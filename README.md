@@ -175,8 +175,7 @@ clean-clone runbook: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md). Release gates
 | [`docs/site-health.md`](docs/site-health.md) | Site crawl, page kinds, rules, issues, readiness, and crawl changes |
 | [`docs/design.md`](docs/design.md) | Design tokens, screen geometry, and the insight object |
 
-Everything under [`docs/archive/`](docs/archive/) is historical and is **not** an implementation
-authority.
+Archived history, when present, is **not** an implementation authority.
 
 <a id="repository-shape"></a>
 ## Repository shape
@@ -188,7 +187,6 @@ backend/app/core/config/site_health_*.py focused page-kind, crawl, rule, and run
 migrations/versions/0001_initial.py    pre-launch canonical database baseline
 docs/plans/                            active target implementation plans
 docs/evaluations/                      evaluation corpora, provenance, and labels
-docs/archive/                          historical plans and superseded context
 ```
 
 <a id="full-validation"></a>

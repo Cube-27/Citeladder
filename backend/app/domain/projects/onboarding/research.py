@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Literal
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.connectors.agent.client import AgentNotConfiguredError
 from app.connectors.agent.factory import create_model_gateway
@@ -19,6 +21,8 @@ from app.core.config.brand_discovery import (
     CAPTURE_METHOD_CRAWLER,
     CONTEXT_PROFILE_VERSION,
     DISCOVERY_RESEARCH_SYSTEM_PROMPT,
+    DISCOVERY_TOPIC_MAX,
+    DISCOVERY_TOPIC_MIN,
     KNOWLEDGE_STRENGTHS,
     MARKET_SCOPES,
     SECTORS,
@@ -26,11 +30,12 @@ from app.core.config.brand_discovery import (
     same_business_class,
 )
 from app.core.config.observed_competitors import EXCLUDED_RESEARCH_DOMAINS
-from app.domain.projects.brand_evidence import collect_brand_evidence
+from app.domain.projects.brand_evidence import BrandEvidence, collect_brand_evidence
 from app.domain.projects.discovery_schemas import (
     DiscoveryCompetitorSuggestion,
     DiscoveryEvidence,
     DiscoveryProfile,
+    DiscoveryTopic,
 )
 from app.domain.projects.onboarding.normalization import (
     InvalidWebsiteUrl,
@@ -47,21 +52,32 @@ from app.domain.projects.onboarding.site_resolution import (
 COMPETITOR_POOL_MULTIPLIER = 3
 
 
+class ResearchTopic(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=255)
+    evidence_refs: list[str] = Field(min_length=1)
+
+
 class ResearchEnvelope(BaseModel):
-    profile: DiscoveryProfile
+    status: Literal["ready", "insufficient_evidence"] = "ready"
+    profile: DiscoveryProfile = Field(default_factory=DiscoveryProfile)
     competitors: list[DiscoveryCompetitorSuggestion] = Field(default_factory=list)
-    topics: list[str] = Field(min_length=1, max_length=20)
+    topics: list[ResearchTopic] = Field(
+        default_factory=list, max_length=DISCOVERY_TOPIC_MAX
+    )
 
 
 @dataclass(frozen=True, slots=True)
 class ResearchResult:
     profile: dict
     competitors: list[dict]
-    topics: list[str]
+    topics: list[dict]
     evidence: list[dict]
     warnings: list[str]
     provider: str
     model: str
+    pages_read: int
 
 
 def _site_text(page) -> str:
@@ -72,24 +88,78 @@ def _site_text(page) -> str:
     )[: brand_discovery_settings.synthesis_evidence_max_chars]
 
 
-async def _site_evidence(site) -> str:
+async def _site_evidence(site) -> BrandEvidence:
     """Read a few high-signal pages, not just the homepage.
 
     A homepage is often a slogan and a hero image, which is exactly the case
     where the model has to guess -- and guessing is what produces confident
-    nonsense for brands it does not know. `collect_brand_evidence` reads /about,
-    /products, /services and /pricing when the homepage is thin, inside a fixed
-    wall-clock budget, with an in-process cache and single-flight. It never
-    raises, so a blocked or slow site degrades to homepage text rather than
-    failing onboarding.
+    nonsense for brands it does not know. `collect_brand_evidence` reads the
+    homepage plus at most four commercial navigation destinations inside a
+    fixed wall-clock budget, with an in-process cache and single-flight. It
+    never raises, so a blocked or slow site degrades to homepage text rather
+    than failing onboarding.
     """
     try:
         evidence = await collect_brand_evidence(site.canonical_url)
     except Exception:  # noqa: BLE001 - evidence is best-effort by contract
-        return ""
-    if not evidence.pages:
-        return ""
-    return evidence.serialize()[: brand_discovery_settings.synthesis_evidence_max_chars]
+        return BrandEvidence()
+    return evidence
+
+
+def _commercial_evidence_refs(evidence: BrandEvidence) -> set[str]:
+    return {
+        f"page-{index}"
+        for index, page in enumerate(evidence.pages, start=1)
+        if page.role == "commercial"
+    }
+
+
+def _admit_topic(
+    candidate: ResearchTopic,
+    *,
+    commercial_refs: set[str],
+    brand_key: str,
+    seen: set[str],
+) -> DiscoveryTopic | None:
+    name = " ".join(candidate.name.split())
+    key = name.casefold()
+    refs = list(dict.fromkeys(candidate.evidence_refs))
+    if not name or key in seen or (brand_key and brand_key in key):
+        return None
+    if not refs or any(ref not in commercial_refs for ref in refs):
+        return None
+    seen.add(key)
+    return DiscoveryTopic(topic_id=uuid.uuid4(), name=name, evidence_refs=refs)
+
+
+def _admitted_topics(
+    model_result: ResearchEnvelope | None,
+    evidence: BrandEvidence,
+    *,
+    brand_name: str,
+) -> list[DiscoveryTopic]:
+    """Admit only 3–5 distinct topics grounded in supplied commercial pages."""
+    if model_result is None or model_result.status != "ready":
+        return []
+    if len(model_result.topics) > DISCOVERY_TOPIC_MAX:
+        return []
+    commercial_refs = _commercial_evidence_refs(evidence)
+    brand_key = " ".join(brand_name.casefold().split())
+    seen: set[str] = set()
+    admitted = [
+        topic
+        for candidate in model_result.topics
+        if (
+            topic := _admit_topic(
+                candidate,
+                commercial_refs=commercial_refs,
+                brand_key=brand_key,
+                seen=seen,
+            )
+        )
+        is not None
+    ]
+    return admitted if len(admitted) >= DISCOVERY_TOPIC_MIN else []
 
 
 def _fallback_profile(*, brand_name: str, industry: str) -> DiscoveryProfile:
@@ -244,7 +314,7 @@ async def research_brand(
     site,
     industry_context: dict,
 ) -> ResearchResult:
-    site_evidence = await _site_evidence(site)
+    website_evidence = await _site_evidence(site)
     model_result, provider, model = await _research_model(
         brand_name=brand_name,
         site=site,
@@ -253,7 +323,9 @@ async def research_brand(
         primary_market=primary_market,
         language_code=language_code,
         industry_context=industry_context,
-        site_evidence=site_evidence,
+        site_evidence=website_evidence.serialize()[
+            : brand_discovery_settings.synthesis_evidence_max_chars
+        ],
     )
     profile = (
         model_result.profile
@@ -265,20 +337,19 @@ async def research_brand(
         model_available=model_result is not None,
         competitors_found=bool(verified),
     )
-    topics = (
-        list(model_result.topics)
-        if model_result is not None
-        else [*(profile.products_services or []), industry]
-    )
-    evidence = _research_evidence(site, model_result, provider, model)
+    topics = _admitted_topics(model_result, website_evidence, brand_name=brand_name)
+    evidence = _research_evidence(site, website_evidence, model_result, provider, model)
+    if not topics:
+        warnings.append("insufficient_commercial_topics")
     return ResearchResult(
         profile=profile.model_dump(),
         competitors=[item.model_dump() for item in verified],
-        topics=list(dict.fromkeys(topic for topic in topics if topic.strip())),
+        topics=[topic.model_dump(mode="json") for topic in topics],
         evidence=evidence,
         warnings=list(dict.fromkeys(warnings)),
         provider=provider,
         model=model,
+        pages_read=len(website_evidence.pages),
     )
 
 
@@ -317,18 +388,31 @@ async def _verified_from_model(model_result, owned_domain):
     )
 
 
-def _research_evidence(site, model_result, provider, model):
+def _research_evidence(site, website_evidence, model_result, provider, model):
     captured_at = datetime.now(UTC)
+    pages = list(website_evidence.pages)
     evidence = [
         DiscoveryEvidence(
-            source_url=site.canonical_url,
+            source_url=page.url,
             capture_method=CAPTURE_METHOD_CRAWLER,
-            method="direct_homepage",
-            confidence=0.9 if site.page is not None else 0.4,
+            method=f"commercial_page:page-{index}",
+            confidence=0.9,
             captured_at=captured_at,
-            supports=["official_website", "owned_domain", "profile"],
+            supports=["official_website", "owned_domain", "profile", "topics"],
         ).model_dump(mode="json")
+        for index, page in enumerate(pages, start=1)
     ]
+    if not evidence:
+        evidence.append(
+            DiscoveryEvidence(
+                source_url=site.canonical_url,
+                capture_method=CAPTURE_METHOD_CRAWLER,
+                method="direct_homepage",
+                confidence=0.4,
+                captured_at=captured_at,
+                supports=["official_website", "owned_domain", "profile"],
+            ).model_dump(mode="json")
+        )
     if model_result is not None:
         evidence.append(
             DiscoveryEvidence(
@@ -367,8 +451,8 @@ def _research_request(
             "official_site_text": site_evidence or _site_text(site.page),
             "user_supplied_industry_hint": industry,
             "user_supplied_subindustry_hint": subindustry,
-            "primary_market": primary_market,
-            "language_code": language_code,
+            "market_hint": primary_market,
+            "language_hint": language_code,
             "context_profile_version": CONTEXT_PROFILE_VERSION,
             "allowed_business_models": list(BUSINESS_MODELS),
             "allowed_market_scopes": list(MARKET_SCOPES),

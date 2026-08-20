@@ -7,6 +7,8 @@ import type { PromptGenerateResponse, Topic } from '@/lib/api/types';
 
 import { GeneratePromptsDialogView } from './generate-prompts-dialog-view';
 
+const MAX_GENERATION_COUNT = 100;
+
 export function GeneratePromptsDialog({
   open,
   onOpenChange,
@@ -33,8 +35,9 @@ export function GeneratePromptsDialog({
     setPreviousOpen(open);
     if (open) setTopicId(defaultTopicId ?? '');
   }
-  const parsedCount = Number.parseInt(count, 10);
-  const countValid = Number.isFinite(parsedCount) && parsedCount >= 1 && parsedCount <= 20;
+  const parsedCount = Number(count);
+  const countValid =
+    Number.isInteger(parsedCount) && parsedCount >= 1 && parsedCount <= MAX_GENERATION_COUNT;
   return (
     <GeneratePromptsDialogView
       open={open}
@@ -51,6 +54,7 @@ export function GeneratePromptsDialog({
       isGenerating={isGenerating}
       error={error}
       result={result}
+      maxCount={MAX_GENERATION_COUNT}
     />
   );
 }

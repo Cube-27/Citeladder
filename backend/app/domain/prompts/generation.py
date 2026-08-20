@@ -16,7 +16,7 @@ import uuid
 from difflib import SequenceMatcher
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,11 +30,10 @@ from app.core.config.prompts import (
     GENERATOR_VERSION,
     PROMPT_NEAR_DUPLICATE_SIMILARITY,
     PROMPT_STATUS_ACTIVE,
-    TOPIC_ORIGIN_GENERATED,
     prompt_generation_settings,
 )
 from app.domain.projects.knowledge_base import build_brand_knowledge_data
-from app.domain.projects.shim import project_business_context, project_scoring_identity
+from app.domain.projects.shim import project_scoring_identity
 from app.domain.prompts.generation_contract import (
     GenerationOutputError,
     SuggestedPrompt,
@@ -45,12 +44,6 @@ from app.domain.prompts.generation_contract import (
 from app.domain.prompts.generation_errors import (
     GenerationValidationError,
     reraise_scoped_integrity_error,
-)
-from app.domain.prompts.generation_topics import (
-    ground_suggestion_topics as _ground_suggestion_topics,
-)
-from app.domain.prompts.generation_topics import (
-    product_service_topic_names as _product_service_topic_names,
 )
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
@@ -160,8 +153,6 @@ def _drop_invalid_core_prompts(
     accepted: list[str] = []
     topics: list[SuggestedTopic] = []
     for topic in suggestions:
-        if _is_branded(topic.name, brand_context):
-            continue
         rows: list[SuggestedPrompt] = []
         for prompt in topic.prompts:
             normalized = " ".join(prompt.text.casefold().split())
@@ -170,7 +161,9 @@ def _drop_invalid_core_prompts(
             accepted.append(normalized)
             rows.append(prompt)
         if rows:
-            topics.append(SuggestedTopic(name=topic.name, prompts=rows))
+            topics.append(
+                SuggestedTopic(topic_id=topic.topic_id, name=topic.name, prompts=rows)
+            )
     return topics
 
 
@@ -203,13 +196,50 @@ def _drop_invalid_comparison_prompts(
         ]
         if retained_prompts:
             retained_topics.append(
-                SuggestedTopic(name=topic.name, prompts=retained_prompts)
+                SuggestedTopic(
+                    topic_id=topic.topic_id,
+                    name=topic.name,
+                    prompts=retained_prompts,
+                )
             )
     return retained_topics
 
 
 def _prompt_count(suggestions: list[SuggestedTopic]) -> int:
     return sum(len(topic.prompts) for topic in suggestions)
+
+
+def _drop_cross_batch_duplicates(
+    existing: list[SuggestedTopic], incoming: list[SuggestedTopic]
+) -> tuple[list[SuggestedTopic], int]:
+    """Remove and count rows too similar to an earlier accepted batch."""
+    previous = [
+        " ".join(prompt.text.casefold().split())
+        for topic in existing
+        for prompt in topic.prompts
+    ]
+    retained: list[SuggestedTopic] = []
+    dropped = 0
+    for topic in incoming:
+        prompts: list[SuggestedPrompt] = []
+        for prompt in topic.prompts:
+            normalized = " ".join(prompt.text.casefold().split())
+            duplicate = any(
+                SequenceMatcher(None, normalized, prior).ratio()
+                >= PROMPT_NEAR_DUPLICATE_SIMILARITY
+                for prior in previous
+            )
+            if duplicate:
+                dropped += 1
+            else:
+                prompts.append(prompt)
+        if prompts:
+            retained.append(
+                SuggestedTopic(
+                    topic_id=topic.topic_id, name=topic.name, prompts=prompts
+                )
+            )
+    return retained, dropped
 
 
 def _filter_for_cohort(
@@ -250,9 +280,9 @@ def _validate_generation_payload(prompt_set: PromptSet, payload: Any) -> Topic |
             f"count must be at most {max_count} (requested {payload.count})"
         )
     target_topic = _resolve_target_topic(prompt_set, payload)
-    if target_topic is None and not _product_service_topic_names(prompt_set.project):
+    if not prompt_set.project.topics:
         raise GenerationValidationError(
-            "Add at least one confirmed product/service before generating topics"
+            "Add at least one topic before generating prompts"
         )
     return target_topic
 
@@ -295,50 +325,11 @@ def _cap_suggestions_to_count(
             break
         kept = topic.prompts[:remaining]
         if kept:
-            capped.append(SuggestedTopic(name=topic.name, prompts=kept))
+            capped.append(
+                SuggestedTopic(topic_id=topic.topic_id, name=topic.name, prompts=kept)
+            )
             remaining -= len(kept)
     return capped
-
-
-async def _get_or_create_topic(
-    session: AsyncSession,
-    *,
-    project: Project,
-    name: str,
-    topics_by_name: dict[str, Topic],
-) -> Topic:
-    """Resolve an existing topic by case-insensitive name or create it.
-
-    ``lower()`` matches the DB's functional unique index on ``lower(name)``.
-    A create race is caught on a savepoint so the prompts already inserted in
-    this transaction survive, then the race winner is re-selected.
-    """
-    topic = topics_by_name.get(name.lower())
-    if topic is not None:
-        return topic
-    topic = Topic(
-        project_id=project.id,
-        name=name.strip(),
-        origin=TOPIC_ORIGIN_GENERATED,
-    )
-    try:
-        # Savepoint so a lost create race doesn't discard the prompts already
-        # inserted in this transaction.
-        async with session.begin_nested():
-            session.add(topic)
-    except IntegrityError:
-        # Lost the create race: re-select the winner. Match case-insensitively
-        # — the unique index is on ``lower(name)``, so casing may differ.
-        topic = (
-            await session.execute(
-                select(Topic).where(
-                    Topic.project_id == project.id,
-                    func.lower(Topic.name) == name.strip().lower(),
-                )
-            )
-        ).scalar_one()
-    topics_by_name[topic.name.lower()] = topic
-    return topic
 
 
 def _drop_unbound_suggestions(
@@ -361,7 +352,11 @@ def _drop_unbound_suggestions(
             if validate_prompt_binding(p.text, vocabulary).accepted
         ]
         if prompts:
-            kept.append(SuggestedTopic(name=topic.name, prompts=prompts))
+            kept.append(
+                SuggestedTopic(
+                    topic_id=topic.topic_id, name=topic.name, prompts=prompts
+                )
+            )
     return kept
 
 
@@ -395,7 +390,11 @@ async def _apply_insert_capacity(
         prompts = [p for p in topic.prompts if prompt_text_hash(p.text) in approved]
         dropped += len(topic.prompts) - len(prompts)
         if prompts:
-            kept.append(SuggestedTopic(name=topic.name, prompts=prompts))
+            kept.append(
+                SuggestedTopic(
+                    topic_id=topic.topic_id, name=topic.name, prompts=prompts
+                )
+            )
     return kept, dropped
 
 
@@ -427,7 +426,7 @@ async def _insert_prompts_returning(
             "theme": topic.name,
             "intent": prompt.intent,
             "cohort": cohort,
-            "branded": cohort == "comparison",
+            "branded": cohort in {"comparison", "brand_diagnostic"},
             "enabled": True,
             "status": PROMPT_STATUS_ACTIVE,
             "origin": PROMPT_ORIGIN_GENERATED,
@@ -490,9 +489,6 @@ def _generation_brand_context(
 ) -> dict[str, Any]:
     context = project_scoring_identity(project)
     context["knowledge_base"] = build_brand_knowledge_data(project)
-    # Composed here rather than by widening `build_brand_knowledge_data`,
-    # which has its own owner and consumers.
-    context["business_context"] = project_business_context(project)
     context["demand_signals"] = [
         {
             "id": str(signal.id),
@@ -534,6 +530,33 @@ def _generation_evidence(
     }
 
 
+def _allowed_generation_topics(
+    project: Project, target_topic: Topic | None
+) -> list[dict[str, str]]:
+    topics = [target_topic] if target_topic is not None else project.topics
+    return [
+        {
+            "id": str(topic.id),
+            "name": topic.name,
+            "description": topic.description or "",
+        }
+        for topic in topics
+    ]
+
+
+def _existing_generation_context(
+    prompt_set: PromptSet,
+    suggestions: list[SuggestedTopic],
+    *,
+    limit: int,
+) -> list[str]:
+    if not limit:
+        return []
+    existing = [prompt.text for prompt in prompt_set.prompts]
+    accumulated = [prompt.text for topic in suggestions for prompt in topic.prompts]
+    return [*existing, *accumulated][-limit:]
+
+
 async def _generate_suggestions(
     session: AsyncSession,
     *,
@@ -557,50 +580,40 @@ async def _generate_suggestions(
     )
     brand_context = _generation_brand_context(prompt_set.project, demand_signals)
     context_limit = prompt_generation_settings.existing_prompt_context_limit
-    user_message = build_generation_user_message(
-        brand_context=brand_context,
-        existing_topics=[
-            {"name": topic.name, "description": topic.description or ""}
-            for topic in prompt_set.project.topics
-        ],
-        existing_prompts=[p.text for p in prompt_set.prompts][:context_limit],
-        count=payload.count,
-        intents=[i for i in payload.intents if i],
-        product_service_topics=_product_service_topic_names(prompt_set.project),
-        target_topic=target_topic.name if target_topic is not None else "",
-        target_topic_description=(
-            target_topic.description if target_topic is not None else ""
-        ),
-    )
+    allowed_topics = _allowed_generation_topics(prompt_set.project, target_topic)
     await session.commit()
     system_prompt = (
         GENERATION_COMPARISON_SYSTEM_PROMPT
         if payload.cohort == "comparison"
         else GENERATION_SYSTEM_PROMPT
     )
-    raw = await agent.complete_json(system=system_prompt, user=user_message)
-    suggestions, intra_duplicates = parse_generation_output(raw)
-    suggestions = _filter_for_cohort(suggestions, payload.cohort, brand_context)
-    suggestions = _ground_suggestion_topics(
-        suggestions, project=prompt_set.project, target_topic=target_topic
-    )
-    if _prompt_count(suggestions) < payload.count:
+    suggestions: list[SuggestedTopic] = []
+    intra_duplicates = 0
+    batch_size = min(prompt_generation_settings.model_batch_size, payload.count)
+    maximum_calls = (payload.count + batch_size - 1) // batch_size + 1
+    for _call in range(maximum_calls):
         missing = payload.count - _prompt_count(suggestions)
-        replacement_raw = await agent.complete_json(
-            system=system_prompt,
-            user=(
-                user_message
-                + f"\nThe first batch had {missing} rejected rows. Generate exactly "
-                f"{missing} replacement prompts satisfying every rule."
+        if missing <= 0:
+            break
+        requested = min(batch_size, missing)
+        user_message = build_generation_user_message(
+            brand_context=brand_context,
+            topics=allowed_topics,
+            existing_prompts=_existing_generation_context(
+                prompt_set, suggestions, limit=context_limit
             ),
+            count=requested,
+            intents=[i for i in payload.intents if i],
         )
-        replacements, replacement_duplicates = parse_generation_output(replacement_raw)
-        replacements = _filter_for_cohort(replacements, payload.cohort, brand_context)
-        replacements = _ground_suggestion_topics(
-            replacements, project=prompt_set.project, target_topic=target_topic
+        raw = await agent.complete_json(system=system_prompt, user=user_message)
+        batch, batch_duplicates = parse_generation_output(
+            raw, allowed_topics=allowed_topics
         )
-        suggestions.extend(replacements)
-        intra_duplicates += replacement_duplicates
+        intra_duplicates += batch_duplicates
+        batch = _filter_for_cohort(batch, payload.cohort, brand_context)
+        batch, cross_batch_duplicates = _drop_cross_batch_duplicates(suggestions, batch)
+        intra_duplicates += cross_batch_duplicates
+        suggestions.extend(batch)
     return (
         _cap_suggestions_to_count(suggestions, payload.count),
         intra_duplicates,
@@ -637,7 +650,7 @@ async def generate_prompts(
         prompt_set = await _load_prompt_set_with_project(
             session, workspace_id=workspace_id, prompt_set_id=prompt_set_id
         )
-    target_topic = _validate_generation_payload(prompt_set, payload)
+    _validate_generation_payload(prompt_set, payload)
     project_id = prompt_set.project.id
     (
         suggestions,
@@ -679,13 +692,11 @@ async def generate_prompts(
         prompt_set_id=prompt_set_id,
         for_update=True,
     )
-    target_topic = _resolve_target_topic(prompt_set, payload)
+    _resolve_target_topic(prompt_set, payload)
     project = prompt_set.project
-    # ``lower()`` (not ``casefold()``) so the in-memory match uses the same
-    # canonical form as the DB's unique index on ``lower(name)``.
-    topics_by_name = {topic.name.lower(): topic for topic in project.topics}
+    topics_by_id = {topic.id: topic for topic in project.topics}
 
-    # 5. Persist: get-or-create topics by name, then conflict-safe inserts.
+    # 5. Persist prompts only under topics that still exist after provider I/O.
     evidence_base = _generation_evidence(
         agent=agent,
         payload=payload,
@@ -714,16 +725,10 @@ async def generate_prompts(
         inserted_ids: list[uuid.UUID] = []
         dropped = intra_duplicates + capacity_dropped
         for suggestion in suggestions:
-            if target_topic is not None:
-                # Scoped generation: everything lands in the requested topic.
-                topic = target_topic
-            else:
-                topic = await _get_or_create_topic(
-                    session,
-                    project=project,
-                    name=suggestion.name,
-                    topics_by_name=topics_by_name,
-                )
+            topic = topics_by_id.get(suggestion.topic_id)
+            if topic is None:
+                dropped += len(suggestion.prompts)
+                continue
             if topic not in touched_topics:
                 touched_topics.append(topic)
 

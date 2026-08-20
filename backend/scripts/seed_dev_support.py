@@ -77,7 +77,7 @@ DEMO_COMPETITOR_PRODUCT_SPEC = _CompetitorProductSpec(
     url="https://trailblazepacks.com/alpine-45",
     price=174.99,
     attributes={
-        "gtin": "00850000000401",
+        "gtin": "00860000000451",
         "brand": "TrailBlaze Packs",
         "material": "Recycled ripstop nylon",
         "warranty": "Lifetime",

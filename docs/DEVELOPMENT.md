@@ -67,7 +67,7 @@ cp .env.example .env
 
 # Use the env -u workaround (gotcha 1) and select the copied env file — verbatim:
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
-  POSTGRES_PASSWORD=citeladder_dev_password \
+  POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
   docker compose --env-file .env -f docker-compose.yml \
   up -d --build --force-recreate
 
@@ -77,9 +77,17 @@ curl -fsS http://localhost:8000/health
 ```
 
 The stack's frontend is at `http://localhost:3000`, and FastAPI is at
-`http://localhost:8000`. Inspect readiness with `docker compose --env-file .env -f
-docker-compose.yml ps`; the one-shot `migrate` service must have completed
-successfully. See `docker-compose.yml` for the executable process list and
+`http://localhost:8000`. Inspect readiness with the same `env -u` wrapper (gotcha 1) —
+every Compose invocation resolves `${VAR}` from the shell first, not just `up`:
+
+```bash
+env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
+  POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
+  docker compose --env-file .env -f docker-compose.yml ps
+```
+
+The one-shot `migrate` service must have completed successfully. See
+`docker-compose.yml` for the executable process list and
 [`release-checklist.md`](release-checklist.md) for clean-clone release verification.
 
 ## Testing

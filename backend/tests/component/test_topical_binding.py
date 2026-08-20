@@ -277,6 +277,12 @@ async def test_generation_drops_off_domain_model_output(
         json={"products_services": ["running shoes"]},
     )
     assert profile.status_code == 200
+    topic = (
+        await client.post(
+            f"/api/v1/projects/{project['id']}/topics",
+            json={"name": "Running Shoes"},
+        )
+    ).json()
 
     class _MixedAgent:
         model = "fake-model"
@@ -284,11 +290,13 @@ async def test_generation_drops_off_domain_model_output(
 
         async def complete_json(self, *, system: str, user: str) -> str:
             return (
-                '{"topics": [{"name": "Mix", "prompts": ['
-                '{"text": "best running shoes for daily training", '
+                '{"prompts": ['
+                f'{{"topic_id": "{topic["id"]}", '
+                '"text": "best running shoes for daily training", '
                 '"intent": "discovery"},'
-                '{"text": "best laptops for programming", "intent": "discovery"}'
-                "]}]}"
+                f'{{"topic_id": "{topic["id"]}", '
+                '"text": "best laptops for programming", "intent": "discovery"}'
+                "]}"
             )
 
     monkeypatch.setattr(prompts_api, "create_model_gateway", lambda: _MixedAgent())

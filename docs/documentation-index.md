@@ -10,7 +10,7 @@ listed here must prove a current operational purpose or move to the archive.
 3. [`architecture.md`](architecture.md) defines the product hierarchy.
 4. Active plans define approved future work.
 5. Current-runtime references explain subsystem contracts.
-6. [`archive/`](archive/README.md) is historical context only.
+6. Archived history, when present, is historical context only.
 
 ## Product and plans
 
@@ -35,6 +35,7 @@ listed here must prove a current operational purpose or move to the archive.
 |---|---|
 | [`site-health.md`](site-health.md) | Crawl, page kinds, rules, scores, issues, graph, readiness, and crawl changes |
 | [`backend-architecture.md`](backend-architecture.md) | Backend modules, queues, workers, and routes |
+| [`visibility-prompt.md`](visibility-prompt.md) | Canonical topic discovery and AI Visibility prompt-generation contract |
 | [`frontend-architecture.md`](frontend-architecture.md) | Frontend ownership, API contracts, and routes |
 | [`invariants.md`](invariants.md) | Hard cross-cutting runtime invariants |
 | [`api-error-contract.md`](api-error-contract.md) | Canonical API error envelope |

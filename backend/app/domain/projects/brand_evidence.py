@@ -1,16 +1,19 @@
 # Gathering brand web evidence for the profile drafter.
 #
 # Orchestrates the connector: canonicalize the project's website URL, fetch the
-# homepage, fall back to the about pages only when the homepage is too thin,
-# and report whether what came back clears the grounding floor. Thin evidence
-# never authorizes a model-memory fallback.
+# homepage plus at most four commercial internal pages, and report whether the
+# result clears the grounding floor. Thin evidence never authorizes a
+# model-memory fallback.
 from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, replace
+from urllib.parse import urlsplit
 
 from app.connectors.web_evidence.brand_evidence import (
+    BrandEvidenceLink,
     BrandEvidencePage,
     fallback_urls,
     fetch_brand_page,
@@ -22,15 +25,20 @@ from app.connectors.web_evidence.url_policy import UrlPolicyError, canonicalize
 from app.core.config.brand_evidence import (
     BRAND_EVIDENCE_CACHE_MAX_ENTRIES,
     BRAND_EVIDENCE_CACHE_SECONDS,
+    BRAND_EVIDENCE_COMMERCIAL_LINK_TERMS,
+    BRAND_EVIDENCE_EDITORIAL_LINK_TERMS,
     BRAND_EVIDENCE_FALLBACK_PATHS,
+    BRAND_EVIDENCE_MAX_PAGES,
     BRAND_EVIDENCE_MIN_WORDS,
     BRAND_EVIDENCE_NEGATIVE_CACHE_SECONDS,
     BRAND_EVIDENCE_TOTAL_TIMEOUT_SECONDS,
     BRAND_EVIDENCE_USER_AGENT,
+    BRAND_EVIDENCE_UTILITY_LINK_TERMS,
     BRAND_EVIDENCE_VERSION,
 )
 
 logger = logging.getLogger(__name__)
+_LINK_TOKEN = re.compile(r"[a-z0-9]+")
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,8 +91,45 @@ def _homepage_url(website_url: str) -> str:
         return ""
 
 
+def _link_terms(link: BrandEvidenceLink) -> set[str]:
+    text = f"{link.label} {urlsplit(link.url).path}".casefold()
+    return set(_LINK_TOKEN.findall(text))
+
+
+def _commercial_navigation_links(page: BrandEvidencePage) -> list[BrandEvidenceLink]:
+    """Prefer explicit commerce links, then other non-editorial nav links."""
+    ranked: list[tuple[int, int, BrandEvidenceLink]] = []
+    for index, link in enumerate(page.navigation_links):
+        terms = _link_terms(link)
+        excluded = (
+            BRAND_EVIDENCE_EDITORIAL_LINK_TERMS | BRAND_EVIDENCE_UTILITY_LINK_TERMS
+        )
+        if terms & excluded:
+            continue
+        priority = 0 if terms & BRAND_EVIDENCE_COMMERCIAL_LINK_TERMS else 1
+        ranked.append((priority, index, link))
+    ranked.sort(key=lambda item: (item[0], item[1]))
+    return [item[2] for item in ranked]
+
+
+def _selected_internal_links(
+    homepage: str, page: BrandEvidencePage | None
+) -> list[BrandEvidenceLink]:
+    selected = [
+        link
+        for link in (_commercial_navigation_links(page) if page is not None else [])
+        if link.url != homepage
+    ]
+    known = {homepage, *(link.url for link in selected)}
+    for url in fallback_urls(homepage, BRAND_EVIDENCE_FALLBACK_PATHS):
+        if url not in known:
+            selected.append(BrandEvidenceLink(url=url, label=""))
+            known.add(url)
+    return selected[: max(0, BRAND_EVIDENCE_MAX_PAGES - 1)]
+
+
 async def _gather(homepage: str) -> list[BrandEvidencePage]:
-    """Fetch the homepage, then about pages only if it was too thin."""
+    """Fetch one homepage plus at most four high-signal internal pages."""
     pages: list[BrandEvidencePage] = []
     # Keyed on the FINAL url (post-redirect): a site that redirects ``/about``
     # back to the homepage, or serves the same page at several paths, would
@@ -92,28 +137,28 @@ async def _gather(homepage: str) -> list[BrandEvidencePage]:
     # floor on a single thin page repeated.
     seen_urls: set[str] = set()
 
-    def _add(page: BrandEvidencePage | None) -> int:
+    def _add(page: BrandEvidencePage | None) -> None:
         if page is None or page.url in seen_urls:
-            return sum(p.word_count for p in pages)
+            return
         seen_urls.add(page.url)
         pages.append(page)
-        return sum(p.word_count for p in pages)
 
     async with SecureFetcher(
         resolver=SystemDnsResolver(),
         user_agent=BRAND_EVIDENCE_USER_AGENT,
     ) as fetcher:
-        if _add(await fetch_brand_page(homepage, fetcher=fetcher)) >= (
-            BRAND_EVIDENCE_MIN_WORDS
-        ):
-            return pages
-        # Homepage was thin (JS shell, splash page): try the about pages in
-        # order, stopping as soon as the floor is cleared.
-        for url in fallback_urls(homepage, BRAND_EVIDENCE_FALLBACK_PATHS):
-            if _add(await fetch_brand_page(url, fetcher=fetcher)) >= (
-                BRAND_EVIDENCE_MIN_WORDS
-            ):
-                break
+        home_page = await fetch_brand_page(homepage, fetcher=fetcher)
+        if home_page is not None:
+            home_page = replace(home_page, role="homepage")
+        _add(home_page)
+        links = _selected_internal_links(homepage, home_page)
+        fetched = await asyncio.gather(
+            *(fetch_brand_page(link.url, fetcher=fetcher) for link in links),
+            return_exceptions=True,
+        )
+        for link, result in zip(links, fetched, strict=True):
+            if isinstance(result, BrandEvidencePage):
+                _add(replace(result, role="commercial", navigation_label=link.label))
     return pages
 
 

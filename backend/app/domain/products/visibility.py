@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -439,7 +439,7 @@ async def get_product_visibility(
         session,
         workspace_id=workspace_id,
         project_id=project_id,
-        before=audit.created_at,
+        before=cast(datetime, audit.completed_at),
         engine=engine,
     )
     products = _own_visibility_entries(
@@ -531,7 +531,7 @@ async def _previous_visibility_rates(
             Audit.workspace_id == workspace_id,
             Audit.project_id == project_id,
             Audit.status.in_(_DASHBOARD_STATUSES),
-            Audit.created_at < before,
+            Audit.completed_at < before,
             select(ProductMetricSnapshot.id)
             .where(ProductMetricSnapshot.audit_id == Audit.id)
             .exists(),

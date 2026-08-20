@@ -36,19 +36,12 @@ GRAZA = CASES_BY_SLUG["graza-united-states"]
 
 def _valid_portfolio(case) -> list[PortfolioPrompt]:
     """A portfolio built from the case's own gold prompts, so it should pass."""
-    neutral = [
-        PortfolioPrompt(text, "market_visibility")
-        for text in case.gold_buyer_prompts[:5]
-    ]
-    relevant = [
-        PortfolioPrompt(text, "brand_relevant")
-        for text in case.gold_buyer_prompts[5:10]
-    ]
+    neutral = [PortfolioPrompt(text, "core") for text in case.gold_buyer_prompts[:8]]
     branded = [
         PortfolioPrompt(text, "brand_diagnostic")
-        for text in case.gold_branded_prompts[:5]
+        for text in case.gold_branded_prompts[:2]
     ]
-    return [*neutral, *relevant, *branded]
+    return [*neutral, *branded]
 
 
 def test_corpus_covers_the_agreed_cases() -> None:
@@ -127,9 +120,8 @@ def test_collision_pair_shares_a_category_but_not_a_market() -> None:
 def test_portfolio_evaluation_accepts_gold_derived_portfolios() -> None:
     result = evaluate_portfolio(FEEDONOMICS, _valid_portfolio(FEEDONOMICS))
     assert result.valid, result.issues
-    assert result.market_visibility_count == 5
-    assert result.brand_relevant_count == 5
-    assert result.branded_count == 5
+    assert result.organic_count == 8
+    assert result.branded_count == 2
 
 
 def test_market_signal_rate_matches_whole_words() -> None:
@@ -137,13 +129,12 @@ def test_market_signal_rate_matches_whole_words() -> None:
     assert result.market_signal_rate > 0
 
 
-def test_portfolio_counts_are_bounded_not_exact() -> None:
-    """An honest short portfolio passes; padding beyond the ceiling does not."""
-    short = _valid_portfolio(FEEDONOMICS)[:PORTFOLIO_MIN]
-    assert len(evaluate_portfolio(FEEDONOMICS, short).issues) == 0
+def test_portfolio_requires_the_exact_eight_two_shape() -> None:
+    short = _valid_portfolio(FEEDONOMICS)[: PORTFOLIO_MIN - 1]
+    assert evaluate_portfolio(FEEDONOMICS, short).issues
 
     too_many = _valid_portfolio(FEEDONOMICS) + [
-        PortfolioPrompt("one prompt too many for the ceiling", "market_visibility")
+        PortfolioPrompt("one prompt too many for the ceiling", "core")
     ]
     issues = evaluate_portfolio(FEEDONOMICS, too_many).issues
     assert any(str(PORTFOLIO_MAX) in issue for issue in issues)
@@ -151,7 +142,7 @@ def test_portfolio_counts_are_bounded_not_exact() -> None:
 
 def test_portfolio_rejects_duplicates_and_misplaced_identity() -> None:
     prompts = _valid_portfolio(FEEDONOMICS)
-    prompts[0] = PortfolioPrompt("is feedonomics worth the price", "market_visibility")
+    prompts[0] = PortfolioPrompt("is feedonomics worth the price", "core")
     prompts[-1] = PortfolioPrompt(prompts[-2].text, "brand_diagnostic")
     result = evaluate_portfolio(FEEDONOMICS, prompts)
     assert not result.valid
@@ -195,9 +186,9 @@ def test_template_tell_detects_slot_filled_prompts() -> None:
         PortfolioPrompt(
             "Which analytics software options can help my team with automating "
             "workflows?",
-            "market_visibility",
+            "core",
         ),
-        PortfolioPrompt("best mattress for back pain india", "market_visibility"),
+        PortfolioPrompt("best mattress for back pain india", "core"),
     ]
     assert template_tell(prompts, templates) == 0.5
     assert template_tell(prompts, []) == 0.0
@@ -208,7 +199,7 @@ def test_template_sentinel_survives_alias_normalization() -> None:
     templates = ["What should I consider before choosing {category} in {market}?"]
     prompt = PortfolioPrompt(
         "What should I consider before choosing mattresses in India?",
-        "brand_relevant",
+        "core",
     )
     assert template_tell([prompt], templates) == 1.0
 
@@ -240,12 +231,8 @@ def test_context_evaluation_scores_facets_and_reports_mismatches() -> None:
 
 def test_collision_score_ignores_the_market_token() -> None:
     """Swapping only the country name is one portfolio, not two."""
-    left = [PortfolioPrompt("where can i buy homewares in India", "market_visibility")]
-    right = [
-        PortfolioPrompt(
-            "where can i buy homewares in United States", "market_visibility"
-        )
-    ]
+    left = [PortfolioPrompt("where can i buy homewares in India", "core")]
+    right = [PortfolioPrompt("where can i buy homewares in United States", "core")]
     assert collision_score(left, right) < 1.0
     assert (
         collision_score(
@@ -260,8 +247,8 @@ def test_collision_score_ignores_the_market_token() -> None:
 
 def test_gold_overlap_rewards_talking_about_the_same_things() -> None:
     gold = ["best product feed management software for ecommerce"]
-    close = [PortfolioPrompt("best product feed management software", "brand_relevant")]
-    far = [PortfolioPrompt("cheap school uniforms australia", "brand_relevant")]
+    close = [PortfolioPrompt("best product feed management software", "core")]
+    far = [PortfolioPrompt("cheap school uniforms australia", "core")]
     assert gold_overlap(close, gold) > gold_overlap(far, gold)
     assert gold_overlap([], gold) == 0.0
 
@@ -301,9 +288,7 @@ async def test_realism_scores_perfect_discrimination_as_zero() -> None:
 
     # Prompts absent from the gold set, so "generated" is unambiguous.
     prompts = [
-        PortfolioPrompt(
-            f"which zzz option number {index} should i consider", "brand_relevant"
-        )
+        PortfolioPrompt(f"which zzz option number {index} should i consider", "core")
         for index in range(5)
     ]
     result = await evaluate_realism(

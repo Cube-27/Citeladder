@@ -1,12 +1,12 @@
-"""Component tests for AI prompt generation, topics, and the review lifecycle.
+"""Component tests for topic-bound AI prompt generation and review lifecycle.
 
 The default agent is always faked at the API boundary
 (``app.api.prompts.create_model_gateway``) so no test ever performs live
 provider I/O, regardless of what keys exist in the developer's ``.env``.
 
 Covers:
-  - generate happy path: topics get-or-created, prompts land ``proposed`` /
-    ``origin='generated'`` with provenance evidence (invariant 4);
+  - generate happy path: prompts reference existing canonical topics and retain
+    provenance evidence (invariant 4);
   - automatic generation without a third decision gate + count cap (422);
   - unconfigured agent -> 503, but foreign set -> 404 first (invariant 5);
   - unparseable model output -> 502;
@@ -45,7 +45,7 @@ VALID_AGENT_RESPONSE = json.dumps(
     {
         "topics": [
             {
-                "name": "Footwear",
+                "name": "Running Shoes",
                 "prompts": [
                     {"text": "best running shoes in australia", "intent": "discovery"},
                     {
@@ -57,7 +57,7 @@ VALID_AGENT_RESPONSE = json.dumps(
                 ],
             },
             {
-                "name": "Sizing",
+                "name": "Running Shoes",
                 "prompts": [
                     {
                         "text": "how to choose the right running shoe size",
@@ -82,7 +82,26 @@ class FakeAgent:
 
     async def complete_json(self, *, system: str, user: str) -> str:
         self.calls.append({"system": system, "user": user})
-        return self.response
+        try:
+            payload = json.loads(self.response)
+        except json.JSONDecodeError:
+            return self.response
+        if "prompts" in payload:
+            return self.response
+
+        marker = "Canonical topics (copy one id exactly for every prompt): "
+        topic_line = next(line for line in user.splitlines() if line.startswith(marker))
+        canonical = json.loads(topic_line.removeprefix(marker))
+        by_name = {str(topic["name"]).casefold(): topic for topic in canonical}
+        flattened = []
+        for suggested_topic in payload.get("topics", []):
+            topic = by_name.get(str(suggested_topic.get("name", "")).casefold())
+            topic = topic or canonical[0]
+            flattened.extend(
+                {"topic_id": topic["id"], **prompt}
+                for prompt in suggested_topic.get("prompts", [])
+            )
+        return json.dumps({"prompts": flattened})
 
 
 @pytest.fixture
@@ -113,7 +132,7 @@ def _project_payload(**overrides: object) -> dict:
 
 
 async def _make_project_and_set(
-    client: httpx.AsyncClient, email: str
+    client: httpx.AsyncClient, email: str, *, create_default_topic: bool = True
 ) -> tuple[dict, str]:
     await _register(client, email)
     project = (await client.post("/api/v1/projects", json=_project_payload())).json()
@@ -131,6 +150,12 @@ async def _make_project_and_set(
         json={"products_services": ["running shoes"]},
     )
     assert profile.status_code == 200
+    if create_default_topic:
+        topic = await client.post(
+            f"/api/v1/projects/{project['id']}/topics",
+            json={"name": "Running Shoes"},
+        )
+        assert topic.status_code == 201
     return project, prompt_set_id
 
 
@@ -138,7 +163,7 @@ async def _make_project_and_set(
 # Generation
 # --------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_generate_creates_proposed_prompts_and_topics(
+async def test_generate_creates_prompts_under_existing_topic(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
     project, prompt_set_id = await _make_project_and_set(client, "gen1@example.com")
@@ -172,7 +197,7 @@ async def test_generate_creates_proposed_prompts_and_topics(
         assert prompt["topic_id"] is not None
     assert {t["name"] for t in body["topics"]} == {"Running Shoes"}
     running_shoes = body["topics"][0]
-    assert running_shoes["origin"] == "generated"
+    assert running_shoes["origin"] == "manual"
     assert running_shoes["active_count"] == 3
     assert running_shoes["proposed_count"] == 0
 
@@ -184,8 +209,8 @@ async def test_generate_creates_proposed_prompts_and_topics(
     assert "Globex" in sent
     assert "Value-priced family footwear" in sent
     assert "exactly 3 prompts" in sent
-    assert "Confirmed product/service topic taxonomy" in sent
-    assert '["Running Shoes"]' in sent
+    assert "Canonical topics" in sent
+    assert '["running shoes"]' in sent
 
     # Provenance evidence is persisted but the API response never includes
     # any credential material — only host + model identity.
@@ -227,7 +252,7 @@ async def test_generate_persists_provenance_evidence(
     for prompt in prompts:
         evidence = prompt.generation_evidence
         assert evidence is not None
-        assert evidence["generator_version"] == "prompt-gen-v6"
+        assert evidence["generator_version"] == "prompt-gen-v10"
         assert evidence["model_identity"] == {
             "transport_host": "agent.test",
             "transport_model": "fake-model",
@@ -252,17 +277,12 @@ async def test_generate_rejects_count_over_cap(
 
 
 @pytest.mark.asyncio
-async def test_generate_requires_confirmed_product_services(
+async def test_generate_requires_an_existing_topic(
     client: httpx.AsyncClient, fake_agent: FakeAgent
 ) -> None:
     project, prompt_set_id = await _make_project_and_set(
-        client, "gen-products@example.com"
+        client, "gen-products@example.com", create_default_topic=False
     )
-    profile = await client.put(
-        f"/api/v1/projects/{project['id']}/brand-profile",
-        json={"products_services": []},
-    )
-    assert profile.status_code == 200
 
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
@@ -271,7 +291,7 @@ async def test_generate_requires_confirmed_product_services(
 
     assert resp.status_code == 422
     assert resp.json()["detail"]["code"] == "generation_invalid"
-    assert "confirmed product/service" in resp.json()["detail"]["message"]
+    assert "at least one topic" in resp.json()["detail"]["message"]
     assert fake_agent.calls == []
 
 
@@ -417,8 +437,8 @@ async def test_generate_into_target_topic(
         )
     ).json()
 
-    # Model still answers with its own topic name; scoped generation must
-    # land everything in the requested topic regardless.
+    # The fake converts its fixture to the only canonical topic ID supplied to
+    # a scoped generation call.
     agent = FakeAgent(
         response=json.dumps(
             {
@@ -449,11 +469,11 @@ async def test_generate_into_target_topic(
     body = resp.json()
     assert [t["id"] for t in body["topics"]] == [topic["id"]]
     assert body["generated"][0]["topic_id"] == topic["id"]
-    assert "ONLY for this topic" in agent.calls[0]["user"]
+    assert '"name":"Pricing"' in agent.calls[0]["user"]
 
     # No new topic was created from the model's invented name.
     topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
-    assert [t["name"] for t in topics] == ["Pricing"]
+    assert {t["name"] for t in topics} == {"Pricing", "Running Shoes"}
 
 
 @pytest.mark.asyncio
@@ -503,15 +523,18 @@ async def test_generation_reuses_existing_topic_with_description(
         in agent.calls[0]["user"]
     )
     topics = (await client.get(f"/api/v1/projects/{project['id']}/topics")).json()
-    assert len(topics) == 1
+    assert {item["name"] for item in topics} == {"Footwear", "Running Shoes"}
 
 
-def _agent_response_with_n_prompts(n: int, *, topic: str = "Bulk") -> str:
+def _agent_response_with_n_prompts(
+    n: int, *, topic: str = "Running Shoes", discriminator: str = ""
+) -> str:
     """A single-topic response carrying ``n`` distinct prompts.
 
     Texts embed the topic so responses from different runs never collide on
     the per-set dedupe hash (letting a test insert fresh rows each run).
     """
+    text_prefix = discriminator or topic
     return json.dumps(
         {
             "topics": [
@@ -519,7 +542,9 @@ def _agent_response_with_n_prompts(n: int, *, topic: str = "Bulk") -> str:
                     "name": topic,
                     "prompts": [
                         {
-                            "text": (f"{topic} running shoes for {chr(97 + i) * 20}"),
+                            "text": (
+                                f"{text_prefix} running shoes for {chr(97 + i) * 20}"
+                            ),
                             "intent": "discovery",
                         }
                         for i in range(n)
@@ -574,7 +599,7 @@ async def test_generate_comparison_cohort_is_active_and_branded(
     ]
     agent = FakeAgent(
         response=json.dumps(
-            {"topics": [{"name": "Comparisons", "prompts": comparison_prompts}]}
+            {"topics": [{"name": "Running Shoes", "prompts": comparison_prompts}]}
         )
     )
     monkeypatch.setattr(prompts_api, "create_model_gateway", lambda: agent)
@@ -604,7 +629,7 @@ async def test_generate_counts_intra_response_duplicates(
             {
                 "topics": [
                     {
-                        "name": "A",
+                        "name": "Running Shoes",
                         "prompts": [
                             {"text": "Best Shoes?", "intent": "discovery"},
                             {"text": "best  shoes", "intent": "discovery"},
@@ -684,13 +709,17 @@ async def test_concurrent_generation_keeps_all_validated_rows_active(
         model = "fake-model"
         base_url_host = "agent.test"
 
-        def __init__(self, topic: str, n: int) -> None:
-            self._response = _agent_response_with_n_prompts(n, topic=topic)
+        def __init__(self, discriminator: str, n: int) -> None:
+            self._response = _agent_response_with_n_prompts(
+                n, discriminator=discriminator
+            )
 
         async def complete_json(self, *, system: str, user: str) -> str:
             # Yield so both coroutines interleave before either persists.
             await asyncio.sleep(0)
-            return self._response
+            return await FakeAgent(response=self._response).complete_json(
+                system=system, user=user
+            )
 
     async def _run(topic: str, n: int) -> None:
         async with session_factory() as session:
@@ -755,7 +784,9 @@ async def test_generation_racing_prompt_set_delete_is_scoped_not_found(
             # set that no longer exists).
             provider_entered.set()
             await delete_done.wait()
-            return _agent_response_with_n_prompts(3, topic="Race")
+            return await FakeAgent(
+                response=_agent_response_with_n_prompts(3, topic="Race")
+            ).complete_json(system=system, user=user)
 
     async def _generate() -> BaseException | None:
         async with session_factory() as session:
@@ -824,7 +855,9 @@ async def test_generation_racing_topic_delete_is_scoped_validation_error(
         async def complete_json(self, *, system: str, user: str) -> str:
             provider_entered.set()
             await delete_done.wait()
-            return _agent_response_with_n_prompts(2, topic="Whatever")
+            return await FakeAgent(
+                response=_agent_response_with_n_prompts(2, topic="Whatever")
+            ).complete_json(system=system, user=user)
 
     async def _generate() -> BaseException | None:
         async with session_factory() as session:
@@ -913,7 +946,7 @@ async def test_generation_unrelated_integrity_error_is_not_remapped(
                 payload=PromptGenerateRequest(count=2, confirm_send_evidence=True),
                 agent=cast(
                     DefaultAgentClient,
-                    FakeAgent(response=_agent_response_with_n_prompts(2, topic="Keep")),
+                    FakeAgent(response=_agent_response_with_n_prompts(2)),
                 ),
             )
 
@@ -928,7 +961,9 @@ async def test_create_prompt_accepts_topic_id(client: httpx.AsyncClient) -> None
     Without ``topic_id`` on create it would have to POST every prompt and then
     PATCH every prompt, doubling the write count on a first-run flow.
     """
-    project, prompt_set_id = await _make_project_and_set(client, "ptopic1@example.com")
+    project, prompt_set_id = await _make_project_and_set(
+        client, "ptopic1@example.com", create_default_topic=False
+    )
     topic = (
         await client.post(
             f"/api/v1/projects/{project['id']}/topics", json={"name": "Everyday basics"}
@@ -981,7 +1016,9 @@ async def test_create_prompt_rejects_foreign_topic_id(
 
 @pytest.mark.asyncio
 async def test_topics_crud_with_counts(client: httpx.AsyncClient) -> None:
-    project, prompt_set_id = await _make_project_and_set(client, "top1@example.com")
+    project, prompt_set_id = await _make_project_and_set(
+        client, "top1@example.com", create_default_topic=False
+    )
     project_id = project["id"]
 
     created = await client.post(

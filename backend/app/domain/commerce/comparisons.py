@@ -35,9 +35,23 @@ def _entry_id(row: dict[str, Any]) -> str:
     return str(row.get("id") or "")
 
 
+def _is_entry_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(value)
+    except ValueError:
+        return False
+    return True
+
+
 def _usable_catalog_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Frozen catalog rows this projection can actually build a product from.
+
+    A row whose ``id`` is missing or not a UUID is dropped here rather than
+    raising later: ``_comparison_product`` parses that id, so a malformed
+    frozen entry would otherwise take the whole comparison down.
+    """
     parsed = [dict(row) for row in rows]
-    return [row for row in parsed if _entry_id(row)]
+    return [row for row in parsed if _is_entry_uuid(_entry_id(row))]
 
 
 def _metric_map(

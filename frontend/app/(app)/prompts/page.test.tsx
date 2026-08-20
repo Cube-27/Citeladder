@@ -247,7 +247,7 @@ describe('PromptsPage (Your Prompts)', () => {
     const { rerender } = renderPromptsPage();
 
     expect(
-      await screen.findByRole('button', { name: /Generate prompts & topics/ }, { timeout: 5000 }),
+      await screen.findByRole('button', { name: 'Generate prompts' }, { timeout: 5000 }),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Done managing' }));
@@ -285,7 +285,7 @@ describe('PromptsPage (Your Prompts)', () => {
 
     // Deep-linked into manage mode.
     expect(
-      await screen.findByRole('button', { name: /Generate prompts & topics/ }, { timeout: 5000 }),
+      await screen.findByRole('button', { name: 'Generate prompts' }, { timeout: 5000 }),
     ).toBeInTheDocument();
 
     // Exiting clears the URL param (the read view's manage links point at

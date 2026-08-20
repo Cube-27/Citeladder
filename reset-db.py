@@ -68,7 +68,9 @@ def _database_url() -> str:
     database_url = _configuration().get("DATABASE_URL", "").strip()
     if not database_url:
         raise RuntimeError(
-            "DATABASE_URL is required in the environment, .env, or backend/.env"
+            "DATABASE_URL is required in the environment, .env, or backend/.env, "
+            "or as POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_HOST, "
+            "and POSTGRES_HOST_PORT (the Docker Compose components)"
         )
     return database_url
 

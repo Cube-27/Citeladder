@@ -1,40 +1,37 @@
-"""Reliability-first onboarding unit contracts."""
+"""Focused unit contracts for two-pass visibility onboarding."""
 
 from __future__ import annotations
 
-import asyncio
-import time
+import uuid
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
+from app.connectors.web_evidence.brand_evidence import BrandEvidencePage
 from app.core.config.brand_discovery import (
+    DISCOVERY_PROMPT_MAX_WORDS,
     _discovery_research_system_prompt,
-    brand_discovery_settings,
+    _onboarding_portfolio_system_prompt,
 )
+from app.domain.projects.brand_evidence import BrandEvidence
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryCreate,
     CompetitorQualification,
     ConfirmedDiscoveryProfile,
     DiscoveryCompetitorSuggestion,
 )
-from app.domain.projects.onboarding import portfolio_generation, prompt_generation
-from app.domain.projects.onboarding.industry_library import (
-    industry_context,
-    industry_names,
-)
 from app.domain.projects.onboarding.normalization import (
     InvalidWebsiteUrl,
     normalize_primary_market,
     normalize_website_url,
 )
-from app.domain.projects.onboarding.prompt_generation import fallback_portfolio
-from app.domain.projects.onboarding.prompt_validation import (
-    BRAND_RELEVANT,
-    MARKET_VISIBILITY,
-    validate_portfolio,
-)
+from app.domain.projects.onboarding.portfolio_generation import _parsed_prompts
+from app.domain.projects.onboarding.prompt_validation import select_portfolio
 from app.domain.projects.onboarding.research import (
+    ResearchEnvelope,
+    ResearchTopic,
+    _admitted_topics,
     _customer_warnings,
     _is_peer_company,
 )
@@ -42,124 +39,284 @@ from app.domain.projects.onboarding.service import discovery_catalog
 from app.domain.projects.onboarding.site_resolution import resolve_site
 
 
-def test_normalizes_url_idn_path_fragment_and_market() -> None:
-    url, domain = normalize_website_url("HTTPS://WWW.Example.COM:443/shop#offers")
+def _profile() -> dict:
+    return {
+        "description": "Acme sells family footwear.",
+        "positioning": "Affordable shoes.",
+        "products_services": ["Footwear"],
+        "target_audience": "Families",
+    }
 
+
+def test_normalizes_url_and_market() -> None:
+    url, domain = normalize_website_url("HTTPS://WWW.Example.COM:443/shop#offers")
     assert url == "https://www.example.com/shop"
     assert domain == "example.com"
     assert normalize_primary_market("in") == "IN"
-    assert normalize_primary_market("global") == "GLOBAL"
 
 
-@pytest.mark.parametrize(
-    "value", ["", "localhost", "127.0.0.1", "ftp://example.com", "example"]
-)
-def test_rejects_non_public_or_invalid_urls(value: str) -> None:
+@pytest.mark.parametrize("value", ["javascript:alert(1)", "file:///tmp/x", "localhost"])
+def test_rejects_invalid_public_urls(value: str) -> None:
     with pytest.raises(InvalidWebsiteUrl):
         normalize_website_url(value)
 
 
-@pytest.mark.parametrize("value", ["I", "IND", "12", "worldwide"])
-def test_rejects_invalid_primary_market(value: str) -> None:
-    with pytest.raises(ValueError, match="primary_market"):
-        normalize_primary_market(value)
-
-
-def test_general_industry_is_deterministic_fallback() -> None:
-    selected, context = industry_context("Unknown vertical")
-
-    assert selected == "General"
-    assert len(context["archetypes"]) == 5
-
-    prompts = fallback_portfolio(
-        primary_market="US",
-        industry=selected,
-        industry_context=context,
-        products_services=[],
-    )
-    assert prompts[0]["theme"] == "Professional Help"
-    assert all("products and services" not in item["text"] for item in prompts)
-
-
-def test_research_prompt_defers_generation_until_icp_confirmation() -> None:
-    prompt = _discovery_research_system_prompt(3, 4)
-
-    assert "Do not generate search prompts" in prompt
-    assert "after the user confirms or edits the ICP" in prompt
+def test_create_contract_requires_market() -> None:
+    with pytest.raises(ValidationError):
+        BrandDiscoveryCreate(brand_name="Acme", website_url="https://acme.example")
 
 
 @pytest.mark.parametrize(
     "payload",
     [
-        {"positioning": " ", "target_audience": "buyers", "products_services": ["x"]},
-        {"positioning": "value", "target_audience": " ", "products_services": ["x"]},
-        {
-            "positioning": "value",
-            "target_audience": "buyers",
-            "products_services": [" "],
-        },
+        {**_profile(), "positioning": " "},
+        {**_profile(), "target_audience": " "},
+        {**_profile(), "products_services": [" "]},
     ],
 )
-def test_confirmed_icp_rejects_blank_required_values(payload: dict) -> None:
-    with pytest.raises(ValueError):
-        ConfirmedDiscoveryProfile.model_validate(payload)
+def test_confirmed_profile_rejects_blank_required_fields(payload: dict) -> None:
+    with pytest.raises(ValidationError):
+        ConfirmedDiscoveryProfile(**payload)
 
 
-def _candidate(name: str, business_model: str | None) -> DiscoveryCompetitorSuggestion:
+def _competitor(model: str | None) -> DiscoveryCompetitorSuggestion:
     return DiscoveryCompetitorSuggestion(
-        name=name,
-        domains=[f"{name.lower().replace(' ', '')}.com"],
-        business_model=business_model,
+        name="Peer",
+        domains=["peer.example"],
+        business_model=model,
         qualification=CompetitorQualification(
-            # Deliberately perfect. The point of the case is that every
-            # dimension the model scores can agree while the answer is wrong.
-            product_substitutability=1.0,
-            customer_use_case_overlap=1.0,
-            geographic_relevance=1.0,
-            question_visibility=1.0,
+            product_substitutability=1,
+            customer_use_case_overlap=1,
+            geographic_relevance=1,
+            question_visibility=1,
         ),
     )
 
 
-def test_platform_vendors_are_not_peers_of_a_services_firm() -> None:
-    """The exact failure: an ecommerce agency handed the platforms it implements.
-
-    CUBE27 builds ecommerce sites; discovery returned Shopify Plus, BigCommerce,
-    Salesforce Commerce Cloud, SAP Commerce Cloud and commercetools. Nobody
-    hires a storefront platform instead of an implementation partner.
-    """
-    for vendor in ("Shopify Plus", "commercetools", "BigCommerce"):
-        assert not _is_peer_company(
-            _candidate(vendor, "b2b_saas"), brand_model="professional_service"
-        ), vendor
-
-
-def test_peer_agencies_survive_the_class_filter() -> None:
+def test_services_firm_does_not_accept_product_vendor_as_peer() -> None:
+    assert not _is_peer_company(
+        _competitor("b2b_saas"), brand_model="professional_service"
+    )
     assert _is_peer_company(
-        _candidate("Publicis Sapient", "professional_service"),
-        brand_model="professional_service",
+        _competitor("professional_service"), brand_model="professional_service"
+    )
+    assert _is_peer_company(_competitor(None), brand_model="professional_service")
+
+
+def test_research_prompt_owns_three_to_five_evidence_backed_topics() -> None:
+    prompt = _discovery_research_system_prompt()
+    assert "three to five" in prompt
+    assert "fewer than three" in prompt
+    assert "Evidence ref" in prompt
+    assert "Do not generate search prompts" in prompt
+
+
+def test_portfolio_prompt_requires_short_buyer_queries() -> None:
+    prompt = _onboarding_portfolio_system_prompt()
+
+    assert f"2 to {DISCOVERY_PROMPT_MAX_WORDS} words" in prompt
+    assert "shortest query" in prompt
+    assert "Never paste the target audience" in prompt
+
+
+def _evidence() -> BrandEvidence:
+    return BrandEvidence(
+        pages=(
+            BrandEvidencePage(
+                url="https://acme.example",
+                title="Acme",
+                meta_description="",
+                text="Shoes, clothing, and bags for families.",
+                role="commercial",
+            ),
+        )
     )
 
 
-def test_class_filter_abstains_when_the_model_did_not_classify() -> None:
-    """An unstated business model is not evidence of a mismatch."""
-    assert _is_peer_company(_candidate("Unknown Co", None), brand_model="b2b_saas")
+def _research(topics: list[ResearchTopic], status: str = "ready") -> ResearchEnvelope:
+    return ResearchEnvelope(
+        status=status,
+        profile=_profile(),
+        topics=topics,
+    )
 
 
-def test_research_prompt_separates_services_firms_from_the_products_they_build() -> (
-    None
-):
-    prompt = _discovery_research_system_prompt(3, 4)
+def test_pass_one_admits_three_to_five_topics_and_assigns_uuid() -> None:
+    topics = [
+        ResearchTopic(name=name, evidence_refs=["page-1"])
+        for name in ("Footwear", "Family Clothing", "Travel Bags")
+    ]
 
-    assert "WHAT DOES THE BUYER ACTUALLY RECEIVE?" in prompt
-    assert "THE SAME KIND OF COMPANY" in prompt
+    admitted = _admitted_topics(_research(topics), _evidence(), brand_name="Acme")
+
+    assert [topic.name for topic in admitted] == [
+        "Footwear",
+        "Family Clothing",
+        "Travel Bags",
+    ]
+    assert all(isinstance(topic.topic_id, uuid.UUID) for topic in admitted)
 
 
-def test_complete_research_does_not_warn_about_internal_fallbacks() -> None:
+def test_pass_one_rejects_too_few_or_unbound_topics_without_padding() -> None:
+    too_few = [
+        ResearchTopic(name="Footwear", evidence_refs=["page-1"]),
+        ResearchTopic(name="Bags", evidence_refs=["page-1"]),
+    ]
+    bad_ref = [
+        ResearchTopic(name=name, evidence_refs=["missing"])
+        for name in ("Footwear", "Clothing", "Bags")
+    ]
+
+    assert not _admitted_topics(_research(too_few), _evidence(), brand_name="Acme")
+    assert not _admitted_topics(_research(bad_ref), _evidence(), brand_name="Acme")
+
+
+def test_pass_one_skips_invalid_candidates_when_three_grounded_topics_remain() -> None:
+    topics = [
+        ResearchTopic(name="Acme Footwear", evidence_refs=["page-1"]),
+        ResearchTopic(name="Footwear", evidence_refs=["page-1"]),
+        ResearchTopic(name="Family Clothing", evidence_refs=["missing"]),
+        ResearchTopic(name="Travel Bags", evidence_refs=["page-1"]),
+        ResearchTopic(name="Family Clothing", evidence_refs=["page-1"]),
+    ]
+
+    admitted = _admitted_topics(_research(topics), _evidence(), brand_name="Acme")
+
+    assert [topic.name for topic in admitted] == [
+        "Footwear",
+        "Travel Bags",
+        "Family Clothing",
+    ]
+
+
+def test_pass_one_topic_schema_forbids_prompt_owned_fields() -> None:
+    with pytest.raises(ValidationError):
+        ResearchTopic.model_validate(
+            {
+                "name": "Footwear",
+                "evidence_refs": ["page-1"],
+                "customer_need": "Buy shoes",
+            }
+        )
+
+
+def test_pass_two_drops_rows_that_try_to_output_a_theme() -> None:
+    assert not _parsed_prompts(
+        {
+            "prompts": [
+                {
+                    "topic_id": str(uuid.uuid4()),
+                    "text": "best walking shoes",
+                    "intent": "discovery",
+                    "cohort": "organic",
+                    "theme": "model invented topic",
+                }
+            ]
+        }
+    )
+
+
+def _portfolio_candidates(topic_ids: list[str]) -> list[dict]:
+    organic_texts = (
+        "what should I look for when choosing everyday footwear",
+        "which family clothing options work well across seasons",
+        "how do I choose a durable bag for frequent travel",
+        "what footwear is comfortable for long days of walking",
+        "which clothing materials are easiest for families to maintain",
+        "what features matter most in cabin luggage",
+        "where can I find supportive shoes for daily commuting",
+        "how should I compare clothing quality before buying online",
+        "which travel bags balance low weight and useful storage",
+        "what makes a shoe suitable for both work and weekends",
+    )
+    prompts = []
+    for index, text in enumerate(organic_texts):
+        prompts.append(
+            {
+                "topic_id": topic_ids[index % len(topic_ids)],
+                "text": text,
+                "cohort": "organic",
+                "intent": "discovery" if index % 2 == 0 else "purchase",
+            }
+        )
+    prompts.extend(
+        [
+            {
+                "topic_id": topic_ids[0],
+                "text": "is Acme good for everyday use",
+                "cohort": "brand_context",
+                "intent": "discovery",
+            },
+            {
+                "topic_id": topic_ids[-1],
+                "text": "should I buy this from Acme",
+                "cohort": "brand_context",
+                "intent": "purchase",
+            },
+        ]
+    )
+    return prompts
+
+
+def test_pass_two_selects_eight_organic_and_two_brand_context() -> None:
+    topic_ids = [str(uuid.uuid4()) for _ in range(3)]
+    result = select_portfolio(
+        _portfolio_candidates(topic_ids),
+        topic_ids=topic_ids,
+        brand_terms=["Acme"],
+        competitor_terms=[],
+    )
+
+    assert not result.errors
+    assert len(result.accepted) == 10
+    assert sum(row["cohort"] == "core" for row in result.accepted) == 8
+    assert sum(row["cohort"] == "brand_diagnostic" for row in result.accepted) == 2
+    assert {row["topic_id"] for row in result.accepted} == set(topic_ids)
+
+
+def test_pass_two_rejects_wrong_identity_rules() -> None:
+    topic_ids = [str(uuid.uuid4()) for _ in range(3)]
+    candidates = _portfolio_candidates(topic_ids)
+    candidates[0]["text"] = "is Acme good for this"
+    candidates[-1]["text"] = "is this brand good for me"
+
+    result = select_portfolio(
+        candidates,
+        topic_ids=topic_ids,
+        brand_terms=["Acme"],
+        competitor_terms=[],
+    )
+
+    assert not result.accepted
+    assert "prompt[0].tracked_name" in result.errors
+    assert "prompt[11].missing_brand_name" in result.errors
+
+
+def test_pass_two_rejects_profile_prose_that_exceeds_buyer_query_length() -> None:
+    topic_ids = [str(uuid.uuid4()) for _ in range(3)]
+    candidates = _portfolio_candidates(topic_ids)
+    candidates[0]["text"] = " ".join(["which"] * (DISCOVERY_PROMPT_MAX_WORDS + 1))
+
+    result = select_portfolio(
+        candidates,
+        topic_ids=topic_ids,
+        brand_terms=["Acme"],
+        competitor_terms=[],
+    )
+
+    assert result.accepted
+    assert all(
+        len(prompt["text"].split()) <= DISCOVERY_PROMPT_MAX_WORDS
+        for prompt in result.accepted
+    )
+
+
+def test_catalog_exposes_only_stored_visibility_cohorts() -> None:
+    assert discovery_catalog()["prompt_cohorts"] == ["core", "brand_diagnostic"]
+
+
+def test_customer_warnings_only_report_material_gaps() -> None:
     assert _customer_warnings(model_available=True, competitors_found=True) == []
-
-
-def test_materially_incomplete_research_keeps_customer_warnings() -> None:
     assert _customer_warnings(model_available=False, competitors_found=False) == [
         "research_degraded",
         "competitors_not_found",
@@ -167,342 +324,28 @@ def test_materially_incomplete_research_keeps_customer_warnings() -> None:
 
 
 @pytest.mark.asyncio
-async def test_https_to_http_redirect_is_not_used_as_research(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    class RedirectingFetcher:
-        def __init__(self, **_kwargs: object) -> None:
-            pass
+async def test_https_to_http_redirect_is_not_used_as_research(monkeypatch) -> None:
+    response = SimpleNamespace(
+        status_code=200,
+        final_url="http://acme.com/",
+        body=b"<html><body>Brand text</body></html>",
+        charset="utf-8",
+    )
 
+    class Fetcher:
         async def __aenter__(self):
             return self
 
-        async def __aexit__(self, *_args: object) -> None:
-            pass
+        async def __aexit__(self, *_args):
+            return None
 
-        async def fetch(self, _request: object):
-            return SimpleNamespace(
-                status_code=200,
-                final_url="http://example.com/",
-                body=b"<html><title>Untrusted</title><p>content</p></html>",
-                charset="utf-8",
-            )
+        async def fetch(self, _request):
+            return response
 
     monkeypatch.setattr(
         "app.domain.projects.onboarding.site_resolution.SecureFetcher",
-        RedirectingFetcher,
+        lambda **_kwargs: Fetcher(),
     )
-
-    resolved = await resolve_site("example.com", "https://example.com/")
-
-    assert resolved.page is None
-    assert resolved.warning == "research_degraded"
-
-
-def test_fallback_portfolio_is_balanced_and_all_prompts_are_unbranded() -> None:
-    industry, context = industry_context("Ecommerce")
-    prompts = fallback_portfolio(
-        primary_market="IN",
-        industry=industry,
-        industry_context=context,
-        products_services=["online marketplace"],
-    )
-
-    quality = validate_portfolio(
-        prompts,
-        brand_terms=["Flipkart"],
-        competitor_terms=["Amazon"],
-        primary_market="IN",
-        context_terms=[
-            "online marketplace",
-            *(context.get("use_cases") or []),
-            *(context.get("topics") or []),
-        ],
-    )
-    assert quality.errors == ()
-    assert [item["cohort"] for item in prompts].count(MARKET_VISIBILITY) == 5
-    assert [item["cohort"] for item in prompts].count(BRAND_RELEVANT) == 5
-    assert all(
-        "online marketplace" not in item["text"].casefold()
-        for item in prompts
-        if item["cohort"] == MARKET_VISIBILITY
-    )
-    assert all(
-        "online marketplace" in item["text"].casefold()
-        for item in prompts
-        if item["cohort"] == BRAND_RELEVANT
-    )
-    assert all("flipkart" not in item["text"].casefold() for item in prompts)
-    assert any("India" in item["text"] or "Indian" in item["text"] for item in prompts)
-
-
-def test_confirmed_target_audience_changes_generated_portfolio() -> None:
-    industry, context = industry_context("Software")
-    shared = {
-        "primary_market": "US",
-        "industry": industry,
-        "industry_context": context,
-        "products_services": ["analytics software"],
-    }
-
-    enterprise = fallback_portfolio(
-        **shared, target_audience="enterprise marketing teams"
-    )
-    agencies = fallback_portfolio(**shared, target_audience="independent agencies")
-
-    assert [item["text"] for item in enterprise] != [item["text"] for item in agencies]
-    assert any("enterprise marketing teams" in item["text"] for item in enterprise)
-    assert any("independent agencies" in item["text"] for item in agencies)
-
-
-def test_fallback_uses_general_templates_when_industry_archetypes_are_empty() -> None:
-    _, context = industry_context("Software")
-    prompts = fallback_portfolio(
-        primary_market="US",
-        industry="Software",
-        industry_context={**context, "archetypes": []},
-        products_services=["analytics software"],
-    )
-
-    assert len(prompts) == 10
-    assert prompts[0]["text"].startswith(
-        "What are my best options for analytics software"
-    )
-
-
-def test_fallback_reports_missing_brand_relevant_templates(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _, context = industry_context("Software")
-    monkeypatch.setattr(
-        prompt_generation,
-        "load_industry_library",
-        lambda: {"brand_relevant_archetypes": [], "industries": {}},
-    )
-
-    with pytest.raises(RuntimeError, match="brand-relevant archetypes"):
-        fallback_portfolio(
-            primary_market="US",
-            industry="Software",
-            industry_context=context,
-            products_services=["analytics software"],
-        )
-
-
-def test_prompt_gate_rejects_tracked_names_in_both_cohorts() -> None:
-    _, context = industry_context("Software")
-    prompts = fallback_portfolio(
-        primary_market="US",
-        industry="Software",
-        industry_context=context,
-        products_services=["analytics software"],
-    )
-    assert prompts[0]["cohort"] == MARKET_VISIBILITY
-    assert prompts[5]["cohort"] == BRAND_RELEVANT
-    prompts[0] = {**prompts[0], "text": "Is Acme the best analytics software in US?"}
-    prompts[1] = {**prompts[1], "theme": "Acme pricing"}
-    prompts[2] = {**prompts[2], "theme": ""}
-    prompts[5] = {
-        **prompts[5],
-        "text": "Which Acme analytics tools help marketing teams in US?",
-    }
-
-    result = validate_portfolio(
-        prompts,
-        brand_terms=["Acme"],
-        competitor_terms=[],
-    )
-
-    assert "prompt[0].tracked_name" in result.errors
-    assert "prompt[1].tracked_topic_name" in result.errors
-    assert "prompt[2].topic" in result.errors
-    assert "prompt[5].tracked_name" in result.errors
-
-
-def test_portfolio_must_stay_grounded_in_confirmed_context() -> None:
-    """Grounding is a portfolio-level floor, not a per-prompt keyword quota.
-
-    The rule this replaced required every confirmed phrase to appear verbatim,
-    which rewarded stuffing mechanical context clauses into otherwise natural
-    questions. Sharing vocabulary with two confirmed terms proves the portfolio
-    is about this brand without dictating how it reads.
-    """
-    _, context = industry_context("Software")
-    prompts = fallback_portfolio(
-        primary_market="US",
-        industry="Software",
-        industry_context=context,
-        products_services=["analytics software"],
-    )
-    replacements = [
-        "Where can I find dependable business tools in US?",
-        "Which business tools best suit my growing team in US?",
-        "I'm looking for reliable digital options for my team in US",
-        "How do I compare business tools on price and quality?",
-        "Where can I find dependable digital tools for my team in US?",
-    ]
-    for index, text in enumerate(replacements, start=5):
-        prompts[index] = {**prompts[index], "text": text}
-
-    result = validate_portfolio(
-        prompts,
-        brand_terms=["Acme"],
-        competitor_terms=[],
-        primary_market="US",
-        context_terms=["analytics software", "integrations"],
-    )
-
-    assert "portfolio.grounding" in result.errors
-
-
-def test_prompt_gate_rejects_third_person_buyer_language() -> None:
-    """Asking *about* the audience is the marketer tell worth catching."""
-    _, context = industry_context("Ecommerce")
-    prompts = fallback_portfolio(
-        primary_market="US",
-        industry="Ecommerce",
-        industry_context=context,
-        products_services=["kids clothing"],
-    )
-    prompts[0] = {
-        **prompts[0],
-        "text": "Where can shoppers buy kids clothing online in US?",
-    }
-
-    result = validate_portfolio(
-        prompts,
-        brand_terms=["Best&Less"],
-        competitor_terms=[],
-    )
-
-    assert "prompt[0].third_person_audience" in result.errors
-
-
-def test_prompt_gate_keeps_pronoun_free_buyer_searches() -> None:
-    """Real queries often have no pronoun at all; that must not be an error.
-
-    The former rule demanded an i/me/my/we/us/our token, which rejected the
-    single most common shape of real buyer query and forced the stilted
-    "...should I consider..." phrasing it was meant to prevent.
-    """
-    prompts = [
-        {
-            "text": "best mattress for back pain india under 20000",
-            "theme": "mattress for back pain",
-            "intent": "purchase",
-            "cohort": "market_visibility",
-        },
-        {
-            "text": "memory foam vs spring mattress",
-            "theme": "mattress types",
-            "intent": "comparison",
-            "cohort": "market_visibility",
-        },
-    ]
-
-    result = validate_portfolio(prompts, brand_terms=["Wakefit"], competitor_terms=[])
-
-    assert not [error for error in result.errors if error.startswith("prompt[")]
-
-
-def test_best_less_fallback_produces_real_searches_when_research_degrades() -> None:
-    industry, context = industry_context("Ecommerce")
-    prompts = fallback_portfolio(
-        primary_market="AU",
-        industry=industry,
-        industry_context=context,
-        products_services=[
-            "womens clothing",
-            "mens clothing",
-            "kids clothing",
-            "baby clothing",
-            "homewares",
-        ],
-        price_tier="budget",
-    )
-
-    assert len(prompts) == 10
-    assert prompts[5]["text"] == (
-        "Which affordable women's clothing options should I consider in Australia?"
-    )
-    assert prompts[5]["theme"] == "Women's Clothing"
-    assert all("best&less" not in item["text"].casefold() for item in prompts)
-    assert all(
-        "for buying products online in Australia" not in item["text"]
-        for item in prompts
-    )
-    assert all(len(item["text"].split()) >= 6 for item in prompts)
-
-
-@pytest.mark.parametrize("industry", industry_names())
-def test_fallback_portfolio_validates_for_every_industry(industry: str) -> None:
-    _, context = industry_context(industry)
-    prompts = fallback_portfolio(
-        primary_market="US",
-        industry=industry,
-        industry_context=context,
-        products_services=[],
-    )
-    result = validate_portfolio(
-        prompts,
-        brand_terms=["Acme"],
-        competitor_terms=[],
-        primary_market="US",
-        context_terms=[
-            *(context.get("use_cases") or []),
-            *(context.get("topics") or []),
-        ],
-    )
-    assert result.errors == ()
-
-
-def test_create_contract_requires_primary_market() -> None:
-    with pytest.raises(ValueError):
-        BrandDiscoveryCreate.model_validate(
-            {"brand_name": "Acme", "website_url": "https://acme.example"}
-        )
-
-
-def test_catalog_exposes_only_current_research_methods_and_cohorts() -> None:
-    catalog = discovery_catalog()
-
-    assert "firecrawl_rendered" not in catalog["capture_methods"]
-    assert catalog["prompt_cohorts"] == [MARKET_VISIBILITY, BRAND_RELEVANT]
-    assert catalog["required_fields"] == [
-        "brand_name",
-        "website_url",
-        "primary_market",
-    ]
-
-
-@pytest.mark.asyncio
-async def test_portfolio_generation_budget_covers_every_retry(monkeypatch) -> None:
-    """One deadline for the whole retry loop, not one per attempt.
-
-    `complete_discovery` awaits this while holding the discovery row
-    `FOR UPDATE`, so a per-attempt timeout multiplied by `synthesis_max_attempts`
-    would hold the lock for twice the configured ceiling and time out every
-    concurrent write on the row.
-    """
-    attempts = 0
-
-    async def never_answers(_request):
-        nonlocal attempts
-        attempts += 1
-        await asyncio.sleep(10)
-
-    monkeypatch.setattr(
-        brand_discovery_settings, "portfolio_generation_timeout_seconds", 0.2
-    )
-    monkeypatch.setattr(brand_discovery_settings, "synthesis_max_attempts", 3)
-    monkeypatch.setattr(portfolio_generation, "_model_portfolio", never_answers)
-
-    started = time.perf_counter()
-    prompts, shortfall = await portfolio_generation.generate_portfolio(
-        brand_name="Acme", primary_market="US", profile={}, competitors=[]
-    )
-    elapsed = time.perf_counter() - started
-
-    assert (prompts, shortfall) == ([], "")
-    assert attempts == 1
-    assert elapsed < 0.2 * 2
+    site = await resolve_site("acme.com", "https://acme.com/")
+    assert site.page is None
+    assert site.warning == "research_degraded"

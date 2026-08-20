@@ -14,6 +14,7 @@ import pytest
 
 import app.domain.projects.brand_evidence as brand_evidence_domain
 from app.connectors.web_evidence.brand_evidence import (
+    BrandEvidenceLink,
     BrandEvidencePage,
     extract_brand_page,
     fallback_urls,
@@ -28,6 +29,7 @@ from app.core.config.brand_evidence import (
 from app.domain.projects.brand_evidence import (
     BrandEvidence,
     _homepage_url,
+    _selected_internal_links,
     collect_brand_evidence,
 )
 
@@ -58,6 +60,7 @@ class TestExtractBrandPage:
         )
         assert "cloud data platforms" in page.text
         assert page.word_count > BRAND_EVIDENCE_MIN_WORDS / 2
+        assert page.role == "unclassified"
 
     def test_script_style_and_noscript_never_reach_the_agent(self) -> None:
         page = extract_brand_page(REAL_PAGE, url="https://cube27.com")
@@ -93,6 +96,33 @@ class TestExtractBrandPage:
         )
         assert page.title.startswith("Cube27")
 
+    def test_primary_navigation_links_are_extracted_same_origin_only(self) -> None:
+        body = b"""<html><body><nav>
+        <a href="/products">Products</a>
+        <a href="https://cube27.com/services#top">Services</a>
+        <a href="https://other.example/shop">External shop</a>
+        </nav><p>Commercial evidence for customers.</p></body></html>"""
+
+        page = extract_brand_page(body, url="https://cube27.com/")
+
+        assert [(link.label, link.url) for link in page.navigation_links] == [
+            ("Products", "https://cube27.com/products"),
+            ("Services", "https://cube27.com/services"),
+        ]
+
+    def test_div_based_category_rail_uses_image_alt_labels(self) -> None:
+        body = b"""<html><body><div class="category-rail">
+        <a href="/mobiles"><img alt="Mobile Phones"></a>
+        <a href="/fashion" aria-label="Fashion"></a>
+        </div><p>Commercial evidence for customers.</p></body></html>"""
+
+        page = extract_brand_page(body, url="https://shop.example/")
+
+        assert [(link.label, link.url) for link in page.navigation_links] == [
+            ("Mobile Phones", "https://shop.example/mobiles"),
+            ("Fashion", "https://shop.example/fashion"),
+        ]
+
 
 class TestSerializeBrandEvidence:
     def _page(self, text: str = "Cube27 builds data platforms.") -> BrandEvidencePage:
@@ -117,6 +147,13 @@ class TestSerializeBrandEvidence:
         pages = [self._page("word " * 20_000) for _ in range(3)]
         out = serialize_brand_evidence(pages)
         assert len(out) <= BRAND_EVIDENCE_MAX_TOTAL_CHARS + 500
+
+    def test_every_selected_page_receives_part_of_the_evidence_budget(self) -> None:
+        pages = [self._page("word " * 20_000) for _ in range(5)]
+
+        out = serialize_brand_evidence(pages)
+
+        assert all(f"Evidence ref: page-{index}" in out for index in range(1, 6))
 
     @pytest.mark.parametrize(
         "hostile",
@@ -360,3 +397,95 @@ class TestFallbackUrls:
         assert urls == [
             f"https://cube27.com{path}" for path in BRAND_EVIDENCE_FALLBACK_PATHS
         ]
+
+    def test_internal_selection_is_bounded_and_excludes_editorial_links(self) -> None:
+        page = BrandEvidencePage(
+            url="https://cube27.com/",
+            title="Cube27",
+            meta_description="",
+            text="Evidence",
+            navigation_links=tuple(
+                BrandEvidenceLink(url=f"https://cube27.com{path}", label=label)
+                for label, path in (
+                    ("Blog", "/blog"),
+                    ("Contact", "/contact"),
+                    ("Products", "/products"),
+                    ("Solutions", "/solutions"),
+                    ("Pricing", "/pricing"),
+                    ("Industries", "/industries"),
+                    ("Company", "/company"),
+                )
+            ),
+        )
+
+        selected = _selected_internal_links("https://cube27.com/", page)
+
+        assert len(selected) == 4
+        assert [link.label for link in selected] == [
+            "Products",
+            "Solutions",
+            "Pricing",
+            "Industries",
+        ]
+
+    def test_internal_selection_excludes_homepage_before_fallback_and_limit(
+        self,
+    ) -> None:
+        homepage = "https://cube27.com/"
+        page = BrandEvidencePage(
+            url=homepage,
+            title="Cube27",
+            meta_description="",
+            text="Evidence",
+            navigation_links=(
+                BrandEvidenceLink(url=homepage, label="Shop"),
+                BrandEvidenceLink(url="https://cube27.com/products", label="Products"),
+            ),
+        )
+
+        selected = _selected_internal_links(homepage, page)
+
+        assert homepage not in {link.url for link in selected}
+        assert selected[0].url == "https://cube27.com/products"
+
+    @pytest.mark.asyncio
+    async def test_gather_labels_homepage_separately_from_internal_pages(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        homepage = "https://cube27.com/"
+
+        class Fetcher:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+        async def fetch_page(url: str, *, fetcher) -> BrandEvidencePage:
+            del fetcher
+            links = (
+                (
+                    BrandEvidenceLink(
+                        url="https://cube27.com/products", label="Products"
+                    ),
+                )
+                if url == homepage
+                else ()
+            )
+            return BrandEvidencePage(
+                url=url,
+                title="Cube27",
+                meta_description="",
+                text="Evidence",
+                navigation_links=links,
+            )
+
+        monkeypatch.setattr(
+            brand_evidence_domain, "SecureFetcher", lambda **_kwargs: Fetcher()
+        )
+        monkeypatch.setattr(brand_evidence_domain, "fetch_brand_page", fetch_page)
+
+        pages = await brand_evidence_domain._gather(homepage)
+
+        assert pages[0].role == "homepage"
+        assert all(page.role == "commercial" for page in pages[1:])

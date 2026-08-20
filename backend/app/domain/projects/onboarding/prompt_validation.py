@@ -1,81 +1,24 @@
-"""Deterministic quality gate for the onboarding prompt portfolio.
-
-The gate is built around one goal: the portfolio must read like queries the
-brand's actual customers would type. Three earlier rules were removed because
-measurement showed they enforced the opposite -- hand-authored gold prompts
-written the way real buyers speak *failed* them:
-
-``buyer_perspective``
-    demanded an i/me/my/we/us/our pronoun. "best mattress for back pain india
-    under 20000" contains none, and is exactly what a real buyer types. The rule
-    mandated the stilted "...should I consider..." register it was meant to
-    prevent.
-``natural_search`` (>= 6 words)
-    rejected the terse queries that dominate real usage: "feedonomics
-    alternatives", "plumber near me".
-``market_coverage``
-    forced a country name into the text, producing "... in United States" on
-    queries no American writes.
-
-What replaces them is a check the old gate could not make at all: a prompt that
-matches a slot-template skeleton is rejected outright, because template output
-is the one form of synthetic language that is machine-detectable with certainty.
-Counts are bounded rather than exact, so a brand the model barely knows ships
-fewer honest prompts instead of padded ones.
-"""
+"""Small deterministic admission gate for the initial visibility portfolio."""
 
 from __future__ import annotations
 
-import re
-from collections.abc import Sequence
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 
 from app.analysis.normalization import normalize_alias
 from app.core.config.brand_discovery import (
-    BRAND_RELEVANT_PROMPT_MAX,
-    BRANDED_PROMPT_MAX,
-    MARKET_VISIBILITY_PROMPT_MAX,
-    MIN_ONBOARDING_DISTINCT_INTENTS,
-    PORTFOLIO_PROMPT_MIN,
+    DISCOVERY_BRAND_CONTEXT_PROMPT_COUNT,
+    DISCOVERY_ORGANIC_PROMPT_COUNT,
+    DISCOVERY_PROMPT_MAX_WORDS,
+    DISCOVERY_PROMPT_MIN_WORDS,
 )
 from app.core.config.projects import PROMPT_INTENTS
 from app.domain.prompts.portfolio import contains_tracked_name
 
-MARKET_VISIBILITY = "market_visibility"
-BRAND_RELEVANT = "brand_relevant"
+ORGANIC = "organic"
+BRAND_CONTEXT = "brand_context"
+CORE = "core"
 BRAND_DIAGNOSTIC = "brand_diagnostic"
-COMPARISON = "comparison"
-
-NEUTRAL_COHORTS = (MARKET_VISIBILITY, BRAND_RELEVANT)
-BRANDED_COHORTS = (BRAND_DIAGNOSTIC, COMPARISON)
-COHORT_MAXIMUMS = {
-    MARKET_VISIBILITY: MARKET_VISIBILITY_PROMPT_MAX,
-    BRAND_RELEVANT: BRAND_RELEVANT_PROMPT_MAX,
-    BRAND_DIAGNOSTIC: BRANDED_PROMPT_MAX,
-    COMPARISON: BRANDED_PROMPT_MAX,
-}
-
-# A single word is not a query anyone types into an answer engine, but two often
-# is ("feedonomics alternatives"). This is a floor against empty output, not a
-# style rule.
-MIN_PROMPT_WORDS = 2
-MAX_PROMPT_WORDS = 30
-_SLOT_PATTERN = re.compile(r"\{[a-z_]+\}")
-_SLOT_SENTINEL = "zzslotzz"
-
-# The marketer-voice tell, stated precisely. The old rule tested for the
-# *absence* of an i/me/my pronoun, which condemned "best mattress for back pain"
-# -- a perfectly real query -- while a genuine giveaway is asking about the
-# audience in the third person: "Where can shoppers buy ...". Matching the
-# audience noun only in subject position after a modal keeps legitimate queries
-# such as "best crm for small businesses" intact.
-_THIRD_PERSON_SUBJECT = re.compile(
-    r"\b(?:can|should|do|does|would|might|will)\s+"
-    r"(?:shoppers|customers|users|buyers|consumers|clients|businesses|"
-    r"companies|people|brands|retailers)\b",
-    re.IGNORECASE,
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,218 +27,191 @@ class PromptQualityResult:
     errors: tuple[str, ...]
 
 
-def _is_near_duplicate(candidate: str, accepted: list[str]) -> bool:
-    normalized = normalize_alias(candidate)
+def _near_duplicate(text: str, accepted: list[str]) -> bool:
+    normalized = normalize_alias(text)
     return any(
         normalized == prior or SequenceMatcher(None, normalized, prior).ratio() >= 0.88
         for prior in accepted
     )
 
 
-def template_patterns(templates: Sequence[str]) -> list[re.Pattern[str]]:
-    """Compile archetype templates into anchored skeleton matchers.
-
-    The sentinel must survive ``normalize_alias``, which strips punctuation and
-    control characters, so it has to be an ordinary alphanumeric word.
-    """
-    patterns: list[re.Pattern[str]] = []
-    for template in templates:
-        normalized = normalize_alias(_SLOT_PATTERN.sub(f" {_SLOT_SENTINEL} ", template))
-        if _SLOT_SENTINEL not in normalized:
-            continue
-        escaped = "".join(
-            ".+?" if part == _SLOT_SENTINEL else re.escape(part)
-            for part in re.split(f"({_SLOT_SENTINEL})", normalized)
-        )
-        patterns.append(re.compile(f"^{escaped}$"))
-    return patterns
-
-
-def validate_portfolio(
-    prompts: list[dict],
+def _candidate_shape_error(
+    prompt: dict,
     *,
+    index: int,
+    topic_ids: set[str],
+    accepted_text: list[str],
+) -> str:
+    topic_id = str(prompt.get("topic_id") or "")
+    text = " ".join(str(prompt.get("text") or "").split())
+    cohort = str(prompt.get("cohort") or "")
+    intent = str(prompt.get("intent") or "")
+    if topic_id not in topic_ids:
+        return f"prompt[{index}].topic_id"
+    if cohort not in {ORGANIC, BRAND_CONTEXT}:
+        return f"prompt[{index}].cohort"
+    if intent not in PROMPT_INTENTS:
+        return f"prompt[{index}].intent"
+    if (
+        not DISCOVERY_PROMPT_MIN_WORDS
+        <= len(text.split())
+        <= DISCOVERY_PROMPT_MAX_WORDS
+    ):
+        return f"prompt[{index}].length"
+    if _near_duplicate(text, accepted_text):
+        return f"prompt[{index}].duplicate"
+    return ""
+
+
+def _candidate_name_error(
+    prompt: dict,
+    *,
+    index: int,
     brand_terms: list[str],
     competitor_terms: list[str],
-    primary_market: str = "",
-    context_terms: list[str] | None = None,
-    banned_patterns: list[re.Pattern[str]] | None = None,
-) -> PromptQualityResult:
-    accepted, errors, counts, intents = _accepted_portfolio_rows(
-        prompts,
-        brand_terms=brand_terms,
-        competitor_terms=competitor_terms,
-        banned_patterns=banned_patterns or [],
-    )
-    errors.extend(
-        _portfolio_errors(
-            counts=counts,
-            accepted_count=len(accepted),
-            accepted_text=[normalize_alias(str(p.get("text") or "")) for p in accepted],
-            intents=intents,
-            primary_market=primary_market,
-            context_terms=context_terms,
-        )
-    )
-    return PromptQualityResult(tuple(accepted), tuple(errors))
-
-
-def _accepted_portfolio_rows(
-    prompts, *, brand_terms, competitor_terms, banned_patterns
-):
-    accepted: list[dict] = []
-    accepted_text: list[str] = []
-    errors: list[str] = []
-    counts = dict.fromkeys(COHORT_MAXIMUMS, 0)
-    intents: set[str] = set()
-    for index, prompt in enumerate(prompts):
-        text = str(prompt.get("text") or "").strip()
-        cohort = str(prompt.get("cohort") or "")
-        error = _prompt_error(
-            index=index,
-            text=text,
-            theme=str(prompt.get("theme") or "").strip(),
-            cohort=cohort,
-            intent=str(prompt.get("intent") or ""),
-            brand_terms=brand_terms,
-            competitor_terms=competitor_terms,
-            accepted_text=accepted_text,
-            banned_patterns=banned_patterns,
-        )
-        if error:
-            errors.append(error)
-            continue
-        if counts[cohort] >= COHORT_MAXIMUMS[cohort]:
-            # A generous model is not a broken one. Trim the surplus rather than
-            # failing a portfolio whose only fault is having too much of a good
-            # cohort; the ceiling is about cost and UI, not correctness.
-            continue
-        counts[cohort] += 1
-        intents.add(str(prompt.get("intent") or ""))
-        accepted.append(prompt)
-        accepted_text.append(normalize_alias(text))
-    return accepted, errors, counts, intents
-
-
-def _prompt_error(
-    *,
-    index,
-    text,
-    theme,
-    cohort,
-    intent,
-    brand_terms,
-    competitor_terms,
-    accepted_text,
-    banned_patterns,
 ) -> str:
-    if cohort not in COHORT_MAXIMUMS:
-        return f"prompt[{index}].cohort"
-    if not theme:
-        return f"prompt[{index}].topic"
-    words = len(text.split())
-    if words < MIN_PROMPT_WORDS:
-        return f"prompt[{index}].too_short"
-    if words > MAX_PROMPT_WORDS:
-        # Long prompts are how raw profile text leaks into a question: an entire
-        # target-audience paragraph spliced mid-sentence.
-        return f"prompt[{index}].too_long"
-    if _is_near_duplicate(text, accepted_text):
-        return f"prompt[{index}].duplicate"
-    if intent not in PROMPT_INTENTS or not intent:
-        return f"prompt[{index}].intent"
-    normalized = normalize_alias(text)
-    if any(pattern.match(normalized) for pattern in banned_patterns):
-        return f"prompt[{index}].template_tell"
-    if _THIRD_PERSON_SUBJECT.search(text):
-        return f"prompt[{index}].third_person_audience"
-    return _identity_error(
-        index=index,
-        text=text,
-        theme=theme,
-        cohort=cohort,
-        brand_terms=brand_terms,
-        competitor_terms=competitor_terms,
-    )
-
-
-def _identity_error(
-    *, index, text, theme, cohort, brand_terms, competitor_terms
-) -> str:
-    """Neutral cohorts must not name the brand; branded cohorts must.
-
-    Neutrality is load-bearing only where it measures something: a prompt that
-    names the brand cannot show whether an answer engine recommends it
-    *unprompted*. The branded cohorts measure a different question -- whether the
-    brand is described accurately and wins its comparisons -- so there the brand
-    name is required rather than forbidden.
-    """
-    if cohort in NEUTRAL_COHORTS:
-        tracked = [*brand_terms, *competitor_terms]
-        if contains_tracked_name(text, tracked):
-            return f"prompt[{index}].tracked_name"
-        if contains_tracked_name(theme, tracked):
-            return f"prompt[{index}].tracked_topic_name"
-        return ""
-    if not contains_tracked_name(text, brand_terms):
+    text = " ".join(str(prompt.get("text") or "").split())
+    cohort = str(prompt.get("cohort") or "")
+    intent = str(prompt.get("intent") or "")
+    if cohort == ORGANIC and contains_tracked_name(
+        text, [*brand_terms, *competitor_terms]
+    ):
+        return f"prompt[{index}].tracked_name"
+    if cohort == BRAND_CONTEXT and not contains_tracked_name(text, brand_terms):
         return f"prompt[{index}].missing_brand_name"
-    if cohort == COMPARISON and not contains_tracked_name(text, competitor_terms):
+    if (
+        cohort == BRAND_CONTEXT
+        and intent == "comparison"
+        and competitor_terms
+        and not contains_tracked_name(text, competitor_terms)
+    ):
         return f"prompt[{index}].missing_competitor_name"
     return ""
 
 
-def _portfolio_errors(
+def _candidate_error(
+    prompt: dict,
     *,
-    counts,
-    accepted_count,
-    accepted_text,
-    intents,
-    primary_market,
-    context_terms,
-) -> list[str]:
-    """Bound the portfolio; never require it to be full.
+    index: int,
+    topic_ids: set[str],
+    brand_terms: list[str],
+    competitor_terms: list[str],
+    accepted_text: list[str],
+) -> str:
+    return _candidate_shape_error(
+        prompt,
+        index=index,
+        topic_ids=topic_ids,
+        accepted_text=accepted_text,
+    ) or _candidate_name_error(
+        prompt,
+        index=index,
+        brand_terms=brand_terms,
+        competitor_terms=competitor_terms,
+    )
 
-    A brand with thin evidence should ship a short honest portfolio, so only
-    ceilings are enforced. The floor exists to catch an empty result, not to
-    force padding.
-    """
-    del counts  # cohort ceilings are applied by trimming, not by erroring
+
+def _first_for_each_topic(prompts: list[dict], topic_ids: list[str]) -> list[dict]:
+    selected: list[dict] = []
+    for topic_id in topic_ids:
+        match = next(
+            (prompt for prompt in prompts if prompt["topic_id"] == topic_id), None
+        )
+        if match is not None:
+            selected.append(match)
+    return selected
+
+
+def _fill_in_order(selected: list[dict], candidates: list[dict], limit: int) -> None:
+    selected_indexes = {prompt["_index"] for prompt in selected}
+    for prompt in candidates:
+        if len(selected) >= limit:
+            break
+        if prompt["_index"] not in selected_indexes:
+            selected.append(prompt)
+            selected_indexes.add(prompt["_index"])
+
+
+def _validated_candidates(
+    prompts: list[dict],
+    *,
+    topic_ids: set[str],
+    brand_terms: list[str],
+    competitor_terms: list[str],
+) -> tuple[list[dict], list[str]]:
+    accepted_text: list[str] = []
+    valid: list[dict] = []
     errors: list[str] = []
-    if accepted_count < PORTFOLIO_PROMPT_MIN:
-        errors.append(f"portfolio.count:{accepted_count}")
-    if _lacks_intent_coverage(primary_market, intents):
-        errors.append("portfolio.intent_coverage")
-    if _lacks_grounding(context_terms, accepted_text):
-        errors.append("portfolio.grounding")
-    return errors
+    for index, prompt in enumerate(prompts):
+        error = _candidate_error(
+            prompt,
+            index=index,
+            topic_ids=topic_ids,
+            brand_terms=brand_terms,
+            competitor_terms=competitor_terms,
+            accepted_text=accepted_text,
+        )
+        if error:
+            errors.append(error)
+            continue
+        normalized = {
+            "topic_id": str(prompt["topic_id"]),
+            "text": " ".join(str(prompt["text"]).split()),
+            "cohort": str(prompt["cohort"]),
+            "intent": str(prompt["intent"]),
+            "_index": index,
+        }
+        valid.append(normalized)
+        accepted_text.append(normalize_alias(normalized["text"]))
+    return valid, errors
 
 
-def _lacks_grounding(context_terms: list[str] | None, accepted_text: list[str]) -> bool:
-    """Is the portfolio about this brand's subject matter at all?
+def select_portfolio(
+    prompts: list[dict],
+    *,
+    topic_ids: list[str],
+    brand_terms: list[str],
+    competitor_terms: list[str],
+) -> PromptQualityResult:
+    """Validate candidates and deterministically retain an 8/2 portfolio."""
+    valid, errors = _validated_candidates(
+        prompts,
+        topic_ids=set(topic_ids),
+        brand_terms=brand_terms,
+        competitor_terms=competitor_terms,
+    )
 
-    Deliberately weaker than the rule it replaces, which demanded each supplied
-    phrase appear *verbatim* and so rewarded keyword stuffing. Sharing a content
-    word with two distinct confirmed terms is enough to show the portfolio is
-    grounded, while leaving the wording free to sound like a person.
-    """
-    if not context_terms or not accepted_text:
-        return False
-    # Threshold off the *usable* terms: counting blank or duplicate entries made
-    # the requirement depend on how the caller happened to pad the list.
-    terms = {
-        normalized
-        for term in context_terms
-        if (normalized := normalize_alias(term).strip())
-    }
-    if not terms:
-        return False
-    words = {word for text in accepted_text for word in text.split()}
-    covered = sum(1 for term in terms if words & set(term.split()))
-    return covered < min(2, len(terms))
+    organic = [prompt for prompt in valid if prompt["cohort"] == ORGANIC]
+    branded = [prompt for prompt in valid if prompt["cohort"] == BRAND_CONTEXT]
+    selected_organic = _first_for_each_topic(organic, topic_ids)
+    portfolio_errors: list[str] = []
+    if len(selected_organic) != len(topic_ids):
+        portfolio_errors.append("portfolio.topic_coverage")
+    _fill_in_order(selected_organic, organic, DISCOVERY_ORGANIC_PROMPT_COUNT)
+    selected_branded = branded[:DISCOVERY_BRAND_CONTEXT_PROMPT_COUNT]
+    if len(selected_organic) != DISCOVERY_ORGANIC_PROMPT_COUNT:
+        portfolio_errors.append(f"portfolio.organic_count:{len(selected_organic)}")
+    if len(selected_branded) != DISCOVERY_BRAND_CONTEXT_PROMPT_COUNT:
+        portfolio_errors.append(
+            f"portfolio.brand_context_count:{len(selected_branded)}"
+        )
+    if portfolio_errors:
+        return PromptQualityResult(
+            (), tuple(dict.fromkeys([*errors, *portfolio_errors]))
+        )
 
-
-def _lacks_intent_coverage(primary_market: str, intents: set[str]) -> bool:
-    return (
-        bool(primary_market)
-        and len({intent for intent in intents if intent})
-        < MIN_ONBOARDING_DISTINCT_INTENTS
+    selected = sorted(
+        [*selected_organic, *selected_branded], key=lambda prompt: prompt["_index"]
+    )
+    return PromptQualityResult(
+        tuple(
+            {
+                "topic_id": prompt["topic_id"],
+                "text": prompt["text"],
+                "intent": prompt["intent"],
+                "cohort": (CORE if prompt["cohort"] == ORGANIC else BRAND_DIAGNOSTIC),
+            }
+            for prompt in selected
+        ),
+        (),
     )

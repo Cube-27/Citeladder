@@ -83,6 +83,7 @@ class _LogfireSpy:
         self.configure_calls: list[dict[str, Any]] = []
         self.instrumented_apps: list[object] = []
         self.instrumented: list[str] = []
+        self.httpx_calls: list[dict[str, Any]] = []
 
     def AdvancedOptions(self, **kwargs: Any) -> dict[str, Any]:  # noqa: N802
         return kwargs
@@ -96,7 +97,8 @@ class _LogfireSpy:
     def instrument_system_metrics(self) -> None:
         self.instrumented.append("system-metrics")
 
-    def instrument_httpx(self) -> None:
+    def instrument_httpx(self, **kwargs: Any) -> None:
+        self.httpx_calls.append(kwargs)
         self.instrumented.append("httpx")
 
     def instrument_sqlalchemy(self, engine: object) -> None:
@@ -203,6 +205,7 @@ def test_logfire_configuration_attaches_the_shared_instrumentation(
     instrument_fastapi(object())
 
     assert spy.instrumented == ["system-metrics", "httpx", "sqlalchemy"]
+    assert spy.httpx_calls == [{"capture_all": False}]
     assert any(
         isinstance(handler, _SpyLoggingHandler)
         for handler in logging.getLogger().handlers
@@ -215,7 +218,7 @@ def test_logfire_configuration_survives_an_unavailable_instrumentor(
     """A broken optional instrumentor must never take the process down."""
     _enable(monkeypatch)
 
-    def _boom() -> None:
+    def _boom(**_kwargs: Any) -> None:
         raise RuntimeError("instrumentor unavailable")
 
     monkeypatch.setattr(spy, "instrument_httpx", _boom)
@@ -269,6 +272,7 @@ def test_logfire_configures_only_once_per_process(
 
     assert len(spy.configure_calls) == 1
     assert spy.instrumented == ["system-metrics", "httpx", "sqlalchemy"]
+    assert spy.httpx_calls == [{"capture_all": False}]
 
 
 def test_logfire_uses_app_environment_when_not_configured(

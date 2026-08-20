@@ -85,3 +85,36 @@ def test_audit_comparison_matches_identity_and_projects_attribute_gaps() -> None
     assert [(gap.field, gap.competitor_value) for gap in item.attribute_gaps] == [
         ("material", "Recycled ripstop nylon")
     ]
+
+
+def test_comparison_skips_frozen_rows_whose_identity_is_not_a_uuid() -> None:
+    # A frozen catalog row can carry a non-UUID id (legacy/imported
+    # configuration). It still matches by gtin and still has a snapshot via the
+    # frozen entry_id, so the projection has to drop it up front rather than
+    # fail parsing the id while building the comparison product.
+    audit = SimpleNamespace(
+        configuration={
+            "products": [
+                {
+                    "id": "own-legacy-1",
+                    "sku": "LEGACY-40",
+                    "name": "Legacy Summit",
+                    "attributes": {"gtin": "00999999999999"},
+                }
+            ],
+            "competitor_products": [
+                {
+                    "id": "competitor-legacy-1",
+                    "competitor_name": "TrailBlaze",
+                    "name": "Legacy Alpine",
+                    "attributes": {"gtin": "00999999999999"},
+                }
+            ],
+        }
+    )
+    own = _snapshot(product_id=None, competitor_id=None, mentions=1, rank=2)
+    own.metrics = {**own.metrics, "entry_id": "own-legacy-1"}
+    competitor = _snapshot(product_id=None, competitor_id=None, mentions=2, rank=1)
+    competitor.metrics = {**competitor.metrics, "entry_id": "competitor-legacy-1"}
+
+    assert _comparison_items(audit, [own, competitor], total_analyses=4) == []

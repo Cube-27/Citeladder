@@ -65,7 +65,7 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
 
   it('generates prompts through the consent-gated dialog', async () => {
     const user = userEvent.setup();
-    usePromptPageHandlers([makePrompt()]);
+    usePromptPageHandlers([makePrompt()], [makeTopic()]);
     let generateBody: Record<string, unknown> | null = null;
     const generated = makePrompt({
       id: '66666666-6666-4666-8666-666666666666',
@@ -91,7 +91,7 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
 
     renderPromptsPage();
     await screen.findByText('Best running shoes?', undefined, { timeout: 5000 });
-    await user.click(screen.getByRole('button', { name: /Generate prompts & topics/ }));
+    await user.click(screen.getByRole('button', { name: 'Generate prompts' }));
 
     const dialog = await screen.findByRole('dialog');
     const generateButton = within(dialog).getByRole('button', { name: 'Generate' });
@@ -106,9 +106,26 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
     expect(screen.getByRole('tab', { name: /Active/ })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('rejects fractional prompt counts', async () => {
+    const user = userEvent.setup();
+    usePromptPageHandlers([makePrompt()], [makeTopic()]);
+
+    renderPromptsPage();
+    await screen.findByText('Best running shoes?', undefined, { timeout: 5000 });
+    await user.click(screen.getByRole('button', { name: 'Generate prompts' }));
+
+    const dialog = await screen.findByRole('dialog');
+    const count = within(dialog).getByRole('spinbutton', { name: 'Number of prompts' });
+    await user.clear(count);
+    await user.type(count, '1.5');
+
+    expect(within(dialog).getByRole('button', { name: 'Generate' })).toBeDisabled();
+    expect(count).toHaveAttribute('aria-invalid', 'true');
+  });
+
   it('selects the Active tab and reports placement when generated prompts land active', async () => {
     const user = userEvent.setup();
-    usePromptPageHandlers([makePrompt()]);
+    usePromptPageHandlers([makePrompt()], [makeTopic()]);
     const generatedActive = makePrompt({
       id: '66666666-6666-4666-8666-666666666666',
       text: 'Auto-promoted prompt',
@@ -126,7 +143,7 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
 
     renderPromptsPage();
     await screen.findByText('Best running shoes?', undefined, { timeout: 5000 });
-    await user.click(screen.getByRole('button', { name: /Generate prompts & topics/ }));
+    await user.click(screen.getByRole('button', { name: 'Generate prompts' }));
 
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Generate' }));
@@ -140,7 +157,7 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
 
   it('shows a fresh error only, never a stale success summary, on a failed retry', async () => {
     const user = userEvent.setup();
-    usePromptPageHandlers([makePrompt()]);
+    usePromptPageHandlers([makePrompt()], [makeTopic()]);
     const generated = makePrompt({
       id: '66666666-6666-4666-8666-666666666666',
       text: 'Best trail runners?',
@@ -172,7 +189,7 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
 
     renderPromptsPage();
     await screen.findByText('Best running shoes?', undefined, { timeout: 5000 });
-    await user.click(screen.getByRole('button', { name: /Generate prompts & topics/ }));
+    await user.click(screen.getByRole('button', { name: 'Generate prompts' }));
 
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Generate' }));
@@ -187,7 +204,7 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
 
   it('counts only topics that received generated rows, not duplicate-only touched topics', async () => {
     const user = userEvent.setup();
-    usePromptPageHandlers([makePrompt()]);
+    usePromptPageHandlers([makePrompt()], [makeTopic()]);
     // One generated row lands in a single topic, but the run "touched" two
     // topics (the second only had a dropped duplicate). The summary must say
     // 1 topic, not 2, and still report the dropped duplicate.
@@ -219,7 +236,7 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
 
     renderPromptsPage();
     await screen.findByText('Best running shoes?', undefined, { timeout: 5000 });
-    await user.click(screen.getByRole('button', { name: /Generate prompts & topics/ }));
+    await user.click(screen.getByRole('button', { name: 'Generate prompts' }));
 
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Generate' }));
@@ -279,7 +296,7 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
     await user.click(await screen.findByRole('button', { name: /^Footwear/ }));
 
     // Generate — the run lands the row in a different topic (Apparel).
-    await user.click(screen.getByRole('button', { name: /Generate prompts & topics/ }));
+    await user.click(screen.getByRole('button', { name: 'Generate prompts' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Generate' }));
     await within(dialog).findByText(/1 prompt added to Active/);
@@ -308,7 +325,7 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
 
   it('shows actionable config guidance when no agent is configured (503)', async () => {
     const user = userEvent.setup();
-    usePromptPageHandlers([makePrompt()]);
+    usePromptPageHandlers([makePrompt()], [makeTopic()]);
     mswServer.use(
       http.post(`/api/v1/prompt-sets/${SET_ID}/generate`, () =>
         HttpResponse.json(
@@ -320,7 +337,7 @@ describe('PromptsPage manage mode (PromptLibrary)', () => {
 
     renderPromptsPage();
     await screen.findByText('Best running shoes?', undefined, { timeout: 5000 });
-    await user.click(screen.getByRole('button', { name: /Generate prompts & topics/ }));
+    await user.click(screen.getByRole('button', { name: 'Generate prompts' }));
 
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Generate' }));

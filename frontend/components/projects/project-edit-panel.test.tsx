@@ -22,7 +22,7 @@ beforeEach(() => {
         maximum_competitors: 5,
         industries: ['General'],
         subindustries: { General: [] },
-        prompt_cohorts: ['market_visibility', 'brand_relevant'],
+        prompt_cohorts: ['core', 'brand_diagnostic'],
       }),
     ),
   );

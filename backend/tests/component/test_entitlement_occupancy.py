@@ -306,6 +306,13 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
         json={"products_services": ["running shoes"]},
     )
     assert profile.status_code == 200
+    topic = (
+        await client.post(
+            f"/api/v1/projects/{project['id']}/topics",
+            json={"name": "Running Shoes"},
+        )
+    ).json()
+    topic_id = topic["id"]
     workspace_id = uuid.UUID(project["workspace_id"])
     async with session_factory() as session:
         await seed_occupancy_grants(
@@ -322,19 +329,13 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
     def _agent_payload(topic: str) -> str:
         return json.dumps(
             {
-                "topics": [
+                "prompts": [
                     {
-                        "name": topic,
-                        "prompts": [
-                            {
-                                "text": (
-                                    f"{topic} running shoes for {chr(97 + idx) * 20}"
-                                ),
-                                "intent": "discovery",
-                            }
-                            for idx in range(5)
-                        ],
+                        "topic_id": topic_id,
+                        "text": f"{topic} running shoes for {chr(97 + idx) * 20}",
+                        "intent": "discovery",
                     }
+                    for idx in range(5)
                 ]
             }
         )

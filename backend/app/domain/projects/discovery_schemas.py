@@ -176,11 +176,19 @@ class DiscoveryCompetitorSuggestion(CompetitorInput):
         return values
 
 
+class DiscoveryTopic(BaseModel):
+    """Canonical Pass 1 topic persisted before prompt generation."""
+
+    topic_id: uuid.UUID
+    name: str = Field(min_length=1, max_length=255)
+    evidence_refs: list[str] = Field(min_length=1)
+
+
 class DiscoveryPromptSuggestion(BaseModel):
+    topic_id: uuid.UUID
     text: str = Field(min_length=1, max_length=2000)
-    theme: str = Field(default="", max_length=255)
     intent: Literal["discovery", "comparison", "purchase", "service", "local"]
-    cohort: Literal["market_visibility", "brand_relevant"]
+    cohort: Literal["core", "brand_diagnostic"]
 
 
 class BrandDiscoveryProgress(BaseModel):
@@ -228,7 +236,7 @@ class BrandDiscoveryResponse(BaseModel):
     profile: DiscoveryProfile
     domains: list[str]
     competitors: list[DiscoveryCompetitorSuggestion]
-    topics: list[str]
+    topics: list[DiscoveryTopic]
     prompt_suggestions: list[DiscoveryPromptSuggestion]
     evidence: list[DiscoveryEvidence]
     warnings: list[str] = Field(default_factory=list)

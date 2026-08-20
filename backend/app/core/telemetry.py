@@ -134,21 +134,32 @@ def _configure_logfire(role: str) -> Any | None:
         return None
     if _logfire_configured:
         return logfire
-    logfire.configure(
-        token=settings.logfire_token,
-        service_name=_service_name(role),
-        environment=settings.logfire_environment or settings.app_env,
-        send_to_logfire="if-token-present",
-        # This process already owns its stdout format: structlog renders one
-        # JSON object per record (``configure_logging``). Logfire's pretty
-        # console exporter would interleave a second, differently shaped
-        # rendering of the same spans into that stream -- and on a Windows
-        # cp1252 console its box-drawing characters raise UnicodeEncodeError
-        # inside the exporter, turning every span carrying a traceback into an
-        # "Exception while exporting Span" error. Spans still go to Logfire.
-        console=False,
-        advanced=logfire.AdvancedOptions(base_url=settings.logfire_base_url),
-    )
+    try:
+        logfire.configure(
+            token=settings.logfire_token,
+            service_name=_service_name(role),
+            environment=settings.logfire_environment or settings.app_env,
+            send_to_logfire="if-token-present",
+            # This process already owns its stdout format: structlog renders
+            # one JSON object per record (``configure_logging``). Logfire's
+            # pretty console exporter would interleave a second, differently
+            # shaped rendering of the same spans into that stream -- and on a
+            # Windows cp1252 console its box-drawing characters raise
+            # UnicodeEncodeError inside the exporter, turning every span
+            # carrying a traceback into an "Exception while exporting Span"
+            # error. Spans still go to Logfire.
+            console=False,
+            advanced=logfire.AdvancedOptions(base_url=settings.logfire_base_url),
+        )
+    except Exception:  # pragma: no cover - optional telemetry configuration
+        # Telemetry never breaks the app (same invariant `_instrument_process`
+        # follows): a bad token, an unreachable base URL, or an SDK-side error
+        # must not stop an API or worker process from starting.
+        logging.getLogger("app.core.telemetry").warning(
+            "logfire configuration failed; continuing without instrumentation",
+            exc_info=True,
+        )
+        return None
     _logfire_configured = True
     _instrument_process(logfire)
     return logfire
@@ -165,10 +176,10 @@ def _instrument_process(logfire: Any) -> None:
     """
     log = logging.getLogger("app.core.telemetry")
 
-    def _try(label: str, instrument_name: str) -> None:
+    def _try(label: str, instrument_name: str, **kwargs: Any) -> None:
         try:
             instrument = getattr(logfire, instrument_name)
-            instrument()
+            instrument(**kwargs)
         except Exception:  # pragma: no cover - optional instrumentation
             log.warning("logfire %s instrumentation unavailable", label, exc_info=True)
 
@@ -176,7 +187,10 @@ def _instrument_process(logfire: Any) -> None:
     # Captures method, URL, status, and timing only. Request and response
     # bodies stay out of telemetry, so answer-engine prompts and completions
     # are never shipped to Logfire (see connectors/agent/client.py).
-    _try("httpx", "instrument_httpx")
+    # ``capture_all=False`` is stated rather than inherited from the SDK
+    # default: it is what keeps request/response bodies out of telemetry, so it
+    # must not silently change with a logfire upgrade.
+    _try("httpx", "instrument_httpx", capture_all=False)
 
     def _sqlalchemy() -> None:
         from app.core.database import engine

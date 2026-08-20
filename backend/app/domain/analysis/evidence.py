@@ -196,11 +196,9 @@ def _evidence_statement(
         stmt = stmt.where(AuditPromptSnapshot.prompt_id == prompt_id)
     if logical_engine is not None:
         stmt = stmt.where(ResponseAnalysis.logical_engine == logical_engine)
-    # `core` is a VIEW over every organic cohort, not a literal column match:
-    # onboarding-generated portfolios store `market_visibility` /
-    # `brand_relevant`, so an `== "core"` filter matched nothing and emptied
-    # both evidence tabs. The aggregate visibility projection uses the same
-    # same organic set — this keeps the read side in step with the write side.
+    # `core` is a view over new core rows plus legacy organic cohort values.
+    # Keeping historical rows readable does not authorize new writes using the
+    # superseded cohort taxonomy.
     stmt = stmt.where(
         ResponseAnalysis.cohort.in_(
             tuple(ORGANIC_PROMPT_COHORTS) if cohort == PROMPT_COHORT_CORE else (cohort,)
