@@ -109,7 +109,6 @@ class DiscoverPhaseMixin(DiscoverPersistenceMixin):
         # task that was still writing.
         async with self._leased(task_id):
             outcome = await self._fetch_discover(
-                crawl_id=crawl_id,
                 requested_url=requested_url,
                 root_registrable_domain=root_registrable_domain,
                 include_globs=include_globs,
@@ -128,7 +127,6 @@ class DiscoverPhaseMixin(DiscoverPersistenceMixin):
     async def _fetch_discover(
         self,
         *,
-        crawl_id: uuid.UUID,
         requested_url: str,
         root_registrable_domain: str,
         include_globs: list[str] | None,
@@ -203,9 +201,6 @@ class DiscoverPhaseMixin(DiscoverPersistenceMixin):
             allowed_content_types=HTML_CONTENT_TYPES,
         )
         started = time.monotonic()
-        acquisition_plan = await self._acquisition_plan(
-            crawl_id=crawl_id, url=requested_url
-        )
         try:
             async with self._new_fetcher() as fetcher:
                 result = await fetcher.fetch(
@@ -214,8 +209,6 @@ class DiscoverPhaseMixin(DiscoverPersistenceMixin):
                     include_globs=include_globs,
                     exclude_globs=exclude_globs,
                     enforce_scope=bool(root_registrable_domain),
-                    preferred_rung=acquisition_plan.preferred_rung,
-                    initial_trigger=acquisition_plan.trigger,
                 )
         except FetchError as exc:
             latency = int((time.monotonic() - started) * 1000)

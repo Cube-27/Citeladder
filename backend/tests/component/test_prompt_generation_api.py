@@ -532,7 +532,10 @@ def _agent_response_with_n_prompts(
     """A single-topic response carrying ``n`` distinct prompts.
 
     Texts embed the topic so responses from different runs never collide on
-    the per-set dedupe hash (letting a test insert fresh rows each run).
+    the per-set dedupe hash (letting a test insert fresh rows each run), and
+    each opens with a different token: generation caps how many prompts may
+    share their first three words, so a stub that repeats one opening is
+    rejected as templated rather than accepted as a batch.
     """
     text_prefix = discriminator or topic
     return json.dumps(
@@ -543,7 +546,8 @@ def _agent_response_with_n_prompts(
                     "prompts": [
                         {
                             "text": (
-                                f"{text_prefix} running shoes for {chr(97 + i) * 20}"
+                                f"{chr(97 + i) * 20} {text_prefix} running "
+                                "shoes for buyers"
                             ),
                             "intent": "discovery",
                         }
@@ -591,11 +595,19 @@ async def test_generate_comparison_cohort_is_active_and_branded(
         )
         assert created.status_code == 201
     comparison_prompts = [
-        {
-            "text": f"Acme Corp vs Globex for running shoe use case {i}",
-            "intent": "comparison",
-        }
-        for i in range(10)
+        {"text": text, "intent": "comparison"}
+        for text in (
+            "Acme Corp or Globex for wet trail running",
+            "Should I choose Globex over Acme Corp for marathon shoes",
+            "Compare Acme Corp and Globex shoes for flat feet",
+            "Is Globex better than Acme Corp for school trainers",
+            "Acme Corp versus Globex when buying wide running shoes",
+            "Would Globex or Acme Corp suit daily walking",
+            "How do Acme Corp and Globex compare on hiking footwear",
+            "Which lasts longer, Acme Corp or Globex running shoes",
+            "For gym training, is Acme Corp better than Globex",
+            "Between Globex and Acme Corp, who makes lighter shoes",
+        )
     ]
     agent = FakeAgent(
         response=json.dumps(
@@ -619,6 +631,49 @@ async def test_generate_comparison_cohort_is_active_and_branded(
 
 
 @pytest.mark.asyncio
+async def test_generate_brand_diagnostic_uses_named_cohort_rules(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, prompt_set_id = await _make_project_and_set(client, "diagnostic@example.com")
+    agent = FakeAgent(
+        response=json.dumps(
+            {
+                "topics": [
+                    {
+                        "name": "Running Shoes",
+                        "prompts": [
+                            {
+                                "text": (
+                                    "Is Acme Corp reliable for long distance "
+                                    "running shoes"
+                                ),
+                                "intent": "discovery",
+                            }
+                        ],
+                    }
+                ]
+            }
+        )
+    )
+    monkeypatch.setattr(prompts_api, "create_model_gateway", lambda: agent)
+
+    response = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
+        json={
+            "count": 1,
+            "cohort": "brand_diagnostic",
+            "confirm_send_evidence": True,
+        },
+    )
+
+    assert response.status_code == 201
+    assert [item["cohort"] for item in response.json()["generated"]] == [
+        "brand_diagnostic"
+    ]
+    assert "Every prompt must name the tracked brand" in agent.calls[0]["system"]
+
+
+@pytest.mark.asyncio
 async def test_generate_counts_intra_response_duplicates(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -631,9 +686,18 @@ async def test_generate_counts_intra_response_duplicates(
                     {
                         "name": "Running Shoes",
                         "prompts": [
-                            {"text": "Best Shoes?", "intent": "discovery"},
-                            {"text": "best  shoes", "intent": "discovery"},
-                            {"text": "hiking shoes", "intent": "discovery"},
+                            {
+                                "text": "Best running shoes for flat feet?",
+                                "intent": "discovery",
+                            },
+                            {
+                                "text": "best  running shoes for flat feet",
+                                "intent": "discovery",
+                            },
+                            {
+                                "text": "hiking shoes for wet weather trails",
+                                "intent": "discovery",
+                            },
                         ],
                     }
                 ]
@@ -678,9 +742,11 @@ async def test_generate_bounds_existing_prompt_context(
     )
     assert resp.status_code == 201
     sent = agent.calls[0]["user"]
-    # Only the first 3 existing prompts appear in the "do NOT duplicate" block.
+    # Only the most recent 3 existing prompts appear in the "do NOT duplicate"
+    # block: the context is the tail of the set, so 3, 4 and 5 are sent and the
+    # older 0, 1 and 2 are left out.
     included = [i for i in range(6) if f"existing acme context prompt {i}" in sent]
-    assert len(included) == 3
+    assert included == [3, 4, 5]
 
 
 @pytest.mark.asyncio
