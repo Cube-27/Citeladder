@@ -10,7 +10,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useProjectContext } from '@/lib/project/project-context';
 import {
   useCatalogQueries,
-  useCommerceComparison,
   useCommerceOpportunities,
   useCommerceOverview,
   useProductsTab,
@@ -21,7 +20,6 @@ import { AiVisibilityPanel } from './ai-visibility-panel';
 import { CatalogPanel } from './catalog-panel';
 import { CommerceOpportunitiesPanel } from './commerce-opportunities-panel';
 import { CommerceOverviewPanel } from './commerce-overview-panel';
-import { CompetitorsPanel } from './competitors-panel';
 import { ProductsTabs } from './products-tabs';
 
 export function ProductsScreenSkeleton() {
@@ -37,7 +35,7 @@ export function ProductsScreenSkeleton() {
   );
 }
 
-/** Five-tab Commerce suite. Every inactive tab remains query-inert. */
+/** Four-tab Commerce workflow. Every inactive tab remains query-inert. */
 export function ProductsScreen() {
   const { activeProject, isLoading: isProjectLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
@@ -47,7 +45,6 @@ export function ProductsScreen() {
   const overviewQueries = useCommerceOverview(projectId, activeTab === 'overview');
   const catalogQueries = useCatalogQueries(projectId, activeTab === 'catalog');
   const visibilityQueries = useProductVisibilityQueries(projectId, activeTab === 'visibility');
-  const comparisonQueries = useCommerceComparison(projectId, activeTab === 'competitors');
   const opportunityQueries = useCommerceOpportunities(projectId, activeTab === 'opportunities');
 
   if (isProjectLoading) return <ProductsScreenSkeleton />;
@@ -64,8 +61,6 @@ export function ProductsScreen() {
         onAddProducts={() => selectTab('catalog')}
         onLaunchAudit={() => setLaunchOpen(true)}
       />
-    ) : activeTab === 'competitors' ? (
-      <CompetitorsPanel queries={comparisonQueries} />
     ) : activeTab === 'opportunities' ? (
       <CommerceOpportunitiesPanel queries={opportunityQueries} />
     ) : (
@@ -83,6 +78,8 @@ export function ProductsScreen() {
         open={launchOpen}
         onOpenChange={setLaunchOpen}
         projectId={projectId}
+        fixedPromptSetId={overviewQueries.commercePromptSet?.id}
+        auditScope="commerce"
         onLaunched={(audit) => router.push(`/runs/${audit.id}`)}
       />
     </>
