@@ -62,7 +62,7 @@ from tests.component.log_capture import capture_log_messages
 _SECRET = "commercial-webhook-secret"
 _PLAN_REF = "plan_test_private"
 _TOPUP_REF = "plink_test_private"
-_TOPUP_KEY = "topup_benchmark_credits"
+_TOPUP_KEY = "topup_audit_credits"
 
 
 # --- helpers -----------------------------------------------------------------
@@ -847,8 +847,8 @@ async def test_pending_addon_blocks_same_key_but_not_other_addons_or_topups(
     """
     monkeypatch.setattr(billing_settings, "addon_extra_project_usd_minor", 1_900)
     monkeypatch.setattr(billing_settings, "addon_extra_prompts_usd_minor", 2_900)
-    monkeypatch.setattr(billing_settings, "topup_benchmark_credits_usd_minor", 1_000)
-    monkeypatch.setattr(billing_settings, "topup_benchmark_credits_per_pack", 25)
+    monkeypatch.setattr(billing_settings, "topup_audit_credits_usd_minor", 1_000)
+    monkeypatch.setattr(billing_settings, "topup_audit_credits_per_pack", 25)
     _enable_checkout(
         monkeypatch,
         {
@@ -985,7 +985,7 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     assert subscription.external_subscription_id == "sub_activate"
     # The REAL tier_1 catalog bundle: 8 grants, one version bump for the event
     # plus one for the bundle.
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 8
+    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 7
     assert await _account_version(db_session) == 2
 
     # The account read now reports the subscription and the issued grants.
@@ -995,7 +995,7 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     assert view["status"] == "resolved"
     assert view["subscription"]["catalog_key"] == "tier_1"
     assert view["subscription"]["cancel_at_period_end"] is False
-    assert len(view["grants"]) == 8
+    assert len(view["grants"]) == 7
     assert "funded_execution_allowed" not in view
 
     # A redelivery under a NEW event id never duplicates the subscription or
@@ -1003,7 +1003,7 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     duplicate = await _post_webhook(client, raw, event_id="evt_act_2")
     assert duplicate.status_code == 204
     db_session.expire_all()
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 8
+    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 7
     assert await db_session.scalar(select(func.count(BillingSubscription.id))) == 1
     assert await db_session.scalar(select(func.count(BillingWebhookEvent.id))) == 2
 
@@ -1069,7 +1069,7 @@ async def test_webhook_reconciliation_race_settles_exactly_once(
     assert sweep_result.already_settled is True
     db_session.expire_all()
     assert await db_session.scalar(select(func.count(BillingSubscription.id))) == 1
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 8
+    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 7
     assert await _account_version(db_session) == version_after_first
 
 
@@ -1089,8 +1089,8 @@ async def _purchase_topup(
 
 
 def _enable_topup(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(billing_settings, "topup_benchmark_credits_usd_minor", 1_000)
-    monkeypatch.setattr(billing_settings, "topup_benchmark_credits_per_pack", 25)
+    monkeypatch.setattr(billing_settings, "topup_audit_credits_usd_minor", 1_000)
+    monkeypatch.setattr(billing_settings, "topup_audit_credits_per_pack", 25)
     _enable_checkout(monkeypatch, {f"{_TOPUP_KEY}:international:base": _TOPUP_REF})
 
 
@@ -1155,7 +1155,7 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     assert pending is not None
     assert pending.status == "activated"
     grant = (await db_session.scalars(select(AccountGrant))).one()
-    assert grant.key == "benchmark_credits"
+    assert grant.key == "audit_credits"
     assert grant.value == 50  # 25 per pack x 2 packs
     assert grant.source_kind == "topup"
     # The STORED expiry is the FIXED paid_at + 30 days.
@@ -1168,7 +1168,7 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     usage = await client.get("/api/v1/billing/usage")
     assert usage.status_code == 200
     items = {item["key"]: item for item in usage.json()["items"]}
-    credits = items["benchmark_credits"]
+    credits = items["audit_credits"]
     assert credits["limit_state"] == "finite"
     assert credits["allowance"] == 50
     assert credits["consumed"] == 0
@@ -1287,7 +1287,7 @@ async def test_reconciliation_settles_fails_and_abandons_from_provider_state(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "topup_benchmark_credits_per_pack", 25)
+    monkeypatch.setattr(billing_settings, "topup_audit_credits_per_pack", 25)
     monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     await _register(client, "sweep@example.com")
     account = await _account(db_session)
@@ -1343,7 +1343,7 @@ async def test_reconciliation_settles_fails_and_abandons_from_provider_state(
     assert settled.status == "activated"
     assert settled.settled_by == "reconciliation"
     grant = (await db_session.scalars(select(AccountGrant))).one()
-    assert grant.key == "benchmark_credits"
+    assert grant.key == "audit_credits"
     assert grant.value == 25
     assert grant.valid_until == (
         datetime.fromtimestamp(paid_at, tz=UTC) + timedelta(days=30)

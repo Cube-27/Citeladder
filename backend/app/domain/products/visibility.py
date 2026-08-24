@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.analysis.product_scoring import ProductScoringConfig
 from app.analysis.product_service import build_product_scoring_config
 from app.core.config.audits import (
+    AUDIT_SCOPE_COMMERCE,
     AUDIT_STATUS_COMPLETED,
     AUDIT_STATUS_PARTIALLY_COMPLETED,
 )
@@ -36,8 +37,8 @@ from app.core.config.products import (
 )
 from app.core.config.provider_catalog import LOGICAL_ENGINES
 from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
+from app.domain.products.commerce_citations import commerce_citation_comparison
 from app.domain.products.schemas import (
-    CompetitorProductVisibilityEntry,
     FrozenPromptContext,
     ProductVisibilityEntry,
     ProductVisibilityResponse,
@@ -64,7 +65,6 @@ _AUDIT_RECENCY_ORDER = (Audit.completed_at.desc().nullslast(), Audit.created_at.
 _AUDIT_NOT_FOUND = "Audit not found"
 
 _EMPTY_DESTINATION_MIX: dict[str, Any] = {"total": 0, "by_kind": [], "by_domain": []}
-_EMPTY_CO_PLACEMENT: dict[str, Any] = {"items": [], "truncated": False}
 
 
 async def _conversation_context(
@@ -103,11 +103,10 @@ async def _conversation_context(
     ).all()
     grouped: dict[tuple[str, uuid.UUID], dict[int, FrozenPromptContext]] = {}
     for mention, prompt in rows:
-        entry_id = mention.product_id or mention.competitor_product_id
+        entry_id = mention.product_id
         if entry_id is None:
             continue
-        kind = "product" if mention.product_id is not None else "competitor_product"
-        grouped.setdefault((kind, entry_id), {})[prompt.prompt_index] = (
+        grouped.setdefault(("product", entry_id), {})[prompt.prompt_index] = (
             FrozenPromptContext(
                 prompt_index=prompt.prompt_index,
                 text=prompt.text,
@@ -178,8 +177,6 @@ def _normalize_aggregate(aggregate: dict[str, Any]) -> dict[str, Any]:
         },
         "buyer_destination_mix": aggregate.get("buyer_destination_mix")
         or dict(_EMPTY_DESTINATION_MIX),
-        "competitor_co_placement": aggregate.get("competitor_co_placement")
-        or dict(_EMPTY_CO_PLACEMENT),
     }
 
 
@@ -312,6 +309,7 @@ def _own_visibility_entries(
                 product_id=snapshot.product_id,
                 sku=entry.sku,
                 name=entry.name,
+                category=str((entry.attributes or {}).get("category") or ""),
                 product_analyzer_version=snapshot.product_analyzer_version,
                 mention_count=metrics["mention_count"],
                 sov_share=metrics["sov_share"],
@@ -324,7 +322,6 @@ def _own_visibility_entries(
                 price_relation_counts=metrics["price_relation_counts"],
                 attribute_dimension_frequency=metrics["attribute_dimension_frequency"],
                 buyer_destination_mix=metrics["buyer_destination_mix"],
-                competitor_co_placement=metrics["competitor_co_placement"],
                 prompt_coverage=coverage,
                 frozen_prompt_context=prompts,
                 conversation_themes=themes,
@@ -340,57 +337,6 @@ def _own_visibility_entries(
                     if snapshot.product_id in previous_visibility
                     else None
                 ),
-            )
-        )
-    return projected
-
-
-def _competitor_visibility_entries(
-    config: ProductScoringConfig,
-    by_entry: dict[str, ProductMetricSnapshot],
-    sliced: dict[str, dict[str, Any]],
-    conversation: ConversationContext,
-    total_analyses: int,
-    engine: str | None,
-) -> list[CompetitorProductVisibilityEntry]:
-    projected: list[CompetitorProductVisibilityEntry] = []
-    for entry in config.competitor_products:
-        snapshot = by_entry.get(entry.id)
-        if snapshot is None:
-            continue
-        metrics = sliced[entry.id]
-        coverage, prompts, themes = (
-            conversation.get(
-                ("competitor_product", snapshot.competitor_product_id),
-                (None, [], []),
-            )
-            if snapshot.competitor_product_id is not None
-            else (None, [], [])
-        )
-        projected.append(
-            CompetitorProductVisibilityEntry(
-                competitor_product_id=snapshot.competitor_product_id,
-                competitor_name=entry.competitor,
-                name=entry.name,
-                product_analyzer_version=snapshot.product_analyzer_version,
-                mention_count=metrics["mention_count"],
-                sov_share=metrics["sov_share"],
-                avg_rank=metrics["avg_rank"],
-                rank_distribution=metrics["rank_distribution"],
-                price_mention_count=metrics["price_mention_count"],
-                price_accuracy_rate=metrics["price_accuracy_rate"],
-                win_rate=metrics["win_rate"],
-                price_mismatch_rate=metrics["price_mismatch_rate"],
-                price_relation_counts=metrics["price_relation_counts"],
-                attribute_dimension_frequency=metrics["attribute_dimension_frequency"],
-                buyer_destination_mix=metrics["buyer_destination_mix"],
-                competitor_co_placement=metrics["competitor_co_placement"],
-                prompt_coverage=coverage,
-                frozen_prompt_context=prompts,
-                conversation_themes=themes,
-                visibility_rate=_rate(metrics["mention_count"], total_analyses),
-                top_three_rate=_rate(_top_three(metrics), total_analyses),
-                engine_coverage=_engine_coverage(snapshot, engine),
             )
         )
     return projected
@@ -451,14 +397,10 @@ async def get_product_visibility(
         previous_visibility,
         engine,
     )
-    competitor_products = _competitor_visibility_entries(
-        config, by_entry, sliced, conversation, total_analyses, engine
-    )
     # Response-level version label: the first catalog entry's selected
     # snapshot (deterministic catalog order). Row-level DTOs carry their own
     # version, so a mixed-version audit is still labelled correctly per row.
     selected_entry_ids = [entry.id for entry in config.products]
-    selected_entry_ids.extend(entry.id for entry in config.competitor_products)
     selected = [
         by_entry[entry_id] for entry_id in selected_entry_ids if entry_id in by_entry
     ]
@@ -471,18 +413,19 @@ async def get_product_visibility(
         audit_status=audit.status,
         product_analyzer_version=first.product_analyzer_version,
         product_scoring_rule_version=first.product_scoring_rule_version,
-        total_mentions=sum(m["mention_count"] for m in sliced.values()),
+        total_mentions=sum(product.mention_count for product in products),
         total_analyses=total_analyses,
-        summary=_visibility_summary(products, competitor_products, total_analyses),
+        summary=_visibility_summary(products, total_analyses),
         products=products,
-        competitor_products=competitor_products,
+        citation_comparison=await commerce_citation_comparison(
+            session, audit=audit, config=config
+        ),
         created_at=max(s.created_at for s in selected),
     )
 
 
 def _visibility_summary(
     products: list[ProductVisibilityEntry],
-    competitors: list[CompetitorProductVisibilityEntry],
     total_analyses: int,
 ) -> ProductVisibilitySummary:
     denominator = total_analyses * len(products)
@@ -511,9 +454,6 @@ def _visibility_summary(
             denominator,
         ),
         average_rank=average_rank,
-        competitor_wins=sum(
-            int(entry.rank_distribution.get("top_1") or 0) for entry in competitors
-        ),
     )
 
 
@@ -727,7 +667,7 @@ def _snapshot_entry_id(snapshot: ProductMetricSnapshot) -> str:
     The live FK is SET NULL when the catalog row is deleted, so fall back to
     the frozen ``entry_id`` persisted in ``metrics`` at finalize time.
     """
-    live = snapshot.product_id or snapshot.competitor_product_id
+    live = snapshot.product_id
     if live is not None:
         return str(live)
     return str((snapshot.metrics or {}).get("entry_id") or "")
@@ -763,6 +703,8 @@ async def _load_audit_and_snapshots(
     )
     if audit is None:
         raise AnalysisNotFoundError(_AUDIT_NOT_FOUND)
+    if audit.audit_scope != AUDIT_SCOPE_COMMERCE:
+        raise AnalysisNotFoundError("Audit is not a Commerce audit")
     snapshots = list(
         (
             await session.scalars(
@@ -793,6 +735,7 @@ async def _latest_product_audit_id(
             Audit.workspace_id == workspace_id,
             Audit.project_id == project_id,
             Audit.status.in_(_DASHBOARD_STATUSES),
+            Audit.audit_scope == AUDIT_SCOPE_COMMERCE,
             has_snapshots,
         )
         .order_by(*_AUDIT_RECENCY_ORDER)

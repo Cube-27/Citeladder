@@ -36,7 +36,11 @@ from app.connectors.answer_engines.contracts import (
     NormalizedUsage,
     SearchEventResult,
 )
-from app.core.config.audits import AUDIT_TRIGGER_MANUAL, audit_settings
+from app.core.config.audits import (
+    AUDIT_SCOPE_COMMERCE,
+    AUDIT_TRIGGER_MANUAL,
+    audit_settings,
+)
 from app.core.config.products import PRODUCT_EVIDENCE_MAX_LIMIT
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
@@ -44,8 +48,8 @@ from app.core.config.provider_catalog import (
     TRANSPORT_GOOGLE,
 )
 from app.domain.audits.creation import create_audit
-from app.models.brand import Competitor
-from app.models.product import CompetitorProduct, Product
+from app.models.product import Product
+from app.models.prompt import Prompt
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
 from app.workers.audit import execution as audit_execution
@@ -134,20 +138,14 @@ async def _seed_workspace_with_catalog(
             price=Decimal("2499.00"),
             currency="USD",
             url="https://acme.com/p/voltbike",
+            attributes={"category": "E-Bikes"},
         )
         session.add(product)
-        competitor = await session.scalar(
-            select(Competitor).where(Competitor.project_id == seed.project_id)
-        )
-        assert competitor is not None
-        competitor_product = CompetitorProduct(
-            project_id=seed.project_id,
-            competitor_id=competitor.id,
-            name="Globex CityBike 450",
-            price=Decimal("2399.00"),
-            currency="USD",
-        )
-        session.add(competitor_product)
+        for prompt in (
+            await session.scalars(select(Prompt).where(Prompt.id.in_(seed.prompt_ids)))
+        ).all():
+            prompt.theme = "E-Bikes"
+            prompt.cohort = "commerce"
         user = await session.scalar(select(User).where(User.email == email))
         assert user is not None
         session.add(
@@ -156,7 +154,7 @@ async def _seed_workspace_with_catalog(
             )
         )
         await session.commit()
-    return seed, product, competitor_product
+    return seed, product, None
 
 
 async def _run_audit(
@@ -171,6 +169,7 @@ async def _run_audit(
             engines=seed.engines,
             prompt_set_id=seed.prompt_set_id,
             repetitions=reps,
+            audit_scope=AUDIT_SCOPE_COMMERCE,
             random_seed="1",
         )
     worker = AuditWorker(session_factory=session_factory, owner="w-prodvis")
@@ -189,7 +188,7 @@ async def test_visibility_defaults_to_latest_and_explicit_audit(
     _stub_adapter,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    seed, product, competitor_product = await _seed_workspace_with_catalog(
+    seed, product, _competitor_product = await _seed_workspace_with_catalog(
         client, session_factory
     )
     first = await _run_audit(session_factory, seed)
@@ -214,9 +213,9 @@ async def test_visibility_defaults_to_latest_and_explicit_audit(
     assert body["product_analyzer_version"] == "product-analysis-2"
     assert body["product_scoring_rule_version"] == "product-scoring-v2"
     # The shopping-surface gate ships empty: only measurement is available.
-    # 2 prompts x 1 rep -> 2 executions, each mentioning both entries.
+    # 2 prompts x 1 rep -> 2 executions, each mentioning the uploaded product.
     assert body["total_analyses"] == 2
-    assert body["total_mentions"] == 4
+    assert body["total_mentions"] == 2
 
     own = body["products"]
     assert len(own) == 1
@@ -226,7 +225,7 @@ async def test_visibility_defaults_to_latest_and_explicit_audit(
     assert entry["name"] == "Acme VoltBike 500"
     assert entry["product_analyzer_version"] == "product-analysis-2"
     assert entry["mention_count"] == 2
-    assert entry["sov_share"] == 0.5
+    assert entry["sov_share"] == 1.0
     assert entry["avg_rank"] == 1.0
     assert entry["rank_distribution"]["top_1"] == 2
     assert entry["price_mention_count"] == 2
@@ -246,42 +245,8 @@ async def test_visibility_defaults_to_latest_and_explicit_audit(
         "by_kind": [],
         "by_domain": [],
     }
-    assert entry["competitor_co_placement"] == {
-        "items": [
-            {
-                "competitor_product_id": str(competitor_product.id),
-                "competitor_name": "Globex",
-                "product_name": "Globex CityBike 450",
-                "count": 2,
-            }
-        ],
-        "truncated": False,
-    }
-
-    competitor_entries = body["competitor_products"]
-    assert len(competitor_entries) == 1
-    competitor_entry = competitor_entries[0]
-    assert competitor_entry["competitor_product_id"] == str(competitor_product.id)
-    assert competitor_entry["competitor_name"] == "Globex"
-    assert competitor_entry["name"] == "Globex CityBike 450"
-    assert competitor_entry["product_analyzer_version"] == "product-analysis-2"
-    assert competitor_entry["mention_count"] == 2
-    assert competitor_entry["avg_rank"] == 2.0
-    # Rank 2 in both enumerations -> never a win; price matches the catalog.
-    assert competitor_entry["win_rate"] == 0.0
-    assert competitor_entry["price_relation_counts"] == {
-        "match": 2,
-        "higher": 0,
-        "lower": 0,
-        "mismatch": 0,
-    }
-    assert competitor_entry["price_mismatch_rate"] == 0.0
-    # Co-placement only tracks COMPETITOR products, so the competitor entry
-    # itself has no pairs (the own product is not a competitor).
-    assert competitor_entry["competitor_co_placement"] == {
-        "items": [],
-        "truncated": False,
-    }
+    assert entry["category"] == "E-Bikes"
+    assert body["citation_comparison"]["status"] == "available"
 
     # An explicit audit_id selects that audit's projection.
     explicit = await client.get(
@@ -327,10 +292,10 @@ async def test_visibility_engine_slice_is_projection_only(
     )
     assert gemini.status_code == 200
     body = gemini.json()
-    assert body["total_mentions"] == 4
+    assert body["total_mentions"] == 2
     entry = body["products"][0]
     assert entry["mention_count"] == 2
-    assert entry["sov_share"] == 0.5
+    assert entry["sov_share"] == 1.0
     assert entry["avg_rank"] == 1.0
 
     # A valid engine with no data slices to a zero-filled aggregate (200).
@@ -550,13 +515,11 @@ async def test_export_csv_download(
         "price_relation_mismatch_count",
         "attribute_dimension_frequency",
         "buyer_destination_mix",
-        "competitor_co_placement",
     ]
-    # 2 entries x (overall + one engine row) = 4 data rows.
-    assert len(rows) == 4
+    # 1 uploaded product x (overall + one engine row) = 2 data rows.
+    assert len(rows) == 2
     own_rows = [row for row in rows if row["product"] == "Acme VoltBike 500"]
     assert {row["engine"] for row in own_rows} == {"all", ENGINE_GEMINI}
-    assert any(row["product"] == "Globex CityBike 450" for row in rows)
     assert all(row["audit_id"] == str(audit.id) for row in rows)
     # v2 provenance + metrics on every row; surface stays measurement ("").
     assert all(row["product_analyzer_version"] == "product-analysis-2" for row in rows)
@@ -575,11 +538,6 @@ async def test_export_csv_download(
         "by_kind": [],
         "by_domain": [],
     }
-    co_placement = json.loads(own_overall["competitor_co_placement"])
-    assert co_placement["truncated"] is False
-    assert [item["product_name"] for item in co_placement["items"]] == [
-        "Globex CityBike 450"
-    ]
     # Repeated exports are byte-stable.
     again = await client.get(
         f"/api/v1/projects/{seed.project_id}/products/visibility/export.csv",

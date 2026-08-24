@@ -12,8 +12,6 @@ from app.analysis.exports import audit_to_csv, audit_to_markdown
 from app.core.config.audits import (
     AUDIT_STATUS_COMPLETED,
     AUDIT_TRIGGER_MANUAL,
-    MEASUREMENT_MODE_BENCHMARK,
-    MEASUREMENT_MODE_PULSE,
     audit_settings,
 )
 from app.core.config.provider_catalog import (
@@ -54,7 +52,7 @@ from tests.component.audit_helpers import seed_audit_fixtures
 # than pinned as a literal: these assertions are about provenance travelling
 # intact from the frozen route to the projection, not about which Gemini build
 # is current, and a literal here goes stale on every model-version bump.
-GEMINI_MODEL = measurement_route(ENGINE_GEMINI, "pulse").transport_model
+GEMINI_MODEL = measurement_route(ENGINE_GEMINI).transport_model
 
 
 def test_logo_lookup_distinguishes_same_named_brand_and_competitor() -> None:
@@ -112,9 +110,7 @@ async def test_benchmark_fixture_persists_grounded_search_evidence(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,
 ) -> None:
-    _seed, audit = await _run_completed_audit(
-        session_factory, measurement_mode=MEASUREMENT_MODE_BENCHMARK
-    )
+    _seed, audit = await _run_completed_audit(session_factory)
 
     async with session_factory() as session:
         artifacts = list(
@@ -180,13 +176,12 @@ async def test_metrics_and_visibility_are_projections(
         assert vis.per_engine[0].logical_engine == ENGINE_GEMINI
         # Measurement provenance (invariants 4/7): the frozen mode column and
         # the stable aggregate model-provenance list — retrieval comes from
-        assert vis.measurement_mode == MEASUREMENT_MODE_PULSE
         assert [p.model_dump() for p in vis.model_provenance] == [
             {
                 "logical_engine": ENGINE_GEMINI,
                 "transport_provider": TRANSPORT_GOOGLE,
                 "transport_model": GEMINI_MODEL,
-                "retrieval_enabled": False,
+                    "retrieval_enabled": True,
             }
         ]
         # Vocabulary lock: no ``mode`` alias is ever emitted.
@@ -279,8 +274,7 @@ async def test_execution_evidence_projection(
         # Execution-level provenance: the exact singular model plus the frozen
         # mode/retrieval state the call executed under (inv. 4/7, 10).
         assert evidence.transport_model == GEMINI_MODEL
-        assert evidence.measurement_mode == MEASUREMENT_MODE_PULSE
-        assert evidence.retrieval_enabled is False
+        assert evidence.retrieval_enabled is True
         assert "mode" not in evidence.model_dump()
         # Roadmap fields present but null.
         assert evidence.sentiment is None
@@ -316,7 +310,7 @@ async def test_exports_render_from_persisted_rows(
         assert len(csv_body.strip().splitlines()) == 1 + 4
 
         md_body = audit_to_markdown(loaded_audit, tasks)
-        assert "# AI Search Visibility Benchmark" in md_body
+        assert "# AI Search Visibility Audit" in md_body
         assert "## Headline Metrics" in md_body
         assert "## Methodology" in md_body
 

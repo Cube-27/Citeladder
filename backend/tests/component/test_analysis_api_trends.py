@@ -23,8 +23,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.audits import (
     AUDIT_STATUS_PARTIALLY_COMPLETED,
-    MEASUREMENT_MODE_BENCHMARK,
-    MEASUREMENT_MODE_PULSE,
 )
 from app.core.config.provider_catalog import (
     ENGINE_CHATGPT,
@@ -50,7 +48,7 @@ from tests.component.audit_helpers import Seed, seed_audit_fixtures
 # than pinned as a literal: these assertions are about provenance travelling
 # intact from the frozen route to the projection, not about which Gemini build
 # is current, and a literal here goes stale on every model-version bump.
-GEMINI_MODEL = measurement_route(ENGINE_GEMINI, "pulse").transport_model
+GEMINI_MODEL = measurement_route(ENGINE_GEMINI).transport_model
 
 
 async def _seed_reference_snapshot(session: AsyncSession) -> Seed:
@@ -502,15 +500,7 @@ async def test_trends_invalid_query_raises(
                 project_id=seed.project_id,
                 from_at=datetime(2026, 3, 1),  # naive
             )
-        # Identity-slice validation: an unknown measurement mode or an empty
-        # model id is a query error (HTTP 422), never a silent empty slice.
-        with pytest.raises(TrendQueryError):
-            await get_visibility_trends(
-                session,
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                measurement_mode="deep_dive",
-            )
+        # An empty model id is a query error (HTTP 422), never a silent slice.
         with pytest.raises(TrendQueryError):
             await get_visibility_trends(
                 session,
@@ -550,17 +540,17 @@ async def test_trends_partition_by_measurement_identity(
         )
 
     expected_identities = {
-        (mode, model, retrieval) for mode, model, retrieval, _ in _PARTITION_IDENTITIES
+        (model, retrieval) for model, retrieval, _ in _PARTITION_IDENTITIES
     }
     # Raw granularity: one point per run, each carrying its frozen identity.
-    assert len(raw) == 8
+    assert len(raw) == 6
     assert {_identity_of(p) for p in raw} == expected_identities
     assert all(p.audit_id is not None for p in raw)
 
     # Week + month fold WITHIN an identity only: four separate ordered series,
     # one per identity — never one blended bucket (no cross-partition folding).
     for points in (weekly, monthly):
-        assert len(points) == 4
+        assert len(points) == 3
         assert {_identity_of(p) for p in points} == expected_identities
         for point in points:
             identity = _identity_of(point)
@@ -575,15 +565,15 @@ async def test_trends_partition_by_measurement_identity(
             scores = [s.visibility_score for s in expected]
             assert point.visibility_score == pytest.approx(sum(scores) / len(scores))
             # Aggregate provenance: the partition's single frozen route.
-            assert [p.transport_model for p in point.model_provenance] == [identity[1]]
+            assert [p.transport_model for p in point.model_provenance] == [identity[0]]
             assert all(
-                p.retrieval_enabled == identity[2] for p in point.model_provenance
+                p.retrieval_enabled == identity[1] for p in point.model_provenance
             )
             assert "mode" not in point.model_dump()
     # Ordered by bucket boundary, then deterministically by identity.
     assert [(_identity_of(p)) for p in weekly] == sorted(
         {_identity_of(p) for p in weekly},
-        key=lambda i: (i[0], i[1], str(i[2])),
+        key=lambda i: (i[0], str(i[1])),
     )
 
 
@@ -604,30 +594,27 @@ async def test_trends_identity_slice_filters_before_folding(
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
             granularity="week",
-            measurement_mode=MEASUREMENT_MODE_BENCHMARK,
             transport_model="model-a",
             retrieval_enabled=True,
         )
         assert len(sliced) == 1
         point = sliced[0]
-        assert _identity_of(point) == ("benchmark", "model-a", True)
+        assert _identity_of(point) == ("model-a", True)
         assert point.visibility_score == pytest.approx(70.0)
         assert {str(sid) for sid in point.source_snapshot_ids} == {
-            str(s.id) for s in snapshots[("benchmark", "model-a", True)]
+            str(s.id) for s in snapshots[("model-a", True)]
         }
 
-        # A mode-only slice keeps both retrieval states as separate series.
-        pulse_only = await get_visibility_trends(
+        # An unsliced run projection keeps every frozen identity.
+        all_runs = await get_visibility_trends(
             session,
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
-            measurement_mode=MEASUREMENT_MODE_PULSE,
         )
-        assert len(pulse_only) == 2
-        assert all(p.measurement_mode == MEASUREMENT_MODE_PULSE for p in pulse_only)
+        assert len(all_runs) == 6
 
         # A retrieval slice at run granularity selects exactly the matching
-        # runs (benchmark retrieval-on across both models).
+        # runs (retrieval-on across both models).
         retrieval_on = await get_visibility_trends(
             session,
             workspace_id=seed.workspace_id,

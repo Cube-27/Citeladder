@@ -10,7 +10,6 @@ from app.analysis.opportunities.detectors import (
     AnalysisEvidence,
     CommerceEvidence,
     DetectorHit,
-    ProductAttributeGapEvidence,
     ProductEntryEvidence,
     PromptSnapshotEvidence,
     SiteEvidence,
@@ -18,10 +17,9 @@ from app.analysis.opportunities.detectors import (
     SiteUrlEvidence,
     VisibilityEvidence,
     detect_brand_absent_high_value_prompt,
-    detect_competitor_product_dominates,
+    detect_catalog_fields_missing,
+    detect_cited_alternatives_without_uploaded_presence,
     detect_owned_page_not_cited,
-    detect_price_mention_mismatch,
-    detect_product_attribute_gap,
     detect_product_not_mentioned,
     detect_site_issue_opportunities,
 )
@@ -45,6 +43,10 @@ from app.core.config.opportunities import (
     RULE_VERSION,
     STATUS_OPEN,
 )
+from app.core.config.products import (
+    PRODUCT_COMPLETENESS_ATTRIBUTE_KEYS,
+    PRODUCT_REQUIRED_ATTRIBUTES,
+)
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_CANCELLED,
     CRAWL_STATUS_COMPLETED,
@@ -52,6 +54,9 @@ from app.core.config.site_health_contracts import (
 )
 from app.core.config.site_health_rules import (
     FINDING_CLASS_DEFECT,
+)
+from app.domain.opportunities.category_citations import (
+    load_category_citation_evidence,
 )
 from app.domain.opportunities.change_hits import load_change_hits
 from app.domain.opportunities.common import (
@@ -78,7 +83,6 @@ from app.models.analysis import (
 )
 from app.models.audit import Audit, AuditPromptSnapshot
 from app.models.brand import OwnedDomain
-from app.models.commerce import CompetitorComparisonSnapshot
 from app.models.demand import DemandSnapshot
 from app.models.opportunity import (
     Opportunity,
@@ -374,6 +378,8 @@ def _project_commerce_entry(
     name: str,
     sku: str,
     competitor_name: str,
+    category: str = "",
+    missing_fields: tuple[str, ...] = (),
 ) -> ProductEntryEvidence:
     return ProductEntryEvidence(
         entry_id=entry_id,
@@ -394,6 +400,8 @@ def _project_commerce_entry(
             if snapshot is not None
             else ()
         ),
+        category=category,
+        missing_fields=missing_fields,
     )
 
 
@@ -406,45 +414,23 @@ def _project_commerce_entries(config, by_entry) -> list[ProductEntryEvidence]:
             name=entry.name,
             sku=entry.sku,
             competitor_name="",
+            category=entry.category,
+            missing_fields=tuple(
+                key
+                for key in (
+                    *PRODUCT_REQUIRED_ATTRIBUTES,
+                    *PRODUCT_COMPLETENESS_ATTRIBUTE_KEYS,
+                )
+                if not (
+                    getattr(entry, key, None)
+                    if key in PRODUCT_REQUIRED_ATTRIBUTES
+                    else entry.attributes.get(key)
+                )
+            ),
         )
         for entry in config.products
     ]
-    competitors = [
-        _project_commerce_entry(
-            snapshot=by_entry.get(entry.id),
-            entry_id=entry.id,
-            kind="competitor_product",
-            name=entry.name,
-            sku="",
-            competitor_name=entry.competitor,
-        )
-        for entry in config.competitor_products
-    ]
-    return own + competitors
-
-
-def _comparison_attribute_gaps(
-    comparison: CompetitorComparisonSnapshot | None,
-) -> tuple[ProductAttributeGapEvidence, ...]:
-    if comparison is None:
-        return ()
-    payload = comparison.comparison or {}
-    source_metric_ids = tuple(
-        str(value) for value in (payload.get("source_metric_ids") or [])
-    )
-    return tuple(
-        ProductAttributeGapEvidence(
-            product_id=str(item.get("own_product", {}).get("id") or ""),
-            product_name=str(item.get("own_product", {}).get("name") or ""),
-            product_sku=str(item.get("own_product", {}).get("sku") or ""),
-            competitor_name=str(
-                item.get("competitor_product", {}).get("competitor_name") or ""
-            ),
-            gaps=tuple(item.get("attribute_gaps") or []),
-            source_metric_ids=source_metric_ids,
-        )
-        for item in (payload.get("items") or [])
-    )
+    return own
 
 
 async def _load_commerce_evidence(
@@ -460,7 +446,7 @@ async def _load_commerce_evidence(
     to empty evidence without a query.
     """
     config = build_product_scoring_config(audit.configuration or {})
-    if not config.products and not config.competitor_products:
+    if not config.products:
         return CommerceEvidence(audit_id=audit.id, entries=())
     snapshots = list(
         (
@@ -481,16 +467,12 @@ async def _load_commerce_evidence(
     by_entry = select_current_snapshots(snapshots)
 
     entries = _project_commerce_entries(config, by_entry)
-    comparison = await session.scalar(
-        select(CompetitorComparisonSnapshot).where(
-            CompetitorComparisonSnapshot.workspace_id == workspace_id,
-            CompetitorComparisonSnapshot.audit_id == audit.id,
-        )
-    )
     return CommerceEvidence(
         audit_id=audit.id,
         entries=tuple(entries),
-        attribute_gaps=_comparison_attribute_gaps(comparison),
+        category_citations=await load_category_citation_evidence(
+            session, audit=audit, config=config
+        ),
     )
 
 
@@ -585,9 +567,8 @@ async def _collect_recompute_hits(
                 session, workspace_id=workspace_id, audit=audit
             )
             hits.extend(detect_product_not_mentioned(commerce))
-            hits.extend(detect_competitor_product_dominates(commerce))
-            hits.extend(detect_price_mention_mismatch(commerce))
-            hits.extend(detect_product_attribute_gap(commerce))
+            hits.extend(detect_cited_alternatives_without_uploaded_presence(commerce))
+            hits.extend(detect_catalog_fields_missing(commerce))
             hits.extend(
                 await _confirmed_decline_hits(
                     session, workspace_id=workspace_id, audit=audit

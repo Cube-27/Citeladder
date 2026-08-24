@@ -25,11 +25,10 @@ from app.connectors.answer_engines.contracts import (
 )
 from app.core.config.audits import (
     ATTEMPT_STATUS_SUCCEEDED,
+    AUDIT_ANSWER_INSTRUCTION,
     AUDIT_STATUS_CANCELLED,
     AUDIT_STATUS_COMPLETED,
-    MEASUREMENT_MODE_PULSE,
     MEASUREMENT_POLICY_KEY,
-    PULSE_ANSWER_INSTRUCTION,
     audit_settings,
 )
 from app.core.config.provider_catalog import (
@@ -415,27 +414,6 @@ async def test_opportunities_enqueue_failure_never_blocks_terminalization(
 
 
 @pytest.mark.asyncio
-async def test_comparison_projection_failure_never_blocks_terminalization(
-    session_factory: async_sessionmaker[AsyncSession],
-    _stub_adapter,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
-
-    async def _boom(session, *, audit):
-        raise RuntimeError("comparison exploded")
-
-    monkeypatch.setattr(audit_terminalization, "persist_comparison_snapshot", _boom)
-    worker = AuditWorker(session_factory=session_factory, owner="w-comparison-boom")
-    await worker.run_until_idle()
-
-    async with session_factory() as session:
-        refreshed = await session.get(Audit, audit.id)
-        assert refreshed is not None
-        assert refreshed.status == AUDIT_STATUS_COMPLETED
-
-
-@pytest.mark.asyncio
 async def test_worker_persists_canonical_and_raw_finish_reasons(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,
@@ -484,9 +462,7 @@ async def test_request_snapshot_records_the_frozen_policy_and_no_secret(
     Every field the adapter was driven by is recorded, and the BYOK key (and the
     brand/competitor list) never reaches a snapshot.
     """
-    _seed, audit = await _make_audit(
-        session_factory, prompts=1, reps=1, measurement_mode=MEASUREMENT_MODE_PULSE
-    )
+    _seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
     worker = AuditWorker(session_factory=session_factory, owner="w-snapshot")
 
     await worker.run_until_idle()
@@ -501,16 +477,15 @@ async def test_request_snapshot_records_the_frozen_policy_and_no_secret(
         assert task is not None
 
     snapshot = task.request_snapshot
-    assert snapshot["measurement_mode"] == MEASUREMENT_MODE_PULSE
     assert snapshot["stateless"] is True
     # Driven by the frozen block, NOT by whatever the live settings say now.
     assert snapshot["retrieval_enabled"] == frozen["retrieval_enabled"]
     assert snapshot["max_output_tokens"] == frozen["max_output_tokens"]
     assert snapshot["timeout_seconds"] == frozen["timeout_seconds"]
     assert snapshot["answer_instruction"] == frozen["answer_instruction"]
-    assert snapshot["answer_instruction"] == PULSE_ANSWER_INSTRUCTION
+    assert snapshot["answer_instruction"] == AUDIT_ANSWER_INSTRUCTION
     assert snapshot["reasoning_effort"] == (
-        route_policy(task.logical_engine, MEASUREMENT_MODE_PULSE).reasoning_effort
+        route_policy(task.logical_engine).reasoning_effort
     )
     # Invariant 6: no credential, in any field, at any depth.
     assert "api_key" not in snapshot
@@ -528,13 +503,11 @@ async def test_frozen_policy_survives_a_live_settings_change(
     Invariant 9: the worker executes the policy frozen at plan time, so the
     snapshot keeps the planned cap/timeout even though the live values moved.
     """
-    _seed, audit = await _make_audit(
-        session_factory, prompts=1, reps=1, measurement_mode=MEASUREMENT_MODE_PULSE
-    )
-    planned_cap = audit_settings.pulse_max_output_tokens
-    planned_timeout = audit_settings.pulse_timeout_seconds
-    monkeypatch.setattr(audit_settings, "pulse_max_output_tokens", 1)
-    monkeypatch.setattr(audit_settings, "pulse_timeout_seconds", 999.0)
+    _seed, audit = await _make_audit(session_factory, prompts=1, reps=1)
+    planned_cap = audit_settings.audit_max_output_tokens
+    planned_timeout = audit_settings.audit_timeout_seconds
+    monkeypatch.setattr(audit_settings, "audit_max_output_tokens", 1)
+    monkeypatch.setattr(audit_settings, "audit_timeout_seconds", 999.0)
 
     worker = AuditWorker(session_factory=session_factory, owner="w-frozen")
     await worker.run_until_idle()
