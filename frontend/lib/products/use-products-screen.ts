@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { commerceApi } from '@/lib/api/commerce';
-import { opportunitiesApi } from '@/lib/api/opportunities';
 import { productsApi } from '@/lib/api/products';
 import { promptsApi } from '@/lib/api/prompts';
 import { topicsApi } from '@/lib/api/topics';
@@ -14,6 +12,8 @@ import { runsApi } from '@/lib/api/runs';
 import {
   catalogCategories,
   categoryIdentity,
+  commercePromptIdsToReplace,
+  commercePromptProductName,
   normalizeProductsTab,
   type ProductEngineFilter,
   type ProductsTab,
@@ -41,19 +41,13 @@ export function useProductsTab() {
 
   return { activeTab, selectTab };
 }
-
 export function useCatalogQueries(projectId: string | null, enabled = true) {
   const productsQuery = useQuery({
     queryKey: queryKeys.products.list(projectId ?? ''),
     queryFn: ({ signal }) => productsApi.list(projectId!, { signal }),
     enabled: Boolean(projectId) && enabled,
   });
-  const catalogHealthQuery = useQuery({
-    queryKey: queryKeys.commerce.catalogHealth(projectId ?? ''),
-    queryFn: ({ signal }) => commerceApi.getCatalogHealth(projectId!, { signal }),
-    enabled: Boolean(projectId) && enabled,
-  });
-  return { productsQuery, catalogHealthQuery };
+  return { productsQuery };
 }
 
 export function useProductVisibilityQueries(projectId: string | null, enabled = true) {
@@ -129,7 +123,7 @@ async function ensureCommercePromptSet(
   return promptsApi.createPromptSet({
     project_id: projectId,
     name: 'Commerce Product Visibility',
-    description: 'Category-level buyer destination and merchant comparison prompts.',
+    description: 'Product-named buyer destination and alternatives prompts grouped by category.',
   });
 }
 
@@ -150,19 +144,29 @@ async function ensureCategoryTopic(
   return created;
 }
 
-function topicPromptsAreComplete(prompts: PromptSet['prompts'], topicId: string) {
-  const intents = new Set(
-    prompts
-      .filter((prompt) => prompt.cohort === 'commerce' && prompt.topic_id === topicId)
-      .map((prompt) => prompt.intent),
+function topicPromptsAreComplete(
+  prompts: PromptSet['prompts'],
+  topicId: string,
+  productNames: string[],
+) {
+  const topicPrompts = prompts.filter(
+    (prompt) => prompt.cohort === 'commerce' && prompt.topic_id === topicId,
   );
-  return intents.has('discovery') && intents.has('comparison');
+  return productNames.every((productName) => {
+    const intents = new Set(
+      topicPrompts
+        .filter((prompt) => commercePromptProductName(prompt.text, productNames) === productName)
+        .map((prompt) => prompt.intent),
+    );
+    return intents.has('discovery') && intents.has('comparison');
+  });
 }
 
 async function generateCommercePortfolio({
   projectId,
   missingCategorySkus,
   categories,
+  products,
   commercePromptSet,
   availableTopics,
   regenerate,
@@ -171,6 +175,7 @@ async function generateCommercePortfolio({
   projectId: string | null;
   missingCategorySkus: string[];
   categories: string[];
+  products: Awaited<ReturnType<typeof productsApi.list>>;
   commercePromptSet: PromptSet | undefined;
   availableTopics: Topic[];
   regenerate: boolean;
@@ -183,17 +188,30 @@ async function generateCommercePortfolio({
   const replacedPromptIds: string[] = [];
   for (const category of categories) {
     const topic = await ensureCategoryTopic(projectId, topics, category);
-    if (!regenerate && topicPromptsAreComplete(currentPrompts, topic.id)) continue;
-    await promptsApi.generate(promptSet.id, {
-      count: 2,
+    const categoryProducts = products.filter(
+      (product) => categoryIdentity(product.attributes.category) === categoryIdentity(category),
+    );
+    if (
+      !regenerate &&
+      topicPromptsAreComplete(
+        currentPrompts,
+        topic.id,
+        categoryProducts.map((product) => product.name),
+      )
+    )
+      continue;
+    const existingTopicPrompts = currentPrompts.filter(
+      (prompt) => prompt.cohort === 'commerce' && prompt.topic_id === topic.id,
+    );
+    const productNames = categoryProducts.map((product) => product.name);
+    const generated = await promptsApi.generate(promptSet.id, {
+      count: categoryProducts.length * 2,
       topic_id: topic.id,
       intents: ['discovery', 'comparison'],
       cohort: 'commerce',
     });
     replacedPromptIds.push(
-      ...currentPrompts
-        .filter((prompt) => prompt.cohort === 'commerce' && prompt.topic_id === topic.id)
-        .map((prompt) => prompt.id),
+      ...commercePromptIdsToReplace(existingTopicPrompts, generated.generated, productNames),
     );
   }
   await Promise.all(replacedPromptIds.map((promptId) => promptsApi.deletePrompt(promptId)));
@@ -212,13 +230,7 @@ function useCommerceMeasurementQueries(projectId: string | null, enabled: boolea
     queryFn: ({ signal }) => productsApi.getProductVisibility(projectId!, undefined, { signal }),
     enabled: queryEnabled,
   });
-  const opportunitiesQuery = useQuery({
-    queryKey: queryKeys.opportunities.list(projectId ?? '', { type: 'commerce', limit: 5 }),
-    queryFn: ({ signal }) =>
-      opportunitiesApi.list(projectId!, { type: 'commerce', limit: 5 }, { signal }),
-    enabled: queryEnabled,
-  });
-  return { productsQuery, visibilityQuery, opportunitiesQuery };
+  return { productsQuery, visibilityQuery };
 }
 
 function useCommerceSetupQueries(projectId: string | null, enabled: boolean) {
@@ -249,10 +261,7 @@ function uncategorizedSkus(products: Awaited<ReturnType<typeof productsApi.list>
 
 export function useCommerceOverview(projectId: string | null, enabled = true) {
   const queryClient = useQueryClient();
-  const { productsQuery, visibilityQuery, opportunitiesQuery } = useCommerceMeasurementQueries(
-    projectId,
-    enabled,
-  );
+  const { productsQuery, visibilityQuery } = useCommerceMeasurementQueries(projectId, enabled);
   const { promptSetsQuery, topicsQuery, auditsQuery } = useCommerceSetupQueries(projectId, enabled);
   const categories = useMemo(
     () => catalogCategories(productsQuery.data ?? []),
@@ -272,6 +281,7 @@ export function useCommerceOverview(projectId: string | null, enabled = true) {
         projectId,
         missingCategorySkus,
         categories,
+        products: productsQuery.data ?? [],
         commercePromptSet,
         availableTopics: topicsQuery.data ?? [],
         regenerate,
@@ -290,7 +300,6 @@ export function useCommerceOverview(projectId: string | null, enabled = true) {
   return {
     productsQuery,
     visibilityQuery,
-    opportunitiesQuery,
     promptSetsQuery,
     topicsQuery,
     auditsQuery,
@@ -301,14 +310,4 @@ export function useCommerceOverview(projectId: string | null, enabled = true) {
     commerceAudits,
     generatePromptsMutation,
   };
-}
-
-export function useCommerceOpportunities(projectId: string | null, enabled = true) {
-  const opportunitiesQuery = useQuery({
-    queryKey: queryKeys.opportunities.list(projectId ?? '', { type: 'commerce', limit: 100 }),
-    queryFn: ({ signal }) =>
-      opportunitiesApi.list(projectId!, { type: 'commerce', limit: 100 }, { signal }),
-    enabled: Boolean(projectId) && enabled,
-  });
-  return { opportunitiesQuery };
 }

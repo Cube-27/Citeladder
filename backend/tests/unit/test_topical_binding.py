@@ -104,7 +104,6 @@ def test_build_project_vocabulary_uses_all_identity_sources() -> None:
     project.topics.append(
         Topic(project_id=project.id, name="Sizing", description="Shoe fit help")
     )
-
     vocabulary = build_project_vocabulary(project)
     for expected in (
         "acme",

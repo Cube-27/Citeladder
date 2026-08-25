@@ -16,8 +16,8 @@ import type {
   ProductOrigin,
 } from '@/lib/api/types';
 
-/** The four `/products` workspace tabs, in display order; Overview is default. */
-export type ProductsTab = 'overview' | 'catalog' | 'visibility' | 'opportunities';
+/** The three `/products` workspace tabs, in display order; Overview is default. */
+export type ProductsTab = 'overview' | 'catalog' | 'visibility';
 
 /** Engine filter value for the products surfaces (`all` = cross-engine). */
 export type ProductEngineFilter = LogicalEngine | 'all';
@@ -26,7 +26,6 @@ export const PRODUCTS_TABS: readonly { id: ProductsTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'catalog', label: 'Catalog' },
   { id: 'visibility', label: 'AI Visibility' },
-  { id: 'opportunities', label: 'Opportunities' },
 ] as const;
 
 /**
@@ -53,6 +52,58 @@ export function categoryIdentity(value: unknown): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
+function commercePhraseIdentity(value: string): string {
+  return value
+    .normalize('NFKC')
+    .toLocaleLowerCase()
+    .replaceAll(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+/** Associate prompt text with the longest exact catalog-name phrase it contains. */
+export function commercePromptProductName(
+  text: string,
+  productNames: readonly string[],
+): string | null {
+  const normalizedText = ` ${commercePhraseIdentity(text)} `;
+  const candidates = productNames
+    .map((name) => ({ name, identity: commercePhraseIdentity(name) }))
+    .filter((candidate) => candidate.identity)
+    .sort((left, right) => right.identity.length - left.identity.length);
+  return (
+    candidates.find((candidate) => normalizedText.includes(` ${candidate.identity} `))?.name ?? null
+  );
+}
+
+type CommercePromptIdentity = { text: string; intent?: string | null };
+
+function commercePromptKey(
+  prompt: CommercePromptIdentity,
+  productNames: readonly string[],
+): string | null {
+  const productName = commercePromptProductName(prompt.text, productNames);
+  return productName ? `${productName}\u0000${prompt.intent ?? ''}` : null;
+}
+
+/** Remove stale prompts or old rows that an inserted prompt actually replaces. */
+export function commercePromptIdsToReplace(
+  existing: readonly (CommercePromptIdentity & { id: string })[],
+  generated: readonly CommercePromptIdentity[],
+  productNames: readonly string[],
+): string[] {
+  const generatedKeys = new Set(
+    generated
+      .map((prompt) => commercePromptKey(prompt, productNames))
+      .filter((key): key is string => key !== null),
+  );
+  return existing
+    .filter((prompt) => {
+      const key = commercePromptKey(prompt, productNames);
+      return key === null || generatedKeys.has(key);
+    })
+    .map((prompt) => prompt.id);
+}
+
 /** One display category per identity, preserving the first uploaded spelling. */
 export function catalogCategories(products: readonly { attributes: Record<string, unknown> }[]) {
   const categories = new Map<string, string>();
@@ -73,16 +124,17 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   GBP: '£',
   AUD: 'A$',
   CAD: 'C$',
+  INR: '₹',
 };
 
 /** `$2,499.00` / `€2,499.00` / `2,499.00 CHF` / `—` when no price. */
 export function formatPrice(price: number | null | undefined, currency: string): string {
   if (price === null || price === undefined) return '—';
-  const amount = price.toLocaleString('en-US', {
+  const code = (currency ?? '').trim().toUpperCase();
+  const amount = price.toLocaleString(code === 'INR' ? 'en-IN' : 'en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  const code = (currency ?? '').trim().toUpperCase();
   const symbol = code ? CURRENCY_SYMBOLS[code] : undefined;
   if (symbol) return `${symbol}${amount}`;
   return code ? `${amount} ${code}` : amount;
