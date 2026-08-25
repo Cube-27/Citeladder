@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.connectors.web_evidence.brand_evidence import evidence_block_lines
 from app.core.config.projects import PROMPT_INTENTS
+from app.core.config.prompts import prompt_generation_settings
 from app.domain.projects.knowledge_base import serialize_brand_knowledge_context
 from app.domain.prompts.normalization import prompt_text_hash
 
@@ -43,15 +44,86 @@ class GenerationOutput(BaseModel):
     prompts: list[GeneratedPrompt] = Field(default_factory=list)
 
 
-def parse_generation_output(
-    raw: str, *, allowed_topics: list[dict[str, str]]
-) -> tuple[list[SuggestedTopic], int]:
+def generation_model_call_budget(count: int) -> int:
+    """Return the maximum provider calls one bounded generation may make."""
+    batch_size = min(prompt_generation_settings.model_batch_size, count)
+    return (count + batch_size - 1) // batch_size + 1
+
+
+def _topic_keyed_rows(
+    key: object,
+    rows: object,
+    *,
+    allowed_topic_ids: set[str],
+    fallback_intents: tuple[str, ...],
+) -> list[dict[str, str]] | None:
     try:
-        output = GenerationOutput.model_validate(json.loads(raw))
+        topic_id = str(uuid.UUID(str(key)))
+    except ValueError:
+        return None
+    if topic_id not in allowed_topic_ids or not isinstance(rows, list):
+        return None
+    if not all(isinstance(text, str) and text.strip() for text in rows):
+        return None
+    if fallback_intents and len(rows) != len(fallback_intents):
+        return None
+    return [
+        {
+            "topic_id": topic_id,
+            "text": text,
+            "intent": fallback_intents[index] if fallback_intents else "",
+        }
+        for index, text in enumerate(rows)
+    ]
+
+
+def _normalize_topic_keyed_output(
+    value: object,
+    *,
+    allowed_topic_ids: set[str],
+    fallback_intents: tuple[str, ...],
+) -> object:
+    """Normalize the bounded topic-map shape returned by some JSON-only hosts."""
+    if not isinstance(value, dict):
+        return value
+    topic_keys = [key for key in value if key != "prompts"]
+    if not topic_keys:
+        return value
+    prompts = value.get("prompts", [])
+    if not isinstance(prompts, list):
+        return value
+
+    normalized = list(prompts)
+    for key in topic_keys:
+        rows = _topic_keyed_rows(
+            key,
+            value[key],
+            allowed_topic_ids=allowed_topic_ids,
+            fallback_intents=fallback_intents,
+        )
+        if rows is None:
+            return value
+        normalized.extend(rows)
+    return {"prompts": normalized}
+
+
+def parse_generation_output(
+    raw: str,
+    *,
+    allowed_topics: list[dict[str, str]],
+    fallback_intents: tuple[str, ...] = (),
+) -> tuple[list[SuggestedTopic], int]:
+    topics = {str(topic["id"]): topic["name"] for topic in allowed_topics}
+    try:
+        payload = _normalize_topic_keyed_output(
+            json.loads(raw),
+            allowed_topic_ids=set(topics),
+            fallback_intents=fallback_intents,
+        )
+        output = GenerationOutput.model_validate(payload)
     except (json.JSONDecodeError, ValidationError) as exc:
         raise GenerationOutputError(f"Unparseable agent output: {exc}") from exc
 
-    topics = {str(topic["id"]): topic["name"] for topic in allowed_topics}
     grouped: dict[str, list[SuggestedPrompt]] = {}
     seen_hashes: set[str] = set()
     duplicate_count = 0
