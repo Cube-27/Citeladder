@@ -4,14 +4,18 @@ import type { ReactNode } from 'react';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { cn } from '@/lib/utils';
 
-export function AuthWordmark({ compact = false }: Readonly<{ compact?: boolean }>) {
+export function AuthWordmark({
+  compact = false,
+  size,
+  surface = 'light',
+}: Readonly<{ compact?: boolean; size?: number; surface?: 'light' | 'dark' }>) {
   return (
     <Link
       href="/"
       aria-label="CiteLadder home"
       className="group inline-flex items-center no-underline transition-opacity hover:opacity-90"
     >
-      <LogoMark size={compact ? 22 : 26} />
+      <LogoMark size={size ?? (compact ? 22 : 26)} surface={surface} />
     </Link>
   );
 }
@@ -55,7 +59,7 @@ export function AuthBrandPanel() {
   return (
     <BrandCanvas className="col-span-1 min-h-full items-center justify-center px-8 py-12">
       <div className="relative z-10 flex items-center justify-center">
-        <AuthWordmark />
+        <AuthWordmark size={32} surface="dark" />
       </div>
     </BrandCanvas>
   );

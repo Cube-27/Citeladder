@@ -86,5 +86,9 @@ describe('AuthBrandPanel', () => {
 
     expect(container.querySelector('[data-brand-canvas="true"]')).not.toBeNull();
     expect(screen.getByRole('link', { name: 'CiteLadder home' })).toBeVisible();
+    expect(container.querySelector('img')).toHaveAttribute(
+      'src',
+      expect.stringContaining('citeladder-dark-logo.webp'),
+    );
   });
 });
