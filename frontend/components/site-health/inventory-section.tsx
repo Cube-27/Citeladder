@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
@@ -236,8 +236,24 @@ function ScoredInventory({
   const allPager = useCursorStack();
   const errorsPager = useCursorStack();
   const pager = tab === 'monitored' ? monitoredPager : tab === 'all' ? allPager : errorsPager;
+  const resetMonitoredPager = monitoredPager.reset;
+
+  // The monitored query changes from `status=completed` to the full projection
+  // when a crawl becomes terminal. Its cursor is filter-bound, so never carry a
+  // deeper active-view cursor across that boundary.
+  useEffect(() => {
+    resetMonitoredPager();
+  }, [active, resetMonitoredPager]);
 
   const activeTab = TABS.find((t) => t.key === tab)!;
+  // A recrawl pre-seeds every monitored URL as pending. Showing that full
+  // pending window immediately makes the table appear frozen and then burst
+  // all at once. The first active view instead asks the persisted projection
+  // for completed rows, so audited pages arrive progressively. The other tabs
+  // remain available, and the terminal Monitored view returns to the complete
+  // monitored set.
+  const activeTabParams: PagesParams =
+    active && tab === 'monitored' ? { ...activeTab.params, status: 'completed' } : activeTab.params;
 
   // A filter edit restarts EVERY tab from its first page — cursors are
   // filter-bound server-side, so a stale cursor under a new page type 400s.
@@ -254,7 +270,7 @@ function ScoredInventory({
   // rows under review don't shift as more pages finish scoring.
   const pagesQuery = useQuery(
     siteHealthQueries.pages(crawl.id, {
-      ...activeTab.params,
+      ...activeTabParams,
       page_kind: pageKind || undefined,
       cursor: pager.cursor,
       limit: PAGE_LIMIT,
@@ -303,7 +319,9 @@ function ScoredInventory({
                 aria-current={t.key === tab ? 'true' : undefined}
                 className={segmentedItemClasses(t.key === tab)}
               >
-                {t.label}
+                {active && tab === 'monitored' && t.key === 'monitored'
+                  ? 'Audited so far'
+                  : t.label}
               </button>
             ))}
           </div>
