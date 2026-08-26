@@ -550,18 +550,18 @@ Before hardcoding the model ID, use the provider's `/v1/models` result or config
 
 ## Configuration
 
-Suggested environment variables:
+Runtime environment variables:
 
 ```text
 CONTENT_PROVIDER=gmi
-CONTENT_MODEL=MiniMaxAI/MiniMax-M3
-GMI_API_KEY=...
-CONTENT_PROVIDER_ENDPOINT=https://api.gmi-serving.com/v1/chat/completions
+GMICLOUD_MODEL=MiniMaxAI/MiniMax-M3
+GMICLOUD_API_KEY=...
+GMICLOUD_BASE_URL=https://api.gmi-serving.com/v1
 ```
 
-Keep Mistral support available as fallback.
-
-Do not delete the existing Mistral provider.
+The shipped provider-neutral OpenAI-compatible transport records the selected
+provider and requested/returned model on every attempt. Mistral remains
+selectable as a dormant fallback through its existing Content configuration.
 
 ---
 
