@@ -446,8 +446,8 @@ async def _collect_recompute_hits(
                 await load_commerce_opportunity_hits(
                     session,
                     workspace_id=workspace_id,
+                    project_id=project_id,
                     audit_id=audit.id,
-                    project_id=audit.project_id,
                 )
             )
             hits.extend(
