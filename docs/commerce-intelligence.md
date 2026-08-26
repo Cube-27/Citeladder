@@ -1,5 +1,11 @@
 # Commerce specialization
 
+> **Status:** shipped-runtime reference until the atomic replacement lands.
+> The approved future contract is
+> [`plans/commerce-suite-atomic-rebuild.md`](plans/commerce-suite-atomic-rebuild.md).
+> Its PR 1 performs the cutover and replaces this document's current boundary;
+> do not combine the two implementations before that gate.
+
 Commerce is a specialization over the shared Site Health, Content, Demand, and
 Opportunity owners. It is not a separate crawler, page-analysis table,
 knowledge store, or product architecture.
