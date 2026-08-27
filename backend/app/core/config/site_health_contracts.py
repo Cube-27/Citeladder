@@ -121,11 +121,18 @@ TASK_KIND_ANALYZE: Final = "analyze"
 
 TASK_KIND_CHANGE_INTEL: Final = "change_intel"
 
+TASK_KIND_LINK_METRICS: Final = "link_metrics"
+
+POST_TERMINAL_SITE_TASK_KINDS: Final[frozenset[str]] = frozenset(
+    {TASK_KIND_CHANGE_INTEL, TASK_KIND_LINK_METRICS}
+)
+
 SITE_TASK_KINDS: Final[frozenset[str]] = frozenset(
     {
         TASK_KIND_DISCOVER,
         TASK_KIND_ANALYZE,
         TASK_KIND_CHANGE_INTEL,
+        TASK_KIND_LINK_METRICS,
     }
 )
 
@@ -308,7 +315,7 @@ EVENT_CRAWL_CANCELLED: Final = "crawl.cancelled"
 # logged instead of silently emptying the fact bucket, so an extraction bug is
 # no longer replayed as "this page had no title / no CTAs / no forms". Facts
 # extracted under v7 stay replayable at v7 (invariant 5).
-EXTRACTOR_VERSION: Final = "sh-extractor-10"
+EXTRACTOR_VERSION: Final = "sh-extractor-11"
 
 LINK_REWRITE_VERSION: Final = "sh-link-rewrite-1"
 
@@ -320,4 +327,4 @@ RULE_CATALOG_VERSION: Final = "sh-rules-5"
 
 SCORING_VERSION: Final = "sh-scoring-3"
 
-CLASSIFIER_VERSION: Final = "sh-classifier-6"
+CLASSIFIER_VERSION: Final = "sh-classifier-7"

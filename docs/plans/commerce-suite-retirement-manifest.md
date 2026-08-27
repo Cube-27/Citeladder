@@ -56,9 +56,9 @@ inventory found no external caller.
 | Concern | Before | After |
 |---|---|---|
 | Site Health acquisition | `sh-acquisition-2` | unchanged |
-| Site Health extractor | `sh-extractor-8` | `sh-extractor-9` |
-| Site Health analyzer | `sh-analyzer-4` | `sh-analyzer-5` |
-| Page classifier | `sh-classifier-3` | `sh-classifier-5` |
+| Site Health extractor | `sh-extractor-8` | `sh-extractor-11` |
+| Site Health analyzer | `sh-analyzer-4` | `sh-analyzer-6` |
+| Page classifier | `sh-classifier-3` | `sh-classifier-7` |
 | Site Health rules | `sh-rules-4` | unchanged |
 | Site Health scoring | `sh-scoring-2` | unchanged |
 | Legacy Commerce importer | `commerce-importer-1` | retired |
@@ -66,7 +66,7 @@ inventory found no external caller.
 | Legacy product scoring | `product-scoring-v2` | retired |
 | Catalog projector | absent | `commerce-projector-3` |
 | Catalog importer/edit policy | absent | `commerce-catalog-importer-1` / `commerce-catalog-edit-2` / `commerce-category-edit-1` |
-| Competitor provider/validator | absent | `tavily-commerce-1` / `commerce-competitor-validator-4` |
+| Competitor provider/validator | absent | `tavily-commerce-1` / `commerce-competitor-validator-5` |
 | Buyer prompt template | absent | `commerce-buyer-prompts-2` |
 | Recommendation parser/matcher | absent | `commerce-recommendation-parser-3` / `commerce-recommendation-matcher-3` |
 | AI Shelf formulas | absent | `commerce-shelf-formulas-2` |
