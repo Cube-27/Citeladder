@@ -234,8 +234,12 @@ test('Overview remains useful before the first visibility audit', async ({ page 
 
   await page.goto('/projects');
   await expect(page.getByText('Make every answer traceable')).toBeVisible();
+  await expect(page.getByText('Growth teams')).toBeVisible();
+  await expect(page.getByText('Analytics')).toBeVisible();
   await expect(page.getByText('Connect GSC or GA4')).toBeVisible();
-  await expect(page.getByText('Citation share —')).toBeVisible();
+  const citationShare = page.getByRole('region', { name: 'Citation share' });
+  await expect(citationShare).toBeVisible();
+  await expect(citationShare.getByText('Not run', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Executive PDF/i })).toHaveCount(0);
   // The Product loop station strip was removed from Overview; loop evidence
   // still arrives on the projection but has no station-tile surface.

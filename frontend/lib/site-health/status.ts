@@ -14,7 +14,7 @@
  *   - sample mode never renders a total placeholder or count-dependent copy —
  *     `total_url_count` is null and there is no "discovered so far";
  *   - error / blocked rows are explicit states, never a fabricated zero score;
- *   - missing / not-yet-analysed scores render the `—` placeholder.
+ *   - missing / not-yet-analysed scores render an explicit not-measured label.
  */
 import type {
   CrawlAnalysisStatus,
@@ -25,10 +25,11 @@ import type {
   SiteHealthEntitlement,
 } from '@/lib/api/types';
 import type { RunStatusValue, StatusValue } from '@/components/ui/badge-variants';
+import { availabilityLabel } from '@/lib/format';
 import { titleCaseStatus } from '@/lib/utils';
 
 /** The not-yet-analysed / not-applicable placeholder (matches visibility UI). */
-export const PLACEHOLDER = '—';
+export const PLACEHOLDER = availabilityLabel('not_measured');
 
 /** Rows per cursor page across the Site Health inventory/pages lists. */
 export const PAGE_LIMIT = 10;
@@ -425,7 +426,7 @@ export function statusLabel(status: string): string {
 
 /**
  * Format a 0–100 score for display. Null (not yet analysed) and NaN render the
- * `—` placeholder — an error/blocked row is NEVER shown as 0.
+ * `Not measured` placeholder — an error/blocked row is NEVER shown as 0.
  */
 export function formatScore(score: number | null): string {
   if (score === null || Number.isNaN(score)) return PLACEHOLDER;

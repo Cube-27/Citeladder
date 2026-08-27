@@ -14,6 +14,7 @@ import type {
   VisibilityTrendPoint,
   VisibilityTrendRankingRow,
 } from '@/lib/api/types';
+import { availabilityLabel } from '@/lib/format';
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
@@ -166,11 +167,11 @@ export type TrendStat = {
 };
 
 function formatPct(value: number | null): string {
-  return value === null ? '—' : `${Math.round(value)}%`;
+  return value === null ? availabilityLabel('not_measured') : `${Math.round(value)}%`;
 }
 
 function formatScoreValue(value: number | null): string {
-  return value === null ? '—' : `${Math.round(value)}`;
+  return value === null ? availabilityLabel('not_measured') : `${Math.round(value)}`;
 }
 
 /**
@@ -230,7 +231,7 @@ export function trendStats(points: readonly VisibilityTrendPoint[]): TrendStat[]
       value: formatScoreValue(vs),
       delta: scoreDelta.text,
       direction: scoreDelta.direction,
-      placeholder: false,
+      placeholder: vs === null,
     },
     {
       key: 'sov',
@@ -238,7 +239,7 @@ export function trendStats(points: readonly VisibilityTrendPoint[]): TrendStat[]
       value: formatPct(sov),
       delta: sovDelta.text,
       direction: sovDelta.direction,
-      placeholder: false,
+      placeholder: sov === null,
     },
     {
       key: 'response_sov',
@@ -246,15 +247,15 @@ export function trendStats(points: readonly VisibilityTrendPoint[]): TrendStat[]
       value: formatPct(rsov),
       delta: rsovDelta.text,
       direction: rsovDelta.direction,
-      placeholder: false,
+      placeholder: rsov === null,
     },
     {
       key: 'brand_mention_count',
       label: 'Brand mentions',
-      value: bmc === null ? '—' : `${bmc}`,
+      value: bmc === null ? availabilityLabel('not_measured') : `${bmc}`,
       delta: bmcDelta.text,
       direction: bmcDelta.direction,
-      placeholder: false,
+      placeholder: bmc === null,
     },
     {
       key: 'owned_citation_rate',
@@ -262,7 +263,7 @@ export function trendStats(points: readonly VisibilityTrendPoint[]): TrendStat[]
       value: formatPct(oc),
       delta: ocDelta.text,
       direction: ocDelta.direction,
-      placeholder: false,
+      placeholder: oc === null,
     },
   ];
 }

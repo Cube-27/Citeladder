@@ -192,6 +192,18 @@ export function editorialTypographyViolations(source, label, ownsWebsiteEditoria
     );
 }
 
+/** Product data absence must name its state instead of rendering punctuation alone. */
+export function standalonePlaceholderViolations(source, label, ownsProductUi) {
+  if (!ownsProductUi) return [];
+  const violations = [];
+  const literalStandaloneDash = /(['"`])—\1/g;
+  const jsxStandaloneDash = />\s*—\s*</g;
+  if (literalStandaloneDash.test(source) || jsxStandaloneDash.test(source)) {
+    violations.push(`${label}: standalone em-dash placeholder; use semantic availability copy`);
+  }
+  return violations;
+}
+
 function cssRules(source) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const rules = [];
