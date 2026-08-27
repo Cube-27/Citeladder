@@ -8,6 +8,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 from app.analysis.site_health.fact_regions import primary_region_text
+from app.core.config.site_health_archetypes import ARCHITECTURE_MAX_BREADCRUMB_ITEMS
 
 _PRICE = re.compile(
     r"(?:[$£€₹]|AUD|USD|CAD|NZD|GBP|EUR|INR)\s*\d[\d,.]*(?:\.\d{1,2})?",
@@ -32,20 +33,40 @@ def _ancestor_tokens(node: Any) -> str:
     return " ".join(values)
 
 
-def _breadcrumbs(root: Any, text_of: Callable[[Any], str]) -> list[str]:
+def _breadcrumbs(
+    root: Any, *, final_url: str, text_of: Callable[[Any], str]
+) -> tuple[list[str], list[dict[str, str]]]:
     xpath = (
         "//*[contains(translate(@class,'BREADCRUMB','breadcrumb'),'breadcrumb') "
         "or @aria-label='breadcrumb' or @aria-label='Breadcrumb']"
     )
     values: list[str] = []
+    links: list[dict[str, str]] = []
     for node in root.xpath(xpath)[:4]:
-        for item in node.xpath(".//a|.//li|.//span"):
+        items = node.xpath(".//a|.//li|.//span")[
+            : ARCHITECTURE_MAX_BREADCRUMB_ITEMS * 4
+        ]
+        for item in items:
             cleaned = text_of(item).strip()[:255]
-            if cleaned and cleaned not in values:
+            if (
+                cleaned
+                and cleaned not in values
+                and len(values) < ARCHITECTURE_MAX_BREADCRUMB_ITEMS
+            ):
                 values.append(cleaned)
-            if len(values) >= 16:
-                return values
-    return values
+            href = str(item.get("href") or "").strip()
+            if href:
+                row = {
+                    "url": urljoin(final_url, href)[:2048],
+                    "title": cleaned,
+                }
+                _append_unique(links, row, limit=ARCHITECTURE_MAX_BREADCRUMB_ITEMS)
+            if (
+                len(values) >= ARCHITECTURE_MAX_BREADCRUMB_ITEMS
+                and len(links) >= ARCHITECTURE_MAX_BREADCRUMB_ITEMS
+            ):
+                return values, links
+    return values, links
 
 
 def _cards(
@@ -78,7 +99,9 @@ def extract_commerce_facts(
     root: Any, *, final_url: str, text_of: Callable[[Any], str]
 ) -> dict[str, Any]:
     """Return structural taxonomy/card facts without assigning a page kind."""
-    breadcrumbs = _breadcrumbs(root, text_of)
+    breadcrumbs, breadcrumb_links = _breadcrumbs(
+        root, final_url=final_url, text_of=text_of
+    )
     product_cards, category_links = _cards(root, final_url=final_url, text_of=text_of)
     # The page's own visible text, not the whole tree: ``text_of(root)`` also
     # reads inline <script> bodies, and a JavaScript regex replacement string
@@ -87,6 +110,7 @@ def extract_commerce_facts(
     match = _PRICE.search(page_text)
     return {
         "breadcrumbs": breadcrumbs,
+        "breadcrumb_links": breadcrumb_links,
         "product_cards": product_cards,
         "category_links": category_links,
         "category_role": (
