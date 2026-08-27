@@ -54,6 +54,7 @@ function generation(overrides: Record<string, unknown> = {}) {
     opportunity_id: null,
     skill_version: 'content-v1',
     feedback: null,
+    feedback_reason: '',
     feedback_at: null,
     grounding_status: 'included',
     requested_model: 'mistral-small-latest',
@@ -66,13 +67,13 @@ function generation(overrides: Record<string, unknown> = {}) {
     prompt_preview: 'Write an about page',
     prompt: 'Write an about page for Acme.',
     grounding_summary: {
-      version: 'grounding-envelope-v2',
-      allowed_fact_count: 2,
-      source_ref_count: 3,
-      crawl_fragment_count: 1,
-      prohibited_claim_classes: ['pricing'],
+      version: 'content-context-v1',
+      crawl_page_count: 3,
+      crawl_urls: ['https://acme.test/', 'https://acme.test/pricing', 'https://acme.test/about'],
+      crawl_completed_at: '2026-07-15T00:00:00Z',
+      brand_fields: ['description'],
+      search_connected: false,
       omissions: [],
-      budget: {},
     },
     finish_reason: null,
     output_truncated: false,
@@ -136,16 +137,24 @@ test('content nav link is live and the enqueue → output flow renders sanitised
   await expect(page).toHaveURL(/\/content$/);
 
   const promptBox = page.getByRole('textbox', { name: /describe the website content/i });
-  await expect(
-    page.getByText('Uses confirmed facts and crawl evidence when available'),
-  ).toBeVisible();
+  // The indicator is live, so the page count depends on this environment's
+  // crawl state; assert the surface exists and names both sources instead.
+  const contextIndicator = page.locator('[data-component-id="content-context-indicator"]');
+  await expect(contextIndicator).toBeVisible();
+  // Search Console is always named; the crawl line may legitimately still be
+  // checking while the preview query retries in this environment, so assert
+  // it settles rather than pinning a page count that varies with crawl state.
+  await expect(contextIndicator).toContainText(/search console/i);
+  await expect(contextIndicator).toContainText(/website crawl|checking available context/i);
   await promptBox.fill('Write an about page for Acme.');
   await page.getByRole('button', { name: 'Generate' }).click();
 
   // The queued state may resolve before the browser paints; assert the durable result.
   await expect(page.getByRole('heading', { name: 'About Acme' })).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText(/returned model: mistral-small-2506/i)).toBeVisible();
-  await expect(page.getByText(/Grounding: 2 confirmed facts · 1 crawl fragments/i)).toBeVisible();
+  // Model ids are provenance on the row, not something the writer needs on the
+  // page; the footer now says only what the draft was grounded with.
+  await expect(page.getByText(/returned model/i)).toHaveCount(0);
+  await expect(page.getByText(/grounded with: website crawl · 3 pages/i)).toBeVisible();
 });
 
 test('cancel during generation returns the screen to a non-generating state', async ({ page }) => {

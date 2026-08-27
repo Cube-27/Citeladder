@@ -13,13 +13,14 @@ import {
 import { useActiveProject } from '@/lib/project/project-context';
 import { saveBlob } from '@/lib/site-health/download';
 
-import { useDemandBrief, useSkillCatalog } from './content-screen-data';
 import {
-  ContentComposer,
-  GenerationErrorPanel,
-  GeneratingPanel,
-  GenerationResult,
-} from './content-screen-panels';
+  useContentContextPreview,
+  useDemandBrief,
+  useOpportunityContext,
+  useSkillCatalog,
+} from './content-screen-data';
+import { ContentComposer, GenerationErrorPanel, GeneratingPanel } from './content-screen-panels';
+import { GenerationResult } from './content-screen-result';
 import { GenerationHistory } from './content-screen-history';
 
 const FALLBACK_SKILL_ID = 'content_page';
@@ -74,8 +75,11 @@ function ProjectContentScreen({
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement | null>(null);
+  const [reasonOpen, setReasonOpen] = useState(false);
   const skillCatalog = useSkillCatalog();
   const demand = useDemandBrief(projectId, demandSignalId);
+  const contextPreview = useContentContextPreview(projectId);
+  const opportunity = useOpportunityContext(opportunityId);
   const generation = useContentGenerations(projectId, undefined, opportunityId);
   const detail: ContentGenerationDetail | null = generation.detailQuery.data ?? null;
   const seededBrief = useRef<string | null>(null);
@@ -88,6 +92,15 @@ function ProjectContentScreen({
     setPrompt(brief.prompt);
     setChosenSkillId(brief.suggestedSkillId);
   }, [demand.brief]);
+
+  // Seed once from the opportunity, on the same guarded pattern as the demand
+  // brief: a later refetch must never overwrite what the user has typed.
+  const seededOpportunity = useRef<string | null>(null);
+  useEffect(() => {
+    if (!opportunity?.remediation || seededOpportunity.current === opportunity.remediation) return;
+    seededOpportunity.current = opportunity.remediation;
+    setPrompt((current) => (current.trim() ? current : opportunity.remediation));
+  }, [opportunity?.remediation]);
 
   const generating = Boolean(
     (detail && !isTerminalContentStatus(detail.status)) || generation.enqueueMutation.isPending,
@@ -114,7 +127,11 @@ function ProjectContentScreen({
       demand={demand}
       prompt={prompt}
       promptRef={promptRef}
-      opportunityId={opportunityId}
+      opportunity={opportunity}
+      contextPreview={contextPreview.data ?? null}
+      // Only pending BEFORE the query settles: an errored preview must fall
+      // through to a real line, and isLoading stays true across retries.
+      contextLoading={contextPreview.isPending && !contextPreview.isError}
       generating={generating}
       skillId={skillId}
       skills={skills}
@@ -130,6 +147,8 @@ function ProjectContentScreen({
       copied={copied}
       copyFailed={copyFailed}
       clipboard={clipboard}
+      reasonOpen={reasonOpen}
+      setReasonOpen={setReasonOpen}
     />
   );
 }
@@ -138,7 +157,9 @@ function ContentWorkspace({
   demand,
   prompt,
   promptRef,
-  opportunityId,
+  opportunity,
+  contextPreview,
+  contextLoading,
   generating,
   skillId,
   skills,
@@ -154,11 +175,15 @@ function ContentWorkspace({
   copied,
   copyFailed,
   clipboard,
+  reasonOpen,
+  setReasonOpen,
 }: Readonly<{
   demand: ReturnType<typeof useDemandBrief>;
   prompt: string;
   promptRef: React.RefObject<HTMLTextAreaElement | null>;
-  opportunityId?: string | null;
+  opportunity: ReturnType<typeof useOpportunityContext>;
+  contextPreview: Parameters<typeof ContentComposer>[0]['contextPreview'];
+  contextLoading: boolean;
   generating: boolean;
   skillId: string;
   skills: Parameters<typeof ContentComposer>[0]['skills'];
@@ -174,6 +199,8 @@ function ContentWorkspace({
   copied: boolean;
   copyFailed: boolean;
   clipboard: () => Promise<void>;
+  reasonOpen: boolean;
+  setReasonOpen: (value: boolean) => void;
 }>) {
   return (
     <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px] [&>*]:min-w-0">
@@ -182,7 +209,9 @@ function ContentWorkspace({
         <ContentComposer
           prompt={prompt}
           promptRef={promptRef}
-          opportunityId={opportunityId}
+          opportunity={opportunity}
+          contextPreview={contextPreview}
+          contextLoading={contextLoading}
           demandSource={demand.brief?.sourceLabel ?? null}
           generating={generating}
           skillId={skillId}
@@ -219,9 +248,12 @@ function ContentWorkspace({
             onCopy={clipboard}
             onExport={() => exportMarkdown(detail)}
             onRegenerate={generation.regenerateMutation.mutate}
-            onFeedback={(generationId, feedback) =>
-              generation.feedbackMutation.mutate({ generationId, feedback })
-            }
+            reasonOpen={reasonOpen}
+            onRejectClick={() => setReasonOpen(true)}
+            onFeedback={(generationId, feedback, reason) => {
+              setReasonOpen(false);
+              generation.feedbackMutation.mutate({ generationId, feedback, reason });
+            }}
           />
         ) : null}
       </div>
