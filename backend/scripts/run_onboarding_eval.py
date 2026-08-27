@@ -52,14 +52,17 @@ _load_env()
 
 from app.domain.projects.discovery_schemas import DiscoveryTopic  # noqa: E402
 from app.domain.projects.onboarding.industry_library import (  # noqa: E402
-    archetype_templates,
     industry_context,
+    load_industry_library,
 )
 from app.domain.projects.onboarding.normalization import (  # noqa: E402
     normalize_website_url,
 )
 from app.domain.projects.onboarding.portfolio_generation import (  # noqa: E402
     generate_portfolio,
+)
+from app.domain.projects.onboarding.prompt_validation import (  # noqa: E402
+    brand_terms,
 )
 from app.domain.projects.onboarding.research import research_brand  # noqa: E402
 from app.domain.projects.onboarding.site_resolution import resolve_site  # noqa: E402
@@ -123,8 +126,27 @@ class CaseResult:
 
 
 def _archetype_templates() -> list[str]:
-    """Every slot template the deterministic fallback can emit."""
-    return list(archetype_templates())
+    """Every slot template the deterministic fallback can emit.
+
+    The library is the only place these skeletons exist, and it nests them per
+    industry and subindustry, so they are collected by walking it rather than
+    by mirroring its shape here.
+    """
+    templates: list[str] = []
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            text = node.get("text")
+            if isinstance(text, str) and text.strip():
+                templates.append(text)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(load_industry_library())
+    return list(dict.fromkeys(templates))
 
 
 async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseResult:
@@ -140,7 +162,7 @@ async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseRes
     try:
         normalized_url, _domain = normalize_website_url(case.website_url)
         site = await resolve_site(case.website_url, normalized_url)
-        selected_industry, context = industry_context(industry)
+        selected_industry, _context = industry_context(industry)
         market = MARKET_CODES[case.primary_market]
         research = await research_brand(
             brand_name=case.brand_name,
@@ -149,7 +171,6 @@ async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseRes
             subindustry=subindustry,
             language_code="en",
             site=site,
-            industry_context=context,
         )
         profile = _as_mapping(research.profile)
         competitors = [_competitor_name(entry) for entry in research.competitors]
@@ -157,9 +178,15 @@ async def _run_case(case, *, judge_key: str, judge_model: str | None) -> CaseRes
         topics = [DiscoveryTopic.model_validate(topic) for topic in research.topics]
         portfolio = await generate_portfolio(
             brand_name=case.brand_name,
+            brand_terms=brand_terms(
+                case.brand_name,
+                [],
+                _category_vocabulary(profile, topics),
+            ),
             primary_market=market,
             profile=profile,
             competitors=competitors,
+            competitor_terms=_competitor_terms(research.competitors),
             topics=topics,
         )
         if not portfolio.prompts:
@@ -196,6 +223,51 @@ def _competitor_name(entry: Any) -> str:
     if isinstance(entry, dict):
         return str(entry.get("name") or "").strip()
     return str(getattr(entry, "name", "") or "").strip()
+
+
+def _competitor_aliases(entry: Any) -> list[str]:
+    """The alias list carried alongside a competitor name, in either shape."""
+    raw = (
+        entry.get("aliases")
+        if isinstance(entry, dict)
+        else getattr(entry, "aliases", None)
+    )
+    return [str(alias).strip() for alias in (raw or []) if str(alias).strip()]
+
+
+def _competitor_terms(entries: Any) -> list[str]:
+    """Every name a competitor answers to, so prompts can be scored against it."""
+    return [
+        term
+        for entry in entries or ()
+        for term in [_competitor_name(entry), *_competitor_aliases(entry)]
+        if term
+    ]
+
+
+def _category_vocabulary(
+    profile: dict[str, Any], topics: list[DiscoveryTopic]
+) -> list[str]:
+    """The business's own category language, mirroring the onboarding service.
+
+    A token the confirmed category uses is category language first and brand
+    language second, so it must stay usable in organic prompts.
+    """
+    values: list[str] = []
+    for key in (
+        "category",
+        "category_options",
+        "category_aliases",
+        "category_terms",
+        "products_services",
+    ):
+        raw = profile.get(key)
+        if isinstance(raw, str):
+            values.append(raw)
+        elif isinstance(raw, list):
+            values.extend(str(item) for item in raw)
+    values.extend(topic.name for topic in topics)
+    return [value.strip() for value in values if value.strip()]
 
 
 def _as_mapping(value: Any) -> dict[str, Any]:

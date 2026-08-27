@@ -28,6 +28,7 @@ from app.domain.commerce.projector import (
     _category_from_analysis,
     _category_title,
     _crawl_values,
+    _project_product_source,
 )
 from app.domain.commerce.prompts import _leaks_owned_identity
 from app.domain.commerce.schemas import (
@@ -552,6 +553,61 @@ async def test_projector_refreshes_non_edited_category_name() -> None:
 
 
 @pytest.mark.asyncio
+async def test_a_listing_page_classified_as_a_product_projects_as_a_category() -> None:
+    """A crawled page must reach the catalog under SOME kind, never vanish.
+
+    The classifier promotes listing pages ("/shop/women") to `product` on a
+    price regex plus a cart marker. They carry no product identity, so the
+    projector refused them -- and, because it refused them silently, a crawl
+    with nine analyzed product pages left the Commerce workspace reading
+    "Nothing projected yet". A listing page is a category; project it as one.
+    """
+    added: list[object] = []
+
+    class Session:
+        async def scalar(self, *_: object) -> None:
+            return None
+
+        def add(self, row: object) -> None:
+            added.append(row)
+
+        async def flush(self) -> None:
+            raise AssertionError("no product row is written for a listing page")
+
+    analysis = SimpleNamespace(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        project_id=uuid.uuid4(),
+        classifier_version="c1",
+    )
+    artifact = SimpleNamespace(
+        id=uuid.uuid4(),
+        extractor_version="e1",
+        normalized_facts={
+            "title": "Women's Clothing Online | Shop Now",
+            "structured_data": {"product": {}},
+            "commerce": {"breadcrumbs": ["Home", "Women"], "category_role": "hub"},
+        },
+    )
+    site_url = SimpleNamespace(
+        normalized_url="https://shop.test/shop/women", latest_title="Women"
+    )
+
+    await _project_product_source(
+        Session(),  # type: ignore[arg-type]
+        analysis=analysis,
+        artifact=artifact,
+        site_url=site_url,
+    )
+
+    assert len(added) == 1
+    category = added[0]
+    assert category.name == "Women"  # the breadcrumb leaf, not the title tag
+    assert category.canonical_url == "https://shop.test/shop/women"
+    assert category.role == "hub"
+
+
+@pytest.mark.asyncio
 async def test_concurrent_category_name_conflict_is_translated() -> None:
     class UniqueViolation(Exception):
         constraint_name = "uq_commerce_category_name"
@@ -722,6 +778,24 @@ def test_category_name_is_the_page_s_own_name_not_its_title_tag() -> None:
     )
     # A separator-free title survives intact.
     assert _category_title({"title": "Back in Stock"}, "") == "Back in Stock"
+
+
+def test_a_breadcrumb_separator_is_not_a_category_name() -> None:
+    """A crumb of pure punctuation became a catalog category literally named "/"."""
+    # The separator nodes are skipped and the real leaf is taken.
+    assert (
+        _category_title({"commerce": {"breadcrumbs": ["Home", "/", "Dresses"]}}, "")
+        == "Dresses"
+    )
+    # A trail that is nothing BUT separators names nothing, and falls through.
+    assert _category_title({"commerce": {"breadcrumbs": ["/", "›"]}}, "") == ""
+    # The same rule applies to an h1 and to a title segment.
+    assert _category_title({"headings": {"h1_texts": ["|"]}, "title": "Denim"}, "") == (
+        "Denim"
+    )
+    assert _category_title({"title": "/"}, "") == ""
+    # A non-Latin name is still a name.
+    assert _category_title({"commerce": {"breadcrumbs": ["ドレス"]}}, "") == ("ドレス")
 
 
 def test_a_shipping_banner_is_not_a_product_price() -> None:

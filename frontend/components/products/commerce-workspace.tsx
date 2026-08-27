@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
 import { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
+import {
+  MAX_PANE_WIDTH,
+  MIN_PANE_WIDTH,
+  type ResizablePane,
+  useResizablePane,
+} from '@/lib/products/use-resizable-pane';
 import { targetKey, useCommerceTarget } from '@/lib/products/use-commerce-target';
 import { useCommerceQueries } from '@/lib/products/use-products-screen';
 
@@ -42,11 +48,63 @@ function BulkActions({
   );
 }
 
+/**
+ * The drag handle between the catalog list and the target detail.
+ *
+ * A `separator` with `aria-valuenow` is the role a pane splitter has, so the
+ * width is operable by keyboard (arrows nudge, Home restores the default) and
+ * not only by pointer — a control that exists only under a mouse is not a
+ * control. Hidden below `lg`, where the two panes stack and there is no
+ * boundary to move.
+ */
+function PaneResizer({ pane }: Readonly<{ pane: ResizablePane }>) {
+  return (
+    <div
+      role="separator"
+      tabIndex={0}
+      aria-orientation="vertical"
+      aria-label="Resize the catalog pane"
+      aria-valuemin={MIN_PANE_WIDTH}
+      aria-valuemax={MAX_PANE_WIDTH}
+      aria-valuenow={pane.width}
+      className="group focus-visible:ring-accent hidden cursor-col-resize touch-none items-stretch justify-center rounded-full px-1 focus-visible:ring-2 focus-visible:outline-none lg:flex"
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        pane.beginDrag(event.clientX);
+      }}
+      onPointerMove={(event) => {
+        if (pane.dragging) pane.dragTo(event.clientX);
+      }}
+      onPointerUp={(event) => {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        pane.endDrag();
+      }}
+      onPointerCancel={() => pane.endDrag()}
+      onDoubleClick={() => pane.reset()}
+      onKeyDown={(event) => {
+        if (event.key === 'ArrowLeft') pane.nudge(-pane.keyboardStep);
+        else if (event.key === 'ArrowRight') pane.nudge(pane.keyboardStep);
+        else if (event.key === 'Home') pane.reset();
+        else return;
+        event.preventDefault();
+      }}
+    >
+      <span
+        aria-hidden
+        className={`w-0.5 rounded-full transition-colors ${
+          pane.dragging ? 'bg-accent' : 'bg-border group-hover:bg-border-bold'
+        }`}
+      />
+    </div>
+  );
+}
+
 export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>) {
   const { target, selectTarget } = useCommerceTarget();
   const queries = useCommerceQueries(projectId, target);
   const discovery = useCompetitorDiscovery(projectId);
   const [checked, setChecked] = useState<string[]>([]);
+  const pane = useResizablePane();
   const { categories, products } = catalogEntries(queries.catalog);
   const entries = [...categories, ...products];
   const selectedKey = target ? targetKey(target) : undefined;
@@ -72,8 +130,18 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
           `min-width: auto`, so a long product name ("TempPro TP920 Bluetooth
           Meat Thermometer + TP620 Instant-Read + TP358 Hygrometer — Bundle")
           forces the track wider than its track sizing and the list overflows
-          its own card, on top of the detail pane. */}
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+          its own card, on top of the detail pane.
+
+          The first track is the reader's to size (see `useResizablePane`); the
+          gap is halved because the separator now carries the space between the
+          panes itself. `select-none` while dragging stops the pointer from
+          painting a text selection across both panes. */}
+      <div
+        style={{ '--catalog-pane': `${pane.width}px` } as React.CSSProperties}
+        className={`grid items-start gap-2 lg:grid-cols-[var(--catalog-pane)_auto_minmax(0,1fr)] ${
+          pane.dragging ? 'cursor-col-resize select-none' : ''
+        }`}
+      >
         <Card className="min-w-0 lg:sticky lg:top-4">
           <CardContent className="max-h-[calc(100vh-8rem)] overflow-y-auto pt-4">
             <CatalogList
@@ -85,6 +153,7 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
             />
           </CardContent>
         </Card>
+        <PaneResizer pane={pane} />
         <div className="min-w-0">
           {target ? (
             // Rendered as soon as a target exists, not once the catalog has

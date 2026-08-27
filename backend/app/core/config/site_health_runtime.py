@@ -54,11 +54,14 @@ class SiteHealthSettings(BaseSettings):
     # Manual seed, page-kind, and oversized crawl controls are development-only.
     # The standard product path is one bounded, progressively analyzed crawl.
     advanced_controls_enabled: bool = False
-    # Standard user-initiated crawls discover at most 50 pages. Development
+    # Standard user-initiated crawls discover at most 500 pages. Development
     # advanced controls may explicitly request more, up to the separate
-    # 50,000-URL internal ceilings below.
-    automatic_page_limit: int = 50
-    max_requested_page_limit: int = 50
+    # 50,000-URL internal ceilings below. A 50-page sample spent its whole
+    # budget on a large retailer's navigation shell -- category hubs and
+    # /shop/* landing pages -- and never reached a single product detail URL,
+    # which left every downstream Commerce projection empty.
+    automatic_page_limit: int = 500
+    max_requested_page_limit: int = 500
     # Technical/dev ceiling. Entitlement grants and paid-plan allowances remain
     # separate; the audited workspace override is required to use all 500.
     max_advanced_requested_page_limit: int = 500

@@ -33,6 +33,7 @@ URL_EXCLUSION_INVALID: Final = "invalid_url"
 URL_EXCLUSION_DUPLICATE: Final = "duplicate"
 URL_EXCLUSION_PAGE_KIND: Final = "page_kind_filtered"
 URL_EXCLUSION_TRACKING: Final = "tracking_url"
+URL_EXCLUSION_HARD_HOST: Final = "hard_excluded_host"
 
 # These dispositions are distinct states, not a confidence gradient.
 CORPUS_DISPOSITION_ANALYZE: Final = "analyze"
@@ -72,6 +73,33 @@ URL_HARD_EXCLUSION_PATH_PATTERNS: Final[tuple[str, ...]] = (
     r"(?:^|/)(?:search|tag|tags|author|authors|feed)(?:/|$)",
     r"(?:^|/)(?:viewcart|searchsuggestion)(?:/|$)",
     r"(?:^|/)(?:preview|print|share)(?:/|$)",
+)
+# The same non-content endpoints as the path patterns above, but named by
+# SUBDOMAIN instead of by path. Scope is the registrable domain plus every
+# subdomain, so a storefront that puts its customer area on `account.<domain>`
+# put it squarely in the frontier: the crawler spent budget on
+# `https://account.<domain>/?buyer_flags=<jwt>` — a page that answers 401/403 to
+# an unauthenticated fetch — and the resulting Error/Blocked rows were enough
+# to finish the crawl as ``partially_completed``. Only the LEFTMOST label is
+# matched, so `shop.<domain>` and a path like `/my-account-guide` are untouched.
+URL_HARD_EXCLUSION_HOST_LABELS: Final[frozenset[str]] = frozenset(
+    {
+        "account",
+        "accounts",
+        "admin",
+        "auth",
+        "basket",
+        "cart",
+        "checkout",
+        "login",
+        "signin",
+        "signup",
+        "register",
+        "payment",
+        "payments",
+        "orders",
+        "wishlist",
+    }
 )
 URL_HARD_EXCLUSION_QUERY_KEYS: Final[frozenset[str]] = frozenset(
     {

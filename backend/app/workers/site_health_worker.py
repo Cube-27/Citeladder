@@ -80,6 +80,10 @@ from app.workers.site_health.attempt_rows import (
     diagnostic_attempt,
     traced_attempt,
 )
+from app.workers.site_health.db_conflicts import (
+    is_transient_db_conflict,
+    requeue_conflicted_task,
+)
 from app.workers.site_health.helpers import (
     _serialize_redirect_chain,
     _utcnow,
@@ -703,7 +707,27 @@ class SiteHealthWorker(
             )
 
     async def _record_crash(self, task_id: uuid.UUID, exc: Exception) -> None:
+        """Fail the task terminally, unless the database asked us to try again.
+
+        A deadlock or serialization failure is Postgres declining to order two
+        concurrent transactions, NOT a statement about the page: discovery
+        admits child URLs while analyze finalizes a sibling, and each holds a
+        row the other wants. Failing terminally on that turned a transient
+        lock conflict into a permanently unanalyzed page and a crawl stuck at
+        ``partially_completed`` -- which is what left real product URLs
+        (e.g. a retailer's /dhoti detail page) missing from the catalog while
+        every downstream screen showed "some pages could not be analyzed".
+        Re-queue it with the normal backoff and attempt budget instead.
+        """
         detail = f"{type(exc).__name__}: {exc}"
+        if is_transient_db_conflict(exc) and await requeue_conflicted_task(
+            self._queue,
+            self._session_factory,
+            owner=self.owner,
+            task_id=task_id,
+            detail=detail,
+        ):
+            return
         await self._queue.fail(
             task_id=task_id,
             owner=self.owner,

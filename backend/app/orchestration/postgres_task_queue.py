@@ -345,7 +345,14 @@ class PostgresTaskQueue[
         delay_seconds: float,
         error_code: str = "",
         error_detail: str = "",
+        mutate: Callable[[T], None] | None = None,
     ) -> bool:
+        """Re-queue an owned task after ``delay_seconds``.
+
+        ``mutate`` is the same escape hatch ``_finish`` offers: a caller whose
+        own transaction rolled back (so its ``attempt_count`` bump was lost)
+        applies it here, under the ownership check.
+        """
         now = _utcnow()
         async with self._session_factory() as session:
             task = await self._owned_task(session, task_id, owner)
@@ -358,6 +365,8 @@ class PostgresTaskQueue[
             task.available_at = now + timedelta(seconds=max(0.0, delay_seconds))
             task.error_code = error_code
             task.error_detail = error_detail[:2000]
+            if mutate is not None:
+                mutate(task)
             await session.commit()
             return True
 

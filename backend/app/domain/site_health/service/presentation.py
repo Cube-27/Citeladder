@@ -227,14 +227,20 @@ def _default_crawl_counters(
 
 
 def _crawl_disclosure_fields(crawl: SiteCrawl, *, disclose: bool) -> dict:
+    # ``discovered_url_count`` counts the pages discovery FETCHED, not the URLs
+    # it found: a sitemap-driven crawl fetches the root once and admits fifty
+    # URLs from the sitemap, leaving the counter at 1. Publishing that as the
+    # site total produced "49/1 analyzed" on every screen that renders
+    # analyzed-over-total. The inventory a crawl actually holds is its admitted
+    # set, so the total is the larger of the two -- never below what the crawl
+    # already admitted (and therefore never below what it analyzed).
+    inventory_total = max(
+        int(crawl.discovered_url_count or 0), int(crawl.admitted_url_count or 0)
+    )
     return {
-        "discovered_count": (
-            int(crawl.discovered_url_count or 0) if disclose else None
-        ),
+        "discovered_count": (inventory_total if disclose else None),
         "total_url_count": (
-            int(crawl.discovered_url_count or 0)
-            if (disclose and crawl.inventory_complete)
-            else None
+            inventory_total if (disclose and crawl.inventory_complete) else None
         ),
         "has_more_site_urls": ((not crawl.inventory_complete) if disclose else None),
     }

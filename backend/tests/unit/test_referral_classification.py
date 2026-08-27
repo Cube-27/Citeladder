@@ -128,4 +128,6 @@ def test_classification_is_deterministic() -> None:
         "utm_source": "perplexity",
         "user_agent": "Claude-User",
     }
-    assert classify_referral_signals(**kwargs) == classify_referral_signals(**kwargs)
+    first = classify_referral_signals(**kwargs)
+    second = classify_referral_signals(**kwargs)
+    assert first == second

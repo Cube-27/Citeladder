@@ -22,8 +22,15 @@ from app.connectors.answer_engines.contracts import (
 _PUBLIC_IP = "93.184.216.34"
 _WANDERLUST_CITATION_LABEL = "Wanderlust Gear"
 # Monitored-URL allowance granted to the demo workspace so Site Health seeds a
-# full-discovery crawl with user selection (mirrors the old Starter limit).
-SEED_MONITORED_URL_ALLOWANCE = 50
+# full-discovery crawl with user selection.
+#
+# Deliberately far above the tier-1 commercial allowance (50). This is a local
+# development fixture, not a plan: a real storefront's crawl stopped at
+# `partially_completed` with ~48 of its pages analyzed, which caps the catalog
+# and therefore everything Commerce projects from it. Raising the PLAN would
+# change what customers are sold; raising the dev seed only changes what a
+# developer can exercise locally.
+SEED_MONITORED_URL_ALLOWANCE = 500
 
 
 @dataclass(frozen=True)

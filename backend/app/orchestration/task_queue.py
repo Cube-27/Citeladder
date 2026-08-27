@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from typing import Protocol, runtime_checkable
 
@@ -71,11 +71,14 @@ class TaskQueue[T](Protocol):
         delay_seconds: float,
         error_code: str = "",
         error_detail: str = "",
+        mutate: Callable[[T], None] | None = None,
     ) -> bool:
         """Return a task to ``retry_wait`` with a future ``available_at``.
 
-        Increments nothing here (the worker increments ``attempt_count`` before
-        the call); the queue only reschedules and releases the lease.
+        Increments nothing on its own (the worker increments ``attempt_count``
+        before the call); the queue only reschedules and releases the lease.
+        A caller whose own transaction rolled back — so its increment was lost
+        with it — passes ``mutate`` to apply the bump under the ownership check.
         """
         ...
 

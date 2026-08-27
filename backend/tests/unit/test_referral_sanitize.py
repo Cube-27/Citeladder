@@ -91,7 +91,8 @@ def test_session_hash_is_deterministic_salted_and_truncated(
     ]
     assert hash_session_id("session-42") == expected
     # Deterministic for the same (salt, raw id)...
-    assert hash_session_id("session-42") == hash_session_id("session-42")
+    repeated = hash_session_id("session-42")
+    assert repeated == expected
     # ...truncated, never the full digest...
     assert len(hash_session_id("session-42")) == REFERRAL_SESSION_HASH_HEX_LENGTH
     # ...keyed by the deployment salt...

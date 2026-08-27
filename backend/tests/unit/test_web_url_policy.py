@@ -186,6 +186,12 @@ def test_is_admissible_combines_scope_and_narrowing():
         ("https://example.com/assets/logo.png", "hard_excluded_asset"),
         ("https://example.com/products/widget?filter=blue", "hard_excluded_query"),
         ("https://example.com/products/widget?utm_source=mail", "tracking_url"),
+        # A non-content endpoint named by SUBDOMAIN, which the path patterns
+        # never saw: scope is the registrable domain plus every subdomain, so
+        # the customer area was in the frontier and answered 401/403.
+        ("https://account.example.com/", "hard_excluded_host"),
+        ("https://account.example.com/?buyer_flags=abc.def.ghi", "hard_excluded_host"),
+        ("https://checkout.example.com/step/1", "hard_excluded_host"),
     ],
 )
 def test_value_aware_admission_hard_exclusions_are_not_overridable(url, reason):
@@ -440,3 +446,18 @@ async def test_resolve_target_private_only_answer_blocked():
 def test_split_host_port_defaults_by_scheme():
     assert split_host_port("https://example.com/x") == ("example.com", 443)
     assert split_host_port("http://example.com/x") == ("example.com", 80)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        # Only the leftmost label is matched, so a storefront subdomain and a
+        # path that merely contains one of the words both stay admitted.
+        "https://shop.example.com/products/widget",
+        "https://example.com/guides/my-account-setup",
+        "https://accountancy.example.com/services",
+    ],
+)
+def test_content_subdomains_are_not_confused_with_account_endpoints(url):
+    decision = classify_url_admission(url, root_registrable_domain="example.com")
+    assert decision.accepted, decision.reason_code

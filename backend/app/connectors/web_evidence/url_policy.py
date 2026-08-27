@@ -62,6 +62,7 @@ from app.core.config.site_health_crawl_policy import (
     ITEM_KIND_DOCUMENT,
     ITEM_KIND_HTML_PAGE,
     URL_EXCLUSION_HARD_ASSET,
+    URL_EXCLUSION_HARD_HOST,
     URL_EXCLUSION_HARD_PATH,
     URL_EXCLUSION_HARD_QUERY,
     URL_EXCLUSION_INVALID,
@@ -69,6 +70,7 @@ from app.core.config.site_health_crawl_policy import (
     URL_EXCLUSION_OUT_OF_SCOPE,
     URL_EXCLUSION_TRACKING,
     URL_HARD_EXCLUSION_EXTENSIONS,
+    URL_HARD_EXCLUSION_HOST_LABELS,
     URL_HARD_EXCLUSION_PATH_PATTERNS,
     URL_HARD_EXCLUSION_QUERY_KEYS,
     URL_VALUE_PRIORITIES,
@@ -138,6 +140,17 @@ def _path_is_hard_excluded(path: str) -> bool:
     return any(
         re.search(pattern, normalized) for pattern in URL_HARD_EXCLUSION_PATH_PATTERNS
     )
+
+
+def _host_is_hard_excluded(host: str) -> bool:
+    """Whether the host's leftmost label names a non-content endpoint.
+
+    Matching only the leftmost label is deliberate: it is the label a site
+    chooses for the endpoint, and comparing against the whole host would reject
+    a registrable domain that merely contains one of these words.
+    """
+    label = host.strip().rstrip(".").lower().split(".")[0]
+    return label in URL_HARD_EXCLUSION_HOST_LABELS
 
 
 def _has_hard_excluded_query(query: str) -> bool:
@@ -213,7 +226,10 @@ def _query_rejection(query: str) -> str | None:
 def _canonical_rejection(
     canonical: str, *, infrastructure_purpose: str | None
 ) -> str | None:
-    path = urlsplit(canonical).path
+    parts = urlsplit(canonical)
+    path = parts.path
+    if _host_is_hard_excluded(parts.hostname or ""):
+        return URL_EXCLUSION_HARD_HOST
     if _path_is_hard_excluded(path):
         return URL_EXCLUSION_HARD_PATH
     infrastructure_asset = _is_infrastructure_asset_exception(

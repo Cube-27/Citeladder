@@ -4,29 +4,105 @@ import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Label, Metric } from '@/components/ui/typography';
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthApi, siteHealthQueries } from '@/lib/api/site-health';
-import { crawlPollInterval } from '@/lib/site-health/status';
+import {
+  PLACEHOLDER,
+  crawlBadgeValue,
+  crawlPollInterval,
+  statusLabel,
+} from '@/lib/site-health/status';
+
+import type { SiteCrawl } from '@/lib/api/types';
 
 import type { CommerceQueries } from './commerce-queries';
 
-function projectionSummary(tasks: Record<string, number> | undefined) {
-  const entries = Object.entries(tasks ?? {}).filter(([, count]) => count > 0);
-  return entries.length
-    ? entries.map(([status, count]) => `${count} ${status}`).join(' · ')
-    : 'no projection tasks yet';
+/** One metric: micro-label above a tabular value. The row's only unit. */
+function Stat({ label, value }: Readonly<{ label: string; value: string }>) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <Label>{label}</Label>
+      <Metric className="text-base">{value}</Metric>
+    </div>
+  );
+}
+
+/**
+ * Pages analyzed over the crawl's own inventory.
+ *
+ * The denominator is the site inventory the crawl holds, which is never below
+ * what it analyzed — reading it off the discovery FETCH counter is what
+ * rendered "49/1". The client still floors it, because a crawl whose counters
+ * are mid-flight must not print a fraction that reads backwards.
+ */
+/** The dashboard's crawl, exactly as the query returns it (nullable). */
+type SiteHealthCrawl = SiteCrawl | null;
+
+function analyzedLabel(crawl: SiteHealthCrawl): string {
+  if (!crawl) return PLACEHOLDER;
+  const known = crawl.total_url_count ?? crawl.visible_url_count;
+  return `${crawl.analyzed_count}/${Math.max(known, crawl.analyzed_count)}`;
+}
+
+/** In-flight projection work, or '' when the queue is idle. */
+function projectionLabel(tasks: Record<string, number> | undefined): string {
+  const pending = Object.entries(tasks ?? {})
+    .filter(([status, count]) => count > 0 && status !== 'succeeded')
+    .reduce((total, [, count]) => total + count, 0);
+  return pending ? `${pending} projecting` : '';
+}
+
+/** The catalog-wide metrics half of the toolbar: counts, crawl, queue. */
+function CatalogStats({
+  counts,
+  crawl,
+  projecting,
+}: Readonly<{
+  counts: CommerceQueries['catalog']['data'];
+  crawl: SiteHealthCrawl;
+  projecting: string;
+}>) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+      <Stat label="Products" value={counts ? `${counts.products.length}` : PLACEHOLDER} />
+      <Stat label="Categories" value={counts ? `${counts.categories.length}` : PLACEHOLDER} />
+      <Stat label="Pages analyzed" value={analyzedLabel(crawl)} />
+      <div className="flex flex-col items-start gap-0.5">
+        <Label>Site Health</Label>
+        {crawl ? (
+          <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
+            {statusLabel(crawl.status)}
+          </Badge>
+        ) : (
+          <Badge>No crawl yet</Badge>
+        )}
+      </div>
+      {projecting ? (
+        <div className="flex flex-col items-start gap-0.5">
+          <Label>Projection</Label>
+          <Badge variant="status" value="info">
+            {projecting}
+          </Badge>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 /**
  * Catalog-WIDE state and catalog-wide actions, and nothing target-scoped.
  *
- * The old header stacked crawl progress, projection counts and the import
- * result as three separate full-width paragraphs under a button row, and each
- * tab restated its own version of the same context. One line, one toolbar,
- * one place.
+ * ONE row: metrics left, actions right — the same toolbar shape every other
+ * screen uses. It carries no title and no description. The screen already
+ * names itself in the nav, and the two sentences that used to sit here
+ * ("Site Health observations project automatically…") explained a mechanism
+ * the numbers show directly, while pushing the actions down a line and
+ * leaving the entire right half of the card empty.
  */
 export function CatalogHeader({
   projectId,
@@ -60,36 +136,14 @@ export function CatalogHeader({
       await Promise.all([dashboard.refetch(), query.refetch()]);
     },
   });
-  const crawl = dashboard.data?.crawl;
+  const crawl = dashboard.data?.crawl ?? null;
   const counts = query.data;
+  const projecting = projectionLabel(counts?.projection_tasks);
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Commerce</CardTitle>
-        <CardDescription>
-          Site Health observations project automatically. CSV and explicit edits retain field-level
-          authority.
-        </CardDescription>
-        <p className="text-secondary text-sm">
-          {counts
-            ? `${counts.products.length} products · ${counts.categories.length} categories · `
-            : ''}
-          {crawl
-            ? `crawl ${crawl.analyzed_count}/${crawl.total_url_count ?? crawl.visible_url_count} analyzed, ${crawl.status}`
-            : 'no Site Health crawl yet'}
-          {' · '}
-          {projectionSummary(counts?.projection_tasks)}
-          {result ? ` · ${result}` : ''}
-        </p>
+      <CardContent className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+        <CatalogStats counts={counts} crawl={crawl} projecting={projecting} />
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            disabled={discover.isPending || dashboard.isPending}
-            onClick={() =>
-              crawl ? void Promise.all([dashboard.refetch(), query.refetch()]) : discover.mutate()
-            }
-          >
-            {crawl ? 'Refresh from Site Health' : 'Discover from Site Health'}
-          </Button>
           <Button
             variant="secondary"
             disabled={importCatalog.isPending}
@@ -97,9 +151,19 @@ export function CatalogHeader({
           >
             {importCatalog.isPending ? 'Importing…' : 'Import CSV'}
           </Button>
-          <a className="text-link text-sm" href="/site" target="_blank" rel="noreferrer">
-            Open Site Health
-          </a>
+          <Button asChild variant="ghost">
+            <a href="/site" target="_blank" rel="noreferrer">
+              Open Site Health
+            </a>
+          </Button>
+          <Button
+            disabled={discover.isPending || dashboard.isPending}
+            onClick={() =>
+              crawl ? void Promise.all([dashboard.refetch(), query.refetch()]) : discover.mutate()
+            }
+          >
+            {crawl ? 'Refresh from Site Health' : 'Run Site Health crawl'}
+          </Button>
         </div>
         <input
           ref={fileInputRef}
@@ -114,11 +178,18 @@ export function CatalogHeader({
             if (file) importCatalog.mutate(file);
           }}
         />
-        {importCatalog.isError ? <Alert tone="danger">The catalog import failed.</Alert> : null}
-        {discover.isError || dashboard.isError ? (
-          <Alert tone="danger">Site Health progress could not be refreshed.</Alert>
+        {result ? <p className="text-secondary w-full text-sm">{result}</p> : null}
+        {importCatalog.isError ? (
+          <Alert className="w-full" tone="danger">
+            The catalog import failed.
+          </Alert>
         ) : null}
-      </CardHeader>
+        {discover.isError || dashboard.isError ? (
+          <Alert className="w-full" tone="danger">
+            Site Health progress could not be refreshed.
+          </Alert>
+        ) : null}
+      </CardContent>
     </Card>
   );
 }

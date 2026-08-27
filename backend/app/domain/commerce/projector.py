@@ -227,6 +227,19 @@ async def _projection_source(
 _TITLE_SEPARATORS = ("|", "–", "—", "·", "»", " - ")
 
 
+def _is_named(value: str) -> bool:
+    """Whether a candidate name says anything, rather than being punctuation.
+
+    Breadcrumb trails are commonly marked up as one node per crumb AND one per
+    separator, so the extractor reads "Home", "/", "Dresses". A crumb made only
+    of separator characters is the markup's punctuation, not a category: taken
+    as a leaf it produced a catalog category literally named "/" that every
+    product on the site then hung off. One alphanumeric character is the whole
+    requirement, so non-Latin names ("ドレス") still qualify.
+    """
+    return any(char.isalnum() for char in value)
+
+
 def _category_title(facts: dict[str, Any], fallback: str) -> str:
     """A category's own name, not the page's title tag.
 
@@ -245,7 +258,10 @@ def _category_title(facts: dict[str, Any], fallback: str) -> str:
     breadcrumbs = [
         str(value).strip() for value in _list_value(commerce.get("breadcrumbs"))
     ]
-    leaf = next((value for value in reversed(breadcrumbs) if value), "")
+    leaf = next(
+        (value for value in reversed(breadcrumbs) if _is_named(value)),
+        "",
+    )
     if leaf:
         return leaf
     headings = _dict_value(facts.get("headings"))
@@ -253,13 +269,14 @@ def _category_title(facts: dict[str, Any], fallback: str) -> str:
         (
             str(value).strip()
             for value in _list_value(headings.get("h1_texts"))
-            if str(value).strip()
+            if _is_named(str(value))
         ),
         "",
     )
     if h1:
         return h1
-    return _title_segment(str(facts.get("title") or fallback))
+    segment = _title_segment(str(facts.get("title") or fallback))
+    return segment if _is_named(segment) else ""
 
 
 def _title_segment(title: str) -> str:
@@ -315,7 +332,24 @@ async def _project_product_source(
         # more than a price regex plus a cart marker, which every Shopify
         # collection satisfies -- so "Back in Stock" and "Brands We Love"
         # entered the catalog as products. A product the page cannot identify
-        # is not a product; leaving it out keeps the catalog answerable.
+        # is not a product; entering it as one makes the catalog unanswerable.
+        #
+        # Dropping it silently was just as wrong: a retailer whose product
+        # pages are client-rendered projects nothing at all, and the Commerce
+        # workspace says "Nothing projected yet" while Site Health reports the
+        # same pages analyzed. A listing page IS a category, so project it as
+        # one -- the crawl's evidence reaches the catalog under the kind it
+        # actually supports.
+        facts = _dict_value(artifact.normalized_facts)
+        await _category_from_analysis(
+            session,
+            analysis=analysis,
+            canonical_url=site_url.normalized_url,
+            title=_category_title(facts, str(site_url.latest_title or "Uncategorized")),
+            role=str(
+                _dict_value(facts.get("commerce")).get("category_role") or "unknown"
+            ),
+        )
         return
     product = await session.scalar(
         select(CommerceProduct).where(
@@ -423,7 +457,8 @@ async def _category_from_analysis(
     title: str,
     role: str,
 ) -> None:
-    safe_title = title.strip() or "Uncategorized"
+    stripped = title.strip()
+    safe_title = stripped if _is_named(stripped) else "Uncategorized"
     normalized = " ".join(safe_title.casefold().split())
     category = await session.scalar(
         select(CommerceCategory).where(

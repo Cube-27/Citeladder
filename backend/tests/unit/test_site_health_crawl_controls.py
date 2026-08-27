@@ -56,25 +56,28 @@ def test_production_controls_keep_the_automatic_page_limit(monkeypatch):
     assert page_kinds == []
 
 
-def test_production_page_limit_accepts_50_and_rejects_51(monkeypatch):
+def test_production_page_limit_accepts_the_maximum_and_rejects_one_past_it(
+    monkeypatch,
+):
     monkeypatch.setattr(
         "app.domain.site_health.planner.site_health_settings.advanced_controls_enabled",
         False,
     )
+    maximum = site_health_settings.max_requested_page_limit
 
     assert (
         _controls_for_request(
             input_mode=None,
-            requested_page_limit=50,
+            requested_page_limit=maximum,
             seed_urls=None,
             page_kinds=None,
         )[1]
-        == 50
+        == maximum
     )
     with pytest.raises(CrawlPlanError, match="outside the allowed range"):
         _controls_for_request(
             input_mode=None,
-            requested_page_limit=51,
+            requested_page_limit=maximum + 1,
             seed_urls=None,
             page_kinds=None,
         )

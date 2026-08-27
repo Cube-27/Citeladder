@@ -21,7 +21,9 @@ from app.core.config.opportunities import (
 
 def test_priority_score_is_deterministic() -> None:
     kwargs = {"severity": "high", "value_factor": 1.5, "gap_factor": 2.0}
-    assert priority_score(**kwargs) == priority_score(**kwargs)
+    first = priority_score(**kwargs)
+    second = priority_score(**kwargs)
+    assert first == second
 
 
 def test_priority_score_matches_formula() -> None:

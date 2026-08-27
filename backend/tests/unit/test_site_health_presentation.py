@@ -112,6 +112,25 @@ def test_project_crawl_withholds_the_total_until_inventory_is_complete() -> None
     assert done["has_more_site_urls"] is False
 
 
+def test_project_crawl_never_reports_a_total_below_the_admitted_inventory() -> None:
+    # `discovered_url_count` counts the pages discovery FETCHED, so a
+    # sitemap-driven crawl (one root fetch, fifty URLs admitted from the
+    # sitemap) leaves it at 1 while the crawl holds -- and analyzes -- fifty.
+    # Publishing that as the site total rendered "49/1 analyzed".
+    sitemap_driven = project_crawl(
+        _crawl(
+            inventory_complete=True,
+            discovered_url_count=1,
+            admitted_url_count=50,
+            analyzed_url_count=49,
+        )
+    )
+
+    assert sitemap_driven["total_url_count"] == 50
+    assert sitemap_driven["discovered_count"] == 50
+    assert sitemap_driven["total_url_count"] >= sitemap_driven["analyzed_count"]
+
+
 def test_project_crawl_redacts_every_count_field_for_a_sample_crawl() -> None:
     # The frozen `count_disclosure` snapshot is the authority (a later
     # allowance change must not retroactively reveal a sample crawl's counts).
