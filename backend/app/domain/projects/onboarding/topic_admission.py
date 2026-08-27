@@ -12,9 +12,10 @@ import re
 import uuid
 
 from app.core.config.visibility_prompts import (
+    CONFIRMED_OFFERING_SOURCE_REF,
     MODEL_PRIOR_SOURCE_REF,
     PROVIDER_DESCRIPTION_PHRASES,
-    VISIBILITY_TOPIC_MIN,
+    VISIBILITY_TOPIC_MAX,
     VISIBILITY_TOPIC_NAME_MAX_WORDS,
 )
 from app.domain.projects.discovery_schemas import DiscoveryTopic
@@ -155,7 +156,7 @@ def admit_topics(
     ``business_terms`` are the resolved category, its aliases and the sector.
 
     The business-restatement rule is deliberately SOFT -- it is skipped when
-    applying it would leave too few topics. A business that genuinely sells one
+    applying it would leave no topics. A business that genuinely sells one
     thing, a mattress brand whose category is "mattresses", must be allowed to
     keep it. The provider-phrase rule is unconditional: nobody shops for those
     under any circumstances.
@@ -179,7 +180,35 @@ def admit_topics(
         for row in structural
         if not _restates_business(row[0], business_terms=business_terms)
     ]
-    retained = strict if len(strict) >= VISIBILITY_TOPIC_MIN else structural
+    retained = strict or structural
 
-    admitted = _distinct_topics(retained)
-    return admitted if len(admitted) >= VISIBILITY_TOPIC_MIN else []
+    return _distinct_topics(retained)
+
+
+def confirmed_offering_topics(offerings: list[str]) -> list[DiscoveryTopic]:
+    """Create starting topics from the offerings a person confirmed.
+
+    This is the deterministic recovery path when best-effort topic selection
+    returns nothing. It preserves the user's wording and stamps explicit
+    provenance; it does not infer, broaden, or pad the portfolio.
+    """
+    topics: list[DiscoveryTopic] = []
+    seen: set[str] = set()
+    for offering in offerings:
+        name = " ".join(offering.split())[:255].rstrip()
+        key = name.casefold()
+        if not name or key in seen:
+            continue
+        seen.add(key)
+        topics.append(
+            DiscoveryTopic(
+                topic_id=uuid.uuid4(),
+                name=name,
+                description="",
+                source_refs=[CONFIRMED_OFFERING_SOURCE_REF],
+            )
+        )
+        if len(topics) == VISIBILITY_TOPIC_MAX:
+            break
+
+    return topics

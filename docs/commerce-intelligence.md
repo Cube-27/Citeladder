@@ -12,7 +12,14 @@ Catalog surfaces persisted Site Health crawl and Commerce projection progress,
 category hub/leaf roles and counts, product memberships, explicit product
 correction/reassignment, and category rename/role correction. Category edits
 also create append-only observations and retain field-level authority over later
-projection refreshes.
+projection refreshes. The Commerce rail renders products beneath every category
+they belong to, keeps products without a projected category under
+`Uncategorized`, and keeps catalog search pinned as an opaque first row while
+the list scrolls. Categories are collapsed initially, show their persisted
+product count, and expose a disclosure control only when projected child
+products exist. Bulk checking a category includes that category and all of its
+product targets; opening or expanding a category remains a separate navigation
+action.
 
 ## Competitors
 

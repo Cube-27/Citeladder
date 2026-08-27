@@ -72,10 +72,13 @@ adds bounded Keenable corroboration. One structured application-model call
 classifies identity and emits an evidence-referenced competitive signature;
 deterministic brand-neutral searches then gather the competitor research
 evidence, and a second structured call reads the competitor names out of that
-evidence text. Search results are evidence, never candidates: a query such as
-"<brand> competitors" returns pages *about* the brand -- listicles, directories,
-coupon and analytics sites -- so the rivals are the companies named inside that
-text, not the domains that published it. Pydantic and deterministic reference
+evidence. The bounded qualifier shares its text budget across every distinct
+source so a few long fetched pages cannot hide the rest of the search pool.
+Editorial, coupon, directory, and analytics results are evidence, never
+candidates: their rivals are the companies named inside the text, not the
+publishing domains. An official company page may establish that company itself
+when its title, domain, and content match the buyer, category, and market.
+Pydantic and deterministic reference
 checks enforce the contracts and always run: no host is assumed to guarantee
 native strict-schema output, so those checks stay in force even when the
 gateway selects Mistral's verified native mode. The existing domain resolver remains the
@@ -329,9 +332,10 @@ Onboarding topic selection is the sole AI owner of the initial taxonomy. A
 deterministic harvest reads the offering list the site already publishes -- its
 departments, products, capabilities, specialties or courses -- from pages
 already fetched, and the model selects and names topics from that list rather
-than inventing them. Topic count follows the evidence up to a cap; a site whose
-offering list cannot be read reports insufficient evidence instead of being
-padded with built-in categories.
+than inventing them. Topic count follows the evidence up to a cap with no
+minimum. If selection returns no topics, completion creates them from the
+offerings the user explicitly confirms, preserving that wording and provenance
+instead of blocking onboarding or padding with built-in categories.
 
 Prompt generation receives those persisted UUIDs and cannot create, rename,
 repair, or replace topics. It runs per topic in small batches, with the buyer

@@ -184,9 +184,7 @@ describe('OnboardingScreen', () => {
     await enterBrand();
 
     expect(
-      screen.getByText(
-        'Topic suggestions are temporarily unavailable. You can configure them after setup.',
-      ),
+      screen.getByText('Your starting topics will be created from the offerings you confirm.'),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Some research could not be confirmed/i)).toBeNull();
   });

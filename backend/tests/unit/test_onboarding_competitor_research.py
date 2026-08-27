@@ -7,6 +7,10 @@ import json
 import pytest
 
 from app.connectors.keenable import KeenableSearchResult
+from app.core.config.brand_discovery import (
+    BRAND_COMPETITOR_QUALIFICATION_VERSION,
+    COMPETITOR_QUALIFICATION_SYSTEM_PROMPT,
+)
 from app.domain.projects.discovery_schemas import DiscoveryProfile
 from app.domain.projects.onboarding.competitor_research import (
     NamedCompetitor,
@@ -148,6 +152,52 @@ def test_evidence_uses_one_shared_character_budget(monkeypatch) -> None:
     bounded = _bounded_evidence(evidence)
 
     assert sum(len(item.text) for item in bounded) == 7
+
+
+def test_broad_retailer_pool_exposes_every_distinct_source(monkeypatch) -> None:
+    """Long early fetches must not hide later retailer search results."""
+    from app.domain.projects.onboarding import competitor_research as module
+
+    monkeypatch.setattr(
+        module.brand_discovery_settings,
+        "competitor_qualification_evidence_max_chars",
+        12_000,
+    )
+    fetched = [
+        ResearchEvidenceItem(
+            evidence_ref=f"kc-fetch-{index}",
+            source_url=f"https://retailer{index}.example",
+            text="f" * 6_000,
+            source_kind="external_fetch",
+            supports=["competitors"],
+        )
+        for index in range(1, 6)
+    ]
+    searches = [
+        ResearchEvidenceItem(
+            evidence_ref=f"kc-search-{index}",
+            source_url=f"https://retailer{index}.example",
+            text="s" * 1_500,
+            source_kind="external_search",
+            supports=["competitors"],
+        )
+        for index in range(1, 25)
+    ]
+
+    bounded = _bounded_evidence(tuple([*fetched, *searches]))
+
+    assert len(bounded) == 24
+    assert bounded[-1].evidence_ref == "kc-search-24"
+    assert bounded[-1].text
+    assert sum(len(item.text) for item in bounded) == 12_000
+
+
+def test_qualification_contract_accepts_matching_official_company_pages() -> None:
+    assert BRAND_COMPETITOR_QUALIFICATION_VERSION == "brand-competitor-qualification-v3"
+    assert (
+        "official company homepage or product page"
+        in COMPETITOR_QUALIFICATION_SYSTEM_PROMPT
+    )
 
 
 @pytest.mark.asyncio

@@ -72,13 +72,15 @@ describe('brandStepSchema', () => {
 });
 
 describe('onboardingErrorMessage', () => {
-  it('prefers the transport-unwrapped detail', () => {
-    expect(onboardingErrorMessage(new Error('Brand already exists.'))).toBe(
-      'Brand already exists.',
-    );
+  it('does not expose technical backend detail', () => {
+    expect(
+      onboardingErrorMessage(
+        new Error('At least 3 evidence-supported topics are required, but 0 were found'),
+      ),
+    ).toBe('We couldn’t finish this setup step just now. Please try again.');
   });
 
   it('falls back for non-errors', () => {
-    expect(onboardingErrorMessage(null)).toMatch(/something went wrong/i);
+    expect(onboardingErrorMessage(null)).toMatch(/finish this setup step/i);
   });
 });

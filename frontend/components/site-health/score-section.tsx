@@ -2,8 +2,9 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { ScoreRing } from '@/components/ui/score-ring';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageSummary, SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
-import { PLACEHOLDER, formatScore } from '@/lib/site-health/status';
+import { formatScore } from '@/lib/site-health/status';
 
 /**
  * Always-mounted score section of the canonical Site Health screen.
@@ -118,22 +119,24 @@ function ScoreCard({
 }: Readonly<{ label: string; value: number | null; sub: string }>) {
   return (
     <Card className="border-border/70">
-      <CardContent className="flex items-center gap-4 p-5 sm:p-6">
-        {value === null ? (
-          <div className="border-border/60 text-muted mono size-score-ring flex items-center justify-center rounded-full border text-base">
-            {PLACEHOLDER}
-          </div>
-        ) : (
-          <ScoreRing value={value} size={72} label={`${label} score: ${Math.round(value)}`} />
-        )}
-        <div className="grid gap-1">
+      {value === null ? (
+        <CardContent className="grid h-full content-center gap-1 p-5 sm:p-6">
           <p className="text-muted text-xs font-semibold tracking-wider uppercase">{label}</p>
-          <span className="font-display text-foreground text-xl font-semibold tabular-nums">
-            {value === null ? PLACEHOLDER : `${formatScore(value)} / 100`}
-          </span>
+          <UnavailableValue state="not_measured" className="text-sm" />
           <span className="text-muted text-xs leading-relaxed">{sub}</span>
-        </div>
-      </CardContent>
+        </CardContent>
+      ) : (
+        <CardContent className="flex h-full items-center gap-4 p-5 sm:p-6">
+          <ScoreRing value={value} size={72} label={`${label} score: ${Math.round(value)}`} />
+          <div className="grid gap-1">
+            <p className="text-muted text-xs font-semibold tracking-wider uppercase">{label}</p>
+            <span className="font-display text-foreground text-xl font-semibold tabular-nums">
+              {formatScore(value)} / 100
+            </span>
+            <span className="text-muted text-xs leading-relaxed">{sub}</span>
+          </div>
+        </CardContent>
+      )}
     </Card>
   );
 }

@@ -206,13 +206,13 @@ global law firm renders its practice-area list client-side, so no link harvest
 of any depth can see it; a hospital group buries clinical navigation under a
 mega-menu that the filters above only partly recover.
 
-When fewer than three offering nodes survive filtering, Pass B runs on page
-text, title, and meta description alone and is explicitly told the harvest was
-empty. If it still cannot support three topics it returns
-`insufficient_evidence`, onboarding reports that state, and the user is invited
-to add topics on the topics rail, which already supports manual creation.
-Reporting "we could not read what you sell" is a correct outcome. Emitting five
-synonyms for "online shop" is not.
+When no offering nodes survive filtering, Pass B runs on page text, title, and
+meta description alone and is explicitly told the harvest was empty. If it
+still cannot support a topic it returns `insufficient_evidence`. That state does
+not block onboarding: completion creates starting topics from the offerings the
+user confirms on the review screen. Those topics keep the confirmed wording and
+carry `confirmed_profile:products_services` provenance. Emitting five synonyms
+for "online shop" is still forbidden.
 
 Out of scope for this version: sitemap harvesting, JSON-LD `BreadcrumbList`,
 and headless rendering. Add them only if a measured recall gap justifies it.
@@ -289,9 +289,9 @@ expressed: "Plus Size Dresses", "Mobile Phones Under 25000", "Weekend MBA",
 evidence does not support.
 
 Return as many topics as the evidence supports, up to 10. Do not pad to reach a
-number, and do not broaden a topic to cover more ground. A business with four
-service lines returns four topics. If the evidence supports fewer than three,
-return status "insufficient_evidence" with an empty list.
+number, and do not broaden a topic to cover more ground. A business with one
+service line returns one topic. Return status "insufficient_evidence" with an
+empty list only when no offering is supported.
 
 If harvest_status is "empty" there is no published list to work from. Read the
 page evidence for what this business actually offers, expect to return fewer
@@ -433,17 +433,19 @@ while leaving alone any topic that adds a real noun.
 **The category-restatement rule.** Separately, reject a topic whose token set
 equals `profile.category`, a `category_aliases` or `category_options` entry, or
 `profile.sector`. This half is **soft** — skip it if applying it would drop the
-admitted set below three topics, so a business that genuinely sells one thing
-keeps it. The provider rule above is unconditional.
+admitted set to zero, so a business that genuinely sells one thing keeps it.
+The provider rule above is unconditional.
 
 After admission the server assigns UUIDs, persists topics on the discovery
 record and research snapshot, and materializes them as `Topic` rows with
 `origin="generated"` on confirmation. Those UUIDs are canonical before Pass C.
 No later step may infer, rename, or replace a topic.
 
-If Pass B is unavailable or returns `insufficient_evidence`, onboarding reports
-that state. It never falls back to industry defaults, model memory, or
-`products_services` prose.
+If Pass B is unavailable or returns `insufficient_evidence`, onboarding shows
+calm guidance and continues. At confirmation, the server deterministically
+creates topics from the explicitly confirmed `products_services`, capped at
+ten and stamped `confirmed_profile:products_services`. It never falls back to
+industry defaults or unconfirmed model prose.
 
 ## Step 5: Pass C — prompt generation
 
@@ -707,7 +709,7 @@ Organic prompts (`core`) feed the AI Visibility score. `brand_diagnostic` and
   manual surface's separate instruction set, replaced by the shared one;
 - all-or-nothing portfolio selection;
 - generating `theme` names in the prompt pass, rebuilding topics from prompt
-  text, converting `products_services` prose into topics, fuzzy topic repair,
+  text, converting unconfirmed profile prose into topics, fuzzy topic repair,
   post-hoc topic-label rewriting, and deterministic prompt templates used to
   disguise unavailable model output. Already superseded; must not return.
 
@@ -739,8 +741,9 @@ never the prompt generator's.
 5. At most one accepted prompt per topic names the market.
 6. No more than two accepted prompts share their first three words.
 7. At least three quarters of topics carry the full `PROMPTS_PER_TOPIC`.
-8. A site whose offering list cannot be read produces `insufficient_evidence`,
-   never a fabricated portfolio.
+8. A site whose offering list cannot be read uses only the offerings confirmed
+   by the user, with `confirmed_profile:products_services` provenance; it never
+   fabricates category padding.
 
 Regression fixtures, one per row of the business-model table, plus one site
 whose offering list is client-side rendered.

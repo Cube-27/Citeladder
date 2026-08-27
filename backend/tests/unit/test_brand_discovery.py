@@ -13,6 +13,7 @@ from app.connectors.web_evidence.brand_evidence import (
 )
 from app.core.config.brand_discovery import _discovery_research_system_prompt
 from app.core.config.visibility_prompts import (
+    CONFIRMED_OFFERING_SOURCE_REF,
     MODEL_PRIOR_SOURCE_REF,
     TEMPLATE_LEAD_INS,
     TOPIC_SELECTION_SYSTEM_PROMPT,
@@ -44,7 +45,10 @@ from app.domain.projects.onboarding.research import (
 )
 from app.domain.projects.onboarding.service import discovery_catalog
 from app.domain.projects.onboarding.site_resolution import resolve_site
-from app.domain.projects.onboarding.topic_admission import admit_topics
+from app.domain.projects.onboarding.topic_admission import (
+    admit_topics,
+    confirmed_offering_topics,
+)
 from app.domain.prompts.style import words as _words
 
 
@@ -270,34 +274,39 @@ def test_admission_keeps_departments_that_merely_look_alike() -> None:
 
 
 def test_admission_drops_brand_and_unbound_evidence_without_padding() -> None:
-    assert _admit(["Acme Footwear", "Footwear", "Bags"]) == []
-    assert (
-        admit_topics(
-            [
-                _candidate("Footwear", ["missing"]),
-                _candidate("Bags"),
-                _candidate("Hats"),
-            ],
-            known_refs={"nav-1"},
-            forbidden_terms=[],
-            business_terms=[],
-        )
-        == []
+    assert _admit(["Acme Footwear", "Footwear", "Bags"]) == ["Footwear", "Bags"]
+    topics = admit_topics(
+        [
+            _candidate("Footwear", ["missing"]),
+            _candidate("Bags"),
+            _candidate("Hats"),
+        ],
+        known_refs={"nav-1"},
+        forbidden_terms=[],
+        business_terms=[],
     )
+    assert [topic.name for topic in topics] == ["Bags", "Hats"]
 
 
 def test_category_restatement_rule_yields_to_a_single_offering_business() -> None:
     """A mattress brand whose category IS mattresses must keep the topic."""
+    assert _admit(["Mattresses"], business_terms=["mattresses"]) == ["Mattresses"]
+    # When a specific topic survives, the provider-category restatement drops.
     names = _admit(
-        ["Mattresses", "Pillows", "Bed Frames"], business_terms=["mattresses"]
-    )
-    assert "Mattresses" in names
-    # With enough specific topics the restatement is dropped instead.
-    names = _admit(
-        ["Mattresses", "Pillows", "Bed Frames", "Mattress Toppers"],
+        ["Mattresses", "Pillows", "Bed Frames"],
         business_terms=["mattresses"],
     )
     assert "Mattresses" not in names
+
+
+def test_confirmed_offerings_are_a_simple_provenanced_recovery_path() -> None:
+    topics = confirmed_offering_topics(
+        [" Analytics Software ", "analytics software", "Process Mining"]
+    )
+    assert [topic.name for topic in topics] == ["Analytics Software", "Process Mining"]
+    assert {ref for topic in topics for ref in topic.source_refs} == {
+        CONFIRMED_OFFERING_SOURCE_REF
+    }
 
 
 def _validator(**kwargs) -> PortfolioValidator:

@@ -307,7 +307,10 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
     expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Stop crawl' })).not.toBeInTheDocument();
     // The score section stays mounted with placeholders (no screen swap).
-    expect(screen.getByTestId('score-section')).toBeInTheDocument();
+    const scores = screen.getByTestId('score-section');
+    expect(scores).toBeInTheDocument();
+    // An unavailable score is one calm status, not a faux ring plus duplicate value.
+    expect(within(scores).getAllByText('Not measured')).toHaveLength(3);
   });
 
   it('routes a failed crawl with a PRESENT-but-null-score summary to terminal (the SH-2 shape)', async () => {

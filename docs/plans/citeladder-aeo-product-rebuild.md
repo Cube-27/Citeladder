@@ -1079,8 +1079,10 @@ Website ──▶ Discover profile ──▶ User confirms/edits ICP + positioni
   `frontend/components/onboarding/onboarding-screen.tsx` / `review-step.tsx`
   (fields already exist on `DiscoveryProfile`: `target_audience`, `positioning`,
   `products_services` — no schema change).
-- Backend: discovery persists three to ten canonical, evidence-backed topic
-  UUIDs. After confirmation, prompt generation uses only those IDs and
+- Backend: discovery persists up to ten canonical, evidence-backed topic UUIDs.
+  When best-effort selection returns none, confirmation derives the starting
+  topics from the user-confirmed offerings and stamps that provenance. Prompt
+  generation then uses only those IDs and
   persists up to 12 core prompts, two brand-diagnostic prompts, and one
   comparison prompt with project creation. Returning to the ICP step invalidates any client preview;
   submitting again performs a fresh idempotent server generation. The complete

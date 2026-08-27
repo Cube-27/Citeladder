@@ -156,7 +156,7 @@ export function DiscoveryStage({
         </Alert>
       ) : null}
       {discovery.error ? (
-        <Alert tone="danger">
+        <Alert tone="warning">
           <div className="flex items-center justify-between gap-3">
             <span>{onboardingErrorMessage(discovery.error)}</span>
             <Button
@@ -259,7 +259,7 @@ export function ReviewStage({
         </Alert>
       ) : null}
       {complete.isError ? (
-        <Alert tone="danger">{onboardingErrorMessage(complete.error)}</Alert>
+        <Alert tone="warning">{onboardingErrorMessage(complete.error)}</Alert>
       ) : null}
       {!hasSelectedDomain ? (
         <Alert tone="warning">Keep at least one website address selected.</Alert>
@@ -287,19 +287,19 @@ export function ReviewStage({
 function warningMessage(code: string): string {
   const messages: Record<string, string> = {
     research_degraded:
-      'Some research was unavailable. We prepared a market-aware fallback for you to edit.',
+      'We used the website details we could confirm. Review them before continuing.',
     competitors_not_found:
       'No competitors were confirmed. You can continue with none or add them yourself.',
     external_research_unavailable:
-      'External research is temporarily unavailable. Review the website-based suggestions.',
+      'We used the website details we could confirm. Review them before continuing.',
     external_research_no_results:
-      'External research returned no corroborating results. Review the website-based suggestions.',
+      'We used the website details we could confirm. Review them before continuing.',
     conflicting_evidence:
       'Sources disagreed about this business. Review the suggested positioning carefully.',
     topic_selection_unavailable:
-      'Topic suggestions are temporarily unavailable. You can configure them after setup.',
+      'Your starting topics will be created from the offerings you confirm.',
     insufficient_offering_evidence:
-      'We could not confirm enough offering evidence to suggest topics yet.',
+      'Your starting topics will be created from the offerings you confirm.',
     site_health_deferred:
       'The project is ready; its Site Health review will need to be started later.',
   };

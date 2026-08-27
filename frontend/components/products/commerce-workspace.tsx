@@ -113,10 +113,13 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
   const checkedTargets = entries
     .filter((entry) => checkedSet.has(entry.key))
     .map((entry) => entry.target);
-  const toggle = (key: string) =>
-    setChecked((current) =>
-      current.includes(key) ? current.filter((value) => value !== key) : [...current, key],
-    );
+  const toggle = (keys: string[]) =>
+    setChecked((current) => {
+      const next = new Set(current);
+      const remove = keys.every((key) => next.has(key));
+      keys.forEach((key) => (remove ? next.delete(key) : next.add(key)));
+      return [...next];
+    });
   return (
     <div className="grid gap-4">
       <CatalogHeader projectId={projectId} query={queries.catalog} />
@@ -143,7 +146,7 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
         }`}
       >
         <Card className="min-w-0 lg:sticky lg:top-4">
-          <CardContent className="max-h-[calc(100vh-8rem)] overflow-y-auto pt-4">
+          <CardContent className="max-h-[calc(100vh-8rem)] overflow-y-auto p-0">
             <CatalogList
               query={queries.catalog}
               selectedKey={selectedKey}

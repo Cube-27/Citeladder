@@ -29,11 +29,10 @@ from __future__ import annotations
 from typing import Final
 
 # --- Topic selection (Pass B) ----------------------------------------------
-TOPIC_SELECTION_PROMPT_VERSION: Final = "visibility-topic-selection-v1"
-# The floor is an "insufficient evidence" signal, not a target: below it we
-# report that we could not read what the business offers. The ceiling bounds
-# audit cost, nothing else.
-VISIBILITY_TOPIC_MIN: Final = 3
+TOPIC_SELECTION_PROMPT_VERSION: Final = "visibility-topic-selection-v2"
+# There is deliberately no topic floor. One real offering is enough to start
+# measuring; a numerical minimum previously turned a transient selection miss
+# into a blocking onboarding failure. The ceiling bounds audit cost.
 VISIBILITY_TOPIC_MAX: Final = 10
 VISIBILITY_TOPIC_NAME_MAX_WORDS: Final = 6
 
@@ -42,6 +41,11 @@ VISIBILITY_TOPIC_NAME_MAX_WORDS: Final = 6
 # schema requires that) while remaining obviously NOT a page ref, so a
 # prior-backed topic can always be told apart from an evidence-backed one.
 MODEL_PRIOR_SOURCE_REF: Final = "model_prior:brand_knowledge"
+
+# Source ref stamped when completion derives a starting topic from an offering
+# the user explicitly confirmed. This is neither fetched-page evidence nor a
+# model prior, so it remains independently attributable.
+CONFIRMED_OFFERING_SOURCE_REF: Final = "confirmed_profile:products_services"
 
 # Appended to the system prompt ONLY for a brand the profile pass recognised
 # (``knowledge_strength != "none"`` with resolved category vocabulary). The
@@ -96,9 +100,8 @@ evidence does not support.
 
 Return as many topics as the evidence supports, up to {VISIBILITY_TOPIC_MAX}.
 Do not pad to reach a number, and do not broaden a topic to cover more
-ground. A business with four service lines returns four topics. If the
-evidence supports fewer than {VISIBILITY_TOPIC_MIN}, return status
-"insufficient_evidence" with an empty list.
+ground. A business with one service line returns one topic. Return status
+"insufficient_evidence" with an empty list only when no offering is supported.
 
 If harvest_status is "empty" there is no published list to work from. Read the
 page evidence for what this business actually offers, expect to return fewer

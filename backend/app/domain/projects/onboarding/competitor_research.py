@@ -279,13 +279,27 @@ def _bare_domain(value: str) -> str:
 def _bounded_evidence(
     evidence: tuple[ResearchEvidenceItem, ...],
 ) -> tuple[ResearchEvidenceItem, ...]:
-    """Trim evidence text to the configured qualification character budget."""
+    """Share the qualification budget across every distinct gathered source.
+
+    Sequential truncation let the first few fetched pages consume the entire
+    budget, hiding most search results from qualification. A broad retailer
+    search could gather dozens of useful sources and still expose only four.
+    """
+    distinct: list[ResearchEvidenceItem] = []
+    seen_urls: set[str] = set()
+    for item in evidence:
+        if item.source_url in seen_urls:
+            continue
+        seen_urls.add(item.source_url)
+        distinct.append(item)
+
     remaining = brand_discovery_settings.competitor_qualification_evidence_max_chars
     bounded: list[ResearchEvidenceItem] = []
-    for item in evidence:
+    for index, item in enumerate(distinct):
         if remaining <= 0:
             break
-        text = item.text[:remaining]
+        sources_left = len(distinct) - index
+        text = item.text[: max(remaining // sources_left, 1)]
         remaining -= len(text)
         bounded.append(item.model_copy(update={"text": text}))
     return tuple(bounded)

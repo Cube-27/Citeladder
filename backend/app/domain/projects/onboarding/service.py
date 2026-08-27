@@ -37,7 +37,6 @@ from app.core.config.prompts import (
 )
 from app.core.config.visibility_prompts import (
     VISIBILITY_TOPIC_MAX,
-    VISIBILITY_TOPIC_MIN,
 )
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryComplete,
@@ -64,6 +63,7 @@ from app.domain.projects.onboarding.site_resolution import (
     SiteNotFoundError,
     resolve_site,
 )
+from app.domain.projects.onboarding.topic_admission import confirmed_offering_topics
 from app.domain.projects.schemas import BrandInput, CompetitorInput, ProjectCreate
 from app.domain.projects.service import create_project
 from app.domain.prompts.service import prepare_prompt_inserts
@@ -524,6 +524,27 @@ async def _persist_project(
     return project.id
 
 
+async def _completion_replay(
+    session: AsyncSession,
+    *,
+    row: BrandDiscovery,
+    idempotency_key: str,
+) -> tuple[BrandDiscovery, SiteCrawl | None] | None:
+    existing_key = str(row.input_data.get("completion_idempotency_key") or "")
+    if not existing_key:
+        return None
+    if existing_key != idempotency_key:
+        raise BrandDiscoveryError(
+            "Discovery was completed with another Idempotency-Key"
+        )
+    existing_crawl = (
+        await session.get(SiteCrawl, row.initial_crawl_id)
+        if row.initial_crawl_id is not None
+        else None
+    )
+    return row, existing_crawl
+
+
 async def complete_discovery(
     session: AsyncSession,
     *,
@@ -541,18 +562,9 @@ async def complete_discovery(
         workspace_id=workspace_id,
         discovery_id=discovery_id,
     )
-    existing_key = str(row.input_data.get("completion_idempotency_key") or "")
-    if existing_key:
-        if existing_key != key:
-            raise BrandDiscoveryError(
-                "Discovery was completed with another Idempotency-Key"
-            )
-        existing_crawl = (
-            await session.get(SiteCrawl, row.initial_crawl_id)
-            if row.initial_crawl_id is not None
-            else None
-        )
-        return row, existing_crawl
+    replay = await _completion_replay(session, row=row, idempotency_key=key)
+    if replay is not None:
+        return replay
     if row.status != DISCOVERY_STATUS_READY:
         raise BrandDiscoveryError("Discovery is not ready for completion")
     (
@@ -585,24 +597,16 @@ async def complete_discovery(
         discovery_id=discovery_id,
         for_update=True,
     )
-    existing_key = str(row.input_data.get("completion_idempotency_key") or "")
-    if existing_key:
-        if existing_key != key:
-            raise BrandDiscoveryError(
-                "Discovery was completed with another Idempotency-Key"
-            )
-        existing_crawl = (
-            await session.get(SiteCrawl, row.initial_crawl_id)
-            if row.initial_crawl_id is not None
-            else None
-        )
-        return row, existing_crawl
+    replay = await _completion_replay(session, row=row, idempotency_key=key)
+    if replay is not None:
+        return replay
     if row.status != DISCOVERY_STATUS_READY:
         raise BrandDiscoveryError("Discovery is not ready for completion")
     row.domains = domains
     row.competitors = competitors
     confirmed_profile = payload.profile.model_dump()
     row.profile = confirmed_profile
+    row.topics = [topic.model_dump(mode="json") for topic in discovery_topics]
     row.prompt_suggestions = prompts
     # A topic that produced no usable prompt is reported, not fatal. The topic
     # still exists and the user can write a prompt for it by hand.
@@ -684,21 +688,11 @@ def _confirmed_portfolio_inputs(
     )
     try:
         topics = [DiscoveryTopic.model_validate(item) for item in row.topics]
-    except (TypeError, ValueError) as exc:
-        raise BrandDiscoveryError(
-            "Commercial topics are invalid; retry discovery"
-        ) from exc
-    if len(topics) < VISIBILITY_TOPIC_MIN:
-        raise BrandDiscoveryError(
-            f"At least {VISIBILITY_TOPIC_MIN} evidence-supported topics are "
-            f"required, but {len(topics)} were found; rerun discovery or add "
-            "topics manually"
-        )
-    if len(topics) > VISIBILITY_TOPIC_MAX:
-        raise BrandDiscoveryError(
-            f"At most {VISIBILITY_TOPIC_MAX} topics are supported, but "
-            f"{len(topics)} were supplied; remove some and retry"
-        )
+    except (TypeError, ValueError):
+        topics = []
+    if not topics:
+        topics = confirmed_offering_topics(payload.profile.products_services)
+    topics = topics[:VISIBILITY_TOPIC_MAX]
     brand_name = str(row.input_data["brand_name"])
     primary_market = str(row.input_data["primary_market"])
     profile_sources = _reviewed_profile_sources(payload.profile.model_dump())

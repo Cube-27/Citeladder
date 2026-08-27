@@ -13,6 +13,8 @@
  */
 import { z } from 'zod';
 
+import { humanizeApiError } from '@/lib/api/errors';
+
 /** A competitor as it appears in the review step — always editable. */
 export type ReviewCompetitor = {
   id: string;
@@ -89,11 +91,13 @@ export function deriveDomain(value: string): string {
   }
 }
 
-/**
- * Best-effort human message from a thrown mutation error. Mirrors the auth and
- * setup helpers: the transport unwraps a JSON `{ detail }` into `error.message`.
- */
 export function onboardingErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  return 'Something went wrong. Please try again.';
+  const { status } = humanizeApiError(error);
+  if (status === 403) {
+    return 'Your workspace has reached its project limit. Free a slot or update your plan, then try again.';
+  }
+  if (status === 422) {
+    return 'Check the website and required details, then try again.';
+  }
+  return 'We couldn’t finish this setup step just now. Please try again.';
 }

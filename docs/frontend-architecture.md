@@ -216,6 +216,13 @@ persisted projection. The four headline metrics, recommendation evidence, and
 immutable measurement history remain bound to that target. Buyer Prompts reuses
 the shared audit-launch dialog for target-filtered approved prompt IDs, provider
 selection, repetitions, estimates, and launch; Commerce owns no parallel runner.
+The Commerce catalog rail is a category tree: products appear beneath their
+projected categories, uncategorized products retain an explicit fallback group,
+and an opaque sticky search filters both levels without letting scrolled rows
+bleed above it. Categories begin collapsed, retain their product counts, and
+only categories with projected children render a disclosure control. Category
+bulk selection includes every child product without changing the target
+currently open in the detail pane.
 
 ## Authentication flow
 

@@ -154,9 +154,11 @@ contracts that are already right.
 
 ## Resolved at delivery
 
-1. **One grouped list**, categories above products, with a search box. Revisit
-   only if a catalog arrives with enough products that the flat list stops
-   being scannable.
+1. **One collapsed category tree**, with products nested beneath their
+   categories and the opaque search header pinned while the rail scrolls.
+   Categories show their product count and render a disclosure only when they
+   have children. Category bulk selection includes all child products; products
+   without a known category remain visible in an explicit fallback group.
 2. **A category detail drills into its own products**, so there is one
    navigation model rather than two.
 3. **No cross-target shelf view.** A "shelf across the whole catalog" report is

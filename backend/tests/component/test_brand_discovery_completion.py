@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.brand_discovery import ERROR_BRAND_DISCOVERY
 from app.core.config.entitlements import KEY_PROJECT_SLOTS, KEY_PROMPT_SLOTS
+from app.core.config.visibility_prompts import CONFIRMED_OFFERING_SOURCE_REF
 from app.domain.entitlements.types import GrantSpec
 from app.domain.projects.onboarding import service as onboarding_service
 from app.domain.projects.onboarding.portfolio_generation import PortfolioResult
@@ -23,7 +24,7 @@ from app.models.discovery import (
     BrandResearchSnapshot,
 )
 from app.models.project import Project
-from app.models.prompt import Prompt
+from app.models.prompt import Prompt, Topic
 from app.models.site_health.crawl import SiteCrawl
 from app.models.workspace import Workspace
 from app.workers import brand_discovery_worker
@@ -65,17 +66,20 @@ def _completion_payload() -> dict:
 
 
 async def _seed_ready_discovery(
-    session: AsyncSession, workspace_id: uuid.UUID
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    topics: list[dict] | None = None,
 ) -> BrandDiscovery:
-    topics = [
-        {
-            "topic_id": str(uuid.uuid4()),
-            "name": name,
-            "description": "",
-            "source_refs": ["nav-1"],
-        }
-        for name in ("Workflow Analytics", "Process Mining", "Journey Analysis")
-    ]
+    if topics is None:
+        topics = [
+            {
+                "topic_id": str(uuid.uuid4()),
+                "name": name,
+                "description": "",
+                "source_refs": ["nav-1"],
+            }
+            for name in ("Workflow Analytics", "Process Mining", "Journey Analysis")
+        ]
     row = BrandDiscovery(
         workspace_id=workspace_id,
         status="ready",
@@ -334,6 +338,64 @@ async def test_completion_is_atomic_idempotent_scoped_and_does_not_start_site_he
     await _register(client, "complete-foreign@example.com")
     foreign = await client.get(f"/api/v1/brand-discoveries/{discovery_id}")
     assert foreign.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_completion_recovers_zero_selected_topics_from_confirmed_offerings(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fixture_portfolio(**kwargs) -> PortfolioResult:
+        topics = kwargs["topics"]
+        assert [topic.name for topic in topics] == ["analytics software"]
+        assert topics[0].source_refs == [CONFIRMED_OFFERING_SOURCE_REF]
+        return PortfolioResult(
+            prompts=(
+                {
+                    "topic_id": str(topics[0].topic_id),
+                    "text": "how can teams choose analytics software",
+                    "intent": "discovery",
+                    "cohort": "core",
+                },
+            ),
+            provider="agent.test",
+            model="fake-model",
+        )
+
+    monkeypatch.setattr(onboarding_service, "generate_portfolio", fixture_portfolio)
+    await _register(client, "complete-topic-fallback@example.com")
+    async with session_factory() as session:
+        workspace_id = await session.scalar(select(Workspace.id).limit(1))
+        assert workspace_id is not None
+        await seed_occupancy_grants(
+            session,
+            workspace_id=workspace_id,
+            grants=(
+                GrantSpec(key=KEY_PROJECT_SLOTS, value=10),
+                GrantSpec(key=KEY_PROMPT_SLOTS, value=100),
+            ),
+        )
+        discovery = await _seed_ready_discovery(session, workspace_id, topics=[])
+        await session.commit()
+        discovery_id = discovery.id
+
+    response = await client.post(
+        f"/api/v1/brand-discoveries/{discovery_id}/complete",
+        headers={"Idempotency-Key": "complete-topic-fallback"},
+        json=_completion_payload(),
+    )
+    assert response.status_code == 201, response.text
+
+    async with session_factory() as session:
+        persisted = await session.get(BrandDiscovery, discovery_id)
+        assert persisted is not None
+        assert persisted.topics[0]["name"] == "analytics software"
+        assert persisted.topics[0]["source_refs"] == [CONFIRMED_OFFERING_SOURCE_REF]
+        topic = await session.scalar(select(Topic))
+        assert topic is not None
+        assert topic.name == "analytics software"
+        assert topic.origin == "generated"
 
 
 @pytest.mark.asyncio
