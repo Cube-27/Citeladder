@@ -9,6 +9,9 @@ import type { z } from 'zod';
 
 import type {
   aeoReadinessSchema,
+  architectureFamilySchema,
+  architectureNodeSchema,
+  architectureSchema,
   auditEventSchema,
   auditScheduleCadenceSchema,
   auditScheduleSchema,
@@ -76,6 +79,8 @@ import type {
   monitoredUrlSchema,
   monitoredUrlsResponseSchema,
   pageAnalysisStatusSchema,
+  coverageStateSchema,
+  internalLinksSchema,
   pageDetailSchema,
   pageSummarySchema,
   pagesPageSchema,
@@ -84,7 +89,9 @@ import type {
   phaseMutationResponseSchema,
   phaseRunSchema,
   rerunPageResponseSchema,
+  readinessCheckSchema,
   readinessDimensionSchema,
+  readinessEvidencePageSchema,
   rootErrorSchema,
   siteCrawlListPageSchema,
   siteCrawlSchema,
@@ -202,7 +209,14 @@ export type PageDetail = z.infer<typeof pageDetailSchema>;
 export type RerunPageResponse = z.infer<typeof rerunPageResponseSchema>;
 export type SiteHealthDashboard = z.infer<typeof siteHealthDashboardSchema>;
 export type AeoReadiness = z.infer<typeof aeoReadinessSchema>;
+export type InternalLinks = z.infer<typeof internalLinksSchema>;
+export type CoverageState = z.infer<typeof coverageStateSchema>;
+export type ArchitectureFamily = z.infer<typeof architectureFamilySchema>;
+export type ArchitectureNode = z.infer<typeof architectureNodeSchema>;
+export type SiteArchitecture = z.infer<typeof architectureSchema>;
 export type ReadinessDimension = z.infer<typeof readinessDimensionSchema>;
+export type ReadinessCheck = z.infer<typeof readinessCheckSchema>;
+export type ReadinessEvidencePage = z.infer<typeof readinessEvidencePageSchema>;
 export type ChangeSummary = z.infer<typeof changeSummarySchema>;
 export type ChangeObservation = z.infer<typeof changeObservationSchema>;
 export type ChangesPage = z.infer<typeof changesPageSchema>;

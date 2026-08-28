@@ -29,12 +29,12 @@ ARCHETYPE_COMMERCE: Final = "commerce"
 ARCHETYPE_SOFTWARE: Final = "software"
 ARCHETYPE_SERVICES: Final = "services"
 ARCHETYPE_OTHER: Final = "other"
-ARCHETYPES: Final[frozenset[str]] = frozenset(
-    {ARCHETYPE_COMMERCE, ARCHETYPE_SOFTWARE, ARCHETYPE_SERVICES, ARCHETYPE_OTHER}
-)
 
 ARCHETYPE_SOURCE_ONBOARDING: Final = "onboarding_profile"
 ARCHETYPE_SOURCE_ABSTAINED: Final = "abstained"
+# A user correction is a PRESENTATION-layer override: it re-reads the same
+# persisted evidence under a different archetype and never rewrites, re-scores,
+# or re-derives the immutable model row.
 ARCHETYPE_BUSINESS_MODEL_CONFIDENCE_FLOOR: Final = 0.65
 ARCHETYPE_CONTRADICTION_MIN_PAGES: Final = 5
 ARCHETYPE_CONTRADICTION_SHARE: Final = 0.6
@@ -90,6 +90,9 @@ ARCHITECTURE_UNHUBBED_FAMILY_MIN_URLS: Final = 3
 ARCHITECTURE_MAX_FAMILIES: Final = 500
 ARCHITECTURE_MAX_PAGES: Final = 500
 ARCHITECTURE_MAX_EVIDENCE_ITEMS: Final = 25
+# Beyond this, an exported tree renders a family as one `[N Kind]` count line
+# rather than listing every member URL.
+ARCHITECTURE_FAMILY_COLLAPSE_MIN: Final = 8
 ARCHITECTURE_MAX_BREADCRUMB_ITEMS: Final = 16
 
 

@@ -1595,6 +1595,7 @@ def upgrade() -> None:
         sa.Column("discovery_requested_count", sa.Integer(), nullable=False),
         sa.Column("analysis_requested_count", sa.Integer(), nullable=False),
         sa.Column("inventory_complete", sa.Boolean(), nullable=False),
+        sa.Column("partial_reason", sa.String(length=48), nullable=False),
         sa.Column("score_summary", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("site_facts", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("extractor_version", sa.String(length=32), nullable=False),

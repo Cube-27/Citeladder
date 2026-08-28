@@ -246,6 +246,15 @@ attempt. `SiteFetchAttempt` remains the append-only owner for bounded curl call
 outcomes, and a host-level `429` cooldown prevents queued tasks from stampeding
 the same host. This adds no fetch-artifact column or mutable crawl-config state.
 
+A terminal crawl records WHY it is partial. `SiteCrawl.partial_reason` freezes
+`discovery_incomplete`, `analysis_incomplete`, or both at terminalization and is
+empty on every other status. URLs that could not be fetched during discovery are
+routine on a real site — a dead link, a PDF, a blocked host — and are not an
+analysis failure; the two shared one status and one analysis-worded message, so
+nearly every crawl reported that pages could not be analyzed. Reads project the
+reason and the client selects copy from it; it never infers the cause from a
+counter.
+
 Usable terminal Site Health evidence has one change-intelligence downstream DAG.
 A conflict-safe `change_intel` task selects the immediate persisted A/B pair,
 enforces root, scope, extractor, and analyzer comparability, and writes
@@ -275,13 +284,30 @@ versions. Its aggregated structural evaluations reuse the existing
 coverage is complete. The task is retryable and cannot fail crawl
 terminalization.
 
+Those projections have one read surface each and no second writer. The
+architecture route returns the newest persisted model for a crawl with its
+architecture formula version, observed families, and hierarchy. It exposes no
+archetype advisory block or correction mutation. The pages list
+keyset-pages over `(link_metric_value, site_url_id)` when a link sort is
+requested, with the sort inside the cursor fingerprint so a cursor cannot be
+replayed under a different ordering. An unmeasured page reports `null`, never
+`0`.
+
 The AEO Readiness endpoint is a separate read-only projection over those same
 persisted current page analyses and rule evaluations. It requires the crawl's
 exact analyzer/extractor versions, maps only the 20 config-declared rule IDs
 into seven presentation dimensions, and returns pass/fail/not-applicable/error
-counts, expected/observed coverage, source-analysis IDs, and at most 25 stable
-evidence links per dimension. It persists no row, computes no score, repairs no
-state, and performs no network/model work.
+counts, expected/observed coverage, and source-analysis IDs. It persists no row,
+computes no score, repairs no state, and performs no network/model work.
+
+Its presentation contract is page-shaped rather than evaluation-shaped, because
+the evaluation shape was unreadable. Each dimension carries a plain-language
+description, per-rule rollups with the catalog title and remediation, the count
+of distinct pages a check applied to, the count that failed at least one, and a
+bounded list of failing pages that each name their own failed checks once. The
+bound applies to pages and always travels beside the true failing-page total, so
+a capped list is never presented as the complete one. A rule ID is provenance
+here, never display copy.
 
 Change summary, cursor-paged observation, and detail APIs are persisted reads
 under `/api/v1/projects/{project_id}/site-health/changes`. Both crawl IDs are
@@ -297,9 +323,7 @@ artifact -> normalized region/entity facts -> tiered page_kind assessment
 ```
 
 The former industry-role, knowledge, correction, and comparison columns/tables
-were removed. The broad observed-architecture archetype is an advisory
-expectation layer only: it cannot classify a site, create a defect, or alter a
-score. `page_kind` remains the generic structural classifier and drives
+were removed. `page_kind` remains the generic structural classifier and drives
 schema/property contracts and rule applicability. Primary-region facts exclude
 chrome, non-rendered subtrees, and repeated-card contamination. Structured data
 is retained as a suggestion/corroborator and never decides the kind alone. See

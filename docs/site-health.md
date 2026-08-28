@@ -19,15 +19,15 @@ crawler identities even when external evidence later resolves them for a join.
 
 The user-facing area has three pages:
 
-1. **Site Health** — crawl lifecycle, scores by page kind, and URL inventory.
+1. **Site Health** — crawl lifecycle, scores by page kind, and URL inventory,
+   with **Pages**, **Architecture**, **AEO Readiness**, and **Changes** tabs.
 2. **Issues** — grouped findings with affected page-kind badges.
 3. **Opportunities** — persisted prioritized actions.
 
 The removed Site Intelligence workspace and industry-pack/knowledge subsystems
-must not be reintroduced as parallel owners. Site Health does own one persisted
-observed-architecture projection. Its broad onboarding-derived archetype is an
-advisory expectation layer: it does not classify the site and cannot produce a
-defect or alter a score.
+must not be reintroduced as parallel owners. Site Health owns one persisted
+observed-architecture projection whose read surface exposes observed families
+and hierarchy only.
 
 ## Pipeline
 
@@ -186,6 +186,40 @@ The archetype can only be mapped from a sufficiently grounded onboarding
 abstains to `other`. Crawl evidence may veto but never assign an archetype.
 Common structures not observed are suppressed unless coverage is complete.
 
+### Architecture read surface
+
+The Architecture tab renders page families only — each family expanding to the
+URLs assigned to it. The observed hierarchy tree and the site-profile block are
+not presented; the Markdown export below remains the place a structural tree
+belongs.
+
+`GET /api/v1/projects/{project_id}/site-health/architecture` projects the newest
+persisted model for the selected (or latest usable) crawl. It never re-derives
+the model, crawls, or scores. The response carries `coverage_state` alongside
+every site-level number, the page-family rows, the hierarchy nodes with their
+`parent_source`, the architecture formula version of the row it actually read,
+and a plain-language `limitations` line whenever coverage is not `complete`. A
+crawl with no persisted model returns `state:
+"unavailable"` with a reason rather than an empty tree.
+
+There is no archetype correction endpoint, mutable archetype override, or
+archetype advisory block in the response.
+
+`GET /api/v1/site-crawls/{crawl_id}/export.md?view=architecture` renders the
+observed tree as Markdown with an ASCII tree; large sibling sets collapse to one
+`[N kind]` count line. The CSV export rejects the view — a tree is not a table.
+
+### Pages sorting and internal links
+
+The pages list accepts `sort=url|inbound|main_content_inbound|depth`. Non-default
+sorts keyset-page over `(metric_value, site_url_id)` against this crawl's
+`SitePageLinkMetric` rows; the sort is part of the cursor fingerprint, so a
+cursor cannot be replayed under a different ordering (400). Page rows and page
+detail both carry the crawl's persisted link metrics, and detail adds bounded
+top inbound/outbound neighbours. A URL with no metric row reports `null`, never
+`0`: unmeasured and unlinked are different facts, and the UI renders the
+not-measured placeholder for the former.
+
 ## AEO Readiness
 
 `GET /api/v1/projects/{project_id}/site-health/aeo-readiness` is a read-only
@@ -197,10 +231,20 @@ latest. Reads never analyze, enqueue, repair, or call a provider.
 
 Taxonomy `aeo-readiness-v1` maps exactly 20 declared rule IDs into seven ordered
 dimensions: **Answerability**, **Structure**, **Evidence**,
-**Machine-readability**, **Authority**, **Freshness**, and **Crawlability**.
+**Machine readability**, **Authority**, **Freshness**, and **Crawlability**.
+
+Each dimension is projected in page terms, not evaluation terms: a plain
+description, per-rule rollups carrying the catalog title and remediation, the
+distinct pages a check applied to, the distinct pages that failed at least one,
+and a bounded list of failing pages each naming its own failed checks once. The
+bound is on pages and is always reported with the true failing-page total, so a
+capped list never reads as the whole set. A rule ID stays provenance and is
+never display copy.
 Unmapped Site Health rules remain outside this view; there is no fallback
 bucket. Each dimension exposes pass, fail, not-applicable, error, expected and
-observed counts, coverage, and at most 25 stable page/evaluation links.
+observed counts, coverage, and at most 25 failing pages in `evidence_pages`.
+The true failing-page total is reported separately even when that page list is
+bounded.
 Not-applicable remains disclosed and never becomes a failure. This adds no AEO
 Readiness score and does not reinterpret Site Health scoring.
 

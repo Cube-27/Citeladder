@@ -1,4 +1,4 @@
-"""Site Health dashboard, change, and AEO readiness read routes.
+"""Site Health dashboard, change, AEO readiness, and architecture routes.
 
 Every route is workspace-authorized through ``_WorkspaceDep`` and projects
 persisted rows via the service layer; nothing here crawls, re-scores, or
@@ -19,6 +19,7 @@ from app.domain.site_health.api_schemas import (
     AeoReadinessResponse,
     DashboardResponse,
 )
+from app.domain.site_health.architecture_schemas import ArchitectureResponse
 from app.domain.site_health.change_schemas import (
     ChangeObservationResponse,
     ChangesPage,
@@ -158,3 +159,26 @@ async def get_aeo_readiness_endpoint(
     except SiteHealthNotFoundError as exc:
         raise _not_found(str(exc)) from exc
     return AeoReadinessResponse.model_validate(result)
+
+
+@router.get(
+    "/projects/{project_id}/site-health/architecture",
+    response_model=ArchitectureResponse,
+)
+async def get_architecture_endpoint(
+    project_id: uuid.UUID,
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+    crawl_id: Annotated[uuid.UUID | None, Query()] = None,
+) -> ArchitectureResponse:
+    """The crawl's persisted observed-architecture model (never re-derived)."""
+    try:
+        result = await service.get_architecture(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=project_id,
+            crawl_id=crawl_id,
+        )
+    except SiteHealthNotFoundError as exc:
+        raise _not_found(str(exc)) from exc
+    return ArchitectureResponse.model_validate(result)
