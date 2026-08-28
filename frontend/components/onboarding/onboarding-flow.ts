@@ -24,6 +24,8 @@ import { hasConfirmedIcp } from './icp-confirmation';
 
 export type OnboardingStep = 0 | 1 | 2;
 
+const RETRYABLE_COMPLETION_ERRORS = new Set(['occupancy_limit_exceeded', 'occupancy_unresolved']);
+
 function withBrandKnowledgeDefaults(profile: DiscoveryProfile): DiscoveryProfile {
   const category = profile.category.trim();
   const products = profile.products_services.filter((item) => item.trim());
@@ -103,6 +105,9 @@ export function useOnboardingFlow() {
   });
   const maximumCompetitors = catalog.data?.maximum_competitors;
   const discoveryState = discovery.discovery;
+  const completionRetryable =
+    discoveryState?.status === 'failed' &&
+    RETRYABLE_COMPLETION_ERRORS.has(discoveryState.error_code);
 
   useEffect(() => {
     if (!brand && discoveryState) {
@@ -126,7 +131,7 @@ export function useOnboardingFlow() {
   }, [discoveryState?.id, resumeDiscoveryId, router, searchParams, step]);
 
   useEffect(() => {
-    if (discoveryState?.status !== 'ready') return;
+    if (discoveryState?.status !== 'ready' && !completionRetryable) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setDomains((current) =>
       current.length
@@ -138,10 +143,14 @@ export function useOnboardingFlow() {
           })),
     );
     setProfile((current) => current ?? discoveryState.profile);
-  }, [discoveryState]);
+  }, [completionRetryable, discoveryState]);
 
   useEffect(() => {
-    if (maximumCompetitors === undefined || discoveryState?.status !== 'ready') return;
+    if (
+      maximumCompetitors === undefined ||
+      (discoveryState?.status !== 'ready' && !completionRetryable)
+    )
+      return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setCompetitors((current) =>
       current.length
@@ -152,7 +161,20 @@ export function useOnboardingFlow() {
             selected: index < maximumCompetitors,
           })),
     );
-  }, [discoveryState, maximumCompetitors]);
+  }, [completionRetryable, discoveryState, maximumCompetitors]);
+
+  const openProject = useCallback(
+    async (projectId: string) => {
+      setActiveProjectId(projectId);
+      void projectsApi
+        .refreshProjectLogos(projectId)
+        .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() }))
+        .catch(() => undefined);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
+      router.replace('/projects');
+    },
+    [queryClient, router, setActiveProjectId],
+  );
 
   const complete = useMutation({
     mutationFn: async () => {
@@ -170,19 +192,28 @@ export function useOnboardingFlow() {
         `complete:${discoveryState.id}`,
       );
     },
+    // The request only ACCEPTS the completion; the portfolio is generated on a
+    // worker because it takes minutes and the client abandons a request after
+    // 30s. A replayed completion already carries its project id and skips
+    // straight through; otherwise the discovery poll below finishes the job.
     onSuccess: async (result) => {
-      setActiveProjectId(result.project_id);
-      void projectsApi
-        .refreshProjectLogos(result.project_id)
-        .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() }))
-        .catch(() => undefined);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
-      router.replace('/projects');
+      if (result.project_id) await openProject(result.project_id);
+      else await queryClient.invalidateQueries({ queryKey: ['brand-discovery'] });
     },
   });
 
+  const completedProjectId =
+    discoveryState?.status === 'project_created' ? discoveryState.project_id : null;
+  const completionFailed = discoveryState?.status === 'failed' && !completionRetryable;
+  useEffect(() => {
+    if (!completedProjectId) return;
+    void openProject(completedProjectId);
+  }, [completedProjectId, openProject]);
+
   const submitBrand = form.handleSubmit((values) => {
-    const rediscovers = brand !== null && JSON.stringify(brand) !== JSON.stringify(values);
+    const rediscovers =
+      discoveryState?.status === 'failed' ||
+      (brand !== null && JSON.stringify(brand) !== JSON.stringify(values));
     if (rediscovers) {
       setDomains([]);
       setCompetitors([]);
@@ -209,6 +240,22 @@ export function useOnboardingFlow() {
     catalog,
     competitors,
     complete,
+    completionFailed,
+    completionRetryable,
+    // True from the click until the worker lands the project. The request
+    // itself resolves in milliseconds now, so `complete.isPending` alone would
+    // re-enable the button the moment the job was ACCEPTED -- inviting the
+    // very second click this whole change exists to remove. `isSuccess`
+    // without a project id is "accepted, still generating", and it bridges the
+    // gap before the discovery poll first reports `completing`; the polled
+    // status is what holds it across a RELOAD, where the mutation is fresh and
+    // knows nothing about the job already running.
+    //
+    isCompleting:
+      !completionFailed &&
+      (complete.isPending ||
+        (complete.isSuccess && discoveryState?.status !== 'failed' && !completedProjectId) ||
+        discoveryState?.status === 'completing'),
     discovery,
     domains,
     form,

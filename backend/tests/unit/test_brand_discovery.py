@@ -25,6 +25,7 @@ from app.domain.projects.discovery_schemas import (
     CompetitorQualification,
     ConfirmedDiscoveryProfile,
     DiscoveryCompetitorSuggestion,
+    DiscoveryPromptSuggestion,
 )
 from app.domain.projects.offering_harvest import harvest_offerings
 from app.domain.projects.onboarding.normalization import (
@@ -77,6 +78,19 @@ def test_rejects_invalid_public_urls(value: str) -> None:
 def test_create_contract_requires_market() -> None:
     with pytest.raises(ValidationError):
         BrandDiscoveryCreate(brand_name="Acme", website_url="https://acme.example")
+
+
+def test_discovery_prompt_contract_normalizes_legacy_unbound_topic() -> None:
+    suggestion = DiscoveryPromptSuggestion.model_validate(
+        {
+            "topic_id": "",
+            "text": "is Acme suitable for growing teams",
+            "intent": "discovery",
+            "cohort": "brand_diagnostic",
+        }
+    )
+
+    assert suggestion.topic_id is None
 
 
 @pytest.mark.parametrize(
@@ -666,6 +680,31 @@ def test_brand_named_after_its_category_keeps_the_category_word_usable() -> None
     assert _offer(validator, "best summer dresses for a beach wedding") == ""
     # The full name is still the brand and still cannot appear organically.
     assert _offer(validator, "is Red Dress good for petite sizing") == "tracked_name"
+
+
+def test_brand_named_with_ordinary_english_keeps_that_word_usable() -> None:
+    """ "I Love Dooney" banned "love" and left a portfolio of brand prompts.
+
+    The same collapse as the Red Dress case, from the other side: "love" is
+    not category language, so no confirmed category could ever unban it, yet
+    it appears in a large share of ordinary apparel queries. Every one of them
+    was rejected as `tracked_name`, the core cohort emptied, and the fixed
+    brand-diagnostic and comparison prompts became the whole portfolio. It
+    looked brand-specific because it depended on the brand's own name.
+    """
+    terms = brand_terms("I Love Dooney", ["ilovedooney"], ["Handbags", "Purses"])
+    assert "I Love Dooney" in terms
+    assert "love" not in terms
+    # The distinctive token is still the brand and is still banned.
+    assert "dooney" in terms
+    validator = _validator(brand_terms=terms)
+    assert _offer(validator, "leather handbags i would love for everyday work") == ""
+    assert _offer(validator, "are Dooney bags worth the price") == "tracked_name"
+    # The site's own spelling is one word and is never a token of the name, so
+    # it has to be banned as an alias.
+    assert _offer(validator, "is ilovedooney a legit place to buy bags") == (
+        "tracked_name"
+    )
 
 
 def test_category_vocabulary_never_unbans_a_real_brand_token() -> None:

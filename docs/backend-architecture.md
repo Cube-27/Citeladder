@@ -67,6 +67,16 @@ reviewer, and only then creates the bounded initial prompt portfolio exactly
 once. Topics in that portfolio are reusable semantic demand clusters, not query
 phrases; related prompts share a topic.
 
+Completion is an accepted asynchronous job. The request validates and freezes
+the confirmed review, claims its idempotency key, and adds a `brand_completion`
+task to the existing brand-discovery PostgreSQL queue. The worker performs
+provider I/O without holding the discovery row lock, then creates the project
+and portfolio atomically. Retries replay the in-flight or completed discovery;
+an exhausted task terminalizes it with a completion-specific failure instead
+of leaving the client polling indefinitely. If project capacity changes while
+generation is in flight, completion persists the occupancy code as a retryable
+review state and reuses the same completion task after capacity is restored.
+
 Onboarding discovery v8 keeps the existing bounded first-party acquisition and
 adds bounded Keenable corroboration. One structured application-model call
 classifies identity and emits an evidence-referenced competitive signature;

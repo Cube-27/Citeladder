@@ -13,12 +13,14 @@ from app.core.config.site_health_acquisition import (
     ERROR_HTTP_5XX,
     ERROR_ROBOTS_DENIED,
     ERROR_TIMEOUT,
+    ERROR_URL_ADMISSION_REJECTED,
     FETCH_ATTEMPT_OUTCOME_ERROR,
 )
 from app.core.config.site_health_contracts import (
     ANALYSIS_STATUS_RUNNING,
     CRAWL_STATUS_RUNNING,
     TASK_KIND_ANALYZE,
+    TASK_KIND_DISCOVER,
 )
 from app.core.config.site_health_crawl_policy import (
     SELECTION_SOURCE_USER,
@@ -319,3 +321,92 @@ async def test_dashboard_projects_failure_breakdown_and_evidence_activity(
     assert stalled_activity["reason"] == "expired_lease"
     assert stalled_activity["queue_depth"] == 2
     assert stalled_activity["next_available_at"] is not None
+
+
+async def test_policy_excluded_url_leaves_both_sides_of_the_analyzed_ratio(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A URL rejected by our own policy is an exclusion, never a failed page.
+
+    ``/customer_authentication/redirect`` is same-host and passes admission at
+    discovery, so it reserves a page of budget; only when the fetch resolves
+    does it 302 onto ``account.<domain>`` and get rejected. Counting that as a
+    failure is what made every Shopify crawl report ``analyzed`` one short of
+    ``discovered`` -- 499/500 -- forever. It has to leave BOTH sides.
+    """
+    await _register(client, "policy-excluded@example.com")
+    async with session_factory() as session:
+        scn = await _seed_scenario(session, email="policy-excluded@example.com")
+        crawl = await session.get(SiteCrawl, scn.crawl_id)
+        assert crawl is not None
+        # Absolute counts are disclosed only when the crawl froze that in.
+        crawl.sample_mode = False
+        crawl.configuration = {**(crawl.configuration or {}), "count_disclosure": True}
+        # Four admitted URLs; two turn out to be auth redirectors. The second
+        # is rejected before a durable SiteUrl identity can be attached.
+        crawl.admitted_url_count = 4
+        excluded_url = "https://acme.test/customer_authentication/redirect"
+        site_url = SiteUrl(
+            workspace_id=scn.workspace_id,
+            project_id=scn.project_id,
+            normalized_url=excluded_url,
+            url_hash=_hash(excluded_url),
+            display_url=excluded_url,
+            host="acme.test",
+            last_seen_crawl_id=crawl.id,
+        )
+        session.add(site_url)
+        await session.flush()
+        session.add(
+            MonitoredSiteUrl(
+                workspace_id=scn.workspace_id,
+                project_id=scn.project_id,
+                profile_id=crawl.profile_id,
+                site_url_id=site_url.id,
+                active=True,
+                selection_source=SELECTION_SOURCE_USER,
+            )
+        )
+        session.add(
+            SiteCrawlTask(
+                crawl_id=crawl.id,
+                workspace_id=scn.workspace_id,
+                site_url_id=site_url.id,
+                task_kind=TASK_KIND_ANALYZE,
+                requested_url=excluded_url,
+                url_hash=site_url.url_hash,
+                idempotency_key=f"{crawl.id}:analyze:auth-redirect",
+                status=TASK_STATUS_FAILED,
+                error_code=ERROR_URL_ADMISSION_REJECTED,
+            )
+        )
+        identityless_url = "https://acme.test/account/redirect"
+        session.add(
+            SiteCrawlTask(
+                crawl_id=crawl.id,
+                workspace_id=scn.workspace_id,
+                site_url_id=None,
+                task_kind=TASK_KIND_DISCOVER,
+                requested_url=identityless_url,
+                url_hash=_hash(identityless_url),
+                idempotency_key=f"{crawl.id}:discover:identityless-redirect",
+                status=TASK_STATUS_FAILED,
+                error_code=ERROR_URL_ADMISSION_REJECTED,
+            )
+        )
+        await session.commit()
+
+    headers = {"X-Workspace-Id": str(scn.workspace_id)}
+    dashboard = await client.get(
+        f"/api/v1/projects/{scn.project_id}/site-health", headers=headers
+    )
+    assert dashboard.status_code == 200
+    counters = dashboard.json()["crawl"]["counters"]
+
+    # Four URLs were admitted and two were excluded, including the one without
+    # a SiteUrl identity, so the denominator is 2 rather than 3 or 4.
+    assert counters["discovered"] == 2
+    # And it is neither an error nor a "blocked" page: nothing went wrong.
+    assert counters["errors"] == 0
+    assert counters["blocked"] == 0
