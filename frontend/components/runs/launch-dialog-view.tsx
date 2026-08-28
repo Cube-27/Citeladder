@@ -6,9 +6,10 @@ import { filterChipClasses } from '@/components/ui/filter-chip-variants';
 import { Input, inputClasses } from '@/components/ui/input';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
-import type { LogicalEngine, PromptSet } from '@/lib/api/types';
+import type { LogicalEngine, Prompt, PromptSet } from '@/lib/api/types';
 import { ENGINE_LABELS } from '@/lib/providers/catalog';
 import {
+  batchLabel,
   clampRepetitions,
   MAX_REPETITIONS,
   MIN_REPETITIONS,
@@ -85,6 +86,50 @@ function PromptSetField({
   );
 }
 
+/**
+ * Which slice of the set to run.
+ *
+ * Only offered when there is more than one batch, unless a refresh invalidated
+ * a prior choice. In that case it stays visible so the user can explicitly
+ * recover to "All prompts" without silently broadening the launch.
+ */
+function BatchField({
+  batches,
+  batchIndex,
+  setBatchIndex,
+}: Readonly<{
+  batches: Prompt[][];
+  batchIndex: number | null;
+  setBatchIndex: (index: number | null) => void;
+}>) {
+  if (batches.length < 2 && batchIndex === null) return null;
+  const total = batches.reduce((count, batch) => count + batch.length, 0);
+  return (
+    <Field
+      label="Prompts to run"
+      hint="Run the whole set, or one batch at a time to keep a run short and its cost predictable."
+    >
+      {(props) => (
+        <select
+          {...props}
+          className={inputClasses}
+          value={batchIndex === null ? 'all' : String(batchIndex)}
+          onChange={(event) =>
+            setBatchIndex(event.target.value === 'all' ? null : Number(event.target.value))
+          }
+        >
+          <option value="all">All {total} prompts</option>
+          {batches.map((batch, index) => (
+            <option key={batchLabel(index, batch)} value={index}>
+              {batchLabel(index, batch)}
+            </option>
+          ))}
+        </select>
+      )}
+    </Field>
+  );
+}
+
 export function LaunchDialogView({
   open,
   onOpenChange,
@@ -94,6 +139,9 @@ export function LaunchDialogView({
   unverifiedEngines,
   promptSetId,
   setPromptSetId,
+  batches,
+  batchIndex,
+  setBatchIndex,
   engines,
   setEngines,
   repetitions,
@@ -116,6 +164,9 @@ export function LaunchDialogView({
   unverifiedEngines: LogicalEngine[];
   promptSetId: string | null;
   setPromptSetId: (id: string) => void;
+  batches: Prompt[][];
+  batchIndex: number | null;
+  setBatchIndex: (index: number | null) => void;
   engines: LogicalEngine[];
   setEngines: React.Dispatch<React.SetStateAction<LogicalEngine[]>>;
   repetitions: number;
@@ -159,6 +210,7 @@ export function LaunchDialogView({
             promptSetLocked={promptSetLocked}
             promptSelectionLabel={promptSelectionLabel}
           />
+          <BatchField batches={batches} batchIndex={batchIndex} setBatchIndex={setBatchIndex} />
           <fieldset className="grid gap-2">
             <legend className="text-secondary text-xs font-medium">
               Engines <span className="text-danger">*</span>
