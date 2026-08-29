@@ -44,6 +44,34 @@ for (const owner of [
   }
 }
 
+// Hard navigation is a two-module seam. The linter used to carry a related
+// guard -- `@next/next/no-location-assign-relative-destination` -- which oxlint
+// does not implement; this is the stricter replacement, because it also keeps
+// untestable direct calls out of components (see the header comments on both
+// owners for why the seam exists at all).
+const NAVIGATION_OWNERS = new Set(['lib/navigate.ts', 'lib/navigation/hard-navigate.ts']);
+const HARD_NAVIGATION = /location\s*\.\s*(?:assign|replace)\s*\(|location\s*\.\s*href\s*=[^=]/;
+
+function sourceFiles(directory) {
+  const absolute = path.join(root, directory);
+  if (!fs.existsSync(absolute)) return [];
+  return fs.readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
+    const relative = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) return sourceFiles(relative);
+    return /\.(?:ts|tsx)$/.test(entry.name) ? [relative] : [];
+  });
+}
+
+for (const file of ['app', 'components', 'lib'].flatMap(sourceFiles)) {
+  if (NAVIGATION_OWNERS.has(file) || file.includes('.test.')) continue;
+  const source = fs.readFileSync(path.join(root, file), 'utf8');
+  // Strip comments so the seam's own prose references do not trip the guard.
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '');
+  if (HARD_NAVIGATION.test(code)) {
+    failures.push(`${file} navigates the browser directly; use lib/navigation/hard-navigate.ts.`);
+  }
+}
+
 const facade = path.join(root, 'lib', 'api', 'index.ts');
 if (fs.existsSync(facade)) {
   const source = fs.readFileSync(facade, 'utf8');

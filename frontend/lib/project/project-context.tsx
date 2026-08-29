@@ -106,7 +106,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
       writeStoredActiveProjectId(activeProjectId);
       // One-time promotion of the resolved default into state so a reload is
       // stable; guarded above, so it cannot cascade.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // oxlint-disable-next-line react-hooks/set-state-in-effect
       setSelectedId(activeProjectId);
     }
   }, [activeProjectId, selectedId]);

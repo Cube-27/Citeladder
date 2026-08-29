@@ -111,7 +111,7 @@ export function useOnboardingFlow() {
 
   useEffect(() => {
     if (!brand && discoveryState) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate the persisted draft once.
+      // oxlint-disable-next-line react-hooks/set-state-in-effect -- hydrate the persisted draft once.
       setBrand(persistedBrand(discoveryState.input_data));
     }
   }, [brand, discoveryState]);
@@ -120,7 +120,7 @@ export function useOnboardingFlow() {
     const discoveryId = discoveryState?.id ?? resumeDiscoveryId;
     if (!discoveryId) return;
     if (resumeDiscoveryId !== discoveryId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- mirror the persisted discovery id.
+      // oxlint-disable-next-line react-hooks/set-state-in-effect -- mirror the persisted discovery id.
       setResumeDiscoveryId(discoveryId);
     }
     const params = new URLSearchParams(searchParams?.toString() ?? '');
@@ -132,7 +132,7 @@ export function useOnboardingFlow() {
 
   useEffect(() => {
     if (discoveryState?.status !== 'ready' && !completionRetryable) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
+    // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setDomains((current) =>
       current.length
         ? current
@@ -151,7 +151,7 @@ export function useOnboardingFlow() {
       (discoveryState?.status !== 'ready' && !completionRetryable)
     )
       return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
+    // oxlint-disable-next-line react-hooks/set-state-in-effect -- seed an editable persisted draft.
     setCompetitors((current) =>
       current.length
         ? current

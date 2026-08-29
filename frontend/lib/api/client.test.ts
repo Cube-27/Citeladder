@@ -15,6 +15,19 @@ function errorJson(body: unknown, status: number, statusText = 'Error') {
   });
 }
 
+/**
+ * The `RequestInit` of a recorded fetch call, or a failure naming the missing
+ * call. Written this way because `calls[i]?.[1] as RequestInit` promised a
+ * safety the cast then threw away: a missing call short-circuited to
+ * `undefined` and the next property read raised an opaque TypeError instead of
+ * an assertion (oxlint `no-unsafe-optional-chaining`).
+ */
+function requestInitAt(mock: { mock: { calls: unknown[][] } }, index: number): RequestInit {
+  const call = mock.mock.calls[index];
+  if (!call) throw new Error(`expected a fetch call at index ${index}`);
+  return call[1] as RequestInit;
+}
+
 describe('apiClient', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -210,24 +223,18 @@ describe('apiClient', () => {
 
     // No active workspace → header absent (backend uses default workspace).
     await apiClient.get('/projects');
-    expect(
-      new Headers((fetchMock.mock.calls[0]?.[1] as RequestInit).headers).get('X-Workspace-Id'),
-    ).toBeNull();
+    expect(new Headers(requestInitAt(fetchMock, 0).headers).get('X-Workspace-Id')).toBeNull();
 
     // Selecting a workspace stamps it on subsequent requests.
     setActiveWorkspaceId('ws-123');
     expect(getActiveWorkspaceId()).toBe('ws-123');
     await apiClient.get('/projects');
-    expect(
-      new Headers((fetchMock.mock.calls[1]?.[1] as RequestInit).headers).get('X-Workspace-Id'),
-    ).toBe('ws-123');
+    expect(new Headers(requestInitAt(fetchMock, 1).headers).get('X-Workspace-Id')).toBe('ws-123');
 
     // Clearing it removes the header again.
     setActiveWorkspaceId(null);
     await apiClient.get('/projects');
-    expect(
-      new Headers((fetchMock.mock.calls[2]?.[1] as RequestInit).headers).get('X-Workspace-Id'),
-    ).toBeNull();
+    expect(new Headers(requestInitAt(fetchMock, 2).headers).get('X-Workspace-Id')).toBeNull();
   });
 });
 

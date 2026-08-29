@@ -133,6 +133,7 @@ uv run ruff check .
 ```bash
 cd frontend
 pnpm test             # Vitest (network mocked with MSW)
+pnpm lint             # Oxlint (React/Next/TypeScript/a11y rules)
 pnpm check:policy     # architecture + design-token guards
 pnpm exec tsc --noEmit # type check
 pnpm build            # next build
@@ -146,7 +147,7 @@ once the planned implementation is finished — not after every step.
 
 ```powershell
 .\scripts\check.ps1     # static + fix gate: ruff, mypy, complexity,
-                        # import-linter, vulture, deptry, prettier, eslint,
+                        # import-linter, vulture, deptry, prettier, oxlint,
                         # tsc, frontend policies, docs index
 .\scripts	test.ps1      # affected backend, frontend, and mapped E2E tests
 ```

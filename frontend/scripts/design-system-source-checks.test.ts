@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   productUiSourceViolations,
   standalonePlaceholderViolations,
+  textRoleBackgroundViolations,
 } from './design-system-source-checks.mjs';
 
 describe('standalonePlaceholderViolations', () => {
@@ -56,5 +57,42 @@ describe('productUiSourceViolations', () => {
     expect(
       productUiSourceViolations(source, 'components/onboarding/example.tsx', true),
     ).toHaveLength(1);
+  });
+});
+
+describe('textRoleBackgroundViolations', () => {
+  // Assembled at runtime so this spec -- which the policy walk in
+  // check-design-system.mjs also reads -- cannot trip its own rule.
+  const banned = (role: string) => ['bg', '-'].join('') + role;
+
+  it('rejects text-ink backgrounds in string, template, and JSX class text', () => {
+    expect(
+      textRoleBackgroundViolations(`const c = 'rounded ${banned('subtle')} p-2';`, 'lib/x.ts'),
+    ).toHaveLength(1);
+    expect(
+      textRoleBackgroundViolations(`const c = \`flex ${banned('muted')} \${id}\`;`, 'lib/x.ts'),
+    ).toHaveLength(1);
+    expect(
+      textRoleBackgroundViolations(
+        `<div className="${banned('secondary')}" />`,
+        'components/x.tsx',
+      ),
+    ).toHaveLength(1);
+    expect(
+      textRoleBackgroundViolations(`const c = '${banned('subtle')}/70';`, 'lib/x.ts'),
+    ).toHaveLength(1);
+  });
+
+  it('allows surface tokens, prefixed variants, prose, and non-source files', () => {
+    expect(textRoleBackgroundViolations("const c = 'flex bg-panel';", 'lib/x.ts')).toEqual([]);
+    // A variant prefix is a different utility; the ESLint selector this
+    // replaced anchored on a word boundary too.
+    expect(
+      textRoleBackgroundViolations(`const c = 'hover:${banned('subtle')}';`, 'lib/x.ts'),
+    ).toEqual([]);
+    expect(
+      textRoleBackgroundViolations(`// never paint with ${banned('subtle')}`, 'lib/x.ts'),
+    ).toEqual([]);
+    expect(textRoleBackgroundViolations(banned('subtle'), 'app/globals.css')).toEqual([]);
   });
 });

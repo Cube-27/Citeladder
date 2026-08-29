@@ -50,6 +50,10 @@ describe('Button', () => {
   it('renders as the child element when asChild is set (Radix Slot)', () => {
     render(
       <Button asChild variant="secondary">
+        {/* oxlint-disable-next-line nextjs/no-html-link-for-pages -- not
+            navigation: this asserts Radix Slot forwards the button surface onto
+            whatever child it is given, and oxlint's port of the rule has no
+            route table to check `/next` against as the ESLint version did. */}
         <a href="/next">Go</a>
       </Button>,
     );

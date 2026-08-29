@@ -42,7 +42,7 @@ export function useVisibilityFilters() {
   const [activeTab, setActiveTab] = useState<VisibilityTab>(urlTab);
   useEffect(() => {
     // Intentional URL→state sync (external navigation is the source of truth).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // oxlint-disable-next-line react-hooks/set-state-in-effect
     setActiveTab(urlTab);
   }, [urlTab]);
 

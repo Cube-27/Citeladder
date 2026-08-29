@@ -228,6 +228,63 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
   return violations;
 }
 
+/**
+ * Tailwind v4 generates EVERY utility family from every theme token, so
+ * `--color-subtle` / `--color-muted` / `--color-secondary` (the Gray-500/600/700
+ * TEXT inks) silently yield usable `bg-*` utilities. `bg-subtle` painted the
+ * page-kind score expansion as a dark slate panel with unreadable controls on
+ * it, and neither review nor the type system could catch it.
+ *
+ * This lived as an ESLint `no-restricted-syntax` selector pair until the linter
+ * moved to Oxlint, which does not implement that rule. The check belongs here
+ * regardless: it is a design-token contract, and this file already owns the
+ * others. The AST walk (rather than a source regex) is what the ESLint
+ * selectors gave us -- it matches string and template text only, so the rule
+ * cannot be tripped by a prose mention in a comment.
+ *
+ * NOT banned: `bg-foreground` + `text-background` is the deliberate
+ * inverse-chip pattern, and `bg-inverse/70` is a white scrim.
+ */
+const TEXT_ROLE_BACKGROUND = new RegExp(
+  // Assembled from fragments so this policy source -- which the walk in
+  // check-design-system.mjs also reads -- can never match itself.
+  `(^|\\s)${['bg', '-'].join('')}(subtle|secondary|muted)(\\s|/|$)`,
+);
+
+const TEXT_ROLE_BACKGROUND_MESSAGE =
+  'background utility built from a TEXT-role token; use a surface token ' +
+  '(bg-background-alt, bg-panel, bg-well, bg-elevated, bg-surface-inverse), ' +
+  'a border-scale neutral, or a semantic bg-*-bg';
+
+/** Surfaces must never be painted with a text-ink token. */
+export function textRoleBackgroundViolations(source, label) {
+  if (!/\.(?:tsx|ts|mjs|js)$/.test(label)) return [];
+  const sourceFile = ts.createSourceFile(
+    label,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const violations = [];
+  const visit = (node) => {
+    const text =
+      ts.isStringLiteralLike(node) ||
+      ts.isTemplateHead(node) ||
+      ts.isTemplateMiddle(node) ||
+      ts.isTemplateTail(node)
+        ? node.text
+        : null;
+    if (text !== null && TEXT_ROLE_BACKGROUND.test(text)) {
+      const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+      violations.push(`${label}:${line}: ${TEXT_ROLE_BACKGROUND_MESSAGE}`);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return violations;
+}
+
 function tokenDeclaration(source, token, value) {
   return new RegExp(`${escapeRegExp(token)}\\s*:\\s*${escapeRegExp(value)}\\s*;`).test(source);
 }

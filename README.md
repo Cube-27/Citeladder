@@ -201,7 +201,7 @@ and running the underlying command directly is equivalent.
 ```bash
 pnpm setup       # frozen installs: frontend (pnpm) + backend (uv)
 pnpm test        # vitest, then pytest
-pnpm lint        # eslint, then ruff
+pnpm lint        # oxlint, then ruff
 pnpm typecheck   # tsc --noEmit, then mypy
 pnpm build       # next build
 ```

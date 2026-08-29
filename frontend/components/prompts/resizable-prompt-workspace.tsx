@@ -89,7 +89,6 @@ export function ResizablePromptWorkspace({
       restoreDocumentInteraction();
     };
     // The width helpers intentionally read live refs and DOM geometry.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {

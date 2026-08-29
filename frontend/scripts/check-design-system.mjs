@@ -7,6 +7,7 @@ import {
   productUiSourceViolations,
   standalonePlaceholderViolations,
   textContrastViolations,
+  textRoleBackgroundViolations,
   websiteContractViolations,
 } from './design-system-source-checks.mjs';
 
@@ -69,6 +70,10 @@ for (const path of files(root)) {
       label.startsWith('app/(onboarding)/') ||
       label.startsWith('components/') ||
       label.startsWith('lib/'));
+  // Applies to every source file, not just product UI: the ESLint rule this
+  // replaced was repository-wide, and a text-ink background is wrong on a
+  // marketing surface too.
+  violations.push(...textRoleBackgroundViolations(source, label));
   violations.push(...editorialTypographyViolations(source, label, ownsWebsiteEditorialCopy));
   violations.push(...standalonePlaceholderViolations(source, label, ownsProductUi));
   violations.push(...productUiSourceViolations(source, label, ownsProductUi));

@@ -73,7 +73,7 @@ change must use an additive migration with an explicit backfill and downgrade.
   affected component tests.
 - Frontend registration/login tests: `8 passed`.
 - Changed-path Ruff, `mypy app`, and complexity-policy checks: passed.
-- Frontend ESLint, TypeScript, architecture/design policy, and production build:
+- Frontend Oxlint, TypeScript, architecture/design policy, and production build:
   passed.
 - `alembic upgrade head` plus `alembic check` against a disposable database:
   passed with no new upgrade operations detected.

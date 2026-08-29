@@ -156,7 +156,7 @@ export type DeclaredKeys = {
   required: string[];
 };
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* oxlint-disable typescript/no-explicit-any */
 
 /** Unwrap array/default/optional/nullable/readonly/pipe wrappers to the object. */
 function unwrapToObject(schema: unknown): z.ZodObject | null {
@@ -203,7 +203,7 @@ function toleratesAbsent(field: unknown): boolean {
   return false;
 }
 
-/* eslint-enable @typescript-eslint/no-explicit-any */
+/* oxlint-enable typescript/no-explicit-any */
 
 /**
  * Extract the declared top-level keys for one mapped zod schema, split into

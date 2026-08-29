@@ -121,7 +121,7 @@ jobs:
           --cov --cov-report=xml --cov-report=term
 
   frontend:
-    name: Frontend (vitest, tsc, policy, build)
+    name: Frontend (vitest, oxlint, tsc, policy, build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -142,6 +142,12 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Vitest
         run: pnpm test
+      # Oxlint replaced ESLint: same rule set (migrated with @oxlint/migrate),
+      # ~20x faster, and `--deny-warnings` plus unused-directive reporting mean
+      # neither a warning nor a stale suppression can accumulate quietly. The
+      # two rules oxlint does not implement moved to the policy scripts:
+      # the design-token restriction to `check:policy`'s design-system guard,
+      # and the hard-navigation guard to its architecture guard.
       - name: Lint
         run: pnpm lint
       # Formatting was enforceable (`format:check` has always existed) but not

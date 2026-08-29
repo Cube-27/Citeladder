@@ -61,8 +61,17 @@
       "frontendTests": ["next.config.test.ts", "app/sitemap.test.ts"]
     },
     {
-      "sources": ["frontend/next.config.ts", "frontend/eslint.config.mjs"],
+      "sources": ["frontend/next.config.ts"],
       "frontendTests": ["next.config.test.ts"]
+    },
+    {
+      "sources": [
+        "frontend/.oxlintrc.json",
+        "frontend/scripts/check-design-system.mjs",
+        "frontend/scripts/check-frontend-architecture.mjs",
+        "frontend/scripts/design-system-source-checks.mjs"
+      ],
+      "frontendTests": ["scripts/design-system-source-checks.test.ts"]
     },
     {
       "sources": [

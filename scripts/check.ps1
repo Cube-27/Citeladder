@@ -95,7 +95,7 @@ function Invoke-FrontendChecks {
     else {
         Invoke-Step "Prettier format fixes" { Invoke-FrontendPnpm format }
     }
-    Invoke-Step "ESLint" { Invoke-FrontendPnpm lint }
+    Invoke-Step "Oxlint" { Invoke-FrontendPnpm lint }
     Invoke-Step "TypeScript" { Invoke-FrontendPnpm exec tsc --noEmit }
     Invoke-Step "Frontend complexity policy" { Invoke-FrontendPnpm check:complexity }
     Invoke-Step "Duplication policy" { Invoke-FrontendPnpm check:duplicates }

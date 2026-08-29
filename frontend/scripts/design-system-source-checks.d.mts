@@ -9,3 +9,5 @@ export declare function productUiSourceViolations(
   label: string,
   ownsProductUi: boolean,
 ): string[];
+
+export declare function textRoleBackgroundViolations(source: string, label: string): string[];
