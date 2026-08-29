@@ -37,6 +37,7 @@ Read only the documents required by the task.
 | Complete active-document map | `docs/documentation-index.md` |
 | Program sequence | `docs/plans/citeladder-aeo-product-rebuild.md` |
 | Site crawl, classification, rules, and runtime | `docs/site-health.md` |
+| Site Health measurement cutover sequence | `docs/plans/site-health-measurement-cutover.md` |
 | Content workflows | `docs/plans/CITELADDER_CONTENT_GENERATION_SIMPLIFIED_PLAN.md` |
 | Demand, prompts, visibility, and Agent | `docs/plans/citeladder-aeo-product-rebuild.md` |
 | Backend ownership and shipped runtime | `docs/backend-architecture.md` |
@@ -79,8 +80,11 @@ page-kind-specific rules fail closed and remain out of scoring. A JS shell is
 also distinct from missing content; content-reading rules stay not-applicable
 while `aeo.server_rendered_content` owns the observable problem.
 
-Every classifier, extractor, analyzer, rule, and scoring change carries a
-version bump so append-only analyses are replayable.
+During pre-launch development, databases are disposable and no historical
+analysis compatibility is preserved. Classifier, extractor, analyzer, rule,
+scoring, formula, coverage, architecture, and presentation version fields stay
+at `1`; semantic changes reset and rebuild the development database. Begin
+incrementing versions only after an explicit production-history policy change.
 
 ## Repository invariants
 
@@ -132,7 +136,8 @@ version bump so append-only analyses are replayable.
 - CiteLadder is pre-launch and keeps one explicit
   `migrations/versions/0001_initial.py`. Fold schema changes into it, reset a
   disposable database, migrate from scratch, and check ORM drift. Do not add a
-  `0002+` migration unless this policy changes explicitly.
+  `0002+` migration or increment development semantic versions unless this
+  policy changes explicitly.
 
 ## Change validation
 

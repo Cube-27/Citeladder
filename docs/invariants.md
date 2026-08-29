@@ -35,7 +35,9 @@ Persistence means observed, not automatically true.
 Analyses, rule evaluations, scores, demand signals, opportunities, briefs,
 prompts, validations, verifications, and agent results reference exact source
 IDs and every relevant extractor, classifier, analyzer, rule, scoring, formula,
-template, provider, and model version.
+template, provider, and model version. During disposable pre-launch
+development, active semantic versions remain `1`; a semantic change resets the
+development database instead of preserving cross-version history.
 
 ## 6. Reads are persisted projections
 
@@ -126,4 +128,5 @@ without measured need.
 Before launch, schema changes are folded into
 `migrations/versions/0001_initial.py`. Verify from an empty disposable database
 with `alembic upgrade head` and `alembic check`; do not add `0002+` without an
-explicit policy change.
+explicit policy change. All active development semantic versions remain `1`
+under the same reset policy.

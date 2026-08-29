@@ -51,7 +51,7 @@ ACTIVE_EXACT = {
     "docs/plans/commerce-suite-atomic-rebuild.md",
     "docs/plans/commerce-ui-redesign.md",
     "docs/plans/commerce-suite-retirement-manifest.md",
-    "docs/plans/site-health-site-model.md",
+    "docs/plans/site-health-measurement-cutover.md",
     "docs/plans/crawl-onboarding-prompt-repair.md",
     "docs/plans/CITELADDER_CONTENT_GENERATION_SIMPLIFIED_PLAN.md",
     "docs/plans/aeo-opportunity-loop.md",
