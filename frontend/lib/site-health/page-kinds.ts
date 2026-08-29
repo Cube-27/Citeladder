@@ -79,6 +79,35 @@ export const CONFIDENCE_LABELS: Readonly<Record<string, string>> = {
   unknown: 'Unclassified',
 };
 
+/**
+ * Display wording for an observed page trait.
+ *
+ * A trait says what else is on a page, independent of what the page is for,
+ * so the copy reads as an observation ("Has an FAQ") rather than a
+ * classification. An unknown trait falls back to its own token: a backend that
+ * ships a new observation should surface it, not hide it.
+ */
+const PAGE_TRAIT_LABELS: Readonly<Record<string, string>> = {
+  has_faq: 'Has an FAQ',
+  has_reviews: 'Has reviews',
+  has_variants: 'Has variants',
+  listing: 'Lists items',
+  local_intent: 'Local business details',
+  contact_intent: 'Contact details',
+  about_intent: 'About the organization',
+  case_study_intent: 'Case study',
+  comparison_content: 'Comparison',
+  procedural: 'Step by step',
+};
+
+export function pageTraitLabel(trait: string): string {
+  // Own properties only. A plain object literal still inherits `constructor`,
+  // `toString` and `__proto__`, so a bare lookup on an untrusted token returns
+  // a function or the prototype rather than a label — and React throws when
+  // asked to render one as a child.
+  return Object.hasOwn(PAGE_TRAIT_LABELS, trait) ? PAGE_TRAIT_LABELS[trait] : trait;
+}
+
 export function pageKindConfidenceLabel(confidence: string, tier: string): string {
   if (confidence === 'medium' && tier === 'structural') {
     return 'Medium — mixed evidence';

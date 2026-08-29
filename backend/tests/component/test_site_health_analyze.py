@@ -40,7 +40,7 @@ from app.core.config.site_health_crawl_policy import (
     SELECTION_SOURCE_FREE_SAMPLE,
 )
 from app.core.config.site_health_taxonomy import (
-    PAGE_KIND_PROFILES,
+    MIN_MEANINGFUL_WORDS,
 )
 from app.core.config.task_queue import (
     TASK_STATUS_CANCELLED,
@@ -547,9 +547,9 @@ async def test_analyze_persists_page_kind_classifier_and_current_versions(
     )
 
     assert (ANALYZER_VERSION, SCORING_VERSION, CLASSIFIER_VERSION) == (
-        "sh-analyzer-7",
-        "sh-scoring-4",
-        "sh-classifier-8",
+        "sh-analyzer-8",
+        "sh-scoring-5",
+        "sh-classifier-9",
     )
 
     seed, _site_url_id, _task_id = await _seed_analyze_ready(
@@ -569,9 +569,9 @@ async def test_analyze_persists_page_kind_classifier_and_current_versions(
         ).scalar_one()
         # The /blog/ path pattern classified the page as an article.
         assert analysis.page_kind == "article"
-        assert analysis.classifier_version == "sh-classifier-8"
-        assert analysis.analyzer_version == "sh-analyzer-7"
-        assert analysis.scoring_version == "sh-scoring-4"
+        assert analysis.classifier_version == "sh-classifier-9"
+        assert analysis.analyzer_version == "sh-analyzer-8"
+        assert analysis.scoring_version == "sh-scoring-5"
 
         # The bounded classifier evidence persisted WITH the row (it used to
         # be computed, injected into the facts dict after the artifact flush,
@@ -595,17 +595,19 @@ async def test_analyze_persists_page_kind_classifier_and_current_versions(
                 )
             )
         ).scalar_one()
-        article_min = PAGE_KIND_PROFILES["article"].min_sufficient_words
         assert thin.evidence["page_kind"] == "article"
-        assert thin.evidence["minimum"] == article_min
-        # The rich page (140 words) is thin FOR AN ARTICLE (>= 300 words).
-        assert thin.outcome == RULE_OUTCOME_FAIL
+        assert thin.evidence["minimum"] == MIN_MEANINGFUL_WORDS
+        # A 140-word article used to be "thin" against a 300-word floor. It is
+        # short, not defective, and the analyzer cannot tell the difference --
+        # so the only thing still reported here is an actually empty page.
+        assert thin.outcome == RULE_OUTCOME_PASS
+        assert thin.evidence["word_count"] >= MIN_MEANINGFUL_WORDS
 
         # The crawl rollup carries the per-page-type breakdown.
         crawl = await session.get(SiteCrawl, seed.crawl_id)
         assert crawl is not None
         summary = crawl.score_summary or {}
-        assert summary.get("scoring_version") == "sh-scoring-4"
+        assert summary.get("scoring_version") == "sh-scoring-5"
         by_page_kind = summary.get("by_page_kind") or {}
         assert set(by_page_kind) == {"article"}
         assert by_page_kind["article"]["analyzed_count"] == 1
@@ -735,7 +737,7 @@ async def test_analyze_injects_site_facts_on_root_analysis_only(
         assert stance is not None
         assert stance.outcome == RULE_OUTCOME_FAIL
         assert stance.evidence["blocked"] == ["GPTBot"]
-        assert stance.rule_version == RULE_CATALOG_VERSION == "sh-rules-6"
+        assert stance.rule_version == RULE_CATALOG_VERSION == "sh-rules-7"
         llms = await _eval("aeo.llms_txt_present", root_analysis.id)
         assert llms is not None
         assert llms.outcome == RULE_OUTCOME_PASS

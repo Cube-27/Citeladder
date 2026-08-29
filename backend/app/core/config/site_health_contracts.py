@@ -323,6 +323,18 @@ APPLICABILITY_CRAWL_FINALIZE: Final = "crawl_finalize"
 
 APPLICABILITY_OBSERVED_CONTENT: Final = "observed_content"
 
+# NOT_APPLICABLE reason vocabulary. These strings reach the user through the
+# evaluation evidence -- a skipped rule has to be able to explain itself -- so
+# they are named constants rather than literals scattered through the checks.
+#
+# ``insufficient_evidence`` is deliberately a REASON and not a fifth outcome.
+# not_applicable already delivers exactly what uncertainty needs: excluded from
+# scoring, disclosed rather than hidden, and never a failure. Uncertainty must
+# never be converted into a defect.
+SKIP_REASON_INSUFFICIENT_EVIDENCE: Final = "insufficient_evidence"
+
+SKIP_REASON_LOW_CONFIDENCE_KIND: Final = "low_confidence_kind"
+
 CODE_MONITORING_NOT_ALLOWED: Final = "monitoring_not_allowed"
 
 CODE_QUOTA_EXCEEDED: Final = "site_health_quota_exceeded"
@@ -369,20 +381,19 @@ EVENT_CRAWL_FAILED: Final = "crawl.failed"
 
 EVENT_CRAWL_CANCELLED: Final = "crawl.cancelled"
 
-# v8: DOM traversal failures are narrowed to a documented exception set and
-# logged instead of silently emptying the fact bucket, so an extraction bug is
-# no longer replayed as "this page had no title / no CTAs / no forms". Facts
-# extracted under v7 stay replayable at v7 (invariant 5).
-EXTRACTOR_VERSION: Final = "sh-extractor-12"
+# v13: the author/date facts gained targeted visible byline/date evidence from
+# labelled primary-content nodes. Facts extracted under v12 stay replayable at
+# v12 (invariant 5).
+EXTRACTOR_VERSION: Final = "sh-extractor-13"
 
 LINK_REWRITE_VERSION: Final = "sh-link-rewrite-1"
 
 LINK_REWRITE_ENCODED_TRACKING_QUERY: Final = "encoded_tracking_query_delimiter"
 
-ANALYZER_VERSION: Final = "sh-analyzer-7"
+ANALYZER_VERSION: Final = "sh-analyzer-8"
 
-RULE_CATALOG_VERSION: Final = "sh-rules-6"
+RULE_CATALOG_VERSION: Final = "sh-rules-7"
 
-SCORING_VERSION: Final = "sh-scoring-4"
+SCORING_VERSION: Final = "sh-scoring-5"
 
-CLASSIFIER_VERSION: Final = "sh-classifier-8"
+CLASSIFIER_VERSION: Final = "sh-classifier-9"

@@ -325,6 +325,84 @@ become the `blog` route family.
 `other` is an abstention. It is not treated as a proven `WebPage`, and
 page-kind-specific rules are not scored for it.
 
+Confidence is consumed, not merely recorded. Every page-kind-scoped rule
+declares how it relates to the classification:
+
+- **expectation** — asserts something should be present *because of* the page
+  kind. Only as sound as the classification behind it.
+- **triggered** — validates an artifact that is actually present, and already
+  resolves not-applicable when it is absent.
+- **universal** — not page-kind-scoped.
+
+An expectation **defect** requires structural evidence: page-owned structure
+the classifier read from the page itself. A kind established only from a URL
+path segment or from bounded title/content semantics yields
+`not_applicable` with reason `low_confidence_kind` instead, so a page inferred
+to be an FAQ because its path contains `/support/` is never accused of missing
+FAQ structure. Advisories are offered at every tier, because an opportunity
+costs nothing when the guess is wrong. Triggered validation runs at every tier,
+because its trigger is the artifact rather than the classification.
+
+The gate keys on the evidence tier rather than the confidence label:
+`_confidence` demotes structural evidence to `medium` whenever any other signal
+disagreed, so reading the label alone would suppress checks on pages whose own
+structure proved what they were.
+
+## Page traits
+
+`page_kind` is exclusive and answers "what is this page for". A **trait** is
+additive and answers "what else is on it":
+
+```text
+has_faq, has_reviews, has_variants, listing, local_intent,
+contact_intent, about_intent, case_study_intent, comparison_content, procedural
+```
+
+A product page carrying an FAQ block is a `product` with a separate `has_faq`
+observation, rather than being filed as one or the other or requiring a
+`product_with_faq` kind that would never cover every combination.
+
+Traits also separate the two kinds that bundle unlike pages. `about_contact`
+mixes pages with different success criteria — demanding contact details of
+`/about/our-story` invents a fault, while not checking them on `/contact-us`
+misses an improvement — and `case_study_review` mixes "problem, intervention,
+result" with "item, evaluator, verdict". `aeo.author_present` therefore no
+longer applies to `case_study_review`; the analyzer does not guess whether the
+page is the case-study half or the review half from a route or title token.
+
+Derivation is pure, deterministic, bounded, and versioned (`TRAITS_VERSION`).
+It reads the same page facts as the classifier but never reads `page_kind`, so
+a trait is an observation rather than a consequence of the classification.
+
+A trait is deliberately stricter than the classifier signal it resembles.
+`has_faq` requires FAQPage markup or subheadings that literally end in a
+question mark, where the classifier's FAQ signal accepts a heading opening with
+what/why/how — right for a signal resolved by tier precedence against
+competitors, wrong for a standalone assertion that whatever keys on it fires
+with no second opinion.
+
+Observed traits persist on `SitePageAnalysis.page_traits` as a queryable array
+and appear on the per-URL detail beside the page kind.
+
+## Content sufficiency
+
+There is no magical minimum word count and no ideal page length, so length is
+evidence, never the verdict. `technical.thin_content` reports an **empty** page,
+not a short one: one low universal floor (`MIN_MEANINGFUL_WORDS`) replaces the
+former per-kind ladder of 40 to 300 words, and the word count is recorded as
+evidence rather than as the judgement.
+
+Below the floor a page can still prove itself structurally — a category page
+that actually lists items, a location page carrying findable details, a product
+or pricing page showing a price, a contact page handing over a way to reply, an
+about page identifying the entity. Those signals only ever ADD a way to pass;
+none of them can fail a page the floor would have passed, so the check reports
+fewer pages than the floor alone would, never more.
+
+A page kind with no structural signal is judged on the floor alone. That is the
+correct answer rather than a gap: a 150-word article is short, not defective,
+and nothing in the crawl can tell those apart.
+
 ## Structured-data extraction and schema contracts
 
 The bounded extractor reads JSON-LD graphs and shallow microdata. It normalizes
@@ -342,6 +420,19 @@ schema type used, not once for the whole page kind. For example:
   `BreadcrumbList.itemListElement`;
 - Article and ItemList alternatives on comparison pages use their own fields.
 
+Schema handling is validation-first, not presence-first. Absent markup is an
+opportunity, never a page defect: structured data helps a search engine
+understand a page and can unlock specific features, but it has never been
+required, and no special markup is needed to be read by an answer engine.
+Markup that is present and contradicts the visible page is a real defect, and
+`aeo.schema_matches_content` owns that finding.
+
+Required properties are therefore only those a present block genuinely needs.
+`Article` requires `headline` alone, with `author` and `datePublished` as
+recommendations. `FAQPage` and `HowTo` require nothing at all — both describe
+retired rich-result features, so their absence cannot be scored and their shape
+cannot be a contract, while a present-but-contradictory block stays reportable.
+
 Schema rules require both a classified non-`other` page kind and an HTML
 response. Content-parity rules additionally require visible server-rendered
 body content.
@@ -350,14 +441,29 @@ body content.
 
 Not-applicable is different from pass and is excluded from scoring.
 
-- Technical delivery, indexability, metadata, and rendering rules remain
-  broadly applicable where their source evidence exists.
+- Technical delivery and indexability rules read the response and remain
+  applicable to any successful fetch.
+- Title, meta-description, and canonical rules require an HTML response. A
+  supported office/PDF/Markdown document is successful inventory evidence and
+  is not reported as missing markup its format does not have.
 - Schema presence/type/property rules apply only to classified page kinds.
 - Author and citation rules apply only to authored editorial types.
+  `aeo.author_present` is `not_applicable` on `case_study_review`: a case study
+  is usually published by the organization and owes no named writer.
 - Date rules also include documentation.
-- Question-heading rules apply to FAQ, guide, docs, and article pages.
-- Answer-first structure applies to article, FAQ, guide, docs, service,
-  comparison, and case-study/review pages.
+- Question-heading rules apply to FAQ pages only, and are not applicable to a
+  page with no h2/h3 subheadings at all: no sections is a different fact from
+  badly phrased sections.
+- Answer-first structure applies to FAQ, guide, and docs pages, as an advisory.
+  A service page, a comparison, a case study, or a narrative article carries no
+  obligation to open with a direct answer.
+- A canonical declaration that points away from the page is not a conflict —
+  consolidating a sorted, filtered, or tracked URL onto its parent is what the
+  element is for. Only positive evidence of a broken target fails: a canonical
+  that is unresolvable, points to another origin, or points at a different
+  hreflang alternate of the same page. Campaign and click parameters are
+  removed before the comparison, and a relative canonical is resolved against
+  the page URL first.
 - Product offer and visible/schema parity rules apply only to product pages.
 - Architecture depth, breadcrumb-conflict, and duplicate-family-metadata rules
   report positive observations at any coverage. Orphan, parentless-detail,
@@ -388,9 +494,19 @@ plain-language title, frozen description, an affected-page evidence chip, and
 page-kind scope; remediation appears when the row expands.
 
 Every rule also owns a versioned `finding_class`: `defect` for a reproducible
-problem and `advisory` for deterministic but opinionated guidance. Title- and
-meta-description length bands are advisories. Defects and advisories have
-separate server-filtered views. The headline is the number of distinct defect
+problem and `advisory` for deterministic but opinionated guidance.
+
+**Only defects score.** Advisory evaluations are excluded from scoring
+entirely — pass, fail, and error alike — so guidance can neither lower nor
+raise a health score. Excluding advisory passes matters as much as excluding
+advisory failures: a page must not be able to lift its score by satisfying an
+opinion. `weight` is therefore only meaningful on a defect.
+
+Advisories are: title and meta-description length bands, meta-description and
+canonical presence, structured-data and Open Graph presence, expected-schema
+and recommended-schema properties, answer-first structure, collapsed-content
+gating, and an indexability finding whose intent could not be established.
+Defects and advisories have separate server-filtered views. The headline is the number of distinct defect
 issue types by default and distinct advisory issue types in the advisory view;
 supporting metrics explicitly name the selected class's occurrences and
 affected URLs. Only defects feed severity filters and Opportunities. The
@@ -406,14 +522,51 @@ current per-page evidence is retained, and no dormant scope configuration or
 placeholder identity owner is introduced.
 
 Current versions are owned in the focused `backend/app/core/config/site_health_*`
-modules. The observed-architecture slice ships extractor `sh-extractor-12`,
-classifier `sh-classifier-8`, analyzer `sh-analyzer-7`, rule catalog
-`sh-rules-6`, and scoring `sh-scoring-4`. An unclassified `other` page retains
+modules. The false-positive hardening slice ships extractor `sh-extractor-13`,
+classifier `sh-classifier-9`, analyzer `sh-analyzer-8`, rule catalog
+`sh-rules-7`, and scoring `sh-scoring-5`. Scores are not comparable across the
+scoring-version boundary, and Change Intelligence correctly reports pairs that
+straddle it as `non_comparable` rather than as regressions. An unclassified `other` page retains
 its Technical score but has no AEO score; its count remains visible in the
 page-kind rollup. Coverage uses `sh-coverage-1`,
 internal-link metrics use `sh-link-metrics-1`, architecture uses
 `sh-architecture-1`, and the archetype policy uses `sh-archetypes-1`; tests pin
 persistence and replay behavior.
+
+## False-positive contract
+
+`backend/tests/unit/test_site_health_fixture_contracts.py` holds a fixture per
+page shape, each stating both the findings it must produce and the findings it
+must never produce. Most fixtures are correctly built pages; one is
+deliberately broken so no rule can be neutralised into silence and still pass.
+
+`KNOWN_FALSE_POSITIVES` in that module lists the defects a valid page still
+produces, and the suite asserts the list is exact in both directions — it
+cannot grow to cover new breakage, and a stale entry fails once its fix lands.
+Any new page-kind check belongs here before it ships.
+
+## Known analyzer gaps
+
+Deliberately not fixed here, each because the honest fix is wider than the
+false-positive work it surfaced during:
+
+- **Interaction-gated content is not detected.** `expand_gated_ratio` counts
+  words inside collapsed `<details>` and `aria-expanded="false"` nodes — text
+  that IS in the DOM and extractable. `aeo.no_expand_gating` is therefore an
+  advisory: it cannot detect content that is genuinely unreachable without
+  interaction (empty `<template>` shells, `hidden` containers, client-fetched
+  panels), which needs a new extractor signal before it can be a defect again.
+- **`aeo.outbound_citations` applies to guides.** A practical how-to that cites
+  nothing is not defective. The rule wants an "is this a researched claim?"
+  trigger rather than a page-kind scope.
+- **Canonical target problems needing crawl-wide state are not checked.** A
+  canonical pointing at a 404 or at a noindex page is a real defect, but the
+  per-page pass cannot see the target. It belongs in a `crawl_finalize`-scoped
+  sibling alongside `technical.sitemap_orphan`.
+- **Two dead indexing inputs.** `facts["indexing_policy"]` and
+  `facts["robots_indexing_policy"]` are read by the intent precedence chain and
+  written by nothing in production, so its first and last branches are
+  unreachable. Either wire them to a real user policy surface or delete them.
 
 ## Known boundary
 
@@ -427,9 +580,11 @@ Health analysis must not invent durable facts merely to fill it.
 From `backend/`:
 
 ```bash
-uv run pytest tests/unit/test_site_health_page_kinds.py \
+uv run pytest tests/unit/test_site_health_fixture_contracts.py \
+  tests/unit/test_site_health_page_kinds.py \
   tests/unit/test_site_health_parser.py \
   tests/unit/test_site_health_rules.py \
+  tests/unit/test_site_health_scoring.py \
   tests/component/test_site_health_analyze.py \
   tests/component/test_site_health_discover.py -q
 uv run ruff check app/analysis/site_health app/core/config/site_health_*.py

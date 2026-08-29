@@ -25,12 +25,20 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.analysis.site_health.indexing import (
+    canonical_origin,
     evaluate_indexability,
     normalized_url_for_compare,
+    resolve_canonical,
 )
 from app.analysis.site_health.product_rules import (
     check_product_offer_details,
     check_product_visible_schema_parity,
+)
+from app.analysis.site_health.rule_scope import (
+    applicability,
+    observed_traits,
+    profile_for,
+    server_render_signals,
 )
 from app.analysis.site_health.schema_rules import (
     check_schema_expected_for_type,
@@ -43,9 +51,6 @@ from app.core.config.site_health_acquisition import (
     AI_CRAWLER_STANCE_BLOCK,
 )
 from app.core.config.site_health_contracts import (
-    APPLICABILITY_CRAWL_FINALIZE,
-    APPLICABILITY_OBSERVED_CONTENT,
-    APPLICABILITY_SITE_ROOT,
     RULE_OUTCOME_ERROR,
     RULE_OUTCOME_FAIL,
     RULE_OUTCOME_NOT_APPLICABLE,
@@ -56,45 +61,56 @@ from app.core.config.site_health_page_profiles import (
     PRODUCT_ANALYSIS_RULES_BY_ID,
     PRODUCT_SCHEMA_EXPECTATION,
 )
+from app.core.config.site_health_rule_types import (
+    FINDING_CLASS_ADVISORY,
+    SiteHealthRule,
+)
 from app.core.config.site_health_rules import (
     ANSWER_FIRST_MIN_WORDS,
     EXPAND_GATED_MAX_RATIO,
-    FINDING_CLASS_ADVISORY,
     META_DESCRIPTION_LENGTH_BAND,
     QUESTION_HEADINGS_MIN_RATIO,
     RENDER_BLOCKING_MAX_RESOURCES,
-    SERVER_RENDERED_MIN_WORDS,
     SITE_HEALTH_RULES,
     SITE_HEALTH_RULES_BY_ID,
     SOCIAL_DOMAINS,
     TITLE_LENGTH_BAND,
     TTFB_WARN_MS,
-    SiteHealthRule,
 )
 from app.core.config.site_health_taxonomy import (
-    PAGE_KIND_APPLICABILITY_PREFIX,
-    PAGE_KIND_CONTENT_APPLICABILITY_PREFIX,
-    PAGE_KIND_HTML_APPLICABILITY_PREFIX,
+    CONTENT_SUFFICIENCY_PRICE_KINDS,
+    CONTENT_SUFFICIENCY_TRAITS,
+    MIN_MEANINGFUL_WORDS,
     PAGE_KIND_OTHER,
     PAGE_KIND_PROFILES,
-    PageKindProfile,
 )
 
 
-def _profile_for(facts: dict) -> PageKindProfile | None:
-    """The config profile for ``facts["page_kind"]`` (None when unknown)."""
-    page_kind = str(facts.get("page_kind") or "").strip().lower()
-    return PAGE_KIND_PROFILES.get(page_kind)
+def _has_price_evidence(facts: dict) -> bool:
+    """A visible price, or a Product/Offer that declares one."""
+    entity_product = (facts.get("entity") or {}).get("product") or {}
+    if entity_product.get("has_primary_price"):
+        return True
+    if str((facts.get("commerce") or {}).get("visible_price") or "").strip():
+        return True
+    product = (facts.get("structured_data") or {}).get("product") or {}
+    return bool(product.get("price"))
 
 
-def _sufficient_word_minimum(facts: dict) -> tuple[int, str]:
-    """Per-type thin-content minimum, falling back to the ``other`` profile.
+def _structural_sufficiency(facts: dict) -> tuple[str, bool]:
+    """``(signal, satisfied)`` for a short page that may still be complete.
 
-    Returns ``(minimum, page_kind)`` so the check evidence records exactly
-    which profile drove the outcome.
+    Only ever ADDS a way to pass. Nothing here can fail a page the word floor
+    would have passed, so the check reports fewer pages than the floor alone
+    would, never more.
     """
-    profile = _profile_for(facts) or PAGE_KIND_PROFILES[PAGE_KIND_OTHER]
-    return profile.min_sufficient_words, profile.page_kind
+    page_kind = str(facts.get("page_kind") or "").strip().lower()
+    if page_kind in CONTENT_SUFFICIENCY_PRICE_KINDS:
+        return "price", _has_price_evidence(facts)
+    wanted = CONTENT_SUFFICIENCY_TRAITS.get(page_kind)
+    if wanted:
+        return "|".join(wanted), bool(observed_traits(facts) & set(wanted))
+    return "", False
 
 
 @dataclass(frozen=True)
@@ -194,34 +210,113 @@ def _check_open_graph_present(facts: dict) -> tuple[str, dict]:
 
 
 def _check_thin_content(facts: dict) -> tuple[str, dict]:
+    """Report an EMPTY page, not a short one.
+
+    This used to compare the word count against a per-page-kind minimum
+    ranging from 40 to 300. Segmenting by kind beat one global threshold, but
+    the premise underneath was still that length proves substance, and it does
+    not: there is no magical minimum word count and no ideal page length. A
+    category page with 25 words over 60 well-organized products, a contact
+    page complete in 30 words, and a product page with 65 words plus price,
+    availability and specifications were all reported as thin.
+
+    The verdict is now emptiness, against one low universal floor, with word
+    count kept as EVIDENCE rather than as the judgement. Below the floor a
+    page can still prove itself structurally -- a listing that lists, a
+    location with findable details, a commercial page with a price -- which
+    only ever adds a way to pass.
+    """
     body = facts.get("body") or {}
     word_count = int(body.get("word_count", 0) or 0)
-    minimum, page_kind = _sufficient_word_minimum(facts)
-    return _pass_fail(word_count >= minimum), {
+    profile = profile_for(facts) or PAGE_KIND_PROFILES[PAGE_KIND_OTHER]
+    evidence: dict[str, Any] = {
         "word_count": word_count,
-        "minimum": minimum,
-        "page_kind": page_kind,
+        "minimum": MIN_MEANINGFUL_WORDS,
+        "page_kind": profile.page_kind,
     }
+    if word_count >= MIN_MEANINGFUL_WORDS:
+        return RULE_OUTCOME_PASS, evidence
+    signal, satisfied = _structural_sufficiency(facts)
+    evidence["structural_signal"] = signal
+    evidence["structurally_sufficient"] = satisfied
+    return _pass_fail(satisfied), evidence
 
 
 # --- v2 P2: hygiene checks -------------------------------------------------
 
 
+def _hreflang_alternate_urls(facts: dict) -> list[str]:
+    alternates = facts.get("hreflang_alternates") or []
+    return [
+        str(entry.get("url") or "")
+        for entry in alternates
+        if isinstance(entry, dict) and entry.get("url")
+    ]
+
+
 def _check_canonical_conflict(facts: dict) -> tuple[str, dict]:
-    canonical = (facts.get("canonical_url") or "").strip()
-    if not canonical:
-        # No canonical declared: the v1 presence rule owns that finding.
+    """Fail on a canonical that is BROKEN, not on one that merely points away.
+
+    The old check failed whenever the canonical was not the page's own final
+    URL. That is the ordinary, intended use of the element: consolidating a
+    sorted, filtered or paginated view onto its parent is what rel=canonical
+    exists to do, and a canonical declaration is not even mandatory.
+
+    Worse, it contradicted this package's own indexing logic, which reads the
+    identical condition as evidence that the page is DELIBERATELY excluded
+    (``_canonical_intent``). One module treated a cross-canonical as a mistake
+    while the other treated it as an intention.
+
+    So a plain cross-canonical passes, and only positive evidence of a broken
+    target fails. Evidence needing crawl-wide state -- a canonical pointing at
+    a 404 or at a noindex page -- is not available in the per-page pass and is
+    not guessed at here.
+    """
+    declared = (facts.get("canonical_url") or "").strip()
+    if not declared:
+        # No canonical declared: the presence rule owns that finding.
         return RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_canonical"}
     delivery = facts.get("delivery") or {}
     final_url = str(delivery.get("final_url") or "")
-    match = normalized_url_for_compare(canonical) == normalized_url_for_compare(
-        final_url
-    )
-    return _pass_fail(match), {
+    canonical = resolve_canonical(declared, final_url)
+    evidence: dict[str, Any] = {
+        "declared_canonical": declared[:2048],
         "canonical_url": canonical[:2048],
         "final_url": final_url[:2048],
-        "matches_final_url": match,
     }
+    self_canonical = normalized_url_for_compare(
+        canonical
+    ) == normalized_url_for_compare(final_url)
+    evidence["self_canonical"] = self_canonical
+    if self_canonical:
+        return RULE_OUTCOME_PASS, evidence
+
+    origin = canonical_origin(canonical)
+    if not origin:
+        # Not an absolute http(s) URL even after resolution: this cannot
+        # consolidate anything.
+        evidence["problem"] = "invalid_canonical"
+        return RULE_OUTCOME_FAIL, evidence
+
+    final_origin = canonical_origin(final_url)
+    if final_origin and origin != final_origin:
+        # Handing indexing authority to another origin is almost never what a
+        # site owner meant, and it is not something consolidation requires.
+        evidence["problem"] = "cross_origin_canonical"
+        return RULE_OUTCOME_FAIL, evidence
+
+    alternates = {
+        normalized_url_for_compare(url) for url in _hreflang_alternate_urls(facts)
+    }
+    if alternates and normalized_url_for_compare(canonical) in alternates:
+        # A page in an hreflang cluster must canonicalise to ITSELF. Pointing
+        # at a sibling language tells the two systems opposite things about
+        # which URL represents this content.
+        evidence["problem"] = "hreflang_canonical_conflict"
+        return RULE_OUTCOME_FAIL, evidence
+
+    evidence["reason"] = "intentional_consolidation"
+    return RULE_OUTCOME_PASS, evidence
 
 
 def _length_band_check(
@@ -419,40 +514,27 @@ def _check_answer_first(facts: dict) -> tuple[str, dict]:
 
 
 def _check_question_headings(facts: dict) -> tuple[str, dict]:
+    headings = facts.get("headings") or {}
+    subheadings = len(headings.get("h2_texts") or []) + len(
+        headings.get("h3_texts") or []
+    )
+    if not subheadings:
+        # ``question_heading_ratio`` is questions / subheadings and is 0.0 when
+        # there are NO subheadings at all -- indistinguishable, to the ratio
+        # alone, from subheadings that are all badly phrased. A page with no
+        # sections is not a page with poorly written sections, so there is
+        # nothing here to judge.
+        return RULE_OUTCOME_NOT_APPLICABLE, {"reason": "no_subheadings"}
     ratio = float(facts.get("question_heading_ratio", 0.0) or 0.0)
     return _pass_fail(ratio > QUESTION_HEADINGS_MIN_RATIO), {
         "question_heading_ratio": ratio,
+        "subheading_count": subheadings,
         "minimum_ratio": QUESTION_HEADINGS_MIN_RATIO,
     }
 
 
-def _server_render_signals(facts: dict) -> tuple[bool, dict]:
-    """``(is_js_shell, evidence)`` for the server-rendered-content signal.
-
-    Shared by ``_check_server_rendered_content`` (which reports it) and
-    ``_applicability`` (which uses it to skip the rules that read content this
-    page never delivered). One definition so the HIGH finding and the
-    not-applicable rules can never disagree about whether a page is a shell.
-    """
-    body = facts.get("body") or {}
-    word_count = int(body.get("word_count", 0) or 0)
-    text_chars = len(str(body.get("text") or ""))
-    inline_script_chars = int(facts.get("inline_script_chars", 0) or 0)
-    # A page is a shell only when it is BOTH text-thin AND script-dominated:
-    # the signature of a JS shell whose content never made it into the HTML.
-    is_shell = (
-        word_count < SERVER_RENDERED_MIN_WORDS and inline_script_chars > text_chars
-    )
-    return is_shell, {
-        "word_count": word_count,
-        "minimum_words": SERVER_RENDERED_MIN_WORDS,
-        "body_text_chars": text_chars,
-        "inline_script_chars": inline_script_chars,
-    }
-
-
 def _check_server_rendered_content(facts: dict) -> tuple[str, dict]:
-    is_shell, evidence = _server_render_signals(facts)
+    is_shell, evidence = server_render_signals(facts)
     return _pass_fail(not is_shell), evidence
 
 
@@ -504,93 +586,13 @@ _CHECKS: dict[str, Callable[[dict], tuple[str, dict]]] = {
 }
 
 
-def _observed_content(facts: dict) -> tuple[bool, str]:
-    """Content-reading rules need content we actually RECEIVED.
-
-    On a client-rendered shell the body is empty, so asserting "missing H1",
-    "thin content" or "no outbound citations" would be reporting the absence of
-    something we never had a chance to see — six derived findings, each scoring
-    against the page, for one real problem. ``aeo.server_rendered_content``
-    owns that problem and stays applicable (it is ``has_html``), so the shell is
-    still reported once, at HIGH, with its remediation.
-    """
-    if not facts.get("has_html"):
-        return False, "no_html"
-    is_shell, _evidence = _server_render_signals(facts)
-    return not is_shell, "content_not_server_rendered"
-
-
-def _page_kind_scope(key: str, prefix: str, facts: dict) -> tuple[bool, str]:
-    """``<prefix><type>[|<type>...]`` resolved against ``facts["page_kind"]``.
-
-    The token names every type the check is MEANT for, so a product page is
-    never asked for an author byline and an FAQ is never asked for
-    Product/offers markup. An absent or unknown page type is inapplicable
-    (fail-closed) — we do not guess which checklist a page we could not
-    classify should answer for.
-    """
-    profile = _profile_for(facts)
-    if profile is None:
-        return False, "other_page_kind"
-    allowed = {token for token in key[len(prefix) :].split("|") if token}
-    return profile.page_kind in allowed, "other_page_kind"
-
-
-def _applicability(rule: SiteHealthRule, facts: dict) -> tuple[bool, str]:
-    """``(applicable, skip_reason)`` for one rule against ``facts``.
-
-    The reason is carried into the NOT_APPLICABLE evidence so a skipped rule
-    can explain itself. A bare ``not_applicable`` is indistinguishable from a
-    pass in the UI, which matters most for the shell case: the user needs to
-    read "we could not see this page's content", not silence.
-    """
-    key = (rule.applicability_key or "always").strip().lower()
-    if key == "always":
-        return True, ""
-    if key == "has_html":
-        return bool(facts.get("has_html")), "no_html"
-    if key == APPLICABILITY_OBSERVED_CONTENT:
-        return _observed_content(facts)
-    if key.startswith(PAGE_KIND_CONTENT_APPLICABILITY_PREFIX):
-        # Page-kind scope AND the shell guard. Order matters only for the skip
-        # reason: an article we could not render should say "we could not see
-        # this page's content", not "wrong page kind".
-        applies, reason = _page_kind_scope(
-            key, PAGE_KIND_CONTENT_APPLICABILITY_PREFIX, facts
-        )
-        if not applies:
-            return False, reason
-        return _observed_content(facts)
-    if key.startswith(PAGE_KIND_HTML_APPLICABILITY_PREFIX):
-        applies, reason = _page_kind_scope(
-            key, PAGE_KIND_HTML_APPLICABILITY_PREFIX, facts
-        )
-        if not applies:
-            return False, reason
-        return bool(facts.get("has_html")), "no_html"
-    if key.startswith(PAGE_KIND_APPLICABILITY_PREFIX):
-        return _page_kind_scope(key, PAGE_KIND_APPLICABILITY_PREFIX, facts)
-    if key == APPLICABILITY_SITE_ROOT:
-        # Site-level rules apply only inside the crawl root's own analysis,
-        # where the worker injected facts["site"] from the crawl's
-        # site_facts (spec §5.3 — exactly once per crawl).
-        return facts.get("site") is not None, "not_site_root"
-    if key == APPLICABILITY_CRAWL_FINALIZE:
-        # Never applicable in the per-page pass: the finalize-writer owns
-        # these rows (single-writer per rule scope) and the analyze writer
-        # filters them out before persisting.
-        return False, "crawl_finalize_scope"
-    # Unknown applicability key: treat as inapplicable (fail-closed).
-    return False, "unknown_applicability"
-
-
 def _weight_for(rule: SiteHealthRule, facts: dict) -> float:
     """The rule's weight, with any per-(rule_id, page_kind) config override.
 
     Resolved at evaluation time from ``PAGE_KIND_PROFILES`` so the emitted
     ``RuleEvaluation`` carries exactly the weight scoring will credit.
     """
-    profile = _profile_for(facts)
+    profile = profile_for(facts)
     if profile is not None:
         override = profile.rule_weight_overrides.get(rule.rule_id)
         if override is not None:
@@ -616,7 +618,7 @@ def evaluate_rule(rule: SiteHealthRule, facts: dict) -> RuleEvaluation:
         description=rule.description,
         remediation=rule.remediation,
     )
-    applicable, skip_reason = _applicability(rule, facts)
+    applicable, skip_reason = applicability(rule, facts)
     if not applicable:
         return RuleEvaluation(
             outcome=RULE_OUTCOME_NOT_APPLICABLE,

@@ -11,6 +11,8 @@ Pure, offline.
 
 from __future__ import annotations
 
+import pytest
+
 from app.analysis.site_health.rules import (
     evaluate_all,
     evaluate_rule,
@@ -28,12 +30,18 @@ from app.core.config.site_health_contracts import (
     RULE_OUTCOME_FAIL,
     RULE_OUTCOME_NOT_APPLICABLE,
     RULE_OUTCOME_PASS,
+    SKIP_REASON_LOW_CONFIDENCE_KIND,
+)
+from app.core.config.site_health_page_profiles import PRODUCT_ANALYSIS_RULES
+from app.core.config.site_health_rule_types import (
+    FINDING_CLASS_ADVISORY,
+    FINDING_CLASS_DEFECT,
+    KIND_EVIDENCE_CLASSES,
+    SiteHealthRule,
 )
 from app.core.config.site_health_rules import (
     ANSWER_FIRST_MIN_WORDS,
     EXPAND_GATED_MAX_RATIO,
-    FINDING_CLASS_ADVISORY,
-    FINDING_CLASS_DEFECT,
     META_DESCRIPTION_LENGTH_BAND,
     QUESTION_HEADINGS_MIN_RATIO,
     RENDER_BLOCKING_MAX_RESOURCES,
@@ -41,16 +49,11 @@ from app.core.config.site_health_rules import (
     SITE_HEALTH_RULES,
     TITLE_LENGTH_BAND,
     TTFB_WARN_MS,
-    SiteHealthRule,
 )
 from app.core.config.site_health_taxonomy import (
-    PAGE_KIND_OTHER,
+    MIN_MEANINGFUL_WORDS,
     PAGE_KIND_PROFILES,
 )
-
-# The v1 global thin-content minimum now lives in the config-owned ``other``
-# profile (identical value, so unclassified pages score exactly as before).
-MIN_SUFFICIENT_WORDS = PAGE_KIND_PROFILES[PAGE_KIND_OTHER].min_sufficient_words
 
 # The rules whose rows the finalize-writer owns: never applicable per-page.
 _CRAWL_FINALIZE_RULE_IDS = {
@@ -60,18 +63,14 @@ _CRAWL_FINALIZE_RULE_IDS = {
 }
 
 
-def test_other_profile_minimum_preserves_v1_parity():
-    # Pin the v1 contract: the ``other`` profile minimum must stay 100 words
-    # so unclassified pages score exactly as v1 did (spec §5.2). The alias
-    # above intentionally derives from config; this assertion does not.
-    assert PAGE_KIND_PROFILES[PAGE_KIND_OTHER].min_sufficient_words == 100
-
-
 def _html_facts(**overrides):
     """A fully healthy homepage (+ healthy site) so every per-page rule passes."""
     facts = {
         "has_html": True,
         "page_kind": "homepage",
+        # Structural evidence: the strongest tier, so kind expectations apply.
+        # The worker injects this alongside page_kind on the evaluation copy.
+        "page_kind_evidence": {"tier": "structural", "confidence": "high"},
         "title": "Acme Widgets — everything you need to know",
         "meta_description": (
             "Acme Widgets helps teams ship reliable widgets faster with "
@@ -119,8 +118,8 @@ def _html_facts(**overrides):
         },
         "open_graph": {"og:title": "T", "og:description": "D"},
         "body": {
-            "word_count": MIN_SUFFICIENT_WORDS + 10,
-            "text": "word " * (MIN_SUFFICIENT_WORDS + 10),
+            "word_count": MIN_MEANINGFUL_WORDS + 10,
+            "text": "word " * (MIN_MEANINGFUL_WORDS + 10),
         },
         "author": "Jane Doe",
         "dates": {"published": "2026-01-15", "modified": "2026-06-01"},
@@ -187,7 +186,8 @@ def test_all_rules_pass_on_healthy_page():
         if e.rule_id in _CRAWL_FINALIZE_RULE_IDS | _EDITORIAL_RULE_IDS:
             # crawl_finalize rules are owned by the finalize-writer; the
             # editorial rules are scoped to article/guide/docs page kinds and
-            # this fixture is a homepage.
+            # this fixture is a homepage; the trait rules need an observation
+            # this fixture does not carry.
             assert e.outcome == RULE_OUTCOME_NOT_APPLICABLE, e.rule_id
         else:
             assert e.outcome == RULE_OUTCOME_PASS, e.rule_id
@@ -262,13 +262,13 @@ def test_open_graph_incomplete_fails():
     assert ev.evidence["has_og_description"] is False
 
 
-def test_thin_content_fails():
+def test_thin_content_fails_on_an_empty_page():
     ev = _outcome(
-        _html_facts(page_kind=None, body={"word_count": MIN_SUFFICIENT_WORDS - 1}),
+        _html_facts(page_kind=None, body={"word_count": MIN_MEANINGFUL_WORDS - 1}),
         "technical.thin_content",
     )
     assert ev.outcome == RULE_OUTCOME_FAIL
-    assert ev.evidence["minimum"] == MIN_SUFFICIENT_WORDS
+    assert ev.evidence["minimum"] == MIN_MEANINGFUL_WORDS
 
 
 def test_has_html_rules_not_applicable_without_html():
@@ -287,9 +287,19 @@ def test_has_html_rules_not_applicable_without_html():
     assert evals["aeo.structured_data_present"].outcome == RULE_OUTCOME_NOT_APPLICABLE
     assert evals["aeo.open_graph_present"].outcome == RULE_OUTCOME_NOT_APPLICABLE
     assert evals["technical.thin_content"].outcome == RULE_OUTCOME_NOT_APPLICABLE
-    # "always" rules still evaluate (https passes; title fails).
+    # A supported document is successful inventory evidence, not a broken page.
+    # These three were "always" rules, so a PDF was reported as missing a
+    # <title>, a meta description and a canonical -- three metadata defects
+    # about markup the format does not have.
+    assert evals["technical.title_present"].outcome == RULE_OUTCOME_NOT_APPLICABLE
+    assert evals["technical.meta_description_present"].outcome == (
+        RULE_OUTCOME_NOT_APPLICABLE
+    )
+    assert evals["technical.canonical_present"].outcome == RULE_OUTCOME_NOT_APPLICABLE
+    # Delivery-level "always" rules still evaluate: they read the response,
+    # not the markup.
     assert evals["technical.https"].outcome == RULE_OUTCOME_PASS
-    assert evals["technical.title_present"].outcome == RULE_OUTCOME_FAIL
+    assert evals["technical.indexable"].outcome == RULE_OUTCOME_PASS
 
 
 def _js_shell_facts():
@@ -328,7 +338,6 @@ def test_js_shell_reports_one_finding_not_a_cascade():
     for rule_id in (
         "technical.single_h1",
         "technical.thin_content",
-        "aeo.question_headings",
         "aeo.outbound_citations",
         "aeo.author_present",
         "aeo.date_present",
@@ -342,6 +351,9 @@ def test_js_shell_reports_one_finding_not_a_cascade():
     assert evals["aeo.structured_data_present"].outcome != RULE_OUTCOME_NOT_APPLICABLE
     assert evals["technical.title_present"].outcome == RULE_OUTCOME_PASS
     assert evals["technical.https"].outcome == RULE_OUTCOME_PASS
+    # Skipped too, but for a different reason: the shell fixture is an article
+    # and question headings are asked of FAQ pages only.
+    assert evals["aeo.question_headings"].outcome == RULE_OUTCOME_NOT_APPLICABLE
 
 
 def test_product_parity_is_not_applicable_to_a_js_shell():
@@ -462,41 +474,106 @@ def test_page_type_token_for_unconfigured_type_fail_closed():
     assert ev.outcome == RULE_OUTCOME_NOT_APPLICABLE
 
 
-def test_thin_content_uses_per_type_minimum():
-    article_min = PAGE_KIND_PROFILES["article"].min_sufficient_words
-    other_min = PAGE_KIND_PROFILES[PAGE_KIND_OTHER].min_sufficient_words
-    assert article_min > other_min  # the config actually differentiates
-    # Between the two minimums: an article fails while `other` passes.
-    facts_article = _html_facts(page_kind="article", body={"word_count": other_min})
-    ev = _outcome(facts_article, "technical.thin_content")
-    assert ev.outcome == RULE_OUTCOME_FAIL
-    assert ev.evidence["minimum"] == article_min
-    assert ev.evidence["page_kind"] == "article"
-    facts_other = _html_facts(page_kind="other", body={"word_count": other_min})
-    ev_other = _outcome(facts_other, "technical.thin_content")
-    assert ev_other.outcome == RULE_OUTCOME_PASS
-    assert ev_other.evidence["minimum"] == other_min
+def test_length_alone_never_decides_a_page_is_bad():
+    """The per-kind ladder is gone: 40 for a homepage up to 300 for an article.
+
+    Segmenting by kind beat one global threshold, but the premise underneath
+    was still that length proves substance. A 150-word article is short; it is
+    not defective, and the analyzer has no way to tell the difference.
+    """
+    short_but_real = {"word_count": MIN_MEANINGFUL_WORDS + 1, "text": "word " * 30}
+    for page_kind in ("article", "guide", "comparison", "docs", "other"):
+        ev = _outcome(
+            _html_facts(page_kind=page_kind, body=short_but_real),
+            "technical.thin_content",
+        )
+        assert ev.outcome == RULE_OUTCOME_PASS, page_kind
+        assert ev.evidence["minimum"] == MIN_MEANINGFUL_WORDS
 
 
-def test_thin_content_without_page_type_falls_back_to_other_minimum():
+def test_thin_content_without_page_type_falls_back_to_other():
     ev = _outcome(
-        _html_facts(page_kind=None, body={"word_count": MIN_SUFFICIENT_WORDS}),
+        _html_facts(page_kind=None, body={"word_count": MIN_MEANINGFUL_WORDS}),
         "technical.thin_content",
     )
     assert ev.outcome == RULE_OUTCOME_PASS
-    assert ev.evidence["minimum"] == MIN_SUFFICIENT_WORDS
+    assert ev.evidence["minimum"] == MIN_MEANINGFUL_WORDS
     assert ev.evidence["page_kind"] == "other"
 
 
-def test_thin_content_homepage_minimum_is_lower():
-    homepage_min = PAGE_KIND_PROFILES["homepage"].min_sufficient_words
-    assert homepage_min < MIN_SUFFICIENT_WORDS
+def test_a_listing_page_is_sufficient_because_it_lists():
+    """25 words over 60 products is an excellent category page.
+
+    Below the floor a page can still prove itself structurally. This is the
+    only thing the per-kind knowledge is used for now, and it can only ever
+    ADD a way to pass -- nothing here fails a page the floor would have passed.
+    """
+    almost_empty = {"word_count": 5, "text": "Women dresses sorted by"}
+    listing = _outcome(
+        _html_facts(page_kind="category", page_traits=["listing"], body=almost_empty),
+        "technical.thin_content",
+    )
+    assert listing.outcome == RULE_OUTCOME_PASS
+    assert listing.evidence["structurally_sufficient"] is True
+    # Same page kind, same word count, no listing: genuinely empty.
+    empty = _outcome(
+        _html_facts(page_kind="category", page_traits=[], body=almost_empty),
+        "technical.thin_content",
+    )
+    assert empty.outcome == RULE_OUTCOME_FAIL
+    assert empty.evidence["structurally_sufficient"] is False
+
+
+def test_a_commercial_page_is_sufficient_because_it_shows_a_price():
+    almost_empty = {"word_count": 6, "text": "Ilkley Refectory Table 1240"}
+    priced = _outcome(
+        _html_facts(
+            page_kind="product",
+            body=almost_empty,
+            entity={"product": {"has_primary_price": True}},
+        ),
+        "technical.thin_content",
+    )
+    assert priced.outcome == RULE_OUTCOME_PASS
+    assert priced.evidence["structural_signal"] == "price"
+
+
+def test_a_contact_or_about_page_proves_itself_either_way():
+    # The two halves of the bundled kind have different evidence, and either
+    # one is enough: a contact page hands over a way to reply, an about page
+    # identifies the entity.
+    almost_empty = {"word_count": 4, "text": "Northgate Joinery Leeds"}
+    for traits in (["contact_intent"], ["about_intent"]):
+        ev = _outcome(
+            _html_facts(
+                page_kind="about_contact", page_traits=traits, body=almost_empty
+            ),
+            "technical.thin_content",
+        )
+        assert ev.outcome == RULE_OUTCOME_PASS, traits
+
+
+def test_structural_sufficiency_only_ever_adds_a_pass():
+    # A kind with no structural signal is judged on the floor alone, which is
+    # the correct answer rather than a gap.
     ev = _outcome(
-        _html_facts(page_kind="homepage", body={"word_count": homepage_min}),
+        _html_facts(page_kind="article", page_traits=[], body={"word_count": 200}),
         "technical.thin_content",
     )
     assert ev.outcome == RULE_OUTCOME_PASS
-    assert ev.evidence["minimum"] == homepage_min
+    assert "structural_signal" not in ev.evidence
+
+
+def test_thin_content_weight_is_reduced_on_a_homepage():
+    # Emptiness matters less on the one page whose job is to route visitors
+    # elsewhere, so the weight override survives the threshold removal.
+    ev = _outcome(
+        _html_facts(page_kind="homepage", body={"word_count": MIN_MEANINGFUL_WORDS}),
+        "technical.thin_content",
+    )
+    assert ev.weight == 1.0
+    assert ev.outcome == RULE_OUTCOME_PASS
+    assert ev.evidence["minimum"] == MIN_MEANINGFUL_WORDS
 
 
 def test_weight_override_applies_for_configured_page_type():
@@ -521,7 +598,7 @@ def test_weight_override_applies_for_configured_page_type():
 def test_canonical_conflict_passes_when_canonical_matches_final_url():
     ev = _outcome(_html_facts(), "technical.canonical_conflict")
     assert ev.outcome == RULE_OUTCOME_PASS
-    assert ev.evidence["matches_final_url"] is True
+    assert ev.evidence["self_canonical"] is True
 
 
 def test_canonical_conflict_normalization_variants_still_match():
@@ -536,13 +613,144 @@ def test_canonical_conflict_normalization_variants_still_match():
     )
 
 
-def test_canonical_conflict_fails_on_mismatch():
+def test_a_same_origin_cross_canonical_is_not_a_conflict():
+    """Consolidating one URL onto another is what rel=canonical is FOR.
+
+    The old rule failed every canonical that was not the page own final URL,
+    so a sorted listing pointing at its parent -- the textbook use -- became a
+    defect. It also contradicted ``_canonical_intent``, which reads the very
+    same condition as evidence the page is deliberately excluded: one module
+    called it a mistake while the other called it an intention.
+    """
     facts = _html_facts(canonical_url="https://x.example/other-page")
     ev = _outcome(facts, "technical.canonical_conflict")
-    assert ev.outcome == RULE_OUTCOME_FAIL
-    assert ev.evidence["matches_final_url"] is False
+    assert ev.outcome == RULE_OUTCOME_PASS
+    assert ev.evidence["self_canonical"] is False
+    assert ev.evidence["reason"] == "intentional_consolidation"
     assert ev.evidence["canonical_url"] == "https://x.example/other-page"
     assert ev.evidence["final_url"] == "https://x.example/"
+
+
+def test_tracking_parameters_are_not_a_canonical_conflict():
+    # Reached from a newsletter: the tracking parameter describes how the
+    # crawler arrived, not the page.
+    facts = _html_facts(
+        canonical_url="https://x.example/post",
+        delivery={
+            **_html_facts()["delivery"],
+            "final_url": "https://x.example/post?utm_source=newsletter",
+        },
+    )
+    ev = _outcome(facts, "technical.canonical_conflict")
+    assert ev.outcome == RULE_OUTCOME_PASS
+    assert ev.evidence["self_canonical"] is True
+
+
+def test_a_relative_canonical_resolves_before_comparing():
+    # A relative canonical href is legal and common. The declared value is
+    # recorded raw, so comparing it against an absolute final URL could never
+    # match and every such page looked like a conflict.
+    facts = _html_facts(canonical_url="/")
+    ev = _outcome(facts, "technical.canonical_conflict")
+    assert ev.outcome == RULE_OUTCOME_PASS
+    assert ev.evidence["self_canonical"] is True
+    assert ev.evidence["declared_canonical"] == "/"
+    assert ev.evidence["canonical_url"] == "https://x.example/"
+
+
+def test_canonical_to_another_origin_fails():
+    facts = _html_facts(canonical_url="https://other.example/page")
+    ev = _outcome(facts, "technical.canonical_conflict")
+    assert ev.outcome == RULE_OUTCOME_FAIL
+    assert ev.evidence["problem"] == "cross_origin_canonical"
+
+
+def test_unresolvable_canonical_fails():
+    facts = _html_facts(canonical_url="javascript:void(0)")
+    ev = _outcome(facts, "technical.canonical_conflict")
+    assert ev.outcome == RULE_OUTCOME_FAIL
+    assert ev.evidence["problem"] == "invalid_canonical"
+
+
+def test_a_different_port_is_a_different_origin():
+    """An origin is scheme, host AND port.
+
+    Dropping the port made ``https://x.example:444/a`` compare equal to
+    ``https://x.example/a``, so a canonical handing indexing authority across
+    two origins read as ordinary same-origin consolidation and passed. It also
+    disagreed with ``normalized_url_for_compare``, which has always kept the
+    port -- the two comparisons in one rule contradicted each other.
+    """
+    facts = _html_facts(canonical_url="https://x.example:444/")
+    ev = _outcome(facts, "technical.canonical_conflict")
+    assert ev.outcome == RULE_OUTCOME_FAIL
+    assert ev.evidence["problem"] == "cross_origin_canonical"
+
+
+def test_a_default_port_is_still_the_same_origin():
+    # :443 on HTTPS is the same origin as no port at all, the same rule
+    # normalized_url_for_compare already applies.
+    ev = _outcome(
+        _html_facts(canonical_url="https://x.example:443/"),
+        ("technical.canonical_conflict"),
+    )
+    assert ev.outcome == RULE_OUTCOME_PASS
+    assert ev.evidence["self_canonical"] is True
+
+
+@pytest.mark.parametrize(
+    "canonical",
+    [
+        "https://x.example:notaport/",
+        "https://x.example:99999/",
+    ],
+)
+def test_an_unreadable_port_makes_the_canonical_invalid(canonical):
+    """``urlsplit`` is lazy about the port and only raises when it is read.
+
+    Swallowing that and substituting None made the port vanish, so a malformed
+    authority normalized to a clean one and compared EQUAL to the page it was
+    a broken canonical for -- passing as self-canonical.
+    """
+    ev = _outcome(_html_facts(canonical_url=canonical), "technical.canonical_conflict")
+    assert ev.outcome == RULE_OUTCOME_FAIL
+    assert ev.evidence["problem"] == "invalid_canonical"
+
+
+def test_an_unparseable_canonical_is_not_intent_evidence():
+    """It is not evidence in either direction, so precedence falls through.
+
+    Before the port was validated this compared equal to the page and read as
+    intended_index. Treating the mismatch as intent instead would swing it to
+    intended_exclude and suppress the noindex defect entirely, which is the
+    worse of the two errors -- so it yields no canonical evidence at all.
+    """
+    ev = _outcome(
+        _html_facts(
+            robots={"noindex": True, "nofollow": False},
+            canonical_url="https://x.example:notaport/",
+            sitemap_member=True,
+        ),
+        "technical.indexable",
+    )
+    assert ev.outcome == RULE_OUTCOME_FAIL
+    assert ev.evidence["canonical_unparseable"] is True
+    assert ev.evidence["intent_source"] == "sitemap_membership"
+
+
+def test_canonical_to_a_different_hreflang_alternate_fails():
+    # A page in an hreflang cluster must canonicalise to ITSELF; pointing at a
+    # sibling language tells the two systems opposite things.
+    facts = _html_facts(
+        canonical_url="https://x.example/fr/",
+        hreflang_alternates=[
+            {"hreflang": "en", "url": "https://x.example/"},
+            {"hreflang": "fr", "url": "https://x.example/fr/"},
+        ],
+    )
+    ev = _outcome(facts, "technical.canonical_conflict")
+    assert ev.outcome == RULE_OUTCOME_FAIL
+    assert ev.evidence["problem"] == "hreflang_canonical_conflict"
 
 
 def test_canonical_conflict_not_applicable_without_canonical():
@@ -1145,22 +1353,52 @@ def test_organization_identity():
 # --- v2 P2: extractability rules ---------------------------------------------
 
 
+def _answer_page_facts(**overrides):
+    """The healthy fixture as a DOCS page: answer_first still applies there."""
+    return _html_facts(page_kind="docs", **overrides)
+
+
 def test_answer_first():
-    assert _outcome(_article_facts(), "aeo.answer_first").outcome == RULE_OUTCOME_PASS
-    short = _outcome(_article_facts(first_answer_text="Too short."), "aeo.answer_first")
+    assert (
+        _outcome(_answer_page_facts(), "aeo.answer_first").outcome == RULE_OUTCOME_PASS
+    )
+    short = _outcome(
+        _answer_page_facts(first_answer_text="Too short."), "aeo.answer_first"
+    )
     assert short.outcome == RULE_OUTCOME_FAIL
     assert short.evidence["answer_word_count"] == 2
     assert short.evidence["minimum_words"] == ANSWER_FIRST_MIN_WORDS
     # Exactly at the minimum passes.
     exactly = " ".join(f"w{i}" for i in range(ANSWER_FIRST_MIN_WORDS))
     assert (
-        _outcome(_article_facts(first_answer_text=exactly), "aeo.answer_first").outcome
+        _outcome(
+            _answer_page_facts(first_answer_text=exactly), "aeo.answer_first"
+        ).outcome
         == RULE_OUTCOME_PASS
     )
 
 
+def test_answer_first_does_not_apply_to_narrative_or_commercial_pages():
+    """A style recommendation, not a defect, and not for every page.
+
+    A service page has no obligation to open like a reference answer, a case
+    study may deliberately open with context, and a narrative article is not
+    worse for building to its point. Kept only where the reader arrived with a
+    question -- and advisory even there.
+    """
+    for page_kind in ("article", "service", "comparison", "case_study_review"):
+        ev = _outcome(
+            _html_facts(page_kind=page_kind, first_answer_text="Too short."),
+            "aeo.answer_first",
+        )
+        assert ev.outcome == RULE_OUTCOME_NOT_APPLICABLE, page_kind
+    rule = rule_for("aeo.answer_first")
+    assert rule is not None
+    assert rule.finding_class == FINDING_CLASS_ADVISORY
+
+
 def test_answer_first_not_applicable_without_headings():
-    facts = _article_facts(
+    facts = _answer_page_facts(
         headings={"h1_count": 0, "counts": {}, "h1_texts": [], "h2_texts": []}
     )
     ev = _outcome(facts, "aeo.answer_first")
@@ -1168,14 +1406,41 @@ def test_answer_first_not_applicable_without_headings():
     assert ev.evidence["reason"] == "no_headings"
 
 
+def _faq_facts(**overrides):
+    """The healthy fixture as an FAQ: question_headings scope after Phase 2."""
+    return _html_facts(page_kind="faq", **overrides)
+
+
 def test_question_headings():
-    assert _outcome(_article_facts(), "aeo.question_headings").outcome == (
-        RULE_OUTCOME_PASS
-    )
-    ev = _outcome(_article_facts(question_heading_ratio=0.0), "aeo.question_headings")
+    assert _outcome(_faq_facts(), "aeo.question_headings").outcome == RULE_OUTCOME_PASS
+    ev = _outcome(_faq_facts(question_heading_ratio=0.0), "aeo.question_headings")
     assert ev.outcome == RULE_OUTCOME_FAIL
     assert ev.evidence["question_heading_ratio"] == 0.0
     assert ev.evidence["minimum_ratio"] == QUESTION_HEADINGS_MIN_RATIO
+
+
+def test_question_headings_not_applicable_without_subheadings():
+    """No sections is not the same as badly phrased sections.
+
+    The ratio is questions / subheadings, and it is 0.0 both when every
+    heading is declarative AND when there are no h2/h3 headings at all. API
+    reference documentation, which routinely has neither, was failed for the
+    second case as though it were the first.
+    """
+    ev = _outcome(
+        _faq_facts(
+            question_heading_ratio=0.0,
+            headings={
+                "h1_count": 1,
+                "counts": {"h1": 1},
+                "h2_texts": [],
+                "h3_texts": [],
+            },
+        ),
+        "aeo.question_headings",
+    )
+    assert ev.outcome == RULE_OUTCOME_NOT_APPLICABLE
+    assert ev.evidence["reason"] == "no_subheadings"
 
 
 def test_server_rendered_content():
@@ -1274,13 +1539,20 @@ def test_published_date_applies_to_docs_but_not_to_a_product_page():
     )
 
 
-def test_question_headings_apply_to_answer_pages_only():
+def test_question_headings_apply_to_faq_pages_only():
+    # An FAQ whose sections are not questions is not really an FAQ, so the
+    # finding survives there. A guide, a reference page or an essay carries no
+    # such obligation and was being failed for prose style.
     facts = _html_facts(question_heading_ratio=0.0)
-    for page_kind in ("faq", "guide", "docs", "article"):
+    assert (
+        _outcome({**facts, "page_kind": "faq"}, "aeo.question_headings").outcome
+        == RULE_OUTCOME_FAIL
+    )
+    for page_kind in ("guide", "docs", "article"):
         assert (
             _outcome({**facts, "page_kind": page_kind}, "aeo.question_headings").outcome
-            == RULE_OUTCOME_FAIL
-        )
+            == RULE_OUTCOME_NOT_APPLICABLE
+        ), page_kind
     for page_kind in ("homepage", "product", "category"):
         assert (
             _outcome({**facts, "page_kind": page_kind}, "aeo.question_headings").outcome
@@ -1293,3 +1565,107 @@ def test_multi_kind_token_still_fails_closed_on_an_unclassified_page():
     # checklist it should answer for.
     facts = _html_facts(page_kind=None, author="")
     assert _outcome(facts, "aeo.author_present").outcome == RULE_OUTCOME_NOT_APPLICABLE
+
+
+# --- classification confidence gates kind EXPECTATIONS ----------------------
+#
+# The classifier has always recorded whether it read page-owned structure, a
+# URL path segment, or bounded semantics -- and nothing consumed it. A page
+# inferred to be an FAQ purely because its path contains /support/ answered the
+# whole FAQ checklist, and was scored on it, as confidently as a page whose
+# structure proved what it was.
+
+
+def _tiered(tier, **overrides):
+    return _html_facts(
+        page_kind="article",
+        page_kind_evidence={"tier": tier, "confidence": "x"},
+        author="",
+        dates={"published": "", "modified": ""},
+        **overrides,
+    )
+
+
+def test_structural_evidence_admits_kind_expectation_defects():
+    # Page-owned structure proved the kind, so the checklist applies in full.
+    ev = _outcome(_tiered("structural"), "aeo.author_present")
+    assert ev.outcome == RULE_OUTCOME_FAIL
+
+
+def test_route_and_semantic_evidence_suppress_kind_expectation_defects():
+    for tier in ("route", "semantic"):
+        ev = _outcome(_tiered(tier), "aeo.author_present")
+        assert ev.outcome == RULE_OUTCOME_NOT_APPLICABLE, tier
+        assert ev.evidence["reason"] == SKIP_REASON_LOW_CONFIDENCE_KIND, tier
+
+
+def test_advisories_are_offered_at_every_confidence_tier():
+    # An opportunity costs nothing if the guess was wrong, and withholding a
+    # suggestion helps no one. Only defects, which move the score, need
+    # evidence the page owns.
+    for tier in ("structural", "route", "semantic"):
+        ev = _outcome(
+            _tiered(tier, structured_data={"count": 0, "blocks": [], "types": []}),
+            "aeo.structured_data_present",
+        )
+        assert ev.outcome == RULE_OUTCOME_FAIL, tier
+        assert ev.finding_class == FINDING_CLASS_ADVISORY
+
+
+def test_triggered_validation_runs_at_every_confidence_tier():
+    """The trigger is the artifact, not the classification.
+
+    A Product block that contradicts the visible page is a defect however the
+    page was classified, so these rules are never gated. They self-resolve to
+    not_applicable when the block is absent, which is what makes that safe.
+    """
+    contradicting = {
+        "count": 1,
+        "has_json_ld": True,
+        "types": ["Article"],
+        "blocks": [
+            {
+                "type": "Article",
+                "syntax": "json-ld",
+                "name": "A completely unrelated headline",
+                "props_present": ["headline"],
+            }
+        ],
+    }
+    for tier in ("structural", "route", "semantic"):
+        ev = _outcome(
+            _tiered(tier, structured_data=contradicting),
+            "aeo.schema_matches_content",
+        )
+        assert ev.outcome == RULE_OUTCOME_FAIL, tier
+
+
+def test_missing_classifier_evidence_opens_the_gate():
+    """Absent evidence resolves to structural, deliberately.
+
+    The one production writer always injects it. Failing CLOSED on absence
+    would empty the AEO dimension for a whole crawl, and a None score is
+    silent where a false positive at least argues with the user.
+    ``test_prepare_page_evaluation_injects_classifier_evidence`` holds the
+    injection itself in place.
+    """
+    facts = _html_facts(page_kind="article", author="")
+    facts.pop("page_kind_evidence")
+    assert _outcome(facts, "aeo.author_present").outcome == RULE_OUTCOME_FAIL
+
+
+def test_every_kind_scoped_rule_declares_its_evidence_class():
+    # A new page-kind rule defaults to EXPECTATION, so it is gated unless it
+    # explicitly declares that an artifact triggers it.
+    for rule in (*SITE_HEALTH_RULES, *PRODUCT_ANALYSIS_RULES):
+        assert rule.kind_evidence in KIND_EVIDENCE_CLASSES, rule.rule_id
+
+
+def test_a_case_study_is_no_longer_asked_for_a_byline():
+    # The half of the split that removes a false positive: a case study
+    # published by the organisation is not defective for having no named
+    # writer.
+    ev = _outcome(
+        _html_facts(page_kind="case_study_review", author=""), "aeo.author_present"
+    )
+    assert ev.outcome == RULE_OUTCOME_NOT_APPLICABLE

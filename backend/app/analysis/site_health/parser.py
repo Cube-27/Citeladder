@@ -24,6 +24,7 @@ from lxml import html as lxml_html
 from app.analysis.site_health.commerce_facts import extract_commerce_facts
 from app.analysis.site_health.dom import DOM_ERRORS, dom_failure
 from app.analysis.site_health.dom import node_text as _text
+from app.analysis.site_health.fact_authorship import author_and_dates
 from app.analysis.site_health.fact_entity import (
     empty_entity_signals,
     safe_entity_signals,
@@ -33,6 +34,7 @@ from app.analysis.site_health.fact_signals import (
     cta_texts,
     first_answer_text,
     form_fields,
+    ordered_list_steps,
     outbound_domains,
 )
 from app.analysis.site_health.page_kinds import is_question_heading
@@ -67,8 +69,6 @@ _MAX_FORM_FIELD_CHARS = site_health_config.SITE_HEALTH_MAX_FORM_FIELD_CHARS
 _MAX_LINK_CONTEXT = site_health_config.SITE_HEALTH_MAX_LINK_CONTEXT
 _MAX_LINK_CONTEXT_CHARS = site_health_config.SITE_HEALTH_MAX_LINK_CONTEXT_CHARS
 CTA_BUTTON_ROLE_TOKENS = site_health_config.CTA_BUTTON_ROLE_TOKENS
-_MAX_AUTHOR_CHARS = site_health_config.SITE_HEALTH_MAX_AUTHOR_CHARS
-_MAX_DATE_CHARS = site_health_config.SITE_HEALTH_MAX_DATE_CHARS
 _MAX_OUTBOUND_DOMAINS = site_health_config.SITE_HEALTH_MAX_OUTBOUND_DOMAINS
 _MAX_DOMAIN_CHARS = site_health_config.SITE_HEALTH_MAX_DOMAIN_CHARS
 _MAX_HREFLANG_ALTERNATES = site_health_config.SITE_HEALTH_MAX_HREFLANG_ALTERNATES
@@ -424,62 +424,6 @@ def _delivery_facts(
     }
 
 
-def _structured_author_and_dates(
-    structured_data: dict[str, Any],
-) -> tuple[str, str, str]:
-    author = ""
-    published = ""
-    modified = ""
-    for block in structured_data.get("blocks") or []:
-        if not author:
-            author = str(block.get("author") or "").strip()
-        if not published:
-            published = str(block.get("date_published") or "").strip()
-        if not modified:
-            modified = str(block.get("date_modified") or "").strip()
-    return author, published, modified
-
-
-def _first_declared_time(root: Any) -> str:
-    try:
-        for node in root.xpath("//time[@datetime]"):
-            candidate = (node.get("datetime") or "").strip()
-            if candidate:
-                return candidate
-    except DOM_ERRORS as exc:
-        dom_failure("_first_declared_time", exc)
-    return ""
-
-
-def _author_and_dates(
-    root: Any, structured_data: dict[str, Any], article_meta: dict[str, str]
-) -> tuple[str, dict[str, str]]:
-    """Author byline + published/modified dates (bounded, precedence-ordered)."""
-    structured_author, structured_published, structured_modified = (
-        _structured_author_and_dates(structured_data)
-    )
-    author = (
-        structured_author
-        or _meta_content(root, name="author").strip()
-        or (article_meta.get("article:author") or "").strip()
-    )
-    published = (
-        structured_published
-        or (article_meta.get("article:published_time") or "").strip()
-        or _first_declared_time(root)
-    )
-    modified = (
-        structured_modified or (article_meta.get("article:modified_time") or "").strip()
-    )
-    return (
-        author[:_MAX_AUTHOR_CHARS],
-        {
-            "published": published[:_MAX_DATE_CHARS],
-            "modified": modified[:_MAX_DATE_CHARS],
-        },
-    )
-
-
 def _landmarks(root: Any) -> dict[str, bool]:
     """Presence of the main/article/nav landmark elements."""
     out = {"main": False, "article": False, "nav": False}
@@ -629,8 +573,10 @@ def _empty_facts() -> dict[str, Any]:
         # v2 P2 (sh-extractor-2) fields.
         "author": "",
         "dates": {"published": "", "modified": ""},
+        "authorship": {"visible_byline": "", "visible_date": ""},
         "outbound_domains": [],
         "landmarks": {"main": False, "article": False, "nav": False},
+        "ordered_list_steps": 0,
         "question_heading_ratio": 0.0,
         "expand_gated_ratio": 0.0,
         "hreflang_alternates": [],
@@ -707,13 +653,11 @@ def _extract_document(root: Any, *, final_url: str, settings: Any) -> dict[str, 
     facts["form_fields"] = form_fields(root)
     facts["link_context"] = _link_context(facts["links"].get("anchors") or [])
     facts["contact_points"] = _contact_points(root)
-    facts["author"], facts["dates"] = _author_and_dates(
-        root, facts["structured_data"], article_meta
-    )
     facts["outbound_domains"] = outbound_domains(
         facts["links"]["anchors"], base_host=base_host
     )
     facts["landmarks"] = _landmarks(root)
+    facts["ordered_list_steps"] = ordered_list_steps(root)
     facts["question_heading_ratio"] = _question_heading_ratio(facts["headings"])
     facts["hreflang_alternates"] = _hreflang_alternates(root, final_url=final_url)
     facts["first_answer_text"] = first_answer_text(root)
@@ -726,6 +670,12 @@ def _extract_document(root: Any, *, final_url: str, settings: Any) -> dict[str, 
         "total": blocking_scripts + blocking_styles,
     }
     facts["body"] = _body_text(root, max_chars=settings.max_text_chars)
+    facts["author"], facts["dates"], facts["authorship"] = author_and_dates(
+        root,
+        facts["structured_data"],
+        article_meta,
+        meta_author=_meta_content(root, name="author"),
+    )
     try:
         facts["commerce"] = extract_commerce_facts(
             root, final_url=final_url, text_of=_text
