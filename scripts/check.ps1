@@ -90,10 +90,10 @@ function Invoke-BackendChecks {
 
 function Invoke-FrontendChecks {
     if ($CheckOnly) {
-        Invoke-Step "Prettier format" { Invoke-FrontendPnpm format:check }
+        Invoke-Step "Oxfmt format" { Invoke-FrontendPnpm format:check }
     }
     else {
-        Invoke-Step "Prettier format fixes" { Invoke-FrontendPnpm format }
+        Invoke-Step "Oxfmt format fixes" { Invoke-FrontendPnpm format }
     }
     Invoke-Step "Oxlint" { Invoke-FrontendPnpm lint }
     Invoke-Step "TypeScript" { Invoke-FrontendPnpm exec tsc --noEmit }

@@ -19,7 +19,12 @@ import type { snapshotGranularitySchema } from '@/lib/api/schemas';
 type BucketGranularity = z.infer<typeof snapshotGranularitySchema>;
 
 export type DataAvailabilityState =
-  'not_measured' | 'not_run' | 'not_set' | 'unavailable' | 'not_applicable' | 'unknown';
+  | 'not_measured'
+  | 'not_run'
+  | 'not_set'
+  | 'unavailable'
+  | 'not_applicable'
+  | 'unknown';
 
 const availabilityLabels: Readonly<Record<DataAvailabilityState, string>> = {
   not_measured: 'Not measured',

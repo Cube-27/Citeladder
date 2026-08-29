@@ -147,7 +147,7 @@ once the planned implementation is finished — not after every step.
 
 ```powershell
 .\scripts\check.ps1     # static + fix gate: ruff, mypy, complexity,
-                        # import-linter, vulture, deptry, prettier, oxlint,
+                        # import-linter, vulture, deptry, oxfmt, oxlint,
                         # tsc, frontend policies, docs index
 .\scripts	test.ps1      # affected backend, frontend, and mapped E2E tests
 ```

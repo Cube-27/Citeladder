@@ -151,8 +151,11 @@ jobs:
       - name: Lint
         run: pnpm lint
       # Formatting was enforceable (`format:check` has always existed) but not
-      # enforced, so Prettier drift could land silently and then show up as
-      # noise in an unrelated diff. Gated here; `pnpm format` fixes it.
+      # enforced, so formatter drift could land silently and then show up as
+      # noise in an unrelated diff. Gated here; `pnpm format` fixes it. Oxfmt
+      # replaced Prettier and prettier-plugin-tailwindcss: identical output
+      # apart from wrapped union types, identical Tailwind class ordering, and
+      # it always writes LF -- which is what ../.gitattributes now declares.
       - name: Format check
         run: pnpm format:check
       - name: Type check

@@ -11,7 +11,8 @@ import { assignLocation } from '@/lib/navigate';
 
 type GrantStatus = IntegrationConnection['grant_status'];
 type GrantBadge =
-  { variant: 'status'; value: 'success' | 'warning' | 'danger' } | { variant: 'neutral' };
+  | { variant: 'status'; value: 'success' | 'warning' | 'danger' }
+  | { variant: 'neutral' };
 
 const GRANT_STATUS_BADGE: Record<GrantStatus, GrantBadge> = {
   connected: { variant: 'status', value: 'success' },

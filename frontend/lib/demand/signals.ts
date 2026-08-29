@@ -17,7 +17,12 @@ export type SignalType =
   | 'branded_query_performance';
 
 export type FilterTab =
-  'all' | 'striking_distance' | 'cannibalization' | 'ctr_gap' | 'trends' | 'branded';
+  | 'all'
+  | 'striking_distance'
+  | 'cannibalization'
+  | 'ctr_gap'
+  | 'trends'
+  | 'branded';
 
 /** Which signal types each filter tab admits. `all` admits everything. */
 export const SIGNAL_GROUPS: Readonly<Record<Exclude<FilterTab, 'all'>, readonly SignalType[]>> = {

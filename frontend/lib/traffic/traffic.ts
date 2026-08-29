@@ -170,7 +170,12 @@ export const NULL_PLACEHOLDER = availabilityLabel('not_measured');
 // ---------------------------------------------------------------------------
 
 export type TrafficStatKey =
-  'impressions' | 'clicks' | 'ctr' | 'position' | 'sessions' | 'conversions';
+  | 'impressions'
+  | 'clicks'
+  | 'ctr'
+  | 'position'
+  | 'sessions'
+  | 'conversions';
 
 export type TrafficStat = {
   key: TrafficStatKey;

@@ -1,0 +1,31 @@
+// Oxfmt replaced Prettier and prettier-plugin-tailwindcss. The options below
+// were migrated with `oxfmt --migrate=prettier`; `sortTailwindcss` is oxfmt's
+// built-in port of the Tailwind class sorter, and produces byte-identical
+// ordering to the plugin it replaces -- including this project's custom v4
+// tokens and variant prefixes, in both string and template positions.
+//
+// Prettier's `endOfLine: auto` has no equivalent: oxfmt always writes LF. That
+// is why ../.gitattributes now declares `eol=lf` for the whole repository --
+// without it, a Windows checkout is CRLF and `format:check` fails on every
+// file.
+//
+// Formatting is otherwise identical across the tree apart from one construct:
+// a union type wrapped onto its own line is expanded one member per line
+// instead of kept inline.
+{
+  "printWidth": 100,
+  "singleQuote": true,
+  "sortPackageJson": false,
+  "sortTailwindcss": {},
+  "ignorePatterns": [
+    ".next/",
+    "node_modules/",
+    "coverage/",
+    "playwright-report/",
+    "test-results/",
+    "pnpm-lock.yaml",
+    // Re-wrapping this inflates it past the owner line budget that
+    // check-frontend-architecture.mjs enforces; kept hand-formatted.
+    "app/globals.css"
+  ]
+}

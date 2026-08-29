@@ -11,7 +11,8 @@
  */
 
 export type BlogBlock =
-  { type: 'paragraph' | 'heading'; text: string } | { type: 'list'; items: readonly string[] };
+  | { type: 'paragraph' | 'heading'; text: string }
+  | { type: 'list'; items: readonly string[] };
 
 export type BlogPost = {
   slug: string;

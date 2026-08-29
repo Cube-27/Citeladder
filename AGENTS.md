@@ -150,7 +150,7 @@ these once, in this order, from the repository root:
 
 `check.ps1` is the canonical static/fix gate. It applies Ruff fixes and
 formatting, runs mypy, the backend complexity policy, and the dead-code policy;
-then Prettier fixes, Oxlint, `tsc --noEmit`, the frontend complexity,
+then Oxfmt fixes, Oxlint, `tsc --noEmit`, the frontend complexity,
 duplication, design-system, architecture, and API-contract policies; then the
 documentation-index check. `test.ps1` separately selects and runs the affected
 backend, frontend, and mapped E2E tests from the working diff against
