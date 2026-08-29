@@ -123,7 +123,9 @@ After the final internal sub-slice, the same chat closes the wave:
 #### Focused local verification matrix
 
 Choose the narrowest applicable row(s), replace placeholders with the actual changed owners, and
-record the exact commands. GitHub CI runs the repository-wide suite after the PR is opened.
+record the exact commands. GitHub CI runs the repository-wide suites for the changed owners after
+the PR is opened; later pushes rerun changed or previously failed owners, and merge queue / `main`
+events run all owners.
 
 | Sub-slice shape | Required local proof before advancing inside the chat |
 |---|---|

@@ -4,10 +4,58 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
 
 jobs:
+  changes:
+    name: Classify latest push
+    permissions:
+      actions: read
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.classify.outputs.backend }}
+      frontend: ${{ steps.classify.outputs.frontend }}
+      contract: ${{ steps.classify.outputs.contract }}
+      e2e: ${{ steps.classify.outputs.e2e }}
+      security: ${{ steps.classify.outputs.security }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select required owners
+        id: classify
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_BEFORE_SHA: ${{ github.event.before }}
+          CI_HEAD_REF: ${{ github.head_ref }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CI_WORKFLOW_FILE: ci.yml
+          GITHUB_EVENT_ACTION: ${{ github.event.action }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci-changes.mjs
+
+  common:
+    name: Common gates
+    permissions:
+      contents: read
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: CI classifier tests
+        run: node --test scripts/ci-changes.test.mjs
+      - name: Documentation index
+        run: python docs/validate_documentation.py
+
   backend:
     name: Backend (quality, pytest)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -42,10 +90,10 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies (frozen lock)
         run: uv sync --frozen --extra dev
-      - name: Backend and documentation quality
+      - name: Backend quality
         env:
           COMPLEXITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: node ../scripts/quality.mjs --mode check --scope backend,docs
+        run: node ../scripts/quality.mjs --mode check --scope backend
       - name: Export OpenAPI contract
         run: .venv/bin/python -m scripts.export_openapi --output .artifacts/openapi.json
       - name: Publish OpenAPI contract
@@ -66,6 +114,8 @@ jobs:
 
   frontend:
     name: Frontend (quality, coverage, build)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -113,7 +163,8 @@ jobs:
     name: API contract (backend to frontend)
     permissions:
       contents: read
-    needs: backend
+    needs: [changes, backend]
+    if: always() && needs.changes.outputs.contract == 'true' && needs.backend.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -145,6 +196,8 @@ jobs:
 
   e2e:
     name: E2E (playwright)
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -179,6 +232,8 @@ jobs:
 
   security:
     name: Security (pip-audit, detect-secrets)
+    needs: changes
+    if: needs.changes.outputs.security == 'true'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -202,16 +257,21 @@ jobs:
             --exclude-files 'uv\.lock|pnpm-lock\.yaml|\.secrets\.baseline'
 
   required-quality:
-    name: Required quality
+    name: Required
     permissions: {}
     if: always()
-    needs: [backend, frontend, contract, e2e, security]
+    needs: [changes, common, backend, frontend, contract, e2e, security]
     runs-on: ubuntu-latest
     steps:
-      - name: Require every quality owner
+      - name: Require selected quality owners
         run: |
-          test "${{ needs.backend.result }}" = "success"
-          test "${{ needs.frontend.result }}" = "success"
-          test "${{ needs.contract.result }}" = "success"
-          test "${{ needs.e2e.result }}" = "success"
-          test "${{ needs.security.result }}" = "success"
+          test "${{ needs.changes.result }}" = "success"
+          test "${{ needs.common.result }}" = "success"
+          for result in \
+            "${{ needs.backend.result }}" \
+            "${{ needs.frontend.result }}" \
+            "${{ needs.contract.result }}" \
+            "${{ needs.e2e.result }}" \
+            "${{ needs.security.result }}"; do
+            test "$result" = "success" || test "$result" = "skipped"
+          done

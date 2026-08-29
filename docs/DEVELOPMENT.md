@@ -171,6 +171,24 @@ production file through `scripts/validation.json`, and fails if a changed file
 under `backend/app` or `frontend/{app,components,lib}` has no mapping. Add the
 missing mapping; never substitute a broad or full-suite fallback.
 
+GitHub CI has one cheap classifier before the implementation jobs. On an
+initial pull-request run it classifies the complete PR diff. On a subsequent
+push it classifies only the range from the previous PR head to the new head and
+also reruns any owner that failed on that previous head. Backend-only and
+frontend-only pushes therefore do not repeat the other successful suite.
+Changes to shared tooling or configuration select both sides; backend API/schema
+and frontend API-client paths also select both sides and the strict contract
+job. Documentation-only changes run the common classifier and documentation
+gates. The clean-clone Compose smoke runs on initial application PR validation,
+Compose-sensitive follow-up changes, a previously failed smoke owner, merge
+queue validation, and every push to `main`. Merge queue and `main` events select
+every CI owner as the final safety net.
+
+Only `CI / Required` needs to be a required status for the main workflow. It
+requires common gates and every selected owner while accepting jobs that the
+classifier intentionally skipped. Do not add workflow-level `paths` filters to
+required workflows; a skipped workflow can leave a required status pending.
+
 Static-analysis commands, pinned by the frozen locks:
 
 ```powershell
@@ -200,10 +218,11 @@ higher ceilings, higher exceptions, and newly added exceptions. Roots may be
 
 ### Coverage
 
-Coverage is measured and published on every CI run and is **not a gate**, in
-either the repository-wide or the changed-lines form. A coverage ratio is a
-target you can move without improving anything, so enforcing one reliably
-produces tests written to move the number rather than to describe behaviour.
+Coverage is measured and published whenever its owning CI suite is selected and
+is **not a gate**, in either the repository-wide or the changed-lines form. A
+coverage ratio is a target you can move without improving anything, so enforcing
+one reliably produces tests written to move the number rather than to describe
+behaviour.
 
 What must be tested is decided by `scripts/validation.json`, which maps every
 production file to the tests that have to run for it, and `test.ps1` fails when

@@ -177,9 +177,11 @@ When debugging one known failure, running that exact test directly is allowed.
 Return to the repository script before considering the change complete.
 
 `.\scripts\check.ps1 -CheckOnly` never mutates files; use it for a pre-push or
-verification-only pass. GitHub CI remains authoritative and runs full static,
-unit, component, frontend, build, and security validation. Do not run the full
-backend suite locally.
+verification-only pass. GitHub CI remains authoritative. Pull-request CI uses
+the latest-push diff to rerun changed or previously failed owners; shared and
+API-contract paths invalidate both backend and frontend. Merge-queue validation
+and every push to `main` run full static, unit, component, frontend, build,
+security, and Compose validation. Do not run the full backend suite locally.
 
 A coding task is complete only when `.\scripts\check.ps1` and `.\scripts\test.ps1`
 pass.
@@ -217,7 +219,9 @@ the task requires that policy change.
 - Focused change: affected tests.
 - User-facing feature flow: affected tests plus mapped feature E2E.
 - Core, shared, or config change: the broader mapped set the rules select.
-- Pull request and main: GitHub CI full suite.
+- Pull request: GitHub CI selects changed and previously failed owners; its
+  single `CI / Required` result accepts intentional skips.
+- Merge queue and main: GitHub CI full suite and clean-clone Compose validation.
 
 Frontend tooling is **pnpm only**. Never use npm or yarn wrappers.
 
