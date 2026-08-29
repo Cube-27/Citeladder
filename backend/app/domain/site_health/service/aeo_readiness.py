@@ -181,8 +181,10 @@ async def get_aeo_readiness(
                 normalized_url=urls[row.analysis_id].normalized_url,
                 rule_id=row.rule_id,
                 outcome=row.outcome,
+                finding_class=row.finding_class,
                 title=rule_copy[row.rule_id][0],
                 remediation=rule_copy[row.rule_id][1],
+                reason=str((row.evidence or {}).get("reason") or ""),
             )
             for row in evaluation_rows
         ],
@@ -196,7 +198,7 @@ async def get_aeo_readiness(
             "the counts below are a bounded sample of them."
         )
     return {
-        "state": "incomplete" if truncated else "available",
+        "state": "incomplete" if truncated or limitations else "available",
         "crawl_id": crawl.id,
         "taxonomy_version": AEO_READINESS_TAXONOMY_VERSION,
         "analyzer_version": crawl.analyzer_version,
