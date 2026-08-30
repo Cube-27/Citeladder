@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 
 import { Alert } from '@/components/ui/alert';
 import { CursorPager } from '@/components/ui/cursor-pager';
@@ -222,6 +223,26 @@ function ScoredInventory({
   crawl: SiteCrawl;
   active: boolean;
 }>) {
+  const requestedSort = useSearchParams().get('sort');
+  return (
+    <ScoredInventoryState
+      key={requestedSort ?? ''}
+      crawl={crawl}
+      active={active}
+      requestedSort={requestedSort}
+    />
+  );
+}
+
+function ScoredInventoryState({
+  crawl,
+  active,
+  requestedSort,
+}: Readonly<{
+  crawl: SiteCrawl;
+  active: boolean;
+  requestedSort: string | null;
+}>) {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<TabKey>('monitored');
   // Shared page-kind filter (v2 P1): one server-backed value that composes
@@ -229,7 +250,7 @@ function ScoredInventory({
   const [pageKind, setPageKind] = useState('');
   // Shared server-side ordering. Like the filter, it is part of the cursor
   // fingerprint, so changing it must restart every tab's paging.
-  const [sort, setSort] = useState<PagesSort>('url');
+  const [sort, setSort] = useState<PagesSort>(initialPagesSort(requestedSort));
   // Per-tab cursor stack so Prev/Next walk keyset pages without offsets.
   const monitoredPager = useCursorStack();
   const allPager = useCursorStack();
@@ -356,4 +377,9 @@ function ScoredInventory({
       ) : null}
     </div>
   );
+}
+
+function initialPagesSort(value: string | null): PagesSort {
+  const supported: readonly PagesSort[] = ['inbound', 'main_content_inbound', 'depth'];
+  return supported.includes(value as PagesSort) ? (value as PagesSort) : 'url';
 }

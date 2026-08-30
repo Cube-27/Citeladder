@@ -47,6 +47,7 @@ from app.domain.site_health.service import (
     presentation_status_for,
 )
 from app.domain.site_health.snapshot import _eligibility_state
+from app.domain.site_health.web_fundamentals_projection import _area_state
 from app.models.site_health.analysis import SitePageAnalysis
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
@@ -54,6 +55,15 @@ from app.models.site_health.queue import SiteCrawlTask
 # --------------------------------------------------------------------------
 # Keyset cursors
 # --------------------------------------------------------------------------
+
+
+def test_web_fundamentals_na_only_area_is_not_measured() -> None:
+    state, coverage = _area_state(
+        [SimpleNamespace(outcome="not_applicable")], unavailable=0
+    )
+
+    assert state == "not_measured"
+    assert coverage is None
 
 
 def test_fingerprint_is_stable_and_ignores_empty_values() -> None:
@@ -326,7 +336,7 @@ def test_admission_rejection_is_excluded_from_search_eligibility() -> None:
         status=TASK_STATUS_FAILED,
         error_code=ERROR_URL_ADMISSION_REJECTED,
     )
-    assert _eligibility_state("unknown", "unknown", task) == (
+    assert _eligibility_state("unknown", "unknown", "unknown", "unknown", task) == (
         "excluded",
         "excluded",
     )
@@ -334,7 +344,10 @@ def test_admission_rejection_is_excluded_from_search_eligibility() -> None:
 
 def test_robots_denial_remains_an_observed_blocker() -> None:
     task = SimpleNamespace(status=TASK_STATUS_FAILED, error_code=ERROR_ROBOTS_DENIED)
-    assert _eligibility_state("missing", "unknown", task) == ("blocked", "blocked")
+    assert _eligibility_state("missing", "unknown", "unknown", "unknown", task) == (
+        "blocked",
+        "blocked",
+    )
 
 
 def test_only_determinate_indexability_outcomes_become_booleans() -> None:

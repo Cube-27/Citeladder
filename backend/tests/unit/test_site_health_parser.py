@@ -29,7 +29,7 @@ from app.core.config.site_health_runtime import (
 )
 
 _FULL_PAGE = b"""
-<html>
+<html lang="en">
   <head>
     <title>Acme Widgets</title>
     <meta name="description" content="Best widgets on the web.">
@@ -38,6 +38,7 @@ _FULL_PAGE = b"""
     <meta property="og:title" content="Acme Widgets">
     <meta property="og:description" content="Buy widgets">
     <meta name="twitter:card" content="summary">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/styles.css">
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"Organization",
@@ -87,7 +88,9 @@ def test_full_page_extraction():
     assert facts["has_html"] is True
     assert facts["title"] == "Acme Widgets"
     assert facts["meta_description"] == "Best widgets on the web."
-    assert facts["robots"] == {"noindex": False, "nofollow": False}
+    assert facts["robots"]["noindex"] is False
+    assert facts["robots"]["nofollow"] is False
+    assert facts["robots"]["nosnippet"] is False
     assert facts["canonical_url"] == "https://acme.example.com/widgets"
     assert facts["open_graph"]["og:title"] == "Acme Widgets"
     assert facts["open_graph"]["og:description"] == "Buy widgets"
@@ -99,6 +102,66 @@ def test_full_page_extraction():
     assert facts["body"]["word_count"] > 0
     assert "widgets" in facts["body"]["text"].lower()
     assert facts["extractor_version"] == EXTRACTOR_VERSION
+
+
+def test_accessibility_viewport_and_snippet_facts_are_distinct() -> None:
+    facts = _facts(
+        b'<html lang="en"><head><meta name="robots" content="nosnippet">'
+        b'<meta name="viewport" content="width=device-width"></head><body>'
+        b'<h1>Title</h1><h3>Skipped</h3><img src="a.png" alt="">'
+        b'<img src="b.png"><label for="email">Email</label>'
+        b'<input id="email"><input id="missing"></body></html>',
+        redacted_headers={"x-robots-tag": "max-snippet:0"},
+    )
+    assert facts["robots"]["nosnippet"] is True
+    assert facts["robots"]["max_snippet"] == 0
+    assert facts["images"] == {"count": 2, "missing_alt": 1, "decorative_alt": 1}
+    assert facts["accessibility"]["controls_missing_accessible_name"] == 1
+    assert facts["accessibility"]["heading_level_skips"] == 1
+    assert facts["accessibility"]["document_language"] == "en"
+    assert facts["mobile"]["viewport"]["declared"] is True
+
+
+def test_header_robots_directives_survive_an_empty_body() -> None:
+    facts = _facts(
+        b"",
+        redacted_headers={
+            "X-Robots-Tag": "googlebot: noindex, nofollow, max-snippet:0"
+        },
+    )
+
+    assert facts["has_html"] is False
+    assert facts["robots"]["noindex"] is True
+    assert facts["robots"]["nofollow"] is True
+    assert facts["robots"]["max_snippet"] == 0
+
+
+def test_robots_merge_preserves_bounded_meta_facts_and_restrictive_snippet() -> None:
+    filler = ",".join(f"a-directive-{index:02d}" for index in range(40))
+    facts = _facts(
+        (
+            '<html><head><meta name="robots" content="'
+            f'{filler},noindex,max-snippet:-1,max-snippet:50">'
+            "</head><body></body></html>"
+        ).encode(),
+        redacted_headers={"x-robots-tag": "max-snippet:0"},
+    )
+
+    assert len(facts["robots"]["directives"]) == 32
+    assert facts["robots"]["noindex"] is True
+    assert facts["robots"]["max_snippet"] == 0
+
+
+def test_accessible_names_resolve_labelledby_and_native_buttons() -> None:
+    facts = _facts(
+        b'<html><body><span id="valid">Search</span><span id="empty"></span>'
+        b'<input aria-labelledby="valid"><input aria-labelledby="missing">'
+        b'<input aria-labelledby="empty"><button>Save</button><button></button>'
+        b"</body></html>"
+    )
+
+    assert facts["accessibility"]["control_count"] == 5
+    assert facts["accessibility"]["controls_missing_accessible_name"] == 3
 
 
 def test_structured_data_extraction_and_validation():
