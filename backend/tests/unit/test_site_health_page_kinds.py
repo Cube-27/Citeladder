@@ -182,7 +182,9 @@ def test_homepage_outranks_conflicting_schema_and_records_suggestion() -> None:
         ("https://example.com/docs/getting-started", "docs"),
         ("https://example.com/reference/api", "docs"),
         ("https://example.com/faq", "faq"),
-        ("https://example.com/help/article", "faq"),
+        # Help/support paths are documentation. FAQ requires the explicit FAQ
+        # route or independent structural classification evidence.
+        ("https://example.com/help/article", "docs"),
         ("https://example.com/about", "about_contact"),
         ("https://example.com/contact", "about_contact"),
     ],
@@ -608,6 +610,8 @@ def test_classifier_version_stamped_from_config() -> None:
         ("/request-demo", config.PAGE_KIND_ABOUT_CONTACT),
         ("/customers/acme", config.PAGE_KIND_CASE_STUDY_REVIEW),
         ("/cookies", config.PAGE_KIND_TRUST_POLICY),
+        ("/support/faq/", config.PAGE_KIND_FAQ),
+        ("/help/faqs/", config.PAGE_KIND_FAQ),
     ],
 )
 def test_clear_route_aliases_map_to_stable_page_kinds(path: str, expected: str) -> None:

@@ -128,11 +128,12 @@ PAGE_KIND_PATH_PATTERNS: Final[tuple[tuple[str, str], ...]] = (
         r"^/(?:[^/]+/)*?(compare|comparisons?|vs)(/|$)",
     ),
     (PAGE_KIND_PRICING, r"^/(?:[^/]+/)*?(pricing|plans)(/|$)"),
+    (PAGE_KIND_FAQ, r"^/(?:[^/]+/)*?faqs?(/|$)"),
     (
         PAGE_KIND_DOCS,
-        r"^/(?:[^/]+/)*?(docs|documentation|reference|api)(/|$)",
+        r"^/(?!.*(?:/|^)faqs?(?:/|$))(?:[^/]+/)*?"
+        r"(docs|documentation|reference|api|help|support)(/|$)",
     ),
-    (PAGE_KIND_FAQ, r"^/(?:[^/]+/)*?(faqs?|help|support)(/|$)"),
     (
         PAGE_KIND_ABOUT_CONTACT,
         r"^/(?:[^/]+/)*?(about|about-us|company|our-story|contact|contact-us|request-demo|book-demo)(/|$)",
@@ -307,6 +308,12 @@ PAGE_KIND_SCHEMA_TYPE_MAP: Final[dict[str, str]] = {
     "BlogPosting": PAGE_KIND_ARTICLE,
     "Article": PAGE_KIND_ARTICLE,
 }
+
+ORGANIZATION_BEARING_SCHEMA_TYPES: Final[tuple[str, ...]] = (
+    "Organization",
+    "LocalBusiness",
+    "ContactPage",
+)
 
 # Tier C semantic fallback. Matched against the page's own title, H1 and final
 # path segment ONLY when no structural evidence and no route pattern produced a
@@ -653,7 +660,7 @@ PAGE_KIND_EXPECTED_SCHEMA: Final[dict[str, PageKindSchemaExpectation]] = {
         # else is valid markup, so treating those two as REQUIRED reported a
         # correct block as a malformed one. They remain worth adding, which is
         # exactly what a recommendation says -- and the visible byline/date
-        # rules (``aeo.author_present`` / ``aeo.date_present``) already own the
+        # rules (``aeo.author_present`` / ``aeo.content_date_present``) own the
         # separate question of whether the page attributes itself at all.
         required_properties=("headline",),
         recommended_properties=("author", "datePublished", "image", "dateModified"),
@@ -708,7 +715,7 @@ PAGE_KIND_EXPECTED_SCHEMA: Final[dict[str, PageKindSchemaExpectation]] = {
     ),
     PAGE_KIND_ABOUT_CONTACT: PageKindSchemaExpectation(
         page_kind=PAGE_KIND_ABOUT_CONTACT,
-        expected_types=("Organization", "LocalBusiness", "ContactPage"),
+        expected_types=ORGANIZATION_BEARING_SCHEMA_TYPES,
         required_properties=("name",),
         recommended_properties=("contactPoint", "address"),
         # ContactPage describes the page. Contact details may live in a
