@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
-import { CONTENT_PROMPT_MAX_LEN } from '@/lib/api/content';
+import { CONTENT_PROMPT_MAX_LEN, type SiteHealthReferenceInput } from '@/lib/api/content';
 import type { ContentGenerationDetail } from '@/lib/api/types';
 import {
   isTerminalContentStatus,
@@ -19,6 +19,7 @@ import {
   useDemandBrief,
   useOpportunityContext,
   useSkillCatalog,
+  useSiteHealthHandoff,
 } from './content-screen-data';
 import { ContentComposer, GenerationErrorPanel, GeneratingPanel } from './content-screen-panels';
 import { GenerationResult } from './content-screen-result';
@@ -26,11 +27,29 @@ import { GenerationHistory } from './content-screen-history';
 
 const FALLBACK_SKILL_ID = 'content_page';
 
+function replaceAutomaticPrompt(
+  current: string,
+  next: string,
+  priority: number,
+  automatic: { current: { value: string; priority: number } | null },
+): string {
+  const previous = automatic.current;
+  const userEdited = current.trim().length > 0 && current !== previous?.value;
+  if (userEdited || (previous?.priority ?? 0) > priority) return current;
+  automatic.current = { value: next, priority };
+  return next;
+}
+
 /** Project-aware content entry point that resets transient state on project switch. */
 export function ContentScreen({
   opportunityId,
   demandSignalId,
-}: Readonly<{ opportunityId?: string | null; demandSignalId?: string | null }>) {
+  siteHealthReference,
+}: Readonly<{
+  opportunityId?: string | null;
+  demandSignalId?: string | null;
+  siteHealthReference?: SiteHealthReferenceInput;
+}>) {
   const activeProject = useActiveProject();
   if (!activeProject) return <NoProjectState />;
 
@@ -40,6 +59,9 @@ export function ContentScreen({
       projectId={activeProject.id}
       opportunityId={opportunityId}
       demandSignalId={demandSignalId}
+      siteHealthReference={
+        siteHealthReference?.project_id === activeProject.id ? siteHealthReference : undefined
+      }
     />
   );
 }
@@ -66,10 +88,12 @@ function ProjectContentScreen({
   projectId,
   opportunityId,
   demandSignalId,
+  siteHealthReference,
 }: Readonly<{
   projectId: string;
   opportunityId?: string | null;
   demandSignalId?: string | null;
+  siteHealthReference?: SiteHealthReferenceInput;
 }>) {
   const [prompt, setPrompt] = useState('');
   const [chosenSkillId, setChosenSkillId] = useState<string | null>(null);
@@ -81,8 +105,15 @@ function ProjectContentScreen({
   const demand = useDemandBrief(projectId, demandSignalId);
   const contextPreview = useContentContextPreview(projectId);
   const opportunity = useOpportunityContext(opportunityId);
-  const generation = useContentGenerations(projectId, undefined, opportunityId);
+  const siteHealth = useSiteHealthHandoff(siteHealthReference);
+  const generation = useContentGenerations(
+    projectId,
+    undefined,
+    opportunityId,
+    siteHealthReference,
+  );
   const detail: ContentGenerationDetail | null = generation.detailQuery.data ?? null;
+  const automaticPrompt = useRef<{ value: string; priority: number } | null>(null);
   const seededBrief = useRef<string | null>(null);
 
   // Seed only a newly arrived brief; subsequent snapshot refreshes must not overwrite edits.
@@ -90,7 +121,7 @@ function ProjectContentScreen({
     const brief = demand.brief;
     if (!brief || seededBrief.current === brief.prompt) return;
     seededBrief.current = brief.prompt;
-    setPrompt(brief.prompt);
+    setPrompt((current) => replaceAutomaticPrompt(current, brief.prompt, 1, automaticPrompt));
     setChosenSkillId(brief.suggestedSkillId);
   }, [demand.brief]);
 
@@ -100,9 +131,20 @@ function ProjectContentScreen({
   useEffect(() => {
     if (!opportunity?.taskSeed || seededOpportunity.current === opportunity.id) return;
     seededOpportunity.current = opportunity.id;
-    setPrompt((current) => (current.trim() ? current : opportunity.taskSeed));
+    setPrompt((current) =>
+      replaceAutomaticPrompt(current, opportunity.taskSeed, 2, automaticPrompt),
+    );
     setChosenSkillId((current) => current ?? opportunity.suggestedSkillId);
   }, [opportunity]);
+
+  const seededSiteHealth = useRef<string | null>(null);
+  useEffect(() => {
+    const handoff = siteHealth.data;
+    if (!handoff || seededSiteHealth.current === handoff.source_analysis_id) return;
+    seededSiteHealth.current = handoff.source_analysis_id;
+    const task = [...handoff.expected_capability, ...handoff.remediation].join('\n');
+    setPrompt((current) => replaceAutomaticPrompt(current, task, 3, automaticPrompt));
+  }, [siteHealth.data]);
 
   const generating = Boolean(
     (detail && !isTerminalContentStatus(detail.status)) || generation.enqueueMutation.isPending,
@@ -127,6 +169,7 @@ function ProjectContentScreen({
   return (
     <ContentWorkspace
       demand={demand}
+      siteHealth={siteHealth}
       prompt={prompt}
       promptRef={promptRef}
       opportunity={opportunity}
@@ -157,6 +200,7 @@ function ProjectContentScreen({
 
 function ContentWorkspace({
   demand,
+  siteHealth,
   prompt,
   promptRef,
   opportunity,
@@ -181,6 +225,7 @@ function ContentWorkspace({
   setReasonOpen,
 }: Readonly<{
   demand: ReturnType<typeof useDemandBrief>;
+  siteHealth: ReturnType<typeof useSiteHealthHandoff>;
   prompt: string;
   promptRef: React.RefObject<HTMLTextAreaElement | null>;
   opportunity: ReturnType<typeof useOpportunityContext>;
@@ -204,10 +249,26 @@ function ContentWorkspace({
   reasonOpen: boolean;
   setReasonOpen: (value: boolean) => void;
 }>) {
+  let siteHealthAlert = null;
+  if (siteHealth.isError) {
+    siteHealthAlert = (
+      <Alert tone="danger">
+        The Site Health readiness evidence could not be authorized or loaded.
+      </Alert>
+    );
+  } else if (siteHealth.data) {
+    siteHealthAlert = (
+      <Alert tone="info">
+        This draft will use the persisted {siteHealth.data.dimension} readiness gap and its bounded
+        crawl evidence.
+      </Alert>
+    );
+  }
   return (
     <div className="grid grid-cols-1 items-start gap-[var(--workspace-gap)] xl:grid-cols-[minmax(0,1fr)_320px] [&>*]:min-w-0">
       <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">
         <DemandAlerts notFound={demand.notFound} failed={demand.failed} />
+        {siteHealthAlert}
         <ContentComposer
           prompt={prompt}
           promptRef={promptRef}
@@ -224,40 +285,18 @@ function ContentWorkspace({
           onSkillChange={setChosenSkillId}
           onGenerate={onGenerate}
         />
-        {generating ? (
-          <GeneratingPanel
-            selectedId={generation.selectedId}
-            cancelling={generation.cancelMutation.isPending}
-            onCancel={generation.cancelMutation.mutate}
-          />
-        ) : null}
-        {!generating && (Boolean(mutationError) || failed) ? (
-          <GenerationErrorPanel
-            mutationError={mutationError}
-            failedGenerationId={failed && detail ? detail.id : null}
-            retrying={generation.tryAgainMutation.isPending}
-            onTryAgain={generation.tryAgainMutation.mutate}
-            onDismiss={() => dismiss(generation)}
-          />
-        ) : null}
-        {!generating && detail?.status === 'succeeded' && detail.output_text ? (
-          <GenerationResult
-            detail={detail}
-            copied={copied}
-            copyLabel={copyLabel(copied, copyFailed)}
-            regenerating={generation.regenerateMutation.isPending}
-            feedbackPending={generation.feedbackMutation.isPending}
-            onCopy={clipboard}
-            onExport={() => exportMarkdown(detail)}
-            onRegenerate={generation.regenerateMutation.mutate}
-            reasonOpen={reasonOpen}
-            onRejectClick={() => setReasonOpen(true)}
-            onFeedback={(generationId, feedback, reason) => {
-              setReasonOpen(false);
-              generation.feedbackMutation.mutate({ generationId, feedback, reason });
-            }}
-          />
-        ) : null}
+        <GenerationStatePanels
+          generating={generating}
+          generation={generation}
+          mutationError={mutationError}
+          failed={failed}
+          detail={detail}
+          copied={copied}
+          copyFailed={copyFailed}
+          clipboard={clipboard}
+          reasonOpen={reasonOpen}
+          setReasonOpen={setReasonOpen}
+        />
       </div>
       <div className="w-full min-w-0 xl:sticky xl:top-[var(--workspace-gap)]">
         <GenerationHistory
@@ -268,6 +307,70 @@ function ContentWorkspace({
         />
       </div>
     </div>
+  );
+}
+
+function GenerationStatePanels({
+  generating,
+  generation,
+  mutationError,
+  failed,
+  detail,
+  copied,
+  copyFailed,
+  clipboard,
+  reasonOpen,
+  setReasonOpen,
+}: Readonly<{
+  generating: boolean;
+  generation: ReturnType<typeof useContentGenerations>;
+  mutationError: unknown;
+  failed: boolean;
+  detail: ContentGenerationDetail | null;
+  copied: boolean;
+  copyFailed: boolean;
+  clipboard: () => Promise<void>;
+  reasonOpen: boolean;
+  setReasonOpen: (value: boolean) => void;
+}>) {
+  if (generating) {
+    return (
+      <GeneratingPanel
+        selectedId={generation.selectedId}
+        cancelling={generation.cancelMutation.isPending}
+        onCancel={generation.cancelMutation.mutate}
+      />
+    );
+  }
+  if (mutationError || failed) {
+    return (
+      <GenerationErrorPanel
+        mutationError={mutationError}
+        failedGenerationId={failed && detail ? detail.id : null}
+        retrying={generation.tryAgainMutation.isPending}
+        onTryAgain={generation.tryAgainMutation.mutate}
+        onDismiss={() => dismiss(generation)}
+      />
+    );
+  }
+  if (detail?.status !== 'succeeded' || !detail.output_text) return null;
+  return (
+    <GenerationResult
+      detail={detail}
+      copied={copied}
+      copyLabel={copyLabel(copied, copyFailed)}
+      regenerating={generation.regenerateMutation.isPending}
+      feedbackPending={generation.feedbackMutation.isPending}
+      onCopy={clipboard}
+      onExport={() => exportMarkdown(detail)}
+      onRegenerate={generation.regenerateMutation.mutate}
+      reasonOpen={reasonOpen}
+      onRejectClick={() => setReasonOpen(true)}
+      onFeedback={(generationId, feedback, reason) => {
+        setReasonOpen(false);
+        generation.feedbackMutation.mutate({ generationId, feedback, reason });
+      }}
+    />
   );
 }
 

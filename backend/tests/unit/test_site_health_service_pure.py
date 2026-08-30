@@ -20,6 +20,7 @@ import pytest
 from app.core.config.site_health_acquisition import (
     ERROR_ROBOTS_DENIED,
     ERROR_SSRF_BLOCKED,
+    ERROR_URL_ADMISSION_REJECTED,
 )
 from app.core.config.site_health_contracts import (
     PAGE_ANALYSIS_STATUS_COMPLETED,
@@ -33,6 +34,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_RUNNING,
     TASK_STATUS_SUCCEEDED,
 )
+from app.domain.site_health.architecture import _indexability_outcome
 from app.domain.site_health.normalization import (
     CursorScopeError,
     decode_keyset_cursor,
@@ -44,6 +46,7 @@ from app.domain.site_health.service import (
     display_label_for,
     presentation_status_for,
 )
+from app.domain.site_health.snapshot import _eligibility_state
 from app.models.site_health.analysis import SitePageAnalysis
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
@@ -242,9 +245,13 @@ def _crawl_with_summary(summary: dict | None) -> SimpleNamespace:
 def test_score_summary_projects_by_page_kind() -> None:
     crawl = _crawl_with_summary(
         {
-            "overall_score": 75.0,
-            "technical_score": 80.0,
-            "aeo_score": 70.0,
+            "technical_integrity_score": 80.0,
+            "technical_integrity_coverage": 1.0,
+            "technical_integrity_state": "measured",
+            "aeo_readiness_score": 70.0,
+            "aeo_measurement_coverage": 0.8,
+            "aeo_measurement_state": "measured",
+            "search_eligibility": "eligible",
             "selected_count": 4,
             "analyzed_count": 3,
             "issue_count": 2,
@@ -252,15 +259,21 @@ def test_score_summary_projects_by_page_kind() -> None:
             "by_page_kind": {
                 "article": {
                     "analyzed_count": 2,
-                    "technical_score": 85.0,
-                    "aeo_score": 70.0,
-                    "overall_score": 77.5,
+                    "technical_integrity_score": 85.0,
+                    "technical_integrity_coverage": 1.0,
+                    "technical_integrity_state": "measured",
+                    "aeo_readiness_score": 70.0,
+                    "aeo_measurement_coverage": 0.8,
+                    "aeo_measurement_state": "measured",
                 },
                 "product": {
                     "analyzed_count": 1,
-                    "technical_score": None,
-                    "aeo_score": 70.0,
-                    "overall_score": 70.0,
+                    "technical_integrity_score": None,
+                    "technical_integrity_coverage": 0.5,
+                    "technical_integrity_state": "limited_evidence",
+                    "aeo_readiness_score": 70.0,
+                    "aeo_measurement_coverage": 0.8,
+                    "aeo_measurement_state": "measured",
                 },
             },
         }
@@ -271,12 +284,15 @@ def test_score_summary_projects_by_page_kind() -> None:
     assert set(by_page_kind) == {"article", "product"}
     assert by_page_kind["article"] == {
         "analyzed_count": 2,
-        "technical_score": 85.0,
-        "aeo_score": 70.0,
-        "overall_score": 77.5,
+        "technical_integrity_score": 85.0,
+        "technical_integrity_coverage": 1.0,
+        "technical_integrity_state": "measured",
+        "aeo_readiness_score": 70.0,
+        "aeo_measurement_coverage": 0.8,
+        "aeo_measurement_state": "measured",
     }
     # A None mean is projected as None, never fabricated as zero.
-    assert by_page_kind["product"]["technical_score"] is None
+    assert by_page_kind["product"]["technical_integrity_score"] is None
 
 
 def test_score_summary_without_breakdown_projects_empty_map() -> None:
@@ -284,9 +300,12 @@ def test_score_summary_without_breakdown_projects_empty_map() -> None:
     # an empty map rather than a missing key.
     crawl = _crawl_with_summary(
         {
-            "overall_score": 50.0,
-            "technical_score": 50.0,
-            "aeo_score": 50.0,
+            "technical_integrity_score": 50.0,
+            "technical_integrity_coverage": 1.0,
+            "technical_integrity_state": "measured",
+            "aeo_readiness_score": 50.0,
+            "aeo_measurement_coverage": 0.8,
+            "aeo_measurement_state": "measured",
             "selected_count": 1,
             "analyzed_count": 1,
             "issue_count": 0,
@@ -300,3 +319,26 @@ def test_score_summary_without_breakdown_projects_empty_map() -> None:
 
 def test_score_summary_none_when_absent() -> None:
     assert _score_summary(cast(SiteCrawl, _crawl_with_summary(None))) is None
+
+
+def test_admission_rejection_is_excluded_from_search_eligibility() -> None:
+    task = SimpleNamespace(
+        status=TASK_STATUS_FAILED,
+        error_code=ERROR_URL_ADMISSION_REJECTED,
+    )
+    assert _eligibility_state("unknown", "unknown", task) == (
+        "excluded",
+        "excluded",
+    )
+
+
+def test_robots_denial_remains_an_observed_blocker() -> None:
+    task = SimpleNamespace(status=TASK_STATUS_FAILED, error_code=ERROR_ROBOTS_DENIED)
+    assert _eligibility_state("missing", "unknown", task) == ("blocked", "blocked")
+
+
+def test_only_determinate_indexability_outcomes_become_booleans() -> None:
+    assert _indexability_outcome("satisfied") is True
+    assert _indexability_outcome("missing") is False
+    assert _indexability_outcome("unknown") is None
+    assert _indexability_outcome("unavailable") is None

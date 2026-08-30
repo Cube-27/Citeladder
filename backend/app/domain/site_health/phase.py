@@ -27,6 +27,7 @@ from app.core.config.site_health_contracts import (
     DISCOVERY_STATUS_SAMPLE_COMPLETED,
     DISCOVERY_STATUS_STOPPED,
 )
+from app.core.config.site_health_measurement import MEASUREMENT_STATE_NOT_MEASURED
 from app.models.site_health.crawl import SiteCrawl
 
 SiteHealthPhase = Literal[
@@ -60,10 +61,15 @@ def _has_real_scores(score_summary: dict | None) -> bool:
     A fully-failed crawl persists a PRESENT-but-null-score summary
     (``persist_empty=True``), so ``score_summary is not None`` alone reads that
     shape as dashboard-worthy — the bug that hid every failed crawl behind an
-    empty dashboard. Requiring a non-null ``overall_score`` distinguishes them
+    empty dashboard. Requiring at least one measured projection distinguishes them
     without a separate failure probe.
     """
-    return score_summary is not None and score_summary.get("overall_score") is not None
+    return score_summary is not None and (
+        score_summary.get("technical_integrity_state", MEASUREMENT_STATE_NOT_MEASURED)
+        != MEASUREMENT_STATE_NOT_MEASURED
+        or score_summary.get("aeo_measurement_state", MEASUREMENT_STATE_NOT_MEASURED)
+        != MEASUREMENT_STATE_NOT_MEASURED
+    )
 
 
 def resolve_phase(

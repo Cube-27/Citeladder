@@ -16,7 +16,7 @@ superseded path is deleted.
 | Station | Destination | Canonical browser location |
 |---|---|---|
 | Overview | Overview | `/projects` |
-| Analyze | Website | `/site?tab=pages` (default), `architecture`, `aeo-readiness`, `changes` |
+| Analyze | Website | `/site?tab=pages` (navigation target and non-dashboard default); Overview becomes the default when the server phase is `dashboard`, with `architecture`, `aeo-readiness`, and `changes` also available |
 | Analyze | Issues / Search Demand / Traffic | `/issues`, `/demand`, `/traffic` |
 | Analyze | Commerce Suite | `/products` |
 | Act | Opportunities / Content | `/opportunities`, `/content` |
@@ -110,15 +110,19 @@ crawl exists, its header has one contextual primary control: **Stop crawl** for
 an active persisted crawl, otherwise **Run new crawl**. **Export** is the
 secondary action. The client exposes no separate discovery or analysis buttons.
 
-Website uses one tablist on `/site`. **Pages** retains the crawl lifecycle and
-inventory surface. **AEO Readiness** is an adjacent Website tab. It renders the
-server's seven ordered dimensions as one ledger with determinate, expected,
-N/A, error, coverage, and state columns. A dimension's bounded drawer names
-catalog checks, remediation, and each failing page once. It shows no raw rule
-ID or bare outcome token and never presents a bounded evidence list as a total.
-The client does not remap rules, recompute coverage, guess a missing bucket, or
-display a composite readiness score. A nullable AEO score renders **Not
-measured** on Pages, page detail, and page-kind/crawl summaries.
+Website uses one tablist on `/site`: **Overview**, **Pages**, **Architecture**,
+**AEO Readiness**, and **Changes**. Pages is the fallback outside the server's
+`dashboard` phase; Overview is the fallback in `dashboard`
+and reads the cohesive persisted snapshot projection: Search eligibility,
+Technical Integrity, qualified AEO Readiness, AEO Measurement Coverage, Crawl
+Coverage, seven pillars, top issues, Web Fundamentals, trend, and changes.
+**Pages** retains the crawl lifecycle and final per-URL metric surface.
+**AEO Readiness** renders the server's seven ordered dimensions, explicit
+applicability/state, uncertainty counts, catalog guidance, and bounded page
+evidence. Content-addressable missing or partial checkpoints link to Content
+with stable project/crawl/URL/analysis/dimension/checkpoint references; Content
+re-authorizes the typed handoff before use. The client never remaps rules,
+recomputes coverage, guesses a missing bucket, or displays a Combined score.
 
 **Changes** reads only persisted Change Intelligence summary and cursor pages.
 It shows the four classes, exact before/after values, analysis provenance, and

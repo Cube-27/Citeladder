@@ -26,6 +26,7 @@ from app.domain.projects.discovery_schemas import (
     ConfirmedDiscoveryProfile,
     DiscoveryCompetitorSuggestion,
     DiscoveryPromptSuggestion,
+    PersistableDiscoveryProfile,
 )
 from app.domain.projects.offering_harvest import harvest_offerings
 from app.domain.projects.onboarding.normalization import (
@@ -104,6 +105,16 @@ def test_discovery_prompt_contract_normalizes_legacy_unbound_topic() -> None:
 def test_confirmed_profile_rejects_blank_required_fields(payload: dict) -> None:
     with pytest.raises(ValidationError):
         ConfirmedDiscoveryProfile(**payload)
+
+
+def test_generated_profile_rejects_product_too_long_for_project_persistence() -> None:
+    generated_payload = ["x" * 256]
+    with pytest.raises(ValidationError):
+        PersistableDiscoveryProfile(products_services=generated_payload)
+
+    confirmed_payload = {**_profile(), "products_services": ["x" * 256]}
+    with pytest.raises(ValidationError):
+        ConfirmedDiscoveryProfile(**confirmed_payload)
 
 
 def _competitor(model: str | None) -> DiscoveryCompetitorSuggestion:
@@ -728,7 +739,6 @@ def test_a_resolved_conflict_does_not_warn_the_user_to_review_it() -> None:
     Review the suggested positioning carefully", which is advice with nothing
     behind it and trains people to skip the warning that does matter.
     """
-    from app.domain.projects.discovery_schemas import DiscoveryProfile
     from app.domain.projects.onboarding.identity_research import (
         IdentityResearchEnvelope,
     )
@@ -737,7 +747,7 @@ def test_a_resolved_conflict_does_not_warn_the_user_to_review_it() -> None:
     def envelope(status: str, confidence: dict[str, float]):
         return IdentityResearchEnvelope(
             status=status,
-            profile=DiscoveryProfile(field_confidence=confidence),
+            profile=PersistableDiscoveryProfile(field_confidence=confidence),
         )
 
     confident = {

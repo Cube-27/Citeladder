@@ -11,6 +11,7 @@ import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-la
 import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
+import { OverviewPanel } from '@/components/site-health/overview-panel';
 import { ScreenHeader, ScreenSkeleton } from '@/components/site-health/screen-states';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -35,7 +36,7 @@ function LoadedSiteHealthScreen({
   screen,
 }: Readonly<{ projectId: string; screen: ReturnType<typeof useSiteHealthScreen> }>) {
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<AnalysisTab>(() => analysisTabFrom(searchParams.get('tab')));
+  const [selectedTab, setSelectedTab] = useState<AnalysisTab | null>(null);
   const {
     entitlementQuery,
     dashboardQuery,
@@ -52,6 +53,10 @@ function LoadedSiteHealthScreen({
     exporting,
     exportError,
   } = screen;
+  const tab =
+    selectedTab ??
+    analysisTabFrom(searchParams.get('tab')) ??
+    (phase === 'dashboard' ? 'overview' : 'pages');
   const blockingState = screenBlockingState({
     entitlementLoading: entitlementQuery.isLoading,
     dashboardLoading: dashboardQuery.isLoading,
@@ -93,7 +98,7 @@ function LoadedSiteHealthScreen({
           persisted remain visible below.
         </Alert>
       ) : null}
-      <AnalysisTabs tab={tab} setTab={setTab} actions={headerActions} />
+      <AnalysisTabs tab={tab} setTab={setSelectedTab} actions={headerActions} />
       <AnalysisPanel
         tab={tab}
         crawlId={crawl?.id}
@@ -105,17 +110,19 @@ function LoadedSiteHealthScreen({
   );
 }
 
-type AnalysisTab = 'pages' | 'architecture' | 'aeo-readiness' | 'changes';
+type AnalysisTab = 'overview' | 'pages' | 'architecture' | 'aeo-readiness' | 'changes';
 
 const ANALYSIS_TABS: ReadonlyArray<{ value: AnalysisTab; label: string }> = [
+  { value: 'overview', label: 'Overview' },
   { value: 'pages', label: 'Pages' },
   { value: 'architecture', label: 'Architecture' },
   { value: 'aeo-readiness', label: 'AEO Readiness' },
   { value: 'changes', label: 'Changes' },
 ];
 
-function analysisTabFrom(value: string | null): AnalysisTab {
-  return ANALYSIS_TABS.some((tab) => tab.value === value) ? (value as AnalysisTab) : 'pages';
+function analysisTabFrom(value: string | null): AnalysisTab | null {
+  if (ANALYSIS_TABS.some((tab) => tab.value === value)) return value as AnalysisTab;
+  return null;
 }
 
 function AnalysisTabs({
@@ -170,6 +177,8 @@ function AnalysisPanel({
 }>) {
   if (tab === 'pages')
     return <SiteHealthDashboardLayout screen={screen} entitlement={entitlement} />;
+  if (tab === 'overview' && crawlId)
+    return <OverviewPanel projectId={projectId} crawlId={crawlId} />;
   // Architecture reads a project-scoped projection, so it renders its own
   // "derived after the crawl finishes" state rather than needing a crawl here.
   if (tab === 'architecture')

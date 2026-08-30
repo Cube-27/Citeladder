@@ -27,7 +27,7 @@ from app.core.config.site_health_contracts import (
     EXTRACTOR_VERSION,
     OBSERVATION_SOURCE_SITEMAP,
     PAGE_ANALYSIS_STATUS_COMPLETED,
-    RULE_OUTCOME_FAIL,
+    RULE_FAILING_OUTCOMES,
 )
 from app.domain.site_health.coverage import crawl_coverage
 from app.domain.site_health.normalization import canonical_identity, canonical_or_empty
@@ -350,6 +350,14 @@ class CrawlFinalizeMixin:
                     finding_class=ev.finding_class,
                     weight=ev.weight,
                     outcome=ev.outcome,
+                    display_applicability=ev.display_applicability,
+                    score_applicability=ev.score_applicability,
+                    expected_profile_membership=ev.expected_profile_membership,
+                    reason_code=ev.reason_code,
+                    score_roles=list(ev.score_roles),
+                    checkpoint_family=ev.checkpoint_family,
+                    readiness_dimension=ev.readiness_dimension,
+                    readiness_weight=ev.readiness_weight,
                     evidence=ev.evidence,
                     supporting_artifact_ids=[artifact_id],
                     extractor_version=crawl.extractor_version or EXTRACTOR_VERSION,
@@ -367,7 +375,7 @@ class CrawlFinalizeMixin:
             )
             if inserted_id is None:
                 continue
-            if ev.outcome == RULE_OUTCOME_FAIL:
+            if ev.outcome in RULE_FAILING_OUTCOMES:
                 session.add(
                     SiteIssue(
                         workspace_id=crawl.workspace_id,

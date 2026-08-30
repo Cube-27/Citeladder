@@ -25,7 +25,9 @@ from app.core.config.site_health_contracts import (
     EXTRACTOR_VERSION,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     RULE_CATALOG_VERSION,
+    RULE_FAILING_OUTCOMES,
     RULE_OUTCOME_FAIL,
+    RULE_OUTCOME_PASS,
 )
 from app.core.config.site_health_link_metrics import LINK_METRIC_FORMULA_VERSION
 from app.core.config.site_health_taxonomy import PAGE_KIND_HOMEPAGE
@@ -139,7 +141,9 @@ async def _architecture_pages(
             )
         )
     ).all()
-    indexability = {row.analysis_id: row.outcome == "pass" for row in indexability_rows}
+    indexability = {
+        row.analysis_id: _indexability_outcome(row.outcome) for row in indexability_rows
+    }
     evaluation_ids = [row.id for row in indexability_rows]
     pages: list[ArchitecturePage] = []
     for analysis, site_url, artifact, metric in rows:
@@ -160,11 +164,19 @@ async def _architecture_pages(
                 depth_from_home=metric.depth_from_home,
                 inbound_count=metric.inbound_count,
                 outbound_count=metric.outbound_count,
-                indexable=indexability.get(analysis.id, False),
+                indexable=indexability.get(analysis.id),
                 facts=facts,
             )
         )
     return pages, evaluation_ids
+
+
+def _indexability_outcome(outcome: str) -> bool | None:
+    if outcome == RULE_OUTCOME_PASS:
+        return True
+    if outcome == RULE_OUTCOME_FAIL:
+        return False
+    return None
 
 
 def _root_page(pages: list[ArchitecturePage]) -> ArchitecturePage | None:
@@ -198,6 +210,14 @@ async def _persist_rule_evaluations(
                 finding_class=evaluation.finding_class,
                 weight=evaluation.weight,
                 outcome=evaluation.outcome,
+                display_applicability=evaluation.display_applicability,
+                score_applicability=evaluation.score_applicability,
+                expected_profile_membership=evaluation.expected_profile_membership,
+                reason_code=evaluation.reason_code,
+                score_roles=list(evaluation.score_roles),
+                checkpoint_family=evaluation.checkpoint_family,
+                readiness_dimension=evaluation.readiness_dimension,
+                readiness_weight=evaluation.readiness_weight,
                 evidence=evaluation.evidence,
                 supporting_artifact_ids=supporting_artifact_ids,
                 extractor_version=crawl.extractor_version or EXTRACTOR_VERSION,
@@ -207,7 +227,7 @@ async def _persist_rule_evaluations(
             .on_conflict_do_nothing(constraint="uq_site_rule_evaluation")
             .returning(SiteRuleEvaluation.id)
         )
-        if evaluation_id is None or evaluation.outcome != RULE_OUTCOME_FAIL:
+        if evaluation_id is None or evaluation.outcome not in RULE_FAILING_OUTCOMES:
             continue
         session.add(
             SiteIssue(

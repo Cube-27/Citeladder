@@ -30,6 +30,8 @@ from app.core.config.site_health_contracts import (
     RULE_OUTCOME_FAIL,
     RULE_OUTCOME_NOT_APPLICABLE,
     RULE_OUTCOME_PASS,
+    RULE_OUTCOME_UNAVAILABLE,
+    RULE_OUTCOME_UNKNOWN,
     SKIP_REASON_LOW_CONFIDENCE_KIND,
 )
 from app.core.config.site_health_page_profiles import PRODUCT_ANALYSIS_RULES
@@ -384,6 +386,10 @@ def test_check_raising_yields_error_outcome():
     ev = evaluate_rule(rule, facts)
     assert ev.outcome == RULE_OUTCOME_ERROR
     assert "error" in ev.evidence
+    assert ev.reason_code == "check_error"
+    assert ev.score_roles == ()
+    assert ev.score_applicability is False
+    assert ev.expected_profile_membership is True
 
 
 def test_unmapped_rule_id_yields_error():
@@ -401,6 +407,8 @@ def test_unmapped_rule_id_yields_error():
     ev = evaluate_rule(phantom, _html_facts())
     assert ev.outcome == RULE_OUTCOME_ERROR
     assert ev.evidence["error"] == "no_check_mapped"
+    assert ev.reason_code == "no_check_mapped"
+    assert ev.readiness_dimension == ""
 
 
 def test_unknown_applicability_key_is_not_applicable():
@@ -799,7 +807,7 @@ def test_indexability_uses_strong_intent_evidence_in_precedence_order():
     assert sitemap_index.severity == "critical"
 
 
-def test_unknown_noindex_intent_is_low_advisory_not_critical_defect():
+def test_unknown_noindex_intent_preserves_rule_metadata_without_a_missing_outcome():
     result = _outcome(
         _html_facts(
             robots={"noindex": True, "nofollow": False},
@@ -808,15 +816,15 @@ def test_unknown_noindex_intent_is_low_advisory_not_critical_defect():
         ),
         "technical.indexable",
     )
-    assert result.outcome == RULE_OUTCOME_FAIL
-    assert result.finding_class == FINDING_CLASS_ADVISORY
-    assert result.severity == "low"
+    assert result.outcome == RULE_OUTCOME_UNKNOWN
+    assert result.finding_class == FINDING_CLASS_DEFECT
+    assert result.severity == "critical"
     assert result.evidence == {
         "noindex": True,
         "nofollow": False,
         "indexing_intent": "unknown",
         "intent_source": "insufficient_evidence",
-        "uncertain": True,
+        "reason": "insufficient_evidence",
     }
 
 
@@ -828,6 +836,9 @@ def test_title_length_band():
     short = _outcome(_html_facts(title="x" * (low - 1)), "technical.title_length_band")
     assert short.outcome == RULE_OUTCOME_FAIL
     assert short.finding_class == FINDING_CLASS_ADVISORY
+    assert short.expected_profile_membership is True
+    assert short.score_applicability is False
+    assert short.score_roles == ()
     assert short.evidence["title_length"] == low - 1
     assert short.evidence["band"] == [low, high]
     long = _outcome(_html_facts(title="x" * (high + 1)), "technical.title_length_band")
@@ -899,7 +910,7 @@ def test_ttfb_band():
     assert slow.evidence["ttfb_ms"] == TTFB_WARN_MS + 1
     assert slow.evidence["threshold_ms"] == TTFB_WARN_MS
     unmeasured = _with_ttfb(None)
-    assert unmeasured.outcome == RULE_OUTCOME_NOT_APPLICABLE
+    assert unmeasured.outcome == RULE_OUTCOME_UNAVAILABLE
     assert unmeasured.evidence["reason"] == "no_ttfb_measurement"
 
 
@@ -959,14 +970,14 @@ def test_ai_crawler_access_passes_when_all_bots_allowed():
     assert set(ev.evidence["ai_crawlers"]) == set(AI_CRAWLER_BOTS)
 
 
-def test_ai_crawler_access_not_applicable_when_robots_not_fetched():
+def test_ai_crawler_access_unknown_when_robots_not_fetched():
     # An unfetched robots.txt yields the fail-open all-allow stance: passing
-    # a HIGH-severity signal on that would be vacuous — N/A instead.
+    # a HIGH-severity signal on that would be vacuous — unknown instead.
     facts = _html_facts()
     facts["site"]["robots"]["fetched"] = False
     facts["site"]["robots"]["status_code"] = None
     ev = _outcome(facts, "technical.ai_crawler_access")
-    assert ev.outcome == RULE_OUTCOME_NOT_APPLICABLE
+    assert ev.outcome == RULE_OUTCOME_UNKNOWN
     assert ev.evidence["reason"] == "robots_not_fetched"
     assert ev.evidence["robots_fetched"] is False
     # The stance evidence is still carried (bounded, all bots).

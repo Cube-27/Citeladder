@@ -59,13 +59,6 @@ const LINK_COLUMNS: ReadonlyArray<{
     descending: true,
     value: (page) => page.inbound_count,
   },
-  {
-    sort: 'main_content_inbound',
-    label: 'Main-content inbound',
-    descending: true,
-    value: (page) => page.main_content_inbound_count,
-  },
-  { sort: 'depth', label: 'Depth', descending: false, value: (page) => page.depth_from_home },
 ];
 
 function SortableHead({
@@ -120,8 +113,9 @@ export function PagesTable({
           <TableHead>Type</TableHead>
           <TableHead>Status</TableHead>
           <TableHead numeric>Issues</TableHead>
-          <TableHead numeric>Web Fundamentals</TableHead>
-          <TableHead numeric>AEO</TableHead>
+          <TableHead numeric>Technical Integrity</TableHead>
+          <TableHead numeric>AEO Readiness</TableHead>
+          <TableHead numeric>AEO Coverage</TableHead>
           {LINK_COLUMNS.map((column) =>
             onSortChange ? (
               <SortableHead
@@ -137,6 +131,7 @@ export function PagesTable({
               </TableHead>
             ),
           )}
+          <TableHead>Main-content indexable</TableHead>
           <TableHead>Last Audit</TableHead>
           <TableHead className="w-16" />
         </TableRow>
@@ -198,12 +193,23 @@ export function PagesTable({
             </TableCell>
             <TableCell
               numeric
-              className={cn('mono font-medium', scoreTextClass(page.technical_score))}
+              className={cn('mono font-medium', scoreTextClass(page.technical_integrity_score))}
             >
-              {formatScore(page.technical_score)}
+              {formatMeasurementScore(
+                page.technical_integrity_score,
+                page.technical_integrity_state,
+              )}
             </TableCell>
-            <TableCell numeric className={cn('mono font-medium', scoreTextClass(page.aeo_score))}>
-              {formatScore(page.aeo_score)}
+            <TableCell
+              numeric
+              className={cn('mono font-medium', scoreTextClass(page.aeo_readiness_score))}
+            >
+              {formatMeasurementScore(page.aeo_readiness_score, page.aeo_measurement_state)}
+            </TableCell>
+            <TableCell numeric className="mono font-medium">
+              {page.aeo_measurement_coverage === null
+                ? measurementStateLabel(page.aeo_measurement_state)
+                : `${Math.round(page.aeo_measurement_coverage * 100)}%`}
             </TableCell>
             {LINK_COLUMNS.map((column) => {
               const value = column.value(page);
@@ -217,6 +223,9 @@ export function PagesTable({
                 </TableCell>
               );
             })}
+            <TableCell className="text-secondary text-xs">
+              {formatIndexability(page.main_content_indexable)}
+            </TableCell>
             <TableCell className="text-secondary text-xs whitespace-nowrap">
               {formatAudited(page.last_audited)}
             </TableCell>
@@ -234,4 +243,22 @@ export function PagesTable({
       </TableBody>
     </Table>
   );
+}
+
+function formatIndexability(value: boolean | null) {
+  if (value === null) return PLACEHOLDER;
+  return value ? 'Indexable' : 'Blocked';
+}
+
+function formatMeasurementScore(score: number | null, state: string): string {
+  if (score !== null && (state === 'measured' || state === 'limited_evidence')) {
+    return formatScore(score);
+  }
+  return measurementStateLabel(state);
+}
+
+function measurementStateLabel(state: string): string {
+  if (state === 'limited_evidence') return 'Limited evidence';
+  if (state === 'excluded') return 'Excluded';
+  return PLACEHOLDER;
 }
