@@ -50,7 +50,9 @@ export function SiteHealthDashboardLayout({
         <Card data-testid="site-health-empty">
           <CardContent className="grid justify-items-start gap-3 py-[var(--empty-state-padding)]">
             <div className="grid max-w-2xl gap-1">
-              <h2 className="text-foreground text-heading-md">Run your first site crawl</h2>
+              <h2 className="text-foreground text-xl font-semibold tracking-[-0.02em]">
+                Run your first site crawl
+              </h2>
               <p className="text-secondary text-sm">
                 Crawl your site to see page health, issues, and recommendations as results arrive.
               </p>

@@ -305,13 +305,13 @@ function StatValues({ stat }: Readonly<{ stat: Stat }>) {
     <>
       <span
         className={cn(
-          'mono text-xl font-medium',
+          'mono text-2xl font-semibold tabular-nums tracking-[-0.02em]',
           stat.placeholder ? 'text-muted' : 'text-foreground',
         )}
       >
         {stat.value}
       </span>
-      <span className={cn('text-xs', delta)}>{stat.delta}</span>
+      <span className={cn('text-xs font-medium tabular-nums', delta)}>{stat.delta}</span>
     </>
   );
 }

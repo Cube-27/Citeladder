@@ -31,8 +31,10 @@ export function PromptMovement({
           <ul className="border-border-subtle divide-border-subtle divide-y rounded-lg border">
             {promptQuery.data.slice(0, 5).map((item) => (
               <li key={item.id} className="grid gap-1 px-3 py-2 text-sm">
-                <span className="text-foreground line-clamp-2">{item.prompt_text}</span>
-                <span className="text-secondary">
+                <span className="text-foreground line-clamp-2 text-sm font-medium">
+                  {item.prompt_text}
+                </span>
+                <span className="text-secondary text-xs">
                   {item.composite_score.toFixed(1)} score
                   {movementDelta(item.immediate_delta)}
                   {item.decline_confirmed ? ' · confirmed decline' : ''}
@@ -75,7 +77,7 @@ export function CompetitorSuggestions({
   return (
     <div className="flex flex-col gap-3 pt-2">
       <div>
-        <h3 className="text-foreground text-sm font-semibold">Competitor suggestions</h3>
+        <h3 className="text-foreground text-base font-semibold">Competitor suggestions</h3>
         <p className="text-muted mt-0.5 text-xs">
           Observed repeatedly in third-party citations. Verify relevance before adding.
         </p>
@@ -91,8 +93,8 @@ export function CompetitorSuggestions({
               className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 text-sm"
             >
               <div>
-                <p className="text-foreground text-xs font-medium">{candidate.name}</p>
-                <p className="text-muted text-2xs mt-0.5">
+                <p className="text-foreground text-sm font-medium">{candidate.name}</p>
+                <p className="text-muted mt-0.5 text-xs">
                   {candidate.domain} · {candidate.prompt_count} prompts / {candidate.engine_count}{' '}
                   engines
                 </p>

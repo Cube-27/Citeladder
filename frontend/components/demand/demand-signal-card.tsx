@@ -342,25 +342,31 @@ export function DemandSignalCard({
         <div className="border-border-subtle flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
           <dl className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
-              <dt className="text-muted text-xs">Impressions</dt>
+              <dt className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">
+                Impressions
+              </dt>
               <dd className="text-foreground mt-0.5 text-sm font-semibold tabular-nums">
                 {formatCount(numericMetric(signal, 'impressions'))}
               </dd>
             </div>
             <div>
-              <dt className="text-muted text-xs">Clicks</dt>
+              <dt className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">
+                Clicks
+              </dt>
               <dd className="text-foreground mt-0.5 text-sm font-semibold tabular-nums">
                 {formatCount(numericMetric(signal, 'clicks'))}
               </dd>
             </div>
             <div>
-              <dt className="text-muted text-xs">CTR</dt>
+              <dt className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">CTR</dt>
               <dd className="text-foreground mt-0.5 text-sm font-semibold tabular-nums">
                 {formatCtr(signal)}
               </dd>
             </div>
             <div>
-              <dt className="text-muted text-xs">Avg Position</dt>
+              <dt className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">
+                Avg Position
+              </dt>
               <dd className="text-foreground mt-0.5 text-sm font-semibold tabular-nums">
                 {numericMetric(signal, 'position')?.toFixed(1) ?? availabilityLabel('not_measured')}
               </dd>

@@ -144,7 +144,9 @@ function FeaturedRecommendation({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid min-w-0 gap-2">
             <AccentEyebrow>Next best action</AccentEyebrow>
-            <h2 className="text-foreground text-xl">{detail.title}</h2>
+            <h2 className="text-foreground text-xl font-semibold tracking-[-0.02em]">
+              {detail.title}
+            </h2>
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge variant="status" value={severityBadgeValue(detail.severity)}>
                 {severityLabel(detail.severity)} impact
@@ -327,7 +329,10 @@ function RecommendationsHeader({
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="grid gap-1">
-        <h2 id="recommendations-heading" className="text-foreground text-lg">
+        <h2
+          id="recommendations-heading"
+          className="text-foreground text-lg font-semibold tracking-[-0.015em]"
+        >
           Prioritized recommendations
         </h2>
         <p className="text-muted text-xs">

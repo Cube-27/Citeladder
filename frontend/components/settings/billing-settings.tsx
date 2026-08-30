@@ -183,9 +183,11 @@ function CurrentPlan({
     <div className="bg-panel shadow-card border-border-subtle rounded-md border p-[var(--card-padding)]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-muted text-2xs font-semibold">Current plan</p>
+          <p className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">
+            Current plan
+          </p>
           <div className="mt-1 flex items-center gap-2.5">
-            <p className="text-foreground text-heading-sm font-semibold">
+            <p className="text-foreground text-base font-semibold tracking-[-0.015em]">
               {currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
             </p>
             <Badge variant="status" value={subscription ? 'success' : 'info'}>

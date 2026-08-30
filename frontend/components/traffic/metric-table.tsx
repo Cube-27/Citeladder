@@ -97,7 +97,7 @@ function SortableColumnHead({
             <ArrowUp className="size-3" aria-hidden />
           )
         ) : (
-          <ArrowUpDown className="text-subtle size-3" aria-hidden />
+          <ArrowUpDown className="text-muted size-3" aria-hidden />
         )}
       </button>
     </TableHead>
@@ -118,7 +118,7 @@ function NullableMetricCell({
 }: Readonly<{ value: number | null; format: (value: number) => string }>) {
   return value === null ? (
     <TableCell numeric>
-      <span className="text-subtle">{NULL_PLACEHOLDER}</span>
+      <span className="text-muted">{NULL_PLACEHOLDER}</span>
     </TableCell>
   ) : (
     <NumericCell>{format(value)}</NumericCell>

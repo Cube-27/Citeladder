@@ -140,7 +140,7 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
       <div className="border-border-subtle flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="grid gap-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-foreground font-display text-xl font-bold">
+            <h1 className="text-foreground font-display text-2xl font-semibold tracking-[-0.025em]">
               {snapshot.signals.length === 1
                 ? '1 demand signal observed'
                 : `${snapshot.signals.length} demand signals observed`}
@@ -151,7 +151,7 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
               {windowLabel}
             </span>
           </div>
-          <p className="text-secondary text-xs">
+          <p className="text-muted text-sm">
             Versioned GSC query evidence. Highest-priority signals are shown first; branded demand
             remains a separate cohort.
           </p>

@@ -38,7 +38,7 @@ export function EvidenceLink({ evidence, className }: Readonly<EvidenceLinkProps
     >
       <span>{evidence.label}</span>
       {evidence.observedAt ? (
-        <span className="text-subtle font-normal">· {evidence.observedAt}</span>
+        <span className="text-muted font-normal">· {evidence.observedAt}</span>
       ) : null}
       <ArrowUpRight aria-hidden className="size-3 shrink-0" />
     </Link>

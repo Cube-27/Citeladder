@@ -340,7 +340,9 @@ function IssueCardView({
         </div>
 
         <div className="grid gap-1">
-          <h3 className="text-foreground text-heading-sm">{issueTitle(issue)}</h3>
+          <h3 className="text-foreground text-base font-semibold tracking-[-0.015em]">
+            {issueTitle(issue)}
+          </h3>
           {issue.description ? (
             <p className="text-secondary text-sm whitespace-pre-line">{issue.description}</p>
           ) : null}

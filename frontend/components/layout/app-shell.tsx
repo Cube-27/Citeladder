@@ -67,7 +67,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 <Calendar className="text-muted size-3.5 shrink-0" aria-hidden />
                 <span>Last 28 days</span>
                 <span className="text-border-strong">|</span>
-                <span className="text-subtle">vs previous</span>
+                <span className="text-muted">vs previous</span>
               </div>
               <AgentSheet />
             </div>

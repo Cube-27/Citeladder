@@ -79,7 +79,7 @@ function SortableHead({
         )}
       >
         {label}
-        <Icon className={cn('size-3', !active && 'text-subtle')} aria-hidden />
+        <Icon className={cn('size-3', !active && 'text-muted')} aria-hidden />
       </button>
     </TableHead>
   );

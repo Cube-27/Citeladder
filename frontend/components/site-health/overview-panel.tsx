@@ -4,7 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardEyebrow,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -101,10 +108,12 @@ function MetricCard({
   return (
     <Card>
       <CardHeader>
-        <CardDescription>{title}</CardDescription>
-        <CardTitle>{value}</CardTitle>
+        <CardEyebrow>{title}</CardEyebrow>
+        <p className="font-display text-foreground text-3xl font-semibold tracking-[-0.03em] tabular-nums">
+          {value}
+        </p>
       </CardHeader>
-      <CardContent className="text-muted text-xs">{detail}</CardContent>
+      <CardContent className="text-muted pt-0 text-xs">{detail}</CardContent>
     </Card>
   );
 }
@@ -188,8 +197,8 @@ function StateCard({ title, value }: Readonly<{ title: string; value: string }>)
   return (
     <Card>
       <CardHeader>
-        <CardDescription>{title}</CardDescription>
-        <CardTitle>{value || 'Unavailable'}</CardTitle>
+        <CardEyebrow>{title}</CardEyebrow>
+        <CardTitle className="text-lg">{value || 'Unavailable'}</CardTitle>
       </CardHeader>
     </Card>
   );

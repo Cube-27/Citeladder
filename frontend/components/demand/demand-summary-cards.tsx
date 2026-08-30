@@ -23,7 +23,7 @@ function KpiSegment({
     <div
       className={`hover:bg-panel-tonal/40 flex flex-col justify-between p-[var(--card-padding)] transition-colors sm:p-[var(--card-padding)] ${className ?? ''}`}
     >
-      <div className="text-muted flex items-center justify-between text-xs font-semibold">
+      <div className="text-muted text-2xs flex items-center justify-between font-semibold tracking-[0.06em] uppercase">
         <span className="truncate">{label}</span>
         <Icon className={`${iconClassName} ml-2 size-4 shrink-0`} aria-hidden="true" />
       </div>

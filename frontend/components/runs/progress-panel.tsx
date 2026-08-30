@@ -109,17 +109,17 @@ function ProgressBar({
 }
 
 function ProgressMetrics({ audit }: Readonly<{ audit: Audit }>) {
-  const failedColor = audit.failed_count > 0 ? 'text-run-failed text-xl' : 'text-muted text-xl';
+  const failedColor = audit.failed_count > 0 ? 'text-run-failed' : 'text-muted';
 
   return (
     <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <div className="border-border-subtle grid gap-1 border-r pr-2 last:border-0 sm:pr-4">
         <Label>Requested</Label>
-        <Metric className="text-xl">{audit.requested_count}</Metric>
+        <Metric>{audit.requested_count}</Metric>
       </div>
       <div className="border-border-subtle grid gap-1 border-r pr-2 last:border-0 sm:pr-4">
         <Label>Completed</Label>
-        <Metric className="text-run-completed text-xl">{audit.completed_count}</Metric>
+        <Metric className="text-run-completed">{audit.completed_count}</Metric>
       </div>
       <div className="border-border-subtle grid gap-1 border-r pr-2 last:border-0 sm:pr-4">
         <Label>Failed</Label>

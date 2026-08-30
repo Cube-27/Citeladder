@@ -65,11 +65,11 @@ export function Drawer({
         >
           <header className="border-border-subtle flex items-start justify-between gap-3 border-b px-[var(--modal-padding)] py-4">
             <div className="min-w-0">
-              <DialogPrimitive.Title className="text-foreground text-heading-sm truncate">
+              <DialogPrimitive.Title className="text-foreground truncate text-xl font-semibold tracking-tight">
                 {title}
               </DialogPrimitive.Title>
               {description ? (
-                <DialogPrimitive.Description className="text-muted mt-0.5 text-xs">
+                <DialogPrimitive.Description className="text-secondary mt-1 text-sm leading-relaxed">
                   {description}
                 </DialogPrimitive.Description>
               ) : null}

@@ -297,7 +297,7 @@ export function YourPrompts() {
                                   Branded
                                 </Badge>
                               ) : (
-                                <span className="text-subtle text-xs font-medium">Not branded</span>
+                                <span className="text-muted text-xs font-medium">Not branded</span>
                               )}
                             </TableCell>
                           </TableRow>

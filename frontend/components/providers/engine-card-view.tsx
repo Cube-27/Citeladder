@@ -113,7 +113,9 @@ export function EngineCardView({
               websiteUrl={ENGINE_DOMAINS[model.logical_engine]}
               size="sm"
             />
-            <h3 className="text-foreground text-heading-sm font-semibold">{model.label}</h3>
+            <h3 className="text-foreground text-base font-semibold tracking-[-0.015em]">
+              {model.label}
+            </h3>
           </div>
           <ConnectionStateBadge model={model} />
         </CardHeader>

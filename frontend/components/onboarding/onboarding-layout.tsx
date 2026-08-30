@@ -30,7 +30,7 @@ function StepMarker({ index, step }: Readonly<{ index: number; step: OnboardingS
   return (
     <span
       className={cn(
-        'relative z-10 flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-all sm:size-10',
+        'relative z-10 flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all sm:size-10',
         isDone && 'bg-accent text-accent-fg shadow-accent/30 shadow-md',
         isCurrent && 'bg-accent text-accent-fg ring-accent/20 ring-4',
         !isDone &&

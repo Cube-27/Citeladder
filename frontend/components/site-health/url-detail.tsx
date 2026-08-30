@@ -166,7 +166,9 @@ function IssueHistory({ crawlId, siteUrlId }: Readonly<{ crawlId: string; siteUr
   return (
     <Card>
       <CardContent className="grid gap-3">
-        <h2 className="text-foreground text-heading-sm">Issue History</h2>
+        <h2 className="text-foreground text-base font-semibold tracking-[-0.015em]">
+          Issue History
+        </h2>
         {historyQuery.isError ? <Alert tone="danger">Could not load issue history.</Alert> : null}
         {historyQuery.isLoading ? <HistorySkeleton /> : null}
         {!historyQuery.isLoading && !historyQuery.isError && rows.length === 0 ? (

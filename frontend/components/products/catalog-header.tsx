@@ -27,7 +27,7 @@ function Stat({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div className="flex flex-col gap-0.5">
       <Label>{label}</Label>
-      <Metric className="text-base">{value}</Metric>
+      <Metric>{value}</Metric>
     </div>
   );
 }

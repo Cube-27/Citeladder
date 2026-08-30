@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScoreRing } from '@/components/ui/score-ring';
-import { Label, displayHeadingLgClasses } from '@/components/ui/typography';
+import { Label, displayHeadingXlClasses } from '@/components/ui/typography';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import type { DeliveryFacts, PageDetail, SiteIssue } from '@/lib/api/types';
@@ -116,7 +116,7 @@ function HeaderCard({
       <CardContent className="grid gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid min-w-0 gap-1">
-            <h1 className={cn(displayHeadingLgClasses, 'break-all')}>
+            <h1 className={cn(displayHeadingXlClasses, 'break-all')}>
               {pageDisplayTitle(detail.title, detail.display_url)}
             </h1>
           </div>
@@ -396,7 +396,9 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
     <Card>
       <CardContent className="grid gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground text-heading-sm">Delivery Metrics</h2>
+          <h2 className="text-foreground text-base font-semibold tracking-[-0.015em]">
+            Delivery Metrics
+          </h2>
           <span className="text-2xs text-muted">
             Static HTTP-level measurements (not browser-rendered Core Web Vitals)
           </span>
@@ -420,7 +422,9 @@ function IssuesList({ issues }: Readonly<{ issues: SiteIssue[] }>) {
     <Card>
       <CardContent className="grid gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground text-heading-sm">All Issues ({issues.length})</h2>
+          <h2 className="text-foreground text-base font-semibold tracking-[-0.015em]">
+            All Issues ({issues.length})
+          </h2>
           <span className="text-2xs text-muted">Sorted by severity</span>
         </div>
         {ordered.length === 0 ? (

@@ -59,7 +59,7 @@ export function Metric({
     <span
       {...props}
       className={cn(
-        'mono font-display text-foreground font-semibold tracking-[-0.02em] tabular-nums',
+        'mono font-display text-foreground text-2xl font-semibold tracking-[-0.02em] tabular-nums',
         className,
       )}
     >

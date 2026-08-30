@@ -108,7 +108,7 @@ export function Insight({
         >
           {PRIORITY_COPY[insight.priority]}
         </span>
-        <span className={cn(eyebrowClasses, 'text-subtle')}>{LAYER_LABEL[insight.layer]}</span>
+        <span className={eyebrowClasses}>{LAYER_LABEL[insight.layer]}</span>
       </div>
 
       {/* 2. Claim */}
@@ -118,21 +118,21 @@ export function Insight({
 
       {/* 3. Evidence */}
       <div className="flex flex-col gap-1">
-        <p className={cn(eyebrowClasses, 'text-subtle')}>Evidence</p>
+        <p className={eyebrowClasses}>Evidence</p>
         <EvidenceLink evidence={insight.evidence} />
       </div>
 
       {/* 4. Why this matters */}
       {!hideWhyThisMatters ? (
         <div className="flex flex-col gap-1">
-          <p className={cn(eyebrowClasses, 'text-subtle')}>Why this matters</p>
+          <p className={eyebrowClasses}>Why this matters</p>
           <p className="text-muted text-xs leading-relaxed">{insight.whyThisMatters}</p>
         </div>
       ) : null}
 
       {/* 5. Potential impact */}
       <div className="border-border-subtle flex items-center justify-between border-t pt-3">
-        <span className={cn(eyebrowClasses, 'text-subtle')}>Potential impact</span>
+        <span className={eyebrowClasses}>Potential impact</span>
         <span className="font-display text-foreground text-xs font-semibold">
           {IMPACT_COPY[insight.potentialImpact]}
         </span>

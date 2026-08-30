@@ -223,7 +223,7 @@ export function ReviewStage({
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="border-border bg-panel shadow-card flex flex-col gap-2 rounded-md border p-4">
           <div className="border-border-subtle flex items-center justify-between border-b pb-2">
-            <span className="text-muted font-sans text-xs font-semibold">
+            <span className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">
               Brand Positioning &amp; Market
             </span>
             <span className="bg-accent-soft text-accent-text border-accent-border/50 text-2xs inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-semibold">
@@ -235,7 +235,7 @@ export function ReviewStage({
         </div>
         <div className="border-border bg-panel shadow-card flex flex-col gap-2 rounded-md border p-4">
           <div className="border-border-subtle flex items-center justify-between border-b pb-2">
-            <span className="text-muted font-sans text-xs font-semibold">
+            <span className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">
               Online Footprint &amp; Peers
             </span>
             <span className="text-2xs text-muted font-medium">Auto-verified domains</span>

@@ -186,8 +186,8 @@ function ArchitectureMetrics({
           key={label}
           className="border-border-subtle grid gap-0.5 border-b px-3 py-2 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
         >
-          <dt className="text-muted text-xs">{label}</dt>
-          <dd className="text-foreground text-base font-semibold tabular-nums">{value}</dd>
+          <dt className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">{label}</dt>
+          <dd className="text-foreground text-2xl font-semibold tabular-nums">{value}</dd>
         </div>
       ))}
     </dl>
@@ -447,9 +447,11 @@ function EvidenceMetric({
 }: Readonly<{ label: string; value: string; supporting?: string }>) {
   return (
     <div className="grid content-start gap-1">
-      <span className="text-foreground text-xl font-semibold tabular-nums">{value}</span>
-      <span className="text-muted text-xs">{label}</span>
-      {supporting ? <span className="text-subtle text-2xs">{supporting}</span> : null}
+      <span className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">{label}</span>
+      <span className="mono text-foreground text-2xl font-semibold tracking-[-0.02em] tabular-nums">
+        {value}
+      </span>
+      {supporting ? <span className="text-muted text-xs">{supporting}</span> : null}
     </div>
   );
 }

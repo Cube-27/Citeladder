@@ -50,22 +50,22 @@ function Evidence({ row }: Readonly<{ row: ChangeObservation }>) {
       </summary>
       <dl className="mt-2 grid gap-1 text-xs">
         <div>
-          <dt className="text-subtle inline">Before: </dt>
+          <dt className="text-muted inline">Before: </dt>
           <dd className="inline">{valueLabel(row.before_value)}</dd>
         </div>
         <div>
-          <dt className="text-subtle inline">After: </dt>
+          <dt className="text-muted inline">After: </dt>
           <dd className="inline">{valueLabel(row.after_value)}</dd>
         </div>
         <div>
-          <dt className="text-subtle inline">Analyses: </dt>
+          <dt className="text-muted inline">Analyses: </dt>
           <dd className="inline break-all">
             {row.source_analysis_a_id ?? 'none'} → {row.source_analysis_b_id ?? 'none'}
           </dd>
         </div>
         {row.implementation_event_id ? (
           <div>
-            <dt className="text-subtle inline">Implementation event: </dt>
+            <dt className="text-muted inline">Implementation event: </dt>
             <dd className="inline break-all">{row.implementation_event_id}</dd>
           </div>
         ) : null}
@@ -175,8 +175,12 @@ function ChangesTable({
           <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             {Object.entries(CLASS_LABELS).map(([key, label]) => (
               <div key={key}>
-                <span className="text-subtle block">{label}</span>
-                <span className="font-medium tabular-nums">{counts?.[key] ?? 0}</span>
+                <span className="text-muted text-2xs block font-semibold tracking-[0.06em] uppercase">
+                  {label}
+                </span>
+                <span className="mono text-foreground mt-0.5 block text-base font-semibold tabular-nums">
+                  {counts?.[key] ?? 0}
+                </span>
               </div>
             ))}
           </div>
