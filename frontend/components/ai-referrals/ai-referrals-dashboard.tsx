@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TrendChart, type TrendPoint } from '@/components/ui/trend-chart';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { AiReferrals } from '@/lib/api/ai-referrals';
 import {
   aiSourceLabel,
@@ -181,7 +182,11 @@ function SourceTotalsTable({ data }: Readonly<{ data: AiReferrals }>) {
               <span className="tabular-nums">{formatInt(source.sessions)}</span>
             </TableCell>
             <TableCell numeric>
-              <span className="tabular-nums">{formatPercent(source.share, 1)}</span>
+              {source.share === null ? (
+                <UnavailableValue state="not_measured" />
+              ) : (
+                <span className="tabular-nums">{formatPercent(source.share, 1)}</span>
+              )}
             </TableCell>
           </TableRow>
         ))}

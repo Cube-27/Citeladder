@@ -112,6 +112,11 @@ describe('Architecture panel', () => {
     );
     expect(screen.getByText('67%')).toBeInTheDocument();
     expect(screen.getByText('8')).toBeInTheDocument();
+    const linking = screen.getByText('Internal linking').closest('section');
+    const pageKinds = screen.getByRole('heading', { name: 'Page kinds' }).closest('section');
+    expect(
+      linking!.compareDocumentPosition(pageKinds!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('renders the persisted parent hierarchy and relationship source', async () => {
@@ -151,7 +156,7 @@ describe('Architecture panel', () => {
     expect(await screen.findByText('Partial coverage')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('page budget');
     const orphans = screen.getAllByText('Orphaned pages')[0]!.closest('div');
-    expect(within(orphans!).getByText('Not measured')).toBeInTheDocument();
+    expect(within(orphans!).getByText('Not measured')).toHaveClass('value-placeholder');
   });
 
   it('explains when the persisted projection is unavailable', async () => {

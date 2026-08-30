@@ -78,16 +78,16 @@ comparison surface inside these routes.
 The persisted observed-architecture projection is presented as the
 **Architecture** tab of the existing Website tablist in
 `components/site-health/architecture-panel.tsx` — never a second site workspace
-and never its own route. The tab leads with Page kinds, Pages, Median depth,
-Duplicate metadata, and Orphaned pages, then an always-visible page-kind ledger
+and never its own route. The tab leads with the persisted Internal linking and
+Structure depth summaries, followed by Page kinds, Pages, Median depth,
+Duplicate metadata, and Orphaned pages and an always-visible page-kind ledger
 whose columns are page kind, pages, median depth, indexable, duplicate metadata,
 and orphaned. Only the URLs assigned to a page kind are disclosed on demand.
 A read-only Observed hierarchy follows the ledger and nests URLs only by the
 API's persisted `parent_site_url_id`, naming each returned `parent_source`;
 unresolved nodes remain roots and the browser never invents parentage. Expanded
 URL sets and the observed tree use bounded scroll regions so a
-large crawl cannot turn either card into an unbounded page. Persisted
-Internal linking and Structure depth summaries stay visible below. The tab
+large crawl cannot turn either card into an unbounded page. The tab
 renders no site-profile/archetype block. The browser renders the persisted
 coverage state and limitation once and leaves orphan absence unmeasured whenever
 coverage is not `complete`.

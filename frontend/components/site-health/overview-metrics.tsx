@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScoreRing } from '@/components/ui/score-ring';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
@@ -194,7 +195,7 @@ function OverviewMetricCard({
             <p className="text-foreground text-sm font-semibold">{title}</p>
           </div>
           {value === null ? (
-            <span className="value-placeholder text-sm">{PLACEHOLDER}</span>
+            <UnavailableValue state="not_measured" />
           ) : (
             <ScoreRing value={value} size={64} label={`${title} score: ${Math.round(value)}`} />
           )}

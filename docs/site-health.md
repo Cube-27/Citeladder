@@ -256,7 +256,7 @@ relationship names its persisted `parent_source`: visible breadcrumb, explicit
 structure, safe immediate URL parent, or unresolved. The browser does not infer
 parents from links or paths; a missing or unresolved parent stays at the root.
 
-Two persisted summaries remain visible below. Internal linking reports the
+Two persisted summaries lead the tab. Internal linking reports the
 total observed internal links, the count and percentage of observed pages with
 at least one incoming link, and the orphan count when complete coverage permits
 that absence claim. Structure depth reports page counts and percentages for

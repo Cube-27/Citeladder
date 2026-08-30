@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { cn } from '@/lib/utils';
 import type { RankingRow, Visibility } from '@/lib/api/types';
 import {
@@ -71,9 +72,11 @@ export function EngineComparison({
                       {engineLabel(engine.logical_engine)}
                     </TableCell>
                     <TableCell numeric className="mono text-foreground font-medium">
-                      {engine.visibility_score === null
-                        ? PLACEHOLDER
-                        : `${Math.round(engine.visibility_score)}%`}
+                      {engine.visibility_score === null ? (
+                        <UnavailableValue state="not_measured" />
+                      ) : (
+                        `${Math.round(engine.visibility_score)}%`
+                      )}
                     </TableCell>
                     <TableCell numeric className="mono text-secondary">
                       {formatRate(engine.brand_mention_rate)}

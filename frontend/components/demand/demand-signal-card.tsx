@@ -18,6 +18,7 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { Card, CardContent } from '@/components/ui/card';
 import type { DemandSignal } from '@/lib/api/demand';
 import { contentBriefHref } from '@/lib/demand/content-brief';
@@ -95,6 +96,14 @@ function formatCtr(signal: DemandSignal): string {
 
 function formatCount(value: number | null): string {
   return value === null ? availabilityLabel('not_measured') : value.toLocaleString('en-US');
+}
+
+function DemandMetricValue({ value }: Readonly<{ value: string }>) {
+  return value === availabilityLabel('not_measured') ? (
+    <UnavailableValue state="not_measured" />
+  ) : (
+    value
+  );
 }
 
 type DiagnosticInsight = {
@@ -346,7 +355,7 @@ export function DemandSignalCard({
                 Impressions
               </dt>
               <dd className="text-foreground mt-0.5 text-sm font-semibold tabular-nums">
-                {formatCount(numericMetric(signal, 'impressions'))}
+                <DemandMetricValue value={formatCount(numericMetric(signal, 'impressions'))} />
               </dd>
             </div>
             <div>
@@ -354,13 +363,13 @@ export function DemandSignalCard({
                 Clicks
               </dt>
               <dd className="text-foreground mt-0.5 text-sm font-semibold tabular-nums">
-                {formatCount(numericMetric(signal, 'clicks'))}
+                <DemandMetricValue value={formatCount(numericMetric(signal, 'clicks'))} />
               </dd>
             </div>
             <div>
               <dt className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">CTR</dt>
               <dd className="text-foreground mt-0.5 text-sm font-semibold tabular-nums">
-                {formatCtr(signal)}
+                <DemandMetricValue value={formatCtr(signal)} />
               </dd>
             </div>
             <div>
@@ -368,7 +377,11 @@ export function DemandSignalCard({
                 Avg Position
               </dt>
               <dd className="text-foreground mt-0.5 text-sm font-semibold tabular-nums">
-                {numericMetric(signal, 'position')?.toFixed(1) ?? availabilityLabel('not_measured')}
+                {numericMetric(signal, 'position') === null ? (
+                  <UnavailableValue state="not_measured" />
+                ) : (
+                  numericMetric(signal, 'position')!.toFixed(1)
+                )}
               </dd>
             </div>
           </dl>

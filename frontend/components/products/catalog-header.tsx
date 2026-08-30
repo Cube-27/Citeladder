@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label, Metric } from '@/components/ui/typography';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
 import { siteHealthApi, siteHealthQueries } from '@/lib/api/site-health';
@@ -27,7 +28,7 @@ function Stat({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div className="flex flex-col gap-0.5">
       <Label>{label}</Label>
-      <Metric>{value}</Metric>
+      {value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : <Metric>{value}</Metric>}
     </div>
   );
 }

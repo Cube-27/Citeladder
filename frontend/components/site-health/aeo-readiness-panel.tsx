@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Drawer } from '@/components/ui/drawer';
+import { ScoreBar } from '@/components/ui/score-bar';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import {
   Table,
   TableBody,
@@ -115,7 +117,7 @@ function ReadinessLedger({
       <CardHeader bordered className="gap-1">
         <CardTitle className="text-lg">Readiness dimensions</CardTitle>
         <CardDescription>
-          One count is one persisted rule evaluation on one analyzed page.
+          Scores show observed readiness; coverage shows how much expected evidence was measured.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
@@ -123,10 +125,8 @@ function ReadinessLedger({
           <TableHeader className="hidden md:table-header-group">
             <TableRow>
               <TableHead>Dimension</TableHead>
-              <TableHead numeric>Determinate</TableHead>
-              <TableHead numeric>Expected</TableHead>
-              <TableHead numeric>N/A</TableHead>
-              <TableHead numeric>Errors</TableHead>
+              <TableHead numeric>Score</TableHead>
+              <TableHead>Quality</TableHead>
               <TableHead numeric>Coverage</TableHead>
               <TableHead>State</TableHead>
               <TableHead className="w-28" />
@@ -144,25 +144,26 @@ function ReadinessLedger({
                     <span className="font-medium">{dimension.label}</span>
                     <span className="text-muted mt-0.5 block text-xs">{dimension.description}</span>
                   </TableCell>
-                  <TableRecordMetricCell label="Determinate">
-                    {dimension.determinate_points}
+                  <TableRecordMetricCell label="Score">
+                    {dimension.score ?? <UnavailableValue state="not_measured" />}
                   </TableRecordMetricCell>
-                  <TableRecordMetricCell label="Expected">
-                    {dimension.expected_points}
-                  </TableRecordMetricCell>
-                  <TableRecordMetricCell label="Not applicable">
-                    {dimension.not_applicable_count}
-                  </TableRecordMetricCell>
-                  <TableRecordMetricCell
-                    label="Errors"
-                    className={
-                      dimension.error_count > 0 ? 'text-warning-text font-medium' : undefined
-                    }
-                  >
-                    {dimension.error_count}
+                  <TableRecordMetricCell label="Quality" className="md:min-w-32">
+                    {dimension.score === null ? (
+                      dimension.dimension_measurement_state === 'not_measured' ? (
+                        <UnavailableValue state="not_measured" />
+                      ) : (
+                        <span className="text-muted text-xs">{state}</span>
+                      )
+                    ) : (
+                      <ScoreBar value={dimension.score} label={`${dimension.label} score`} />
+                    )}
                   </TableRecordMetricCell>
                   <TableRecordMetricCell label="Coverage">
-                    {formatCoverage(dimension.coverage)}
+                    {dimension.coverage === null ? (
+                      <UnavailableValue state="not_measured" />
+                    ) : (
+                      formatCoverage(dimension.coverage)
+                    )}
                   </TableRecordMetricCell>
                   <TableRecordMetricCell label="State" className="items-center">
                     <Badge variant="status" value={stateBadgeValue(state)}>

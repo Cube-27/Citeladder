@@ -154,7 +154,7 @@ export function ProductWindow() {
             <div className="border-border-strong bg-background text-muted flex h-8 max-w-80 min-w-0 flex-1 items-center gap-2 rounded-md border px-3 text-[13px] shadow-xs lg:mx-auto">
               <Search className="size-3.5 shrink-0" strokeWidth={2} />
               <span className="truncate">Search pages, evidence, prompts…</span>
-              <span className="border-border bg-panel ml-auto hidden rounded-xs border px-1.5 py-0.5 text-[10px] sm:inline">
+              <span className="border-border bg-panel ml-auto hidden rounded-xs border px-1.5 py-0.5 text-xs sm:inline">
                 ⌘ K
               </span>
             </div>
@@ -214,7 +214,7 @@ function PreviewSidebar({ activeItem }: Readonly<{ activeItem: PreviewItemLabel 
       </div>
       <div className="border-border-subtle border-b p-2">
         <div className="hover:bg-background-alt flex items-center gap-2 rounded-sm px-2 py-1.5">
-          <span className="bg-foreground text-background flex size-7 items-center justify-center rounded-md text-[10px] font-semibold">
+          <span className="bg-foreground text-background flex size-7 items-center justify-center rounded-md text-xs font-semibold">
             AC
           </span>
           <span className="text-foreground min-w-0 flex-1 truncate text-[13px] font-medium">
@@ -249,7 +249,7 @@ function PreviewSidebar({ activeItem }: Readonly<{ activeItem: PreviewItemLabel 
                       <Icon className="size-3.5" strokeWidth={2} />
                       <span>{item.label}</span>
                       {item.count ? (
-                        <span className="bg-neutral-bg text-secondary ml-auto rounded-full px-1.5 text-[10px]">
+                        <span className="bg-neutral-bg text-secondary ml-auto rounded-full px-1.5 text-xs">
                           {item.count}
                         </span>
                       ) : null}

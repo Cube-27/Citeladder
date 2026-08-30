@@ -183,7 +183,7 @@ describe('Card', () => {
     const eyebrow = screen.getByText('Visibility score');
     expect(eyebrow.tagName).toBe('SPAN');
     // Micro-label: 10/14 @600, muted, sentence case, and never the mono face.
-    expect(eyebrow.className).toContain('text-2xs');
+    expect(eyebrow.className).toContain('text-xs');
     expect(eyebrow.className).toContain('text-muted');
     expect(eyebrow.className).toContain('font-semibold');
     expect(eyebrow.className).not.toContain('uppercase');
@@ -196,7 +196,7 @@ describe('UnavailableValue', () => {
   it('renders the explicit semantic state with the shared placeholder treatment', () => {
     render(<UnavailableValue state="not_measured" />);
     const value = screen.getByText('Not measured');
-    expect(value).toHaveClass('value-placeholder', 'text-xs', 'font-medium');
+    expect(value).toHaveClass('value-placeholder');
   });
 });
 

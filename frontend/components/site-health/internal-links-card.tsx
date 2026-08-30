@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/typography';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageDetail } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
 
@@ -50,7 +51,13 @@ export function InternalLinksCard({
           {metrics.map((metric) => (
             <div key={metric.label} className="grid gap-0.5">
               <Label>{metric.label}</Label>
-              <dd className="mono text-foreground text-sm font-medium">{metric.value}</dd>
+              <dd className="mono text-foreground text-sm font-medium">
+                {metric.value === PLACEHOLDER ? (
+                  <UnavailableValue state="not_measured" />
+                ) : (
+                  metric.value
+                )}
+              </dd>
             </div>
           ))}
         </dl>

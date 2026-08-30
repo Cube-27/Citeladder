@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { scoreTextClass } from '@/components/ui/score-band';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { cn } from '@/lib/utils';
 import type { PagesSort } from '@/lib/api/site-health';
 import type { PageSummary } from '@/lib/api/types';
@@ -213,7 +214,7 @@ export function PagesTable({
             </TableCell>
             <TableCell numeric className="mono font-medium">
               {page.aeo_measurement_coverage === null
-                ? measurementStateLabel(page.aeo_measurement_state)
+                ? measurementStateValue(page.aeo_measurement_state)
                 : `${Math.round(page.aeo_measurement_coverage * 100)}%`}
             </TableCell>
             {LINK_COLUMNS.map((column) => {
@@ -224,7 +225,7 @@ export function PagesTable({
                   numeric
                   className={cn('mono', value === null ? 'text-muted text-xs' : 'text-secondary')}
                 >
-                  {value === null ? PLACEHOLDER : value}
+                  {value === null ? <UnavailableValue state="not_measured" /> : value}
                 </TableCell>
               );
             })}
@@ -257,30 +258,19 @@ function formatIndexability(value: boolean | null) {
 
 function MeasurementValue({
   score,
-  coverage,
   state,
 }: Readonly<{ score: number | null; coverage: number | null; state: string }>) {
-  if (score === null) return measurementStateLabel(state);
-  const coverageLabel =
-    coverage === null ? 'Coverage unavailable' : `${Math.round(coverage * 100)}% measured`;
-  return (
-    <span className="grid gap-0.5">
-      <span>{formatScore(score)}</span>
-      <span className="text-muted text-2xs font-normal normal-case">
-        {coverageLabel} · {measurementConfidence(state)}
-      </span>
-    </span>
-  );
+  if (score === null) return measurementStateValue(state);
+  return formatScore(score);
+}
+
+function measurementStateValue(state: string) {
+  const label = measurementStateLabel(state);
+  return label === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : label;
 }
 
 function measurementStateLabel(state: string): string {
   if (state === 'limited_evidence') return 'Limited evidence';
   if (state === 'excluded') return 'Excluded';
   return PLACEHOLDER;
-}
-
-function measurementConfidence(state: string): string {
-  if (state === 'measured') return 'High confidence';
-  if (state === 'limited_evidence') return 'Moderate confidence';
-  return measurementStateLabel(state);
 }

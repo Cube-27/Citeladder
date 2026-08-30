@@ -9,9 +9,10 @@ import {
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { scoreBand, scoreBandText } from '@/components/ui/score-band';
 import { Sparkline } from '@/components/ui/sparkline';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { cn } from '@/lib/utils';
 import type { RankingRow } from '@/lib/api/types';
-import { PLACEHOLDER, formatRate } from '@/lib/visibility/dashboard';
+import { formatRate } from '@/lib/visibility/dashboard';
 
 /** Shared empty state for a rankings table with no rows. */
 export const NO_RANKINGS_MESSAGE = 'No brand or competitor mentions were recorded for this run.';
@@ -103,10 +104,10 @@ export function RankingRowsTable({
                 {formatRate(row.share_of_voice)}
               </TableCell>
               <TableCell numeric className="mono text-muted">
-                {PLACEHOLDER}
+                <UnavailableValue state="not_measured" />
               </TableCell>
               <TableCell numeric className="mono text-muted">
-                {PLACEHOLDER}
+                <UnavailableValue state="not_measured" />
               </TableCell>
             </TableRow>
           );

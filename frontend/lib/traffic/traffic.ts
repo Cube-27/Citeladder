@@ -163,7 +163,7 @@ export function formatPosition(value: number): string {
 }
 
 /** The not-measured placeholder (null metrics — never a fabricated zero). */
-export const NULL_PLACEHOLDER = availabilityLabel('not_measured');
+const NULL_PLACEHOLDER = availabilityLabel('not_measured');
 
 // ---------------------------------------------------------------------------
 // Headline stat cards

@@ -21,6 +21,11 @@ The repository-wide invariants in [../../AGENTS.md](../../AGENTS.md) and
 [../invariants.md](../invariants.md) also apply. UI implementation follows
 [../design.md](../design.md). No archived plan is implementation authority.
 
+The post-PR3 reliability follow-up is owned separately by
+[`site-health-measurement-reliability-pr4.md`](site-health-measurement-reliability-pr4.md).
+It does not weaken or reopen a PR1–PR3 gate and begins only after this cutover
+sequence merges.
+
 ## Delivery policy
 
 CiteLadder is pre-launch and does not preserve development database history.
@@ -174,12 +179,13 @@ defect-derived Opportunities while their finding class is advisory/diagnostic.
   metadata, and orphaned columns. Remove URL-pattern and type-mix presentation.
   Only assigned URLs collapse. Render the persisted observed hierarchy and its
   parent evidence beneath the ledger without inferring relationships in the
-  browser. Persisted Internal linking and Structure depth summaries use the
-  supplied card layout; its detailed report actions were delivered in PR3.
+  browser. Persisted Internal linking and Structure depth summaries lead the
+  tab in the supplied card layout; its detailed report actions were delivered
+  in PR3.
 - **AEO Readiness:** retain the existing dimension ledger and evidence drawer,
-  improve typography/spacing and show determinate, expected, N/A, error,
-  coverage, and limitations accurately. PR1 does not introduce the final AEO
-  scalar, readiness-gap taxonomy, or Content action.
+  improve typography/spacing, and show score, quality, coverage, state, and
+  limitations accurately. PR1 does not introduce the final AEO scalar,
+  readiness-gap taxonomy, or Content action.
 - **Changes:** preserve the existing design and correct only labels or states
   affected by the backend bug fixes.
 
@@ -401,7 +407,8 @@ Readiness**, and **Changes**, with Overview as the default after a usable crawl.
   list; Overview owns the aggregate AEO score, coverage/state, and page counts
   without a duplicate summary card. Durable user-facing limitations may precede
   the ledger, but delivery-phase or PR-numbered copy never appears. Every row
-  distinguishes dimension applicability from measurement state,
+  shows score, quality, coverage, and state while distinguishing dimension
+  applicability from measurement state,
   so `Not measured` never renders as N/A. Selecting a dimension/gap opens
   bounded persisted page evidence with observed evidence, expected capability,
   and remediation.

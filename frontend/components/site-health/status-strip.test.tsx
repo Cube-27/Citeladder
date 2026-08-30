@@ -152,15 +152,15 @@ function renderStrip(props: Partial<Parameters<typeof StatusStrip>[0]> = {}) {
 }
 
 describe('StatusStrip — analysis counters', () => {
-  it('derives "Completed" from the server-aggregated analyzed_count, not a truncated pages window', () => {
+  it('derives "Pages analyzed" from the server aggregate, not a truncated pages window', () => {
     // Only ONE monitored page is present in this (deliberately truncated)
     // `pages` prop, but the crawl-wide score_summary says 1 of 3 is analyzed.
-    // The "Completed" count must reflect the authoritative aggregate.
+    // The analyzed count must reflect the authoritative aggregate.
     renderStrip({ pages: [page({ analysis_status: 'completed' })], selectedTotal: 3 });
 
-    const totalLabel = screen.getByText('Total pages');
+    const totalLabel = screen.getByText('Pages selected');
     expect(totalLabel.parentElement?.textContent).toContain('3');
-    const completedLabel = screen.getByText('Completed');
+    const completedLabel = screen.getByText('Pages analyzed');
     const completedValue = completedLabel.parentElement?.querySelector('.text-run-completed');
     expect(completedValue?.textContent).toBe('1');
   });
@@ -170,7 +170,7 @@ describe('StatusStrip — analysis counters', () => {
 
     const queuedLabel = screen.getByText('Queued');
     expect(queuedLabel.parentElement?.textContent).toContain('2');
-    const totalLabel = screen.getByText('Total pages');
+    const totalLabel = screen.getByText('Pages selected');
     expect(totalLabel.parentElement?.textContent).toContain('3');
   });
 
@@ -308,8 +308,8 @@ describe('StatusStrip — lifecycle content', () => {
       }),
     });
 
-    expect(screen.getByText('URLs found')).toBeInTheDocument();
-    expect(screen.queryByText('Sample URLs')).not.toBeInTheDocument();
+    expect(screen.getByText('Pages discovered')).toBeInTheDocument();
+    expect(screen.queryByText('Sample pages discovered')).not.toBeInTheDocument();
     expect(screen.queryByText(/page sample of your site/)).not.toBeInTheDocument();
   });
 

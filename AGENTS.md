@@ -37,7 +37,8 @@ Read only the documents required by the task.
 | Complete active-document map | `docs/documentation-index.md` |
 | Program sequence | `docs/plans/citeladder-aeo-product-rebuild.md` |
 | Site crawl, classification, rules, and runtime | `docs/site-health.md` |
-| Site Health measurement cutover sequence | `docs/plans/site-health-measurement-cutover.md` |
+| Site Health measurement cutover PR1–PR3 | `docs/plans/site-health-measurement-cutover.md` |
+| Site Health measurement reliability PR4 | `docs/plans/site-health-measurement-reliability-pr4.md` |
 | Content workflows | `docs/plans/CITELADDER_CONTENT_GENERATION_SIMPLIFIED_PLAN.md` |
 | Demand, prompts, visibility, and Agent | `docs/plans/citeladder-aeo-product-rebuild.md` |
 | Backend ownership and shipped runtime | `docs/backend-architecture.md` |

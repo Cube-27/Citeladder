@@ -57,7 +57,7 @@ export function StateMetric({
       <p className={eyebrowClasses}>{label}</p>
       <div className="my-2">
         {value === null ? (
-          <UnavailableValue state="not_measured" className="text-sm" />
+          <UnavailableValue state="not_measured" />
         ) : (
           <p className="font-display text-foreground text-3xl leading-none font-semibold tracking-[-0.03em] tabular-nums">
             {metricValue(value, suffix)}

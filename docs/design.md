@@ -132,7 +132,6 @@ classes.
 
 | Role | Family | Size / line height | Weight | Tracking | Class / Token | Text Colour |
 | --- | --- | ---: | ---: | ---: | :--- | :--- |
-| Micro metadata | Geist | 10/14px | 500–600 | 0 | `text-2xs` | `text-muted` |
 | Secondary / table header | Geist | 12/16px | 400–600 | 0 | `text-xs` | `text-secondary` / `text-muted` |
 | Baseline UI and body | Geist | 14/20px | 400–600 | 0 | `text-sm` | semantic text role |
 | Emphasis / section title | Geist | 16/22px | 500–600 | -0.015em | `text-base` | `text-foreground` |
@@ -141,6 +140,16 @@ classes.
 | Heading L | Geist | 24/32px | 600 | -0.025em | `text-2xl` | `text-foreground` |
 | Metric M | Geist | 28/36px | 600 | -0.02em | `text-3xl` + `tabular-nums` | `text-foreground` |
 | Metric L | Geist | 32/40px | 600 | -0.02em | `text-4xl` + `tabular-nums` | `text-foreground` |
+
+Fourteen pixels is the product baseline and 12px is the compact secondary rung.
+Ten-pixel text is not a general product role; legacy `text-2xs` consumers are
+mapped to the 12px rung for compatibility. New components use `text-sm` for body
+and controls and `text-xs` only for short labels, table headers, and supporting
+metadata.
+
+Availability labels such as **Not measured**, **Unavailable**, and **Unknown**
+never inherit metric typography. They use the shared `UnavailableValue`
+treatment: muted, 12/16px, regular weight, and zero tracking on every surface.
 
 ### High density layout and elevation standard
 
@@ -232,21 +241,21 @@ series retain visual gaps for unavailable points and explain those gaps accessib
 - AEO Readiness is a dimension ledger, never a gauge or mystery number. Its
   dedicated tab opens directly on that ledger; aggregate score, coverage, and
   page-count summaries stay in Overview instead of repeating in a second card.
-  The table names determinate, expected, not applicable, errors, coverage, and state
-  independently for all seven dimensions; not-applicable rows remain visible
-  and are not styled as failures. Because one count is one rule evaluated on one
-  page, the surface says so rather than letting the totals read as page counts.
+  The table uses the same score, quality, coverage, and state roles as Overview
+  for all seven dimensions; not-applicable rows remain visible and are not
+  styled as failures. Overview provides the direct **View details** route into
+  this tab.
   Evidence opens in the shared right-side sheet, failures first — a dimension
   can carry dozens of persisted evaluations, and an in-cell disclosure inflated
   one table row past the height of the viewport.
-- Site Health Architecture leads with five site-level facts and an always-visible
-  page-kind ledger. Page kind, pages, median depth, indexable count, duplicate
+- Site Health Architecture leads with the persisted Internal linking and
+  Structure depth summaries because they are primary AEO signals. Five
+  site-level facts and an always-visible page-kind ledger follow. Page kind,
+  pages, median depth, indexable count, duplicate
   metadata, and orphaned count never require disclosure; only a kind's assigned
   URL list expands in a bounded region. A read-only observed hierarchy then
   renders the persisted parent relationships and their evidence sources without
   client-side inference in its own bounded scroll region.
-  Persisted Internal linking and Structure depth summaries remain visible below
-  without detailed-report actions before PR3.
 - Website Changes is an evidence ledger with four named classes and expandable
   before/after provenance. `Expected` is a secondary exact-link label, not a
   fifth severity. Unavailable and non-comparable states use distinct empty

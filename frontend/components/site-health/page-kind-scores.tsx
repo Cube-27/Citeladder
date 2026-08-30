@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Label } from '@/components/ui/typography';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import { byPageKindRows } from '@/lib/site-health/page-kinds';
@@ -102,9 +103,11 @@ export function PageKindScores({
                     />
                   </TableCell>
                   <TableCell numeric className="mono font-medium">
-                    {row.aeo_measurement_coverage === null
-                      ? 'Not measured'
-                      : `${Math.round(row.aeo_measurement_coverage * 100)}%`}
+                    {row.aeo_measurement_coverage === null ? (
+                      <UnavailableValue state="not_measured" />
+                    ) : (
+                      `${Math.round(row.aeo_measurement_coverage * 100)}%`
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -135,7 +138,7 @@ function MeasurementValue({
   }
   if (state === 'limited_evidence') return 'Limited evidence';
   if (state === 'excluded') return 'Excluded';
-  return 'Not measured';
+  return <UnavailableValue state="not_measured" />;
 }
 
 function measurementConfidence(state: string): string {

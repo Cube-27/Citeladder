@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CursorPager } from '@/components/ui/cursor-pager';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import {
   Table,
   TableBody,
@@ -22,7 +23,6 @@ import {
   formatCount,
   formatCtr,
   formatPosition,
-  NULL_PLACEHOLDER,
   sortDirection,
   sortKey,
   toggleSort,
@@ -118,7 +118,7 @@ function NullableMetricCell({
 }: Readonly<{ value: number | null; format: (value: number) => string }>) {
   return value === null ? (
     <TableCell numeric>
-      <span className="text-muted">{NULL_PLACEHOLDER}</span>
+      <UnavailableValue state="not_measured" />
     </TableCell>
   ) : (
     <NumericCell>{format(value)}</NumericCell>

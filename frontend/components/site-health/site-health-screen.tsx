@@ -36,7 +36,12 @@ function LoadedSiteHealthScreen({
   screen,
 }: Readonly<{ projectId: string; screen: ReturnType<typeof useSiteHealthScreen> }>) {
   const searchParams = useSearchParams();
-  const [selectedTab, setSelectedTab] = useState<AnalysisTab | null>(null);
+  const search = searchParams.toString();
+  const [selectedTab, setSelectedTab] = useState<{
+    value: AnalysisTab;
+    sourceSearch: string;
+  } | null>(null);
+  const requestedTab = analysisTabFrom(searchParams.get('tab'));
   const {
     entitlementQuery,
     dashboardQuery,
@@ -54,9 +59,16 @@ function LoadedSiteHealthScreen({
     exportError,
   } = screen;
   const tab =
-    selectedTab ??
-    analysisTabFrom(searchParams.get('tab')) ??
+    (selectedTab?.sourceSearch === search ? selectedTab.value : null) ??
+    requestedTab ??
     (phase === 'dashboard' ? 'overview' : 'pages');
+  const selectTab = (nextTab: AnalysisTab) => {
+    setSelectedTab({ value: nextTab, sourceSearch: search });
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', nextTab);
+    if (nextTab !== 'pages') params.delete('sort');
+    window.history.pushState(null, '', `?${params.toString()}`);
+  };
   const blockingState = screenBlockingState({
     entitlementLoading: entitlementQuery.isLoading,
     dashboardLoading: dashboardQuery.isLoading,
@@ -98,7 +110,7 @@ function LoadedSiteHealthScreen({
           persisted remain visible below.
         </Alert>
       ) : null}
-      <AnalysisTabs tab={tab} setTab={setSelectedTab} actions={headerActions} />
+      <AnalysisTabs tab={tab} setTab={selectTab} actions={headerActions} />
       <AnalysisPanel
         tab={tab}
         crawlId={crawl?.id}

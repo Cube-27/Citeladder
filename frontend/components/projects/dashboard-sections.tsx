@@ -238,10 +238,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
           <SectionTitle id="citation-share-track">Citation share</SectionTitle>
           <div className="mt-1 flex items-baseline gap-3">
             {data.track.citation_share.value === null ? (
-              <UnavailableValue
-                state={data.track.observed_at ? 'unavailable' : 'not_run'}
-                className="text-sm"
-              />
+              <UnavailableValue state={data.track.observed_at ? 'unavailable' : 'not_run'} />
             ) : (
               <p className="font-display text-foreground text-3xl leading-none font-semibold tracking-[-0.03em] tabular-nums">
                 {metricValue(data.track.citation_share.value, '%')}

@@ -335,7 +335,7 @@ test('AEO Readiness browser proof: seven named dimensions and page-grouped evide
   const panel = page.getByTestId('aeo-readiness');
   await expect(panel).toBeVisible();
   for (const [, label] of dimensions) await expect(panel).toContainText(label);
-  for (const heading of ['Determinate', 'Expected', 'N/A', 'Errors', 'Coverage', 'State']) {
+  for (const heading of ['Score', 'Quality', 'Coverage', 'State']) {
     await expect(panel.getByRole('columnheader', { name: heading })).toBeVisible();
   }
   await expect(panel).not.toContainText('Answer is not stated first');

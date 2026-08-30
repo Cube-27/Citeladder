@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScoreRing } from '@/components/ui/score-ring';
 import { Label, displayHeadingXlClasses } from '@/components/ui/typography';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import type { DeliveryFacts, PageDetail, SiteIssue } from '@/lib/api/types';
@@ -363,9 +364,13 @@ function ScoreTile({
     <Card>
       <CardContent className="flex flex-col items-center gap-2 py-[var(--card-padding)]">
         {value === null ? (
-          <div className="mono border-border-subtle text-muted flex size-16 items-center justify-center rounded-full border text-base">
-            {scoreStateLabel(state)}
-          </div>
+          state === 'limited_evidence' || state === 'excluded' ? (
+            <span className="text-muted text-xs">
+              {state === 'limited_evidence' ? 'Limited evidence' : 'Excluded'}
+            </span>
+          ) : (
+            <UnavailableValue state="not_measured" />
+          )
         ) : (
           <ScoreRing value={value} size={64} label={`${label}: ${Math.round(value)}`} />
         )}
@@ -376,12 +381,6 @@ function ScoreTile({
       </CardContent>
     </Card>
   );
-}
-
-function scoreStateLabel(state: string): string {
-  if (state === 'limited_evidence') return 'Limited';
-  if (state === 'excluded') return 'Excluded';
-  return PLACEHOLDER;
 }
 
 function scoreConfidenceLabel(state: string): string {
@@ -426,7 +425,13 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
           {items.map((item) => (
             <div key={item.label} className="grid gap-0.5">
               <Label>{item.label}</Label>
-              <dd className="mono text-foreground text-sm font-medium">{item.value}</dd>
+              <dd className="mono text-foreground text-sm font-medium">
+                {item.value === PLACEHOLDER ? (
+                  <UnavailableValue state="not_measured" />
+                ) : (
+                  item.value
+                )}
+              </dd>
             </div>
           ))}
         </dl>

@@ -1,8 +1,9 @@
 import { Activity, AlertTriangle, ArrowUpRight, Split, Zap, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { DemandSnapshot } from '@/lib/api/demand';
 import { countByTab, detectorStates, isActionableGap, numericMetric } from '@/lib/demand/signals';
-import { availabilityLabel } from '@/lib/format';
 
 function KpiSegment({
   label,
@@ -13,7 +14,7 @@ function KpiSegment({
   className,
 }: Readonly<{
   label: string;
-  value: string;
+  value: ReactNode;
   caption: string;
   icon: LucideIcon;
   iconClassName: string;
@@ -36,12 +37,15 @@ function KpiSegment({
 }
 
 /** `activeDetectors/totalDetectors` plus the caption that describes it. */
-function detectorHealth(summary: Record<string, unknown>): { value: string; caption: string } {
+function detectorHealth(summary: Record<string, unknown>): {
+  value: string | null;
+  caption: string;
+} {
   const entries = Object.values(detectorStates(summary));
   if (entries.length === 0) {
     // No detector block at all — say so rather than claiming full coverage,
     // which `0 === 0` would otherwise do.
-    return { value: availabilityLabel('unknown'), caption: 'No detector status reported' };
+    return { value: null, caption: 'No detector status reported' };
   }
   const active = entries.filter(
     (detector) => detector?.state === 'available' || detector?.state === 'partial',
@@ -95,7 +99,7 @@ export function DemandSummaryCards({ snapshot }: Readonly<{ snapshot: DemandSnap
         />
         <KpiSegment
           label="Detector Health"
-          value={health.value}
+          value={health.value ?? <UnavailableValue state="unknown" />}
           caption={health.caption}
           icon={Activity}
           iconClassName="text-success"

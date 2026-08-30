@@ -294,7 +294,7 @@ export function productContractViolations(root) {
   const violations = [];
   const css = readFileSync(join(root, 'app', 'globals.css'), 'utf8');
   const tokenContract = new Map([
-    ['--text-2xs', '0.625rem'],
+    ['--text-2xs', '0.75rem'],
     ['--text-xs', '0.75rem'],
     ['--text-sm', '0.875rem'],
     ['--text-base', '1rem'],
@@ -343,11 +343,18 @@ export function productContractViolations(root) {
   }
   const eyebrow = readFileSync(join(root, 'components', 'ui', 'eyebrow.tsx'), 'utf8');
   if (
-    !eyebrow.includes(
-      "export const eyebrowClasses = 'font-sans text-2xs font-semibold text-muted';",
-    )
+    !eyebrow.includes("export const eyebrowClasses = 'font-sans text-xs font-semibold text-muted';")
   ) {
     violations.push('components/ui/eyebrow.tsx: product eyebrows must be sentence case');
+  }
+  if (
+    !/\.value-placeholder\s*\{[^}]*font-size:\s*var\(--text-xs\);[^}]*font-weight:\s*400;/s.test(
+      css,
+    )
+  ) {
+    violations.push(
+      'app/globals.css: unavailable values must remain muted 12px regular-weight text',
+    );
   }
   return violations;
 }

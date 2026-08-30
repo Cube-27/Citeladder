@@ -6,6 +6,7 @@ import { ArrowUpRight, ExternalLink, FileText, ShieldCheck, Split } from 'lucide
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { DemandSignal } from '@/lib/api/demand';
 import { contentBriefHref } from '@/lib/demand/content-brief';
 import {
@@ -15,7 +16,7 @@ import {
   signalTarget,
   signalTargetKind,
 } from '@/lib/demand/signals';
-import { availabilityLabel, formatWindowDate } from '@/lib/format';
+import { formatWindowDate } from '@/lib/format';
 
 export function DemandEvidenceDrawer({
   signal,
@@ -98,33 +99,41 @@ function DemandEvidenceContent({
             <div>
               <span className="text-2xs text-muted">Impressions</span>
               <p className="text-foreground text-sm font-semibold tabular-nums">
-                {typeof details.metrics.impressions === 'number'
-                  ? details.metrics.impressions.toLocaleString()
-                  : availabilityLabel('not_measured')}
+                {typeof details.metrics.impressions === 'number' ? (
+                  details.metrics.impressions.toLocaleString()
+                ) : (
+                  <UnavailableValue state="not_measured" />
+                )}
               </p>
             </div>
             <div>
               <span className="text-2xs text-muted">Clicks</span>
               <p className="text-foreground text-sm font-semibold tabular-nums">
-                {typeof details.metrics.clicks === 'number'
-                  ? details.metrics.clicks.toLocaleString()
-                  : availabilityLabel('not_measured')}
+                {typeof details.metrics.clicks === 'number' ? (
+                  details.metrics.clicks.toLocaleString()
+                ) : (
+                  <UnavailableValue state="not_measured" />
+                )}
               </p>
             </div>
             <div>
               <span className="text-2xs text-muted">CTR</span>
               <p className="text-foreground text-sm font-semibold tabular-nums">
-                {typeof details.metrics.ctr === 'number'
-                  ? `${(details.metrics.ctr * 100).toFixed(1)}%`
-                  : availabilityLabel('not_measured')}
+                {typeof details.metrics.ctr === 'number' ? (
+                  `${(details.metrics.ctr * 100).toFixed(1)}%`
+                ) : (
+                  <UnavailableValue state="not_measured" />
+                )}
               </p>
             </div>
             <div>
               <span className="text-2xs text-muted">Avg Position</span>
               <p className="text-foreground text-sm font-semibold tabular-nums">
-                {typeof details.metrics.position === 'number'
-                  ? details.metrics.position.toFixed(1)
-                  : availabilityLabel('not_measured')}
+                {typeof details.metrics.position === 'number' ? (
+                  details.metrics.position.toFixed(1)
+                ) : (
+                  <UnavailableValue state="not_measured" />
+                )}
               </p>
             </div>
           </div>
@@ -160,11 +169,13 @@ function DemandEvidenceContent({
             <div className="border-border bg-panel grid gap-2 rounded-md border p-3 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted">Position Band:</span>
-                <span className="text-foreground font-medium">
-                  {details.positionBand !== null
-                    ? `Positions ${details.positionBand}.0 – ${details.positionBand}.9`
-                    : availabilityLabel('not_measured')}
-                </span>
+                {details.positionBand !== null ? (
+                  <span className="text-foreground font-medium">
+                    Positions {details.positionBand}.0 – {details.positionBand}.9
+                  </span>
+                ) : (
+                  <UnavailableValue state="not_measured" />
+                )}
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Cohort Median CTR:</span>
@@ -174,12 +185,13 @@ function DemandEvidenceContent({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Observed Actual CTR:</span>
-                <span className="text-danger font-semibold tabular-nums">
-                  {/* An unobserved CTR is explicit, never a fabricated 0.0%. */}
-                  {numericMetric(signal, 'ctr') !== null
-                    ? `${(numericMetric(signal, 'ctr')! * 100).toFixed(1)}%`
-                    : availabilityLabel('not_measured')}
-                </span>
+                {numericMetric(signal, 'ctr') !== null ? (
+                  <span className="text-danger font-semibold tabular-nums">
+                    {(numericMetric(signal, 'ctr')! * 100).toFixed(1)}%
+                  </span>
+                ) : (
+                  <UnavailableValue state="not_measured" />
+                )}
               </div>
             </div>
           </section>

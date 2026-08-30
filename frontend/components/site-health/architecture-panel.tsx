@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import {
   Table,
   TableBody,
@@ -117,6 +118,7 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
 
   return (
     <div className="grid min-w-0 gap-[var(--workspace-gap)]" data-testid="site-architecture">
+      <ArchitectureEvidence data={data} />
       <Card>
         <CardHeader className="gap-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -155,7 +157,6 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
         </CardContent>
       </Card>
       <HierarchyCard nodes={data.nodes} crawlId={data.crawl_id} />
-      <ArchitectureEvidence data={data} />
     </div>
   );
 }
@@ -188,7 +189,9 @@ function ArchitectureMetrics({
           className="border-border-subtle grid gap-0.5 border-b px-3 py-2 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
         >
           <dt className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">{label}</dt>
-          <dd className="text-foreground text-2xl font-semibold tabular-nums">{value}</dd>
+          <dd className="text-foreground text-2xl font-semibold tabular-nums">
+            {value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : value}
+          </dd>
         </div>
       ))}
     </dl>
@@ -238,7 +241,7 @@ function PageKindTable({
                 </TableCell>
                 <TableRecordMetricCell label="Pages">{pageKind.page_count}</TableRecordMetricCell>
                 <TableRecordMetricCell label="Median depth">
-                  {pageKind.median_depth ?? PLACEHOLDER}
+                  {pageKind.median_depth ?? <UnavailableValue state="not_measured" />}
                 </TableRecordMetricCell>
                 <TableRecordMetricCell label="Indexable">
                   {pageKind.indexable_count} / {pageKind.page_count}
@@ -247,7 +250,7 @@ function PageKindTable({
                   {pageKind.duplicate_metadata_count}
                 </TableRecordMetricCell>
                 <TableRecordMetricCell label="Orphaned">
-                  {pageKind.orphan_count ?? PLACEHOLDER}
+                  {pageKind.orphan_count ?? <UnavailableValue state="not_measured" />}
                 </TableRecordMetricCell>
               </TableRow>
               {open ? <PageKindPages pages={pages} crawlId={crawlId} /> : null}
@@ -455,9 +458,13 @@ function EvidenceMetric({
   return (
     <div className="grid content-start gap-1">
       <span className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">{label}</span>
-      <span className="mono text-foreground text-2xl font-semibold tracking-[-0.02em] tabular-nums">
-        {value}
-      </span>
+      {value === PLACEHOLDER ? (
+        <UnavailableValue state="not_measured" />
+      ) : (
+        <span className="mono text-foreground text-2xl font-semibold tracking-[-0.02em] tabular-nums">
+          {value}
+        </span>
+      )}
       {supporting ? <span className="text-muted text-xs">{supporting}</span> : null}
     </div>
   );

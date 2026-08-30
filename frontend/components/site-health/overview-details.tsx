@@ -19,6 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TrendChart } from '@/components/ui/trend-chart';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { SiteHealthOverview } from '@/lib/api/types';
 import { PLACEHOLDER, statusLabel } from '@/lib/site-health/status';
 
@@ -88,8 +89,15 @@ function DimensionLedger({
   return (
     <Card id="site-readiness-pillars">
       <CardHeader bordered>
-        <CardTitle>AEO Readiness by pillar</CardTitle>
-        <CardDescription>Observed quality and evidence coverage stay separate.</CardDescription>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>AEO Readiness by pillar</CardTitle>
+            <CardDescription>Observed quality and evidence coverage stay separate.</CardDescription>
+          </div>
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/site?tab=aeo-readiness">View details</Link>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <Table>
@@ -118,7 +126,9 @@ function DimensionLedger({
                     ) : null}
                   </div>
                 </TableCell>
-                <TableCell numeric>{dimension.score ?? PLACEHOLDER}</TableCell>
+                <TableCell numeric>
+                  {dimension.score ?? <UnavailableValue state="not_measured" />}
+                </TableCell>
                 <TableCell className="min-w-32">
                   {dimension.score === null ? (
                     <span className="text-muted text-xs">
@@ -130,7 +140,13 @@ function DimensionLedger({
                     <ScoreBar value={dimension.score} label={`${dimension.label} score`} />
                   )}
                 </TableCell>
-                <TableCell numeric>{percent(dimension.coverage)}</TableCell>
+                <TableCell numeric>
+                  {dimension.coverage === null ? (
+                    <UnavailableValue state="not_measured" />
+                  ) : (
+                    percent(dimension.coverage)
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

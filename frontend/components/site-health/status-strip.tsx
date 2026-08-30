@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { Label, Metric, displayHeadingLgClasses } from '@/components/ui/typography';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
 import {
-  PLACEHOLDER,
   canShowDiscoveredTotal,
   crawlBadgeValue,
   crawlFailureCopy,
@@ -166,11 +166,17 @@ function TerminalNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
 
 function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   const notice = dashboardRunNotice(crawl);
-  return notice ? (
-    <Alert tone={notice.tone}>
-      <RunNotice crawl={crawl} message={notice.message} badge={notice.badge} />
-    </Alert>
-  ) : null;
+  const analyzed = crawl.counters.analyzed || crawl.analyzed_count;
+  return (
+    <ProgressRow
+      crawl={crawl}
+      narration={notice?.message ?? 'Latest crawl results'}
+      counts={[
+        { label: 'Pages discovered', value: crawl.visible_url_count },
+        { label: 'Pages analyzed', value: analyzed, className: 'text-run-completed' },
+      ]}
+    />
+  );
 }
 
 function RunNotice({
@@ -234,9 +240,11 @@ function ProgressRow({
             {counts.map((count) => (
               <div key={count.label} className="flex items-baseline gap-1.5">
                 <Label>{count.label}</Label>
-                <Metric className={cn('text-sm', count.className)}>
-                  {count.value ?? PLACEHOLDER}
-                </Metric>
+                {count.value === null ? (
+                  <UnavailableValue state="not_measured" />
+                ) : (
+                  <Metric className={cn('text-sm', count.className)}>{count.value}</Metric>
+                )}
               </div>
             ))}
           </dl>
@@ -271,7 +279,11 @@ function DiscoveryStrip({
   }
 
   const counts: Array<{ label: string; value: number | null }> = [
-    { label: sampleMode ? 'Sample URLs' : 'URLs found', value: crawl.visible_url_count },
+    {
+      label: sampleMode ? 'Sample pages discovered' : 'Pages discovered',
+      value: crawl.visible_url_count,
+    },
+    { label: 'Pages analyzed', value: crawl.counters.analyzed },
   ];
   if (showTotal && crawl.total_url_count !== null) {
     counts.push({ label: 'Total discovered', value: crawl.total_url_count });
@@ -345,8 +357,9 @@ function analysisNarration(crawl: SiteCrawl, cancelPending: boolean): string {
 function analysisCounts(crawl: SiteCrawl, selected: number): ProgressCount[] {
   const { counters } = crawl;
   const fixed: ProgressCount[] = [
-    { label: 'Total pages', value: selected },
-    { label: 'Completed', value: counters.analyzed, className: 'text-run-completed' },
+    { label: 'Pages discovered', value: crawl.visible_url_count },
+    { label: 'Pages selected', value: selected },
+    { label: 'Pages analyzed', value: counters.analyzed, className: 'text-run-completed' },
     { label: 'In progress', value: counters.running, className: 'text-run-running' },
     { label: 'Queued', value: counters.queued, className: 'text-muted' },
   ];

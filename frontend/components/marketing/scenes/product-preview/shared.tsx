@@ -96,7 +96,7 @@ export function MetricStrip({
             <span className="text-foreground text-base font-semibold tabular-nums">
               {item.value}
             </span>
-            <span className="text-muted text-[10px]">{item.detail}</span>
+            <span className="text-muted text-xs">{item.detail}</span>
           </div>
         </div>
       ))}

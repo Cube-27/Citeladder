@@ -11,6 +11,7 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { NO_RANKINGS_MESSAGE, RankingRowsTable } from '@/components/visibility/ranking-rows';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
 import { PromptMovement } from '@/components/visibility/prompt-insights';
@@ -201,11 +202,18 @@ function StatCard({ stat }: Readonly<{ stat: TrendStat }>) {
     <Card>
       <CardContent className="grid gap-1 p-4">
         <span className={eyebrowClasses}>{stat.label}</span>
-        <span
-          className={cn('mono text-2xl font-semibold tabular-nums tracking-[-0.02em]', valueClass)}
-        >
-          {stat.value}
-        </span>
+        {stat.placeholder ? (
+          <UnavailableValue state="not_measured" />
+        ) : (
+          <span
+            className={cn(
+              'mono text-2xl font-semibold tabular-nums tracking-[-0.02em]',
+              valueClass,
+            )}
+          >
+            {stat.value}
+          </span>
+        )}
         <span className={cn('text-xs font-medium tabular-nums', deltaClass)}>{stat.delta}</span>
       </CardContent>
     </Card>

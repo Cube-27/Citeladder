@@ -14,7 +14,7 @@ export function UnavailableValue({
   }
 >) {
   return (
-    <span {...props} className={cn('value-placeholder font-sans text-xs font-medium', className)}>
+    <span {...props} className={cn('value-placeholder', className)}>
       {availabilityLabel(state)}
     </span>
   );

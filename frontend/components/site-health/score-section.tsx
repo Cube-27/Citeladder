@@ -83,11 +83,11 @@ function ScoreCard({
         <CardContent className="grid h-full content-center gap-1 p-[var(--card-padding)] sm:p-[var(--card-padding)]">
           <p className="text-muted text-2xs font-semibold tracking-[0.06em] uppercase">{label}</p>
           {state === 'limited_evidence' || state === 'excluded' ? (
-            <span className="value-placeholder font-sans text-sm font-medium">
+            <span className="value-placeholder">
               {state === 'limited_evidence' ? 'Limited evidence' : 'Excluded'}
             </span>
           ) : (
-            <UnavailableValue state="not_measured" className="text-sm" />
+            <UnavailableValue state="not_measured" />
           )}
           <span className="text-muted text-xs leading-relaxed">{sub}</span>
         </CardContent>

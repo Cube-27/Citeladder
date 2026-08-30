@@ -51,7 +51,7 @@ describe('PagesTable', () => {
     expect(screen.getByText('64')).toBeInTheDocument();
   });
 
-  it('shows a non-null limited-evidence score with subordinate coverage and confidence', () => {
+  it('shows a non-null limited-evidence score without an internal confidence subtitle', () => {
     render(
       <PagesTable
         crawlId={CRAWL}
@@ -70,7 +70,8 @@ describe('PagesTable', () => {
     const row = screen.getByText('Homepage').closest('tr');
     expect(row).not.toBeNull();
     expect(within(row!).getByText('46')).toBeInTheDocument();
-    expect(within(row!).getByText('100% measured · Moderate confidence')).toBeInTheDocument();
+    expect(within(row!).queryByText(/confidence/i)).not.toBeInTheDocument();
+    expect(within(row!).queryByText(/100% measured/i)).not.toBeInTheDocument();
   });
 
   it('renders the page-kind badge for a classified page', () => {

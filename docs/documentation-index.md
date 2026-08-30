@@ -24,14 +24,18 @@ listed here must prove a current operational purpose or move to the archive.
 | [`plans/commerce-ui-redesign.md`](plans/commerce-ui-redesign.md) | Proposed master-detail redesign of the Commerce workspace, replacing the four verb tabs and their repeated target selectors |
 | [`plans/commerce-suite-retirement-manifest.md`](plans/commerce-suite-retirement-manifest.md) | Exact retired Commerce authorities and version lineage for the atomic cutover |
 | [`plans/site-health-measurement-cutover.md`](plans/site-health-measurement-cutover.md) | Active three-PR Site Health stabilization, measurement-contract, Overview/AEO UI, and checkpoint-coverage cutover |
+| [`plans/site-health-measurement-reliability-pr4.md`](plans/site-health-measurement-reliability-pr4.md) | Approved post-PR3 Site Health reliability cutover for classifier evidence, checkpoint semantics, capability-family scoring, classification coverage, and calibrated presentation |
 | [`plans/crawl-onboarding-prompt-repair.md`](plans/crawl-onboarding-prompt-repair.md) | Implemented repair of five long-standing defects: the crawl that always finished one page short, discovery starving analysis on a cold crawl, commerce category prompts generated for the wrong industry, the onboarding completion timeout, and brand-dominated portfolios for brands named with ordinary words |
 | [`plans/aeo-opportunity-loop.md`](plans/aeo-opportunity-loop.md) | Implemented buyer-stage priority, owned/competitive/earned routing, Content handoff, implementation linkage, and comparable verification contract |
 
 ## Active implementation plans
 
 [`plans/site-health-measurement-cutover.md`](plans/site-health-measurement-cutover.md)
-is the active Site Health implementation sequence. It is subordinate to the
-canonical runtime and measurement logic in [`site-health.md`](site-health.md).
+owns the active PR1 → PR2 → PR3 implementation sequence. The approved
+post-cutover reliability follow-up is
+[`plans/site-health-measurement-reliability-pr4.md`](plans/site-health-measurement-reliability-pr4.md).
+Both are subordinate to the canonical runtime and measurement logic in
+[`site-health.md`](site-health.md); PR4 begins only after PR3 merges.
 
 ## Current-runtime references
 
@@ -71,7 +75,9 @@ without complete crawl coverage. Historical context is non-authoritative; use
 [`site-health.md`](site-health.md) for the current contract.
 Use
 [`plans/site-health-measurement-cutover.md`](plans/site-health-measurement-cutover.md)
-only for the approved PR1 → PR2 → PR3 delivery sequence.
+for the approved PR1 → PR2 → PR3 delivery sequence. Use
+[`plans/site-health-measurement-reliability-pr4.md`](plans/site-health-measurement-reliability-pr4.md)
+only for the dependent post-PR3 reliability cutover.
 
 Site analysis is governed by the generic `page_kind` taxonomy and its
 config-owned schema/property contracts. `other` means classification abstained;
