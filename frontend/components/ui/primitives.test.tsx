@@ -11,7 +11,15 @@ import { Field } from './field';
 import { Input } from './input';
 import { ScoreRing } from './score-ring';
 import { Skeleton } from './skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRecordMetricCell,
+  TableRow,
+} from './table';
 import { TrendChart } from './trend-chart';
 import { UnavailableValue } from './unavailable-value';
 import { scoreBand } from './score-band';
@@ -238,6 +246,22 @@ describe('Table (dense)', () => {
     const cell = screen.getByText('How good is X?');
     expect(cell.className).not.toContain('py-0');
     expect(cell.className).not.toContain('border-l');
+  });
+
+  it('labels numeric values when a table becomes mobile records', () => {
+    render(
+      <table>
+        <tbody>
+          <tr>
+            <TableRecordMetricCell label="Coverage">82%</TableRecordMetricCell>
+          </tr>
+        </tbody>
+      </table>,
+    );
+
+    const cell = screen.getByRole('cell', { name: '82%' });
+    expect(cell).toHaveAttribute('data-label', 'Coverage');
+    expect(cell).toHaveClass('grid', 'md:table-cell', 'tabular-nums');
   });
 });
 

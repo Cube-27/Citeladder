@@ -84,7 +84,9 @@ whose columns are page kind, pages, median depth, indexable, duplicate metadata,
 and orphaned. Only the URLs assigned to a page kind are disclosed on demand.
 A read-only Observed hierarchy follows the ledger and nests URLs only by the
 API's persisted `parent_site_url_id`, naming each returned `parent_source`;
-unresolved nodes remain roots and the browser never invents parentage. Persisted
+unresolved nodes remain roots and the browser never invents parentage. Expanded
+URL sets and the observed tree use bounded scroll regions so a
+large crawl cannot turn either card into an unbounded page. Persisted
 Internal linking and Structure depth summaries stay visible below. The tab
 renders no site-profile/archetype block. The browser renders the persisted
 coverage state and limitation once and leaves orphan absence unmeasured whenever
@@ -119,7 +121,9 @@ Coverage, seven pillars, top issues, Web Fundamentals, trend, and changes.
 **Pages** retains the crawl lifecycle and final per-URL metric surface.
 **AEO Readiness** renders the server's seven ordered dimensions, explicit
 applicability/state, uncertainty counts, catalog guidance, and bounded page
-evidence. Content-addressable missing or partial checkpoints link to Content
+evidence. The dedicated tab starts at the dimension ledger; aggregate readiness,
+coverage, and page counts remain in Overview and are not repeated in a summary
+card. Content-addressable missing or partial checkpoints link to Content
 with stable project/crawl/URL/analysis/dimension/checkpoint references; Content
 re-authorizes the typed handoff before use. The client never remaps rules,
 recomputes coverage, guesses a missing bucket, or displays a Combined score.

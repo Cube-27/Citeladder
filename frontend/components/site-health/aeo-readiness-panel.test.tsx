@@ -148,17 +148,14 @@ describe('AEO Readiness', () => {
     stubReadiness();
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
-    await screen.findByRole('heading', { name: 'AEO Readiness' });
+    await screen.findByRole('heading', { name: 'Readiness dimensions' });
     for (const [, label] of DIMENSIONS) expect(screen.getByText(label)).toBeInTheDocument();
     expect(screen.getByText(/what answerability means in one sentence/i)).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Determinate' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Expected' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'N/A' })).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'Seven readiness dimensions with determinate coverage over expected checks.',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.queryByText('Analyzed pages')).not.toBeInTheDocument();
+    expect(screen.queryByText('Affected pages')).not.toBeInTheDocument();
     expect(screen.queryByText(/Taxonomy aeo-readiness-v1/)).toBeNull();
     expect(screen.queryByText(/Analyzer page-v1/)).toBeNull();
   });

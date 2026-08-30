@@ -391,9 +391,11 @@ Readiness**, and **Changes**, with Overview as the default after a usable crawl.
   Technical Integrity, AEO Readiness, AEO Measurement Coverage, Issues, Inbound
   links, and Main-content indexable. Remove Combined from table, detail, sorts,
   exports, and page-kind rollups.
-- **AEO Readiness:** lead with AEO score, coverage/state, affected-page count,
-  and limitations. Follow with the seven-dimension ledger and readiness-gap
-  list. Every row distinguishes dimension applicability from measurement state,
+- **AEO Readiness:** open directly on the seven-dimension ledger and readiness-gap
+  list; Overview owns the aggregate AEO score, coverage/state, and page counts
+  without a duplicate summary card. Durable user-facing limitations may precede
+  the ledger, but delivery-phase or PR-numbered copy never appears. Every row
+  distinguishes dimension applicability from measurement state,
   so `Not measured` never renders as N/A. Selecting a dimension/gap opens
   bounded persisted page evidence with observed evidence, expected capability,
   and remediation.

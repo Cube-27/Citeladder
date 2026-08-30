@@ -16,6 +16,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
+  TableRecordMetricCell,
   TableRow,
 } from '@/components/ui/table';
 import { siteHealthQueries } from '@/lib/api/site-health';
@@ -116,10 +117,10 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
   return (
     <div className="grid min-w-0 gap-[var(--workspace-gap)]" data-testid="site-architecture">
       <Card>
-        <CardHeader className="gap-3">
+        <CardHeader className="gap-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="grid gap-1">
-              <CardTitle>Page kinds</CardTitle>
+              <CardTitle className="text-lg">Page kinds</CardTitle>
               <CardDescription>
                 URLs grouped by their persisted structural purpose for this crawl.
               </CardDescription>
@@ -132,7 +133,7 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-4 pt-2">
+        <CardContent className="grid gap-3 pt-1">
           <ArchitectureMetrics
             pageKinds={pageKinds.length}
             pages={data.page_count}
@@ -183,10 +184,10 @@ function ArchitectureMetrics({
       {items.map(([label, value]) => (
         <div
           key={label}
-          className="border-border-subtle grid gap-1 border-b px-3 py-3 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
+          className="border-border-subtle grid gap-0.5 border-b px-3 py-2 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
         >
           <dt className="text-muted text-xs">{label}</dt>
-          <dd className="text-foreground text-lg font-semibold tabular-nums">{value}</dd>
+          <dd className="text-foreground text-base font-semibold tabular-nums">{value}</dd>
         </div>
       ))}
     </dl>
@@ -204,8 +205,8 @@ function PageKindTable({
 }>) {
   const [openKind, setOpenKind] = useState<string | null>(null);
   return (
-    <Table>
-      <TableHeader>
+    <Table className="block md:table" wrapperClassName="overflow-hidden md:overflow-auto">
+      <TableHeader className="hidden md:table-header-group">
         <TableRow>
           <TableHead>Page kind</TableHead>
           <TableHead numeric>Pages</TableHead>
@@ -215,32 +216,38 @@ function PageKindTable({
           <TableHead numeric>Orphaned</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <TableBody className="block md:table-row-group">
         {pageKinds.map((pageKind) => {
           const open = openKind === pageKind.page_kind;
           const pages = grouped.get(pageKind.page_kind) ?? [];
           const Chevron = open ? ChevronDown : ChevronRight;
           return (
             <Fragment key={pageKind.page_kind}>
-              <TableRow>
-                <TableCell>
+              <TableRow className="grid h-auto grid-cols-1 py-2 md:table-row md:h-[var(--table-row-height)] md:py-0">
+                <TableCell className="block border-b-0 px-4 py-1 md:table-cell md:border-b md:px-[var(--table-cell-padding-x)] md:py-[var(--table-cell-padding-y)]">
                   <button
                     type="button"
                     aria-expanded={open}
                     onClick={() => setOpenKind(open ? null : pageKind.page_kind)}
-                    className="inline-flex min-h-11 items-center gap-2 text-left"
+                    className="inline-flex min-h-11 items-center gap-2 text-left md:min-h-9"
                   >
                     <Chevron className="text-muted size-4 shrink-0" aria-hidden />
                     <PageKindBadge pageKind={pageKind.page_kind} />
                   </button>
                 </TableCell>
-                <TableCell numeric>{pageKind.page_count}</TableCell>
-                <TableCell numeric>{pageKind.median_depth ?? PLACEHOLDER}</TableCell>
-                <TableCell numeric>
+                <TableRecordMetricCell label="Pages">{pageKind.page_count}</TableRecordMetricCell>
+                <TableRecordMetricCell label="Median depth">
+                  {pageKind.median_depth ?? PLACEHOLDER}
+                </TableRecordMetricCell>
+                <TableRecordMetricCell label="Indexable">
                   {pageKind.indexable_count} / {pageKind.page_count}
-                </TableCell>
-                <TableCell numeric>{pageKind.duplicate_metadata_count}</TableCell>
-                <TableCell numeric>{pageKind.orphan_count ?? PLACEHOLDER}</TableCell>
+                </TableRecordMetricCell>
+                <TableRecordMetricCell label="Duplicate metadata">
+                  {pageKind.duplicate_metadata_count}
+                </TableRecordMetricCell>
+                <TableRecordMetricCell label="Orphaned">
+                  {pageKind.orphan_count ?? PLACEHOLDER}
+                </TableRecordMetricCell>
               </TableRow>
               {open ? <PageKindPages pages={pages} crawlId={crawlId} /> : null}
             </Fragment>
@@ -256,12 +263,12 @@ function PageKindPages({
   crawlId,
 }: Readonly<{ pages: ArchitectureNode[]; crawlId: string | null }>) {
   return (
-    <TableRow className="bg-background-alt hover:bg-background-alt">
-      <TableCell colSpan={6} className="py-3">
+    <TableRow className="bg-background-alt hover:bg-background-alt block h-auto md:table-row md:h-[var(--table-row-height)]">
+      <TableCell colSpan={6} className="block py-3 md:table-cell">
         {pages.length === 0 ? (
           <p className="text-secondary text-sm">No projected URLs are available for this kind.</p>
         ) : (
-          <ul className="grid gap-2 pl-6">
+          <ul className="content-scroll grid max-h-64 gap-1.5 overflow-y-auto overscroll-contain pr-2 pl-6">
             {pages.map((page) => (
               <li key={page.site_url_id} className="min-w-0">
                 {crawlId ? (
@@ -312,7 +319,7 @@ function HierarchyCard({
   const roots = grouped.get(null) ?? [];
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="gap-1">
         <CardTitle>Observed hierarchy</CardTitle>
         <CardDescription>
           Persisted parent relationships from breadcrumbs, explicit structure, or a safe URL parent.
@@ -323,7 +330,12 @@ function HierarchyCard({
         {roots.length === 0 ? (
           <p className="text-secondary text-sm">No hierarchy nodes were measured.</p>
         ) : (
-          <HierarchyList nodes={roots} grouped={grouped} crawlId={crawlId} />
+          <section
+            className="content-scroll max-h-96 overflow-y-auto overscroll-contain pr-2"
+            aria-label="Observed hierarchy pages"
+          >
+            <HierarchyList nodes={roots} grouped={grouped} crawlId={crawlId} />
+          </section>
         )}
       </CardContent>
     </Card>

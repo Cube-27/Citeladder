@@ -176,6 +176,13 @@ async def test_readiness_reconciles_persisted_measurement_and_page_evidence(
     assert body["analysis_count"] == 1
     assert body["source_analysis_ids"] == [str(analysis.id)]
     assert body["affected_page_count"] == 1
+    assert body["limitations"][0] == (
+        "Readiness evidence is limited; review dimension coverage below."
+    )
+    assert all(
+        "PR2" not in limitation and "PR3" not in limitation
+        for limitation in body["limitations"]
+    )
     assert len(body["dimensions"]) == 7
     answerability = next(
         row for row in body["dimensions"] if row["key"] == "answerability"

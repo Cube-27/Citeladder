@@ -325,8 +325,7 @@ async def get_aeo_readiness(
     limitations = []
     if snapshot.aeo_measurement_state != "measured":
         limitations.append(
-            "PR2 measures a defensible initial checkpoint set; broader "
-            "page-purpose coverage ships in PR3."
+            "Readiness evidence is limited; review dimension coverage below."
         )
     if snapshot.coverage_state != "complete":
         limitations.append(

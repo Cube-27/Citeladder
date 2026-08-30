@@ -15,10 +15,11 @@ import {
   TableCell,
   TableHead,
   TableHeader,
+  TableRecordMetricCell,
   TableRow,
 } from '@/components/ui/table';
 import { siteHealthQueries } from '@/lib/api/site-health';
-import type { AeoReadiness, ReadinessCheck, ReadinessDimension } from '@/lib/api/types';
+import type { ReadinessCheck, ReadinessDimension } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
 
 function pageLabel(url: string) {
@@ -93,7 +94,6 @@ export function AeoReadinessPanel({
   const selected = data.dimensions.find((dimension) => dimension.key === detailKey) ?? null;
   return (
     <div className="grid min-w-0 gap-4" data-testid="aeo-readiness">
-      <ReadinessHeader data={data} />
       {data.limitations.length > 0 ? <Alert tone="info">{data.limitations.join(' ')}</Alert> : null}
       <ReadinessLedger dimensions={data.dimensions} onOpen={setDetailKey} />
       <DimensionDrawer
@@ -106,72 +106,21 @@ export function AeoReadinessPanel({
   );
 }
 
-function ReadinessHeader({ data }: Readonly<{ data: AeoReadiness }>) {
-  const state = measurementState(data.state);
-  const items = [
-    ['Analyzed pages', String(data.analysis_count)],
-    ['Affected pages', String(data.affected_page_count)],
-    [
-      'AEO Readiness',
-      data.state === 'measured' && data.score !== null ? `${Math.round(data.score)}` : state.label,
-    ],
-    ['Coverage', formatCoverage(data.coverage)],
-  ];
-  return (
-    <Card>
-      <CardHeader className="gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <CardTitle>AEO Readiness</CardTitle>
-          <Badge variant="status" value={state.tone}>
-            {state.label}
-          </Badge>
-        </div>
-        <CardDescription>
-          Seven readiness dimensions with determinate coverage over expected checks.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-2">
-        <dl className="border-border-subtle grid grid-cols-2 border-y md:grid-cols-4">
-          {items.map(([label, value]) => (
-            <div
-              key={label}
-              className="border-border-subtle grid gap-1 border-b px-3 py-3 last:border-b-0 md:border-r md:border-b-0 md:last:border-r-0"
-            >
-              <dt className="text-muted text-xs">{label}</dt>
-              <dd className="text-foreground text-lg font-semibold tabular-nums">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </CardContent>
-    </Card>
-  );
-}
-
-function measurementState(state: AeoReadiness['state']): {
-  label: string;
-  tone: 'success' | 'warning' | 'info';
-} {
-  if (state === 'measured') return { label: 'Measured', tone: 'success' };
-  if (state === 'limited_evidence') return { label: 'Limited evidence', tone: 'warning' };
-  if (state === 'excluded') return { label: 'Excluded', tone: 'info' };
-  return { label: 'Not measured', tone: 'info' };
-}
-
 function ReadinessLedger({
   dimensions,
   onOpen,
 }: Readonly<{ dimensions: ReadinessDimension[]; onOpen: (key: string) => void }>) {
   return (
     <Card>
-      <CardHeader bordered>
-        <CardTitle>Readiness dimensions</CardTitle>
+      <CardHeader bordered className="gap-1">
+        <CardTitle className="text-lg">Readiness dimensions</CardTitle>
         <CardDescription>
           One count is one persisted rule evaluation on one analyzed page.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <Table>
-          <TableHeader>
+        <Table className="block md:table" wrapperClassName="overflow-hidden md:overflow-auto">
+          <TableHeader className="hidden md:table-header-group">
             <TableRow>
               <TableHead>Dimension</TableHead>
               <TableHead numeric>Determinate</TableHead>
@@ -183,34 +132,50 @@ function ReadinessLedger({
               <TableHead className="w-28" />
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="block md:table-row-group">
             {dimensions.map((dimension) => {
               const state = dimensionState(dimension);
               return (
-                <TableRow key={dimension.key}>
-                  <TableCell className="min-w-64">
+                <TableRow
+                  key={dimension.key}
+                  className="grid h-auto grid-cols-1 py-2 md:table-row md:h-[var(--table-row-height)] md:py-0"
+                >
+                  <TableCell className="block min-w-0 border-b-0 px-4 py-2 md:table-cell md:min-w-64 md:border-b md:px-[var(--table-cell-padding-x)] md:py-[var(--table-cell-padding-y)]">
                     <span className="font-medium">{dimension.label}</span>
                     <span className="text-muted mt-0.5 block text-xs">{dimension.description}</span>
                   </TableCell>
-                  <TableCell numeric>{dimension.determinate_points}</TableCell>
-                  <TableCell numeric>{dimension.expected_points}</TableCell>
-                  <TableCell numeric>{dimension.not_applicable_count}</TableCell>
-                  <TableCell
-                    numeric
+                  <TableRecordMetricCell label="Determinate">
+                    {dimension.determinate_points}
+                  </TableRecordMetricCell>
+                  <TableRecordMetricCell label="Expected">
+                    {dimension.expected_points}
+                  </TableRecordMetricCell>
+                  <TableRecordMetricCell label="Not applicable">
+                    {dimension.not_applicable_count}
+                  </TableRecordMetricCell>
+                  <TableRecordMetricCell
+                    label="Errors"
                     className={
                       dimension.error_count > 0 ? 'text-warning-text font-medium' : undefined
                     }
                   >
                     {dimension.error_count}
-                  </TableCell>
-                  <TableCell numeric>{formatCoverage(dimension.coverage)}</TableCell>
-                  <TableCell>
+                  </TableRecordMetricCell>
+                  <TableRecordMetricCell label="Coverage">
+                    {formatCoverage(dimension.coverage)}
+                  </TableRecordMetricCell>
+                  <TableRecordMetricCell label="State" className="items-center">
                     <Badge variant="status" value={stateBadgeValue(state)}>
                       {state}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="secondary" size="sm" onClick={() => onOpen(dimension.key)}>
+                  </TableRecordMetricCell>
+                  <TableCell className="block px-4 pt-2 pb-3 md:table-cell md:px-[var(--table-cell-padding-x)] md:py-[var(--table-cell-padding-y)]">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full md:w-auto"
+                      onClick={() => onOpen(dimension.key)}
+                    >
                       View details <span className="sr-only">for {dimension.label}</span>
                     </Button>
                   </TableCell>

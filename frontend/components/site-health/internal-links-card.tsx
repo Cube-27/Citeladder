@@ -35,11 +35,11 @@ export function InternalLinksCard({
     },
   ];
   return (
-    <Card>
+    <Card className="min-w-0 overflow-hidden">
       <CardContent className="grid gap-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
           <h2 className="text-foreground text-heading-sm">Internal Links</h2>
-          <span className="text-2xs text-muted">
+          <span className="text-2xs text-muted shrink-0">
             Counted across {links.source_page_count} crawled page
             {links.source_page_count === 1 ? '' : 's'}
           </span>
@@ -52,7 +52,7 @@ export function InternalLinksCard({
             </div>
           ))}
         </dl>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
           <NeighbourList
             heading="Top linking pages"
             neighbours={links.top_inbound}
@@ -83,16 +83,16 @@ function NeighbourList({
   emptyMessage: string;
 }>) {
   return (
-    <section className="grid content-start gap-1.5">
+    <section className="grid min-w-0 content-start gap-1.5 overflow-hidden">
       <Label>{heading}</Label>
       {neighbours.length === 0 ? (
         <p className="text-secondary text-sm">{emptyMessage}</p>
       ) : (
-        <ul className="divide-border-subtle divide-y">
+        <ul className="divide-border-subtle min-w-0 divide-y">
           {neighbours.map((neighbour) => (
             <li
               key={`${neighbour.site_url_id ?? neighbour.url}`}
-              className="flex items-baseline justify-between gap-3 py-1.5 first:pt-0"
+              className="flex min-w-0 items-baseline justify-between gap-3 py-1.5 first:pt-0"
             >
               {/* An off-crawl target is counted but was never a node, so it has
                   no detail route to link to. */}

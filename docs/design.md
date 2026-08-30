@@ -230,7 +230,9 @@ series retain visual gaps for unavailable points and explain those gaps accessib
   **affected URLs** so visually adjacent quantities never masquerade as one
   number. Advisory rows use an Advisory label, not a severity chip.
 - AEO Readiness is a dimension ledger, never a gauge or mystery number. Its
-  table names determinate, expected, not applicable, errors, coverage, and state
+  dedicated tab opens directly on that ledger; aggregate score, coverage, and
+  page-count summaries stay in Overview instead of repeating in a second card.
+  The table names determinate, expected, not applicable, errors, coverage, and state
   independently for all seven dimensions; not-applicable rows remain visible
   and are not styled as failures. Because one count is one rule evaluated on one
   page, the surface says so rather than letting the totals read as page counts.
@@ -240,8 +242,9 @@ series retain visual gaps for unavailable points and explain those gaps accessib
 - Site Health Architecture leads with five site-level facts and an always-visible
   page-kind ledger. Page kind, pages, median depth, indexable count, duplicate
   metadata, and orphaned count never require disclosure; only a kind's assigned
-  URL list expands. A read-only observed hierarchy then renders the persisted
-  parent relationships and their evidence sources without client-side inference.
+  URL list expands in a bounded region. A read-only observed hierarchy then
+  renders the persisted parent relationships and their evidence sources without
+  client-side inference in its own bounded scroll region.
   Persisted Internal linking and Structure depth summaries remain visible below
   without detailed-report actions before PR3.
 - Website Changes is an evidence ledger with four named classes and expandable
