@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Final
 
 BYLINE_PATTERN: Final = r"\b[Bb]y\s+[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){1,2}\b"
+VISIBLE_AUTHOR_NAME_PATTERN: Final = r"^[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){0,3}$"
 
 # ISO, month-first, and day-first publication-shaped dates.
 DATE_PATTERN: Final = (
@@ -16,6 +17,9 @@ DATE_PATTERN: Final = (
 )
 
 VISIBLE_AUTHOR_NODE_TOKENS: Final[frozenset[str]] = frozenset({"author", "byline"})
+VISIBLE_AUTHOR_HEADING_EXCLUSIONS: Final[frozenset[str]] = frozenset(
+    {"about us", "contact us", "our team", "meet the team"}
+)
 VISIBLE_DATE_NODE_TOKENS: Final[frozenset[str]] = frozenset(
     {"byline", "date", "datemodified", "datepublished", "published", "updated"}
 )
