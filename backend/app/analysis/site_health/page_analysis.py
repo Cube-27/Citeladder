@@ -7,7 +7,11 @@ from typing import Any
 
 from app.analysis.site_health.page_kinds import PageKindAssessment, classify
 from app.analysis.site_health.page_traits import derive_traits
-from app.analysis.site_health.rules import RuleEvaluation, evaluate_rule
+from app.analysis.site_health.rules import (
+    RuleEvaluation,
+    evaluate_rules,
+    measurement_context,
+)
 from app.analysis.site_health.scoring import AnalysisScores, score_analysis
 from app.core.config.site_health_contracts import APPLICABILITY_CRAWL_FINALIZE
 from app.core.config.site_health_rules import SITE_HEALTH_RULES
@@ -48,14 +52,19 @@ def analyze_page(
     if site_facts is not None:
         evaluation_facts["site"] = site_facts
     evaluations = tuple(
-        evaluate_rule(rule, evaluation_facts)
-        for rule in SITE_HEALTH_RULES
-        if rule.applicability_key != APPLICABILITY_CRAWL_FINALIZE
+        evaluate_rules(
+            evaluation_facts,
+            (
+                rule
+                for rule in SITE_HEALTH_RULES
+                if rule.applicability_key != APPLICABILITY_CRAWL_FINALIZE
+            ),
+        )
     )
     scores = score_analysis(
         list(evaluations),
         page_kind=assessment.page_kind,
         page_traits=traits,
-        crawl_context={"is_site_root": site_facts is not None},
+        crawl_context=measurement_context(evaluation_facts),
     )
     return PageAnalysisResult(assessment, traits, evaluations, scores)
