@@ -29,6 +29,7 @@ const CSS_BLOCK_CONTRACTS = new Map([
   ['.website-section-heading', []],
   ['.website-feature-heading', []],
   ['.website-small-heading', []],
+  ['.auth-form-title', ['font-size: 1.375rem', 'letter-spacing: -0.01em']],
   ['.website-lead', []],
   ['.website-body', []],
   ['.website-nav', []],
@@ -58,7 +59,7 @@ const JSX_ROLE_CONTRACTS = new Map([
     'components/marketing/primitives/section.tsx',
     ['website-section-heading', 'website-feature-heading'],
   ],
-  ['components/auth/auth-form.tsx', ['website-small-heading', 'website-body']],
+  ['components/auth/auth-form.tsx', ['auth-form-title', 'website-body']],
 ]);
 
 function staticBindings(sourceFile) {
@@ -249,6 +250,24 @@ function cosmeticButtonToken(token) {
 }
 
 /** Product controls must route behavior and appearance through shared owners. */
+const RAW_PRODUCT_CONTROL_MESSAGES = new Map([
+  ['select', 'native select must use components/ui/select'],
+  ['input', 'raw product input must use a components/ui owner'],
+  ['textarea', 'raw product textarea must use components/ui/textarea'],
+  ['button', 'raw product button must use Button or Pressable'],
+]);
+
+function hasCosmeticButtonOverride(node, sourceFile, bindings) {
+  const classAttribute = node.attributes.properties.find(
+    (property) => ts.isJsxAttribute(property) && property.name.getText(sourceFile) === 'className',
+  );
+  if (!classAttribute || !ts.isJsxAttribute(classAttribute)) return false;
+  return classFragments(classAttribute.initializer, bindings)
+    .join(' ')
+    .split(/\s+/)
+    .some(cosmeticButtonToken);
+}
+
 export function productControlViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || !label.endsWith('.tsx') || label.startsWith('components/ui/')) return [];
   const sourceFile = ts.createSourceFile(
@@ -264,27 +283,12 @@ export function productControlViolations(source, label, ownsProductUi) {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = node.tagName.getText(sourceFile);
       const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-      if (tag === 'select') {
-        violations.push(`${label}:${line}: native select must use components/ui/select`);
-      }
-      if (tag === 'button') {
-        violations.push(`${label}:${line}: raw product button must use Button or Pressable`);
-      }
-      if (tag === 'Button') {
-        const classAttribute = node.attributes.properties.find(
-          (property) =>
-            ts.isJsxAttribute(property) && property.name.getText(sourceFile) === 'className',
+      const rawControlMessage = RAW_PRODUCT_CONTROL_MESSAGES.get(tag);
+      if (rawControlMessage) violations.push(`${label}:${line}: ${rawControlMessage}`);
+      if (tag === 'Button' && hasCosmeticButtonOverride(node, sourceFile, bindings)) {
+        violations.push(
+          `${label}:${line}: Button cosmetics belong in its semantic variant, not className`,
         );
-        if (classAttribute && ts.isJsxAttribute(classAttribute)) {
-          const tokens = classFragments(classAttribute.initializer, bindings)
-            .join(' ')
-            .split(/\s+/);
-          if (tokens.some(cosmeticButtonToken)) {
-            violations.push(
-              `${label}:${line}: Button cosmetics belong in its semantic variant, not className`,
-            );
-          }
-        }
       }
     }
     ts.forEachChild(node, visit);

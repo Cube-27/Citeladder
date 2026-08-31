@@ -58,12 +58,17 @@ from app.models.site_health.queue import SiteCrawlTask
 
 
 def test_web_fundamentals_na_only_area_is_not_measured() -> None:
-    state, coverage = _area_state(
-        [SimpleNamespace(outcome="not_applicable")], unavailable=0
-    )
+    state, coverage = _area_state([SimpleNamespace(outcome="not_applicable")])
 
     assert state == "not_measured"
     assert coverage is None
+
+
+def test_web_fundamentals_partial_outcome_is_determinate() -> None:
+    state, coverage = _area_state([SimpleNamespace(outcome="partial")])
+
+    assert state == "measured"
+    assert coverage == 1.0
 
 
 def test_fingerprint_is_stable_and_ignores_empty_values() -> None:
