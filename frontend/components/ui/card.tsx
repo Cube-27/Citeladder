@@ -2,20 +2,12 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
-import { cardClasses } from './card-variants';
+import { cardClasses, type CardTone } from './card-variants';
 
 /**
- * Card (§8) — bg-panel, --radius-card, --card-padding, and the shared Image-2
- * reference `shadow-card` elevation rung owned by globals.css.
- * Composed from header / title / description / content slots.
- *
- * Elevation model (docs/design.md): a card is a --bg-panel fill lifted
- * off the canvas through the shared card shadow. Interactive
- * cards lift on hover — `hover:shadow-card-hover` (the overlay rung) plus
- * a 2px rise — which is why the base transition includes box-shadow.
- *
- * Dialog, Drawer, and the command palette use the deeper modal rung; menus
- * and tooltips use `shadow-elevated`.
+ * Card is reserved for a meaningful semantic object. It owns a white fill and
+ * 16px object radius, with no default border or elevation. Structural layout
+ * uses metric groups, ledgers, editorial sections, and workspace panes.
  *
  * Optional eyebrow header hook: render <CardEyebrow> above <CardTitle> for the
  * micro-label — e.g.
@@ -24,17 +16,18 @@ import { cardClasses } from './card-variants';
 export function Card({
   children,
   className,
+  tone = 'default',
   ...props
-}: Readonly<ComponentPropsWithoutRef<'section'>>) {
+}: Readonly<ComponentPropsWithoutRef<'section'> & { tone?: CardTone }>) {
   return (
-    <section {...props} className={cn(cardClasses(), className)}>
+    <section {...props} className={cn(cardClasses(tone), className)}>
       {children}
     </section>
   );
 }
 
 /**
- * CardHeader — no bottom rule by default (the flat language separates the
+ * CardHeader — no bottom rule by default (the editorial language separates the
  * header from content with spacing alone). Pass `bordered` for the few
  * surfaces that genuinely need the hairline, e.g. a header sitting directly
  * atop a full-bleed table.
@@ -81,13 +74,7 @@ export function CardTitle({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'h3'>>) {
   return (
-    <h3
-      {...props}
-      className={cn(
-        'font-display text-foreground text-base font-semibold tracking-[-0.015em]',
-        className,
-      )}
-    >
+    <h3 {...props} className={cn('font-display text-foreground text-lg font-medium', className)}>
       {children}
     </h3>
   );
