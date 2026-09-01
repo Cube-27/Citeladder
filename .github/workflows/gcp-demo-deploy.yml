@@ -48,6 +48,8 @@ jobs:
       - name: Install repository toolchain
         shell: bash
         run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ripgrep
           python -m pip install uv==0.11.28
           uv sync --project backend --frozen --extra dev
           npm install --global --ignore-scripts pnpm@11.22.0

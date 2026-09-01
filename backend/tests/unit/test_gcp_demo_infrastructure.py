@@ -126,6 +126,7 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
 
 def test_deploy_validates_the_latest_commit_as_a_full_diff() -> None:
     workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
+    assert "sudo apt-get install --yes --no-install-recommends ripgrep" in workflow
     gate = workflow.split("- name: Run repository gates for the deployed commit", 1)[
         1
     ].split("- uses:", 1)[0]
