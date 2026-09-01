@@ -56,6 +56,7 @@ jobs:
           uv sync --project backend --frozen --extra dev
           npm install --global --ignore-scripts pnpm@11.22.0
           pnpm --dir frontend install --frozen-lockfile --ignore-scripts
+          pnpm --dir frontend exec playwright install --with-deps chromium
       - name: Run repository gates for the deployed commit
         shell: pwsh
         env:
