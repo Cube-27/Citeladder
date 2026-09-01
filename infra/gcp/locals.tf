@@ -15,5 +15,7 @@ locals {
     "citeladder-cloudflare-origin-key",
     "citeladder-mistral-api-key",
     "citeladder-default-agent-api-key",
+    "citeladder-keenable-api-key",
+    "citeladder-tavily-api-key",
   ])
 }

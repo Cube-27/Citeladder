@@ -33,10 +33,42 @@ function Test-GcloudResource {
     }
 }
 
+function Set-ProjectLabels {
+    param([Parameter(Mandatory)] [string] $Id)
+
+    $project = gcloud projects describe $Id --format=json | ConvertFrom-Json
+    $labels = @{}
+    if ($null -ne $project.labels) {
+        foreach ($property in $project.labels.psobject.Properties) {
+            $labels[$property.Name] = $property.Value
+        }
+    }
+    $labels['project'] = 'citeladder'
+    $labels['environment'] = 'demo'
+    $labels['managed_by'] = 'terraform'
+
+    $headers = @{ Authorization = "Bearer $(gcloud auth print-access-token)" }
+    $uri = "https://cloudresourcemanager.googleapis.com/v3/projects/$($project.projectNumber)?updateMask=labels"
+    $operation = Invoke-RestMethod -Method Patch -Uri $uri -Headers $headers `
+        -ContentType 'application/json' -Body (@{ labels = $labels } | ConvertTo-Json -Compress)
+    for ($attempt = 0; -not $operation.done -and $attempt -lt 30; $attempt++) {
+        Start-Sleep -Seconds 1
+        $operation = Invoke-RestMethod -Method Get `
+            -Uri "https://cloudresourcemanager.googleapis.com/v3/$($operation.name)" `
+            -Headers $headers
+    }
+    if (-not $operation.done) {
+        throw "Timed out while applying labels to project $Id."
+    }
+    if ($null -ne $operation.error) {
+        throw "Could not apply labels to project ${Id}: $($operation.error.message)"
+    }
+}
+
 if (-not (Test-GcloudResource { gcloud projects describe $ProjectId })) {
     gcloud projects create $ProjectId --name='CiteLadder Demo' --labels='project=citeladder,environment=demo,managed_by=terraform'
 }
-gcloud projects update $ProjectId --update-labels='project=citeladder,environment=demo,managed_by=terraform'
+Set-ProjectLabels -Id $ProjectId
 gcloud billing projects link $ProjectId --billing-account=$BillingAccount
 gcloud config set project $ProjectId
 
@@ -87,7 +119,7 @@ foreach ($role in $projectRoles) {
         --role=$role --condition=None --quiet *> $null
 }
 gcloud billing accounts add-iam-policy-binding $BillingAccount --member="serviceAccount:$serviceAccount" `
-    --role='roles/billing.costsManager' --condition=None --quiet *> $null
+    --role='roles/billing.costsManager' --quiet *> $null
 
 if (-not (Test-GcloudResource { gcloud iam workload-identity-pools describe $pool --location=global --project=$ProjectId })) {
     gcloud iam workload-identity-pools create $pool --location=global --project=$ProjectId `

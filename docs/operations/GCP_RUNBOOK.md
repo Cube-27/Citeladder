@@ -60,16 +60,30 @@ Add these environment variables:
 | `DOMAIN_NAME` | Lower-case public DNS hostname |
 | `DEMO_EXPIRES_AT` | Fixed RFC3339 expiry |
 | `DEMO_LOGIN_EMAIL` | Optional; defaults to `dev@citeladder.com` |
+| `DEFAULT_AGENT_BASE_URL` | HTTPS base URL for the demo's OpenAI-compatible agent provider |
+| `DEFAULT_AGENT_MODEL` | Exact provider model identifier used by the Growth Agent |
 
 Add these environment secrets:
 
 - `DEMO_LOGIN_PASSWORD`: a unique password of at least 32 characters;
 - `CLOUDFLARE_ORIGIN_CERT`: the complete PEM Origin CA certificate;
 - `CLOUDFLARE_ORIGIN_KEY`: the complete PEM private key;
-- `MISTRAL_API_KEY` and `DEFAULT_AGENT_API_KEY` only if the demo uses them.
+- `DEFAULT_AGENT_API_KEY`: required with `DEFAULT_AGENT_BASE_URL` and
+  `DEFAULT_AGENT_MODEL` for Growth Agent features;
+- `KEENABLE_API_KEY`: required for external brand-discovery research;
+- `TAVILY_API_KEY`: required for commerce-catalog web research;
+- `MISTRAL_API_KEY`: optional; required for default Mistral-backed content
+  generation unless a separate content provider is configured;
+- `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE`: optional Logo.dev publishable token. It
+  is injected only while building the frontend and becomes public client
+  configuration; do not use a Logo.dev secret key here.
 
 The first deployment generates independent database, JWT, encryption, and
 referral secrets directly in Secret Manager. They never enter Terraform state.
+Provider secrets are copied once from the protected GitHub environment into
+dedicated Secret Manager versions. Agent endpoint and model values are
+non-secret runtime configuration. The deploy fails closed when either is
+missing, rather than accepting an API key that no feature can use.
 
 ## 4. Configure Cloudflare
 

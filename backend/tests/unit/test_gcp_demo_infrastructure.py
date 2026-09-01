@@ -69,6 +69,26 @@ def test_wif_is_exact_and_no_service_account_keys_exist() -> None:
     assert "private_key" not in all_text
 
 
+def test_bootstrap_updates_project_labels_without_alpha_gcloud() -> None:
+    bootstrap = (GCP / "bootstrap.ps1").read_text(encoding="utf-8")
+    assert "gcloud projects update" not in bootstrap
+    assert "gcloud alpha projects update" not in bootstrap
+    assert "cloudresourcemanager.googleapis.com/v3/projects/" in bootstrap
+    assert "?updateMask=labels" in bootstrap
+    assert "foreach ($property in $project.labels.psobject.Properties)" in bootstrap
+    assert "-not $operation.done -and $attempt -lt 30" in bootstrap
+    assert "$null -ne $operation.error" in bootstrap
+
+
+def test_bootstrap_uses_supported_billing_iam_flags() -> None:
+    bootstrap = (GCP / "bootstrap.ps1").read_text(encoding="utf-8")
+    billing_binding = bootstrap.split(
+        "gcloud billing accounts add-iam-policy-binding", 1
+    )[1].split("if (-not (Test-GcloudResource", 1)[0]
+    assert "--role='roles/billing.costsManager'" in billing_binding
+    assert "--condition" not in billing_binding
+
+
 def test_secret_payloads_stay_out_of_terraform_and_arguments() -> None:
     terraform = _read_tree(GCP, "*.tf")
     workflows = _read_tree(WORKFLOWS, "gcp-demo-*.yml")
@@ -80,6 +100,28 @@ def test_secret_payloads_stay_out_of_terraform_and_arguments() -> None:
     assert "--data-file=-" in workflows
     assert "--data-file=$" not in workflows
     assert "GCP_SERVICE_ACCOUNT_KEY" not in workflows
+
+
+def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
+    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
+    locals_tf = (GCP / "locals.tf").read_text(encoding="utf-8")
+    deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
+    expected_secret_mappings = {
+        "KEENABLE_API_KEY": "citeladder-keenable-api-key",
+        "TAVILY_API_KEY": "citeladder-tavily-api-key",
+    }
+    for variable, secret_id in expected_secret_mappings.items():
+        assert f"secrets.{variable}" in workflow
+        assert f'"{secret_id}"' in locals_tf
+        assert f"add_value_once {secret_id}" in workflow
+        assert f"write_env {variable}" in deploy
+    assert "secrets.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE" in workflow
+    assert "--build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=" in workflow
+    assert "citeladder-logo" not in locals_tf
+    for variable in ("DEFAULT_AGENT_BASE_URL", "DEFAULT_AGENT_MODEL"):
+        assert f"vars.{variable}" in workflow
+        assert f"${{{variable}:?{variable} is required}}" in deploy
+        assert f"write_env {variable}" in deploy
 
 
 def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:

@@ -8,6 +8,8 @@ set -euo pipefail
 : "${BACKUP_BUCKET:?BACKUP_BUCKET is required}"
 : "${DOMAIN_NAME:?DOMAIN_NAME is required}"
 : "${SOURCE_COMMIT:?SOURCE_COMMIT is required}"
+: "${DEFAULT_AGENT_BASE_URL:?DEFAULT_AGENT_BASE_URL is required}"
+: "${DEFAULT_AGENT_MODEL:?DEFAULT_AGENT_MODEL is required}"
 
 [[ "$PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
 [[ "$REGION" =~ ^[a-z]+-[a-z]+[0-9]+$ ]]
@@ -63,6 +65,8 @@ origin_cert="$(secret citeladder-cloudflare-origin-cert)"
 origin_key="$(secret citeladder-cloudflare-origin-key)"
 mistral_key="$(secret citeladder-mistral-api-key 2>/dev/null || true)"
 agent_key="$(secret citeladder-default-agent-api-key 2>/dev/null || true)"
+keenable_key="$(secret citeladder-keenable-api-key 2>/dev/null || true)"
+tavily_key="$(secret citeladder-tavily-api-key 2>/dev/null || true)"
 
 for value in "$db_password" "$jwt_secret" "$encryption_key" "$referral_salt" "$demo_password"; do
   test "${#value}" -ge 32
@@ -105,6 +109,10 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env DEV_LOGIN_PASSWORD "$demo_password"
   test -z "$mistral_key" || write_env MISTRAL_API_KEY "$mistral_key"
   test -z "$agent_key" || write_env DEFAULT_AGENT_API_KEY "$agent_key"
+  write_env DEFAULT_AGENT_BASE_URL "$DEFAULT_AGENT_BASE_URL"
+  write_env DEFAULT_AGENT_MODEL "$DEFAULT_AGENT_MODEL"
+  test -z "$keenable_key" || write_env KEENABLE_API_KEY "$keenable_key"
+  test -z "$tavily_key" || write_env TAVILY_API_KEY "$tavily_key"
 } > /opt/citeladder/runtime.env.new
 mv /opt/citeladder/runtime.env.new /opt/citeladder/runtime.env
 
