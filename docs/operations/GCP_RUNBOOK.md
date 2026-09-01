@@ -131,12 +131,8 @@ private as planned and recheck environment reviewers and the WIF claim.
 ## 6. Daily operation
 
 Use **GCP Demo - Control** with `start` or `stop`; do not bypass its protected
-environment. Starting is refused after expiry. The VM also powers itself off
-after ten minutes without non-health web traffic, but only when every durable
-application queue is idle; active crawls and other jobs refresh the grace
-period. A stopped VM still incurs disk and reserved-address charges.
-The idle path leaves the Compose containers installed so Docker's
-`restart: unless-stopped` policy restores the application on the next VM start.
+environment. Starting is refused after expiry. A stopped VM still incurs disk
+and reserved-address charges.
 
 For emergency read-only inspection:
 
@@ -151,7 +147,7 @@ On the VM:
 cd /opt/citeladder
 sudo docker compose --env-file runtime.env -f compose.gcp.yml ps
 sudo docker compose --env-file runtime.env -f compose.gcp.yml logs --tail=200 web frontend caddy
-sudo systemctl status citeladder-backup.timer citeladder-expiry.timer citeladder-idle.timer
+sudo systemctl status citeladder-backup.timer citeladder-expiry.timer
 sudo journalctl -u citeladder-backup.service --since '24 hours ago'
 df -h /
 bucket=$(sudo sed -n "s/^BACKUP_BUCKET='\(.*\)'$/\1/p" runtime.env)

@@ -162,7 +162,6 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./tls:/etc/caddy/tls:ro
-      - ./logs:/var/log/caddy
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

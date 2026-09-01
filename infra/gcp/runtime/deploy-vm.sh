@@ -32,12 +32,18 @@ if [[ -n "$running_services" ]]; then
   had_previous=true
 fi
 
-install -d -m 0750 /opt/citeladder /opt/citeladder/logs /opt/citeladder/tls
+# Remove the retired inactivity shutdown from hosts deployed by older revisions.
+systemctl disable --now citeladder-idle.timer 2>/dev/null || true
+rm -f /etc/systemd/system/citeladder-idle.timer \
+  /etc/systemd/system/citeladder-idle.service \
+  /opt/citeladder/idle-shutdown.sh \
+  /opt/citeladder/activity-start
+
+install -d -m 0750 /opt/citeladder /opt/citeladder/tls
 install -m 0644 /tmp/citeladder-deploy/compose.gcp.yml /opt/citeladder/compose.gcp.yml
 install -m 0755 /tmp/citeladder-deploy/init-postgres-tls.sh /opt/citeladder/init-postgres-tls.sh
 install -m 0750 /tmp/citeladder-deploy/backup.sh /opt/citeladder/backup.sh
 install -m 0750 /tmp/citeladder-deploy/expire.sh /opt/citeladder/expire.sh
-install -m 0750 /tmp/citeladder-deploy/idle-shutdown.sh /opt/citeladder/idle-shutdown.sh
 
 expiry="$(curl --fail --silent --show-error -H 'Metadata-Flavor: Google' \
   http://metadata.google.internal/computeMetadata/v1/instance/attributes/demo-expires-at)"
@@ -101,7 +107,6 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env SOURCE_COMMIT "$SOURCE_COMMIT"
   write_env TRUSTED_PROXY_CIDRS "$trusted_proxy_cidrs"
   write_env DEMO_EXPIRES_AT "$expiry"
-  write_env IDLE_SHUTDOWN_SECONDS "600"
   write_env DEV_LOGIN_EMAIL "${DEV_LOGIN_EMAIL:-dev@citeladder.com}"
   write_env POSTGRES_PASSWORD "$db_password"
   write_env DATABASE_URL "$database_url"
@@ -131,12 +136,10 @@ restore_previous_deployment() {
     echo 'Deployment failed; restoring the previous runtime and services' >&2
     cp runtime.env.previous runtime.env
     docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate
-    systemctl start citeladder-idle.timer 2>/dev/null || true
   fi
   exit "$status"
 }
 trap restore_previous_deployment ERR
-systemctl stop citeladder-idle.timer 2>/dev/null || true
 
 if $had_previous; then
   docker compose --env-file runtime.env -f compose.gcp.yml stop "${stopped_services[@]}"
@@ -180,28 +183,8 @@ RandomizedDelaySec=15m
 [Install]
 WantedBy=timers.target
 UNIT
-cat > /etc/systemd/system/citeladder-idle.service <<'UNIT'
-[Unit]
-Description=Stop the CiteLadder demo after workload-aware inactivity
-After=docker.service
-Requires=docker.service
-[Service]
-Type=oneshot
-ExecStart=/opt/citeladder/idle-shutdown.sh
-UNIT
-cat > /etc/systemd/system/citeladder-idle.timer <<'UNIT'
-[Unit]
-Description=Check CiteLadder demo inactivity every minute
-[Timer]
-OnBootSec=10min
-OnUnitActiveSec=1min
-AccuracySec=10s
-[Install]
-WantedBy=timers.target
-UNIT
-touch /opt/citeladder/activity-start
 systemctl daemon-reload
-systemctl enable --now citeladder-expiry.timer citeladder-backup.timer citeladder-idle.timer
+systemctl enable --now citeladder-expiry.timer citeladder-backup.timer
 
 for attempt in $(seq 1 30); do
   if curl --fail --silent http://127.0.0.1:3000/health >/dev/null; then break; fi

@@ -214,7 +214,6 @@ def test_backups_and_expiry_are_fixed_and_operational() -> None:
     assert "{{.RestartCount}}" in deploy
     assert "{{.State.ExitCode}}" in deploy
     assert "citeladder-expiry.timer" in deploy
-    assert "citeladder-idle.timer" in deploy
     assert "OnCalendar=$calendar" in deploy
     assert "demo-expires-at" in deploy
     assert "pg_dump" in backup
@@ -222,10 +221,6 @@ def test_backups_and_expiry_are_fixed_and_operational() -> None:
     assert "Refusing to change the original demo expiry" in workflow
     expire = (RUNTIME / "expire.sh").read_text(encoding="utf-8")
     assert "(cd /opt/citeladder &&" in expire
-    idle = (RUNTIME / "idle-shutdown.sh").read_text(encoding="utf-8")
-    assert "site_crawl_tasks" in idle
-    assert "shutdown -h now" in idle
-    assert "compose.gcp.yml down" not in idle
     expiry_workflow = (WORKFLOWS / "gcp-demo-expiry.yml").read_text(encoding="utf-8")
     assert "compute instances list" in expiry_workflow
     assert "--quiet || true" not in expiry_workflow
