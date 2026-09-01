@@ -1,5 +1,11 @@
 # Temporary CiteLadder Google Cloud Demo
 
+> **Implementation status:** repository infrastructure is implemented under
+> `infra/gcp`; deployment remains operator-gated until the external GCP,
+> GitHub environment, Secret Manager, and Cloudflare setup is completed.
+> `Cube-27/Citeladder` is temporarily public at the owner's explicit request
+> for code review and must be made private after deployment.
+
 ## Summary
 
 Deploy the existing application unchanged on one Compute Engine VM:
@@ -45,6 +51,32 @@ Cloudflare → Caddy → Next.js → FastAPI
 No additional GCP-specific public API or database schema changes are required.
 The application stack still includes the Site Health API and synchronized
 frontend contract changes documented elsewhere in this repository.
+
+### Implemented owners
+
+- `infra/gcp/*.tf`: VPC, firewall rules, static address, Shielded VM, dedicated
+  VM service account, Artifact Registry, Secret Manager containers, backup
+  bucket, and budget alert.
+- `infra/gcp/bootstrap.ps1`: disposable-project APIs, versioned GCS state
+  bucket, deploy service account, and exact GitHub Workload Identity trust.
+- `infra/gcp/runtime/`: loopback-only production Compose stack, Caddy, database
+  TLS, IAP deployment, backup, and fixed-expiry scripts.
+- `.github/workflows/gcp-demo-*.yml`: protected deployment, VM control, expiry
+  guard, and authoritative project teardown.
+- `backend/tests/unit/test_gcp_demo_infrastructure.py`: deterministic security
+  and deployment-contract checks selected by `scripts/validation.json`.
+
+### Protected GitHub environment values
+
+Configure these variables on `gcp-demo`: `GCP_PROJECT_ID`,
+`GCP_PROJECT_NUMBER`, `GCP_REGION`, `GCP_ZONE`, `GCP_WIF_PROVIDER`,
+`GCP_DEPLOY_SERVICE_ACCOUNT`, `GCP_TF_STATE_BUCKET`, `GCP_BILLING_ACCOUNT`,
+`DOMAIN_NAME`, `DEMO_EXPIRES_AT`, and optionally `DEMO_LOGIN_EMAIL`.
+
+Configure these environment secrets: `DEMO_LOGIN_PASSWORD`, <!-- pragma: allowlist secret -- variable name, not a value -->
+`CLOUDFLARE_ORIGIN_CERT`, `CLOUDFLARE_ORIGIN_KEY`, and only the provider keys
+needed for the demonstration. The deploy workflow creates independent database,
+JWT, encryption, and referral secrets directly in Secret Manager on first use.
 
 ## Owner Runbook
 

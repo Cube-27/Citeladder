@@ -1,0 +1,45 @@
+name: GCP Demo - Control
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Start or stop the fixed demo VM
+        type: choice
+        required: true
+        options: [start, stop]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  control:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: gcp-demo
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+      - name: Control the fixed VM
+        shell: bash
+        env:
+          ACTION: ${{ inputs.action }}
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          ZONE: ${{ vars.GCP_ZONE }}
+          DEMO_EXPIRES_AT: ${{ vars.DEMO_EXPIRES_AT }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_SHA" = "$(git rev-parse origin/main)"
+          if [ "$ACTION" = start ]; then
+            test "$(date -u +%s)" -lt "$(date -u -d "$DEMO_EXPIRES_AT" +%s)" || { echo 'Demo has expired'; exit 1; }
+            gcloud compute instances start citeladder-demo --project "$PROJECT_ID" --zone "$ZONE" --quiet
+          else
+            gcloud compute instances stop citeladder-demo --project "$PROJECT_ID" --zone "$ZONE" --quiet
+          fi

@@ -1,22 +1,46 @@
-variable "aws_region" {
+variable "project_id" {
+  type        = string
+  description = "Dedicated disposable GCP project ID."
+}
+
+variable "billing_account" {
+  type        = string
+  description = "Billing account used by the USD 25 alert."
+  sensitive   = true
+}
+
+variable "region" {
   type    = string
-  default = "us-east-1"
+  default = "asia-south1"
   validation {
-    condition     = var.aws_region == "us-east-1"
-    error_message = "The CiteLadder demo is fixed to us-east-1."
+    condition     = var.region == "asia-south1"
+    error_message = "The temporary demo is fixed to asia-south1 (Mumbai)."
+  }
+}
+
+variable "zone" {
+  type    = string
+  default = "asia-south1-a"
+  validation {
+    condition     = startswith(var.zone, "asia-south1-")
+    error_message = "The demo VM must remain in asia-south1."
   }
 }
 
 variable "domain_name" {
   type    = string
   default = "citeladder.com"
+  validation {
+    condition     = can(regex("^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$", var.domain_name))
+    error_message = "domain_name must be a lower-case DNS hostname."
+  }
 }
 
 variable "backend_image" {
   type = string
   validation {
     condition     = can(regex("@sha256:[0-9a-f]{64}$", var.backend_image))
-    error_message = "backend_image must be an immutable image digest."
+    error_message = "backend_image must be an immutable Artifact Registry digest."
   }
 }
 
@@ -24,7 +48,7 @@ variable "frontend_image" {
   type = string
   validation {
     condition     = can(regex("@sha256:[0-9a-f]{64}$", var.frontend_image))
-    error_message = "frontend_image must be an immutable image digest."
+    error_message = "frontend_image must be an immutable Artifact Registry digest."
   }
 }
 
@@ -56,29 +80,11 @@ variable "cloudflare_ipv6_cidrs" {
   }
 }
 
-variable "task_cpu" {
-  type    = number
-  default = 2048
+variable "machine_type" {
+  type    = string
+  default = "e2-standard-2"
   validation {
-    condition     = contains([2048, 4096], var.task_cpu)
-    error_message = "task_cpu must be a supported reviewed demo size."
-  }
-}
-
-variable "task_memory" {
-  type    = number
-  default = 4096
-  validation {
-    condition     = contains([4096, 8192], var.task_memory)
-    error_message = "task_memory must be 4096 or 8192 MiB."
-  }
-}
-
-variable "desired_count" {
-  type    = number
-  default = 1
-  validation {
-    condition     = contains([0, 1], var.desired_count)
-    error_message = "The demo desired count must be zero or one."
+    condition     = var.machine_type == "e2-standard-2"
+    error_message = "The reviewed temporary-demo size is e2-standard-2."
   }
 }

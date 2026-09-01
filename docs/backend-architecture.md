@@ -219,9 +219,13 @@ issued under the previous version.
 Authentication abuse limits identify clients from `X-Forwarded-For` only when
 the direct ASGI peer belongs to `TRUSTED_PROXY_CIDRS`; the chain is walked from
 the trusted edge toward the first untrusted address. Production startup fails
-closed when the trusted-proxy networks are missing or invalid. The AWS deployer
-places frontend proxy tasks in dedicated subnets and injects only those subnet
-CIDRs. Catch-all IPv4 and IPv6 networks are rejected.
+closed when the trusted-proxy networks are missing or invalid. The GCP deployer
+uses host networking: FastAPI receives frontend proxy traffic from
+`127.0.0.1`, so `TRUSTED_PROXY_CIDRS` starts with `127.0.0.1/32`, followed by
+the exact reviewed Cloudflare ranges needed to walk Caddy's forwarded chain.
+The deployed shape is
+`TRUSTED_PROXY_CIDRS=127.0.0.1/32,<Cloudflare IPv4 CIDRs>,<Cloudflare IPv6 CIDRs>`.
+It never uses VPC subnet CIDRs, and catch-all IPv4 and IPv6 networks are rejected.
 
 User-created workspaces are transaction-serialized per account and capped by
 the config-owned `MAX_WORKSPACES_PER_USER`. The personal workspace counts

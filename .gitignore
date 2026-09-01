@@ -8,6 +8,7 @@ venv/
 .ruff_cache/
 .mypy_cache/
 artifacts/
+**/.terraform/
 
 # Env / secrets
 .env

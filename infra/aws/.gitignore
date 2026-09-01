@@ -1,7 +1,0 @@
-# Local AWS deployment inputs. These contain account-specific ARNs and URLs.
-config.json
-secret-arns.json
-
-# Generated ECS task definitions and local build output.
-generated/
-

@@ -1,0 +1,37 @@
+name: GCP Demo - Destroy Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type the exact disposable GCP project ID
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  destroy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: gcp-demo
+    steps:
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+      - name: Delete the dedicated project
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = "$PROJECT_ID"
+          test -n "$PROJECT_ID" && test "$PROJECT_ID" != 'citeladder'
+          labels=$(gcloud projects describe "$PROJECT_ID" --format='value(labels.project,labels.environment)')
+          test "$labels" = $'citeladder\tdemo'
+          gcloud projects delete "$PROJECT_ID" --quiet
