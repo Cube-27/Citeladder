@@ -86,7 +86,7 @@ jobs:
           terraform init -input=false -backend-config="bucket=$STATE_BUCKET"
           terraform fmt -check
           terraform validate
-          existing=$(terraform output -raw demo_expires_at 2>/dev/null || true)
+          existing=$(terraform output -json | jq -r '.demo_expires_at.value // empty')
           test -z "$existing" || test "$existing" = "$DEMO_EXPIRES_AT" || {
             echo 'Refusing to change the original demo expiry' >&2
             exit 1
