@@ -124,6 +124,17 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
         assert f"write_env {variable}" in deploy
 
 
+def test_deploy_validates_the_latest_commit_as_a_full_diff() -> None:
+    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
+    gate = workflow.split("- name: Run repository gates for the deployed commit", 1)[
+        1
+    ].split("- uses:", 1)[0]
+    assert 'git rev-parse "$env:GITHUB_SHA^"' in gate
+    assert "git update-ref refs/remotes/origin/main $deployBase" in gate
+    assert "./scripts/test.ps1" in gate
+    assert "-ChangedFiles" not in gate
+
+
 def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     variables = (GCP / "variables.tf").read_text(encoding="utf-8")
     assert variables.count("@sha256:[0-9a-f]{64}$") == 2
