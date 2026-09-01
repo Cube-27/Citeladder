@@ -75,6 +75,7 @@ jobs:
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
         with:
           terraform_version: 1.10.5
+          terraform_wrapper: false
       - name: Initialize Terraform and validate the fixed expiry
         working-directory: infra/gcp
         shell: bash
