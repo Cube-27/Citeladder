@@ -43,7 +43,7 @@ _PAGE_SORTS: dict[str, tuple[str, bool]] = {
     "main_content_inbound": ("main_content_inbound_count", True),
     "depth": ("depth_from_home", False),
 }
-PAGE_SORTS = frozenset({"url", *_PAGE_SORTS})
+PAGE_SORTS = frozenset({"status", "url", *_PAGE_SORTS})
 
 
 def _link_metric_join_condition(crawl: SiteCrawl):

@@ -304,6 +304,8 @@ export function pageStatusBadgeValue(status: PageAnalysisStatus): StatusValue {
     case 'blocked':
     case 'cancelled':
       return 'danger';
+    case 'not_measured':
+      return 'info';
     default:
       // not_selected / pending / running
       return 'info';

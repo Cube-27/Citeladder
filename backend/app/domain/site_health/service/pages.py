@@ -7,6 +7,7 @@ import uuid
 from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.site_health_contracts import CRAWL_TERMINAL_STATUSES
 from app.domain.site_health.inventory_scope import inherited_inventory_crawl_ids
 from app.domain.site_health.service.common import (
     SiteHealthNotFoundError,
@@ -125,7 +126,7 @@ async def get_pages(
     # never created a page row of its own.
     root_errors = await _root_errors_for(session, crawl)
     scope = "pages"
-    sort = sort if sort in PAGE_SORTS else "url"
+    sort = sort if sort in PAGE_SORTS else "status"
     filters = {
         "crawl_id": str(crawl_id),
         "status": status or None,
@@ -218,6 +219,7 @@ async def get_pages(
         page_kind=None,
         limit=limit,
         project=project_pages_row,
+        terminal=crawl.status in CRAWL_TERMINAL_STATUSES,
     )
     items, next_cursor = _page_keyset_result(
         items,
@@ -377,6 +379,7 @@ async def get_page_detail(
         analysis=analysis,
         monitored=site_url_id in monitored_ids,
         latest_analyze_task=tasks.get(site_url_id),
+        terminal=crawl.status in CRAWL_TERMINAL_STATUSES,
     )
 
     (

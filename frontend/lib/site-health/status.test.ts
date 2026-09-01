@@ -313,7 +313,7 @@ describe('dashboardRunNotice', () => {
     });
     expect(notice?.tone).toBe('info');
     expect(notice?.message).toMatch(/could not be fetched/i);
-    expect(notice?.message).toMatch(/every page that was fetched has been analyzed/i);
+    expect(notice?.message).not.toMatch(/every page that was fetched has been analyzed/i);
     expect(notice?.message).not.toMatch(/could not be analyzed/i);
   });
 

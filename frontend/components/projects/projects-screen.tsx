@@ -2,7 +2,8 @@
 
 import { FolderOpen, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -27,8 +28,24 @@ import { DashboardScreen } from './dashboard-screen';
  * just as much as the first did.
  */
 export function ProjectsScreen() {
-  const { projects, isLoading } = useProjectContext();
+  const { projects, isLoading, setActiveProjectId } = useProjectContext();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [editing, setEditing] = useState<Project | null>(null);
+
+  // Onboarding and the authenticated app use separate layout providers. Carry
+  // the committed project id across that boundary so the app-side provider
+  // pins the explicit selection even if its cached project list is briefly
+  // stale, then remove the one-time handoff from the address bar.
+  useEffect(() => {
+    const projectId = searchParams.get('project');
+    if (!projectId) return;
+    setActiveProjectId(projectId);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('project');
+    const query = next.toString();
+    router.replace(query ? `/projects?${query}` : '/projects', { scroll: false });
+  }, [router, searchParams, setActiveProjectId]);
 
   if (isLoading) {
     return (

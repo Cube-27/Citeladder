@@ -47,8 +47,8 @@ async def get_pages_endpoint(
     monitored: Annotated[bool | None, Query()] = None,
     page_kind: Annotated[str | None, Query()] = None,
     sort: Annotated[
-        Literal["url", "inbound", "main_content_inbound", "depth"], Query()
-    ] = "url",
+        Literal["status", "url", "inbound", "main_content_inbound", "depth"], Query()
+    ] = "status",
 ) -> PagesPage:
     try:
         page = await service.get_pages(

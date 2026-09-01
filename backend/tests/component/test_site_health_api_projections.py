@@ -418,6 +418,17 @@ async def test_completed_pages_filter_precedes_keyset_pagination(
             )
         await session.commit()
 
+    inventory = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/inventory",
+        params={"limit": 2, "monitored": "true"},
+        headers={"X-Workspace-Id": str(scn.workspace_id)},
+    )
+    assert inventory.status_code == 200
+    assert [row["normalized_url"] for row in inventory.json()["items"]] == [
+        "https://acme.test/a",
+        "https://acme.test/a00",
+    ]
+
     response = await client.get(
         f"/api/v1/site-crawls/{scn.crawl_id}/pages",
         params={"limit": 2, "monitored": "true", "status": "completed"},
@@ -430,6 +441,35 @@ async def test_completed_pages_filter_precedes_keyset_pagination(
         str(scn.issue_url_id),
     ]
     assert body["next_cursor"] is None
+
+    # The ordinary monitored view is measurement-first across the complete
+    # server result, not merely sorted inside the current browser page.
+    first = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/pages",
+        params={"limit": 2, "monitored": "true"},
+        headers={"X-Workspace-Id": str(scn.workspace_id)},
+    )
+    assert first.status_code == 200
+    first_body = first.json()
+    assert [row["analysis_status"] for row in first_body["items"]] == [
+        "completed",
+        "completed",
+    ]
+    assert first_body["next_cursor"] is not None
+
+    second = await client.get(
+        f"/api/v1/site-crawls/{scn.crawl_id}/pages",
+        params={
+            "limit": 2,
+            "monitored": "true",
+            "cursor": first_body["next_cursor"],
+        },
+        headers={"X-Workspace-Id": str(scn.workspace_id)},
+    )
+    assert second.status_code == 200
+    assert all(
+        row["analysis_status"] == "not_measured" for row in second.json()["items"]
+    )
 
 
 async def test_issue_catalog_separates_defect_and_advisory_quantities(

@@ -162,7 +162,7 @@ export function useOnboardingFlow() {
         .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() }))
         .catch(() => undefined);
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
-      router.replace('/projects');
+      router.replace(`/projects?project=${encodeURIComponent(projectId)}`);
     },
     [queryClient, router, setActiveProjectId],
   );

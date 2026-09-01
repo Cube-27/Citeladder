@@ -210,6 +210,22 @@ describe('PagesTable', () => {
       <PagesTable pages={[page()]} crawlId={CRAWL} sort="inbound" onSortChange={onSortChange} />,
     );
     fireEvent.click(screen.getByRole('button', { name: /^Inbound/ }));
+    expect(onSortChange).toHaveBeenCalledWith('status');
+  });
+
+  it('offers server-backed URL and status sorting', () => {
+    const onSortChange = vi.fn();
+    render(
+      <PagesTable pages={[page()]} crawlId={CRAWL} sort="status" onSortChange={onSortChange} />,
+    );
+    expect(screen.getByRole('columnheader', { name: /^Status/ })).toHaveAttribute(
+      'aria-sort',
+      'ascending',
+    );
+    expect(screen.getByRole('columnheader', { name: /^Status/ })).not.toHaveClass('tabular-nums');
+    expect(screen.getByRole('columnheader', { name: /^Page URL/ })).not.toHaveClass('tabular-nums');
+    expect(screen.getByRole('columnheader', { name: /^Inbound/ })).toHaveClass('tabular-nums');
+    fireEvent.click(screen.getByRole('button', { name: /^Page URL/ }));
     expect(onSortChange).toHaveBeenCalledWith('url');
   });
 

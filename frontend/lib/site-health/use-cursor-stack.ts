@@ -22,5 +22,5 @@ export function useCursorStack() {
   const pop = useCallback(() => setStack((prev) => prev.slice(0, -1)), []);
   const reset = useCallback(() => setStack([]), []);
 
-  return { cursor, canPrev, push, pop, reset };
+  return { cursor, canPrev, page: stack.length + 1, push, pop, reset };
 }

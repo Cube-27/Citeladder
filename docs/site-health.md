@@ -303,10 +303,13 @@ observed tree as Markdown with an ASCII tree; large sibling sets collapse to one
 
 ### Pages sorting and internal links
 
-The pages list accepts `sort=url|inbound|main_content_inbound|depth`. Non-default
-sorts keyset-page over `(metric_value, site_url_id)` against this crawl's
-`SitePageLinkMetric` rows; the sort is part of the cursor fingerprint, so a
-cursor cannot be replayed under a different ordering (400). Page rows and page
+The pages list accepts `sort=status|url|inbound|main_content_inbound|depth`.
+`status` is the default and puts persisted measured analyses before terminal
+errors, blocked URLs, and unmeasured URLs, with URL as the stable tie-breaker.
+Terminal monitored URLs that received no analysis task are `not_measured`, not
+`pending`. Link sorts keyset-page over `(metric_value, site_url_id)` against
+this crawl's `SitePageLinkMetric` rows; every sort is part of the cursor
+fingerprint, so a cursor cannot be replayed under a different ordering (400). Page rows and page
 detail both carry the crawl's persisted link metrics, and detail adds bounded
 top inbound/outbound neighbours. A URL with no metric row reports `null`, never
 `0`: unmeasured and unlinked are different facts, and the UI renders the

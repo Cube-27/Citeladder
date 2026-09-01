@@ -73,9 +73,11 @@ export const siteCrawlTaskStatusSchema = z.enum([
 export const siteUrlSourceSchema = z.enum(['root', 'link', 'sitemap', 'redirect']);
 
 // Per-URL analysis presentation state. `error`/`blocked` are explicit states
-// (never a fabricated zero score); `not_selected` covers unanalysed rows.
+// (never a fabricated zero score); `not_measured` is terminal, while
+// `not_selected` covers URLs outside the monitored set.
 export const pageAnalysisStatusSchema = z.enum([
   'not_selected',
+  'not_measured',
   'pending',
   'running',
   'completed',

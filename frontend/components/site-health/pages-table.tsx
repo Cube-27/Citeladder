@@ -67,11 +67,21 @@ function SortableHead({
   label,
   active,
   descending,
+  numeric = true,
   onSort,
-}: Readonly<{ label: string; active: boolean; descending: boolean; onSort: () => void }>) {
+}: Readonly<{
+  label: string;
+  active: boolean;
+  descending: boolean;
+  numeric?: boolean;
+  onSort: () => void;
+}>) {
   const Icon = active ? (descending ? ArrowDown : ArrowUp) : ArrowUpDown;
   return (
-    <TableHead numeric aria-sort={active ? (descending ? 'descending' : 'ascending') : undefined}>
+    <TableHead
+      numeric={numeric}
+      aria-sort={active ? (descending ? 'descending' : 'ascending') : undefined}
+    >
       <Pressable
         type="button"
         onClick={onSort}
@@ -90,7 +100,7 @@ function SortableHead({
 export function PagesTable({
   pages,
   crawlId,
-  sort = 'url',
+  sort = 'status',
   onSortChange,
 }: Readonly<{
   pages: PageSummary[];
@@ -111,9 +121,29 @@ export function PagesTable({
           <TableHead numeric className="w-10">
             #
           </TableHead>
-          <TableHead>Page URL</TableHead>
+          {onSortChange ? (
+            <SortableHead
+              label="Page URL"
+              active={sort === 'url'}
+              descending={false}
+              numeric={false}
+              onSort={() => onSortChange(sort === 'url' ? 'status' : 'url')}
+            />
+          ) : (
+            <TableHead>Page URL</TableHead>
+          )}
           <TableHead>Type</TableHead>
-          <TableHead>Status</TableHead>
+          {onSortChange ? (
+            <SortableHead
+              label="Status"
+              active={sort === 'status'}
+              descending={false}
+              numeric={false}
+              onSort={() => onSortChange('status')}
+            />
+          ) : (
+            <TableHead>Status</TableHead>
+          )}
           <TableHead numeric>Issues</TableHead>
           <TableHead numeric>Web Fundamentals</TableHead>
           <TableHead numeric>AEO Readiness</TableHead>
@@ -125,7 +155,7 @@ export function PagesTable({
                 label={column.label}
                 active={sort === column.sort}
                 descending={column.descending}
-                onSort={() => onSortChange(sort === column.sort ? 'url' : column.sort)}
+                onSort={() => onSortChange(sort === column.sort ? 'status' : column.sort)}
               />
             ) : (
               <TableHead key={column.sort} numeric>

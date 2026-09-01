@@ -8,16 +8,24 @@ import { Button } from '@/components/ui/button';
 export function CursorPager({
   canPrev,
   canNext,
+  page,
   onPrev,
   onNext,
 }: Readonly<{
   canPrev: boolean;
   canNext: boolean;
+  /** One-based position tracked by the caller's cursor stack. */
+  page?: number;
   onPrev: () => void;
   onNext: () => void;
 }>) {
   return (
     <>
+      {page ? (
+        <span className="text-secondary mr-1 text-xs" aria-live="polite">
+          Page {page}
+        </span>
+      ) : null}
       <Button variant="secondary" size="sm" onClick={onPrev} disabled={!canPrev}>
         Previous
       </Button>

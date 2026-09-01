@@ -16,8 +16,11 @@ export function Shift() {
         {shift.facts.map((fact) => {
           const Icon = LANDING_ICONS[fact.icon];
           return (
-            <StaggerItem key={fact.label} className="h-full">
-              <article className="group flex h-full flex-col justify-between px-1 py-7 md:px-6 lg:first:pl-0 lg:last:pr-0">
+            <StaggerItem
+              key={fact.label}
+              className="h-full px-1 py-7 md:px-6 lg:first:pl-0 lg:last:pr-0"
+            >
+              <article className="group flex h-full flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-3">
                     <span className="bg-accent-subtle text-accent-text flex size-9 items-center justify-center rounded-[var(--radius-control)]">

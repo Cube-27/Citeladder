@@ -99,7 +99,7 @@ export type InventoryParams = {
 
 type CrawlListParams = { project_id: string; limit?: number; cursor?: string };
 /** Server-backed orderings of the pages list (keyset, never a client sort). */
-export type PagesSort = 'url' | 'inbound' | 'main_content_inbound' | 'depth';
+export type PagesSort = 'status' | 'url' | 'inbound' | 'main_content_inbound' | 'depth';
 export type PagesParams = {
   cursor?: string;
   limit?: number;

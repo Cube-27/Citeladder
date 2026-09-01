@@ -18,9 +18,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.domain.site_health.phase import SiteHealthPhase
 
 # Presentation-status literals (superset of the persisted page-analysis states,
-# adding the mockup-facing `not_selected` / `error` / `blocked` / `cancelled`).
+# adding the mockup-facing `not_selected` / `not_measured` / `error` /
+# `blocked` / `cancelled`).
 PageAnalysisStatus = Literal[
     "not_selected",
+    "not_measured",
     "pending",
     "running",
     "completed",

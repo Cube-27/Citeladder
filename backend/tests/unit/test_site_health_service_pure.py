@@ -241,6 +241,17 @@ def test_monitored_with_nothing_is_pending() -> None:
     assert st == "pending"
 
 
+def test_terminal_monitored_with_nothing_is_not_measured() -> None:
+    st, code = presentation_status_for(
+        analysis=None,
+        monitored=True,
+        latest_analyze_task=None,
+        terminal=True,
+    )
+    assert st == "not_measured"
+    assert code == ""
+
+
 def test_unmonitored_with_nothing_is_not_selected() -> None:
     st, _ = presentation_status_for(
         analysis=None, monitored=False, latest_analyze_task=None

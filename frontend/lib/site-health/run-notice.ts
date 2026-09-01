@@ -85,7 +85,7 @@ export type DashboardRunNotice = {
  */
 const PARTIAL_MESSAGES: Record<string, string> = {
   discovery_incomplete:
-    'Some links could not be fetched — they were dead, blocked, or not web pages. Every page that was fetched has been analyzed.',
+    'Some links could not be fetched — they were dead, blocked, or not web pages.',
   analysis_incomplete:
     'Some pages could not be analyzed — showing partial results. Re-crawl to retry the remaining pages.',
   discovery_and_analysis_incomplete:

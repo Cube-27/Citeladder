@@ -14,12 +14,13 @@ from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import and_, func, or_, select, tuple_
+from sqlalchemy import and_, case, func, literal, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_FAILED,
+    CRAWL_TERMINAL_STATUSES,
     PAGE_ANALYSIS_STATUS_COMPLETED,
     PAGE_ANALYSIS_STATUS_PARTIALLY_COMPLETED,
     TASK_KIND_ANALYZE,
@@ -333,6 +334,7 @@ def _matching_page_summaries(
     page_kind: str | None,
     limit: int,
     project: Callable[[SiteUrl, SitePageAnalysis | None, str, str | None], dict],
+    terminal: bool = False,
 ) -> tuple[list[dict], tuple[SiteUrl, Any] | None]:
     """Project matching rows and retain the last scanned key for pagination.
 
@@ -351,6 +353,7 @@ def _matching_page_summaries(
             analysis=analysis,
             monitored=row.id in monitored_ids,
             latest_analyze_task=tasks.get(row.id),
+            terminal=terminal,
         )
         if not _matches_page_status(presentation_status, status):
             continue
@@ -534,6 +537,7 @@ async def get_inventory(
         limit=limit,
         over_fetch=over_fetch,
         extra_where=[*search, *analysis_filters],
+        sort="url",
     )
     if stmt is None:
         return {"items": [], "next_cursor": None}
@@ -577,6 +581,7 @@ async def get_inventory(
         page_kind=None,
         limit=limit,
         project=project_inventory_row,
+        terminal=crawl.status in CRAWL_TERMINAL_STATUSES,
     )
     items, next_cursor = _page_keyset_result(
         items,
@@ -638,7 +643,23 @@ def _analysis_page_filters(
     return clauses, None if persisted_status else status
 
 
-_DEFAULT_PAGE_SORT = "url"
+_DEFAULT_PAGE_SORT = "status"
+
+
+def _status_sort_expression(crawl_id: uuid.UUID):
+    """Measured rows first, then terminal failures/unmeasured rows by URL."""
+    measured = (
+        select(SitePageAnalysis.id)
+        .where(
+            SitePageAnalysis.crawl_id == crawl_id,
+            SitePageAnalysis.site_url_id == SiteUrl.id,
+            SitePageAnalysis.is_current.is_(True),
+            SitePageAnalysis.status.in_(_PERSISTED_ANALYSIS_STATUSES),
+        )
+        .exists()
+    )
+    rank = case((measured, literal("0:")), else_=literal("1:"))
+    return rank + SiteUrl.normalized_url
 
 
 def _site_url_page_stmt(
@@ -667,8 +688,8 @@ def _site_url_page_stmt(
     still come back full. ``extra_where`` carries caller-specific predicates
     (the inventory's substring search) so they are applied with the rest of
     the filtering, before ordering and limiting. ``sort`` selects the keyset:
-    ``url`` (the default ``(normalized_url, id)``) or one of the link-metric
-    sorts, which LEFT JOIN this crawl's ``SitePageLinkMetric`` projection.
+    ``status`` (measured rows first), ``url``, or one of the link-metric sorts,
+    which LEFT JOIN this crawl's ``SitePageLinkMetric`` projection.
 
     The statement always yields ``(SiteUrl, sort_value)`` so the caller's
     cursor is built from the value the database actually ordered by.
@@ -687,7 +708,14 @@ def _site_url_page_stmt(
         stmt = stmt.where(SiteUrl.id.notin_(list(monitored_ids)))
 
     window = _scan_window(limit, over_fetch=over_fetch)
-    if sort in PAGE_SORTS and sort != _DEFAULT_PAGE_SORT:
+    if sort == _DEFAULT_PAGE_SORT:
+        expression = _status_sort_expression(crawl.id)
+        stmt = stmt.add_columns(expression.label("sort_value"))
+        if cursor:
+            cur_value, cur_id = _decode_url_keyset(cursor, scope=scope, filters=filters)
+            stmt = stmt.where(tuple_(expression, SiteUrl.id) > (cur_value, cur_id))
+        return stmt.order_by(expression.asc(), SiteUrl.id.asc()).limit(window)
+    if sort in PAGE_SORTS and sort not in {_DEFAULT_PAGE_SORT, "url"}:
         stmt = _sorted_page_stmt(
             stmt, crawl=crawl, sort=sort, cursor=cursor, scope=scope, filters=filters
         )

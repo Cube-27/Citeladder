@@ -407,11 +407,18 @@ def project_crawl(
 # =========================================================================
 # Presentation status derivation (plan projection rules)
 # =========================================================================
+def _status_without_task(*, monitored: bool, terminal: bool) -> tuple[str, str]:
+    if not monitored:
+        return "not_selected", ""
+    return ("not_measured" if terminal else "pending"), ""
+
+
 def presentation_status_for(
     *,
     analysis: SitePageAnalysis | None,
     monitored: bool,
     latest_analyze_task: SiteCrawlTask | None,
+    terminal: bool = False,
 ) -> tuple[str, str]:
     """Derive the mockup-facing ``(analysis_status, error_code)`` for a URL.
 
@@ -425,7 +432,8 @@ def presentation_status_for(
         (robots/SSRF) -> ``blocked`` (with the error code);
       - no analysis + any other terminal-unsuccessful analyze task -> ``error``;
       - an in-flight analyze task -> ``pending`` / ``running``;
-      - a monitored URL with no analyze task yet -> ``pending``;
+      - a monitored URL with no analyze task yet -> ``pending`` while the crawl
+        is active, otherwise ``not_measured`` once the crawl is terminal;
       - an un-monitored URL with nothing -> ``not_selected``.
     ``failed`` is never surfaced as page copy (it maps to ``error``/``blocked``).
     """
@@ -436,25 +444,22 @@ def presentation_status_for(
         return analysis.status, ""
 
     task = latest_analyze_task
-    if task is not None:
-        if task.status == TASK_STATUS_CANCELLED:
-            return "cancelled", task.error_code or ""
-        if task.status == TASK_STATUS_FAILED:
-            code = task.error_code or ""
-            if code in POLICY_BLOCKING_ERROR_CODES:
-                return "blocked", code
-            return "error", code
-        if task.status == TASK_STATUS_SUCCEEDED:
-            # Succeeded fetch but no completed analysis row yet: still resolving.
-            return "pending", ""
-        # queued / leased / running / retry_wait -> in-flight.
-        if task.status in (TASK_STATUS_RUNNING, TASK_STATUS_LEASED):
-            return "running", ""
+    if task is None:
+        return _status_without_task(monitored=monitored, terminal=terminal)
+    if task.status == TASK_STATUS_CANCELLED:
+        return "cancelled", task.error_code or ""
+    if task.status == TASK_STATUS_FAILED:
+        code = task.error_code or ""
+        if code in POLICY_BLOCKING_ERROR_CODES:
+            return "blocked", code
+        return "error", code
+    if task.status == TASK_STATUS_SUCCEEDED:
+        # Succeeded fetch but no completed analysis row yet: still resolving.
         return "pending", ""
-
-    if monitored:
-        return "pending", ""
-    return "not_selected", ""
+    # queued / leased / running / retry_wait -> in-flight.
+    if task.status in (TASK_STATUS_RUNNING, TASK_STATUS_LEASED):
+        return "running", ""
+    return "pending", ""
 
 
 # =========================================================================

@@ -169,7 +169,10 @@ missing classification/scored-cohort projection is non-comparable.
 **Pages** retains crawl lifecycle and persisted per-URL metrics. Page and detail
 rows consume the server's score, measurement state, classification state, and
 reasons without remapping checkpoint outcomes. `other` rows never display a
-generic `WebPage` score.
+generic `WebPage` score. The default server-backed page order puts measured
+analyses first and terminal errors, blocked URLs, and unmeasured URLs last;
+cursor controls expose the current page, and URL, status, and link sorting
+restart pagination against the complete server result.
 
 **AEO Readiness** starts at the seven-dimension ledger. Aggregate readiness and
 the three coverage projections remain in Overview rather than a duplicate
@@ -337,6 +340,11 @@ email/password flow that receives a session and performs the account-scoped
 cache transition. After the destination is resolved, login crosses the identity
 boundary with a full-document navigation so the protected layout reads the new
 session cookie and cannot reuse a prefetched anonymous shell.
+
+Onboarding completion carries the committed project ID into `/projects` as a
+one-time query handoff. The authenticated projects screen applies that explicit
+selection to its own `ProjectProvider` before removing the handoff parameter,
+so a stale project-list cache cannot silently select the first project.
 
 ## Data and query ownership
 

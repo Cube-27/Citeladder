@@ -144,6 +144,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
           <CursorPager
             canPrev={pager.canPrev}
             canNext={Boolean(nextCursor)}
+            page={pager.page}
             onPrev={pager.pop}
             onNext={() => pager.push(nextCursor)}
           />
@@ -366,6 +367,7 @@ function ScoredInventoryState({
           <CursorPager
             canPrev={pager.canPrev}
             canNext={Boolean(nextCursor)}
+            page={pager.page}
             onPrev={pager.pop}
             onNext={() => pager.push(nextCursor)}
           />
@@ -376,6 +378,12 @@ function ScoredInventoryState({
 }
 
 function initialPagesSort(value: string | null): PagesSort {
-  const supported: readonly PagesSort[] = ['inbound', 'main_content_inbound', 'depth'];
-  return supported.includes(value as PagesSort) ? (value as PagesSort) : 'url';
+  const supported: readonly PagesSort[] = [
+    'status',
+    'url',
+    'inbound',
+    'main_content_inbound',
+    'depth',
+  ];
+  return supported.includes(value as PagesSort) ? (value as PagesSort) : 'status';
 }
