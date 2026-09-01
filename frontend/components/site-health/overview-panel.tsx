@@ -44,8 +44,11 @@ export function OverviewPanel({
     <div className="grid min-w-0 gap-4" data-testid="site-health-overview">
       {data ? (
         <Alert tone={searchEligibilityTone(data.search_eligibility)}>
-          Search eligibility: {data.search_eligibility}. {data.audited_page_count} audited of{' '}
-          {data.selected_page_count} selected pages.
+          Audit finished: {data.audited_page_count} of {data.selected_page_count} selected pages
+          analyzed.{' '}
+          {data.search_eligibility === 'blocked'
+            ? 'At least one selected page has a critical search eligibility blocker.'
+            : `Search eligibility: ${data.search_eligibility}.`}
         </Alert>
       ) : null}
       <OverviewMetricCards overview={data} dashboard={dashboard} crawl={crawl} />
