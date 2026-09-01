@@ -175,7 +175,8 @@ jobs:
         run: |
           set -euo pipefail
           has_version() {
-            test -n "$(gcloud secrets versions list "$1" --project "$PROJECT_ID" --filter='state=ENABLED' --limit=1 --format='value(name)')"
+            gcloud secrets versions list "$1" --project "$PROJECT_ID" --format=json \
+              | jq -e 'any(.[]; .state == "ENABLED")' >/dev/null
           }
           add_generated() {
             has_version "$1" || openssl rand -hex 32 | gcloud secrets versions add "$1" --project "$PROJECT_ID" --data-file=- >/dev/null
@@ -196,6 +197,28 @@ jobs:
           test -z "$DEFAULT_AGENT_API_KEY" || add_value_once citeladder-default-agent-api-key "$DEFAULT_AGENT_API_KEY"
           test -z "$KEENABLE_API_KEY" || add_value_once citeladder-keenable-api-key "$KEENABLE_API_KEY"
           test -z "$TAVILY_API_KEY" || add_value_once citeladder-tavily-api-key "$TAVILY_API_KEY"
+
+          tls_dir="$(mktemp -d)"
+          trap 'rm -rf "$tls_dir"' EXIT
+          umask 077
+          gcloud secrets versions access latest --project "$PROJECT_ID" \
+            --secret citeladder-cloudflare-origin-cert > "$tls_dir/origin.pem"
+          gcloud secrets versions access latest --project "$PROJECT_ID" \
+            --secret citeladder-cloudflare-origin-key > "$tls_dir/origin-key.pem"
+          if ! openssl x509 -in "$tls_dir/origin.pem" -noout -checkhost "$DOMAIN_NAME"; then
+            echo "::error::Cloudflare origin certificate is not valid PEM for $DOMAIN_NAME"
+            exit 1
+          fi
+          if ! openssl pkey -in "$tls_dir/origin-key.pem" -noout >/dev/null; then
+            echo "::error::Cloudflare origin private key is not valid PEM"
+            exit 1
+          fi
+          cert_public_key="$(openssl x509 -in "$tls_dir/origin.pem" -pubkey -noout | openssl pkey -pubin -outform DER | sha256sum)"
+          private_public_key="$(openssl pkey -in "$tls_dir/origin-key.pem" -pubout -outform DER | sha256sum)"
+          if test "$cert_public_key" != "$private_public_key"; then
+            echo "::error::Cloudflare origin certificate and private key do not match"
+            exit 1
+          fi
       - name: Apply infrastructure
         id: terraform
         working-directory: infra/gcp
