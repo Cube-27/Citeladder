@@ -5,8 +5,8 @@
   "frontendExtensions": [".ts", ".tsx", ".js", ".jsx", ".mjs"],
   "rules": [
     {
-      "sources": ["infra/terraform/**", ".github/workflows/aws-demo-*.yml"],
-      "backendTests": ["tests/unit/test_aws_demo_infrastructure.py"]
+      "sources": ["infra/gcp/**", ".github/workflows/gcp-demo-*.yml"],
+      "backendTests": ["tests/unit/test_gcp_demo_infrastructure.py"]
     },
     {
       "sources": ["reset-db.py"],

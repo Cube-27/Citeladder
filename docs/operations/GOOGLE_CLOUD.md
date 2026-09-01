@@ -1,5 +1,14 @@
 # Temporary CiteLadder Google Cloud Demo
 
+> **Implementation status:** repository infrastructure is implemented under
+> `infra/gcp`; deployment remains operator-gated until the external GCP,
+> GitHub environment, Secret Manager, and Cloudflare setup is completed.
+> `Cube-27/Citeladder` is temporarily public at the owner's explicit request
+> for code review and must be made private after deployment.
+
+Follow [GCP_RUNBOOK.md](GCP_RUNBOOK.md) for the executable owner procedure.
+This document remains the deployment design and security contract.
+
 ## Summary
 
 Deploy the existing application unchanged on one Compute Engine VM:
@@ -10,7 +19,8 @@ Cloudflare → Caddy → Next.js → FastAPI
                             └─ Existing workers and schedulers
 ```
 
-- Repository: private `Cube-27/Citeladder`, initially copied with full Git history.
+- Repository: `Cube-27/Citeladder`, temporarily public for code review and made
+  private immediately after the reviewed deployment.
 - GCP: dedicated disposable project in `asia-south1` (Mumbai).
 - Runtime: one on-demand `e2-standard-2` VM, 2 vCPU/8 GiB, 30 GiB balanced disk.
 - URL: `https://citeladder.com`.
@@ -20,7 +30,10 @@ Cloudflare → Caddy → Next.js → FastAPI
 
 ## Repository and Deployment Changes
 
-- Make `Cube-27/Citeladder` private before copying code. Configure `abhineetjain13` and `abhineet.jain@cube27.com` only as Git commit identity; GitHub authentication continues through the authorized account/session.
+- Keep `Cube-27/Citeladder` public only through code review and the reviewed
+  deployment, then make it private immediately. Configure `abhineetjain13` and
+  `abhineet.jain@cube27.com` only as Git commit identity; GitHub authentication
+  continues through the authorized account/session.
 - Preserve full history and tags. In the Cube-27 clone, name the old repository `upstream` and Cube-27 `origin`; until the eventual ownership shift, bring application updates in through reviewed merges from `upstream/main`.
 - Remove the AWS-demo workflows, Terraform, tests, and active AWS runbooks from the Cube-27 copy. Replace them with GCP infrastructure, GCP deployment workflows, a GCP infrastructure test, and the owner runbook. Update `scripts/validation.json` so GCP infrastructure changes select the replacement test.
 - Add a protected GitHub environment named `gcp-demo`. Require `main`, successful CI, and owner approval for deploy and teardown.
@@ -46,12 +59,42 @@ No additional GCP-specific public API or database schema changes are required.
 The application stack still includes the Site Health API and synchronized
 frontend contract changes documented elsewhere in this repository.
 
+### Implemented owners
+
+- `infra/gcp/*.tf`: VPC, firewall rules, static address, Shielded VM, dedicated
+  VM service account, Artifact Registry, Secret Manager containers, backup
+  bucket, and budget alert.
+- `infra/gcp/bootstrap.ps1`: disposable-project APIs, versioned GCS state
+  bucket, deploy service account, and exact GitHub Workload Identity trust.
+- `infra/gcp/runtime/`: loopback-only production Compose stack, Caddy, database
+  TLS, IAP deployment, backup, and fixed-expiry scripts.
+- `.github/workflows/gcp-demo-*.yml`: protected deployment, VM control, expiry
+  guard, and authoritative project teardown.
+- `backend/tests/unit/test_gcp_demo_infrastructure.py`: deterministic security
+  and deployment-contract checks selected by `scripts/validation.json`.
+
+### Protected GitHub environment values
+
+Configure these variables on `gcp-demo`: `GCP_PROJECT_ID`,
+`GCP_PROJECT_NUMBER`, `GCP_REGION`, `GCP_ZONE`, `GCP_WIF_PROVIDER`,
+`GCP_DEPLOY_SERVICE_ACCOUNT`, `GCP_TF_STATE_BUCKET`, `GCP_BILLING_ACCOUNT`,
+`DOMAIN_NAME`, `DEMO_EXPIRES_AT`, and optionally `DEMO_LOGIN_EMAIL`.
+
+Configure these environment secrets: `DEMO_LOGIN_PASSWORD`, <!-- pragma: allowlist secret -- variable name, not a value -->
+`CLOUDFLARE_ORIGIN_CERT`, `CLOUDFLARE_ORIGIN_KEY`, and only the provider keys
+needed for the demonstration. The deploy workflow creates independent database,
+JWT, encryption, and referral secrets directly in Secret Manager on first use.
+
 ## Owner Runbook
 
 ### One-time setup
 
-1. Make `Cube-27/Citeladder` private, copy the reviewed `main` history and tags, enable branch protection, and create the protected `gcp-demo` environment.
-2. Create a new globally unique GCP project, link billing, label it `project=citeladder, environment=demo`, and select Mumbai.
+1. Preserve the reviewed `main` history and tags, enable branch protection, and
+   create the protected `gcp-demo` environment. Make the temporarily public
+   repository private immediately after deployment and review.
+2. Create a new globally unique GCP project, link billing, label it
+   `project=citeladder`, `environment=demo`, and `managed_by=terraform`, and
+   select Mumbai.
 3. Run the checked-in owner bootstrap to enable billing, Compute, IAM, IAP, Artifact Registry, Secret Manager, Cloud Build, and Storage APIs; create the state bucket and exact GitHub WIF trust.
 4. Set GitHub environment variables for project ID, project number, region, zone, WIF provider, deploy service account, state bucket, domain, and the fixed RFC3339 expiry.
 5. Generate the demo login password in a password manager and install it as a protected environment secret. Allow the first deployment to generate independent database, JWT, encryption, and referral secrets directly into Secret Manager.
@@ -115,7 +158,8 @@ frontend contract changes documented elsewhere in this repository.
 
 ## Assumptions
 
-- The owner makes `Cube-27/Citeladder` private before any code or deployment material is pushed.
+- The owner keeps `Cube-27/Citeladder` public only for review and the reviewed
+  deployment, then makes it private immediately afterward.
 - `citeladder.com` can be temporarily repointed through Cloudflare.
 - Seven days and Mumbai are the default deployment window and location.
 - Availability is demo-grade: one VM, no HA, no SLA, and brief downtime during updates is acceptable.

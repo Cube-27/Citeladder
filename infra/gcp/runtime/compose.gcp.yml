@@ -1,0 +1,173 @@
+name: citeladder-demo
+
+x-backend: &backend
+  image: ${BACKEND_IMAGE:?BACKEND_IMAGE must be an immutable digest}
+  network_mode: host
+  restart: unless-stopped
+  env_file:
+    - path: runtime.env
+      required: ${RUNTIME_ENV_REQUIRED:-true}
+  environment: &backend_environment
+    APP_ENV: production
+    DEMO_MODE: "true"
+    DEMO_EXPIRES_AT: ${DEMO_EXPIRES_AT:?DEMO_EXPIRES_AT is required}
+    DEV_LOGIN_EMAIL: ${DEV_LOGIN_EMAIL:?DEV_LOGIN_EMAIL is required}
+    DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    DB_SSL_MODE: require
+    DB_POOL_SIZE: "8"
+    DB_MAX_OVERFLOW: "0"
+    AUDIT_WORKER_CONCURRENCY: "2"
+    SITE_HEALTH_GLOBAL_CONCURRENCY: "2"
+    SITE_HEALTH_PER_HOST_CONCURRENCY: "2"
+    FRONTEND_URL: https://${DOMAIN_NAME:?DOMAIN_NAME is required}
+    FRONTEND_ORIGINS: https://${DOMAIN_NAME}
+    TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:?TRUSTED_PROXY_CIDRS is required}
+  depends_on:
+    db:
+      condition: service_healthy
+    migrate:
+      condition: service_completed_successfully
+  healthcheck:
+    disable: true
+
+services:
+  db-tls-init:
+    image: postgres:16-bookworm@sha256:bb3e1a57e5407e0a5280b4211980a5e537f4abd234a87014ac979849a78dd825
+    network_mode: host
+    user: "0:0"
+    restart: "no"
+    volumes:
+      - postgres_tls:/tls
+      - ./init-postgres-tls.sh:/usr/local/bin/init-postgres-tls.sh:ro
+    command: ["/usr/local/bin/init-postgres-tls.sh"]
+
+  db:
+    image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: citeladder
+      POSTGRES_USER: citeladder
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    command:
+      - postgres
+      - -c
+      - listen_addresses=127.0.0.1
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/tls/server.crt
+      - -c
+      - ssl_key_file=/tls/server.key
+      - -c
+      - password_encryption=scram-sha-256
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_tls:/tls:ro
+    depends_on:
+      db-tls-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U citeladder -d citeladder"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  migrate:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE must be an immutable digest}
+    network_mode: host
+    restart: "no"
+    env_file:
+      - path: runtime.env
+        required: ${RUNTIME_ENV_REQUIRED:-true}
+    environment:
+      <<: *backend_environment
+      DEV_LOGIN_PASSWORD: ${DEV_LOGIN_PASSWORD:?DEV_LOGIN_PASSWORD is required}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["/bin/sh", "-c", "alembic upgrade head && python -m app.demo.bootstrap"]
+
+  web:
+    <<: *backend
+    command: ["uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "127.0.0.1"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/ready').status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+
+  frontend:
+    image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE must be an immutable digest}
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 127.0.0.1
+      PORT: "3000"
+      BACKEND_ORIGIN: http://127.0.0.1:8000
+      CITELADDER_TASK_LOCAL_BACKEND: "true"
+      NEXT_PUBLIC_SITE_URL: https://${DOMAIN_NAME}
+      NEXT_PUBLIC_DEMO_MODE: "true"
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+
+  audit-worker:
+    <<: *backend
+    command: ["python", "-m", "app.workers.audit_worker"]
+  audit-scheduler:
+    <<: *backend
+    command: ["python", "-m", "app.workers.audit_scheduler"]
+  site-health-worker:
+    <<: *backend
+    command: ["python", "-m", "app.workers.site_health_worker"]
+  brand-discovery-worker:
+    <<: *backend
+    command: ["python", "-m", "app.workers.brand_discovery_worker"]
+  content-worker:
+    <<: *backend
+    command: ["python", "-m", "app.workers.content_worker"]
+  agent-worker:
+    <<: *backend
+    command: ["python", "-m", "app.workers.agent_worker"]
+  analytics-worker:
+    <<: *backend
+    command: ["python", "-m", "app.workers.analytics_worker"]
+  queue-sweeper:
+    <<: *backend
+    command: ["python", "-m", "app.workers.queue_sweeper"]
+  integration-worker:
+    <<: *backend
+    command: ["python", "-m", "app.workers.integration_worker"]
+  integration-dispatcher:
+    <<: *backend
+    command: ["python", "-m", "app.workers.integration_dispatcher"]
+
+  caddy:
+    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./tls:/etc/caddy/tls:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  postgres_tls:
+  caddy_data:
+  caddy_config:
