@@ -37,6 +37,8 @@ def test_vm_is_shielded_fixed_size_and_has_no_default_identity() -> None:
     compute = (GCP / "compute.tf").read_text(encoding="utf-8")
     variables = (GCP / "variables.tf").read_text(encoding="utf-8")
     assert 'default = "e2-standard-2"' in variables
+    assert 'condition     = var.zone == "asia-south1-a"' in variables
+    assert 'for label in split(".", var.domain_name)' in variables
     assert "size  = 30" in compute
     assert 'type  = "pd-balanced"' in compute
     assert 'enable-oslogin         = "TRUE"' in compute
@@ -59,6 +61,8 @@ def test_wif_is_exact_and_no_service_account_keys_exist() -> None:
     assert "assertion.ref=='refs/heads/main'" in bootstrap
     assert "assertion.environment=='$Environment'" in bootstrap
     assert "attribute.repository=assertion.repository" in bootstrap
+    assert "$PSNativeCommandUseErrorActionPreference = $true" in bootstrap
+    assert 'Write-Output "GCP_ZONE=$Zone"' in bootstrap
     assert "service-account-key" not in all_text.lower()
     assert "credentials_json" not in all_text
     assert "google_service_account_key" not in all_text
@@ -81,6 +85,8 @@ def test_secret_payloads_stay_out_of_terraform_and_arguments() -> None:
 def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     variables = (GCP / "variables.tf").read_text(encoding="utf-8")
     assert variables.count("@sha256:[0-9a-f]{64}$") == 2
+    assert variables.count("citeladder-demo/backend@sha256:") == 1
+    assert variables.count("citeladder-demo/frontend@sha256:") == 1
     assert "immutable_tags = true" in (GCP / "storage.tf").read_text(encoding="utf-8")
     paths = sorted(WORKFLOWS.glob("gcp-demo-*.yml"))
     assert paths
@@ -96,6 +102,13 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     deploy = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
     assert "group: gcp-demo-deploy" in deploy
     assert "cancel-in-progress: false" in deploy
+    assert deploy.count("gcloud artifacts docker images describe") >= 2
+    assert "if grep -Fxq '0.0.0.0/0'" in deploy
+    assert "if grep -Fxq '::/0'" in deploy
+    assert "bash /tmp/citeladder-deploy/deploy-vm.sh" in deploy
+    destroy = (WORKFLOWS / "gcp-demo-destroy.yml").read_text(encoding="utf-8")
+    assert "labels.managed_by" in destroy
+    assert "$'citeladder\\tdemo\\tterraform'" in destroy
 
 
 def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> None:
@@ -121,6 +134,8 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert "env_file:" not in frontend
     assert "JWT_SECRET_KEY" not in frontend
     assert "DEV_LOGIN_PASSWORD" not in frontend
+    tls_init = (RUNTIME / "init-postgres-tls.sh").read_text(encoding="utf-8")
+    assert "chown 70:70" in tls_init
 
 
 def test_backups_and_expiry_are_fixed_and_operational() -> None:
@@ -129,11 +144,19 @@ def test_backups_and_expiry_are_fixed_and_operational() -> None:
     storage = (GCP / "storage.tf").read_text(encoding="utf-8")
     workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
     assert "./backup.sh predeploy" in deploy
-    assert "restoring the previous services" in deploy
+    assert "restoring the previous runtime and services" in deploy
+    assert "runtime.env.previous" in deploy
+    assert "trap restore_previous_deployment ERR" in deploy
+    assert 'running_services="$(docker compose' in deploy
+    assert "ps --status running --quiet | grep -q" not in deploy
     assert "printf \"%s='%s'\\n\"" in deploy
     assert "*$'\\n'*|*$'\\r'*|*\"'\"*" in deploy
     assert 'cloudflare_ipv4="$(paste -sd,' in deploy
     assert 'cloudflare_ipv6="$(paste -sd,' in deploy
+    assert "urllib.parse.quote" in deploy
+    assert 'for service in "${stopped_services[@]}" db' in deploy
+    assert "{{.RestartCount}}" in deploy
+    assert "{{.State.ExitCode}}" in deploy
     assert "citeladder-expiry.timer" in deploy
     assert "OnCalendar=$calendar" in deploy
     assert "demo-expires-at" in deploy

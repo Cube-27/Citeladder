@@ -1,5 +1,8 @@
 # Google Cloud temporary demo infrastructure
 
+Follow the complete owner procedure in
+[`docs/operations/GCP_RUNBOOK.md`](../../docs/operations/GCP_RUNBOOK.md).
+
 This directory is the sole infrastructure owner for the seven-day CiteLadder
 demo described in [`docs/operations/GOOGLE_CLOUD.md`](../../docs/operations/GOOGLE_CLOUD.md).
 It provisions one Shielded Compute Engine VM in Mumbai, a dedicated VPC,

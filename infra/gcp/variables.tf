@@ -22,8 +22,8 @@ variable "zone" {
   type    = string
   default = "asia-south1-a"
   validation {
-    condition     = startswith(var.zone, "asia-south1-")
-    error_message = "The demo VM must remain in asia-south1."
+    condition     = var.zone == "asia-south1-a"
+    error_message = "The temporary demo is fixed to asia-south1-a."
   }
 }
 
@@ -31,7 +31,11 @@ variable "domain_name" {
   type    = string
   default = "citeladder.com"
   validation {
-    condition     = can(regex("^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$", var.domain_name))
+    condition = length(var.domain_name) <= 253 && alltrue([
+      for label in split(".", var.domain_name) :
+      length(label) >= 1 && length(label) <= 63 &&
+      can(regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", label))
+    ])
     error_message = "domain_name must be a lower-case DNS hostname."
   }
 }
@@ -39,7 +43,10 @@ variable "domain_name" {
 variable "backend_image" {
   type = string
   validation {
-    condition     = can(regex("@sha256:[0-9a-f]{64}$", var.backend_image))
+    condition = startswith(
+      var.backend_image,
+      "${var.region}-docker.pkg.dev/${var.project_id}/citeladder-demo/backend@sha256:"
+    ) && can(regex("@sha256:[0-9a-f]{64}$", var.backend_image))
     error_message = "backend_image must be an immutable Artifact Registry digest."
   }
 }
@@ -47,7 +54,10 @@ variable "backend_image" {
 variable "frontend_image" {
   type = string
   validation {
-    condition     = can(regex("@sha256:[0-9a-f]{64}$", var.frontend_image))
+    condition = startswith(
+      var.frontend_image,
+      "${var.region}-docker.pkg.dev/${var.project_id}/citeladder-demo/frontend@sha256:"
+    ) && can(regex("@sha256:[0-9a-f]{64}$", var.frontend_image))
     error_message = "frontend_image must be an immutable Artifact Registry digest."
   }
 }

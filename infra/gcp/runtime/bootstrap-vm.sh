@@ -3,7 +3,7 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y --no-install-recommends ca-certificates curl gnupg
+apt-get install -y --no-install-recommends ca-certificates curl gnupg python3
 install -m 0755 -d /etc/apt/keyrings
 curl --fail --silent --show-error https://download.docker.com/linux/debian/gpg \
   | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg

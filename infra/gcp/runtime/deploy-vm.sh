@@ -15,6 +15,20 @@ set -euo pipefail
 [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$BACKEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
 [[ "$FRONTEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
+expected_registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
+[[ "$BACKEND_IMAGE" == "$expected_registry/backend@sha256:"* ]]
+[[ "$FRONTEND_IMAGE" == "$expected_registry/frontend@sha256:"* ]]
+
+had_previous=false
+running_services=""
+if test -f /opt/citeladder/runtime.env && test -f /opt/citeladder/compose.gcp.yml; then
+  running_services="$(docker compose --env-file /opt/citeladder/runtime.env \
+    -f /opt/citeladder/compose.gcp.yml ps --status running --quiet)"
+fi
+if [[ -n "$running_services" ]]; then
+  cp /opt/citeladder/runtime.env /opt/citeladder/runtime.env.previous
+  had_previous=true
+fi
 
 install -d -m 0750 /opt/citeladder /opt/citeladder/tls
 install -m 0644 /tmp/citeladder-deploy/compose.gcp.yml /opt/citeladder/compose.gcp.yml
@@ -65,7 +79,9 @@ write_env() {
 cloudflare_ipv4="$(paste -sd, /tmp/citeladder-deploy/cf-v4)"
 cloudflare_ipv6="$(paste -sd, /tmp/citeladder-deploy/cf-v6)"
 trusted_proxy_cidrs="127.0.0.1/32,$cloudflare_ipv4,$cloudflare_ipv6"
-database_url="postgresql+asyncpg://citeladder:$db_password@127.0.0.1:5432/citeladder"
+db_password_uri="$(DB_PASSWORD="$db_password" python3 -c \
+  'import os, urllib.parse; print(urllib.parse.quote(os.environ["DB_PASSWORD"], safe=""))')"
+database_url="postgresql+asyncpg://citeladder:$db_password_uri@127.0.0.1:5432/citeladder"
 
 umask 077
 printf '%s\n' "$origin_cert" > /opt/citeladder/tls/origin.crt
@@ -89,22 +105,30 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env DEV_LOGIN_PASSWORD "$demo_password"
   test -z "$mistral_key" || write_env MISTRAL_API_KEY "$mistral_key"
   test -z "$agent_key" || write_env DEFAULT_AGENT_API_KEY "$agent_key"
-} > /opt/citeladder/runtime.env
+} > /opt/citeladder/runtime.env.new
+mv /opt/citeladder/runtime.env.new /opt/citeladder/runtime.env
 
 cd /opt/citeladder
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-if docker compose --env-file runtime.env -f compose.gcp.yml ps --status running --quiet | grep -q .; then
-  stopped_services=(caddy frontend web audit-worker audit-scheduler site-health-worker \
-    brand-discovery-worker content-worker agent-worker analytics-worker \
-    queue-sweeper integration-worker integration-dispatcher)
-  docker compose --env-file runtime.env -f compose.gcp.yml stop "${stopped_services[@]}"
-  if ! ./backup.sh predeploy; then
-    echo 'Pre-deploy backup failed; restoring the previous services' >&2
-    if ! docker compose --env-file runtime.env -f compose.gcp.yml start "${stopped_services[@]}"; then
-      echo 'Previous services also failed to restart' >&2
-    fi
-    exit 1
+stopped_services=(caddy frontend web audit-worker audit-scheduler site-health-worker \
+  brand-discovery-worker content-worker agent-worker analytics-worker \
+  queue-sweeper integration-worker integration-dispatcher)
+restore_previous_deployment() {
+  local status=$?
+  trap - ERR
+  set +e
+  if $had_previous; then
+    echo 'Deployment failed; restoring the previous runtime and services' >&2
+    cp runtime.env.previous runtime.env
+    docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate
   fi
+  exit "$status"
+}
+trap restore_previous_deployment ERR
+
+if $had_previous; then
+  docker compose --env-file runtime.env -f compose.gcp.yml stop "${stopped_services[@]}"
+  ./backup.sh predeploy
 fi
 docker compose --env-file runtime.env -f compose.gcp.yml pull
 docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate
@@ -148,9 +172,19 @@ systemctl daemon-reload
 systemctl enable --now citeladder-expiry.timer citeladder-backup.timer
 
 for attempt in $(seq 1 30); do
-  if curl --fail --silent http://127.0.0.1:3000/health >/dev/null; then exit 0; fi
+  if curl --fail --silent http://127.0.0.1:3000/health >/dev/null; then break; fi
   echo "Health probe attempt $attempt failed"
   sleep 5
 done
-docker compose --env-file runtime.env -f compose.gcp.yml ps
-exit 1
+curl --fail --silent http://127.0.0.1:3000/health >/dev/null
+for service in "${stopped_services[@]}" db; do
+  container_id="$(docker compose --env-file runtime.env -f compose.gcp.yml ps -q "$service")"
+  test -n "$container_id"
+  test "$(docker inspect --format '{{.State.Running}}' "$container_id")" = true
+  test "$(docker inspect --format '{{.RestartCount}}' "$container_id")" = 0
+done
+migrate_id="$(docker compose --env-file runtime.env -f compose.gcp.yml ps -aq migrate)"
+test -n "$migrate_id"
+test "$(docker inspect --format '{{.State.ExitCode}}' "$migrate_id")" = 0
+rm -f runtime.env.previous
+trap - ERR

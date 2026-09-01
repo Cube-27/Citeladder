@@ -93,14 +93,20 @@ jobs:
           curl --fail --silent --show-error https://www.cloudflare.com/ips-v4 > /tmp/cf-v4
           curl --fail --silent --show-error https://www.cloudflare.com/ips-v6 > /tmp/cf-v6
           test -s /tmp/cf-v4 && test -s /tmp/cf-v6
-          ! grep -Fxq '0.0.0.0/0' /tmp/cf-v4
-          ! grep -Fxq '::/0' /tmp/cf-v6
+          if grep -Fxq '0.0.0.0/0' /tmp/cf-v4; then
+            echo 'Cloudflare IPv4 list contains a default route' >&2
+            exit 1
+          fi
+          if grep -Fxq '::/0' /tmp/cf-v6; then
+            echo 'Cloudflare IPv6 list contains a default route' >&2
+            exit 1
+          fi
           jq -n \
             --arg project "$PROJECT_ID" --arg billing "$BILLING_ACCOUNT" \
             --arg region "$REGION" --arg zone "$ZONE" --arg domain "$DOMAIN_NAME" \
             --arg expiry "$DEMO_EXPIRES_AT" \
-            --arg backend 'invalid.example/backend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
-            --arg frontend 'invalid.example/frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' \
+            --arg backend "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/backend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+            --arg frontend "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" \
             --argjson v4 "$(jq -Rsc 'split("\n")|map(select(length>0))' /tmp/cf-v4)" \
             --argjson v6 "$(jq -Rsc 'split("\n")|map(select(length>0))' /tmp/cf-v6)" \
             '{project_id:$project,billing_account:$billing,region:$region,zone:$zone,domain_name:$domain,
@@ -118,15 +124,19 @@ jobs:
           set -euo pipefail
           registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
           gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-          docker build --build-arg BUILD_REVISION="$GITHUB_SHA" -t "$registry/backend:$GITHUB_SHA" ../..
-          docker build --build-arg BUILD_REVISION="$GITHUB_SHA" \
-            --build-arg BACKEND_ORIGIN=http://127.0.0.1:8000 \
-            --build-arg CITELADDER_TASK_LOCAL_BACKEND=true \
-            --build-arg NEXT_PUBLIC_DEMO_MODE=true \
-            --build-arg NEXT_PUBLIC_SITE_URL="https://$DOMAIN_NAME" \
-            -t "$registry/frontend:$GITHUB_SHA" -f ../../frontend/Dockerfile ../..
-          docker push "$registry/backend:$GITHUB_SHA"
-          docker push "$registry/frontend:$GITHUB_SHA"
+          if ! gcloud artifacts docker images describe "$registry/backend:$GITHUB_SHA" >/dev/null 2>&1; then
+            docker build --build-arg BUILD_REVISION="$GITHUB_SHA" -t "$registry/backend:$GITHUB_SHA" ../..
+            docker push "$registry/backend:$GITHUB_SHA"
+          fi
+          if ! gcloud artifacts docker images describe "$registry/frontend:$GITHUB_SHA" >/dev/null 2>&1; then
+            docker build --build-arg BUILD_REVISION="$GITHUB_SHA" \
+              --build-arg BACKEND_ORIGIN=http://127.0.0.1:8000 \
+              --build-arg CITELADDER_TASK_LOCAL_BACKEND=true \
+              --build-arg NEXT_PUBLIC_DEMO_MODE=true \
+              --build-arg NEXT_PUBLIC_SITE_URL="https://$DOMAIN_NAME" \
+              -t "$registry/frontend:$GITHUB_SHA" -f ../../frontend/Dockerfile ../..
+            docker push "$registry/frontend:$GITHUB_SHA"
+          fi
           backend_digest=$(gcloud artifacts docker images describe "$registry/backend:$GITHUB_SHA" --format='value(image_summary.digest)')
           frontend_digest=$(gcloud artifacts docker images describe "$registry/frontend:$GITHUB_SHA" --format='value(image_summary.digest)')
           test "$backend_digest" != "$frontend_digest"
@@ -196,7 +206,7 @@ jobs:
             --quiet --command='rm -rf /tmp/citeladder-deploy && mkdir -m 700 /tmp/citeladder-deploy'
           gcloud compute scp infra/gcp/runtime/* /tmp/cf-v4 /tmp/cf-v6 "$VM_NAME:/tmp/citeladder-deploy/" \
             --project "$PROJECT_ID" --zone "$ZONE" --tunnel-through-iap --quiet
-          printf -v remote 'sudo env PROJECT_ID=%q REGION=%q BACKEND_IMAGE=%q FRONTEND_IMAGE=%q BACKUP_BUCKET=%q DOMAIN_NAME=%q SOURCE_COMMIT=%q DEV_LOGIN_EMAIL=%q /tmp/citeladder-deploy/deploy-vm.sh' \
+          printf -v remote 'sudo env PROJECT_ID=%q REGION=%q BACKEND_IMAGE=%q FRONTEND_IMAGE=%q BACKUP_BUCKET=%q DOMAIN_NAME=%q SOURCE_COMMIT=%q DEV_LOGIN_EMAIL=%q bash /tmp/citeladder-deploy/deploy-vm.sh' \
             "$PROJECT_ID" "$REGION" "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$BACKUP_BUCKET" \
             "$DOMAIN_NAME" "$GITHUB_SHA" "${DEMO_LOGIN_EMAIL:-dev@citeladder.com}"
           gcloud compute ssh "$VM_NAME" --project "$PROJECT_ID" --zone "$ZONE" --tunnel-through-iap --quiet --command="$remote"

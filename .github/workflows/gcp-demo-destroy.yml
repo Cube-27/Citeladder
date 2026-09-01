@@ -32,6 +32,6 @@ jobs:
           set -euo pipefail
           test "$CONFIRMATION" = "$PROJECT_ID"
           test -n "$PROJECT_ID" && test "$PROJECT_ID" != 'citeladder'
-          labels=$(gcloud projects describe "$PROJECT_ID" --format='value(labels.project,labels.environment)')
-          test "$labels" = $'citeladder\tdemo'
+          labels=$(gcloud projects describe "$PROJECT_ID" --format='value(labels.project,labels.environment,labels.managed_by)')
+          test "$labels" = $'citeladder\tdemo\tterraform'
           gcloud projects delete "$PROJECT_ID" --quiet
