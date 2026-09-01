@@ -264,8 +264,11 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --retry 12 --retry-delay 5 "https://$DOMAIN_NAME/health" >/dev/null
+          registration_payload="$(jq -nc --arg email "$DEMO_LOGIN_EMAIL" --arg password "$(openssl rand -hex 16)" \
+            '{email:$email,password:$password}')"
           status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            -X POST -H 'content-type: application/json' -d '{}' "https://$DOMAIN_NAME/api/v1/auth/register")
+            -X POST -H 'content-type: application/json' --data "$registration_payload" \
+            "https://$DOMAIN_NAME/api/v1/auth/register")
           test "$status" = 403
           {
             echo '### GCP demo deployment'
