@@ -23,7 +23,7 @@ from app.api.browser_cookies import (
     clear_integration_oauth_cookie,
 )
 from app.api.deps import get_current_user, get_db
-from app.core.config import settings, trusted_proxy_networks
+from app.core.config import demo_access_expired, settings, trusted_proxy_networks
 from app.core.config.abuse import abuse_settings
 from app.core.http_errors import raise_api_error
 from app.domain.abuse.service import UsageLimitExceededError, enforce_and_commit
@@ -113,6 +113,8 @@ async def register(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> RegistrationResponse:
+    if settings.demo_mode:
+        raise_api_error(status.HTTP_403_FORBIDDEN, "Registration is disabled")
     await _enforce_limit(
         session,
         subject_kind="client",
@@ -134,6 +136,8 @@ async def login(
     response: Response,
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> AuthResponse:
+    if demo_access_expired():
+        raise_api_error(status.HTTP_401_UNAUTHORIZED, "Demo access has expired")
     await _enforce_limit(
         session,
         subject_kind="client",

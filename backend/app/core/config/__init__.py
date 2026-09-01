@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ipaddress
 import logging
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import AliasChoices, Field
@@ -82,6 +83,22 @@ class Settings(BaseSettings):
     )
     # Session cookie name for the HttpOnly JWT (set by B2).
     session_cookie_name: str = "citeladder_session"
+    demo_mode: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("DEMO_MODE", "demo_mode"),
+    )
+    demo_expires_at: datetime | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DEMO_EXPIRES_AT", "demo_expires_at"),
+    )
+    dev_login_email: str = Field(
+        default="dev@citeladder.com",
+        validation_alias=AliasChoices("DEV_LOGIN_EMAIL", "dev_login_email"),
+    )
+    dev_login_password: str = Field(
+        default="",
+        validation_alias=AliasChoices("DEV_LOGIN_PASSWORD", "dev_login_password"),
+    )
     encryption_key: str = Field(
         default="replace-with-32-byte-minimum-secret",
         validation_alias=AliasChoices("ENCRYPTION_KEY", "encryption_key"),
@@ -354,6 +371,35 @@ def _dev_gate_problems(candidate: Settings) -> list[str]:
     return []
 
 
+def demo_access_expired(
+    candidate: Settings = settings,
+    *,
+    now: datetime | None = None,
+) -> bool:
+    """Fail closed when demo mode has no valid future access deadline."""
+    if not candidate.demo_mode:
+        return False
+    expires_at = candidate.demo_expires_at
+    if expires_at is None or expires_at.tzinfo is None:
+        return True
+    current = now or datetime.now(UTC)
+    return current >= expires_at.astimezone(UTC)
+
+
+def _demo_problems(candidate: Settings) -> list[str]:
+    if not candidate.demo_mode:
+        return []
+    issues: list[str] = []
+    if candidate.demo_expires_at is None or candidate.demo_expires_at.tzinfo is None:
+        issues.append("demo_expires_at must be a timezone-aware timestamp in demo mode")
+    if _secret_is_weak(candidate.dev_login_password):
+        issues.append("dev_login_password does not meet the production strength policy")
+    core_values = {getattr(candidate, name) for name in _SECRET_FIELDS}
+    if candidate.dev_login_password in core_values:
+        issues.append("dev_login_password must be independent of application secrets")
+    return issues
+
+
 def validate_production_security(candidate: Settings) -> list[str]:
     """Return non-secret deployment-policy violations for ``candidate``."""
     issues: list[str] = []
@@ -376,6 +422,7 @@ def validate_production_security(candidate: Settings) -> list[str]:
         issues.append("db_ssl_mode must be require in production")
     issues.extend(_trusted_proxy_problems(candidate.trusted_proxy_cidrs))
     issues.extend(_dev_gate_problems(candidate))
+    issues.extend(_demo_problems(candidate))
     return issues
 
 

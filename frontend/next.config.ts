@@ -54,6 +54,7 @@ function stripTrailingDots(value: string): string {
 export function resolveBackendOrigin(
   configuredValue = process.env.BACKEND_ORIGIN,
   production = process.env.NODE_ENV === 'production',
+  taskLocal = process.env.CITELADDER_TASK_LOCAL_BACKEND === 'true',
 ) {
   const configured = configuredValue?.trim();
   if (!configured) {
@@ -76,15 +77,15 @@ export function resolveBackendOrigin(
   // `URL` keeps IPv6 literals bracketed; strip them so one set of comparisons
   // covers both forms.
   const host = stripTrailingDots(parsed.hostname.toLowerCase()).replace(/^\[|\]$/g, '');
-  if (
-    production &&
-    (host === 'localhost' ||
-      host === '0.0.0.0' ||
-      host === '::' ||
-      host === '::1' ||
-      host.startsWith('127.') ||
-      isMappedIpv4Literal(host))
-  ) {
+  const loopback =
+    host === 'localhost' ||
+    host === '0.0.0.0' ||
+    host === '::' ||
+    host === '::1' ||
+    host.startsWith('127.') ||
+    isMappedIpv4Literal(host);
+  const exactTaskLocalOrigin = parsed.origin === 'http://127.0.0.1:8000';
+  if (production && loopback && !(taskLocal && exactTaskLocalOrigin)) {
     throw new Error('BACKEND_ORIGIN must not use a loopback host in production.');
   }
   return parsed.origin;

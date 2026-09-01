@@ -11,6 +11,7 @@ import { authErrorMessage, loginFormSchema, type LoginFormValues } from '@/lib/a
 import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 
 function LoginForm() {
+  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   const searchParams = useSearchParams();
   const description =
     searchParams.get('registered') === '1'
@@ -40,6 +41,7 @@ function LoginForm() {
       footerPrompt="Don't have an account?"
       footerHref="/register"
       footerLabel="Sign up"
+      showFooter={!demoMode}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />
       <AuthPasswordField

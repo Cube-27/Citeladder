@@ -43,4 +43,14 @@ describe('resolveBackendOrigin', () => {
   it('still permits loopback outside production', () => {
     expect(resolveBackendOrigin('http://127.0.0.1:8000', false)).toBe('http://127.0.0.1:8000');
   });
+
+  it('permits only the exact task-local backend when explicitly enabled', () => {
+    expect(resolveBackendOrigin('http://127.0.0.1:8000', true, true)).toBe('http://127.0.0.1:8000');
+    expect(() => resolveBackendOrigin('http://127.0.0.1:9000', true, true)).toThrow(
+      /loopback host/i,
+    );
+    expect(() => resolveBackendOrigin('http://localhost:8000', true, true)).toThrow(
+      /loopback host/i,
+    );
+  });
 });

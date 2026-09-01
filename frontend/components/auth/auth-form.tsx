@@ -117,6 +117,8 @@ export function AuthFormShell({
   footerHref,
   footerLabel,
   showOAuth = true,
+  showForm = true,
+  showFooter = true,
   children,
 }: Readonly<{
   title: string;
@@ -130,6 +132,8 @@ export function AuthFormShell({
   footerHref: string;
   footerLabel: string;
   showOAuth?: boolean;
+  showForm?: boolean;
+  showFooter?: boolean;
   children: ReactNode;
 }>) {
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
@@ -190,28 +194,32 @@ export function AuthFormShell({
 
         {error ? <MktAlert>{error}</MktAlert> : null}
 
-        <form noValidate onSubmit={onSubmit} className="space-y-3">
-          {children}
+        {showForm ? (
+          <form noValidate onSubmit={onSubmit} className="space-y-3">
+            {children}
 
-          <Button
-            type="submit"
-            size="lg"
-            className="mt-2 w-full text-sm font-medium"
-            disabled={pending}
-          >
-            {pending ? pendingLabel : submitLabel}
-          </Button>
-        </form>
+            <Button
+              type="submit"
+              size="lg"
+              className="mt-2 w-full text-sm font-medium"
+              disabled={pending}
+            >
+              {pending ? pendingLabel : submitLabel}
+            </Button>
+          </form>
+        ) : null}
 
-        <p className="website-body text-muted pt-1 text-center">
-          {footerPrompt}{' '}
-          <Link
-            href={footerHref}
-            className="text-accent-text hover:text-accent-hover font-medium transition-colors"
-          >
-            {footerLabel}
-          </Link>
-        </p>
+        {showFooter ? (
+          <p className="website-body text-muted pt-1 text-center">
+            {footerPrompt}{' '}
+            <Link
+              href={footerHref}
+              className="text-accent-text hover:text-accent-hover font-medium transition-colors"
+            >
+              {footerLabel}
+            </Link>
+          </p>
+        ) : null}
       </div>
     </div>
   );

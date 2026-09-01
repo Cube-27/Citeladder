@@ -1,0 +1,46 @@
+name: AWS Demo - Destroy Resources
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    environment: aws-demo
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify protected commit
+        shell: bash
+        run: test "$GITHUB_SHA" = "$(git rev-parse origin/main)"
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ vars.AWS_DESTROY_ROLE_ARN }}
+          aws-region: us-east-1
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: 1.10.5
+      - name: Destroy exact demo state
+        working-directory: infra/terraform
+        env:
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform init -input=false -backend-config="bucket=$TF_STATE_BUCKET"
+          terraform destroy -input=false -auto-approve \
+            -var='backend_image=invalid.example/backend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
+            -var='frontend_image=invalid.example/frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' \
+            -var='demo_expires_at=2099-01-01T00:00:00Z' \
+            -var='cloudflare_ipv4_cidrs=["173.245.48.0/20"]' \
+            -var='cloudflare_ipv6_cidrs=["2400:cb00::/32"]'
+          for key in citeladder-demo/terraform.tfstate citeladder-demo/terraform.tfstate.tflock; do
+            aws s3api list-object-versions --bucket "$TF_STATE_BUCKET" --prefix "$key" --output json |
+              jq -r --arg key "$key" '[(.Versions//[])+(.DeleteMarkers//[])|.[]|select(.Key==$key)|[.Key,.VersionId]|@tsv][]' |
+              while IFS=$'\t' read -r exact version; do
+                aws s3api delete-object --bucket "$TF_STATE_BUCKET" --key "$exact" --version-id "$version" >/dev/null
+              done
+          done

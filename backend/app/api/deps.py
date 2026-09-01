@@ -12,7 +12,7 @@ from fastapi import Cookie, Depends, Header, Path, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import demo_access_expired, settings
 from app.core.database import get_session
 from app.core.http_errors import raise_api_error, raise_not_found
 from app.core.security import decode_access_token
@@ -42,6 +42,8 @@ async def get_current_user(
     session: AsyncSession = Depends(get_db),  # noqa: B008 - FastAPI injects via defaults.
 ) -> User:
     """Resolve the authenticated user from the HttpOnly session cookie."""
+    if demo_access_expired():
+        raise_api_error(status.HTTP_401_UNAUTHORIZED, "Demo access has expired")
     if not session_token:
         raise_api_error(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
     try:

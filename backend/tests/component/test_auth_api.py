@@ -9,6 +9,7 @@ Covers the B2 acceptance:
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -44,6 +45,51 @@ async def test_register_is_generic_and_does_not_create_session(
     assert resp.status_code == 202
     assert set(resp.json()) == {"message"}
     assert COOKIE not in resp.cookies
+    assert (await client.get("/api/v1/auth/me")).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_demo_mode_rejects_registration_server_side(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "demo_mode", True)
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={"email": "blocked@example.com", "password": "password123"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Registration is disabled"
+
+
+@pytest.mark.asyncio
+async def test_demo_login_and_existing_session_obey_fixed_expiry(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await _register(client, "demo@example.com")
+    client.cookies.clear()
+    monkeypatch.setattr(settings, "demo_mode", True)
+    monkeypatch.setattr(
+        settings,
+        "demo_expires_at",
+        datetime.now(UTC) + timedelta(hours=1),
+    )
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "demo@example.com", "password": "password123"},
+    )
+    assert login.status_code == 200
+    assert (await client.get("/api/v1/auth/me")).status_code == 200
+
+    monkeypatch.setattr(
+        settings,
+        "demo_expires_at",
+        datetime.now(UTC) - timedelta(seconds=1),
+    )
+    expired_login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "demo@example.com", "password": "password123"},
+    )
+    assert expired_login.status_code == 401
     assert (await client.get("/api/v1/auth/me")).status_code == 401
 
 

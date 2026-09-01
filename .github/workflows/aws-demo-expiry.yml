@@ -1,0 +1,38 @@
+name: AWS Demo - Expiry
+
+on:
+  schedule:
+    - cron: '11 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    environment: aws-demo
+    outputs:
+      expired: ${{ steps.deadline.outputs.expired }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ vars.AWS_DESTROY_ROLE_ARN }}
+          aws-region: us-east-1
+      - id: deadline
+        shell: bash
+        run: |
+          expiry=$(aws ssm get-parameter --name /citeladder/demo/expires-at --query 'Parameter.Value' --output text 2>/dev/null || true)
+          if [ -n "$expiry" ] && [ "$(date -u +%s)" -ge "$(date -u -d "$expiry" +%s)" ]; then
+            echo 'expired=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'expired=false' >> "$GITHUB_OUTPUT"
+          fi
+  destroy:
+    needs: check
+    if: needs.check.outputs.expired == 'true'
+    uses: ./.github/workflows/aws-demo-destroy-reusable.yml
+    permissions:
+      contents: read
+      id-token: write

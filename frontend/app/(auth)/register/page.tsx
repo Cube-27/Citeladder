@@ -10,6 +10,7 @@ import { authApi } from '@/lib/api/auth';
 import { authErrorMessage, registerFormSchema, type RegisterFormValues } from '@/lib/auth/forms';
 
 export default function RegisterPage() {
+  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   const router = useRouter();
   const {
     register,
@@ -25,6 +26,26 @@ export default function RegisterPage() {
   });
   const submit = (values: RegisterFormValues) =>
     mutation.mutateAsync(values).catch(() => undefined);
+
+  if (demoMode) {
+    return (
+      <AuthFormShell
+        title="Registration unavailable"
+        description="This temporary demo uses a preconfigured account."
+        onSubmit={(event) => event.preventDefault()}
+        pending={false}
+        submitLabel="Registration disabled"
+        pendingLabel="Registration disabled"
+        footerPrompt="Already have the demo account?"
+        footerHref="/login"
+        footerLabel="Sign in"
+        showOAuth={false}
+        showForm={false}
+      >
+        {null}
+      </AuthFormShell>
+    );
+  }
 
   return (
     <AuthFormShell

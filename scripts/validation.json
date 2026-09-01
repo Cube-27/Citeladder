@@ -5,6 +5,10 @@
   "frontendExtensions": [".ts", ".tsx", ".js", ".jsx", ".mjs"],
   "rules": [
     {
+      "sources": ["infra/terraform/**", ".github/workflows/aws-demo-*.yml"],
+      "backendTests": ["tests/unit/test_aws_demo_infrastructure.py"]
+    },
+    {
       "sources": ["reset-db.py"],
       "backendTests": ["tests/unit/test_reset_db.py"]
     },
@@ -396,6 +400,7 @@
     },
     {
       "sources": [
+        "backend/app/demo/**",
         "backend/app/domain/auth/**",
         "backend/app/domain/workspaces/**",
         "backend/app/domain/projects/**",
