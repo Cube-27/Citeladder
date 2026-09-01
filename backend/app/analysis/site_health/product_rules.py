@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, date, datetime
+
 from app.core.config.site_health_contracts import (
     RULE_OUTCOME_MISSING,
     RULE_OUTCOME_SATISFIED,
@@ -83,7 +85,7 @@ def check_offer_freshness_signal(facts: dict) -> tuple[str, dict]:
         or commerce.get("visible_price")
     )
     currency = [str(value) for value in schema.get("price_currency") or () if value]
-    timestamp, timestamp_source = _freshness_timestamp(facts)
+    timestamp, timestamp_source = _offer_freshness_timestamp(facts, schema)
     evidence = {
         "offer": offer,
         "currency": list(dict.fromkeys(currency))[:8],
@@ -187,6 +189,28 @@ def _freshness_timestamp(facts: dict) -> tuple[str, str]:
         if timestamp:
             return timestamp[:128], key
     return "", ""
+
+
+def _offer_freshness_timestamp(facts: dict, schema: dict) -> tuple[str, str]:
+    validity = next(
+        (
+            str(value).strip()
+            for value in schema.get("price_valid_until") or ()
+            if value
+        ),
+        "",
+    )
+    if validity:
+        return _current_offer_validity(validity), "offer_price_valid_until"
+    return _freshness_timestamp(facts)
+
+
+def _current_offer_validity(value: str) -> str:
+    try:
+        valid_until = date.fromisoformat(value[:10])
+    except ValueError:
+        return ""
+    return value[:128] if valid_until >= datetime.now(UTC).date() else ""
 
 
 def check_listing_item_facts(facts: dict) -> tuple[str, dict]:
