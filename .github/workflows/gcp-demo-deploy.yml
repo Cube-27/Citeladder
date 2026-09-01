@@ -34,6 +34,8 @@ jobs:
       ZONE: ${{ vars.GCP_ZONE }}
       STATE_BUCKET: ${{ vars.GCP_TF_STATE_BUCKET }}
       BILLING_ACCOUNT: ${{ vars.GCP_BILLING_ACCOUNT }}
+      BUDGET_CURRENCY_CODE: ${{ vars.GCP_BUDGET_CURRENCY_CODE }}
+      BUDGET_UNITS: ${{ vars.GCP_BUDGET_UNITS }}
       DEMO_EXPIRES_AT: ${{ vars.DEMO_EXPIRES_AT }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       DEMO_LOGIN_EMAIL: ${{ vars.DEMO_LOGIN_EMAIL }}
@@ -82,7 +84,8 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$PROJECT_ID" && test -n "$STATE_BUCKET" && test -n "$DEMO_EXPIRES_AT"
-          test -n "$BILLING_ACCOUNT" && test -n "$DOMAIN_NAME"
+          test -n "$BILLING_ACCOUNT" && test -n "$BUDGET_CURRENCY_CODE" && test -n "$BUDGET_UNITS"
+          test -n "$DOMAIN_NAME"
           terraform init -input=false -backend-config="bucket=$STATE_BUCKET"
           terraform fmt -check
           terraform validate
@@ -110,13 +113,15 @@ jobs:
           fi
           jq -n \
             --arg project "$PROJECT_ID" --arg billing "$BILLING_ACCOUNT" \
+            --arg budget_currency "$BUDGET_CURRENCY_CODE" --argjson budget_units "$BUDGET_UNITS" \
             --arg region "$REGION" --arg zone "$ZONE" --arg domain "$DOMAIN_NAME" \
             --arg expiry "$DEMO_EXPIRES_AT" \
             --arg backend "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/backend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
             --arg frontend "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" \
             --argjson v4 "$(jq -Rsc 'split("\n")|map(select(length>0))' /tmp/cf-v4)" \
             --argjson v6 "$(jq -Rsc 'split("\n")|map(select(length>0))' /tmp/cf-v6)" \
-            '{project_id:$project,billing_account:$billing,region:$region,zone:$zone,domain_name:$domain,
+            '{project_id:$project,billing_account:$billing,budget_currency_code:$budget_currency,
+              budget_units:$budget_units,region:$region,zone:$zone,domain_name:$domain,
               demo_expires_at:$expiry,backend_image:$backend,frontend_image:$frontend,
               cloudflare_ipv4_cidrs:$v4,cloudflare_ipv6_cidrs:$v6}' > demo.auto.tfvars.json
           terraform apply -input=false -auto-approve \

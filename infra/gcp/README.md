@@ -7,7 +7,9 @@ This directory is the sole infrastructure owner for the seven-day CiteLadder
 demo described in [`docs/operations/GOOGLE_CLOUD.md`](../../docs/operations/GOOGLE_CLOUD.md).
 It provisions one Shielded Compute Engine VM in Mumbai, a dedicated VPC,
 Cloudflare-only web ingress, IAP-only SSH, Artifact Registry, Secret Manager,
-a private backup bucket, and a USD 25 billing-budget alert.
+a private backup bucket, and a billing-account-currency budget alert. The
+reviewed INR account uses `GCP_BUDGET_CURRENCY_CODE=INR` and
+`GCP_BUDGET_UNITS=2400`, approximately USD 25 at review time.
 
 ## Bootstrap
 
@@ -18,7 +20,8 @@ for `Cube-27/Citeladder`, `refs/heads/main`, and `gcp-demo`.
 
 The script prints the non-secret GitHub environment variables. Configure them
 on the protected `gcp-demo` environment, add the fixed `DEMO_EXPIRES_AT`,
-`GCP_BILLING_ACCOUNT`, and `DOMAIN_NAME`, then add the protected
+`GCP_BILLING_ACCOUNT`, matching `GCP_BUDGET_CURRENCY_CODE` and
+`GCP_BUDGET_UNITS`, and `DOMAIN_NAME`, then add the protected
 `DEMO_LOGIN_PASSWORD` secret. Install the Cloudflare Origin CA certificate and
 key directly in Secret Manager; never pass them through Terraform.
 

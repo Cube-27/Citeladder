@@ -5,8 +5,26 @@ variable "project_id" {
 
 variable "billing_account" {
   type        = string
-  description = "Billing account used by the USD 25 alert."
+  description = "Billing account used by the configured demo-cost alert."
   sensitive   = true
+}
+
+variable "budget_currency_code" {
+  type        = string
+  description = "ISO 4217 currency code matching the billing account."
+  validation {
+    condition     = can(regex("^[A-Z]{3}$", var.budget_currency_code))
+    error_message = "budget_currency_code must be a three-letter uppercase ISO 4217 code."
+  }
+}
+
+variable "budget_units" {
+  type        = number
+  description = "Positive whole-unit budget amount in the billing account currency."
+  validation {
+    condition     = var.budget_units > 0 && floor(var.budget_units) == var.budget_units
+    error_message = "budget_units must be a positive whole number."
+  }
 }
 
 variable "region" {
@@ -29,7 +47,7 @@ variable "zone" {
 
 variable "domain_name" {
   type    = string
-  default = "citeladder.com"
+  default = "citeladder.cube27.com"
   validation {
     condition = length(var.domain_name) <= 253 && alltrue([
       for label in split(".", var.domain_name) :

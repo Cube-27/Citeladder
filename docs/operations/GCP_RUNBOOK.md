@@ -12,8 +12,8 @@ later. The operator needs permission to create a GCP project, link its billing
 account, change billing IAM, and administer `Cube-27/Citeladder`.
 
 Choose once: a globally unique disposable project ID, the billing-account ID,
-a globally unique GCS state-bucket name, the domain (normally
-`citeladder.com`), and an immutable UTC expiry such as
+a globally unique GCS state-bucket name, the domain
+(`citeladder.cube27.com`), and an immutable UTC expiry such as
 `2026-09-08T12:00:00Z`. Redeployment must never extend that expiry.
 
 ```powershell
@@ -57,6 +57,8 @@ Add these environment variables:
 | `GCP_DEPLOY_SERVICE_ACCOUNT` | Bootstrap output |
 | `GCP_TF_STATE_BUCKET` | Bootstrap state bucket |
 | `GCP_BILLING_ACCOUNT` | Billing-account ID |
+| `GCP_BUDGET_CURRENCY_CODE` | Billing-account ISO 4217 currency code; currently `INR` |
+| `GCP_BUDGET_UNITS` | Positive whole-unit amount; currently `2400` (about USD 25 at review) |
 | `DOMAIN_NAME` | Lower-case public DNS hostname |
 | `DEMO_EXPIRES_AT` | Fixed RFC3339 expiry |
 | `DEMO_LOGIN_EMAIL` | Optional; defaults to `dev@citeladder.com` |
@@ -105,10 +107,10 @@ Set Cloudflare's A record to the static IP in the workflow summary. If DNS was
 not ready for the final smoke test, correct DNS and rerun the same workflow.
 
 ```powershell
-curl.exe --fail --show-error https://citeladder.com/health
+curl.exe --fail --show-error https://citeladder.cube27.com/health
 curl.exe -o NUL -s -w "%{http_code}`n" -X POST `
   -H "content-type: application/json" -d "{}" `
-  https://citeladder.com/api/v1/auth/register
+  https://citeladder.cube27.com/api/v1/auth/register
 ```
 
 Health must succeed and registration must return `403`. Log in, confirm exactly

@@ -20,12 +20,17 @@ resource "google_compute_address" "demo" {
 }
 
 resource "google_compute_firewall" "cloudflare_web" {
-  name      = "${local.name}-cloudflare-web"
+  for_each = {
+    ipv4 = var.cloudflare_ipv4_cidrs
+    ipv6 = var.cloudflare_ipv6_cidrs
+  }
+
+  name      = "${local.name}-cloudflare-web-${each.key}"
   network   = google_compute_network.demo.name
   direction = "INGRESS"
   priority  = 1000
 
-  source_ranges           = concat(sort(tolist(var.cloudflare_ipv4_cidrs)), sort(tolist(var.cloudflare_ipv6_cidrs)))
+  source_ranges           = sort(tolist(each.value))
   target_service_accounts = [google_service_account.vm.email]
 
   allow {

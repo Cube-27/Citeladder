@@ -1,5 +1,8 @@
 project_id              = "replace-with-unique-project-id"
 billing_account         = "000000-000000-000000"
+budget_currency_code    = "USD"
+budget_units            = 25
+domain_name             = "citeladder.cube27.com"
 backend_image           = "asia-south1-docker.pkg.dev/project/citeladder-demo/backend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 frontend_image          = "asia-south1-docker.pkg.dev/project/citeladder-demo/frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 demo_expires_at         = "2026-09-08T12:00:00Z"

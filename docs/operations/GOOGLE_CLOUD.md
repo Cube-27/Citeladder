@@ -23,9 +23,9 @@ Cloudflare → Caddy → Next.js → FastAPI
   private immediately after the reviewed deployment.
 - GCP: dedicated disposable project in `asia-south1` (Mumbai).
 - Runtime: one on-demand `e2-standard-2` VM, 2 vCPU/8 GiB, 30 GiB balanced disk.
-- URL: `https://citeladder.com`.
+- URL: `https://citeladder.cube27.com`.
 - Lifetime: seven days, with the existing fixed demo expiry and one-account restriction.
-- Expected GCP cost: approximately USD $15–25 for seven continuously running days; set a $25 budget alert. Provider/API usage is separate.
+- Expected GCP cost: approximately USD $15–25 for seven continuously running days; set an equivalent alert in the billing-account currency. The reviewed INR account uses INR 2,400. Provider/API usage is separate.
 - Do not use Cloud Run, Cloud SQL, a load balancer, Kubernetes, Redis, or Spot VMs for this temporary demo.
 
 ## Repository and Deployment Changes
@@ -78,7 +78,8 @@ frontend contract changes documented elsewhere in this repository.
 Configure these variables on `gcp-demo`: `GCP_PROJECT_ID`,
 `GCP_PROJECT_NUMBER`, `GCP_REGION`, `GCP_ZONE`, `GCP_WIF_PROVIDER`,
 `GCP_DEPLOY_SERVICE_ACCOUNT`, `GCP_TF_STATE_BUCKET`, `GCP_BILLING_ACCOUNT`,
-`DOMAIN_NAME`, `DEMO_EXPIRES_AT`, and optionally `DEMO_LOGIN_EMAIL`.
+`GCP_BUDGET_CURRENCY_CODE`, `GCP_BUDGET_UNITS`, `DOMAIN_NAME`,
+`DEMO_EXPIRES_AT`, and optionally `DEMO_LOGIN_EMAIL`.
 
 Configure these environment secrets: `DEMO_LOGIN_PASSWORD`, <!-- pragma: allowlist secret -- variable name, not a value -->
 `CLOUDFLARE_ORIGIN_CERT`, `CLOUDFLARE_ORIGIN_KEY`, and only the provider keys
@@ -101,16 +102,16 @@ JWT, encryption, and referral secrets directly in Secret Manager on first use.
 6. Add only provider credentials needed for the demonstration. Leave billing checkout, OAuth integrations, and unused providers disabled.
 7. In Cloudflare:
    - preserve all MX, SPF, DKIM, and DMARC records;
-   - create an Origin CA certificate for `citeladder.com`;
+   - create an Origin CA certificate for `citeladder.cube27.com`;
    - store its certificate and private key in Secret Manager;
-   - use Full (strict), proxy the root record, disable caching for `/api/*` and authentication responses, and point the root A record to the provisioned static IP. Origin CA supports this proxied/strict configuration. [Cloudflare Origin CA](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/)
+   - use Full (strict), proxy the `citeladder` record, disable caching for `/api/*` and authentication responses, and point that A record to the provisioned static IP. Origin CA supports this proxied/strict configuration. [Cloudflare Origin CA](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/)
 
 ### First deployment
 
 1. Run the repository gates on the exact `main` commit.
 2. Approve the `gcp-demo` workflow. It must build images, push digests, apply Terraform, deploy Compose, migrate, bootstrap exactly one account, and verify health.
 3. Confirm:
-   - `https://citeladder.com` is valid HTTPS;
+   - `https://citeladder.cube27.com` is valid HTTPS;
    - `/api/v1/auth/register` returns 403;
    - the configured account can log in;
    - the database contains exactly one user;
@@ -160,7 +161,7 @@ JWT, encryption, and referral secrets directly in Secret Manager on first use.
 
 - The owner keeps `Cube-27/Citeladder` public only for review and the reviewed
   deployment, then makes it private immediately afterward.
-- `citeladder.com` can be temporarily repointed through Cloudflare.
+- `citeladder.cube27.com` can be temporarily repointed through Cloudflare.
 - Seven days and Mumbai are the default deployment window and location.
 - Availability is demo-grade: one VM, no HA, no SLA, and brief downtime during updates is acceptable.
 - The $25 budget is an alert, not a hard spending cap; GCP budgets do not automatically stop resources.
