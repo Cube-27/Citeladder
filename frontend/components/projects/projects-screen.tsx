@@ -33,10 +33,8 @@ export function ProjectsScreen() {
   const searchParams = useSearchParams();
   const [editing, setEditing] = useState<Project | null>(null);
 
-  // Onboarding and the authenticated app use separate layout providers. Carry
-  // the committed project id across that boundary so the app-side provider
-  // pins the explicit selection even if its cached project list is briefly
-  // stale, then remove the one-time handoff from the address bar.
+  // Normalize legacy one-time project handoff links. Current onboarding stores
+  // the selection before navigating directly to the canonical `/projects` URL.
   useEffect(() => {
     const projectId = searchParams.get('project');
     if (!projectId) return;

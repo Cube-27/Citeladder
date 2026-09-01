@@ -6,6 +6,23 @@ import type { SiteHealthDashboard } from '@/lib/api/types';
 import { ScoreSection } from './score-section';
 
 describe('ScoreSection', () => {
+  it('shows each unavailable score state once', () => {
+    const dashboard = {
+      score_summary: {
+        web_fundamentals_score: null,
+        web_fundamentals_coverage: null,
+        web_fundamentals_state: 'not_measured',
+        aeo_readiness_score: null,
+        aeo_measurement_coverage: null,
+        aeo_measurement_state: 'not_measured',
+      },
+    } as SiteHealthDashboard;
+
+    render(<ScoreSection crawl={null} dashboard={dashboard} />);
+
+    expect(screen.getAllByText('Not measured')).toHaveLength(3);
+  });
+
   it('preserves unavailable measurement states when scores are absent', () => {
     const dashboard = {
       score_summary: {

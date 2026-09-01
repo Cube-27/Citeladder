@@ -91,6 +91,14 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("DEMO_EXPIRES_AT", "demo_expires_at"),
     )
+    demo_monitored_url_limit: int = Field(
+        default=50_000,
+        ge=1,
+        le=50_000,
+        validation_alias=AliasChoices(
+            "DEMO_MONITORED_URL_LIMIT", "demo_monitored_url_limit"
+        ),
+    )
     dev_login_email: str = Field(
         default="dev@citeladder.com",
         validation_alias=AliasChoices("DEV_LOGIN_EMAIL", "dev_login_email"),

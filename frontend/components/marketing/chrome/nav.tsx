@@ -61,11 +61,14 @@ function useMarketingSession() {
   const projects = useQuery({
     queryKey: queryKeys.projects.list(),
     queryFn: ({ signal }) => projectsApi.listProjects({ signal }),
-    enabled: me.isSuccess,
+    enabled: Boolean(me.data),
   });
   const hasProject = (projects.data?.length ?? 0) > 0 || hasStoredProject;
 
-  return { isAuthenticated: me.isSuccess, dashboardHref: hasProject ? '/projects' : '/onboarding' };
+  return {
+    isAuthenticated: Boolean(me.data),
+    dashboardHref: hasProject ? '/projects' : '/onboarding',
+  };
 }
 
 function useScrolled() {

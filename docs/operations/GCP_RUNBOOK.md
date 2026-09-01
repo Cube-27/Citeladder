@@ -100,16 +100,25 @@ firewall permits web traffic only from current Cloudflare address ranges.
 Merge the intended commit to `main` and wait for required CI. Run **GCP Demo -
 Deploy** from `main` and approve `gcp-demo`. It serializes deployments, safely
 reuses immutable images when retrying the same commit, applies Terraform,
-installs secrets once, deploys exact digests over IAP, migrates, bootstraps the
-single account, validates every long-running service, and performs smoke tests.
+installs secrets once, deploys exact digests over IAP, migrates, and bootstraps
+the single development account. Project slots remain unprovisioned, which is
+the pre-commercial unlimited-project behavior. Each project crawl is capped at
+200 URLs, while the account receives an expiry-bounded 50,000 monitored-URL
+development ceiling so projects do not consume one shared 200-URL allowance.
+The demo crawler runs with eight global and six per-host slots. Deployment
+then validates every long-running service and performs smoke tests.
 
 Set Cloudflare's A record to the static IP in the workflow summary. If DNS was
 not ready for the final smoke test, correct DNS and rerun the same workflow.
 
 ```powershell
 curl.exe --fail --show-error https://citeladder.cube27.com/health
+$registrationPayload = @{
+  email = 'dev@citeladder.com'
+  password = [guid]::NewGuid().ToString('N')
+} | ConvertTo-Json -Compress
 curl.exe -o NUL -s -w "%{http_code}`n" -X POST `
-  -H "content-type: application/json" -d "{}" `
+  -H "content-type: application/json" -d $registrationPayload `
   https://citeladder.cube27.com/api/v1/auth/register
 ```
 
@@ -122,8 +131,12 @@ private as planned and recheck environment reviewers and the WIF claim.
 ## 6. Daily operation
 
 Use **GCP Demo - Control** with `start` or `stop`; do not bypass its protected
-environment. Starting is refused after expiry. A stopped VM still incurs disk
-and reserved-address charges.
+environment. Starting is refused after expiry. The VM also powers itself off
+after ten minutes without non-health web traffic, but only when every durable
+application queue is idle; active crawls and other jobs refresh the grace
+period. A stopped VM still incurs disk and reserved-address charges.
+The idle path leaves the Compose containers installed so Docker's
+`restart: unless-stopped` policy restores the application on the next VM start.
 
 For emergency read-only inspection:
 
@@ -138,7 +151,7 @@ On the VM:
 cd /opt/citeladder
 sudo docker compose --env-file runtime.env -f compose.gcp.yml ps
 sudo docker compose --env-file runtime.env -f compose.gcp.yml logs --tail=200 web frontend caddy
-sudo systemctl status citeladder-backup.timer citeladder-expiry.timer
+sudo systemctl status citeladder-backup.timer citeladder-expiry.timer citeladder-idle.timer
 sudo journalctl -u citeladder-backup.service --since '24 hours ago'
 df -h /
 bucket=$(sudo sed -n "s/^BACKUP_BUCKET='\(.*\)'$/\1/p" runtime.env)

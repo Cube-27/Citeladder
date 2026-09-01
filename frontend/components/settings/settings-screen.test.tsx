@@ -8,8 +8,9 @@ import type { Project, SessionUser } from '@/lib/api/types';
 
 // Stub imperative navigation used by the delete-project flow. Shallow tab
 // state uses the browser History API, matching production.
+const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace, prefetch: vi.fn() }),
   usePathname: () => '/settings',
 }));
 
@@ -79,6 +80,7 @@ function renderScreen() {
 describe('SettingsScreen', () => {
   beforeEach(() => {
     deleteProject.mockClear();
+    replace.mockClear();
     setActiveProjectId.mockClear();
     window.history.replaceState(null, '', '/settings');
   });
@@ -232,6 +234,7 @@ describe('SettingsScreen', () => {
     await ue.click(within(dialog).getByRole('button', { name: /delete project/i }));
 
     expect(deleteProject).toHaveBeenCalledWith(activeProject.id);
+    expect(replace).toHaveBeenCalledWith('/onboarding?new=1');
   });
 
   it('does not delete when the dialog is cancelled', async () => {

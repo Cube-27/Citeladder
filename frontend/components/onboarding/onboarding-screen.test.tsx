@@ -254,7 +254,7 @@ describe('OnboardingScreen', () => {
     });
     expect(JSON.stringify(completionBody)).not.toContain('prompt_groups');
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
-    expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`);
+    expect(replace).toHaveBeenCalledWith('/projects');
   });
 
   it('opens the committed project shell while its portfolio is queued', async () => {
@@ -285,7 +285,7 @@ describe('OnboardingScreen', () => {
     await waitFor(() => expect(createProject).toBeEnabled());
     await user.click(createProject);
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/projects'));
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
   });
 
@@ -301,8 +301,20 @@ describe('OnboardingScreen', () => {
     );
     renderWithProviders(<OnboardingScreen />);
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/projects'));
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
+  });
+
+  it('starts fresh when a persisted completion has lost its deleted project', async () => {
+    searchParams = `discovery=${DISCOVERY_ID}&step=review`;
+    discoveryState = discovery('completing', 'preparing_review');
+    mswServer.use(catalogHandler());
+    renderWithProviders(<OnboardingScreen />);
+
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith('/onboarding?new=1', { scroll: false }),
+    );
+    expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
   });
 
   it('reports a queued generation failure without replaying the failed job', async () => {

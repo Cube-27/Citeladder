@@ -1,9 +1,11 @@
 import { http, HttpResponse } from 'msw';
+import { useQuery } from '@tanstack/react-query';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { DEMO_HREF, NAV_DROPS } from '@/lib/marketing-content/nav';
+import { queryKeys } from '@/lib/api/query-keys';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -37,6 +39,14 @@ function stubSignedIn() {
     ),
     http.get('/api/v1/projects', () => HttpResponse.json([])),
   );
+}
+
+function NavWithAnonymousPricingSession() {
+  useQuery({
+    queryKey: queryKeys.auth.me(),
+    queryFn: async () => null,
+  });
+  return <MarketingNav />;
 }
 
 /**
@@ -165,6 +175,13 @@ describe('MarketingNav', () => {
     expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
     // Proof is a light-only identity — a theme toggle here would do nothing.
     expect(screen.queryByRole('button', { name: /toggle color theme/i })).toBeNull();
+  });
+
+  it('does not treat a successful null session cache entry as authenticated', async () => {
+    renderWithProviders(<NavWithAnonymousPricingSession />);
+
+    expect(await screen.findByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
+    expect(screen.queryByRole('link', { name: /dashboard/i })).toBeNull();
   });
 
   it('swaps the CTA for a dashboard link once the session resolves', async () => {

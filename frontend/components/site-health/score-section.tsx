@@ -89,7 +89,9 @@ function ScoreCard({
           ) : (
             <UnavailableValue state="not_measured" />
           )}
-          <span className="text-muted text-xs leading-relaxed">{sub}</span>
+          {sub === 'Not measured' ? null : (
+            <span className="text-muted text-xs leading-relaxed">{sub}</span>
+          )}
         </CardContent>
       ) : (
         <CardContent className="flex h-full items-center gap-4 p-[var(--card-padding)] sm:p-[var(--card-padding)]">

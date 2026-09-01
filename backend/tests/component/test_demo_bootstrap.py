@@ -7,9 +7,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.core.config.entitlements import GRANT_SOURCE_OVERRIDE, KEY_MONITORED_URLS
 from app.core.security import verify_password
 from app.demo.bootstrap import ensure_demo_account
 from app.domain.auth.service import register_user
+from app.models.billing import AccountGrant
+from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
 from app.models.user import User
 
 
@@ -39,12 +42,23 @@ async def test_demo_bootstrap_creates_and_resets_one_account(
     assert len(users) == 1
     assert users[0].email == candidate.dev_login_email
     assert verify_password(candidate.dev_login_password, users[0].hashed_password)
+    grants = list((await db_session.scalars(select(AccountGrant))).all())
+    assert len(grants) == 1
+    assert grants[0].key == KEY_MONITORED_URLS
+    assert grants[0].value == 50_000
+    assert grants[0].source_kind == GRANT_SOURCE_OVERRIDE
+    assert grants[0].valid_until == candidate.demo_expires_at
+    runtime = await db_session.scalar(select(WorkspaceSiteHealthRuntime))
+    assert runtime is not None
+    assert runtime.discovery_mode == "full"
+    assert runtime.monitored_url_limit == 50_000
 
     original_version = users[0].session_version
     await ensure_demo_account(db_session, candidate)
     users = list((await db_session.scalars(select(User))).all())
     assert len(users) == 1
     assert users[0].session_version == original_version + 1
+    assert len(list((await db_session.scalars(select(AccountGrant))).all())) == 1
 
 
 @pytest.mark.asyncio

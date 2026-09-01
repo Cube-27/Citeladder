@@ -6,7 +6,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { brandDiscoveriesApi, type DiscoveryProfile } from '@/lib/api/brand-discoveries';
+import {
+  brandDiscoveriesApi,
+  type BrandDiscovery,
+  type DiscoveryProfile,
+} from '@/lib/api/brand-discoveries';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import {
@@ -65,6 +69,14 @@ function persistedBrand(input: Record<string, unknown>): BrandStepValues {
   };
 }
 
+function isOrphanedCompletion(
+  discoveryId: string | null,
+  discovery: BrandDiscovery | undefined,
+): boolean {
+  if (!discoveryId || discovery?.project_id) return false;
+  return discovery?.status === 'completing' || discovery?.status === 'project_created';
+}
+
 export function useOnboardingFlow() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -104,14 +116,31 @@ export function useOnboardingFlow() {
   });
   const maximumCompetitors = catalog.data?.maximum_competitors;
   const discoveryState = discovery.discovery;
+  const orphanedCompletion = isOrphanedCompletion(initialDiscoveryId, discoveryState);
   useEffect(() => {
-    if (!brand && discoveryState) {
+    if (!orphanedCompletion && !brand && discoveryState) {
       // oxlint-disable-next-line react-hooks/set-state-in-effect -- hydrate the persisted draft once.
       setBrand(persistedBrand(discoveryState.input_data));
     }
-  }, [brand, discoveryState]);
+  }, [brand, discoveryState, orphanedCompletion]);
 
   useEffect(() => {
+    if (!orphanedCompletion) return;
+    // Project deletion preserves discovery provenance by nulling project_id.
+    // A bookmarked completion URL must not resurrect that old transaction.
+    // oxlint-disable-next-line react-hooks/set-state-in-effect -- discard the stale route-owned draft.
+    setResumeDiscoveryId(null);
+    setBrand(null);
+    setDomains([]);
+    setCompetitors([]);
+    setProfile(null);
+    form.reset(emptyBrandStep);
+    setStep(0);
+    router.replace('/onboarding?new=1', { scroll: false });
+  }, [form, orphanedCompletion, router]);
+
+  useEffect(() => {
+    if (orphanedCompletion) return;
     const discoveryId = discoveryState?.id ?? resumeDiscoveryId;
     if (!discoveryId) return;
     if (resumeDiscoveryId !== discoveryId) {
@@ -123,7 +152,7 @@ export function useOnboardingFlow() {
     params.set('step', stepQueryValue(step));
     const next = params.toString();
     if (next !== searchParams?.toString()) router.replace(`/onboarding?${next}`, { scroll: false });
-  }, [discoveryState?.id, resumeDiscoveryId, router, searchParams, step]);
+  }, [discoveryState?.id, orphanedCompletion, resumeDiscoveryId, router, searchParams, step]);
 
   useEffect(() => {
     if (discoveryState?.status !== 'ready') return;
@@ -162,7 +191,7 @@ export function useOnboardingFlow() {
         .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() }))
         .catch(() => undefined);
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
-      router.replace(`/projects?project=${encodeURIComponent(projectId)}`);
+      router.replace('/projects');
     },
     [queryClient, router, setActiveProjectId],
   );

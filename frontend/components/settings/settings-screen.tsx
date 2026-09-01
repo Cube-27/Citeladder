@@ -120,7 +120,7 @@ export function SettingsScreen() {
         setActiveProjectId(next.id);
         setConfirmOpen(false);
       } else {
-        router.replace('/onboarding');
+        router.replace('/onboarding?new=1');
       }
     },
   });

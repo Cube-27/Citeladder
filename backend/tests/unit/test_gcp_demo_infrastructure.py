@@ -178,8 +178,10 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert 'AUDIT_WORKER_CONCURRENCY: "2"' in compose
     assert 'DB_POOL_SIZE: "8"' in compose
     assert 'DB_MAX_OVERFLOW: "0"' in compose
-    assert 'SITE_HEALTH_GLOBAL_CONCURRENCY: "2"' in compose
-    assert 'SITE_HEALTH_PER_HOST_CONCURRENCY: "2"' in compose
+    assert 'DEMO_MONITORED_URL_LIMIT: "50000"' in compose
+    assert 'SITE_HEALTH_GLOBAL_CONCURRENCY: "8"' in compose
+    assert 'SITE_HEALTH_PER_HOST_CONCURRENCY: "6"' in compose
+    assert 'SITE_HEALTH_AUTOMATIC_PAGE_LIMIT: "200"' in compose
     assert compose.count("app.workers.") == 10
     assert "TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS" in compose
     caddy = (RUNTIME / "Caddyfile").read_text(encoding="utf-8")
@@ -212,6 +214,7 @@ def test_backups_and_expiry_are_fixed_and_operational() -> None:
     assert "{{.RestartCount}}" in deploy
     assert "{{.State.ExitCode}}" in deploy
     assert "citeladder-expiry.timer" in deploy
+    assert "citeladder-idle.timer" in deploy
     assert "OnCalendar=$calendar" in deploy
     assert "demo-expires-at" in deploy
     assert "pg_dump" in backup
@@ -219,6 +222,10 @@ def test_backups_and_expiry_are_fixed_and_operational() -> None:
     assert "Refusing to change the original demo expiry" in workflow
     expire = (RUNTIME / "expire.sh").read_text(encoding="utf-8")
     assert "(cd /opt/citeladder &&" in expire
+    idle = (RUNTIME / "idle-shutdown.sh").read_text(encoding="utf-8")
+    assert "site_crawl_tasks" in idle
+    assert "shutdown -h now" in idle
+    assert "compose.gcp.yml down" not in idle
     expiry_workflow = (WORKFLOWS / "gcp-demo-expiry.yml").read_text(encoding="utf-8")
     assert "compute instances list" in expiry_workflow
     assert "--quiet || true" not in expiry_workflow
