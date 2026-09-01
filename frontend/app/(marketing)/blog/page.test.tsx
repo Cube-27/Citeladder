@@ -77,7 +77,7 @@ describe('Blog index (public marketing `/blog`)', () => {
     blogState.posts = [...POSTS, second];
     render(<BlogPage />);
 
-    const grid = screen.getByRole('region', { name: 'All posts' });
+    const grid = screen.getByRole('region', { name: 'All guides' });
     // Grid carries the second post only — the featured post is not duplicated.
     expect(within(grid).getByRole('link', { name: second.title })).toHaveAttribute(
       'href',
@@ -96,7 +96,7 @@ describe('Blog index (public marketing `/blog`)', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(BLOG_EMPTY_STATE.body)).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Featured post' })).toBeNull();
-    expect(screen.queryByRole('region', { name: 'All posts' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'All guides' })).toBeNull();
 
     // The page hero (and its single h1) still renders above the empty state.
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
@@ -112,7 +112,12 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
     expect(h1s[0]).toHaveTextContent(post.title);
-    expect(screen.getByRole('link', { name: /all guides/i })).toHaveAttribute('href', '/blog');
+    const postHeader = h1s[0].closest('header');
+    if (!postHeader) throw new Error('blog post heading must render inside the page header');
+    expect(within(postHeader).getByRole('link', { name: /all guides/i })).toHaveAttribute(
+      'href',
+      '/blog',
+    );
 
     // The excerpt renders as the lede, then one <h2> per heading block and
     // one <ul> per list block, all inside the article.
