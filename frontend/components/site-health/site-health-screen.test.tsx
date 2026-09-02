@@ -64,9 +64,11 @@ describe('SiteHealthScreen — Website tab deep links', () => {
 
     renderScreen();
 
-    expect(await screen.findByRole('tab', { name: 'Overview' })).toHaveAttribute(
-      'aria-selected',
-      'true',
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      ),
     );
   });
 });

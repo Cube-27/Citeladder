@@ -3,7 +3,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 
-import { RouteContent } from '@/components/providers/product-motion-provider';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -70,7 +69,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
           >
             <MobileStationNavigation />
             <div className="mx-auto grid w-full max-w-[var(--content-max-width)] grid-cols-[minmax(0,1fr)] gap-0 p-[var(--content-gutter)]">
-              <RouteContent>{children}</RouteContent>
+              <div>{children}</div>
             </div>
           </main>
 

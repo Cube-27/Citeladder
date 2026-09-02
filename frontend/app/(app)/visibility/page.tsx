@@ -1,9 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
-
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { DashboardSkeleton } from '@/components/visibility/dashboard-skeleton';
 import { VisibilityDashboard } from '@/components/visibility/visibility-dashboard';
 
 /**
@@ -29,9 +26,7 @@ export default function VisibilityPage() {
   return (
     <TooltipProvider>
       <div className="grid gap-[var(--workspace-gap)]">
-        <Suspense fallback={<DashboardSkeleton />}>
-          <VisibilityDashboard />
-        </Suspense>
+        <VisibilityDashboard />
       </div>
     </TooltipProvider>
   );

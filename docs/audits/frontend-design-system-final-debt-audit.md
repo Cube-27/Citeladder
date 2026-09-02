@@ -64,7 +64,7 @@ contract. Do not introduce new primitives.
 Root `frontend/app/layout.tsx` loads Geist + Plus Jakarta Sans, skip link,
 and `QueryProvider`. Authenticated layout stacks `SessionGuard` →
 `ProjectProvider` → `ProductTourProvider` → `EntitlementProvider` →
-`ProductMotionProvider` → `ToastProvider` → `OnboardingGate` → `AppShell`.
+`ToastProvider` → `OnboardingGate` → `AppShell`.
 
 App routes are thin pages that render feature screens under `frontend/components/{domain}/`.
 
@@ -508,7 +508,7 @@ No remaining separate marketing colour namespace (policy forbids `--mkt-` / `--d
 | Empty states | `ui/empty-state.tsx` | In-ledger local copy; wrappers OK |
 | Unavailable values | `ui/unavailable-value.tsx` | Widely used; keep |
 | Icons (product concepts) | `lib/icons.ts` | Many direct lucide imports (OK for local glyphs); spinner not followed |
-| Motion | `ProductMotionProvider` / `MarketingMotion` + GSAP initializer | Keep split |
+| Motion | Authenticated CSS rules / `MarketingMotion` + GSAP initializer | Keep route ownership split |
 | URL/tab state | `lib/navigation/url-state.ts` | Dead LayerTabs |
 
 ---

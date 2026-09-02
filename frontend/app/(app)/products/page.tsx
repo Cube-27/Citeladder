@@ -1,9 +1,7 @@
 'use client';
 
-import { Suspense } from 'react';
-
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { ProductsScreen, ProductsScreenSkeleton } from '@/components/products/products-screen';
+import { ProductsScreen } from '@/components/products/products-screen';
 
 /**
  * Commerce workspace: Catalog, Competitors, Buyer Prompts, and AI Shelf.
@@ -14,9 +12,7 @@ export default function ProductsPage() {
   return (
     <TooltipProvider>
       <div className="grid gap-[var(--workspace-gap)]">
-        <Suspense fallback={<ProductsScreenSkeleton />}>
-          <ProductsScreen />
-        </Suspense>
+        <ProductsScreen />
       </div>
     </TooltipProvider>
   );

@@ -55,7 +55,10 @@ export function TargetPrompts({
     onSuccess: refresh,
   });
   const rows = query.data ? forTarget(query.data, target) : [];
-  const approvedIds = rows.filter((row) => row.enabled).map((row) => row.id);
+  const approvedIds = rows.reduce<string[]>((ids, row) => {
+    if (row.enabled) ids.push(row.id);
+    return ids;
+  }, []);
   const busy = [generate.isPending, manual.isPending, decide.isPending].some(Boolean);
   const failed = [generate.isError, manual.isError, decide.isError].some(Boolean);
   return (

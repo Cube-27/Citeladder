@@ -62,8 +62,17 @@ topics before generating prompts.
 - Next.js Cache Components and Partial Prefetching produce one reusable App
   Shell per route. The authenticated layout is instant-navigation validated;
   its sidebar, top bar, query client, and project context remain mounted while
-  route-owned content streams or enters the `(app)` loading shell. A focused
-  Playwright `instant()` assertion protects primary navigation.
+  route-owned client content resolves. The `(app)` segment has no loading
+  boundary: each screen keeps its toolbar, filters, and tablist mounted and
+  limits loading placeholders to the data region whose geometry they match. A
+  focused Playwright `instant()` assertion protects primary navigation.
+- Desktop and mobile navigation prefetch each data-heavy destination's primary
+  TanStack query on pointer hover or keyboard focus. Data tabs use the shared
+  `Tabs.onIntent` hook for the same purpose; inexpensive visited panels may stay
+  mounted so returning to them preserves interaction state.
+- Read-mostly queries are fresh for 60 seconds and retained for 30 minutes.
+  Explicit polling intervals remain the authority for active crawls, audits,
+  syncs, and other live workflows.
 - Retained TanStack Query placeholder data is owner-scoped: filter, sort, and
   cursor changes may keep prior results mounted only while the project or
   crawl identity is unchanged. A project/crawl switch returns to an explicit
@@ -349,8 +358,9 @@ so a stale project-list cache cannot silently select the first project.
 ## Data and query ownership
 
 Each domain has one API module, one query-key owner, and shared schemas/types.
-Queries are enabled only when their surface is visible where practical. A
-shared artifact uses the same server ID and cache identity everywhere.
+Queries are enabled when their surface is visible or the user expresses route
+or tab intent. Intent prefetching reuses the destination's exact cache identity;
+a shared artifact uses the same server ID and cache identity everywhere.
 
 Unknown, unavailable, zero, historical, conflicting, excluded, and
 not-applicable states retain distinct labels and are never communicated by
@@ -394,7 +404,10 @@ AI Visibility has exactly Trends, Mentions & Citations, and Query Fanout, with
 Trends as the default. Trends owns latest/start rankings, engine comparison, and
 prompt movement. Competitor suggestions live in Overview's Facts drawer, and no
 Visibility overview token, component, selected-run composition, or redirect is
-retained.
+retained. The latest Trends and selected-run projection requests start as soon
+as the project is known with `audit_id` omitted; the server resolves latest, and
+only an explicit run choice adds that filter. The shared run list warms in the
+project provider instead of gating the first analytical request.
 
 Traffic treats Day/Week/Month as chart-interval controls. During an interval
 refetch, existing analytical content stays mounted, the analytical region is

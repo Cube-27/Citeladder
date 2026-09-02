@@ -26,16 +26,36 @@ export function AiReferralsContent({
   query: UseQueryResult<AiReferrals, Error>;
   toolbar: React.ReactNode;
 }>) {
+  return (
+    <div className="grid gap-[var(--workspace-gap)]">
+      {toolbar}
+      <AiReferralsDataRegion
+        projectId={projectId}
+        projectLoading={projectLoading}
+        range={range}
+        windowBounds={windowBounds}
+        query={query}
+      />
+    </div>
+  );
+}
+
+function AiReferralsDataRegion({
+  projectId,
+  projectLoading,
+  range,
+  windowBounds,
+  query,
+}: Omit<React.ComponentProps<typeof AiReferralsContent>, 'toolbar'>) {
   if (projectLoading || (Boolean(projectId) && query.isLoading)) return <AiReferralsSkeleton />;
   if (!projectId) return <Alert tone="info">Select or create a project to see AI referrals.</Alert>;
   if (query.isError) return <AiReferralsError onRetry={() => query.refetch()} />;
 
   const data = query.data ?? null;
   if (!data || (isAiReferralsEmpty(data) && range === 'latest')) return <AiReferralsEmptyState />;
-  if (isAiReferralsEmpty(data))
-    return <AiReferralsNoSnapshot toolbar={toolbar} windowBounds={windowBounds} />;
+  if (isAiReferralsEmpty(data)) return <AiReferralsNoSnapshot windowBounds={windowBounds} />;
 
-  return <AiReferralsDashboard data={data} toolbar={toolbar} fetching={query.isFetching} />;
+  return <AiReferralsDashboard data={data} fetching={query.isFetching} />;
 }
 
 function AiReferralsError({ onRetry }: Readonly<{ onRetry: () => void }>) {
@@ -52,17 +72,13 @@ function AiReferralsError({ onRetry }: Readonly<{ onRetry: () => void }>) {
 }
 
 function AiReferralsNoSnapshot({
-  toolbar,
   windowBounds,
-}: Readonly<{ toolbar: React.ReactNode; windowBounds: { from?: string; to?: string } }>) {
+}: Readonly<{ windowBounds: { from?: string; to?: string } }>) {
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      {toolbar}
-      <Alert tone="info">
-        No synced AI-referral snapshot covers {formatWindowDate(windowBounds.from ?? '')} –{' '}
-        {formatWindowDate(windowBounds.to ?? '')}. Switch to the latest synced window or run a sync
-        from Traffic.
-      </Alert>
-    </div>
+    <Alert tone="info">
+      No synced AI-referral snapshot covers {formatWindowDate(windowBounds.from ?? '')} –{' '}
+      {formatWindowDate(windowBounds.to ?? '')}. Switch to the latest synced window or run a sync
+      from Traffic.
+    </Alert>
   );
 }

@@ -7,7 +7,7 @@ import { useProjectContext } from '@/lib/project/project-context';
 
 import { CommerceWorkspace } from './commerce-workspace';
 
-export function ProductsScreenSkeleton() {
+function ProductsScreenSkeleton() {
   return (
     <Card aria-hidden>
       <CardContent>

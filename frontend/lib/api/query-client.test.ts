@@ -59,7 +59,8 @@ describe('createAppQueryClient', () => {
     const client = createAppQueryClient();
     const queries = client.getDefaultOptions().queries;
     expect(queries?.retry).toBe(shouldRetryQuery);
-    expect(queries?.staleTime).toBe(15_000);
+    expect(queries?.staleTime).toBe(60_000);
+    expect(queries?.gcTime).toBe(30 * 60_000);
     expect(queries?.refetchOnWindowFocus).toBe(false);
     expect(client.getDefaultOptions().mutations?.retry).toBe(false);
   });

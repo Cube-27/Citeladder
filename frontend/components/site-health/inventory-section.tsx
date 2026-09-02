@@ -250,7 +250,7 @@ function ScoredInventoryState({
   const [pageKind, setPageKind] = useState('');
   // Shared server-side ordering. Like the filter, it is part of the cursor
   // fingerprint, so changing it must restart every tab's paging.
-  const [sort, setSort] = useState<PagesSort>(initialPagesSort(requestedSort));
+  const [sort, setSort] = useState<PagesSort>(() => initialPagesSort(requestedSort));
   // Per-tab cursor stack so Prev/Next walk keyset pages without offsets.
   const monitoredPager = useCursorStack();
   const allPager = useCursorStack();

@@ -212,7 +212,9 @@ describe('TrafficScreen — populated dashboard', () => {
       'aria-checked',
       'true',
     );
-    expect(within(toolbar).getByText('Last synced Jul 23, 2026 · 18:14 UTC')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(toolbar).getByText('Last synced Jul 23, 2026 · 18:14 UTC')).toBeInTheDocument(),
+    );
 
     // The default mode sends no window bounds — granularity only.
     await waitFor(() => expect(seen.length).toBeGreaterThan(0));
@@ -347,13 +349,13 @@ describe('TrafficScreen — populated dashboard', () => {
     expect(queries).toHaveFocus();
     expect(queries).toHaveAttribute('aria-selected', 'true');
     expect(await screen.findByTestId('queries-table')).toBeInTheDocument();
-    expect(screen.queryByTestId('pages-table')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pages-table')).not.toBeVisible();
     expect(screen.getByText('best trail running shoes')).toBeInTheDocument();
   });
 });
 
 describe('TrafficScreen — empty + bounded-miss states', () => {
-  it('renders the connect-CTA empty state (no toolbar) when nothing has synced and no connections exist', async () => {
+  it('keeps the toolbar mounted with the connect CTA when nothing has synced', async () => {
     mockDashboard(emptyPayload);
     mockConnections([]);
     renderWithProviders(<TrafficScreen />);
@@ -361,7 +363,7 @@ describe('TrafficScreen — empty + bounded-miss states', () => {
     expect(await screen.findByText('Connect search data')).toBeInTheDocument();
     const cta = screen.getByRole('link', { name: 'Connect an integration' });
     expect(cta).toHaveAttribute('href', '/settings?tab=integrations');
-    expect(screen.queryByTestId('traffic-toolbar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('traffic-toolbar')).toBeInTheDocument();
     expect(screen.queryByTestId('traffic-stats')).not.toBeInTheDocument();
     expect(screen.queryByTestId('pages-table')).not.toBeInTheDocument();
   });
@@ -380,7 +382,9 @@ describe('TrafficScreen — empty + bounded-miss states', () => {
     renderWithProviders(<TrafficScreen />);
 
     expect(await screen.findByText('Sync your traffic data')).toBeInTheDocument();
-    const syncNow = screen.getByRole('button', { name: 'Sync now' });
+    const syncNow = within(screen.getByTestId('traffic-toolbar')).getByRole('button', {
+      name: 'Sync now',
+    });
     expect(syncNow).toBeEnabled();
     await ue.click(syncNow);
 

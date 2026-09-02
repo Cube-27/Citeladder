@@ -19,6 +19,7 @@ export function TrafficToolbar({
   syncing,
   syncPending,
   fetching,
+  syncDisabled,
   onSyncNow,
 }: Readonly<{
   range: TrafficRange;
@@ -29,6 +30,7 @@ export function TrafficToolbar({
   syncing: boolean;
   syncPending: boolean;
   fetching: boolean;
+  syncDisabled?: boolean;
   onSyncNow: () => void;
 }>) {
   return (
@@ -50,7 +52,7 @@ export function TrafficToolbar({
             variant="secondary"
             size="sm"
             onClick={onSyncNow}
-            disabled={syncing || syncPending}
+            disabled={syncDisabled || syncing || syncPending}
             data-testid="sync-now-button"
           >
             {syncing || syncPending ? (

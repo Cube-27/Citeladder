@@ -2,9 +2,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /**
- * Selected-run dashboard loading placeholder, shared by the page's `<Suspense>`
- * boundary (required by `useSearchParams`) and the Overview tab's own loading
- * state so the two render identically.
+ * Analytical-region placeholder. The route toolbar and tablist remain mounted
+ * around it so loading does not replace the screen's interaction geometry.
  */
 export function DashboardSkeleton() {
   return (

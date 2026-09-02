@@ -51,10 +51,15 @@ export function groupByPrompt(items: readonly VisibilityExecutionEvidence[]): Pr
 
 /** The distinct non-blank search-query strings for one execution, in order. */
 export function queryTexts(item: VisibilityExecutionEvidence): string[] {
-  return item.search_events.flatMap((event) => {
+  const queries: string[] = [];
+  const seen = new Set<string>();
+  for (const event of item.search_events) {
     const query = event.query.trim();
-    return query ? [query] : [];
-  });
+    if (!query || seen.has(query)) continue;
+    seen.add(query);
+    queries.push(query);
+  }
+  return queries;
 }
 
 /** Human explanation for a count-only execution ("provider reported N searches"). */

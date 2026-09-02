@@ -35,8 +35,14 @@ export function VisibilityDashboard() {
     queries.auditsQuery.isError,
     queries.hasRuns,
   );
-  if (state) return <DashboardState state={state} activeRun={queries.activeRun} />;
-  return <VisibilityWorkspace filters={filters} queries={queries} promptQuery={promptQuery} />;
+  return (
+    <VisibilityWorkspace
+      filters={filters}
+      queries={queries}
+      promptQuery={promptQuery}
+      state={state}
+    />
+  );
 }
 
 function usePromptQuery(projectId: string | null, activeRunId: string | null, activeTab: string) {
@@ -44,7 +50,7 @@ function usePromptQuery(projectId: string | null, activeRunId: string | null, ac
     queryKey: queryKeys.visibility.prompts(projectId ?? '', activeRunId ?? undefined),
     queryFn: ({ signal }) =>
       visibilityApi.getPromptMetrics(projectId ?? '', activeRunId ?? undefined, { signal }),
-    enabled: activeTab === 'trends' && Boolean(projectId) && Boolean(activeRunId),
+    enabled: activeTab === 'trends' && Boolean(projectId),
   });
 }
 
@@ -64,8 +70,8 @@ function dashboardState(
 
 function DashboardState({
   state,
-  activeRun,
-}: Readonly<{ state: string; activeRun: ReturnType<typeof useVisibilityQueries>['activeRun'] }>) {
+  hasActiveRun,
+}: Readonly<{ state: string; hasActiveRun: boolean }>) {
   if (state === 'loading') return <DashboardSkeleton />;
   if (state === 'missing-project')
     return <Alert tone="info">Select or create a project to see its AI-visibility results.</Alert>;
@@ -75,22 +81,19 @@ function DashboardState({
         Could not load this project&apos;s runs. Check your connection and try again.
       </Alert>
     );
-  return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      {activeRun ? <ActiveRunBanner run={activeRun} /> : null}
-      <VisibilityEmptyState hasActiveRun={Boolean(activeRun)} />
-    </div>
-  );
+  return <VisibilityEmptyState hasActiveRun={hasActiveRun} />;
 }
 
 function VisibilityWorkspace({
   filters,
   queries,
   promptQuery,
+  state,
 }: Readonly<{
   filters: ReturnType<typeof useVisibilityFilters>;
   queries: ReturnType<typeof useVisibilityQueries>;
   promptQuery: ReturnType<typeof usePromptQuery>;
+  state: string | null;
 }>) {
   return (
     <div className="grid gap-[var(--workspace-gap)]">
@@ -118,9 +121,14 @@ function VisibilityWorkspace({
         items={VISIBILITY_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
         ariaLabel="Visibility views"
         rootClassName="grid gap-4"
+        onIntent={queries.prefetchTab}
       >
         <TabPanel value={filters.activeTab} className="focus-ring">
-          <DashboardPanel filters={filters} queries={queries} promptQuery={promptQuery} />
+          {state ? (
+            <DashboardState state={state} hasActiveRun={Boolean(queries.activeRun)} />
+          ) : (
+            <DashboardPanel filters={filters} queries={queries} promptQuery={promptQuery} />
+          )}
         </TabPanel>
       </Tabs>
     </div>
