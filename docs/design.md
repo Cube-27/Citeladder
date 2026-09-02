@@ -6,8 +6,8 @@
 ## Direction and identity
 
 CiteLadder is a light-only, evidence-led enterprise system. The authenticated
-application uses the **Prism Evidence Workspace**: a cool blue editorial canvas,
-navy ink and actions, indigo analytical selection, semantic pastel evidence
+application uses the **Prism Evidence Workspace**: a neutral paper editorial canvas,
+near-black ink and actions, one blue for analytical selection, semantic evidence
 washes, useful density, and deliberate negative space. It is an operating
 workspace, not a wall of equal-weight KPI cards.
 
@@ -25,10 +25,10 @@ workspace, not a wall of equal-weight KPI cards.
   Website and flow surfaces use a 16px reading baseline. Size,
   leading, weight, tracking, and
   colour are one role contract, never independent page-level choices.
-- **Action and selection:** navy (`#14213D`) owns primary actions across product,
-  public, authentication, and onboarding surfaces. Indigo owns analytical
-  selection, links, and focus. Cyan, coral, lime, and amber are evidence/status
-  families, never route decoration.
+- **Action and selection:** ink (`#16161A`) owns primary actions across product,
+  public, authentication, and onboarding surfaces. One blue (`#1B44E0`) owns
+  analytical selection, links, active navigation, and focus. Cyan, coral, lime,
+  and amber are evidence/status families, never route decoration.
 - **Composition:** state before features. Product pages prioritise current state,
   movement, next action, then evidence. Marketing is more editorial but uses the
   same tokens, type, and restraint.
@@ -129,7 +129,7 @@ tracking, weight, and colour combinations.
 
 Ordinary website paragraphs never render below 16px. Fourteen pixels is reserved
 for short labels, metadata, captions, and legal support. Prose stays within a
-45–75 character measure. Accent indigo never carries a long paragraph. Large text
+45–75 character measure. The accent blue never carries a long paragraph. Large text
 uses tighter leading and tracking; body text stays at zero tracking with more
 leading. Pricing values are the one non-editorial website display role:
 `website-data-display` uses Geist at 40/46px with tabular numerals and never
@@ -486,7 +486,7 @@ never an empty-state label.
 
 The marketing nav floats transparent over the hero and becomes a frosted white on
 scroll, with no shadow. The app sidebar makes the active location obvious through
-a quiet indigo tonal fill and indigo label, never through weight, translation, or
+ink label and an accent icon mark, never through a fill, translation, or
 a leading rail.
 Menus and custom listboxes use `shadow-elevated`, the semantic overlay-radius role, the shared
 menu panel/item recipes, and a short system-curve entrance. Single-select filters use
@@ -548,8 +548,9 @@ Before merging a visual change, verify:
   baseline; authenticated-app type uses Geist at weights 400 and 500 only.
 - Marketing stays monochrome-plus-blue; functional colour appears only in the app.
 - Every product, marketing, authentication, and onboarding surface consumes the
-  same token ladder: `#F6F8FC` canvas, `#EAF1FB` structure/well, `#EDF2FA` tonal
-  panel, and `#D3E3FD` selected state. Surface separation does not add borders.
+  same token ladder: `#FAFAF8` canvas and sidebar, `#F4F4F1` structure/well/tonal
+  panel, and `#EFEFEB` hover and selected state. Sections separate with a hairline
+  rule and space, not with a box around their contents.
 - App controls use 8px, semantic objects use 10px, and overlays use 12px.
   Shadows appear only on floating surfaces.
 - Any new motion is calm and stops under `prefers-reduced-motion`.
@@ -560,7 +561,7 @@ Before merging a visual change, verify:
   prose punctuation is unaffected.
 
 The focused flow introduces no new colour family, gradient, decorative glow,
-nested card, or competitor mutation. Navy owns the primary action; indigo owns
+nested card, or competitor mutation. Ink owns the primary action; the accent blue owns
 the current step and selected-answer state without changing font weight. The
 transaction flow and all explicit confirmation gates remain unchanged.
 - Repository-owned static, test, and appropriate visual commands pass. External
