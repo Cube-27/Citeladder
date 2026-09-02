@@ -654,10 +654,16 @@ samp {
   transform: translateY(0);
 }
 
-/* In-page anchors must clear the fixed marketing nav so linked sections land
-   below the chrome. */
+/* In-page anchors must clear the fixed chrome so linked sections land below it. */
 [id] {
   scroll-margin-top: calc(var(--topbar-height) + 1.5rem);
+}
+
+/* The public nav is 4rem and `safe-top` grows it by the notch inset, so it is
+   taller than the authenticated top bar the default above is sized for. Without
+   this, an anchored heading lands underneath the nav on a notched phone. */
+[data-public-surface] [id] {
+  scroll-margin-top: calc(4rem + env(safe-area-inset-top, 0px) + 1.5rem);
 }
 
 /* Fixed chrome respects the home indicator and notch on mobile. */
