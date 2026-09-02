@@ -264,10 +264,7 @@ describe('Table (dense)', () => {
       </Table>,
     );
     const headers = screen.getAllByRole('columnheader');
-    expect(screen.getByRole('table').parentElement).toHaveClass(
-      'bg-panel',
-      'rounded-[var(--radius-card)]',
-    );
+    expect(screen.getByRole('table').parentElement).toHaveClass('bg-panel');
     expect(headers).toHaveLength(2);
     // Sticky header at the dense height, sentence-case sans micro-label.
     expect(headers[0].className).toContain('h-[var(--table-header-height)]');

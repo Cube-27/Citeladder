@@ -1,7 +1,6 @@
 import type { HTMLAttributes, ReactNode, Ref, TdHTMLAttributes, ThHTMLAttributes } from 'react';
 
 import { cn } from '@/lib/utils';
-import { cardClasses } from './card-variants';
 
 /**
  * Dense analytics table — the shared semantic ledger treatment:
@@ -35,7 +34,7 @@ export function Table({
   return (
     <div
       ref={wrapperRef}
-      className={cn(cardClasses(), 'relative w-full overflow-auto', wrapperClassName)}
+      className={cn('bg-panel relative w-full overflow-auto', wrapperClassName)}
     >
       <table className={cn('w-full border-collapse text-sm', className)}>{children}</table>
     </div>
