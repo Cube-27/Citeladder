@@ -29,7 +29,7 @@ export function Workflow() {
               <StaggerItem key={step.num} className="flex flex-col items-start xl:pt-8">
                 <div className="flex items-center gap-3">
                   <span className="bg-accent-subtle text-accent-text flex size-9 items-center justify-center rounded-[var(--radius-control)]">
-                    <Icon className="size-5" strokeWidth={1.75} aria-hidden />
+                    <Icon className="size-5" aria-hidden />
                   </span>
                   <span className="text-subtle font-mono text-xs tabular-nums">{step.num}</span>
                 </div>

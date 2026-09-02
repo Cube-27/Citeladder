@@ -171,18 +171,14 @@ export function EnterpriseOps() {
           <StaggerItem key={title} className="h-full">
             <article className="bg-panel border-border-subtle hover:border-accent-border flex h-full flex-col rounded-[var(--radius-card)] border p-7 transition-colors duration-200">
               <div className="bg-accent-soft text-accent-text grid size-10 place-items-center rounded-xl">
-                <Icon aria-hidden strokeWidth={1.8} className="size-5" />
+                <Icon aria-hidden className="size-5" />
               </div>
               <h3 className="website-feature-heading text-foreground mt-5">{title}</h3>
               <p className="website-body text-muted mt-3">{tagline}</p>
               <ul className="border-border-subtle mt-6 space-y-3 border-t pt-6">
                 {highlights.map((item) => (
                   <li key={item} className="text-foreground flex gap-3 text-sm">
-                    <Check
-                      aria-hidden
-                      strokeWidth={2.5}
-                      className="text-success-text mt-0.5 size-4 shrink-0"
-                    />
+                    <Check aria-hidden className="text-success-text mt-0.5 size-4 shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -236,7 +232,7 @@ export function EnterpriseFit() {
         {ENTERPRISE_FIT.map(({ icon: Icon, title, description }) => (
           <StaggerItem key={title} className="h-full">
             <article className="bg-panel border-border-subtle flex h-full flex-col rounded-[var(--radius-card)] border p-6 md:p-7">
-              <Icon aria-hidden className="text-accent-text size-6" strokeWidth={1.8} />
+              <Icon aria-hidden className="text-accent-text size-6" />
               <h3 className="website-feature-heading text-foreground mt-6">{title}</h3>
               <p className="website-body text-muted mt-3">{description}</p>
             </article>

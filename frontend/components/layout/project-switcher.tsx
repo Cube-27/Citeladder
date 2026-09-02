@@ -46,7 +46,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
         <span className="text-foreground min-w-0 flex-1 truncate text-sm font-medium tracking-tight">
           {label}
         </span>
-        <ChevronsUpDown className="text-muted size-3.5 shrink-0" aria-hidden strokeWidth={2} />
+        <ChevronsUpDown className="text-muted size-3.5 shrink-0" aria-hidden />
       </DropdownTrigger>
       <DropdownContent align="start" className="w-56">
         <DropdownLabel>Projects</DropdownLabel>

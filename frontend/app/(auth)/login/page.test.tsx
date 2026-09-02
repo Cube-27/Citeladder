@@ -32,6 +32,7 @@ afterEach(() => {
   mswServer.resetHandlers();
   navigate.mockReset();
   searchParams.delete('registered');
+  searchParams.delete('return_to');
 });
 afterAll(() => mswServer.close());
 
@@ -73,6 +74,37 @@ describe('LoginPage', () => {
 
   it('logs in and routes to /onboarding when the workspace has no projects', async () => {
     const user = userEvent.setup();
+    mswServer.use(
+      http.post('/api/v1/auth/login', () => HttpResponse.json({ user: sessionUser })),
+      http.get('/api/v1/projects', () => HttpResponse.json([])),
+    );
+
+    renderWithProviders(<LoginPage />);
+    await user.type(screen.getByLabelText(/email address/i), 'user@example.com');
+    await user.type(screen.getByLabelText(/password/i, { selector: 'input' }), 'sup3rsecret');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/onboarding'));
+  });
+
+  it('returns a successful MCP login to the bounded OAuth consent path', async () => {
+    const user = userEvent.setup();
+    searchParams.set('return_to', '/mcp/oauth/consent?transaction=demo-transaction');
+    mswServer.use(http.post('/api/v1/auth/login', () => HttpResponse.json({ user: sessionUser })));
+
+    renderWithProviders(<LoginPage />);
+    await user.type(screen.getByLabelText(/email address/i), 'user@example.com');
+    await user.type(screen.getByLabelText(/password/i, { selector: 'input' }), 'sup3rsecret');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith('/mcp/oauth/consent?transaction=demo-transaction'),
+    );
+  });
+
+  it('ignores an external login return target', async () => {
+    const user = userEvent.setup();
+    searchParams.set('return_to', 'https://evil.example/steal');
     mswServer.use(
       http.post('/api/v1/auth/login', () => HttpResponse.json({ user: sessionUser })),
       http.get('/api/v1/projects', () => HttpResponse.json([])),

@@ -346,6 +346,49 @@ body {
   p {
     margin: 0;
   }
+
+  /* Icon stroke ladder — the single weight contract for lucide glyphs.
+     lucide draws on a 24-unit grid, so `stroke-width` is scaled by the
+     rendered size: a flat 2 paints a 1px stem at 12px and a 2px stem at
+     24px, which is why large icons currently read heavier than small ones.
+     These rungs compensate so every glyph lands near a 1.3px stem, in step
+     with Geist at body sizes. Compensation is partial on purpose: an
+     identical absolute stem at 12px closes up the counters and muddies the
+     glyph.
+
+     A call site sets the size class and nothing else — `strokeWidth` props
+     are redundant, and a class rule beats an SVG presentation attribute, so
+     they are overridden here rather than honoured. A deliberate outlier uses
+     inline `style={{ strokeWidth: n }}`, which outranks a layered rule. */
+  .lucide {
+    stroke-width: 2;
+  }
+
+  /* A rung exists for each size lucide is actually rendered at. Add one when
+     a new size gets its first call site — an unlisted size falls back to the
+     chrome weight above, which is a reasonable default, not a lost contract. */
+
+  /* Dense — tables, toolbars, inline chips (12-14px). */
+  .lucide.size-3,
+  .lucide.size-3\.5 {
+    stroke-width: 2.25;
+  }
+
+  /* Well — landing wells and empty states (18-20px). */
+  .lucide.size-4\.5,
+  .lucide.size-5 {
+    stroke-width: 1.75;
+  }
+
+  /* Display (24px). */
+  .lucide.size-6 {
+    stroke-width: 1.5;
+  }
+
+  /* Oversized decorative marks (32px). */
+  .lucide.size-8 {
+    stroke-width: 1.25;
+  }
 }
 
 :focus-visible {

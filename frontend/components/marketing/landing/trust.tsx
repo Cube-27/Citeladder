@@ -35,7 +35,7 @@ export function Trust() {
                   className="hover:bg-background-alt/50 grid grid-cols-[40px_1fr] gap-4 p-5 transition-colors sm:p-6"
                 >
                   <span className="bg-accent-subtle/80 text-accent-text flex size-10 items-center justify-center rounded-sm">
-                    <Icon className="size-4.5" strokeWidth={1.75} aria-hidden />
+                    <Icon className="size-4.5" aria-hidden />
                   </span>
                   <div>
                     <dt className="website-body text-foreground font-medium">{guarantee.title}</dt>

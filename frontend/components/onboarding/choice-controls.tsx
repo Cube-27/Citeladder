@@ -39,7 +39,7 @@ export function ChipRow({
 function ChipMark({ selected, idle }: Readonly<{ selected: boolean; idle?: React.ReactNode }>) {
   return (
     <span aria-hidden className="flex size-3.5 shrink-0 items-center justify-center">
-      {selected ? <Check className="text-accent-text size-3.5" strokeWidth={2.5} /> : idle}
+      {selected ? <Check className="text-accent-text size-3.5" /> : idle}
     </span>
   );
 }

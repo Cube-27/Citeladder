@@ -150,7 +150,7 @@ export function BlogIndex() {
         <Section tone="paper" rhythm="tight" aria-label="No posts yet">
           <Reveal className="border-border-subtle mx-auto max-w-xl rounded-[var(--radius-card)] border border-dashed p-10 text-center">
             <span className="bg-accent-soft text-accent-text mx-auto grid size-10 place-items-center rounded-md">
-              <PenLine aria-hidden strokeWidth={1.8} className="size-5" />
+              <PenLine aria-hidden className="size-5" />
             </span>
             <h2 className="website-section-heading text-foreground mt-6">
               {BLOG_EMPTY_STATE.heading}

@@ -91,6 +91,12 @@ from app.models.integrations import (
     IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
+from app.models.mcp import (
+    McpAuthorizationCode,
+    McpAuthorizationRequest,
+    McpOAuthClient,
+    McpOAuthGrant,
+)
 from app.models.opportunity import (
     Opportunity,
     OpportunityGuidance,
@@ -186,6 +192,10 @@ __all__ = [
     "IntegrationOAuthState",
     "IntegrationPropertyMapping",
     "IntegrationSyncRun",
+    "McpAuthorizationCode",
+    "McpAuthorizationRequest",
+    "McpOAuthClient",
+    "McpOAuthGrant",
     "MetricSnapshot",
     "MonitoredSiteUrl",
     "ObservedEntityCandidate",

@@ -18,7 +18,7 @@ export function TrustStrip({ className }: Readonly<{ className?: string }>) {
     <ul className={cn('flex flex-wrap items-center gap-x-8 gap-y-4', className)}>
       {CLAIMS.map(({ Icon, label }) => (
         <li key={label} className="text-muted flex items-center gap-3 text-sm">
-          <Icon aria-hidden strokeWidth={2} className="text-muted size-4 shrink-0" />
+          <Icon aria-hidden className="text-muted size-4 shrink-0" />
           {label}
         </li>
       ))}

@@ -25,6 +25,14 @@ workspace, not a wall of equal-weight KPI cards.
   Website and flow surfaces use a 16px reading baseline. Size,
   leading, weight, tracking, and
   colour are one role contract, never independent page-level choices.
+- **Iconography:** lucide only, imported by concept from `frontend/lib/icons.ts`
+  where a concept exists. A call site sets the size class and nothing else:
+  `size-3`/`size-3.5` for dense tables, toolbars, and inline chips, `size-4` for
+  chrome, `size-5` for empty states and marketing wells, larger only for
+  decorative marks. Stroke weight is not a call-site choice — the icon stroke
+  ladder in `app/globals.css` derives it from the size class so every glyph
+  lands near a 1.3px stem instead of growing heavier with the icon. Colour stays
+  `currentColor` so `text-muted` and `text-accent-text` keep painting the glyph.
 - **Action and selection:** blue-violet (`#5147E5`) owns primary actions across product,
   public, authentication, and onboarding surfaces. One blue (`#1B44E0`) owns
   analytical selection, links, active navigation, and focus. Cyan, coral, lime,

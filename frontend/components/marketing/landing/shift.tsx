@@ -24,7 +24,7 @@ export function Shift() {
                 <div>
                   <div className="flex items-center gap-3">
                     <span className="bg-accent-subtle text-accent-text flex size-9 items-center justify-center rounded-[var(--radius-control)]">
-                      <Icon className="size-4.5" strokeWidth={1.75} aria-hidden />{' '}
+                      <Icon className="size-4.5" aria-hidden />{' '}
                     </span>
                     <span className="text-muted text-xs font-medium tracking-wide uppercase">
                       {fact.label}

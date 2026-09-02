@@ -134,6 +134,26 @@ const nextConfig: NextConfig = {
         source: '/api/:path*',
         destination: `${BACKEND_ORIGIN}/api/:path*`,
       },
+      {
+        source: '/mcp/:path*',
+        destination: `${BACKEND_ORIGIN}/mcp/:path*`,
+      },
+      {
+        source: '/mcp',
+        destination: `${BACKEND_ORIGIN}/mcp`,
+      },
+      ...['authorize', 'token', 'register', 'revoke'].map((path) => ({
+        source: `/${path}`,
+        destination: `${BACKEND_ORIGIN}/${path}`,
+      })),
+      {
+        source: '/.well-known/oauth-authorization-server',
+        destination: `${BACKEND_ORIGIN}/.well-known/oauth-authorization-server`,
+      },
+      {
+        source: '/.well-known/oauth-protected-resource/mcp',
+        destination: `${BACKEND_ORIGIN}/.well-known/oauth-protected-resource/mcp`,
+      },
     ];
   },
 };

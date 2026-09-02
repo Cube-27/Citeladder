@@ -55,6 +55,7 @@ from app.core.telemetry import (
     reset_correlation_id,
     set_correlation_id,
 )
+from app.domain.mcp.server import McpDispatchMiddleware, mcp_app, mcp_server
 
 logger = logging.getLogger("app")
 
@@ -105,7 +106,8 @@ async def lifespan(_app: FastAPI):
     configure_logging()
     logger.info("citeladder backend starting", extra={"app_env": settings.app_env})
     try:
-        yield
+        async with mcp_server.session_manager.run():
+            yield
     finally:
         # The provider connectivity probe (/provider-connections/{id}/test) runs
         # in this process, so the web app owns a pooled answer-engine client too.
@@ -143,6 +145,13 @@ def create_app() -> FastAPI:
     # cover JSON, downloads, validation errors, and unhandled API errors alike.
     app.add_middleware(RequestBodyLimitMiddleware)
     app.add_middleware(ApiNoStoreMiddleware)
+    # The dispatcher hands protocol paths to the SDK app without calling the
+    # rest of the stack, so the body limit is wrapped around that app directly
+    # instead of relying on this registration happening to sit outside it.
+    app.add_middleware(
+        McpDispatchMiddleware,
+        protocol_app=RequestBodyLimitMiddleware(mcp_app, guard_every_path=True),
+    )
 
     @app.middleware("http")
     async def correlation_middleware(request: Request, call_next) -> Response:

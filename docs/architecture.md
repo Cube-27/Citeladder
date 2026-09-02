@@ -75,6 +75,12 @@ and Demand projections, not a navigation station or a second copy of system
 data. It cannot publish content, activate prompts, or mutate an external system
 without an explicit user decision.
 
+The hosted MCP server is a second read interface over those same persisted
+owners. An OAuth grant is bound to one CiteLadder account, while each product
+read resolves that account's current workspace memberships before returning a
+project projection. MCP owns authorization records only: it does not copy
+business data, run providers, or expose a mutation tool.
+
 ## Product stations
 
 | Station | User job | Primary capability owners |

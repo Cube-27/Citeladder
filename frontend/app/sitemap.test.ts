@@ -26,6 +26,7 @@ const STATIC_PATHS = [
   '/faq',
   '/blog',
   '/compare',
+  '/docs/mcp',
 ] as const;
 
 describe('sitemap', () => {

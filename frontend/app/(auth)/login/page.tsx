@@ -13,6 +13,7 @@ import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 function LoginForm() {
   const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   const searchParams = useSearchParams();
+  const returnTo = safeMcpReturnPath(searchParams.get('return_to'));
   const description =
     searchParams.get('registered') === '1'
       ? 'Your account is ready. Sign in to continue.'
@@ -25,8 +26,9 @@ function LoginForm() {
     resolver: zodResolver(loginFormSchema),
     defaultValues: { email: '', password: '' },
   });
-  const { mutation, submit } = useAuthMutation((values: LoginFormValues) =>
-    authApi.login(values.email, values.password),
+  const { mutation, submit } = useAuthMutation(
+    (values: LoginFormValues) => authApi.login(values.email, values.password),
+    returnTo,
   );
 
   return (
@@ -53,6 +55,16 @@ function LoginForm() {
       />
     </AuthFormShell>
   );
+}
+
+function safeMcpReturnPath(value: string | null): string | undefined {
+  if (!value?.startsWith('/mcp/oauth/consent?')) return undefined;
+  if (value.startsWith('//') || value.includes('#')) return undefined;
+  const parsed = new URL(value, 'https://citeladder.invalid');
+  if (parsed.origin !== 'https://citeladder.invalid') return undefined;
+  const transaction = parsed.searchParams.get('transaction');
+  if (!transaction || transaction.length > 256) return undefined;
+  return `${parsed.pathname}?transaction=${encodeURIComponent(transaction)}`;
 }
 
 export default function LoginPage() {

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
 from starlette.responses import JSONResponse
@@ -11,7 +11,7 @@ from app.core.config.http import API_REQUEST_BODY_MAX_BYTES
 
 ASGIApp = Callable[
     [
-        dict[str, Any],
+        MutableMapping[str, Any],
         Callable[..., Awaitable[dict]],
         Callable[..., Awaitable[None]],
     ],
@@ -20,11 +20,24 @@ ASGIApp = Callable[
 
 
 class RequestBodyLimitMiddleware:
-    """Reject oversized API bodies before or while they are streamed."""
+    """Reject oversized request bodies before or while they are streamed.
 
-    def __init__(self, app: ASGIApp, max_bytes: int = API_REQUEST_BODY_MAX_BYTES):
+    Mounted twice. Over the main app it guards /api/, the only routes there that
+    take a body. It is also wrapped directly around the MCP protocol app, which
+    the dispatcher hands off to before the main stack runs; there it guards
+    every path, because none of that app's routes live under /api/.
+    """
+
+    def __init__(
+        self,
+        app: ASGIApp,
+        max_bytes: int = API_REQUEST_BODY_MAX_BYTES,
+        *,
+        guard_every_path: bool = False,
+    ):
         self.app = app
         self.max_bytes = max_bytes
+        self.guard_every_path = guard_every_path
 
     @staticmethod
     def _declared_too_large(headers: dict[bytes, bytes], max_bytes: int) -> bool:
@@ -50,10 +63,11 @@ class RequestBodyLimitMiddleware:
         return message
 
     async def __call__(
-        self, scope: dict[str, Any], receive: Callable, send: Callable
+        self, scope: MutableMapping[str, Any], receive: Callable, send: Callable
     ) -> None:
         path = str(scope.get("path", ""))
-        if scope.get("type") != "http" or not path.startswith("/api/"):
+        guarded = self.guard_every_path or path.startswith("/api/")
+        if scope.get("type") != "http" or not guarded:
             await self.app(scope, receive, send)
             return
 
@@ -81,7 +95,9 @@ class RequestBodyLimitMiddleware:
             await self._reject(scope, receive, send)
 
     @staticmethod
-    async def _reject(scope: dict, receive: Callable, send: Callable) -> None:
+    async def _reject(
+        scope: MutableMapping[str, Any], receive: Callable, send: Callable
+    ) -> None:
         response = JSONResponse({"detail": "Request body too large"}, status_code=413)
         await response(scope, receive, send)
 
@@ -93,7 +109,7 @@ class ApiNoStoreMiddleware:
         self.app = app
 
     async def __call__(
-        self, scope: dict[str, Any], receive: Callable, send: Callable
+        self, scope: MutableMapping[str, Any], receive: Callable, send: Callable
     ) -> None:
         path = str(scope.get("path", ""))
         is_api = scope.get("type") == "http" and path.startswith("/api/")

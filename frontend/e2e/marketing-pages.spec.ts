@@ -10,6 +10,7 @@ const MARKETING_PAGES = [
   '/compare',
   '/compare/profound',
   '/faq',
+  '/docs/mcp',
 ];
 
 // Every visitor-reachable route: the ten marketing pages, one blog post and
