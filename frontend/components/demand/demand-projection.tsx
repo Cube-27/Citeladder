@@ -154,7 +154,6 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       <EditorialSectionHeader
-        ruled
         title={
           <span className="flex flex-wrap items-center gap-2">
             <span>

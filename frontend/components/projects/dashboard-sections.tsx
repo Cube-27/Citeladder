@@ -142,9 +142,11 @@ function FactSummary({
     <div className={cn(hairlineBandItemClasses, 'grid gap-1.5')}>
       <p className={eyebrowClasses}>{label}</p>
       {value.trim() ? (
-        <Tooltip content={value}>
-          <p className={textRole('body', 'line-clamp-2 leading-snug')}>{value}</p>
-        </Tooltip>
+        <div className="min-w-0">
+          <Tooltip content={value}>
+            <p className={textRole('body', 'line-clamp-2 overflow-hidden leading-snug')}>{value}</p>
+          </Tooltip>
+        </div>
       ) : (
         <UnavailableValue state={emptyState} className="inline-flex justify-self-start" />
       )}

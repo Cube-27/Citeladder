@@ -52,7 +52,7 @@ export function MetricGroup({
     <dl
       {...props}
       className={cn(
-        'divide-border-subtle grid divide-y sm:grid-cols-2 sm:divide-x-0 sm:divide-y-0 sm:[&>*]:border-b sm:[&>*]:border-border-subtle sm:[&>*:nth-child(odd)]:border-r sm:[&>*:nth-last-child(-n+2)]:border-b-0 sm:[&>*:nth-last-child(2):nth-child(even)]:border-b lg:grid-flow-col lg:auto-cols-fr lg:[&>*]:border-r lg:[&>*]:border-b-0 lg:[&>*:last-child]:border-r-0',
+        'divide-border-subtle grid divide-y sm:grid-cols-2 sm:divide-x-0 sm:divide-y-0 sm:[&>*]:border-b sm:[&>*]:border-border-subtle sm:[&>*:nth-child(odd)]:border-r sm:[&>*:nth-last-child(-n+2)]:border-b-0 sm:[&>*:nth-last-child(2):nth-child(even)]:border-b lg:grid-flow-col lg:auto-cols-fr lg:[&>*]:border-r lg:[&>*]:border-b-0 lg:[&>*:nth-last-child(2):nth-child(even)]:border-b-0 lg:[&>*:last-child]:border-r-0',
         className,
       )}
     >
