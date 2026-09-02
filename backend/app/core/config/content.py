@@ -2,8 +2,8 @@
 #
 # Owns every tunable knob for the content-generation vertical: the env-driven
 # provider settings (Mistral, ``SecretStr`` key — deliberately NOT the
-# BYOK ``ProviderConnection`` path used for measurement), the output-type
-# vocabulary, prompt/context caps, retry budget, and the
+# BYOK ``ProviderConnection`` path used for measurement), instruction/context
+# caps, retry budget, and the
 # ``PostgresQueueSpec`` that parameterizes the shared generic queue over
 # ``ContentGeneration`` rows. Service/worker/adapter code READS these; it never
 # hard-codes the literals inline.
@@ -33,12 +33,6 @@ if TYPE_CHECKING:
 # (``CONTENT_MODEL`` + ``CONTENT_PROVIDER_ENDPOINT`` + ``CONTENT_API_KEY``).
 CONTENT_PROVIDER_MISTRAL: Final = "mistral"
 
-# --- Output types ----------------------------------------------------------
-CONTENT_OUTPUT_TYPE_WEBSITE_PAGE: Final = "website_page"
-CONTENT_OUTPUT_TYPES: Final[frozenset[str]] = frozenset(
-    {CONTENT_OUTPUT_TYPE_WEBSITE_PAGE}
-)
-CONTENT_DEFAULT_OUTPUT_TYPE: Final = CONTENT_OUTPUT_TYPE_WEBSITE_PAGE
 # The skill catalog lives in its own module (it is large and self-contained);
 # re-exported here so ``app.core.config.content`` stays the one import site
 # for content configuration.
@@ -47,30 +41,21 @@ CONTENT_SKILL_IDS: Final[tuple[str, ...]] = _skills.CONTENT_SKILL_IDS
 CONTENT_SKILLS: Final[frozenset[str]] = _skills.CONTENT_SKILLS
 CONTENT_DEFAULT_SKILL: Final = _skills.CONTENT_DEFAULT_SKILL
 CONTENT_SKILL_REGISTRY: Final = _skills.CONTENT_SKILL_REGISTRY
-CONTENT_SKILL_DIRECTIVES: Final[dict[str, str]] = _skills.CONTENT_SKILL_DIRECTIVES
-skill_directive = _skills.skill_directive
+skill_body = _skills.skill_body
 
 FEEDBACK_ACCEPTED: Final = "accepted"
 FEEDBACK_REJECTED: Final = "rejected"
 
-# --- Grounding-envelope contract (frozen on the generation row) -----------
-GROUNDING_STATUS_INCLUDED: Final = "included"
-GROUNDING_STATUS_UNAVAILABLE: Final = "unavailable"
-GROUNDING_STATUS_CONFLICTING: Final = "conflicting"
-GROUNDING_STATUSES: Final[frozenset[str]] = frozenset(
-    {
-        GROUNDING_STATUS_INCLUDED,
-        GROUNDING_STATUS_UNAVAILABLE,
-        GROUNDING_STATUS_CONFLICTING,
-    }
-)
+# --- Frozen context contract (frozen on the generation row) ---------------
+CONTENT_CONTEXT_STATUS_INCLUDED: Final = "included"
+CONTENT_CONTEXT_STATUS_UNAVAILABLE: Final = "unavailable"
 
 # --- Input caps ------------------------------------------------------------
-CONTENT_PROMPT_MAX_LEN: Final = 4000
+CONTENT_INSTRUCTION_MAX_LEN: Final = 4000
 # Client-supplied Idempotency-Key cap — must match the DB column width so an
 # overlong header is a 422 at the boundary, never a DataError mid-insert.
 CONTENT_IDEMPOTENCY_KEY_MAX_LEN: Final = 128
-# Deterministic history label: first prompt line trimmed to this many chars.
+# Deterministic history label: first instruction line trimmed to this many chars.
 CONTENT_HISTORY_TITLE_MAX_LEN: Final = 80
 
 # --- List bounds -----------------------------------------------------------
@@ -87,7 +72,7 @@ CONTENT_CONTEXT_MAX_CHARS: Final = 24000
 CONTENT_CONTEXT_FIELD_MAX_CHARS: Final = 300
 
 # --- Relevance scoring weights (deterministic lexical overlap) -------------
-# Applied per distinct prompt term present in the field, not per occurrence, so
+# Applied per distinct instruction term present in the field, not per occurrence, so
 # a long page cannot outrank a precisely-matching one on repetition alone.
 CONTENT_SCORE_TARGET_URL: Final = 1000
 CONTENT_SCORE_TITLE: Final = 20
@@ -115,7 +100,9 @@ CONTENT_FEEDBACK_REASONS: Final[tuple[str, ...]] = (
 # --- Error tokens specific to the content vertical -------------------------
 ERROR_PROVIDER_NOT_CONFIGURED: Final = "provider_not_configured"
 ERROR_IDEMPOTENCY_CONFLICT: Final = "idempotency_conflict"
+ERROR_CONTENT_CONTEXT_CONFLICT: Final = "content_context_conflict"
 ERROR_CANCEL_NOT_ALLOWED: Final = "cancel_not_allowed"
+ERROR_DELETE_NOT_ALLOWED: Final = "delete_not_allowed"
 
 
 class ContentSettings(BaseSettings):
@@ -144,13 +131,8 @@ class ContentSettings(BaseSettings):
     )
     request_timeout_seconds: float = Field(default=60.0, gt=0)
     max_output_tokens: int = Field(default=4096, gt=0)
-    # Provider-neutral key, preferred. ``MISTRAL_API_KEY`` remains as a
-    # fallback so an existing env keeps working without an edit.
     api_key: SecretStr = Field(
         default=SecretStr(""), validation_alias="CONTENT_API_KEY"
-    )
-    mistral_api_key: SecretStr = Field(
-        default=SecretStr(""), validation_alias="MISTRAL_API_KEY"
     )
     lease_ttl_seconds: float = Field(default=120.0, gt=0)
     heartbeat_interval_seconds: float = Field(default=30.0, gt=0)
@@ -194,10 +176,7 @@ class ContentSettings(BaseSettings):
 
     @property
     def resolved_api_key(self) -> str:
-        """``CONTENT_API_KEY`` when set, else the legacy ``MISTRAL_API_KEY``."""
-        return (
-            self.api_key.get_secret_value() or self.mistral_api_key.get_secret_value()
-        )
+        return self.api_key.get_secret_value()
 
     @property
     def resolved_endpoint(self) -> str:

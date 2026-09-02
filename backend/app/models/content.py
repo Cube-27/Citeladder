@@ -27,7 +27,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.config.content import CONTENT_MAX_ATTEMPTS
+from app.core.config.content import CONTENT_DEFAULT_SKILL, CONTENT_MAX_ATTEMPTS
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.core.database import Base
 from app.models.constants import CASCADE_ALL_DELETE_ORPHAN
@@ -45,7 +45,7 @@ def _utcnow() -> datetime:
 class ContentGeneration(Base):
     """One immutable content-generation request + queue row + result.
 
-    The frozen inputs (prompt, output type, website-context snapshot, message
+    The frozen inputs (user instruction, context snapshot, message
     digest/snapshot) are written at enqueue and never mutated. The queue-lease
     columns mirror ``AuditTask`` exactly so the generic queue serves this row.
     The result fields are single-writer: only the claiming worker's atomic
@@ -84,19 +84,29 @@ class ContentGeneration(Base):
         nullable=True,
         index=True,
     )
+    target_site_url_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("site_urls.id", ondelete=_SET_NULL),
+        nullable=True,
+        index=True,
+    )
+    target_url: Mapped[str] = mapped_column(String(2048), default="")
+    demand_signal_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("demand_signals.id", ondelete=_SET_NULL),
+        nullable=True,
+        index=True,
+    )
     site_health_reference: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # --- Frozen inputs (written at enqueue, never mutated) ----------------
-    prompt: Mapped[str] = mapped_column(Text)
-    skill_id: Mapped[str] = mapped_column(String(64), default="article")
-    skill_version: Mapped[str] = mapped_column(String(32), default="content-v1")
-    output_type: Mapped[str] = mapped_column(String(32))
-    # Frozen rendered generation context (brand/task/website/search blocks plus
-    # a provenance summary) — see ``domain/content/context_builder.py``. The
-    # column keeps its historical name; older rows hold the retired grounding
-    # envelope and are read as empty by ``ContentContext.from_snapshot``.
-    grounding_status: Mapped[str] = mapped_column(String(16), default="")
-    grounding_envelope: Mapped[dict] = mapped_column(JSONB, default=dict)
-    # Stable hash over (project_id, prompt, output_type, context flag): the
+    user_instruction: Mapped[str] = mapped_column(Text)
+    skill_id: Mapped[str] = mapped_column(String(64), default=CONTENT_DEFAULT_SKILL)
+    skill_version: Mapped[int] = mapped_column(Integer)
+    # Frozen canonical generation context plus bounded provenance summary;
+    # see ``domain/content/context_builder.py``.
+    context_status: Mapped[str] = mapped_column(String(16), default="")
+    context_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict)
+    # Stable hash over the request's identifiers, instruction, and context:
     # idempotency replay/conflict comparator.
     request_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
     message_digest: Mapped[str] = mapped_column(String(64), default="")

@@ -60,7 +60,7 @@ export const CONTRACT_CODEGEN_TIMEOUT_MS = 120_000;
 export const EVIDENCE_LIMIT = 100;
 
 // Content request and list bounds.
-export const CONTENT_PROMPT_MAX_LEN = 4_000;
+export const CONTENT_INSTRUCTION_MAX_LEN = 4_000;
 export const CONTENT_LIST_DEFAULT_LIMIT = 50;
 
 // Audit launch bounds.

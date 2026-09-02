@@ -251,20 +251,20 @@ contract. It is not a second brief or action store. It contains:
 
 - action pathway (`owned` or `earned`), source class, canonical domain, and suggested role;
 - a config-owned suggested Content skill/output kind;
-- editable task seed and target URL/theme when one exists;
+- target URL/theme and a suggested skill when one exists; the user's instruction remains empty;
 - representative cited page URLs/titles, affected prompts/themes, observed competitors, coverage,
   limitations, truncation state, and exact source-analysis IDs; and
 - Opportunity snapshot, detector, formula, taxonomy, and handoff-template versions.
 
 The Content owner accepts `opportunity_id`, authorizes it in the active workspace/project, freezes
-that exact handoff into the generation context manifest, and records omissions and budgets before
+that exact handoff into the canonical generation context snapshot, and records omissions before
 provider I/O. Observed third-party page metadata remains untrusted evidence; Content does not fetch
 the domain or use a second search provider.
 
 The Opportunities drawer offers **Create owned content** or **Prepare earned content** and routes to
 the existing Content screen with `opportunity_id`. Content displays the pathway, cited domain/page
-evidence, coverage, and limitations; preselects the server-suggested skill; seeds an editable
-instruction once; and never overwrites user edits on refetch.
+evidence, coverage, and limitations, preselects the server-suggested skill and owned target page
+when known, and opens an empty focused instruction field. Origin evidence remains server-side.
 
 Initial earned outputs are transparent human-led assets such as an editorial inclusion brief,
 expert-contribution outline, review/profile evidence pack, or outreach draft. They must not

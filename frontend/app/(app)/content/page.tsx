@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { ContentScreen } from '@/components/content/content-screen';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { DEMAND_SIGNAL_PARAM } from '@/lib/demand/content-brief';
+import { DEMAND_SIGNAL_PARAM } from '@/lib/demand/content-link';
 import type { SiteHealthReferenceInput } from '@/lib/api/content';
 
 function siteHealthReference(

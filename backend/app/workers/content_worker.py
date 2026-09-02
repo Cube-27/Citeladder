@@ -220,9 +220,9 @@ class ContentWorker(DrainableWorkerMixin):
     async def _run_provider_call(self, claimed: ContentGeneration) -> None:
         # Rebuild the exact frozen messages from the immutable inputs (the
         # snapshot was truncated for provenance; the digest pins the content).
-        context = ContentContext.from_snapshot(claimed.grounding_envelope or {})
+        context = ContentContext.from_snapshot(claimed.context_snapshot or {})
         messages, _digest, _snapshot = build_messages(
-            prompt=claimed.prompt,
+            user_instruction=claimed.user_instruction,
             context=context,
             skill_id=claimed.skill_id,
         )

@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { Card, CardContent } from '@/components/ui/card';
 import type { DemandSignal } from '@/lib/api/demand';
-import { contentBriefHref } from '@/lib/demand/content-brief';
+import { demandContentHref } from '@/lib/demand/content-link';
 import {
   competingPages,
   numericMetric,
@@ -375,7 +375,7 @@ export function DemandSignalCard({
               </Button>
             )}
             <Button variant="tonal" size="sm" asChild>
-              <Link href={contentBriefHref(signal)} className="inline-flex items-center">
+              <Link href={demandContentHref(signal)} className="inline-flex items-center">
                 <FileText className="mr-1 size-3" />
                 <span>Draft</span>
               </Link>

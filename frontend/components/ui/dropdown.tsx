@@ -22,6 +22,7 @@ export function DropdownContent({
   className,
   align = 'start',
   sideOffset = 4,
+  collisionPadding = 8,
   children,
   ...props
 }: Readonly<ComponentPropsWithoutRef<typeof DropdownPrimitive.Content>>) {
@@ -30,7 +31,14 @@ export function DropdownContent({
       <DropdownPrimitive.Content
         align={align}
         sideOffset={sideOffset}
-        className={cn(menuPanelClasses, 'min-w-40', className)}
+        collisionPadding={collisionPadding}
+        className={cn(
+          menuPanelClasses,
+          // A long catalog must scroll inside the panel rather than be clipped
+          // by it: Radix reports the space it actually has, so cap there.
+          'max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] min-w-40 overflow-auto',
+          className,
+        )}
         {...props}
       >
         {children}

@@ -71,6 +71,9 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 include = ["app*"]
 
+[tool.setuptools.package-data]
+"app.core.config.content_skills" = ["packs/*/SKILL.md"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 88

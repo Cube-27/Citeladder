@@ -349,7 +349,7 @@ class OpportunityImplementationEvent(Base):
     target_site_url_ids: Mapped[list] = mapped_column(JSONB, default=list)
     generation_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("content_generations.id", ondelete="RESTRICT"),
+        ForeignKey("content_generations.id", ondelete="SET NULL"),
         nullable=True,
     )
     declared_implemented_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

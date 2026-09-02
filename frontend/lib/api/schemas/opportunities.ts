@@ -43,7 +43,6 @@ const contentHandoffSchema = responseObject({
   canonical_domain: z.string().nullable(),
   suggested_role: z.string(),
   suggested_skill_id: z.string(),
-  task_seed: z.string(),
   target_url: z.string().nullable(),
   target_theme: z.string().nullable(),
   representative_citations: z.array(z.record(z.string(), z.unknown())),

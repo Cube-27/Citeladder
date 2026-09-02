@@ -40,6 +40,15 @@ function newIdempotencyKey(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+/** The origins a new generation inherits from however the screen was reached. */
+export type ContentGenerationsOptions = {
+  limit?: number;
+  opportunityId?: string | null;
+  demandSignalId?: string | null;
+  target?: { siteUrlId?: string; url?: string };
+  siteHealthReference?: SiteHealthReferenceInput;
+};
+
 /**
  * Data orchestration for the Content screen.
  *
@@ -52,9 +61,13 @@ function newIdempotencyKey(): string {
  */
 export function useContentGenerations(
   projectId: string | null,
-  limit: number = CONTENT_LIST_DEFAULT_LIMIT,
-  opportunityId?: string | null,
-  siteHealthReference?: SiteHealthReferenceInput,
+  {
+    limit = CONTENT_LIST_DEFAULT_LIMIT,
+    opportunityId,
+    demandSignalId,
+    target,
+    siteHealthReference,
+  }: ContentGenerationsOptions = {},
 ) {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -103,13 +116,16 @@ export function useContentGenerations(
   const enqueueMutation = useMutation({
     // `skillId` is validated against the server-owned catalog, not a frontend
     // union — a skill added backend-side must not need a client release.
-    mutationFn: (input: { prompt: string; skillId: string }) =>
+    mutationFn: (input: { userInstruction: string; skillId: string }) =>
       contentApi.enqueueGeneration(
         {
           project_id: projectId ?? '',
-          prompt: input.prompt,
+          user_instruction: input.userInstruction,
           skill_id: input.skillId,
+          target_site_url_id: target?.siteUrlId,
+          target_url: target?.url,
           opportunity_id: opportunityId ?? undefined,
+          demand_signal_id: demandSignalId ?? undefined,
           site_health_reference: siteHealthReference,
         },
         newIdempotencyKey(),
@@ -135,6 +151,27 @@ export function useContentGenerations(
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (generationId: string) => contentApi.deleteGeneration(generationId),
+    onSuccess: (_result, generationId) => {
+      queryClient.removeQueries({ queryKey: queryKeys.content.detail(generationId) });
+      if (selectedId === generationId) setSelectedId(null);
+      invalidateList();
+    },
+  });
+
+  const clearHistoryMutation = useMutation({
+    mutationFn: () => contentApi.clearGenerationHistory(projectId ?? ''),
+    onSuccess: () => {
+      const selectedStatus =
+        detailQuery.data?.status ?? listQuery.data?.find((item) => item.id === selectedId)?.status;
+      if (selectedId && (!selectedStatus || isTerminalContentStatus(selectedStatus))) {
+        setSelectedId(null);
+      }
+      invalidateList();
+    },
+  });
+
   const feedbackMutation = useMutation({
     mutationFn: (input: {
       generationId: string;
@@ -156,6 +193,8 @@ export function useContentGenerations(
     regenerateMutation,
     tryAgainMutation,
     cancelMutation,
+    deleteMutation,
+    clearHistoryMutation,
     feedbackMutation,
   };
 }

@@ -14,6 +14,8 @@ from app.core.config.content import (
     CONTENT_LIST_DEFAULT_LIMIT,
     CONTENT_LIST_MAX_LIMIT,
     ERROR_CANCEL_NOT_ALLOWED,
+    ERROR_CONTENT_CONTEXT_CONFLICT,
+    ERROR_DELETE_NOT_ALLOWED,
     ERROR_IDEMPOTENCY_CONFLICT,
     ERROR_PROVIDER_NOT_CONFIGURED,
 )
@@ -27,18 +29,25 @@ from app.domain.content.schemas import (
     ContentGenerationDetail,
     ContentGenerationListItem,
     ContentSkillCatalog,
+    ContentTargetPage,
+    SiteHealthReference,
     skill_catalog,
 )
 from app.domain.content.service import (
     CancelNotAllowedError,
+    ContentGenerationConflictError,
     ContentGenerationNotFoundError,
+    DeleteNotAllowedError,
     IdempotencyConflictError,
     ProviderNotConfiguredError,
     cancel_generation,
+    clear_terminal_generations,
     context_preview,
+    delete_generation,
     enqueue_generation,
     get_generation,
     list_generations,
+    list_target_pages,
     record_feedback,
     regenerate,
     to_detail,
@@ -67,6 +76,8 @@ def _usage_limited(exc: UsageLimitExceededError) -> ApiException:
 def _enqueue_conflict(exc: Exception) -> ApiException:
     if isinstance(exc, ProviderNotConfiguredError):
         detail = ERROR_PROVIDER_NOT_CONFIGURED
+    elif isinstance(exc, ContentGenerationConflictError):
+        detail = ERROR_CONTENT_CONTEXT_CONFLICT
     else:
         detail = ERROR_IDEMPOTENCY_CONFLICT
     return api_error(status.HTTP_409_CONFLICT, detail)
@@ -89,15 +100,68 @@ async def context_preview_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
     project_id: Annotated[uuid.UUID, Query()],
+    target_site_url_id: Annotated[uuid.UUID | None, Query()] = None,
+    target_url: Annotated[str | None, Query(max_length=2048)] = None,
+    opportunity_id: Annotated[uuid.UUID | None, Query()] = None,
+    demand_signal_id: Annotated[uuid.UUID | None, Query()] = None,
+    site_health_crawl_id: Annotated[uuid.UUID | None, Query()] = None,
+    site_health_site_url_id: Annotated[uuid.UUID | None, Query()] = None,
+    site_health_source_analysis_id: Annotated[uuid.UUID | None, Query()] = None,
+    site_health_dimension: Annotated[str | None, Query(max_length=32)] = None,
+    site_health_checkpoint_ids: Annotated[str | None, Query(max_length=1039)] = None,
 ) -> ContentContextPreview:
     """What CiteLadder would ground a draft with, before one is requested."""
     try:
         preview = await context_preview(
-            session, workspace_id=ctx.workspace_id, project_id=project_id
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=project_id,
+            target_site_url_id=target_site_url_id,
+            target_url=target_url,
+            opportunity_id=opportunity_id,
+            demand_signal_id=demand_signal_id,
+            site_health_reference=_preview_site_health_reference(
+                project_id=project_id,
+                crawl_id=site_health_crawl_id,
+                site_url_id=site_health_site_url_id,
+                source_analysis_id=site_health_source_analysis_id,
+                dimension=site_health_dimension,
+                checkpoint_ids=site_health_checkpoint_ids,
+            ),
         )
     except ContentGenerationNotFoundError as exc:
         raise _not_found(exc) from exc
+    except ContentGenerationConflictError as exc:
+        raise _enqueue_conflict(exc) from exc
     return ContentContextPreview.model_validate(preview)
+
+
+def _preview_site_health_reference(
+    *,
+    project_id: uuid.UUID,
+    crawl_id: uuid.UUID | None,
+    site_url_id: uuid.UUID | None,
+    source_analysis_id: uuid.UUID | None,
+    dimension: str | None,
+    checkpoint_ids: str | None,
+) -> SiteHealthReference | None:
+    """Build the existing typed reference only when the complete identity is present."""
+    if (
+        crawl_id is None
+        or site_url_id is None
+        or source_analysis_id is None
+        or not dimension
+        or not checkpoint_ids
+    ):
+        return None
+    return SiteHealthReference(
+        project_id=project_id,
+        crawl_id=crawl_id,
+        site_url_id=site_url_id,
+        source_analysis_id=source_analysis_id,
+        dimension=dimension,
+        checkpoint_ids=[item for item in checkpoint_ids.split(",") if item],
+    )
 
 
 @router.get("/generations", response_model=list[ContentGenerationListItem])
@@ -121,6 +185,24 @@ async def list_generations_endpoint(
     return [to_list_item(row) for row in rows]
 
 
+@router.get("/target-pages", response_model=list[ContentTargetPage])
+async def list_target_pages_endpoint(
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+    project_id: Annotated[uuid.UUID, Query()],
+    query: Annotated[str, Query(max_length=256)] = "",
+) -> list[ContentTargetPage]:
+    try:
+        return await list_target_pages(
+            session,
+            workspace_id=ctx.workspace_id,
+            project_id=project_id,
+            query=query,
+        )
+    except ContentGenerationNotFoundError as exc:
+        raise _not_found(exc) from exc
+
+
 @router.post(
     "/generations",
     response_model=ContentGenerationDetail,
@@ -140,11 +222,13 @@ async def enqueue_generation_endpoint(
             session,
             workspace_id=ctx.workspace_id,
             project_id=payload.project_id,
-            prompt=payload.prompt,
-            output_type=payload.output_type,
+            user_instruction=payload.user_instruction,
             idempotency_key=(idempotency_key or "").strip(),
             skill_id=payload.skill_id,
+            target_site_url_id=payload.target_site_url_id,
+            target_url=payload.target_url,
             opportunity_id=payload.opportunity_id,
+            demand_signal_id=payload.demand_signal_id,
             site_health_reference=payload.site_health_reference,
         )
     except ContentGenerationNotFoundError as exc:
@@ -152,11 +236,46 @@ async def enqueue_generation_endpoint(
     except (
         ProviderNotConfiguredError,
         IdempotencyConflictError,
+        ContentGenerationConflictError,
     ) as exc:
         raise _enqueue_conflict(exc) from exc
     except UsageLimitExceededError as exc:
         raise _usage_limited(exc) from exc
     return to_detail(row)
+
+
+@router.delete("/generations/{generation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_generation_endpoint(
+    generation_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> None:
+    try:
+        await delete_generation(
+            session, workspace_id=ctx.workspace_id, generation_id=generation_id
+        )
+    except ContentGenerationNotFoundError as exc:
+        raise _not_found(exc) from exc
+    except DeleteNotAllowedError as exc:
+        raise_api_error(
+            status.HTTP_409_CONFLICT,
+            "This content generation is still active. Cancel it before deleting it.",
+            code=ERROR_DELETE_NOT_ALLOWED,
+            detail=ERROR_DELETE_NOT_ALLOWED,
+            cause=exc,
+        )
+
+
+@router.delete("/generations", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_generation_history_endpoint(
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+    project_id: Annotated[uuid.UUID, Query()],
+) -> None:
+    try:
+        await clear_terminal_generations(
+            session, workspace_id=ctx.workspace_id, project_id=project_id
+        )
+    except ContentGenerationNotFoundError as exc:
+        raise _not_found(exc) from exc
 
 
 @router.get("/generations/{generation_id}", response_model=ContentGenerationDetail)

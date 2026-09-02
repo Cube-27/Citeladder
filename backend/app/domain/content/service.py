@@ -15,7 +15,7 @@ import json
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,7 +25,7 @@ from app.core.config.content import (
     CONTENT_FEEDBACK_REASONS,
     CONTENT_GENERATOR_VERSION,
     CONTENT_LIST_MAX_LIMIT,
-    CONTENT_SKILL_CATALOG_VERSION,
+    CONTENT_SKILL_REGISTRY,
     FEEDBACK_ACCEPTED,
     FEEDBACK_REJECTED,
     content_settings,
@@ -39,21 +39,21 @@ from app.core.config.task_queue import (
 from app.domain.abuse.service import reserve_workspace_capacity
 from app.domain.content.context_builder import (
     ContentContext,
+    ContentContextConflictError,
+    ContentContextNotFoundError,
     build_content_context,
-    content_context_availability,
 )
 from app.domain.content.message_builder import build_messages
 from app.domain.content.schemas import (
     ContentContextSummary,
     ContentGenerationDetail,
     ContentGenerationListItem,
+    ContentTargetPage,
     SiteHealthReference,
-    prompt_preview,
+    instruction_preview,
 )
-from app.domain.site_health.service.aeo_readiness import get_content_handoff
-from app.domain.site_health.service.common import SiteHealthNotFoundError
+from app.domain.content.website_context import select_crawl_fragments
 from app.models.content import ContentGeneration
-from app.models.opportunity import Opportunity
 from app.models.project import Project
 
 
@@ -69,8 +69,16 @@ class IdempotencyConflictError(RuntimeError):
     """Same idempotency key, different request fingerprint (-> 409)."""
 
 
+class ContentGenerationConflictError(RuntimeError):
+    """Authorized origins selected mutually incompatible target pages."""
+
+
 class CancelNotAllowedError(RuntimeError):
     """Cancel requested on a terminal record (-> 409)."""
+
+
+class DeleteNotAllowedError(RuntimeError):
+    """Deletion requested on an active record (-> 409)."""
 
 
 async def _reserve_content_capacity(
@@ -93,20 +101,24 @@ async def _reserve_content_capacity(
 def request_fingerprint(
     *,
     project_id: uuid.UUID,
-    prompt: str,
-    output_type: str,
+    user_instruction: str,
     skill_id: str = CONTENT_DEFAULT_SKILL,
+    target_site_url_id: uuid.UUID | None = None,
+    target_url: str | None = None,
     opportunity_id: uuid.UUID | None = None,
+    demand_signal_id: uuid.UUID | None = None,
     site_health_reference: dict | None = None,
 ) -> str:
     """Stable comparator for idempotency replay-vs-conflict decisions."""
     canonical = "\x1f".join(
         [
             str(project_id),
-            prompt.strip(),
-            output_type,
+            user_instruction.strip(),
             skill_id,
+            _optional_uuid(target_site_url_id),
+            (target_url or "").strip(),
             _optional_uuid(opportunity_id),
+            _optional_uuid(demand_signal_id),
             json.dumps(
                 site_health_reference or {}, sort_keys=True, separators=(",", ":")
             ),
@@ -135,21 +147,30 @@ async def _project_in_workspace(
 
 def _summary_dto(row: ContentGeneration) -> ContentContextSummary:
     """Bounded public provenance: counts and URLs, never the rendered blocks."""
-    summary = (row.grounding_envelope or {}).get("summary") or {}
+    snapshot = row.context_snapshot or {}
+    summary = snapshot.get("summary") or {}
+    target_url = summary.get("target_url")
     return ContentContextSummary(
-        version=str((row.grounding_envelope or {}).get("version") or ""),
-        crawl_page_count=int(summary.get("crawl_page_count") or 0),
-        crawl_urls=[str(url) for url in (summary.get("crawl_urls") or [])],
+        version=str(snapshot.get("version", "")),
+        crawl_page_count=int(summary.get("crawl_page_count", 0)),
+        crawl_urls=_string_list(summary.get("crawl_urls")),
         crawl_completed_at=summary.get("crawl_completed_at"),
-        brand_fields=[str(item) for item in (summary.get("brand_fields") or [])],
-        search_connected=bool(summary.get("search_connected")),
-        omissions=list(summary.get("omissions") or []),
+        brand_memory=bool(summary.get("brand_memory")),
+        brand_fields=_string_list(summary.get("brand_fields")),
+        target_url=str(target_url) if target_url else None,
+        issue_count=int(summary.get("issue_count", 0)),
+        related_page_count=int(summary.get("related_page_count", 0)),
+        omissions=list(summary.get("omissions", [])),
     )
+
+
+def _string_list(value: object) -> list[str]:
+    return [str(item) for item in value] if isinstance(value, list) else []
 
 
 def to_list_item(row: ContentGeneration) -> ContentGenerationListItem:
     item = ContentGenerationListItem.model_validate(row)
-    item.prompt_preview = prompt_preview(row.prompt)
+    item.instruction_preview = instruction_preview(row.user_instruction)
     return item
 
 
@@ -157,10 +178,10 @@ def to_detail(row: ContentGeneration) -> ContentGenerationDetail:
     payload = {
         field_name: getattr(row, field_name)
         for field_name in ContentGenerationDetail.model_fields
-        if field_name not in {"prompt_preview", "grounding_summary"}
+        if field_name not in {"instruction_preview", "context_summary"}
     }
-    payload["prompt_preview"] = prompt_preview(row.prompt)
-    payload["grounding_summary"] = _summary_dto(row)
+    payload["instruction_preview"] = instruction_preview(row.user_instruction)
+    payload["context_summary"] = _summary_dto(row)
     return ContentGenerationDetail.model_validate(payload)
 
 
@@ -171,15 +192,15 @@ def _insert_generation(
     context: ContentContext,
 ) -> ContentGeneration:
     messages, digest, message_snapshot = build_messages(
-        prompt=row.prompt,
+        user_instruction=row.user_instruction,
         context=context,
         skill_id=row.skill_id,
     )
     # ``messages`` itself is never persisted — the worker rebuilds it from the
-    # frozen prompt + snapshot; only the digest + safe snapshot are stored.
+    # frozen instruction + snapshot; only the digest + safe snapshot are stored.
     del messages
-    row.grounding_status = context.status
-    row.grounding_envelope = context.snapshot()
+    row.context_status = context.status
+    row.context_snapshot = context.snapshot()
     row.message_digest = digest
     row.message_snapshot = message_snapshot
     session.add(row)
@@ -202,11 +223,13 @@ async def enqueue_generation(
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-    prompt: str,
-    output_type: str,
+    user_instruction: str,
     idempotency_key: str = "",
     skill_id: str = CONTENT_DEFAULT_SKILL,
+    target_site_url_id: uuid.UUID | None = None,
+    target_url: str | None = None,
     opportunity_id: uuid.UUID | None = None,
+    demand_signal_id: uuid.UUID | None = None,
     site_health_reference: SiteHealthReference | None = None,
 ) -> tuple[ContentGeneration, bool]:
     """Enqueue one generation. Returns ``(row, created)``.
@@ -216,44 +239,21 @@ async def enqueue_generation(
     ``IdempotencyConflictError``; a concurrent same-key insert converges via
     the IntegrityError reload/compare path.
     """
-    project = await _project_in_workspace(
+    await _project_in_workspace(
         session, workspace_id=workspace_id, project_id=project_id
     )
 
-    opportunity = await _require_opportunity(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        opportunity_id=opportunity_id,
-    )
     reference_dict = (
         site_health_reference.model_dump(mode="json") if site_health_reference else None
     )
-    if site_health_reference and site_health_reference.project_id != project_id:
-        raise ContentGenerationNotFoundError("Site Health reference not found")
-    try:
-        site_health_handoff = (
-            await get_content_handoff(
-                session,
-                workspace_id=workspace_id,
-                project_id=project_id,
-                crawl_id=site_health_reference.crawl_id,
-                site_url_id=site_health_reference.site_url_id,
-                source_analysis_id=site_health_reference.source_analysis_id,
-                dimension=site_health_reference.dimension,
-                checkpoint_ids=site_health_reference.checkpoint_ids,
-            )
-            if site_health_reference
-            else None
-        )
-    except SiteHealthNotFoundError as exc:
-        raise ContentGenerationNotFoundError(str(exc)) from exc
     fingerprint = request_fingerprint(
         project_id=project_id,
-        prompt=prompt,
-        output_type=output_type,
+        user_instruction=user_instruction,
         skill_id=skill_id,
+        target_site_url_id=target_site_url_id,
+        target_url=target_url,
         opportunity_id=opportunity_id,
+        demand_signal_id=demand_signal_id,
         site_health_reference=reference_dict,
     )
     # A server-side key when the client sent none: the composite constraint is
@@ -273,17 +273,23 @@ async def enqueue_generation(
     if existing is not None:
         return existing, False
 
-    context = await build_content_context(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        prompt=prompt,
-        brand_name=project.brand_name or project.name,
-        website=project.website_url,
-        locale=_project_locale(project),
-        opportunity=opportunity,
-        site_health_handoff=site_health_handoff,
-    )
+    try:
+        context = await build_content_context(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            user_instruction=user_instruction,
+            target_site_url_id=target_site_url_id,
+            target_url=target_url or "",
+            opportunity_id=opportunity_id,
+            demand_signal_id=demand_signal_id,
+            site_health_reference=site_health_reference,
+        )
+    except ContentContextNotFoundError as exc:
+        raise ContentGenerationNotFoundError(str(exc)) from exc
+    except ContentContextConflictError as exc:
+        raise ContentGenerationConflictError(str(exc)) from exc
+
     _require_provider_configured()
     await _reserve_content_capacity(session, workspace_id=workspace_id)
 
@@ -292,17 +298,19 @@ async def enqueue_generation(
         row=ContentGeneration(
             workspace_id=workspace_id,
             project_id=project_id,
-            prompt=prompt,
-            output_type=output_type,
+            user_instruction=user_instruction,
             idempotency_key=key,
             request_fingerprint=fingerprint,
             skill_id=skill_id,
+            target_site_url_id=target_site_url_id,
+            target_url=(target_url or "").strip(),
             opportunity_id=opportunity_id,
+            demand_signal_id=demand_signal_id,
             site_health_reference=reference_dict,
             # The skill catalog and the generator version independently: a
             # reworded directive changes what was asked for even when the
             # generator is untouched, so provenance must record both.
-            skill_version=CONTENT_SKILL_CATALOG_VERSION,
+            skill_version=CONTENT_SKILL_REGISTRY[skill_id].version,
             provider=content_settings.provider,
             requested_model=content_settings.resolved_model,
             generator_version=CONTENT_GENERATOR_VERSION,
@@ -316,36 +324,6 @@ async def enqueue_generation(
         return winner, False
     await session.refresh(row)
     return row, True
-
-
-def _project_locale(project: Project) -> str:
-    """Market/language hint so drafts stay in the project's locale."""
-    return " ".join(
-        part
-        for part in (
-            project.country_code or project.primary_market,
-            project.language_code,
-        )
-        if part
-    ).strip()
-
-
-async def _require_opportunity(
-    session, *, workspace_id, project_id, opportunity_id
-) -> Opportunity | None:
-    """Authorize and RETURN the opportunity so its text can reach the model."""
-    if opportunity_id is None:
-        return None
-    opportunity = await session.scalar(
-        select(Opportunity).where(
-            Opportunity.id == opportunity_id,
-            Opportunity.workspace_id == workspace_id,
-            Opportunity.project_id == project_id,
-        )
-    )
-    if opportunity is None:
-        raise ContentGenerationNotFoundError("Opportunity not found")
-    return opportunity
 
 
 async def _idempotent_replay(
@@ -417,15 +395,69 @@ async def list_generations(
 
 
 async def context_preview(
-    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    target_site_url_id: uuid.UUID | None = None,
+    target_url: str | None = None,
+    opportunity_id: uuid.UUID | None = None,
+    demand_signal_id: uuid.UUID | None = None,
+    site_health_reference: SiteHealthReference | None = None,
 ) -> dict:
-    """What would ground a draft for this project right now (authorizes first)."""
+    """Build the canonical persisted context and expose only its compact summary."""
+    try:
+        context = await build_content_context(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            user_instruction="",
+            target_site_url_id=target_site_url_id,
+            target_url=target_url or "",
+            opportunity_id=opportunity_id,
+            demand_signal_id=demand_signal_id,
+            site_health_reference=site_health_reference,
+        )
+    except ContentContextNotFoundError as exc:
+        raise ContentGenerationNotFoundError(str(exc)) from exc
+    except ContentContextConflictError as exc:
+        raise ContentGenerationConflictError(str(exc)) from exc
+    summary = context.summary
+    return {
+        "brand_memory": bool(summary.get("brand_memory")),
+        "target_page": str(summary.get("target_page") or "") or None,
+        "issue_count": int(summary.get("issue_count") or 0),
+        "related_page_count": int(summary.get("related_page_count") or 0),
+    }
+
+
+async def list_target_pages(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    query: str = "",
+) -> list[ContentTargetPage]:
+    """Search the newest usable persisted crawl; never crawl on a read."""
     await _project_in_workspace(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    return await content_context_availability(
-        session, workspace_id=workspace_id, project_id=project_id
+    selection = await select_crawl_fragments(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        query_text=query,
     )
+    return [
+        ContentTargetPage(
+            site_url_id=page["site_url_id"],
+            title=page["title"],
+            url=page["final_url"],
+            display_url=page["final_url"],
+            page_kind=page["page_kind"],
+        )
+        for page in selection.pages
+    ]
 
 
 async def get_generation(
@@ -457,10 +489,14 @@ async def cancel_generation(
     later terminal write (which re-checks owner + status under its own lock)
     discards the in-flight result (invariant 3/9).
     """
-    await get_generation(
-        session, workspace_id=workspace_id, generation_id=generation_id
+    locked = await session.scalar(
+        select(ContentGeneration)
+        .where(
+            ContentGeneration.id == generation_id,
+            ContentGeneration.workspace_id == workspace_id,
+        )
+        .with_for_update()
     )
-    locked = await session.get(ContentGeneration, generation_id, with_for_update=True)
     if locked is None:
         raise ContentGenerationNotFoundError("Content generation not found")
     if locked.status in TASK_TERMINAL_STATUSES:
@@ -480,6 +516,58 @@ async def cancel_generation(
     return locked
 
 
+async def delete_generation(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    generation_id: uuid.UUID,
+) -> None:
+    """Permanently remove one terminal generation owned by this workspace.
+
+    Attempt rows are owned by the generation and are removed by the database
+    cascade. References from implementation declarations are retained with a
+    null ``generation_id`` by their foreign-key policy.
+    """
+    locked = await session.scalar(
+        select(ContentGeneration)
+        .where(
+            ContentGeneration.id == generation_id,
+            ContentGeneration.workspace_id == workspace_id,
+        )
+        .with_for_update()
+    )
+    if locked is None:
+        raise ContentGenerationNotFoundError("Content generation not found")
+    if locked.status not in TASK_TERMINAL_STATUSES:
+        active_status = locked.status
+        await session.rollback()
+        raise DeleteNotAllowedError(
+            f"cannot delete an active {active_status} generation"
+        )
+    await session.delete(locked)
+    await session.commit()
+
+
+async def clear_terminal_generations(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+) -> None:
+    """Delete terminal history for one authorized project, retaining active work."""
+    await _project_in_workspace(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    await session.execute(
+        delete(ContentGeneration).where(
+            ContentGeneration.workspace_id == workspace_id,
+            ContentGeneration.project_id == project_id,
+            ContentGeneration.status.in_(TASK_TERMINAL_STATUSES),
+        )
+    )
+    await session.commit()
+
+
 async def regenerate(
     session: AsyncSession,
     *,
@@ -495,10 +583,12 @@ async def regenerate(
         session,
         workspace_id=workspace_id,
         project_id=source.project_id,
-        prompt=source.prompt,
-        output_type=source.output_type,
+        user_instruction=source.user_instruction,
         skill_id=source.skill_id,
+        target_site_url_id=source.target_site_url_id,
+        target_url=source.target_url,
         opportunity_id=source.opportunity_id,
+        demand_signal_id=source.demand_signal_id,
         site_health_reference=(
             SiteHealthReference.model_validate(source.site_health_reference)
             if source.site_health_reference
@@ -521,13 +611,15 @@ async def try_again(
     )
     _require_provider_configured()
     await _reserve_content_capacity(session, workspace_id=workspace_id)
-    frozen = ContentContext.from_snapshot(source.grounding_envelope or {})
+    frozen = ContentContext.from_snapshot(source.context_snapshot or {})
     fingerprint = request_fingerprint(
         project_id=source.project_id,
-        prompt=source.prompt,
-        output_type=source.output_type,
+        user_instruction=source.user_instruction,
         skill_id=source.skill_id,
+        target_site_url_id=source.target_site_url_id,
+        target_url=source.target_url,
         opportunity_id=source.opportunity_id,
+        demand_signal_id=source.demand_signal_id,
         site_health_reference=source.site_health_reference,
     )
     row = _insert_generation(
@@ -535,12 +627,14 @@ async def try_again(
         row=ContentGeneration(
             workspace_id=workspace_id,
             project_id=source.project_id,
-            prompt=source.prompt,
-            output_type=source.output_type,
+            user_instruction=source.user_instruction,
             idempotency_key=str(uuid.uuid4()),
             request_fingerprint=fingerprint,
             skill_id=source.skill_id,
+            target_site_url_id=source.target_site_url_id,
+            target_url=source.target_url,
             opportunity_id=source.opportunity_id,
+            demand_signal_id=source.demand_signal_id,
             site_health_reference=source.site_health_reference,
             skill_version=source.skill_version,
             provider=content_settings.provider,

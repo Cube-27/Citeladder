@@ -1,21 +1,23 @@
-"""Content config: spec shape, output types, caps, and secret handling."""
+"""Content config: caps, queue shape, and secret handling."""
 
 from __future__ import annotations
 
 import pytest
 from pydantic import SecretStr, ValidationError
 
+from app.api.content import _enqueue_conflict
 from app.core.config.content import (
-    CONTENT_DEFAULT_OUTPUT_TYPE,
+    CONTENT_INSTRUCTION_MAX_LEN,
     CONTENT_LIST_DEFAULT_LIMIT,
     CONTENT_LIST_MAX_LIMIT,
     CONTENT_MAX_ATTEMPTS,
-    CONTENT_OUTPUT_TYPES,
-    CONTENT_PROMPT_MAX_LEN,
     CONTENT_QUEUE_SPEC,
+    ERROR_CONTENT_CONTEXT_CONFLICT,
+    ERROR_IDEMPOTENCY_CONFLICT,
     ContentSettings,
     _content_claim_order,
 )
+from app.domain.content.service import ContentGenerationConflictError
 from app.models.content import ContentGeneration
 
 
@@ -34,17 +36,18 @@ def test_claim_order_is_deterministic_priority_fifo_position() -> None:
     assert "randomized_position ASC" in rendered[2]
 
 
-def test_output_type_vocabulary() -> None:
-    assert CONTENT_DEFAULT_OUTPUT_TYPE in CONTENT_OUTPUT_TYPES
-    assert CONTENT_OUTPUT_TYPES == frozenset({"website_page"})
+def test_context_conflict_has_a_distinct_api_error_code() -> None:
+    response = _enqueue_conflict(ContentGenerationConflictError("conflict"))
+    assert response.detail == ERROR_CONTENT_CONTEXT_CONFLICT
+    assert response.detail != ERROR_IDEMPOTENCY_CONFLICT
 
 
 def test_list_limit_constants() -> None:
     assert 0 < CONTENT_LIST_DEFAULT_LIMIT <= CONTENT_LIST_MAX_LIMIT
 
 
-def test_prompt_cap_and_retry_budget_positive() -> None:
-    assert CONTENT_PROMPT_MAX_LEN > 0
+def test_instruction_cap_and_retry_budget_positive() -> None:
+    assert CONTENT_INSTRUCTION_MAX_LEN > 0
     assert CONTENT_MAX_ATTEMPTS >= 1
 
 
@@ -52,26 +55,26 @@ def test_api_key_is_secretstr_and_defaults_empty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # A developer's real key in the env must not leak into this test.
-    monkeypatch.delenv("MISTRAL_API_KEY", raising=False)
+    monkeypatch.delenv("CONTENT_API_KEY", raising=False)
     fresh = ContentSettings(_env_file=None)
-    assert isinstance(fresh.mistral_api_key, SecretStr)
+    assert isinstance(fresh.api_key, SecretStr)
     # The default is empty (provider not configured).
-    assert fresh.mistral_api_key.get_secret_value() == ""
+    assert fresh.api_key.get_secret_value() == ""
 
     # A non-empty key never leaks through str()/repr() (invariant 6).
     canary = "canary-key-do-not-print"
-    monkeypatch.setenv("MISTRAL_API_KEY", canary)
+    monkeypatch.setenv("CONTENT_API_KEY", canary)
     configured = ContentSettings(_env_file=None)
-    assert isinstance(configured.mistral_api_key, SecretStr)
-    assert configured.mistral_api_key.get_secret_value() == canary
-    assert canary not in str(configured.mistral_api_key)
-    assert canary not in repr(configured.mistral_api_key)
+    assert isinstance(configured.api_key, SecretStr)
+    assert configured.api_key.get_secret_value() == canary
+    assert canary not in str(configured.api_key)
+    assert canary not in repr(configured.api_key)
 
 
 def test_mistral_content_provider_resolves_configuration(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("MISTRAL_API_KEY", "mistral-key")
+    monkeypatch.setenv("CONTENT_API_KEY", "content-key")
     monkeypatch.setenv(
         "CONTENT_PROVIDER_ENDPOINT", "https://mistral.example/v1/chat/completions"
     )
@@ -80,7 +83,7 @@ def test_mistral_content_provider_resolves_configuration(
     configured = ContentSettings(_env_file=None)
 
     assert configured.provider == "mistral"
-    assert configured.resolved_api_key == "mistral-key"
+    assert configured.resolved_api_key == "content-key"
     assert configured.resolved_endpoint == "https://mistral.example/v1/chat/completions"
     assert configured.resolved_model == "fixture-model"
 

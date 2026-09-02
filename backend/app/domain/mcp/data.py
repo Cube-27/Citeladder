@@ -158,10 +158,7 @@ def skill_catalog() -> dict[str, Any]:
                 "label": skill.label,
                 "channel": skill.channel,
                 "description": skill.description,
-                "structure": list(skill.structure),
-                "tone": skill.tone,
-                "length_hint": skill.length_hint,
-                "rules": list(skill.rules),
+                "version": skill.version,
             }
             for skill in CONTENT_SKILL_REGISTRY.values()
         ],

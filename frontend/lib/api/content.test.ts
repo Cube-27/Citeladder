@@ -22,10 +22,9 @@ const listItem = {
   id: GENERATION_ID,
   project_id: PROJECT_ID,
   status: 'queued' as const,
-  output_type: 'website_page' as const,
   skill_id: 'article' as const,
   opportunity_id: null,
-  grounding_status: 'included' as const,
+  context_status: 'included' as const,
   requested_model: 'mistral-small-latest',
   returned_model: null,
   provider: 'mistral',
@@ -33,23 +32,26 @@ const listItem = {
   updated_at: '2026-07-15T00:00:00Z',
   completed_at: null,
   error_code: '',
-  prompt_preview: 'Write a landing page',
+  instruction_preview: 'Write a landing page',
 };
 
 const detail = {
   ...listItem,
-  skill_version: 'content-v1',
+  skill_version: 1,
   feedback: null,
   feedback_reason: '',
   feedback_at: null,
-  prompt: 'Write a landing page for Acme.',
-  grounding_summary: {
+  user_instruction: 'Write a landing page for Acme.',
+  context_summary: {
     version: 'content-context-v1',
     crawl_page_count: 3,
     crawl_urls: ['https://acme.test/', 'https://acme.test/pricing', 'https://acme.test/about'],
     crawl_completed_at: '2026-07-15T00:00:00Z',
+    brand_memory: true,
     brand_fields: ['description'],
-    search_connected: false,
+    target_url: null,
+    issue_count: 0,
+    related_page_count: 3,
     omissions: [],
   },
   finish_reason: null,
@@ -58,7 +60,7 @@ const detail = {
   usage: null,
   latency_ms: null,
   error_detail: '',
-  generator_version: 'content-v1',
+  generator_version: 'content-v3',
 };
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
@@ -77,7 +79,7 @@ describe('content generation API', () => {
 
     const items = await contentApi.listGenerations(PROJECT_ID);
     expect(items).toHaveLength(1);
-    expect(items[0].prompt_preview).toBe('Write a landing page');
+    expect(items[0].instruction_preview).toBe('Write a landing page');
     expect('output_text' in items[0]).toBe(false);
     expect(new URL(seenUrl).searchParams).toMatchObject({
       get: expect.any(Function),
@@ -98,16 +100,72 @@ describe('content generation API', () => {
     );
 
     const result = await contentApi.enqueueGeneration(
-      { project_id: PROJECT_ID, prompt: 'Write a landing page for Acme.', skill_id: 'article' },
+      {
+        project_id: PROJECT_ID,
+        user_instruction: 'Write a landing page for Acme.',
+        skill_id: 'article',
+      },
       'idem-key-1',
     );
-    expect(result.grounding_summary.crawl_page_count).toBe(3);
+    expect(result.context_summary.crawl_page_count).toBe(3);
     expect(key).toBe('idem-key-1');
     expect(body).toEqual({
       project_id: PROJECT_ID,
-      prompt: 'Write a landing page for Acme.',
+      user_instruction: 'Write a landing page for Acme.',
       skill_id: 'article',
     });
+  });
+
+  it('keys and requests context previews by selected context inputs', async () => {
+    let query = new URLSearchParams();
+    mswServer.use(
+      http.get('/api/v1/content/context-preview', ({ request }) => {
+        query = new URL(request.url).searchParams;
+        return HttpResponse.json({
+          brand_memory: true,
+          target_page: 'Pricing',
+          issue_count: 1,
+          related_page_count: 2,
+        });
+      }),
+    );
+    const inputs = {
+      target_site_url_id: GENERATION_ID,
+      opportunity_id: PROJECT_ID,
+    };
+
+    const result = await contentApi.getContextPreview(PROJECT_ID, inputs);
+
+    expect(result.target_page).toBe('Pricing');
+    expect(query.get('target_site_url_id')).toBe(GENERATION_ID);
+    expect(query.get('opportunity_id')).toBe(PROJECT_ID);
+    expect(queryKeys.content.contextPreview(PROJECT_ID, inputs)).not.toEqual(
+      queryKeys.content.contextPreview(PROJECT_ID, {}),
+    );
+  });
+
+  it('searches the persisted target-page projection', async () => {
+    let query = new URLSearchParams();
+    mswServer.use(
+      http.get('/api/v1/content/target-pages', ({ request }) => {
+        query = new URL(request.url).searchParams;
+        return HttpResponse.json([
+          {
+            site_url_id: GENERATION_ID,
+            title: 'Pricing',
+            url: 'https://acme.test/pricing',
+            display_url: 'acme.test/pricing',
+            page_kind: 'product',
+          },
+        ]);
+      }),
+    );
+
+    const pages = await contentApi.listTargetPages(PROJECT_ID, 'pricing');
+
+    expect(pages[0]).toMatchObject({ site_url_id: GENERATION_ID, title: 'Pricing' });
+    expect(query.get('project_id')).toBe(PROJECT_ID);
+    expect(query.get('query')).toBe('pricing');
   });
 
   it('uses only the retained detail actions', async () => {
@@ -138,6 +196,27 @@ describe('content generation API', () => {
     await contentApi.tryAgainGeneration(GENERATION_ID);
     expect((await contentApi.recordFeedback(GENERATION_ID, 'accepted')).feedback).toBe('accepted');
     expect(seen).toEqual(['cancel', 'regenerate', 'try-again']);
+  });
+
+  it('deletes one generation and clears terminal project history', async () => {
+    const paths: string[] = [];
+    mswServer.use(
+      http.delete('/api/v1/content/generations/:generationId', ({ request }) => {
+        paths.push(new URL(request.url).pathname);
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.delete('/api/v1/content/generations', ({ request }) => {
+        paths.push(`${new URL(request.url).pathname}?${new URL(request.url).searchParams}`);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await expect(contentApi.deleteGeneration(GENERATION_ID)).resolves.toBeUndefined();
+    await expect(contentApi.clearGenerationHistory(PROJECT_ID)).resolves.toBeUndefined();
+    expect(paths).toEqual([
+      `/api/v1/content/generations/${GENERATION_ID}`,
+      `/api/v1/content/generations?project_id=${PROJECT_ID}`,
+    ]);
   });
 });
 

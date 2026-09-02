@@ -3,16 +3,14 @@ import { useMemo } from 'react';
 
 import {
   type ContentSkillView,
+  type ContentContextPreviewInput,
   contentApi,
   type SiteHealthReferenceInput,
 } from '@/lib/api/content';
-import { demandApi } from '@/lib/api/demand';
 import { opportunitiesQueries } from '@/lib/api/opportunities';
 import { siteHealthApi } from '@/lib/api/site-health';
 import { queryKeys } from '@/lib/api/query-keys';
 import { ApiError, httpErrorStatus } from '@/lib/api/errors';
-import { buildDemandBrief } from '@/lib/demand/content-brief';
-import { useActiveProject } from '@/lib/project/project-context';
 
 /** Map an action failure to its specific user-facing message when possible. */
 export function actionErrorMessage(error: unknown): string {
@@ -23,6 +21,9 @@ export function actionErrorMessage(error: unknown): string {
     }
     if (body.includes('cancel_not_allowed')) {
       return 'This generation already finished, so it can no longer be cancelled.';
+    }
+    if (body.includes('delete_not_allowed')) {
+      return 'This generation is still active. Cancel it before deleting it.';
     }
     if (body.includes('idempotency_conflict')) {
       return 'A different request was already submitted with this key. Please try again.';
@@ -40,47 +41,23 @@ export function useSkillCatalog() {
   });
 }
 
-const IDLE_BRIEF = {
-  brief: null as ReturnType<typeof buildDemandBrief> | null,
-  loading: false,
-  notFound: false,
-  failed: false,
-} as const;
-
-/** Rebuilds a demand brief from the live snapshot identified in the URL. */
-export function useDemandBrief(projectId: string, demandSignalId?: string | null) {
-  const snapshot = useQuery({
-    queryKey: queryKeys.demand.latest(projectId),
-    queryFn: ({ signal }) => demandApi.getLatest(projectId, { signal }),
-    enabled: Boolean(demandSignalId),
-  });
-  const activeProject = useActiveProject();
-  const signals = snapshot.data?.signals;
-  const brandName = activeProject?.brand_name;
-
-  return useMemo(() => {
-    if (!demandSignalId) return IDLE_BRIEF;
-    if (snapshot.isLoading) return { ...IDLE_BRIEF, loading: true };
-    if (snapshot.isError || !signals) return { ...IDLE_BRIEF, failed: true };
-
-    const match = signals.find((item) => item.id === demandSignalId);
-    if (!match) return { ...IDLE_BRIEF, notFound: true };
-    return {
-      ...IDLE_BRIEF,
-      brief: buildDemandBrief(match, brandName ? { brand_name: brandName } : null),
-    };
-  }, [brandName, demandSignalId, signals, snapshot.isError, snapshot.isLoading]);
-}
-
 /**
- * What would ground a draft for this project right now, so the composer can
+ * Canonical context available to a draft for this project, so the composer can
  * say so before Generate rather than after. Cheap enough to refetch on a
  * project switch, stale-tolerant enough not to poll.
  */
-export function useContentContextPreview(projectId: string) {
+export function useContentContextPreview(projectId: string, input: ContentContextPreviewInput) {
   return useQuery({
-    queryKey: queryKeys.content.contextPreview(projectId),
-    queryFn: ({ signal }) => contentApi.getContextPreview(projectId, { signal }),
+    queryKey: queryKeys.content.contextPreview(projectId, input),
+    queryFn: ({ signal }) => contentApi.getContextPreview(projectId, input, { signal }),
+    staleTime: 60_000,
+  });
+}
+
+export function useContentTargetPages(projectId: string, query: string) {
+  return useQuery({
+    queryKey: queryKeys.content.targetPages(projectId, query),
+    queryFn: ({ signal }) => contentApi.listTargetPages(projectId, query, { signal }),
     staleTime: 60_000,
   });
 }
@@ -120,9 +97,9 @@ export type ContentOpportunityContext = {
   id: string;
   title: string;
   target: string;
+  targetUrl: string | null;
   pathway: 'owned' | 'earned';
   canonicalDomain: string | null;
-  taskSeed: string;
   suggestedSkillId: string;
   limitations: string[];
   citations: Array<Record<string, unknown>>;
@@ -142,9 +119,9 @@ export function useOpportunityContext(
       id: data.id,
       title: data.title,
       target: data.target_url ?? data.target_theme ?? '',
+      targetUrl: data.target_url,
       pathway: data.content_handoff.pathway,
       canonicalDomain: data.content_handoff.canonical_domain,
-      taskSeed: data.content_handoff.task_seed,
       suggestedSkillId: data.content_handoff.suggested_skill_id,
       limitations: data.content_handoff.limitations,
       citations: data.content_handoff.representative_citations,

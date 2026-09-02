@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -169,18 +170,17 @@ async def test_declaration_accepts_only_a_successful_generation_for_the_opportun
                 workspace_id=scenario.workspace_id,
                 project_id=scenario.project_id,
                 opportunity_id=opportunity.id if linked else None,
-                prompt="Prepare the evidence-backed asset.",
-                output_type="website_page",
+                user_instruction="Prepare the evidence-backed asset.",
                 skill_id="article",
-                skill_version="content-v1",
-                grounding_status="included",
-                grounding_envelope={},
+                skill_version=1,
+                context_status="included",
+                context_snapshot={},
                 request_fingerprint=character * 64,
                 idempotency_key=f"generation-{character}",
                 status=status,
                 provider="mistral",
                 requested_model="fixture-model",
-                generator_version="content-v1",
+                generator_version="content-v3",
             )
             for linked, status, character in (
                 (True, "succeeded", "a"),
@@ -217,6 +217,17 @@ async def test_declaration_accepts_only_a_successful_generation_for_the_opportun
     assert accepted.status_code == 201
     assert accepted.json()["generation_id"] == str(generation_ids[0])
     assert accepted.json()["expected_checks"][0]["kind"] == "site_rule"
+
+    deleted = await client.delete(
+        f"/api/v1/content/generations/{generation_ids[0]}", headers=headers
+    )
+    assert deleted.status_code == 204
+    async with session_factory() as session:
+        declaration = await session.get(
+            OpportunityImplementationEvent, uuid.UUID(accepted.json()["id"])
+        )
+        assert declaration is not None
+        assert declaration.generation_id is None
 
 
 async def test_terminal_crawl_appends_all_persisted_projection_states(

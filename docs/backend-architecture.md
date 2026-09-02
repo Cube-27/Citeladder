@@ -478,13 +478,18 @@ is retained as a suggestion/corroborator and never decides the kind alone. See
 The shipped runtime has no strategy, brief, context-package, validation,
 revision, publication-claim, or verification rows.
 
-`domain/content/grounding.py` is the sole grounding adapter. It builds a bounded,
-versioned envelope from confirmed or edited BrandProfile fields and exact
-crawl-observed fragments selected internally by `website_context.py`.
-`ContentGeneration` freezes that envelope before provider I/O; message building
-validates fact-to-source references, and the worker rejects provider source
-markers outside the envelope. Conflicts prohibit the affected claim class.
-Unavailable evidence remains a truthful ungrounded draft.
+`domain/content/context_builder.py` is the sole generation-context owner. It
+workspace-authorizes optional target, Site Health, Opportunity, and Demand
+identifiers, then renders durable brand memory, target-page evidence,
+page-specific issues, and bounded crawl fragments selected internally by
+`website_context.py`. Reads use persisted state only.
+
+The selected skill body lives in one `SKILL.md`; message building keeps the
+user's exact instruction separate from untrusted reference material.
+`ContentGeneration` freezes context, numeric skill version, message digest,
+provider provenance, and queue state before provider I/O. Terminal generations
+may be deleted with their owned attempts; clearing project history preserves
+active work, and implementation declarations retain a nullable link.
 
 ## Demand, Traffic, and visibility
 

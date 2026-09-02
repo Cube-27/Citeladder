@@ -35,7 +35,6 @@ def _earned_hit(rule_id: str, row: dict) -> DetectorHit:
         "canonical_domain": domain,
         "suggested_role": row.get("suggested_role"),
         "suggested_skill_id": row.get("suggested_skill_id"),
-        "task_seed": f"Prepare a transparent, human-led contribution for {domain}.",
         "target_url": representative.get("url"),
         "target_theme": target_theme,
         "representative_citations": citations,
