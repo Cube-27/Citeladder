@@ -127,9 +127,7 @@ function ProgressMetrics({ audit }: Readonly<{ audit: Audit }>) {
       </div>
       <div className="grid gap-1">
         <Label>Created</Label>
-        <span className={textRole('bodyStrong')}>
-          {formatDateTime(audit.created_at)}
-        </span>
+        <span className={textRole('bodyStrong')}>{formatDateTime(audit.created_at)}</span>
       </div>
     </dl>
   );

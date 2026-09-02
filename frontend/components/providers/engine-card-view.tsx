@@ -12,6 +12,7 @@ import type { useEngineConnection } from '@/lib/providers/use-engine-connection'
 
 import { EngineConnectionFields } from './engine-connection-fields';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 type ConnectionState = ReturnType<typeof useEngineConnection>;
 
@@ -56,7 +57,7 @@ function ConnectionError({ model }: Readonly<{ model: EngineCardModel }>) {
 function RouteDetails({ state }: Readonly<{ state: ConnectionState }>) {
   if (!state.route) return null;
   return (
-    <div className="bg-background-alt border-border-subtle grid gap-1.5 rounded-[var(--radius-control)] border p-3">
+    <div className={panelClasses({ tone: 'tonal', pad: 'compact' }, 'grid gap-1.5')}>
       <div className="flex items-center justify-between">
         <span className={textRole('label')}>Route</span>
         <span className={textRole('label')}>{state.route.label}</span>

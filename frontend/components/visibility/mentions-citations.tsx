@@ -17,6 +17,7 @@ import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { totalCitationCount, totalMentionCount } from '@/lib/visibility/evidence';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 const TITLE = 'Mentions & Citations';
 
@@ -103,7 +104,7 @@ export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: 
 function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   return (
     <li className="hover:bg-panel-tonal/40 grid gap-3 px-[var(--card-padding)] py-4 transition-colors">
-      <div className="border-border-subtle bg-well/20 grid gap-1.5 rounded-[var(--radius-control)] border p-3">
+      <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1.5')}>
         <p className={textRole('body', 'leading-relaxed')}>
           {item.prompt_text || 'Untitled prompt'}
         </p>
@@ -144,7 +145,10 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
                         href={href}
                         target="_blank"
                         rel="noreferrer"
-                        className={textRole('label', 'hover:text-accent-text inline-flex max-w-full items-center gap-1.5 transition-colors hover:underline')}
+                        className={textRole(
+                          'label',
+                          'hover:text-accent-text inline-flex max-w-full items-center gap-1.5 transition-colors hover:underline',
+                        )}
                       >
                         <span className="truncate">
                           {citation.title?.trim() || citation.domain || citation.url}

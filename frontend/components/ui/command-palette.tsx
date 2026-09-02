@@ -42,7 +42,8 @@ type Command = {
 };
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
-const ROW = 'flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-3 text-left text-sm h-9';
+const ROW =
+  'flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-3 text-left text-sm h-9';
 
 /**
  * Results keep ONE flat order for the keyboard cursor, but render grouped.

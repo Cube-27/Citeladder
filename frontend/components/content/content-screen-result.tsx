@@ -36,9 +36,7 @@ export function GenerationResult({
     <Card data-component-id="content-result-card" className="min-w-0 p-[var(--card-padding)]">
       <CardContent className="flex flex-col gap-[var(--workspace-gap)] p-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className={textRole('sectionTitle', 'tracking-tight')}>
-            Generated content
-          </h2>
+          <h2 className={textRole('sectionTitle', 'tracking-tight')}>Generated content</h2>
           <DraftActionButtons
             detail={detail}
             regenerating={regenerating}

@@ -268,7 +268,10 @@ function ChartableStat({
         <span className={eyebrowClasses}>{stat.label}</span>
         <span
           className={cn(
-            textRole('emphasis', 'text-3xs inline-flex size-4 items-center justify-center rounded-xs border transition-colors'),
+            textRole(
+              'emphasis',
+              'text-3xs inline-flex size-4 items-center justify-center rounded-xs border transition-colors',
+            ),
             state.checked
               ? cn('text-inverse border-transparent', METRIC_CONFIGS[state.key].bgSolid)
               : 'border-border text-transparent',

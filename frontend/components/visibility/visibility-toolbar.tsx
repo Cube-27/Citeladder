@@ -151,9 +151,7 @@ function EngineFilterControl({ engine, onChangeEngine }: ToolbarProps) {
       <DropdownTrigger asChild>
         <FilterButton active={engine !== 'all'} label="Filter by model">
           <ICONS.analytics className="size-3" aria-hidden />
-          <span>
-            {engine === 'all' ? 'All models' : engineLabel(engine)}
-          </span>
+          <span>{engine === 'all' ? 'All models' : engineLabel(engine)}</span>
         </FilterButton>
       </DropdownTrigger>
       <DropdownContent>

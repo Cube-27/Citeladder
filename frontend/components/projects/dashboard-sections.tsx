@@ -54,7 +54,7 @@ export function DashboardHeader({
             size="xl"
             className="size-12 rounded-[var(--radius-control)]"
           />
-          <div className="grid gap-1 min-w-0">
+          <div className="grid min-w-0 gap-1">
             <div className="flex flex-wrap items-center gap-2.5">
               <h2 className={textRole('sectionTitle', 'truncate tracking-[-0.02em]')}>
                 {data.project.brand_name || data.project.name}
@@ -64,7 +64,10 @@ export function DashboardHeader({
                   href={/^https?:\/\//i.test(website) ? website : `https://${website}`}
                   target="_blank"
                   rel="noreferrer"
-                  className={textRole('label', 'hover:text-foreground border-border-subtle bg-background inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2 py-0.5 transition-colors')}
+                  className={textRole(
+                    'label',
+                    'hover:text-foreground border-border-subtle bg-background inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2 py-0.5 transition-colors',
+                  )}
                 >
                   <span className="truncate">
                     {website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
@@ -98,9 +101,7 @@ export function DashboardHeader({
       <div className="border-border-subtle grid gap-3 border-t pt-3">
         <div className="flex items-center justify-between gap-3">
           <SectionTitle id="company-facts">Company facts</SectionTitle>
-          <span className={textRole('label')}>
-            {facts.industry || 'Industry not set'}
-          </span>
+          <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
         </div>
         <div
           className={cn(hairlineBandClasses, 'border-y-0 sm:grid-cols-3')}
@@ -209,9 +210,7 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
             {data.next_action.kind === 'monitor' ? 'Optimal state' : 'Action recommended'}
           </span>
         </div>
-        <p className={textRole('sectionTitle', 'mt-3 leading-snug')}>
-          {data.next_action.title}
-        </p>
+        <p className={textRole('sectionTitle', 'mt-3 leading-snug')}>{data.next_action.title}</p>
         <p className="text-muted mt-1 text-xs leading-relaxed">
           Prioritized from deterministic evidence and current visibility coverage.
         </p>
@@ -240,7 +239,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
             {data.track.observed_at ? `${data.track.engine_coverage} engine(s)` : 'No run'}
           </span>
         </div>
-        <div className="grid gap-1 mt-3">
+        <div className="mt-3 grid gap-1">
           <SectionTitle id="citation-share-track">Citation share</SectionTitle>
           <div className="flex items-baseline gap-3">
             {data.track.citation_share.value === null ? (
@@ -287,9 +286,7 @@ function Movement({ data }: Readonly<{ data: CommandCenter }>) {
       <div className="grid gap-3">
         <div className="grid gap-0.5">
           <SectionTitle id="movement">Movement</SectionTitle>
-          <p className="text-muted text-xs">
-            Only comparable persisted measurements are shown.
-          </p>
+          <p className="text-muted text-xs">Only comparable persisted measurements are shown.</p>
         </div>
         <MovementChart movements={data.movements} />
       </div>
@@ -318,9 +315,7 @@ export function ActionsAndProof({
         <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-t border-b pt-3 pb-3">
           <div className="grid gap-0.5">
             <SectionTitle id="ranked-actions">Ranked actions</SectionTitle>
-            <p className="text-muted text-xs">
-              Shared order · drag or use the arrow controls.
-            </p>
+            <p className="text-muted text-xs">Shared order · drag or use the arrow controls.</p>
           </div>
           <Button asChild variant="ghost" size="sm">
             <Link href="/opportunities">
@@ -345,9 +340,7 @@ export function ActionsAndProof({
         ) : (
           <div className="grid gap-1 py-[var(--empty-state-padding)]">
             <p className={textRole('bodyStrong')}>No open actions</p>
-            <p className="text-muted text-xs">
-              Run another audit to look for new opportunities.
-            </p>
+            <p className="text-muted text-xs">Run another audit to look for new opportunities.</p>
           </div>
         )}
       </Card>

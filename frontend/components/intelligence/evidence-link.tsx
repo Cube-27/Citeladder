@@ -33,7 +33,10 @@ export function EvidenceLink({ evidence, className }: Readonly<EvidenceLinkProps
     <Link
       href={evidence.href}
       className={cn(
-        textRole('label', 'text-accent-text flex min-w-0 items-start gap-1 underline-offset-2 hover:underline'),
+        textRole(
+          'label',
+          'text-accent-text flex min-w-0 items-start gap-1 underline-offset-2 hover:underline',
+        ),
         className,
       )}
     >

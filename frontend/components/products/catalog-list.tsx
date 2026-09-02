@@ -309,7 +309,7 @@ export function CatalogList({
     <div className="grid min-w-0 content-start">
       <div
         data-testid="catalog-search-controls"
-        className="grid gap-2 border-border-subtle bg-panel sticky top-0 z-20 border-b p-[var(--card-padding)]"
+        className="border-border-subtle bg-panel sticky top-0 z-20 grid gap-2 border-b p-[var(--card-padding)]"
       >
         <SearchField
           aria-label="Search the catalog"

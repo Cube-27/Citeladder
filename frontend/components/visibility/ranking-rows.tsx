@@ -10,7 +10,6 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { scoreBand, scoreBandText } from '@/components/ui/score-band';
 import { Sparkline } from '@/components/ui/sparkline';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { cn } from '@/lib/utils';
 import type { RankingRow } from '@/lib/api/types';
 import { formatRate } from '@/lib/visibility/dashboard';
 import { textRole } from '@/components/ui/typography';
@@ -81,7 +80,12 @@ export function RankingRowsTable({
                   />
                   <span className={textRole('emphasis')}>{row.name}</span>
                   {row.is_brand ? (
-                    <span className={textRole('label', 'bg-well inline-flex items-center rounded-[var(--radius-control)] px-1.5 py-0.5')}>
+                    <span
+                      className={textRole(
+                        'label',
+                        'bg-well inline-flex items-center rounded-[var(--radius-control)] px-1.5 py-0.5',
+                      )}
+                    >
                       You
                     </span>
                   ) : null}

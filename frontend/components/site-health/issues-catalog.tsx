@@ -25,6 +25,7 @@ import { pageKindLabel } from '@/lib/site-health/page-kinds';
 import { pageDisplayTitle } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 const ISSUE_LIMIT = 25;
 const OCCURRENCE_LIMIT = 25;
@@ -322,7 +323,9 @@ function IssueDetailRail({
               </h2>
               <IssueMetadata issue={issue} />
             </div>
-            <div className={textRole('body', 'border-border-subtle grid shrink-0 gap-1 border-l pl-4')}>
+            <div
+              className={textRole('body', 'border-border-subtle grid shrink-0 gap-1 border-l pl-4')}
+            >
               <span className="text-secondary whitespace-nowrap tabular-nums">
                 {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}{' '}
                 affected
@@ -349,7 +352,7 @@ function IssueDetailRail({
             <p className="text-secondary text-sm whitespace-pre-line">{issue.description}</p>
           ) : null}
           {issue.remediation ? (
-            <div className="border-border-subtle bg-well grid gap-1 rounded-[var(--radius-card)] border p-3">
+            <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1')}>
               <span className={textRole('label')}>How to fix</span>
               <p className="text-secondary text-sm whitespace-pre-line">{issue.remediation}</p>
             </div>

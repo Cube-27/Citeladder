@@ -12,6 +12,7 @@ import type { AgentTaskRun, AgentTaskRunSummary, AgentTaskType } from '@/lib/api
 import { formatUtcTimestamp } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 const ACTIVE_STATUSES = new Set(['queued', 'running']);
 const CANCELLABLE_STATUSES = new Set(['queued', 'running']);
@@ -98,7 +99,12 @@ export function TaskHistory({
   if (!runs?.length) return null;
   return (
     <details className="border-border-subtle rounded-[var(--radius-control)] border">
-      <summary className={textRole('label', 'focus-ring cursor-pointer list-none rounded-[var(--radius-control)] px-3 py-2')}>
+      <summary
+        className={textRole(
+          'label',
+          'focus-ring cursor-pointer list-none rounded-[var(--radius-control)] px-3 py-2',
+        )}
+      >
         Task history · {runs.length}
       </summary>
       <div className="border-border-subtle grid gap-1 border-t p-2" aria-label="Task history">
@@ -136,8 +142,13 @@ function DataUsed({ result }: Readonly<{ result: AgentResult }>) {
     : 'No saved data artifact was available for this result.';
 
   return (
-    <details className="grid gap-3 border-border-subtle bg-background rounded-[var(--radius-control)] border px-3 py-3">
-      <summary className={textRole('bodyStrong', 'focus-ring cursor-pointer list-none rounded-[var(--radius-control)]')}>
+    <details className="border-border-subtle bg-background grid gap-3 rounded-[var(--radius-control)] border px-3 py-3">
+      <summary
+        className={textRole(
+          'bodyStrong',
+          'focus-ring cursor-pointer list-none rounded-[var(--radius-control)]',
+        )}
+      >
         Data used
       </summary>
       <div className="border-border-subtle grid gap-3 border-t pt-3">
@@ -179,10 +190,15 @@ function Roadmap({ items }: Readonly<{ items: AgentResult['roadmap_items'] }>) {
             className="border-border-subtle rounded-[var(--radius-control)] border p-3"
           >
             <div className="flex items-start gap-3">
-              <span className={textRole('label', 'bg-accent-soft text-accent-text grid size-6 shrink-0 place-items-center rounded-full')}>
+              <span
+                className={textRole(
+                  'label',
+                  'bg-accent-soft text-accent-text grid size-6 shrink-0 place-items-center rounded-full',
+                )}
+              >
                 {item.rank}
               </span>
-              <div className="grid gap-1 min-w-0">
+              <div className="grid min-w-0 gap-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className={textRole('bodyStrong')}>{item.title}</h4>
                   <Badge variant="neutral" className="capitalize">
@@ -305,11 +321,9 @@ function RunErrors({ detail, cancelError }: Readonly<{ detail: string; cancelErr
 
 function ResultSummary({ result }: Readonly<{ result: AgentResult }>) {
   return (
-    <section className="grid gap-2 border-border-subtle bg-background-alt rounded-[var(--radius-control)] border p-4 break-words">
+    <section className={panelClasses({ tone: 'tonal' }, 'grid gap-2 break-words')}>
       <h3 className={textRole('bodyStrong')}>Summary</h3>
-      <p className="text-secondary text-sm leading-relaxed whitespace-pre-wrap">
-        {result.summary}
-      </p>
+      <p className="text-secondary text-sm leading-relaxed whitespace-pre-wrap">{result.summary}</p>
       {result.observations.length ? (
         <ResultList heading="What the data shows" values={result.observations} />
       ) : null}

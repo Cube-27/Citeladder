@@ -8,6 +8,7 @@ import { UsageMeter } from '@/components/billing/usage-meter';
 import { billingApi, type UsageItem } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 /**
  * Preferred display order. Rows the backend sends that are not listed here
@@ -43,7 +44,7 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
   });
 
   return (
-    <div className="bg-panel border-border-subtle grid gap-3 rounded-[var(--radius-control)] border p-[var(--card-padding)]">
+    <div className={panelClasses({}, 'grid gap-3')}>
       <div className="grid gap-0.5">
         <h2 className={textRole('bodyStrong', 'tracking-tight')}>Usage</h2>
         <p className="text-muted text-xs">

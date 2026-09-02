@@ -11,6 +11,7 @@ import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status
 import { cn } from '@/lib/utils';
 
 import { ContentMarkdown } from '@/lib/content/markdown';
+import { panelClasses } from '@/components/ui/panel';
 
 function safeCitationUrl(value: string): string | null {
   try {
@@ -28,7 +29,9 @@ function Outcome({
 }: Readonly<{ label: string; detail: string; passed: boolean }>) {
   const Icon = passed ? CheckCircle2 : XCircle;
   return (
-    <div className="border-border-subtle bg-well flex min-w-0 items-start gap-2.5 rounded-[var(--radius-control)] border p-3">
+    <div
+      className={panelClasses({ tone: 'well', pad: 'compact' }, 'flex min-w-0 items-start gap-2.5')}
+    >
       <Icon
         className={cn('mt-0.5 size-4 shrink-0', passed ? 'text-score-high' : 'text-muted')}
         aria-hidden
@@ -110,7 +113,7 @@ function EvidenceAnswer({ answerText }: Readonly<{ answerText?: string | null }>
   return (
     <section className="grid gap-2">
       <Label>Engine response</Label>
-      <div className="border-border-subtle bg-well min-w-0 overflow-hidden rounded-[var(--radius-control)] border p-3.5 sm:p-4">
+      <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'min-w-0 overflow-hidden')}>
         {trimmed ? (
           <ContentMarkdown markdown={trimmed} density="compact" />
         ) : (
@@ -174,21 +177,22 @@ function CitationItem({
       <span className={textRole('label', 'mono mt-0.5 w-5 shrink-0')}>{ordinal}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
-          <div className="grid gap-0.5 min-w-0">
+          <div className="grid min-w-0 gap-0.5">
             {href ? (
               <a
                 href={href}
                 target="_blank"
                 rel="noreferrer"
-                className={textRole('bodyStrong', 'hover:text-accent-text inline-flex max-w-full items-center gap-1.5 transition-colors hover:underline')}
+                className={textRole(
+                  'bodyStrong',
+                  'hover:text-accent-text inline-flex max-w-full items-center gap-1.5 transition-colors hover:underline',
+                )}
               >
                 <span className="truncate">{title}</span>
                 <ExternalLink className="size-3 shrink-0" aria-hidden />
               </a>
             ) : (
-              <p className={textRole('bodyStrong', 'truncate')}>
-                {title || 'Untitled source'}
-              </p>
+              <p className={textRole('bodyStrong', 'truncate')}>{title || 'Untitled source'}</p>
             )}
             <p className="text-muted truncate text-xs">{citation.domain}</p>
           </div>

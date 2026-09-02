@@ -355,7 +355,9 @@ function HoverTooltip({
       style={{ left: `${(point.x / plotWidth) * 100}%` }}
     >
       <span className="text-muted">{point.label}</span>{' '}
-      <span className={textRole('emphasis', 'font-mono tabular-nums')}>{formatValue(point.value)}</span>
+      <span className={textRole('emphasis', 'font-mono tabular-nums')}>
+        {formatValue(point.value)}
+      </span>
     </div>
   );
 }

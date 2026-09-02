@@ -202,7 +202,9 @@ function StatCard({ stat }: Readonly<{ stat: TrendStat }>) {
           <span className={cn('tabular-nums', valueClass)}>{stat.value}</span>
         )
       }
-      detail={<span className={cn(textRole('emphasis', 'tabular-nums'), deltaClass)}>{stat.delta}</span>}
+      detail={
+        <span className={cn(textRole('emphasis', 'tabular-nums'), deltaClass)}>{stat.delta}</span>
+      }
     />
   );
 }
@@ -247,7 +249,7 @@ function TrendCard({
               <span key={y}>{y}</span>
             ))}
           </div>
-          <div className="grid gap-1 min-w-0 flex-1">
+          <div className="grid min-w-0 flex-1 gap-1">
             <TrendChart
               label={title}
               data={chartPoints}

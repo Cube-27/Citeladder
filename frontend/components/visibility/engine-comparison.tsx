@@ -68,9 +68,7 @@ export function EngineComparison({
               <TableBody>
                 {engines.map((engine) => (
                   <TableRow key={engine.logical_engine}>
-                    <TableCell>
-                      {engineLabel(engine.logical_engine)}
-                    </TableCell>
+                    <TableCell>{engineLabel(engine.logical_engine)}</TableCell>
                     <TableCell numeric>
                       {engine.visibility_score === null ? (
                         <UnavailableValue state="not_measured" />
@@ -154,12 +152,7 @@ function ShareOfVoiceRow({ row }: Readonly<{ row: RankingRow }>) {
   const pct = sovPercent(row) ?? 0;
   return (
     <div className="grid grid-cols-[92px_1fr_44px] items-center gap-3">
-      <span
-        className={cn(
-          'truncate text-sm',
-          row.is_brand ? 'text-foreground' : 'text-secondary',
-        )}
-      >
+      <span className={cn('truncate text-sm', row.is_brand ? 'text-foreground' : 'text-secondary')}>
         {row.name}
       </span>
       <span className="bg-well h-2 overflow-hidden rounded-full">

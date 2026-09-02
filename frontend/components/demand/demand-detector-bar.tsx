@@ -6,6 +6,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import type { DemandSnapshot } from '@/lib/api/demand';
 import { detectorStates } from '@/lib/demand/signals';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 const DETECTOR_DEFINITIONS: Record<
   string,
@@ -72,7 +73,12 @@ export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnaps
   );
 
   return (
-    <div className="bg-well border-border-subtle flex flex-col gap-2.5 rounded-[var(--radius-control)] border p-3 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      className={panelClasses(
+        { tone: 'well', pad: 'compact' },
+        'flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between',
+      )}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <span className={textRole('label')}>Detectors:</span>
         {Object.entries(DETECTOR_DEFINITIONS).map(([key, meta]) => {

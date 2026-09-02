@@ -163,7 +163,7 @@ export function AuthFormShell({
   }
 
   return (
-    <div className="grid gap-6 w-full">
+    <div className="grid w-full gap-6">
       <div className="grid gap-1 text-center">
         <h1 className="flow-title">{title}</h1>
         <p className="website-body text-muted">{description}</p>
@@ -175,7 +175,10 @@ export function AuthFormShell({
             <Button
               variant="secondary"
               size="lg"
-              className={textRole('bodyStrong', 'border-border-strong bg-panel hover:border-border-bold hover:bg-background-alt w-full gap-2')}
+              className={textRole(
+                'bodyStrong',
+                'border-border-strong bg-panel hover:border-border-bold hover:bg-background-alt w-full gap-2',
+              )}
               disabled={oauthPending}
               onClick={() => void handleGoogleSignIn()}
             >
@@ -215,7 +218,10 @@ export function AuthFormShell({
             {footerPrompt}{' '}
             <Link
               href={footerHref}
-              className={textRole('emphasis', 'text-accent-text hover:text-accent-hover transition-colors')}
+              className={textRole(
+                'emphasis',
+                'text-accent-text hover:text-accent-hover transition-colors',
+              )}
             >
               {footerLabel}
             </Link>

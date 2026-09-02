@@ -18,6 +18,7 @@ import {
 } from '@/lib/demand/signals';
 import { formatWindowDate } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 export function DemandEvidenceDrawer({
   signal,
@@ -95,7 +96,9 @@ function DemandEvidenceContent({
         {/* Observed GSC Metrics */}
         <section className="grid gap-2">
           <h3 className={textRole('label')}>Observed GSC Performance</h3>
-          <div className="border-border bg-panel grid grid-cols-2 gap-2 rounded-[var(--radius-control)] border p-3 sm:grid-cols-4">
+          <div
+            className={panelClasses({ pad: 'compact' }, 'grid grid-cols-2 gap-2 sm:grid-cols-4')}
+          >
             <div>
               <span className="text-muted text-xs">Impressions</span>
               <p className={textRole('metricSm')}>
@@ -149,7 +152,9 @@ function DemandEvidenceContent({
             <div className="border-border bg-panel divide-border-subtle divide-y rounded-[var(--radius-control)] border">
               {details.pages.map((page) => (
                 <div key={page.url} className="grid gap-1 p-2.5 text-xs">
-                  <div className={textRole('emphasis', 'text-foreground break-all')}>{page.url}</div>
+                  <div className={textRole('emphasis', 'text-foreground break-all')}>
+                    {page.url}
+                  </div>
                   <div className="text-muted flex items-center justify-between text-xs">
                     <span>{page.impressions.toLocaleString('en-US')} impressions</span>
                     <span className={textRole('emphasis', 'text-foreground tabular-nums')}>
@@ -166,7 +171,7 @@ function DemandEvidenceContent({
         {details.cohortMedianCtr !== null && (
           <section className="grid gap-2">
             <h3 className={textRole('label')}>Position Cohort Benchmark</h3>
-            <div className="border-border bg-panel grid gap-2 rounded-[var(--radius-control)] border p-3 text-xs">
+            <div className={panelClasses({ pad: 'compact' }, 'grid gap-2 text-xs')}>
               <div className="flex justify-between">
                 <span className="text-muted">Position Band:</span>
                 {details.positionBand !== null ? (
@@ -203,7 +208,12 @@ function DemandEvidenceContent({
             <ShieldCheck className="text-accent size-3.5" />
             <span>Audit Trail & Provenance</span>
           </div>
-          <div className="border-border bg-well text-muted grid gap-1.5 rounded-[var(--radius-control)] border p-3 text-xs">
+          <div
+            className={panelClasses(
+              { tone: 'well', pad: 'compact' },
+              'text-muted grid gap-1.5 text-xs',
+            )}
+          >
             <div className="flex justify-between">
               <span>Signal ID:</span>
               <span className="text-foreground font-mono">{signal.id.slice(0, 8)}...</span>

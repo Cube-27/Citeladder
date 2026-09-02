@@ -43,10 +43,7 @@ export function ExecutionsTable({
           <TableRow key={execution.id}>
             <TableCell className="max-w-2xl py-3">
               <div className="flex flex-col gap-1">
-                <span
-                  className="leading-relaxed break-words"
-                  title={execution.prompt_text}
-                >
+                <span className="leading-relaxed break-words" title={execution.prompt_text}>
                   {execution.prompt_text || `Prompt #${execution.prompt_index + 1}`}
                 </span>
                 <span className="mono text-muted text-xs">rep {execution.repetition}</span>

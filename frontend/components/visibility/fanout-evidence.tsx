@@ -21,6 +21,7 @@ import {
   type PromptGroup,
 } from '@/lib/visibility/evidence';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 const TITLE = 'Query Fanout';
 
@@ -111,7 +112,7 @@ function PromptGroupBlock({ group }: Readonly<{ group: PromptGroup }>) {
 
 function ExecutionRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   return (
-    <li className="border-border-subtle bg-well/20 grid gap-2.5 rounded-[var(--radius-control)] border p-3.5">
+    <li className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-2.5')}>
       <ExecutionHeader
         item={item}
         trailing={

@@ -151,8 +151,13 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
 
         <SiteFactsAlerts view={view} blocked={blocked} />
 
-        <details className="grid gap-3 border-border-subtle border-t pt-2">
-          <summary className={textRole('label', 'focus-ring hover:text-foreground w-fit cursor-pointer rounded-[var(--radius-control)]')}>
+        <details className="border-border-subtle grid gap-3 border-t pt-2">
+          <summary
+            className={textRole(
+              'label',
+              'focus-ring hover:text-foreground w-fit cursor-pointer rounded-[var(--radius-control)]',
+            )}
+          >
             Crawler details
           </summary>
           <div className="grid gap-3">
@@ -223,9 +228,7 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
                   {view.robotsUrl ?? <UnavailableValue state="unavailable" />}
                 </span>
                 {view.llmsTxtUrl !== null ? (
-                  <span className={textRole('label', 'mono truncate')}>
-                    {view.llmsTxtUrl}
-                  </span>
+                  <span className={textRole('label', 'mono truncate')}>{view.llmsTxtUrl}</span>
                 ) : null}
               </div>
             </div>

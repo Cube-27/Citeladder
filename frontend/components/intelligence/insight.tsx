@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { EvidenceLink, type EvidenceRef } from './evidence-link';
 import { ProvenanceChip, type Provenance } from './provenance-chip';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 /**
  * Insight — the reusable unit the product model produces.
@@ -94,10 +95,7 @@ export function Insight({
     <article
       data-insight-id={insight.id}
       data-layer={insight.layer}
-      className={cn(
-        'bg-panel border-border flex flex-col gap-3 rounded-[var(--radius-control)] border p-4 sm:p-[var(--card-padding)]',
-        className,
-      )}
+      className={cn(panelClasses({}, 'flex flex-col gap-3'), className)}
     >
       {/* 1. Priority and source layer */}
       <div className="flex items-center justify-between gap-3">

@@ -14,7 +14,10 @@ export default function SitePage() {
         <AgentLauncher
           taskType="build_roadmap"
           objective="Build a roadmap from the current Website evidence."
-          className={textRole('bodyStrong', 'text-accent-text self-start underline-offset-2 hover:underline')}
+          className={textRole(
+            'bodyStrong',
+            'text-accent-text self-start underline-offset-2 hover:underline',
+          )}
         >
           Build a roadmap with the Growth Agent
         </AgentLauncher>

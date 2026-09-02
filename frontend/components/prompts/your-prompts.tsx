@@ -61,7 +61,10 @@ function ScoreCell({ score }: Readonly<{ score: number | null }>) {
   if (score === null) return <UnavailableValue state="not_measured" />;
   return (
     <span
-      className={cn(textRole('bodyStrong', 'font-mono tabular-nums'), scoreBandText[scoreBand(score)])}
+      className={cn(
+        textRole('bodyStrong', 'font-mono tabular-nums'),
+        scoreBandText[scoreBand(score)],
+      )}
     >
       {score}%
     </span>
@@ -160,8 +163,8 @@ export function YourPrompts() {
       <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-y py-[var(--card-padding-compact)]">
         <p className="text-secondary text-sm">
           The {project?.brand_name ?? 'brand'} configuration includes{' '}
-          <span className={textRole('emphasis', 'text-foreground')}>{activePrompts.length}</span> visibility{' '}
-          {activePrompts.length === 1 ? 'prompt' : 'prompts'} across{' '}
+          <span className={textRole('emphasis', 'text-foreground')}>{activePrompts.length}</span>{' '}
+          visibility {activePrompts.length === 1 ? 'prompt' : 'prompts'} across{' '}
           <span className={textRole('emphasis', 'text-foreground')}>{topicCount}</span>{' '}
           {topicCount === 1 ? 'topic' : 'topics'}, which are run on each audit.
         </p>

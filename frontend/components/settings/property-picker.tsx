@@ -163,7 +163,12 @@ export function PropertyPicker({
             {selected}
           </span>
         ) : (
-          <span className={textRole('label', 'text-warning-text bg-warning-bg/50 max-w-full truncate rounded-xs px-2 py-0.5')}>
+          <span
+            className={textRole(
+              'label',
+              'text-warning-text bg-warning-bg/50 max-w-full truncate rounded-xs px-2 py-0.5',
+            )}
+          >
             No {noun} selected
           </span>
         )}

@@ -198,11 +198,7 @@ function ArchitectureMetrics({
         >
           <dt className={eyebrowClasses}>{label}</dt>
           <dd
-            className={
-              value.startsWith('Count withheld')
-                ? textRole('meta')
-                : textRole('metric')
-            }
+            className={value.startsWith('Count withheld') ? textRole('meta') : textRole('metric')}
           >
             {value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : value}
           </dd>

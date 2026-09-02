@@ -130,9 +130,7 @@ export function GeneratePromptsDialogView({
         {error ? <GenerateErrorAlert error={error} /> : null}
         {result && !error ? <GenerateResultAlert result={result} /> : null}
         <div className="grid gap-1.5">
-          <span className={textRole('label')}>
-            Number of prompts (1–{maxCount})
-          </span>
+          <span className={textRole('label')}>Number of prompts (1–{maxCount})</span>
           <Input
             type="number"
             min={1}

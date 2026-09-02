@@ -61,9 +61,7 @@ export function StateMetric({
         {value === null ? (
           <UnavailableValue state="not_measured" />
         ) : (
-          <p className={textRole('metric', 'leading-none')}>
-            {metricValue(value, suffix)}
-          </p>
+          <p className={textRole('metric', 'leading-none')}>{metricValue(value, suffix)}</p>
         )}
       </div>
       <p
@@ -120,9 +118,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
               style={{ height: `${Math.max(6, ((row.current ?? 0) / ceiling) * 56)}px` }}
             />
           </div>
-          <p className={textRole('label', 'mt-2.5 text-center font-sans')}>
-            Previous · Current
-          </p>
+          <p className={textRole('label', 'mt-2.5 text-center font-sans')}>Previous · Current</p>
         </div>
       ))}
     </div>
@@ -170,7 +166,7 @@ export function ActionRow({
           {index + 1}
         </span>
       </div>
-      <div className="grid gap-1 min-w-0">
+      <div className="grid min-w-0 gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/opportunities?selected=${action.id}`}

@@ -173,6 +173,17 @@ function classFragments(node, bindings, seen = new Set()) {
   return [];
 }
 
+/** Every prop through which a call site can hand Tailwind classes to a component. */
+const CLASS_ATTRIBUTES = new Set([
+  'className',
+  'rootClassName',
+  'contentClassName',
+  'bodyClassName',
+  'panelClassName',
+  'itemClassName',
+  'triggerClassName',
+]);
+
 function jsxClassData(source, label) {
   const sourceFile = ts.createSourceFile(
     label,
@@ -185,11 +196,15 @@ function jsxClassData(source, label) {
   const entries = [];
   const visit = (node) => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      const classAttribute = node.attributes.properties.find(
+      // `className` is not the only way a call site hands classes to a
+      // component. `rootClassName="grid gap-6"` slipped past every spacing and
+      // type rule for exactly as long as this only looked at one attribute.
+      const classAttributes = node.attributes.properties.filter(
         (property) =>
-          ts.isJsxAttribute(property) && property.name.getText(sourceFile) === 'className',
+          ts.isJsxAttribute(property) && CLASS_ATTRIBUTES.has(property.name.getText(sourceFile)),
       );
-      if (classAttribute && ts.isJsxAttribute(classAttribute)) {
+      for (const classAttribute of classAttributes) {
+        if (!ts.isJsxAttribute(classAttribute)) continue;
         const classes = classAttribute.initializer
           ? classFragments(classAttribute.initializer, bindings).join(' ')
           : '';
@@ -256,6 +271,23 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
     ) {
       violations.push(
         `${label}:${entry.line}: font weight belongs to a text role (components/ui/typography.tsx)`,
+      );
+    }
+    // A bordered, filled, padded box is a Panel. Twenty-seven of these were
+    // rebuilt by hand, each with its own fill, border colour, radius and
+    // padding, which is why the same evidence box looked different in six
+    // screens. Card could not absorb them — a Card may not nest in a Card — so
+    // panelClasses is the owner. Chips, icon tiles and controls are excluded by
+    // requiring an all-sides padding.
+    if (
+      !label.startsWith('components/ui/') &&
+      /(?<![:\w\]-])bg-(?:panel|well|background-alt)(?:\/\d+)?\b/.test(entry.classes) &&
+      /(?<![:\w\]-])border(?![-\w])/.test(entry.classes) &&
+      /(?<![:\w\]-])rounded-\[var\(--radius-(?:control|card|overlay)\)\]/.test(entry.classes) &&
+      /(?<![:\w\]-])p-(?:\d[\d.]*|\[var\([^)]+\)\])/.test(entry.classes)
+    ) {
+      violations.push(
+        `${label}:${entry.line}: a bordered filled box is a Panel (components/ui/panel.tsx)`,
       );
     }
     if (/\btext-5xl\b|\btext-\[[^\]]+\]/.test(entry.classes)) {
@@ -561,8 +593,14 @@ export function productContractViolations(root) {
     violations.push('components/ui/eyebrow.tsx: product meta labels must be one uppercase recipe');
   }
   const card = readFileSync(join(root, 'components', 'ui', 'card-variants.ts'), 'utf8');
-  if (/shadow-|\bborder\b/.test(card.match(/cva\(([^;]+)\)/s)?.[1] ?? '')) {
-    violations.push('components/ui/card-variants.ts: Card must remain flat by default');
+  const cardRecipe = card.match(/cva\(([^;]+)\)/s)?.[1] ?? '';
+  // A card is defined by its edge. Elevation stays overlay-only; the border now
+  // belongs to the owner, so no call site has to rebuild a bordered panel.
+  if (/shadow-/.test(cardRecipe)) {
+    violations.push('components/ui/card-variants.ts: Card elevation belongs to overlays');
+  }
+  if (!/\bborder-border-subtle\b/.test(cardRecipe) || !/\bborder\b/.test(cardRecipe)) {
+    violations.push('components/ui/card-variants.ts: Card must own its hairline border');
   }
   const button = readFileSync(join(root, 'components', 'ui', 'button-variants.ts'), 'utf8');
   if (!button.includes('bg-action text-action-fg')) {
@@ -706,7 +744,7 @@ export function websiteContractViolations(root) {
   }
 
   for (const role of SHARED_GEOMETRY_ROLES) {
-    if (new RegExp(escapeRegExp(role) + '\s*:').test(readFileSync(cssPath, 'utf8'))) {
+    if (new RegExp(escapeRegExp(role) + String.raw`\s*:`).test(readFileSync(cssPath, 'utf8'))) {
       violations.push(
         cssLabel + ': ' + role + ' is a shared geometry role and must not be redefined per surface',
       );

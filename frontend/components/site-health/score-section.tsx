@@ -102,9 +102,7 @@ function ScoreCard({
           <ScoreRing value={value} size={64} label={`${label} score: ${Math.round(value)}`} />
           <div className="grid gap-1">
             <p className={eyebrowClasses}>{label}</p>
-            <span className={textRole('metric', 'leading-none')}>
-              {formatScore(value)} / 100
-            </span>
+            <span className={textRole('metric', 'leading-none')}>{formatScore(value)} / 100</span>
             <span className="text-muted text-xs leading-relaxed">{sub}</span>
           </div>
         </div>

@@ -260,7 +260,7 @@ function PopulatedTrafficDashboard({
           onValueChange={selectTable}
           items={TRAFFIC_TABLE_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
           ariaLabel="Traffic rankings"
-          rootClassName="grid gap-4"
+          rootClassName="grid gap-[var(--workspace-gap)]"
           onIntent={prepareTable}
         >
           {mountedViews.has('pages') ? (

@@ -24,6 +24,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { SiteHealthOverview } from '@/lib/api/types';
 import { PLACEHOLDER, statusLabel } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 function percent(value: number | null): string {
   return value === null ? PLACEHOLDER : `${Math.round(value * 100)}%`;
@@ -118,7 +119,9 @@ function DimensionLedger({
                       surface, and a wrapping sentence pushes the score columns
                       off a screenful. Full text stays available on hover. */}
                   <div className="grid max-w-md min-w-0 gap-1">
-                    <span className={textRole('emphasis', 'text-foreground')}>{dimension.label}</span>
+                    <span className={textRole('emphasis', 'text-foreground')}>
+                      {dimension.label}
+                    </span>
                     <span className="text-muted truncate text-xs" title={dimension.description}>
                       {dimension.description}
                     </span>
@@ -234,7 +237,7 @@ function WebFundamentalsCard({
           {data.areas.map((area) => (
             <div
               key={area.key}
-              className="border-border-subtle bg-well grid gap-1 rounded-[var(--radius-control)] border p-3"
+              className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1')}
             >
               <span className={textRole('label', 'capitalize')}>{area.key}</span>
               <Badge variant="status" value={measurementTone(area.state)}>

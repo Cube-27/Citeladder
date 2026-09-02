@@ -65,7 +65,10 @@ function StationLinks({
                 onFocus={() => onIntent(item.href)}
                 aria-current={isNavItemActive(pathname, searchParams, item) ? 'page' : undefined}
                 className={cn(
-                  textRole('bodyStrong', 'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3'),
+                  textRole(
+                    'bodyStrong',
+                    'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3',
+                  ),
                   isNavItemActive(pathname, searchParams, item)
                     ? textRole('emphasis', 'bg-accent-soft text-accent-text')
                     : 'text-muted hover:bg-active hover:text-foreground',
@@ -96,15 +99,16 @@ function StationLinks({
 
 export function SidebarNav({ className }: Readonly<{ className?: string }>) {
   return (
-    <nav aria-label="Primary" className={cn('flex flex-col gap-[var(--sidebar-group-gap)]', className)}>
+    <nav
+      aria-label="Primary"
+      className={cn('flex flex-col gap-[var(--sidebar-group-gap)]', className)}
+    >
       {NAV_GROUPS.map((group) => {
         const showHeading = group.title !== 'Overview';
         return (
           <div key={group.title} className="flex flex-col gap-0">
             {showHeading ? (
-              <p className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-2 pb-1')}>
-                {group.title}
-              </p>
+              <p className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-2 pb-1')}>{group.title}</p>
             ) : null}
             <StationLinks group={group} />
           </div>

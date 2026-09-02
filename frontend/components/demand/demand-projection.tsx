@@ -268,9 +268,7 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
       ) : snapshot.signals.length === 0 ? (
         <div className="py-[var(--empty-state-padding)] text-center">
           <Sparkles className="text-muted/60 mx-auto size-8" />
-          <h3 className={textRole('bodyStrong', 'mt-2')}>
-            No qualifying search gaps observed
-          </h3>
+          <h3 className={textRole('bodyStrong', 'mt-2')}>No qualifying search gaps observed</h3>
           <p className="text-muted mt-1 text-xs">
             Search Console data was observed, but no configured detector emitted a signal in this
             window.

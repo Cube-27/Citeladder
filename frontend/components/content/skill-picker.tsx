@@ -83,7 +83,9 @@ export function SkillPicker({
                 >
                   <span>{group.label}</span>
                   {active ? (
-                    <span className={textRole('body', 'max-w-44 truncate')}>{selectedSkill.label}</span>
+                    <span className={textRole('body', 'max-w-44 truncate')}>
+                      {selectedSkill.label}
+                    </span>
                   ) : null}
                   <ChevronDown className="size-3.5 shrink-0" aria-hidden />
                 </Button>

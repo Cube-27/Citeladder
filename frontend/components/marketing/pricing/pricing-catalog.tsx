@@ -315,7 +315,9 @@ function LoadingCards() {
 }
 
 function LoadingShell() {
-  return <div aria-busy="true" className="bg-panel h-48 animate-pulse rounded-[var(--radius-control)]" />;
+  return (
+    <div aria-busy="true" className="bg-panel h-48 animate-pulse rounded-[var(--radius-control)]" />
+  );
 }
 
 function CatalogError({ onRetry }: Readonly<{ onRetry: () => void }>) {

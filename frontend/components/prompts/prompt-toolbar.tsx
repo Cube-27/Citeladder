@@ -83,7 +83,12 @@ export function PromptToolbar({
             <Filter className="size-4" aria-hidden />
             Filter
             {activeFilterCount > 0 ? (
-              <span className={textRole('label', 'bg-accent-subtle text-accent-text ml-1 rounded-full px-1.5 font-mono')}>
+              <span
+                className={textRole(
+                  'label',
+                  'bg-accent-subtle text-accent-text ml-1 rounded-full px-1.5 font-mono',
+                )}
+              >
                 {activeFilterCount}
               </span>
             ) : null}

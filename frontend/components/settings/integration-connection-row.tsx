@@ -20,6 +20,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { formatShortDate, formatUtcTimestamp } from '@/lib/format';
 import { isActiveSyncRun, SYNC_RUN_BADGE, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 type ConnectionMutation = {
   isPending: boolean;
@@ -211,16 +212,14 @@ function DisconnectDialog({
         {lastConnection ? (
           <>
             <p className="text-secondary text-sm">
-              This is the <strong>last connection</strong>{' '}
-              on the {familyTitle} OAuth grant, so disconnecting it also{' '}
-              <strong>revokes the grant</strong>:
-              CiteLadder&rsquo;s access at {familyTitle} is removed and the stored tokens are
-              deleted. Previously imported {label} data is kept.
+              This is the <strong>last connection</strong> on the {familyTitle} OAuth grant, so
+              disconnecting it also <strong>revokes the grant</strong>: CiteLadder&rsquo;s access at{' '}
+              {familyTitle} is removed and the stored tokens are deleted. Previously imported{' '}
+              {label} data is kept.
             </p>
             <p className="text-secondary text-sm">
               If {familyTitle}&nbsp;can&rsquo;t be reached to complete the revocation, the grant
-              moves to <strong>pending revocation</strong>{' '}
-              and CiteLadder retries in the background.
+              moves to <strong>pending revocation</strong> and CiteLadder retries in the background.
             </p>
           </>
         ) : (
@@ -280,7 +279,7 @@ function ConnectionRowView({
 
   return (
     <div
-      className="bg-panel border-border-subtle rounded-[var(--radius-control)] border p-3.5 shadow-2xs"
+      className={panelClasses({ pad: 'compact' })}
       data-testid={`connection-row-${connection.provider}`}
     >
       <ConnectionActions

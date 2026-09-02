@@ -55,7 +55,10 @@ export function CardGrid({
   return (
     <div
       {...props}
-      className={cn('grid gap-[var(--workspace-gap)] [&>*]:h-full', className)}
+      className={cn(
+        'grid gap-[var(--workspace-gap)] [&>*]:flex [&>*]:h-full [&>*]:flex-col',
+        className,
+      )}
     >
       {children}
     </div>

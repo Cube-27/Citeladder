@@ -19,6 +19,7 @@ import {
   type ContentSkillView,
 } from './content-screen-data';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 export function ContentComposer({
   instruction,
@@ -231,10 +232,7 @@ function ContextIndicator({
       ? `Context: ${parts.join(' · ') || 'User instruction only'}`
       : 'Context unavailable';
   return (
-    <div
-      data-component-id="content-context-indicator"
-      className={textRole('label', 'grid gap-1')}
-    >
+    <div data-component-id="content-context-indicator" className={textRole('label', 'grid gap-1')}>
       <ContextLine available={Boolean(preview?.brand_memory)} label={label} />
     </div>
   );
@@ -258,7 +256,7 @@ function OpportunityContext({ opportunity }: Readonly<{ opportunity: ContentOppo
   return (
     <div
       data-component-id="content-opportunity-context"
-      className="border-border bg-well grid min-w-0 gap-2 rounded-[var(--radius-control)] border p-4 [overflow-wrap:anywhere]"
+      className={panelClasses({ tone: 'well' }, 'grid min-w-0 gap-2 [overflow-wrap:anywhere]')}
     >
       <span className={eyebrowClasses}>Based on opportunity</span>
       <p className={textRole('bodyStrong', 'min-w-0')}>{opportunity.title}</p>

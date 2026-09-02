@@ -19,6 +19,7 @@ import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
 import { shouldPollAudit } from '@/lib/runs/status';
 import { useActiveProject } from '@/lib/project/project-context';
+import { Stack } from '@/components/ui/layout';
 
 /** Poll interval (ms) for the runs list while any run is active. */
 const POLL_INTERVAL_MS = 3_000;
@@ -75,7 +76,7 @@ export default function RunsPage() {
   const anyActive = audits.some((audit) => shouldPollAudit(audit.status));
 
   return (
-    <div className="grid gap-4">
+    <Stack gap="section">
       <div className="flex flex-wrap items-center gap-2">
         <fieldset className="flex flex-wrap items-center gap-2" aria-label="Filter by status">
           {STATUS_FILTERS.map((filter) => (
@@ -159,6 +160,6 @@ export default function RunsPage() {
           onLaunched={(audit) => router.push(`/runs/${audit.id}`)}
         />
       ) : null}
-    </div>
+    </Stack>
   );
 }

@@ -35,6 +35,7 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
+import { panelClasses } from '@/components/ui/panel';
 
 export function UrlDetailView({
   detail,
@@ -192,7 +193,7 @@ function PageKindEvidencePanel({
   const WarningIcon = ICONS.warning;
   return (
     <div id="page-kind-evidence">
-      <div className="border-border-subtle bg-background-alt grid gap-3 rounded-[var(--radius-card)] border p-3">
+      <div className={panelClasses({ tone: 'tonal', pad: 'compact' }, 'grid gap-3')}>
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
           <EvidenceFact label="Classified by" value={evidence.classifiedBy} />
           <EvidenceFact

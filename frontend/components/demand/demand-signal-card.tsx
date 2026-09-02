@@ -31,6 +31,7 @@ import {
 import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 const SIGNAL_METAS: Record<
   string,
@@ -240,7 +241,12 @@ export function DemandSignalCard({
         {/* Header: Rank, Badges, Query Title */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
-            <span className={textRole('label', 'bg-well flex size-6 shrink-0 items-center justify-center rounded-full tabular-nums')}>
+            <span
+              className={textRole(
+                'label',
+                'bg-well flex size-6 shrink-0 items-center justify-center rounded-full tabular-nums',
+              )}
+            >
               #{rank}
             </span>
             <div className="grid min-w-0 flex-1 gap-1.5">
@@ -255,9 +261,7 @@ export function DemandSignalCard({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <h3 className={textRole('objectTitle', 'leading-tight break-words')}>
-                  {target}
-                </h3>
+                <h3 className={textRole('objectTitle', 'leading-tight break-words')}>{target}</h3>
                 <CopyButton
                   value={target}
                   iconOnly
@@ -299,7 +303,12 @@ export function DemandSignalCard({
         </div>
 
         {/* Diagnostic Insight Callout */}
-        <div className={cn('rounded-[var(--radius-control)] border p-3 text-xs leading-relaxed', insightToneClasses)}>
+        <div
+          className={panelClasses(
+            { tone: 'none', pad: 'compact' },
+            cn('text-xs leading-relaxed', insightToneClasses),
+          )}
+        >
           <div className="flex items-start gap-2">
             <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <div className="grid gap-0.5">

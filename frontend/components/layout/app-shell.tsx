@@ -65,10 +65,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             </div>
           </header>
 
-          <main
-            id="main"
-            className="safe-bottom min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0"
-          >
+          <main id="main" className="safe-bottom min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0">
             <MobileStationNavigation />
             <div className="mx-auto grid w-full max-w-[var(--content-max-width)] grid-cols-[minmax(0,1fr)] gap-0 p-[var(--content-gutter)]">
               <div>{children}</div>

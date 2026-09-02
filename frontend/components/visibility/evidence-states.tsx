@@ -157,7 +157,9 @@ export function ExecutionHeader({
         {item.repetition > 0 ? ` · repeat ${item.repetition + 1}` : ''}
       </p>
       <span className="text-muted flex items-center gap-2 text-xs">
-        <span className={textRole('emphasis', 'text-secondary')}>{engineLabel(item.logical_engine)}</span>
+        <span className={textRole('emphasis', 'text-secondary')}>
+          {engineLabel(item.logical_engine)}
+        </span>
         <span>{item.transport_model}</span>
         {trailing}
       </span>
@@ -168,8 +170,10 @@ export function ExecutionHeader({
 /** Collapsed task/analysis/artifact ids for one execution. */
 export function ProvenanceDisclosure({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   return (
-    <details className="grid gap-1 text-muted text-xs">
-      <summary className="focus-ring w-fit cursor-pointer rounded-[var(--radius-control)]">Provenance</summary>
+    <details className="text-muted grid gap-1 text-xs">
+      <summary className="focus-ring w-fit cursor-pointer rounded-[var(--radius-control)]">
+        Provenance
+      </summary>
       <p className="font-mono">{provenanceSummary(item)}</p>
     </details>
   );

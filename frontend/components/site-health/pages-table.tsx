@@ -224,20 +224,14 @@ export function PagesTable({
             <TableCell numeric className="mono text-danger-text">
               {formatIssueCount(page.issue_count)}
             </TableCell>
-            <TableCell
-              numeric
-              className={scoreTextClass(page.web_fundamentals_score)}
-            >
+            <TableCell numeric className={scoreTextClass(page.web_fundamentals_score)}>
               <MeasurementValue
                 score={page.web_fundamentals_score}
                 coverage={page.web_fundamentals_coverage}
                 state={page.web_fundamentals_state}
               />
             </TableCell>
-            <TableCell
-              numeric
-              className={scoreTextClass(page.aeo_readiness_score)}
-            >
+            <TableCell numeric className={scoreTextClass(page.aeo_readiness_score)}>
               <MeasurementValue
                 score={page.aeo_readiness_score}
                 coverage={page.aeo_measurement_coverage}

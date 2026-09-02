@@ -17,6 +17,7 @@ import { Label, textRole } from '@/components/ui/typography';
 import { opportunitiesQueries } from '@/lib/api/opportunities';
 import type { OpportunityDetail } from '@/lib/api/types';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
+import { panelClasses } from '@/components/ui/panel';
 
 /** Recommendation detail drawer backed by the persisted detail projection. */
 export function EvidenceDrawer({
@@ -70,7 +71,7 @@ export function EvidenceDrawer({
           {detail.remediation ? (
             <section className="grid gap-2">
               <Label>Recommended improvements</Label>
-              <div className="border-border-subtle bg-well rounded-[var(--radius-control)] border p-3">
+              <div className={panelClasses({ tone: 'well', pad: 'compact' })}>
                 <p className="text-secondary text-sm leading-relaxed whitespace-pre-line">
                   {detail.remediation}
                 </p>
@@ -92,7 +93,7 @@ function ActionHandoff({ detail }: Readonly<{ detail: OpportunityDetail }>) {
   return (
     <section className="grid gap-2">
       <Label>Action handoff</Label>
-      <div className="border-border-subtle bg-panel grid gap-2 rounded-[var(--radius-control)] border p-3">
+      <div className={panelClasses({ pad: 'compact' }, 'grid gap-2')}>
         <p className="text-secondary text-sm">
           {earned
             ? `Prepare a human-led earned asset for ${handoff.canonical_domain ?? 'the cited source'}.`

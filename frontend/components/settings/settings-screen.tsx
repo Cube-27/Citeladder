@@ -133,7 +133,7 @@ export function SettingsScreen() {
         onValueChange={setActiveTab}
         items={SETTINGS_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
         ariaLabel="Settings sections"
-        rootClassName="grid gap-6"
+        rootClassName="grid gap-[var(--page-section-gap)]"
       >
         <TabPanel value="billing" forceMount className="focus-ring data-[state=inactive]:hidden">
           <BillingSettings enabled={activeTab === 'billing'} />
@@ -153,11 +153,14 @@ export function SettingsScreen() {
                 <div className="flex items-center gap-4">
                   <span
                     aria-hidden
-                    className={textRole('bodyStrong', 'bg-accent-soft text-accent-text flex size-10 shrink-0 items-center justify-center rounded-full uppercase')}
+                    className={textRole(
+                      'bodyStrong',
+                      'bg-accent-soft text-accent-text flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
+                    )}
                   >
                     {emailInitials(user.email)}
                   </span>
-                  <div className="grid gap-0.5 min-w-0 flex-1">
+                  <div className="grid min-w-0 flex-1 gap-0.5">
                     <div className={textRole('bodyStrong', 'truncate')}>{user.email}</div>
                     <div className="text-muted text-sm capitalize">{user.role}</div>
                   </div>
@@ -223,13 +226,11 @@ export function SettingsScreen() {
                           websiteUrl={activeProject.website_url}
                           size="md"
                         />
-                        <div className="grid gap-0.5 min-w-0">
+                        <div className="grid min-w-0 gap-0.5">
                           <div className={textRole('bodyStrong', 'truncate')}>
                             {activeProject.name}
                           </div>
-                          <p className="text-muted text-xs">
-                            Brand: {activeProject.brand_name}
-                          </p>
+                          <p className="text-muted text-xs">Brand: {activeProject.brand_name}</p>
                         </div>
                       </div>
                       <Button

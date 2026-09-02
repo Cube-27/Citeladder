@@ -212,7 +212,10 @@ function ProfileTabPanel({
             {competitors.map((competitor) => (
               <li
                 key={`${competitor.name}:${competitor.domains[0] ?? ''}`}
-                className={textRole('label', 'bg-background flex min-w-0 items-center gap-2 rounded-[var(--radius-control)] px-3 py-2')}
+                className={textRole(
+                  'label',
+                  'bg-background flex min-w-0 items-center gap-2 rounded-[var(--radius-control)] px-3 py-2',
+                )}
               >
                 <BrandLogo
                   name={competitor.name}

@@ -136,10 +136,7 @@ export function AuditSchedules({
               />
             </div>
             {cadence === 'every_n_minutes' ? (
-              <label
-                htmlFor="audit-schedule-minutes"
-                className={textRole('label', 'grid gap-1')}
-              >
+              <label htmlFor="audit-schedule-minutes" className={textRole('label', 'grid gap-1')}>
                 <span>Minutes</span>
                 <Input
                   id="audit-schedule-minutes"

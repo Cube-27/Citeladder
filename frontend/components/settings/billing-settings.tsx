@@ -30,6 +30,7 @@ import {
   headlinePrice,
 } from '@/lib/billing/catalog';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
@@ -108,7 +109,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
 
 function BillingSkeleton() {
   return (
-    <div className="bg-panel border-border-subtle grid gap-3 rounded-[var(--radius-control)] border p-[var(--card-padding)]">
+    <div className={panelClasses({}, 'grid gap-3')}>
       <Skeleton className="h-6 w-40" />
       <Skeleton className="h-20 w-full" />
     </div>
@@ -183,9 +184,9 @@ function CurrentPlan({
   const subscription = entitlement?.subscription ?? null;
   const periodEnd = subscription?.current_period_end;
   return (
-    <div className="grid gap-4 bg-panel border-border-subtle rounded-[var(--radius-control)] border p-[var(--card-padding)]">
+    <div className={panelClasses({}, 'grid gap-4')}>
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="grid gap-1 min-w-0">
+        <div className="grid min-w-0 gap-1">
           <p className={eyebrowClasses}>Current plan</p>
           <div className="flex items-center gap-2.5">
             <p className={textRole('objectTitle')}>
@@ -239,7 +240,7 @@ function PlanCatalog({
   onCheckout: (key: SelfServePlanKey) => void;
 }>) {
   return (
-    <div className="bg-panel border-border-subtle grid gap-4 rounded-[var(--radius-control)] border p-[var(--card-padding)] lg:col-span-7">
+    <div className={panelClasses({}, 'grid gap-4 lg:col-span-7')}>
       <div className="grid gap-0.5">
         <h2 className={textRole('bodyStrong', 'tracking-tight')}>Change plan</h2>
         <p className="text-muted text-xs">
@@ -280,7 +281,12 @@ function CountryInput({
   setCountry,
 }: Readonly<{ country: string; setCountry: (country: string) => void }>) {
   return (
-    <div className="bg-background-alt border-border-subtle flex flex-col justify-between gap-2.5 rounded-[var(--radius-control)] border p-3 sm:flex-row sm:items-center">
+    <div
+      className={panelClasses(
+        { tone: 'tonal', pad: 'compact' },
+        'flex flex-col justify-between gap-2.5 sm:flex-row sm:items-center',
+      )}
+    >
       <div className="min-w-0">
         <label htmlFor="billing-country-input" className={textRole('label', 'block')}>
           Billing country
@@ -348,10 +354,13 @@ function PlanRow({
   );
   return (
     <div
-      className="bg-background-alt border-border-subtle flex flex-col justify-between gap-3 rounded-[var(--radius-control)] border p-3.5 sm:flex-row sm:items-center"
+      className={panelClasses(
+        { tone: 'tonal', pad: 'compact' },
+        'flex flex-col justify-between gap-3 sm:flex-row sm:items-center',
+      )}
       data-tier={plan.key}
     >
-      <div className="grid gap-0.5 min-w-0">
+      <div className="grid min-w-0 gap-0.5">
         <div className="flex items-center gap-2">
           <span className={textRole('bodyStrong')}>{plan.name}</span>
           <span className={textRole('label', 'font-mono')}>{priceLabel}</span>

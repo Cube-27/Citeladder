@@ -17,6 +17,7 @@ import {
   toggleEngine,
 } from '@/lib/runs/launch';
 import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 type Estimate = {
   execution_count: number;
@@ -257,7 +258,7 @@ export function LaunchDialogView({
             )}
           </Field>
           {estimate ? (
-            <div className="border-border-subtle bg-well grid gap-1 rounded-[var(--radius-card)] border p-3 text-xs">
+            <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1 text-xs')}>
               <span className={textRole('emphasis', 'text-foreground')}>
                 {estimate.execution_count}{' '}
                 {estimate.execution_count === 1 ? 'response' : 'responses'} planned

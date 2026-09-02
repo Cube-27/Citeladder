@@ -32,9 +32,7 @@ export function PromptMovement({
           <ul className="border-border-subtle divide-border-subtle divide-y rounded-[var(--radius-card)] border">
             {promptQuery.data.slice(0, 5).map((item) => (
               <li key={item.id} className="grid gap-1 px-3 py-2 text-sm">
-                <span className={textRole('bodyStrong', 'line-clamp-2')}>
-                  {item.prompt_text}
-                </span>
+                <span className={textRole('bodyStrong', 'line-clamp-2')}>{item.prompt_text}</span>
                 <span className="text-secondary text-xs">
                   {item.composite_score.toFixed(1)} score
                   {movementDelta(item.immediate_delta)}

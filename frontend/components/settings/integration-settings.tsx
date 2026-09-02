@@ -70,33 +70,33 @@ function CallbackNotice({
     if (family === 'google') {
       return (
         <Alert tone="success">
-          <strong>Google connected.</strong> Search Console and Analytics 4
-          are now linked on one shared OAuth grant. Initial syncs are queued and will appear in
-          Traffic and AI Referrals once they complete.
+          <strong>Google connected.</strong> Search Console and Analytics 4 are now linked on one
+          shared OAuth grant. Initial syncs are queued and will appear in Traffic and AI Referrals
+          once they complete.
         </Alert>
       );
     }
     if (family === 'microsoft') {
       return (
         <Alert tone="success">
-          <strong>Microsoft connected.</strong> Bing Webmaster Tools is now
-          linked. Initial syncs are queued and will appear in Traffic once they complete.
+          <strong>Microsoft connected.</strong> Bing Webmaster Tools is now linked. Initial syncs
+          are queued and will appear in Traffic once they complete.
         </Alert>
       );
     }
     return (
       <Alert tone="success">
-        <strong>Integration connected.</strong> Initial syncs are queued and
-        will appear in Traffic once they complete.
+        <strong>Integration connected.</strong> Initial syncs are queued and will appear in Traffic
+        once they complete.
       </Alert>
     );
   }
   if (notice.error) {
     return (
       <Alert tone="danger">
-        <strong>Connection failed.</strong> The provider did not complete
-        the connect flow (<code className="font-mono text-xs">{notice.error}</code>). No grant was
-        created and nothing was stored — you can retry whenever you&rsquo;re ready.
+        <strong>Connection failed.</strong> The provider did not complete the connect flow (
+        <code className="font-mono text-xs">{notice.error}</code>). No grant was created and nothing
+        was stored — you can retry whenever you&rsquo;re ready.
       </Alert>
     );
   }

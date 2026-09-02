@@ -42,7 +42,10 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
         <DropdownTrigger className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1 text-left transition-colors">
           <span
             aria-hidden
-            className={textRole('label', 'bg-background-alt flex size-6 shrink-0 items-center justify-center rounded-full uppercase')}
+            className={textRole(
+              'label',
+              'bg-background-alt flex size-6 shrink-0 items-center justify-center rounded-full uppercase',
+            )}
           >
             {emailInitials(user.email)}
           </span>
