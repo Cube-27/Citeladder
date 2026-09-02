@@ -4,6 +4,7 @@ import { LoaderCircle } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { auditStatusLabel } from '@/lib/runs/status';
 import type { ActiveRun } from '@/lib/visibility/dashboard';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * In-progress run banner for the Visibility workspace. An active run has no
@@ -22,7 +23,7 @@ export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
         </span>
         <Link
           href={`/runs/${run.id}`}
-          className="text-accent-text font-medium whitespace-nowrap hover:underline"
+          className={textRole('emphasis', 'text-accent-text whitespace-nowrap hover:underline')}
         >
           Watch live progress →
         </Link>

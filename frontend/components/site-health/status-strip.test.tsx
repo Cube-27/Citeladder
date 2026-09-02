@@ -201,8 +201,7 @@ describe('StatusStrip — analysis counters', () => {
 
     // selected(5) - completed(1) - failed(0) - running(1) = 3 queued.
     const queuedLabel = screen.getByText('Queued');
-    const queuedValue = queuedLabel.parentElement?.querySelector('.mono');
-    expect(queuedValue?.textContent).toBe('3');
+    expect(queuedLabel.parentElement).toHaveTextContent('3');
   });
 
   it('surfaces a monitored-count fetch error instead of silently approximating', () => {

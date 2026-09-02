@@ -21,6 +21,7 @@ import { useSessionUser } from '@/lib/auth/session-guard';
 import { useProjectContext } from '@/lib/project/project-context';
 import { emailInitials } from '@/lib/utils';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { textRole } from '@/components/ui/typography';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -52,7 +53,7 @@ function DetailRow({
 }: Readonly<{ label: string; children: React.ReactNode; mono?: boolean }>) {
   return (
     <div className="border-border-subtle grid min-h-12 grid-cols-[minmax(0,180px)_1fr] items-center gap-4 border-b py-2 last:border-b-0">
-      <dt className="text-secondary text-sm font-medium">{label}</dt>
+      <dt className={textRole('bodyStrong')}>{label}</dt>
       <dd className={mono ? 'mono text-secondary text-xs' : 'text-foreground text-sm'}>
         {children}
       </dd>
@@ -152,13 +153,13 @@ export function SettingsScreen() {
                 <div className="flex items-center gap-4">
                   <span
                     aria-hidden
-                    className="bg-accent-soft text-accent-text flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-medium uppercase"
+                    className={textRole('bodyStrong', 'bg-accent-soft text-accent-text flex size-10 shrink-0 items-center justify-center rounded-full uppercase')}
                   >
                     {emailInitials(user.email)}
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-foreground truncate text-sm font-medium">{user.email}</div>
-                    <div className="text-muted mt-0.5 text-sm capitalize">{user.role}</div>
+                  <div className="grid gap-0.5 min-w-0 flex-1">
+                    <div className={textRole('bodyStrong', 'truncate')}>{user.email}</div>
+                    <div className="text-muted text-sm capitalize">{user.role}</div>
                   </div>
                   <Badge variant="status" value={user.is_active ? 'success' : 'danger'}>
                     {user.is_active ? 'Active' : 'Inactive'}
@@ -222,11 +223,11 @@ export function SettingsScreen() {
                           websiteUrl={activeProject.website_url}
                           size="md"
                         />
-                        <div className="min-w-0">
-                          <div className="text-foreground truncate text-sm font-medium">
+                        <div className="grid gap-0.5 min-w-0">
+                          <div className={textRole('bodyStrong', 'truncate')}>
                             {activeProject.name}
                           </div>
-                          <p className="text-muted mt-0.5 text-xs">
+                          <p className="text-muted text-xs">
                             Brand: {activeProject.brand_name}
                           </p>
                         </div>

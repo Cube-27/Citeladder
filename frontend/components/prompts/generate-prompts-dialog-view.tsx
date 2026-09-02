@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import type { PromptGenerateResponse, Topic } from '@/lib/api/types';
+import { textRole } from '@/components/ui/typography';
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
@@ -129,7 +130,7 @@ export function GeneratePromptsDialogView({
         {error ? <GenerateErrorAlert error={error} /> : null}
         {result && !error ? <GenerateResultAlert result={result} /> : null}
         <div className="grid gap-1.5">
-          <span className="text-secondary text-xs font-medium">
+          <span className={textRole('label')}>
             Number of prompts (1–{maxCount})
           </span>
           <Input
@@ -144,7 +145,7 @@ export function GeneratePromptsDialogView({
         </div>
         {topics.length > 0 ? (
           <div className="grid gap-1.5">
-            <span className="text-secondary text-xs font-medium">Topic</span>
+            <span className={textRole('label')}>Topic</span>
             <Select
               value={topicId}
               onValueChange={setTopicId}

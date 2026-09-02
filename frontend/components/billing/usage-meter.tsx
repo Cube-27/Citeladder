@@ -2,6 +2,7 @@
 
 import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/config/billing';
 import type { UsageItem } from '@/lib/api/billing';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * One usage counter.
@@ -20,8 +21,8 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
     return (
       <div className="border-border-subtle grid gap-1 border-b pb-3 last:border-b-0 last:pb-0">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-secondary text-xs font-medium">{label}</span>
-          <span className="text-muted text-xs font-medium">Not available</span>
+          <span className={textRole('label')}>{label}</span>
+          <span className={textRole('label')}>Not available</span>
         </div>
         <p className="text-muted text-xs">
           This allowance could not be resolved, so no usage is shown.
@@ -34,8 +35,8 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
     return (
       <div className="border-border-subtle grid gap-1 border-b pb-3 last:border-b-0 last:pb-0">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-secondary text-xs font-medium">{label}</span>
-          <span className="text-foreground font-mono text-xs font-medium tabular-nums">
+          <span className={textRole('label')}>{label}</span>
+          <span className={textRole('label', 'font-mono tabular-nums')}>
             {item.consumed ?? 0} {item.unit}
           </span>
         </div>
@@ -62,8 +63,8 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   return (
     <div className="border-border-subtle grid gap-1.5 border-b pb-3.5 last:border-b-0 last:pb-0">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-secondary text-xs font-medium">{label}</span>
-        <span className="text-foreground font-mono text-xs font-medium tabular-nums">
+        <span className={textRole('label')}>{label}</span>
+        <span className={textRole('label', 'font-mono tabular-nums')}>
           {consumed} / {allowance} {item.unit}
         </span>
       </div>

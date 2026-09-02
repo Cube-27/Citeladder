@@ -245,6 +245,19 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
     if (/\b(?:font-semibold|font-bold|text-2xs)\b/.test(entry.classes)) {
       violations.push(`${label}:${entry.line}: product type uses a retired weight or size`);
     }
+    // Weight is never a call-site decision. It encodes one distinction — 500 for
+    // what you scan, 400 for what you read — and that belongs to a text role, not
+    // to whoever happens to be writing this className. Leaving it open is how a
+    // card's title, its body copy, its metric and its timestamp all ended up at
+    // 500, which left weight carrying no information at all.
+    if (
+      !label.startsWith('components/ui/') &&
+      /\bfont-(?:normal|medium|semibold|bold)\b/.test(entry.classes)
+    ) {
+      violations.push(
+        `${label}:${entry.line}: font weight belongs to a text role (components/ui/typography.tsx)`,
+      );
+    }
     if (/\btext-5xl\b|\btext-\[[^\]]+\]/.test(entry.classes)) {
       violations.push(`${label}:${entry.line}: product type must use the approved even ladder`);
     }
@@ -406,6 +419,35 @@ const TEXT_ROLE_BACKGROUND_MESSAGE =
   'a border-scale neutral, or a semantic bg-*-bg';
 
 /** Surfaces must never be painted with a text-ink token. */
+
+/**
+ * Radius is a ladder, not a vocabulary. `--radius-control` / `--radius-card` /
+ * `--radius-overlay` are the three roles, with `rounded-xs` as the micro rung
+ * for chart bars, skeletons and inline code, and `rounded-full` for pills.
+ *
+ * This applies to every surface, not just product UI: the app, login and
+ * marketing each used to carry their own idea of a rounded corner, so the same
+ * button rendered at three different radii depending on which page it sat on.
+ */
+export function rawRadiusViolations(source, label) {
+  if (label.includes('.test.') || !/\.(?:tsx|ts)$/.test(label)) return [];
+  const violations = [];
+  for (const entry of jsxClassData(source, label)) {
+    const raw = entry.classes
+      .split(/\s+/)
+      .filter((token) =>
+        /^(?:[a-z-]+:)*rounded(?:-(?:t|b|l|r|s|e|tl|tr|bl|br|ss|se|es|ee))?(?:-(?:none|sm|md|lg|xl|2xl|3xl))?$/.test(
+          token,
+        ),
+      );
+    if (raw.length) {
+      violations.push(
+        `${label}:${entry.line}: ${raw.join(', ')} — radius must use a role token (--radius-control|card|overlay), rounded-xs, or rounded-full`,
+      );
+    }
+  }
+  return violations;
+}
 export function textRoleBackgroundViolations(source, label) {
   if (!/\.(?:tsx|ts|mjs|js)$/.test(label)) return [];
   const sourceFile = ts.createSourceFile(

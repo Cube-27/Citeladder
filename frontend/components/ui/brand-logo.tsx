@@ -9,10 +9,10 @@ import { cn } from '@/lib/utils';
 
 const SIZE = {
   xs: { pixels: 14, className: 'size-3.5 rounded-xs text-xs' },
-  sm: { pixels: 20, className: 'size-5 rounded text-xs' },
-  md: { pixels: 24, className: 'size-6 rounded-md text-xs' },
-  lg: { pixels: 32, className: 'size-8 rounded-md text-sm' },
-  xl: { pixels: 40, className: 'size-10 rounded-lg text-base' },
+  sm: { pixels: 20, className: 'size-5 rounded-xs text-xs' },
+  md: { pixels: 24, className: 'size-6 rounded-[var(--radius-control)] text-xs' },
+  lg: { pixels: 32, className: 'size-8 rounded-[var(--radius-control)] text-sm' },
+  xl: { pixels: 40, className: 'size-10 rounded-[var(--radius-card)] text-base' },
 } as const;
 
 /**

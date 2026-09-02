@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * ProvenanceChip — analyzer version and snapshot identity.
@@ -36,7 +37,7 @@ export function ProvenanceChip({ provenance, className }: Readonly<ProvenanceChi
   return (
     <span
       className={cn(
-        'text-muted bg-well text-xs inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 font-medium tabular-nums',
+        textRole('label', 'bg-well inline-flex items-center gap-1 rounded-[var(--radius-control)] px-1.5 py-0.5 tabular-nums'),
         className,
       )}
       title="Rules and snapshot this projection was computed from"

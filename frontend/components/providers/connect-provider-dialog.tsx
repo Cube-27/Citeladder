@@ -26,6 +26,7 @@ import {
 import { useEngineConnection } from '@/lib/providers/use-engine-connection';
 
 import { EngineConnectionFields } from './engine-connection-fields';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * ConnectProviderDialog (Task 3.2) — the guided single-provider connect flow,
@@ -152,7 +153,7 @@ function ConnectEngineForm({
   return (
     <div className="grid gap-4">
       {route ? (
-        <div className="bg-background-alt border-border-subtle flex items-center justify-between rounded-md border p-3">
+        <div className="bg-background-alt border-border-subtle flex items-center justify-between rounded-[var(--radius-control)] border p-3">
           <div className="flex items-center gap-2.5">
             <BrandLogo
               name={model.label}
@@ -161,7 +162,7 @@ function ConnectEngineForm({
               size="sm"
             />
             <div>
-              <p className="text-foreground text-xs font-medium">{model.label}</p>
+              <p className={textRole('label')}>{model.label}</p>
               <p className="text-muted text-xs">via {TRANSPORT_LABELS[route.transport_provider]}</p>
             </div>
           </div>

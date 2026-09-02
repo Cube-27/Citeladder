@@ -30,6 +30,7 @@ import type {
   SiteArchitecture,
 } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
+import { textRole } from '@/components/ui/typography';
 
 const COVERAGE_LABELS: Record<CoverageState, string> = {
   complete: 'Complete coverage',
@@ -199,8 +200,8 @@ function ArchitectureMetrics({
           <dd
             className={
               value.startsWith('Count withheld')
-                ? 'text-muted text-xs font-normal'
-                : 'text-foreground text-2xl font-medium tabular-nums'
+                ? textRole('meta')
+                : textRole('metric')
             }
           >
             {value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : value}
@@ -441,7 +442,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
                   style={{ width: `${Math.round((bucket.percentage ?? 0) * 100)}%` }}
                 />
               </div>
-              <span className="text-foreground min-w-16 text-right text-xs font-medium tabular-nums">
+              <span className={textRole('label', 'min-w-16 text-right tabular-nums')}>
                 {bucket.page_count} ({formatPercentage(bucket.percentage)})
               </span>
             </div>
@@ -476,7 +477,7 @@ function EvidenceMetric({
       ) : value.startsWith('Count withheld') ? (
         <span className="text-muted text-xs leading-4">{value}</span>
       ) : (
-        <span className="mono text-foreground text-2xl font-medium tracking-[-0.02em] tabular-nums">
+        <span className={textRole('pageTitle', 'mono tracking-[-0.02em] tabular-nums')}>
           {value}
         </span>
       )}

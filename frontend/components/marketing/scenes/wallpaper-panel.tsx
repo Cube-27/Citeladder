@@ -22,7 +22,7 @@ export function WallpaperPanel({
     <div
       className={cn(
         'bg-background-alt relative overflow-hidden',
-        rounded && 'rounded-lg',
+        rounded && 'rounded-[var(--radius-card)]',
         className,
       )}
       {...rest}

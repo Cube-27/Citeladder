@@ -7,6 +7,7 @@ import { ScoreRing } from '@/components/ui/score-ring';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import { formatScore } from '@/lib/site-health/status';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * Always-mounted score section of the canonical Site Health screen.
@@ -101,7 +102,7 @@ function ScoreCard({
           <ScoreRing value={value} size={64} label={`${label} score: ${Math.round(value)}`} />
           <div className="grid gap-1">
             <p className={eyebrowClasses}>{label}</p>
-            <span className="font-display text-foreground text-3xl leading-none font-medium tracking-[-0.02em] tabular-nums">
+            <span className={textRole('metric', 'leading-none')}>
               {formatScore(value)} / 100
             </span>
             <span className="text-muted text-xs leading-relaxed">{sub}</span>

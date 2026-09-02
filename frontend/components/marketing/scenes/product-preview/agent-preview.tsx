@@ -48,7 +48,7 @@ export function AgentPreview({ phase, reduceMotion }: PreviewProps) {
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(270px,0.75fr)]">
         <section className={cn(PRIMARY_SURFACE, 'flex min-h-[390px] flex-col overflow-hidden')}>
           <div className="border-border flex items-center gap-3 border-b px-4 py-3">
-            <span className="bg-accent-soft text-accent-text grid size-7 place-items-center rounded-md">
+            <span className="bg-accent-soft text-accent-text grid size-7 place-items-center rounded-[var(--radius-control)]">
               <MessageSquareText className="size-3.5" />
             </span>
             <div>
@@ -120,7 +120,7 @@ export function AgentPreview({ phase, reduceMotion }: PreviewProps) {
                   />
                 ) : null}
               </span>
-              <span className="bg-accent text-inverse grid size-7 place-items-center rounded-md">
+              <span className="bg-accent text-inverse grid size-7 place-items-center rounded-[var(--radius-control)]">
                 <ArrowUp className="size-3.5" aria-hidden />
               </span>
             </div>

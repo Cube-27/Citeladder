@@ -14,6 +14,7 @@ import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery
 
 import type { CommerceQueries } from './commerce-queries';
 import { competitorHost, competitorTone, discoveryMessage } from './commerce-format';
+import { textRole } from '@/components/ui/typography';
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
 
@@ -118,7 +119,7 @@ function CompetitorRows({
       {rows.map((row) => (
         <li key={row.id} className="flex flex-wrap items-center gap-3 py-2">
           <a
-            className="text-link min-w-0 flex-1 truncate font-medium"
+            className={textRole('emphasis', 'text-link min-w-0 flex-1 truncate')}
             href={row.canonical_url}
             target="_blank"
             rel="noreferrer"

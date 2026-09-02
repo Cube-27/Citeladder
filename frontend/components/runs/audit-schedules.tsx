@@ -16,6 +16,7 @@ import { runsApi } from '@/lib/api/runs';
 import type { AuditScheduleCadence, LogicalEngine, PromptSet } from '@/lib/api/types';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { formatUtcTimestamp } from '@/lib/format';
+import { textRole } from '@/components/ui/typography';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -59,9 +60,9 @@ export function AuditSchedules({
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
-        <div>
+        <div className="grid gap-1">
           <CardTitle>Scheduled audits</CardTitle>
-          <p className="text-muted mt-1 text-xs">
+          <p className="text-muted text-xs">
             Runs use the selected prompt set and your connected engines.
           </p>
         </div>
@@ -71,13 +72,13 @@ export function AuditSchedules({
           <Alert tone="danger">Could not load scheduled audits.</Alert>
         ) : null}
         {schedulesQuery.data?.length ? (
-          <ul className="border-border-subtle divide-border-subtle divide-y rounded-lg border">
+          <ul className="border-border-subtle divide-border-subtle divide-y rounded-[var(--radius-card)] border">
             {schedulesQuery.data.map((schedule) => (
               <li
                 key={schedule.id}
                 className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
               >
-                <span className="text-foreground font-medium">
+                <span className={textRole('emphasis', 'text-foreground')}>
                   {CADENCE_LABELS[schedule.cadence]}
                 </span>
                 <span className="text-secondary">
@@ -101,7 +102,7 @@ export function AuditSchedules({
           <Alert tone="info">Add prompts before scheduling an audit.</Alert>
         ) : (
           <div className="grid gap-3 border-t pt-4 sm:grid-cols-3">
-            <div className="text-secondary grid gap-1 text-xs font-medium">
+            <div className={textRole('label', 'grid gap-1')}>
               <span>Prompt set</span>
               <Select
                 ariaLabel="Prompt set"
@@ -110,7 +111,7 @@ export function AuditSchedules({
                 options={promptSets.map((set) => ({ value: set.id, label: set.name }))}
               />
             </div>
-            <div className="text-secondary grid gap-1 text-xs font-medium">
+            <div className={textRole('label', 'grid gap-1')}>
               <span>Measurement scope</span>
               <Select
                 ariaLabel="Measurement scope"
@@ -122,7 +123,7 @@ export function AuditSchedules({
                 ]}
               />
             </div>
-            <div className="text-secondary grid gap-1 text-xs font-medium">
+            <div className={textRole('label', 'grid gap-1')}>
               <span>Cadence</span>
               <Select
                 ariaLabel="Cadence"
@@ -137,7 +138,7 @@ export function AuditSchedules({
             {cadence === 'every_n_minutes' ? (
               <label
                 htmlFor="audit-schedule-minutes"
-                className="text-secondary grid gap-1 text-xs font-medium"
+                className={textRole('label', 'grid gap-1')}
               >
                 <span>Minutes</span>
                 <Input
@@ -150,7 +151,7 @@ export function AuditSchedules({
               </label>
             ) : null}
             <fieldset className="sm:col-span-2">
-              <legend className="text-secondary mb-1 text-xs font-medium">Engines</legend>
+              <legend className={textRole('label', 'mb-1')}>Engines</legend>
               <div className="flex flex-wrap gap-2">
                 {(['chatgpt', 'gemini', 'claude'] as const).map((engine) => (
                   <Checkbox

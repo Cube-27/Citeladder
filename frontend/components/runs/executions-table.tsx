@@ -14,6 +14,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { engineLabel, transportLabel } from '@/lib/providers/catalog';
 import type { Execution } from '@/lib/api/types';
 import { executionBadgeValue, executionStatusLabel } from '@/lib/runs/status';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * Executions table for a run (F10, design.md §9.7).
@@ -43,7 +44,7 @@ export function ExecutionsTable({
             <TableCell className="max-w-2xl py-3">
               <div className="flex flex-col gap-1">
                 <span
-                  className="text-foreground text-sm leading-relaxed font-normal break-words"
+                  className="leading-relaxed break-words"
                   title={execution.prompt_text}
                 >
                   {execution.prompt_text || `Prompt #${execution.prompt_index + 1}`}
@@ -52,7 +53,7 @@ export function ExecutionsTable({
               </div>
             </TableCell>
             <TableCell className="py-3">
-              <span className="text-foreground text-sm font-medium">
+              <span className={textRole('bodyStrong')}>
                 {engineLabel(execution.logical_engine)}
               </span>
               <span className="text-muted ml-1.5 text-xs">

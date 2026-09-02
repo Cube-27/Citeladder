@@ -171,7 +171,7 @@ function VisibilityContentPreview() {
               key={source}
               className="bg-panel flex items-start gap-3 rounded-[var(--radius-control)] p-3"
             >
-              <span className="bg-accent-soft text-accent-text grid size-7 shrink-0 place-items-center rounded-md">
+              <span className="bg-accent-soft text-accent-text grid size-7 shrink-0 place-items-center rounded-[var(--radius-control)]">
                 <Link2 className="size-3.5" />
               </span>
               <div className="min-w-0">

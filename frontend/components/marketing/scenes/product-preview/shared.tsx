@@ -16,7 +16,7 @@ export function ScreenHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="bg-accent-soft text-accent-text grid size-9 shrink-0 place-items-center rounded-md">
+        <span className="bg-accent-soft text-accent-text grid size-9 shrink-0 place-items-center rounded-[var(--radius-control)]">
           {icon}
         </span>
         <div>

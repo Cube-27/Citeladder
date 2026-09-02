@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * EvidenceLink — the path from a derived number to the artifact it came from.
@@ -32,13 +33,13 @@ export function EvidenceLink({ evidence, className }: Readonly<EvidenceLinkProps
     <Link
       href={evidence.href}
       className={cn(
-        'text-accent-text flex min-w-0 items-start gap-1 text-xs font-medium underline-offset-2 hover:underline',
+        textRole('label', 'text-accent-text flex min-w-0 items-start gap-1 underline-offset-2 hover:underline'),
         className,
       )}
     >
       <span className="min-w-0 [overflow-wrap:anywhere]">{evidence.label}</span>
       {evidence.observedAt ? (
-        <span className="text-muted shrink-0 font-normal">· {evidence.observedAt}</span>
+        <span className={textRole('meta', 'shrink-0')}>· {evidence.observedAt}</span>
       ) : null}
       <ArrowUpRight aria-hidden className="mt-0.5 size-3 shrink-0" />
     </Link>

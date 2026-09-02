@@ -16,6 +16,7 @@ import { authApi } from '@/lib/api/auth';
 import { useSession } from '@/lib/auth/session-guard';
 import { ICONS } from '@/lib/icons';
 import { cn, emailInitials } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * UserMenu (F5) — shows the current user (from F4's `useSession`) and a logout
@@ -38,10 +39,10 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
   return (
     <div className={cn('flex items-center gap-1', className)}>
       <Dropdown>
-        <DropdownTrigger className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2 py-1 text-left transition-colors">
+        <DropdownTrigger className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1 text-left transition-colors">
           <span
             aria-hidden
-            className="bg-background-alt text-secondary flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium uppercase"
+            className={textRole('label', 'bg-background-alt flex size-6 shrink-0 items-center justify-center rounded-full uppercase')}
           >
             {emailInitials(user.email)}
           </span>

@@ -11,6 +11,7 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Opportunity } from '@/lib/api/types';
 import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
 
 export function metricValue(value: number | null, suffix = '') {
   return value === null
@@ -60,14 +61,14 @@ export function StateMetric({
         {value === null ? (
           <UnavailableValue state="not_measured" />
         ) : (
-          <p className="font-display text-foreground text-3xl leading-none font-medium tracking-[-0.02em] tabular-nums">
+          <p className={textRole('metric', 'leading-none')}>
             {metricValue(value, suffix)}
           </p>
         )}
       </div>
       <p
         className={cn(
-          'text-xs font-medium tabular-nums',
+          textRole('label', 'tabular-nums'),
           delta === null ? 'text-muted' : positive ? 'text-success' : 'text-danger',
         )}
       >
@@ -92,10 +93,10 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
       {movements.map((row) => (
         <div key={row.label} className="border-border-subtle min-w-0 border-t pt-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-foreground text-xs font-medium capitalize">{row.label}</span>
+            <span className={textRole('label', 'capitalize')}>{row.label}</span>
             <span
               className={cn(
-                'font-display text-xs font-medium tabular-nums',
+                textRole('label', 'font-display tabular-nums'),
                 row.direction === 'positive' ? 'text-success' : 'text-danger',
               )}
             >
@@ -111,15 +112,15 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
           </div>
           <div className="mt-3 flex h-14 items-end gap-2.5" aria-hidden>
             <span
-              className="bg-border-strong w-6 rounded-t transition-[height]"
+              className="bg-border-strong w-6 rounded-t-xs transition-[height]"
               style={{ height: `${Math.max(6, ((row.previous ?? 0) / ceiling) * 56)}px` }}
             />
             <span
-              className="bg-accent w-6 rounded-t transition-[height]"
+              className="bg-accent w-6 rounded-t-xs transition-[height]"
               style={{ height: `${Math.max(6, ((row.current ?? 0) / ceiling) * 56)}px` }}
             />
           </div>
-          <p className="text-muted mt-2.5 text-center font-sans text-xs font-medium">
+          <p className={textRole('label', 'mt-2.5 text-center font-sans')}>
             Previous · Current
           </p>
         </div>
@@ -165,15 +166,15 @@ export function ActionRow({
     >
       <div className="flex items-center gap-2">
         <GripVertical className="text-muted hover:text-foreground size-4 cursor-grab" aria-hidden />
-        <span className="text-muted w-5 text-center font-mono text-xs font-medium tabular-nums">
+        <span className={textRole('label', 'w-5 text-center font-mono tabular-nums')}>
           {index + 1}
         </span>
       </div>
-      <div className="min-w-0">
+      <div className="grid gap-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/opportunities?selected=${action.id}`}
-            className="text-foreground hover:text-accent-text text-sm font-medium transition-colors"
+            className={textRole('bodyStrong', 'hover:text-accent-text transition-colors')}
           >
             {action.title}
           </Link>
@@ -185,13 +186,13 @@ export function ActionRow({
             <Badge>{action.severity}</Badge>
           )}
         </div>
-        <p className="text-muted mt-1 truncate text-xs">
+        <p className="text-muted truncate text-xs">
           {action.target_label ?? 'Project-wide'} · {action.evidence_summary.count} persisted
           evidence item(s)
         </p>
       </div>
       <div className="flex items-center justify-end gap-1.5">
-        <span className="text-muted font-display me-2 text-xs font-medium tabular-nums">
+        <span className={textRole('label', 'font-display me-2 tabular-nums')}>
           {action.priority_score.toFixed(1)}
         </span>
         <Button

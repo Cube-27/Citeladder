@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
-import { Label, Metric, displayHeadingLgClasses } from '@/components/ui/typography';
+import { Label, displayHeadingLgClasses, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
@@ -239,7 +239,9 @@ function ProgressRow({
               {count.value === null ? (
                 <UnavailableValue state="not_measured" />
               ) : (
-                <Metric className={cn('text-sm', count.className)}>{count.value}</Metric>
+                <span className={textRole('emphasis', cn('tabular-nums', count.className))}>
+                  {count.value}
+                </span>
               )}
             </div>
           ))}

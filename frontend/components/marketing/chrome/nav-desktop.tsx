@@ -9,7 +9,7 @@ import { NavItemLink } from './nav-items';
 
 const NAV_LINK =
   'website-nav text-secondary hover:text-foreground relative z-1 inline-flex items-center gap-2 ' +
-  'rounded-sm px-4 py-4 font-medium transition-colors duration-300';
+  'rounded-[var(--radius-control)] px-4 py-4 font-medium transition-colors duration-300';
 
 type DropLayout = Record<NavDropKey, { width: number; twoColumn: boolean }>;
 
@@ -69,7 +69,7 @@ export function DesktopNavigation({
           style={{ left: lens.left, width: lens.width }}
           transition={lensTransition}
           className={cn(
-            'border-border-subtle bg-panel shadow-elevated pointer-events-none rounded-md',
+            'border-border-subtle bg-panel shadow-elevated pointer-events-none rounded-[var(--radius-control)]',
             'absolute inset-y-0 border',
           )}
         />
@@ -155,7 +155,7 @@ function DesktopDropPanel({
         maxWidth: 'calc(100vw - 2rem)',
       }}
       className={cn(
-        'border-border-subtle bg-panel shadow-elevated absolute top-full rounded-md',
+        'border-border-subtle bg-panel shadow-elevated absolute top-full rounded-[var(--radius-control)]',
         'mt-2 overflow-hidden border',
       )}
     >

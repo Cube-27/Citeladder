@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Label } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
@@ -80,7 +80,7 @@ export function PageKindScores({
                   </TableCell>
                   <TableCell
                     numeric
-                    className={cn('mono font-medium', scoreTextClass(row.web_fundamentals_score))}
+                    className={scoreTextClass(row.web_fundamentals_score)}
                   >
                     <MeasurementValue
                       score={row.web_fundamentals_score}
@@ -90,7 +90,7 @@ export function PageKindScores({
                   </TableCell>
                   <TableCell
                     numeric
-                    className={cn('mono font-medium', scoreTextClass(row.aeo_readiness_score))}
+                    className={scoreTextClass(row.aeo_readiness_score)}
                   >
                     <MeasurementValue
                       score={row.aeo_readiness_score}
@@ -98,7 +98,7 @@ export function PageKindScores({
                       state={row.aeo_measurement_state}
                     />
                   </TableCell>
-                  <TableCell numeric className="mono font-medium">
+                  <TableCell numeric>
                     {row.aeo_measurement_coverage === null ? (
                       <UnavailableValue state="not_measured" />
                     ) : (
@@ -126,7 +126,7 @@ function MeasurementValue({
     return (
       <span className="grid gap-0.5">
         <span>{formatScore(score)}</span>
-        <span className="text-muted text-xs font-normal normal-case">
+        <span className={textRole('meta', 'normal-case')}>
           {coverageLabel} · {measurementConfidence(state)}
         </span>
       </span>

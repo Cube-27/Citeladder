@@ -33,7 +33,7 @@ export function CompareIndex() {
         </div>
 
         {COMPETITORS.length === 0 ? (
-          <p className="website-body border-border-subtle text-muted rounded-lg border border-dashed p-8 text-center">
+          <p className="website-body border-border-subtle text-muted rounded-[var(--radius-card)] border border-dashed p-8 text-center">
             Comparison notes publish as each vendor review completes.
           </p>
         ) : (
@@ -46,7 +46,7 @@ export function CompareIndex() {
                 >
                   <span
                     aria-hidden
-                    className="bg-accent-soft text-accent-text font-display grid size-9 shrink-0 place-items-center rounded-md text-sm font-medium"
+                    className="bg-accent-soft text-accent-text font-display grid size-9 shrink-0 place-items-center rounded-[var(--radius-control)] text-sm font-medium"
                   >
                     {competitor.name.charAt(0)}
                   </span>

@@ -10,6 +10,7 @@ import {
   productUiSourceViolations,
   standalonePlaceholderViolations,
   textContrastViolations,
+  rawRadiusViolations,
   textRoleBackgroundViolations,
   websiteContractViolations,
 } from './design-system-source-checks.mjs';
@@ -75,6 +76,7 @@ for (const path of files(root)) {
   // replaced was repository-wide, and a text-ink background is wrong on a
   // marketing surface too.
   violations.push(...textRoleBackgroundViolations(source, label));
+  violations.push(...rawRadiusViolations(source, label));
   violations.push(...editorialTypographyViolations(source, label, ownsWebsiteEditorialCopy));
   violations.push(...standalonePlaceholderViolations(source, label, ownsProductUi));
   violations.push(...productUiSourceViolations(source, label, ownsProductUi));

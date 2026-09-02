@@ -53,11 +53,11 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
         </div>
         <div className="border-border-subtle mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-5">
           <div className="flex flex-wrap gap-3">
-            <span className="border-border-subtle bg-background-alt text-muted inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium">
+            <span className="border-border-subtle bg-background-alt text-muted inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-4 py-2 text-sm font-medium">
               <Download aria-hidden className="size-4" />
               Mentions (CSV)
             </span>
-            <span className="border-border-subtle bg-background-alt text-muted inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium">
+            <span className="border-border-subtle bg-background-alt text-muted inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-4 py-2 text-sm font-medium">
               <FileSpreadsheet aria-hidden className="size-4" />
               Evidence (Markdown)
             </span>
@@ -138,7 +138,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
     label: 'Ecommerce — product AI visibility',
     body: (
       <>
-        <div className="border-border-subtle bg-background-alt rounded-md border p-4">
+        <div className="border-border-subtle bg-background-alt rounded-[var(--radius-control)] border p-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-foreground flex items-center gap-3 font-medium">
               <ShoppingBag className="text-accent-text size-4" aria-hidden />
@@ -178,7 +178,7 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
     label: 'Citation ownership — per prompt',
     body: (
       <>
-        <div className="bg-background-alt border-border-subtle text-foreground mb-5 rounded-md border p-4 text-sm font-medium">
+        <div className="bg-background-alt border-border-subtle text-foreground mb-5 rounded-[var(--radius-control)] border p-4 text-sm font-medium">
           &quot;What are the top enterprise AI search platforms?&quot;
         </div>
         <div className="grid gap-4">

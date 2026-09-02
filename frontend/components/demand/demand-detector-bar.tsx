@@ -5,6 +5,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { DemandSnapshot } from '@/lib/api/demand';
 import { detectorStates } from '@/lib/demand/signals';
+import { textRole } from '@/components/ui/typography';
 
 const DETECTOR_DEFINITIONS: Record<
   string,
@@ -71,9 +72,9 @@ export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnaps
   );
 
   return (
-    <div className="bg-well border-border-subtle flex flex-col gap-2.5 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="bg-well border-border-subtle flex flex-col gap-2.5 rounded-[var(--radius-control)] border p-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-muted text-xs font-medium">Detectors:</span>
+        <span className={textRole('label')}>Detectors:</span>
         {Object.entries(DETECTOR_DEFINITIONS).map(([key, meta]) => {
           const rawState = detectors[key]?.state ?? 'unavailable';
           const badgeTone = detectorBadgeValue(rawState);
@@ -85,13 +86,13 @@ export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnaps
               key={key}
               content={
                 <div className="max-w-xs p-1 text-xs">
-                  <p className="font-medium">{meta.label}</p>
+                  <p className={textRole('emphasis')}>{meta.label}</p>
                   <p className="mt-1 opacity-90">{meta.description}</p>
                   <p className="mt-1.5 border-t border-white/20 pt-1.5 text-xs opacity-75">
                     {meta.requirements}
                   </p>
                   {detectorLimitations.length > 0 && (
-                    <p className="text-warning-text mt-1 text-xs font-medium">
+                    <p className={textRole('label', 'text-warning-text mt-1')}>
                       Note: {detectorLimitations.join(' ')}
                     </p>
                   )}
@@ -100,9 +101,9 @@ export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnaps
             >
               <Pressable
                 type="button"
-                className="bg-panel border-border hover:border-border-strong flex cursor-help items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
+                className="bg-panel border-border hover:border-border-strong flex cursor-help items-center gap-1.5 rounded-[var(--radius-control)] border px-2 py-1 text-xs transition-colors"
               >
-                <span className="text-foreground font-medium">{meta.label}</span>
+                <span className={textRole('emphasis', 'text-foreground')}>{meta.label}</span>
                 <Badge variant="status" value={badgeTone}>
                   {stateText}
                 </Badge>

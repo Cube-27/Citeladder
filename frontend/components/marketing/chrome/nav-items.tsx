@@ -5,7 +5,7 @@ import type { NavDropItem } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 const ROW =
-  'group rounded-md flex items-start gap-3 px-3 py-2.5 transition-colors duration-150 ' +
+  'group rounded-[var(--radius-control)] flex items-start gap-3 px-3 py-2.5 transition-colors duration-150 ' +
   'hover:bg-background focus-visible:bg-background';
 
 function RowBody({ item }: Readonly<{ item: NavDropItem }>) {

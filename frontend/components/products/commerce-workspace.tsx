@@ -19,6 +19,7 @@ import { useCommerceQueries } from '@/lib/products/use-products-screen';
 import { CatalogHeader } from './catalog-header';
 import { CatalogList, catalogEntries } from './catalog-list';
 import { TargetDetail } from './target-detail';
+import { textRole } from '@/components/ui/typography';
 
 /** Selection-only bulk actions, including stale keys that still need a clear path. */
 export function BulkActions({
@@ -37,7 +38,7 @@ export function BulkActions({
   return (
     <Card className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2">
       <div className="grid gap-0.5">
-        <span aria-live="polite" className="text-foreground text-sm font-medium">
+        <span aria-live="polite" className={textRole('bodyStrong')}>
           {count
             ? `${count} ${count === 1 ? 'target' : 'targets'} selected`
             : 'No targets selected'}

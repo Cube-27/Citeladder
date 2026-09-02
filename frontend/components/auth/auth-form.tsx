@@ -12,6 +12,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/errors';
 import { assignLocation } from '@/lib/navigate';
+import { textRole } from '@/components/ui/typography';
 
 type InputProps = ComponentProps<typeof Input>;
 
@@ -162,19 +163,19 @@ export function AuthFormShell({
   }
 
   return (
-    <div className="w-full">
-      <div className="text-center">
+    <div className="grid gap-6 w-full">
+      <div className="grid gap-1 text-center">
         <h1 className="flow-title">{title}</h1>
-        <p className="website-body text-muted mt-1">{description}</p>
+        <p className="website-body text-muted">{description}</p>
       </div>
 
-      <div className="mt-6 space-y-4">
+      <div className="space-y-4">
         {showOAuth && (
           <>
             <Button
               variant="secondary"
               size="lg"
-              className="border-border-strong bg-panel hover:border-border-bold hover:bg-background-alt w-full gap-2 text-sm font-medium"
+              className={textRole('bodyStrong', 'border-border-strong bg-panel hover:border-border-bold hover:bg-background-alt w-full gap-2')}
               disabled={oauthPending}
               onClick={() => void handleGoogleSignIn()}
             >
@@ -186,7 +187,7 @@ export function AuthFormShell({
 
             <div className="my-4 flex items-center gap-3">
               <span className="bg-border h-px flex-1" aria-hidden="true" />
-              <span className="text-muted text-xs font-normal">or</span>
+              <span className={textRole('meta')}>or</span>
               <span className="bg-border h-px flex-1" aria-hidden="true" />
             </div>
           </>
@@ -201,7 +202,7 @@ export function AuthFormShell({
             <Button
               type="submit"
               size="lg"
-              className="mt-2 w-full text-sm font-medium"
+              className={textRole('bodyStrong', 'mt-2 w-full')}
               disabled={pending}
             >
               {pending ? pendingLabel : submitLabel}
@@ -214,7 +215,7 @@ export function AuthFormShell({
             {footerPrompt}{' '}
             <Link
               href={footerHref}
-              className="text-accent-text hover:text-accent-hover font-medium transition-colors"
+              className={textRole('emphasis', 'text-accent-text hover:text-accent-hover transition-colors')}
             >
               {footerLabel}
             </Link>

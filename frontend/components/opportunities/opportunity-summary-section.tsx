@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row';
-import { Label } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@/lib/api/types';
 import { formatAudited } from '@/lib/site-health/status';
 
@@ -18,7 +18,7 @@ function SourceLink({
   return (
     <div className="flex items-start justify-between gap-3 py-1">
       <span className="text-muted shrink-0 text-xs">{label}</span>
-      <Link href={href} className="text-accent-text text-sm font-medium hover:underline">
+      <Link href={href} className={textRole('bodyStrong', 'text-accent-text hover:underline')}>
         {linkText}
       </Link>
     </div>

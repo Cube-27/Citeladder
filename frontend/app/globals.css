@@ -206,11 +206,12 @@
   --color-chart-tooltip-fg: #ffffff;
   --color-overlay-scrim: rgb(22 22 26 / 45%);
 
+  /* Tailwind's default radius scale is cleared so the ladder cannot be
+     side-stepped by reaching for a size name. What remains is the 4px micro
+     rung (chart bars, skeletons, inline code), the pill, and the three
+     semantic roles declared in :root below. */
+  --radius-*: initial;
   --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
   --radius-full: 9999px;
 
   /* Elevation — overlays own a real hairline border, so the shadow is pure
@@ -349,6 +350,15 @@ body {
 
   p {
     margin: 0;
+  }
+
+  /* Inline emphasis inside a sentence, and the one step up a table header
+     gets. font-bold is retired, so 500 is the whole ladder above regular and
+     it is declared here rather than restated at call sites. */
+  strong,
+  b,
+  th {
+    font-weight: 500;
   }
 
   /* Icon stroke ladder — the single weight contract for lucide glyphs.

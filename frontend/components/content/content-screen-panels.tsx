@@ -18,6 +18,7 @@ import {
   type ContentOpportunityContext,
   type ContentSkillView,
 } from './content-screen-data';
+import { textRole } from '@/components/ui/typography';
 
 export function ContentComposer({
   instruction,
@@ -68,7 +69,7 @@ export function ContentComposer({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-1">
             <span className={eyebrowClasses}>New generation</span>
-            <h2 className="font-display text-foreground text-xl font-medium tracking-tight">
+            <h2 className={textRole('sectionTitle', 'tracking-tight')}>
               What can I help you create?
             </h2>
           </div>
@@ -90,7 +91,7 @@ export function ContentComposer({
         <label
           id="content-user-instruction-label"
           htmlFor="content-user-instruction"
-          className="text-muted text-xs font-medium"
+          className={textRole('label')}
         >
           Your instruction
         </label>
@@ -105,7 +106,7 @@ export function ContentComposer({
           aria-label="Your instruction"
           aria-labelledby="content-user-instruction-label"
           placeholder="Describe the website content you want to create…"
-          className="border-border bg-background focus:bg-panel rounded-sm p-4 text-sm leading-relaxed"
+          className="border-border bg-background focus:bg-panel rounded-[var(--radius-control)] p-4 text-sm leading-relaxed"
         />
         <SkillPicker
           skills={skills}
@@ -150,7 +151,7 @@ function TargetPageSelect({
   const selected = pages.find((page) => page.site_url_id === target.siteUrlId);
   return (
     <div className="grid gap-2">
-      <label className="text-muted text-xs font-medium" htmlFor="content-target-page">
+      <label className={textRole('label')} htmlFor="content-target-page">
         Target page (optional)
       </label>
       <SearchableSelect
@@ -232,7 +233,7 @@ function ContextIndicator({
   return (
     <div
       data-component-id="content-context-indicator"
-      className="text-muted grid gap-1 text-xs font-medium"
+      className={textRole('label', 'grid gap-1')}
     >
       <ContextLine available={Boolean(preview?.brand_memory)} label={label} />
     </div>
@@ -257,10 +258,10 @@ function OpportunityContext({ opportunity }: Readonly<{ opportunity: ContentOppo
   return (
     <div
       data-component-id="content-opportunity-context"
-      className="border-border bg-well grid min-w-0 gap-2 rounded-sm border p-4 [overflow-wrap:anywhere]"
+      className="border-border bg-well grid min-w-0 gap-2 rounded-[var(--radius-control)] border p-4 [overflow-wrap:anywhere]"
     >
       <span className={eyebrowClasses}>Based on opportunity</span>
-      <p className="text-foreground min-w-0 text-sm font-medium">{opportunity.title}</p>
+      <p className={textRole('bodyStrong', 'min-w-0')}>{opportunity.title}</p>
       {opportunity.target ? (
         <p className="text-muted min-w-0 text-xs">Target: {opportunity.target}</p>
       ) : null}
@@ -297,7 +298,7 @@ export function GeneratingPanel({
       <CardContent className="flex items-center gap-4 p-0">
         <output aria-label="Generating content" className="flex items-center gap-3">
           <ICONS.spinner className="text-accent size-5 animate-spin" aria-hidden />
-          <span className="text-foreground text-sm font-medium">Generating your content…</span>
+          <span className={textRole('bodyStrong')}>Generating your content…</span>
         </output>
         <div className="ml-auto">
           <Button
@@ -337,7 +338,7 @@ export function GenerationErrorPanel({
       <CardContent className="flex flex-col gap-4 p-0">
         <div role="alert" className="text-danger-text flex items-start gap-2.5 text-sm">
           <ICONS.warning className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span className="leading-relaxed font-medium">
+          <span className={textRole('emphasis', 'leading-relaxed')}>
             {mutationError
               ? actionErrorMessage(mutationError)
               : 'Generation failed. You can edit your instruction and try again.'}

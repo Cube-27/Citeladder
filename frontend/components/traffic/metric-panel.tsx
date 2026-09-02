@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import type { TrendPoint } from '@/components/ui/trend-chart';
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
 
 const PLOT = {
   fallbackWidth: 320,
@@ -149,7 +150,7 @@ export function MetricPanel({
   return (
     <figure className={cn('grid gap-1', className)} data-testid={testId}>
       <figcaption className="grid gap-0.5">
-        <span className="text-foreground text-xs font-medium">{title}</span>
+        <span className={textRole('label')}>{title}</span>
         {description ? <span className="text-muted text-xs">{description}</span> : null}
       </figcaption>
 
@@ -350,11 +351,11 @@ function HoverTooltip({
   return (
     <div
       aria-hidden="true"
-      className="border-border-subtle bg-elevated text-foreground pointer-events-none absolute top-0 rounded-sm border px-2 py-1 text-xs"
+      className="border-border-subtle bg-elevated text-foreground pointer-events-none absolute top-0 rounded-[var(--radius-control)] border px-2 py-1 text-xs"
       style={{ left: `${(point.x / plotWidth) * 100}%` }}
     >
       <span className="text-muted">{point.label}</span>{' '}
-      <span className="font-mono font-medium tabular-nums">{formatValue(point.value)}</span>
+      <span className={textRole('emphasis', 'font-mono tabular-nums')}>{formatValue(point.value)}</span>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
   type NavGroup,
   type NavItem,
 } from './nav-items';
+import { textRole } from '@/components/ui/typography';
 
 function NavLink({
   item,
@@ -34,8 +35,8 @@ function NavLink({
       className={cn(
         'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 text-sm transition-colors duration-150',
         active
-          ? 'bg-accent-soft text-accent-text font-medium'
-          : 'text-secondary hover:bg-active hover:text-foreground font-normal',
+          ? textRole('emphasis', 'bg-accent-soft text-accent-text')
+          : 'text-secondary hover:bg-active hover:text-foreground',
       )}
     >
       <Icon className={cn('size-4 shrink-0', active ? 'text-accent' : 'text-subtle')} aria-hidden />
@@ -64,9 +65,9 @@ function StationLinks({
                 onFocus={() => onIntent(item.href)}
                 aria-current={isNavItemActive(pathname, searchParams, item) ? 'page' : undefined}
                 className={cn(
-                  'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium',
+                  textRole('bodyStrong', 'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3'),
                   isNavItemActive(pathname, searchParams, item)
-                    ? 'bg-accent-soft text-accent-text font-medium'
+                    ? textRole('emphasis', 'bg-accent-soft text-accent-text')
                     : 'text-muted hover:bg-active hover:text-foreground',
                 )}
               >
@@ -141,7 +142,7 @@ export function MobilePrimaryNavigation() {
             onFocus={() => onIntent(item.href)}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'text-xs flex min-w-0 flex-col items-center justify-center gap-1 font-medium',
+              textRole('label', 'flex min-w-0 flex-col items-center justify-center gap-1'),
               active ? 'text-accent-text' : 'text-muted hover:text-accent-text',
             )}
           >

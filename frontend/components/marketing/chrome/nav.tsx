@@ -283,7 +283,7 @@ function NavActions({
       )}
       <button
         type="button"
-        className="border-border-subtle text-foreground grid size-10 place-items-center rounded-md border lg:hidden"
+        className="border-border-subtle text-foreground grid size-10 place-items-center rounded-[var(--radius-control)] border lg:hidden"
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={mobileOpen}
         aria-controls="mobile-menu"

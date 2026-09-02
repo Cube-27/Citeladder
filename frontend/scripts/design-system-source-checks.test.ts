@@ -90,7 +90,19 @@ describe('productUiSourceViolations', () => {
   it('rejects retired product typography, palette utilities, and feature elevation', () => {
     const source =
       '<div className="text-2xs font-semibold bg-indigo-500 shadow-card">Example</div>';
-    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(3);
+    // Retired size, retired weight, raw palette, feature elevation — and the
+    // weight is also a call-site weight decision, which is its own violation.
+    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(4);
+  });
+
+  it('rejects a font weight chosen at a call site', () => {
+    const source = '<span className="text-sm font-medium">Example</span>';
+    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(1);
+  });
+
+  it('lets components/ui own font weight, since the roles live there', () => {
+    const source = '<span className="text-sm font-medium">Example</span>';
+    expect(productUiSourceViolations(source, 'components/ui/example.tsx', true)).toEqual([]);
   });
 
   it('rejects website typography inside product UI', () => {

@@ -9,6 +9,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
+import { textRole } from '@/components/ui/typography';
 
 type Summary = SiteHealthDashboard['score_summary'];
 type MetricContext = {
@@ -207,7 +208,7 @@ function OverviewMetricCard({
       <div className="flex items-start justify-between gap-3">
         <div className="grid gap-1">
           <Icon aria-hidden className="text-subtle size-4" />
-          <p className="text-foreground text-sm font-medium">{title}</p>
+          <p className={textRole('bodyStrong')}>{title}</p>
         </div>
         {value === null ? (
           <UnavailableValue state="not_measured" />

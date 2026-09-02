@@ -14,6 +14,7 @@ import {
   isTerminalContentStatus,
   useContentGenerations,
 } from '@/lib/content/use-content-generations';
+import { textRole } from '@/components/ui/typography';
 
 const STATUS_BADGE: Record<ContentGenerationStatus, RunStatusValue> = {
   queued: 'queued',
@@ -182,7 +183,7 @@ function GenerationHistory({
   return (
     <div data-component-id="content-history" className="min-w-0">
       {loading ? (
-        <Skeleton className="h-24 w-full rounded-sm" />
+        <Skeleton className="h-24 w-full rounded-[var(--radius-control)]" />
       ) : (
         <HistoryItems
           items={items}
@@ -224,13 +225,13 @@ function HistoryItems({
             type="button"
             onClick={() => onSelect(item.id)}
             className={cn(
-              'focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-3 rounded-sm border px-3.5 py-3 text-left text-sm transition-colors',
+              'focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-control)] border px-3.5 py-3 text-left text-sm transition-colors',
               item.id === selectedId
-                ? 'border-accent-border bg-accent-soft font-medium'
+                ? 'border-accent-border bg-accent-soft'
                 : 'border-border',
             )}
           >
-            <span className="text-foreground min-w-0 flex-1 truncate font-medium">
+            <span className={textRole('emphasis', 'text-foreground min-w-0 flex-1 truncate')}>
               {item.instruction_preview || 'Untitled generation'}
             </span>
             <Badge variant="run-status" value={STATUS_BADGE[item.status]}>

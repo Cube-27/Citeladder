@@ -81,7 +81,7 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
       ) : null}
 
       {action ? (
-        <div className="border-accent-border bg-accent-subtle rounded-md border-l px-3 py-2.5">
+        <div className="border-accent-border bg-accent-subtle rounded-[var(--radius-control)] border-l px-3 py-2.5">
           <span className="text-muted text-xs">Suggested next action</span>
           <p className="text-foreground text-sm">{action}</p>
         </div>

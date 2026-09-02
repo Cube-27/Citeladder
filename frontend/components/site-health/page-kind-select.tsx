@@ -32,7 +32,7 @@ export function PageKindSelect({
         aria-label="Filter by page kind"
         className={cn(
           inputClasses,
-          'flex w-44 cursor-pointer items-center justify-between text-left font-normal select-none',
+          'flex w-44 cursor-pointer items-center justify-between text-left select-none',
         )}
       >
         <span className="truncate">{currentLabel}</span>

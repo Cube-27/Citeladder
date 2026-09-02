@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ContentSkillView } from '@/lib/api/content';
+import { textRole } from '@/components/ui/typography';
 
 /** Display order and copy for the channel groups the catalog reports. */
 const CHANNEL_LABELS: Readonly<Record<string, string>> = {
@@ -64,7 +65,7 @@ export function SkillPicker({
 
   return (
     <div className="grid gap-2" aria-label="Content format">
-      <span className="text-secondary text-sm font-medium">Format</span>
+      <span className={textRole('bodyStrong')}>Format</span>
       <div className="flex flex-wrap gap-2">
         {groups.map((group) => {
           const active = selectedSkill?.channel === group.channel;
@@ -82,7 +83,7 @@ export function SkillPicker({
                 >
                   <span>{group.label}</span>
                   {active ? (
-                    <span className="max-w-44 truncate font-normal">{selectedSkill.label}</span>
+                    <span className={textRole('body', 'max-w-44 truncate')}>{selectedSkill.label}</span>
                   ) : null}
                   <ChevronDown className="size-3.5 shrink-0" aria-hidden />
                 </Button>
@@ -98,7 +99,7 @@ export function SkillPicker({
                       className="items-start py-2.5"
                     >
                       <span className="grid min-w-0 gap-0.5">
-                        <span className="font-medium">{skill.label}</span>
+                        <span className={textRole('emphasis')}>{skill.label}</span>
                         <span className="text-secondary text-xs leading-relaxed">
                           {skill.description}
                         </span>

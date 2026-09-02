@@ -29,6 +29,7 @@ import {
 import { formatWindowDate } from '@/lib/format';
 import { useProjectContext } from '@/lib/project/project-context';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { textRole } from '@/components/ui/typography';
 
 const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
@@ -51,12 +52,12 @@ function DemandProjectionSkeleton() {
       {/* Summary Cards Skeleton */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {Array.from({ length: 5 }, (_, i) => (
-          <Skeleton key={i} className="h-24 rounded-md" />
+          <Skeleton key={i} className="h-24 rounded-[var(--radius-control)]" />
         ))}
       </div>
 
       {/* Detector Bar Skeleton */}
-      <Skeleton className="h-12 rounded-md" />
+      <Skeleton className="h-12 rounded-[var(--radius-control)]" />
 
       {/* Filter Bar Skeleton */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -71,7 +72,7 @@ function DemandProjectionSkeleton() {
       {/* Signal Cards Skeleton */}
       <div className="grid gap-3">
         {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-40 rounded-md" />
+          <Skeleton key={i} className="h-40 rounded-[var(--radius-control)]" />
         ))}
       </div>
     </div>
@@ -267,7 +268,7 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
       ) : snapshot.signals.length === 0 ? (
         <div className="py-[var(--empty-state-padding)] text-center">
           <Sparkles className="text-muted/60 mx-auto size-8" />
-          <h3 className="text-foreground mt-2 text-sm font-medium">
+          <h3 className={textRole('bodyStrong', 'mt-2')}>
             No qualifying search gaps observed
           </h3>
           <p className="text-muted mt-1 text-xs">
@@ -278,7 +279,7 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
       ) : (
         <div className="py-[var(--empty-state-padding)] text-center">
           <Search className="text-muted/60 mx-auto size-8" />
-          <h3 className="text-foreground mt-2 text-sm font-medium">No signals match your filter</h3>
+          <h3 className={textRole('bodyStrong', 'mt-2')}>No signals match your filter</h3>
           <p className="text-muted mt-1 text-xs">
             Try choosing a different filter tab or clearing your search term.
           </p>

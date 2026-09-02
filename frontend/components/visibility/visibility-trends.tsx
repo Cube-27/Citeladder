@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendChart } from '@/components/ui/trend-chart';
-import { displayHeadingLgClasses } from '@/components/ui/typography';
+import { displayHeadingLgClasses, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import { NO_RANKINGS_MESSAGE, RankingRowsTable } from '@/components/visibility/ranking-rows';
@@ -202,7 +202,7 @@ function StatCard({ stat }: Readonly<{ stat: TrendStat }>) {
           <span className={cn('tabular-nums', valueClass)}>{stat.value}</span>
         )
       }
-      detail={<span className={cn('font-medium tabular-nums', deltaClass)}>{stat.delta}</span>}
+      detail={<span className={cn(textRole('emphasis', 'tabular-nums'), deltaClass)}>{stat.delta}</span>}
     />
   );
 }
@@ -247,7 +247,7 @@ function TrendCard({
               <span key={y}>{y}</span>
             ))}
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="grid gap-1 min-w-0 flex-1">
             <TrendChart
               label={title}
               data={chartPoints}
@@ -256,7 +256,7 @@ function TrendCard({
               className="h-45 w-full"
             />
             {chartPoints.length > 1 ? (
-              <div className="text-muted mt-1 flex justify-between font-mono text-xs" aria-hidden>
+              <div className="text-muted flex justify-between font-mono text-xs" aria-hidden>
                 <span>{firstLabel}</span>
                 <span>{lastLabel}</span>
               </div>

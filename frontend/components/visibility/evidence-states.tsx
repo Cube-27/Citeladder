@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IconChip } from '@/components/ui/icon-chip';
-import { displayHeadingLgClasses } from '@/components/ui/typography';
+import { displayHeadingLgClasses, textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 
 /**
@@ -157,7 +157,7 @@ export function ExecutionHeader({
         {item.repetition > 0 ? ` · repeat ${item.repetition + 1}` : ''}
       </p>
       <span className="text-muted flex items-center gap-2 text-xs">
-        <span className="text-secondary font-medium">{engineLabel(item.logical_engine)}</span>
+        <span className={textRole('emphasis', 'text-secondary')}>{engineLabel(item.logical_engine)}</span>
         <span>{item.transport_model}</span>
         {trailing}
       </span>
@@ -168,9 +168,9 @@ export function ExecutionHeader({
 /** Collapsed task/analysis/artifact ids for one execution. */
 export function ProvenanceDisclosure({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   return (
-    <details className="text-muted text-xs">
-      <summary className="focus-ring w-fit cursor-pointer rounded-sm">Provenance</summary>
-      <p className="mt-1 font-mono">{provenanceSummary(item)}</p>
+    <details className="grid gap-1 text-muted text-xs">
+      <summary className="focus-ring w-fit cursor-pointer rounded-[var(--radius-control)]">Provenance</summary>
+      <p className="font-mono">{provenanceSummary(item)}</p>
     </details>
   );
 }

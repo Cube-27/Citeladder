@@ -47,6 +47,12 @@ const TEXT_ROLES = {
    * change is the meaning. 12/400, tabular.
    */
   delta: 'text-xs font-normal tabular-nums',
+  /**
+   * A value or name inside a row that owns its own size — a label/value pair,
+   * a table cell, a list line. Sets weight and ink only, so it never fights the
+   * size it inherits. Pass a tone to override the ink.
+   */
+  emphasis: 'font-medium text-foreground',
 } as const;
 
 export type TextRole = keyof typeof TEXT_ROLES;

@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { CopyButton } from '@/components/ui/copy-button';
 import type { ContentFeedbackReason, ContentGenerationDetail } from '@/lib/api/types';
 import { ContentMarkdown } from '@/lib/content/markdown';
+import { textRole } from '@/components/ui/typography';
 
 export function GenerationResult({
   detail,
@@ -35,7 +36,7 @@ export function GenerationResult({
     <Card data-component-id="content-result-card" className="min-w-0 p-[var(--card-padding)]">
       <CardContent className="flex flex-col gap-[var(--workspace-gap)] p-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-foreground text-xl font-medium tracking-tight">
+          <h2 className={textRole('sectionTitle', 'tracking-tight')}>
             Generated content
           </h2>
           <DraftActionButtons
@@ -168,7 +169,7 @@ function ResultActions({
             </Button>
           </>
         ) : (
-          <span className="text-secondary text-sm font-medium">
+          <span className={textRole('bodyStrong')}>
             {detail.feedback === 'accepted' ? 'Marked helpful' : 'Marked not useful'}
           </span>
         )}
@@ -248,7 +249,7 @@ function FeedbackReasonPicker({
       data-component-id="content-feedback-reasons"
       className="border-border flex flex-wrap items-center gap-2 border-t pt-4"
     >
-      <span className="text-secondary text-sm font-medium">Why?</span>
+      <span className={textRole('bodyStrong')}>Why?</span>
       {FEEDBACK_REASONS.map((reason) => (
         <Button
           key={reason.value}

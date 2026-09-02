@@ -11,6 +11,7 @@ import {
 import type { useEngineConnection } from '@/lib/providers/use-engine-connection';
 
 import { EngineConnectionFields } from './engine-connection-fields';
+import { textRole } from '@/components/ui/typography';
 
 type ConnectionState = ReturnType<typeof useEngineConnection>;
 
@@ -55,10 +56,10 @@ function ConnectionError({ model }: Readonly<{ model: EngineCardModel }>) {
 function RouteDetails({ state }: Readonly<{ state: ConnectionState }>) {
   if (!state.route) return null;
   return (
-    <div className="bg-background-alt border-border-subtle grid gap-1.5 rounded-md border p-3">
+    <div className="bg-background-alt border-border-subtle grid gap-1.5 rounded-[var(--radius-control)] border p-3">
       <div className="flex items-center justify-between">
-        <span className="text-muted text-xs font-medium">Route</span>
-        <span className="text-foreground text-xs font-medium">{state.route.label}</span>
+        <span className={textRole('label')}>Route</span>
+        <span className={textRole('label')}>{state.route.label}</span>
       </div>
       <div className="text-muted grid gap-1 font-mono text-xs">
         <div className="flex items-center justify-between">
@@ -113,7 +114,7 @@ export function EngineCardView({
               websiteUrl={ENGINE_DOMAINS[model.logical_engine]}
               size="sm"
             />
-            <h3 className="text-foreground text-base font-medium">{model.label}</h3>
+            <h3 className={textRole('objectTitle')}>{model.label}</h3>
           </div>
           <ConnectionStateBadge model={model} />
         </CardHeader>

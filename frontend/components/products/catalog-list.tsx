@@ -14,6 +14,7 @@ import { targetKey } from '@/lib/products/use-commerce-target';
 import { cn } from '@/lib/utils';
 
 import type { CommerceQueries } from './commerce-queries';
+import { textRole } from '@/components/ui/typography';
 
 export type CatalogEntry = {
   key: string;
@@ -181,7 +182,7 @@ function CatalogTree({
         />
         <span className="text-muted text-xs tabular-nums">{shownKeys.length} shown</span>
       </div>
-      <div className="text-muted flex items-center justify-between px-2 text-xs font-medium">
+      <div className={textRole('label', 'flex items-center justify-between px-2')}>
         <span>Categories</span>
         <span className="tabular-nums">{categories.length}</span>
       </div>
@@ -235,7 +236,7 @@ function CatalogTree({
       </ul>
       {uncategorized.length ? (
         <div className="grid min-w-0 gap-1">
-          <div className="text-muted px-2 text-xs font-medium">Uncategorized</div>
+          <div className={textRole('label', 'px-2')}>Uncategorized</div>
           <ul className="grid min-w-0">
             {uncategorized.map((product) => (
               <CatalogRow
@@ -308,7 +309,7 @@ export function CatalogList({
     <div className="grid min-w-0 content-start">
       <div
         data-testid="catalog-search-controls"
-        className="border-border-subtle bg-panel sticky top-0 z-20 border-b p-[var(--card-padding)]"
+        className="grid gap-2 border-border-subtle bg-panel sticky top-0 z-20 border-b p-[var(--card-padding)]"
       >
         <SearchField
           aria-label="Search the catalog"
@@ -316,7 +317,7 @@ export function CatalogList({
           value={search}
           onValueChange={setSearch}
         />
-        <p className="text-muted mt-2 text-xs">
+        <p className="text-muted text-xs">
           Check items for bulk actions. Select a name to view its details.
         </p>
       </div>

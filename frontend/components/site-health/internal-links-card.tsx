@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageDetail } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
@@ -39,7 +39,7 @@ export function InternalLinksCard({
     <Card className="min-w-0 overflow-hidden">
       <CardContent className="grid gap-4">
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-          <h2 className="text-foreground text-base font-medium">Internal Links</h2>
+          <h2 className={textRole('objectTitle')}>Internal Links</h2>
           <span className="text-muted shrink-0 text-xs">
             Counted across {links.source_page_count} crawled page
             {links.source_page_count === 1 ? '' : 's'}
@@ -49,7 +49,7 @@ export function InternalLinksCard({
           {metrics.map((metric) => (
             <div key={metric.label} className="grid gap-0.5">
               <Label>{metric.label}</Label>
-              <dd className="mono text-foreground text-sm font-medium">
+              <dd className={textRole('bodyStrong', 'mono')}>
                 {metric.value === PLACEHOLDER ? (
                   <UnavailableValue state="not_measured" />
                 ) : (

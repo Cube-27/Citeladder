@@ -19,6 +19,7 @@ import {
 import { queryKeys } from '@/lib/api/query-keys';
 import { formatShortDate, formatUtcTimestamp } from '@/lib/format';
 import { isActiveSyncRun, SYNC_RUN_BADGE, SYNC_RUN_POLL_MS } from '@/lib/integrations/sync-runs';
+import { textRole } from '@/components/ui/typography';
 
 type ConnectionMutation = {
   isPending: boolean;
@@ -74,12 +75,12 @@ function ConnectionActions({
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <span
           aria-hidden
-          className="bg-well border-border-subtle text-secondary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border"
+          className="bg-well border-border-subtle text-secondary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] border"
         >
           <Icon className="size-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-foreground truncate text-sm font-medium">{label}</div>
+          <div className={textRole('bodyStrong', 'truncate')}>{label}</div>
           <PropertyPicker connection={connection} disabled={busy} />
         </div>
       </div>
@@ -210,15 +211,15 @@ function DisconnectDialog({
         {lastConnection ? (
           <>
             <p className="text-secondary text-sm">
-              This is the <strong className="text-foreground font-medium">last connection</strong>{' '}
+              This is the <strong>last connection</strong>{' '}
               on the {familyTitle} OAuth grant, so disconnecting it also{' '}
-              <strong className="text-foreground font-medium">revokes the grant</strong>:
+              <strong>revokes the grant</strong>:
               CiteLadder&rsquo;s access at {familyTitle} is removed and the stored tokens are
               deleted. Previously imported {label} data is kept.
             </p>
             <p className="text-secondary text-sm">
               If {familyTitle}&nbsp;can&rsquo;t be reached to complete the revocation, the grant
-              moves to <strong className="text-foreground font-medium">pending revocation</strong>{' '}
+              moves to <strong>pending revocation</strong>{' '}
               and CiteLadder retries in the background.
             </p>
           </>
@@ -230,7 +231,7 @@ function DisconnectDialog({
               connection. Previously imported data is kept.
             </p>
             <p className="text-secondary text-sm">
-              <strong className="text-foreground font-medium">
+              <strong>
                 {siblings.map((sibling) => PROVIDER_META[sibling.provider].label).join(' and ')}{' '}
                 stays connected
               </strong>
@@ -279,7 +280,7 @@ function ConnectionRowView({
 
   return (
     <div
-      className="bg-panel border-border-subtle rounded-md border p-3.5 shadow-2xs"
+      className="bg-panel border-border-subtle rounded-[var(--radius-control)] border p-3.5 shadow-2xs"
       data-testid={`connection-row-${connection.provider}`}
     >
       <ConnectionActions
