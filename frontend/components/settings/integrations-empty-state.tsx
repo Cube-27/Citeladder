@@ -9,9 +9,8 @@ import { assignLocation } from '@/lib/navigate';
 
 /**
  * Empty state for the Settings → Integrations tab when the workspace has no
- * connections yet (mockup `integrations-settings-empty-first-run-*.html`), in
- * the `VisibilityEmptyState` pattern (mono eyebrow + IconChip + display
- * heading + CTAs).
+ * connections yet, in the shared `EmptyState` shape (icon beside the heading,
+ * one line of copy, then the CTAs).
  *
  * Both CTAs are full-page navigations to the same-origin OAuth start
  * endpoints (302s — never apiClient fetches): one Google consent links Search

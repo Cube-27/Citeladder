@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { LogoMark } from '@/components/ui/logo-mark';
 import { Menu, X } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import Link from 'next/link';
@@ -14,7 +15,6 @@ import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
-import { Wordmark } from '../primitives/wordmark';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
 
@@ -208,10 +208,10 @@ export function MarketingNav() {
       <nav
         ref={navRef}
         aria-label="Main navigation"
-        className="px-6-phone md:px-6-tablet mx-auto flex h-16 w-full max-w-7xl items-center gap-5 xl:px-6"
+        className="mx-auto flex h-16 w-full max-w-7xl items-center gap-5 px-[var(--site-gutter)]"
       >
         <Link href="/" aria-label="CiteLadder home" className="shrink-0">
-          <Wordmark />
+          <LogoMark size={24} />
         </Link>
 
         <DesktopNavigation

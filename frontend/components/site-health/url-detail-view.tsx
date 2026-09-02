@@ -356,9 +356,7 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
     <Card>
       <CardContent className="grid gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground text-base font-medium tracking-[-0.015em]">
-            Delivery Metrics
-          </h2>
+          <h2 className="text-foreground text-base font-medium">Delivery Metrics</h2>
           <span className="text-muted text-xs">Static HTTP-level measurements</span>
         </div>
         <dl className="grid gap-4 sm:grid-cols-4">
@@ -386,9 +384,7 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
     <Card>
       <CardContent className="grid gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground text-base font-medium tracking-[-0.015em]">
-            All Issues ({issues.length})
-          </h2>
+          <h2 className="text-foreground text-base font-medium">All Issues ({issues.length})</h2>
           <span className="text-muted text-xs">Sorted by severity</span>
         </div>
         {ordered.length === 0 ? (

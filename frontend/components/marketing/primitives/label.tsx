@@ -19,7 +19,7 @@ export function Meta({
 }
 
 /**
- * The eyebrow / pre-title (docs/website-design-system.md §5.5): Text XS Bold
+ * The eyebrow / pre-title (docs/design.md §5.5): Text XS Bold
  * in slate, optionally led by a 6px accent dot at a 10px gap. It sits 10–20px
  * above the heading, which is the SectionHeader gap — never spaced by the call
  * site. The dot is the only decorative use of the accent on paper; everywhere
@@ -37,7 +37,7 @@ export function Eyebrow({
   return (
     <div
       className={cn(
-        'website-label text-muted inline-flex items-center gap-2 font-medium',
+        'website-eyebrow text-muted inline-flex items-center gap-2 font-medium',
         className,
       )}
     >

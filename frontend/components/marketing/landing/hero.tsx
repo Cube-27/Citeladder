@@ -4,6 +4,7 @@ import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import { ButtonLink } from '../primitives/button';
+import { Eyebrow } from '../primitives/label';
 import { Container } from '../primitives/section';
 import { HeroEntrance } from './hero-entrance';
 import { RotatingEngineLogos } from './rotating-engine-logos';
@@ -18,23 +19,16 @@ import { RotatingEngineLogos } from './rotating-engine-logos';
 export function Hero() {
   const { hook } = LANDING_CONTENT;
   return (
-    <header className="bg-background-alt relative -mt-16 overflow-hidden pt-16">
+    <header className="bg-background-alt border-border-subtle relative -mt-16 overflow-hidden border-b pt-16">
       <Container className="relative z-1 pt-20 pb-18 md:pt-32 md:pb-24">
-        <HeroEntrance className="mx-auto w-full max-w-5xl text-center">
-          <div className="flex justify-center">
-            <div className="bg-accent-subtle text-accent-text border-accent-border inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-medium">
-              <span className="bg-accent size-1.5 rounded-full" aria-hidden />
-              <span>{hook.eyebrow}</span>
-            </div>
-          </div>
-          <h1 className="website-hero-display text-foreground mx-auto mt-6 max-w-[24ch] text-center text-balance">
+        <HeroEntrance className="w-full max-w-5xl">
+          <Eyebrow>{hook.eyebrow}</Eyebrow>
+          <h1 className="website-hero-display text-foreground mt-5 max-w-[22ch] text-balance">
             {hook.title}{' '}
             <em className="text-accent-text font-medium not-italic">{hook.titleAccent}</em>
           </h1>
-          <p className="website-lead text-muted mx-auto mt-6 max-w-[64ch] text-center">
-            {hook.body}
-          </p>
-          <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row sm:items-center">
+          <p className="website-lead text-muted mt-6 max-w-[58ch]">{hook.body}</p>
+          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
             <ButtonLink href={DEMO_HREF} variant="primary" className="w-full sm:w-auto">
               {hook.primaryCta}
               <ArrowRight aria-hidden />
@@ -47,7 +41,7 @@ export function Hero() {
               {hook.secondaryCta}
             </ButtonLink>
           </div>
-          <RotatingEngineLogos className="mx-auto mt-10 max-w-2xl" />
+          <RotatingEngineLogos className="mt-12 max-w-2xl" />
         </HeroEntrance>
       </Container>
     </header>

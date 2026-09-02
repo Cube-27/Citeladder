@@ -457,21 +457,21 @@ export function productContractViolations(root) {
     ['--modal-padding', '20px'],
     ['--control-height', '32px'],
     ['--control-height-lg', '36px'],
-    ['--radius-control', '10px'],
-    ['--radius-card', '16px'],
-    ['--radius-overlay', '16px'],
-    ['--color-background', ['#f6', 'f8fc'].join('')],
-    ['--color-background-alt', ['#ea', 'f1fb'].join('')],
-    ['--color-panel-tonal', ['#ed', 'f2fa'].join('')],
-    ['--color-well', ['#ea', 'f1fb'].join('')],
-    ['--color-active', ['#d3', 'e3fd'].join('')],
-    ['--color-sidebar', ['#ea', 'f1fb'].join('')],
-    ['--color-action', ['#14', '213d'].join('')],
-    ['--color-accent', ['#55', '42f6'].join('')],
-    ['--color-focus', ['#55', '42f6'].join('')],
-    ['--color-focus-ring', ['#c1', 'b8ff'].join('')],
-    ['--color-selection', ['#de', 'd9ff'].join('')],
-    ['--color-selection-fg', ['#14', '213d'].join('')],
+    ['--radius-control', '8px'],
+    ['--radius-card', '10px'],
+    ['--radius-overlay', '12px'],
+    ['--color-background', ['#fa', 'faf8'].join('')],
+    ['--color-background-alt', ['#f4', 'f4f1'].join('')],
+    ['--color-panel-tonal', ['#f4', 'f4f1'].join('')],
+    ['--color-well', ['#f4', 'f4f1'].join('')],
+    ['--color-active', ['#ef', 'efeb'].join('')],
+    ['--color-sidebar', ['#fa', 'faf8'].join('')],
+    ['--color-action', ['#16', '161a'].join('')],
+    ['--color-accent', ['#1b', '44e0'].join('')],
+    ['--color-focus', ['#1b', '44e0'].join('')],
+    ['--color-focus-ring', ['#c7', 'd4fb'].join('')],
+    ['--color-selection', ['#c7', 'd4fb'].join('')],
+    ['--color-selection-fg', ['#16', '161a'].join('')],
   ]);
   for (const [token, value] of tokenContract) {
     if (!tokenDeclaration(css, token, value)) {
@@ -481,8 +481,10 @@ export function productContractViolations(root) {
   if (/\.website-type\b/.test(css + websiteCss)) {
     violations.push('app/globals.css: retired .website-type palette boundary must not return');
   }
-  if (/\.product-app\s*\{[^}]*--color-[\w-]+\s*:/s.test(css)) {
-    violations.push('app/globals.css: product-app must not override the shared surface palette');
+  // The class itself is gone from the shell, so guarding only the palette-override
+  // shape would be an assertion that can never fire. Keep the namespace retired.
+  if (/\.product-app\b/.test(css)) {
+    violations.push('app/globals.css: the retired product-app palette scope must not return');
   }
 
   const layout = readFileSync(join(root, 'app', 'layout.tsx'), 'utf8');
@@ -509,10 +511,9 @@ export function productContractViolations(root) {
     violations.push('components/ui/table.tsx: table headers must be 12px and single-line');
   }
   const eyebrow = readFileSync(join(root, 'components', 'ui', 'eyebrow.tsx'), 'utf8');
-  if (
-    !eyebrow.includes("export const eyebrowClasses = 'font-sans text-xs font-medium text-muted';")
-  ) {
-    violations.push('components/ui/eyebrow.tsx: product eyebrows must be sentence case');
+  const eyebrowRecipe = eyebrow.match(/export const eyebrowClasses =\s*'([^']+)'/)?.[1] ?? '';
+  if (eyebrowRecipe !== 'font-sans text-xs font-medium tracking-[0.06em] text-muted uppercase') {
+    violations.push('components/ui/eyebrow.tsx: product meta labels must be one uppercase recipe');
   }
   const card = readFileSync(join(root, 'components', 'ui', 'card-variants.ts'), 'utf8');
   if (/shadow-|\bborder\b/.test(card.match(/cva\(([^;]+)\)/s)?.[1] ?? '')) {

@@ -11,23 +11,23 @@
 
   /* Palette layer. Product code consumes the semantic aliases below. */
   --color-gray-0: #ffffff;
-  --color-gray-50: #faf9f6;
-  --color-gray-100: #f7f6f2;
-  --color-gray-200: #f1f0eb;
-  --color-gray-300: #e7e5de;
-  --color-gray-400: #c9c7c0;
-  --color-gray-500: #7b8494;
-  --color-gray-600: #536176;
-  --color-gray-700: #475569;
-  --color-gray-800: #253352;
-  --color-gray-900: #14213d;
-  --color-indigo-50: #f8f7ff;
-  --color-indigo-100: #f0efff;
-  --color-indigo-200: #ded9ff;
-  --color-indigo-300: #c1b8ff;
-  --color-indigo-500: #6b5cff;
-  --color-indigo-600: #5542f6;
-  --color-indigo-700: #4033c7;
+  --color-gray-50: #fafaf8;
+  --color-gray-100: #f4f4f1;
+  --color-gray-200: #efefeb;
+  --color-gray-300: #e4e4df;
+  --color-gray-400: #cfcfc9;
+  --color-gray-500: #9a9aa0;
+  --color-gray-600: #6b6b72;
+  --color-gray-700: #5c5c63;
+  --color-gray-800: #3a3a40;
+  --color-gray-900: #16161a;
+  --color-indigo-50: #f2f5fe;
+  --color-indigo-100: #e4eafd;
+  --color-indigo-200: #c7d4fb;
+  --color-indigo-300: #9fb4f7;
+  --color-indigo-500: #3a63ea;
+  --color-indigo-600: #1b44e0;
+  --color-indigo-700: #1a3fd0;
   --color-cyan-50: #edf7f7;
   --color-cyan-100: #ddf1f2;
   --color-cyan-500: #00a9c5;
@@ -45,47 +45,47 @@
   --color-amber-500: #f59e0b;
   --color-amber-700: #b45309;
 
-  --color-background: #f6f8fc;
-  --color-background-alt: #eaf1fb;
+  --color-background: #fafaf8;
+  --color-background-alt: #f4f4f1;
   --color-panel: #ffffff;
-  --color-panel-tonal: #edf2fa;
+  --color-panel-tonal: #f4f4f1;
   --color-elevated: #ffffff;
-  --color-well: #eaf1fb;
-  --color-active: #d3e3fd;
+  --color-well: #f4f4f1;
+  --color-active: #efefeb;
   --color-input: #ffffff;
-  --color-sidebar: #eaf1fb;
-  --color-surface-inverse: #14213d;
+  --color-sidebar: #fafaf8;
+  --color-surface-inverse: #16161a;
 
-  --color-border: #d7deea;
-  --color-border-subtle: #e2e8f2;
-  --color-border-strong: #8a96a8;
-  --color-border-bold: #6d788b;
+  --color-border: #ddddd6;
+  --color-border-subtle: #eae9e4;
+  --color-border-strong: #b6b6ae;
+  --color-border-bold: #8c8c84;
 
-  --color-foreground: #14213d;
-  --color-secondary: #475569;
-  --color-muted: #536176;
-  --color-subtle: #536176;
-  --color-disabled: #7b8494;
+  --color-foreground: #16161a;
+  --color-secondary: #3a3a40;
+  --color-muted: #5c5c63;
+  --color-subtle: #6b6b72;
+  --color-disabled: #9a9aa0;
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
-  --color-link: #5542f6;
+  --color-link: #1a3fd0;
 
-  /* Analytical selection and focus. Primary actions use navy, below. */
-  --color-accent: #5542f6;
-  --color-accent-hover: #4033c7;
-  --color-accent-active: #4033c7;
+  /* Analytical selection and focus. Primary actions use ink, below. */
+  --color-accent: #1b44e0;
+  --color-accent-hover: #1a3fd0;
+  --color-accent-active: #1a3fd0;
   --color-accent-fg: #ffffff;
-  --color-accent-subtle: #f0efff;
-  --color-accent-soft: #f8f7ff;
-  --color-accent-border: #ded9ff;
-  --color-accent-text: #4033c7;
-  --color-focus: #5542f6;
-  --color-focus-ring: #c1b8ff;
-  --color-selection: #ded9ff;
-  --color-selection-fg: #14213d;
-  --color-action: #14213d;
-  --color-action-hover: #253352;
-  --color-action-active: #14213d;
+  --color-accent-subtle: #e4eafd;
+  --color-accent-soft: #f2f5fe;
+  --color-accent-border: #c7d4fb;
+  --color-accent-text: #1a3fd0;
+  --color-focus: #1b44e0;
+  --color-focus-ring: #c7d4fb;
+  --color-selection: #c7d4fb;
+  --color-selection-fg: #16161a;
+  --color-action: #16161a;
+  --color-action-hover: #2c2c32;
+  --color-action-active: #0b0b0e;
   --color-action-fg: #ffffff;
 
   /* Answer-engine brand marks (functional identity, marketing engine chips). */
@@ -123,48 +123,48 @@
   --color-info-bg: #edf7f7;
   --color-info-border: #ddf1f2;
   --color-info-text: #155e75;
-  --color-neutral-bg: #edf2fa;
+  --color-neutral-bg: #f4f4f1;
 
   --color-sentiment-positive: #9acd32;
   --color-sentiment-positive-bg: #f4f8ec;
   --color-sentiment-positive-text: #3f6212;
-  --color-sentiment-neutral: #7b8494;
-  --color-sentiment-neutral-bg: #edf2fa;
-  --color-sentiment-neutral-text: #475569;
+  --color-sentiment-neutral: #6b6b72;
+  --color-sentiment-neutral-bg: #f4f4f1;
+  --color-sentiment-neutral-text: #3a3a40;
   --color-sentiment-negative: #ff6e56;
   --color-sentiment-negative-bg: #fff3f0;
   --color-sentiment-negative-text: #9a3412;
 
   /* Owned evidence tracks selection indigo; competitor/third-party stay distinct. */
-  --color-citation-owned: #5542f6;
-  --color-citation-owned-bg: #f0efff;
-  --color-citation-owned-border: #ded9ff;
-  --color-citation-owned-text: #4033c7;
+  --color-citation-owned: #1b44e0;
+  --color-citation-owned-bg: #e4eafd;
+  --color-citation-owned-border: #c7d4fb;
+  --color-citation-owned-text: #1a3fd0;
   --color-citation-competitor: #00a9c5;
   --color-citation-competitor-bg: #edf7f7;
   --color-citation-competitor-border: #ddf1f2;
   --color-citation-competitor-text: #155e75;
-  --color-citation-third-party: #7b8494;
-  --color-citation-third-party-bg: #edf2fa;
-  --color-citation-third-party-border: #e7e5de;
-  --color-citation-third-party-text: #475569;
+  --color-citation-third-party: #6b6b72;
+  --color-citation-third-party-bg: #f4f4f1;
+  --color-citation-third-party-border: #ddddd6;
+  --color-citation-third-party-text: #3a3a40;
 
-  --color-run-draft: #7b8494;
-  --color-run-draft-bg: #edf2fa;
-  --color-run-queued: #7b8494;
-  --color-run-queued-bg: #edf2fa;
+  --color-run-draft: #6b6b72;
+  --color-run-draft-bg: #f4f4f1;
+  --color-run-queued: #6b6b72;
+  --color-run-queued-bg: #f4f4f1;
   --color-run-running: #00a9c5;
   --color-run-running-bg: #edf7f7;
-  --color-run-analyzing: #5542f6;
-  --color-run-analyzing-bg: #f0efff;
+  --color-run-analyzing: #1b44e0;
+  --color-run-analyzing-bg: #e4eafd;
   --color-run-completed: #9acd32;
   --color-run-completed-bg: #f4f8ec;
   --color-run-partial: #f59e0b;
   --color-run-partial-bg: #fffbeb;
   --color-run-failed: #ff6e56;
   --color-run-failed-bg: #fff3f0;
-  --color-run-cancelled: #7b8494;
-  --color-run-cancelled-bg: #edf2fa;
+  --color-run-cancelled: #6b6b72;
+  --color-run-cancelled-bg: #f4f4f1;
 
   /* Score bands — low/mid escalate coral→amber; good/high use cyan→lime. */
   --color-score-low: #ff6e56;
@@ -189,39 +189,39 @@
   --color-score-high-ring: #9acd32;
 
   /* Charts — analytical indigo is the first series; the rest stay categorical. */
-  --color-chart-1: #5542f6;
+  --color-chart-1: #1b44e0;
   --color-chart-2: #00a9c5;
   --color-chart-3: #f59e0b;
   --color-chart-4: #ff6e56;
   --color-chart-5: #9acd32;
-  --color-chart-6: #c1b8ff;
+  --color-chart-6: #9fb4f7;
   --color-chart-7: #155e75;
   --color-chart-8: #9a3412;
-  --color-series-1: #5542f6;
+  --color-series-1: #1b44e0;
   --color-series-2: #00a9c5;
   --color-series-3: #f59e0b;
   --color-series-4: #ff6e56;
   --color-series-5: #9acd32;
-  --color-series-other: #7b8494;
-  --color-chart-tooltip: #14213d;
+  --color-series-other: #6b6b72;
+  --color-chart-tooltip: #16161a;
   --color-chart-tooltip-fg: #ffffff;
-  --color-overlay-scrim: rgb(20 33 61 / 42%);
+  --color-overlay-scrim: rgb(22 22 26 / 45%);
 
-  --radius-xs: 8px;
-  --radius-sm: 10px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 16px;
-  --radius-2xl: 16px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 12px;
   --radius-full: 9999px;
 
-  /* Elevation — Specular ambient shadows with crisp 1px hairline definition. */
-  --shadow-xs: 0 1px 2px rgb(15 23 42 / 0.04);
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04), 0 2px 4px -1px rgb(15 23 42 / 0.06);
-  --shadow-elevated:
-    0 0 0 1px rgb(15 23 42 / 0.06), 0 6px 18px -2px rgb(15 23 42 / 0.07), 0 20px 40px -8px rgb(15 23 42 / 0.11);
-  --shadow-lg: 0 0 0 1px rgb(15 23 42 / 0.07), 0 10px 28px -4px rgb(15 23 42 / 0.09), 0 28px 64px -12px rgb(15 23 42 / 0.15);
-  --shadow-modal-value: 0 0 0 1px rgb(15 23 42 / 0.08), 0 16px 36px rgb(15 23 42 / 0.14), 0 32px 72px -16px rgb(15 23 42 / 0.24);
+  /* Elevation — overlays own a real hairline border, so the shadow is pure
+     ambient depth and never draws a ring of its own. */
+  --shadow-xs: 0 1px 1px rgb(22 22 26 / 0.03);
+  --shadow-sm: 0 1px 2px rgb(22 22 26 / 0.03), 0 2px 4px -1px rgb(22 22 26 / 0.04);
+  --shadow-elevated: 0 4px 12px -2px rgb(22 22 26 / 0.05), 0 14px 28px -8px rgb(22 22 26 / 0.08);
+  --shadow-lg: 0 8px 20px -4px rgb(22 22 26 / 0.06), 0 20px 44px -12px rgb(22 22 26 / 0.10);
+  --shadow-modal-value: 0 12px 26px -6px rgb(22 22 26 / 0.10), 0 28px 60px -16px rgb(22 22 26 / 0.17);
 
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
@@ -266,7 +266,6 @@
   --nav-item-height: 36px;
   --content-gutter: 24px;
   --content-max-width: 1360px;
-  --container-max: 1360px;
   --page-section-gap: 32px;
   --workspace-gap: 16px;
   --compact-gap: 12px;
@@ -274,9 +273,7 @@
   --card-padding-compact: 12px;
   --card-padding-large: 20px;
   --modal-padding: 20px;
-  --storytelling-gap: 32px;
-  --empty-state-padding: 40px;
-  --card-gap: var(--workspace-gap);
+  --empty-state-padding: 24px;
   --control-height-sm: 32px;
   --control-height: 32px;
   --control-height-lg: 36px;
@@ -287,16 +284,16 @@
   --dialog-scroll: 60vh;
   --score-ring: 72px;
   /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
-  --radius-control: 10px;
-  --radius-card: 16px;
-  --radius-overlay: 16px;
-  /* Section rhythm — whitespace as a luxury signal (marketing consumes these). */
-  --section-y-desktop: 120px;
-  --section-y-tablet: 72px;
-  --section-y-phone: 48px;
+  --radius-control: 8px;
+  --radius-card: 10px;
+  --radius-overlay: 12px;
+  /* Public-surface rhythm. Marketing consumes these directly; the phone values
+     are the base and the media queries below step them up. */
+  --site-gutter: 20px;
+  --section-y: 56px;
   /* A 2px panel gap then a solid, opaque accent ring. */
   --focus-ring: 0 0 0 2px var(--color-panel), 0 0 0 4px var(--color-focus-ring);
-  --skeleton-base: #eaf1fb;
+  --skeleton-base: #efefeb;
   --skeleton-highlight: #ffffff;
   --value-placeholder: var(--color-subtle);
 }
@@ -476,7 +473,7 @@ samp {
 }
 
 .skeleton {
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background-color: var(--skeleton-base);
   background-image: linear-gradient(
     90deg,
@@ -496,6 +493,43 @@ samp {
     --control-height: 44px;
     --control-height-lg: 44px;
     --table-row-height: 44px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --site-gutter: 32px;
+    --section-y: 80px;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --site-gutter: 40px;
+    --section-y: 96px;
+  }
+}
+
+/* Two public sections of the same tone read as one band, so they share a single
+   rhythm rather than stacking both paddings. This is the rule the
+   data-citeladder-section hook in marketing/primitives/section.tsx was written for. */
+[data-citeladder-section='paper'] + [data-citeladder-section='paper'] {
+  padding-top: 0;
+}
+
+/* Live-activity marker. Owned here so features never hand-roll a pulse. */
+.activity-dot {
+  border-radius: var(--radius-full);
+  animation: activity-pulse 1.6s var(--ease-standard) infinite;
+}
+
+@keyframes activity-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
   }
 }
 
@@ -620,10 +654,16 @@ samp {
   transform: translateY(0);
 }
 
-/* In-page anchors must clear the fixed marketing nav so linked sections land
-   below the chrome. */
+/* In-page anchors must clear the fixed chrome so linked sections land below it. */
 [id] {
   scroll-margin-top: calc(var(--topbar-height) + 1.5rem);
+}
+
+/* The public nav is 4rem and `safe-top` grows it by the notch inset, so it is
+   taller than the authenticated top bar the default above is sized for. Without
+   this, an anchored heading lands underneath the nav on a notched phone. */
+[data-public-surface] [id] {
+  scroll-margin-top: calc(4rem + env(safe-area-inset-top, 0px) + 1.5rem);
 }
 
 /* Fixed chrome respects the home indicator and notch on mobile. */

@@ -1,4 +1,5 @@
 import { ArrowRight, Download, ExternalLink, LoaderCircle } from 'lucide-react';
+import { hairlineBandClasses, hairlineBandItemClasses } from '@/components/ui/workspace';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +7,7 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { SectionTitle } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { AccentEyebrow, eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Project } from '@/lib/api/types';
 import { formatUtcTimestamp } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -42,8 +43,8 @@ export function DashboardHeader({
   const website = data.project.website_url;
   const facts = data.facts;
   return (
-    <section className="bg-panel border-border overflow-hidden rounded-[var(--radius-card)] border">
-      <div className="flex flex-wrap items-center justify-between gap-4 p-[var(--card-padding)]">
+    <section className="grid gap-[var(--workspace-gap)]">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
           <BrandLogo
             name={data.project.brand_name || data.project.name}
@@ -93,14 +94,17 @@ export function DashboardHeader({
           ) : null}
         </div>
       </div>
-      <div className="border-border-subtle border-t p-[var(--card-padding)]">
-        <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="border-border-subtle grid gap-3 border-t pt-3">
+        <div className="flex items-center justify-between gap-3">
           <SectionTitle id="company-facts">Company facts</SectionTitle>
           <span className="text-muted text-xs font-medium">
             {facts.industry || 'Industry not set'}
           </span>
         </div>
-        <div className="grid gap-3 md:grid-cols-3" aria-labelledby="company-facts">
+        <div
+          className={cn(hairlineBandClasses, 'border-y-0 sm:grid-cols-3')}
+          aria-labelledby="company-facts"
+        >
           <FactSummary
             label="Positioning"
             value={facts.positioning || facts.description}
@@ -131,7 +135,7 @@ function FactSummary({
   supporting?: string;
 }>) {
   return (
-    <div className="border-border-subtle bg-background min-w-0 rounded-[var(--radius-card)] border p-4">
+    <div className={hairlineBandItemClasses}>
       <p className={eyebrowClasses}>{label}</p>
       {value.trim() ? (
         <p className="text-foreground mt-1.5 line-clamp-none text-sm leading-snug font-medium md:line-clamp-2">
@@ -180,7 +184,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
           <SectionTitle id="project-state">Project state</SectionTitle>
           <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
         </div>
-        <div className="bg-panel border-border divide-border-subtle grid divide-y overflow-hidden rounded-[var(--radius-card)] border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className={cn(hairlineBandClasses, 'sm:grid-cols-3')}>
           <StateMetric label="Visibility" {...data.state.visibility} />
           <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
           <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
@@ -193,13 +197,13 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
 
 function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <div className="bg-panel-tonal text-foreground border-border flex flex-col justify-between gap-4 rounded-[var(--radius-card)] border p-[var(--card-padding)]">
+    <div className="bg-well text-foreground border-border-subtle flex flex-col justify-between gap-4 rounded-[var(--radius-card)] border p-[var(--card-padding)]">
       <div>
         <div className="flex items-center justify-between">
-          <span className="text-accent-text bg-accent-soft inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-sans text-xs font-medium">
+          <AccentEyebrow>
             <span className="bg-accent size-1.5 rounded-full" aria-hidden />
             Next action
-          </span>
+          </AccentEyebrow>
           <span className="text-muted text-xs font-medium">
             {data.next_action.kind === 'monitor' ? 'Optimal state' : 'Action recommended'}
           </span>
@@ -226,7 +230,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <section
       aria-labelledby="citation-share-track"
-      className="bg-panel border-border flex flex-col justify-between gap-4 rounded-[var(--radius-card)] border p-[var(--card-padding)]"
+      className="border-border-subtle flex flex-col justify-between gap-4 border-t pt-3"
     >
       <div>
         <div className="flex items-center justify-between">
@@ -241,7 +245,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
             {data.track.citation_share.value === null ? (
               <UnavailableValue state={data.track.observed_at ? 'unavailable' : 'not_run'} />
             ) : (
-              <p className="font-display text-foreground text-3xl leading-none font-medium tracking-[-0.03em] tabular-nums">
+              <p className="font-display text-foreground text-3xl leading-none font-medium tracking-[-0.02em] tabular-nums">
                 {metricValue(data.track.citation_share.value, '%')}
               </p>
             )}
@@ -275,7 +279,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
 
 function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <div className="bg-panel border-border flex flex-col justify-between gap-4 rounded-[var(--radius-card)] border p-[var(--card-padding)]">
+    <div className="border-border-subtle flex flex-col justify-between gap-4 border-t pt-3">
       <section aria-labelledby="movement" className="grid gap-3">
         <div>
           <SectionTitle id="movement">Movement</SectionTitle>
@@ -306,46 +310,44 @@ export function ActionsAndProof({
 }>) {
   return (
     <>
-      <div className="bg-panel border-border overflow-hidden rounded-[var(--radius-card)] border">
-        <section aria-labelledby="ranked-actions">
-          <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b px-[var(--card-padding)] py-4">
-            <div>
-              <SectionTitle id="ranked-actions">Ranked actions</SectionTitle>
-              <p className="text-muted mt-0.5 text-xs">
-                Shared order · drag or use the arrow controls.
-              </p>
-            </div>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/opportunities">
-                View all <ArrowRight className="ms-1 size-3.5" aria-hidden />
-              </Link>
-            </Button>
+      <section aria-labelledby="ranked-actions">
+        <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-t border-b pt-3 pb-3">
+          <div>
+            <SectionTitle id="ranked-actions">Ranked actions</SectionTitle>
+            <p className="text-muted mt-0.5 text-xs">
+              Shared order · drag or use the arrow controls.
+            </p>
           </div>
-          {actions.length ? (
-            <ol>
-              {actions.map((action, index) => (
-                <ActionRow
-                  key={action.id}
-                  action={action}
-                  index={index}
-                  total={actions.length}
-                  onMove={onMove}
-                  onDrop={onMove}
-                  reorderPending={pending}
-                />
-              ))}
-            </ol>
-          ) : (
-            <div className="p-[var(--empty-state-padding)] text-center">
-              <p className="text-foreground text-sm font-medium">No open actions</p>
-              <p className="text-muted mt-1 text-xs">
-                Run another audit to look for new opportunities.
-              </p>
-            </div>
-          )}
-        </section>
-      </div>
-      <div className="bg-panel border-border rounded-[var(--radius-card)] border p-[var(--card-padding)]">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/opportunities">
+              View all <ArrowRight className="ms-1 size-3.5" aria-hidden />
+            </Link>
+          </Button>
+        </div>
+        {actions.length ? (
+          <ol>
+            {actions.map((action, index) => (
+              <ActionRow
+                key={action.id}
+                action={action}
+                index={index}
+                total={actions.length}
+                onMove={onMove}
+                onDrop={onMove}
+                reorderPending={pending}
+              />
+            ))}
+          </ol>
+        ) : (
+          <div className="py-[var(--empty-state-padding)]">
+            <p className="text-foreground text-sm font-medium">No open actions</p>
+            <p className="text-muted mt-1 text-xs">
+              Run another audit to look for new opportunities.
+            </p>
+          </div>
+        )}
+      </section>
+      <div className="border-border-subtle border-t pt-3">
         <section
           aria-labelledby="progress-proof"
           className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"

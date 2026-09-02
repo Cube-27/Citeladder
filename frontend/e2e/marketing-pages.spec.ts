@@ -80,13 +80,13 @@ test.describe('marketing routes', () => {
 
   test('marketing subpages render the unified light canvas', async ({ page }) => {
     await page.goto('/pricing');
-    // docs/design.md §Colour: the canvas is the shared cool-blue `background`
-    // token. Crisp white is `panel` / `elevated`, and the deeper blue tone
-    // is the grouped-region well (`background-alt` / `well`) —
+    // docs/design.md §Colour: the canvas is the shared neutral paper
+    // `background` token. Crisp white is `panel` / `elevated`, and the
+    // recessed tone is the grouped-region well (`background-alt` / `well`) —
     // neither of those is the canvas.
     await expect(page.locator('.bg-background').first()).toHaveCSS(
       'background-color',
-      'rgb(246, 248, 252)',
+      'rgb(250, 250, 248)',
     );
   });
 

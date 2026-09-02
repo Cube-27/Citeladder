@@ -22,7 +22,7 @@ export function SeeIt() {
   const { seeIt } = LANDING_CONTENT;
   return (
     <Section id="see-it" tone="paper" rhythm="base" aria-labelledby="see-it-title">
-      <Reveal className="mx-auto max-w-5xl text-center">
+      <Reveal className="max-w-5xl">
         <p className="website-eyebrow text-accent-text">{seeIt.kicker}</p>
         {/* Heading weight and tracking come from the base rule in globals.css;
             the size rung is the only thing markup sets, so type stays uniform. */}
@@ -33,7 +33,7 @@ export function SeeIt() {
       <Reveal>
         <ProductWindow />
       </Reveal>
-      <div className="mt-10 flex justify-center">
+      <div className="mt-10 flex">
         <ButtonLink href={DEMO_HREF} variant="primary" className="w-full sm:w-auto">
           {seeIt.cta}
           <ArrowRight aria-hidden />

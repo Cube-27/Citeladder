@@ -31,7 +31,7 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
   return (
     <main id="main">
       <header className="border-border-subtle border-b pt-16 pb-6 md:pb-8">
-        <div className="px-6-phone md:px-6-tablet mx-auto w-full max-w-3xl xl:px-6">
+        <div className="mx-auto w-full max-w-3xl px-[var(--site-gutter)]">
           <Reveal>
             <p className="website-eyebrow text-muted">Legal</p>
             <h1 className="website-page-title text-foreground mt-3">{document.title}</h1>

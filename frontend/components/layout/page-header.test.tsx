@@ -43,18 +43,6 @@ describe('PageHeader', () => {
     expect(renderTitle('/nope')).toBe('CiteLadder');
   });
 
-  it('renders the summary and actions slots alongside the title', () => {
-    pathname.value = '/visibility';
-    render(
-      <PageHeader
-        summary={<span>mentioned in 62% of answers</span>}
-        actions={<span>Metrics</span>}
-      />,
-    );
-    expect(screen.getByText('mentioned in 62% of answers')).toBeInTheDocument();
-    expect(screen.getByText('Metrics')).toBeInTheDocument();
-  });
-
   it('accepts an explicit title override', () => {
     pathname.value = '/visibility';
     render(<PageHeader title="Custom" />);

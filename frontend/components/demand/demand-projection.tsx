@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Loader2, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { Calendar, LoaderCircle, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -146,6 +146,7 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       <EditorialSectionHeader
+        ruled
         title={
           <span className="flex flex-wrap items-center gap-2">
             <span>
@@ -170,7 +171,7 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
           >
             {recomputeMutation.isPending ? (
               <>
-                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                <LoaderCircle className="mr-1.5 size-3.5 animate-spin" />
                 Queueing…
               </>
             ) : (

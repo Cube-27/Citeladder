@@ -213,11 +213,11 @@ describe('IntegrationSettings — grant cards', () => {
 
   it('maps grant statuses to badge tokens', async () => {
     const cases = [
-      { status: 'connected', label: 'Connected', classes: 'bg-success-bg' },
-      { status: 'needs_reauth', label: 'Needs reauth', classes: 'bg-warning-bg' },
-      { status: 'pending_revocation', label: 'Pending revocation', classes: 'bg-warning-bg' },
-      { status: 'error', label: 'Error', classes: 'bg-danger-bg' },
-      { status: 'revoked', label: 'Revoked', classes: 'bg-neutral-bg' },
+      { status: 'connected', label: 'Connected', classes: 'bg-success' },
+      { status: 'needs_reauth', label: 'Needs reauth', classes: 'bg-warning' },
+      { status: 'pending_revocation', label: 'Pending revocation', classes: 'bg-warning' },
+      { status: 'error', label: 'Error', classes: 'bg-danger' },
+      { status: 'revoked', label: 'Revoked', classes: 'bg-border-strong' },
     ] as const;
 
     for (const { status, label, classes } of cases) {
@@ -225,7 +225,7 @@ describe('IntegrationSettings — grant cards', () => {
       const { unmount } = renderWithProviders(<IntegrationSettings />);
       const badge = await screen.findByTestId('grant-status-google');
       expect(badge).toHaveTextContent(label);
-      expect(badge.className).toContain(classes);
+      expect(badge.querySelector('span')?.className).toContain(classes);
       unmount();
     }
   });

@@ -46,7 +46,7 @@ export function IssuesScreen() {
         <Alert tone="danger">Could not load Site Health. Please refresh.</Alert>
       ) : !crawl ? (
         <Card>
-          <CardContent className="grid justify-items-center gap-3 py-10 text-center">
+          <CardContent className="grid gap-3 py-[var(--empty-state-padding)]">
             <AccentEyebrow>Issues</AccentEyebrow>
             <h2 className={displayHeadingLgClasses}>No Site Health crawl yet</h2>
             <p className="text-secondary max-w-md text-sm">

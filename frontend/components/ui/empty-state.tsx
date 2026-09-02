@@ -1,15 +1,17 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { Card, CardContent } from '@/components/ui/card';
-import { IconChip } from '@/components/ui/icon-chip';
+import { cn } from '@/lib/utils';
+
 import { displayHeadingLgClasses } from '@/components/ui/typography';
 
 /**
  * EmptyState — the one empty-state pattern for the whole app.
  *
  * Replaces the per-surface empty states that had each grown their own copy and
- * layout. Shape: icon chip → heading → one short line → one action.
+ * layout. Shape: a small icon beside the heading → one short line → one action,
+ * hung on the section's left margin. It is not a card: an empty region should
+ * read as absent content on the page, not as an object floating on it.
  *
  * **Keep `description` to a single sentence.** The empty states this replaces
  * had drifted into two- and three-clause explanations of what the screen would
@@ -40,20 +42,14 @@ export function EmptyState({
   className?: string;
 }>) {
   return (
-    <Card className={className}>
-      <CardContent className="grid justify-items-center gap-4 py-[var(--empty-state-padding)] text-center">
-        <IconChip>
-          <Icon className="size-6" aria-hidden />
-        </IconChip>
-        <div className="grid gap-2">
-          <h2 className={displayHeadingLgClasses}>{heading}</h2>
-          {description ? (
-            <p className="text-secondary mx-auto max-w-[46ch] text-sm">{description}</p>
-          ) : null}
-        </div>
-        {action ? <div className="mt-2 flex items-center gap-2">{action}</div> : null}
-        {footnote ? <div className="text-muted text-xs">{footnote}</div> : null}
-      </CardContent>
-    </Card>
+    <div className={cn('grid gap-3 py-[var(--empty-state-padding)]', className)}>
+      <div className="flex items-center gap-2">
+        <Icon className="text-subtle size-4 shrink-0" aria-hidden />
+        <h2 className={displayHeadingLgClasses}>{heading}</h2>
+      </div>
+      {description ? <p className="text-secondary max-w-[52ch] text-sm">{description}</p> : null}
+      {action ? <div className="flex items-center gap-2">{action}</div> : null}
+      {footnote ? <div className="text-muted text-xs">{footnote}</div> : null}
+    </div>
   );
 }

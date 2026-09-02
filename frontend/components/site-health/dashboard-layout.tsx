@@ -45,7 +45,7 @@ export function SiteHealthDashboardLayout({
   return (
     // `min-w-0` so a wide table inside a section scrolls in its own wrapper
     // instead of widening this column (and every ancestor) to its max-content.
-    <div className="grid min-w-0 gap-[var(--workspace-gap)]" data-testid="site-health-canonical">
+    <div className="grid min-w-0 gap-[var(--page-section-gap)]" data-testid="site-health-canonical">
       {!crawl ? (
         <Card data-testid="site-health-empty">
           <CardContent className="grid justify-items-start gap-3 py-[var(--empty-state-padding)]">

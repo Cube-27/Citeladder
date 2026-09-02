@@ -136,7 +136,6 @@ const CUSTOM_LIMITS = [
 export function EnterpriseHero() {
   return (
     <PageHero
-      centered
       eyebrow="Enterprise"
       title="AI visibility your security team"
       accent="can inspect."
@@ -169,7 +168,7 @@ export function EnterpriseOps() {
       <StaggerGroup className="grid gap-5 md:grid-cols-3">
         {CAPABILITIES.map(({ icon: Icon, title, tagline, highlights }) => (
           <StaggerItem key={title} className="h-full">
-            <article className="bg-panel border-border-subtle hover:border-accent-border flex h-full flex-col rounded-2xl border p-7 transition-colors duration-200">
+            <article className="bg-panel border-border-subtle hover:border-accent-border flex h-full flex-col rounded-[var(--radius-card)] border p-7 transition-colors duration-200">
               <div className="bg-accent-soft text-accent-text grid size-10 place-items-center rounded-xl">
                 <Icon aria-hidden strokeWidth={1.8} className="size-5" />
               </div>
@@ -197,7 +196,7 @@ export function EnterpriseOps() {
           <p className="website-body text-muted font-medium">How a request travels</p>
           <span className="text-subtle text-xs">Managed cloud · same-origin boundary</span>
         </div>
-        <Reveal className="bg-panel border-border-subtle overflow-hidden rounded-2xl border">
+        <Reveal className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border">
           <ol className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {DATA_FLOW_STEPS.map((step, index) => (
               <li
@@ -235,7 +234,7 @@ export function EnterpriseFit() {
       <StaggerGroup className="grid gap-5 md:grid-cols-3">
         {ENTERPRISE_FIT.map(({ icon: Icon, title, description }) => (
           <StaggerItem key={title} className="h-full">
-            <article className="bg-panel border-border-subtle flex h-full flex-col rounded-2xl border p-6 md:p-7">
+            <article className="bg-panel border-border-subtle flex h-full flex-col rounded-[var(--radius-card)] border p-6 md:p-7">
               <Icon aria-hidden className="text-accent-text size-6" strokeWidth={1.8} />
               <h3 className="website-feature-heading text-foreground mt-6">{title}</h3>
               <p className="website-body text-muted mt-3">{description}</p>
@@ -257,7 +256,7 @@ export function EnterpriseLimits() {
         headingId="enterprise-limits-title"
       />
 
-      <Reveal className="bg-panel border-border-subtle overflow-hidden rounded-2xl border">
+      <Reveal className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border">
         <div className="border-border-subtle bg-accent-soft flex flex-col justify-between gap-4 border-b px-6 py-5 md:flex-row md:items-center md:px-8">
           <div>
             <h3 className="website-section-heading text-foreground">Enterprise agreement</h3>
@@ -287,7 +286,7 @@ export function EnterpriseLimits() {
         </StaggerGroup>
       </Reveal>
 
-      <div className="bg-panel border-border-subtle mt-8 flex flex-col items-start justify-between gap-6 rounded-2xl border p-6 md:flex-row md:items-center md:p-8">
+      <div className="bg-panel border-border-subtle mt-8 flex flex-col items-start justify-between gap-6 rounded-[var(--radius-card)] border p-6 md:flex-row md:items-center md:p-8">
         <div>
           <p className="website-section-heading text-foreground">Audit trail included</p>
           <p className="website-body text-muted mt-2 max-w-[60ch]">

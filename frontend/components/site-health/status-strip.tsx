@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { Label, Metric, displayHeadingLgClasses } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
@@ -60,7 +59,7 @@ export function StatusStrip({
   // The wrapper (and its test id) stays mounted in every phase — only the
   // CONTENT below changes. The screen regression tests assert this stability.
   return (
-    <div className="grid gap-2 empty:hidden" data-testid="status-strip">
+    <div className="grid empty:hidden" data-testid="status-strip">
       <StripContent
         crawl={crawl}
         phase={phase}
@@ -113,17 +112,15 @@ function StripContent({
     // Direct component callers retain an empty-state fallback. The canonical
     // layout owns the actionable first-crawl placeholder.
     return (
-      <Card>
-        <CardContent className="grid justify-items-center gap-3 py-10 text-center">
-          <AccentEyebrow>Site health</AccentEyebrow>
-          <h2 className={displayHeadingLgClasses}>No crawl yet</h2>
-          <p className="text-secondary max-w-md text-sm">
-            Discover and analyze your site&apos;s pages for AI search optimization. Start a crawl to
-            see your pages, scores, and issues here — this screen updates in place as the crawl
-            progresses.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-3 py-[var(--empty-state-padding)]">
+        <AccentEyebrow>Site health</AccentEyebrow>
+        <h2 className={displayHeadingLgClasses}>No crawl yet</h2>
+        <p className="text-secondary max-w-md text-sm">
+          Discover and analyze your site&apos;s pages for AI search optimization. Start a crawl to
+          see your pages, scores, and issues here — this screen updates in place as the crawl
+          progresses.
+        </p>
+      </div>
     );
   }
 
@@ -214,44 +211,42 @@ function ProgressRow({
   children?: ReactNode;
 }>) {
   return (
-    <Card>
-      <CardContent className="grid gap-3 py-3">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <div className="flex min-w-0 items-center gap-3">
-            <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
-              {statusLabel(crawl.status)}
-            </Badge>
-            <span className="text-secondary flex min-w-0 items-center gap-2 text-sm">
-              {active ? (
-                <span
-                  aria-hidden
-                  data-testid="activity-pulse"
-                  className="activity-dot bg-run-running size-1.5 shrink-0"
-                />
-              ) : null}
-              {/* The live region is the TEXT, not the row: announcing the whole
+    <div className="border-border-subtle grid gap-3 border-b pb-3">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
+            {statusLabel(crawl.status)}
+          </Badge>
+          <span className="text-secondary flex min-w-0 items-center gap-2 text-sm">
+            {active ? (
+              <span
+                aria-hidden
+                data-testid="activity-pulse"
+                className="activity-dot bg-run-running size-1.5 shrink-0"
+              />
+            ) : null}
+            {/* The live region is the TEXT, not the row: announcing the whole
                   row would re-read every counter on each poll. */}
-              <span className="truncate" aria-live="polite">
-                {narration}
-              </span>
+            <span className="truncate" aria-live="polite">
+              {narration}
             </span>
-          </div>
-          <dl className="ml-auto flex flex-wrap items-baseline gap-x-6 gap-y-1">
-            {counts.map((count) => (
-              <div key={count.label} className="flex items-baseline gap-1.5">
-                <Label>{count.label}</Label>
-                {count.value === null ? (
-                  <UnavailableValue state="not_measured" />
-                ) : (
-                  <Metric className={cn('text-sm', count.className)}>{count.value}</Metric>
-                )}
-              </div>
-            ))}
-          </dl>
+          </span>
         </div>
-        {children}
-      </CardContent>
-    </Card>
+        <dl className="ml-auto flex flex-wrap items-baseline gap-x-6 gap-y-1">
+          {counts.map((count) => (
+            <div key={count.label} className="flex items-baseline gap-1.5">
+              <Label>{count.label}</Label>
+              {count.value === null ? (
+                <UnavailableValue state="not_measured" />
+              ) : (
+                <Metric className={cn('text-sm', count.className)}>{count.value}</Metric>
+              )}
+            </div>
+          ))}
+        </dl>
+      </div>
+      {children}
+    </div>
   );
 }
 

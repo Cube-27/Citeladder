@@ -18,13 +18,14 @@ import { UserMenu } from './user-menu';
  * AppShell — the authenticated application chrome.
  *
  * Geometry: a quiet structural sidebar and flat top bar frame the editorial
- * workspace. Tone and whitespace, rather than repeated rules, separate chrome.
+ * workspace. On the paper canvas the chrome shares the page's ground, so a
+ * single hairline — not a tinted slab — is what separates it.
  */
 export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <TooltipProvider>
-      <div className="product-app bg-background relative flex h-dvh overflow-hidden">
-        <aside className="bg-sidebar relative z-1 hidden w-[var(--sidebar-width)] shrink-0 flex-col transition-[width] md:flex">
+      <div className="bg-background relative flex h-dvh overflow-hidden">
+        <aside className="bg-sidebar border-border-subtle relative z-1 hidden w-[var(--sidebar-width)] shrink-0 flex-col border-r transition-[width] md:flex">
           {/* Logo row — matches topbar height */}
           <div className="flex h-[var(--topbar-height)] shrink-0 items-center px-4">
             <LogoMark size={22} />
@@ -44,7 +45,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         </aside>
 
         <div className="relative z-1 flex min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="bg-background sticky top-0 z-20 grid h-[var(--topbar-height)] shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 px-[var(--content-gutter)] sm:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)_minmax(0,1fr)]">
+          <header className="bg-background border-border-subtle sticky top-0 z-20 grid h-[var(--topbar-height)] shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b px-[var(--content-gutter)] sm:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)_minmax(0,1fr)]">
             <div className="flex min-w-0 items-center gap-2">
               <Link
                 href="/projects"
@@ -53,7 +54,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               >
                 <LogoMark size={20} />
               </Link>
-              <PageHeader className="mb-0 min-w-0 flex-1 [&_h1]:truncate" />
+              <PageHeader className="min-w-0 flex-1 [&_h1]:truncate" />
             </div>
             <div className="w-auto justify-self-center sm:w-full">
               <CommandPalette />

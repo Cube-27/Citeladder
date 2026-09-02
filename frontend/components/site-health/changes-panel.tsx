@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
@@ -175,9 +177,7 @@ function ChangesTable({
           <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             {Object.entries(CLASS_LABELS).map(([key, label]) => (
               <div key={key}>
-                <span className="text-muted block text-xs font-medium tracking-[0.06em] uppercase">
-                  {label}
-                </span>
+                <span className={cn(eyebrowClasses, 'block')}>{label}</span>
                 <span className="mono text-foreground mt-0.5 block text-base font-medium tabular-nums">
                   {counts?.[key] ?? 0}
                 </span>

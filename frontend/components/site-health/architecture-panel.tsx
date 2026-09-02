@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Fragment, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Link2, ListTree } from 'lucide-react';
@@ -194,7 +195,7 @@ function ArchitectureMetrics({
           key={label}
           className="border-border-subtle grid gap-0.5 border-b px-3 py-2 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
         >
-          <dt className="text-muted text-xs font-medium tracking-[0.06em] uppercase">{label}</dt>
+          <dt className={eyebrowClasses}>{label}</dt>
           <dd
             className={
               value.startsWith('Count withheld')
@@ -469,7 +470,7 @@ function EvidenceMetric({
 }: Readonly<{ label: string; value: string; supporting?: string }>) {
   return (
     <div className="grid content-start gap-1">
-      <span className="text-muted text-xs font-medium tracking-[0.06em] uppercase">{label}</span>
+      <span className={eyebrowClasses}>{label}</span>
       {value === PLACEHOLDER ? (
         <UnavailableValue state="not_measured" />
       ) : value.startsWith('Count withheld') ? (

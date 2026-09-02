@@ -97,27 +97,30 @@ describe('Button', () => {
 });
 
 describe('Badge', () => {
-  it('maps status variant to the success token classes', () => {
+  it('maps status variant to the success dot with a quiet label', () => {
     render(
       <Badge variant="status" value="success">
         Configured
       </Badge>,
     );
     const badge = screen.getByText('Configured');
-    expect(badge.className).toContain('bg-success-bg');
-    expect(badge.className).toContain('text-success-text');
-    // Flat language: sans rectangles, not mono pills.
-    expect(badge.className).toContain('rounded-sm');
+    expect(badge.querySelector('span')?.className).toContain('bg-success');
+    expect(badge.className).toContain('text-secondary');
+    // One signal, one encoding: the dot carries the colour, so the badge is
+    // unboxed — no fill, no border, no chip radius.
+    expect(badge.className).not.toContain('bg-success-bg');
+    expect(badge.className).not.toContain('border');
+    expect(badge.className).not.toContain('rounded-sm');
     expect(badge.className).not.toContain('font-mono');
   });
 
-  it('keeps the pill shape for run-status badges only', () => {
+  it('gives every family the same unboxed shape', () => {
     const { unmount } = render(
       <Badge variant="run-status" value="running">
         Running
       </Badge>,
     );
-    expect(screen.getByText('Running').className).toContain('rounded-full');
+    expect(screen.getByText('Running').className).not.toContain('rounded-full');
     unmount();
 
     render(
@@ -134,7 +137,9 @@ describe('Badge', () => {
         Negative
       </Badge>,
     );
-    expect(screen.getByText('Negative').className).toContain('bg-sentiment-negative-bg');
+    expect(screen.getByText('Negative').querySelector('span')?.className).toContain(
+      'bg-sentiment-negative',
+    );
   });
 
   it('maps classification variant to citation tokens', () => {
@@ -143,7 +148,9 @@ describe('Badge', () => {
         Owned
       </Badge>,
     );
-    expect(screen.getByText('Owned').className).toContain('bg-citation-owned-bg');
+    expect(screen.getByText('Owned').querySelector('span')?.className).toContain(
+      'bg-citation-owned',
+    );
   });
 
   it('maps run-status variant to run-status tokens', () => {
@@ -153,13 +160,15 @@ describe('Badge', () => {
       </Badge>,
     );
     const badge = screen.getByText('Completed');
-    expect(badge.className).toContain('bg-run-completed-bg');
-    expect(badge.className).toContain('text-run-completed');
+    expect(badge.querySelector('span')?.className).toContain('bg-run-completed');
+    expect(badge.className).toContain('text-secondary');
   });
 
   it('falls back to the neutral token when no variant is given', () => {
     render(<Badge>Draft</Badge>);
-    expect(screen.getByText('Draft').className).toContain('bg-neutral-bg');
+    expect(screen.getByText('Draft').querySelector('span')?.className).toContain(
+      'bg-border-strong',
+    );
   });
 });
 
@@ -185,12 +194,14 @@ describe('Card', () => {
     render(<CardEyebrow>Visibility score</CardEyebrow>);
     const eyebrow = screen.getByText('Visibility score');
     expect(eyebrow.tagName).toBe('SPAN');
-    // Metadata: 12/16 @500, muted, sentence case, and never the mono face.
+    // Metadata: 12/16 @500, muted, uppercase with open tracking, and never the
+    // mono face. Uppercase is what separates a label from content on a paper
+    // canvas where boxes no longer frame a section.
     expect(eyebrow.className).toContain('text-xs');
     expect(eyebrow.className).toContain('text-muted');
     expect(eyebrow.className).toContain('font-medium');
-    expect(eyebrow.className).not.toContain('uppercase');
-    expect(eyebrow.className).not.toContain('tracking-');
+    expect(eyebrow.className).toContain('uppercase');
+    expect(eyebrow.className).toContain('tracking-[0.06em]');
     expect(eyebrow.className).not.toContain('font-mono');
   });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
 
 import { TrafficEmptyState } from '@/components/traffic/empty-state';
@@ -327,7 +327,7 @@ function SyncBanner({ active }: Readonly<{ active: boolean }>) {
   return active ? (
     <Alert tone="info" hideIcon>
       <span className="flex items-center gap-2" data-testid="sync-status-banner">
-        <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+        <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden />
         <span>
           Sync in progress — refreshing Google Search Console and GA4 data. Charts and tables update
           when the sync completes.

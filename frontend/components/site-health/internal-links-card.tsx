@@ -39,9 +39,7 @@ export function InternalLinksCard({
     <Card className="min-w-0 overflow-hidden">
       <CardContent className="grid gap-4">
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-          <h2 className="text-foreground text-base font-medium tracking-[-0.015em]">
-            Internal Links
-          </h2>
+          <h2 className="text-foreground text-base font-medium">Internal Links</h2>
           <span className="text-muted shrink-0 text-xs">
             Counted across {links.source_page_count} crawled page
             {links.source_page_count === 1 ? '' : 's'}

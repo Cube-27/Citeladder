@@ -1,6 +1,5 @@
 import {
   AlertCircle,
-  BookOpen,
   Bot,
   Check,
   FileBarChart,
@@ -17,7 +16,6 @@ import {
   Radar,
   Settings,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   TriangleAlert,
   Wrench,
@@ -33,7 +31,6 @@ import {
  * - warning = `TriangleAlert` (only)
  * - danger = `AlertCircle` (only)
  * - success = `Check` (only)
- * - ai = `Sparkles` — reserved for AI-generation buttons, never nav.
  *
  * Nav notes: issues uses `OctagonAlert`, NOT `CircleAlert` (an alias of
  * `AlertCircle` — the same glyph as danger). `Settings` is for the user menu
@@ -61,7 +58,6 @@ export const ICONS = {
   siteHealth: ShieldCheck,
   issues: OctagonAlert,
   opportunities: Lightbulb,
-  knowledgeBase: BookOpen,
   setup: Wrench,
   settings: Settings,
   // Shared UI concepts.
@@ -69,5 +65,4 @@ export const ICONS = {
   warning: TriangleAlert,
   danger: AlertCircle,
   success: Check,
-  ai: Sparkles,
 } as const;

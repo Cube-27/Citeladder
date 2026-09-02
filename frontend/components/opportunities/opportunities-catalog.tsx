@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
@@ -144,9 +145,7 @@ function FeaturedRecommendation({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid min-w-0 gap-2">
             <AccentEyebrow>Next best action</AccentEyebrow>
-            <h2 className="text-foreground text-xl font-medium tracking-[-0.02em]">
-              {detail.title}
-            </h2>
+            <h2 className="text-foreground text-xl font-medium">{detail.title}</h2>
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge variant="status" value={severityBadgeValue(detail.severity)}>
                 {severityLabel(detail.severity)} impact
@@ -209,7 +208,7 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
   const featured = useFeaturedRecommendation(rows, filters.statusFilter, filters.pager.cursor);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <div className="grid gap-[var(--page-section-gap)]">
       <FeaturedSection featured={featured} onOpen={setSelectedId} />
       <RecommendationsSection
         projectId={projectId}
@@ -327,45 +326,40 @@ function RecommendationsHeader({
   filters,
 }: Readonly<{ filters: ReturnType<typeof useCatalogFilters> }>) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div className="grid gap-1">
-        <h2
-          id="recommendations-heading"
-          className="text-foreground text-lg font-medium tracking-[-0.015em]"
-        >
-          Prioritized recommendations
-        </h2>
-        <p className="text-muted text-xs">
-          Ordered by expected impact using your latest visibility and site evidence.
-        </p>
-      </div>
-      <fieldset className="flex flex-wrap items-center gap-2" aria-label="Recommendation filters">
-        <FilterMenu
-          label="Path"
-          value={filters.pathFilter}
-          options={PATH_FILTERS}
-          onChange={filters.setPathFilter}
-        />
-        <FilterMenu
-          label="Area"
-          value={filters.typeFilter}
-          options={TYPE_FILTERS}
-          onChange={filters.setTypeFilter}
-        />
-        <FilterMenu
-          label="Impact"
-          value={filters.severityFilter}
-          options={SEVERITY_FILTERS}
-          onChange={filters.setSeverityFilter}
-        />
-        <FilterMenu
-          label="Status"
-          value={filters.statusFilter}
-          options={STATUS_FILTERS}
-          onChange={filters.setStatusFilter}
-        />
-      </fieldset>
-    </div>
+    <EditorialSectionHeader
+      ruled
+      headingId="recommendations-heading"
+      title="Prioritized recommendations"
+      description="Ordered by expected impact using your latest visibility and site evidence."
+      actions={
+        <fieldset className="flex flex-wrap items-center gap-2" aria-label="Recommendation filters">
+          <FilterMenu
+            label="Path"
+            value={filters.pathFilter}
+            options={PATH_FILTERS}
+            onChange={filters.setPathFilter}
+          />
+          <FilterMenu
+            label="Area"
+            value={filters.typeFilter}
+            options={TYPE_FILTERS}
+            onChange={filters.setTypeFilter}
+          />
+          <FilterMenu
+            label="Impact"
+            value={filters.severityFilter}
+            options={SEVERITY_FILTERS}
+            onChange={filters.setSeverityFilter}
+          />
+          <FilterMenu
+            label="Status"
+            value={filters.statusFilter}
+            options={STATUS_FILTERS}
+            onChange={filters.setStatusFilter}
+          />
+        </fieldset>
+      }
+    />
   );
 }
 
@@ -391,11 +385,9 @@ function RecommendationsBody({
     );
   if (!rows.length)
     return (
-      <Card>
-        <CardContent className="text-secondary text-sm">
-          No recommendations match these filters. Try broadening the area, impact, or status.
-        </CardContent>
-      </Card>
+      <div className="text-secondary py-[var(--empty-state-padding)] text-sm">
+        No recommendations match these filters. Try broadening the area, impact, or status.
+      </div>
     );
   return <RecommendationsTable projectId={projectId} rows={rows} onOpen={onOpen} />;
 }
@@ -406,59 +398,57 @@ function RecommendationsTable({
   onOpen,
 }: Readonly<{ projectId: string; rows: Opportunity[]; onOpen: (id: string) => void }>) {
   return (
-    <Card>
-      <Table className="min-w-3xl table-fixed">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[48%]">Recommendation</TableHead>
-            <TableHead>Impact</TableHead>
-            <TableHead>Area</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Detected</TableHead>
-            <TableHead className="w-24" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow key={row.id} className="hover:bg-background-alt">
-              <TableCell className="min-w-0">
-                <div className="grid min-w-0 gap-0.5">
-                  <span className="text-foreground truncate text-sm font-medium" title={row.title}>
-                    {row.title}
-                  </span>
-                  {row.target_label ? (
-                    <span className="text-muted truncate text-xs" title={row.target_label}>
-                      {row.target_label}
-                    </span>
-                  ) : null}
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="status" value={severityBadgeValue(row.severity)}>
-                  {severityLabel(row.severity)}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <OpportunityTypeBadge type={row.opportunity_type} />
-              </TableCell>
-              <TableCell>
-                <StatusControl row={row} projectId={projectId} />
-              </TableCell>
-              <TableCell>
-                <span className="text-secondary text-xs whitespace-nowrap">
-                  {formatAudited(row.created_at)}
+    <Table className="min-w-3xl table-fixed">
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[48%]">Recommendation</TableHead>
+          <TableHead>Impact</TableHead>
+          <TableHead>Area</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Detected</TableHead>
+          <TableHead className="w-24" />
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.id}>
+            <TableCell className="min-w-0">
+              <div className="grid min-w-0 gap-0.5">
+                <span className="text-foreground truncate text-sm font-medium" title={row.title}>
+                  {row.title}
                 </span>
-              </TableCell>
-              <TableCell>
-                <Button variant="ghost" size="sm" onClick={() => onOpen(row.id)}>
-                  Review
-                  <ChevronRight className="size-4" aria-hidden />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+                {row.target_label ? (
+                  <span className="text-muted truncate text-xs" title={row.target_label}>
+                    {row.target_label}
+                  </span>
+                ) : null}
+              </div>
+            </TableCell>
+            <TableCell>
+              <Badge variant="status" value={severityBadgeValue(row.severity)}>
+                {severityLabel(row.severity)}
+              </Badge>
+            </TableCell>
+            <TableCell>
+              <OpportunityTypeBadge type={row.opportunity_type} />
+            </TableCell>
+            <TableCell>
+              <StatusControl row={row} projectId={projectId} />
+            </TableCell>
+            <TableCell>
+              <span className="text-secondary text-xs whitespace-nowrap">
+                {formatAudited(row.created_at)}
+              </span>
+            </TableCell>
+            <TableCell>
+              <Button variant="ghost" size="sm" onClick={() => onOpen(row.id)}>
+                Review
+                <ChevronRight className="size-4" aria-hidden />
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
