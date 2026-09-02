@@ -17,6 +17,7 @@ import {
   useBaseVisibilityHandlers,
 } from '@/test/fixtures/visibility';
 import { mswServer } from '@/test/msw-server';
+import { queryKeys } from '@/lib/api/query-keys';
 
 let pushStateSpy: ReturnType<typeof vi.spyOn>;
 vi.mock('next/navigation', () => ({
@@ -255,6 +256,48 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
     await user.click(screen.getByRole('button', { name: 'Select run' }));
     await user.click(await screen.findByRole('menuitemradio', { name: 'Latest' }));
     expect(screen.getByRole('button', { name: 'Select run' })).toHaveTextContent('Latest');
+  });
+
+  it('refreshes the implicit latest projection when polling observes a completed run', async () => {
+    let latestReady = false;
+    useBaseVisibilityHandlers();
+    mswServer.use(
+      http.get('/api/v1/audits', () =>
+        HttpResponse.json([
+          {
+            ...makeAudit(AUDIT_LATEST, '2026-07-18T00:00:00Z'),
+            status: latestReady ? 'completed' : 'running',
+            completed_at: latestReady ? '2026-07-18T00:00:00Z' : null,
+          },
+          makeAudit(AUDIT_OLDER, '2026-07-15T00:00:00Z'),
+        ]),
+      ),
+      http.get(`/api/v1/projects/${PROJECT_ID}/visibility`, () =>
+        HttpResponse.json(
+          latestReady ? makeVisibility(AUDIT_LATEST, 67) : makeVisibility(AUDIT_OLDER, 55),
+        ),
+      ),
+    );
+    const { queryClient } = renderVisibilityPage();
+    const latestProjectionKey = [...queryKeys.visibility.project(PROJECT_ID), 'core'] as const;
+
+    await waitFor(() =>
+      expect(queryClient.getQueryData<{ audit_id: string }>(latestProjectionKey)?.audit_id).toBe(
+        AUDIT_OLDER,
+      ),
+    );
+
+    latestReady = true;
+    await queryClient.refetchQueries({
+      queryKey: queryKeys.runs.list({ project_id: PROJECT_ID }),
+      exact: true,
+    });
+
+    await waitFor(() =>
+      expect(queryClient.getQueryData<{ audit_id: string }>(latestProjectionKey)?.audit_id).toBe(
+        AUDIT_LATEST,
+      ),
+    );
   });
 
   it('narrows the per-engine comparison when an engine filter is applied', async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { EngineFilter } from '@/components/visibility/visibility-toolbar';
@@ -112,6 +112,10 @@ function useRunSelection(projectId: string | null, selectedRunId: string | null)
 
   const runOptions = useMemo(() => toRunOptions(auditsQuery.data ?? []), [auditsQuery.data]);
   const activeRun = useMemo(() => findActiveRun(auditsQuery.data ?? []), [auditsQuery.data]);
+  useLatestRunInvalidation(
+    projectId,
+    auditsQuery.data === undefined ? undefined : (runOptions[0]?.id ?? null),
+  );
 
   const activeRunId = useMemo(() => {
     if (selectedRunId && runOptions.some((run) => run.id === selectedRunId)) {
@@ -127,6 +131,28 @@ function useRunSelection(projectId: string | null, selectedRunId: string | null)
     activeRunId,
     hasRuns: runOptions.length > 0,
   };
+}
+
+/** Refresh `latest` projections when polling observes a newly dashboard-ready run. */
+function useLatestRunInvalidation(
+  projectId: string | null,
+  latestDashboardRunId: string | null | undefined,
+) {
+  const queryClient = useQueryClient();
+  const previous = useRef<{ projectId: string; runId: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!projectId || latestDashboardRunId === undefined) return;
+    const prior = previous.current;
+    previous.current = { projectId, runId: latestDashboardRunId };
+    if (!prior || prior.projectId !== projectId || prior.runId === latestDashboardRunId) return;
+
+    // The server-resolved `latest` keys do not change when run B supersedes run
+    // A. Mark cached Visibility projections stale so the active tab refetches
+    // immediately and inactive evidence is refreshed
+    // on its next intent/mount instead of serving run A for the global staleTime.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.visibility.all });
+  }, [latestDashboardRunId, projectId, queryClient]);
 }
 
 /**

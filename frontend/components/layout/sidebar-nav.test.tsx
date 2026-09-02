@@ -84,8 +84,17 @@ describe('station navigation', () => {
     render(<SidebarNav />);
     const traffic = screen.getByRole('link', { name: 'Traffic' });
     fireEvent.mouseEnter(traffic);
-    fireEvent.focus(traffic);
     expect(mocks.prefetchQuery).toHaveBeenCalled();
+    expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual([
+      'traffic',
+      'dashboard',
+      '11111111-1111-4111-8111-111111111111',
+      { granularity: 'day' },
+    ]);
+
+    mocks.prefetchQuery.mockClear();
+    fireEvent.focus(traffic);
+    expect(mocks.prefetchQuery).toHaveBeenCalledOnce();
     expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual([
       'traffic',
       'dashboard',
