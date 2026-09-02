@@ -19,13 +19,13 @@ test('landing renders on the Proof surface without a backend', async ({ page }) 
   await expect(h1).toBeVisible();
   await expect(h1).toHaveCount(1);
 
-  // docs/design.md §Colour is the authority: the page canvas is the neutral
+  // docs/design.md §Colour is the authority: the page canvas is the violet-tinted
   // paper `background` token, while crisp white is `panel` / `elevated`, the
   // surface that sits ON the canvas. This asserted the panel colour for the
   // canvas, and no CI job ran it, so the drift went unnoticed.
   await expect(page.locator('.bg-background').first()).toHaveCSS(
     'background-color',
-    'rgb(250, 250, 248)',
+    'rgb(247, 246, 253)',
   );
 
   await expect(page.getByRole('img', { name: /ChatGPT, Grok, Gemini/i })).toBeVisible();
