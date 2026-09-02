@@ -39,28 +39,3 @@ export function Stack({
     </Component>
   );
 }
-
-/**
- * A row of cards that read as peers. `h-full` on the children is what lets a
- * `CardFooter` land on the same baseline across the row instead of floating at
- * the bottom of whichever card happened to have the most content.
- *
- * The caller supplies the column count at the breakpoint where the row forms.
- */
-export function CardGrid({
-  className,
-  children,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'div'>>) {
-  return (
-    <div
-      {...props}
-      className={cn(
-        'grid gap-[var(--workspace-gap)] [&>*]:flex [&>*]:h-full [&>*]:flex-col',
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
-}

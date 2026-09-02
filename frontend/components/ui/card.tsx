@@ -110,30 +110,3 @@ export function CardContent({
     </div>
   );
 }
-
-/**
- * CardFooter — the action bar at the foot of a card: a tonal band hung off a
- * hairline, holding the card's one action. Pair it with `CardGrid` so the bars
- * land on the same baseline across a row instead of floating at the bottom of
- * whichever card had the most content.
- *
- * `mt-auto` is what pins it: the card is a column, so the footer takes the
- * slack rather than sitting immediately under the content.
- */
-export function CardFooter({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'footer'>>) {
-  return (
-    <footer
-      {...props}
-      className={cn(
-        'border-border-subtle bg-panel-tonal mt-auto flex items-center justify-between gap-2 border-t px-[var(--card-padding-large)] py-3',
-        className,
-      )}
-    >
-      {children}
-    </footer>
-  );
-}

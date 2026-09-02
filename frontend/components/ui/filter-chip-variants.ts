@@ -11,7 +11,7 @@ export const chipBaseClasses =
 export const chipRestingClasses =
   'border-border bg-panel text-secondary hover:border-border-strong hover:text-foreground';
 
-export const chipSelectedClasses = 'border-accent-border bg-accent-subtle text-accent-text';
+const chipSelectedClasses = 'border-accent-border bg-accent-subtle text-accent-text';
 
 /** Shared multi-select/filter chip recipe. */
 export function filterChipClasses(active: boolean): string {

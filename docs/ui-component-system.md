@@ -20,9 +20,9 @@ React Hook Form, Zod, and TanStack Query.
 | Pressable | Add | `components/ui/pressable.tsx`; rows/cards without button chrome |
 | Clipboard action | Add | `components/ui/copy-button.tsx` |
 | Text roles (`textRole`) | Add | `components/ui/typography.tsx`; the closed set of product text roles — a call site names the job, never a size/weight/ink |
-| Stack, CardGrid | Add | `components/ui/layout.tsx`; vertical rhythm and equal-height card rows |
+| Stack | Add | `components/ui/layout.tsx`; vertical rhythm belongs to the container, never a child margin |
 | Panel (`panelClasses`) | Add | `components/ui/panel.tsx`; the bordered filled box nested inside a card or section |
-| Card footer / flush content | Deepen | `components/ui/card.tsx`; `CardFooter` for the action bar, `CardContent flush` for edge-to-edge tables and lists |
+| Flush card content | Deepen | `components/ui/card.tsx`; `CardContent flush` for edge-to-edge tables and lists |
 | Menu separator | Deepen | `components/ui/dropdown.tsx`; the separator owns its own rule and spacing |
 | Command palette, Market Select, CSV import | Specialized | `csv-import.tsx` owns file selection, reset/reselection, pending state, and accessible labeling; domain parsers remain feature-owned |
 | Cursor/table pagination, resizable workspaces | Specialized | Existing feature owners |

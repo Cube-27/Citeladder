@@ -199,9 +199,10 @@ and crisp semantic hairlines to maintain clear structure without visual clutter:
   tonal well. `Card` is reserved for a real semantic object: a white fill, the
   card radius, and a hairline border. It carries no shadow — a card is defined
   by its edge — and shadows belong only to overlays, menus, drawers, dialogs,
-  the command palette, and toasts. `Card` sets no display of its own; a row that
-  needs its `CardFooter` bars aligned uses `CardGrid`, which opts that row into
-  the column layout.
+  the command palette, and toasts. `Card` sets no display of its own: making it
+  a flex column would re-flow every existing card and put an overflow boundary
+  between a sticky child and its scroll container, so a row that needs aligned
+  footers opts in at the call site.
 - **The nested box is a `Panel`**: a bordered, filled, padded box *inside* a card
   or a section uses `panelClasses({ tone, pad })` from `components/ui/panel.tsx`.
   Twenty-seven of these were hand-rolled, each with its own fill, border colour,
