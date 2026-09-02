@@ -33,10 +33,10 @@ function NavLink({
       onFocus={() => onIntent(item.href)}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 text-sm transition-colors duration-150',
+        'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] border px-2.5 text-sm transition-colors duration-150',
         active
-          ? textRole('emphasis', 'bg-panel')
-          : 'text-secondary hover:bg-panel/70 hover:text-foreground',
+          ? textRole('emphasis', 'border-border-subtle bg-panel')
+          : 'border-transparent text-secondary hover:bg-panel/70 hover:text-foreground',
       )}
     >
       <Icon className={cn('size-4 shrink-0', active ? 'text-accent' : 'text-subtle')} aria-hidden />
@@ -67,11 +67,11 @@ function StationLinks({
                 className={cn(
                   textRole(
                     'bodyStrong',
-                    'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3',
+                    'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3',
                   ),
                   isNavItemActive(pathname, searchParams, item)
-                    ? textRole('emphasis', 'bg-panel')
-                    : 'text-muted hover:bg-panel/70 hover:text-foreground',
+                    ? textRole('emphasis', 'border-border-subtle bg-panel')
+                    : 'border-transparent text-muted hover:bg-panel/70 hover:text-foreground',
                 )}
               >
                 {item.label}
@@ -108,7 +108,9 @@ export function SidebarNav({ className }: Readonly<{ className?: string }>) {
         return (
           <div key={group.title} className="flex flex-col gap-0">
             {showHeading ? (
-              <p className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-2 pb-1')}>{group.title}</p>
+              <p className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-3.5 pb-1')}>
+                {group.title}
+              </p>
             ) : null}
             <StationLinks group={group} />
           </div>

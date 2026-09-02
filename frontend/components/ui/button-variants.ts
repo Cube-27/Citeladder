@@ -30,7 +30,8 @@ export const buttonVariants = cva(
         primary:
           'border-transparent bg-action text-action-fg hover:bg-action-hover active:bg-action-active',
         // Secondary is the quiet tonal alternate action in authenticated flows.
-        secondary: 'border-transparent bg-well text-foreground hover:bg-active active:bg-active',
+        secondary:
+          'border-border-subtle bg-well text-foreground hover:border-border hover:bg-active active:bg-active',
         tonal:
           'border-accent-border bg-accent-subtle text-accent-text hover:border-accent hover:bg-accent-border active:bg-accent-border',
         neutral:

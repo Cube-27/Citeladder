@@ -14,8 +14,8 @@
   --color-gray-50: #f7f6fd;
   --color-gray-100: #f4f4f1;
   --color-gray-200: #efefeb;
-  --color-gray-300: #e4e4df;
-  --color-gray-400: #cfcfc9;
+  --color-gray-300: #e3e2ec;
+  --color-gray-400: #d1d0dc;
   --color-gray-500: #9a9aa0;
   --color-gray-600: #6b6b72;
   --color-gray-700: #5c5c63;
@@ -56,10 +56,10 @@
   --color-sidebar: #f4f4f1;
   --color-surface-inverse: #16161a;
 
-  --color-border: #ddddd6;
-  --color-border-subtle: #eae9e4;
-  --color-border-strong: #b6b6ae;
-  --color-border-bold: #8c8c84;
+  --color-border: #d1d0dc;
+  --color-border-subtle: #e3e2ec;
+  --color-border-strong: #a2a0b0;
+  --color-border-bold: #747282;
 
   --color-foreground: #16161a;
   --color-secondary: #3a3a40;
@@ -216,9 +216,10 @@
 
   /* Elevation — overlays own a real hairline border, so the shadow is pure
      ambient depth and never draws a ring of its own. */
-  --shadow-sm: 0 1px 2px rgb(22 22 26 / 0.03), 0 2px 4px -1px rgb(22 22 26 / 0.04);
-  --shadow-elevated: 0 4px 12px -2px rgb(22 22 26 / 0.05), 0 14px 28px -8px rgb(22 22 26 / 0.08);
-  --shadow-modal-value: 0 12px 26px -6px rgb(22 22 26 / 0.10), 0 28px 60px -16px rgb(22 22 26 / 0.17);
+  --shadow-xs: 0 1px 2px 0 rgb(22 22 26 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(22 22 26 / 0.04), 0 1px 2px -1px rgb(22 22 26 / 0.04);
+  --shadow-elevated: 0 4px 14px -2px rgb(22 22 26 / 0.06), 0 12px 28px -6px rgb(22 22 26 / 0.08);
+  --shadow-modal-value: 0 12px 28px -6px rgb(22 22 26 / 0.10), 0 28px 60px -16px rgb(22 22 26 / 0.16);
 
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;

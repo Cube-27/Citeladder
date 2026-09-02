@@ -75,7 +75,7 @@ Tokens are semantic; components use the role, not a colour value.
 | Canvas and structure | `background` / `sidebar` (`#F7F6FD`), `well` / `background-alt` / `panel-tonal` (`#F4F4F1`), `active` (`#EFEFEB`) | One lightly violet-tinted paper hierarchy across product, marketing, authentication, and onboarding |
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
 | Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
-| Borders | `border-subtle` (`#EAE9E4`), `border` (`#DDDDD6`), `border-strong` (`#B6B6AE`), `border-bold` (`#8C8C84`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
+| Borders | `border-subtle` (`#E3E2EC`), `border` (`#D1D0DC`), `border-strong` (`#A2A0B0`), `border-bold` (`#747282`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
 | Primary action | `action-*` (`#5147E5`) | Blue-violet primary actions |
 | Selection and focus | `accent-*` (`#1B44E0`) | One blue for selection, links, tabs, active navigation, and focus |
 | Status and evidence | cyan, coral, lime, amber, `citation-*`, `run-*`, `score-*`, `chart-*` | Persisted evidence and status, always paired with a label or icon |

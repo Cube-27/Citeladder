@@ -68,7 +68,7 @@ export function DashboardHeader({
                   rel="noreferrer"
                   className={textRole(
                     'label',
-                    'hover:text-foreground border-border-subtle bg-background inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2 py-0.5 transition-colors',
+                    'hover:text-foreground border-border-subtle bg-background-alt inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2 py-0.5 transition-colors',
                   )}
                 >
                   <span className="truncate">
@@ -100,7 +100,7 @@ export function DashboardHeader({
           ) : null}
         </div>
       </div>
-      <div className="border-border-subtle grid gap-3 border-t pt-3">
+      <div className="border-border-subtle grid gap-3 border-t pt-4">
         <div className="flex items-center justify-between gap-3">
           <SectionTitle id="company-facts">Company facts</SectionTitle>
           <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
