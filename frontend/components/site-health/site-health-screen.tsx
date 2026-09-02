@@ -82,7 +82,7 @@ function LoadedSiteHealthScreen({
     />
   ) : undefined;
   return (
-    <div className="grid min-w-0 gap-[var(--workspace-gap)]">
+    <div className="grid min-w-0 gap-[var(--page-section-gap)]">
       {exportError ? <Alert tone="danger">{exportError}</Alert> : null}
       {createMutation.isError ? (
         <MutationNotice

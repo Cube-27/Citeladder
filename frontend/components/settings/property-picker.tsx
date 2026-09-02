@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
@@ -65,7 +65,9 @@ function PropertyOption({
         <span className="text-foreground block truncate text-sm font-medium">{property.label}</span>
         <span className="text-muted block truncate font-mono text-xs">{property.property_ref}</span>
       </span>
-      {pending ? <Loader2 className="text-muted size-4 shrink-0 animate-spin" aria-hidden /> : null}
+      {pending ? (
+        <LoaderCircle className="text-muted size-4 shrink-0 animate-spin" aria-hidden />
+      ) : null}
       {selected && !pending ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
     </Pressable>
   );

@@ -9,7 +9,7 @@ export const segmentedItemVariants = cva(
   {
     variants: {
       selected: {
-        true: 'bg-panel text-foreground shadow-xs',
+        true: 'bg-panel text-foreground',
         false: 'text-secondary enabled:hover:bg-well enabled:hover:text-foreground',
       },
     },

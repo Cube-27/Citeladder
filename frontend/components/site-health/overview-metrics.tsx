@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import { hairlineBandClasses, hairlineBandItemClasses } from '@/components/ui/workspace';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { ScoreRing } from '@/components/ui/score-ring';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
@@ -55,7 +56,7 @@ export function OverviewMetricCards({
     crawlMetric(context),
   ];
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-testid="overview-metrics">
+    <div className={cn(hairlineBandClasses, 'sm:grid-cols-4')} data-testid="overview-metrics">
       {metrics.map((metric) => (
         <OverviewMetricCard key={metric.title} {...metric} />
       ))}
@@ -192,29 +193,27 @@ function OverviewMetricCard({
   const coverageLabel =
     coverage === null ? 'Not measured' : `${Math.round(coverage * 100)}% ${coverageUnit}`;
   return (
-    <Card>
-      <CardContent className="grid h-full gap-4 p-[var(--card-padding)]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="grid gap-1">
-            <Icon aria-hidden className="text-accent size-5" />
-            <p className="text-foreground text-sm font-medium">{title}</p>
-          </div>
-          {value === null ? (
-            <UnavailableValue state="not_measured" />
-          ) : (
-            <ScoreRing value={value} size={64} label={`${title} score: ${Math.round(value)}`} />
-          )}
-        </div>
+    <div className={cn(hairlineBandItemClasses, 'grid h-full gap-4')}>
+      <div className="flex items-start justify-between gap-3">
         <div className="grid gap-1">
-          <p className="text-muted text-xs">
-            {coverageLabel} · {confidenceLabel}
-          </p>
-          <p className="text-secondary text-xs">{detail}</p>
+          <Icon aria-hidden className="text-subtle size-4" />
+          <p className="text-foreground text-sm font-medium">{title}</p>
         </div>
-        <Button asChild variant="secondary" size="sm" className="mt-auto justify-self-start">
-          <Link href={href}>View details</Link>
-        </Button>
-      </CardContent>
-    </Card>
+        {value === null ? (
+          <UnavailableValue state="not_measured" />
+        ) : (
+          <ScoreRing value={value} size={64} label={`${title} score: ${Math.round(value)}`} />
+        )}
+      </div>
+      <div className="grid gap-1">
+        <p className="text-muted text-xs">
+          {coverageLabel} · {confidenceLabel}
+        </p>
+        <p className="text-secondary text-xs">{detail}</p>
+      </div>
+      <Button asChild variant="ghost" size="sm" className="-ms-2.5 mt-auto justify-self-start">
+        <Link href={href}>View details</Link>
+      </Button>
+    </div>
   );
 }

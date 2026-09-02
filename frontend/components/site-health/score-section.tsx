@@ -1,6 +1,8 @@
 'use client';
 
-import { Card, CardContent } from '@/components/ui/card';
+import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { cn } from '@/lib/utils';
+import { hairlineBandClasses, hairlineBandItemClasses } from '@/components/ui/workspace';
 import { ScoreRing } from '@/components/ui/score-ring';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
@@ -9,11 +11,12 @@ import { formatScore } from '@/lib/site-health/status';
 /**
  * Always-mounted score section of the canonical Site Health screen.
  *
- * The three score cards (Web Fundamentals / AEO / coverage) render in every phase:
+ * The three scores (Web Fundamentals / AEO / coverage) share one hairline-divided
+ * band rather than three cards, and render in every phase:
  * placeholders before any analysis has produced data, a live running mean
  * while analysis is in flight, and the final `score_summary` once it lands.
  * Scores appear IN PLACE — the section never unmounts, so finishing a crawl
- * updates the cards instead of jumping to a different screen. Missing scores
+ * updates them in place instead of jumping to a different screen. Missing scores
  * render `Not measured`, never a fabricated zero.
  */
 export function ScoreSection({
@@ -33,7 +36,7 @@ export function ScoreSection({
   const coverage = coverageValue;
 
   return (
-    <div className="grid gap-4 sm:grid-cols-3" data-testid="score-section">
+    <div className={cn(hairlineBandClasses, 'sm:grid-cols-3')} data-testid="score-section">
       <ScoreCard
         label="Web Fundamentals"
         value={technical}
@@ -78,10 +81,10 @@ function ScoreCard({
   sub,
 }: Readonly<{ label: string; value: number | null; state: string | undefined; sub: string }>) {
   return (
-    <Card>
+    <div className={hairlineBandItemClasses}>
       {value === null ? (
-        <CardContent className="grid h-full content-center gap-1 p-[var(--card-padding)] sm:p-[var(--card-padding)]">
-          <p className="text-muted text-xs font-medium tracking-[0.06em] uppercase">{label}</p>
+        <div className="grid h-full content-center gap-1">
+          <p className={eyebrowClasses}>{label}</p>
           {state === 'limited_evidence' || state === 'excluded' ? (
             <span className="value-placeholder">
               {state === 'limited_evidence' ? 'Limited evidence' : 'Excluded'}
@@ -92,19 +95,19 @@ function ScoreCard({
           {sub === 'Not measured' ? null : (
             <span className="text-muted text-xs leading-relaxed">{sub}</span>
           )}
-        </CardContent>
+        </div>
       ) : (
-        <CardContent className="flex h-full items-center gap-4 p-[var(--card-padding)] sm:p-[var(--card-padding)]">
-          <ScoreRing value={value} size={72} label={`${label} score: ${Math.round(value)}`} />
+        <div className="flex h-full items-center gap-4">
+          <ScoreRing value={value} size={64} label={`${label} score: ${Math.round(value)}`} />
           <div className="grid gap-1">
-            <p className="text-muted text-xs font-medium tracking-[0.06em] uppercase">{label}</p>
-            <span className="font-display text-foreground text-2xl font-medium tracking-[-0.02em] tabular-nums">
+            <p className={eyebrowClasses}>{label}</p>
+            <span className="font-display text-foreground text-3xl leading-none font-medium tracking-[-0.02em] tabular-nums">
               {formatScore(value)} / 100
             </span>
             <span className="text-muted text-xs leading-relaxed">{sub}</span>
           </div>
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </div>
   );
 }

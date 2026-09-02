@@ -7,7 +7,6 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { displayHeadingLgClasses } from '@/components/ui/typography';
@@ -195,7 +194,7 @@ function StatCard({ stat }: Readonly<{ stat: TrendStat }>) {
         : 'text-muted';
   return (
     <MetricItem
-      label={<span className={eyebrowClasses}>{stat.label}</span>}
+      label={stat.label}
       value={
         stat.placeholder ? (
           <UnavailableValue state="not_measured" />

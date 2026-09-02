@@ -64,31 +64,37 @@ Tokens are semantic; components use the role, not a colour value.
 
 | Role | Token family | Use |
 | --- | --- | --- |
-| Canvas and structure | `background` (`#F6F8FC`), `sidebar` / `well` / `background-alt` (`#EAF1FB`), `panel-tonal` (`#EDF2FA`), `active` (`#D3E3FD`) | One cool blue surface hierarchy across product, marketing, authentication, and onboarding |
+| Canvas and structure | `background` / `sidebar` (`#FAFAF8`), `well` / `background-alt` / `panel-tonal` (`#F4F4F1`), `active` (`#EFEFEB`) | One neutral paper hierarchy across product, marketing, authentication, and onboarding |
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
-| Text | `foreground` (`#14213D`), `secondary` (`#475569`), `muted` / `subtle` (`#536176`), disabled (`#7B8494`) | Editorial ink roles |
-| Borders | `border-subtle` (`#E2E8F2`), `border` (`#D7DEEA`), `border-strong` (`#8A96A8`), `border-bold` (`#6D788B`) | Shared blue-gray ledger and control roles, never surface-separation shells |
-| Primary action | `action-*` | Navy authenticated primary actions |
-| Selection and focus | `accent-*` | Indigo selection, links, tabs, and focus |
+| Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
+| Borders | `border-subtle` (`#EAE9E4`), `border` (`#DDDDD6`), `border-strong` (`#B6B6AE`), `border-bold` (`#8C8C84`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
+| Primary action | `action-*` (`#16161A`) | Near-black authenticated primary actions |
+| Selection and focus | `accent-*` (`#1B44E0`) | One blue for selection, links, tabs, active navigation, and focus |
 | Status and evidence | cyan, coral, lime, amber, `citation-*`, `run-*`, `score-*`, `chart-*` | Persisted evidence and status, always paired with a label or icon |
 
-The authenticated selection accent is indigo: `#5542F6` at rest and `#4033C7`
-for text, hover, and press. Navy owns primary actions. Every surface uses the same
-cool blue ladder: `#F6F8FC` canvas, `#EAF1FB` navigation/hover/well,
-`#EDF2FA` tonal panels, and `#D3E3FD` selected state. Raised objects, inputs, and
-overlays remain white. Product, marketing, authentication, and onboarding consume
-these shared tokens without route-scoped palette overrides.
+The ground is paper and the ink is near-black. Colour appears on under five
+percent of the surface: `action` `#16161A` owns primary buttons, and a single
+blue `#1B44E0` (`#1A3FD0` for text, hover, and press) owns selection, links,
+tabs, active navigation, focus, and the first chart series. Every surface uses
+the same neutral ladder: `#FAFAF8` canvas and sidebar, `#F4F4F1` wells and
+tonal bands, `#EFEFEB` hover and selected state. Raised objects, inputs, and
+overlays remain white. Product, marketing, authentication, and onboarding
+consume these shared tokens without route-scoped palette overrides.
 
 Text hierarchy is semantic rather than route-specific: `foreground` owns headings,
 primary values, and actions; `secondary` owns body copy and row values; `muted`
 owns labels, captions, and supporting metadata; `subtle` is reserved for tertiary
-metadata, placeholders, and unavailable-value marks. The design-system policy
+metadata, placeholders, and unavailable-value marks. These are four visibly
+different inks — when `muted` and `subtle` held the same value the ladder
+collapsed and dense screens lost their hierarchy. The design-system policy
 requires all four neutral text roles to meet WCAG 2.1 AA normal-text contrast
 (`4.5:1`) on every shared light surface, including `active`.
 
-Marketing uses the same cool blue surface ladder (`background`, `sidebar` / `well`,
-`panel-tonal`, and `active`), navy action, and indigo link/focus roles as the product,
-without route-scoped palette overrides. Functional evidence families remain inside
+Marketing uses the same neutral paper ladder (`background`, `sidebar` / `well`,
+`panel-tonal`, and `active`), ink action, and blue link/focus roles as the product,
+without route-scoped palette overrides. On paper a tonal band is a whisper, so a
+public section separates with a hairline (`divided`) unless the fill edge is
+doing real work. Functional evidence families remain inside
 product data and faithful preview scenes because those states must stay legible at a glance.
 Functional colour never carries meaning alone.
 
@@ -189,8 +195,8 @@ and crisp semantic hairlines to maintain clear structure without visual clutter:
 
 The content area caps at 1360px. Internal groups use 16–24px and major sections
 separate by 32px. Compact gutters remain 16px; dialogs and drawers use 20px.
-Cross-surface geometry is role-driven: controls and fields use 10px corners,
-semantic objects use 16px, and overlays use 16px. Focused-flow fields may use
+Cross-surface geometry is role-driven: controls and fields use 8px corners,
+semantic objects use 10px, and overlays use 12px. Focused-flow fields may use
 their documented 12px auth-control role. Fully rounded geometry is reserved for chips, badges,
 status dots, count pills, and filter toggles. Components consume the semantic geometry role;
 they do not select a route-local radius.
@@ -449,7 +455,7 @@ focused grid, then an optional CTA.
 
 ### Controls
 
-App buttons use the 10px control-radius role with no decorative inset border.
+App buttons use the 8px control-radius role with no decorative inset border.
 Website and flow primary buttons use the same shared Button behaviour and blue
 fill, but add the reference treatment: 12px corners, a subtle light inset edge,
 a defined outer blue edge, and quiet elevation. Secondary, neutral, ghost, and
@@ -485,7 +491,7 @@ a leading rail.
 Menus and custom listboxes use `shadow-elevated`, the semantic overlay-radius role, the shared
 menu panel/item recipes, and a short system-curve entrance. Single-select filters use
 radio menu items so the current value is visible without relying on colour.
-Tooltips use the elevated rung and the 16px overlay-radius role; dialogs and drawers use
+Tooltips use the elevated rung and the 12px overlay-radius role; dialogs and drawers use
 `shadow-modal-value` with the same overlay-radius role. Drawers are right-side modal contextual
 sheets owned by `components/ui/drawer.tsx`. Their scrim dims and locks the page;
 outside click, Escape, or the close control dismisses them, and focus returns to
@@ -544,7 +550,7 @@ Before merging a visual change, verify:
 - Every product, marketing, authentication, and onboarding surface consumes the
   same token ladder: `#F6F8FC` canvas, `#EAF1FB` structure/well, `#EDF2FA` tonal
   panel, and `#D3E3FD` selected state. Surface separation does not add borders.
-- App controls use 10px, semantic objects use 16px, and overlays use 16px.
+- App controls use 8px, semantic objects use 10px, and overlays use 12px.
   Shadows appear only on floating surfaces.
 - Any new motion is calm and stops under `prefers-reduced-motion`.
 - Text, focus, status, loading, error, empty, keyboard, touch, reduced-motion,

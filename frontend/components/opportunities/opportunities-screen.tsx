@@ -6,7 +6,6 @@ import { ChevronDown, Download, RefreshCw } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -66,7 +65,7 @@ function OpportunitiesContent({
     summary,
   );
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <div className="grid gap-[var(--page-section-gap)]">
       <OpportunitiesScreenBody state={screen} projectId={projectId} summary={summary} />
     </div>
   );
@@ -153,18 +152,16 @@ function PreparingRecommendations({
 }: Readonly<{ projectId: string; summary: OpportunitySummary }>) {
   const delayed = summary.activation_state === 'delayed';
   return (
-    <Card>
-      <CardContent className="grid justify-items-center gap-3 py-10 text-center">
-        <AccentEyebrow>Recommendations</AccentEyebrow>
-        <h2 className={displayHeadingLgClasses}>
-          {delayed ? 'Recommendations need another try' : 'Preparing recommendations'}
-        </h2>
-        <p className="text-secondary max-w-md text-sm">
-          {preparationMessage(summary.activation_state)}
-        </p>
-        {delayed ? <RetryButton projectId={projectId} variant="secondary" /> : null}
-      </CardContent>
-    </Card>
+    <div className="grid gap-3 py-[var(--empty-state-padding)]">
+      <AccentEyebrow>Recommendations</AccentEyebrow>
+      <h2 className={displayHeadingLgClasses}>
+        {delayed ? 'Recommendations need another try' : 'Preparing recommendations'}
+      </h2>
+      <p className="text-secondary max-w-md text-sm">
+        {preparationMessage(summary.activation_state)}
+      </p>
+      {delayed ? <RetryButton projectId={projectId} variant="secondary" /> : null}
+    </div>
   );
 }
 
@@ -178,59 +175,56 @@ function SummaryStrip({
     (summary.counts_by_severity.critical ?? 0) + (summary.counts_by_severity.high ?? 0);
 
   return (
-    <Card>
-      <CardContent className="flex flex-wrap items-center justify-between gap-4 py-3">
-        <div className="grid gap-1">
-          <AccentEyebrow>Recommendation queue</AccentEyebrow>
-          <p className="text-foreground text-sm">
-            <span className="mono font-medium">{openCount}</span> open recommendations
-            <span className="text-muted"> · </span>
-            <span className="mono font-medium">{highImpactCount}</span> high impact
-            <span className="text-muted"> · </span>
-            <span className="mono font-medium">{inProgressCount}</span> in progress
+    <div className="border-border-subtle flex flex-wrap items-center justify-between gap-4 border-b pb-3">
+      <div className="grid gap-1">
+        <AccentEyebrow>Recommendation queue</AccentEyebrow>
+        <p className="text-foreground text-sm">
+          <span className="mono font-medium">{openCount}</span> open recommendations
+          <span className="text-muted"> · </span>
+          <span className="mono font-medium">{highImpactCount}</span> high impact
+          <span className="text-muted"> · </span>
+          <span className="mono font-medium">{inProgressCount}</span> in progress
+        </p>
+        <SourceMixHeadline mix={summary.source_mix} />
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-muted text-xs">
+            Last computed {formatAudited(summary.computed_at)} from your latest available evidence.
           </p>
-          <SourceMixHeadline mix={summary.source_mix} />
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-muted text-xs">
-              Last computed {formatAudited(summary.computed_at)} from your latest available
-              evidence.
-            </p>
-            {summary.stale ? (
-              <Badge variant="status" value="warning">
-                Newer evidence available
-              </Badge>
-            ) : null}
-          </div>
-          {summary.limitations.length > 0 ? (
-            <p className="text-warning text-xs">{summary.limitations.join(' ')}</p>
+          {summary.stale ? (
+            <Badge variant="status" value="warning">
+              Newer evidence available
+            </Badge>
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
-          <Dropdown>
-            <DropdownTrigger asChild>
-              <Button variant="secondary" size="sm">
-                <Download className="size-4" aria-hidden />
-                Export
-                <ChevronDown className="size-4" aria-hidden />
-              </Button>
-            </DropdownTrigger>
-            <DropdownContent align="end">
-              <DropdownItem asChild>
-                <a href={opportunitiesApi.exportUrl(projectId, 'csv')} download>
-                  Download CSV
-                </a>
-              </DropdownItem>
-              <DropdownItem asChild>
-                <a href={opportunitiesApi.exportUrl(projectId, 'md')} download>
-                  Download Markdown
-                </a>
-              </DropdownItem>
-            </DropdownContent>
-          </Dropdown>
-          {summary.activation_state === 'delayed' ? <RetryButton projectId={projectId} /> : null}
-        </div>
-      </CardContent>
-    </Card>
+        {summary.limitations.length > 0 ? (
+          <p className="text-warning text-xs">{summary.limitations.join(' ')}</p>
+        ) : null}
+      </div>
+      <div className="flex items-center gap-2">
+        <Dropdown>
+          <DropdownTrigger asChild>
+            <Button variant="secondary" size="sm">
+              <Download className="size-4" aria-hidden />
+              Export
+              <ChevronDown className="size-4" aria-hidden />
+            </Button>
+          </DropdownTrigger>
+          <DropdownContent align="end">
+            <DropdownItem asChild>
+              <a href={opportunitiesApi.exportUrl(projectId, 'csv')} download>
+                Download CSV
+              </a>
+            </DropdownItem>
+            <DropdownItem asChild>
+              <a href={opportunitiesApi.exportUrl(projectId, 'md')} download>
+                Download Markdown
+              </a>
+            </DropdownItem>
+          </DropdownContent>
+        </Dropdown>
+        {summary.activation_state === 'delayed' ? <RetryButton projectId={projectId} /> : null}
+      </div>
+    </div>
   );
 }
 

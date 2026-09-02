@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart3, Globe, Loader2, Search, type LucideIcon } from 'lucide-react';
+import { BarChart3, Globe, LoaderCircle, Search, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { FAMILY_META, type GrantModel } from '@/components/settings/grant-model';
@@ -103,7 +103,7 @@ function ConnectionActions({
         >
           {syncPending ? (
             <>
-              <Loader2 className="size-3.5 animate-spin" aria-hidden />
+              <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
               Syncing…
             </>
           ) : (

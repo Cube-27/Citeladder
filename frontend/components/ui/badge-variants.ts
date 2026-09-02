@@ -1,50 +1,60 @@
 /**
- * Badge token maps (§8). Each family maps a value → bridged semantic token
- * classes (bg + text + border). No raw hex; all classes resolve to the
+ * Badge token maps (§8). Each family maps a value → the colour of the badge's
+ * status dot, plus the label's ink. No raw hex; all classes resolve to the
  * semantic Tailwind declarations in globals.css.
+ *
+ * One signal, one encoding. A badge used to carry a fill, a border, a dot and a
+ * label — four ways of saying the same thing, and on a paper canvas that reads
+ * as clutter. The dot now carries the family colour and the label carries the
+ * meaning, so a dense table of badges stays quiet enough to scan.
+ *
+ * The dot class is a separate field rather than a `[&>span]:bg-*` variant on the
+ * wrapper: a child selector matches ANY direct span, and several call sites wrap
+ * their own label in one (prompt-table, measurement-context), which would paint
+ * a block behind the text. Badge owns the dot element, so Badge applies the class.
  *
  * Families:
  *  - status:         success | warning | danger | info
  *  - sentiment:      positive | neutral | negative
  *  - classification: owned | competitor | third-party  (citation classification)
  *  - run-status:     draft | queued | running | analyzing | completed | partial | failed | cancelled
- *  - neutral:        the default grey chip
+ *  - neutral:        the default chip
  */
 
+export type BadgeTone = { label: string; dot: string };
+
 export const statusBadge = {
-  success: 'bg-success-bg text-success-text border border-success-border/60',
-  warning: 'bg-warning-bg text-warning-text border border-warning-border/60',
-  danger: 'bg-danger-bg text-danger-text border border-danger-border/60',
-  info: 'bg-info-bg text-info-text border border-info-border/60',
-} as const;
+  success: { label: 'text-secondary', dot: 'bg-success' },
+  warning: { label: 'text-secondary', dot: 'bg-warning' },
+  danger: { label: 'text-danger-text', dot: 'bg-danger' },
+  info: { label: 'text-secondary', dot: 'bg-info' },
+} as const satisfies Record<string, BadgeTone>;
 
 export const sentimentBadge = {
-  positive: 'bg-sentiment-positive-bg text-sentiment-positive-text border border-success-border/50',
-  neutral: 'bg-sentiment-neutral-bg text-sentiment-neutral-text border border-border',
-  negative: 'bg-sentiment-negative-bg text-sentiment-negative-text border border-danger-border/50',
-} as const;
+  positive: { label: 'text-secondary', dot: 'bg-sentiment-positive' },
+  neutral: { label: 'text-secondary', dot: 'bg-sentiment-neutral' },
+  negative: { label: 'text-danger-text', dot: 'bg-sentiment-negative' },
+} as const satisfies Record<string, BadgeTone>;
 
 export const classificationBadge = {
-  owned: 'bg-citation-owned-bg text-citation-owned-text border border-citation-owned-border/60',
-  competitor:
-    'bg-citation-competitor-bg text-citation-competitor-text border border-citation-competitor-border/60',
-  'third-party':
-    'bg-citation-third-party-bg text-citation-third-party-text border border-citation-third-party-border/60',
-} as const;
+  owned: { label: 'text-secondary', dot: 'bg-citation-owned' },
+  competitor: { label: 'text-secondary', dot: 'bg-citation-competitor' },
+  'third-party': { label: 'text-secondary', dot: 'bg-citation-third-party' },
+} as const satisfies Record<string, BadgeTone>;
 
 export const runStatusBadge = {
-  draft: 'bg-run-draft-bg text-run-draft border border-border',
-  queued: 'bg-run-queued-bg text-run-queued border border-border',
-  running: 'bg-run-running-bg text-run-running border border-accent-border/60',
-  paused: 'bg-run-queued-bg text-run-queued border border-border',
-  analyzing: 'bg-run-analyzing-bg text-run-analyzing border border-purple-200',
-  completed: 'bg-run-completed-bg text-run-completed border border-success-border/60',
-  partial: 'bg-run-partial-bg text-run-partial border border-warning-border/60',
-  failed: 'bg-run-failed-bg text-run-failed border border-danger-border/60',
-  cancelled: 'bg-run-cancelled-bg text-run-cancelled border border-border',
-} as const;
+  draft: { label: 'text-muted', dot: 'bg-run-draft' },
+  queued: { label: 'text-muted', dot: 'bg-run-queued' },
+  running: { label: 'text-secondary', dot: 'bg-run-running' },
+  paused: { label: 'text-muted', dot: 'bg-run-queued' },
+  analyzing: { label: 'text-secondary', dot: 'bg-run-analyzing' },
+  completed: { label: 'text-secondary', dot: 'bg-run-completed' },
+  partial: { label: 'text-secondary', dot: 'bg-run-partial' },
+  failed: { label: 'text-danger-text', dot: 'bg-run-failed' },
+  cancelled: { label: 'text-muted', dot: 'bg-run-cancelled' },
+} as const satisfies Record<string, BadgeTone>;
 
-export const neutralBadge = 'bg-neutral-bg text-secondary border border-border';
+export const neutralBadge = { label: 'text-muted', dot: 'bg-border-strong' } as const;
 
 export type StatusValue = keyof typeof statusBadge;
 export type SentimentValue = keyof typeof sentimentBadge;
@@ -52,13 +62,8 @@ export type ClassificationValue = keyof typeof classificationBadge;
 export type RunStatusValue = keyof typeof runStatusBadge;
 
 /**
- * Shared shape/typography for every badge family — flat sans rectangles
- * (rounded-sm), not mono pills. Casing comes from the call site so product
- * nouns keep their capitalization. `run-status` keeps the pill via
- * `runStatusBadgeShape` below.
+ * Shared shape/typography for every badge family — an unboxed dot-and-label
+ * pair, not a chip. Casing comes from the call site so product nouns keep their
+ * capitalization.
  */
-export const badgeBase =
-  'inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm px-2 py-0.5 text-xs font-medium';
-
-/** Run-status badges stay pills — the lifecycle dot reads better round. */
-export const runStatusBadgeShape = 'rounded-full px-2';
+export const badgeBase = 'inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium';

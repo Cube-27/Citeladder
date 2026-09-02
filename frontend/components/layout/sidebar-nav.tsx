@@ -22,16 +22,11 @@ function NavLink({ item, active }: Readonly<{ item: NavItem; active: boolean }>)
       href={item.href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 text-sm font-medium transition-colors duration-150',
-        active
-          ? 'bg-panel text-accent-text'
-          : 'text-secondary hover:bg-panel hover:text-foreground',
+        'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 text-sm transition-colors duration-150',
+        active ? 'text-foreground font-medium' : 'text-muted hover:text-foreground font-normal',
       )}
     >
-      <Icon
-        className={cn('size-4 shrink-0', active ? 'text-accent opacity-100' : 'opacity-80')}
-        aria-hidden
-      />
+      <Icon className={cn('size-4 shrink-0', active ? 'text-accent' : 'text-subtle')} aria-hidden />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
     </Link>
   );
@@ -56,8 +51,8 @@ function StationLinks({
                 className={cn(
                   'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium',
                   isNavItemActive(pathname, searchParams, item)
-                    ? 'bg-active text-foreground'
-                    : 'text-secondary',
+                    ? 'text-foreground font-medium'
+                    : 'text-muted',
                 )}
               >
                 {item.label}
@@ -87,7 +82,7 @@ export function SidebarNav({ className }: Readonly<{ className?: string }>) {
         return (
           <div key={group.title} className="flex flex-col gap-0">
             {showHeading ? (
-              <p className={cn(eyebrowClasses, 'px-1 pb-0.5 text-sm')}>{group.title}</p>
+              <p className={cn(eyebrowClasses, 'px-2.5 pt-3 pb-1.5')}>{group.title}</p>
             ) : null}
             <StationLinks group={group} />
           </div>

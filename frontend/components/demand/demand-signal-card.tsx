@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { eyebrowClasses } from '@/components/ui/eyebrow';
 import {
   ArrowUpRight,
   ChevronRight,
@@ -334,29 +335,25 @@ export function DemandSignalCard({
         <div className="border-border-subtle flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
           <dl className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
-              <dt className="text-muted text-xs font-medium tracking-[0.06em] uppercase">
-                Impressions
-              </dt>
+              <dt className={eyebrowClasses}>Impressions</dt>
               <dd className="text-foreground mt-0.5 text-sm font-medium tabular-nums">
                 <DemandMetricValue value={formatCount(numericMetric(signal, 'impressions'))} />
               </dd>
             </div>
             <div>
-              <dt className="text-muted text-xs font-medium tracking-[0.06em] uppercase">Clicks</dt>
+              <dt className={eyebrowClasses}>Clicks</dt>
               <dd className="text-foreground mt-0.5 text-sm font-medium tabular-nums">
                 <DemandMetricValue value={formatCount(numericMetric(signal, 'clicks'))} />
               </dd>
             </div>
             <div>
-              <dt className="text-muted text-xs font-medium tracking-[0.06em] uppercase">CTR</dt>
+              <dt className={eyebrowClasses}>CTR</dt>
               <dd className="text-foreground mt-0.5 text-sm font-medium tabular-nums">
                 <DemandMetricValue value={formatCtr(signal)} />
               </dd>
             </div>
             <div>
-              <dt className="text-muted text-xs font-medium tracking-[0.06em] uppercase">
-                Avg Position
-              </dt>
+              <dt className={eyebrowClasses}>Avg Position</dt>
               <dd className="text-foreground mt-0.5 text-sm font-medium tabular-nums">
                 {numericMetric(signal, 'position') === null ? (
                   <UnavailableValue state="not_measured" />

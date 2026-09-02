@@ -1,4 +1,5 @@
 import { ArrowUpRight } from 'lucide-react';
+import { LogoMark } from '@/components/ui/logo-mark';
 import Link from 'next/link';
 
 import { COMPETITORS } from '@/lib/marketing-content/compare';
@@ -7,7 +8,6 @@ import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { CONTACT_EMAIL, SOCIAL_LINKS, type SocialLink } from '@/lib/marketing-content/social';
 
 import { Container } from '../primitives/section';
-import { Wordmark } from '../primitives/wordmark';
 
 type FooterLink = { label: string; href: string; external?: boolean };
 type FooterColumn = { key: string; label: string; links: readonly FooterLink[] };
@@ -123,7 +123,7 @@ export async function MarketingFooter() {
         >
           <div className="col-span-2 space-y-5 sm:col-span-3 lg:col-span-1">
             <Link href="/" aria-label="CiteLadder home" className="inline-block">
-              <Wordmark />
+              <LogoMark size={24} />
             </Link>
 
             <p className="website-body text-muted max-w-[28ch]">

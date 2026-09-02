@@ -58,7 +58,7 @@ export function EvidenceError({
   return (
     <Card>
       <CardContent>
-        <div className="grid justify-items-center gap-3 py-10 text-center">
+        <div className="grid gap-3 py-[var(--empty-state-padding)]">
           <CardEyebrow>{title}</CardEyebrow>
           <IconChip className="bg-danger-bg text-danger-text">
             <ICONS.warning className="size-5" aria-hidden />
@@ -85,8 +85,7 @@ export function EvidenceEmpty({
   return (
     <Card>
       <CardContent>
-        {/* Midnight empty-state pattern: mono eyebrow + display heading + ghost CTA. */}
-        <div className="grid justify-items-center gap-3 py-10 text-center">
+        <div className="grid gap-3 py-[var(--empty-state-padding)]">
           <CardEyebrow>{title}</CardEyebrow>
           <IconChip className="bg-neutral-bg text-muted">
             <Inbox className="size-5" aria-hidden />
@@ -110,7 +109,7 @@ export function EvidenceFilteredEmpty({
   return (
     <Card>
       <CardContent>
-        <div className="grid justify-items-center gap-3 py-10 text-center">
+        <div className="grid gap-3 py-[var(--empty-state-padding)]">
           <CardEyebrow>{title}</CardEyebrow>
           <IconChip className="bg-neutral-bg text-muted">
             <SearchX className="size-5" aria-hidden />

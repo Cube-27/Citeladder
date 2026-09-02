@@ -4,15 +4,14 @@ import { cn } from '@/lib/utils';
 
 /**
  * Dense analytics table — the shared semantic ledger treatment:
- *  - sticky header (--table-header-height) on bg-panel, ruled top and with
- *    a 2px under-rule (border-b-2); no vertical column-separator
- *    hairlines, which made the tables read as
- *    spreadsheets rather than designed surfaces
+ *  - sticky header (--table-header-height) on bg-panel with a single
+ *    full-strength under-rule; no vertical column-separator hairlines, which
+ *    made the tables read as spreadsheets rather than designed surfaces
  *  - --table-row-height rows, --text-sm cells, subtle ROW hairlines only
  *  - everything left-aligned (including numeric columns — the mock aligns the
  *    column edge, not the digits); `numeric` still applies tabular numerals
- *  - hover tints the row with background-alt; `highlight` marks the user's
- *    own row with the same tint permanently
+ *  - hover tints the row with `active`; `highlight` marks the user's own row
+ *    with the same tint permanently
  * The wrapper is scroll-capable so the sticky header pins on vertical scroll.
  *
  * The header label recipe (`tableHeadClasses`) is deliberately NOT the shared
@@ -73,8 +72,8 @@ export function TableRow({
     <tr
       {...props}
       className={cn(
-        'hover:bg-background-alt h-[var(--table-row-height)] transition-colors',
-        highlight && 'bg-background-alt',
+        'hover:bg-active h-[var(--table-row-height)] transition-colors',
+        highlight && 'bg-active',
         className,
       )}
     >
@@ -94,7 +93,7 @@ export function TableHead({
       {...props}
       className={cn(
         tableHeadClasses,
-        'border-border-subtle bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-t border-b-2 px-[var(--table-cell-padding-x)] text-left align-middle',
+        'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'tabular-nums',
         className,
       )}

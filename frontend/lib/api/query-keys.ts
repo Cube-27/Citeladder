@@ -10,9 +10,8 @@
  *   - traffic.ts       — traffic (dashboard, pages, queries)
  *   - demand.ts        — search-demand projections
  *   - ai-referrals.ts  — AI-referral measurements
- *   - products.ts      — products (agentic commerce catalog + visibility)
  *   - opportunities.ts — opportunities (catalog, detail, summary)
- *   - commerce.ts      — commerce (catalog feed health)
+ *   - commerce.ts      — commerce (catalog feed health, agentic product visibility)
  *
  * This facade assembles them under one `queryKeys` entry point.
  */

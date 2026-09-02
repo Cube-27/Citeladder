@@ -56,7 +56,7 @@ export function PromptTable({
   const pagedPrompts = prompts.slice(from - 1, to);
 
   return (
-    <div className="bg-panel border-border overflow-hidden rounded-[var(--radius-card)] border">
+    <>
       <Table>
         <TableHeader>
           <TableRow>
@@ -151,6 +151,6 @@ export function PromptTable({
         noun="prompts"
         onPageChange={setPage}
       />
-    </div>
+    </>
   );
 }

@@ -7,8 +7,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 
 /**
  * Empty state (F7) — shown when the active project's prompt set has no prompts.
- * Midnight empty-state pattern: mono eyebrow + display heading + ghost CTAs
- * inviting the first manual prompt or a CSV import.
+ * The shared `EmptyState` shape, with CTAs inviting the first manual prompt or
+ * a CSV import.
  */
 export function PromptEmptyState({
   onAdd,

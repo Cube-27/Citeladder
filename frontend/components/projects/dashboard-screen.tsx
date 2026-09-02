@@ -72,7 +72,7 @@ function DashboardData({
 }>) {
   const actions = useCommandCenterActions(data, activeProject);
   return (
-    <div className="flex flex-col gap-[var(--workspace-gap)]">
+    <div className="flex flex-col gap-[var(--page-section-gap)]">
       <div className="grid gap-[var(--workspace-gap)]" data-tour="command-center">
         <DashboardHeader
           data={data}

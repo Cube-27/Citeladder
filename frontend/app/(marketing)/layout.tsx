@@ -12,7 +12,7 @@ import { organizationJsonLd, websiteJsonLd } from '@/lib/seo/json-ld';
  * Deliberately NOT wrapped in SessionGuard: these pages must be reachable and
  * server-rendered for anonymous visitors.
  *
- * The warm canvas uses the public editorial type ladder. `MarketingMotion`
+ * The paper canvas uses the public editorial type ladder. `MarketingMotion`
  * supplies the tree's explanatory animation features — it is what makes `m`
  * components animate at all, and it defers GSAP off the server bundle. Fonts
  * come from the root layout: Plus Jakarta Sans → `--font-display`, Geist → `--font-sans`.

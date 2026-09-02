@@ -93,7 +93,7 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
   };
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <div className="grid gap-[var(--page-section-gap)]">
       {summary ? <IssueSummary summary={summary} findingView={findingView} /> : null}
       <div className="flex flex-wrap items-center gap-2">
         <IssueSearch
@@ -251,7 +251,7 @@ function IssueGroupList({
   onSelect: (groupId: string) => void;
 }>) {
   return (
-    <div className="border-border-subtle bg-panel divide-border-subtle divide-y overflow-hidden rounded-lg border">
+    <div className="border-border-subtle bg-panel divide-border-subtle divide-y overflow-hidden rounded-[var(--radius-card)] border">
       {rows.map((issue) => {
         const selected = issue.group_id === selectedGroupId;
         return (
@@ -262,7 +262,7 @@ function IssueGroupList({
             aria-pressed={selected}
             className={cn(
               'focus-ring grid w-full gap-2 px-4 py-3 text-left transition-colors',
-              selected ? 'bg-accent-subtle' : 'hover:bg-panel-subtle',
+              selected ? 'bg-accent-subtle' : 'hover:bg-active',
             )}
           >
             <span className="flex items-center justify-between gap-3">
@@ -348,7 +348,7 @@ function IssueDetailRail({
             <p className="text-secondary text-sm whitespace-pre-line">{issue.description}</p>
           ) : null}
           {issue.remediation ? (
-            <div className="border-border-subtle bg-panel-subtle grid gap-1 rounded-lg border p-3">
+            <div className="border-border-subtle bg-well grid gap-1 rounded-[var(--radius-card)] border p-3">
               <span className="text-muted text-xs font-medium">How to fix</span>
               <p className="text-secondary text-sm whitespace-pre-line">{issue.remediation}</p>
             </div>

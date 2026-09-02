@@ -6,9 +6,9 @@ import {
   classificationBadge,
   neutralBadge,
   runStatusBadge,
-  runStatusBadgeShape,
   sentimentBadge,
   statusBadge,
+  type BadgeTone,
   type ClassificationValue,
   type RunStatusValue,
   type SentimentValue,
@@ -32,7 +32,7 @@ export type BadgeProps = {
 ) &
   Omit<HTMLAttributes<HTMLSpanElement>, 'children'>;
 
-function badgeClasses(props: BadgeProps): string {
+function badgeTone(props: BadgeProps): BadgeTone {
   switch (props.variant) {
     case 'status':
       return statusBadge[props.value];
@@ -41,7 +41,7 @@ function badgeClasses(props: BadgeProps): string {
     case 'classification':
       return classificationBadge[props.value];
     case 'run-status':
-      return cn(runStatusBadge[props.value], runStatusBadgeShape);
+      return runStatusBadge[props.value];
     default:
       return neutralBadge;
   }
@@ -52,9 +52,10 @@ export function Badge(props: Readonly<BadgeProps>) {
   // the DOM node; forward every other HTML attribute (id, style, aria-*,
   // onClick, …) to the span.
   const { children, className, variant: _variant, value: _value, ...rest } = props;
+  const tone = badgeTone(props);
   return (
-    <span className={cn(badgeBase, badgeClasses(props), className)} {...rest}>
-      <span className="size-1.5 rounded-full bg-current" aria-hidden />
+    <span className={cn(badgeBase, tone.label, className)} {...rest}>
+      <span className={cn('size-1.5 shrink-0 rounded-full', tone.dot)} aria-hidden />
       {children}
     </span>
   );

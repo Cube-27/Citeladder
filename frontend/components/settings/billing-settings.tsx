@@ -1,6 +1,7 @@
 'use client';
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { eyebrowClasses } from '@/components/ui/eyebrow';
 import Link from 'next/link';
 import { CreditCard, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
@@ -184,9 +185,9 @@ function CurrentPlan({
     <div className="bg-panel border-border-subtle rounded-md border p-[var(--card-padding)]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-muted text-xs font-medium tracking-[0.06em] uppercase">Current plan</p>
+          <p className={eyebrowClasses}>Current plan</p>
           <div className="mt-1 flex items-center gap-2.5">
-            <p className="text-foreground text-base font-medium tracking-[-0.015em]">
+            <p className="text-foreground text-base font-medium">
               {currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
             </p>
             <Badge variant="status" value={subscription ? 'success' : 'info'}>

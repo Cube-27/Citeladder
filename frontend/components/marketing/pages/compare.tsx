@@ -20,7 +20,6 @@ export function CompareIndex() {
   return (
     <>
       <PageHero
-        centered
         eyebrow="Comparisons"
         title="How CiteLadder"
         accent="compares."

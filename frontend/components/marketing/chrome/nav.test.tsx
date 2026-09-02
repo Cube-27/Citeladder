@@ -63,9 +63,7 @@ describe('MarketingNav', () => {
 
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toHaveClass(
       'max-w-7xl',
-      'px-6-phone',
-      'md:px-6-tablet',
-      'xl:px-6',
+      'px-[var(--site-gutter)]',
     );
   });
 

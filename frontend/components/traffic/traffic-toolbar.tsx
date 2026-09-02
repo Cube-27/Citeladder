@@ -1,4 +1,4 @@
-import { Loader2, RefreshCw } from 'lucide-react';
+import { LoaderCircle, RefreshCw } from 'lucide-react';
 
 import { AnalyticsToolbar } from '@/components/ui/analytics-toolbar';
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,7 @@ export function TrafficToolbar({
           >
             {syncing || syncPending ? (
               <>
-                <Loader2 className="size-4 animate-spin" aria-hidden />
+                <LoaderCircle className="size-4 animate-spin" aria-hidden />
                 Syncing…
               </>
             ) : (

@@ -36,13 +36,12 @@ const SEGMENT_ICONS = {
 export function SolutionsHero() {
   return (
     <PageHero
-      centered
       eyebrow={SOLUTIONS_HERO.eyebrow}
       title={SOLUTIONS_HERO.title}
       accent={SOLUTIONS_HERO.accent}
       lead={SOLUTIONS_HERO.lead}
     >
-      <nav aria-label="Solutions by team" className="mt-8 flex flex-wrap justify-center gap-4">
+      <nav aria-label="Solutions by team" className="mt-8 flex flex-wrap gap-4">
         {SOLUTION_SEGMENTS.map(({ id, label }) => {
           const Icon = SEGMENT_ICONS[id as keyof typeof SEGMENT_ICONS];
           return (

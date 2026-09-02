@@ -53,7 +53,6 @@ export default function DemoPage() {
   return (
     <main id="main">
       <PageHero
-        centered
         eyebrow={DEMO_HERO.eyebrow}
         title={DEMO_HERO.title}
         accent={DEMO_HERO.accent}

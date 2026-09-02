@@ -157,7 +157,7 @@ export function YourPrompts() {
         <Alert tone="danger">Could not load prompts. Check your connection and try again.</Alert>
       ) : null}
 
-      <div className="bg-panel border-border flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border px-[var(--card-padding)] py-[var(--card-padding-compact)]">
+      <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-y py-[var(--card-padding-compact)]">
         <p className="text-secondary text-sm">
           The {project?.brand_name ?? 'brand'} configuration includes{' '}
           <span className="text-foreground font-medium">{activePrompts.length}</span> visibility{' '}
@@ -192,7 +192,7 @@ export function YourPrompts() {
       </div>
 
       {activePrompts.length === 0 ? (
-        <div className="bg-panel border-border/70 grid place-items-center gap-3 rounded-sm border p-[var(--empty-state-padding)] text-center">
+        <div className="grid gap-3 py-[var(--empty-state-padding)]">
           <p className={eyebrowClasses}>Your prompts</p>
           <h2 className={displayHeadingLgClasses}>No active prompts yet</h2>
           <p className="text-secondary max-w-md text-sm leading-relaxed">
@@ -207,109 +207,106 @@ export function YourPrompts() {
           </Link>
         </div>
       ) : visiblePrompts.length === 0 ? (
-        <p className="text-secondary p-[var(--empty-state-padding)] text-center text-sm">
+        <p className="text-secondary py-[var(--empty-state-padding)] text-sm">
           No prompts match your search.
         </p>
       ) : (
-        <div className="bg-panel border-border overflow-hidden rounded-[var(--radius-card)] border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8" aria-label="Expand" />
-                <TableHead>Prompt</TableHead>
-                <TableHead numeric>Visibility Score</TableHead>
-                <TableHead numeric>Avg Position</TableHead>
-                <TableHead numeric>Sentiment</TableHead>
-                <TableHead>Topic</TableHead>
-                <TableHead>Branded</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {groups.map((group) => {
-                const isCollapsed = collapsed.has(group.key);
-                const label = group.topic?.name ?? 'Ungrouped';
-                return (
-                  <Fragment key={group.key}>
-                    <TableRow className="bg-background-alt/50">
-                      <TableCell>
-                        <Pressable
-                          type="button"
-                          aria-expanded={!isCollapsed}
-                          aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} topic ${label}`}
-                          onClick={() => toggleGroup(group.key)}
-                          className="focus-ring text-muted hover:text-foreground hover:bg-well grid size-7 place-items-center rounded-lg transition-colors"
-                        >
-                          {isCollapsed ? (
-                            <ChevronRight className="size-4" aria-hidden />
-                          ) : (
-                            <ChevronDown className="size-4" aria-hidden />
-                          )}
-                        </Pressable>
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center gap-2">
-                          <Badge variant="neutral">{label}</Badge>
-                          <span className="text-muted text-xs">
-                            {group.prompts.length}{' '}
-                            {group.prompts.length === 1 ? 'prompt' : 'prompts'}
-                          </span>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-8" aria-label="Expand" />
+              <TableHead>Prompt</TableHead>
+              <TableHead numeric>Visibility Score</TableHead>
+              <TableHead numeric>Avg Position</TableHead>
+              <TableHead numeric>Sentiment</TableHead>
+              <TableHead>Topic</TableHead>
+              <TableHead>Branded</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {groups.map((group) => {
+              const isCollapsed = collapsed.has(group.key);
+              const label = group.topic?.name ?? 'Ungrouped';
+              return (
+                <Fragment key={group.key}>
+                  <TableRow className="bg-background-alt/50">
+                    <TableCell>
+                      <Pressable
+                        type="button"
+                        aria-expanded={!isCollapsed}
+                        aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} topic ${label}`}
+                        onClick={() => toggleGroup(group.key)}
+                        className="focus-ring text-muted hover:text-foreground hover:bg-well grid size-7 place-items-center rounded-lg transition-colors"
+                      >
+                        {isCollapsed ? (
+                          <ChevronRight className="size-4" aria-hidden />
+                        ) : (
+                          <ChevronDown className="size-4" aria-hidden />
+                        )}
+                      </Pressable>
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-2">
+                        <Badge variant="neutral">{label}</Badge>
+                        <span className="text-muted text-xs">
+                          {group.prompts.length} {group.prompts.length === 1 ? 'prompt' : 'prompts'}
                         </span>
-                      </TableCell>
-                      <TableCell numeric>
-                        <ScoreCell score={group.score} />
-                      </TableCell>
-                      <TableCell numeric>
-                        <UnavailableValue state="not_measured" />
-                      </TableCell>
-                      <TableCell numeric>
-                        <UnavailableValue state="not_measured" />
-                      </TableCell>
-                      <TableCell />
-                      <TableCell />
-                    </TableRow>
-                    {!isCollapsed
-                      ? group.prompts.map((prompt) => (
-                          <TableRow key={prompt.id}>
-                            <TableCell />
-                            <TableCell className="max-w-120">
-                              <span className="text-foreground block truncate" title={prompt.text}>
-                                {prompt.text}
-                              </span>
-                            </TableCell>
-                            <TableCell numeric>
-                              <ScoreCell score={scores.get(prompt.id) ?? null} />
-                            </TableCell>
-                            <TableCell numeric>
-                              <UnavailableValue state="not_measured" />
-                            </TableCell>
-                            <TableCell numeric>
-                              <UnavailableValue state="not_measured" />
-                            </TableCell>
-                            <TableCell>
-                              {group.topic ? (
-                                <Badge variant="neutral">{group.topic.name}</Badge>
-                              ) : (
-                                <UnavailableValue state="not_set" />
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {prompt.branded ? (
-                                <Badge variant="status" value="info">
-                                  Branded
-                                </Badge>
-                              ) : (
-                                <span className="text-muted text-xs font-medium">Not branded</span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      : null}
-                  </Fragment>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                      </span>
+                    </TableCell>
+                    <TableCell numeric>
+                      <ScoreCell score={group.score} />
+                    </TableCell>
+                    <TableCell numeric>
+                      <UnavailableValue state="not_measured" />
+                    </TableCell>
+                    <TableCell numeric>
+                      <UnavailableValue state="not_measured" />
+                    </TableCell>
+                    <TableCell />
+                    <TableCell />
+                  </TableRow>
+                  {!isCollapsed
+                    ? group.prompts.map((prompt) => (
+                        <TableRow key={prompt.id}>
+                          <TableCell />
+                          <TableCell className="max-w-120">
+                            <span className="text-foreground block truncate" title={prompt.text}>
+                              {prompt.text}
+                            </span>
+                          </TableCell>
+                          <TableCell numeric>
+                            <ScoreCell score={scores.get(prompt.id) ?? null} />
+                          </TableCell>
+                          <TableCell numeric>
+                            <UnavailableValue state="not_measured" />
+                          </TableCell>
+                          <TableCell numeric>
+                            <UnavailableValue state="not_measured" />
+                          </TableCell>
+                          <TableCell>
+                            {group.topic ? (
+                              <Badge variant="neutral">{group.topic.name}</Badge>
+                            ) : (
+                              <UnavailableValue state="not_set" />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {prompt.branded ? (
+                              <Badge variant="status" value="info">
+                                Branded
+                              </Badge>
+                            ) : (
+                              <span className="text-muted text-xs font-medium">Not branded</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    : null}
+                </Fragment>
+              );
+            })}
+          </TableBody>
+        </Table>
       )}
     </div>
   );

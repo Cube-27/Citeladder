@@ -84,7 +84,6 @@ export function BlogIndex() {
   return (
     <>
       <PageHero
-        centered
         eyebrow="Resources"
         title="Make AI visibility"
         accent="understandable."
@@ -98,7 +97,7 @@ export function BlogIndex() {
               <Link
                 href={`/blog/${featured.slug}`}
                 aria-label={featured.title}
-                className="bg-panel border-border group hover:border-accent-border block overflow-hidden rounded-2xl border transition-colors duration-200"
+                className="bg-panel border-border group hover:border-accent-border block overflow-hidden rounded-[var(--radius-card)] border transition-colors duration-200"
               >
                 <div className="p-7 md:p-10">
                   <TagRow tags={featured.tags} />
@@ -127,7 +126,7 @@ export function BlogIndex() {
                   {rest.length} {rest.length === 1 ? 'guide' : 'guides'}
                 </Meta>
               </div>
-              <StaggerGroup className="divide-border-subtle bg-panel border-border-subtle divide-y overflow-hidden rounded-2xl border">
+              <StaggerGroup className="divide-border-subtle bg-panel border-border-subtle divide-y overflow-hidden rounded-[var(--radius-card)] border">
                 {rest.map((post) => (
                   <StaggerItem key={post.slug}>
                     <Link
@@ -148,7 +147,7 @@ export function BlogIndex() {
         </>
       ) : (
         <Section tone="paper" rhythm="tight" aria-label="No posts yet">
-          <Reveal className="border-border-subtle mx-auto max-w-xl rounded-2xl border border-dashed p-10 text-center">
+          <Reveal className="border-border-subtle mx-auto max-w-xl rounded-[var(--radius-card)] border border-dashed p-10 text-center">
             <span className="bg-accent-soft text-accent-text mx-auto grid size-10 place-items-center rounded-md">
               <PenLine aria-hidden strokeWidth={1.8} className="size-5" />
             </span>

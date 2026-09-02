@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, GripVertical } from 'lucide-react';
+import { hairlineBandItemClasses } from '@/components/ui/workspace';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -53,13 +54,13 @@ export function StateMetric({
 }>) {
   const positive = delta !== null && (inverse ? delta < 0 : delta > 0);
   return (
-    <div className="flex min-h-[112px] flex-col justify-between p-[var(--card-padding)]">
+    <div className={cn(hairlineBandItemClasses, 'flex min-h-[104px] flex-col justify-between')}>
       <p className={eyebrowClasses}>{label}</p>
       <div className="my-2">
         {value === null ? (
           <UnavailableValue state="not_measured" />
         ) : (
-          <p className="font-display text-foreground text-3xl leading-none font-medium tracking-[-0.03em] tabular-nums">
+          <p className="font-display text-foreground text-3xl leading-none font-medium tracking-[-0.02em] tabular-nums">
             {metricValue(value, suffix)}
           </p>
         )}
@@ -79,7 +80,7 @@ export function StateMetric({
 export function MovementChart({ movements }: Readonly<{ movements: CommandCenter['movements'] }>) {
   if (movements.length === 0)
     return (
-      <div className="border-border-subtle bg-background-alt grid min-h-36 place-items-center rounded-[var(--radius-card)] border p-[var(--card-padding)] text-center">
+      <div className="border-border-subtle grid min-h-36 place-items-center border-y py-[var(--card-padding)] text-center">
         <p className="text-muted max-w-md text-xs">
           Movement appears after a run with the same prompts, engines, and measurement mode.
         </p>
@@ -89,10 +90,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {movements.map((row) => (
-        <div
-          key={row.label}
-          className="bg-background-alt border-border-subtle rounded-[var(--radius-card)] border p-3.5"
-        >
+        <div key={row.label} className="border-border-subtle min-w-0 border-t pt-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-foreground text-xs font-medium capitalize">{row.label}</span>
             <span
@@ -111,7 +109,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
               )}
             </span>
           </div>
-          <div className="mt-3.5 flex h-14 items-end justify-center gap-2.5" aria-hidden>
+          <div className="mt-3 flex h-14 items-end gap-2.5" aria-hidden>
             <span
               className="bg-border-strong w-6 rounded-t transition-[height]"
               style={{ height: `${Math.max(6, ((row.previous ?? 0) / ceiling) * 56)}px` }}
@@ -161,7 +159,7 @@ export function ActionRow({
         if (!reorderPending) onDrop(Number(event.dataTransfer.getData('text/plain')), index);
       }}
       className={cn(
-        'border-border-subtle hover:bg-background-alt/60 grid gap-3 border-b px-4 py-3.5 transition-colors last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
+        'border-border-subtle hover:bg-active grid gap-3 border-b py-3 transition-colors last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
         dragging && 'opacity-60',
       )}
     >
