@@ -231,6 +231,29 @@ User-created workspaces are transaction-serialized per account and capped by
 the config-owned `MAX_WORKSPACES_PER_USER`. The personal workspace counts
 toward the cap; excess creates return `workspace_limit_exceeded`.
 
+### Remote MCP authorization
+
+The hosted MCP endpoint is `/mcp` using stateless Streamable HTTP. Its OAuth
+2.1 authorization server exposes protected-resource and authorization-server
+metadata, dynamic client registration, PKCE authorization codes, rotating
+refresh tokens, and revocation. Browser login remains the identity owner; an
+authorization request returns through `/mcp/oauth/consent` after the normal
+HttpOnly session cookie is established.
+
+MCP grants are account-bound, but product data is never queried by account ID.
+Each tool derives the account from its bearer grant, joins current
+`WorkspaceMember` rows, and supplies the resulting workspace/project boundary
+to the existing persisted read owner. The demo allowlist is an admission gate,
+not a tenant boundary. OAuth clients, one-time transactions/codes, and hashed
+token grants are stored in the baseline database; confidential client secrets
+are Fernet-encrypted. Raw bearer, refresh, and authorization values are never
+persisted.
+
+The MCP catalog is read-only. It exposes project discovery, complete business
+context, bounded search/fetch, the four existing Growth Agent evidence reads,
+and the config-owned content-skill/task catalog. Reads never crawl, sync, call
+a model/provider, publish, activate a prompt, or mutate an external system.
+
 ## Site Health
 
 `connectors/web_evidence` is the only website acquisition boundary. Its sole
@@ -532,6 +555,10 @@ Compact history and full run-detail routes have separate response shapes so
 history reads do not return provenance payloads. Conversation reads do not
 recompute domain state. The agent has no correction or knowledge-memory tool
 after the Site Intelligence removal.
+
+External assistants reach the same typed persisted projections through the
+read-only MCP surface described above. MCP does not introduce a second agent
+memory or business-data repository.
 
 ## Task queue contract
 

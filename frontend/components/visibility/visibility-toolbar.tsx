@@ -123,7 +123,7 @@ function RunFilter({ runs, selectedRunId, onSelectRun }: ToolbarProps) {
     <Dropdown>
       <DropdownTrigger asChild>
         <FilterButton active={false} label="Select run">
-          <ICONS.runs className="text-muted size-3" aria-hidden strokeWidth={2} />
+          <ICONS.runs className="text-muted size-3" aria-hidden />
           <span className="font-medium">{selected?.label ?? 'Latest'}</span>
         </FilterButton>
       </DropdownTrigger>
@@ -149,7 +149,7 @@ function EngineFilterControl({ engine, onChangeEngine }: ToolbarProps) {
     <Dropdown>
       <DropdownTrigger asChild>
         <FilterButton active={engine !== 'all'} label="Filter by model">
-          <ICONS.analytics className="size-3" aria-hidden strokeWidth={2} />
+          <ICONS.analytics className="size-3" aria-hidden />
           <span className="font-medium">
             {engine === 'all' ? 'All models' : engineLabel(engine)}
           </span>
@@ -177,7 +177,7 @@ function RangeFilter({ range, onChangeRange }: ToolbarProps) {
     <Dropdown>
       <DropdownTrigger asChild>
         <FilterButton active={range !== '90d'} label="Select date range">
-          <CalendarRange className="size-3" aria-hidden strokeWidth={2} />
+          <CalendarRange className="size-3" aria-hidden />
           <span className="font-medium">{rangeLabel(range)}</span>
         </FilterButton>
       </DropdownTrigger>
@@ -231,7 +231,7 @@ function PromptFilter({ promptOptions, promptId, onChangePrompt }: ToolbarProps)
     <Dropdown>
       <DropdownTrigger asChild>
         <FilterButton active={promptId !== null} label="Filter by prompt">
-          <ICONS.prompts className="size-3" aria-hidden strokeWidth={2} />
+          <ICONS.prompts className="size-3" aria-hidden />
           <span className="max-w-[16ch] truncate font-medium">
             {prompt?.label ?? 'All prompts'}
           </span>
@@ -265,14 +265,14 @@ function ToolbarActions() {
       <Tooltip content="How these metrics are calculated">
         <Button variant="secondary" size="icon" asChild>
           <a href={METRICS_HELP_URL} aria-label="About these metrics">
-            <CircleHelp className="size-3" aria-hidden strokeWidth={2} />
+            <CircleHelp className="size-3" aria-hidden />
           </a>
         </Button>
       </Tooltip>
       <Tooltip content="Export is available from a run (coming with reports)">
         <span>
           <Button variant="secondary" size="sm" disabled aria-disabled="true">
-            <Download className="size-3" aria-hidden strokeWidth={2} />
+            <Download className="size-3" aria-hidden />
             Export
           </Button>
         </span>

@@ -126,7 +126,8 @@
       "backendTests": [
         "tests/component/test_health.py",
         "tests/component/test_error_envelope_api.py",
-        "tests/unit/test_error_envelope.py"
+        "tests/unit/test_error_envelope.py",
+        "tests/component/test_mcp.py"
       ]
     },
     {
@@ -397,6 +398,14 @@
         "tests/component/test_entitlement*.py",
         "tests/component/test_funded_ledger.py"
       ]
+    },
+    {
+      "sources": [
+        "backend/app/domain/mcp/**",
+        "backend/app/models/mcp.py",
+        "backend/tests/component/test_mcp.py"
+      ],
+      "backendTests": ["tests/component/test_mcp.py"]
     },
     {
       "sources": [

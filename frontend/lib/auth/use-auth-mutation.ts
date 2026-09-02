@@ -20,7 +20,10 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
  * the new cookie and session state from a clean document instead of reusing a
  * prefetched anonymous shell. A failed lookup falls back to `/onboarding`.
  */
-export function useAuthMutation<TValues>(mutationFn: (values: TValues) => Promise<SessionUser>) {
+export function useAuthMutation<TValues>(
+  mutationFn: (values: TValues) => Promise<SessionUser>,
+  returnTo?: string,
+) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -31,6 +34,11 @@ export function useAuthMutation<TValues>(mutationFn: (values: TValues) => Promis
       // the newly-confirmed identity is seeded.
       await clearAccountScopedClientState(queryClient);
       queryClient.setQueryData(queryKeys.auth.me(), user);
+
+      if (returnTo) {
+        hardNavigate(returnTo);
+        return;
+      }
 
       // A pricing selection captured before signing in wins over onboarding:
       // the visitor's last deliberate action was choosing a plan, and dropping

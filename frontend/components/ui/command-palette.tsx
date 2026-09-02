@@ -233,7 +233,7 @@ export function CommandPalette() {
         aria-keyshortcuts="Meta+K Control+K"
         className="text-muted w-full justify-start text-left max-sm:size-[var(--control-height)] max-sm:px-0 [&>span]:w-full"
       >
-        <Search className="text-muted size-4 shrink-0" aria-hidden strokeWidth={1.75} />
+        <Search className="text-muted size-4 shrink-0" aria-hidden />
         <span className="min-w-0 truncate text-sm font-normal max-sm:sr-only">
           Search or jump to…
         </span>
@@ -264,7 +264,7 @@ export function CommandPalette() {
           >
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
             <div className="border-border/60 flex items-center gap-3 border-b px-4">
-              <Search className="text-muted size-4 shrink-0" aria-hidden strokeWidth={1.75} />
+              <Search className="text-muted size-4 shrink-0" aria-hidden />
               <input
                 ref={inputRef}
                 value={query}
@@ -328,7 +328,6 @@ export function CommandPalette() {
                             <Icon
                               className={cn('size-4 shrink-0', !isActive && 'text-muted')}
                               aria-hidden
-                              strokeWidth={1.75}
                             />
                           ) : (
                             <BrandLogo
@@ -343,11 +342,7 @@ export function CommandPalette() {
                             <span className="text-muted shrink-0 text-xs">{command.hint}</span>
                           ) : null}
                           {isActive ? (
-                            <CornerDownLeft
-                              className="text-muted size-4 shrink-0"
-                              aria-hidden
-                              strokeWidth={1.75}
-                            />
+                            <CornerDownLeft className="text-muted size-4 shrink-0" aria-hidden />
                           ) : null}
                         </button>
                       );

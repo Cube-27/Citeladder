@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { LogOut, Map } from 'lucide-react';
+import { ArrowUpRight, LogOut, Map } from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -54,6 +54,12 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
             <Link href="/settings">
               <SettingsIcon className="size-4 shrink-0" aria-hidden />
               <span>Settings</span>
+            </Link>
+          </DropdownItem>
+          <DropdownItem asChild>
+            <Link href="/docs/mcp" target="_blank">
+              <ArrowUpRight className="size-4 shrink-0" aria-hidden />
+              <span>MCP</span>
             </Link>
           </DropdownItem>
           <DropdownItem

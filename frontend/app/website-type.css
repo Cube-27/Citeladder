@@ -362,12 +362,6 @@
   line-height: 1;
 }
 
-.flow-step-mark svg {
-  width: 0.875rem;
-  height: 0.875rem;
-  stroke-width: 2.5;
-}
-
 .flow-step-mark-current {
   border-color: var(--color-accent);
   background: var(--color-accent);

@@ -236,7 +236,7 @@ export function SettingsScreen() {
                         onClick={() => setConfirmOpen(true)}
                         disabled={deleteMutation.isPending}
                       >
-                        <Trash2 className="size-4 shrink-0" aria-hidden strokeWidth={2} />
+                        <Trash2 className="size-4 shrink-0" aria-hidden />
                         Delete project
                       </Button>
                     </div>

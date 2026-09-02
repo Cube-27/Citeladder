@@ -120,7 +120,7 @@ export function ProductWindow() {
                   : 'text-muted hover:text-foreground',
               )}
             >
-              <Icon className={cn('size-3.5', selected && 'text-accent-text')} strokeWidth={2} />
+              <Icon className={cn('size-3.5', selected && 'text-accent-text')} />
               <span className="sm:hidden">{layer.shortLabel}</span>
               <span className="hidden sm:inline">{layer.label}</span>
               {selected ? (
@@ -152,7 +152,7 @@ export function ProductWindow() {
               <LogoMark size={18} />
             </div>
             <div className="border-border-strong bg-input text-muted flex h-8 max-w-80 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] border px-3 text-sm lg:mx-auto">
-              <Search className="size-3.5 shrink-0" strokeWidth={2} />
+              <Search className="size-3.5 shrink-0" />
               <span className="truncate">Search pages, evidence, prompts…</span>
               <span className="border-border bg-panel ml-auto hidden rounded-xs border px-1.5 py-0.5 text-xs sm:inline">
                 ⌘ K
@@ -220,7 +220,7 @@ function PreviewSidebar({ activeItem }: Readonly<{ activeItem: PreviewItemLabel 
           <span className="text-foreground min-w-0 flex-1 truncate text-sm font-medium">
             Acme Corp
           </span>
-          <ChevronDown className="text-muted size-3.5" strokeWidth={2} />
+          <ChevronDown className="text-muted size-3.5" />
         </div>
       </div>
       <nav
@@ -243,7 +243,7 @@ function PreviewSidebar({ activeItem }: Readonly<{ activeItem: PreviewItemLabel 
                         active ? 'bg-accent-soft text-accent-hover' : 'text-secondary',
                       )}
                     >
-                      <Icon className="size-3.5" strokeWidth={2} />
+                      <Icon className="size-3.5" />
                       <span>{item.label}</span>
                       {item.count ? (
                         <span className="bg-neutral-bg text-secondary ml-auto rounded-full px-1.5 text-xs">

@@ -21,6 +21,12 @@ https://__DOMAIN_NAME__ {
     -Server
   }
 
+  @mcp_protocol path /mcp /mcp/* /authorize /token /register /revoke /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource/mcp
+  reverse_proxy @mcp_protocol 127.0.0.1:8000 {
+    header_up X-Forwarded-Host {host}
+    header_up X-Forwarded-Proto https
+  }
+
   reverse_proxy 127.0.0.1:3000 {
     header_up X-Forwarded-Host {host}
     header_up X-Forwarded-Proto https

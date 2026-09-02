@@ -100,6 +100,117 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
     op.create_table(
+        "mcp_oauth_clients",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("client_id", sa.String(length=36), nullable=False),
+        sa.Column("client_secret_encrypted", sa.Text(), nullable=False),
+        sa.Column(
+            "client_metadata", postgresql.JSONB(astext_type=Text()), nullable=False
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_mcp_oauth_clients_client_id"),
+        "mcp_oauth_clients",
+        ["client_id"],
+        unique=True,
+    )
+    op.create_table(
+        "mcp_authorization_requests",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("transaction_hash", sa.String(length=64), nullable=False),
+        sa.Column("client_id", sa.String(length=36), nullable=False),
+        sa.Column("state", sa.Text(), nullable=False),
+        sa.Column("scopes", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("code_challenge", sa.String(length=128), nullable=False),
+        sa.Column("redirect_uri", sa.Text(), nullable=False),
+        sa.Column("redirect_uri_provided_explicitly", sa.Boolean(), nullable=False),
+        sa.Column("resource", sa.Text(), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("consumed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["client_id"], ["mcp_oauth_clients.client_id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    _create_indexes("mcp_authorization_requests", ("client_id", "expires_at"))
+    op.create_index(
+        op.f("ix_mcp_authorization_requests_transaction_hash"),
+        "mcp_authorization_requests",
+        ["transaction_hash"],
+        unique=True,
+    )
+    op.create_table(
+        "mcp_authorization_codes",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("code_hash", sa.String(length=64), nullable=False),
+        sa.Column("client_id", sa.String(length=36), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("scopes", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("code_challenge", sa.String(length=128), nullable=False),
+        sa.Column("redirect_uri", sa.Text(), nullable=False),
+        sa.Column("redirect_uri_provided_explicitly", sa.Boolean(), nullable=False),
+        sa.Column("resource", sa.Text(), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("consumed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["client_id"], ["mcp_oauth_clients.client_id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    _create_indexes("mcp_authorization_codes", ("client_id", "user_id", "expires_at"))
+    op.create_index(
+        op.f("ix_mcp_authorization_codes_code_hash"),
+        "mcp_authorization_codes",
+        ["code_hash"],
+        unique=True,
+    )
+    op.create_table(
+        "mcp_oauth_grants",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("client_id", sa.String(length=36), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("access_token_hash", sa.String(length=64), nullable=False),
+        sa.Column("refresh_token_hash", sa.String(length=64), nullable=False),
+        sa.Column("scopes", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("resource", sa.Text(), nullable=False),
+        sa.Column("access_expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("refresh_expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["client_id"], ["mcp_oauth_clients.client_id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    _create_indexes(
+        "mcp_oauth_grants",
+        (
+            "client_id",
+            "user_id",
+            "access_expires_at",
+            "refresh_expires_at",
+        ),
+    )
+    op.create_index(
+        op.f("ix_mcp_oauth_grants_access_token_hash"),
+        "mcp_oauth_grants",
+        ["access_token_hash"],
+        unique=True,
+    )
+    op.create_index(
+        op.f("ix_mcp_oauth_grants_refresh_token_hash"),
+        "mcp_oauth_grants",
+        ["refresh_token_hash"],
+        unique=True,
+    )
+    op.create_table(
         "workspaces",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
@@ -5302,6 +5413,10 @@ def downgrade() -> None:
     # installed, so replaying the generated reverse delta would recreate those
     # retired authorities. Drop the explicit final table set instead.
     final_tables = (
+        "mcp_oauth_grants",
+        "mcp_authorization_codes",
+        "mcp_authorization_requests",
+        "mcp_oauth_clients",
         "site_issues",
         "site_observed_architectures",
         "site_page_link_metrics",

@@ -193,8 +193,25 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert 'SITE_HEALTH_AUTOMATIC_PAGE_LIMIT: "200"' in compose
     assert compose.count("app.workers.") == 10
     assert "TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS" in compose
+    assert 'MCP_ENABLED: "true"' in compose
+    assert "MCP_PUBLIC_BASE_URL: https://${DOMAIN_NAME" in compose
+    assert "MCP_ALLOWED_ACCOUNT_EMAIL: ${DEV_LOGIN_EMAIL}" in compose
     caddy = (RUNTIME / "Caddyfile").read_text(encoding="utf-8")
     assert "trusted_proxies static __CLOUDFLARE_CIDRS__" in caddy
+    mcp_matcher = next(
+        line for line in caddy.splitlines() if "@mcp_protocol path" in line
+    )
+    assert mcp_matcher.split()[2:] == [
+        "/mcp",
+        "/mcp/*",
+        "/authorize",
+        "/token",
+        "/register",
+        "/revoke",
+        "/.well-known/oauth-authorization-server",
+        "/.well-known/oauth-protected-resource/mcp",
+    ]
+    assert "reverse_proxy @mcp_protocol 127.0.0.1:8000" in caddy
     frontend = compose.split("\n  frontend:", 1)[1].split("\n  audit-worker:", 1)[0]
     assert "env_file:" not in frontend
     assert "JWT_SECRET_KEY" not in frontend

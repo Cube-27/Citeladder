@@ -50,14 +50,21 @@ Cloudflare → Caddy → Next.js → FastAPI
   - runs `alembic upgrade head && python -m app.demo.bootstrap`;
   - builds the frontend with `BACKEND_ORIGIN=http://127.0.0.1:8000`, `CITELADDER_TASK_LOCAL_BACKEND=true`, and demo mode;
   - throttles demo concurrency to `AUDIT_WORKER_CONCURRENCY=2`, `DB_POOL_SIZE=8`, `DB_MAX_OVERFLOW=0`, and Site Health global/per-host concurrency of 2.
+  - enables the read-only MCP server at the public origin and admits only
+    `DEV_LOGIN_EMAIL`; Caddy routes `/mcp`, its OAuth endpoints, and both
+    discovery documents directly to FastAPI while all UI/docs traffic remains
+    on Next.js.
 - Build backend and frontend images in GitHub Actions, push immutable digests to Artifact Registry, deploy those exact digests over IAP, and record the source commit and digests in the GitHub deployment summary.
 - Keep core credentials, database password, demo password, provider keys, and Cloudflare origin private key in Secret Manager. The frontend receives only public/demo configuration.
 - Create a nightly compressed PostgreSQL dump with a ten-day bucket lifecycle. Before each update, take an additional pre-deploy dump.
 - Install a systemd expiry timer that stops Compose and powers off the VM at `DEMO_EXPIRES_AT`. Redeployment must reuse—not extend—the original deadline.
 
-No additional GCP-specific public API or database schema changes are required.
-The application stack still includes the Site Health API and synchronized
-frontend contract changes documented elsewhere in this repository.
+The baseline schema includes MCP OAuth clients, one-time authorization state,
+and revocable grants. Because pre-launch migrations remain a single folded
+baseline, an existing disposable demo database must be rebuilt or explicitly
+recreated before deploying this change. The application stack still includes
+the Site Health API and synchronized frontend contract changes documented
+elsewhere in this repository.
 
 ### Implemented owners
 

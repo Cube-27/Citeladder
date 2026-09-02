@@ -51,7 +51,7 @@ export function SolutionsHero() {
               href={`#${id}`}
               className="border-border-subtle bg-panel text-foreground hover:bg-accent-soft inline-flex items-center gap-4 rounded-[var(--radius-card)] border px-5 py-4 text-sm font-medium transition-colors duration-200"
             >
-              <Icon aria-hidden strokeWidth={1.8} className="text-muted size-4" />
+              <Icon aria-hidden className="text-muted size-4" />
               {label}
             </a>
           );
@@ -105,11 +105,7 @@ export function SolutionSegments() {
               <ul className="grid gap-4">
                 {segment.mappings.map((mapping) => (
                   <li key={mapping} className="text-muted flex gap-4 text-sm">
-                    <Check
-                      aria-hidden
-                      strokeWidth={2.5}
-                      className="text-success-text mt-2 size-4 shrink-0"
-                    />
+                    <Check aria-hidden className="text-success-text mt-2 size-4 shrink-0" />
                     {mapping}
                   </li>
                 ))}

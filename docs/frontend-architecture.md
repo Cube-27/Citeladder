@@ -326,6 +326,11 @@ defaults by decomposition; an exception is not an intended delivery outcome.
 | `/prompts`, `/visibility`, `/runs` | Demand/Visibility workflows |
 | `/products` | Commerce: Catalog (default), Competitors, Buyer Prompts, AI Shelf |
 | `/settings` | Shared workspace/project configuration, including Integrations and Providers |
+| `/docs/mcp` | Public hosted-MCP setup, security boundary, tool catalog, and client instructions |
+
+The account dropdown links to `/docs/mcp` in a new tab with an external-link
+indicator. MCP has no Settings panel: connection instructions and the endpoint
+remain public documentation, while authorization uses the normal login route.
 
 Commerce AI Shelf requires a product or category target before reading its
 persisted projection. The four headline metrics, recommendation evidence, and
@@ -349,6 +354,11 @@ email/password flow that receives a session and performs the account-scoped
 cache transition. After the destination is resolved, login crosses the identity
 boundary with a full-document navigation so the protected layout reads the new
 session cookie and cannot reuse a prefetched anonymous shell.
+
+An OAuth authorization handoff may supply a strictly validated internal
+`/mcp/oauth/consent?transaction=...` return path. Login preserves that one-time
+handoff through the same full-document navigation; arbitrary and external
+return URLs are ignored.
 
 Onboarding completion carries the committed project ID into `/projects` as a
 one-time query handoff. The authenticated projects screen applies that explicit

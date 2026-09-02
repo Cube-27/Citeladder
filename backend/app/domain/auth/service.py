@@ -6,12 +6,18 @@
 from __future__ import annotations
 
 import logging
+import uuid
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import (
+    create_access_token,
+    decode_access_token,
+    hash_password,
+    verify_password,
+)
 from app.domain.billing.bootstrap import (
     ensure_user_billing,
     user_billing_bootstrap_complete,
@@ -20,6 +26,22 @@ from app.domain.workspaces.service import ensure_personal_workspace
 from app.models.user import User
 
 logger = logging.getLogger("app.auth")
+
+
+async def resolve_session_user(
+    session: AsyncSession, session_token: str
+) -> User | None:
+    """Resolve a browser session without choosing an HTTP response policy."""
+    try:
+        payload = decode_access_token(session_token)
+        user_id = uuid.UUID(str(payload["sub"]))
+        token_version = int(payload["ver"])
+    except (KeyError, ValueError):
+        return None
+    user = await session.scalar(select(User).where(User.id == user_id))
+    if user is None or not user.is_active or token_version != user.session_version:
+        return None
+    return user
 
 
 async def get_user_by_email(session: AsyncSession, email: str) -> User | None:

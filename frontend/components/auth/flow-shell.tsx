@@ -100,7 +100,7 @@ function FlowProgress({
                 )}
                 aria-hidden="true"
               >
-                {isDone ? <Check /> : index + 1}
+                {isDone ? <Check className="size-3.5" /> : index + 1}
               </span>
               <span className="flow-step-label">
                 <span className="flow-step-mobile-prefix">

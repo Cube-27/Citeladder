@@ -89,7 +89,6 @@ export function CompareIndex() {
             >
               <Check
                 aria-hidden
-                strokeWidth={2.5}
                 className="text-accent-text mt-0.5 size-4 shrink-0 md:mt-0 md:mb-2"
               />
               <span className="text-muted font-normal md:block">{point}</span>

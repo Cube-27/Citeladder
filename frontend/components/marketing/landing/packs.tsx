@@ -28,7 +28,7 @@ export function Packs() {
               <article className="bg-panel hover:bg-accent-soft group flex h-full flex-col p-6 transition-colors duration-200">
                 <div className="flex items-center gap-3">
                   <span className="bg-accent-subtle text-accent-text flex size-9 items-center justify-center rounded-[var(--radius-control)]">
-                    <Icon className="size-4.5" strokeWidth={1.75} aria-hidden />
+                    <Icon className="size-4.5" aria-hidden />
                   </span>
                   <h3 className="website-small-heading text-foreground group-hover:text-accent-text transition-colors">
                     {pack.name}

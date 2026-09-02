@@ -93,7 +93,7 @@ function RadioChip<T extends string>({ option }: Readonly<{ option: RadioOption<
     >
       <span aria-hidden className="grid size-3.5 shrink-0 place-items-center">
         <RadioGroupPrimitive.Indicator>
-          <Check className="size-3.5" strokeWidth={2.5} />
+          <Check className="size-3.5" />
         </RadioGroupPrimitive.Indicator>
       </span>
       <span>{option.label}</span>

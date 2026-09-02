@@ -54,11 +54,11 @@ const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = 
         <div className="border-border-subtle mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-5">
           <div className="flex flex-wrap gap-3">
             <span className="border-border-subtle bg-background-alt text-muted inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium">
-              <Download aria-hidden strokeWidth={2} className="size-4" />
+              <Download aria-hidden className="size-4" />
               Mentions (CSV)
             </span>
             <span className="border-border-subtle bg-background-alt text-muted inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium">
-              <FileSpreadsheet aria-hidden strokeWidth={2} className="size-4" />
+              <FileSpreadsheet aria-hidden className="size-4" />
               Evidence (Markdown)
             </span>
           </div>

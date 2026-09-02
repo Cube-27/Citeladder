@@ -86,7 +86,7 @@ function renderCell(value: boolean | number | string | null | undefined) {
   if (typeof value === 'boolean') {
     return value ? (
       <span className="text-success-text inline-flex items-center gap-1.5 font-medium">
-        <Check aria-hidden strokeWidth={2.5} className="size-3.5" />
+        <Check aria-hidden className="size-3.5" />
         <span className="sr-only">Included</span>
       </span>
     ) : (

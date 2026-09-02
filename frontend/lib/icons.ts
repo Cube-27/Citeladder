@@ -39,6 +39,18 @@ import {
  * lucide-react ships alias pairs with identical glyphs (legacy names exist
  * for the spinner and warning glyphs); this module canonicalizes one name
  * per pair so call sites stay consistent and grep-able.
+ *
+ * Visual contract (applies to every lucide glyph, not just the ones mapped
+ * here — see the icon stroke ladder in `app/globals.css` and docs/design.md):
+ * - Size is the only thing a call site picks. `size-3`/`size-3.5` for dense
+ *   tables, toolbars, and inline chips; `size-4` for chrome; `size-5` for
+ *   empty states and marketing wells; larger only for decorative marks.
+ * - Weight follows from that size. Do not pass `strokeWidth` — lucide scales
+ *   it by the icon's size, so a per-call-site number makes weight drift, and
+ *   the stylesheet overrides the prop anyway. A deliberate outlier uses
+ *   inline `style={{ strokeWidth: n }}`.
+ * - Colour stays `currentColor`, so `text-muted` and `text-accent-text` paint
+ *   the glyph. Never hard-code a stroke colour.
  */
 export const ICONS = {
   // The four layers (§4) — these are the sidebar's primary destinations.
