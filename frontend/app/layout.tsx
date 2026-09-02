@@ -19,7 +19,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 const DIRECTION_CONTRACT = `<!--
 THESIS: Prism Evidence is one calm editorial system from first visit through the operating workspace.
-OWN-WORLD: paper ground and near-black ink, one blue for selection, focus and links, hairline rules and negative space carrying hierarchy, Plus Jakarta Sans editorial display with Geist body, and shadows reserved for floating UI.
+OWN-WORLD: paper ground and near-black ink, blue-violet primary actions, one blue for selection, focus and links, hairline rules and negative space carrying hierarchy, Plus Jakarta Sans editorial display with Geist body, and shadows reserved for floating UI.
 STORY: Understand the evidence loop, evaluate the product, enter the essential site facts, confirm exactly what will be tracked, then operate from persisted evidence.
 FIRST VIEWPORT: Public pages use generous editorial rhythm and faithful product scenes; focused flows use a compact wordmark bar, centred task column, and persistent action bar.
 FORM: shared semantic tokens, flat ruled ledgers rather than nested boxes, with a roomier public/focused-flow type ladder over the same visual world.

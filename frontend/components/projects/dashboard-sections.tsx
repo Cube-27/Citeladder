@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { SectionTitle } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { AccentEyebrow, eyebrowClasses } from '@/components/ui/eyebrow';
@@ -43,7 +44,7 @@ export function DashboardHeader({
   const website = data.project.website_url;
   const facts = data.facts;
   return (
-    <section className="grid gap-[var(--workspace-gap)]">
+    <Card className="grid gap-[var(--workspace-gap)] p-[var(--card-padding)]">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
           <BrandLogo
@@ -119,7 +120,7 @@ export function DashboardHeader({
           />
         </div>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -179,7 +180,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
         <NextAction data={data} />
         <Track data={data} />
       </div>
-      <section aria-labelledby="project-state" className="grid gap-3">
+      <Card aria-labelledby="project-state" className="grid gap-3 p-[var(--card-padding)]">
         <div className="flex items-center justify-between gap-3">
           <SectionTitle id="project-state">Project state</SectionTitle>
           <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
@@ -189,7 +190,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
           <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
           <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
         </div>
-      </section>
+      </Card>
       <Movement data={data} />
     </>
   );
@@ -197,7 +198,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
 
 function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <div className="bg-well text-foreground border-border-subtle flex flex-col justify-between gap-4 rounded-[var(--radius-card)] border p-[var(--card-padding)]">
+    <Card className="text-foreground flex flex-col justify-between gap-4 p-[var(--card-padding)]">
       <div>
         <div className="flex items-center justify-between">
           <AccentEyebrow>
@@ -221,16 +222,16 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
           <ArrowRight className="size-4" aria-hidden />
         </Link>
       </Button>
-    </div>
+    </Card>
   );
 }
 
 function Track({ data }: Readonly<{ data: CommandCenter }>) {
   const delta = data.track.citation_share.delta;
   return (
-    <section
+    <Card
       aria-labelledby="citation-share-track"
-      className="border-border-subtle flex flex-col justify-between gap-4 border-t pt-3"
+      className="flex flex-col justify-between gap-4 p-[var(--card-padding)]"
     >
       <div>
         <div className="flex items-center justify-between">
@@ -273,14 +274,17 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
           </Link>
         </Button>
       </div>
-    </section>
+    </Card>
   );
 }
 
 function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <div className="border-border-subtle flex flex-col justify-between gap-4 border-t pt-3">
-      <section aria-labelledby="movement" className="grid gap-3">
+    <Card
+      aria-labelledby="movement"
+      className="flex flex-col justify-between gap-4 p-[var(--card-padding)]"
+    >
+      <div className="grid gap-3">
         <div>
           <SectionTitle id="movement">Movement</SectionTitle>
           <p className="text-muted mt-0.5 text-xs">
@@ -288,8 +292,8 @@ function Movement({ data }: Readonly<{ data: CommandCenter }>) {
           </p>
         </div>
         <MovementChart movements={data.movements} />
-      </section>
-    </div>
+      </div>
+    </Card>
   );
 }
 
@@ -309,8 +313,8 @@ export function ActionsAndProof({
   onDownload: () => void;
 }>) {
   return (
-    <>
-      <section aria-labelledby="ranked-actions">
+    <div className="grid gap-[var(--workspace-gap)]">
+      <Card aria-labelledby="ranked-actions" className="p-[var(--card-padding)]">
         <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-t border-b pt-3 pb-3">
           <div>
             <SectionTitle id="ranked-actions">Ranked actions</SectionTitle>
@@ -346,33 +350,31 @@ export function ActionsAndProof({
             </p>
           </div>
         )}
-      </section>
-      <div className="border-border-subtle border-t pt-3">
-        <section
-          aria-labelledby="progress-proof"
-          className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
-        >
-          <div>
-            <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>
-            <p className="text-muted mt-1 max-w-[65ch] text-xs leading-relaxed">
-              {data.resolved_actions.count} action(s) resolved since the comparable run. Metric
-              movement is shown alongside completion without claiming causation.
-            </p>
-          </div>
-          {data.report_available ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onDownload}
-              pending={downloading}
-              pendingLabel="Preparing…"
-              className="shrink-0 gap-1.5"
-            >
-              <Download className="size-4" aria-hidden /> Download PDF
-            </Button>
-          ) : null}
-        </section>
-      </div>
-    </>
+      </Card>
+      <Card
+        aria-labelledby="progress-proof"
+        className="flex flex-col justify-between gap-4 p-[var(--card-padding)] sm:flex-row sm:items-center"
+      >
+        <div>
+          <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>
+          <p className="text-muted mt-1 max-w-[65ch] text-xs leading-relaxed">
+            {data.resolved_actions.count} action(s) resolved since the comparable run. Metric
+            movement is shown alongside completion without claiming causation.
+          </p>
+        </div>
+        {data.report_available ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onDownload}
+            pending={downloading}
+            pendingLabel="Preparing…"
+            className="shrink-0 gap-1.5"
+          >
+            <Download className="size-4" aria-hidden /> Download PDF
+          </Button>
+        ) : null}
+      </Card>
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
+import { Drawer } from '@/components/ui/drawer';
 import { CONTENT_PROMPT_MAX_LEN, type SiteHealthReferenceInput } from '@/lib/api/content';
 import type { ContentGenerationDetail } from '@/lib/api/types';
 import {
@@ -273,6 +274,7 @@ function ContentWorkspace({
   reasonOpen: boolean;
   setReasonOpen: (value: boolean) => void;
 }>) {
+  const [historyOpen, setHistoryOpen] = useState(false);
   let siteHealthAlert = null;
   if (siteHealth.isError) {
     siteHealthAlert = (
@@ -289,44 +291,52 @@ function ContentWorkspace({
     );
   }
   return (
-    <div className="grid grid-cols-1 items-start gap-[var(--workspace-gap)] xl:grid-cols-[minmax(0,1fr)_320px] [&>*]:min-w-0">
-      <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">
-        <DemandAlerts notFound={demand.notFound} failed={demand.failed} />
-        {siteHealthAlert}
-        <ContentComposer
-          prompt={prompt}
-          promptRef={promptRef}
-          opportunity={opportunity}
-          contextPreview={contextPreview}
-          contextLoading={contextLoading}
-          demandSource={demand.brief?.sourceLabel ?? null}
-          generating={generating}
-          skillId={skillId}
-          skills={skills}
-          skillsLoading={skillsLoading}
-          canGenerate={canGenerate}
-          onPromptChange={setPrompt}
-          onSkillChange={setChosenSkillId}
-          onGenerate={onGenerate}
-        />
-        <GenerationStatePanels
-          generating={generating}
-          generation={generation}
-          mutationError={mutationError}
-          failed={failed}
-          detail={detail}
-          reasonOpen={reasonOpen}
-          setReasonOpen={setReasonOpen}
-        />
-      </div>
-      <div className="w-full min-w-0 xl:sticky xl:top-[var(--workspace-gap)]">
+    <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">
+      <DemandAlerts notFound={demand.notFound} failed={demand.failed} />
+      {siteHealthAlert}
+      <ContentComposer
+        prompt={prompt}
+        promptRef={promptRef}
+        opportunity={opportunity}
+        contextPreview={contextPreview}
+        contextLoading={contextLoading}
+        demandSource={demand.brief?.sourceLabel ?? null}
+        generating={generating}
+        skillId={skillId}
+        skills={skills}
+        skillsLoading={skillsLoading}
+        canGenerate={canGenerate}
+        onPromptChange={setPrompt}
+        onSkillChange={setChosenSkillId}
+        onGenerate={onGenerate}
+        onHistoryOpen={() => setHistoryOpen(true)}
+      />
+      <GenerationStatePanels
+        generating={generating}
+        generation={generation}
+        mutationError={mutationError}
+        failed={failed}
+        detail={detail}
+        reasonOpen={reasonOpen}
+        setReasonOpen={setReasonOpen}
+      />
+      <Drawer
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        title="Generation history"
+        description="Open a previous draft from this project."
+        className="max-w-xl"
+      >
         <GenerationHistory
           items={generation.listQuery.data ?? []}
           loading={generation.listQuery.isLoading}
           selectedId={generation.selectedId}
-          onSelect={generation.setSelectedId}
+          onSelect={(generationId) => {
+            generation.setSelectedId(generationId);
+            setHistoryOpen(false);
+          }}
         />
-      </div>
+      </Drawer>
     </div>
   );
 }

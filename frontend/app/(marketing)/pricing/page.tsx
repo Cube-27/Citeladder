@@ -50,8 +50,9 @@ export default function PricingPage() {
         title="Pay for the intelligence."
         accent="Not the API markup."
         lead="Model calls run on your own provider keys — usage bills straight to your accounts at provider rates. CiteLadder charges for the workspace, the intelligence, and the evidence behind every recommendation."
+        centered
       >
-        <TrustStrip className="mt-8" />
+        <TrustStrip className="mt-8 justify-center" />
       </PageHero>
       <PricingCatalog />
       <PricingCta />

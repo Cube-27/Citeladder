@@ -140,6 +140,7 @@ export function EnterpriseHero() {
       title="AI visibility your security team"
       accent="can inspect."
       lead="Measure how your brand appears in answer engines with a managed, workspace-scoped evidence trail — ready for procurement, security review, and the teams who act on the result."
+      centered
     >
       <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
         <ButtonLink href={DEMO_HREF}>

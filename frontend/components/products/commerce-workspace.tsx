@@ -20,7 +20,7 @@ import { CatalogHeader } from './catalog-header';
 import { CatalogList, catalogEntries } from './catalog-list';
 import { TargetDetail } from './target-detail';
 
-/** Stable bulk-selection status and actions; selecting the first row never shifts the workspace. */
+/** Selection-only bulk actions, including stale keys that still need a clear path. */
 export function BulkActions({
   count,
   hasCheckedKeys,
@@ -35,7 +35,7 @@ export function BulkActions({
   onClear: () => void;
 }>) {
   return (
-    <div className="bg-panel flex min-h-16 flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] px-3 py-2">
+    <Card className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2">
       <div className="grid gap-0.5">
         <span aria-live="polite" className="text-foreground text-sm font-medium">
           {count
@@ -62,7 +62,7 @@ export function BulkActions({
           Clear selection
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -143,13 +143,15 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
   return (
     <div className="grid gap-4">
       <CatalogHeader projectId={projectId} query={queries.catalog} />
-      <BulkActions
-        count={checkedTargets.length}
-        hasCheckedKeys={checked.length > 0}
-        pending={discovery.discover.isPending}
-        onDiscover={() => discovery.discover.mutate(checkedTargets)}
-        onClear={() => setChecked([])}
-      />
+      {checked.length ? (
+        <BulkActions
+          count={checkedTargets.length}
+          hasCheckedKeys
+          pending={discovery.discover.isPending}
+          onDiscover={() => discovery.discover.mutate(checkedTargets)}
+          onClear={() => setChecked([])}
+        />
+      ) : null}
       {/* `min-w-0` on BOTH columns is load-bearing: a grid item defaults to
           `min-width: auto`, so a long product name ("TempPro TP920 Bluetooth
           Meat Thermometer + TP620 Instant-Read + TP358 Hygrometer — Bundle")

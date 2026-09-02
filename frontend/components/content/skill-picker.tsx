@@ -1,6 +1,16 @@
 'use client';
 
-import { RadioGroup } from '@/components/ui/radio-group';
+import { ChevronDown } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownLabel,
+  DropdownRadioGroup,
+  DropdownRadioItem,
+  DropdownTrigger,
+} from '@/components/ui/dropdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ContentSkillView } from '@/lib/api/content';
 
@@ -15,32 +25,12 @@ const CHANNEL_LABELS: Readonly<Record<string, string>> = {
 
 const CHANNEL_ORDER = ['web', 'social', 'video', 'community', 'email'] as const;
 
-/** What the model will be told to do, shown before the user commits to it. */
-function SkillDetail({ skill }: Readonly<{ skill: ContentSkillView }>) {
-  return (
-    <div className="max-w-xs p-1 text-xs">
-      <p className="font-medium">{skill.label}</p>
-      <p className="mt-1 opacity-90">{skill.description}</p>
-      {skill.structure.length > 0 ? (
-        <ul className="border-on-inverse/20 mt-1.5 grid list-disc gap-0.5 border-t pt-1.5 pl-4 text-xs opacity-80">
-          {skill.structure.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ul>
-      ) : null}
-      {skill.length_hint ? <p className="mt-1.5 text-xs opacity-75">{skill.length_hint}</p> : null}
-    </div>
-  );
-}
-
 /**
- * Skill picker for the content composer.
+ * Compact, catalog-driven format picker.
  *
- * The catalog is served by `GET /content/skills`, so this renders whatever the
- * backend offers rather than a hardcoded list — a skill added server-side
- * appears here with no frontend change. Each chip exposes the format's
- * structure on hover/focus so the choice is informed rather than a guess at
- * what "reddit" will produce.
+ * The server still owns every skill. The workspace shows only its high-level
+ * channels until a user opens one, keeping a growing catalog from turning the
+ * composer into a wall of controls.
  */
 export function SkillPicker({
   skills,
@@ -58,35 +48,69 @@ export function SkillPicker({
   if (loading) {
     return (
       <div className="flex flex-wrap gap-2" aria-busy="true">
-        {Array.from({ length: 6 }, (_, index) => (
-          <Skeleton key={index} className="h-7 w-24 rounded-full" />
+        {CHANNEL_ORDER.map((channel) => (
+          <Skeleton key={channel} className="h-9 w-24 rounded-[var(--radius-control)]" />
         ))}
       </div>
     );
   }
 
-  const byChannel = CHANNEL_ORDER.map((channel) => ({
+  const selectedSkill = skills.find((skill) => skill.id === value);
+  const groups = CHANNEL_ORDER.map((channel) => ({
     channel,
     label: CHANNEL_LABELS[channel] ?? channel,
     items: skills.filter((skill) => skill.channel === channel),
   })).filter((group) => group.items.length > 0);
 
   return (
-    <RadioGroup
-      value={value}
-      onValueChange={onChange}
-      ariaLabel="Content format"
-      variant="chip"
-      className="flex-col items-stretch gap-2"
-      options={byChannel.flatMap((group) =>
-        group.items.map((skill) => ({
-          value: skill.id,
-          label: skill.label,
-          disabled,
-          groupLabel: group.label,
-          description: <SkillDetail skill={skill} />,
-        })),
-      )}
-    />
+    <div className="grid gap-2" aria-label="Content format">
+      <span className="text-secondary text-sm font-medium">Format</span>
+      <div className="flex flex-wrap gap-2">
+        {groups.map((group) => {
+          const active = selectedSkill?.channel === group.channel;
+          return (
+            <Dropdown key={group.channel}>
+              <DropdownTrigger asChild>
+                <Button
+                  variant={active ? 'tonal' : 'secondary'}
+                  size="sm"
+                  disabled={disabled}
+                  data-component-id="content-format-channel"
+                  aria-label={
+                    active ? `${group.label}: ${selectedSkill.label}` : `${group.label} formats`
+                  }
+                >
+                  <span>{group.label}</span>
+                  {active ? (
+                    <span className="max-w-44 truncate font-normal">{selectedSkill.label}</span>
+                  ) : null}
+                  <ChevronDown className="size-3.5 shrink-0" aria-hidden />
+                </Button>
+              </DropdownTrigger>
+              <DropdownContent className="w-[min(22rem,calc(100vw-2rem))]">
+                <DropdownLabel>{group.label} formats</DropdownLabel>
+                <DropdownRadioGroup value={value} onValueChange={onChange}>
+                  {group.items.map((skill) => (
+                    <DropdownRadioItem
+                      key={skill.id}
+                      value={skill.id}
+                      disabled={disabled}
+                      className="items-start py-2.5"
+                    >
+                      <span className="grid min-w-0 gap-0.5">
+                        <span className="font-medium">{skill.label}</span>
+                        <span className="text-secondary text-xs leading-relaxed">
+                          {skill.description}
+                        </span>
+                      </span>
+                    </DropdownRadioItem>
+                  ))}
+                </DropdownRadioGroup>
+              </DropdownContent>
+            </Dropdown>
+          );
+        })}
+      </div>
+    </div>
   );
 }

@@ -1,3 +1,5 @@
+import type { ContentSkillView } from '@/lib/api/content';
+
 /** A bounded stand-in for the server-owned skill catalog. */
 function skill(
   id: string,
@@ -6,8 +8,8 @@ function skill(
   structure: string,
   tone: string,
   lengthHint: string,
-  channel = 'web',
-) {
+  channel: ContentSkillView['channel'] = 'web',
+): ContentSkillView {
   return {
     id,
     label,

@@ -1,4 +1,4 @@
-import { Check, Circle, RefreshCw, Sparkles, TrendingUp, X } from 'lucide-react';
+import { Check, Circle, History, RefreshCw, Sparkles, TrendingUp, X } from 'lucide-react';
 import { type RefObject } from 'react';
 
 import { SkillPicker } from '@/components/content/skill-picker';
@@ -31,6 +31,7 @@ export function ContentComposer({
   onPromptChange,
   onSkillChange,
   onGenerate,
+  onHistoryOpen,
 }: Readonly<{
   prompt: string;
   promptRef: RefObject<HTMLTextAreaElement | null>;
@@ -46,15 +47,22 @@ export function ContentComposer({
   onPromptChange: (value: string) => void;
   onSkillChange: (value: string) => void;
   onGenerate: () => void;
+  onHistoryOpen: () => void;
 }>) {
   return (
     <Card data-component-id="content-prompt-box" className="p-[var(--card-padding)]">
       <CardContent className="flex flex-col gap-[var(--workspace-gap)] p-0">
-        <div className="grid gap-1">
-          <span className={eyebrowClasses}>New generation</span>
-          <h2 className="font-display text-foreground text-xl font-medium tracking-tight">
-            What can I help you create?
-          </h2>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="grid gap-1">
+            <span className={eyebrowClasses}>New generation</span>
+            <h2 className="font-display text-foreground text-xl font-medium tracking-tight">
+              What can I help you create?
+            </h2>
+          </div>
+          <Button variant="secondary" size="sm" onClick={onHistoryOpen} className="gap-2">
+            <History className="size-4" aria-hidden />
+            History
+          </Button>
         </div>
         {opportunity ? <OpportunityContext opportunity={opportunity} /> : null}
         {demandSource ? <DemandSource source={demandSource} /> : null}

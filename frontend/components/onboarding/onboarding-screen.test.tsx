@@ -254,7 +254,7 @@ describe('OnboardingScreen', () => {
     });
     expect(JSON.stringify(completionBody)).not.toContain('prompt_groups');
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
-    expect(replace).toHaveBeenCalledWith('/projects');
+    expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`);
   });
 
   it('opens the committed project shell while its portfolio is queued', async () => {
@@ -285,7 +285,7 @@ describe('OnboardingScreen', () => {
     await waitFor(() => expect(createProject).toBeEnabled());
     await user.click(createProject);
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/projects'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`));
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
   });
 
@@ -301,7 +301,7 @@ describe('OnboardingScreen', () => {
     );
     renderWithProviders(<OnboardingScreen />);
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/projects'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`));
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
   });
 

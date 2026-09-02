@@ -1,13 +1,16 @@
 'use client';
 
+import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
 import { Card, CardContent } from '@/components/ui/card';
 import { CsvImportTrigger } from '@/components/ui/csv-import';
+import { menuPanelClasses } from '@/components/ui/menu-variants';
 import { Label, Metric } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { commerceApi } from '@/lib/api/commerce';
@@ -21,6 +24,7 @@ import {
 } from '@/lib/site-health/status';
 
 import type { SiteCrawl } from '@/lib/api/types';
+import { cn } from '@/lib/utils';
 
 import type { CommerceQueries } from './commerce-queries';
 
@@ -149,16 +153,30 @@ export function CatalogHeader({
       <CardContent className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
         <CatalogStats counts={counts} crawl={crawl} projecting={projecting} />
         <div className="flex flex-wrap items-center gap-2">
-          <CsvImportTrigger
-            accessibleLabel="Import catalog CSV"
-            pending={importCatalog.isPending}
-            onSelect={(file) => importCatalog.mutate(file)}
-          />
-          <Button asChild variant="ghost">
-            <a href="/site" target="_blank" rel="noreferrer">
-              Open Site Health
-            </a>
-          </Button>
+          <details className="relative">
+            <summary
+              className={cn(buttonVariants({ variant: 'secondary', size: 'md' }), 'list-none')}
+            >
+              More actions <ChevronDown className="size-4" aria-hidden />
+            </summary>
+            <div
+              className={cn(
+                menuPanelClasses,
+                'absolute top-[calc(100%+0.375rem)] right-0 grid min-w-48 gap-1',
+              )}
+            >
+              <CsvImportTrigger
+                accessibleLabel="Import catalog CSV"
+                pending={importCatalog.isPending}
+                onSelect={(file) => importCatalog.mutate(file)}
+              />
+              <Button asChild variant="ghost" className="justify-start">
+                <a href="/site" target="_blank" rel="noreferrer">
+                  Open Site Health
+                </a>
+              </Button>
+            </div>
+          </details>
           <Button
             disabled={discover.isPending || dashboard.isPending}
             onClick={() =>

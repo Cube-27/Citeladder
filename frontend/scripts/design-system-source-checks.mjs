@@ -466,7 +466,7 @@ export function productContractViolations(root) {
     ['--color-well', ['#f4', 'f4f1'].join('')],
     ['--color-active', ['#ef', 'efeb'].join('')],
     ['--color-sidebar', ['#fa', 'faf8'].join('')],
-    ['--color-action', ['#16', '161a'].join('')],
+    ['--color-action', ['#51', '47e5'].join('')],
     ['--color-accent', ['#1b', '44e0'].join('')],
     ['--color-focus', ['#1b', '44e0'].join('')],
     ['--color-focus-ring', ['#c7', 'd4fb'].join('')],

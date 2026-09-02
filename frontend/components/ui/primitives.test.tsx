@@ -30,7 +30,7 @@ describe('Button', () => {
   it('renders default variant/size classes', () => {
     render(<Button>Save</Button>);
     const btn = screen.getByRole('button', { name: 'Save' });
-    // Primary variant → navy action fill with its verified foreground and the
+    // Primary variant → blue-violet action fill with its verified foreground and the
     // semantic app control radius; the pill is retired for buttons.
     expect(btn.className).toContain('bg-action');
     expect(btn.className).toContain('text-action-fg');
@@ -264,6 +264,7 @@ describe('Table (dense)', () => {
       </Table>,
     );
     const headers = screen.getAllByRole('columnheader');
+    expect(screen.getByRole('table').parentElement).toHaveClass('bg-panel');
     expect(headers).toHaveLength(2);
     // Sticky header at the dense height, sentence-case sans micro-label.
     expect(headers[0].className).toContain('h-[var(--table-header-height)]');

@@ -2,6 +2,7 @@
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
 import { targetKey } from '@/lib/products/use-commerce-target';
 import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
@@ -35,7 +36,7 @@ export function TargetDetail({
 }>) {
   return (
     <div className="grid content-start gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <Card className="flex flex-wrap items-start gap-2 p-[var(--card-padding)]">
         <h2 className="text-foreground text-lg font-medium">{label}</h2>
         <Badge variant="status" value="info">
           {target.kind}
@@ -48,7 +49,7 @@ export function TargetDetail({
             catalog={queries.catalog.data}
           />
         </div>
-      </div>
+      </Card>
       <TargetShelfBand query={queries.shelf} />
       {hasShelfMeasurement(queries.shelf) ? null : (
         <Alert tone="info">

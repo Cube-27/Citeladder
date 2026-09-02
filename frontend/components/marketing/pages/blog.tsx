@@ -88,6 +88,7 @@ export function BlogIndex() {
         title="Make AI visibility"
         accent="understandable."
         lead="Practical guides for answer-engine optimization, evidence-led measurement, and the work between a finding and the next audit."
+        centered
       />
 
       {featured ? (
