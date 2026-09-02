@@ -109,6 +109,7 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
     expected_secret_mappings = {
         "KEENABLE_API_KEY": "citeladder-keenable-api-key",
         "TAVILY_API_KEY": "citeladder-tavily-api-key",
+        "CONTENT_API_KEY": "citeladder-content-api-key",
     }
     for variable, secret_id in expected_secret_mappings.items():
         assert f"secrets.{variable}" in workflow
@@ -118,7 +119,15 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
     assert "secrets.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE" in workflow
     assert "--build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=" in workflow
     assert "citeladder-logo" not in locals_tf
-    for variable in ("DEFAULT_AGENT_BASE_URL", "DEFAULT_AGENT_MODEL"):
+    # Content and the default agent are each a provider-neutral trio
+    # (key + url + model): neither may silently inherit a baked-in default.
+    for variable in (
+        "DEFAULT_AGENT_BASE_URL",
+        "DEFAULT_AGENT_MODEL",
+        "CONTENT_PROVIDER",
+        "CONTENT_PROVIDER_ENDPOINT",
+        "CONTENT_MODEL",
+    ):
         assert f"vars.{variable}" in workflow
         assert f"${{{variable}:?{variable} is required}}" in deploy
         assert f"write_env {variable}" in deploy
