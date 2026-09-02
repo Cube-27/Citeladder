@@ -22,6 +22,7 @@ import {
   StateMetric,
 } from './dashboard-primitives';
 import { Stack } from '@/components/ui/layout';
+import { Tooltip } from '@/components/ui/tooltip';
 
 export function DashboardHeader({
   data,
@@ -141,7 +142,9 @@ function FactSummary({
     <div className={cn(hairlineBandItemClasses, 'grid gap-1.5')}>
       <p className={eyebrowClasses}>{label}</p>
       {value.trim() ? (
-        <p className={textRole('body', 'line-clamp-none leading-snug md:line-clamp-2')}>{value}</p>
+        <Tooltip content={value}>
+          <p className={textRole('body', 'line-clamp-2 leading-snug')}>{value}</p>
+        </Tooltip>
       ) : (
         <UnavailableValue state={emptyState} className="inline-flex justify-self-start" />
       )}

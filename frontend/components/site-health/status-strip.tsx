@@ -211,7 +211,7 @@ function ProgressRow({
   children?: ReactNode;
 }>) {
   return (
-    <div className="border-border-subtle grid gap-3 border-b pb-3">
+    <div className="grid gap-3">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <div className="flex min-w-0 items-center gap-3">
           <Badge variant="run-status" value={crawlBadgeValue(crawl.status)}>
@@ -356,9 +356,6 @@ function analysisCounts(crawl: SiteCrawl, selected: number): ProgressCount[] {
   const fixed: ProgressCount[] = [
     { label: 'Pages discovered', value: crawl.visible_url_count },
     { label: 'Pages selected', value: selected },
-    { label: 'Pages analyzed', value: counters.analyzed, className: 'text-run-completed' },
-    { label: 'In progress', value: counters.running, className: 'text-run-running' },
-    { label: 'Queued', value: counters.queued, className: 'text-muted' },
   ];
   const robots = counters.failure_breakdown.robots_denied;
   if (robots > 0) {

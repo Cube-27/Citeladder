@@ -170,7 +170,7 @@ export function EnterpriseOps() {
         {CAPABILITIES.map(({ icon: Icon, title, tagline, highlights }) => (
           <StaggerItem key={title} className="h-full">
             <article className="bg-panel border-border-subtle hover:border-accent-border flex h-full flex-col rounded-[var(--radius-card)] border p-7 transition-colors duration-200">
-              <div className="bg-accent-soft text-accent-text grid size-10 place-items-center rounded-[var(--radius-card)]">
+              <div className="bg-accent-soft text-accent-text grid size-10 place-items-center rounded-[var(--radius-control)]">
                 <Icon aria-hidden className="size-5" />
               </div>
               <h3 className="website-feature-heading text-foreground mt-5">{title}</h3>

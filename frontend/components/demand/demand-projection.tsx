@@ -30,6 +30,8 @@ import { formatWindowDate } from '@/lib/format';
 import { useProjectContext } from '@/lib/project/project-context';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Card, CardContent } from '@/components/ui/card';
+import { Stack } from '@/components/ui/layout';
 
 const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
@@ -166,7 +168,6 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
             </span>
           </span>
         }
-        description="Versioned GSC query evidence. Highest-priority signals are shown first; branded demand remains a separate cohort."
         actions={
           <Button
             variant="secondary"
@@ -214,11 +215,14 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
         </Alert>
       ) : null}
 
-      {/* Summary KPI Strip */}
-      <DemandSummaryCards snapshot={snapshot} />
-
-      {/* Detector Status Ribbon */}
-      <DemandDetectorBar snapshot={snapshot} />
+      <Card>
+        <CardContent>
+          <Stack gap="workspace">
+            <DemandSummaryCards snapshot={snapshot} />
+            <DemandDetectorBar snapshot={snapshot} />
+          </Stack>
+        </CardContent>
+      </Card>
 
       {/* Interactive Filter & Search Controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

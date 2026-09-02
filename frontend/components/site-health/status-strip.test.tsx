@@ -159,49 +159,24 @@ function renderStrip(props: Partial<Parameters<typeof StatusStrip>[0]> = {}) {
 }
 
 describe('StatusStrip — analysis counters', () => {
-  it('derives "Pages analyzed" from the server aggregate, not a truncated pages window', () => {
+  // The per-state breakdown — analyzed, in progress, queued — was removed from
+  // this row: five numbers where two carry the story. What still matters is
+  // that the totals come from the authoritative aggregate rather than the
+  // bounded `pages` window, which is what these now guard.
+  it('derives "Pages selected" from the server aggregate, not a truncated pages window', () => {
     // Only ONE monitored page is present in this (deliberately truncated)
-    // `pages` prop, but the crawl-wide score_summary says 1 of 3 is analyzed.
-    // The analyzed count must reflect the authoritative aggregate.
+    // `pages` prop, but the selected total says 3.
     renderStrip({ pages: [page({ analysis_status: 'completed' })], selectedTotal: 3 });
 
     const totalLabel = screen.getByText('Pages selected');
     expect(totalLabel.parentElement?.textContent).toContain('3');
-    const completedLabel = screen.getByText('Pages analyzed');
-    const completedValue = completedLabel.parentElement?.querySelector('.text-run-completed');
-    expect(completedValue?.textContent).toBe('1');
   });
 
-  it('uses the persisted queue projection while the monitored query loads', () => {
+  it('falls back to the persisted selected total while the monitored query loads', () => {
     renderStrip({ crawl: crawl({ score_summary: null, analyzed_count: 0 }), selectedTotal: null });
 
-    const queuedLabel = screen.getByText('Queued');
-    expect(queuedLabel.parentElement?.textContent).toContain('2');
     const totalLabel = screen.getByText('Pages selected');
     expect(totalLabel.parentElement?.textContent).toContain('3');
-  });
-
-  it('shows a real Queued count once the selected total is known', () => {
-    renderStrip({
-      crawl: crawl({
-        score_summary: null,
-        analyzed_count: 1,
-        failed_count: 0,
-        counters: {
-          ...crawl().counters,
-          selected: 5,
-          analyzed: 1,
-          running: 1,
-          queued: 3,
-        },
-      }),
-      pages: [page({ analysis_status: 'running' })],
-      selectedTotal: 5,
-    });
-
-    // selected(5) - completed(1) - failed(0) - running(1) = 3 queued.
-    const queuedLabel = screen.getByText('Queued');
-    expect(queuedLabel.parentElement).toHaveTextContent('3');
   });
 
   it('surfaces a monitored-count fetch error instead of silently approximating', () => {
