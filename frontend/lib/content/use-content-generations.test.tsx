@@ -12,18 +12,18 @@ import { isTerminalContentStatus, useContentGenerations } from './use-content-ge
 
 const PROJECT = '22222222-2222-4222-8222-222222222222';
 const GEN = '11111111-1111-4111-8111-111111111111';
+const SECOND_GEN = '33333333-3333-4333-8333-333333333333';
 
 const listItem = {
   id: GEN,
   project_id: PROJECT,
   status: 'queued',
-  output_type: 'website_page',
   skill_id: 'article',
   opportunity_id: null,
   feedback: null,
   feedback_reason: '',
   feedback_at: null,
-  grounding_status: 'unavailable',
+  context_status: 'unavailable',
   requested_model: 'mistral-small-latest',
   returned_model: null,
   provider: 'mistral',
@@ -31,19 +31,22 @@ const listItem = {
   updated_at: '2026-07-15T00:00:00Z',
   completed_at: null,
   error_code: '',
-  prompt_preview: 'Write a landing page',
+  instruction_preview: 'Write a landing page',
 };
 
 const detail = {
   ...listItem,
-  prompt: 'Write a landing page for Acme.',
-  grounding_summary: {
+  user_instruction: 'Write a landing page for Acme.',
+  context_summary: {
     version: 'content-context-v1',
     crawl_page_count: 3,
     crawl_urls: ['https://acme.test/', 'https://acme.test/pricing', 'https://acme.test/about'],
     crawl_completed_at: '2026-07-15T00:00:00Z',
+    brand_memory: true,
     brand_fields: ['description'],
-    search_connected: false,
+    target_url: null,
+    issue_count: 0,
+    related_page_count: 3,
     omissions: [],
   },
   finish_reason: null,
@@ -52,16 +55,18 @@ const detail = {
   usage: null,
   latency_ms: null,
   error_detail: '',
-  generator_version: 'content-v1',
-  skill_version: 'content-v1',
+  generator_version: 'content-v3',
+  skill_version: 1,
 };
 
-function setup() {
+function setup(target?: { siteUrlId?: string; url?: string }) {
   const queryClient = createAppQueryClient();
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  const hook = renderHook(() => useContentGenerations(PROJECT), { wrapper });
+  const hook = renderHook(() => useContentGenerations(PROJECT, { limit: 50, target }), {
+    wrapper,
+  });
   return { queryClient, ...hook };
 }
 
@@ -91,22 +96,26 @@ describe('useContentGenerations', () => {
 
   it('enqueue selects the new record, primes the detail cache, and invalidates the list', async () => {
     let listCalls = 0;
+    let enqueueBody: unknown;
     mswServer.use(
       http.get('/api/v1/content/generations', () => {
         listCalls += 1;
         return HttpResponse.json(listCalls > 1 ? [listItem] : []);
       }),
-      http.post('/api/v1/content/generations', () => HttpResponse.json(detail, { status: 201 })),
+      http.post('/api/v1/content/generations', async ({ request }) => {
+        enqueueBody = await request.json();
+        return HttpResponse.json(detail, { status: 201 });
+      }),
       // The primed detail is non-terminal, so the detail query still polls the
       // endpoint; serve it to keep onUnhandledRequest: 'error' quiet.
       http.get(`/api/v1/content/generations/${GEN}`, () => HttpResponse.json(detail)),
     );
-    const { result, queryClient } = setup();
+    const { result, queryClient } = setup({ siteUrlId: GEN });
     await waitFor(() => expect(result.current.listQuery.isSuccess).toBe(true));
 
     act(() => {
       result.current.enqueueMutation.mutate({
-        prompt: 'Write a landing page for Acme.',
+        userInstruction: 'Write a landing page for Acme.',
         skillId: 'article',
       });
     });
@@ -114,6 +123,12 @@ describe('useContentGenerations', () => {
 
     expect(result.current.selectedId).toBe(GEN);
     expect(queryClient.getQueryData(queryKeys.content.detail(GEN))).toMatchObject({ id: GEN });
+    expect(enqueueBody).toMatchObject({
+      project_id: PROJECT,
+      user_instruction: 'Write a landing page for Acme.',
+      target_site_url_id: GEN,
+    });
+    expect(enqueueBody).not.toHaveProperty('prompt');
     await waitFor(() => expect(listCalls).toBeGreaterThan(1));
   });
 
@@ -158,10 +173,77 @@ describe('useContentGenerations', () => {
     const { result } = setup();
     act(() => {
       result.current.enqueueMutation.mutate({
-        prompt: 'p',
+        userInstruction: 'p',
         skillId: 'article',
       });
     });
     await waitFor(() => expect(result.current.enqueueMutation.isError).toBe(true));
+  });
+
+  it('clears selection after deleting the selected terminal generation', async () => {
+    const terminal = { ...listItem, status: 'succeeded' as const };
+    mswServer.use(
+      http.get('/api/v1/content/generations', () => HttpResponse.json([terminal])),
+      http.get(`/api/v1/content/generations/${GEN}`, () =>
+        HttpResponse.json({ ...detail, status: 'succeeded' }),
+      ),
+      http.delete(
+        `/api/v1/content/generations/${GEN}`,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    const { result } = setup();
+    await waitFor(() => expect(result.current.listQuery.data).toHaveLength(1));
+    act(() => result.current.setSelectedId(GEN));
+    act(() => result.current.deleteMutation.mutate(GEN));
+    await waitFor(() => expect(result.current.deleteMutation.isSuccess).toBe(true));
+    expect(result.current.selectedId).toBeNull();
+  });
+
+  it('clears a terminal selection but preserves an active selection when history is cleared', async () => {
+    const terminal = { ...listItem, status: 'cancelled' as const };
+    const active = { ...listItem, id: SECOND_GEN, status: 'queued' as const };
+    mswServer.use(
+      http.get('/api/v1/content/generations', () => HttpResponse.json([terminal, active])),
+      http.get(`/api/v1/content/generations/${GEN}`, () =>
+        HttpResponse.json({ ...detail, status: 'cancelled' }),
+      ),
+      http.get(`/api/v1/content/generations/${SECOND_GEN}`, () =>
+        HttpResponse.json({ ...detail, id: SECOND_GEN }),
+      ),
+      http.delete('/api/v1/content/generations', () => new HttpResponse(null, { status: 204 })),
+    );
+    const { result, rerender } = setup();
+    await waitFor(() => expect(result.current.listQuery.data).toHaveLength(2));
+
+    act(() => result.current.setSelectedId(GEN));
+    act(() => result.current.clearHistoryMutation.mutate());
+    await waitFor(() => expect(result.current.clearHistoryMutation.isSuccess).toBe(true));
+    expect(result.current.selectedId).toBeNull();
+
+    act(() => result.current.setSelectedId(SECOND_GEN));
+    act(() => result.current.clearHistoryMutation.reset());
+    rerender();
+    act(() => result.current.clearHistoryMutation.mutate());
+    await waitFor(() => expect(result.current.clearHistoryMutation.isSuccess).toBe(true));
+    expect(result.current.selectedId).toBe(SECOND_GEN);
+  });
+
+  it('clears a terminal selection outside the bounded history list', async () => {
+    const active = { ...listItem, status: 'queued' as const };
+    mswServer.use(
+      http.get('/api/v1/content/generations', () => HttpResponse.json([active])),
+      http.get(`/api/v1/content/generations/${SECOND_GEN}`, () =>
+        HttpResponse.json({ ...detail, id: SECOND_GEN, status: 'failed' }),
+      ),
+      http.delete('/api/v1/content/generations', () => new HttpResponse(null, { status: 204 })),
+    );
+    const { result } = setup();
+    await waitFor(() => expect(result.current.listQuery.data).toHaveLength(1));
+    act(() => result.current.setSelectedId(SECOND_GEN));
+    await waitFor(() => expect(result.current.detailQuery.data?.status).toBe('failed'));
+    act(() => result.current.clearHistoryMutation.mutate());
+    await waitFor(() => expect(result.current.clearHistoryMutation.isSuccess).toBe(true));
+    expect(result.current.selectedId).toBeNull();
   });
 });

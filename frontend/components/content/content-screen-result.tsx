@@ -50,7 +50,7 @@ export function GenerationResult({
           <div data-component-id="content-truncation-warning">
             <Alert tone="warning">
               The output hit the length limit and may be incomplete. Regenerate or shorten your
-              prompt for a complete result.
+              instruction for a complete result.
             </Alert>
           </div>
         ) : null}
@@ -92,22 +92,22 @@ function ResultBody({ detail }: Readonly<{ detail: ContentGenerationDetail }>) {
         data-component-id="content-result-provenance"
         className="border-border text-muted flex flex-wrap items-center gap-x-2 border-t pt-4 text-xs"
       >
-        {groundedWithLabel(detail)}
+        {contextUsedLabel(detail)}
       </div>
     </>
   );
 }
 
-/** One quiet line: what this draft was actually grounded with. */
-function groundedWithLabel(detail: ContentGenerationDetail): string {
-  const pages = detail.grounding_summary.crawl_page_count;
+/** One quiet line: which canonical context was available to this draft. */
+function contextUsedLabel(detail: ContentGenerationDetail): string {
+  const pages = detail.context_summary.crawl_page_count;
   if (pages > 0) {
-    return `Grounded with: website crawl · ${pages} ${pages === 1 ? 'page' : 'pages'}`;
+    return `Context used: website crawl · ${pages} ${pages === 1 ? 'page' : 'pages'}`;
   }
-  if (detail.grounding_summary.brand_fields.length > 0) {
-    return 'Grounded with: brand context';
+  if (detail.context_summary.brand_fields.length > 0) {
+    return 'Context used: brand memory';
   }
-  return 'Grounded with: no site evidence available';
+  return 'Context used: user instruction only';
 }
 
 function ResultActions({

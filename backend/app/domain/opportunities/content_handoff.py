@@ -32,7 +32,6 @@ def project_content_handoff(row: Opportunity) -> dict:
         "canonical_domain": None,
         "suggested_role": "Content",
         "suggested_skill_id": CONTENT_DEFAULT_SKILL,
-        "task_seed": row.remediation or row.title,
         "target_url": row.target_url,
         "target_theme": row.target_theme,
         "representative_citations": [],

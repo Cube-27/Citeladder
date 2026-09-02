@@ -74,8 +74,7 @@ Add these environment secrets:
   `DEFAULT_AGENT_MODEL` for Growth Agent features;
 - `KEENABLE_API_KEY`: required for external brand-discovery research;
 - `TAVILY_API_KEY`: required for commerce-catalog web research;
-- `MISTRAL_API_KEY`: optional; required for default Mistral-backed content
-  generation unless a separate content provider is configured;
+- `CONTENT_API_KEY`: required for the configured Content generation provider;
 - `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE`: optional Logo.dev publishable token. It
   is injected only while building the frontend and becomes public client
   configuration; do not use a Logo.dev secret key here.

@@ -601,6 +601,7 @@ _BUSINESS_CONTEXT_FIELDS = (
     "business_model",
     "secondary_business_models",
     "market_scope",
+    "buyer_type",
     "buyer_register",
     "buyer_roles",
     "service_areas",

@@ -854,19 +854,21 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.UUID(), nullable=False),
         sa.Column("project_id", sa.UUID(), nullable=False),
         sa.Column("opportunity_id", sa.UUID(), nullable=True),
+        sa.Column("target_site_url_id", sa.UUID(), nullable=True),
+        sa.Column("target_url", sa.String(length=2048), nullable=False, server_default=""),
+        sa.Column("demand_signal_id", sa.UUID(), nullable=True),
         sa.Column(
             "site_health_reference", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
-        sa.Column("prompt", sa.Text(), nullable=False),
-        sa.Column("output_type", sa.String(length=32), nullable=False),
+        sa.Column("user_instruction", sa.Text(), nullable=False),
         sa.Column("skill_id", sa.String(64), nullable=False),
-        sa.Column("skill_version", sa.String(32), nullable=False),
+        sa.Column("skill_version", sa.Integer(), nullable=False),
         sa.Column("feedback", sa.String(16), nullable=True),
         sa.Column("feedback_reason", sa.String(32), nullable=False, server_default=""),
         sa.Column("feedback_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("grounding_status", sa.String(length=16), nullable=False),
+        sa.Column("context_status", sa.String(length=16), nullable=False),
         sa.Column(
-            "grounding_envelope",
+            "context_snapshot",
             postgresql.JSONB(astext_type=Text()),
             nullable=False,
         ),
@@ -946,6 +948,8 @@ def upgrade() -> None:
         "content_generations",
         ["opportunity_id"],
     )
+    op.create_index(op.f("ix_content_generations_target_site_url_id"), "content_generations", ["target_site_url_id"])
+    op.create_index(op.f("ix_content_generations_demand_signal_id"), "content_generations", ["demand_signal_id"])
     op.create_table(
         "discovery_model_configs",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -2216,7 +2220,7 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["generation_id"], ["content_generations.id"], ondelete="RESTRICT"
+            ["generation_id"], ["content_generations.id"], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
@@ -5166,6 +5170,22 @@ def upgrade() -> None:
     _create_indexes(
         "demand_signals",
         ("workspace_id", "project_id", "snapshot_id", "signal_type", "state"),
+    )
+    op.create_foreign_key(
+        "fk_content_generations_target_site_url_id",
+        "content_generations",
+        "site_urls",
+        ["target_site_url_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
+    op.create_foreign_key(
+        "fk_content_generations_demand_signal_id",
+        "content_generations",
+        "demand_signals",
+        ["demand_signal_id"],
+        ["id"],
+        ondelete="SET NULL",
     )
 
     op.create_table(

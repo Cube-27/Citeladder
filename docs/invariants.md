@@ -115,16 +115,17 @@ truth or authorization.
 
 ## 12. Generated content cannot fabricate facts
 
-Unsupported, conflicting, historical-as-current, regulated, numeric, price,
-date, policy, safety, and identity claims must be validated against the context
-actually supplied. A provider cannot cite an absent artifact. Generated content
-never becomes a fact automatically.
+Generative paths constrain factual claims to the context actually supplied. A
+provider cannot cite an absent artifact, and generated content never becomes a
+fact automatically.
 
-Content generation freezes one versioned grounding envelope from confirmed or
-edited BrandProfile fields plus exact crawl-observed fragments. Crawl text stays
-untrusted observation, conflicts prohibit the affected claim class, and absent
-source references fail validation. An unavailable envelope produces an
-explicitly labelled ungrounded draft; it never fabricates grounding.
+Content generation freezes one versioned `ContentContext` from authorized
+durable brand memory, optional target/origin evidence, and bounded persisted
+crawl fragments. Crawl text stays untrusted observation. One fixed system
+instruction forbids invented company, product, customer, price, policy,
+statistic, and competitor facts; there is no second model call or deterministic
+claim-validator layer. The output remains a reviewable draft, and the UI labels
+the context actually used.
 
 Where structured data mirrors visible content, such as `FAQPage`, markup is
 generated from reviewed visible content rather than substituted for it.

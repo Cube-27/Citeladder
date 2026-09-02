@@ -1,4 +1,4 @@
-import { Check, Circle, History, RefreshCw, Sparkles, TrendingUp, X } from 'lucide-react';
+import { Check, Circle, History, RefreshCw, Sparkles, X } from 'lucide-react';
 import { type RefObject } from 'react';
 
 import { SkillPicker } from '@/components/content/skill-picker';
@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Textarea } from '@/components/ui/textarea';
-import { CONTENT_PROMPT_MAX_LEN } from '@/lib/api/content';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Input } from '@/components/ui/input';
+import type { ContentTargetPage } from '@/lib/api/content';
+import { CONTENT_INSTRUCTION_MAX_LEN } from '@/lib/api/content';
 import type { ContentContextPreview } from '@/lib/api/types';
 import { ICONS } from '@/lib/icons';
 
@@ -17,40 +20,50 @@ import {
 } from './content-screen-data';
 
 export function ContentComposer({
-  prompt,
-  promptRef,
+  instruction,
+  instructionRef,
   opportunity,
-  demandSource,
   contextPreview,
   contextLoading,
+  target,
+  targetUrl,
+  targetPages,
+  onTargetChange,
+  onTargetSearchChange,
+  onTargetUrlChange,
   generating,
   skillId,
   skills,
   skillsLoading,
   canGenerate,
-  onPromptChange,
+  onInstructionChange,
   onSkillChange,
   onGenerate,
   onHistoryOpen,
 }: Readonly<{
-  prompt: string;
-  promptRef: RefObject<HTMLTextAreaElement | null>;
+  instruction: string;
+  instructionRef: RefObject<HTMLTextAreaElement | null>;
   opportunity?: ContentOpportunityContext | null;
-  demandSource?: string | null;
   contextPreview?: ContentContextPreview | null;
   contextLoading?: boolean;
+  target: { siteUrlId?: string; url?: string };
+  targetUrl: string;
+  targetPages: readonly ContentTargetPage[];
+  onTargetChange: (target: { siteUrlId?: string; url?: string }) => void;
+  onTargetSearchChange: (value: string) => void;
+  onTargetUrlChange: (value: string) => void;
   generating: boolean;
   skillId: string;
   skills: readonly ContentSkillView[];
   skillsLoading: boolean;
   canGenerate: boolean;
-  onPromptChange: (value: string) => void;
+  onInstructionChange: (value: string) => void;
   onSkillChange: (value: string) => void;
   onGenerate: () => void;
   onHistoryOpen: () => void;
 }>) {
   return (
-    <Card data-component-id="content-prompt-box" className="p-[var(--card-padding)]">
+    <Card data-component-id="content-composer" className="p-[var(--card-padding)]">
       <CardContent className="flex flex-col gap-[var(--workspace-gap)] p-0">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-1">
@@ -65,15 +78,32 @@ export function ContentComposer({
           </Button>
         </div>
         {opportunity ? <OpportunityContext opportunity={opportunity} /> : null}
-        {demandSource ? <DemandSource source={demandSource} /> : null}
-        <Textarea
-          ref={promptRef}
-          value={prompt}
-          onChange={(event) => onPromptChange(event.target.value)}
+        <TargetPageSelect
+          target={target}
+          targetUrl={targetUrl}
+          pages={targetPages}
           disabled={generating}
-          maxLength={CONTENT_PROMPT_MAX_LEN}
-          rows={demandSource || opportunity ? 10 : 4}
-          aria-label="Describe the website content you want to create"
+          onSearchChange={onTargetSearchChange}
+          onTargetUrlChange={onTargetUrlChange}
+          onChange={onTargetChange}
+        />
+        <label
+          id="content-user-instruction-label"
+          htmlFor="content-user-instruction"
+          className="text-muted text-xs font-medium"
+        >
+          Your instruction
+        </label>
+        <Textarea
+          id="content-user-instruction"
+          ref={instructionRef}
+          value={instruction}
+          onChange={(event) => onInstructionChange(event.target.value)}
+          disabled={generating}
+          maxLength={CONTENT_INSTRUCTION_MAX_LEN}
+          rows={opportunity ? 10 : 4}
+          aria-label="Your instruction"
+          aria-labelledby="content-user-instruction-label"
           placeholder="Describe the website content you want to create…"
           className="border-border bg-background focus:bg-panel rounded-sm p-4 text-sm leading-relaxed"
         />
@@ -100,40 +130,111 @@ export function ContentComposer({
   );
 }
 
-/**
- * What CiteLadder will actually ground this draft with, before Generate.
- *
- * An unavailable source is a neutral absence, never a warning: a project
- * without Search Console is not in a degraded state, it simply has one fewer
- * optional source. Hence muted text and a hollow marker rather than a tone.
- */
+function TargetPageSelect({
+  target,
+  targetUrl,
+  pages,
+  disabled,
+  onSearchChange,
+  onTargetUrlChange,
+  onChange,
+}: Readonly<{
+  target: { siteUrlId?: string; url?: string };
+  targetUrl: string;
+  pages: readonly ContentTargetPage[];
+  disabled: boolean;
+  onSearchChange: (value: string) => void;
+  onTargetUrlChange: (value: string) => void;
+  onChange: (target: { siteUrlId?: string; url?: string }) => void;
+}>) {
+  const selected = pages.find((page) => page.site_url_id === target.siteUrlId);
+  return (
+    <div className="grid gap-2">
+      <label className="text-muted text-xs font-medium" htmlFor="content-target-page">
+        Target page (optional)
+      </label>
+      <SearchableSelect
+        id="content-target-page"
+        ariaLabel="Target page"
+        value={target.siteUrlId ?? ''}
+        disabled={disabled}
+        placeholder="Search crawled pages"
+        unknownValueFallback={() => ''}
+        options={pages.map((page) => ({
+          value: page.site_url_id,
+          label: page.title,
+          detail: page.display_url,
+        }))}
+        onSearchChange={onSearchChange}
+        onChange={(siteUrlId) => onChange({ siteUrlId })}
+      />
+      <Input
+        aria-label="Enter target URL instead"
+        value={targetUrl}
+        disabled={disabled}
+        placeholder="https://example.com/page"
+        onChange={(event) => onTargetUrlChange(event.target.value)}
+      />
+      {selected ? (
+        <p className="text-muted text-xs">
+          Selected: {selected.title} · {selected.display_url}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={disabled || !isHttpTargetUrl(targetUrl)}
+          onClick={() => onChange({ url: targetUrl.trim() })}
+        >
+          Enter URL instead
+        </Button>
+        {target.siteUrlId || target.url ? (
+          <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onChange({})}>
+            No page
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** Only a complete http(s) address is an addressable target the backend can use. */
+function isHttpTargetUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value.trim());
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && parsed.hostname !== '';
+  } catch {
+    return false;
+  }
+}
+
+/** Compact summary of the canonical server-built context, never its evidence text. */
 function ContextIndicator({
   preview,
   loading,
 }: Readonly<{ preview?: ContentContextPreview | null; loading?: boolean }>) {
-  const crawlLabel = (() => {
-    // Only an in-flight query shows the pending label. A settled query with
-    // no preview (unreachable, errored) must still resolve to a real line —
-    // otherwise the indicator sits on "Checking…" forever.
-    if (loading) return 'Checking available context…';
-    if (!preview?.crawl_available) return 'Website crawl · run a crawl to ground drafts';
-    const pages = preview.crawl_page_count;
-    return `Website crawl · ${pages} ${pages === 1 ? 'page' : 'pages'} available`;
-  })();
+  const parts = preview?.brand_memory ? ['Brand memory'] : [];
+  if (preview?.target_page) parts.push(preview.target_page);
+  if (preview?.issue_count) {
+    parts.push(`${preview.issue_count} ${preview.issue_count === 1 ? 'issue' : 'issues'}`);
+  }
+  if (preview?.related_page_count) {
+    parts.push(
+      `${preview.related_page_count} related ${preview.related_page_count === 1 ? 'page' : 'pages'}`,
+    );
+  }
+  const label = loading
+    ? 'Checking context…'
+    : preview
+      ? `Context: ${parts.join(' · ') || 'User instruction only'}`
+      : 'Context unavailable';
   return (
     <div
       data-component-id="content-context-indicator"
       className="text-muted grid gap-1 text-xs font-medium"
     >
-      <ContextLine available={Boolean(preview?.crawl_available)} label={crawlLabel} />
-      <ContextLine
-        available={Boolean(preview?.search_connected)}
-        label={
-          preview?.search_connected
-            ? 'Search Console · connected'
-            : 'Search Console · not connected'
-        }
-      />
+      <ContextLine available={Boolean(preview?.brand_memory)} label={label} />
     </div>
   );
 }
@@ -178,22 +279,6 @@ function OpportunityContext({ opportunity }: Readonly<{ opportunity: ContentOppo
           {limitation}
         </p>
       ))}
-    </div>
-  );
-}
-
-function DemandSource({ source }: Readonly<{ source: string }>) {
-  return (
-    <div
-      data-component-id="content-demand-source"
-      className="border-accent-border bg-accent-soft text-secondary flex items-start gap-2.5 rounded-sm border p-3.5 text-sm"
-    >
-      <TrendingUp className="text-accent-text mt-0.5 size-4 shrink-0" aria-hidden />
-      <span>
-        Brief written from the search demand signal{' '}
-        <span className="text-foreground font-medium">{source}</span>. Edit anything below before
-        generating.
-      </span>
     </div>
   );
 }
@@ -255,7 +340,7 @@ export function GenerationErrorPanel({
           <span className="leading-relaxed font-medium">
             {mutationError
               ? actionErrorMessage(mutationError)
-              : 'Generation failed. You can edit your prompt and try again.'}
+              : 'Generation failed. You can edit your instruction and try again.'}
           </span>
         </div>
         <div className="flex gap-2.5 pt-1">

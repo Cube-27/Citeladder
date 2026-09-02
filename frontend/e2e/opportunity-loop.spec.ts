@@ -72,7 +72,6 @@ const handoff = {
   canonical_domain: 'example.org',
   suggested_role: 'Earned Media',
   suggested_skill_id: 'article',
-  task_seed: 'Prepare an evidence-backed editorial inclusion brief for example.org.',
   target_url: null,
   target_theme: 'analytics',
   representative_citations: [{ url: 'https://example.org/tools', title: 'Analytics tools' }],
@@ -118,14 +117,13 @@ const generation = {
   id: GENERATION,
   project_id: PROJECT,
   status: 'succeeded',
-  output_type: 'website_page',
   skill_id: 'article',
   opportunity_id: OPPORTUNITY,
-  skill_version: 'content-v1',
+  skill_version: 1,
   feedback: null,
   feedback_reason: '',
   feedback_at: null,
-  grounding_status: 'included',
+  context_status: 'included',
   requested_model: 'approved-frontier-model',
   returned_model: 'approved-frontier-model',
   provider: 'approved-provider',
@@ -133,15 +131,18 @@ const generation = {
   updated_at: '2026-08-28T00:02:00Z',
   completed_at: '2026-08-28T00:02:00Z',
   error_code: '',
-  prompt_preview: handoff.task_seed,
-  prompt: handoff.task_seed,
-  grounding_summary: {
+  instruction_preview: 'Editorial inclusion brief',
+  user_instruction: 'Prepare an evidence-backed editorial inclusion brief for example.org.',
+  context_summary: {
     version: 'content-context-v1',
     crawl_page_count: 2,
     crawl_urls: ['https://acme.example/', 'https://acme.example/analytics'],
     crawl_completed_at: '2026-08-28T00:00:00Z',
+    brand_memory: true,
     brand_fields: ['description'],
-    search_connected: true,
+    target_url: 'https://acme.example/analytics',
+    issue_count: 1,
+    related_page_count: 1,
     omissions: [],
   },
   finish_reason: 'stop',
@@ -150,7 +151,7 @@ const generation = {
   usage: { total_tokens: 80 },
   latency_ms: 200,
   error_detail: '',
-  generator_version: 'content-v1',
+  generator_version: 'content-v3',
 };
 
 const verificationResult = {
@@ -287,7 +288,7 @@ test('earned opportunity handoff links generation and comparable verification', 
   await page.route('**/api/v1/content/skills', (route) =>
     route.fulfill({
       json: {
-        version: 'content-skills-v2',
+        version: 'content-skills-v5',
         default_skill_id: 'content_page',
         skills: [
           {
@@ -306,11 +307,10 @@ test('earned opportunity handoff links generation and comparable verification', 
   await page.route('**/api/v1/content/context-preview?*', (route) =>
     route.fulfill({
       json: {
-        crawl_available: true,
-        crawl_page_count: 2,
-        crawl_completed_at: '2026-08-28T00:00:00Z',
-        brand_fields: ['description'],
-        search_connected: true,
+        brand_memory: true,
+        target_page: 'Analytics',
+        issue_count: 1,
+        related_page_count: 1,
       },
     }),
   );
@@ -333,8 +333,9 @@ test('earned opportunity handoff links generation and comparable verification', 
   await expect(page.getByText('Path: Earned')).toBeVisible();
   // Instant navigation may retain the previous route's hidden DOM in its reusable shell.
   await expect(page.getByText(detail(false).remediation).filter({ visible: true })).toHaveCount(0);
-  const prompt = page.getByRole('textbox', { name: /describe the website content/i });
-  await expect(prompt).toHaveValue(handoff.task_seed);
+  const prompt = page.getByRole('textbox', { name: 'Your instruction' });
+  await expect(prompt).toHaveValue('');
+  await prompt.fill('Prepare an evidence-backed editorial inclusion brief for example.org.');
   await page.getByRole('button', { name: 'Generate' }).click();
   await expect(page.getByRole('heading', { name: 'Editorial inclusion brief' })).toBeVisible();
   await page.getByRole('link', { name: 'Return to opportunity' }).click();

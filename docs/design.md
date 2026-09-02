@@ -366,6 +366,14 @@ wrap to the reading width, while intrinsically wide Markdown such as tables may
 scroll horizontally. Copy, Markdown export, and regenerate remain available at
 both the result header and footer.
 
+The composer places one searchable persisted-page picker (plus an explicit URL
+escape hatch) before **Your instruction**. Origin entry points may preselect the
+page and format, but the instruction stays empty and focused. A quiet context
+line names available brand, target, issue, and related-page context without a
+confirmation step. Terminal history rows expose Delete; Clear history and
+individual deletion use the shared destructive confirmation dialog and never
+delete active work.
+
 Overview stays useful without an audit. Its canonical reading order is project identity plus
 Facts, one next action plus Track, Project State, Movement, ranked actions, report proof, and Top
 Insights. The top card places the project identity and actions first, followed by three

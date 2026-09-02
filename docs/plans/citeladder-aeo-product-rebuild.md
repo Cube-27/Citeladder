@@ -198,7 +198,7 @@ focused gate passed and its completion note was recorded; it does **not** create
 | O01 | W3 | completed | A02, P01 | WS1 no-audit command-center projection, evidence-state loop strip, next-action precedence, and capability projection. |
 | O02 | W3 | completed | O01 | WS1 Facts drawer and competitor suggestions on Overview; migrate callers and delete `/knowledge-base` plus caller-free UI. |
 | O03 | W3 | completed | O02 | WS1 Track summary; move retained Visibility capabilities to Trends, delete the Visibility `overview` surface, and finish WS7 phase B navigation cleanup. |
-| G01 | W4 | completed | P01, O03 | WS7A frozen grounding envelope, adapter cutover, provider validation, truthful fallback/copy, and deletion of the superseded direct adapter path. |
+| G01 | W4 | superseded | P01, O03 | Historical WS7A envelope implementation; replaced by the active clean-slate Content plan and canonical `ContentContext`. |
 | Q01 | W4 | completed | X01, D02 | WS3A bounded query↔page↔time projection, lifecycle, API, schema, provenance, and pagination. |
 | Q02 | W4 | completed | Q01 | WS3B Wave 1 branded separation + striking-distance signals and Opportunity mapping. |
 | Q03 | W4 | completed | Q02 | WS3B Wave 2 cannibalization, property-relative CTR gap, trend detectors, abstention states, and no mismatch placeholder. |
@@ -284,6 +284,7 @@ row is the removal condition. No other compatibility path is implied.
 - Advanced to internal slice: wave close
 
 #### G01 — completed 2026-08-15
+- Historical record: this slice was replaced by the clean-slate Content pipeline described in the active Content plan; its envelope/file names are not current implementation authority.
 - Wave / branch: W4 / `feat/aeo-wave-4-demand-content`
 - Owners: Content generation, confirmed BrandProfile provenance, and retained bounded crawl-fragment selection.
 - Implemented: one versioned `GroundingEnvelope` frozen before provider I/O; confirmed/edited facts, untrusted crawl observations, prohibited claim classes, deterministic conflicts, budgets/omissions, provider input and source-marker validation, and truthful unavailable-draft UI.
@@ -1406,6 +1407,12 @@ O02–O03, according to the route/surface that each internal sub-slice replaces.
 
 ### WS7A — Content grounding: a real workstream, not an open question
 
+> **Superseded historical specification.** Everything in WS7A through the
+> Workstream 7B heading records the replaced grounding-envelope design. The
+> active Content plan and shipped `context_builder.py` contract are the current
+> authority; do not implement the envelope, validator, or `grounding.py` paths
+> described below.
+
 **This is a prerequisite for any UI or marketing copy that says "grounded generation."** The IA
 above already implies grounding, so it must be implemented rather than deferred indefinitely.
 
@@ -1428,13 +1435,17 @@ A full Verified Evidence Graph (per-claim sources + site-wide contradiction reso
 it and does not redefine it. Only fields with `review_state = confirmed` (or `edited`) may be
 asserted as user-confirmed facts in the envelope.
 
-**Concrete adapter decision:** add `backend/app/domain/content/grounding.py` inside the existing
-Content owner. Its public seam is
-`build_grounding_envelope(session, workspace_id, project_id) -> GroundingEnvelope`.
-`content.service.enqueue_generation()` freezes the returned envelope on `ContentGeneration`, and
-`content.message_builder.build_messages()` consumes it. Replace the narrower direct
-`WebsiteContext` message parameter rather than running both adapters; `website_context.py` remains
-the bounded crawl-fragment selector used internally by the new adapter.
+**Superseded by the shipped clean-slate Content pipeline:**
+`backend/app/domain/content/context_builder.py` is the one context owner. Its
+small interface builds a frozen `ContentContext` from authorized durable brand,
+target-page, Site Health, Opportunity, Demand, and bounded crawl evidence.
+`content.service.enqueue_generation()` freezes it on `ContentGeneration`, and
+`content.message_builder.build_messages()` consumes it. `website_context.py`
+remains only the bounded deterministic crawl-fragment selector. There is no
+parallel grounding-envelope adapter or old-row compatibility path.
+
+The remaining WS7A envelope specification below is retained only as historical
+delivery context and does not describe the shipped Content contract.
 
 The exact v1 envelope is:
 
@@ -1868,7 +1879,8 @@ quietly tunes the product to one small sample.
 ## Sequencing
 
 **Product decisions are closed for this plan:** measurable promise, explicit action/verification
-events, route contract, provenance shape, grounding envelope, detector semantics, crawl
+events, route contract, provenance shape, canonical Content context (superseding the historical
+grounding envelope), detector semantics, crawl
 acquisition, issue-description history, and change comparability are selected above.
 Implementation evidence may require a documented amendment; it does not authorize an implementer
 to choose a different product contract silently.

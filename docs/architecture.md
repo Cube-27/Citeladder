@@ -40,16 +40,17 @@ runtime does not own validation state machines, user revisions, save decisions,
 publication claims, or later verification. Generated prose is never promoted
 to business truth automatically.
 
-An Opportunity can provide Content with one frozen, typed Owned or Earned
-handoff containing the persisted citations, coverage, limitations, suggested
-skill, and editable task seed. Successful generations link back to that
-Opportunity, but only the user can declare an external change implemented.
+Site Health, Opportunity, and Demand pass durable identifiers into Content's
+one canonical context builder. The browser never inserts generated task prose:
+the instruction is only the user's words. The builder authorizes and renders
+brand memory, an optional target page, page-specific evidence, and a bounded
+related-page set from persisted state. Successful generations can link back to
+an Opportunity, but only the user can declare an external change implemented.
 
-Each generation freezes one bounded grounding envelope. Confirmed or edited
-BrandProfile fields are the only allowed business facts; exact crawl fragments
-remain untrusted observations for terminology, structure, tone, or explicit
-attribution. Conflicts prohibit the affected claim class, and missing evidence
-is exposed as an ungrounded draft rather than fabricated grounding.
+Each generation freezes that context, its numeric file-backed skill version,
+and message/provider provenance before provider I/O. Crawl and origin text is
+untrusted reference data in a separate message. Missing optional evidence is
+represented explicitly and never replaced with fabricated facts.
 
 ### Demand Intelligence and Track
 

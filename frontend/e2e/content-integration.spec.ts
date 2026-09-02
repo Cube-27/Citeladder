@@ -35,7 +35,7 @@ test.beforeEach(() => {
   setProviderDelay(0);
 });
 
-const PROMPT_BOX = /describe the website content/i;
+const PROMPT_BOX = 'Your instruction';
 
 /** Register, explicitly sign in, then create a project via the real API. */
 async function seedAccount(page: Page, email: string, projectName: string): Promise<string> {

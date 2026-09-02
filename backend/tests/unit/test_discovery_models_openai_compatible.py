@@ -157,7 +157,7 @@ def test_factory_builds_any_env_configured_provider(
     from pydantic import SecretStr
 
     monkeypatch.setattr(content_settings, "api_key", SecretStr(""))
-    monkeypatch.setattr(content_settings, "mistral_api_key", SecretStr("k"))
+    monkeypatch.setattr(content_settings, "api_key", SecretStr("k"))
     monkeypatch.setattr(content_settings, "provider", "mistral")
     client = build_discovery_client()
     assert isinstance(client, OpenAICompatibleDiscoveryClient)
@@ -178,7 +178,7 @@ def test_missing_key_is_the_only_provider_configuration_failure(
 
     monkeypatch.setattr(content_settings, "provider", "anything")
     monkeypatch.setattr(content_settings, "api_key", SecretStr(""))
-    monkeypatch.setattr(content_settings, "mistral_api_key", SecretStr(""))
+    monkeypatch.setattr(content_settings, "api_key", SecretStr(""))
     with pytest.raises(ProviderError) as excinfo:
         build_discovery_client()
     assert excinfo.value.error_code == ERROR_AUTH

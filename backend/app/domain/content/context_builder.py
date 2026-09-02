@@ -1,22 +1,4 @@
-"""Plain-text generation context: brand + task + website + search.
-
-Replaces the former grounding envelope. That design shipped a JSON blob of
-facts, source refs, claim classes and prohibited claims, gated brand fields
-behind manual review, and forced ``[[source:<id>]]`` markers whose validation
-rejected otherwise-good output. It produced drafts that read like compliance
-reports.
-
-This module renders four readable text blocks instead. Grounding is now a
-single instruction in the system prompt ("use this material, don't invent
-specifics, write around gaps") rather than a machine-checked contract.
-
-Crawl text still travels in its own separate message (see ``message_builder``)
-and is never concatenated into the system or instruction message, so an
-"ignore previous instructions" string embedded in a crawled page stays data.
-
-Pure DB projection: no fetch, no provider call. The same inputs always render
-the same blocks, so ``message_digest`` stays stable for provenance.
-"""
+"""Canonical, persisted context projection for content generation."""
 
 from __future__ import annotations
 
@@ -25,49 +7,78 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlsplit
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.content import (
+    CONTENT_CONTEXT_STATUS_INCLUDED,
+    CONTENT_CONTEXT_STATUS_UNAVAILABLE,
     CONTENT_CONTEXT_VERSION,
-    GROUNDING_STATUS_INCLUDED,
-    GROUNDING_STATUS_UNAVAILABLE,
 )
-from app.domain.content.website_context import select_crawl_fragments
+from app.domain.content.website_context import (
+    CrawlFragmentSelection,
+    normalized_target_url,
+    select_crawl_fragments,
+)
 from app.domain.opportunities.content_handoff import project_content_handoff
-from app.models.brand import BrandProfile
+from app.domain.site_health.service.aeo_readiness import get_content_handoff
+from app.domain.site_health.service.common import SiteHealthNotFoundError
+from app.models.brand import Brand, BrandAlias, BrandProfile, Competitor
+from app.models.demand import DemandSignal, DemandSnapshot
 from app.models.opportunity import Opportunity
+from app.models.project import Project
+from app.models.site_health.urls import SiteUrl
+
+
+class ContentContextNotFoundError(LookupError):
+    """An origin was missing or outside the active workspace/project."""
+
+
+class ContentContextConflictError(ValueError):
+    """Two explicit origins selected different owned target pages."""
+
+
+@dataclass(frozen=True)
+class _ContentOrigins:
+    project: Project
+    target_url: str
+    target_site_url_id: uuid.UUID | None
+    opportunity: Opportunity | None
+    site_health_handoff: dict | None
+    demand_signal: DemandSignal | None
+    demand_snapshot: DemandSnapshot | None
 
 
 @dataclass(frozen=True)
 class ContentContext:
-    """Rendered, immutable context for one generation.
-
-    Every block is already-rendered text ("" when it has nothing to say), so
-    the worker can rebuild the exact messages from the persisted snapshot
-    without re-querying anything.
-    """
+    """The only generation context shape, frozen before provider I/O."""
 
     brand_block: str = ""
-    task_block: str = ""
-    website_block: str = ""
-    search_block: str = ""
+    target_page_block: str = ""
+    issue_block: str = ""
+    related_site_block: str = ""
     summary: dict[str, Any] = field(default_factory=dict)
     version: str = CONTENT_CONTEXT_VERSION
 
     @property
     def status(self) -> str:
-        """``included`` when any evidence was rendered, else ``unavailable``."""
-        if self.brand_block or self.website_block or self.search_block:
-            return GROUNDING_STATUS_INCLUDED
-        return GROUNDING_STATUS_UNAVAILABLE
+        return (
+            CONTENT_CONTEXT_STATUS_INCLUDED
+            if any(self.reference_blocks())
+            else CONTENT_CONTEXT_STATUS_UNAVAILABLE
+        )
 
     def reference_blocks(self) -> list[str]:
-        """The evidence blocks, in order, skipping empties."""
         return [
             block
-            for block in (self.brand_block, self.website_block, self.search_block)
+            for block in (
+                self.brand_block,
+                self.target_page_block,
+                self.issue_block,
+                self.related_site_block,
+            )
             if block
         ]
 
@@ -75,9 +86,9 @@ class ContentContext:
         return {
             "version": self.version,
             "brand_block": self.brand_block,
-            "task_block": self.task_block,
-            "website_block": self.website_block,
-            "search_block": self.search_block,
+            "target_page_block": self.target_page_block,
+            "issue_block": self.issue_block,
+            "related_site_block": self.related_site_block,
             "summary": self.summary,
         }
 
@@ -86,16 +97,231 @@ class ContentContext:
         value = value or {}
         return cls(
             brand_block=str(value.get("brand_block") or ""),
-            task_block=str(value.get("task_block") or ""),
-            website_block=str(value.get("website_block") or ""),
-            search_block=str(value.get("search_block") or ""),
+            target_page_block=str(value.get("target_page_block") or ""),
+            issue_block=str(value.get("issue_block") or ""),
+            related_site_block=str(value.get("related_site_block") or ""),
             summary=dict(value.get("summary") or {}),
             version=str(value.get("version") or CONTENT_CONTEXT_VERSION),
         )
 
 
+async def _resolve_content_origins(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    target_site_url_id: uuid.UUID | None = None,
+    target_url: str | None = None,
+    opportunity_id: uuid.UUID | None = None,
+    demand_signal_id: uuid.UUID | None = None,
+    site_health_reference: Any | None = None,
+) -> _ContentOrigins:
+    """Resolve every request identifier under one context-owned authority."""
+    project = await session.scalar(
+        select(Project).where(
+            Project.id == project_id, Project.workspace_id == workspace_id
+        )
+    )
+    if project is None:
+        raise ContentContextNotFoundError("Project not found")
+    target, opportunity, signal, snapshot, handoff = await _origin_records(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        target_site_url_id=target_site_url_id,
+        opportunity_id=opportunity_id,
+        demand_signal_id=demand_signal_id,
+        site_health_reference=site_health_reference,
+    )
+    if (
+        handoff
+        and target
+        and site_health_reference is not None
+        and target.id != site_health_reference.site_url_id
+    ):
+        raise ContentContextConflictError("target page conflicts with Site Health")
+    return _ContentOrigins(
+        project=project,
+        target_url=_origin_target_url(
+            target=target,
+            target_url=target_url,
+            handoff=handoff,
+            opportunity=opportunity,
+            signal=signal,
+            project_url=project.website_url,
+        ),
+        target_site_url_id=target.id if target else None,
+        opportunity=opportunity,
+        site_health_handoff=handoff,
+        demand_signal=signal,
+        demand_snapshot=snapshot,
+    )
+
+
+async def _origin_records(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    target_site_url_id: uuid.UUID | None,
+    opportunity_id: uuid.UUID | None,
+    demand_signal_id: uuid.UUID | None,
+    site_health_reference: Any | None,
+) -> tuple[
+    SiteUrl | None,
+    Opportunity | None,
+    DemandSignal | None,
+    DemandSnapshot | None,
+    dict | None,
+]:
+    target = await _target_site_url(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        target_site_url_id=target_site_url_id,
+    )
+    opportunity = await _opportunity(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        opportunity_id=opportunity_id,
+    )
+    signal, snapshot = await _demand_signal(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        demand_signal_id=demand_signal_id,
+    )
+    handoff = await _site_health_handoff(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        reference=site_health_reference,
+    )
+    return target, opportunity, signal, snapshot, handoff
+
+
+def _origin_target_url(
+    *,
+    target: SiteUrl | None,
+    target_url: str | None,
+    handoff: dict | None,
+    opportunity: Opportunity | None,
+    signal: DemandSignal | None,
+    project_url: str,
+) -> str:
+    candidates = (
+        target.normalized_url if target else "",
+        (target_url or "").strip(),
+        str((handoff or {}).get("normalized_url") or ""),
+        _owned_url(opportunity.target_url or "", project_url) if opportunity else "",
+        _owned_url(signal.page_url, project_url) if signal else "",
+    )
+    return next((candidate for candidate in candidates if candidate), "")
+
+
+async def _target_site_url(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    target_site_url_id: uuid.UUID | None,
+) -> SiteUrl | None:
+    if target_site_url_id is None:
+        return None
+    target = await session.scalar(
+        select(SiteUrl).where(
+            SiteUrl.id == target_site_url_id,
+            SiteUrl.workspace_id == workspace_id,
+            SiteUrl.project_id == project_id,
+        )
+    )
+    if target is None:
+        raise ContentContextNotFoundError("Target page not found")
+    return target
+
+
+async def _opportunity(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    opportunity_id: uuid.UUID | None,
+) -> Opportunity | None:
+    if opportunity_id is None:
+        return None
+    opportunity = await session.scalar(
+        select(Opportunity).where(
+            Opportunity.id == opportunity_id,
+            Opportunity.workspace_id == workspace_id,
+            Opportunity.project_id == project_id,
+        )
+    )
+    if opportunity is None:
+        raise ContentContextNotFoundError("Opportunity not found")
+    return opportunity
+
+
+async def _demand_signal(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    demand_signal_id: uuid.UUID | None,
+) -> tuple[DemandSignal | None, DemandSnapshot | None]:
+    if demand_signal_id is None:
+        return None, None
+    pair = await session.execute(
+        select(DemandSignal, DemandSnapshot)
+        .join(DemandSnapshot, DemandSnapshot.id == DemandSignal.snapshot_id)
+        .where(
+            DemandSignal.id == demand_signal_id,
+            DemandSignal.workspace_id == workspace_id,
+            DemandSignal.project_id == project_id,
+            DemandSnapshot.workspace_id == workspace_id,
+            DemandSnapshot.project_id == project_id,
+        )
+    )
+    result = pair.one_or_none()
+    if result is None:
+        raise ContentContextNotFoundError("Demand signal not found")
+    signal, snapshot = result
+    return signal, snapshot
+
+
+async def _site_health_handoff(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    reference: Any | None,
+) -> dict | None:
+    if reference is None:
+        return None
+    if reference.project_id != project_id:
+        raise ContentContextNotFoundError("Site Health reference not found")
+    try:
+        return await get_content_handoff(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            crawl_id=reference.crawl_id,
+            site_url_id=reference.site_url_id,
+            source_analysis_id=reference.source_analysis_id,
+            dimension=reference.dimension,
+            checkpoint_ids=reference.checkpoint_ids,
+        )
+    except SiteHealthNotFoundError as error:
+        raise ContentContextNotFoundError(str(error)) from error
+
+
+def _owned_url(candidate: str, project_url: str) -> str:
+    candidate_host = (urlsplit(candidate).hostname or "").casefold()
+    project_host = (urlsplit(project_url).hostname or "").casefold()
+    return candidate if candidate_host and candidate_host == project_host else ""
+
+
 def _labelled(lines: Sequence[tuple[str, object]]) -> list[str]:
-    """Render ``Label: value`` lines, dropping every empty value."""
     rendered = []
     for label, value in lines:
         if isinstance(value, list):
@@ -106,149 +332,258 @@ def _labelled(lines: Sequence[tuple[str, object]]) -> list[str]:
     return rendered
 
 
-def _render_brand(
-    profile: BrandProfile | None, *, brand_name: str, website: str, locale: str
+async def _render_brand(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project: Project,
 ) -> tuple[str, list[str]]:
-    """Brand block plus the list of fields that contributed.
-
-    Unconfirmed fields are included deliberately: this is context that helps
-    the model use the right terminology and market, not a set of claims it is
-    licensed to assert. The system prompt handles what may be asserted.
-    """
-    # Annotated: profile values below are Any|None, and an inferred
-    # list[tuple[str, str]] from these three literals would reject them.
-    lines: list[tuple[str, object]] = [
-        ("Name", brand_name),
-        ("Website", website),
-        ("Market", locale),
+    profile = await session.scalar(
+        select(BrandProfile).where(
+            BrandProfile.workspace_id == workspace_id,
+            BrandProfile.project_id == project.id,
+        )
+    )
+    aliases = list(
+        (
+            await session.scalars(
+                select(BrandAlias.alias)
+                .join(Brand, Brand.id == BrandAlias.brand_id)
+                .join(Project, Project.id == Brand.project_id)
+                .where(
+                    Brand.project_id == project.id,
+                    Project.workspace_id == workspace_id,
+                )
+                .order_by(BrandAlias.created_at)
+            )
+        ).all()
+    )
+    competitors = list(
+        (
+            await session.scalars(
+                select(Competitor.name)
+                .join(Project, Project.id == Competitor.project_id)
+                .where(
+                    Competitor.project_id == project.id,
+                    Project.workspace_id == workspace_id,
+                )
+                .order_by(Competitor.created_at)
+            )
+        ).all()
+    )
+    context = dict(profile.business_context or {}) if profile else {}
+    fields = []
+    values: list[tuple[str, object]] = [
+        ("Name", project.brand_name or project.name),
+        ("Website", project.website_url),
+        ("Market and language", _project_locale(project)),
+        ("Aliases", aliases),
+        ("Known competitors", competitors),
     ]
-    fields: list[str] = []
-    if profile is not None:
-        for label, attribute in (
-            ("What they do", "description"),
-            ("Positioning", "positioning"),
-            ("Products and services", "products_services"),
-            ("Audience", "target_audience"),
-        ):
-            value = getattr(profile, attribute, None)
-            lines.append((label, value))
-            if value:
-                fields.append(attribute)
-    rendered = _labelled(lines)
-    if not rendered:
-        return "", fields
-    return "BRAND\n" + "\n".join(rendered), fields
+    profile_values, profile_fields = _profile_brand_values(profile)
+    context_values, context_fields = _business_context_values(context, project)
+    values.extend(profile_values)
+    values.extend(context_values)
+    fields.extend(profile_fields)
+    fields.extend(context_fields)
+    lines = _labelled(values)
+    return ("BRAND\n" + "\n".join(lines) if lines else "", fields)
 
 
-def _render_opportunity(handoff: dict | None, opportunity: Opportunity | None) -> str:
-    if opportunity is None or handoff is None:
+def _profile_brand_values(
+    profile: BrandProfile | None,
+) -> tuple[list[tuple[str, object]], list[str]]:
+    fields = ("description", "positioning", "products_services", "target_audience")
+    labels = ("What they do", "Positioning", "Products and services", "Audience")
+    values = [getattr(profile, field) if profile else "" for field in fields]
+    return list(zip(labels, values, strict=True)), [
+        field for field, value in zip(fields, values, strict=True) if value
+    ]
+
+
+def _business_context_values(
+    context: dict, project: Project
+) -> tuple[list[tuple[str, object]], list[str]]:
+    fallbacks = {
+        "category": project.subindustry,
+        "sector": project.industry,
+    }
+    entries = (
+        ("category", "Business category"),
+        ("business_model", "Business model"),
+        ("market_scope", "Market scope"),
+        ("buyer_type", "Buyer type"),
+        ("buyer_register", "Buyer register"),
+        ("sector", "Sector"),
+    )
+    values = [
+        (label, context.get(key) or fallbacks.get(key, "")) for key, label in entries
+    ]
+    fields = [
+        f"business_context.{key}"
+        for (key, _), (_, value) in zip(entries, values, strict=True)
+        if value
+    ]
+    return values, fields
+
+
+def _project_locale(project: Project) -> str:
+    """Market/language hint so drafts stay in the project's locale."""
+    return " ".join(
+        part
+        for part in (
+            project.country_code or project.primary_market,
+            project.language_code,
+        )
+        if part
+    ).strip()
+
+
+def _render_page(page: dict, *, heading: str) -> str:
+    lines = [f"SOURCE: {page.get('final_url') or ''}"]
+    lines.extend(
+        _labelled(
+            [
+                ("Title", page.get("title")),
+                ("Description", page.get("meta_description")),
+                ("Page kind", page.get("page_kind")),
+                ("Structured data", page.get("structured_data_types")),
+                ("H1", page.get("h1")),
+                ("Sections", page.get("h2")),
+                ("Content", page.get("body_text")),
+            ]
+        )
+    )
+    return f"{heading}\n\n" + "\n".join(lines)
+
+
+def _render_opportunity(opportunity: Opportunity | None) -> str:
+    if opportunity is None:
         return ""
-    citations = handoff.get("representative_citations") or []
+    handoff = project_content_handoff(opportunity) or {}
+    citations = [
+        " — ".join(
+            value
+            for value in (
+                str(item.get("title") or ""),
+                str(item.get("url") or ""),
+            )
+            if value
+        )
+        for item in handoff.get("representative_citations") or []
+        if isinstance(item, dict)
+    ]
     lines = _labelled(
         [
-            ("Issue", opportunity.title),
+            ("Opportunity", opportunity.title),
             ("Recommended action", opportunity.remediation),
             ("Action pathway", handoff.get("pathway")),
             ("Source class", handoff.get("source_class")),
-            ("Cited domain", handoff.get("canonical_domain")),
-            ("Suggested role", handoff.get("suggested_role")),
             ("Target URL", handoff.get("target_url")),
             ("Target theme", handoff.get("target_theme")),
             ("Affected themes", handoff.get("affected_themes")),
             ("Observed competitors", handoff.get("observed_competitors")),
-            ("Coverage", handoff.get("coverage")),
+            ("Representative cited pages", citations),
             ("Limitations", handoff.get("limitations")),
-            (
-                "Representative cited pages",
-                [item.get("url") for item in citations if item.get("url")],
-            ),
         ]
     )
-    if not lines:
-        return ""
-    return "CONTENT OPPORTUNITY\n" + "\n".join(lines)
+    return "OPPORTUNITY EVIDENCE\n" + "\n".join(lines) if lines else ""
 
 
-def _render_site_health_task(handoff: dict | None) -> str:
+def _render_site_health(handoff: dict | None) -> str:
     if not handoff:
         return ""
     lines = _labelled(
         [
+            ("Affected page", handoff.get("normalized_url")),
             ("Dimension", handoff.get("dimension")),
             ("Checkpoints", handoff.get("checkpoint_ids")),
             ("Expected capability", handoff.get("expected_capability")),
             ("Remediation", handoff.get("remediation")),
+            ("Observed page kind", handoff.get("page_kind")),
+            ("Observed page traits", handoff.get("page_traits")),
+            ("Observed evidence", json.dumps(handoff.get("observed_evidence") or [])),
         ]
     )
-    return "SITE HEALTH READINESS GAP\n" + "\n".join(lines)
+    return "SITE HEALTH EVIDENCE\n" + "\n".join(lines) if lines else ""
 
 
-def _render_site_health_evidence(handoff: dict | None) -> str:
-    if not handoff:
+def _render_demand(signal: DemandSignal | None, snapshot: DemandSnapshot | None) -> str:
+    if signal is None or snapshot is None:
         return ""
     lines = _labelled(
         [
-            ("Source URL", handoff.get("normalized_url")),
-            ("Observed page kind", handoff.get("page_kind") or "unknown"),
-            ("Observed page traits", handoff.get("page_traits")),
-            (
-                "Observed checkpoint evidence",
-                json.dumps(
-                    handoff.get("observed_evidence") or [],
-                    ensure_ascii=False,
-                    sort_keys=True,
-                    default=str,
-                ),
-            ),
+            ("Demand signal", signal.signal_type),
+            ("State", signal.state),
+            ("Topic", signal.topic_cluster),
+            ("Current page", signal.page_url),
+            ("Window start", snapshot.window_start),
+            ("Window end", snapshot.window_end),
+            ("Demand snapshot", snapshot.id),
+            ("Source artifacts", snapshot.source_artifact_ids),
+            ("Metrics", json.dumps(signal.metrics or {}, sort_keys=True)),
+            ("Evidence", json.dumps(signal.evidence or {}, sort_keys=True)),
+            ("Coverage", json.dumps(signal.coverage or {}, sort_keys=True)),
+            ("Limitations", signal.limitations),
         ]
     )
-    return "SITE HEALTH OBSERVED EVIDENCE\n" + "\n".join(lines)
+    return "DEMAND EVIDENCE\n" + "\n".join(lines) if lines else ""
 
 
-def _render_pages(pages: list[dict]) -> str:
-    """Readable per-page text — the model parses this far better than JSON."""
-    if not pages:
-        return ""
-    blocks = []
-    for page in pages:
-        lines = [f"SOURCE: {page.get('final_url') or ''}"]
-        lines.extend(
-            _labelled(
-                [
-                    ("Title", page.get("title")),
-                    ("Description", page.get("meta_description")),
-                    ("H1", page.get("h1")),
-                    ("Sections", page.get("h2")),
-                    ("Content", page.get("body_text")),
-                ]
-            )
-        )
-        blocks.append("\n".join(lines))
-    return "RELEVANT WEBSITE CONTENT\n\n" + "\n\n".join(blocks)
-
-
-def _selection_inputs(
-    prompt: str,
+def _selection_summary(
+    selection: CrawlFragmentSelection,
+    *,
+    brand_memory: bool,
+    brand_fields: list[str],
+    target_page: dict | None,
+    target_url: str,
+    related_page_count: int,
     opportunity: Opportunity | None,
     site_health_handoff: dict | None,
-) -> tuple[str, str]:
-    """``(target_url, query_text)`` for crawl-page ranking.
+    demand_signal: DemandSignal | None,
+    demand_snapshot: DemandSnapshot | None,
+) -> dict[str, Any]:
+    summary = selection.summary or {}
+    return {
+        "brand_memory": brand_memory,
+        "target_page": _target_label(target_page, target_url),
+        "issue_count": _issue_count(opportunity, site_health_handoff, demand_signal),
+        "related_page_count": related_page_count,
+        "target_url": target_url or None,
+        "crawl_page_count": len(selection.pages),
+        "crawl_urls": [str(page.get("final_url") or "") for page in selection.pages],
+        "crawl_completed_at": summary.get("crawl_completed_at"),
+        "brand_fields": brand_fields,
+        "opportunity_id": str(opportunity.id) if opportunity else None,
+        "site_health_reference": _bounded_site_health_reference(site_health_handoff),
+        "demand_signal_id": str(demand_signal.id) if demand_signal else None,
+        "demand_snapshot_id": str(demand_snapshot.id) if demand_snapshot else None,
+        "selection_policy_version": summary.get("selection_policy_version", ""),
+        "omissions": list(summary.get("omissions") or []),
+    }
 
-    The opportunity's theme widens the query so a rewrite finds topically
-    adjacent pages, not just the target itself.
-    """
-    handoff = site_health_handoff or {}
-    opportunity_url = opportunity.target_url if opportunity is not None else ""
-    target_url = str(handoff.get("normalized_url") or opportunity_url or "")
-    query_parts = [prompt]
-    if opportunity is not None and opportunity.target_theme:
-        query_parts.append(opportunity.target_theme)
-    query_parts.extend(handoff.get("expected_capability") or [])
-    query_parts.extend(handoff.get("remediation") or [])
-    return target_url, " ".join(part for part in query_parts if part)
+
+def _target_label(target_page: dict | None, target_url: str) -> str:
+    if target_page is None:
+        return target_url
+    title = target_page.get("title")
+    if title:
+        return str(title)
+    return str(target_page.get("final_url") or target_url)
 
 
-def _site_health_reference(handoff: dict | None) -> dict[str, object] | None:
+def _issue_count(
+    opportunity: Opportunity | None,
+    site_health_handoff: dict | None,
+    demand_signal: DemandSignal | None,
+) -> int:
+    count = int(opportunity is not None) + int(demand_signal is not None)
+    if site_health_handoff:
+        count += len(site_health_handoff.get("checkpoint_ids") or [])
+    return count
+
+
+def _bounded_site_health_reference(handoff: dict | None) -> dict[str, object] | None:
     if not handoff:
         return None
     return {
@@ -260,133 +595,113 @@ def _site_health_reference(handoff: dict | None) -> dict[str, object] | None:
     }
 
 
-def _render_summary(
-    selection,
-    *,
-    brand_fields: list[str],
-    opportunity: Opportunity | None,
-    handoff: dict | None,
-    site_health_handoff: dict | None,
-) -> dict[str, Any]:
-    """Bounded provenance for the UI and the persisted snapshot."""
-    crawl = selection.summary or {}
-    return {
-        "crawl_page_count": len(selection.pages),
-        "crawl_urls": [str(page.get("final_url") or "") for page in selection.pages],
-        "crawl_id": str(crawl.get("crawl_id") or ""),
-        "crawl_completed_at": crawl.get("crawl_completed_at"),
-        "brand_fields": brand_fields,
-        "opportunity_id": str(opportunity.id) if opportunity else None,
-        "opportunity_handoff": handoff,
-        "site_health_reference": _site_health_reference(site_health_handoff),
-        # GSC is not wired yet; the block stays empty and the flag stays False
-        # so the UI can render "not connected" as a neutral state, not a fault.
-        "search_connected": False,
-        "selection_policy_version": str(crawl.get("selection_policy_version") or ""),
-        "omissions": list(crawl.get("omissions") or []),
-    }
-
-
 async def build_content_context(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-    prompt: str,
-    brand_name: str = "",
-    website: str = "",
-    locale: str = "",
-    opportunity: Opportunity | None = None,
-    site_health_handoff: dict | None = None,
+    user_instruction: str,
+    target_site_url_id: uuid.UUID | None = None,
+    target_url: str = "",
+    opportunity_id: uuid.UUID | None = None,
+    demand_signal_id: uuid.UUID | None = None,
+    site_health_reference: Any | None = None,
 ) -> ContentContext:
-    """Assemble the rendered context for one generation.
-
-    ``opportunity`` is passed in already-loaded by the caller (the service
-    fetches it to authorize the request) rather than re-queried here.
-    """
-    profile = await session.scalar(
-        select(BrandProfile).where(
-            BrandProfile.workspace_id == workspace_id,
-            BrandProfile.project_id == project_id,
-        )
+    """Build one context from authorized persisted sources; never fetches."""
+    origins = await _resolve_content_origins(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        target_site_url_id=target_site_url_id,
+        target_url=target_url,
+        opportunity_id=opportunity_id,
+        demand_signal_id=demand_signal_id,
+        site_health_reference=site_health_reference,
     )
-    brand_block, brand_fields = _render_brand(
-        profile, brand_name=brand_name, website=website, locale=locale
-    )
-    handoff = project_content_handoff(opportunity) if opportunity else None
-    task_block = "\n\n".join(
-        block
-        for block in (
-            _render_opportunity(handoff, opportunity),
-            _render_site_health_task(site_health_handoff),
-        )
-        if block
-    )
-
-    # The opportunity's theme sharpens page ranking, and its target URL pins
-    # the page being rewritten to the front of the context.
-    target_url, query_text = _selection_inputs(prompt, opportunity, site_health_handoff)
     selection = await select_crawl_fragments(
         session,
         workspace_id=workspace_id,
         project_id=project_id,
-        query_text=query_text,
-        target_url=target_url,
+        query_text=_origin_query(user_instruction, origins),
+        target_url=origins.target_url,
     )
+    brand_block, fields = await _render_brand(
+        session,
+        workspace_id=workspace_id,
+        project=origins.project,
+    )
+    target_page, related_pages = _target_and_related_pages(selection, origins)
+    issue_blocks = [
+        _render_opportunity(origins.opportunity),
+        _render_site_health(origins.site_health_handoff),
+        _render_demand(origins.demand_signal, origins.demand_snapshot),
+    ]
+    related_blocks = [
+        _render_page(page, heading="SOURCE").removeprefix("SOURCE\n\n")
+        for page in related_pages
+    ]
     return ContentContext(
         brand_block=brand_block,
-        task_block=task_block,
-        website_block="\n\n".join(
-            block
-            for block in (
-                _render_site_health_evidence(site_health_handoff),
-                _render_pages(selection.pages),
-            )
-            if block
+        target_page_block=(
+            _render_page(target_page, heading="TARGET PAGE")
+            if target_page
+            else _render_target_url(origins.target_url)
         ),
-        search_block="",
-        summary=_render_summary(
+        issue_block="\n\n".join(block for block in issue_blocks if block),
+        related_site_block=("RELATED SITE CONTEXT\n\n" + "\n\n".join(related_blocks))
+        if related_blocks
+        else "",
+        summary=_selection_summary(
             selection,
-            brand_fields=brand_fields,
-            opportunity=opportunity,
-            handoff=handoff,
-            site_health_handoff=site_health_handoff,
+            brand_memory=bool(brand_block),
+            brand_fields=fields,
+            target_page=target_page,
+            target_url=origins.target_url,
+            related_page_count=len(related_pages),
+            opportunity=origins.opportunity,
+            site_health_handoff=origins.site_health_handoff,
+            demand_signal=origins.demand_signal,
+            demand_snapshot=origins.demand_snapshot,
         ),
     )
 
 
-async def content_context_availability(
-    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
-) -> dict[str, Any]:
-    """Cheap pre-flight answer for the composer's context indicator.
+def _origin_query(user_instruction: str, origins: _ContentOrigins) -> str:
+    return " ".join(
+        item
+        for item in (
+            user_instruction,
+            origins.opportunity.target_theme if origins.opportunity else "",
+            origins.demand_signal.topic_cluster if origins.demand_signal else "",
+        )
+        if item
+    )
 
-    Runs the same crawl selection but only reports counts — the caller needs
-    to know whether a draft will be grounded, not what it will be grounded on.
-    """
-    selection = await select_crawl_fragments(
-        session, workspace_id=workspace_id, project_id=project_id
+
+def _target_and_related_pages(
+    selection: CrawlFragmentSelection, origins: _ContentOrigins
+) -> tuple[dict | None, list[dict]]:
+    target = next(
+        (
+            page
+            for page in selection.pages
+            if (
+                origins.target_site_url_id
+                and page.get("site_url_id") == str(origins.target_site_url_id)
+            )
+            or _same_url(page.get("final_url"), origins.target_url)
+        ),
+        None,
     )
-    profile = await session.scalar(
-        select(BrandProfile).where(
-            BrandProfile.workspace_id == workspace_id,
-            BrandProfile.project_id == project_id,
-        )
-    )
-    brand_fields = [
-        attribute
-        for attribute in (
-            "description",
-            "positioning",
-            "products_services",
-            "target_audience",
-        )
-        if profile is not None and getattr(profile, attribute, None)
-    ]
-    summary = selection.summary or {}
-    return {
-        "crawl_available": bool(selection.pages),
-        "crawl_page_count": len(selection.pages),
-        "crawl_completed_at": summary.get("crawl_completed_at"),
-        "brand_fields": brand_fields,
-        "search_connected": False,
-    }
+    return target, [page for page in selection.pages if page is not target]
+
+
+def _same_url(first: object, second: str) -> bool:
+    """Match the selector's own comparison, so a scheme difference still binds."""
+    if not second:
+        return False
+    return normalized_target_url(str(first or "")) == normalized_target_url(second)
+
+
+def _render_target_url(target_url: str) -> str:
+    return f"TARGET PAGE\n\nURL: {target_url}" if target_url else ""

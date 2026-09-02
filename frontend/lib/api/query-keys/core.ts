@@ -47,6 +47,8 @@ export const contentKeys = {
   detail: (generationId: string) => ['content', 'detail', generationId] as const,
   // Static server config — not invalidated by any generation mutation.
   skills: () => ['content', 'skills'] as const,
-  // What is available to ground a draft; project-scoped, not per-generation.
-  contextPreview: (projectId: string) => ['content', 'context-preview', projectId] as const,
+  contextPreview: (projectId: string, inputs: object) =>
+    ['content', 'context-preview', projectId, inputs] as const,
+  targetPages: (projectId: string, query: string) =>
+    ['content', 'target-pages', projectId, query] as const,
 };

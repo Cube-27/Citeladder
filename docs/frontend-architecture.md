@@ -321,7 +321,7 @@ defaults by decomposition; an exception is not an intended delivery outcome.
 
 | Route family | Owner |
 |---|---|
-| `/content` | Content Intelligence; frozen grounding status and provenance summary |
+| `/content` | Content Intelligence; user instruction, canonical context summary, generation history |
 | `/demand`, `/traffic`, `/ai-referrals` | Demand Intelligence |
 | `/prompts`, `/visibility`, `/runs` | Demand/Visibility workflows |
 | `/products` | Commerce: Catalog (default), Competitors, Buyer Prompts, AI Shelf |
@@ -387,9 +387,10 @@ Opportunities renders the backend's persisted three-way source mix and coverage,
 plus server-filtered Owned and Earned paths. Detail renders a typed Content
 handoff with bounded citations, coverage, limitations, suggested skill, and
 linked generations; the browser never reclassifies a domain or invents the
-handoff. Content seeds the editable task once and preserves user edits on
-refetch. Source copy remains observational and never claims that a citation
-caused a recommendation.
+handoff. Content passes its identifier to the backend, preselects a known target
+and suggested skill where available, and opens an empty focused user-instruction
+field. It never composes or seeds task prose. Source copy remains observational
+and never claims that a citation caused a recommendation.
 
 The Opportunity detail footer owns the explicit **I implemented this** action.
 It posts an idempotent declaration with resolved target IDs and expected

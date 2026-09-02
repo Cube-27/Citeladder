@@ -77,7 +77,6 @@ const detail = {
     canonical_domain: null,
     suggested_role: 'Content',
     suggested_skill_id: 'comparison',
-    task_seed: 'Publish a comparison page.',
     target_url: null,
     target_theme: 'crm',
     representative_citations: [],

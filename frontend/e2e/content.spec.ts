@@ -49,14 +49,13 @@ function generation(overrides: Record<string, unknown> = {}) {
     id: GEN_ID,
     project_id: PROJECT_ID,
     status: 'queued',
-    output_type: 'website_page',
     skill_id: 'article',
     opportunity_id: null,
-    skill_version: 'content-v1',
+    skill_version: 1,
     feedback: null,
     feedback_reason: '',
     feedback_at: null,
-    grounding_status: 'included',
+    context_status: 'included',
     requested_model: 'mistral-small-latest',
     returned_model: null,
     provider: 'mistral',
@@ -64,15 +63,18 @@ function generation(overrides: Record<string, unknown> = {}) {
     updated_at: '2026-07-15T00:00:00Z',
     completed_at: null,
     error_code: '',
-    prompt_preview: 'Write an about page',
-    prompt: 'Write an about page for Acme.',
-    grounding_summary: {
+    instruction_preview: 'Write an about page',
+    user_instruction: 'Write an about page for Acme.',
+    context_summary: {
       version: 'content-context-v1',
       crawl_page_count: 3,
       crawl_urls: ['https://acme.test/', 'https://acme.test/pricing', 'https://acme.test/about'],
       crawl_completed_at: '2026-07-15T00:00:00Z',
+      brand_memory: true,
       brand_fields: ['description'],
-      search_connected: false,
+      target_url: null,
+      issue_count: 0,
+      related_page_count: 3,
       omissions: [],
     },
     finish_reason: null,
@@ -81,7 +83,7 @@ function generation(overrides: Record<string, unknown> = {}) {
     usage: null,
     latency_ms: null,
     error_detail: '',
-    generator_version: 'content-v1',
+    generator_version: 'content-v3',
     ...overrides,
   };
 }
@@ -129,6 +131,11 @@ test('content nav link is live and the enqueue → output flow renders sanitised
     detailCalls += 1;
     return route.fulfill({ json: detailCalls < 2 ? generation() : succeeded });
   });
+  await page.route('**/api/v1/content/context-preview?*', (route) =>
+    route.fulfill({
+      json: { brand_memory: true, target_page: null, issue_count: 0, related_page_count: 3 },
+    }),
+  );
 
   await page.goto('/visibility');
   const navLink = page.getByRole('link', { name: 'Content', exact: true });
@@ -136,16 +143,13 @@ test('content nav link is live and the enqueue → output flow renders sanitised
   await navLink.click();
   await expect(page).toHaveURL(/\/content$/);
 
-  const promptBox = page.getByRole('textbox', { name: /describe the website content/i });
-  // The indicator is live, so the page count depends on this environment's
-  // crawl state; assert the surface exists and names both sources instead.
+  const promptBox = page.getByRole('textbox', { name: 'Your instruction' });
+  // One quiet summary of the server-built context; it may still be checking
+  // while the preview query settles, so accept either state before Generate.
   const contextIndicator = page.locator('[data-component-id="content-context-indicator"]');
   await expect(contextIndicator).toBeVisible();
-  // Search Console is always named; the crawl line may legitimately still be
-  // checking while the preview query retries in this environment, so assert
-  // it settles rather than pinning a page count that varies with crawl state.
-  await expect(contextIndicator).toContainText(/search console/i);
-  await expect(contextIndicator).toContainText(/website crawl|checking available context/i);
+  await expect(contextIndicator).toContainText(/brand memory|checking context/i);
+  await expect(contextIndicator).toContainText(/3 related pages|checking context/i);
   await promptBox.fill('Write an about page for Acme.');
   await page.getByRole('button', { name: 'Generate' }).click();
 
@@ -154,7 +158,7 @@ test('content nav link is live and the enqueue → output flow renders sanitised
   // Model ids are provenance on the row, not something the writer needs on the
   // page; the footer now says only what the draft was grounded with.
   await expect(page.getByText(/returned model/i)).toHaveCount(0);
-  await expect(page.getByText(/grounded with: website crawl · 3 pages/i)).toBeVisible();
+  await expect(page.getByText(/context used: website crawl · 3 pages/i)).toBeVisible();
 });
 
 test('cancel during generation returns the screen to a non-generating state', async ({ page }) => {
@@ -193,9 +197,7 @@ test('cancel during generation returns the screen to a non-generating state', as
   });
 
   await page.goto('/content');
-  await page
-    .getByRole('textbox', { name: /describe the website content/i })
-    .fill('Write an about page.');
+  await page.getByRole('textbox', { name: 'Your instruction' }).fill('Write an about page.');
   await page.getByRole('button', { name: 'Generate' }).click();
 
   await expect(page.getByRole('status', { name: /generating content/i })).toBeVisible();
@@ -204,5 +206,5 @@ test('cancel during generation returns the screen to a non-generating state', as
     timeout: 10_000,
   });
   // Composer is editable again.
-  await expect(page.getByRole('textbox', { name: /describe the website content/i })).toBeEnabled();
+  await expect(page.getByRole('textbox', { name: 'Your instruction' })).toBeEnabled();
 });

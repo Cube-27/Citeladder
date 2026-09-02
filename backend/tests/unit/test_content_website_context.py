@@ -249,6 +249,9 @@ async def test_allowlist_fields_and_heading_caps(
         assert len(context.pages) == 1
         page = context.pages[0]
         assert set(page) == {
+            "site_url_id",
+            "page_kind",
+            "structured_data_types",
             "final_url",
             "title",
             "meta_description",

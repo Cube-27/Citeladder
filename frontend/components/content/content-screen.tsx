@@ -5,8 +5,11 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
-import { Drawer } from '@/components/ui/drawer';
-import { CONTENT_PROMPT_MAX_LEN, type SiteHealthReferenceInput } from '@/lib/api/content';
+import {
+  type ContentContextPreviewInput,
+  CONTENT_INSTRUCTION_MAX_LEN,
+  type SiteHealthReferenceInput,
+} from '@/lib/api/content';
 import type { ContentGenerationDetail } from '@/lib/api/types';
 import {
   isTerminalContentStatus,
@@ -17,40 +20,49 @@ import { saveBlob } from '@/lib/site-health/download';
 
 import {
   useContentContextPreview,
-  useDemandBrief,
+  useContentTargetPages,
   useOpportunityContext,
   useSkillCatalog,
   useSiteHealthHandoff,
 } from './content-screen-data';
 import { ContentComposer, GenerationErrorPanel, GeneratingPanel } from './content-screen-panels';
 import { GenerationResult } from './content-screen-result';
-import { GenerationHistory } from './content-screen-history';
+import { GenerationHistoryWorkspace } from './content-screen-history';
+import { opportunityTarget, useOriginSelections } from './content-screen-origins';
 
 const FALLBACK_SKILL_ID = 'content_page';
 
-function replaceAutomaticPrompt(
-  current: string,
-  next: string,
-  priority: number,
-  automatic: { current: { value: string; priority: number } | null },
-): string {
-  const previous = automatic.current;
-  const userEdited = current.trim().length > 0 && current !== previous?.value;
-  if (userEdited || (previous?.priority ?? 0) > priority) return current;
-  automatic.current = { value: next, priority };
-  return next;
+function previewInput(
+  target: { siteUrlId?: string; url?: string },
+  opportunityId?: string | null,
+  demandSignalId?: string | null,
+  siteHealthReference?: SiteHealthReferenceInput,
+): ContentContextPreviewInput {
+  return {
+    target_site_url_id: target.siteUrlId,
+    target_url: target.url,
+    opportunity_id: opportunityId ?? undefined,
+    demand_signal_id: demandSignalId ?? undefined,
+    site_health_reference: siteHealthReference,
+  };
 }
 
-function replaceAutomaticSkill(
-  current: string | null,
-  next: string,
-  priority: number,
-  automatic: { current: { priority: number } | null },
-  userSelected: { current: boolean },
-): string | null {
-  if (userSelected.current || (automatic.current?.priority ?? -1) > priority) return current;
-  automatic.current = { priority };
-  return next;
+function generationPresentation(
+  detail: ContentGenerationDetail | null,
+  enqueuePending: boolean,
+  mutationError: unknown,
+) {
+  const generating = enqueuePending || Boolean(detail && !isTerminalContentStatus(detail.status));
+  const failed = detail?.status === 'failed';
+  return {
+    generating,
+    failed,
+    showError: !generating && (Boolean(mutationError) || failed),
+  };
+}
+
+function instructionReady(instruction: string, generating: boolean) {
+  return instruction.length > 0 && instruction.length <= CONTENT_INSTRUCTION_MAX_LEN && !generating;
 }
 
 /** Project-aware content entry point that resets transient state on project switch. */
@@ -68,7 +80,12 @@ export function ContentScreen({
 
   return (
     <ProjectContentScreen
-      key={activeProject.id}
+      key={[
+        activeProject.id,
+        opportunityId,
+        demandSignalId,
+        siteHealthReference?.source_analysis_id,
+      ].join(':')}
       projectId={activeProject.id}
       opportunityId={opportunityId}
       demandSignalId={demandSignalId}
@@ -108,103 +125,70 @@ function ProjectContentScreen({
   demandSignalId?: string | null;
   siteHealthReference?: SiteHealthReferenceInput;
 }>) {
-  const [prompt, setPrompt] = useState('');
-  const [chosenSkillId, setChosenSkillId] = useState<string | null>(null);
-  const promptRef = useRef<HTMLTextAreaElement | null>(null);
+  const [instruction, setInstruction] = useState('');
+  const instructionRef = useRef<HTMLTextAreaElement | null>(null);
+  const focusedInstruction = useRef(false);
   const [reasonOpen, setReasonOpen] = useState(false);
+  useEffect(() => {
+    if (!focusedInstruction.current && (opportunityId || demandSignalId || siteHealthReference)) {
+      focusedInstruction.current = true;
+      instructionRef.current?.focus();
+    }
+  }, [demandSignalId, opportunityId, siteHealthReference]);
   const skillCatalog = useSkillCatalog();
-  const demand = useDemandBrief(projectId, demandSignalId);
-  const contextPreview = useContentContextPreview(projectId);
   const opportunity = useOpportunityContext(opportunityId);
   const siteHealth = useSiteHealthHandoff(siteHealthReference);
-  const generation = useContentGenerations(
+  const selection = useOriginSelections(
+    opportunity,
+    siteHealth.data,
+    siteHealthReference?.site_url_id,
+  );
+  const targetPages = useContentTargetPages(projectId, selection.targetSearch);
+  const pageItems = targetPages.data ?? [];
+  const { target, targetUrl, chosenSkillId } = selection;
+  const resolvedTarget = opportunityTarget(target, opportunity, pageItems);
+  const contextPreview = useContentContextPreview(
     projectId,
-    undefined,
+    previewInput(resolvedTarget, opportunityId, demandSignalId, siteHealthReference),
+  );
+  const generation = useContentGenerations(projectId, {
     opportunityId,
+    demandSignalId,
+    target: resolvedTarget,
     siteHealthReference,
-  );
-  const detail: ContentGenerationDetail | null = generation.detailQuery.data ?? null;
-  const automaticPrompt = useRef<{ value: string; priority: number } | null>(null);
-  const automaticSkill = useRef<{ priority: number } | null>(null);
-  const userSelectedSkill = useRef(false);
-  const seededBrief = useRef<string | null>(null);
-
-  // Seed only a newly arrived brief; subsequent snapshot refreshes must not overwrite edits.
-  useEffect(() => {
-    const brief = demand.brief;
-    if (!brief || seededBrief.current === brief.prompt) return;
-    seededBrief.current = brief.prompt;
-    setPrompt((current) => replaceAutomaticPrompt(current, brief.prompt, 1, automaticPrompt));
-    setChosenSkillId((current) =>
-      replaceAutomaticSkill(current, brief.suggestedSkillId, 1, automaticSkill, userSelectedSkill),
-    );
-  }, [demand.brief]);
-
-  // Seed once from the opportunity, on the same guarded pattern as the demand
-  // brief: a later refetch must never overwrite what the user has typed.
-  const seededOpportunity = useRef<string | null>(null);
-  useEffect(() => {
-    if (!opportunity?.taskSeed || seededOpportunity.current === opportunity.id) return;
-    seededOpportunity.current = opportunity.id;
-    setPrompt((current) =>
-      replaceAutomaticPrompt(current, opportunity.taskSeed, 2, automaticPrompt),
-    );
-    setChosenSkillId((current) =>
-      replaceAutomaticSkill(
-        current,
-        opportunity.suggestedSkillId,
-        2,
-        automaticSkill,
-        userSelectedSkill,
-      ),
-    );
-  }, [opportunity]);
-
-  const seededSiteHealth = useRef<string | null>(null);
-  useEffect(() => {
-    const handoff = siteHealth.data;
-    if (!handoff || seededSiteHealth.current === handoff.source_analysis_id) return;
-    seededSiteHealth.current = handoff.source_analysis_id;
-    const task = [...handoff.expected_capability, ...handoff.remediation].join('\n');
-    setPrompt((current) => replaceAutomaticPrompt(current, task, 3, automaticPrompt));
-    setChosenSkillId((current) =>
-      replaceAutomaticSkill(
-        current,
-        handoff.suggested_skill_id,
-        3,
-        automaticSkill,
-        userSelectedSkill,
-      ),
-    );
-  }, [siteHealth.data]);
-
-  const generating = Boolean(
-    (detail && !isTerminalContentStatus(detail.status)) || generation.enqueueMutation.isPending,
-  );
+  });
+  const detail = generation.detailQuery.data ?? null;
   const mutationError = firstMutationError(generation);
-  const failed = detail?.status === 'failed';
-  const showError = !generating && (Boolean(mutationError) || failed);
+  const { generating, failed, showError } = generationPresentation(
+    detail,
+    generation.enqueueMutation.isPending,
+    mutationError,
+  );
 
   useEffect(() => {
-    if (showError) promptRef.current?.focus();
+    if (showError) instructionRef.current?.focus();
   }, [showError]);
 
   const skills = skillCatalog.data?.skills ?? [];
-  const catalogDefault = skillCatalog.data?.default_skill_id ?? FALLBACK_SKILL_ID;
+  const catalogDefault = skillCatalog.data?.default_skill_id || FALLBACK_SKILL_ID;
   // A removed server-side skill must fall back to the catalog default, not fail enqueue validation.
   const skillId = selectedSkillId(chosenSkillId, skills, catalogDefault);
-  const trimmedPrompt = prompt.trim();
-  const canGenerate =
-    trimmedPrompt.length > 0 && trimmedPrompt.length <= CONTENT_PROMPT_MAX_LEN && !generating;
+  const trimmedInstruction = instruction.trim();
+  const canGenerate = instructionReady(trimmedInstruction, generating);
 
   return (
     <ContentWorkspace
-      demand={demand}
       siteHealth={siteHealth}
-      prompt={prompt}
-      promptRef={promptRef}
+      instruction={instruction}
+      instructionRef={instructionRef}
       opportunity={opportunity}
       contextPreview={contextPreview.data ?? null}
+      target={resolvedTarget}
+      targetUrl={targetUrl}
+      targetPages={pageItems}
+      setTarget={selection.setTarget}
+      setTargetSearch={selection.setTargetSearch}
+      setTargetUrl={selection.setTargetUrl}
       // Only pending BEFORE the query settles: an errored preview must fall
       // through to a real line, and isLoading stays true across retries.
       contextLoading={contextPreview.isPending && !contextPreview.isError}
@@ -213,12 +197,9 @@ function ProjectContentScreen({
       skills={skills}
       skillsLoading={skillCatalog.isLoading}
       canGenerate={canGenerate}
-      setPrompt={setPrompt}
-      setChosenSkillId={(value) => {
-        userSelectedSkill.current = true;
-        setChosenSkillId(value);
-      }}
-      onGenerate={() => enqueue(generation, trimmedPrompt, skillId, canGenerate)}
+      setInstruction={setInstruction}
+      setChosenSkillId={selection.chooseSkill}
+      onGenerate={() => enqueue(generation, trimmedInstruction, skillId, canGenerate)}
       generation={generation}
       mutationError={mutationError}
       failed={failed}
@@ -230,19 +211,24 @@ function ProjectContentScreen({
 }
 
 function ContentWorkspace({
-  demand,
   siteHealth,
-  prompt,
-  promptRef,
+  instruction,
+  instructionRef,
   opportunity,
   contextPreview,
+  target,
+  targetUrl,
+  targetPages,
+  setTarget,
+  setTargetSearch,
+  setTargetUrl,
   contextLoading,
   generating,
   skillId,
   skills,
   skillsLoading,
   canGenerate,
-  setPrompt,
+  setInstruction,
   setChosenSkillId,
   onGenerate,
   generation,
@@ -252,19 +238,24 @@ function ContentWorkspace({
   reasonOpen,
   setReasonOpen,
 }: Readonly<{
-  demand: ReturnType<typeof useDemandBrief>;
   siteHealth: ReturnType<typeof useSiteHealthHandoff>;
-  prompt: string;
-  promptRef: React.RefObject<HTMLTextAreaElement | null>;
+  instruction: string;
+  instructionRef: React.RefObject<HTMLTextAreaElement | null>;
   opportunity: ReturnType<typeof useOpportunityContext>;
   contextPreview: Parameters<typeof ContentComposer>[0]['contextPreview'];
+  target: { siteUrlId?: string; url?: string };
+  targetUrl: string;
+  targetPages: Parameters<typeof ContentComposer>[0]['targetPages'];
+  setTarget: (target: { siteUrlId?: string; url?: string }) => void;
+  setTargetSearch: (value: string) => void;
+  setTargetUrl: (value: string) => void;
   contextLoading: boolean;
   generating: boolean;
   skillId: string;
   skills: Parameters<typeof ContentComposer>[0]['skills'];
   skillsLoading: boolean;
   canGenerate: boolean;
-  setPrompt: (value: string) => void;
+  setInstruction: (value: string) => void;
   setChosenSkillId: (value: string) => void;
   onGenerate: () => void;
   generation: ReturnType<typeof useContentGenerations>;
@@ -292,21 +283,25 @@ function ContentWorkspace({
   }
   return (
     <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">
-      <DemandAlerts notFound={demand.notFound} failed={demand.failed} />
       {siteHealthAlert}
       <ContentComposer
-        prompt={prompt}
-        promptRef={promptRef}
+        instruction={instruction}
+        instructionRef={instructionRef}
         opportunity={opportunity}
         contextPreview={contextPreview}
         contextLoading={contextLoading}
-        demandSource={demand.brief?.sourceLabel ?? null}
+        target={target}
+        targetUrl={targetUrl}
+        targetPages={targetPages}
+        onTargetChange={setTarget}
+        onTargetSearchChange={setTargetSearch}
+        onTargetUrlChange={setTargetUrl}
         generating={generating}
         skillId={skillId}
         skills={skills}
         skillsLoading={skillsLoading}
         canGenerate={canGenerate}
-        onPromptChange={setPrompt}
+        onInstructionChange={setInstruction}
         onSkillChange={setChosenSkillId}
         onGenerate={onGenerate}
         onHistoryOpen={() => setHistoryOpen(true)}
@@ -320,23 +315,11 @@ function ContentWorkspace({
         reasonOpen={reasonOpen}
         setReasonOpen={setReasonOpen}
       />
-      <Drawer
+      <GenerationHistoryWorkspace
         open={historyOpen}
         onOpenChange={setHistoryOpen}
-        title="Generation history"
-        description="Open a previous draft from this project."
-        className="max-w-xl"
-      >
-        <GenerationHistory
-          items={generation.listQuery.data ?? []}
-          loading={generation.listQuery.isLoading}
-          selectedId={generation.selectedId}
-          onSelect={(generationId) => {
-            generation.setSelectedId(generationId);
-            setHistoryOpen(false);
-          }}
-        />
-      </Drawer>
+        generation={generation}
+      />
     </div>
   );
 }
@@ -396,30 +379,13 @@ function GenerationStatePanels({
   );
 }
 
-function DemandAlerts({ notFound, failed }: Readonly<{ notFound: boolean; failed: boolean }>) {
-  return (
-    <>
-      {notFound ? (
-        <Alert tone="warning">
-          That demand signal is no longer in the latest snapshot — it may have been recomputed away.
-          Start from a current signal on Search Demand, or write your own brief below.
-        </Alert>
-      ) : null}
-      {failed ? (
-        <Alert tone="danger">
-          Search demand could not be loaded, so the brief for this signal could not be built. The
-          signal itself may still exist — reload to try again, or write your own brief below.
-        </Alert>
-      ) : null}
-    </>
-  );
-}
-
 function firstMutationError(generation: ReturnType<typeof useContentGenerations>) {
   return (
     generation.enqueueMutation.error ??
     generation.regenerateMutation.error ??
     generation.tryAgainMutation.error ??
+    generation.deleteMutation.error ??
+    generation.clearHistoryMutation.error ??
     generation.feedbackMutation.error ??
     null
   );
@@ -437,7 +403,7 @@ function selectedSkillId(
 
 function enqueue(
   generation: ReturnType<typeof useContentGenerations>,
-  prompt: string,
+  userInstruction: string,
   skillId: string,
   canGenerate: boolean,
 ) {
@@ -445,7 +411,7 @@ function enqueue(
   if (!canGenerate) return;
   generation.cancelMutation.reset();
   generation.feedbackMutation.reset();
-  generation.enqueueMutation.mutate({ prompt, skillId });
+  generation.enqueueMutation.mutate({ userInstruction, skillId });
 }
 
 function dismiss(generation: ReturnType<typeof useContentGenerations>) {
@@ -453,6 +419,8 @@ function dismiss(generation: ReturnType<typeof useContentGenerations>) {
   generation.regenerateMutation.reset();
   generation.tryAgainMutation.reset();
   generation.cancelMutation.reset();
+  generation.deleteMutation.reset();
+  generation.clearHistoryMutation.reset();
   generation.feedbackMutation.reset();
   generation.setSelectedId(null);
 }

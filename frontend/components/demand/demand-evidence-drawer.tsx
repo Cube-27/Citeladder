@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { DemandSignal } from '@/lib/api/demand';
-import { contentBriefHref } from '@/lib/demand/content-brief';
+import { demandContentHref } from '@/lib/demand/content-link';
 import {
   competingPages,
   numericMetric,
@@ -57,7 +57,7 @@ function DemandEvidenceContent({
             </Link>
           </Button>
           <Button variant="primary" size="sm" asChild>
-            <Link href={contentBriefHref(signal)} className="inline-flex items-center">
+            <Link href={demandContentHref(signal)} className="inline-flex items-center">
               <FileText className="mr-1.5 size-3.5" />
               Draft Content Brief
             </Link>

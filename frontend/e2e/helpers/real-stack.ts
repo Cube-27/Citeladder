@@ -360,7 +360,7 @@ export async function startRealStack(): Promise<RealStack> {
       APP_ENV: 'development',
       CONTENT_PROVIDER: 'mistral',
       CONTENT_MODEL: 'mistral-small-latest',
-      MISTRAL_API_KEY: MOCK_API_KEY,
+      CONTENT_API_KEY: MOCK_API_KEY,
       CONTENT_PROVIDER_ENDPOINT: `${MOCK_ORIGIN}/v1/chat/completions`,
       // Speed the queue up so the spec is not dominated by poll intervals.
       CONTENT_POLL_INTERVAL_SECONDS: '0.2',

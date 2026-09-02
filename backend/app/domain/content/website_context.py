@@ -2,14 +2,14 @@
 
 Pure DB projection (invariant 7): no fetch, no extraction, no provider call.
 Selects the newest terminal crawl with usable artifacts, then ranks its pages
-by lexical relevance to the generation prompt (and to an explicit target URL
+by lexical relevance to the generation instruction (and to an explicit target URL
 when rewriting), emits an allowlist-only subset of each page's
 ``normalized_facts``, sanitises and caps every field plus the total character
 budget, and records full provenance so the result UI can show exactly which
 crawl (and how fresh) grounded the content.
 
 Relevance is deliberately a deterministic lexical score — no embeddings, no
-vector store. The same inputs always produce the same snapshot. With no prompt
+vector store. The same inputs always produce the same snapshot. With no instruction
 text the module falls back to the original positional ordering (homepage ->
 active monitored -> stable URL) so behaviour is never undefined.
 """
@@ -191,14 +191,14 @@ def _tokens(value: object) -> set[str]:
 
 
 def _overlap(terms: set[str], value: object) -> int:
-    """Count of DISTINCT prompt terms present — never term frequency, so a
+    """Count of DISTINCT instruction terms present — never term frequency, so a
     long page cannot outrank a precise one by repeating a word."""
     if not terms:
         return 0
     return len(terms & _tokens(value))
 
 
-def _normalized_target(url: str) -> str:
+def normalized_target_url(url: str) -> str:
     """Compare URLs without scheme, trailing slash, or case differences."""
     return re.sub(r"^https?://", "", str(url or "").strip().lower()).rstrip("/")
 
@@ -210,11 +210,11 @@ def _relevance_score(
     target: str,
     monitored_ids: set[uuid.UUID],
 ) -> int:
-    """Deterministic lexical relevance of one page to the generation prompt."""
+    """Deterministic lexical relevance of one page to the generation instruction."""
     _analysis, artifact, site_url = entry
     if target and target in {
-        _normalized_target(artifact.final_url),
-        _normalized_target(site_url.normalized_url),
+        normalized_target_url(artifact.final_url),
+        normalized_target_url(site_url.normalized_url),
     }:
         return CONTENT_SCORE_TARGET_URL
 
@@ -245,7 +245,7 @@ def _positional_sort_key(
     root_host: str,
     monitored_ids: set[uuid.UUID],
 ) -> tuple[int, str, str]:
-    """Prompt-free fallback ordering: homepage -> monitored -> stable URL."""
+    """Instruction-free fallback ordering: homepage -> monitored -> stable URL."""
     _analysis, _artifact, site_url = entry
     if _is_homepage(site_url, root_url=root_url, root_host=root_host):
         tier = 0
@@ -267,14 +267,14 @@ def _ordered_usable_rows(
 ) -> list[_ContextRow]:
     """Filter and rank persisted page evidence for this generation.
 
-    Ranked by lexical relevance to the prompt, with an explicit target URL
+    Ranked by lexical relevance to the instruction, with an explicit target URL
     always first. The homepage is demoted from its old top tier to a fallback
     appended last, so it supplies brand background without displacing a page
     that actually matches the topic.
     """
     usable = [entry for entry in rows if entry[1].normalized_facts]
     terms = _tokens(query_text)
-    target = _normalized_target(target_url)
+    target = normalized_target_url(target_url)
     if not terms and not target:
         usable.sort(
             key=lambda entry: _positional_sort_key(
@@ -291,8 +291,8 @@ def _ordered_usable_rows(
     # the ranked set and picks up the target score like any other page.
     def _is_target(entry: _ContextRow) -> bool:
         return bool(target) and target in {
-            _normalized_target(entry[1].final_url),
-            _normalized_target(entry[2].normalized_url),
+            normalized_target_url(entry[1].final_url),
+            normalized_target_url(entry[2].normalized_url),
         }
 
     homepage = [
@@ -316,12 +316,19 @@ def _ordered_usable_rows(
     return [*ranked, *homepage]
 
 
-def _page_block(artifact: SiteFetchArtifact, site_url: SiteUrl) -> dict:
+def _page_block(
+    analysis: SitePageAnalysis, artifact: SiteFetchArtifact, site_url: SiteUrl
+) -> dict:
     """Project one artifact into the allowlisted, field-bounded page shape."""
     facts = artifact.normalized_facts or {}
     headings = facts.get("headings") or {}
     body = facts.get("body") or {}
     return {
+        "site_url_id": str(site_url.id),
+        "page_kind": analysis.page_kind,
+        "structured_data_types": list(
+            (facts.get("structured_data") or {}).get("types") or []
+        ),
         "final_url": _clean(
             artifact.final_url or site_url.normalized_url,
             max_chars=CONTENT_CONTEXT_FIELD_MAX_CHARS,
@@ -368,7 +375,7 @@ def _bounded_projection(rows: list[_ContextRow]) -> _ContextProjection:
         if len(pages) >= CONTENT_CONTEXT_MAX_PAGES:
             omissions.append({"reason": "page_limit", "count": len(rows) - index})
             break
-        page = _page_block(artifact, site_url)
+        page = _page_block(analysis, artifact, site_url)
         page_chars = _page_char_count(page)
         if total_chars + page_chars > CONTENT_CONTEXT_MAX_CHARS:
             # Skip, don't stop: one oversized page must not truncate every
@@ -462,7 +469,7 @@ async def select_crawl_fragments(
 ) -> CrawlFragmentSelection:
     """Select bounded crawl fragments most relevant to this generation.
 
-    ``query_text`` is the user's prompt (plus any opportunity theme); pages are
+    ``query_text`` is the user's instruction (plus any opportunity theme); pages are
     ranked by lexical overlap with it. ``target_url`` is an explicit rewrite
     target and always ranks first. With neither, ordering falls back to the
     deterministic positional tiering.

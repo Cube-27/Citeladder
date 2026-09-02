@@ -1,176 +1,112 @@
-"""Reusable content-skill catalog: rendering, integrity, and projection."""
+"""File-backed content-skill catalog tests."""
 
 from __future__ import annotations
+
+from pathlib import Path
 
 import pytest
 
 from app.core.config.content import (
     CONTENT_DEFAULT_SKILL,
     CONTENT_SKILL_CATALOG_VERSION,
-    CONTENT_SKILL_DIRECTIVES,
     CONTENT_SKILL_IDS,
     CONTENT_SKILL_REGISTRY,
     CONTENT_SKILLS,
-    skill_directive,
+    skill_body,
 )
-from app.core.config.content_skills import CONTENT_CHANNELS
+from app.core.config.content_skills import CONTENT_CHANNELS, _load_skill
 from app.domain.content.schemas import ContentGenerationCreate, skill_catalog
 
-# Ids persisted on existing ``ContentGeneration`` rows. Removing or renaming
-# one silently orphans that history, so the catalog must keep carrying them.
-_LEGACY_SKILL_IDS = ("article", "blog", "youtube", "reddit")
+_EXPECTED_SKILL_IDS = (
+    "content_page",
+    "product_page",
+    "category_page",
+    "about_us",
+    "article",
+    "blog",
+    "faq",
+    "comparison",
+    "listicle",
+    "case_study",
+    "glossary_term",
+    "linkedin",
+    "x",
+    "instagram",
+    "youtube",
+    "tiktok",
+    "reddit",
+    "newsletter",
+)
 
 
-def test_legacy_skill_ids_survive_catalog_expansion() -> None:
-    for skill_id in _LEGACY_SKILL_IDS:
-        assert skill_id in CONTENT_SKILLS
-
-
-def test_default_skill_is_the_website_content_page() -> None:
-    # The product's one output type is `website_page`, so an unqualified
-    # request means a page — and it is the default selection in the picker.
+def test_file_backed_catalog_has_the_complete_ordered_skill_set() -> None:
+    assert CONTENT_SKILL_IDS == _EXPECTED_SKILL_IDS
+    assert CONTENT_SKILLS == frozenset(_EXPECTED_SKILL_IDS)
     assert CONTENT_DEFAULT_SKILL == "content_page"
-    assert CONTENT_DEFAULT_SKILL in CONTENT_SKILL_REGISTRY
+    assert CONTENT_SKILL_CATALOG_VERSION == "content-skills-v5"
 
 
-def test_every_skill_declares_a_known_channel() -> None:
-    for definition in CONTENT_SKILL_REGISTRY.values():
-        assert definition.channel in CONTENT_CHANNELS
+def test_every_skill_has_file_metadata_and_an_authored_body() -> None:
+    for expected_order, skill in enumerate(CONTENT_SKILL_REGISTRY.values(), start=1):
+        assert skill.channel in CONTENT_CHANNELS
+        assert skill.order == expected_order
+        assert skill.version >= 1
+        assert skill.description
+        assert skill.body.startswith("## Purpose\n")
+        assert "```yaml" not in skill.body
 
 
-def test_skills_carry_craft_only_not_grounding_rules() -> None:
-    # Grounding lives once in the system prompt. Repeating it into every skill
-    # is what made drafts read like audit reports, so no skill may tell the
-    # model to declare a gap in publishable copy.
-    for skill_id in CONTENT_SKILL_IDS:
-        rendered = skill_directive(skill_id)
-        assert "not available rather than filling the gap" not in rendered
-        assert "grounding envelope" not in rendered.lower()
+def test_selected_skill_body_is_returned_verbatim_and_deterministically() -> None:
+    skill = CONTENT_SKILL_REGISTRY["about_us"]
+    assert skill_body("about_us") == skill.body
+    assert "Direct company/organization and offering definition." in skill.body
+    assert skill_body("does-not-exist") == skill_body(CONTENT_DEFAULT_SKILL)
 
 
-def test_directives_stay_short_enough_to_read() -> None:
-    # A skill is a short opinionated template, not a giant prompt: an
-    # overlong directive crowds out the user's own instruction.
-    for skill_id in CONTENT_SKILL_IDS:
-        assert len(skill_directive(skill_id)) < 1000
+def test_loader_rejects_a_pack_with_invalid_required_metadata(tmp_path: Path) -> None:
+    path = tmp_path / "missing" / "SKILL.md"
+    path.parent.mkdir()
+    path.write_text("---\nid: missing\n---\n\n## Purpose\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="missing metadata"):
+        _load_skill(path)
 
 
-def test_content_page_directive_specifies_a_publishable_page() -> None:
-    rendered = skill_directive("content_page")
-    for required in ("H1", "meta title", "call to action"):
-        assert required in rendered
-    # The old spec forced a Sources section into ordinary publishable copy.
-    assert "## Sources" not in rendered
+def test_loader_rejects_a_pack_outside_its_id_directory(tmp_path: Path) -> None:
+    path = tmp_path / "wrong" / "SKILL.md"
+    path.parent.mkdir()
+    path.write_text(
+        "---\nid: right\nlabel: Right\nchannel: web\norder: 1\nversion: 1\n"
+        "description: A pack.\n---\n\n## Purpose\n\nBody.\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="pack directory must match skill id"):
+        _load_skill(path)
 
 
-def test_about_us_skill_is_grounded_and_prioritizes_entity_signals() -> None:
-    rendered = skill_directive("about_us")
-    assert "company and offering definition" in rendered
-    assert "audience or use case" in rendered
-    assert "durable company proof" in rendered
-    assert "Never invent facts" in rendered
-    assert "separate supporting page" in rendered
-
-
-def test_platform_skills_state_their_posting_constraints() -> None:
-    # The point of a platform skill: the model is told where the content will
-    # be posted and what that surface actually renders.
-    assert "under 280 characters" in skill_directive("x")
-    assert "renders no Markdown" in skill_directive("linkedin")
-    assert "subreddit" in skill_directive("reddit")
-    assert "Instagram renders no Markdown" in skill_directive("instagram")
-
-
-def test_directive_carries_format_structure_tone_and_length() -> None:
-    # The point of a skill is that the model is told the craft constraints,
-    # not just the topic — a one-line directive is what made it clueless.
-    rendered = skill_directive("linkedin")
-    assert "Follow this structure:" in rendered
-    assert "Tone:" in rendered
-    assert "Length:" in rendered
-    assert "1. An opening line" in rendered
-
-
-def test_directive_rendering_is_deterministic() -> None:
-    # The digest over the built messages is provenance; a directive that
-    # rendered differently per call would make it meaningless. Checked across
-    # the whole catalog, and against the definitions themselves, so an
-    # unordered set or a mutated default in any one skill would show up.
-    first = [skill_directive(skill_id) for skill_id in CONTENT_SKILL_IDS]
-    second = [skill_directive(skill_id) for skill_id in CONTENT_SKILL_IDS]
-    assert first == second
-    assert first == [
-        CONTENT_SKILL_REGISTRY[skill_id].render_directive()
-        for skill_id in CONTENT_SKILL_IDS
-    ]
-
-
-@pytest.mark.parametrize("unknown", ["", "does-not-exist", None])
-def test_unknown_skill_falls_back_to_the_default_directive(unknown: str | None) -> None:
-    assert skill_directive(unknown) == skill_directive(CONTENT_DEFAULT_SKILL)
-
-
-def test_flat_directive_view_matches_the_registry() -> None:
-    assert set(CONTENT_SKILL_DIRECTIVES) == set(CONTENT_SKILL_REGISTRY)
-    for skill_id, directive in CONTENT_SKILL_DIRECTIVES.items():
-        assert directive == CONTENT_SKILL_REGISTRY[skill_id].render_directive()
-
-
-def test_catalog_projection_preserves_registry_order() -> None:
+def test_catalog_projection_exposes_metadata_without_the_skill_body() -> None:
     catalog = skill_catalog()
     assert [skill.id for skill in catalog.skills] == list(CONTENT_SKILL_IDS)
-    # The default is offered first, so the picker's initial selection is also
-    # the first thing the user reads.
-    assert catalog.skills[0].id == CONTENT_DEFAULT_SKILL
     assert catalog.default_skill_id == CONTENT_DEFAULT_SKILL
-
-
-def test_catalog_never_leaks_directive_text() -> None:
-    # The picker explains a skill with `description`/`structure`; the raw
-    # directive is prompt-engineering and stays server-side.
-    for skill in skill_catalog().skills:
-        assert not hasattr(skill, "directive")
+    for skill in catalog.skills:
+        assert skill.description
+        assert not hasattr(skill, "body")
 
 
 def test_create_rejects_a_skill_outside_the_catalog() -> None:
     with pytest.raises(ValueError):
         ContentGenerationCreate(
             project_id="00000000-0000-0000-0000-000000000001",
-            prompt="Write something",
+            user_instruction="Write something",
             skill_id="not-a-skill",
         )
 
 
-def test_create_accepts_a_newly_added_skill() -> None:
+def test_create_accepts_a_file_backed_skill() -> None:
     payload = ContentGenerationCreate(
         project_id="00000000-0000-0000-0000-000000000001",
-        prompt="Write something",
-        skill_id="linkedin",
+        user_instruction="Write something",
+        skill_id="product_page",
     )
-    assert payload.skill_id == "linkedin"
-
-
-def test_site_health_checkpoint_ids_are_bounded_before_lookup() -> None:
-    with pytest.raises(ValueError):
-        ContentGenerationCreate(
-            project_id="00000000-0000-0000-0000-000000000001",
-            prompt="Write something",
-            site_health_reference={
-                "project_id": "00000000-0000-0000-0000-000000000001",
-                "crawl_id": "00000000-0000-0000-0000-000000000002",
-                "site_url_id": "00000000-0000-0000-0000-000000000003",
-                "source_analysis_id": "00000000-0000-0000-0000-000000000004",
-                "dimension": "answerability",
-                "checkpoint_ids": ["x" * 65],
-            },
-        )
-
-
-def test_skill_version_records_the_catalog_not_the_generator() -> None:
-    # `skill_version` and `generator_version` are separate columns for a
-    # reason: a reworded directive changes what was asked for even when the
-    # generator is untouched, so stamping both with the generator version
-    # would lose that half of the provenance.
-    from app.core.config.content import CONTENT_GENERATOR_VERSION
-
-    assert CONTENT_SKILL_CATALOG_VERSION != CONTENT_GENERATOR_VERSION
+    assert payload.skill_id == "product_page"

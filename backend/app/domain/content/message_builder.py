@@ -3,7 +3,7 @@
 Three separate messages, never merged:
   0. a fixed system prompt (role, format intent, the grounding rule, and an
      explicit directive to treat reference material as untrusted data),
-  1. the skill directive + the user's instruction + any task framing,
+  1. the selected skill body + the user's exact instruction,
   2. when context exists, the rendered reference material, clearly delimited.
 
 Untrusted crawled page text therefore never concatenates into the system or
@@ -11,9 +11,8 @@ user-instruction message — an embedded "ignore previous instructions" string
 stays data. Returns a stable digest over the serialised messages plus a safe
 truncated snapshot for provenance (never any key).
 
-Grounding lives here, once, rather than being repeated in every skill: the
-skills describe craft (format, structure, tone, length), the system prompt
-describes what may be asserted.
+Grounding lives here, once, rather than being repeated in every skill: skill
+files describe craft and the system prompt describes what may be asserted.
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from app.core.config.content import skill_directive
+from app.core.config.content import skill_body
 from app.domain.content.context_builder import ContentContext
 
 # One system prompt for every skill. The skill supplies the format; this
@@ -47,14 +46,14 @@ _SNAPSHOT_MAX_CHARS = 2000
 
 def build_messages(
     *,
-    prompt: str,
+    user_instruction: str,
     context: ContentContext,
     skill_id: str | None = None,
 ) -> tuple[list[dict], str, dict]:
     """Return ``(messages, message_digest, safe_snapshot)``."""
     messages: list[dict] = [
         {"role": "system", "content": _SYSTEM_PROMPT},
-        {"role": "user", "content": _instruction(prompt, context, skill_id)},
+        {"role": "user", "content": _instruction(user_instruction, skill_id)},
     ]
     reference = context.reference_blocks()
     if reference:
@@ -80,16 +79,10 @@ def build_messages(
     return messages, digest, snapshot
 
 
-def _instruction(prompt: str, context: ContentContext, skill_id: str | None) -> str:
-    """Skill directive, then the user's task, then any opportunity framing.
-
-    An unknown skill id falls back to the default skill rather than dropping
-    the directive entirely.
-    """
+def _instruction(user_instruction: str, skill_id: str | None) -> str:
+    """Skill body and exact user instruction; origin evidence stays separate."""
     parts = []
     if skill_id is not None:
-        parts.append(skill_directive(skill_id))
-    parts.append(prompt)
-    if context.task_block:
-        parts.append(context.task_block)
+        parts.append(skill_body(skill_id))
+    parts.append(f"USER REQUEST:\n{user_instruction}")
     return "\n\n".join(part for part in parts if part)
