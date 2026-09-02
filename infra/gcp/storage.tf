@@ -6,6 +6,27 @@ resource "google_artifact_registry_repository" "images" {
   docker_config {
     immutable_tags = true
   }
+
+  # Retention: every deploy pushes a new immutable tag, so without this the
+  # repository grows without bound. KEEP policies win over DELETE policies.
+  cleanup_policy_dry_run = false
+
+  cleanup_policies {
+    id     = "keep-recent"
+    action = "KEEP"
+    most_recent_versions {
+      keep_count = 5
+    }
+  }
+
+  cleanup_policies {
+    id     = "delete-stale"
+    action = "DELETE"
+    condition {
+      older_than = "2592000s" # 30 days
+    }
+  }
+
   labels = local.labels
 }
 

@@ -169,7 +169,6 @@ jobs:
           DEMO_LOGIN_PASSWORD: ${{ secrets.DEMO_LOGIN_PASSWORD }}
           CLOUDFLARE_ORIGIN_CERT: ${{ secrets.CLOUDFLARE_ORIGIN_CERT }}
           CLOUDFLARE_ORIGIN_KEY: ${{ secrets.CLOUDFLARE_ORIGIN_KEY }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
           CONTENT_API_KEY: ${{ secrets.CONTENT_API_KEY }}
           DEFAULT_AGENT_API_KEY: ${{ secrets.DEFAULT_AGENT_API_KEY }}
           KEENABLE_API_KEY: ${{ secrets.KEENABLE_API_KEY }}
@@ -195,7 +194,6 @@ jobs:
           add_value_once citeladder-demo-password "$DEMO_LOGIN_PASSWORD"
           add_value_once citeladder-cloudflare-origin-cert "$CLOUDFLARE_ORIGIN_CERT"
           add_value_once citeladder-cloudflare-origin-key "$CLOUDFLARE_ORIGIN_KEY"
-          test -z "$MISTRAL_API_KEY" || add_value_once citeladder-mistral-api-key "$MISTRAL_API_KEY"
           test -z "$CONTENT_API_KEY" || add_value_once citeladder-content-api-key "$CONTENT_API_KEY"
           test -z "$DEFAULT_AGENT_API_KEY" || add_value_once citeladder-default-agent-api-key "$DEFAULT_AGENT_API_KEY"
           test -z "$KEENABLE_API_KEY" || add_value_once citeladder-keenable-api-key "$KEENABLE_API_KEY"
