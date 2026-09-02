@@ -1,6 +1,7 @@
 'use client';
 
 import { type ReactNode, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -11,8 +12,9 @@ import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel'
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
 import { OverviewPanel } from '@/components/site-health/overview-panel';
-import { ScreenHeader, ScreenSkeleton } from '@/components/site-health/screen-states';
+import { ScreenSkeleton } from '@/components/site-health/screen-states';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { siteHealthQueries } from '@/lib/api/site-health';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -21,35 +23,29 @@ export function SiteHealthScreen() {
   const { activeProject, isLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
   const screen = useSiteHealthScreen(projectId);
-  if (isLoading) return <ScreenSkeleton label="Loading your Site Health project…" />;
-  if (!projectId)
-    return (
-      <ScreenMessage tone="info">
-        Select or create a project to analyze its site health.
-      </ScreenMessage>
-    );
-  return <LoadedSiteHealthScreen projectId={projectId} screen={screen} />;
+  return <SiteHealthContent projectId={projectId} projectLoading={isLoading} screen={screen} />;
 }
 
-function LoadedSiteHealthScreen({
+function SiteHealthContent({
   projectId,
+  projectLoading,
   screen,
-}: Readonly<{ projectId: string; screen: ReturnType<typeof useSiteHealthScreen> }>) {
+}: Readonly<{
+  projectId: string | null;
+  projectLoading: boolean;
+  screen: ReturnType<typeof useSiteHealthScreen>;
+}>) {
   const {
     entitlementQuery,
-    dashboardQuery,
     phase,
     crawl,
     active,
-    stalled,
     startPending,
-    createMutation,
     cancelMutation,
     startCrawl,
     cancelCrawl,
     runExport,
     exporting,
-    exportError,
   } = screen;
   const defaultTab: AnalysisTab = phase === 'dashboard' ? 'overview' : 'pages';
   const tabCodec = useMemo(
@@ -61,15 +57,7 @@ function LoadedSiteHealthScreen({
     [defaultTab],
   );
   const [tab, selectTab] = useUrlState('tab', tabCodec, { clearKeys: ['cursor', 'sort'] });
-  const blockingState = screenBlockingState({
-    entitlementLoading: entitlementQuery.isLoading,
-    dashboardLoading: dashboardQuery.isLoading,
-    entitlementError: entitlementQuery.isError,
-    dashboardError: dashboardQuery.isError,
-    resolverStatus: entitlementQuery.data?.resolver_status,
-    phase,
-  });
-  if (blockingState) return blockingState;
+  const blockingState = projectBlockingState(projectId, projectLoading, screen);
   const headerActions = crawl ? (
     <CrawlActions
       active={active}
@@ -81,36 +69,88 @@ function LoadedSiteHealthScreen({
       onStart={startCrawl}
     />
   ) : undefined;
+  const prefetchTab = useSiteHealthTabPrefetch(projectId, crawl?.id);
   return (
     <div className="grid min-w-0 gap-[var(--page-section-gap)]">
-      {exportError ? <Alert tone="danger">{exportError}</Alert> : null}
-      {createMutation.isError ? (
+      {!blockingState ? <SiteHealthNotices screen={screen} /> : null}
+      <AnalysisTabs
+        tab={tab}
+        setTab={selectTab}
+        actions={blockingState ? undefined : headerActions}
+        onIntent={prefetchTab}
+      />
+      {blockingState ?? (
+        <AnalysisPanel
+          tab={tab}
+          crawlId={crawl?.id}
+          projectId={projectId!}
+          screen={screen}
+          entitlement={entitlementQuery.data!}
+        />
+      )}
+    </div>
+  );
+}
+
+function projectBlockingState(
+  projectId: string | null,
+  projectLoading: boolean,
+  screen: ReturnType<typeof useSiteHealthScreen>,
+) {
+  if (projectLoading) return <ScreenSkeleton label="Loading your Site Health project…" />;
+  if (!projectId)
+    return <Alert tone="info">Select or create a project to analyze its site health.</Alert>;
+  return screenBlockingState({
+    entitlementLoading: screen.entitlementQuery.isLoading,
+    dashboardLoading: screen.dashboardQuery.isLoading,
+    entitlementError: screen.entitlementQuery.isError,
+    dashboardError: screen.dashboardQuery.isError,
+    resolverStatus: screen.entitlementQuery.data?.resolver_status,
+    phase: screen.phase,
+  });
+}
+
+function useSiteHealthTabPrefetch(projectId: string | null, crawlId: string | undefined) {
+  const queryClient = useQueryClient();
+  return (nextTab: AnalysisTab) => {
+    if (!projectId) return;
+    if (nextTab === 'overview') {
+      void queryClient.prefetchQuery(siteHealthQueries.overview(projectId, crawlId));
+    } else if (nextTab === 'architecture') {
+      void queryClient.prefetchQuery(siteHealthQueries.architecture(projectId, crawlId));
+    } else if (nextTab === 'aeo-readiness') {
+      void queryClient.prefetchQuery(siteHealthQueries.aeoReadiness(projectId, crawlId));
+    } else if (nextTab === 'changes') {
+      void queryClient.prefetchQuery(siteHealthQueries.changesSummary(projectId));
+    }
+  };
+}
+
+function SiteHealthNotices({
+  screen,
+}: Readonly<{ screen: ReturnType<typeof useSiteHealthScreen> }>) {
+  return (
+    <>
+      {screen.exportError ? <Alert tone="danger">{screen.exportError}</Alert> : null}
+      {screen.createMutation.isError ? (
         <MutationNotice
-          notice={mutationNoticeForError(createMutation.error, { action: 'start a crawl' })}
-          onRetry={startCrawl}
+          notice={mutationNoticeForError(screen.createMutation.error, { action: 'start a crawl' })}
+          onRetry={screen.startCrawl}
         />
       ) : null}
-      {cancelMutation.isError ? (
+      {screen.cancelMutation.isError ? (
         <MutationNotice
-          notice={mutationNoticeForError(cancelMutation.error, { action: 'stop the crawl' })}
-          onRetry={cancelCrawl}
+          notice={mutationNoticeForError(screen.cancelMutation.error, { action: 'stop the crawl' })}
+          onRetry={screen.cancelCrawl}
         />
       ) : null}
-      {stalled ? (
+      {screen.stalled ? (
         <Alert tone="warning">
           This crawl has an expired worker lease. Recovery is still being checked; results already
           persisted remain visible below.
         </Alert>
       ) : null}
-      <AnalysisTabs tab={tab} setTab={selectTab} actions={headerActions} />
-      <AnalysisPanel
-        tab={tab}
-        crawlId={crawl?.id}
-        projectId={projectId}
-        screen={screen}
-        entitlement={entitlementQuery.data!}
-      />
-    </div>
+    </>
   );
 }
 
@@ -128,10 +168,12 @@ function AnalysisTabs({
   tab,
   setTab,
   actions,
+  onIntent,
 }: Readonly<{
   tab: string;
   setTab: (tab: AnalysisTab) => void;
   actions?: ReactNode;
+  onIntent: (tab: AnalysisTab) => void;
 }>) {
   // Page actions share the tablist row: the tablist's own block-end rule is
   // suppressed so the row wrapper can carry it across the full width, keeping
@@ -145,6 +187,7 @@ function AnalysisTabs({
         ariaLabel="Website analysis"
         rootClassName="min-w-0 flex-1"
         className="border-b-0"
+        onIntent={onIntent}
       />
       {actions ? <div className="ml-auto flex shrink-0 items-center">{actions}</div> : null}
     </div>
@@ -201,13 +244,13 @@ function screenBlockingState({
   phase: string;
 }>) {
   if (entitlementError || dashboardError)
-    return <ScreenMessage tone="danger">Could not load Site Health. Please refresh.</ScreenMessage>;
+    return <Alert tone="danger">Could not load Site Health. Please refresh.</Alert>;
   if (resolverStatus === 'entitlement_unresolved')
     return (
-      <ScreenMessage tone="warning">
+      <Alert tone="warning">
         Site Health access could not be resolved. Refresh to try again, or contact your workspace
         administrator if this continues.
-      </ScreenMessage>
+      </Alert>
     );
   if (entitlementLoading || dashboardLoading || phase === 'resolving')
     return (
@@ -222,17 +265,6 @@ function screenBlockingState({
   return null;
 }
 
-function ScreenMessage({
-  tone,
-  children,
-}: Readonly<{ tone: 'danger' | 'warning' | 'info'; children: string }>) {
-  return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      <ScreenHeader />
-      <Alert tone={tone}>{children}</Alert>
-    </div>
-  );
-}
 function CrawlActions({
   active,
   exporting,

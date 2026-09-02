@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
 
@@ -39,18 +39,13 @@ type ConnectionsQuery = ReturnType<
   typeof useQuery<Awaited<ReturnType<typeof integrationsApi.list>>>
 >;
 
-export function TrafficSkeleton() {
+function TrafficSkeleton() {
   return (
     <div
       className="grid gap-[var(--workspace-gap)]"
       aria-busy="true"
       data-testid="traffic-skeleton"
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <Skeleton className="h-8 w-40 rounded-full" />
-        <Skeleton className="h-10 w-60 rounded-full" />
-        <Skeleton className="ml-auto h-8 w-32 rounded-full" />
-      </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 6 }, (_, index) => (
           <Skeleton key={index} className="h-26" />
@@ -86,18 +81,33 @@ export function TrafficScreen() {
     queryFn: ({ signal }) => integrationsApi.list({ signal }),
     enabled: Boolean(workspaceId),
   });
+  const sync = useTrafficSync(projectId);
+  const lastSynced = latestSync(connections.data ?? []);
+  const note = projectId ? syncNote(sync.syncing, sync.startedAt, lastSynced) : 'Select a project';
 
   return (
-    <TrafficDataGate
-      isProjectLoading={isLoading}
-      projectId={projectId}
-      dashboard={dashboard}
-      connections={connections}
-      range={range}
-      setRange={setRange}
-      granularity={granularity}
-      setGranularity={setGranularity}
-    />
+    <div className="grid gap-[var(--workspace-gap)]">
+      <TrafficToolbar
+        range={range}
+        onChangeRange={setRange}
+        granularity={granularity}
+        onChangeGranularity={setGranularity}
+        note={note}
+        syncing={sync.syncing}
+        syncPending={sync.mutation.isPending}
+        fetching={dashboard.isFetching}
+        syncDisabled={!projectId || !connections.data?.length}
+        onSyncNow={() => sync.mutation.mutate()}
+      />
+      <TrafficDataGate
+        isProjectLoading={isLoading}
+        projectId={projectId}
+        dashboard={dashboard}
+        connections={connections}
+        range={range}
+        sync={sync}
+      />
+    </div>
   );
 }
 
@@ -107,18 +117,14 @@ function TrafficDataGate({
   dashboard,
   connections,
   range,
-  setRange,
-  granularity,
-  setGranularity,
+  sync,
 }: Readonly<{
   isProjectLoading: boolean;
   projectId: string | null;
   dashboard: DashboardQuery;
   connections: ConnectionsQuery;
   range: TrafficRange;
-  setRange: (range: TrafficRange) => void;
-  granularity: TrafficGranularity;
-  setGranularity: (value: TrafficGranularity) => void;
+  sync: ReturnType<typeof useTrafficSync>;
 }>) {
   if (isProjectLoading || (Boolean(projectId) && dashboard.isLoading)) return <TrafficSkeleton />;
   if (!projectId) return <Alert tone="info">Select or create a project to see its traffic.</Alert>;
@@ -133,9 +139,7 @@ function TrafficDataGate({
       dashboardFetching={dashboard.isFetching}
       connections={connections.data ?? []}
       range={range}
-      setRange={setRange}
-      granularity={granularity}
-      setGranularity={setGranularity}
+      sync={sync}
     />
   );
 }
@@ -146,51 +150,23 @@ function TrafficDashboard({
   dashboardFetching,
   connections,
   range,
-  setRange,
-  granularity,
-  setGranularity,
+  sync,
 }: Readonly<{
   projectId: string;
   dashboard: TrafficDashboard;
   dashboardFetching: boolean;
   connections: Awaited<ReturnType<typeof integrationsApi.list>>;
   range: TrafficRange;
-  setRange: (range: TrafficRange) => void;
-  granularity: TrafficGranularity;
-  setGranularity: (value: TrafficGranularity) => void;
+  sync: ReturnType<typeof useTrafficSync>;
 }>) {
-  const sync = useTrafficSync(projectId);
-  const lastSynced = latestSync(connections);
-  const note = syncNote(sync.syncing, sync.startedAt, lastSynced);
-  const toolbar = (
-    <TrafficToolbar
-      range={range}
-      onChangeRange={setRange}
-      granularity={granularity}
-      onChangeGranularity={setGranularity}
-      note={note}
-      syncing={sync.syncing}
-      syncPending={sync.mutation.isPending}
-      fetching={dashboardFetching}
-      onSyncNow={() => sync.mutation.mutate()}
-    />
-  );
   if (isEmptyDashboard(dashboard))
-    return (
-      <EmptyTrafficDashboard
-        range={range}
-        toolbar={toolbar}
-        connections={connections}
-        sync={sync}
-      />
-    );
+    return <EmptyTrafficDashboard range={range} connections={connections} sync={sync} />;
   return (
     <PopulatedTrafficDashboard
       projectId={projectId}
       dashboard={dashboard}
       dashboardFetching={dashboardFetching}
       range={range}
-      toolbar={toolbar}
       sync={sync}
     />
   );
@@ -198,12 +174,10 @@ function TrafficDashboard({
 
 function EmptyTrafficDashboard({
   range,
-  toolbar,
   connections,
   sync,
 }: Readonly<{
   range: TrafficRange;
-  toolbar: React.ReactNode;
   connections: Awaited<ReturnType<typeof integrationsApi.list>>;
   sync: ReturnType<typeof useTrafficSync>;
 }>) {
@@ -212,7 +186,6 @@ function EmptyTrafficDashboard({
   if (range !== 'latest')
     return (
       <div className="grid gap-[var(--workspace-gap)]">
-        {toolbar}
         <SyncBanner active={sync.syncing} />
         <Alert tone="info">
           No synced snapshot covers {formatWindowDate(bounds.from ?? '')} –{' '}
@@ -229,6 +202,7 @@ function EmptyTrafficDashboard({
         hasConnections={connections.length > 0}
         syncing={sync.syncing || sync.mutation.isPending}
         onSyncNow={() => sync.mutation.mutate()}
+        showSyncAction={false}
       />
     </div>
   );
@@ -239,44 +213,78 @@ function PopulatedTrafficDashboard({
   dashboard,
   dashboardFetching,
   range,
-  toolbar,
   sync,
 }: Readonly<{
   projectId: string;
   dashboard: TrafficDashboard;
   dashboardFetching: boolean;
   range: TrafficRange;
-  toolbar: React.ReactNode;
   sync: ReturnType<typeof useTrafficSync>;
 }>) {
+  const queryClient = useQueryClient();
   const [tableView, setTableView] = useState<TrafficTableView>('pages');
+  const [mountedViews, setMountedViews] = useState<ReadonlySet<TrafficTableView>>(
+    () => new Set<TrafficTableView>(['pages']),
+  );
   const bounds = rangeToWindow(range);
   // Retain the current context project id while React Query shows previous data
   // during a project switch; placeholder dashboard data may belong to the old project.
   const tableKey = `${bounds.from ?? ''}|${bounds.to ?? ''}`;
+  const prepareTable = (view: TrafficTableView) => {
+    setMountedViews((current) => (current.has(view) ? current : new Set(current).add(view)));
+    const params = { from: bounds.from, to: bounds.to, sort: '-clicks' };
+    if (view === 'pages') {
+      void queryClient.prefetchQuery({
+        queryKey: queryKeys.traffic.pages(projectId, { ...params, cursor: undefined }),
+        queryFn: ({ signal }) => trafficApi.getPages(projectId, params, { signal }),
+      });
+    } else {
+      void queryClient.prefetchQuery({
+        queryKey: queryKeys.traffic.queries(projectId, { ...params, cursor: undefined }),
+        queryFn: ({ signal }) => trafficApi.getQueries(projectId, params, { signal }),
+      });
+    }
+  };
+  const selectTable = (view: TrafficTableView) => {
+    prepareTable(view);
+    setTableView(view);
+  };
   return (
     <div className="grid gap-[var(--workspace-gap)]">
-      {toolbar}
       <SyncBanner active={sync.syncing} />
       <TrafficAlerts sync={sync} />
       <div aria-busy={dashboardFetching} className="grid gap-[var(--workspace-gap)]">
         <UnifiedPerformanceCard dashboard={dashboard} granularity={dashboard.granularity} />
         <Tabs
           value={tableView}
-          onValueChange={setTableView}
+          onValueChange={selectTable}
           items={TRAFFIC_TABLE_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
           ariaLabel="Traffic rankings"
           rootClassName="grid gap-4"
+          onIntent={prepareTable}
         >
-          <TabPanel value={tableView} className="focus-ring">
-            <TrafficRankings
-              projectId={projectId}
-              tableView={tableView}
-              tableKey={tableKey}
-              from={bounds.from}
-              to={bounds.to}
-            />
-          </TabPanel>
+          {mountedViews.has('pages') ? (
+            <TabPanel value="pages" forceMount className="focus-ring">
+              <TrafficRankings
+                projectId={projectId}
+                tableView="pages"
+                tableKey={tableKey}
+                from={bounds.from}
+                to={bounds.to}
+              />
+            </TabPanel>
+          ) : null}
+          {mountedViews.has('queries') ? (
+            <TabPanel value="queries" forceMount className="focus-ring">
+              <TrafficRankings
+                projectId={projectId}
+                tableView="queries"
+                tableKey={tableKey}
+                from={bounds.from}
+                to={bounds.to}
+              />
+            </TabPanel>
+          ) : null}
         </Tabs>
       </div>
     </div>

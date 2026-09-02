@@ -5,8 +5,10 @@
  * `strictValidate`.
  */
 import { z } from 'zod';
+import { queryOptions } from '@tanstack/react-query';
 
 import { API_BASE_URL, apiClient, type ApiRequestOptions } from './client';
+import { queryKeys } from './query-keys';
 import {
   auditEstimateSchema,
   auditScheduleSchema,
@@ -133,4 +135,13 @@ export const runsApi = {
    * only with `?stream=true`, so the streaming helper must request it.
    */
   eventsUrl: (auditId: string) => `${API_BASE_URL}/audits/${auditId}/events?stream=true`,
+};
+
+/** Shared list options keep navigation, the app provider, and run screens on one cache identity. */
+export const runsQueries = {
+  list: (projectId: string) =>
+    queryOptions({
+      queryKey: queryKeys.runs.list({ project_id: projectId }),
+      queryFn: ({ signal }) => runsApi.listAudits({ project_id: projectId }, { signal }),
+    }),
 };

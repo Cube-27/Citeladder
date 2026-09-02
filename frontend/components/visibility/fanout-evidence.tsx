@@ -129,9 +129,9 @@ function QueryDetail({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
     const queries = queryTexts(item);
     return (
       <ul className="grid gap-1.5 pt-0.5">
-        {queries.map((query, index) => (
+        {queries.map((query) => (
           <li
-            key={`${index}-${query}`}
+            key={query}
             className="border-border-subtle bg-panel text-foreground flex items-center gap-2 rounded border px-3 py-1.5 font-mono text-xs"
           >
             <Search className="text-muted size-3 shrink-0" aria-hidden />

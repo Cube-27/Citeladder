@@ -2,9 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
+import { prefetchRoute } from '@/lib/navigation/route-prefetch';
+import { useProjectContext } from '@/lib/project/project-context';
 
 import {
   MOBILE_NAV_ITEMS,
@@ -15,11 +19,17 @@ import {
   type NavItem,
 } from './nav-items';
 
-function NavLink({ item, active }: Readonly<{ item: NavItem; active: boolean }>) {
+function NavLink({
+  item,
+  active,
+  onIntent,
+}: Readonly<{ item: NavItem; active: boolean; onIntent: (href: string) => void }>) {
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
+      onMouseEnter={() => onIntent(item.href)}
+      onFocus={() => onIntent(item.href)}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 text-sm transition-colors duration-150',
@@ -38,6 +48,7 @@ function StationLinks({
 }: Readonly<{ group: NavGroup; compact?: boolean }>) {
   const pathname = usePathname() ?? '';
   const searchParams = useSearchParams();
+  const onIntent = useRouteIntent();
   const items = group.items;
   if (compact) {
     return (
@@ -47,6 +58,8 @@ function StationLinks({
             <li key={item.href}>
               <Link
                 href={item.href}
+                onMouseEnter={() => onIntent(item.href)}
+                onFocus={() => onIntent(item.href)}
                 aria-current={isNavItemActive(pathname, searchParams, item) ? 'page' : undefined}
                 className={cn(
                   'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium',
@@ -67,7 +80,11 @@ function StationLinks({
     <ul className="flex flex-col gap-0.5">
       {items.map((item) => (
         <li key={item.href}>
-          <NavLink item={item} active={isNavItemActive(pathname, searchParams, item)} />
+          <NavLink
+            item={item}
+            active={isNavItemActive(pathname, searchParams, item)}
+            onIntent={onIntent}
+          />
         </li>
       ))}
     </ul>
@@ -103,6 +120,7 @@ export function MobilePrimaryNavigation() {
   const pathname = usePathname() ?? '';
   const searchParams = useSearchParams();
   const current = activeStation(pathname, searchParams);
+  const onIntent = useRouteIntent();
   return (
     <nav
       className="border-border bg-panel safe-bottom fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-5 border-t md:hidden"
@@ -115,6 +133,8 @@ export function MobilePrimaryNavigation() {
           <Link
             key={item.href}
             href={item.href}
+            onMouseEnter={() => onIntent(item.href)}
+            onFocus={() => onIntent(item.href)}
             aria-current={active ? 'page' : undefined}
             className={cn(
               'text-xs flex min-w-0 flex-col items-center justify-center gap-1 font-medium',
@@ -127,5 +147,14 @@ export function MobilePrimaryNavigation() {
         );
       })}
     </nav>
+  );
+}
+
+function useRouteIntent() {
+  const queryClient = useQueryClient();
+  const { activeProject } = useProjectContext();
+  return useCallback(
+    (href: string) => prefetchRoute(queryClient, href, activeProject?.id ?? null),
+    [activeProject?.id, queryClient],
   );
 }

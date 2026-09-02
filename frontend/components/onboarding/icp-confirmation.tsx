@@ -48,15 +48,20 @@ const OTHER_CATEGORY = '__other__';
 /** Suggestions come only from model-supplied fields, never the live value. */
 function categoryChoices(profile: DiscoveryProfile): string[] {
   const seen = new Set<string>();
-  return [profile.category, ...profile.category_options, ...profile.category_aliases]
-    .map((item) => item.trim())
-    .filter((item) => {
-      const key = item.toLowerCase();
-      if (!item || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, MAX_CATEGORY_CHOICES);
+  const choices: string[] = [];
+  for (const candidate of [
+    profile.category,
+    ...profile.category_options,
+    ...profile.category_aliases,
+  ]) {
+    const item = candidate.trim();
+    const key = item.toLowerCase();
+    if (!item || seen.has(key)) continue;
+    seen.add(key);
+    choices.push(item);
+    if (choices.length === MAX_CATEGORY_CHOICES) break;
+  }
+  return choices;
 }
 
 export function IcpConfirmation({

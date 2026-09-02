@@ -260,9 +260,11 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
 
     renderScreen();
 
-    expect(await screen.findByRole('tab', { name: 'Overview' })).toHaveAttribute(
-      'aria-selected',
-      'true',
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      ),
     );
     expect((await screen.findAllByText('80')).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('tab', { name: 'Pages' }));

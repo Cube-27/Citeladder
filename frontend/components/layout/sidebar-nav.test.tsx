@@ -1,5 +1,17 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+  prefetchQuery: vi.fn((_options: { queryKey: readonly unknown[] }) => Promise.resolve()),
+}));
+
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ prefetchQuery: mocks.prefetchQuery }),
+}));
+
+vi.mock('@/lib/project/project-context', () => ({
+  useProjectContext: () => ({ activeProject: { id: '11111111-1111-4111-8111-111111111111' } }),
+}));
 
 let pathname = '/site';
 let searchParams = new URLSearchParams();
@@ -13,6 +25,10 @@ import { MobilePrimaryNavigation, MobileStationNavigation, SidebarNav } from './
 import { NAV_GROUPS } from './nav-items';
 
 describe('station navigation', () => {
+  beforeEach(() => {
+    mocks.prefetchQuery.mockClear();
+  });
+
   it('ships the four loop stations and their canonical destinations', () => {
     render(<SidebarNav />);
     expect(NAV_GROUPS.map((group) => group.title)).toEqual(['Overview', 'Analyze', 'Act', 'Track']);
@@ -62,5 +78,19 @@ describe('station navigation', () => {
     expect(screen.getByText('Act', { selector: 'p' })).toBeInTheDocument();
     expect(screen.getByText('Track', { selector: 'p' })).toBeInTheDocument();
     expect(screen.queryByText('Connect', { selector: 'p' })).not.toBeInTheDocument();
+  });
+
+  it('prefetches the destination primary query on pointer and keyboard intent', () => {
+    render(<SidebarNav />);
+    const traffic = screen.getByRole('link', { name: 'Traffic' });
+    fireEvent.mouseEnter(traffic);
+    fireEvent.focus(traffic);
+    expect(mocks.prefetchQuery).toHaveBeenCalled();
+    expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual([
+      'traffic',
+      'dashboard',
+      '11111111-1111-4111-8111-111111111111',
+      { granularity: 'day' },
+    ]);
   });
 });

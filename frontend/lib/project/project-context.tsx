@@ -15,6 +15,8 @@ import {
 import { setActiveWorkspaceId } from '@/lib/api/client';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
+import { runsQueries } from '@/lib/api/runs';
+import { siteHealthQueries } from '@/lib/api/site-health';
 import type { Project } from '@/lib/api/types';
 import {
   readStoredActiveProjectId,
@@ -118,7 +120,16 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
     // default workspace, which is the wrong one for a multi-workspace account.
     if (activeProject === null && pinApplies) return;
     setActiveWorkspaceId(activeProject?.workspace_id ?? null);
-  }, [activeProject, pinApplies]);
+    if (activeProject) {
+      // Warm the shared run list and latest-crawl dashboard only after the
+      // workspace header is installed. Visibility/Runs and Website/Issues then
+      // reuse these exact cache entries instead of starting cold per route.
+      void Promise.all([
+        queryClient.prefetchQuery(runsQueries.list(activeProject.id)),
+        queryClient.prefetchQuery(siteHealthQueries.dashboard(activeProject.id)),
+      ]);
+    }
+  }, [activeProject, pinApplies, queryClient]);
 
   // Backfill missing brand logos. Onboarding kicks off a refresh for the project
   // it creates, but that is the ONLY trigger: a project created before logos

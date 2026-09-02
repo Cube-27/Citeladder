@@ -1,12 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { EngineFilter } from '@/components/visibility/visibility-toolbar';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
-import { runsApi } from '@/lib/api/runs';
+import { runsQueries } from '@/lib/api/runs';
 import { visibilityApi } from '@/lib/api/visibility';
 import {
   findActiveRun,
@@ -92,14 +92,13 @@ export function useVisibilityFilters() {
 
 /**
  * The project's dashboard-ready runs: the audits list, the run-selector
- * options, and the effective run — an explicit selection that still exists,
- * else the latest dashboard-ready run (which is also what the endpoint
- * defaults to when `audit_id` is omitted).
+ * options, and the optional explicit run filter. The default remains `null`
+ * so projection endpoints resolve their latest run immediately server-side;
+ * the audits list is not a prerequisite for the first analytical request.
  */
 function useRunSelection(projectId: string | null, selectedRunId: string | null) {
   const auditsQuery = useQuery({
-    queryKey: queryKeys.runs.list({ project_id: projectId ?? '' }),
-    queryFn: ({ signal }) => runsApi.listAudits({ project_id: projectId! }, { signal }),
+    ...runsQueries.list(projectId ?? ''),
     enabled: Boolean(projectId),
     // While any run is still progressing, keep the audits list fresh so an
     // in-progress run is visible here (not only on /runs/[runId]) and its
@@ -118,7 +117,7 @@ function useRunSelection(projectId: string | null, selectedRunId: string | null)
     if (selectedRunId && runOptions.some((run) => run.id === selectedRunId)) {
       return selectedRunId;
     }
-    return runOptions[0]?.id ?? null;
+    return null;
   }, [runOptions, selectedRunId]);
 
   return {
@@ -154,6 +153,7 @@ function useEvidenceQueries(
     cohort: 'core' | 'comparison';
   }>,
 ) {
+  const queryClient = useQueryClient();
   const { activeRunId, promptId, engineParam, fromParam, cohort } = scope;
   const evidenceParams = {
     audit_id: activeRunId ?? undefined,
@@ -171,29 +171,35 @@ function useEvidenceQueries(
     cohort,
   };
 
-  const evidenceQuery = useQuery({
+  const evidenceOptions = {
     queryKey: queryKeys.visibility.evidence(projectId ?? '', {
       ...keyFilters,
       prompt_id: promptId ?? null,
     }),
-    queryFn: ({ signal }) =>
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
       visibilityApi.getVisibilityEvidence(projectId!, evidenceParams, { signal }),
+  };
+  const evidenceQuery = useQuery({
+    ...evidenceOptions,
     enabled,
     placeholderData: (previousData, previousQuery) =>
       retainPreviousDataForScope(projectId!, previousData, previousQuery),
   });
 
-  const promptOptionsQuery = useQuery({
+  const promptEvidenceOptions = {
     queryKey: queryKeys.visibility.evidence(projectId ?? '', {
       ...keyFilters,
       prompt_id: null,
     }),
-    queryFn: ({ signal }) =>
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
       visibilityApi.getVisibilityEvidence(
         projectId!,
         { ...evidenceParams, prompt_id: undefined },
         { signal },
       ),
+  };
+  const promptOptionsQuery = useQuery({
+    ...promptEvidenceOptions,
     enabled,
     placeholderData: (previousData, previousQuery) =>
       retainPreviousDataForScope(projectId!, previousData, previousQuery),
@@ -203,22 +209,31 @@ function useEvidenceQueries(
     [promptOptionsQuery.data],
   );
 
-  return { evidenceQuery, promptOptions };
+  const prefetch = () => {
+    if (!projectId) return;
+    void Promise.all([
+      queryClient.prefetchQuery(evidenceOptions),
+      queryClient.prefetchQuery(promptEvidenceOptions),
+    ]);
+  };
+
+  return { evidenceQuery, promptOptions, prefetch };
 }
 
 /**
- * The Visibility workspace's per-tab queries. Only the relevant query runs per
- * tab: the selected-run projection and trend series for Trends, and the shared
- * execution-evidence query (one identical cache key) for either
- * evidence tab — so switching between the two evidence tabs reuses the cache.
+ * The Visibility workspace's per-tab queries. The default Trends projection
+ * starts as soon as the project is known, with `audit_id` omitted so the server
+ * resolves latest. Tab intent prefetches the other bounded projection before
+ * selection, while inactive tabs still avoid an unsolicited cold request.
  */
 export function useVisibilityQueries(
   projectId: string | null,
   filters: ReturnType<typeof useVisibilityFilters>,
 ) {
+  const queryClient = useQueryClient();
   const runs = useRunSelection(projectId, filters.selectedRunId);
   const scope = useQueryScope(filters);
-  const trendsEnabled = Boolean(projectId) && runs.hasRuns && filters.activeTab === 'trends';
+  const trendsEnabled = Boolean(projectId) && filters.activeTab === 'trends';
   const visibilityQuery = useVisibilityProjection(
     projectId,
     runs.activeRunId,
@@ -228,10 +243,23 @@ export function useVisibilityQueries(
   const trendQuery = useTrendQuery(projectId, scope, trendsEnabled);
   const evidence = useEvidenceQueries(
     projectId,
-    Boolean(projectId) && runs.hasRuns && isEvidenceTab(filters.activeTab),
+    Boolean(projectId) && isEvidenceTab(filters.activeTab),
     { activeRunId: runs.activeRunId, promptId: filters.promptId, ...scope },
   );
-  return { ...runs, visibilityQuery, trendQuery, ...evidence };
+  const prefetchTab = (tab: VisibilityTab) => {
+    if (!projectId) return;
+    if (tab === 'trends') {
+      void Promise.all([
+        queryClient.prefetchQuery(
+          visibilityProjectionOptions(projectId, runs.activeRunId, scope.cohort),
+        ),
+        queryClient.prefetchQuery(trendOptions(projectId, scope)),
+      ]);
+      return;
+    }
+    evidence.prefetch();
+  };
+  return { ...runs, visibilityQuery, trendQuery, ...evidence, prefetchTab };
 }
 
 function useQueryScope(filters: ReturnType<typeof useVisibilityFilters>) {
@@ -247,15 +275,25 @@ function useVisibilityProjection(
   enabled: boolean,
 ) {
   return useQuery({
-    queryKey: [...queryKeys.visibility.project(projectId ?? '', activeRunId ?? undefined), cohort],
-    queryFn: ({ signal }) =>
+    ...visibilityProjectionOptions(projectId ?? '', activeRunId, cohort),
+    enabled,
+  });
+}
+
+function visibilityProjectionOptions(
+  projectId: string,
+  activeRunId: string | null,
+  cohort: 'core' | 'comparison',
+) {
+  return {
+    queryKey: [...queryKeys.visibility.project(projectId, activeRunId ?? undefined), cohort],
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
       visibilityApi.getProjectVisibility(
-        projectId!,
+        projectId,
         { audit_id: activeRunId ?? undefined, cohort },
         { signal },
       ),
-    enabled,
-  });
+  };
 }
 
 function useTrendQuery(
@@ -264,15 +302,24 @@ function useTrendQuery(
   enabled: boolean,
 ) {
   return useQuery({
-    queryKey: queryKeys.visibility.trends(projectId ?? '', {
+    ...trendOptions(projectId ?? '', scope),
+    enabled,
+    placeholderData: (previousData, previousQuery) =>
+      retainPreviousDataForScope(projectId!, previousData, previousQuery),
+  });
+}
+
+function trendOptions(projectId: string, scope: ReturnType<typeof useQueryScope>) {
+  return {
+    queryKey: queryKeys.visibility.trends(projectId, {
       engine: scope.engineParam ?? null,
       from: scope.fromParam ?? null,
       granularity: scope.granularity,
       cohort: scope.cohort,
     }),
-    queryFn: ({ signal }) =>
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
       visibilityApi.getVisibilityTrends(
-        projectId!,
+        projectId,
         {
           engine: scope.engineParam,
           from: scope.fromParam,
@@ -281,8 +328,5 @@ function useTrendQuery(
         },
         { signal },
       ),
-    enabled,
-    placeholderData: (previousData, previousQuery) =>
-      retainPreviousDataForScope(projectId!, previousData, previousQuery),
-  });
+  };
 }

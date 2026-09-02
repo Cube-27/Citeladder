@@ -20,11 +20,24 @@ export function TrafficEmptyState({
   hasConnections = false,
   syncing = false,
   onSyncNow,
+  showSyncAction = true,
 }: Readonly<{
   hasConnections?: boolean;
   syncing?: boolean;
   onSyncNow?: () => void;
+  showSyncAction?: boolean;
 }>) {
+  const action = hasConnections ? (
+    showSyncAction && onSyncNow ? (
+      <Button onClick={onSyncNow} disabled={syncing} size="md">
+        {syncing ? 'Syncing…' : 'Sync now'}
+      </Button>
+    ) : undefined
+  ) : (
+    <Button asChild size="md">
+      <Link href="/settings?tab=integrations">Connect an integration</Link>
+    </Button>
+  );
   return (
     <EmptyState
       icon={Plug}
@@ -34,17 +47,7 @@ export function TrafficEmptyState({
           ? 'Your connection is ready. Run a sync to import Search Console and Analytics data.'
           : 'Connect Search Console or Google Analytics 4 to see organic and AI-driven traffic.'
       }
-      action={
-        hasConnections && onSyncNow ? (
-          <Button onClick={onSyncNow} disabled={syncing} size="md">
-            {syncing ? 'Syncing…' : 'Sync now'}
-          </Button>
-        ) : (
-          <Button asChild size="md">
-            <Link href="/settings?tab=integrations">Connect an integration</Link>
-          </Button>
-        )
-      }
+      action={action}
     />
   );
 }

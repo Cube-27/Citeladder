@@ -68,8 +68,8 @@ describe('VisibilityPage — Mentions & Citations tab', () => {
     renderVisibilityPage();
 
     await screen.findByText('Best affordable clothing stores in Australia?');
-    // audit_id defaults to the latest run; engine defaults to all (omitted).
-    expect(captured!.searchParams.get('audit_id')).toBe(AUDIT_LATEST);
+    // The server resolves latest when audit_id is omitted; engine defaults to all too.
+    expect(captured!.searchParams.get('audit_id')).toBeNull();
     expect(captured!.searchParams.get('limit')).toBe('100');
     expect(screen.getByText(/Showing newest 100 executions/)).toBeInTheDocument();
   });

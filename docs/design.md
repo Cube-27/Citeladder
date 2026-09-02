@@ -516,7 +516,9 @@ data that has not arrived.
 
 ## Motion and accessibility
 
-Authenticated routes are wrapped by the lazy Motion provider. Pointer-opened menus use a barely visible 150–180ms origin-aware fade/shift.
+Authenticated routes do not load the Motion runtime; their sanctioned feedback
+uses the shared CSS interaction rules. Marketing owns its lazy Motion provider
+for the few editorial scenes that require it. Pointer-opened menus use a barely visible 150–180ms origin-aware fade/shift.
 Keyboard-opened command interfaces are immediate. Drawers use a short 220–260ms
 right-side transition that remains interruptible. Press feedback starts on
 pointer-down. Beyond that, a small, deliberate set of explanatory motions is

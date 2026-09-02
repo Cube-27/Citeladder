@@ -1,8 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
-
-import { TrafficScreen, TrafficSkeleton } from '@/components/traffic/traffic-screen';
+import { TrafficScreen } from '@/components/traffic/traffic-screen';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 /**
@@ -18,9 +16,7 @@ export default function TrafficPage() {
   return (
     <TooltipProvider>
       <div className="grid gap-[var(--workspace-gap)]">
-        <Suspense fallback={<TrafficSkeleton />}>
-          <TrafficScreen />
-        </Suspense>
+        <TrafficScreen />
       </div>
     </TooltipProvider>
   );

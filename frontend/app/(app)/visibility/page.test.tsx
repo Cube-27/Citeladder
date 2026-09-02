@@ -236,7 +236,7 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
     renderVisibilityPage();
 
     await screen.findByRole('heading', { name: 'By model' });
-    expect(seen[0]).toBe(AUDIT_LATEST);
+    expect(seen[0]).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Select run' }));
     const olderLabel = new Date('2026-07-10T00:00:00Z').toLocaleString(undefined, {
@@ -289,8 +289,8 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
 
     expect(await screen.findByText('No completed runs yet')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /launch your first audit/i })).toBeInTheDocument();
-    // No tablist is rendered in the empty state.
-    expect(screen.queryByRole('tablist')).toBeNull();
+    // Navigation geometry stays mounted while the data region explains the empty state.
+    expect(screen.getByRole('tablist')).toBeInTheDocument();
   });
 
   it('shows the in-progress banner when the only run is still active', async () => {

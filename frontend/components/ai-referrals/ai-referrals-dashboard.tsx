@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -27,19 +25,15 @@ import { formatWindowDate } from '@/lib/format';
 
 export function AiReferralsDashboard({
   data,
-  toolbar,
   fetching,
-}: Readonly<{ data: AiReferrals; toolbar: ReactNode; fetching: boolean }>) {
+}: Readonly<{ data: AiReferrals; fetching: boolean }>) {
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      {toolbar}
-      <div aria-busy={fetching} className="grid gap-[var(--workspace-gap)]">
-        <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-2">
-          <ReferralVolumeCard data={data} />
-          <ReferralShareCard data={data} />
-        </div>
-        <SourceTotals data={data} />
+    <div aria-busy={fetching} className="grid gap-[var(--workspace-gap)]">
+      <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-2">
+        <ReferralVolumeCard data={data} />
+        <ReferralShareCard data={data} />
       </div>
+      <SourceTotals data={data} />
     </div>
   );
 }

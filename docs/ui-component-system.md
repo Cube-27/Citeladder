@@ -76,10 +76,10 @@ architectural owner.
 
 ## Motion ownership
 
-`ProductMotionProvider` lazy-loads Motion features for authenticated routes and
-honors the user's reduced-motion preference. Route content and tab selection are
-immediate so navigation never flashes through an opacity transition. Overlays
-retain spatially symmetric entry and exit. Input, focus,
+Authenticated routes use the shared CSS motion rules and do not load the Motion
+runtime. Marketing lazy-loads Motion only for its sanctioned editorial scenes.
+Route content and tab selection are immediate so navigation never flashes
+through an opacity transition. Overlays retain spatially symmetric entry and exit. Input, focus,
 navigation, and server updates never wait for animation. Large tables, polling
 metrics, and charts do not reanimate ornamentally.
 

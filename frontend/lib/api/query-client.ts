@@ -6,8 +6,10 @@
  * retry. When the backend (or the A3 timeout surface) classifies the failure
  * with an explicit `retryable` flag, that classification wins — an A3
  * `request_timeout` ApiError carries `retryable: true` and slots in here.
- * `staleTime` 15s and `refetchOnWindowFocus:false` match the reference
- * frontend. Mutations never auto-retry.
+ * Read-mostly projections stay fresh for 60s and remain recoverable from the
+ * cache for 30 minutes. Explicit polling intervals still own live workflows;
+ * these defaults do not replace or slow their timers. Mutations never
+ * auto-retry.
  */
 import { QueryClient } from '@tanstack/react-query';
 
@@ -44,8 +46,8 @@ export function createAppQueryClient() {
     defaultOptions: {
       queries: {
         retry: shouldRetryQuery,
-        staleTime: 15_000,
-        gcTime: 5 * 60_000,
+        staleTime: 60_000,
+        gcTime: 30 * 60_000,
         refetchOnWindowFocus: false,
       },
       mutations: {

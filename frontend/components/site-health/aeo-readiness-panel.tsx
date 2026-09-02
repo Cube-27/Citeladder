@@ -322,8 +322,8 @@ function contentHref(
     source_analysis_id: page.source_analysis_id,
     dimension: dimension.key,
   });
-  page.failed_checks
-    .filter((check) => check.content_addressable)
-    .forEach((check) => params.append('checkpoint_ids', check.rule_id));
+  for (const check of page.failed_checks) {
+    if (check.content_addressable) params.append('checkpoint_ids', check.rule_id);
+  }
   return `/content?${params.toString()}`;
 }

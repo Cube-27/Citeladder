@@ -127,11 +127,13 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
    */
   const filteredSignals = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return snapshot.signals
-      .map((signal, index) => ({ signal, rank: index + 1 }))
-      .filter(({ signal }) => {
-        if (!matchesTab(signal, activeTab)) return false;
-        if (!query) return true;
+    return snapshot.signals.reduce<Array<{ signal: DemandSignal; rank: number }>>(
+      (matches, signal, index) => {
+        if (!matchesTab(signal, activeTab)) return matches;
+        if (!query) {
+          matches.push({ signal, rank: index + 1 });
+          return matches;
+        }
         const haystack = [
           signalTarget(signal),
           signal.page_url,
@@ -139,8 +141,11 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
         ]
           .join(' ')
           .toLowerCase();
-        return haystack.includes(query);
-      });
+        if (haystack.includes(query)) matches.push({ signal, rank: index + 1 });
+        return matches;
+      },
+      [],
+    );
   }, [snapshot.signals, activeTab, searchQuery]);
 
   return (

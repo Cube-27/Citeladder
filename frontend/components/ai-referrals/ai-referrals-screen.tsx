@@ -81,5 +81,3 @@ function AiReferralsToolbar({
     />
   );
 }
-
-export { AiReferralsSkeleton } from './ai-referrals-skeleton';

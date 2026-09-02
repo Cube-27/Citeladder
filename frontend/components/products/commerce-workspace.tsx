@@ -129,9 +129,10 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
   const selectedKey = target ? targetKey(target) : undefined;
   const label = entries.find((entry) => entry.key === selectedKey)?.label ?? '';
   const checkedSet = new Set(checked);
-  const checkedTargets = entries
-    .filter((entry) => checkedSet.has(entry.key))
-    .map((entry) => entry.target);
+  const checkedTargets = entries.reduce<CommerceTarget[]>((targets, entry) => {
+    if (checkedSet.has(entry.key)) targets.push(entry.target);
+    return targets;
+  }, []);
   const toggle = (keys: string[]) =>
     setChecked((current) => {
       const next = new Set(current);
