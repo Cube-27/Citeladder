@@ -79,7 +79,7 @@ function StationLinks({
     );
   }
   return (
-    <ul className="flex flex-col gap-0.5">
+    <ul className="flex flex-col gap-[var(--sidebar-item-gap)]">
       {items.map((item) => (
         <li key={item.href}>
           <NavLink
@@ -95,13 +95,13 @@ function StationLinks({
 
 export function SidebarNav({ className }: Readonly<{ className?: string }>) {
   return (
-    <nav aria-label="Primary" className={cn('flex flex-col gap-3', className)}>
+    <nav aria-label="Primary" className={cn('flex flex-col gap-[var(--sidebar-group-gap)]', className)}>
       {NAV_GROUPS.map((group) => {
         const showHeading = group.title !== 'Overview';
         return (
           <div key={group.title} className="flex flex-col gap-0">
             {showHeading ? (
-              <p className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-3 pb-1.5')}>
+              <p className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-2 pb-1')}>
                 {group.title}
               </p>
             ) : null}
@@ -127,7 +127,7 @@ export function MobilePrimaryNavigation() {
   const onIntent = useRouteIntent();
   return (
     <nav
-      className="border-border bg-panel safe-bottom fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-5 border-t md:hidden"
+      className="border-border bg-panel safe-bottom fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-4 border-t md:hidden"
       aria-label="Primary mobile navigation"
     >
       {MOBILE_NAV_ITEMS.map((item) => {

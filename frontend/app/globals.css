@@ -53,7 +53,7 @@
   --color-well: #f4f4f1;
   --color-active: #efefeb;
   --color-input: #ffffff;
-  --color-sidebar: #f7f6fd;
+  --color-sidebar: #f4f4f1;
   --color-surface-inverse: #16161a;
 
   --color-border: #ddddd6;
@@ -68,7 +68,6 @@
   --color-disabled: #9a9aa0;
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
-  --color-link: #1a3fd0;
 
   /* Analytical selection and focus. Primary actions use ink, below. */
   --color-accent: #1b44e0;
@@ -212,15 +211,12 @@
   --radius-md: 8px;
   --radius-lg: 10px;
   --radius-xl: 12px;
-  --radius-2xl: 12px;
   --radius-full: 9999px;
 
   /* Elevation — overlays own a real hairline border, so the shadow is pure
      ambient depth and never draws a ring of its own. */
-  --shadow-xs: 0 1px 1px rgb(22 22 26 / 0.03);
   --shadow-sm: 0 1px 2px rgb(22 22 26 / 0.03), 0 2px 4px -1px rgb(22 22 26 / 0.04);
   --shadow-elevated: 0 4px 12px -2px rgb(22 22 26 / 0.05), 0 14px 28px -8px rgb(22 22 26 / 0.08);
-  --shadow-lg: 0 8px 20px -4px rgb(22 22 26 / 0.06), 0 20px 44px -12px rgb(22 22 26 / 0.10);
   --shadow-modal-value: 0 12px 26px -6px rgb(22 22 26 / 0.10), 0 28px 60px -16px rgb(22 22 26 / 0.17);
 
   --text-xs: 0.75rem;
@@ -243,10 +239,8 @@
   --text-4xl--line-height: 2.5rem;
   --text-heading-sm: 1.125rem; /* 18px — compact headings */
   --text-heading-xs: 1rem; /* 16px — structural sub-headings */
-  --text-heading-md: 1.25rem; /* 20px — screen state headings */
 
   --leading-tight: 1.25;
-  --leading-body: 1.5;
 
   /* Motion — frequent controls are quick; occasional drawers get more travel. */
   --transition-fast: 170ms;
@@ -263,9 +257,19 @@
   color-scheme: light;
   --sidebar-width: 220px;
   --topbar-height: 52px;
-  --nav-item-height: 36px;
+  --nav-item-height: 32px;
+  /* Sidebar rhythm. The rail's four bands share one inset so no band invents
+     its own; the group gap is small because the section label carries the
+     separation between groups. */
+  --sidebar-pad-x: 8px;
+  --sidebar-pad-y: 6px;
+  --sidebar-group-gap: 4px;
+  --sidebar-item-gap: 2px;
   --content-gutter: 24px;
   --content-max-width: 1360px;
+  /* The two sanctioned two-column splits. A screen picks a role, never a ratio. */
+  --pane-main-rail: minmax(0, 2fr) minmax(0, 1fr);
+  --pane-list-detail: minmax(18rem, 0.9fr) minmax(0, 2fr);
   --page-section-gap: 32px;
   --workspace-gap: 16px;
   --compact-gap: 12px;
@@ -285,8 +289,8 @@
   --score-ring: 72px;
   /* Authenticated-app geometry roles. Components consume the role, never a route-local radius. */
   --radius-control: 8px;
-  --radius-card: 10px;
-  --radius-overlay: 12px;
+  --radius-card: 12px;
+  --radius-overlay: 16px;
   /* Public-surface rhythm. Marketing consumes these directly; the phone values
      are the base and the media queries below step them up. */
   --site-gutter: 20px;

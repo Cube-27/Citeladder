@@ -26,19 +26,21 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
       <div className="bg-background relative flex h-dvh overflow-hidden">
         <aside className="bg-sidebar border-border-subtle relative z-1 hidden w-[var(--sidebar-width)] shrink-0 flex-col border-r transition-[width] md:flex">
           {/* Logo row — matches topbar height */}
-          <div className="flex h-[var(--topbar-height)] shrink-0 items-center px-4">
-            <LogoMark size={22} />
+          <div className="flex h-[var(--topbar-height)] shrink-0 items-center px-[var(--sidebar-pad-x)]">
+            <span className="px-2.5">
+              <LogoMark size={22} />
+            </span>
           </div>
 
-          <div className="px-2 py-2">
+          <div className="px-[var(--sidebar-pad-x)] py-[var(--sidebar-pad-y)]">
             <ProjectSwitcher />
           </div>
 
-          <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2.5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-[var(--sidebar-pad-x)] py-[var(--sidebar-pad-y)]">
             <SidebarNav />
           </div>
 
-          <div className="shrink-0 p-2">
+          <div className="shrink-0 p-[var(--sidebar-pad-x)]">
             <UserMenu />
           </div>
         </aside>
@@ -65,7 +67,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
 
           <main
             id="main"
-            className="content-scroll safe-bottom min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0"
+            className="safe-bottom min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0"
           >
             <MobileStationNavigation />
             <div className="mx-auto grid w-full max-w-[var(--content-max-width)] grid-cols-[minmax(0,1fr)] gap-0 p-[var(--content-gutter)]">

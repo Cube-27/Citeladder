@@ -15,6 +15,7 @@ const LIGHT_SURFACE_TOKENS = [
   '--color-panel-tonal',
   '--color-well',
   '--color-active',
+  '--color-sidebar',
 ];
 const NEUTRAL_TEXT_TOKENS = [
   '--color-foreground',
@@ -32,7 +33,6 @@ const CSS_BLOCK_CONTRACTS = new Map([
       '--flow-measure-wide: 55rem',
       '--flow-header-gap: 2.5rem',
       '--flow-block: 2rem',
-      '--radius-control: var(--radius-auth-control)',
     ],
   ],
   [
@@ -55,6 +55,9 @@ const CSS_BLOCK_CONTRACTS = new Map([
   ['.website-eyebrow', []],
   ['.website-data-display', []],
 ]);
+
+/** Geometry roles belong to one ladder in globals.css; no surface re-scales them. */
+const SHARED_GEOMETRY_ROLES = ['--radius-control', '--radius-card', '--radius-overlay'];
 
 const ROLE_COLOR_CONTRACTS = new Map([
   ['.website-hero-display', 'color: var(--color-foreground)'],
@@ -458,14 +461,14 @@ export function productContractViolations(root) {
     ['--control-height', '32px'],
     ['--control-height-lg', '36px'],
     ['--radius-control', '8px'],
-    ['--radius-card', '10px'],
-    ['--radius-overlay', '12px'],
+    ['--radius-card', '12px'],
+    ['--radius-overlay', '16px'],
     ['--color-background', ['#f7', 'f6fd'].join('')],
     ['--color-background-alt', ['#f4', 'f4f1'].join('')],
     ['--color-panel-tonal', ['#f4', 'f4f1'].join('')],
     ['--color-well', ['#f4', 'f4f1'].join('')],
     ['--color-active', ['#ef', 'efeb'].join('')],
-    ['--color-sidebar', ['#f7', 'f6fd'].join('')],
+    ['--color-sidebar', ['#f4', 'f4f1'].join('')],
     ['--color-action', ['#51', '47e5'].join('')],
     ['--color-accent', ['#1b', '44e0'].join('')],
     ['--color-focus', ['#1b', '44e0'].join('')],
@@ -657,6 +660,14 @@ export function websiteContractViolations(root) {
       !rules.some((rule) => selectorRegex.test(rule.prelude) && declarationRegex.test(rule.body))
     ) {
       violations.push(cssLabel + ': ' + selector + ' missing scoped declaration ' + declaration);
+    }
+  }
+
+  for (const role of SHARED_GEOMETRY_ROLES) {
+    if (new RegExp(escapeRegExp(role) + '\s*:').test(readFileSync(cssPath, 'utf8'))) {
+      violations.push(
+        cssLabel + ': ' + role + ' is a shared geometry role and must not be redefined per surface',
+      );
     }
   }
 
