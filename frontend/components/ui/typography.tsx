@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * Heading recipes: `displayHeadingLgClasses` for panel / empty-state headings
- * (20/28 @600), `pageHeadingClasses` for top-bar page titles (22/32 @500), and
+ * (20/28 @600), `pageHeadingClasses` for top-bar page titles (24/32 @500), and
  * `displayHeadingXlClasses` for larger entity headings (24/32 @500). There is no
  * separate display face, so headings differ from body by size and weight only,
  * and both rungs bake their weight into the `--text-*` token. These are class

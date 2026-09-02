@@ -11,7 +11,7 @@
 
   /* Palette layer. Product code consumes the semantic aliases below. */
   --color-gray-0: #ffffff;
-  --color-gray-50: #fafaf8;
+  --color-gray-50: #f7f6fd;
   --color-gray-100: #f4f4f1;
   --color-gray-200: #efefeb;
   --color-gray-300: #e4e4df;
@@ -45,7 +45,7 @@
   --color-amber-500: #f59e0b;
   --color-amber-700: #b45309;
 
-  --color-background: #fafaf8;
+  --color-background: #f7f6fd;
   --color-background-alt: #f4f4f1;
   --color-panel: #ffffff;
   --color-panel-tonal: #f4f4f1;
@@ -53,7 +53,7 @@
   --color-well: #f4f4f1;
   --color-active: #efefeb;
   --color-input: #ffffff;
-  --color-sidebar: #fafaf8;
+  --color-sidebar: #f7f6fd;
   --color-surface-inverse: #16161a;
 
   --color-border: #ddddd6;
@@ -233,7 +233,7 @@
   --text-lg--line-height: 1.5rem;
   --text-xl: 1.25rem;
   --text-xl--line-height: 1.75rem;
-  --text-page-title: 1.375rem;
+  --text-page-title: 1.5rem;
   --text-page-title--line-height: 2rem;
   --text-2xl: 1.5rem;
   --text-2xl--line-height: 2rem;

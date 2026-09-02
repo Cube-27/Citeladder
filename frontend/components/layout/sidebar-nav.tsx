@@ -35,7 +35,7 @@ function NavLink({
         'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 text-sm transition-colors duration-150',
         active
           ? 'bg-accent-soft text-accent-text font-medium'
-          : 'text-muted hover:bg-active hover:text-foreground font-normal',
+          : 'text-secondary hover:bg-active hover:text-foreground font-normal',
       )}
     >
       <Icon className={cn('size-4 shrink-0', active ? 'text-accent' : 'text-subtle')} aria-hidden />
@@ -101,7 +101,9 @@ export function SidebarNav({ className }: Readonly<{ className?: string }>) {
         return (
           <div key={group.title} className="flex flex-col gap-0">
             {showHeading ? (
-              <p className={cn(eyebrowClasses, 'px-2.5 pt-3 pb-1.5')}>{group.title}</p>
+              <p className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-3 pb-1.5')}>
+                {group.title}
+              </p>
             ) : null}
             <StationLinks group={group} />
           </div>

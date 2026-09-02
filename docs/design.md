@@ -6,7 +6,7 @@
 ## Direction and identity
 
 CiteLadder is a light-only, evidence-led enterprise system. The authenticated
-application uses the **Prism Evidence Workspace**: a neutral paper editorial canvas,
+application uses the **Prism Evidence Workspace**: a lightly violet-tinted paper editorial canvas,
 near-black ink, a blue-violet primary action, one blue for analytical selection, semantic evidence
 washes, useful density, and deliberate negative space. It is an operating
 workspace, not a wall of equal-weight KPI cards.
@@ -64,7 +64,7 @@ Tokens are semantic; components use the role, not a colour value.
 
 | Role | Token family | Use |
 | --- | --- | --- |
-| Canvas and structure | `background` / `sidebar` (`#FAFAF8`), `well` / `background-alt` / `panel-tonal` (`#F4F4F1`), `active` (`#EFEFEB`) | One neutral paper hierarchy across product, marketing, authentication, and onboarding |
+| Canvas and structure | `background` / `sidebar` (`#F7F6FD`), `well` / `background-alt` / `panel-tonal` (`#F4F4F1`), `active` (`#EFEFEB`) | One lightly violet-tinted paper hierarchy across product, marketing, authentication, and onboarding |
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
 | Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
 | Borders | `border-subtle` (`#EAE9E4`), `border` (`#DDDDD6`), `border-strong` (`#B6B6AE`), `border-bold` (`#8C8C84`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
@@ -76,7 +76,7 @@ The ground is paper and the ink is near-black. Colour appears on under five
 percent of the surface: `action` `#5147E5` owns primary buttons, and a single
 blue `#1B44E0` (`#1A3FD0` for text, hover, and press) owns selection, links,
 tabs, active navigation, focus, and the first chart series. Every surface uses
-the same neutral ladder: `#FAFAF8` canvas and sidebar, `#F4F4F1` wells and
+the same paper ladder: `#F7F6FD` canvas and sidebar, `#F4F4F1` wells and
 tonal bands, `#EFEFEB` hover and selected state. Raised objects, inputs, and
 overlays remain white. Product, marketing, authentication, and onboarding
 consume these shared tokens without route-scoped palette overrides.
@@ -150,7 +150,7 @@ classes.
 | Emphasized body | Geist | 14/20px | 500 | 0 | `text-sm font-medium` | semantic text role |
 | Section heading | Geist | 16/22px | 500 | 0 | `text-base font-medium` | `text-foreground` |
 | Panel heading | Geist | 18/24px | 500 | 0 | `text-lg font-medium` | `text-foreground` |
-| Page title | Geist | 22/32px | 500 | 0 | `text-page-title font-medium` | `text-foreground` |
+| Page title | Geist | 24/32px | 500 | 0 | `text-page-title font-medium` | `text-foreground` |
 | Primary metric | Geist | 28/36 or 32/40px | 500 | -0.02em | `text-3xl` / `text-4xl` + `tabular-nums` | `text-foreground` |
 
 Fourteen pixels is the product baseline. Twelve pixels is reserved for short
@@ -566,7 +566,7 @@ Before merging a visual change, verify:
   baseline; authenticated-app type uses Geist at weights 400 and 500 only.
 - Marketing stays monochrome-plus-blue; functional colour appears only in the app.
 - Every product, marketing, authentication, and onboarding surface consumes the
-  same token ladder: `#FAFAF8` canvas and sidebar, `#F4F4F1` structure/well/tonal
+  same token ladder: `#F7F6FD` canvas and sidebar, `#F4F4F1` structure/well/tonal
   panel, and `#EFEFEB` hover and selected state. Sections separate with a hairline
   rule and space, not with a box around their contents.
 - App controls use 8px, semantic objects use 10px, and overlays use 12px.

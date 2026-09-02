@@ -87,7 +87,7 @@ export function SkillPicker({
                   <ChevronDown className="size-3.5 shrink-0" aria-hidden />
                 </Button>
               </DropdownTrigger>
-              <DropdownContent className="w-[min(22rem,calc(100vw-2rem))]">
+              <DropdownContent className="w-[min(28rem,calc(100vw-2rem))]">
                 <DropdownLabel>{group.label} formats</DropdownLabel>
                 <DropdownRadioGroup value={value} onValueChange={onChange}>
                   {group.items.map((skill) => (
