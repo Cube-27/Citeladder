@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SectionTitle } from '@/components/ui/typography';
+import { SectionTitle, textRole } from '@/components/ui/typography';
 import { ExecutionsTable } from '@/components/runs/executions-table';
 import { ProgressPanel } from '@/components/runs/progress-panel';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -107,7 +107,7 @@ function ExecutionsSection({
 export function RunDetailView(props: RunDetailViewProps) {
   return (
     <div className="grid gap-[var(--workspace-gap)]">
-      <Link href="/runs" className="text-accent-text text-xs font-medium hover:underline">
+      <Link href="/runs" className={textRole('label', 'text-accent-text hover:underline')}>
         ← Back to runs
       </Link>
       <AuditSection {...props} />

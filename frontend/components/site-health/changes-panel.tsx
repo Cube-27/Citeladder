@@ -20,6 +20,7 @@ import {
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { ChangeObservation, ChangesPage, ChangeSummary } from '@/lib/api/types';
 import { useCursorStack } from '@/lib/site-health/use-cursor-stack';
+import { textRole } from '@/components/ui/typography';
 
 const CLASS_LABELS = {
   improvement: 'Improvement',
@@ -46,11 +47,11 @@ function valueLabel(value: unknown) {
 
 function Evidence({ row }: Readonly<{ row: ChangeObservation }>) {
   return (
-    <details>
-      <summary className="text-accent-text cursor-pointer text-xs font-medium">
+    <details className="grid gap-2">
+      <summary className={textRole('label', 'text-accent-text cursor-pointer')}>
         View evidence
       </summary>
-      <dl className="mt-2 grid gap-1 text-xs">
+      <dl className="grid gap-1 text-xs">
         <div>
           <dt className="text-muted inline">Before: </dt>
           <dd className="inline">{valueLabel(row.before_value)}</dd>
@@ -178,7 +179,7 @@ function ChangesTable({
             {Object.entries(CLASS_LABELS).map(([key, label]) => (
               <div key={key}>
                 <span className={cn(eyebrowClasses, 'block')}>{label}</span>
-                <span className="mono text-foreground mt-0.5 block text-base font-medium tabular-nums">
+                <span className={textRole('objectTitle', 'mono mt-0.5 block tabular-nums')}>
                   {counts?.[key] ?? 0}
                 </span>
               </div>
@@ -199,7 +200,7 @@ function ChangesTable({
                   <TableRow key={row.id}>
                     <TableCell>
                       <Link
-                        className="text-accent-text font-medium hover:underline"
+                        className={textRole('emphasis', 'text-accent-text hover:underline')}
                         href={`/site/crawls/${summary.crawl_b_id}/pages/${row.site_url_id}`}
                       >
                         {displayPath(row.normalized_url)}

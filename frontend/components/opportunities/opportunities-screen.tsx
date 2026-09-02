@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
-import { displayHeadingLgClasses } from '@/components/ui/typography';
+import { displayHeadingLgClasses, textRole } from '@/components/ui/typography';
 import { OpportunitiesCatalog } from '@/components/opportunities/opportunities-catalog';
 import { opportunitySummaryPollingInterval } from '@/components/opportunities/opportunity-summary-polling';
 import {
@@ -179,11 +179,11 @@ function SummaryStrip({
       <div className="grid gap-1">
         <AccentEyebrow>Recommendation queue</AccentEyebrow>
         <p className="text-foreground text-sm">
-          <span className="mono font-medium">{openCount}</span> open recommendations
+          <span className={textRole('emphasis', 'mono')}>{openCount}</span> open recommendations
           <span className="text-muted"> · </span>
-          <span className="mono font-medium">{highImpactCount}</span> high impact
+          <span className={textRole('emphasis', 'mono')}>{highImpactCount}</span> high impact
           <span className="text-muted"> · </span>
-          <span className="mono font-medium">{inProgressCount}</span> in progress
+          <span className={textRole('emphasis', 'mono')}>{inProgressCount}</span> in progress
         </p>
         <SourceMixHeadline mix={summary.source_mix} />
         <div className="flex flex-wrap items-center gap-2">
@@ -235,7 +235,7 @@ function SourceMixHeadline({ mix }: Readonly<{ mix: OpportunitySummary['source_m
   }
   return (
     <div className="grid gap-0.5">
-      <p className="text-foreground text-sm font-medium">
+      <p className={textRole('body')}>
         {mix.percentages.earned ?? 0}% Earned
         <span className="text-muted"> · </span>
         {mix.percentages.competitive_evidence ?? 0}% Competitive evidence

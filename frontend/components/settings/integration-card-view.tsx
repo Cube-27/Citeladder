@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardEyebrow, CardHeader } from '@/components/ui/card';
 import { integrationsApi, type IntegrationConnection } from '@/lib/api/integrations';
 import { assignLocation } from '@/lib/navigate';
+import { textRole } from '@/components/ui/typography';
 
 type GrantStatus = IntegrationConnection['grant_status'];
 type GrantBadge =
@@ -78,7 +79,7 @@ function GrantHeader({
     <CardHeader className="border-border-subtle flex-row items-center justify-between gap-3 border-b pb-3">
       <div className="grid min-w-0 gap-0.5">
         <CardEyebrow>OAuth grant</CardEyebrow>
-        <h3 className="text-foreground text-base font-medium">{meta.title}</h3>
+        <h3 className={textRole('objectTitle')}>{meta.title}</h3>
         <p className="text-muted truncate text-xs">{meta.blurb}</p>
       </div>
       <div className="shrink-0">
@@ -131,7 +132,7 @@ function ConnectedCard({ family, grant }: Readonly<{ family: GrantFamily; grant:
         <GrantHeader family={family} grant={grant} />
         <CardContent className="grid gap-3 pt-4">
           <GrantAlert family={family} status={grant.status} />
-          <div className="bg-well/60 border-border-subtle text-muted flex items-center gap-2 rounded-md border px-3 py-2 text-xs">
+          <div className="bg-well/60 border-border-subtle text-muted flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
             <Info className="text-secondary size-3.5 shrink-0" aria-hidden />
             <span>
               One OAuth grant shared by {grant.connections.length}{' '}

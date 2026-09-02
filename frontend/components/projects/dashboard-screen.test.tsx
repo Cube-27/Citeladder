@@ -135,6 +135,8 @@ vi.mock('@/lib/api/opportunities', () => ({
   opportunitiesApi: { updateOrder: vi.fn() },
 }));
 
+import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { DashboardScreen } from './dashboard-screen';
 
 describe('DashboardScreen', () => {
@@ -147,7 +149,11 @@ describe('DashboardScreen', () => {
   });
 
   it('renders state, comparable movement, actions, and report proof', () => {
-    render(<DashboardScreen />);
+    render(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
 
     expect(screen.getByRole('heading', { name: 'Acme' })).toBeInTheDocument();
     expect(screen.getByText('72.5')).toBeInTheDocument();
@@ -183,7 +189,11 @@ describe('DashboardScreen', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
 
-    render(<DashboardScreen />);
+    render(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
     await user.click(screen.getByRole('button', { name: /executive pdf/i }));
 
     expect(downloadExecutiveReport).toHaveBeenCalledWith(project.id);
@@ -202,7 +212,11 @@ describe('DashboardScreen', () => {
       .mockImplementation(() => undefined);
     const user = userEvent.setup();
 
-    render(<DashboardScreen />);
+    render(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
     await user.click(screen.getByRole('button', { name: /executive pdf/i }));
     expect(await screen.findByText('The report could not be downloaded. Try again.')).toBeVisible();
 
@@ -245,7 +259,11 @@ describe('DashboardScreen', () => {
       },
     };
 
-    render(<DashboardScreen />);
+    render(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
 
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
     // The Product loop strip was removed from Overview; loop evidence still
@@ -268,7 +286,11 @@ describe('DashboardScreen', () => {
       },
     };
 
-    render(<DashboardScreen />);
+    render(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
 
     expect(
       within(screen.getByRole('region', { name: 'Citation share' })).getByText('Unavailable'),
@@ -284,7 +306,11 @@ describe('DashboardScreen', () => {
       },
     };
 
-    render(<DashboardScreen />);
+    render(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
 
     expect(screen.getByText('0%')).toBeVisible();
     expect(screen.queryByText('Not measured')).not.toBeInTheDocument();

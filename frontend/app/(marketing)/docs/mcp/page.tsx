@@ -37,7 +37,7 @@ const TOOLS = [
 
 function Code({ children }: Readonly<{ children: string }>) {
   return (
-    <pre className="border-border-subtle bg-background-alt overflow-x-auto rounded-md border p-4 text-sm">
+    <pre className="border-border-subtle bg-background-alt overflow-x-auto rounded-[var(--radius-control)] border p-4 text-sm">
       <code className="font-mono">{children}</code>
     </pre>
   );
@@ -87,7 +87,7 @@ export default function McpDocumentationPage() {
                 <a
                   key={id}
                   href={`#${id}`}
-                  className="text-muted hover:text-foreground rounded-sm py-1 transition-colors"
+                  className="text-muted hover:text-foreground rounded-[var(--radius-control)] py-1 transition-colors"
                 >
                   {label}
                 </a>
@@ -103,7 +103,7 @@ export default function McpDocumentationPage() {
                 come from persisted CiteLadder projections; an MCP read never starts a crawl, audit,
                 sync, model call, publication, or external mutation.
               </p>
-              <div className="border-border-subtle divide-border-subtle divide-y rounded-md border">
+              <div className="border-border-subtle divide-border-subtle divide-y rounded-[var(--radius-control)] border">
                 {TOOLS.map(([name, description]) => (
                   <div key={name} className="grid gap-1 p-4 sm:grid-cols-[15rem_1fr] sm:gap-5">
                     <code className="text-foreground font-mono text-xs">{name}</code>

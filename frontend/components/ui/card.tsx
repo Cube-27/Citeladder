@@ -5,9 +5,10 @@ import { cn } from '@/lib/utils';
 import { cardClasses, type CardTone } from './card-variants';
 
 /**
- * Card is reserved for a meaningful semantic object. It owns a white fill and
- * 16px object radius, with no default border or elevation. Structural layout
- * uses metric groups, ledgers, editorial sections, and workspace panes.
+ * Card is reserved for a meaningful semantic object. It owns a white fill, the
+ * card radius and a hairline border, with no elevation — elevation belongs to
+ * overlays. Structural layout uses metric groups, ledgers, editorial sections,
+ * and workspace panes.
  *
  * Optional eyebrow header hook: render <CardEyebrow> above <CardTitle> for the
  * micro-label — e.g.
@@ -42,7 +43,7 @@ export function CardHeader({
     <header
       {...props}
       className={cn(
-        'flex flex-col gap-1 p-[var(--card-padding)] pb-2',
+        'flex flex-col gap-1 p-[var(--card-padding-large)] pb-2',
         bordered && 'border-border-subtle border-b pb-3',
         className,
       )}
@@ -92,13 +93,19 @@ export function CardDescription({
   );
 }
 
+/**
+ * `flush` drops the inset for content that owns its own edges — a table, a
+ * scrolling list — so the card's padding is a mode rather than something the
+ * call site cancels with `p-0`.
+ */
 export function CardContent({
   children,
   className,
+  flush,
   ...props
-}: Readonly<ComponentPropsWithoutRef<'div'> & { children: ReactNode }>) {
+}: Readonly<ComponentPropsWithoutRef<'div'> & { children: ReactNode; flush?: boolean }>) {
   return (
-    <div {...props} className={cn('p-[var(--card-padding)]', className)}>
+    <div {...props} className={cn(flush ? '' : 'p-[var(--card-padding-large)]', className)}>
       {children}
     </div>
   );

@@ -32,6 +32,7 @@ import {
   type TrendGranularity,
   type TrendRange,
 } from '@/lib/visibility/trends';
+import { textRole } from '@/components/ui/typography';
 
 export type EngineFilter = LogicalEngine | 'all';
 const METRICS_HELP_URL = '/faq';
@@ -99,7 +100,7 @@ function CohortFilter({ cohort, onChangeCohort }: ToolbarProps) {
     <Dropdown>
       <DropdownTrigger asChild>
         <FilterButton active={cohort !== 'core'} label="Filter by prompt cohort">
-          <span className="font-medium">{cohort === 'core' ? 'Core' : 'Comparison'}</span>
+          <span>{cohort === 'core' ? 'Core' : 'Comparison'}</span>
         </FilterButton>
       </DropdownTrigger>
       <DropdownContent>
@@ -124,7 +125,7 @@ function RunFilter({ runs, selectedRunId, onSelectRun }: ToolbarProps) {
       <DropdownTrigger asChild>
         <FilterButton active={false} label="Select run">
           <ICONS.runs className="text-muted size-3" aria-hidden />
-          <span className="font-medium">{selected?.label ?? 'Latest'}</span>
+          <span>{selected?.label ?? 'Latest'}</span>
         </FilterButton>
       </DropdownTrigger>
       <DropdownContent>
@@ -150,9 +151,7 @@ function EngineFilterControl({ engine, onChangeEngine }: ToolbarProps) {
       <DropdownTrigger asChild>
         <FilterButton active={engine !== 'all'} label="Filter by model">
           <ICONS.analytics className="size-3" aria-hidden />
-          <span className="font-medium">
-            {engine === 'all' ? 'All models' : engineLabel(engine)}
-          </span>
+          <span>{engine === 'all' ? 'All models' : engineLabel(engine)}</span>
         </FilterButton>
       </DropdownTrigger>
       <DropdownContent>
@@ -178,7 +177,7 @@ function RangeFilter({ range, onChangeRange }: ToolbarProps) {
       <DropdownTrigger asChild>
         <FilterButton active={range !== '90d'} label="Select date range">
           <CalendarRange className="size-3" aria-hidden />
-          <span className="font-medium">{rangeLabel(range)}</span>
+          <span>{rangeLabel(range)}</span>
         </FilterButton>
       </DropdownTrigger>
       <DropdownContent>
@@ -204,7 +203,7 @@ function GranularityFilter({ granularity, onChangeGranularity }: ToolbarProps) {
     <Dropdown>
       <DropdownTrigger asChild>
         <FilterButton active={granularity !== 'run'} label="Select granularity">
-          <span className="font-medium">{granularityLabel(granularity)}</span>
+          <span>{granularityLabel(granularity)}</span>
         </FilterButton>
       </DropdownTrigger>
       <DropdownContent>
@@ -232,7 +231,7 @@ function PromptFilter({ promptOptions, promptId, onChangePrompt }: ToolbarProps)
       <DropdownTrigger asChild>
         <FilterButton active={promptId !== null} label="Filter by prompt">
           <ICONS.prompts className="size-3" aria-hidden />
-          <span className="max-w-[16ch] truncate font-medium">
+          <span className={textRole('emphasis', 'max-w-[16ch] truncate')}>
             {prompt?.label ?? 'All prompts'}
           </span>
         </FilterButton>

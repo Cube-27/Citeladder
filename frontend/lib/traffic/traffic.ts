@@ -97,7 +97,7 @@ export function rangeToWindow(
 /**
  * Map a persisted series into `TrendChart` points. `percent: true` scales a
  * persisted FRACTION (the wire CTR, e.g. 0.0317) onto the chart's 0–100
- * domain, rounded to 2 decimals so dot labels never show float artifacts. A
+ * domain, rounded-[var(--radius-control)] to 2 decimals so dot labels never show float artifacts. A
  * null value stays null — the chart renders a gap, never a zero.
  */
 export function toChartPoints(

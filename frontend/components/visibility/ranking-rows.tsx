@@ -10,9 +10,10 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { scoreBand, scoreBandText } from '@/components/ui/score-band';
 import { Sparkline } from '@/components/ui/sparkline';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { cn } from '@/lib/utils';
 import type { RankingRow } from '@/lib/api/types';
 import { formatRate } from '@/lib/visibility/dashboard';
+import { textRole } from '@/components/ui/typography';
+import { tagClasses } from '@/components/ui/filter-chip-variants';
 
 /** Shared empty state for a rankings table with no rows. */
 export const NO_RANKINGS_MESSAGE = 'No brand or competitor mentions were recorded for this run.';
@@ -78,15 +79,13 @@ export function RankingRowsTable({
                     websiteUrl={row.website_url}
                     size="sm"
                   />
-                  <span className="text-foreground font-medium">{row.name}</span>
+                  <span className={textRole('emphasis')}>{row.name}</span>
                   {row.is_brand ? (
-                    <span className="bg-well text-secondary inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium">
-                      You
-                    </span>
+                    <span className={textRole('label', tagClasses())}>You</span>
                   ) : null}
                 </span>
               </TableCell>
-              <TableCell numeric className={cn('mono font-medium', bandClass)}>
+              <TableCell numeric className={bandClass}>
                 {formatRate(row.mention_rate)}
               </TableCell>
               {showTrend ? (

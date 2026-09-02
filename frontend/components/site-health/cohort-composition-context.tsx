@@ -1,5 +1,7 @@
 import type { SiteHealthOverview } from '@/lib/api/types';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
+import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 type CohortComposition = SiteHealthOverview['trend']['cohort_composition'];
 
@@ -21,8 +23,8 @@ export function CohortCompositionContext({
       : composition.removed_page_kinds.map(pageKindLabel).join(', ');
 
   return (
-    <div className="border-border-subtle bg-background-alt grid gap-2 rounded-md border p-3 text-xs">
-      <p className="text-foreground font-medium">Scored cohort composition changed.</p>
+    <div className={panelClasses({ tone: 'tonal', pad: 'compact' }, 'grid gap-2 text-xs')}>
+      <p className={textRole('emphasis', 'text-foreground')}>Scored cohort composition changed.</p>
       <p className="text-secondary">
         Added page kinds: {addedKinds}. Removed page kinds: {removedKinds}. Score movement is not
         split into quality versus cohort effects.

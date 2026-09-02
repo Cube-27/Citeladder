@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import type { SiteHealthEntitlement } from '@/lib/api/types';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * The canonical Site Health dashboard layout.
@@ -50,7 +51,7 @@ export function SiteHealthDashboardLayout({
         <Card data-testid="site-health-empty">
           <CardContent className="grid justify-items-start gap-3 py-[var(--empty-state-padding)]">
             <div className="grid max-w-2xl gap-1">
-              <h2 className="text-foreground text-xl font-medium tracking-[-0.02em]">
+              <h2 className={textRole('sectionTitle', 'tracking-[-0.02em]')}>
                 Run your first site crawl
               </h2>
               <p className="text-secondary text-sm">

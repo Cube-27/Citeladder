@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * Stateless presentational pieces of the Site Health screen (header + loading
@@ -33,7 +34,7 @@ export function ScreenSkeleton({ label = 'Loading Site Health…' }: Readonly<{ 
         className="flex min-h-8 items-center gap-3"
       >
         <Skeleton className="size-2 shrink-0 rounded-full" />
-        <p className="text-secondary text-sm font-medium">{label}</p>
+        <p className={textRole('body')}>{label}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3" aria-hidden>

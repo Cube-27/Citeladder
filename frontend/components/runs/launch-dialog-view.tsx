@@ -16,6 +16,8 @@ import {
   MIN_REPETITIONS,
   toggleEngine,
 } from '@/lib/runs/launch';
+import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 type Estimate = {
   execution_count: number;
@@ -58,7 +60,7 @@ function PromptSetField({
     <Field label="Prompt set" required>
       {(props) => {
         if (locked) {
-          return <p className="text-foreground text-sm font-medium">{label}</p>;
+          return <p className={textRole('body')}>{label}</p>;
         }
         if (!promptSetsLoading && !promptSets.length) {
           return (
@@ -208,7 +210,7 @@ export function LaunchDialogView({
           />
           <BatchField batches={batches} batchIndex={batchIndex} setBatchIndex={setBatchIndex} />
           <fieldset className="grid gap-2">
-            <legend className="text-secondary text-xs font-medium">
+            <legend className={textRole('label')}>
               Engines <span className="text-danger">*</span>
             </legend>
             {noEngines ? (
@@ -256,8 +258,8 @@ export function LaunchDialogView({
             )}
           </Field>
           {estimate ? (
-            <div className="border-border-subtle bg-well grid gap-1 rounded-lg border p-3 text-xs">
-              <span className="text-foreground font-medium">
+            <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1 text-xs')}>
+              <span className={textRole('emphasis', 'text-foreground')}>
                 {estimate.execution_count}{' '}
                 {estimate.execution_count === 1 ? 'response' : 'responses'} planned
               </span>

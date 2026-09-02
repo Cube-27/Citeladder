@@ -6,6 +6,7 @@ import { Check } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Tooltip } from './tooltip';
+import { chipBaseClasses, chipRestingClasses } from '@/components/ui/filter-chip-variants';
 
 export type RadioOption<T extends string> = {
   value: T;
@@ -89,7 +90,11 @@ function RadioChip<T extends string>({ option }: Readonly<{ option: RadioOption<
     <RadioGroupPrimitive.Item
       value={option.value}
       disabled={option.disabled}
-      className="focus-ring border-border bg-panel text-secondary hover:border-border-strong hover:text-foreground data-[state=checked]:border-accent-border data-[state=checked]:bg-accent-soft data-[state=checked]:text-accent-text ease-standard inline-flex h-[var(--control-height-sm)] items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-[border-color,background-color,color] duration-[250ms] disabled:cursor-not-allowed disabled:opacity-50"
+      className={cn(
+        chipBaseClasses,
+        chipRestingClasses,
+        'data-[state=checked]:border-accent-border data-[state=checked]:bg-accent-soft data-[state=checked]:text-accent-text disabled:cursor-not-allowed disabled:opacity-50',
+      )}
     >
       <span aria-hidden className="grid size-3.5 shrink-0 place-items-center">
         <RadioGroupPrimitive.Indicator>

@@ -104,7 +104,7 @@ export function ContentPreview({ phase, reduceMotion }: PreviewProps) {
                   />
                 ) : null}
               </span>
-              <span className="bg-accent text-inverse grid size-7 place-items-center rounded-md">
+              <span className="bg-accent text-inverse grid size-7 place-items-center rounded-[var(--radius-control)]">
                 <ArrowUp className="size-3.5" aria-hidden />
               </span>
             </div>

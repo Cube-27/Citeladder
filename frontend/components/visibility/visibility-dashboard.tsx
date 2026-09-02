@@ -120,7 +120,7 @@ function VisibilityWorkspace({
         onValueChange={filters.selectTab}
         items={VISIBILITY_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
         ariaLabel="Visibility views"
-        rootClassName="grid gap-4"
+        rootClassName="grid gap-[var(--workspace-gap)]"
         onIntent={queries.prefetchTab}
       >
         <TabPanel value={filters.activeTab} className="focus-ring">

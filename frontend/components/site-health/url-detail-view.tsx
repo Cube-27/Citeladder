@@ -5,7 +5,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label, displayHeadingXlClasses } from '@/components/ui/typography';
+import { Label, displayHeadingXlClasses, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { Pressable } from '@/components/ui/pressable';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
@@ -35,6 +35,8 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
+import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 export function UrlDetailView({
   detail,
@@ -128,7 +130,7 @@ function HeaderCard({
                     : 'Why this page kind?'
                 }
                 onClick={() => setEvidenceOpen((open) => !open)}
-                className="text-accent-text inline-flex items-center gap-1 text-xs font-medium"
+                className={textRole('label', 'text-accent-text inline-flex items-center gap-1')}
               >
                 {evidenceOpen ? (
                   <ChevronDown className="size-3" aria-hidden />
@@ -192,7 +194,7 @@ function PageKindEvidencePanel({
   const WarningIcon = ICONS.warning;
   return (
     <div id="page-kind-evidence">
-      <div className="border-border-subtle bg-background-alt grid gap-3 rounded-lg border p-3">
+      <div className={panelClasses({ tone: 'tonal', pad: 'compact' }, 'grid gap-3')}>
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
           <EvidenceFact label="Classified by" value={evidence.classifiedBy} />
           <EvidenceFact
@@ -213,7 +215,7 @@ function PageKindEvidencePanel({
         {evidence.otherReason !== null ? (
           <div
             role="note"
-            className="border-border-subtle text-secondary rounded-sm border px-3 py-2 text-sm"
+            className="border-border-subtle text-secondary rounded-[var(--radius-control)] border px-3 py-2 text-sm"
           >
             {evidence.otherReason === 'schema_only'
               ? 'Schema suggested a type, but no independent page evidence confirmed it, so the type was left unassigned.'
@@ -253,7 +255,7 @@ function PageKindEvidencePanel({
         {evidence.schemaConflict && evidence.schemaSuggestedType !== null ? (
           <div
             role="note"
-            className="border-warning-border bg-warning-bg text-warning-text flex items-start gap-2 rounded-sm border px-3 py-2 text-sm"
+            className="border-warning-border bg-warning-bg text-warning-text flex items-start gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm"
           >
             <WarningIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
             <div>
@@ -284,7 +286,7 @@ function EvidenceFact({
       <Label>{label}</Label>
       <span
         className={cn(
-          'mono text-sm font-medium',
+          textRole('bodyStrong', 'mono'),
           warning ? 'text-warning-text' : 'text-foreground',
         )}
       >
@@ -308,13 +310,13 @@ function EvidenceSignals({ evidence }: Readonly<{ evidence: PageKindEvidenceView
             <span className={cn('mono text-sm', chosen ? 'text-foreground' : 'text-secondary')}>
               {signal.signal}
               {chosen ? (
-                <span className="text-accent-text ms-1.5 text-xs font-medium">chosen</span>
+                <span className={textRole('label', 'text-accent-text ms-1.5')}>chosen</span>
               ) : null}
             </span>
             <Badge>{pageKindLabel(signal.pageKind)}</Badge>
             <span
               className={cn(
-                'mono text-sm font-medium',
+                textRole('bodyStrong', 'mono'),
                 chosen ? 'text-foreground' : 'text-secondary',
               )}
             >
@@ -356,14 +358,14 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
     <Card>
       <CardContent className="grid gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground text-base font-medium">Delivery Metrics</h2>
+          <h2 className={textRole('objectTitle')}>Delivery Metrics</h2>
           <span className="text-muted text-xs">Static HTTP-level measurements</span>
         </div>
         <dl className="grid gap-4 sm:grid-cols-4">
           {items.map((item) => (
             <div key={item.label} className="grid gap-0.5">
               <Label>{item.label}</Label>
-              <dd className="mono text-foreground text-sm font-medium">
+              <dd className={textRole('bodyStrong', 'mono')}>
                 {item.value === PLACEHOLDER ? (
                   <UnavailableValue state="not_measured" />
                 ) : (
@@ -384,19 +386,19 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
     <Card>
       <CardContent className="grid gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground text-base font-medium">All Issues ({issues.length})</h2>
+          <h2 className={textRole('objectTitle')}>All Issues ({issues.length})</h2>
           <span className="text-muted text-xs">Sorted by severity</span>
         </div>
         {ordered.length === 0 ? (
           <p className="text-secondary text-sm">No issues detected on this page.</p>
         ) : (
-          <ol className="divide-border-subtle divide-y">
+          <ol className={ledgerClasses()}>
             {ordered.map((issue, index) => (
               <li key={issue.occurrence_id} className="grid gap-2 py-3">
                 <span className="flex items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-3">
                     <span className="mono text-muted w-6 shrink-0 text-xs">{index + 1}</span>
-                    <span className="text-foreground text-sm font-medium">{issue.issue_title}</span>
+                    <span className={textRole('bodyStrong')}>{issue.issue_title}</span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
                     <Badge

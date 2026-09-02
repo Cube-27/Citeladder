@@ -12,15 +12,14 @@ const twMerge = extendTailwindMerge({
       'font-size': [
         {
           text: [
-            // App ladder rungs beyond the default t-shirt sizes (§7) —
-            // without these, `text-hero` + `text-score-high-text` would
-            // collapse to the colour and the numeral would lose its size.
-            '2xs',
-            'hero',
+            // App ladder rungs beyond the default t-shirt sizes — without
+            // these, `text-heading-sm` + `text-score-high-text` would collapse
+            // to the colour and the numeral would lose its size. `text-2xs`,
+            // `text-hero`, `text-display-1` and `text-display-2` no longer
+            // exist in the token layer and are no longer registered here.
             'heading-xs',
             'heading-sm',
-            'display-1',
-            'display-2',
+            'page-title',
           ],
         },
       ],

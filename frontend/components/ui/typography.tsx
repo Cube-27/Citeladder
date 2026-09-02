@@ -4,58 +4,106 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 
 /**
- * Heading recipes: `displayHeadingLgClasses` for panel / empty-state headings
- * (20/28 @600), `pageHeadingClasses` for top-bar page titles (24/32 @500), and
- * `displayHeadingXlClasses` for larger entity headings (24/32 @500). There is no
- * separate display face, so headings differ from body by size and weight only,
- * and both rungs bake their weight into the `--text-*` token. These are class
- * recipes, not components — the call site keeps whichever heading element is
- * semantic.
+ * The closed set of product text roles.
+ *
+ * A call site names the *job* the text does and gets its size, weight and ink
+ * from that job. It never writes `text-sm font-medium text-foreground` and
+ * picks a hierarchy of its own — that is how a card's title, its body copy, its
+ * metric and its timestamp all ended up at weight 500, which left weight
+ * carrying no information at all.
+ *
+ * Weight encodes exactly one distinction:
+ *   500 — things you *scan*: headings, labels, numeric values.
+ *   400 — things you *read*: body copy, descriptions, help text, metadata.
+ *
+ * Hierarchy is carried by size and ink (`foreground` → `secondary` → `muted`),
+ * never by weight. These stay class recipes rather than components so the call
+ * site keeps whichever element is semantic.
  */
-export const displayHeadingLgClasses = 'font-display text-lg font-medium text-foreground';
-export const pageHeadingClasses = 'font-display text-page-title font-medium text-foreground';
+const TEXT_ROLES = {
+  /** The top-bar `h1`. 24/500/foreground. */
+  pageTitle: 'font-display text-page-title font-medium text-foreground',
+  /** A screen section `h2`. 18/500/foreground. */
+  sectionTitle: 'font-display text-lg font-medium text-foreground',
+  /** A card or object `h3`. 16/500/foreground. */
+  objectTitle: 'font-display text-base font-medium text-foreground',
+  /** Reading copy — descriptions, prose, table cell text. 14/400/secondary. */
+  body: 'text-sm font-normal text-secondary',
+  /** Copy that genuinely leads its block. Use sparingly. 14/500/foreground. */
+  bodyStrong: 'text-sm font-medium text-foreground',
+  /** Timestamps, counts, help text, footnotes. 12/400/muted. */
+  meta: 'text-xs font-normal text-muted',
+  /** A field or column label. 12/500/secondary. */
+  label: 'text-xs font-medium text-secondary',
+  /** Uppercase micro-label. The shared recipe, byte-locked by policy. */
+  eyebrow: eyebrowClasses,
+  /** A primary numeral. 28/500/foreground, tabular. */
+  metric: 'font-display text-3xl font-medium tracking-[-0.02em] text-foreground tabular-nums',
+  /** A secondary numeral inside a dense row. 16/500/foreground, tabular. */
+  metricSm: 'font-display text-base font-medium text-foreground tabular-nums',
+  /**
+   * A change indicator. Deliberately ink-less: the caller supplies the tone
+   * role (`text-success-text`, `text-danger-text`), because the sign of the
+   * change is the meaning. 12/400, tabular.
+   */
+  delta: 'text-xs font-normal tabular-nums',
+  /**
+   * A value or name inside a row that owns its own size — a label/value pair,
+   * a table cell, a list line. Sets weight and ink only, so it never fights the
+   * size it inherits. Pass a tone to override the ink.
+   */
+  emphasis: 'font-medium text-foreground',
+} as const;
+
+export type TextRole = keyof typeof TEXT_ROLES;
+
+/** Resolve a text role, optionally merged with layout-only classes. */
+export function textRole(role: TextRole, className?: string) {
+  return cn(TEXT_ROLES[role], className);
+}
+
+/**
+ * Legacy recipe aliases. These are the same roles under their former names and
+ * are kept so the migration can land per directory; prefer `textRole`.
+ */
+export const pageHeadingClasses = TEXT_ROLES.pageTitle;
+export const displayHeadingLgClasses = TEXT_ROLES.sectionTitle;
 export const displayHeadingXlClasses = 'font-display text-2xl font-medium text-foreground';
 
-/** Section heading (card / block level). */
+/** Section heading (card / block level) — the `objectTitle` role. */
 export function SectionTitle({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'h2'>>) {
   return (
-    <h2 {...props} className={cn('font-display text-foreground text-base font-medium', className)}>
+    <h2 {...props} className={textRole('objectTitle', className)}>
       {children}
     </h2>
   );
 }
 
-/** Sentence-case micro-label (the same recipe as `eyebrowClasses`). */
+/** Uppercase micro-label — the `eyebrow` role. */
 export function Label({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={cn(eyebrowClasses, className)}>
+    <span {...props} className={textRole('eyebrow', className)}>
       {children}
     </span>
   );
 }
 
-/** Mono metric value with tabular numerals. */
+/** Primary numeral with tabular figures — the `metric` role. */
 export function Metric({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span
-      {...props}
-      className={cn(
-        'mono font-display text-foreground text-3xl font-medium tracking-[-0.02em] tabular-nums',
-        className,
-      )}
-    >
+    <span {...props} className={textRole('metric', className)}>
       {children}
     </span>
   );

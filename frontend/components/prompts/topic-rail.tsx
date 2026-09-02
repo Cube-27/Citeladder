@@ -12,6 +12,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { Topic } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
 
 const TOPICS_LOAD_ERROR = "Couldn't load topics. Check your connection and try again.";
 
@@ -80,7 +81,7 @@ export function TopicRail({
   };
 
   const errorBanner = topicErrorMessage(loadError, actionError) ? (
-    <Alert tone="danger" className="mx-1 mb-1">
+    <Alert tone="danger" className="mx-1">
       {topicErrorMessage(loadError, actionError)}
     </Alert>
   ) : null;
@@ -92,7 +93,7 @@ export function TopicRail({
       <nav
         id={desktopId}
         aria-label="Topics"
-        className="bg-panel hidden min-w-0 content-start gap-1 rounded-lg p-1.5 lg:sticky lg:top-4 lg:grid"
+        className="bg-panel hidden min-w-0 content-start gap-1 rounded-[var(--radius-card)] p-1.5 lg:sticky lg:top-4 lg:grid"
       >
         <div className="flex items-center justify-between px-1">
           <h3 className={eyebrowClasses}>Topics</h3>
@@ -182,7 +183,7 @@ function TopicSelect({
 }>) {
   const labelId = useId();
   return (
-    <div className="mb-1 grid gap-1.5 lg:hidden">
+    <div className="grid gap-1.5 lg:hidden">
       <span id={labelId} className={eyebrowClasses}>
         Topics
       </span>
@@ -220,7 +221,7 @@ function TopicItem({
   return (
     <div
       className={cn(
-        'group flex min-w-0 items-center gap-0.5 rounded-sm pe-0.5',
+        'group flex min-w-0 items-center gap-0.5 rounded-[var(--radius-control)] pe-0.5',
         selected ? 'bg-accent-subtle' : 'hover:bg-background-alt',
       )}
     >
@@ -229,8 +230,8 @@ function TopicItem({
         onClick={onSelect}
         aria-current={selected ? 'true' : undefined}
         className={cn(
-          'focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-xs',
-          selected ? 'text-accent-text font-medium' : 'text-foreground',
+          'focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 text-left text-xs',
+          selected ? textRole('emphasis', 'text-accent-text') : 'text-foreground',
         )}
       >
         <Tooltip content={label}>

@@ -76,7 +76,7 @@ function TrendCard({
               <span key={label}>{label}</span>
             ))}
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="grid min-w-0 flex-1 gap-1">
             <TrendChart
               label={title}
               data={points}
@@ -86,10 +86,7 @@ function TrendCard({
               className="h-45 w-full"
             />
             {points.length > 1 ? (
-              <div
-                className="text-muted mt-1 flex justify-between text-xs tabular-nums"
-                aria-hidden
-              >
+              <div className="text-muted flex justify-between text-xs tabular-nums" aria-hidden>
                 <span>{firstLabel}</span>
                 <span>{lastLabel}</span>
               </div>

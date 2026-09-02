@@ -29,6 +29,9 @@ import {
 import { formatWindowDate } from '@/lib/format';
 import { useProjectContext } from '@/lib/project/project-context';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Card, CardContent } from '@/components/ui/card';
+import { Stack } from '@/components/ui/layout';
 
 const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
@@ -51,12 +54,12 @@ function DemandProjectionSkeleton() {
       {/* Summary Cards Skeleton */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {Array.from({ length: 5 }, (_, i) => (
-          <Skeleton key={i} className="h-24 rounded-md" />
+          <Skeleton key={i} className="h-24 rounded-[var(--radius-control)]" />
         ))}
       </div>
 
       {/* Detector Bar Skeleton */}
-      <Skeleton className="h-12 rounded-md" />
+      <Skeleton className="h-12 rounded-[var(--radius-control)]" />
 
       {/* Filter Bar Skeleton */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -71,7 +74,7 @@ function DemandProjectionSkeleton() {
       {/* Signal Cards Skeleton */}
       <div className="grid gap-3">
         {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-40 rounded-md" />
+          <Skeleton key={i} className="h-40 rounded-[var(--radius-control)]" />
         ))}
       </div>
     </div>
@@ -151,7 +154,6 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       <EditorialSectionHeader
-        ruled
         title={
           <span className="flex flex-wrap items-center gap-2">
             <span>
@@ -165,7 +167,6 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
             </span>
           </span>
         }
-        description="Versioned GSC query evidence. Highest-priority signals are shown first; branded demand remains a separate cohort."
         actions={
           <Button
             variant="secondary"
@@ -213,11 +214,14 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
         </Alert>
       ) : null}
 
-      {/* Summary KPI Strip */}
-      <DemandSummaryCards snapshot={snapshot} />
-
-      {/* Detector Status Ribbon */}
-      <DemandDetectorBar snapshot={snapshot} />
+      <Card>
+        <CardContent>
+          <Stack gap="workspace">
+            <DemandSummaryCards snapshot={snapshot} />
+            <DemandDetectorBar snapshot={snapshot} />
+          </Stack>
+        </CardContent>
+      </Card>
 
       {/* Interactive Filter & Search Controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -265,35 +269,29 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
           ))}
         </div>
       ) : snapshot.signals.length === 0 ? (
-        <div className="py-[var(--empty-state-padding)] text-center">
-          <Sparkles className="text-muted/60 mx-auto size-8" />
-          <h3 className="text-foreground mt-2 text-sm font-medium">
-            No qualifying search gaps observed
-          </h3>
-          <p className="text-muted mt-1 text-xs">
-            Search Console data was observed, but no configured detector emitted a signal in this
-            window.
-          </p>
-        </div>
+        <EmptyState
+          icon={Sparkles}
+          heading="No qualifying search gaps observed"
+          description="Search Console data was observed, but no configured detector emitted a signal in this window."
+        />
       ) : (
-        <div className="py-[var(--empty-state-padding)] text-center">
-          <Search className="text-muted/60 mx-auto size-8" />
-          <h3 className="text-foreground mt-2 text-sm font-medium">No signals match your filter</h3>
-          <p className="text-muted mt-1 text-xs">
-            Try choosing a different filter tab or clearing your search term.
-          </p>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              setActiveTab('all');
-              setSearchQuery('');
-            }}
-            className="mt-3 text-xs"
-          >
-            Clear Filters
-          </Button>
-        </div>
+        <EmptyState
+          icon={Search}
+          heading="No signals match your filter"
+          description="Try choosing a different filter tab or clearing your search term."
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setActiveTab('all');
+                setSearchQuery('');
+              }}
+            >
+              Clear Filters
+            </Button>
+          }
+        />
       )}
 
       {/* Evidence Inspection Drawer */}

@@ -18,6 +18,7 @@ import {
   type NavGroup,
   type NavItem,
 } from './nav-items';
+import { textRole } from '@/components/ui/typography';
 
 function NavLink({
   item,
@@ -34,8 +35,8 @@ function NavLink({
       className={cn(
         'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 text-sm transition-colors duration-150',
         active
-          ? 'bg-accent-soft text-accent-text font-medium'
-          : 'text-secondary hover:bg-active hover:text-foreground font-normal',
+          ? textRole('emphasis', 'bg-panel')
+          : 'text-secondary hover:bg-panel/70 hover:text-foreground',
       )}
     >
       <Icon className={cn('size-4 shrink-0', active ? 'text-accent' : 'text-subtle')} aria-hidden />
@@ -64,10 +65,13 @@ function StationLinks({
                 onFocus={() => onIntent(item.href)}
                 aria-current={isNavItemActive(pathname, searchParams, item) ? 'page' : undefined}
                 className={cn(
-                  'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium',
+                  textRole(
+                    'bodyStrong',
+                    'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3',
+                  ),
                   isNavItemActive(pathname, searchParams, item)
-                    ? 'bg-accent-soft text-accent-text font-medium'
-                    : 'text-muted hover:bg-active hover:text-foreground',
+                    ? textRole('emphasis', 'bg-panel')
+                    : 'text-muted hover:bg-panel/70 hover:text-foreground',
                 )}
               >
                 {item.label}
@@ -79,7 +83,7 @@ function StationLinks({
     );
   }
   return (
-    <ul className="flex flex-col gap-0.5">
+    <ul className="flex flex-col gap-[var(--sidebar-item-gap)]">
       {items.map((item) => (
         <li key={item.href}>
           <NavLink
@@ -95,15 +99,16 @@ function StationLinks({
 
 export function SidebarNav({ className }: Readonly<{ className?: string }>) {
   return (
-    <nav aria-label="Primary" className={cn('flex flex-col gap-3', className)}>
+    <nav
+      aria-label="Primary"
+      className={cn('flex flex-col gap-[var(--sidebar-group-gap)]', className)}
+    >
       {NAV_GROUPS.map((group) => {
         const showHeading = group.title !== 'Overview';
         return (
           <div key={group.title} className="flex flex-col gap-0">
             {showHeading ? (
-              <p className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-3 pb-1.5')}>
-                {group.title}
-              </p>
+              <p className={cn(eyebrowClasses, 'text-secondary px-2.5 pt-2 pb-1')}>{group.title}</p>
             ) : null}
             <StationLinks group={group} />
           </div>
@@ -127,7 +132,7 @@ export function MobilePrimaryNavigation() {
   const onIntent = useRouteIntent();
   return (
     <nav
-      className="border-border bg-panel safe-bottom fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-5 border-t md:hidden"
+      className="border-border bg-panel safe-bottom fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-4 border-t md:hidden"
       aria-label="Primary mobile navigation"
     >
       {MOBILE_NAV_ITEMS.map((item) => {
@@ -141,7 +146,7 @@ export function MobilePrimaryNavigation() {
             onFocus={() => onIntent(item.href)}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'text-xs flex min-w-0 flex-col items-center justify-center gap-1 font-medium',
+              textRole('label', 'flex min-w-0 flex-col items-center justify-center gap-1'),
               active ? 'text-accent-text' : 'text-muted hover:text-accent-text',
             )}
           >

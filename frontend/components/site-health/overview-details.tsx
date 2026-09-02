@@ -23,6 +23,9 @@ import { TrendChart } from '@/components/ui/trend-chart';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { SiteHealthOverview } from '@/lib/api/types';
 import { PLACEHOLDER, statusLabel } from '@/lib/site-health/status';
+import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 function percent(value: number | null): string {
   return value === null ? PLACEHOLDER : `${Math.round(value * 100)}%`;
@@ -60,7 +63,7 @@ export function OverviewDetailsSkeleton() {
       <div className="grid gap-4 xl:grid-cols-[1.15fr_1fr]" aria-hidden>
         {[0, 1].map((key) => (
           <Card key={key}>
-            <CardContent className="grid gap-3 p-[var(--card-padding)]">
+            <CardContent className="grid gap-3">
               <Skeleton className="h-5 w-40" />
               {Array.from({ length: 5 }, (_, index) => (
                 <Skeleton key={index} className="h-10 w-full" />
@@ -72,7 +75,7 @@ export function OverviewDetailsSkeleton() {
       <div className="grid gap-4 xl:grid-cols-3" aria-hidden>
         {[0, 1, 2].map((key) => (
           <Card key={key}>
-            <CardContent className="grid gap-3 p-[var(--card-padding)]">
+            <CardContent className="grid gap-3">
               <Skeleton className="h-5 w-36" />
               <Skeleton className="h-24 w-full" />
               <Skeleton className="h-4 w-3/4" />
@@ -117,7 +120,9 @@ function DimensionLedger({
                       surface, and a wrapping sentence pushes the score columns
                       off a screenful. Full text stays available on hover. */}
                   <div className="grid max-w-md min-w-0 gap-1">
-                    <span className="text-foreground font-medium">{dimension.label}</span>
+                    <span className={textRole('emphasis', 'text-foreground')}>
+                      {dimension.label}
+                    </span>
                     <span className="text-muted truncate text-xs" title={dimension.description}>
                       {dimension.description}
                     </span>
@@ -197,7 +202,7 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
                   </TableCell>
                   <TableCell>
                     <Link
-                      className="text-foreground font-normal underline decoration-transparent hover:decoration-current"
+                      className="underline decoration-transparent hover:decoration-current"
                       href={issueHref(issue.rule_id, issue.finding_class)}
                     >
                       {issue.description || issue.rule_id}
@@ -233,9 +238,9 @@ function WebFundamentalsCard({
           {data.areas.map((area) => (
             <div
               key={area.key}
-              className="border-border-subtle bg-well grid gap-1 rounded-sm border p-3"
+              className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1')}
             >
-              <span className="text-foreground text-xs font-medium capitalize">{area.key}</span>
+              <span className={textRole('label', 'capitalize')}>{area.key}</span>
               <Badge variant="status" value={measurementTone(area.state)}>
                 {statusLabel(area.state)}
               </Badge>
@@ -292,7 +297,7 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
             <span className="text-secondary">
               {CHANGE_METRIC_LABELS[metric.key] ?? metric.label}
             </span>
-            <span className="text-foreground font-medium tabular-nums">
+            <span className={textRole('emphasis', 'text-foreground tabular-nums')}>
               {directionIndicator(metric.direction)} {formatDelta(metric.delta, metric.key)}
             </span>
           </div>
@@ -383,12 +388,12 @@ function WebFundamentalsDrawer({
       title="Web Fundamentals"
       description="Static evidence from the acquired HTML and response headers."
     >
-      <div className="divide-border-subtle grid divide-y">
+      <div className={ledgerClasses()}>
         {data.areas.map((area) => (
           <section key={area.key} className="grid gap-3 py-4 first:pt-0">
             <header className="grid gap-1">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-foreground text-base font-medium capitalize">{area.key}</h2>
+                <h2 className={textRole('objectTitle', 'capitalize')}>{area.key}</h2>
                 <Badge variant="status" value={measurementTone(area.state)}>
                   {statusLabel(area.state)}
                 </Badge>
@@ -404,7 +409,7 @@ function WebFundamentalsDrawer({
               ) : (
                 area.top_findings.map((finding) => (
                   <div key={finding.rule_id} className="grid gap-1">
-                    <span className="text-foreground text-sm font-medium">{finding.title}</span>
+                    <span className={textRole('bodyStrong')}>{finding.title}</span>
                     <span className="text-muted text-xs">
                       {finding.affected_pages} affected pages · {finding.remediation}
                     </span>

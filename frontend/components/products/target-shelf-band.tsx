@@ -38,7 +38,7 @@ export function TargetShelfBand({ query }: Readonly<{ query: CommerceQueries['sh
           <CardHeader>
             <CardDescription>{label}</CardDescription>
             {value === null ? (
-              <UnavailableValue state="not_measured" className="mt-1 inline-flex" />
+              <UnavailableValue state="not_measured" className="inline-flex" />
             ) : (
               <CardTitle className="tabular-nums">{value}</CardTitle>
             )}

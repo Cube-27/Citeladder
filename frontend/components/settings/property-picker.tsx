@@ -17,6 +17,8 @@ import {
 import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
+import { tagClasses } from '@/components/ui/filter-chip-variants';
 
 const PROVIDER_NOUN: Record<IntegrationConnection['provider'], string> = {
   gsc: 'Search Console property',
@@ -55,14 +57,14 @@ function PropertyOption({
       disabled={disabled}
       aria-pressed={selected}
       className={cn(
-        'border-border-subtle flex w-full items-center gap-3 rounded-md border px-3 py-2 text-start',
+        'border-border-subtle flex w-full items-center gap-3 rounded-[var(--radius-control)] border px-3 py-2 text-start',
         'hover:bg-well focus-visible:ring-accent focus-visible:ring-2 focus-visible:outline-none',
         'disabled:pointer-events-none disabled:opacity-60',
         selected && 'border-accent bg-well',
       )}
     >
       <span className="min-w-0 flex-1">
-        <span className="text-foreground block truncate text-sm font-medium">{property.label}</span>
+        <span className={textRole('bodyStrong', 'block truncate')}>{property.label}</span>
         <span className="text-muted block truncate font-mono text-xs">{property.property_ref}</span>
       </span>
       {pending ? (
@@ -158,11 +160,14 @@ export function PropertyPicker({
     <>
       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
         {selected ? (
-          <span className="bg-well border-border-subtle text-secondary max-w-full truncate rounded border px-2 py-0.5 font-mono text-xs">
-            {selected}
-          </span>
+          <span className={tagClasses('outline', 'max-w-full truncate font-mono')}>{selected}</span>
         ) : (
-          <span className="text-warning-text bg-warning-bg/50 max-w-full truncate rounded px-2 py-0.5 text-xs font-medium">
+          <span
+            className={textRole(
+              'label',
+              'text-warning-text bg-warning-bg/50 max-w-full truncate rounded-xs px-2 py-0.5',
+            )}
+          >
             No {noun} selected
           </span>
         )}

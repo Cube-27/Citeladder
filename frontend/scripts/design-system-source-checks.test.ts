@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  rawRadiusViolations,
   directRadixImportViolations,
   editorialTypographyViolations,
   nestedCardViolations,
@@ -90,7 +91,75 @@ describe('productUiSourceViolations', () => {
   it('rejects retired product typography, palette utilities, and feature elevation', () => {
     const source =
       '<div className="text-2xs font-semibold bg-indigo-500 shadow-card">Example</div>';
-    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(3);
+    // Retired size, retired weight, raw palette, feature elevation — and the
+    // weight is also a call-site weight decision, which is its own violation.
+    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(4);
+  });
+
+  it('rejects a font weight chosen at a call site', () => {
+    const source = '<span className="text-sm font-medium">Example</span>';
+    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(1);
+  });
+
+  it('lets components/ui own font weight, since the roles live there', () => {
+    const source = '<span className="text-sm font-medium">Example</span>';
+    expect(productUiSourceViolations(source, 'components/ui/example.tsx', true)).toEqual([]);
+  });
+
+  it('rejects a bordered filled box that should be a Panel', () => {
+    const source =
+      '<div className="bg-well border-border-subtle rounded-[var(--radius-control)] border p-3">x</div>';
+    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(1);
+  });
+
+  it('leaves chips and icon tiles alone — a Panel needs an all-sides padding', () => {
+    const source =
+      '<span className="bg-well border-border-subtle rounded-[var(--radius-control)] border px-2 py-0.5">x</span>';
+    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toEqual([]);
+  });
+
+  it('does not read a prose renderer’s descendant selectors as a Panel', () => {
+    const source =
+      '<div className="[&_pre]:bg-well [&_pre]:border [&_pre]:rounded-[var(--radius-control)] [&_pre]:p-4">x</div>';
+    expect(productUiSourceViolations(source, 'lib/content/example.tsx', true)).toEqual([]);
+  });
+
+  it('rejects a child that sets its own vertical rhythm', () => {
+    const source = '<p className="mt-3">Example</p>';
+    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(1);
+  });
+
+  it('allows a 2px nudge, a sized glyph, and a negative margin', () => {
+    const cases = [
+      '<p className="mt-0.5">x</p>',
+      '<Icon className="mt-1.5 size-4" />',
+      '<div className="-mt-2">x</div>',
+    ];
+    for (const source of cases) {
+      expect(productUiSourceViolations(source, 'components/example.tsx', true)).toEqual([]);
+    }
+  });
+});
+
+describe('Radius ladder', () => {
+  it('rejects a size-named radius on any surface, marketing included', () => {
+    const source = '<div className="rounded-lg">x</div>';
+    expect(rawRadiusViolations(source, 'components/marketing/example.tsx')).toHaveLength(1);
+    expect(rawRadiusViolations(source, 'components/example.tsx')).toHaveLength(1);
+  });
+
+  it('rejects a bare rounded and a directional size name', () => {
+    expect(
+      rawRadiusViolations('<div className="rounded">x</div>', 'components/a.tsx'),
+    ).toHaveLength(1);
+    expect(
+      rawRadiusViolations('<div className="rounded-t-md">x</div>', 'components/a.tsx'),
+    ).toHaveLength(1);
+  });
+
+  it('allows the role tokens, the micro rung, and the pill', () => {
+    const source = '<div className="rounded-[var(--radius-card)] rounded-xs rounded-full">x</div>';
+    expect(rawRadiusViolations(source, 'components/example.tsx')).toEqual([]);
   });
 
   it('rejects website typography inside product UI', () => {

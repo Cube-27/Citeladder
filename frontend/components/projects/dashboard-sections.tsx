@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { SectionTitle } from '@/components/ui/typography';
+import { SectionTitle, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { AccentEyebrow, eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Project } from '@/lib/api/types';
@@ -21,6 +21,8 @@ import {
   MovementChart,
   StateMetric,
 } from './dashboard-primitives';
+import { Stack } from '@/components/ui/layout';
+import { Tooltip } from '@/components/ui/tooltip';
 
 export function DashboardHeader({
   data,
@@ -44,7 +46,7 @@ export function DashboardHeader({
   const website = data.project.website_url;
   const facts = data.facts;
   return (
-    <Card className="grid gap-[var(--workspace-gap)] p-[var(--card-padding)]">
+    <Card className="grid gap-[var(--workspace-gap)] p-[var(--card-padding-large)]">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
           <BrandLogo
@@ -54,9 +56,9 @@ export function DashboardHeader({
             size="xl"
             className="size-12 rounded-[var(--radius-control)]"
           />
-          <div className="min-w-0">
+          <div className="grid min-w-0 gap-1">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="font-display text-foreground truncate text-xl font-medium tracking-[-0.02em]">
+              <h2 className={textRole('sectionTitle', 'truncate tracking-[-0.02em]')}>
                 {data.project.brand_name || data.project.name}
               </h2>
               {website ? (
@@ -64,7 +66,10 @@ export function DashboardHeader({
                   href={/^https?:\/\//i.test(website) ? website : `https://${website}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-muted hover:text-foreground border-border-subtle bg-background inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2 py-0.5 text-xs font-medium transition-colors"
+                  className={textRole(
+                    'label',
+                    'hover:text-foreground border-border-subtle bg-background inline-flex items-center gap-1 rounded-[var(--radius-control)] border px-2 py-0.5 transition-colors',
+                  )}
                 >
                   <span className="truncate">
                     {website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
@@ -74,7 +79,7 @@ export function DashboardHeader({
               ) : null}
             </div>
             {data.measurement ? (
-              <p className="text-muted mt-1 text-xs">
+              <p className="text-muted text-xs">
                 Tracked {formatUtcTimestamp(data.measurement.completed_at)} ·{' '}
                 {data.measurement.logical_engines.join(', ')}
               </p>
@@ -98,9 +103,7 @@ export function DashboardHeader({
       <div className="border-border-subtle grid gap-3 border-t pt-3">
         <div className="flex items-center justify-between gap-3">
           <SectionTitle id="company-facts">Company facts</SectionTitle>
-          <span className="text-muted text-xs font-medium">
-            {facts.industry || 'Industry not set'}
-          </span>
+          <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
         </div>
         <div
           className={cn(hairlineBandClasses, 'border-y-0 sm:grid-cols-3')}
@@ -136,16 +139,18 @@ function FactSummary({
   supporting?: string;
 }>) {
   return (
-    <div className={hairlineBandItemClasses}>
+    <div className={cn(hairlineBandItemClasses, 'grid gap-1.5')}>
       <p className={eyebrowClasses}>{label}</p>
       {value.trim() ? (
-        <p className="text-foreground mt-1.5 line-clamp-none text-sm leading-snug font-medium md:line-clamp-2">
-          {value}
-        </p>
+        <div className="min-w-0">
+          <Tooltip content={value}>
+            <p className={textRole('body', 'line-clamp-2 overflow-hidden leading-snug')}>{value}</p>
+          </Tooltip>
+        </div>
       ) : (
-        <UnavailableValue state={emptyState} className="mt-1.5 inline-flex" />
+        <UnavailableValue state={emptyState} className="inline-flex justify-self-start" />
       )}
-      {supporting ? <p className="text-muted mt-2 text-xs">{supporting}</p> : null}
+      {supporting ? <p className={textRole('meta')}>{supporting}</p> : null}
     </div>
   );
 }
@@ -180,7 +185,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
         <NextAction data={data} />
         <Track data={data} />
       </div>
-      <Card aria-labelledby="project-state" className="grid gap-3 p-[var(--card-padding)]">
+      <Card aria-labelledby="project-state" className="grid gap-3 p-[var(--card-padding-large)]">
         <div className="flex items-center justify-between gap-3">
           <SectionTitle id="project-state">Project state</SectionTitle>
           <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
@@ -198,24 +203,24 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
 
 function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card className="text-foreground flex flex-col justify-between gap-4 p-[var(--card-padding)]">
-      <div>
+    <Card className="text-foreground flex flex-col justify-between gap-4 p-[var(--card-padding-large)]">
+      <Stack gap="compact">
         <div className="flex items-center justify-between">
           <AccentEyebrow>
             <span className="bg-accent size-1.5 rounded-full" aria-hidden />
             Next action
           </AccentEyebrow>
-          <span className="text-muted text-xs font-medium">
+          <span className={textRole('label')}>
             {data.next_action.kind === 'monitor' ? 'Optimal state' : 'Action recommended'}
           </span>
         </div>
-        <p className="font-display text-foreground mt-3 text-lg leading-snug font-medium">
-          {data.next_action.title}
-        </p>
-        <p className="text-muted mt-1 text-xs leading-relaxed">
-          Prioritized from deterministic evidence and current visibility coverage.
-        </p>
-      </div>
+        <Stack gap="tight">
+          <p className={textRole('sectionTitle', 'leading-snug')}>{data.next_action.title}</p>
+          <p className={textRole('meta', 'leading-relaxed')}>
+            Prioritized from deterministic evidence and current visibility coverage.
+          </p>
+        </Stack>
+      </Stack>
       <Button asChild variant="primary" size="md" className="self-start">
         <Link href={data.next_action.href}>
           {data.next_action.kind === 'monitor' ? 'View trends' : 'Continue'}
@@ -231,42 +236,37 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <Card
       aria-labelledby="citation-share-track"
-      className="flex flex-col justify-between gap-4 p-[var(--card-padding)]"
+      className="flex flex-col justify-between gap-4 p-[var(--card-padding-large)]"
     >
-      <div>
+      <Stack gap="compact">
         <div className="flex items-center justify-between">
           <span className={eyebrowClasses}>AI Visibility Track</span>
-          <span className="text-muted text-xs font-medium">
+          <span className={textRole('label')}>
             {data.track.observed_at ? `${data.track.engine_coverage} engine(s)` : 'No run'}
           </span>
         </div>
-        <div className="mt-3">
+        <Stack gap="tight">
           <SectionTitle id="citation-share-track">Citation share</SectionTitle>
-          <div className="mt-1 flex items-baseline gap-3">
+          <div className="flex items-baseline gap-3">
             {data.track.citation_share.value === null ? (
               <UnavailableValue state={data.track.observed_at ? 'unavailable' : 'not_run'} />
             ) : (
-              <p className="font-display text-foreground text-3xl leading-none font-medium tracking-[-0.02em] tabular-nums">
+              <p className={textRole('metric', 'leading-none')}>
                 {metricValue(data.track.citation_share.value, '%')}
               </p>
             )}
             {delta !== null ? (
-              <span
-                className={cn(
-                  'font-display text-xs font-medium tabular-nums',
-                  delta >= 0 ? 'text-success' : 'text-danger',
-                )}
-              >
+              <span className={textRole('delta', delta >= 0 ? 'text-success' : 'text-danger')}>
                 {delta > 0 ? '+' : ''}
                 {delta.toFixed(1)}%
               </span>
             ) : null}
           </div>
-        </div>
-        <p className="text-muted mt-1.5 text-xs leading-relaxed">
-          {data.track.observed_at ? deltaLabel(delta) : data.track.limitations[0]}
-        </p>
-      </div>
+          <p className={textRole('meta', 'leading-relaxed')}>
+            {data.track.observed_at ? deltaLabel(delta) : data.track.limitations[0]}
+          </p>
+        </Stack>
+      </Stack>
       <div className="flex justify-end">
         <Button asChild variant="ghost" size="sm">
           <Link href="/visibility?tab=trends">
@@ -282,14 +282,12 @@ function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <Card
       aria-labelledby="movement"
-      className="flex flex-col justify-between gap-4 p-[var(--card-padding)]"
+      className="flex flex-col justify-between gap-4 p-[var(--card-padding-large)]"
     >
       <div className="grid gap-3">
-        <div>
+        <div className="grid gap-0.5">
           <SectionTitle id="movement">Movement</SectionTitle>
-          <p className="text-muted mt-0.5 text-xs">
-            Only comparable persisted measurements are shown.
-          </p>
+          <p className="text-muted text-xs">Only comparable persisted measurements are shown.</p>
         </div>
         <MovementChart movements={data.movements} />
       </div>
@@ -314,13 +312,11 @@ export function ActionsAndProof({
 }>) {
   return (
     <div className="grid gap-[var(--workspace-gap)]">
-      <Card aria-labelledby="ranked-actions" className="p-[var(--card-padding)]">
+      <Card aria-labelledby="ranked-actions" className="p-[var(--card-padding-large)]">
         <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-t border-b pt-3 pb-3">
-          <div>
+          <div className="grid gap-0.5">
             <SectionTitle id="ranked-actions">Ranked actions</SectionTitle>
-            <p className="text-muted mt-0.5 text-xs">
-              Shared order · drag or use the arrow controls.
-            </p>
+            <p className="text-muted text-xs">Shared order · drag or use the arrow controls.</p>
           </div>
           <Button asChild variant="ghost" size="sm">
             <Link href="/opportunities">
@@ -343,21 +339,19 @@ export function ActionsAndProof({
             ))}
           </ol>
         ) : (
-          <div className="py-[var(--empty-state-padding)]">
-            <p className="text-foreground text-sm font-medium">No open actions</p>
-            <p className="text-muted mt-1 text-xs">
-              Run another audit to look for new opportunities.
-            </p>
+          <div className="grid gap-1 py-[var(--empty-state-padding)]">
+            <p className={textRole('bodyStrong')}>No open actions</p>
+            <p className="text-muted text-xs">Run another audit to look for new opportunities.</p>
           </div>
         )}
       </Card>
       <Card
         aria-labelledby="progress-proof"
-        className="flex flex-col justify-between gap-4 p-[var(--card-padding)] sm:flex-row sm:items-center"
+        className="flex flex-col justify-between gap-4 p-[var(--card-padding-large)] sm:flex-row sm:items-center"
       >
-        <div>
+        <div className="grid gap-1">
           <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>
-          <p className="text-muted mt-1 max-w-[65ch] text-xs leading-relaxed">
+          <p className="text-muted max-w-[65ch] text-xs leading-relaxed">
             {data.resolved_actions.count} action(s) resolved since the comparable run. Metric
             movement is shown alongside completion without claiming causation.
           </p>

@@ -1,4 +1,6 @@
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
+import { tagClasses } from '@/components/ui/filter-chip-variants';
 
 /**
  * ProvenanceChip — analyzer version and snapshot identity.
@@ -35,10 +37,7 @@ export function ProvenanceChip({ provenance, className }: Readonly<ProvenanceChi
 
   return (
     <span
-      className={cn(
-        'text-muted bg-well text-xs inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 font-medium tabular-nums',
-        className,
-      )}
+      className={cn(textRole('label', tagClasses('well', 'tabular-nums')), className)}
       title="Rules and snapshot this projection was computed from"
     >
       {parts.join(' · ')}

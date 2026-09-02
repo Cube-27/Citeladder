@@ -15,6 +15,7 @@ const LIGHT_SURFACE_TOKENS = [
   '--color-panel-tonal',
   '--color-well',
   '--color-active',
+  '--color-sidebar',
 ];
 const NEUTRAL_TEXT_TOKENS = [
   '--color-foreground',
@@ -32,7 +33,6 @@ const CSS_BLOCK_CONTRACTS = new Map([
       '--flow-measure-wide: 55rem',
       '--flow-header-gap: 2.5rem',
       '--flow-block: 2rem',
-      '--radius-control: var(--radius-auth-control)',
     ],
   ],
   [
@@ -55,6 +55,9 @@ const CSS_BLOCK_CONTRACTS = new Map([
   ['.website-eyebrow', []],
   ['.website-data-display', []],
 ]);
+
+/** Geometry roles belong to one ladder in globals.css; no surface re-scales them. */
+const SHARED_GEOMETRY_ROLES = ['--radius-control', '--radius-card', '--radius-overlay'];
 
 const ROLE_COLOR_CONTRACTS = new Map([
   ['.website-hero-display', 'color: var(--color-foreground)'],
@@ -170,6 +173,17 @@ function classFragments(node, bindings, seen = new Set()) {
   return [];
 }
 
+/** Every prop through which a call site can hand Tailwind classes to a component. */
+const CLASS_ATTRIBUTES = new Set([
+  'className',
+  'rootClassName',
+  'contentClassName',
+  'bodyClassName',
+  'panelClassName',
+  'itemClassName',
+  'triggerClassName',
+]);
+
 function jsxClassData(source, label) {
   const sourceFile = ts.createSourceFile(
     label,
@@ -182,11 +196,15 @@ function jsxClassData(source, label) {
   const entries = [];
   const visit = (node) => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      const classAttribute = node.attributes.properties.find(
+      // `className` is not the only way a call site hands classes to a
+      // component. `rootClassName="grid gap-6"` slipped past every spacing and
+      // type rule for exactly as long as this only looked at one attribute.
+      const classAttributes = node.attributes.properties.filter(
         (property) =>
-          ts.isJsxAttribute(property) && property.name.getText(sourceFile) === 'className',
+          ts.isJsxAttribute(property) && CLASS_ATTRIBUTES.has(property.name.getText(sourceFile)),
       );
-      if (classAttribute && ts.isJsxAttribute(classAttribute)) {
+      for (const classAttribute of classAttributes) {
+        if (!ts.isJsxAttribute(classAttribute)) continue;
         const classes = classAttribute.initializer
           ? classFragments(classAttribute.initializer, bindings).join(' ')
           : '';
@@ -241,6 +259,54 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
     }
     if (/\b(?:font-semibold|font-bold|text-2xs)\b/.test(entry.classes)) {
       violations.push(`${label}:${entry.line}: product type uses a retired weight or size`);
+    }
+    // Weight is never a call-site decision. It encodes one distinction — 500 for
+    // what you scan, 400 for what you read — and that belongs to a text role, not
+    // to whoever happens to be writing this className. Leaving it open is how a
+    // card's title, its body copy, its metric and its timestamp all ended up at
+    // 500, which left weight carrying no information at all.
+    if (
+      !label.startsWith('components/ui/') &&
+      /\bfont-(?:normal|medium|semibold|bold)\b/.test(entry.classes)
+    ) {
+      violations.push(
+        `${label}:${entry.line}: font weight belongs to a text role (components/ui/typography.tsx)`,
+      );
+    }
+    // A bordered, filled, padded box is a Panel. Twenty-seven of these were
+    // rebuilt by hand, each with its own fill, border colour, radius and
+    // padding, which is why the same evidence box looked different in six
+    // screens. Card could not absorb them — a Card may not nest in a Card — so
+    // panelClasses is the owner. Chips, icon tiles and controls are excluded by
+    // requiring an all-sides padding.
+    if (
+      !label.startsWith('components/ui/') &&
+      /(?<![:\w\]-])bg-(?:panel|well|background-alt)(?:\/\d+)?\b/.test(entry.classes) &&
+      /(?<![:\w\]-])border(?![-\w])/.test(entry.classes) &&
+      /(?<![:\w\]-])rounded-\[var\(--radius-(?:control|card|overlay)\)\]/.test(entry.classes) &&
+      /(?<![:\w\]-])p-(?:\d[\d.]*|\[var\([^)]+\)\])/.test(entry.classes)
+    ) {
+      violations.push(
+        `${label}:${entry.line}: a bordered filled box is a Panel (components/ui/panel.tsx)`,
+      );
+    }
+    // Vertical rhythm belongs to the container. A child that sets its own
+    // `mt-*` owns its distance from a sibling it cannot see, which is why
+    // ninety-odd of these accumulated in a dozen values and why changing a
+    // screen's rhythm meant editing every child taking part in it. Use `Stack`
+    // or a `gap`.
+    //
+    // Exempt: a className that also sizes a glyph (`size-*`), which is optical
+    // alignment against a text baseline rather than rhythm; negative margins,
+    // which are deliberate overlap; and 2px, which is too small to be rhythm.
+    if (
+      !label.startsWith('components/ui/') &&
+      !/(?<![:\w\]-])size-[0-9.]+\b/.test(entry.classes) &&
+      /(?<![:\w\]-])(?:mt|mb|my)-(?!0\b|0\.5\b|px\b)[0-9.]+\b/.test(entry.classes)
+    ) {
+      violations.push(
+        `${label}:${entry.line}: vertical rhythm belongs to a container gap (components/ui/layout.tsx)`,
+      );
     }
     if (/\btext-5xl\b|\btext-\[[^\]]+\]/.test(entry.classes)) {
       violations.push(`${label}:${entry.line}: product type must use the approved even ladder`);
@@ -403,6 +469,35 @@ const TEXT_ROLE_BACKGROUND_MESSAGE =
   'a border-scale neutral, or a semantic bg-*-bg';
 
 /** Surfaces must never be painted with a text-ink token. */
+
+/**
+ * Radius is a ladder, not a vocabulary. `--radius-control` / `--radius-card` /
+ * `--radius-overlay` are the three roles, with `rounded-xs` as the micro rung
+ * for chart bars, skeletons and inline code, and `rounded-full` for pills.
+ *
+ * This applies to every surface, not just product UI: the app, login and
+ * marketing each used to carry their own idea of a rounded corner, so the same
+ * button rendered at three different radii depending on which page it sat on.
+ */
+export function rawRadiusViolations(source, label) {
+  if (label.includes('.test.') || !/\.(?:tsx|ts)$/.test(label)) return [];
+  const violations = [];
+  for (const entry of jsxClassData(source, label)) {
+    const raw = entry.classes
+      .split(/\s+/)
+      .filter((token) =>
+        /^(?:[a-z-]+:)*rounded(?:-(?:t|b|l|r|s|e|tl|tr|bl|br|ss|se|es|ee))?(?:-(?:none|sm|md|lg|xl|2xl|3xl))?$/.test(
+          token,
+        ),
+      );
+    if (raw.length) {
+      violations.push(
+        `${label}:${entry.line}: ${raw.join(', ')} — radius must use a role token (--radius-control|card|overlay), rounded-xs, or rounded-full`,
+      );
+    }
+  }
+  return violations;
+}
 export function textRoleBackgroundViolations(source, label) {
   if (!/\.(?:tsx|ts|mjs|js)$/.test(label)) return [];
   const sourceFile = ts.createSourceFile(
@@ -458,14 +553,14 @@ export function productContractViolations(root) {
     ['--control-height', '32px'],
     ['--control-height-lg', '36px'],
     ['--radius-control', '8px'],
-    ['--radius-card', '10px'],
-    ['--radius-overlay', '12px'],
+    ['--radius-card', '12px'],
+    ['--radius-overlay', '16px'],
     ['--color-background', ['#f7', 'f6fd'].join('')],
     ['--color-background-alt', ['#f4', 'f4f1'].join('')],
     ['--color-panel-tonal', ['#f4', 'f4f1'].join('')],
     ['--color-well', ['#f4', 'f4f1'].join('')],
     ['--color-active', ['#ef', 'efeb'].join('')],
-    ['--color-sidebar', ['#f7', 'f6fd'].join('')],
+    ['--color-sidebar', ['#f4', 'f4f1'].join('')],
     ['--color-action', ['#51', '47e5'].join('')],
     ['--color-accent', ['#1b', '44e0'].join('')],
     ['--color-focus', ['#1b', '44e0'].join('')],
@@ -516,8 +611,14 @@ export function productContractViolations(root) {
     violations.push('components/ui/eyebrow.tsx: product meta labels must be one uppercase recipe');
   }
   const card = readFileSync(join(root, 'components', 'ui', 'card-variants.ts'), 'utf8');
-  if (/shadow-|\bborder\b/.test(card.match(/cva\(([^;]+)\)/s)?.[1] ?? '')) {
-    violations.push('components/ui/card-variants.ts: Card must remain flat by default');
+  const cardRecipe = card.match(/cva\(([^;]+)\)/s)?.[1] ?? '';
+  // A card is defined by its edge. Elevation stays overlay-only; the border now
+  // belongs to the owner, so no call site has to rebuild a bordered panel.
+  if (/shadow-/.test(cardRecipe)) {
+    violations.push('components/ui/card-variants.ts: Card elevation belongs to overlays');
+  }
+  if (!/\bborder-border-subtle\b/.test(cardRecipe) || !/\bborder\b/.test(cardRecipe)) {
+    violations.push('components/ui/card-variants.ts: Card must own its hairline border');
   }
   const button = readFileSync(join(root, 'components', 'ui', 'button-variants.ts'), 'utf8');
   if (!button.includes('bg-action text-action-fg')) {
@@ -657,6 +758,14 @@ export function websiteContractViolations(root) {
       !rules.some((rule) => selectorRegex.test(rule.prelude) && declarationRegex.test(rule.body))
     ) {
       violations.push(cssLabel + ': ' + selector + ' missing scoped declaration ' + declaration);
+    }
+  }
+
+  for (const role of SHARED_GEOMETRY_ROLES) {
+    if (new RegExp(escapeRegExp(role) + String.raw`\s*:`).test(readFileSync(cssPath, 'utf8'))) {
+      violations.push(
+        cssLabel + ': ' + role + ' is a shared geometry role and must not be redefined per surface',
+      );
     }
   }
 

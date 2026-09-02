@@ -2,6 +2,8 @@
 
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { RootError } from '@/lib/api/types';
+import { textRole } from '@/components/ui/typography';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 /**
  * Root-failure block for the Errors & Blocked tab (SH-4 — B3).
@@ -21,7 +23,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
         The start URL could not be fetched — the crawl never reached any page. Each row is one
         network call the crawler made.
       </p>
-      <ul className="divide-border-subtle border-border-subtle divide-y border-y">
+      <ul className={ledgerClasses('ruled')}>
         {errors.map((error) => {
           const signature = JSON.stringify([
             error.method,
@@ -39,7 +41,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
               data-testid="root-error-row"
               className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2"
             >
-              <span className="mono text-foreground text-sm font-medium">{error.method}</span>
+              <span className={textRole('bodyStrong', 'mono')}>{error.method}</span>
               <span className="mono text-muted min-w-0 flex-1 truncate text-sm">
                 {error.target}
               </span>

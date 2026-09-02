@@ -24,6 +24,8 @@ import { formatAudited } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
 
 import { UrlDetailView } from './url-detail-view';
+import { textRole } from '@/components/ui/typography';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 const HISTORY_LIMIT = 25;
 const RERUN_SEARCH_PARAM = 'rerun';
@@ -166,7 +168,7 @@ function IssueHistory({ crawlId, siteUrlId }: Readonly<{ crawlId: string; siteUr
   return (
     <Card>
       <CardContent className="grid gap-3">
-        <h2 className="text-foreground text-base font-medium">Issue History</h2>
+        <h2 className={textRole('objectTitle')}>Issue History</h2>
         {historyQuery.isError ? <Alert tone="danger">Could not load issue history.</Alert> : null}
         {historyQuery.isLoading ? <HistorySkeleton /> : null}
         {!historyQuery.isLoading && !historyQuery.isError && rows.length === 0 ? (
@@ -204,7 +206,7 @@ function HistorySkeleton() {
 
 function HistoryRows({ rows }: Readonly<{ rows: IssueHistoryPage['items'] }>) {
   return (
-    <ul className="divide-border-subtle divide-y">
+    <ul className={ledgerClasses()}>
       {rows.map((row) => (
         <li key={row.id} className="flex items-center justify-between gap-3 py-2">
           <span className="flex min-w-0 flex-col">

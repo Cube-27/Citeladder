@@ -151,15 +151,36 @@ high-density information architecture.
 Ad-hoc inline text sizes, weights, and color overrides are prohibited in favor of token
 classes.
 
-| Role | Family | Size / line height | Weight | Tracking | Class / Token | Text Colour |
-| --- | --- | ---: | ---: | ---: | :--- | :--- |
-| Metadata / table header | Geist | 12/16px | 400–500 | 0 | `text-xs` | `text-secondary` / `text-muted` |
-| Body and controls | Geist | 14/20px | 400 | 0 | `text-sm` | semantic text role |
-| Emphasized body | Geist | 14/20px | 500 | 0 | `text-sm font-medium` | semantic text role |
-| Section heading | Geist | 16/22px | 500 | 0 | `text-base font-medium` | `text-foreground` |
-| Panel heading | Geist | 18/24px | 500 | 0 | `text-lg font-medium` | `text-foreground` |
-| Page title | Geist | 24/32px | 500 | 0 | `text-page-title font-medium` | `text-foreground` |
-| Primary metric | Geist | 28/36 or 32/40px | 500 | -0.02em | `text-3xl` / `text-4xl` + `tabular-nums` | `text-foreground` |
+A call site never writes a size, a weight and an ink and picks a hierarchy of
+its own. It names the **job the text does** and takes the hierarchy from that.
+The roles live in `components/ui/typography.tsx` and are reached through
+`textRole(role, layoutClasses?)`.
+
+| Role | Job | Size / line height | Weight | Ink |
+| :--- | :--- | ---: | ---: | :--- |
+| `pageTitle` | the top-bar `h1` | 24/32px | 500 | `foreground` |
+| `sectionTitle` | a screen section `h2` | 18/24px | 500 | `foreground` |
+| `objectTitle` | a card or object `h3` | 16/22px | 500 | `foreground` |
+| `bodyStrong` | copy that leads its block | 14/20px | 500 | `foreground` |
+| `body` | reading copy, descriptions, cell text | 14/20px | **400** | `secondary` |
+| `label` | a field or column label | 12/16px | 500 | `secondary` |
+| `meta` | timestamps, counts, help, footnotes | 12/16px | **400** | `muted` |
+| `eyebrow` | uppercase micro-label | 12/16px | 500 | `muted`, 0.06em |
+| `emphasis` | a value or name at the ambient size | inherited | 500 | `foreground` |
+| `metric` | a primary numeral | 28/36px | 500 | `foreground`, tabular |
+| `metricSm` | a numeral in a dense row | 16/22px | 500 | `foreground`, tabular |
+| `delta` | a change indicator | 12/16px | 400 | caller's tone, tabular |
+
+**Weight encodes exactly one distinction**: 500 for what you *scan* — headings,
+labels, numeric values — and 400 for what you *read*. Hierarchy is carried by
+size and ink (`foreground` → `secondary` → `muted`), never by weight. This is
+not a preference: the app previously ran 377 `font-medium` against 16
+`font-normal`, so a card's title, its body copy, its metric and its timestamp
+all rendered at 500 and weight told the reader nothing.
+
+`font-*` utilities are rejected by `check:policy` outside `components/ui/`.
+`<strong>`, `<b>` and `<th>` take their one step up from a base rule in
+`globals.css`, so no call site restates it.
 
 Fourteen pixels is the product baseline. Twelve pixels is reserved for short
 labels, provenance, badges, and table headers. `text-2xs`, 10px and 11px product
@@ -175,9 +196,33 @@ The product app is an enterprise data-dense environment. It uses diffuse elevati
 and crisp semantic hairlines to maintain clear structure without visual clutter:
 
 - **Elevation and borders**: structural sections are open on the canvas or use a
-  tonal well. `Card` is reserved for a real semantic object and defaults to a
-  white fill with no border or shadow. Shadows belong only to overlays, menus,
-  drawers, dialogs, the command palette, and toasts.
+  tonal well. `Card` is reserved for a real semantic object: a white fill, the
+  card radius, and a hairline border. It carries no shadow — a card is defined
+  by its edge — and shadows belong only to overlays, menus, drawers, dialogs,
+  the command palette, and toasts. `Card` sets no display of its own: making it
+  a flex column would re-flow every existing card and put an overflow boundary
+  between a sticky child and its scroll container, so a row that needs aligned
+  footers opts in at the call site.
+- **The nested box is a `Panel`**: a bordered, filled, padded box *inside* a card
+  or a section uses `panelClasses({ tone, pad })` from `components/ui/panel.tsx`.
+  Twenty-seven of these were hand-rolled, each with its own fill, border colour,
+  radius and padding, which is why the same evidence box looked different in six
+  screens. `Card` cannot absorb them: a `Card` may not nest inside a `Card`.
+- **Radius is one ladder, everywhere**: `--radius-control` (8px),
+  `--radius-card` (12px), `--radius-overlay` (16px), with `rounded-xs` (4px) for
+  micro geometry — chart bars, skeletons, inline code — and `rounded-full` for
+  pills. Tailwind's default radius scale is cleared in `@theme` so a size name
+  cannot be reached for, and `check:policy` rejects `rounded-sm|md|lg|xl` on
+  every surface. **No surface redefines a shared geometry role.** Login used to
+  set `--radius-control` to 12px while `--radius-card` stayed 10px, which
+  inverted the ladder: controls rounder than the card holding them.
+- **Vertical rhythm belongs to the container**: use `Stack` (or a `gap`) from
+  `components/ui/layout.tsx`, never `mt-*` on a child. A child that sets its own
+  top margin owns its distance from a sibling it cannot see; ninety-odd of these
+  had accumulated across a dozen values. The rungs are `section` (32px),
+  `workspace` (16px), `compact` (12px) and `tight` (4px). A 2px nudge, a sized
+  glyph, and a negative margin stay allowed — those are optical alignment and
+  deliberate overlap, not rhythm.
 - **Drawer and Sheet Composition**: Modals, slide-out drawers, and sheets already provide an
   elevated surface. They must **never** contain nested `<Card>` components. Field groups and
   lists inside drawers use clean structural section divisions (`space-y-4` / borderless rows).
@@ -203,11 +248,13 @@ and crisp semantic hairlines to maintain clear structure without visual clutter:
 
 The content area caps at 1360px. Internal groups use 16–24px and major sections
 separate by 32px. Compact gutters remain 16px; dialogs and drawers use 20px.
-Cross-surface geometry is role-driven: controls and fields use 8px corners,
-semantic objects use 10px, and overlays use 12px. Focused-flow fields may use
-their documented 12px auth-control role. Fully rounded geometry is reserved for chips, badges,
-status dots, count pills, and filter toggles. Components consume the semantic geometry role;
-they do not select a route-local radius.
+Cross-surface geometry is role-driven and there is exactly one ladder: controls
+and fields use 8px corners, semantic objects use 12px, and overlays use 16px,
+with 4px for micro geometry and full rounding for chips, badges, status dots,
+count pills, and filter toggles. **No surface — app, login, onboarding or
+marketing — redefines a role.** Components consume the semantic geometry role;
+they do not select a route-local radius, and `check:policy` rejects both a
+size-named radius and any per-surface redeclaration of a role.
 
 `shadow-elevated` owns floating menus and popovers; `shadow-modal-value` owns
 drawers and dialogs. No authenticated feature owns a shadow recipe.
@@ -217,7 +264,8 @@ Authentication and onboarding share the `[data-flow-surface]` geometry owned by
 `website-type.css`: a 64px bar (56px below 640px), 720px content measure, 880px
 review measure, 24px gutters growing to 32px, 40px from title block to first
 group, 32px between groups, 16px from help to controls, and 8px within a title
-stack. Flow controls use 12px corners; selection chips are 36px high on desktop
+stack. Flow controls take the shared 8px control role, the same as the app; the
+surface re-scales type, never geometry. Selection chips are 36px high on desktop
 and 44px on touch. The shell owns the scrolling main region and bottom action
 bar so content height never creates a dead band above the primary action.
 
@@ -487,7 +535,8 @@ focused grid, then an optional CTA.
 
 ### Controls
 
-App buttons use the 8px control-radius role with no decorative inset border.
+Buttons use the 8px control-radius role with no decorative inset border, on
+every surface.
 Website and flow primary buttons use the same shared Button behaviour and blue
 fill, but add the reference treatment: 12px corners, a subtle light inset edge,
 a defined outer blue edge, and quiet elevation. Secondary, neutral, ghost, and
@@ -498,7 +547,7 @@ at least a 44px touch target.
 Inputs use the semantic input and border roles. Labels sit with their control,
 helper text explains constraints, and errors give a recovery instruction. Never
 use placeholder text as the only label. Authentication and onboarding fields and
-large flow buttons use the dedicated 12px auth-control radius; a composed input exposes one
+large flow buttons use the same shared control radius; a composed input exposes one
 focus ring on its shared frame rather than a second outline on its native input.
 
 ### Panels, badges, and evidence
@@ -523,7 +572,7 @@ without translation or a leading rail.
 Menus and custom listboxes use `shadow-elevated`, the semantic overlay-radius role, the shared
 menu panel/item recipes, and a short system-curve entrance. Single-select filters use
 radio menu items so the current value is visible without relying on colour.
-Tooltips use the elevated rung and the 12px overlay-radius role; dialogs and drawers use
+Tooltips use the elevated rung and the 16px overlay-radius role; dialogs and drawers use
 `shadow-modal-value` with the same overlay-radius role. Drawers are right-side modal contextual
 sheets owned by `components/ui/drawer.tsx`. Their scrim dims and locks the page;
 outside click, Escape, or the close control dismisses them, and focus returns to
@@ -585,7 +634,11 @@ Before merging a visual change, verify:
   same token ladder: `#F7F6FD` canvas and sidebar, `#F4F4F1` structure/well/tonal
   panel, and `#EFEFEB` hover and selected state. Sections separate with a hairline
   rule and space, not with a box around their contents.
-- App controls use 8px, semantic objects use 10px, and overlays use 12px.
+- Controls use 8px, semantic objects use 12px, and overlays use 16px — one
+  ladder on every surface, with no per-surface redeclaration of a role.
+- Text names a role from `textRole`; no call site writes a font weight.
+- Vertical rhythm comes from a `Stack` or a container `gap`, never a child `mt-*`.
+- A bordered, filled, padded box inside a card or section is `panelClasses`.
   Shadows appear only on floating surfaces.
 - Any new motion is calm and stops under `prefers-reduced-motion`.
 - Text, focus, status, loading, error, empty, keyboard, touch, reduced-motion,

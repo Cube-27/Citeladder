@@ -42,7 +42,8 @@ type Command = {
 };
 
 /** Chrome shared by the empty state and each row, so heights never drift. */
-const ROW = 'flex w-full items-center gap-2.5 rounded-sm px-3 text-left text-sm h-9';
+const ROW =
+  'flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-3 text-left text-sm h-9';
 
 /**
  * Results keep ONE flat order for the keyboard cursor, but render grouped.
@@ -237,7 +238,7 @@ export function CommandPalette() {
         <span className="min-w-0 truncate text-sm font-normal max-sm:sr-only">
           Search or jump to…
         </span>
-        <kbd className="bg-background-alt border-border/60 text-muted ms-auto hidden shrink-0 rounded-sm border px-1.5 py-0.5 text-xs font-medium sm:inline">
+        <kbd className="bg-background-alt border-border/60 text-muted ms-auto hidden shrink-0 rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs font-medium sm:inline">
           Ctrl K
         </kbd>
       </Button>
@@ -283,7 +284,7 @@ export function CommandPalette() {
                 // that rule is unlayered and would otherwise beat a utility.
                 className="text-foreground placeholder:text-muted h-11 min-w-0 flex-1 bg-transparent text-sm outline-none focus-visible:outline-none!"
               />
-              <kbd className="border-border/60 text-muted shrink-0 rounded-md border px-1.5 py-0.5 font-mono text-xs">
+              <kbd className="border-border/60 text-muted shrink-0 rounded-[var(--radius-control)] border px-1.5 py-0.5 font-mono text-xs">
                 esc
               </kbd>
             </div>
@@ -356,16 +357,16 @@ export function CommandPalette() {
                 it states its own controls rather than assuming they are known. */}
             <div className="border-border/60 text-muted flex shrink-0 items-center gap-4 border-t px-4 py-2.5 text-xs font-medium">
               <span className="flex items-center gap-1.5">
-                <kbd className="border-border/60 bg-well rounded-md border px-1.5 py-0.5 font-mono text-xs">
+                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 font-mono text-xs">
                   ↑
                 </kbd>
-                <kbd className="border-border/60 bg-well rounded-md border px-1.5 py-0.5 font-mono text-xs">
+                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 font-mono text-xs">
                   ↓
                 </kbd>
                 navigate
               </span>
               <span className="flex items-center gap-1.5">
-                <kbd className="border-border/60 bg-well rounded-md border px-1.5 py-0.5 font-mono text-xs">
+                <kbd className="border-border/60 bg-well rounded-[var(--radius-control)] border px-1.5 py-0.5 font-mono text-xs">
                   ↵
                 </kbd>
                 select

@@ -10,13 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Label } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import { byPageKindRows } from '@/lib/site-health/page-kinds';
 import { formatScore } from '@/lib/site-health/status';
-import { cn } from '@/lib/utils';
 
 /**
  * Dashboard per-page-kind score breakdown.
@@ -78,27 +77,21 @@ export function PageKindScores({
                   <TableCell numeric className="mono text-secondary">
                     {row.analyzed_count}
                   </TableCell>
-                  <TableCell
-                    numeric
-                    className={cn('mono font-medium', scoreTextClass(row.web_fundamentals_score))}
-                  >
+                  <TableCell numeric className={scoreTextClass(row.web_fundamentals_score)}>
                     <MeasurementValue
                       score={row.web_fundamentals_score}
                       coverage={row.web_fundamentals_coverage}
                       state={row.web_fundamentals_state}
                     />
                   </TableCell>
-                  <TableCell
-                    numeric
-                    className={cn('mono font-medium', scoreTextClass(row.aeo_readiness_score))}
-                  >
+                  <TableCell numeric className={scoreTextClass(row.aeo_readiness_score)}>
                     <MeasurementValue
                       score={row.aeo_readiness_score}
                       coverage={row.aeo_measurement_coverage}
                       state={row.aeo_measurement_state}
                     />
                   </TableCell>
-                  <TableCell numeric className="mono font-medium">
+                  <TableCell numeric>
                     {row.aeo_measurement_coverage === null ? (
                       <UnavailableValue state="not_measured" />
                     ) : (
@@ -126,7 +119,7 @@ function MeasurementValue({
     return (
       <span className="grid gap-0.5">
         <span>{formatScore(score)}</span>
-        <span className="text-muted text-xs font-normal normal-case">
+        <span className={textRole('meta', 'normal-case')}>
           {coverageLabel} · {measurementConfidence(state)}
         </span>
       </span>

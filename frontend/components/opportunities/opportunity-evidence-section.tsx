@@ -27,12 +27,12 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
     <section className="grid gap-2">
       <Label>Evidence</Label>
       {promptText ? (
-        <blockquote className="border-accent-border bg-accent-subtle rounded-md border-l px-3 py-2.5">
+        <blockquote className="border-accent-border bg-accent-subtle rounded-[var(--radius-control)] border-l px-3 py-2.5">
           <p className="text-foreground text-sm leading-snug">“{promptText}”</p>
         </blockquote>
       ) : null}
       {url ? (
-        <p className="mono text-accent-text bg-background-alt rounded-md px-3 py-2 text-xs break-all">
+        <p className="mono text-accent-text bg-background-alt rounded-[var(--radius-control)] px-3 py-2 text-xs break-all">
           {url}
         </p>
       ) : null}

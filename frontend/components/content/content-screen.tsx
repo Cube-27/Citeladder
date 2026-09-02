@@ -29,6 +29,7 @@ import { ContentComposer, GenerationErrorPanel, GeneratingPanel } from './conten
 import { GenerationResult } from './content-screen-result';
 import { GenerationHistoryWorkspace } from './content-screen-history';
 import { opportunityTarget, useOriginSelections } from './content-screen-origins';
+import { textRole } from '@/components/ui/typography';
 
 const FALLBACK_SKILL_ID = 'content_page';
 
@@ -105,7 +106,7 @@ function NoProjectState() {
         </p>
         <Link
           href="/projects"
-          className="text-accent-text text-sm font-medium underline underline-offset-4"
+          className={textRole('bodyStrong', 'text-accent-text underline underline-offset-4')}
         >
           Go to Projects
         </Link>

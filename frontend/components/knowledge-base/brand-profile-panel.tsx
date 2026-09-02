@@ -15,6 +15,7 @@ import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { BrandProfile, BrandProfileDraft, Project } from '@/lib/api/types';
 import { formErrorMessage } from '@/lib/forms/error-message';
+import { textRole } from '@/components/ui/typography';
 
 const PROFILE_TABS = [
   { id: 'facts', label: 'Facts & Positioning' },
@@ -203,7 +204,7 @@ function ProfileTabPanel({
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       <section aria-labelledby="tracked-competitors" className="grid gap-2">
-        <h3 id="tracked-competitors" className="text-foreground text-sm font-medium">
+        <h3 id="tracked-competitors" className={textRole('bodyStrong')}>
           Tracked competitors
         </h3>
         {competitors.length ? (
@@ -211,7 +212,10 @@ function ProfileTabPanel({
             {competitors.map((competitor) => (
               <li
                 key={`${competitor.name}:${competitor.domains[0] ?? ''}`}
-                className="bg-background text-secondary flex min-w-0 items-center gap-2 rounded-[var(--radius-control)] px-3 py-2 text-xs font-medium"
+                className={textRole(
+                  'label',
+                  'bg-background flex min-w-0 items-center gap-2 rounded-[var(--radius-control)] px-3 py-2',
+                )}
               >
                 <BrandLogo
                   name={competitor.name}

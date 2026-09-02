@@ -21,6 +21,7 @@ import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
 import type { Project } from '@/lib/api/types';
+import { textRole } from '@/components/ui/typography';
 
 export function ProjectControls({
   projects,
@@ -53,7 +54,7 @@ export function ProjectControls({
               websiteUrl={project.website_url}
               size="sm"
             />
-            <span className="min-w-0 flex-1 truncate font-medium">
+            <span className={textRole('emphasis', 'min-w-0 flex-1 truncate')}>
               {project.brand_name || project.name}
             </span>
             {project.id === activeProjectId ? (

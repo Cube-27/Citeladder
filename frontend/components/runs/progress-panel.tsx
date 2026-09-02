@@ -5,7 +5,7 @@ import { MeasurementContext } from '@/components/runs/measurement-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { Label, Metric } from '@/components/ui/typography';
+import { Label, Metric, textRole } from '@/components/ui/typography';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
@@ -127,9 +127,7 @@ function ProgressMetrics({ audit }: Readonly<{ audit: Audit }>) {
       </div>
       <div className="grid gap-1">
         <Label>Created</Label>
-        <span className="text-secondary text-sm font-medium">
-          {formatDateTime(audit.created_at)}
-        </span>
+        <span className={textRole('bodyStrong')}>{formatDateTime(audit.created_at)}</span>
       </div>
     </dl>
   );
@@ -195,7 +193,7 @@ export function ProgressPanel({
 
   return (
     <Card>
-      <CardContent className="grid gap-4 p-[var(--card-padding)]">
+      <CardContent className="grid gap-4">
         <ProgressHeader
           audit={audit}
           polling={polling}

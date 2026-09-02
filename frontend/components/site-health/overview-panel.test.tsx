@@ -243,7 +243,7 @@ describe('OverviewPanel', () => {
       'href',
       '/issues?rule=aeo.visible_attribution&finding_class=advisory',
     );
-    expect(issueLink).toHaveClass('font-normal');
+    expect(issueLink.className).not.toMatch(/font-(?:medium|semibold|bold)/);
     await user.click(screen.getByRole('button', { name: 'View evidence' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Images missing alt attributes');
     expect(screen.getByRole('dialog')).not.toHaveTextContent('mobile_layout');

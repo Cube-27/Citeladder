@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 
 import { EvidenceLink, type EvidenceRef } from './evidence-link';
 import { ProvenanceChip, type Provenance } from './provenance-chip';
+import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 /**
  * Insight — the reusable unit the product model produces.
@@ -93,16 +95,13 @@ export function Insight({
     <article
       data-insight-id={insight.id}
       data-layer={insight.layer}
-      className={cn(
-        'bg-panel border-border flex flex-col gap-3 rounded-sm border p-4 sm:p-[var(--card-padding)]',
-        className,
-      )}
+      className={cn(panelClasses({}, 'flex flex-col gap-3'), className)}
     >
       {/* 1. Priority and source layer */}
       <div className="flex items-center justify-between gap-3">
         <span
           className={cn(
-            'text-xs inline-flex items-center rounded px-1.5 py-0.5 font-medium',
+            textRole('label', 'inline-flex items-center rounded-xs px-1.5 py-0.5'),
             PRIORITY_TONE[insight.priority],
           )}
         >
@@ -112,7 +111,7 @@ export function Insight({
       </div>
 
       {/* 2. Claim */}
-      <h3 className="font-display text-foreground text-sm leading-[1.35] font-medium text-balance">
+      <h3 className={textRole('bodyStrong', 'font-display leading-[1.35] text-balance')}>
         {insight.claim}
       </h3>
 
@@ -133,7 +132,7 @@ export function Insight({
       {/* 5. Potential impact */}
       <div className="border-border-subtle flex items-center justify-between border-t pt-3">
         <span className={eyebrowClasses}>Potential impact</span>
-        <span className="font-display text-foreground text-xs font-medium">
+        <span className={textRole('label', 'font-display')}>
           {IMPACT_COPY[insight.potentialImpact]}
         </span>
       </div>

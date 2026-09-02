@@ -14,6 +14,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { engineLabel, transportLabel } from '@/lib/providers/catalog';
 import type { Execution } from '@/lib/api/types';
 import { executionBadgeValue, executionStatusLabel } from '@/lib/runs/status';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * Executions table for a run (F10, design.md §9.7).
@@ -40,38 +41,35 @@ export function ExecutionsTable({
       <TableBody>
         {executions.map((execution) => (
           <TableRow key={execution.id}>
-            <TableCell className="max-w-2xl py-3">
+            <TableCell className="max-w-2xl">
               <div className="flex flex-col gap-1">
-                <span
-                  className="text-foreground text-sm leading-relaxed font-normal break-words"
-                  title={execution.prompt_text}
-                >
+                <span className="leading-relaxed break-words" title={execution.prompt_text}>
                   {execution.prompt_text || `Prompt #${execution.prompt_index + 1}`}
                 </span>
                 <span className="mono text-muted text-xs">rep {execution.repetition}</span>
               </div>
             </TableCell>
-            <TableCell className="py-3">
-              <span className="text-foreground text-sm font-medium">
+            <TableCell>
+              <span className={textRole('bodyStrong')}>
                 {engineLabel(execution.logical_engine)}
               </span>
               <span className="text-muted ml-1.5 text-xs">
                 {transportLabel(execution.transport_provider)}
               </span>
             </TableCell>
-            <TableCell className="py-3">
+            <TableCell>
               <Badge variant="status" value={executionBadgeValue(execution.status)}>
                 {executionStatusLabel(execution.status)}
               </Badge>
             </TableCell>
-            <TableCell numeric className="mono py-3">
+            <TableCell numeric>
               {execution.latency_ms == null ? (
                 <UnavailableValue state="not_measured" />
               ) : (
                 `${execution.latency_ms} ms`
               )}
             </TableCell>
-            <TableCell className="py-3 text-right">
+            <TableCell className="text-right">
               {execution.status === 'succeeded' ? (
                 <Button variant="ghost" size="sm" onClick={() => onSelectEvidence(execution)}>
                   Evidence

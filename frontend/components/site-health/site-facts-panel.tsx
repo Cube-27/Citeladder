@@ -3,7 +3,7 @@
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import {
@@ -104,7 +104,7 @@ function StatusValue({ status }: Readonly<{ status: number | null }>) {
   if (status === null) {
     return <UnavailableValue state="unknown" className="text-sm" />;
   }
-  return <span className="mono text-foreground text-sm font-medium">{status}</span>;
+  return <span className={textRole('bodyStrong', 'mono')}>{status}</span>;
 }
 
 /**
@@ -137,7 +137,7 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
     <Card data-testid="site-facts-panel">
       <CardContent className="grid gap-2 p-3">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <span className="text-foreground text-sm font-medium">AI crawler access</span>
+          <span className={textRole('bodyStrong')}>AI crawler access</span>
           <SummaryBadge view={view} />
           <span className="text-secondary flex items-center gap-1.5 text-xs">
             <span>robots.txt</span>
@@ -151,11 +151,16 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
 
         <SiteFactsAlerts view={view} blocked={blocked} />
 
-        <details className="border-border-subtle border-t pt-2">
-          <summary className="focus-ring text-muted hover:text-foreground w-fit cursor-pointer rounded-sm text-xs font-medium">
+        <details className="border-border-subtle grid gap-3 border-t pt-2">
+          <summary
+            className={textRole(
+              'label',
+              'focus-ring hover:text-foreground w-fit cursor-pointer rounded-[var(--radius-control)]',
+            )}
+          >
             Crawler details
           </summary>
-          <div className="mt-3 grid gap-3">
+          <div className="grid gap-3">
             <div
               className="grid grid-cols-2 gap-2 sm:grid-cols-4"
               data-testid="site-facts-stance-grid"
@@ -165,13 +170,13 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
                   key={bot}
                   data-testid={`site-facts-stance-${bot.toLowerCase()}`}
                   className={cn(
-                    'flex flex-wrap items-center justify-between gap-2 rounded-md border px-2.5 py-2',
+                    'flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-2.5 py-2',
                     stance === 'block'
                       ? 'border-danger-border bg-danger-bg'
                       : 'border-border-subtle bg-background-alt',
                   )}
                 >
-                  <span className="mono text-foreground truncate text-xs font-medium">{bot}</span>
+                  <span className={textRole('label', 'mono truncate')}>{bot}</span>
                   <StanceBadge stance={stance} />
                   <span className="text-muted basis-full text-xs">{engineLabel(bot)}</span>
                 </div>
@@ -219,13 +224,11 @@ function SiteFactsViewPanel({ view }: Readonly<{ view: SiteFactsView }>) {
               </div>
               <div className="grid min-w-0 gap-0.5 sm:justify-self-end">
                 <Label>Checked</Label>
-                <span className="mono text-muted truncate text-xs font-medium">
+                <span className={textRole('label', 'mono truncate')}>
                   {view.robotsUrl ?? <UnavailableValue state="unavailable" />}
                 </span>
                 {view.llmsTxtUrl !== null ? (
-                  <span className="mono text-muted truncate text-xs font-medium">
-                    {view.llmsTxtUrl}
-                  </span>
+                  <span className={textRole('label', 'mono truncate')}>{view.llmsTxtUrl}</span>
                 ) : null}
               </div>
             </div>

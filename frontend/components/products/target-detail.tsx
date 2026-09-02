@@ -12,6 +12,8 @@ import { TargetCompetitors } from './target-competitors';
 import { TargetCorrections } from './target-corrections';
 import { TargetPrompts } from './target-prompts';
 import { TargetShelfBand, hasShelfMeasurement } from './target-shelf-band';
+import { textRole } from '@/components/ui/typography';
+import { Stack } from '@/components/ui/layout';
 
 /**
  * Everything about ONE target, in the order it is asked about.
@@ -35,9 +37,9 @@ export function TargetDetail({
   discovery: ReturnType<typeof useCompetitorDiscovery>;
 }>) {
   return (
-    <div className="grid content-start gap-4">
-      <Card className="flex flex-wrap items-start gap-2 p-[var(--card-padding)]">
-        <h2 className="text-foreground text-lg font-medium">{label}</h2>
+    <Stack gap="workspace" className="content-start">
+      <Card className="flex flex-wrap items-start gap-2 p-[var(--card-padding-large)]">
+        <h2 className={textRole('sectionTitle')}>{label}</h2>
         <Badge variant="status" value="info">
           {target.kind}
         </Badge>
@@ -69,6 +71,6 @@ export function TargetDetail({
         targetLabel={label}
         query={queries.buyerPrompts}
       />
-    </div>
+    </Stack>
   );
 }

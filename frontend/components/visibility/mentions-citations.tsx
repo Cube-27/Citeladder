@@ -16,6 +16,9 @@ import { ExternalLink } from 'lucide-react';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { totalCitationCount, totalMentionCount } from '@/lib/visibility/evidence';
+import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 const TITLE = 'Mentions & Citations';
 
@@ -88,7 +91,7 @@ export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: 
         </Badge>
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
-        <ul className="divide-border-subtle divide-y">
+        <ul className={ledgerClasses()}>
           {withEvidence.map((item) => (
             <ExecutionEvidenceRow key={item.analysis_id} item={item} />
           ))}
@@ -102,8 +105,8 @@ export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: 
 function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   return (
     <li className="hover:bg-panel-tonal/40 grid gap-3 px-[var(--card-padding)] py-4 transition-colors">
-      <div className="border-border-subtle bg-well/20 grid gap-1.5 rounded-md border p-3">
-        <p className="text-foreground text-sm leading-relaxed font-medium">
+      <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1.5')}>
+        <p className={textRole('body', 'leading-relaxed')}>
           {item.prompt_text || 'Untitled prompt'}
         </p>
         <ExecutionHeader item={item} />
@@ -129,7 +132,7 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
       {item.citations.length > 0 ? (
         <div className="grid gap-1.5">
           <p className={eyebrowClasses}>Citations</p>
-          <ul className="divide-border-subtle border-border-subtle bg-panel divide-y rounded-md border">
+          <ul className={ledgerClasses('boxed')}>
             {item.citations.map((citation) => {
               const href = safeUrl(citation.url);
               return (
@@ -143,7 +146,10 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
                         href={href}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-foreground hover:text-accent-text inline-flex max-w-full items-center gap-1.5 text-xs font-medium transition-colors hover:underline"
+                        className={textRole(
+                          'label',
+                          'hover:text-accent-text inline-flex max-w-full items-center gap-1.5 transition-colors hover:underline',
+                        )}
                       >
                         <span className="truncate">
                           {citation.title?.trim() || citation.domain || citation.url}
@@ -151,7 +157,7 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
                         <ExternalLink className="size-3 shrink-0" aria-hidden />
                       </a>
                     ) : (
-                      <span className="text-foreground block truncate text-xs font-medium">
+                      <span className={textRole('label', 'block truncate')}>
                         {citation.title?.trim() || citation.domain || citation.url}
                       </span>
                     )}

@@ -194,7 +194,7 @@ export function PricingCatalog() {
   return (
     <>
       <Section tone="paper" rhythm="tight" aria-label="Plans">
-        <div className="border-border-subtle bg-background-alt mb-8 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:gap-5 md:p-5">
+        <div className="border-border-subtle bg-background-alt mb-8 flex flex-col gap-3 rounded-[var(--radius-card)] border p-4 sm:flex-row sm:items-center sm:gap-5 md:p-5">
           <div className="flex shrink-0 items-center gap-3">
             <Switch
               checked={byok}
@@ -315,19 +315,21 @@ function LoadingCards() {
 }
 
 function LoadingShell() {
-  return <div aria-busy="true" className="bg-panel h-48 animate-pulse rounded-md" />;
+  return (
+    <div aria-busy="true" className="bg-panel h-48 animate-pulse rounded-[var(--radius-control)]" />
+  );
 }
 
 function CatalogError({ onRetry }: Readonly<{ onRetry: () => void }>) {
   return (
-    <div className="border-border-subtle grid gap-4 rounded-lg border border-dashed p-10 text-center">
+    <div className="border-border-subtle grid gap-4 rounded-[var(--radius-card)] border border-dashed p-10 text-center">
       <p className="website-body text-muted">
         Plans could not be loaded, so no price is shown. Check your connection and retry.
       </p>
       <button
         type="button"
         onClick={onRetry}
-        className="border-border-subtle text-foreground focus-ring mx-auto inline-flex h-10 items-center rounded-md border px-5 text-sm font-medium"
+        className="border-border-subtle text-foreground focus-ring mx-auto inline-flex h-10 items-center rounded-[var(--radius-control)] border px-5 text-sm font-medium"
       >
         Retry
       </button>

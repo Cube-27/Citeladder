@@ -24,6 +24,9 @@ import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/iss
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
 import { pageDisplayTitle } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 const ISSUE_LIMIT = 25;
 const OCCURRENCE_LIMIT = 25;
@@ -209,7 +212,7 @@ function IssueSummary({
 function SummaryMeasure({ value, label }: Readonly<{ value: number; label: string }>) {
   return (
     <span className="flex items-baseline gap-1.5">
-      <span className="text-foreground text-lg font-medium tabular-nums">{value}</span>{' '}
+      <span className={textRole('sectionTitle', 'tabular-nums')}>{value}</span>{' '}
       <span className="text-muted text-xs">{label}</span>
     </span>
   );
@@ -251,7 +254,7 @@ function IssueGroupList({
   onSelect: (groupId: string) => void;
 }>) {
   return (
-    <div className="border-border-subtle bg-panel divide-border-subtle divide-y overflow-hidden rounded-[var(--radius-card)] border">
+    <div className={ledgerClasses('boxed')}>
       {rows.map((issue) => {
         const selected = issue.group_id === selectedGroupId;
         return (
@@ -271,7 +274,7 @@ function IssueGroupList({
                 {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}
               </span>
             </span>
-            <span className="text-foreground text-sm font-medium">{issueTitle(issue)}</span>
+            <span className={textRole('bodyStrong')}>{issueTitle(issue)}</span>
             <span className="text-secondary line-clamp-2 text-xs">{issue.description}</span>
           </Pressable>
         );
@@ -316,12 +319,14 @@ function IssueDetailRail({
         <header className="border-border-subtle grid shrink-0 gap-3 border-b p-[var(--card-padding)]">
           <div className="flex items-start justify-between gap-[var(--workspace-gap)]">
             <div className="grid min-w-0 gap-2">
-              <h2 className="text-foreground text-lg font-medium tracking-[-0.02em]">
+              <h2 className={textRole('sectionTitle', 'tracking-[-0.02em]')}>
                 {issueTitle(issue)}
               </h2>
               <IssueMetadata issue={issue} />
             </div>
-            <div className="border-border-subtle grid shrink-0 gap-1 border-l pl-4 text-sm font-normal">
+            <div
+              className={textRole('body', 'border-border-subtle grid shrink-0 gap-1 border-l pl-4')}
+            >
               <span className="text-secondary whitespace-nowrap tabular-nums">
                 {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}{' '}
                 affected
@@ -348,8 +353,8 @@ function IssueDetailRail({
             <p className="text-secondary text-sm whitespace-pre-line">{issue.description}</p>
           ) : null}
           {issue.remediation ? (
-            <div className="border-border-subtle bg-well grid gap-1 rounded-[var(--radius-card)] border p-3">
-              <span className="text-muted text-xs font-medium">How to fix</span>
+            <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1')}>
+              <span className={textRole('label')}>How to fix</span>
               <p className="text-secondary text-sm whitespace-pre-line">{issue.remediation}</p>
             </div>
           ) : null}
@@ -397,7 +402,7 @@ function OccurrenceList({
   if (!detail || detail.occurrences.length === 0)
     return <p className="text-secondary text-sm">No affected URLs found.</p>;
   return (
-    <ul className="border-border-subtle divide-border-subtle divide-y border-y">
+    <ul className={ledgerClasses('ruled')}>
       {detail.occurrences.map((occurrence) => (
         <li key={occurrence.occurrence_id} className="grid gap-3 p-3">
           <Link
@@ -405,7 +410,7 @@ function OccurrenceList({
             className="hover:text-accent flex min-w-0 flex-col gap-0.5"
           >
             <span className="flex min-w-0 items-center gap-2">
-              <span className="text-foreground truncate text-sm font-medium">
+              <span className={textRole('bodyStrong', 'truncate')}>
                 {pageDisplayTitle(occurrence.title, occurrence.display_url)}
               </span>
               {occurrence.page_kind ? (
@@ -428,7 +433,7 @@ function OccurrenceList({
 function IssueMetadata({ issue }: Readonly<{ issue: SiteIssue }>) {
   const tone = issueSeverityTone(issue.severity);
   return (
-    <span className="flex flex-wrap items-center gap-1.5 text-xs font-medium uppercase">
+    <span className={textRole('label', 'flex flex-wrap items-center gap-1.5 uppercase')}>
       <span className={issue.finding_class === 'defect' ? tone : 'text-secondary'}>
         {issue.finding_class === 'defect' ? severityLabel(issue.severity) : 'Advisory'}
       </span>

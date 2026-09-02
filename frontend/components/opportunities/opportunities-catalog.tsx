@@ -47,6 +47,7 @@ import type {
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
 import { useCursorStack } from '@/lib/site-health/use-cursor-stack';
+import { textRole } from '@/components/ui/typography';
 
 const PAGE_LIMIT = 25;
 /**
@@ -145,7 +146,7 @@ function FeaturedRecommendation({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid min-w-0 gap-2">
             <AccentEyebrow>Next best action</AccentEyebrow>
-            <h2 className="text-foreground text-xl font-medium">{detail.title}</h2>
+            <h2 className={textRole('sectionTitle')}>{detail.title}</h2>
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge variant="status" value={severityBadgeValue(detail.severity)}>
                 {severityLabel(detail.severity)} impact
@@ -414,7 +415,7 @@ function RecommendationsTable({
           <TableRow key={row.id}>
             <TableCell className="min-w-0">
               <div className="grid min-w-0 gap-0.5">
-                <span className="text-foreground truncate text-sm font-medium" title={row.title}>
+                <span className={textRole('bodyStrong', 'truncate')} title={row.title}>
                   {row.title}
                 </span>
                 {row.target_label ? (

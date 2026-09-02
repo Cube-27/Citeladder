@@ -20,6 +20,9 @@ import {
   queryTexts,
   type PromptGroup,
 } from '@/lib/visibility/evidence';
+import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 const TITLE = 'Query Fanout';
 
@@ -80,7 +83,7 @@ export function FanoutEvidence({ query, isFiltered, onClearFilters, limit }: Evi
         </Badge>
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
-        <div className="divide-border-subtle divide-y">
+        <div className={ledgerClasses()}>
           {groups.map((group) => (
             <PromptGroupBlock key={group.promptSnapshotId} group={group} />
           ))}
@@ -95,7 +98,7 @@ function PromptGroupBlock({ group }: Readonly<{ group: PromptGroup }>) {
   return (
     <section className="grid gap-3 px-[var(--card-padding)] py-4">
       <div className="flex items-start gap-2">
-        <h3 className="text-foreground text-sm leading-relaxed font-medium sm:text-base">
+        <h3 className={textRole('bodyStrong', 'leading-relaxed sm:text-base')}>
           {group.promptText}
         </h3>
       </div>
@@ -110,7 +113,7 @@ function PromptGroupBlock({ group }: Readonly<{ group: PromptGroup }>) {
 
 function ExecutionRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
   return (
-    <li className="border-border-subtle bg-well/20 grid gap-2.5 rounded-md border p-3.5">
+    <li className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-2.5')}>
       <ExecutionHeader
         item={item}
         trailing={
@@ -132,7 +135,7 @@ function QueryDetail({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
         {queries.map((query) => (
           <li
             key={query}
-            className="border-border-subtle bg-panel text-foreground flex items-center gap-2 rounded border px-3 py-1.5 font-mono text-xs"
+            className="border-border-subtle bg-panel text-foreground flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-1.5 font-mono text-xs"
           >
             <Search className="text-muted size-3 shrink-0" aria-hidden />
             <span className="break-all">{query}</span>
@@ -144,14 +147,14 @@ function QueryDetail({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
 
   if (item.state === 'count_only') {
     return (
-      <div className="border-border-subtle bg-panel text-muted rounded border px-3 py-2 text-xs">
+      <div className="border-border-subtle bg-panel text-muted rounded-[var(--radius-control)] border px-3 py-2 text-xs">
         {countOnlyExplanation(item)}
       </div>
     );
   }
 
   return (
-    <div className="border-border-subtle bg-panel text-muted flex items-center gap-2 rounded border px-3 py-2 text-xs">
+    <div className="border-border-subtle bg-panel text-muted flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
       <MinusCircle className="size-4 shrink-0" aria-hidden />
       <span>No web searches performed for this execution</span>
     </div>

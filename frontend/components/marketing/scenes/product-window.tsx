@@ -213,7 +213,7 @@ function PreviewSidebar({ activeItem }: Readonly<{ activeItem: PreviewItemLabel 
         <LogoMark size={18} />
       </div>
       <div className="border-border-subtle border-b p-2">
-        <div className="hover:bg-background-alt flex items-center gap-2 rounded-sm px-2 py-1.5">
+        <div className="hover:bg-background-alt flex items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5">
           <span className="bg-foreground text-background flex size-7 items-center justify-center rounded-[var(--radius-control)] text-xs font-medium">
             AC
           </span>
@@ -279,7 +279,7 @@ function MobileSubnav({
         <span
           key={item.label}
           className={cn(
-            'shrink-0 rounded-sm px-2.5 py-1.5 text-xs font-medium',
+            'shrink-0 rounded-[var(--radius-control)] px-2.5 py-1.5 text-xs font-medium',
             item.label === activeItem ? 'bg-accent-soft text-accent-text' : 'text-muted',
           )}
         >

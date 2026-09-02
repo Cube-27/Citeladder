@@ -2,10 +2,11 @@ import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageDetail } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 /**
  * Internal links — the crawl's persisted link-graph projection for this page.
@@ -39,7 +40,7 @@ export function InternalLinksCard({
     <Card className="min-w-0 overflow-hidden">
       <CardContent className="grid gap-4">
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-          <h2 className="text-foreground text-base font-medium">Internal Links</h2>
+          <h2 className={textRole('objectTitle')}>Internal Links</h2>
           <span className="text-muted shrink-0 text-xs">
             Counted across {links.source_page_count} crawled page
             {links.source_page_count === 1 ? '' : 's'}
@@ -49,7 +50,7 @@ export function InternalLinksCard({
           {metrics.map((metric) => (
             <div key={metric.label} className="grid gap-0.5">
               <Label>{metric.label}</Label>
-              <dd className="mono text-foreground text-sm font-medium">
+              <dd className={textRole('bodyStrong', 'mono')}>
                 {metric.value === PLACEHOLDER ? (
                   <UnavailableValue state="not_measured" />
                 ) : (
@@ -95,7 +96,7 @@ function NeighbourList({
       {neighbours.length === 0 ? (
         <p className="text-secondary text-sm">{emptyMessage}</p>
       ) : (
-        <ul className="divide-border-subtle min-w-0 divide-y">
+        <ul className={ledgerClasses()}>
           {neighbours.map((neighbour) => (
             <li
               key={`${neighbour.site_url_id ?? neighbour.url}`}

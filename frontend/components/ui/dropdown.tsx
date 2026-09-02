@@ -15,7 +15,23 @@ import { cn } from '@/lib/utils';
  */
 export const Dropdown = DropdownPrimitive.Root;
 export const DropdownTrigger = DropdownPrimitive.Trigger;
-export const DropdownSeparator = DropdownPrimitive.Separator;
+
+/**
+ * The rule between menu groups. Six call sites used to restate
+ * `bg-border-subtle my-1 h-px`, which is the separator's whole definition —
+ * its margin is its spacing, so it belongs here and not to whoever renders it.
+ */
+export function DropdownSeparator({
+  className,
+  ...props
+}: Readonly<ComponentPropsWithoutRef<typeof DropdownPrimitive.Separator>>) {
+  return (
+    <DropdownPrimitive.Separator
+      {...props}
+      className={cn('bg-border-subtle my-1 h-px', className)}
+    />
+  );
+}
 export const DropdownRadioGroup = DropdownPrimitive.RadioGroup;
 
 export function DropdownContent({

@@ -29,6 +29,7 @@ import {
   pageStatusBadgeValue,
   statusLabel,
 } from '@/lib/site-health/status';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * Analyzed-pages table (Slice 7, mockups 712 + 713).
@@ -202,7 +203,7 @@ export function PagesTable({
             <TableCell>
               <span className="flex max-w-[26rem] min-w-0 flex-col">
                 <span
-                  className="text-foreground truncate font-medium"
+                  className={textRole('emphasis', 'text-foreground truncate')}
                   title={pageDisplayTitle(page.title, page.display_url)}
                 >
                   {pageDisplayTitle(page.title, page.display_url)}
@@ -223,27 +224,21 @@ export function PagesTable({
             <TableCell numeric className="mono text-danger-text">
               {formatIssueCount(page.issue_count)}
             </TableCell>
-            <TableCell
-              numeric
-              className={cn('mono font-medium', scoreTextClass(page.web_fundamentals_score))}
-            >
+            <TableCell numeric className={scoreTextClass(page.web_fundamentals_score)}>
               <MeasurementValue
                 score={page.web_fundamentals_score}
                 coverage={page.web_fundamentals_coverage}
                 state={page.web_fundamentals_state}
               />
             </TableCell>
-            <TableCell
-              numeric
-              className={cn('mono font-medium', scoreTextClass(page.aeo_readiness_score))}
-            >
+            <TableCell numeric className={scoreTextClass(page.aeo_readiness_score)}>
               <MeasurementValue
                 score={page.aeo_readiness_score}
                 coverage={page.aeo_measurement_coverage}
                 state={page.aeo_measurement_state}
               />
             </TableCell>
-            <TableCell numeric className="mono font-medium">
+            <TableCell numeric>
               {page.aeo_measurement_coverage === null
                 ? measurementStateValue(page.aeo_measurement_state)
                 : `${Math.round(page.aeo_measurement_coverage * 100)}%`}
@@ -270,7 +265,7 @@ export function PagesTable({
               <Link
                 href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
                 onClick={(event) => event.stopPropagation()}
-                className="text-accent-text text-xs font-medium hover:underline"
+                className={textRole('label', 'text-accent-text hover:underline')}
               >
                 View
               </Link>

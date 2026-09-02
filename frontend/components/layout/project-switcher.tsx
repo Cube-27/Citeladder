@@ -14,6 +14,7 @@ import {
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * ProjectSwitcher (F5) — brand avatar + active project name with a dropdown of
@@ -31,7 +32,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
     <Dropdown>
       <DropdownTrigger
         className={cn(
-          'focus-ring hover:bg-background-alt flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
+          'focus-ring hover:bg-background-alt flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1 text-left transition-colors disabled:pointer-events-none disabled:opacity-50',
           className,
         )}
         disabled={isLoading}
@@ -41,16 +42,16 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
           logoUrl={activeProject?.brand.logo_url}
           websiteUrl={activeProject?.website_url}
           size="sm"
-          className="bg-foreground text-background size-6.5 rounded-sm"
+          className="bg-foreground text-background size-6.5 rounded-[var(--radius-control)]"
         />
-        <span className="text-foreground min-w-0 flex-1 truncate text-sm font-medium tracking-tight">
+        <span className={textRole('bodyStrong', 'min-w-0 flex-1 truncate tracking-tight')}>
           {label}
         </span>
         <ChevronsUpDown className="text-muted size-3.5 shrink-0" aria-hidden />
       </DropdownTrigger>
       <DropdownContent align="start" className="w-56">
         <DropdownLabel>Projects</DropdownLabel>
-        <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+        <DropdownSeparator />
         {projects.map((project) => {
           const selected = project.id === activeProjectId;
           return (
@@ -70,11 +71,11 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
             </DropdownItem>
           );
         })}
-        <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+        <DropdownSeparator />
         <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
           <span
             aria-hidden
-            className="bg-accent-soft text-accent-text flex size-6 shrink-0 items-center justify-center rounded-sm"
+            className="bg-accent-soft text-accent-text flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
           >
             <Plus className="size-4" />
           </span>

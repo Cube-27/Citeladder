@@ -170,7 +170,7 @@ export function EnterpriseOps() {
         {CAPABILITIES.map(({ icon: Icon, title, tagline, highlights }) => (
           <StaggerItem key={title} className="h-full">
             <article className="bg-panel border-border-subtle hover:border-accent-border flex h-full flex-col rounded-[var(--radius-card)] border p-7 transition-colors duration-200">
-              <div className="bg-accent-soft text-accent-text grid size-10 place-items-center rounded-xl">
+              <div className="bg-accent-soft text-accent-text grid size-10 place-items-center rounded-[var(--radius-control)]">
                 <Icon aria-hidden className="size-5" />
               </div>
               <h3 className="website-feature-heading text-foreground mt-5">{title}</h3>
@@ -259,7 +259,7 @@ export function EnterpriseLimits() {
             <h3 className="website-section-heading text-foreground">Enterprise agreement</h3>
             <p className="website-body text-muted mt-1">Six inputs. One operating plan.</p>
           </div>
-          <span className="border-accent-border bg-panel text-accent-text shrink-0 rounded-md border px-4 py-2 text-xs font-medium tracking-wide uppercase">
+          <span className="border-accent-border bg-panel text-accent-text shrink-0 rounded-[var(--radius-control)] border px-4 py-2 text-xs font-medium tracking-wide uppercase">
             Quoted to fit
           </span>
         </div>
@@ -272,7 +272,7 @@ export function EnterpriseLimits() {
             >
               <div className="flex items-start justify-between gap-3">
                 <h4 className="website-small-heading text-foreground">{item.title}</h4>
-                <span className="bg-well text-secondary shrink-0 rounded-md px-2.5 py-1 text-xs font-medium">
+                <span className="bg-well text-secondary shrink-0 rounded-[var(--radius-control)] px-2.5 py-1 text-xs font-medium">
                   {item.badge}
                 </span>
               </div>

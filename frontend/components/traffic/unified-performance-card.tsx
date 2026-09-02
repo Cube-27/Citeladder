@@ -15,6 +15,7 @@ import {
   type TrafficGranularity,
 } from '@/lib/traffic/traffic';
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
 
 type MetricKey = 'clicks' | 'impressions' | 'ctr' | 'position';
 
@@ -160,7 +161,7 @@ export function UnifiedPerformanceCard({
           />
         ))}
       </div>
-      <CardContent className="p-[var(--card-padding)]">
+      <CardContent>
         <div
           data-testid="traffic-metric-panels"
           className={cn(
@@ -267,7 +268,10 @@ function ChartableStat({
         <span className={eyebrowClasses}>{stat.label}</span>
         <span
           className={cn(
-            'text-3xs inline-flex size-4 items-center justify-center rounded border font-medium transition-colors',
+            textRole(
+              'emphasis',
+              'text-3xs inline-flex size-4 items-center justify-center rounded-xs border transition-colors',
+            ),
             state.checked
               ? cn('text-inverse border-transparent', METRIC_CONFIGS[state.key].bgSolid)
               : 'border-border text-transparent',
@@ -306,13 +310,13 @@ function StatValues({ stat }: Readonly<{ stat: Stat }>) {
     <>
       <span
         className={cn(
-          'mono text-2xl font-medium tabular-nums tracking-[-0.02em]',
+          textRole('pageTitle', 'mono tabular-nums tracking-[-0.02em]'),
           stat.placeholder ? 'text-muted' : 'text-foreground',
         )}
       >
         {stat.value}
       </span>
-      <span className={cn('text-xs font-medium tabular-nums', delta)}>{stat.delta}</span>
+      <span className={cn(textRole('label', 'tabular-nums'), delta)}>{stat.delta}</span>
     </>
   );
 }

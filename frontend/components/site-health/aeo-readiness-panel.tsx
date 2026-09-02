@@ -23,6 +23,9 @@ import {
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { ReadinessCheck, ReadinessDimension } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
+import { textRole } from '@/components/ui/typography';
+import { Stack } from '@/components/ui/layout';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 function pageLabel(url: string) {
   try {
@@ -135,8 +138,10 @@ function ReadinessLedger({
                   className="grid h-auto grid-cols-1 py-2 md:table-row md:h-[var(--table-row-height)] md:py-0"
                 >
                   <TableCell className="block min-w-0 border-b-0 px-4 py-2 md:table-cell md:min-w-64 md:border-b md:px-[var(--table-cell-padding-x)] md:py-[var(--table-cell-padding-y)]">
-                    <span className="font-medium">{dimension.label}</span>
-                    <span className="text-muted mt-0.5 block text-xs">{dimension.description}</span>
+                    <Stack gap="tight">
+                      <span className={textRole('emphasis')}>{dimension.label}</span>
+                      <span className="text-muted text-xs">{dimension.description}</span>
+                    </Stack>
                   </TableCell>
                   <TableRecordMetricCell label="Score">
                     {dimension.score ?? <UnavailableValue state="not_measured" />}
@@ -216,11 +221,11 @@ function DimensionDrawer({
 function CheckLedger({ checks }: Readonly<{ checks: ReadinessCheck[] }>) {
   return (
     <section className="grid gap-2">
-      <h3 className="text-foreground text-base font-medium">Checks</h3>
+      <h3 className={textRole('objectTitle')}>Checks</h3>
       {checks.length === 0 ? (
         <p className="text-secondary text-sm">No determinate checks were recorded.</p>
       ) : (
-        <ul className="divide-border-subtle divide-y">
+        <ul className={ledgerClasses()}>
           {checks.map((check) => (
             <CheckRow key={check.rule_id} check={check} />
           ))}
@@ -235,7 +240,7 @@ function CheckRow({ check }: Readonly<{ check: ReadinessCheck }>) {
   return (
     <li className="grid gap-1 py-3 first:pt-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-foreground text-sm font-medium">{check.title}</span>
+        <span className={textRole('bodyStrong')}>{check.title}</span>
         <span className="text-secondary text-xs">{state}</span>
       </div>
       <p className="text-secondary text-sm">
@@ -267,7 +272,7 @@ function FailingPages({
   return (
     <section className="grid gap-2">
       <div className="grid gap-0.5">
-        <h3 className="text-foreground text-base font-medium">Pages to fix</h3>
+        <h3 className={textRole('objectTitle')}>Pages to fix</h3>
         <p className="text-muted text-xs">
           {total === 0
             ? 'No failing pages were recorded.'
@@ -276,11 +281,11 @@ function FailingPages({
               : `${total} page${total === 1 ? '' : 's'} failed at least one check, worst first.`}
         </p>
       </div>
-      <ul className="divide-border-subtle divide-y">
+      <ul className={ledgerClasses()}>
         {dimension.evidence_pages.map((page) => (
           <li key={page.site_url_id} className="grid gap-1.5 py-3 first:pt-0">
             <Link
-              className="text-accent-text truncate text-sm font-medium hover:underline"
+              className={textRole('bodyStrong', 'text-accent-text truncate hover:underline')}
               href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
             >
               {pageLabel(page.normalized_url)}

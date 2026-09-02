@@ -149,7 +149,7 @@ export function BlogIndex() {
       ) : (
         <Section tone="paper" rhythm="tight" aria-label="No posts yet">
           <Reveal className="border-border-subtle mx-auto max-w-xl rounded-[var(--radius-card)] border border-dashed p-10 text-center">
-            <span className="bg-accent-soft text-accent-text mx-auto grid size-10 place-items-center rounded-md">
+            <span className="bg-accent-soft text-accent-text mx-auto grid size-10 place-items-center rounded-[var(--radius-control)]">
               <PenLine aria-hidden className="size-5" />
             </span>
             <h2 className="website-section-heading text-foreground mt-6">
@@ -260,7 +260,7 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
                   <span className="text-foreground flex items-center gap-3 text-sm font-medium">
                     <span
                       aria-hidden
-                      className="bg-accent-soft text-accent-text grid size-7 place-items-center rounded-md text-xs font-medium"
+                      className="bg-accent-soft text-accent-text grid size-7 place-items-center rounded-[var(--radius-control)] text-xs font-medium"
                     >
                       {authorInitial(post.author)}
                     </span>
@@ -276,7 +276,7 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
 
       <Container dense>
         <article aria-label="Post content" className="mx-auto w-full max-w-3xl py-8 md:py-10">
-          <p className="website-body-lg bg-accent-soft text-foreground mb-6 rounded-lg px-5 py-4 font-medium">
+          <p className="website-body-lg bg-accent-soft text-foreground mb-6 rounded-[var(--radius-card)] px-5 py-4 font-medium">
             {post.excerpt}
           </p>
           {withOccurrenceKeys(post.body, blockIdentity).map(({ key, value }) => (

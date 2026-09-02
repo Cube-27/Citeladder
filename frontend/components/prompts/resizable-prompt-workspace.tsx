@@ -157,11 +157,11 @@ export function ResizablePromptWorkspace({
         onPointerCancel={(event) => finishDrag(event.pointerId)}
         onLostPointerCapture={() => finishDrag()}
         style={{ touchAction: 'none' }}
-        className="focus-ring group relative hidden w-3 shrink-0 cursor-col-resize items-stretch justify-center self-stretch lg:flex"
+        className="focus-ring group relative hidden w-3 shrink-0 cursor-col-resize items-stretch justify-center self-stretch py-2 lg:flex"
         data-dragging={dragging || undefined}
       >
         <span
-          className="bg-border-strong group-hover:bg-accent group-focus-visible:bg-accent group-data-[dragging]:bg-accent my-2 w-px transition-colors motion-reduce:transition-none"
+          className="bg-border-strong group-hover:bg-accent group-focus-visible:bg-accent group-data-[dragging]:bg-accent w-px transition-colors motion-reduce:transition-none"
           aria-hidden
         />
         <span id="topic-rail-resize-help" className="sr-only">

@@ -82,7 +82,7 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
                   </ul>
                 ) : null}
                 {section.note ? (
-                  <p className="website-label border-border-subtle bg-background-alt text-subtle mt-5 rounded-md border px-4 py-3">
+                  <p className="website-label border-border-subtle bg-background-alt text-subtle mt-5 rounded-[var(--radius-control)] border px-4 py-3">
                     {section.note}
                   </p>
                 ) : null}

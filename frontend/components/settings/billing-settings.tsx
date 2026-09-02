@@ -29,6 +29,8 @@ import {
   formatMoney,
   headlinePrice,
 } from '@/lib/billing/catalog';
+import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
@@ -107,7 +109,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
 
 function BillingSkeleton() {
   return (
-    <div className="bg-panel border-border-subtle grid gap-3 rounded-md border p-[var(--card-padding)]">
+    <div className={panelClasses({}, 'grid gap-3')}>
       <Skeleton className="h-6 w-40" />
       <Skeleton className="h-20 w-full" />
     </div>
@@ -182,12 +184,12 @@ function CurrentPlan({
   const subscription = entitlement?.subscription ?? null;
   const periodEnd = subscription?.current_period_end;
   return (
-    <div className="bg-panel border-border-subtle rounded-md border p-[var(--card-padding)]">
+    <div className={panelClasses({}, 'grid gap-4')}>
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="grid min-w-0 gap-1">
           <p className={eyebrowClasses}>Current plan</p>
-          <div className="mt-1 flex items-center gap-2.5">
-            <p className="text-foreground text-base font-medium">
+          <div className="flex items-center gap-2.5">
+            <p className={textRole('objectTitle')}>
               {currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
             </p>
             <Badge variant="status" value={subscription ? 'success' : 'info'}>
@@ -203,14 +205,14 @@ function CurrentPlan({
         ) : null}
       </div>
       {entitlement === null ? (
-        <div className="mt-4">
+        <div className="">
           <Alert tone="warning">
             Your entitlement could not be resolved. No paid capability is active until it does.
           </Alert>
         </div>
       ) : null}
       {cancelError ? (
-        <div className="mt-4">
+        <div className="">
           <Alert tone="danger">{message(cancelError)}</Alert>
         </div>
       ) : null}
@@ -238,10 +240,10 @@ function PlanCatalog({
   onCheckout: (key: SelfServePlanKey) => void;
 }>) {
   return (
-    <div className="bg-panel border-border-subtle grid gap-4 rounded-md border p-[var(--card-padding)] lg:col-span-7">
-      <div>
-        <h2 className="text-foreground text-sm font-medium tracking-tight">Change plan</h2>
-        <p className="text-muted mt-0.5 text-xs">
+    <div className={panelClasses({}, 'grid gap-4 lg:col-span-7')}>
+      <div className="grid gap-0.5">
+        <h2 className={textRole('bodyStrong', 'tracking-tight')}>Change plan</h2>
+        <p className="text-muted text-xs">
           Prices are resolved by the server for your billing country. Audits run on your own
           provider keys, billed by those providers directly.
         </p>
@@ -279,9 +281,14 @@ function CountryInput({
   setCountry,
 }: Readonly<{ country: string; setCountry: (country: string) => void }>) {
   return (
-    <div className="bg-background-alt border-border-subtle flex flex-col justify-between gap-2.5 rounded-md border p-3 sm:flex-row sm:items-center">
+    <div
+      className={panelClasses(
+        { tone: 'tonal', pad: 'compact' },
+        'flex flex-col justify-between gap-2.5 sm:flex-row sm:items-center',
+      )}
+    >
       <div className="min-w-0">
-        <label htmlFor="billing-country-input" className="text-secondary block text-xs font-medium">
+        <label htmlFor="billing-country-input" className={textRole('label', 'block')}>
           Billing country
         </label>
         <span id="billing-country-help" className="text-muted block text-xs">
@@ -294,7 +301,7 @@ function CountryInput({
         onChange={(event) => setCountry(event.target.value.toUpperCase().slice(0, 2))}
         placeholder="US"
         aria-describedby="billing-country-help"
-        className="h-8 w-20 text-center font-mono text-xs font-medium uppercase"
+        className={textRole('label', 'h-8 w-20 text-center font-mono uppercase')}
       />
     </div>
   );
@@ -307,9 +314,9 @@ function SubscriptionDetail({
   subscription: BillingEntitlement['subscription'] | null;
   periodEnd: string | null | undefined;
 }>) {
-  if (!subscription) return <p className="text-muted mt-1 text-xs">No active subscription</p>;
+  if (!subscription) return <p className={textRole('meta')}>No active subscription</p>;
   return (
-    <p className="text-muted mt-1 text-xs">
+    <p className={textRole('meta')}>
       Subscription: {subscription.status.replaceAll('_', ' ')}
       {periodEnd ? (
         <>
@@ -347,17 +354,20 @@ function PlanRow({
   );
   return (
     <div
-      className="bg-background-alt border-border-subtle flex flex-col justify-between gap-3 rounded-md border p-3.5 sm:flex-row sm:items-center"
+      className={panelClasses(
+        { tone: 'tonal', pad: 'compact' },
+        'flex flex-col justify-between gap-3 sm:flex-row sm:items-center',
+      )}
       data-tier={plan.key}
     >
-      <div className="min-w-0">
+      <div className="grid min-w-0 gap-0.5">
         <div className="flex items-center gap-2">
-          <span className="text-foreground text-sm font-medium">{plan.name}</span>
-          <span className="text-muted font-mono text-xs font-medium">{priceLabel}</span>
+          <span className={textRole('bodyStrong')}>{plan.name}</span>
+          <span className={textRole('label', 'font-mono')}>{priceLabel}</span>
         </div>
-        {plan.description ? <p className="text-muted mt-0.5 text-xs">{plan.description}</p> : null}
+        {plan.description ? <p className="text-muted text-xs">{plan.description}</p> : null}
         {!selection.ok && !plan.contact_only && selection.reason ? (
-          <p className="text-muted mt-0.5 text-xs">{selection.reason}</p>
+          <p className="text-muted text-xs">{selection.reason}</p>
         ) : null}
       </div>
       <div className="shrink-0">

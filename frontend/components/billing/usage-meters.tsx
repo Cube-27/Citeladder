@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { billingApi, type UsageItem } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
+import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
 
 /**
  * Preferred display order. Rows the backend sends that are not listed here
@@ -42,10 +44,10 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
   });
 
   return (
-    <div className="bg-panel border-border-subtle grid gap-3 rounded-md border p-[var(--card-padding)]">
-      <div>
-        <h2 className="text-foreground text-sm font-medium tracking-tight">Usage</h2>
-        <p className="text-muted mt-0.5 text-xs">
+    <div className={panelClasses({}, 'grid gap-3')}>
+      <div className="grid gap-0.5">
+        <h2 className={textRole('bodyStrong', 'tracking-tight')}>Usage</h2>
+        <p className="text-muted text-xs">
           Measured against the allowances your active grants provide.
         </p>
       </div>

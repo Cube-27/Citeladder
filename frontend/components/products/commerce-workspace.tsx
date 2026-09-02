@@ -19,6 +19,8 @@ import { useCommerceQueries } from '@/lib/products/use-products-screen';
 import { CatalogHeader } from './catalog-header';
 import { CatalogList, catalogEntries } from './catalog-list';
 import { TargetDetail } from './target-detail';
+import { textRole } from '@/components/ui/typography';
+import { Stack } from '@/components/ui/layout';
 
 /** Selection-only bulk actions, including stale keys that still need a clear path. */
 export function BulkActions({
@@ -37,7 +39,7 @@ export function BulkActions({
   return (
     <Card className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2">
       <div className="grid gap-0.5">
-        <span aria-live="polite" className="text-foreground text-sm font-medium">
+        <span aria-live="polite" className={textRole('bodyStrong')}>
           {count
             ? `${count} ${count === 1 ? 'target' : 'targets'} selected`
             : 'No targets selected'}
@@ -141,7 +143,7 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
       return [...next];
     });
   return (
-    <div className="grid gap-4">
+    <Stack gap="workspace">
       <CatalogHeader projectId={projectId} query={queries.catalog} />
       {checked.length ? (
         <BulkActions
@@ -168,8 +170,11 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
           pane.dragging ? 'cursor-col-resize select-none' : ''
         }`}
       >
-        <Card className="min-w-0 lg:sticky lg:top-4">
-          <CardContent className="max-h-[calc(100vh-8rem)] overflow-y-auto p-0">
+        <Card className="min-w-0 lg:sticky lg:top-[var(--workspace-gap)]">
+          <CardContent
+            flush
+            className="max-h-[calc(100dvh-var(--topbar-height)-2*var(--workspace-gap))] overflow-y-auto"
+          >
             <CatalogList
               query={queries.catalog}
               selectedKey={selectedKey}
@@ -200,6 +205,6 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
           )}
         </div>
       </div>
-    </div>
+    </Stack>
   );
 }

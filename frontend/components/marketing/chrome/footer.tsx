@@ -97,7 +97,7 @@ function SocialButton({ social }: Readonly<{ social: SocialLink }>) {
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       aria-label={social.label}
-      className="border-border-subtle bg-background text-muted hover:border-accent hover:text-accent-text grid size-10 place-items-center rounded-md border transition-colors duration-200"
+      className="border-border-subtle bg-background text-muted hover:border-accent hover:text-accent-text grid size-10 place-items-center rounded-[var(--radius-control)] border transition-colors duration-200"
     >
       <Icon aria-hidden className="size-4" />
     </a>

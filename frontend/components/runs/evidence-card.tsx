@@ -4,13 +4,15 @@ import { CheckCircle2, ExternalLink, Search, XCircle } from 'lucide-react';
 
 import { MeasurementContext } from '@/components/runs/measurement-context';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import { engineLabel, transportLabel } from '@/lib/providers/catalog';
 import type { ExecutionEvidence } from '@/lib/api/types';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 import { cn } from '@/lib/utils';
 
 import { ContentMarkdown } from '@/lib/content/markdown';
+import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 function safeCitationUrl(value: string): string | null {
   try {
@@ -28,13 +30,15 @@ function Outcome({
 }: Readonly<{ label: string; detail: string; passed: boolean }>) {
   const Icon = passed ? CheckCircle2 : XCircle;
   return (
-    <div className="border-border-subtle bg-well flex min-w-0 items-start gap-2.5 rounded-[var(--radius-control)] border p-3">
+    <div
+      className={panelClasses({ tone: 'well', pad: 'compact' }, 'flex min-w-0 items-start gap-2.5')}
+    >
       <Icon
         className={cn('mt-0.5 size-4 shrink-0', passed ? 'text-score-high' : 'text-muted')}
         aria-hidden
       />
       <div className="min-w-0">
-        <p className="text-foreground text-sm font-medium">{label}</p>
+        <p className={textRole('bodyStrong')}>{label}</p>
         <p className="text-muted text-xs leading-relaxed">{detail}</p>
       </div>
     </div>
@@ -77,7 +81,7 @@ function EvidencePromptHeader({
           />
         </div>
       </div>
-      <p className="text-foreground text-sm leading-snug font-medium">{displayPrompt}</p>
+      <p className={textRole('body', 'leading-snug')}>{displayPrompt}</p>
     </section>
   );
 }
@@ -110,7 +114,7 @@ function EvidenceAnswer({ answerText }: Readonly<{ answerText?: string | null }>
   return (
     <section className="grid gap-2">
       <Label>Engine response</Label>
-      <div className="border-border-subtle bg-well min-w-0 overflow-hidden rounded-[var(--radius-control)] border p-3.5 sm:p-4">
+      <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'min-w-0 overflow-hidden')}>
         {trimmed ? (
           <ContentMarkdown markdown={trimmed} density="compact" />
         ) : (
@@ -138,9 +142,9 @@ function EvidenceOutcomes({ evidence }: Readonly<{ evidence: ExecutionEvidence }
 
   return (
     <section className="grid gap-3">
-      <div>
+      <div className="grid gap-0.5">
         <Label>Why it scored this way</Label>
-        <p className="text-muted mt-0.5 text-xs">
+        <p className="text-muted text-xs">
           Deterministic checks against the persisted answer and source evidence.
         </p>
       </div>
@@ -171,26 +175,27 @@ function CitationItem({
 
   return (
     <li className="flex gap-3 p-3.5">
-      <span className="mono text-muted mt-0.5 w-5 shrink-0 text-xs font-medium">{ordinal}</span>
+      <span className={textRole('label', 'mono mt-0.5 w-5 shrink-0')}>{ordinal}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <div className="grid min-w-0 gap-0.5">
             {href ? (
               <a
                 href={href}
                 target="_blank"
                 rel="noreferrer"
-                className="text-foreground hover:text-accent-text inline-flex max-w-full items-center gap-1.5 text-sm font-medium transition-colors hover:underline"
+                className={textRole(
+                  'bodyStrong',
+                  'hover:text-accent-text inline-flex max-w-full items-center gap-1.5 transition-colors hover:underline',
+                )}
               >
                 <span className="truncate">{title}</span>
                 <ExternalLink className="size-3 shrink-0" aria-hidden />
               </a>
             ) : (
-              <p className="text-foreground truncate text-sm font-medium">
-                {title || 'Untitled source'}
-              </p>
+              <p className={textRole('bodyStrong', 'truncate')}>{title || 'Untitled source'}</p>
             )}
-            <p className="text-muted mt-0.5 truncate text-xs">{citation.domain}</p>
+            <p className="text-muted truncate text-xs">{citation.domain}</p>
           </div>
           <Badge
             className="shrink-0"
@@ -217,11 +222,11 @@ function EvidenceCitationsList({
         </span>
       </div>
       {citations.length === 0 ? (
-        <div className="border-border-subtle text-muted rounded-lg border border-dashed p-4 text-center text-sm">
+        <div className="border-border-subtle text-muted rounded-[var(--radius-card)] border border-dashed p-4 text-center text-sm">
           No citations were captured from this response.
         </div>
       ) : (
-        <ol className="divide-border-subtle border-border-subtle divide-y rounded-[var(--radius-control)] border">
+        <ol className={ledgerClasses('boxed')}>
           {citations.map((citation) => (
             <CitationItem key={`${citation.ordinal}-${citation.url}`} citation={citation} />
           ))}
@@ -285,7 +290,7 @@ function EvidenceStat({
       <span className="text-muted text-xs">{label}</span>
       <span
         className={cn(
-          'truncate text-sm font-medium',
+          textRole('bodyStrong', 'truncate'),
           positive === true
             ? 'text-score-high'
             : positive === false

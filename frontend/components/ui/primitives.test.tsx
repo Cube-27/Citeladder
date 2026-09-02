@@ -184,8 +184,11 @@ describe('Card', () => {
     );
     expect(screen.getByTestId('card').className).toContain('bg-panel');
     expect(screen.getByTestId('card').className).toContain('rounded-[var(--radius-card)]');
-    expect(screen.getByTestId('card').className).not.toContain('shadow-card');
-    expect(screen.getByTestId('card').className).not.toContain('border');
+    // The border belongs to the owner: it is what stopped call sites from
+    // hand-rolling a bordered panel. Elevation still does not — a card is
+    // defined by its edge, and shadows stay on overlays.
+    expect(screen.getByTestId('card').className).toContain('border-border-subtle');
+    expect(screen.getByTestId('card').className).not.toContain('shadow');
     expect(screen.getByText('Visibility').tagName).toBe('H3');
     expect(screen.getByText('Body')).toBeInTheDocument();
   });
@@ -205,9 +208,10 @@ describe('Card', () => {
     expect(eyebrow.className).not.toContain('font-mono');
   });
 
-  it('adds a semantic border only when a danger object requests it', () => {
+  it('recolours its border, not its weight, when a danger object requests it', () => {
     render(<Card data-testid="danger-card" tone="danger" />);
     expect(screen.getByTestId('danger-card')).toHaveClass('border', 'border-danger-border');
+    expect(screen.getByTestId('danger-card').className).not.toContain('border-border-subtle');
   });
 });
 

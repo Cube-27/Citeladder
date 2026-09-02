@@ -11,6 +11,10 @@ import { Pressable } from '@/components/ui/pressable';
 import type { AgentTaskRun, AgentTaskRunSummary, AgentTaskType } from '@/lib/api/agent';
 import { formatUtcTimestamp } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
+import { panelClasses } from '@/components/ui/panel';
+import { Stack } from '@/components/ui/layout';
+import { EmptyState } from '@/components/ui/empty-state';
 
 const ACTIVE_STATUSES = new Set(['queued', 'running']);
 const CANCELLABLE_STATUSES = new Set(['queued', 'running']);
@@ -96,8 +100,13 @@ export function TaskHistory({
   // Nothing to switch between until a run exists; the newest run auto-selects.
   if (!runs?.length) return null;
   return (
-    <details className="border-border-subtle rounded-md border">
-      <summary className="focus-ring text-secondary cursor-pointer list-none rounded-md px-3 py-2 text-xs font-medium">
+    <details className="border-border-subtle rounded-[var(--radius-control)] border">
+      <summary
+        className={textRole(
+          'label',
+          'focus-ring cursor-pointer list-none rounded-[var(--radius-control)] px-3 py-2',
+        )}
+      >
         Task history · {runs.length}
       </summary>
       <div className="border-border-subtle grid gap-1 border-t p-2" aria-label="Task history">
@@ -108,14 +117,14 @@ export function TaskHistory({
             onClick={() => onSelect(run.id)}
             aria-pressed={selectedId === run.id}
             className={cn(
-              'focus-ring min-h-11 rounded-sm px-2 py-2 text-left',
+              'focus-ring grid min-h-11 gap-1 rounded-[var(--radius-control)] px-2 py-2 text-left',
               selectedId === run.id
                 ? 'bg-accent-soft text-accent-hover'
                 : 'text-secondary hover:bg-background-alt',
             )}
           >
-            <span className="block truncate text-xs font-medium">{run.objective}</span>
-            <span className="text-muted mt-1 flex items-center justify-between gap-2 text-xs">
+            <span className={textRole('label', 'block truncate')}>{run.objective}</span>
+            <span className={textRole('meta', 'flex items-center justify-between gap-2')}>
               <span>{taskLabel(run.task_type)}</span>
               <span>{formatDate(run.created_at)}</span>
             </span>
@@ -135,11 +144,16 @@ function DataUsed({ result }: Readonly<{ result: AgentResult }>) {
     : 'No saved data artifact was available for this result.';
 
   return (
-    <details className="border-border-subtle bg-background rounded-md border px-3 py-3">
-      <summary className="focus-ring cursor-pointer list-none rounded-sm text-sm font-medium">
+    <details className="border-border-subtle bg-background grid gap-3 rounded-[var(--radius-control)] border px-3 py-3">
+      <summary
+        className={textRole(
+          'bodyStrong',
+          'focus-ring cursor-pointer list-none rounded-[var(--radius-control)]',
+        )}
+      >
         Data used
       </summary>
-      <div className="border-border-subtle mt-3 grid gap-3 border-t pt-3">
+      <div className="border-border-subtle grid gap-3 border-t pt-3">
         {result.sources.map((source) => {
           const coverage = sourceCoverage(source.coverage);
           const window = source.window
@@ -150,11 +164,11 @@ function DataUsed({ result }: Readonly<{ result: AgentResult }>) {
               key={source.key}
               className="flex flex-wrap items-start justify-between gap-2 text-xs"
             >
-              <div>
-                <p className="text-foreground font-medium">{source.label}</p>
-                {source.reason ? <p className="text-muted mt-0.5">{source.reason}</p> : null}
-                {window ? <p className="text-muted mt-0.5">{window}</p> : null}
-                {coverage ? <p className="text-muted mt-0.5 capitalize">{coverage}</p> : null}
+              <div className="grid gap-0.5">
+                <p className={textRole('emphasis', 'text-foreground')}>{source.label}</p>
+                {source.reason ? <p className="text-muted">{source.reason}</p> : null}
+                {window ? <p className="text-muted">{window}</p> : null}
+                {coverage ? <p className="text-muted capitalize">{coverage}</p> : null}
               </div>
               <Badge variant="neutral">{source.availability}</Badge>
             </div>
@@ -169,28 +183,33 @@ function DataUsed({ result }: Readonly<{ result: AgentResult }>) {
 function Roadmap({ items }: Readonly<{ items: AgentResult['roadmap_items'] }>) {
   if (!items.length) return null;
   return (
-    <section>
-      <h3 className="text-foreground text-sm font-medium">Prioritized next steps</h3>
-      <ol className="mt-2 grid gap-2">
+    <section className="grid gap-2">
+      <h3 className={textRole('bodyStrong')}>Prioritized next steps</h3>
+      <ol className="grid gap-2">
         {items.map((item) => (
           <li
             key={`${item.rank}:${item.title}`}
-            className="border-border-subtle rounded-md border p-3"
+            className="border-border-subtle rounded-[var(--radius-control)] border p-3"
           >
             <div className="flex items-start gap-3">
-              <span className="bg-accent-soft text-accent-text grid size-6 shrink-0 place-items-center rounded-full text-xs font-medium">
+              <span
+                className={textRole(
+                  'label',
+                  'bg-accent-soft text-accent-text grid size-6 shrink-0 place-items-center rounded-full',
+                )}
+              >
                 {item.rank}
               </span>
-              <div className="min-w-0">
+              <div className="grid min-w-0 gap-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="text-foreground text-sm font-medium">{item.title}</h4>
+                  <h4 className={textRole('bodyStrong')}>{item.title}</h4>
                   <Badge variant="neutral" className="capitalize">
                     {readable(item.severity)}
                   </Badge>
                 </div>
-                <p className="text-secondary mt-1 text-sm leading-relaxed">{item.remediation}</p>
+                <p className="text-secondary text-sm leading-relaxed">{item.remediation}</p>
                 {item.target_url ? (
-                  <p className="text-muted mt-1 text-xs break-all">Target: {item.target_url}</p>
+                  <p className="text-muted text-xs break-all">Target: {item.target_url}</p>
                 ) : null}
               </div>
             </div>
@@ -232,14 +251,12 @@ export function RunDetail({
 
 function EmptyRunDetail() {
   return (
-    <div className="grid min-h-64 place-items-center text-center">
-      <div>
-        <ShieldCheck aria-hidden className="text-accent-text mx-auto size-6" />
-        <h2 className="text-foreground mt-3 text-lg font-medium">Choose a bounded task</h2>
-        <p className="text-muted mt-1 max-w-lg text-sm">
-          Each run reads persisted project evidence once and records the exact artifacts used.
-        </p>
-      </div>
+    <div className="grid min-h-64 content-center">
+      <EmptyState
+        icon={ShieldCheck}
+        heading="Choose a bounded task"
+        description="Each run reads persisted project evidence once and records the exact artifacts used."
+      />
     </div>
   );
 }
@@ -275,11 +292,11 @@ function RunDetailHeader({
 }: Readonly<{ run: AgentTaskRun; cancelling: boolean; onCancel: (run: AgentTaskRun) => void }>) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <p className="text-muted text-xs">{taskLabel(run.task_type)}</p>
-        <h2 className="text-foreground mt-1 text-lg font-medium">{run.objective}</h2>
-        <p className="text-muted mt-1 text-xs">Started {formatDate(run.created_at)}</p>
-      </div>
+      <Stack gap="tight">
+        <p className={textRole('meta')}>{taskLabel(run.task_type)}</p>
+        <h2 className={textRole('sectionTitle')}>{run.objective}</h2>
+        <p className={textRole('meta')}>Started {formatDate(run.created_at)}</p>
+      </Stack>
       <div className="flex items-center gap-2">
         <RunBadge status={run.status} />
         {CANCELLABLE_STATUSES.has(run.status) ? (
@@ -304,11 +321,9 @@ function RunErrors({ detail, cancelError }: Readonly<{ detail: string; cancelErr
 
 function ResultSummary({ result }: Readonly<{ result: AgentResult }>) {
   return (
-    <section className="border-border-subtle bg-background-alt rounded-md border p-4 break-words">
-      <h3 className="text-foreground text-sm font-medium">Summary</h3>
-      <p className="text-secondary mt-2 text-sm leading-relaxed whitespace-pre-wrap">
-        {result.summary}
-      </p>
+    <section className={panelClasses({ tone: 'tonal' }, 'grid gap-2 break-words')}>
+      <h3 className={textRole('bodyStrong')}>Summary</h3>
+      <p className="text-secondary text-sm leading-relaxed whitespace-pre-wrap">{result.summary}</p>
       {result.observations.length ? (
         <ResultList heading="What the data shows" values={result.observations} />
       ) : null}
@@ -325,11 +340,11 @@ function ResultList({
   muted = false,
 }: Readonly<{ heading: string; values: string[]; muted?: boolean }>) {
   return (
-    <div className="mt-4">
-      <h4 className="text-foreground text-xs font-medium">{heading}</h4>
+    <Stack gap="tight">
+      <h4 className={textRole('label')}>{heading}</h4>
       <ul
         className={cn(
-          'mt-2 list-disc space-y-1 pl-4',
+          'list-disc space-y-1 pl-4',
           muted ? 'text-muted text-xs' : 'text-secondary text-sm',
         )}
       >
@@ -337,7 +352,7 @@ function ResultList({
           <li key={`${index}:${value}`}>{value}</li>
         ))}
       </ul>
-    </div>
+    </Stack>
   );
 }
 

@@ -127,7 +127,7 @@ export function PromptTable({
                         Archive
                       </DropdownItem>
                     ) : null}
-                    <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+                    <DropdownSeparator />
                     <DropdownItem
                       onSelect={() => onDelete(prompt)}
                       className="text-danger-text data-[highlighted]:bg-danger-bg"

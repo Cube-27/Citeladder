@@ -14,6 +14,7 @@ import {
 import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
 import type { Audit } from '@/lib/api/types';
 import { auditBadgeValue, auditStatusLabel, formatDateTime } from '@/lib/runs/status';
+import { textRole } from '@/components/ui/typography';
 
 /** Rows per page on the runs table (client-side; the list arrives whole). */
 const PAGE_SIZE = 10;
@@ -73,7 +74,7 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
               <TableCell>
                 <Link
                   href={`/runs/${audit.id}`}
-                  className="text-accent-text text-sm font-medium hover:underline"
+                  className={textRole('bodyStrong', 'text-accent-text hover:underline')}
                 >
                   View
                 </Link>

@@ -5,6 +5,10 @@ import { Pressable } from '@/components/ui/pressable';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { DemandSnapshot } from '@/lib/api/demand';
 import { detectorStates } from '@/lib/demand/signals';
+import { textRole } from '@/components/ui/typography';
+import { Stack } from '@/components/ui/layout';
+import { filterChipClasses } from '@/components/ui/filter-chip-variants';
+import { cn } from '@/lib/utils';
 
 const DETECTOR_DEFINITIONS: Record<
   string,
@@ -71,55 +75,52 @@ export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnaps
   );
 
   return (
-    <div className="bg-well border-border-subtle flex flex-col gap-2.5 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-muted text-xs font-medium">Detectors:</span>
-        {Object.entries(DETECTOR_DEFINITIONS).map(([key, meta]) => {
-          const rawState = detectors[key]?.state ?? 'unavailable';
-          const badgeTone = detectorBadgeValue(rawState);
-          const stateText = detectorStateLabel(rawState);
-          const detectorLimitations = detectors[key]?.limitations ?? [];
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <span className={textRole('label', 'shrink-0')}>Detectors</span>
+      {Object.entries(DETECTOR_DEFINITIONS).map(([key, meta]) => {
+        const rawState = detectors[key]?.state ?? 'unavailable';
+        const badgeTone = detectorBadgeValue(rawState);
+        const stateText = detectorStateLabel(rawState);
+        const detectorLimitations = detectors[key]?.limitations ?? [];
 
-          return (
-            <Tooltip
-              key={key}
-              content={
-                <div className="max-w-xs p-1 text-xs">
-                  <p className="font-medium">{meta.label}</p>
-                  <p className="mt-1 opacity-90">{meta.description}</p>
-                  <p className="mt-1.5 border-t border-white/20 pt-1.5 text-xs opacity-75">
-                    {meta.requirements}
+        return (
+          <Tooltip
+            key={key}
+            content={
+              <Stack gap="tight" className="max-w-xs p-1 text-xs">
+                <p className={textRole('emphasis')}>{meta.label}</p>
+                <p className="opacity-90">{meta.description}</p>
+                <p className="border-t border-white/20 pt-1.5 text-xs opacity-75">
+                  {meta.requirements}
+                </p>
+                {detectorLimitations.length > 0 && (
+                  <p className={textRole('label', 'text-warning-text')}>
+                    Note: {detectorLimitations.join(' ')}
                   </p>
-                  {detectorLimitations.length > 0 && (
-                    <p className="text-warning-text mt-1 text-xs font-medium">
-                      Note: {detectorLimitations.join(' ')}
-                    </p>
-                  )}
-                </div>
-              }
+                )}
+              </Stack>
+            }
+          >
+            <Pressable
+              type="button"
+              className={cn(filterChipClasses(false), 'w-auto shrink-0 cursor-help')}
             >
-              <Pressable
-                type="button"
-                className="bg-panel border-border hover:border-border-strong flex cursor-help items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
-              >
-                <span className="text-foreground font-medium">{meta.label}</span>
-                <Badge variant="status" value={badgeTone}>
-                  {stateText}
-                </Badge>
-              </Pressable>
-            </Tooltip>
-          );
-        })}
-      </div>
-
-      <div className="text-muted flex items-center gap-1.5 text-xs">
-        <Info className="size-3 shrink-0" aria-hidden="true" />
-        <span>
-          {limitations.length > 0
-            ? limitations.join(' ')
-            : 'GSC detail rows may omit privacy-filtered queries.'}
+              <span className={textRole('emphasis', 'text-foreground')}>{meta.label}</span>
+              <Badge variant="status" value={badgeTone}>
+                {stateText}
+              </Badge>
+            </Pressable>
+          </Tooltip>
+        );
+      })}
+      {/* Real, signal-specific limitations still surface; the static privacy
+          caveat that used to sit here said the same thing on every screen. */}
+      {limitations.length > 0 ? (
+        <span className={textRole('meta', 'ms-auto flex items-center gap-1.5')}>
+          <Info className="size-3 shrink-0" aria-hidden="true" />
+          {limitations.join(' ')}
         </span>
-      </div>
+      ) : null}
     </div>
   );
 }

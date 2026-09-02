@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { intentLabels, intentValues } from '@/lib/prompts/forms';
 import type { EnabledFilter, PromptFilters } from '@/lib/prompts/filter';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * Prompt library toolbar (F7): search box, an intent + enabled filter menu, a
@@ -82,7 +83,12 @@ export function PromptToolbar({
             <Filter className="size-4" aria-hidden />
             Filter
             {activeFilterCount > 0 ? (
-              <span className="bg-accent-subtle text-accent-text ml-1 rounded-full px-1.5 font-mono text-xs font-medium">
+              <span
+                className={textRole(
+                  'label',
+                  'bg-accent-subtle text-accent-text ml-1 rounded-full px-1.5 font-mono',
+                )}
+              >
                 {activeFilterCount}
               </span>
             ) : null}
@@ -102,7 +108,7 @@ export function PromptToolbar({
               {intentLabels[value]}
             </DropdownCheckboxItem>
           ))}
-          <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+          <DropdownSeparator />
           <DropdownLabel>Enabled</DropdownLabel>
           {(['all', 'enabled', 'disabled'] as const).map((value) => (
             <DropdownCheckboxItem
@@ -116,7 +122,7 @@ export function PromptToolbar({
               {value === 'all' ? 'All' : value === 'enabled' ? 'Enabled only' : 'Disabled only'}
             </DropdownCheckboxItem>
           ))}
-          <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+          <DropdownSeparator />
           <DropdownLabel>Branded</DropdownLabel>
           {(['all', 'enabled', 'disabled'] as const).map((value) => (
             <DropdownCheckboxItem

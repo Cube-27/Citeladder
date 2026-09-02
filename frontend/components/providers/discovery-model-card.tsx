@@ -81,7 +81,7 @@ export function DiscoveryModelCard({
             aria-label="Discovery model"
             className={cn(
               inputClasses,
-              'flex w-full cursor-pointer items-center justify-between text-left font-normal select-none',
+              'flex w-full cursor-pointer items-center justify-between text-left select-none',
             )}
           >
             <span className="truncate">{currentLabel}</span>
