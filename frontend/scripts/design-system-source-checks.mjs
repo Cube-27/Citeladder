@@ -290,6 +290,24 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
         `${label}:${entry.line}: a bordered filled box is a Panel (components/ui/panel.tsx)`,
       );
     }
+    // Vertical rhythm belongs to the container. A child that sets its own
+    // `mt-*` owns its distance from a sibling it cannot see, which is why
+    // ninety-odd of these accumulated in a dozen values and why changing a
+    // screen's rhythm meant editing every child taking part in it. Use `Stack`
+    // or a `gap`.
+    //
+    // Exempt: a className that also sizes a glyph (`size-*`), which is optical
+    // alignment against a text baseline rather than rhythm; negative margins,
+    // which are deliberate overlap; and 2px, which is too small to be rhythm.
+    if (
+      !label.startsWith('components/ui/') &&
+      !/(?<![:\w\]-])size-[0-9.]+\b/.test(entry.classes) &&
+      /(?<![:\w\]-])(?:mt|mb|my)-(?!0\b|0\.5\b|px\b)[0-9.]+\b/.test(entry.classes)
+    ) {
+      violations.push(
+        `${label}:${entry.line}: vertical rhythm belongs to a container gap (components/ui/layout.tsx)`,
+      );
+    }
     if (/\btext-5xl\b|\btext-\[[^\]]+\]/.test(entry.classes)) {
       violations.push(`${label}:${entry.line}: product type must use the approved even ladder`);
     }

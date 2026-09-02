@@ -9,6 +9,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
 import type { ObservedCompetitor, PromptMetricItem } from '@/lib/api/types';
 import { textRole } from '@/components/ui/typography';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 function movementDelta(delta: number | null): string {
   if (delta === null) return '';
@@ -29,7 +30,7 @@ export function PromptMovement({
       <CardContent>
         {promptQuery.isError ? <Alert tone="danger">Could not load prompt scores.</Alert> : null}
         {promptQuery.data?.length ? (
-          <ul className="border-border-subtle divide-border-subtle divide-y rounded-[var(--radius-card)] border">
+          <ul className={ledgerClasses('boxed')}>
             {promptQuery.data.slice(0, 5).map((item) => (
               <li key={item.id} className="grid gap-1 px-3 py-2 text-sm">
                 <span className={textRole('bodyStrong', 'line-clamp-2')}>{item.prompt_text}</span>
@@ -85,7 +86,7 @@ export function CompetitorSuggestions({
         <Alert tone="danger">Could not load competitor suggestions.</Alert>
       ) : null}
       {suggestionsQuery.data?.length ? (
-        <ul className="border-border-subtle bg-panel divide-border-subtle divide-y rounded-[var(--radius-control)] border">
+        <ul className={ledgerClasses('boxed')}>
           {suggestionsQuery.data.map((candidate) => (
             <li
               key={candidate.id}

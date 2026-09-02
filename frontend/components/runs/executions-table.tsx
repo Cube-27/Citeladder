@@ -41,7 +41,7 @@ export function ExecutionsTable({
       <TableBody>
         {executions.map((execution) => (
           <TableRow key={execution.id}>
-            <TableCell className="max-w-2xl py-3">
+            <TableCell className="max-w-2xl">
               <div className="flex flex-col gap-1">
                 <span className="leading-relaxed break-words" title={execution.prompt_text}>
                   {execution.prompt_text || `Prompt #${execution.prompt_index + 1}`}
@@ -49,7 +49,7 @@ export function ExecutionsTable({
                 <span className="mono text-muted text-xs">rep {execution.repetition}</span>
               </div>
             </TableCell>
-            <TableCell className="py-3">
+            <TableCell>
               <span className={textRole('bodyStrong')}>
                 {engineLabel(execution.logical_engine)}
               </span>
@@ -57,19 +57,19 @@ export function ExecutionsTable({
                 {transportLabel(execution.transport_provider)}
               </span>
             </TableCell>
-            <TableCell className="py-3">
+            <TableCell>
               <Badge variant="status" value={executionBadgeValue(execution.status)}>
                 {executionStatusLabel(execution.status)}
               </Badge>
             </TableCell>
-            <TableCell numeric className="mono py-3">
+            <TableCell numeric>
               {execution.latency_ms == null ? (
                 <UnavailableValue state="not_measured" />
               ) : (
                 `${execution.latency_ms} ms`
               )}
             </TableCell>
-            <TableCell className="py-3 text-right">
+            <TableCell className="text-right">
               {execution.status === 'succeeded' ? (
                 <Button variant="ghost" size="sm" onClick={() => onSelectEvidence(execution)}>
                   Evidence

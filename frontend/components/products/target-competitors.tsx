@@ -15,6 +15,7 @@ import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery
 import type { CommerceQueries } from './commerce-queries';
 import { competitorHost, competitorTone, discoveryMessage } from './commerce-format';
 import { textRole } from '@/components/ui/typography';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
 
@@ -115,7 +116,7 @@ function CompetitorRows({
     );
   }
   return (
-    <ul className="divide-border-subtle grid divide-y">
+    <ul className={ledgerClasses()}>
       {rows.map((row) => (
         <li key={row.id} className="flex flex-wrap items-center gap-3 py-2">
           <a

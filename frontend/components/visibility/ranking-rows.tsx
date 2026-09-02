@@ -13,6 +13,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { RankingRow } from '@/lib/api/types';
 import { formatRate } from '@/lib/visibility/dashboard';
 import { textRole } from '@/components/ui/typography';
+import { tagClasses } from '@/components/ui/filter-chip-variants';
 
 /** Shared empty state for a rankings table with no rows. */
 export const NO_RANKINGS_MESSAGE = 'No brand or competitor mentions were recorded for this run.';
@@ -80,14 +81,7 @@ export function RankingRowsTable({
                   />
                   <span className={textRole('emphasis')}>{row.name}</span>
                   {row.is_brand ? (
-                    <span
-                      className={textRole(
-                        'label',
-                        'bg-well inline-flex items-center rounded-[var(--radius-control)] px-1.5 py-0.5',
-                      )}
-                    >
-                      You
-                    </span>
+                    <span className={textRole('label', tagClasses())}>You</span>
                   ) : null}
                 </span>
               </TableCell>

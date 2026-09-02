@@ -25,6 +25,7 @@ import type { ReadinessCheck, ReadinessDimension } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
 import { Stack } from '@/components/ui/layout';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 function pageLabel(url: string) {
   try {
@@ -224,7 +225,7 @@ function CheckLedger({ checks }: Readonly<{ checks: ReadinessCheck[] }>) {
       {checks.length === 0 ? (
         <p className="text-secondary text-sm">No determinate checks were recorded.</p>
       ) : (
-        <ul className="divide-border-subtle divide-y">
+        <ul className={ledgerClasses()}>
           {checks.map((check) => (
             <CheckRow key={check.rule_id} check={check} />
           ))}
@@ -280,7 +281,7 @@ function FailingPages({
               : `${total} page${total === 1 ? '' : 's'} failed at least one check, worst first.`}
         </p>
       </div>
-      <ul className="divide-border-subtle divide-y">
+      <ul className={ledgerClasses()}>
         {dimension.evidence_pages.map((page) => (
           <li key={page.site_url_id} className="grid gap-1.5 py-3 first:pt-0">
             <Link

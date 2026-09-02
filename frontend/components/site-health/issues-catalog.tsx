@@ -26,6 +26,7 @@ import { pageDisplayTitle } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 const ISSUE_LIMIT = 25;
 const OCCURRENCE_LIMIT = 25;
@@ -253,7 +254,7 @@ function IssueGroupList({
   onSelect: (groupId: string) => void;
 }>) {
   return (
-    <div className="border-border-subtle bg-panel divide-border-subtle divide-y overflow-hidden rounded-[var(--radius-card)] border">
+    <div className={ledgerClasses('boxed')}>
       {rows.map((issue) => {
         const selected = issue.group_id === selectedGroupId;
         return (
@@ -401,7 +402,7 @@ function OccurrenceList({
   if (!detail || detail.occurrences.length === 0)
     return <p className="text-secondary text-sm">No affected URLs found.</p>;
   return (
-    <ul className="border-border-subtle divide-border-subtle divide-y border-y">
+    <ul className={ledgerClasses('ruled')}>
       {detail.occurrences.map((occurrence) => (
         <li key={occurrence.occurrence_id} className="grid gap-3 p-3">
           <Link

@@ -13,6 +13,8 @@ import { formatUtcTimestamp } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { Stack } from '@/components/ui/layout';
+import { EmptyState } from '@/components/ui/empty-state';
 
 const ACTIVE_STATUSES = new Set(['queued', 'running']);
 const CANCELLABLE_STATUSES = new Set(['queued', 'running']);
@@ -115,14 +117,14 @@ export function TaskHistory({
             onClick={() => onSelect(run.id)}
             aria-pressed={selectedId === run.id}
             className={cn(
-              'focus-ring min-h-11 rounded-[var(--radius-control)] px-2 py-2 text-left',
+              'focus-ring grid min-h-11 gap-1 rounded-[var(--radius-control)] px-2 py-2 text-left',
               selectedId === run.id
                 ? 'bg-accent-soft text-accent-hover'
                 : 'text-secondary hover:bg-background-alt',
             )}
           >
             <span className={textRole('label', 'block truncate')}>{run.objective}</span>
-            <span className="text-muted mt-1 flex items-center justify-between gap-2 text-xs">
+            <span className={textRole('meta', 'flex items-center justify-between gap-2')}>
               <span>{taskLabel(run.task_type)}</span>
               <span>{formatDate(run.created_at)}</span>
             </span>
@@ -249,14 +251,12 @@ export function RunDetail({
 
 function EmptyRunDetail() {
   return (
-    <div className="grid min-h-64 place-items-center text-center">
-      <div>
-        <ShieldCheck aria-hidden className="text-accent-text mx-auto size-6" />
-        <h2 className={textRole('sectionTitle', 'mt-3')}>Choose a bounded task</h2>
-        <p className="text-muted mt-1 max-w-lg text-sm">
-          Each run reads persisted project evidence once and records the exact artifacts used.
-        </p>
-      </div>
+    <div className="grid min-h-64 content-center">
+      <EmptyState
+        icon={ShieldCheck}
+        heading="Choose a bounded task"
+        description="Each run reads persisted project evidence once and records the exact artifacts used."
+      />
     </div>
   );
 }
@@ -292,11 +292,11 @@ function RunDetailHeader({
 }: Readonly<{ run: AgentTaskRun; cancelling: boolean; onCancel: (run: AgentTaskRun) => void }>) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <p className="text-muted text-xs">{taskLabel(run.task_type)}</p>
-        <h2 className={textRole('sectionTitle', 'mt-1')}>{run.objective}</h2>
-        <p className="text-muted mt-1 text-xs">Started {formatDate(run.created_at)}</p>
-      </div>
+      <Stack gap="tight">
+        <p className={textRole('meta')}>{taskLabel(run.task_type)}</p>
+        <h2 className={textRole('sectionTitle')}>{run.objective}</h2>
+        <p className={textRole('meta')}>Started {formatDate(run.created_at)}</p>
+      </Stack>
       <div className="flex items-center gap-2">
         <RunBadge status={run.status} />
         {CANCELLABLE_STATUSES.has(run.status) ? (
@@ -340,11 +340,11 @@ function ResultList({
   muted = false,
 }: Readonly<{ heading: string; values: string[]; muted?: boolean }>) {
   return (
-    <div className="mt-4">
+    <Stack gap="tight">
       <h4 className={textRole('label')}>{heading}</h4>
       <ul
         className={cn(
-          'mt-2 list-disc space-y-1 pl-4',
+          'list-disc space-y-1 pl-4',
           muted ? 'text-muted text-xs' : 'text-secondary text-sm',
         )}
       >
@@ -352,7 +352,7 @@ function ResultList({
           <li key={`${index}:${value}`}>{value}</li>
         ))}
       </ul>
-    </div>
+    </Stack>
   );
 }
 

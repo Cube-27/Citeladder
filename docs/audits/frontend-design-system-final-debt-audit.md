@@ -1,9 +1,18 @@
 # CiteLadder frontend / design-system final debt audit
 
-> Snapshot of the **current tree** after the completed marketing, auth,
-> onboarding, authenticated-app, and shared-primitive migration.
-> Shipped code is authoritative. This document is an audit, not a redesign
-> brief.
+> **Superseded — historical.** This audit describes the tree before the
+> semantic-token consolidation. Its geometry figures are stale (it reports
+> 10/16/16 radii; the ladder is now 8/12/16), and the debt it catalogues has
+> since been closed and locked behind `check:policy`: text roles replace
+> call-site font weights, `Stack` replaces child margins, one radius ladder
+> spans every surface, and `panelClasses` replaces the hand-rolled bordered
+> boxes. See `docs/design.md` for the current contract.
+>
+> Kept for the reasoning it records about how the debt arose.
+>
+> Snapshot of the tree after the completed marketing, auth, onboarding,
+> authenticated-app, and shared-primitive migration. This document is an audit,
+> not a redesign brief.
 
 ## 1. Executive Summary
 

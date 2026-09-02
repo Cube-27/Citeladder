@@ -57,7 +57,7 @@ export function StateMetric({
   return (
     <div className={cn(hairlineBandItemClasses, 'flex min-h-[104px] flex-col justify-between')}>
       <p className={eyebrowClasses}>{label}</p>
-      <div className="my-2">
+      <div>
         {value === null ? (
           <UnavailableValue state="not_measured" />
         ) : (
@@ -108,7 +108,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
               )}
             </span>
           </div>
-          <div className="mt-3 flex h-14 items-end gap-2.5" aria-hidden>
+          <div className="flex h-14 items-end gap-2.5" aria-hidden>
             <span
               className="bg-border-strong w-6 rounded-t-xs transition-[height]"
               style={{ height: `${Math.max(6, ((row.previous ?? 0) / ceiling) * 56)}px` }}
@@ -118,7 +118,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
               style={{ height: `${Math.max(6, ((row.current ?? 0) / ceiling) * 56)}px` }}
             />
           </div>
-          <p className={textRole('label', 'mt-2.5 text-center font-sans')}>Previous · Current</p>
+          <p className={textRole('label', 'text-center font-sans')}>Previous · Current</p>
         </div>
       ))}
     </div>

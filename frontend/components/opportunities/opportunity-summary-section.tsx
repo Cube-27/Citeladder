@@ -4,6 +4,7 @@ import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row'
 import { Label, textRole } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@/lib/api/types';
 import { formatAudited } from '@/lib/site-health/status';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
@@ -38,7 +39,7 @@ export function OpportunitySummarySection({ detail }: Readonly<{ detail: Opportu
   return (
     <section className="grid gap-2">
       <Label>Supporting result</Label>
-      <div className="divide-border-subtle divide-y">
+      <div className={ledgerClasses()}>
         <OpportunityKvRow label="Found" value={formatAudited(detail.created_at)} />
         {auditId ? (
           <SourceLink label="Visibility review" href={`/runs/${auditId}`} linkText="View result" />

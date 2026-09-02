@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 
 import { ContentMarkdown } from '@/lib/content/markdown';
 import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 function safeCitationUrl(value: string): string | null {
   try {
@@ -225,7 +226,7 @@ function EvidenceCitationsList({
           No citations were captured from this response.
         </div>
       ) : (
-        <ol className="divide-border-subtle border-border-subtle divide-y rounded-[var(--radius-control)] border">
+        <ol className={ledgerClasses('boxed')}>
           {citations.map((citation) => (
             <CitationItem key={`${citation.ordinal}-${citation.url}`} citation={citation} />
           ))}

@@ -19,6 +19,7 @@ import {
 import { formatWindowDate } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 export function DemandEvidenceDrawer({
   signal,
@@ -149,7 +150,7 @@ function DemandEvidenceContent({
               <Split className="text-warning size-3.5" />
               <span>Competing URL Breakdown ({details.pages.length} Pages)</span>
             </div>
-            <div className="border-border bg-panel divide-border-subtle divide-y rounded-[var(--radius-control)] border">
+            <div className={ledgerClasses('boxed')}>
               {details.pages.map((page) => (
                 <div key={page.url} className="grid gap-1 p-2.5 text-xs">
                   <div className={textRole('emphasis', 'text-foreground break-all')}>

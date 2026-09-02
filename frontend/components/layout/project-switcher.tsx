@@ -51,7 +51,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
       </DropdownTrigger>
       <DropdownContent align="start" className="w-56">
         <DropdownLabel>Projects</DropdownLabel>
-        <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+        <DropdownSeparator />
         {projects.map((project) => {
           const selected = project.id === activeProjectId;
           return (
@@ -71,7 +71,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
             </DropdownItem>
           );
         })}
-        <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+        <DropdownSeparator />
         <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
           <span
             aria-hidden

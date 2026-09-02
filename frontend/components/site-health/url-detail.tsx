@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 
 import { UrlDetailView } from './url-detail-view';
 import { textRole } from '@/components/ui/typography';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 const HISTORY_LIMIT = 25;
 const RERUN_SEARCH_PARAM = 'rerun';
@@ -205,7 +206,7 @@ function HistorySkeleton() {
 
 function HistoryRows({ rows }: Readonly<{ rows: IssueHistoryPage['items'] }>) {
   return (
-    <ul className="divide-border-subtle divide-y">
+    <ul className={ledgerClasses()}>
       {rows.map((row) => (
         <li key={row.id} className="flex items-center justify-between gap-3 py-2">
           <span className="flex min-w-0 flex-col">

@@ -19,17 +19,32 @@ React Hook Form, Zod, and TanStack Query.
 | Toast | Add | `components/ui/toast.tsx`; transient success only |
 | Pressable | Add | `components/ui/pressable.tsx`; rows/cards without button chrome |
 | Clipboard action | Add | `components/ui/copy-button.tsx` |
+| Text roles (`textRole`) | Add | `components/ui/typography.tsx`; the closed set of product text roles — a call site names the job, never a size/weight/ink |
+| Stack, CardGrid | Add | `components/ui/layout.tsx`; vertical rhythm and equal-height card rows |
+| Panel (`panelClasses`) | Add | `components/ui/panel.tsx`; the bordered filled box nested inside a card or section |
+| Card footer / flush content | Deepen | `components/ui/card.tsx`; `CardFooter` for the action bar, `CardContent flush` for edge-to-edge tables and lists |
+| Menu separator | Deepen | `components/ui/dropdown.tsx`; the separator owns its own rule and spacing |
 | Command palette, Market Select, CSV import | Specialized | `csv-import.tsx` owns file selection, reset/reselection, pending state, and accessible labeling; domain parsers remain feature-owned |
 | Cursor/table pagination, resizable workspaces | Specialized | Existing feature owners |
 | Color controls, OTP, sliders, calendars/date pickers, avatars | Defer | No current product use |
 | Generic disclosure and donut | Removed | No production consumers; domain tree/table expanders retain their own behavior |
 
 Controls expose default, hover, pressed, focus, selected, pending, disabled,
-invalid, success, and destructive states when the capability needs them. App
-geometry uses 10px controls and 16px semantic objects and overlays. `Card` is
-reserved for real semantic objects and defaults to a flat fill. Metric groups,
-editorial section headers, ledgers, and workspace panes provide structural
-layout without turning every region into a card.
+invalid, success, and destructive states when the capability needs them.
+
+Geometry is one ladder on every surface — 8px controls, 12px semantic objects,
+16px overlays — and no surface redeclares a role. `Card` is reserved for real
+semantic objects: a white fill, the card radius, and a hairline border, never a
+shadow. A bordered box *inside* a card or section is `panelClasses`, because a
+`Card` may not nest in a `Card`. Metric groups, editorial section headers,
+ledgers, and workspace panes provide structural layout without turning every
+region into a card.
+
+Three things a call site never decides for itself, each enforced by
+`check:policy`: a **font weight** (name a `textRole`), a **vertical margin**
+(use a `Stack` or a container `gap`), and a **size-named radius** (use a role
+token). The point is that a future design change is a token edit rather than a
+sweep of hundreds of call sites.
 
 `Input` owns optional `startContent` and `endContent` adornments and its shared
 frame. `containerClassName` targets that frame; `className` continues to target

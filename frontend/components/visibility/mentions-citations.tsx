@@ -18,6 +18,7 @@ import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { totalCitationCount, totalMentionCount } from '@/lib/visibility/evidence';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 const TITLE = 'Mentions & Citations';
 
@@ -90,7 +91,7 @@ export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: 
         </Badge>
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
-        <ul className="divide-border-subtle divide-y">
+        <ul className={ledgerClasses()}>
           {withEvidence.map((item) => (
             <ExecutionEvidenceRow key={item.analysis_id} item={item} />
           ))}
@@ -131,7 +132,7 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
       {item.citations.length > 0 ? (
         <div className="grid gap-1.5">
           <p className={eyebrowClasses}>Citations</p>
-          <ul className="divide-border-subtle border-border-subtle bg-panel divide-y rounded-[var(--radius-control)] border">
+          <ul className={ledgerClasses('boxed')}>
             {item.citations.map((citation) => {
               const href = safeUrl(citation.url);
               return (

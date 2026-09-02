@@ -22,6 +22,7 @@ import {
 } from '@/lib/visibility/evidence';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 const TITLE = 'Query Fanout';
 
@@ -82,7 +83,7 @@ export function FanoutEvidence({ query, isFiltered, onClearFilters, limit }: Evi
         </Badge>
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
-        <div className="divide-border-subtle divide-y">
+        <div className={ledgerClasses()}>
           {groups.map((group) => (
             <PromptGroupBlock key={group.promptSnapshotId} group={group} />
           ))}

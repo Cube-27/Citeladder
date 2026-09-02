@@ -161,7 +161,7 @@ export function UnifiedPerformanceCard({
           />
         ))}
       </div>
-      <CardContent className="p-[var(--card-padding)]">
+      <CardContent>
         <div
           data-testid="traffic-metric-panels"
           className={cn(

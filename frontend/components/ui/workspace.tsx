@@ -21,6 +21,28 @@ export const hairlineBandClasses =
   'border-border-subtle divide-border-subtle grid divide-y border-y sm:divide-x sm:divide-y-0';
 
 export const hairlineBandItemClasses = 'min-w-0 py-3 sm:px-4 sm:first:ps-0 sm:last:pe-0';
+
+/**
+ * The ledger: a vertical list of peers separated by rules rather than boxed
+ * individually. Six different wrappers existed for this one idea — borderless,
+ * hung off a rule, and boxed at two different radii — so the same list of
+ * evidence rows looked like a different component on each screen.
+ *
+ *   `open`  — the list sits on whatever surface already contains it.
+ *   `ruled` — hung between two hairlines, to separate it from its neighbours.
+ *   `boxed` — a standalone object with its own fill and edge.
+ */
+const LEDGER_SHELL = {
+  open: '',
+  ruled: 'border-border-subtle border-y',
+  boxed: 'bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border',
+} as const;
+
+export type LedgerShell = keyof typeof LEDGER_SHELL;
+
+export function ledgerClasses(shell: LedgerShell = 'open', className?: string) {
+  return cn('divide-border-subtle grid divide-y', LEDGER_SHELL[shell], className);
+}
 export function MetricGroup({
   children,
   className,

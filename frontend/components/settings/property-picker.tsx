@@ -18,6 +18,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
+import { tagClasses } from '@/components/ui/filter-chip-variants';
 
 const PROVIDER_NOUN: Record<IntegrationConnection['provider'], string> = {
   gsc: 'Search Console property',
@@ -159,9 +160,7 @@ export function PropertyPicker({
     <>
       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
         {selected ? (
-          <span className="bg-well border-border-subtle text-secondary max-w-full truncate rounded-xs border px-2 py-0.5 font-mono text-xs">
-            {selected}
-          </span>
+          <span className={tagClasses('outline', 'max-w-full truncate font-mono')}>{selected}</span>
         ) : (
           <span
             className={textRole(

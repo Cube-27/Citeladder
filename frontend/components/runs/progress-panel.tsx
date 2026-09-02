@@ -193,7 +193,7 @@ export function ProgressPanel({
 
   return (
     <Card>
-      <CardContent className="grid gap-4 p-[var(--card-padding)]">
+      <CardContent className="grid gap-4">
         <ProgressHeader
           audit={audit}
           polling={polling}

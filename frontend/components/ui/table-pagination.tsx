@@ -44,7 +44,7 @@ export function TablePagination({
   onPageChange: (page: number) => void;
 }>) {
   return (
-    <div className="border-border-subtle flex items-center justify-between gap-2 border-t px-2 py-2">
+    <div className="border-border-subtle flex items-center justify-between gap-2 border-t px-[var(--table-cell-padding-x)] py-2">
       <span className="text-muted text-xs">
         <span className="mono">
           {from}–{to}

@@ -36,6 +36,7 @@ import {
 } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
 import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 export function UrlDetailView({
   detail,
@@ -391,7 +392,7 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
         {ordered.length === 0 ? (
           <p className="text-secondary text-sm">No issues detected on this page.</p>
         ) : (
-          <ol className="divide-border-subtle divide-y">
+          <ol className={ledgerClasses()}>
             {ordered.map((issue, index) => (
               <li key={issue.occurrence_id} className="grid gap-2 py-3">
                 <span className="flex items-center justify-between gap-3">

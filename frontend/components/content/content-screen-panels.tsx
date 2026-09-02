@@ -65,7 +65,7 @@ export function ContentComposer({
   onHistoryOpen: () => void;
 }>) {
   return (
-    <Card data-component-id="content-composer" className="p-[var(--card-padding)]">
+    <Card data-component-id="content-composer" className="p-[var(--card-padding-large)]">
       <CardContent className="flex flex-col gap-[var(--workspace-gap)] p-0">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-1">
@@ -292,7 +292,7 @@ export function GeneratingPanel({
   onCancel: (generationId: string) => void;
 }>) {
   return (
-    <Card data-component-id="content-generating-panel" className="p-[var(--card-padding)]">
+    <Card data-component-id="content-generating-panel" className="p-[var(--card-padding-large)]">
       <CardContent className="flex items-center gap-4 p-0">
         <output aria-label="Generating content" className="flex items-center gap-3">
           <ICONS.spinner className="text-accent size-5 animate-spin" aria-hidden />
@@ -331,7 +331,7 @@ export function GenerationErrorPanel({
     <Card
       data-component-id="content-error-panel"
       tone="danger"
-      className="bg-danger-bg p-[var(--card-padding)]"
+      className="bg-danger-bg p-[var(--card-padding-large)]"
     >
       <CardContent className="flex flex-col gap-4 p-0">
         <div role="alert" className="text-danger-text flex items-start gap-2.5 text-sm">

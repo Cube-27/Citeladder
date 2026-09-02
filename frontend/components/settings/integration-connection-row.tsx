@@ -130,7 +130,7 @@ function ConnectionMetadata({
   runActive: boolean;
 }>) {
   return (
-    <div className="border-border-subtle/70 mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-2.5">
+    <div className="border-border-subtle/70 flex flex-wrap items-center justify-between gap-2 border-t pt-2.5">
       <div className="flex items-center gap-2">
         <span className={eyebrowClasses}>Last synced</span>
         <span className="text-secondary font-mono text-xs tabular-nums">

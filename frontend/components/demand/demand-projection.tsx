@@ -29,7 +29,7 @@ import {
 import { formatWindowDate } from '@/lib/format';
 import { useProjectContext } from '@/lib/project/project-context';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { textRole } from '@/components/ui/typography';
+import { EmptyState } from '@/components/ui/empty-state';
 
 const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
@@ -266,33 +266,29 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
           ))}
         </div>
       ) : snapshot.signals.length === 0 ? (
-        <div className="py-[var(--empty-state-padding)] text-center">
-          <Sparkles className="text-muted/60 mx-auto size-8" />
-          <h3 className={textRole('bodyStrong', 'mt-2')}>No qualifying search gaps observed</h3>
-          <p className="text-muted mt-1 text-xs">
-            Search Console data was observed, but no configured detector emitted a signal in this
-            window.
-          </p>
-        </div>
+        <EmptyState
+          icon={Sparkles}
+          heading="No qualifying search gaps observed"
+          description="Search Console data was observed, but no configured detector emitted a signal in this window."
+        />
       ) : (
-        <div className="py-[var(--empty-state-padding)] text-center">
-          <Search className="text-muted/60 mx-auto size-8" />
-          <h3 className={textRole('bodyStrong', 'mt-2')}>No signals match your filter</h3>
-          <p className="text-muted mt-1 text-xs">
-            Try choosing a different filter tab or clearing your search term.
-          </p>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              setActiveTab('all');
-              setSearchQuery('');
-            }}
-            className="mt-3 text-xs"
-          >
-            Clear Filters
-          </Button>
-        </div>
+        <EmptyState
+          icon={Search}
+          heading="No signals match your filter"
+          description="Try choosing a different filter tab or clearing your search term."
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setActiveTab('all');
+                setSearchQuery('');
+              }}
+            >
+              Clear Filters
+            </Button>
+          }
+        />
       )}
 
       {/* Evidence Inspection Drawer */}

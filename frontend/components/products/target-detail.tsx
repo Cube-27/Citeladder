@@ -38,7 +38,7 @@ export function TargetDetail({
 }>) {
   return (
     <Stack gap="workspace" className="content-start">
-      <Card className="flex flex-wrap items-start gap-2 p-[var(--card-padding)]">
+      <Card className="flex flex-wrap items-start gap-2 p-[var(--card-padding-large)]">
         <h2 className={textRole('sectionTitle')}>{label}</h2>
         <Badge variant="status" value="info">
           {target.kind}

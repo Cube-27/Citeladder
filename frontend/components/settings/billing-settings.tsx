@@ -314,9 +314,9 @@ function SubscriptionDetail({
   subscription: BillingEntitlement['subscription'] | null;
   periodEnd: string | null | undefined;
 }>) {
-  if (!subscription) return <p className="text-muted mt-1 text-xs">No active subscription</p>;
+  if (!subscription) return <p className={textRole('meta')}>No active subscription</p>;
   return (
-    <p className="text-muted mt-1 text-xs">
+    <p className={textRole('meta')}>
       Subscription: {subscription.status.replaceAll('_', ' ')}
       {periodEnd ? (
         <>

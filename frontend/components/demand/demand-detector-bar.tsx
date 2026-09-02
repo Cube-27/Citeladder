@@ -7,6 +7,7 @@ import type { DemandSnapshot } from '@/lib/api/demand';
 import { detectorStates } from '@/lib/demand/signals';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { Stack } from '@/components/ui/layout';
 
 const DETECTOR_DEFINITIONS: Record<
   string,
@@ -91,18 +92,18 @@ export function DemandDetectorBar({ snapshot }: Readonly<{ snapshot: DemandSnaps
             <Tooltip
               key={key}
               content={
-                <div className="max-w-xs p-1 text-xs">
+                <Stack gap="tight" className="max-w-xs p-1 text-xs">
                   <p className={textRole('emphasis')}>{meta.label}</p>
-                  <p className="mt-1 opacity-90">{meta.description}</p>
-                  <p className="mt-1.5 border-t border-white/20 pt-1.5 text-xs opacity-75">
+                  <p className="opacity-90">{meta.description}</p>
+                  <p className="border-t border-white/20 pt-1.5 text-xs opacity-75">
                     {meta.requirements}
                   </p>
                   {detectorLimitations.length > 0 && (
-                    <p className={textRole('label', 'text-warning-text mt-1')}>
+                    <p className={textRole('label', 'text-warning-text')}>
                       Note: {detectorLimitations.join(' ')}
                     </p>
                   )}
-                </div>
+                </Stack>
               }
             >
               <Pressable

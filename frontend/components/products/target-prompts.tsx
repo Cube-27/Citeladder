@@ -14,6 +14,7 @@ import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 
 import type { CommerceQueries } from './commerce-queries';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 function forTarget(
   rows: NonNullable<CommerceQueries['buyerPrompts']['data']>,
@@ -143,7 +144,7 @@ function PromptRows({
     );
   }
   return (
-    <ul className="divide-border-subtle grid divide-y">
+    <ul className={ledgerClasses()}>
       {rows.map((row) => (
         <li key={row.id} className="flex flex-wrap items-center gap-3 py-2">
           <span className="text-secondary min-w-0 flex-1">{row.text}</span>

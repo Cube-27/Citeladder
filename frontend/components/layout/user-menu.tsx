@@ -53,7 +53,7 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
         </DropdownTrigger>
         <DropdownContent align="start" side="top" className="w-56">
           <DropdownLabel>{user.email}</DropdownLabel>
-          <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+          <DropdownSeparator />
           <DropdownItem asChild>
             <Link href="/settings">
               <SettingsIcon className="size-4 shrink-0" aria-hidden />

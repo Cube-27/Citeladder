@@ -123,6 +123,22 @@ describe('productUiSourceViolations', () => {
       '<div className="[&_pre]:bg-well [&_pre]:border [&_pre]:rounded-[var(--radius-control)] [&_pre]:p-4">x</div>';
     expect(productUiSourceViolations(source, 'lib/content/example.tsx', true)).toEqual([]);
   });
+
+  it('rejects a child that sets its own vertical rhythm', () => {
+    const source = '<p className="mt-3">Example</p>';
+    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(1);
+  });
+
+  it('allows a 2px nudge, a sized glyph, and a negative margin', () => {
+    const cases = [
+      '<p className="mt-0.5">x</p>',
+      '<Icon className="mt-1.5 size-4" />',
+      '<div className="-mt-2">x</div>',
+    ];
+    for (const source of cases) {
+      expect(productUiSourceViolations(source, 'components/example.tsx', true)).toEqual([]);
+    }
+  });
 });
 
 describe('Radius ladder', () => {

@@ -25,6 +25,7 @@ import type { SiteHealthOverview } from '@/lib/api/types';
 import { PLACEHOLDER, statusLabel } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 function percent(value: number | null): string {
   return value === null ? PLACEHOLDER : `${Math.round(value * 100)}%`;
@@ -62,7 +63,7 @@ export function OverviewDetailsSkeleton() {
       <div className="grid gap-4 xl:grid-cols-[1.15fr_1fr]" aria-hidden>
         {[0, 1].map((key) => (
           <Card key={key}>
-            <CardContent className="grid gap-3 p-[var(--card-padding)]">
+            <CardContent className="grid gap-3">
               <Skeleton className="h-5 w-40" />
               {Array.from({ length: 5 }, (_, index) => (
                 <Skeleton key={index} className="h-10 w-full" />
@@ -74,7 +75,7 @@ export function OverviewDetailsSkeleton() {
       <div className="grid gap-4 xl:grid-cols-3" aria-hidden>
         {[0, 1, 2].map((key) => (
           <Card key={key}>
-            <CardContent className="grid gap-3 p-[var(--card-padding)]">
+            <CardContent className="grid gap-3">
               <Skeleton className="h-5 w-36" />
               <Skeleton className="h-24 w-full" />
               <Skeleton className="h-4 w-3/4" />
@@ -387,7 +388,7 @@ function WebFundamentalsDrawer({
       title="Web Fundamentals"
       description="Static evidence from the acquired HTML and response headers."
     >
-      <div className="divide-border-subtle grid divide-y">
+      <div className={ledgerClasses()}>
         {data.areas.map((area) => (
           <section key={area.key} className="grid gap-3 py-4 first:pt-0">
             <header className="grid gap-1">

@@ -81,7 +81,7 @@ export function TopicRail({
   };
 
   const errorBanner = topicErrorMessage(loadError, actionError) ? (
-    <Alert tone="danger" className="mx-1 mb-1">
+    <Alert tone="danger" className="mx-1">
       {topicErrorMessage(loadError, actionError)}
     </Alert>
   ) : null;
@@ -183,7 +183,7 @@ function TopicSelect({
 }>) {
   const labelId = useId();
   return (
-    <div className="mb-1 grid gap-1.5 lg:hidden">
+    <div className="grid gap-1.5 lg:hidden">
       <span id={labelId} className={eyebrowClasses}>
         Topics
       </span>

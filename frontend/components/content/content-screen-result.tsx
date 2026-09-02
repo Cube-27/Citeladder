@@ -33,7 +33,7 @@ export function GenerationResult({
   onRejectClick: () => void;
 }>) {
   return (
-    <Card data-component-id="content-result-card" className="min-w-0 p-[var(--card-padding)]">
+    <Card data-component-id="content-result-card" className="min-w-0 p-[var(--card-padding-large)]">
       <CardContent className="flex flex-col gap-[var(--workspace-gap)] p-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className={textRole('sectionTitle', 'tracking-tight')}>Generated content</h2>

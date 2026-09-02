@@ -1,5 +1,6 @@
 'use client';
 
+import { Play } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -12,14 +13,13 @@ import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { RunsTable } from '@/components/runs/runs-table';
 import { AuditSchedules } from '@/components/runs/audit-schedules';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
-import { displayHeadingXlClasses } from '@/components/ui/typography';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
 import { shouldPollAudit } from '@/lib/runs/status';
 import { useActiveProject } from '@/lib/project/project-context';
 import { Stack } from '@/components/ui/layout';
+import { EmptyState } from '@/components/ui/empty-state';
 
 /** Poll interval (ms) for the runs list while any run is active. */
 const POLL_INTERVAL_MS = 3_000;
@@ -109,15 +109,17 @@ export default function RunsPage() {
         </Card>
       ) : audits.length === 0 ? (
         <Card>
-          <CardContent className="grid justify-items-center gap-3 py-[var(--empty-state-padding)] text-center">
-            <p className={eyebrowClasses}>Runs</p>
-            <p className={displayHeadingXlClasses}>No runs yet</p>
-            <p className="text-secondary max-w-md text-sm">
-              Launch your first audit to measure how AI engines answer questions about your brand.
-            </p>
-            <Button variant="ghost" className="mt-1" onClick={() => setLaunchOpen(true)}>
-              Launch your first audit
-            </Button>
+          <CardContent>
+            <EmptyState
+              icon={Play}
+              heading="No runs yet"
+              description="Launch your first audit to measure how AI engines answer questions about your brand."
+              action={
+                <Button variant="ghost" onClick={() => setLaunchOpen(true)}>
+                  Launch your first audit
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       ) : (

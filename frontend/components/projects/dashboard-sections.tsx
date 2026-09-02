@@ -21,6 +21,7 @@ import {
   MovementChart,
   StateMetric,
 } from './dashboard-primitives';
+import { Stack } from '@/components/ui/layout';
 
 export function DashboardHeader({
   data,
@@ -44,7 +45,7 @@ export function DashboardHeader({
   const website = data.project.website_url;
   const facts = data.facts;
   return (
-    <Card className="grid gap-[var(--workspace-gap)] p-[var(--card-padding)]">
+    <Card className="grid gap-[var(--workspace-gap)] p-[var(--card-padding-large)]">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
           <BrandLogo
@@ -137,16 +138,14 @@ function FactSummary({
   supporting?: string;
 }>) {
   return (
-    <div className={hairlineBandItemClasses}>
+    <div className={cn(hairlineBandItemClasses, 'grid gap-1.5')}>
       <p className={eyebrowClasses}>{label}</p>
       {value.trim() ? (
-        <p className={textRole('body', 'mt-1.5 line-clamp-none leading-snug md:line-clamp-2')}>
-          {value}
-        </p>
+        <p className={textRole('body', 'line-clamp-none leading-snug md:line-clamp-2')}>{value}</p>
       ) : (
-        <UnavailableValue state={emptyState} className="mt-1.5 inline-flex" />
+        <UnavailableValue state={emptyState} className="inline-flex justify-self-start" />
       )}
-      {supporting ? <p className="text-muted mt-2 text-xs">{supporting}</p> : null}
+      {supporting ? <p className={textRole('meta')}>{supporting}</p> : null}
     </div>
   );
 }
@@ -181,7 +180,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
         <NextAction data={data} />
         <Track data={data} />
       </div>
-      <Card aria-labelledby="project-state" className="grid gap-3 p-[var(--card-padding)]">
+      <Card aria-labelledby="project-state" className="grid gap-3 p-[var(--card-padding-large)]">
         <div className="flex items-center justify-between gap-3">
           <SectionTitle id="project-state">Project state</SectionTitle>
           <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
@@ -199,8 +198,8 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
 
 function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card className="text-foreground flex flex-col justify-between gap-4 p-[var(--card-padding)]">
-      <div>
+    <Card className="text-foreground flex flex-col justify-between gap-4 p-[var(--card-padding-large)]">
+      <Stack gap="compact">
         <div className="flex items-center justify-between">
           <AccentEyebrow>
             <span className="bg-accent size-1.5 rounded-full" aria-hidden />
@@ -210,11 +209,13 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
             {data.next_action.kind === 'monitor' ? 'Optimal state' : 'Action recommended'}
           </span>
         </div>
-        <p className={textRole('sectionTitle', 'mt-3 leading-snug')}>{data.next_action.title}</p>
-        <p className="text-muted mt-1 text-xs leading-relaxed">
-          Prioritized from deterministic evidence and current visibility coverage.
-        </p>
-      </div>
+        <Stack gap="tight">
+          <p className={textRole('sectionTitle', 'leading-snug')}>{data.next_action.title}</p>
+          <p className={textRole('meta', 'leading-relaxed')}>
+            Prioritized from deterministic evidence and current visibility coverage.
+          </p>
+        </Stack>
+      </Stack>
       <Button asChild variant="primary" size="md" className="self-start">
         <Link href={data.next_action.href}>
           {data.next_action.kind === 'monitor' ? 'View trends' : 'Continue'}
@@ -230,16 +231,16 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <Card
       aria-labelledby="citation-share-track"
-      className="flex flex-col justify-between gap-4 p-[var(--card-padding)]"
+      className="flex flex-col justify-between gap-4 p-[var(--card-padding-large)]"
     >
-      <div>
+      <Stack gap="compact">
         <div className="flex items-center justify-between">
           <span className={eyebrowClasses}>AI Visibility Track</span>
           <span className={textRole('label')}>
             {data.track.observed_at ? `${data.track.engine_coverage} engine(s)` : 'No run'}
           </span>
         </div>
-        <div className="mt-3 grid gap-1">
+        <Stack gap="tight">
           <SectionTitle id="citation-share-track">Citation share</SectionTitle>
           <div className="flex items-baseline gap-3">
             {data.track.citation_share.value === null ? (
@@ -250,22 +251,17 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
               </p>
             )}
             {delta !== null ? (
-              <span
-                className={cn(
-                  textRole('label', 'font-display tabular-nums'),
-                  delta >= 0 ? 'text-success' : 'text-danger',
-                )}
-              >
+              <span className={textRole('delta', delta >= 0 ? 'text-success' : 'text-danger')}>
                 {delta > 0 ? '+' : ''}
                 {delta.toFixed(1)}%
               </span>
             ) : null}
           </div>
-        </div>
-        <p className="text-muted mt-1.5 text-xs leading-relaxed">
-          {data.track.observed_at ? deltaLabel(delta) : data.track.limitations[0]}
-        </p>
-      </div>
+          <p className={textRole('meta', 'leading-relaxed')}>
+            {data.track.observed_at ? deltaLabel(delta) : data.track.limitations[0]}
+          </p>
+        </Stack>
+      </Stack>
       <div className="flex justify-end">
         <Button asChild variant="ghost" size="sm">
           <Link href="/visibility?tab=trends">
@@ -281,7 +277,7 @@ function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <Card
       aria-labelledby="movement"
-      className="flex flex-col justify-between gap-4 p-[var(--card-padding)]"
+      className="flex flex-col justify-between gap-4 p-[var(--card-padding-large)]"
     >
       <div className="grid gap-3">
         <div className="grid gap-0.5">
@@ -311,7 +307,7 @@ export function ActionsAndProof({
 }>) {
   return (
     <div className="grid gap-[var(--workspace-gap)]">
-      <Card aria-labelledby="ranked-actions" className="p-[var(--card-padding)]">
+      <Card aria-labelledby="ranked-actions" className="p-[var(--card-padding-large)]">
         <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-t border-b pt-3 pb-3">
           <div className="grid gap-0.5">
             <SectionTitle id="ranked-actions">Ranked actions</SectionTitle>
@@ -346,7 +342,7 @@ export function ActionsAndProof({
       </Card>
       <Card
         aria-labelledby="progress-proof"
-        className="flex flex-col justify-between gap-4 p-[var(--card-padding)] sm:flex-row sm:items-center"
+        className="flex flex-col justify-between gap-4 p-[var(--card-padding-large)] sm:flex-row sm:items-center"
       >
         <div className="grid gap-1">
           <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>

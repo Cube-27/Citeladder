@@ -355,7 +355,7 @@ function ScoredInventoryState({
           ariaLabel="Page inventory views"
           rootClassName="min-w-0 flex-1"
         />
-        <div className="mb-1 ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           <PageKindSelect value={pageKind} onChange={selectPageKind} />
         </div>
       </div>

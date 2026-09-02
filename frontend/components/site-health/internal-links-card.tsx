@@ -6,6 +6,7 @@ import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageDetail } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 /**
  * Internal links — the crawl's persisted link-graph projection for this page.
@@ -95,7 +96,7 @@ function NeighbourList({
       {neighbours.length === 0 ? (
         <p className="text-secondary text-sm">{emptyMessage}</p>
       ) : (
-        <ul className="divide-border-subtle min-w-0 divide-y">
+        <ul className={ledgerClasses()}>
           {neighbours.map((neighbour) => (
             <li
               key={`${neighbour.site_url_id ?? neighbour.url}`}

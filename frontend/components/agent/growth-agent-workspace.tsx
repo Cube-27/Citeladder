@@ -11,6 +11,8 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { RunDetail, TaskForm, TaskHistory } from './growth-agent-workspace-view';
+import { Stack } from '@/components/ui/layout';
+import { textRole } from '@/components/ui/typography';
 
 const ACTIVE_STATUSES = new Set(['queued', 'running']);
 
@@ -59,8 +61,11 @@ export function GrowthAgentWorkspace({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-[var(--card-padding)] py-4">
-        <p className="text-muted mb-4 flex items-center gap-2 text-xs">
+      <Stack
+        gap="workspace"
+        className="min-h-0 flex-1 content-start overflow-y-auto px-[var(--card-padding)] py-4"
+      >
+        <p className={textRole('meta', 'flex items-center gap-2')}>
           <ShieldCheck aria-hidden className="text-accent-text size-4 shrink-0" />
           <span className="min-w-0 truncate">
             Read-only project evidence{routeContext ? ` · ${routeContext.canonicalRoute}` : ''}
@@ -81,7 +86,7 @@ export function GrowthAgentWorkspace({
             />
           )}
         </div>
-      </div>
+      </Stack>
       <TaskForm
         taskType={taskType}
         objective={objective}

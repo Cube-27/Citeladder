@@ -32,6 +32,7 @@ import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { Stack } from '@/components/ui/layout';
 
 const SIGNAL_METAS: Record<
   string,
@@ -237,7 +238,7 @@ export function DemandSignalCard({
 
   return (
     <Card>
-      <CardContent className="grid gap-4 p-4 sm:p-[var(--card-padding)]">
+      <CardContent className="grid gap-4">
         {/* Header: Rank, Badges, Query Title */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
@@ -306,7 +307,7 @@ export function DemandSignalCard({
         <div
           className={panelClasses(
             { tone: 'none', pad: 'compact' },
-            cn('text-xs leading-relaxed', insightToneClasses),
+            cn('grid gap-2.5 text-xs leading-relaxed', insightToneClasses),
           )}
         >
           <div className="flex items-start gap-2">
@@ -319,7 +320,7 @@ export function DemandSignalCard({
 
           {/* Competing URLs summary pill for cannibalization */}
           {pages.length > 0 && (
-            <div className="mt-2.5 grid gap-1.5 border-t border-current/15 pt-2">
+            <div className="grid gap-1.5 border-t border-current/15 pt-2">
               <span className={textRole('label', 'opacity-80')}>Competing URLs:</span>
               <div className="grid gap-1">
                 {pages.slice(0, 2).map((page) => (
@@ -344,34 +345,34 @@ export function DemandSignalCard({
         {/* Metrics Bar & Next Steps */}
         <div className="border-border-subtle flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
           <dl className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
-            <div>
+            <Stack gap="tight">
               <dt className={eyebrowClasses}>Impressions</dt>
-              <dd className={textRole('bodyStrong', 'mt-0.5 tabular-nums')}>
+              <dd className={textRole('bodyStrong', 'tabular-nums')}>
                 <DemandMetricValue value={formatCount(numericMetric(signal, 'impressions'))} />
               </dd>
-            </div>
-            <div>
+            </Stack>
+            <Stack gap="tight">
               <dt className={eyebrowClasses}>Clicks</dt>
-              <dd className={textRole('bodyStrong', 'mt-0.5 tabular-nums')}>
+              <dd className={textRole('bodyStrong', 'tabular-nums')}>
                 <DemandMetricValue value={formatCount(numericMetric(signal, 'clicks'))} />
               </dd>
-            </div>
-            <div>
+            </Stack>
+            <Stack gap="tight">
               <dt className={eyebrowClasses}>CTR</dt>
-              <dd className={textRole('bodyStrong', 'mt-0.5 tabular-nums')}>
+              <dd className={textRole('bodyStrong', 'tabular-nums')}>
                 <DemandMetricValue value={formatCtr(signal)} />
               </dd>
-            </div>
-            <div>
+            </Stack>
+            <Stack gap="tight">
               <dt className={eyebrowClasses}>Avg Position</dt>
-              <dd className={textRole('bodyStrong', 'mt-0.5 tabular-nums')}>
+              <dd className={textRole('bodyStrong', 'tabular-nums')}>
                 {numericMetric(signal, 'position') === null ? (
                   <UnavailableValue state="not_measured" />
                 ) : (
                   numericMetric(signal, 'position')!.toFixed(1)
                 )}
               </dd>
-            </div>
+            </Stack>
           </dl>
 
           {/* Direct Workflow Links */}

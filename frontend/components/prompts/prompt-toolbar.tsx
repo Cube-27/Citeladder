@@ -108,7 +108,7 @@ export function PromptToolbar({
               {intentLabels[value]}
             </DropdownCheckboxItem>
           ))}
-          <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+          <DropdownSeparator />
           <DropdownLabel>Enabled</DropdownLabel>
           {(['all', 'enabled', 'disabled'] as const).map((value) => (
             <DropdownCheckboxItem
@@ -122,7 +122,7 @@ export function PromptToolbar({
               {value === 'all' ? 'All' : value === 'enabled' ? 'Enabled only' : 'Disabled only'}
             </DropdownCheckboxItem>
           ))}
-          <DropdownSeparator className="bg-border-subtle my-1 h-px" />
+          <DropdownSeparator />
           <DropdownLabel>Branded</DropdownLabel>
           {(['all', 'enabled', 'disabled'] as const).map((value) => (
             <DropdownCheckboxItem

@@ -17,6 +17,7 @@ import type { AuditScheduleCadence, LogicalEngine, PromptSet } from '@/lib/api/t
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { formatUtcTimestamp } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
+import { ledgerClasses } from '@/components/ui/workspace';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -72,7 +73,7 @@ export function AuditSchedules({
           <Alert tone="danger">Could not load scheduled audits.</Alert>
         ) : null}
         {schedulesQuery.data?.length ? (
-          <ul className="border-border-subtle divide-border-subtle divide-y rounded-[var(--radius-card)] border">
+          <ul className={ledgerClasses('boxed')}>
             {schedulesQuery.data.map((schedule) => (
               <li
                 key={schedule.id}
@@ -147,8 +148,8 @@ export function AuditSchedules({
                 />
               </label>
             ) : null}
-            <fieldset className="sm:col-span-2">
-              <legend className={textRole('label', 'mb-1')}>Engines</legend>
+            <fieldset className="grid gap-1 sm:col-span-2">
+              <legend className={textRole('label')}>Engines</legend>
               <div className="flex flex-wrap gap-2">
                 {(['chatgpt', 'gemini', 'claude'] as const).map((engine) => (
                   <Checkbox
