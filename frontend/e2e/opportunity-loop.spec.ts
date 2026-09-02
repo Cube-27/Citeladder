@@ -333,7 +333,7 @@ test('earned opportunity handoff links generation and comparable verification', 
   await expect(page.getByText('Path: Earned')).toBeVisible();
   // Instant navigation may retain the previous route's hidden DOM in its reusable shell.
   await expect(page.getByText(detail(false).remediation).filter({ visible: true })).toHaveCount(0);
-  const prompt = page.getByRole('textbox', { name: /describe the website content/i });
+  const prompt = page.getByRole('textbox', { name: 'Your instruction' });
   await expect(prompt).toHaveValue('');
   await prompt.fill('Prepare an evidence-backed editorial inclusion brief for example.org.');
   await page.getByRole('button', { name: 'Generate' }).click();
