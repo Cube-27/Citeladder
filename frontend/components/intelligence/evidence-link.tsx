@@ -32,15 +32,15 @@ export function EvidenceLink({ evidence, className }: Readonly<EvidenceLinkProps
     <Link
       href={evidence.href}
       className={cn(
-        'text-accent-text inline-flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline',
+        'text-accent-text flex min-w-0 items-start gap-1 text-xs font-medium underline-offset-2 hover:underline',
         className,
       )}
     >
-      <span>{evidence.label}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">{evidence.label}</span>
       {evidence.observedAt ? (
-        <span className="text-muted font-normal">· {evidence.observedAt}</span>
+        <span className="text-muted shrink-0 font-normal">· {evidence.observedAt}</span>
       ) : null}
-      <ArrowUpRight aria-hidden className="size-3 shrink-0" />
+      <ArrowUpRight aria-hidden className="mt-0.5 size-3 shrink-0" />
     </Link>
   );
 }

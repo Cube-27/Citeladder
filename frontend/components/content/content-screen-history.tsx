@@ -2,12 +2,10 @@ import { FileText } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import type { RunStatusValue } from '@/components/ui/badge-variants';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ContentGenerationListItem, ContentGenerationStatus } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
 import { Pressable } from '@/components/ui/pressable';
-import { WorkspacePane } from '@/components/ui/workspace';
 
 const STATUS_BADGE: Record<ContentGenerationStatus, RunStatusValue> = {
   queued: 'queued',
@@ -31,22 +29,13 @@ export function GenerationHistory({
   onSelect: (generationId: string) => void;
 }>) {
   return (
-    <WorkspacePane
-      data-component-id="content-history"
-      className="flex flex-col gap-3 p-[var(--card-padding)]"
-    >
-      <div className="border-border grid gap-1 border-b pb-3">
-        <span className={eyebrowClasses}>History</span>
-        <h2 className="font-display text-foreground text-lg leading-tight font-medium tracking-tight">
-          Recent generations
-        </h2>
-      </div>
+    <div data-component-id="content-history" className="min-w-0">
       {loading ? (
         <Skeleton className="h-24 w-full rounded-sm" />
       ) : (
         <HistoryItems items={items} selectedId={selectedId} onSelect={onSelect} />
       )}
-    </WorkspacePane>
+    </div>
   );
 }
 
@@ -59,8 +48,8 @@ function HistoryItems({
   selectedId: string | null;
   onSelect: (generationId: string) => void;
 }>) {
-  // A sidebar rail, so the full <EmptyState> card would out-weigh the panel
-  // it sits in; this keeps the same icon → line shape at rail scale.
+  // The drawer already supplies the surrounding surface, so the empty state
+  // stays compact and avoids nesting another card inside it.
   if (items.length === 0)
     return (
       <div className="text-muted grid justify-items-center gap-2 py-[var(--card-padding)] text-center">

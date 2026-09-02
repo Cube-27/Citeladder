@@ -34,6 +34,18 @@ export function GenerationResult({
   return (
     <Card data-component-id="content-result-card" className="min-w-0 p-[var(--card-padding)]">
       <CardContent className="flex flex-col gap-[var(--workspace-gap)] p-0">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-foreground text-xl font-medium tracking-tight">
+            Generated content
+          </h2>
+          <DraftActionButtons
+            detail={detail}
+            regenerating={regenerating}
+            onExport={onExport}
+            onRegenerate={onRegenerate}
+            placement="top"
+          />
+        </div>
         {detail.output_truncated ? (
           <div data-component-id="content-truncation-warning">
             <Alert tone="warning">
@@ -66,7 +78,10 @@ export function GenerationResult({
 function ResultBody({ detail }: Readonly<{ detail: ContentGenerationDetail }>) {
   return (
     <>
-      <div data-component-id="content-result-body" className="min-w-0 py-2">
+      <div
+        data-component-id="content-result-body"
+        className="max-h-[60vh] max-w-full min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain py-2 pe-2"
+      >
         <ContentMarkdown markdown={detail.output_text ?? ''} />
       </div>
       <p data-component-id="content-ai-disclaimer" className="text-muted text-sm leading-relaxed">
@@ -118,13 +133,13 @@ function ResultActions({
 }>) {
   return (
     <div className="flex flex-wrap items-center gap-3 pt-2">
-      <CopyButton
-        value={detail.output_text ?? ''}
-        size="md"
-        data-component-id="content-copy-button"
-      >
-        Copy
-      </CopyButton>
+      <DraftActionButtons
+        detail={detail}
+        regenerating={regenerating}
+        onExport={onExport}
+        onRegenerate={onRegenerate}
+        placement="bottom"
+      />
       {detail.opportunity_id ? (
         <Button asChild variant="secondary" size="md">
           <Link href={`/opportunities?opportunity_id=${detail.opportunity_id}`}>
@@ -132,25 +147,6 @@ function ResultActions({
           </Link>
         </Button>
       ) : null}
-      <Button
-        variant="secondary"
-        size="md"
-        data-component-id="content-export-button"
-        onClick={onExport}
-      >
-        <Download className="mr-1.5 size-4" aria-hidden />
-        Export Markdown
-      </Button>
-      <Button
-        variant="secondary"
-        size="md"
-        data-component-id="content-regenerate-button"
-        disabled={regenerating}
-        onClick={() => onRegenerate(detail.id)}
-      >
-        <RefreshCw className="mr-1.5 size-4" aria-hidden />
-        Regenerate
-      </Button>
       <div className="ms-auto flex items-center gap-2">
         {detail.feedback === null ? (
           <>
@@ -177,6 +173,52 @@ function ResultActions({
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+function DraftActionButtons({
+  detail,
+  regenerating,
+  onExport,
+  onRegenerate,
+  placement,
+}: Readonly<{
+  detail: ContentGenerationDetail;
+  regenerating: boolean;
+  onExport: () => void;
+  onRegenerate: (id: string) => void;
+  placement: 'top' | 'bottom';
+}>) {
+  const componentSuffix = placement === 'top' ? '-top' : '';
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <CopyButton
+        value={detail.output_text ?? ''}
+        size="md"
+        data-component-id={`content-copy-button${componentSuffix}`}
+      >
+        Copy
+      </CopyButton>
+      <Button
+        variant="secondary"
+        size="md"
+        data-component-id={`content-export-button${componentSuffix}`}
+        onClick={onExport}
+      >
+        <Download className="mr-1.5 size-4" aria-hidden />
+        Export Markdown
+      </Button>
+      <Button
+        variant="secondary"
+        size="md"
+        data-component-id={`content-regenerate-button${componentSuffix}`}
+        disabled={regenerating}
+        onClick={() => onRegenerate(detail.id)}
+      >
+        <RefreshCw className="mr-1.5 size-4" aria-hidden />
+        Regenerate
+      </Button>
     </div>
   );
 }

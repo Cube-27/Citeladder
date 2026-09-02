@@ -52,7 +52,10 @@ describe('station navigation', () => {
     pathname = '/site';
     searchParams = new URLSearchParams('tab=pages');
     render(<SidebarNav />);
-    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute('aria-current', 'page');
+    const activeLink = screen.getByRole('link', { name: 'Website' });
+    expect(activeLink).toHaveAttribute('aria-current', 'page');
+    expect(activeLink).toHaveClass('bg-accent-soft', 'text-accent-text');
+    expect(screen.getByRole('link', { name: 'Issues' })).toHaveClass('hover:bg-active');
   });
 
   it('renders exact mobile stations and shared secondary destinations', () => {

@@ -24,13 +24,13 @@ describe('Solutions page (public marketing `/solutions`)', () => {
     }
   });
 
-  it('hangs the hero off the left axis like the other marketing subpages', () => {
+  it('centers only the hero content and solution links', () => {
     render(<Page />);
 
     const h1 = screen.getByRole('heading', { level: 1 });
-    expect(h1).not.toHaveClass('mx-auto');
-    expect(h1.closest('.text-center')).toBeNull();
-    expect(screen.getByRole('navigation', { name: 'Solutions by team' })).not.toHaveClass(
+    expect(h1).toHaveClass('mx-auto');
+    expect(h1.closest('.text-center')).not.toBeNull();
+    expect(screen.getByRole('navigation', { name: 'Solutions by team' })).toHaveClass(
       'justify-center',
     );
   });

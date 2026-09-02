@@ -277,10 +277,7 @@ describe('ContentScreen — Site Health handoff', () => {
     expect(box.value).toContain('Answer the primary question directly.');
     expect(screen.getByText(/persisted answerability readiness gap/i)).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByRole('radio', { name: /About Us page/i })).toHaveAttribute(
-        'aria-checked',
-        'true',
-      ),
+      expect(screen.getByRole('button', { name: 'Web: About Us page' })).toBeInTheDocument(),
     );
 
     await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
@@ -330,7 +327,8 @@ describe('ContentScreen — Site Health handoff', () => {
     );
 
     renderScreen({ siteHealthReference: reference });
-    const linkedIn = await screen.findByRole('radio', { name: /LinkedIn post/i });
+    await userEvent.click(await screen.findByRole('button', { name: 'Social formats' }));
+    const linkedIn = screen.getByRole('menuitemradio', { name: /LinkedIn post/i });
     await userEvent.click(linkedIn);
     await waitFor(() => {
       const prompt = screen.getByRole('textbox', {
@@ -338,7 +336,7 @@ describe('ContentScreen — Site Health handoff', () => {
       }) as HTMLTextAreaElement;
       expect(prompt.value).toContain('Complete the canonical company profile.');
     });
-    expect(linkedIn).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('button', { name: 'Social: LinkedIn post' })).toBeInTheDocument();
   });
 });
 
@@ -367,10 +365,7 @@ describe('ContentScreen — search demand handoff', () => {
     expect(brief).toContain('Write on behalf of Acme.');
     // Query signals default to the blog skill.
     await waitFor(() =>
-      expect(screen.getByRole('radio', { name: /Blog post/i })).toHaveAttribute(
-        'aria-checked',
-        'true',
-      ),
+      expect(screen.getByRole('button', { name: 'Web: Blog post' })).toBeInTheDocument(),
     );
     // Provenance is visible, and Generate is immediately available.
     expect(screen.getByText(/Brief written from the search demand signal/i)).toBeInTheDocument();
@@ -413,10 +408,7 @@ describe('ContentScreen — search demand handoff', () => {
     expect(brief).toContain('Median click-through rate for this position band: 3.1%');
     // A URL fix is page work.
     await waitFor(() =>
-      expect(screen.getByRole('radio', { name: /Website content page/i })).toHaveAttribute(
-        'aria-checked',
-        'true',
-      ),
+      expect(screen.getByRole('button', { name: 'Web: Website content page' })).toBeInTheDocument(),
     );
   });
 
@@ -511,15 +503,12 @@ describe('ContentScreen — platform skills', () => {
     renderScreen();
 
     // The website content page is preselected — no hardcoded 'article'.
-    const pageOption = await screen.findByRole('radio', { name: /Website content page/i });
-    await waitFor(() => expect(pageOption).toHaveAttribute('aria-checked', 'true'));
+    await screen.findByRole('button', { name: 'Web: Website content page' });
 
     // Picking a platform switches the skill sent with the generation.
-    await userEvent.click(screen.getByRole('radio', { name: /LinkedIn post/i }));
-    expect(screen.getByRole('radio', { name: /LinkedIn post/i })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    );
+    await userEvent.click(screen.getByRole('button', { name: 'Social formats' }));
+    await userEvent.click(screen.getByRole('menuitemradio', { name: /LinkedIn post/i }));
+    expect(screen.getByRole('button', { name: 'Social: LinkedIn post' })).toBeInTheDocument();
 
     await userEvent.type(
       screen.getByRole('textbox', { name: /describe the website content/i }),
@@ -530,18 +519,21 @@ describe('ContentScreen — platform skills', () => {
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0].skill_id).toBe('linkedin');
   });
-
-  it('groups the catalog by channel so platforms are discoverable', async () => {
-    mockBase();
-    renderScreen();
-
-    expect(await screen.findByText('Web')).toBeInTheDocument();
-    expect(screen.getByText('Social')).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /Article/i })).toBeInTheDocument();
-  });
 });
 
 describe('ContentScreen — ready state', () => {
+  it('keeps generation history in a drawer instead of a persistent workspace rail', async () => {
+    mockBase([generation({ status: 'succeeded' })]);
+    renderScreen();
+
+    await screen.findByRole('button', { name: 'History' });
+    expect(document.querySelector('[data-component-id="content-history"]')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'History' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Generation history' });
+    expect(within(drawer).getByText('Write a landing page')).toBeInTheDocument();
+  });
+
   it('reports an empty preview as a crawl to run, not as a pending check', async () => {
     mockBase();
     mswServer.use(
@@ -615,9 +607,10 @@ describe('ContentScreen — generate flow', () => {
     expect(await screen.findByRole('status', { name: /generating content/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /describe the website content/i })).toBeDisabled();
-    for (const option of screen.getAllByRole('radio')) {
-      expect(option).toBeDisabled();
-      expect(option).toHaveClass('disabled:cursor-not-allowed', 'disabled:opacity-50');
+    for (const channel of document.querySelectorAll(
+      '[data-component-id="content-format-channel"]',
+    )) {
+      expect(channel).toBeDisabled();
     }
 
     // Result (poll flips to succeeded): markdown + provenance + actions.
@@ -628,7 +621,13 @@ describe('ContentScreen — generate flow', () => {
     // the page; the footer says only what the draft was grounded with.
     expect(screen.queryByText(/requested model/i)).not.toBeInTheDocument();
     expect(screen.getByText(/grounded with: website crawl · 3 pages/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /regenerate/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /regenerate/i })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /copy/i })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /export markdown/i })).toHaveLength(2);
+    expect(document.querySelector('[data-component-id="content-result-body"]')).toHaveClass(
+      'overflow-x-hidden',
+      'overflow-y-auto',
+    );
     expect(screen.queryByText(/hit the length limit/i)).not.toBeInTheDocument();
   });
 
@@ -668,7 +667,7 @@ describe('ContentScreen — generate flow', () => {
       'Page',
     );
     await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
-    await userEvent.click(await screen.findByRole('button', { name: /copy/i }));
+    await userEvent.click((await screen.findAllByRole('button', { name: /copy/i }))[0]);
     expect(writeText).toHaveBeenCalledWith('# About Acme\n\nWe make things.');
   });
 

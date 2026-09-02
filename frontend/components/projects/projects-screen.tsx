@@ -33,8 +33,8 @@ export function ProjectsScreen() {
   const searchParams = useSearchParams();
   const [editing, setEditing] = useState<Project | null>(null);
 
-  // Normalize legacy one-time project handoff links. Current onboarding stores
-  // the selection before navigating directly to the canonical `/projects` URL.
+  // Apply the one-time onboarding handoff inside this route group's provider,
+  // then normalize the URL once the explicit selection has been recorded.
   useEffect(() => {
     const projectId = searchParams.get('project');
     if (!projectId) return;

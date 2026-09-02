@@ -21,14 +21,14 @@ export function Hero() {
   return (
     <header className="bg-background-alt border-border-subtle relative -mt-16 overflow-hidden border-b pt-16">
       <Container className="relative z-1 pt-20 pb-18 md:pt-32 md:pb-24">
-        <HeroEntrance className="w-full max-w-5xl">
+        <HeroEntrance className="mx-auto w-full max-w-5xl text-center">
           <Eyebrow>{hook.eyebrow}</Eyebrow>
-          <h1 className="website-hero-display text-foreground mt-5 max-w-[22ch] text-balance">
+          <h1 className="website-hero-display text-foreground mx-auto mt-5 max-w-[22ch] text-balance">
             {hook.title}{' '}
             <em className="text-accent-text font-medium not-italic">{hook.titleAccent}</em>
           </h1>
-          <p className="website-lead text-muted mt-6 max-w-[58ch]">{hook.body}</p>
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <p className="website-lead text-muted mx-auto mt-6 max-w-[58ch]">{hook.body}</p>
+          <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row sm:items-center">
             <ButtonLink href={DEMO_HREF} variant="primary" className="w-full sm:w-auto">
               {hook.primaryCta}
               <ArrowRight aria-hidden />
@@ -41,7 +41,7 @@ export function Hero() {
               {hook.secondaryCta}
             </ButtonLink>
           </div>
-          <RotatingEngineLogos className="mt-12 max-w-2xl" />
+          <RotatingEngineLogos className="mx-auto mt-12 max-w-2xl" />
         </HeroEntrance>
       </Container>
     </header>

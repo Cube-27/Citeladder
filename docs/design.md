@@ -7,7 +7,7 @@
 
 CiteLadder is a light-only, evidence-led enterprise system. The authenticated
 application uses the **Prism Evidence Workspace**: a neutral paper editorial canvas,
-near-black ink and actions, one blue for analytical selection, semantic evidence
+near-black ink, a blue-violet primary action, one blue for analytical selection, semantic evidence
 washes, useful density, and deliberate negative space. It is an operating
 workspace, not a wall of equal-weight KPI cards.
 
@@ -25,7 +25,7 @@ workspace, not a wall of equal-weight KPI cards.
   Website and flow surfaces use a 16px reading baseline. Size,
   leading, weight, tracking, and
   colour are one role contract, never independent page-level choices.
-- **Action and selection:** ink (`#16161A`) owns primary actions across product,
+- **Action and selection:** blue-violet (`#5147E5`) owns primary actions across product,
   public, authentication, and onboarding surfaces. One blue (`#1B44E0`) owns
   analytical selection, links, active navigation, and focus. Cyan, coral, lime,
   and amber are evidence/status families, never route decoration.
@@ -68,12 +68,12 @@ Tokens are semantic; components use the role, not a colour value.
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
 | Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
 | Borders | `border-subtle` (`#EAE9E4`), `border` (`#DDDDD6`), `border-strong` (`#B6B6AE`), `border-bold` (`#8C8C84`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
-| Primary action | `action-*` (`#16161A`) | Near-black authenticated primary actions |
+| Primary action | `action-*` (`#5147E5`) | Blue-violet primary actions |
 | Selection and focus | `accent-*` (`#1B44E0`) | One blue for selection, links, tabs, active navigation, and focus |
 | Status and evidence | cyan, coral, lime, amber, `citation-*`, `run-*`, `score-*`, `chart-*` | Persisted evidence and status, always paired with a label or icon |
 
 The ground is paper and the ink is near-black. Colour appears on under five
-percent of the surface: `action` `#16161A` owns primary buttons, and a single
+percent of the surface: `action` `#5147E5` owns primary buttons, and a single
 blue `#1B44E0` (`#1A3FD0` for text, hover, and press) owns selection, links,
 tabs, active navigation, focus, and the first chart series. Every surface uses
 the same neutral ladder: `#FAFAF8` canvas and sidebar, `#F4F4F1` wells and
@@ -91,7 +91,7 @@ requires all four neutral text roles to meet WCAG 2.1 AA normal-text contrast
 (`4.5:1`) on every shared light surface, including `active`.
 
 Marketing uses the same neutral paper ladder (`background`, `sidebar` / `well`,
-`panel-tonal`, and `active`), ink action, and blue link/focus roles as the product,
+`panel-tonal`, and `active`), blue-violet action, and blue link/focus roles as the product,
 without route-scoped palette overrides. On paper a tonal band is a whisper, so a
 public section separates with a hairline (`divided`) unless the fill edge is
 doing real work. Functional evidence families remain inside
@@ -228,6 +228,10 @@ series retain visual gaps for unavailable points and explain those gaps accessib
 
 - Use sections, ledgers, tables, and split workspaces as page architecture. Cards
   support a section; they do not replace one. Avoid nested decorative cards.
+- The warm paper canvas remains visible between regions, while analytical objects
+  sit on white surfaces. Overview sections, Website metric cards and page tables,
+  Opportunities tables, and Prompts tables use the shared white panel role without
+  added elevation.
 - Recommendations show impact, deterministic priority factors, affected scope,
   status, and links to persisted evidence. Do not invent confidence, effort,
   ownership, or causality.
@@ -332,6 +336,9 @@ and Connect. The five-slot mobile bar uses those exact stations; one shared
 accessible secondary-navigation component exposes each station's destinations.
 Commerce is a conditional Analyze destination backed by persisted capability
 evidence; hidden navigation never changes direct-route authorization.
+Its catalog remains the one target selector. Catalog-wide secondary actions are
+grouped behind one disclosure, bulk actions appear only after a selection, and
+the selected target keeps one aligned correction control beside its heading.
 The Agent is a top-bar button opening a right-side sheet, not a destination.
 Escape closes it, focus returns to the trigger, and its context is limited to
 typed workspace, project, canonical route, date range, and route filters.
@@ -341,6 +348,15 @@ data enters Agent context. Because the sheet is the workspace's only host, the
 workspace carries no page chrome of its own: the drawer owns the one title and
 description, the result region owns the one scroll container, the composer pins
 below it, and task history is a collapsed disclosure rather than a sidebar rail.
+
+Content Generation uses the full workspace width. Its format control exposes
+the catalog's channel groups first and keeps the server-owned formats inside
+channel dropdowns, so catalog growth does not create a wall of chips. Generation
+history opens from the composer header in the shared right-side drawer. Generated
+prose scrolls vertically inside its result surface; normal text and long links
+wrap to the reading width, while intrinsically wide Markdown such as tables may
+scroll horizontally. Copy, Markdown export, and regenerate remain available at
+both the result header and footer.
 
 Overview stays useful without an audit. Its canonical reading order is project identity plus
 Facts, one next action plus Track, Project State, Movement, ranked actions, report proof, and Top
@@ -485,9 +501,9 @@ never an empty-state label.
 ### Navigation and overlays
 
 The marketing nav floats transparent over the hero and becomes a frosted white on
-scroll, with no shadow. The app sidebar makes the active location obvious through
-ink label and an accent icon mark, never through a fill, translation, or
-a leading rail.
+scroll, with no shadow. The app sidebar uses a quiet accent-soft pill for the active
+location and a neutral pill on hover; the label and icon retain sufficient contrast
+without translation or a leading rail.
 Menus and custom listboxes use `shadow-elevated`, the semantic overlay-radius role, the shared
 menu panel/item recipes, and a short system-curve entrance. Single-select filters use
 radio menu items so the current value is visible without relying on colour.
@@ -563,7 +579,7 @@ Before merging a visual change, verify:
   prose punctuation is unaffected.
 
 The focused flow introduces no new colour family, gradient, decorative glow,
-nested card, or competitor mutation. Ink owns the primary action; the accent blue owns
+nested card, or competitor mutation. Blue-violet owns the primary action; the accent blue owns
 the current step and selected-answer state without changing font weight. The
 transaction flow and all explicit confirmation gates remain unchanged.
 - Repository-owned static, test, and appropriate visual commands pass. External

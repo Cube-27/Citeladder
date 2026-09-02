@@ -55,12 +55,12 @@ describe('Blog index (public marketing `/blog`)', () => {
     expect(screen.queryByText(BLOG_EMPTY_STATE.body)).toBeNull();
   });
 
-  it('hangs the hero off the left axis like the other marketing subpages', () => {
+  it('centers the hero content', () => {
     render(<BlogPage />);
 
     const h1 = screen.getByRole('heading', { level: 1 });
-    expect(h1).not.toHaveClass('mx-auto');
-    expect(h1.closest('.text-center')).toBeNull();
+    expect(h1).toHaveClass('mx-auto');
+    expect(h1.closest('.text-center')).not.toBeNull();
   });
 
   it('maps posts beyond the featured one to the card grid', () => {

@@ -33,7 +33,9 @@ function NavLink({
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 text-sm transition-colors duration-150',
-        active ? 'text-foreground font-medium' : 'text-muted hover:text-foreground font-normal',
+        active
+          ? 'bg-accent-soft text-accent-text font-medium'
+          : 'text-muted hover:bg-active hover:text-foreground font-normal',
       )}
     >
       <Icon className={cn('size-4 shrink-0', active ? 'text-accent' : 'text-subtle')} aria-hidden />
@@ -64,8 +66,8 @@ function StationLinks({
                 className={cn(
                   'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium',
                   isNavItemActive(pathname, searchParams, item)
-                    ? 'text-foreground font-medium'
-                    : 'text-muted',
+                    ? 'bg-accent-soft text-accent-text font-medium'
+                    : 'text-muted hover:bg-active hover:text-foreground',
                 )}
               >
                 {item.label}

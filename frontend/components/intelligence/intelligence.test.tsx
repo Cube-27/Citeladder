@@ -46,6 +46,17 @@ describe('Insight', () => {
       screen.getByText('47 product pages have weak buying-intent coverage'),
     ).toBeInTheDocument();
   });
+
+  it('allows long evidence labels to wrap inside the insight surface', () => {
+    const longLabel =
+      'https://www.example.com/categories/women/womens-accessories/cotton-shopping-bag/very-long-product-name';
+    render(
+      <Insight insight={insightFixture({ evidence: { href: '/issues/1', label: longLabel } })} />,
+    );
+
+    expect(screen.getByText(longLabel)).toHaveClass('[overflow-wrap:anywhere]');
+    expect(screen.getByRole('link', { name: longLabel })).toHaveClass('min-w-0');
+  });
 });
 
 describe('ProvenanceChip', () => {

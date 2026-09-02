@@ -51,7 +51,9 @@ export function TargetCorrections({
       open={open}
       onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
     >
-      <summary className="text-secondary cursor-pointer">Correct this {target.kind}</summary>
+      <summary className="focus-ring text-muted hover:bg-active hover:text-foreground cursor-pointer rounded-[var(--radius-control)] px-2 py-1 transition-colors">
+        Correct this {target.kind}
+      </summary>
       <div className="pt-2">
         {target.kind === 'category' ? (
           <CategoryFields projectId={projectId} target={target} catalog={catalog} />

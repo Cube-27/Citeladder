@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { hairlineBandClasses, hairlineBandItemClasses } from '@/components/ui/workspace';
 
 import { Button } from '@/components/ui/button';
+import { cardClasses } from '@/components/ui/card-variants';
 import { ScoreRing } from '@/components/ui/score-ring';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
@@ -56,7 +57,14 @@ export function OverviewMetricCards({
     crawlMetric(context),
   ];
   return (
-    <div className={cn(hairlineBandClasses, 'sm:grid-cols-4')} data-testid="overview-metrics">
+    <div
+      className={cn(
+        cardClasses(),
+        hairlineBandClasses,
+        'overflow-hidden border-y-0 sm:grid-cols-4',
+      )}
+      data-testid="overview-metrics"
+    >
       {metrics.map((metric) => (
         <OverviewMetricCard key={metric.title} {...metric} />
       ))}
@@ -193,7 +201,9 @@ function OverviewMetricCard({
   const coverageLabel =
     coverage === null ? 'Not measured' : `${Math.round(coverage * 100)}% ${coverageUnit}`;
   return (
-    <div className={cn(hairlineBandItemClasses, 'grid h-full gap-4')}>
+    <div
+      className={cn(hairlineBandItemClasses, 'grid h-full gap-4 p-4 sm:first:ps-4 sm:last:pe-4')}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="grid gap-1">
           <Icon aria-hidden className="text-subtle size-4" />
