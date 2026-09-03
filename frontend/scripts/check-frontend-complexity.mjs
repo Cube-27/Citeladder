@@ -2,7 +2,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import ts from 'typescript';
+import { visitorKeys } from 'oxc-parser';
+
+import { lineIndex, parseSource } from './source-ast.mjs';
 
 const FRONTEND = path.resolve(import.meta.dirname, '..');
 const REPOSITORY = path.resolve(FRONTEND, '..');
@@ -12,54 +14,79 @@ const GIT_EXECUTABLE =
   process.platform === 'win32' ? 'C:\\Program Files\\Git\\cmd\\git.exe' : '/usr/bin/git';
 const EXPECTED_ROOTS = ['app', 'components', 'lib'];
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;
+// ESTree names for the kinds the TypeScript walk counted. Accessors and
+// constructors are `MethodDefinition` wrappers around a FunctionExpression
+// here, so counting the inner function keeps the per-function tally the same.
 const FUNCTION_KINDS = new Set([
-  ts.SyntaxKind.FunctionDeclaration,
-  ts.SyntaxKind.FunctionExpression,
-  ts.SyntaxKind.ArrowFunction,
-  ts.SyntaxKind.MethodDeclaration,
-  ts.SyntaxKind.Constructor,
-  ts.SyntaxKind.GetAccessor,
-  ts.SyntaxKind.SetAccessor,
+  'FunctionDeclaration',
+  'FunctionExpression',
+  'ArrowFunctionExpression',
 ]);
+// `SwitchCase` covers both CaseClause and DefaultClause, so a `default:` arm
+// adds a point where the TypeScript walk also counted one.
 const BRANCH_KINDS = new Set([
-  ts.SyntaxKind.IfStatement,
-  ts.SyntaxKind.ForStatement,
-  ts.SyntaxKind.ForInStatement,
-  ts.SyntaxKind.ForOfStatement,
-  ts.SyntaxKind.WhileStatement,
-  ts.SyntaxKind.DoStatement,
-  ts.SyntaxKind.CatchClause,
-  ts.SyntaxKind.ConditionalExpression,
-  ts.SyntaxKind.CaseClause,
-  ts.SyntaxKind.DefaultClause,
+  'IfStatement',
+  'ForStatement',
+  'ForInStatement',
+  'ForOfStatement',
+  'WhileStatement',
+  'DoWhileStatement',
+  'CatchClause',
+  'ConditionalExpression',
+  'SwitchCase',
 ]);
+const BRANCH_OPERATORS = new Set(['&&', '||', '??']);
 
 function isFunction(node) {
-  return FUNCTION_KINDS.has(node.kind);
+  return FUNCTION_KINDS.has(node.type);
 }
 function cyclomatic(node) {
   let score = 1;
-  function visit(child) {
-    if (child !== node && isFunction(child)) return;
-    if (BRANCH_KINDS.has(child.kind)) score += 1;
-    if (
-      child.kind === ts.SyntaxKind.BinaryExpression &&
-      [
-        ts.SyntaxKind.AmpersandAmpersandToken,
-        ts.SyntaxKind.BarBarToken,
-        ts.SyntaxKind.QuestionQuestionToken,
-      ].includes(child.operatorToken.kind)
-    )
-      score += 1;
-    ts.forEachChild(child, visit);
-  }
-  ts.forEachChild(node, visit);
+  // Nested functions carry their own score, so the walk stops at their border.
+  const visit = (child) => {
+    if (!child || typeof child !== 'object') return;
+    if (Array.isArray(child)) {
+      for (const item of child) visit(item);
+      return;
+    }
+    if (typeof child.type !== 'string') return;
+    if (isFunction(child)) return;
+    if (BRANCH_KINDS.has(child.type)) score += 1;
+    if (child.type === 'LogicalExpression' && BRANCH_OPERATORS.has(child.operator)) score += 1;
+    for (const key of visitorKeys[child.type] ?? []) visit(child[key]);
+  };
+  for (const key of visitorKeys[node.type] ?? []) visit(node[key]);
   return score;
 }
-function displayName(node, sourceFile, line, column) {
-  if (node.name?.getText) return node.name.getText(sourceFile);
-  if (node.parent?.name?.getText)
-    return `${node.parent.name.getText(sourceFile)}::<anonymous>@${line}:${column}`;
+/** The identifier a declaration binds a function to, if it is one of those. */
+function declaredName(node) {
+  if (node.type === 'VariableDeclarator' && node.id?.type === 'Identifier') return node.id.name;
+  if (
+    node.type === 'MethodDefinition' ||
+    node.type === 'PropertyDefinition' ||
+    node.type === 'Property'
+  ) {
+    return node.key?.name ?? node.key?.value ?? null;
+  }
+  return null;
+}
+/** See through the wrappers that sit between a binding and its function. */
+function unwrapFunction(node) {
+  let current = node;
+  while (
+    current &&
+    typeof current === 'object' &&
+    (current.type === 'TSAsExpression' ||
+      current.type === 'TSSatisfiesExpression' ||
+      current.type === 'ParenthesizedExpression')
+  ) {
+    current = current.expression;
+  }
+  return current && typeof current === 'object' ? current : {};
+}
+function displayName(node, parentName, line, column) {
+  if (node.id?.name) return node.id.name;
+  if (parentName) return `${parentName}::<anonymous>@${line}:${column}`;
   return `<anonymous>@${line}:${column}`;
 }
 function filesUnder(root) {
@@ -89,27 +116,39 @@ function isTestFile(file) {
 
 export function measure(file) {
   const source = fs.readFileSync(file, 'utf8');
-  const scriptKind = file.endsWith('.tsx')
-    ? ts.ScriptKind.TSX
-    : file.endsWith('.jsx')
-      ? ts.ScriptKind.JSX
-      : ts.ScriptKind.TS;
-  const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, scriptKind);
+  const program = parseSource(source, file);
+  const lineOf = lineIndex(source);
   const functions = [];
-  function visit(node) {
+  // The enclosing binding names an anonymous function, the way the TypeScript
+  // walk read the name off the parent node.
+  const visit = (node, parentName) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item, parentName);
+      return;
+    }
+    if (typeof node.type !== 'string') return;
     if (isFunction(node)) {
-      const position = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
-      const line = position.line + 1;
-      const column = position.character + 1;
+      const line = lineOf(node.start);
+      const column = node.start - (source.lastIndexOf('\n', node.start - 1) + 1) + 1;
       functions.push({
-        name: displayName(node, sourceFile, line, column),
+        name: displayName(node, parentName, line, column),
         cc: cyclomatic(node),
         line,
       });
     }
-    ts.forEachChild(node, visit);
-  }
-  visit(sourceFile);
+    // A binding names only the function it initializes directly. Letting the
+    // name flow further would label every nested callback with it, so
+    // `const xs = [() => 1]` would report `xs::<anonymous>` instead of a bare
+    // position-qualified identity.
+    const holder = declaredName(node);
+    for (const key of visitorKeys[node.type] ?? []) {
+      const value = node[key];
+      const direct = holder !== null && isFunction(unwrapFunction(value));
+      visit(value, direct ? holder : null);
+    }
+  };
+  visit(program, null);
   return { loc: source.split(/\r?\n/).length, test: isTestFile(file), functions };
 }
 

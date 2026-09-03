@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-import ts from 'typescript';
+import { visitorKeys } from 'oxc-parser';
+
+import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './source-ast.mjs';
 
 const EDITORIAL_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']);
 const EDITORIAL_SIZE = /\btext-(?:2xs|xs|sm|base|lg|xl|2xl|3xl|4xl|5xl)\b/;
@@ -24,58 +26,79 @@ const NEUTRAL_TEXT_TOKENS = [
   '--color-subtle',
 ];
 
-const CSS_BLOCK_CONTRACTS = new Map([
-  [
-    '[data-flow-surface]',
-    [
-      '--flow-bar-height: 4rem',
-      '--flow-measure: 45rem',
-      '--flow-measure-wide: 55rem',
-      '--flow-header-gap: 2.5rem',
-      '--flow-block: 2rem',
-    ],
-  ],
-  [
-    '.flow-actions.safe-bottom',
-    ['padding-bottom: calc(var(--flow-answer) + env(safe-area-inset-bottom, 0px))'],
-  ],
-  ['.website-hero-display', ['font-size: 2.75rem', 'letter-spacing: -0.04em']],
-  ['.website-page-title', ['font-size: 2.5rem', 'letter-spacing: -0.035em']],
-  ['.website-section-heading', []],
-  ['.website-feature-heading', []],
-  ['.website-small-heading', []],
-  ['.flow-title', ['font-size: 1.75rem', 'letter-spacing: -0.025em']],
-  ['.flow-group-title', ['font-size: 1.0625rem', 'letter-spacing: -0.01em']],
-  ['.flow-help', ['font-size: 0.9375rem']],
-  ['.flow-meta', ['font-size: 0.875rem']],
-  ['.website-lead', []],
-  ['.website-body', []],
-  ['.website-nav', []],
-  ['.website-label', []],
-  ['.website-eyebrow', []],
-  ['.website-data-display', []],
-]);
+/**
+ * Roles the website stylesheet must define.
+ *
+ * The role has to exist, because the JSX and the type ladder below refer to it.
+ * What it looks like is a design decision: this deliberately does not pin the
+ * font-size or letter-spacing a role resolves to, so the type scale can be
+ * retuned without editing a gate.
+ */
+const REQUIRED_WEBSITE_ROLES = [
+  '[data-flow-surface]',
+  '.flow-actions.safe-bottom',
+  '.website-hero-display',
+  '.website-page-title',
+  '.website-section-heading',
+  '.website-feature-heading',
+  '.website-small-heading',
+  '.flow-title',
+  '.flow-group-title',
+  '.flow-help',
+  '.flow-meta',
+  '.website-lead',
+  '.website-body',
+  '.website-nav',
+  '.website-label',
+  '.website-eyebrow',
+  '.website-data-display',
+];
+
+/**
+ * Roles whose size must stay ordered relative to each other.
+ *
+ * This is the consistency the frozen font-size list was really protecting: a
+ * page title must not out-size the hero, and body copy must not out-size a
+ * heading. Any absolute scale satisfying the order passes.
+ */
+const WEBSITE_TYPE_LADDER = [
+  '.website-hero-display',
+  '.website-page-title',
+  '.flow-title',
+  '.website-lead',
+  '.flow-group-title',
+  '.website-body',
+  '.flow-help',
+  '.flow-meta',
+];
 
 /** Geometry roles belong to one ladder in globals.css; no surface re-scales them. */
 const SHARED_GEOMETRY_ROLES = ['--radius-control', '--radius-card', '--radius-overlay'];
 
-const ROLE_COLOR_CONTRACTS = new Map([
-  ['.website-hero-display', 'color: var(--color-foreground)'],
-  ['.website-page-title', 'color: var(--color-foreground)'],
-  ['.website-section-heading', 'color: var(--color-foreground)'],
-  ['.website-feature-heading', 'color: var(--color-foreground)'],
-  ['.website-small-heading', 'color: var(--color-foreground)'],
-  ['.website-nav', 'color: var(--color-foreground)'],
-  ['.website-data-display', 'color: var(--color-foreground)'],
-  ['.flow-title', 'color: var(--color-foreground)'],
-  ['.flow-group-title', 'color: var(--color-foreground)'],
-  ['.website-lead', 'color: var(--color-secondary)'],
-  ['.website-body', 'color: var(--color-secondary)'],
-  ['.website-label', 'color: var(--color-muted)'],
-  ['.website-eyebrow', 'color: var(--color-muted)'],
-  ['.flow-help', 'color: var(--color-muted)'],
-  ['.flow-meta', 'color: var(--color-muted)'],
-]);
+/**
+ * Roles that must take their color from a token rather than a literal.
+ *
+ * Which token is a design decision — moving a role from `--color-secondary` to
+ * `--color-muted` is a legitimate change and no longer fails here. Reaching for
+ * a raw hex is not, because it escapes theming and the contrast check below.
+ */
+const TOKEN_COLORED_ROLES = [
+  '.website-hero-display',
+  '.website-page-title',
+  '.website-section-heading',
+  '.website-feature-heading',
+  '.website-small-heading',
+  '.website-nav',
+  '.website-data-display',
+  '.flow-title',
+  '.flow-group-title',
+  '.website-lead',
+  '.website-body',
+  '.website-label',
+  '.website-eyebrow',
+  '.flow-help',
+  '.flow-meta',
+];
 
 const JSX_ROLE_CONTRACTS = new Map([
   ['components/marketing/landing/hero.tsx', ['website-hero-display']],
@@ -88,88 +111,73 @@ const JSX_ROLE_CONTRACTS = new Map([
   ['components/auth/flow-shell.tsx', ['flow-group-title', 'flow-help', 'flow-meta']],
 ]);
 
-function staticBindings(sourceFile) {
+function staticBindings(program) {
   const bindings = new Map();
-  const visit = (node) => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
-      bindings.set(node.name.text, node.initializer);
+  walk(program, (node) => {
+    if (node.type === 'VariableDeclarator' && node.id?.type === 'Identifier' && node.init) {
+      bindings.set(node.id.name, node.init);
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
+  });
   return bindings;
 }
 
 function classFragments(node, bindings, seen = new Set()) {
   if (!node) return [];
-  if (ts.isStringLiteralLike(node)) return [node.text];
-  if (ts.isTemplateExpression(node)) {
+  const literal = stringValue(node);
+  if (literal !== null) return [literal];
+  if (node.type === 'TemplateLiteral') {
+    // Both halves matter: the static chunks carry classes directly, and the
+    // interpolations can resolve to more through the binding table.
     return [
-      node.head.text,
-      ...node.templateSpans.flatMap((span) => [
-        ...classFragments(span.expression, bindings, seen),
-        span.literal.text,
-      ]),
+      ...node.quasis.map((quasi) => quasi.value.cooked ?? quasi.value.raw ?? ''),
+      ...node.expressions.flatMap((expression) => classFragments(expression, bindings, seen)),
     ];
   }
-  if (
-    ts.isParenthesizedExpression(node) ||
-    ts.isAsExpression(node) ||
-    ts.isSatisfiesExpression(node)
-  ) {
-    return classFragments(node.expression, bindings, seen);
-  }
-  if (ts.isIdentifier(node)) {
-    if (seen.has(node.text)) return [];
-    const initializer = bindings.get(node.text);
+  const unwrapped = unwrap(node);
+  if (unwrapped !== node) return classFragments(unwrapped, bindings, seen);
+  if (node.type === 'Identifier') {
+    if (seen.has(node.name)) return [];
+    const initializer = bindings.get(node.name);
     if (!initializer) return [];
-    return classFragments(initializer, bindings, new Set([...seen, node.text]));
+    return classFragments(initializer, bindings, new Set([...seen, node.name]));
   }
-  if (ts.isElementAccessExpression(node)) {
-    let target = ts.isIdentifier(node.expression)
-      ? bindings.get(node.expression.text)
-      : node.expression;
-    while (
-      target &&
-      (ts.isParenthesizedExpression(target) ||
-        ts.isAsExpression(target) ||
-        ts.isSatisfiesExpression(target))
-    ) {
-      target = target.expression;
-    }
-    if (target && ts.isObjectLiteralExpression(target)) {
+  if (node.type === 'MemberExpression') {
+    const target = unwrap(
+      node.object?.type === 'Identifier' ? bindings.get(node.object.name) : node.object,
+    );
+    if (target?.type === 'ObjectExpression') {
       return target.properties.flatMap((property) =>
-        ts.isPropertyAssignment(property)
-          ? classFragments(property.initializer, bindings, seen)
-          : [],
+        property.type === 'Property' ? classFragments(property.value, bindings, seen) : [],
       );
     }
     return classFragments(target, bindings, seen);
   }
-  if (ts.isCallExpression(node)) {
+  if (node.type === 'CallExpression') {
     return node.arguments.flatMap((argument) => classFragments(argument, bindings, seen));
   }
-  if (ts.isConditionalExpression(node)) {
+  if (node.type === 'ConditionalExpression') {
     return [
-      ...classFragments(node.whenTrue, bindings, seen),
-      ...classFragments(node.whenFalse, bindings, seen),
+      ...classFragments(node.consequent, bindings, seen),
+      ...classFragments(node.alternate, bindings, seen),
     ];
   }
-  if (ts.isBinaryExpression(node)) {
+  if (node.type === 'BinaryExpression' || node.type === 'LogicalExpression') {
     return [
       ...classFragments(node.left, bindings, seen),
       ...classFragments(node.right, bindings, seen),
     ];
   }
-  if (ts.isArrayLiteralExpression(node)) {
+  if (node.type === 'ArrayExpression') {
     return node.elements.flatMap((element) => classFragments(element, bindings, seen));
   }
-  if (ts.isObjectLiteralExpression(node)) {
+  if (node.type === 'ObjectExpression') {
+    // Conditional class maps key the class off a flag, so the key is the class.
     return node.properties.flatMap((property) =>
-      'name' in property ? classFragments(property.name, bindings, seen) : [],
+      property.type === 'Property' ? classFragments(property.key, bindings, seen) : [],
     );
   }
-  if (ts.isJsxExpression(node)) return classFragments(node.expression, bindings, seen);
+  if (node.type === 'JSXExpressionContainer')
+    return classFragments(node.expression, bindings, seen);
   return [];
 }
 
@@ -185,39 +193,29 @@ const CLASS_ATTRIBUTES = new Set([
 ]);
 
 function jsxClassData(source, label) {
-  const sourceFile = ts.createSourceFile(
-    label,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
-  const bindings = staticBindings(sourceFile);
+  const program = parseSource(source, label);
+  const lineOf = lineIndex(source);
+  const bindings = staticBindings(program);
   const entries = [];
-  const visit = (node) => {
-    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      // `className` is not the only way a call site hands classes to a
-      // component. `rootClassName="grid gap-6"` slipped past every spacing and
-      // type rule for exactly as long as this only looked at one attribute.
-      const classAttributes = node.attributes.properties.filter(
-        (property) =>
-          ts.isJsxAttribute(property) && CLASS_ATTRIBUTES.has(property.name.getText(sourceFile)),
-      );
-      for (const classAttribute of classAttributes) {
-        if (!ts.isJsxAttribute(classAttribute)) continue;
-        const classes = classAttribute.initializer
-          ? classFragments(classAttribute.initializer, bindings).join(' ')
-          : '';
-        entries.push({
-          tag: node.tagName.getText(sourceFile),
-          classes,
-          line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
-        });
-      }
+  walk(program, (node) => {
+    if (node.type !== 'JSXOpeningElement') return;
+    // `className` is not the only way a call site hands classes to a
+    // component. `rootClassName="grid gap-6"` slipped past every spacing and
+    // type rule for exactly as long as this only looked at one attribute.
+    const classAttributes = node.attributes.filter(
+      (property) =>
+        property.type === 'JSXAttribute' && CLASS_ATTRIBUTES.has(nameText(property.name)),
+    );
+    for (const classAttribute of classAttributes) {
+      entries.push({
+        tag: nameText(node.name),
+        classes: classAttribute.value
+          ? classFragments(classAttribute.value, bindings).join(' ')
+          : '',
+        line: lineOf(node.start),
+      });
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
+  });
   return entries;
 }
 
@@ -341,28 +339,27 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
 /** Cards are semantic objects, never layout containers nested inside each other. */
 export function nestedCardViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || !label.endsWith('.tsx')) return [];
-  const sourceFile = ts.createSourceFile(
-    label,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const program = parseSource(source, label);
+  const lineOf = lineIndex(source);
   const violations = [];
-  const visit = (node, cardDepth = 0) => {
-    const opening = ts.isJsxElement(node)
-      ? node.openingElement
-      : ts.isJsxSelfClosingElement(node)
-        ? node
-        : null;
-    const isCard = opening?.tagName.getText(sourceFile) === 'Card';
-    if (isCard && cardDepth > 0) {
-      const line = sourceFile.getLineAndCharacterOfPosition(opening.getStart(sourceFile)).line + 1;
-      violations.push(`${label}:${line}: Card must not be nested inside Card`);
+  // Depth has to thread through the recursion, so this walks locally rather
+  // than through the shared depth-free helper.
+  const visit = (node, cardDepth) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item, cardDepth);
+      return;
     }
-    ts.forEachChild(node, (child) => visit(child, cardDepth + (isCard ? 1 : 0)));
+    if (typeof node.type !== 'string') return;
+    const opening = node.type === 'JSXElement' ? node.openingElement : null;
+    const isCard = opening ? nameText(opening.name) === 'Card' : false;
+    if (isCard && cardDepth > 0) {
+      violations.push(`${label}:${lineOf(opening.start)}: Card must not be nested inside Card`);
+    }
+    const nextDepth = cardDepth + (isCard ? 1 : 0);
+    for (const key of visitorKeys[node.type] ?? []) visit(node[key], nextDepth);
   };
-  visit(sourceFile);
+  visit(program, 0);
   return violations;
 }
 
@@ -394,12 +391,12 @@ const RAW_PRODUCT_CONTROL_MESSAGES = new Map([
   ['button', 'raw product button must use Button or Pressable'],
 ]);
 
-function hasCosmeticButtonOverride(node, sourceFile, bindings) {
-  const classAttribute = node.attributes.properties.find(
-    (property) => ts.isJsxAttribute(property) && property.name.getText(sourceFile) === 'className',
+function hasCosmeticButtonOverride(node, bindings) {
+  const classAttribute = node.attributes.find(
+    (property) => property.type === 'JSXAttribute' && nameText(property.name) === 'className',
   );
-  if (!classAttribute || !ts.isJsxAttribute(classAttribute)) return false;
-  return classFragments(classAttribute.initializer, bindings)
+  if (!classAttribute) return false;
+  return classFragments(classAttribute.value, bindings)
     .join(' ')
     .split(/\s+/)
     .some(cosmeticButtonToken);
@@ -407,30 +404,22 @@ function hasCosmeticButtonOverride(node, sourceFile, bindings) {
 
 export function productControlViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || !label.endsWith('.tsx') || label.startsWith('components/ui/')) return [];
-  const sourceFile = ts.createSourceFile(
-    label,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
-  const bindings = staticBindings(sourceFile);
+  const program = parseSource(source, label);
+  const lineOf = lineIndex(source);
+  const bindings = staticBindings(program);
   const violations = [];
-  const visit = (node) => {
-    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      const tag = node.tagName.getText(sourceFile);
-      const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-      const rawControlMessage = RAW_PRODUCT_CONTROL_MESSAGES.get(tag);
-      if (rawControlMessage) violations.push(`${label}:${line}: ${rawControlMessage}`);
-      if (tag === 'Button' && hasCosmeticButtonOverride(node, sourceFile, bindings)) {
-        violations.push(
-          `${label}:${line}: Button cosmetics belong in its semantic variant, not className`,
-        );
-      }
+  walk(program, (node) => {
+    if (node.type !== 'JSXOpeningElement') return;
+    const tag = nameText(node.name);
+    const line = lineOf(node.start);
+    const rawControlMessage = RAW_PRODUCT_CONTROL_MESSAGES.get(tag);
+    if (rawControlMessage) violations.push(`${label}:${line}: ${rawControlMessage}`);
+    if (tag === 'Button' && hasCosmeticButtonOverride(node, bindings)) {
+      violations.push(
+        `${label}:${line}: Button cosmetics belong in its semantic variant, not className`,
+      );
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
+  });
   return violations;
 }
 
@@ -500,34 +489,30 @@ export function rawRadiusViolations(source, label) {
 }
 export function textRoleBackgroundViolations(source, label) {
   if (!/\.(?:tsx|ts|mjs|js)$/.test(label)) return [];
-  const sourceFile = ts.createSourceFile(
-    label,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
+  const program = parseSource(source, label);
+  const lineOf = lineIndex(source);
   const violations = [];
-  const visit = (node) => {
+  walk(program, (node) => {
     const text =
-      ts.isStringLiteralLike(node) ||
-      ts.isTemplateHead(node) ||
-      ts.isTemplateMiddle(node) ||
-      ts.isTemplateTail(node)
-        ? node.text
-        : null;
+      node.type === 'TemplateElement'
+        ? (node.value.cooked ?? node.value.raw ?? '')
+        : stringValue(node);
     if (text !== null && TEXT_ROLE_BACKGROUND.test(text)) {
-      const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-      violations.push(`${label}:${line}: ${TEXT_ROLE_BACKGROUND_MESSAGE}`);
+      violations.push(`${label}:${lineOf(node.start)}: ${TEXT_ROLE_BACKGROUND_MESSAGE}`);
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(sourceFile);
+  });
   return violations;
 }
 
-function tokenDeclaration(source, token, value) {
-  return new RegExp(`${escapeRegExp(token)}\\s*:\\s*${escapeRegExp(value)}\\s*;`).test(source);
+/** A role's declared font-size in rem, or null when it does not set one. */
+function fontSizeRem(rules, selector) {
+  const pattern = selectorPattern(selector);
+  for (const rule of rules) {
+    if (!pattern.test(rule.prelude)) continue;
+    const match = /(?:^|[;{]|\s)font-size\s*:\s*([\d.]+)rem/.exec(rule.body);
+    if (match) return Number(match[1]);
+  }
+  return null;
 }
 
 /** Exact global contract for the spatial/type migration's shared owners. */
@@ -535,42 +520,67 @@ export function productContractViolations(root) {
   const violations = [];
   const css = readFileSync(join(root, 'app', 'globals.css'), 'utf8');
   const websiteCss = readFileSync(join(root, ...WEBSITE_CSS.split('/')), 'utf8');
-  const tokenContract = new Map([
-    ['--text-xs', '0.75rem'],
-    ['--text-sm', '0.875rem'],
-    ['--text-base', '1rem'],
-    ['--text-lg', '1.125rem'],
-    ['--text-xl', '1.25rem'],
-    ['--text-2xl', '1.5rem'],
-    ['--text-3xl', '1.75rem'],
-    ['--text-4xl', '2rem'],
-    ['--content-gutter', '24px'],
-    ['--workspace-gap', '16px'],
-    ['--compact-gap', '12px'],
-    ['--page-section-gap', '32px'],
-    ['--card-padding', '16px'],
-    ['--modal-padding', '20px'],
-    ['--control-height', '32px'],
-    ['--control-height-lg', '36px'],
-    ['--radius-control', '8px'],
-    ['--radius-card', '12px'],
-    ['--radius-overlay', '16px'],
-    ['--color-background', ['#f7', 'f6fd'].join('')],
-    ['--color-background-alt', ['#f4', 'f4f1'].join('')],
-    ['--color-panel-tonal', ['#f4', 'f4f1'].join('')],
-    ['--color-well', ['#f4', 'f4f1'].join('')],
-    ['--color-active', ['#ef', 'efeb'].join('')],
-    ['--color-sidebar', ['#f4', 'f4f1'].join('')],
-    ['--color-action', ['#51', '47e5'].join('')],
-    ['--color-accent', ['#1b', '44e0'].join('')],
-    ['--color-focus', ['#1b', '44e0'].join('')],
-    ['--color-focus-ring', ['#c7', 'd4fb'].join('')],
-    ['--color-selection', ['#c7', 'd4fb'].join('')],
-    ['--color-selection-fg', ['#16', '161a'].join('')],
-  ]);
-  for (const [token, value] of tokenContract) {
-    if (!tokenDeclaration(css, token, value)) {
-      violations.push(`app/globals.css: ${token} must equal ${value}`);
+  // Every role the product builds on has to be defined somewhere. The value is
+  // the design system's to choose: pinning `--color-action` to a literal hex
+  // meant a rebrand failed a test rather than a review.
+  const requiredTokens = [
+    '--text-xs',
+    '--text-sm',
+    '--text-base',
+    '--text-lg',
+    '--text-xl',
+    '--text-2xl',
+    '--text-3xl',
+    '--text-4xl',
+    '--content-gutter',
+    '--workspace-gap',
+    '--compact-gap',
+    '--page-section-gap',
+    '--card-padding',
+    '--modal-padding',
+    '--control-height',
+    '--control-height-lg',
+    '--radius-control',
+    '--radius-card',
+    '--radius-overlay',
+    '--color-background',
+    '--color-background-alt',
+    '--color-panel-tonal',
+    '--color-well',
+    '--color-active',
+    '--color-sidebar',
+    '--color-action',
+    '--color-accent',
+    '--color-focus',
+    '--color-focus-ring',
+    '--color-selection',
+    '--color-selection-fg',
+  ];
+  for (const token of requiredTokens) {
+    if (!new RegExp(escapeRegExp(token) + String.raw`\s*:\s*[^;]+;`).test(css)) {
+      violations.push(`app/globals.css: ${token} must be defined`);
+    }
+  }
+  // The type ladder is ordered even though its absolute sizes are free.
+  const TYPE_SCALE = [
+    '--text-xs',
+    '--text-sm',
+    '--text-base',
+    '--text-lg',
+    '--text-xl',
+    '--text-2xl',
+    '--text-3xl',
+    '--text-4xl',
+  ];
+  const scale = TYPE_SCALE.map((token) => {
+    const match = new RegExp(escapeRegExp(token) + String.raw`\s*:\s*([\d.]+)rem`).exec(css);
+    return { token, size: match ? Number(match[1]) : null };
+  }).filter((step) => step.size !== null);
+  for (let index = 1; index < scale.length; index += 1) {
+    if (scale[index].size <= scale[index - 1].size) {
+      violations.push(
+        `app/globals.css: ${scale[index].token} must be larger than ${scale[index - 1].token}`,
+      );
     }
   }
   if (/\.website-type\b/.test(css + websiteCss)) {
@@ -666,13 +676,6 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&');
 }
 
-function declarationPattern(declaration) {
-  const separator = declaration.indexOf(':');
-  const property = declaration.slice(0, separator).trim();
-  const value = declaration.slice(separator + 1).trim();
-  return new RegExp(escapeRegExp(property) + '\\s*:\\s*' + escapeRegExp(value) + '\\s*;');
-}
-
 function selectorPattern(selector) {
   return new RegExp(escapeRegExp(selector) + '(?![\\w-])');
 }
@@ -738,26 +741,51 @@ export function websiteContractViolations(root) {
   const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
   const rules = cssRules(readFileSync(cssPath, 'utf8'));
 
-  for (const [selector, declarations] of CSS_BLOCK_CONTRACTS) {
-    const rule = rules.find((candidate) => candidate.prelude.trim() === selector);
-    if (!rule) {
+  for (const selector of REQUIRED_WEBSITE_ROLES) {
+    if (!rules.some((candidate) => candidate.prelude.trim() === selector)) {
       violations.push(cssLabel + ': missing website selector ' + selector);
-      continue;
-    }
-    for (const declaration of declarations) {
-      if (!declarationPattern(declaration).test(rule.body)) {
-        violations.push(cssLabel + ': ' + selector + ' missing declaration ' + declaration);
-      }
     }
   }
 
-  for (const [selector, declaration] of ROLE_COLOR_CONTRACTS) {
+  const ladder = WEBSITE_TYPE_LADDER.map((selector) => ({
+    selector,
+    size: fontSizeRem(rules, selector),
+  })).filter((step) => step.size !== null);
+  for (let index = 1; index < ladder.length; index += 1) {
+    const previous = ladder[index - 1];
+    const current = ladder[index];
+    if (current.size > previous.size) {
+      violations.push(
+        cssLabel +
+          ': ' +
+          current.selector +
+          ' (' +
+          current.size +
+          'rem) must not be larger than ' +
+          previous.selector +
+          ' (' +
+          previous.size +
+          'rem)',
+      );
+    }
+  }
+
+  for (const selector of TOKEN_COLORED_ROLES) {
     const selectorRegex = selectorPattern(selector);
-    const declarationRegex = declarationPattern(declaration);
-    if (
-      !rules.some((rule) => selectorRegex.test(rule.prelude) && declarationRegex.test(rule.body))
-    ) {
-      violations.push(cssLabel + ': ' + selector + ' missing scoped declaration ' + declaration);
+    const scoped = rules.filter((rule) => selectorRegex.test(rule.prelude));
+    const colors = scoped.flatMap((rule) => [
+      ...rule.body.matchAll(/(?:^|[;{]|\s)color\s*:([^;]+)/g),
+    ]);
+    if (!colors.length) {
+      violations.push(cssLabel + ': ' + selector + ' must declare a color');
+      continue;
+    }
+    for (const [, value] of colors) {
+      if (!/var\(\s*--/.test(value)) {
+        violations.push(
+          cssLabel + ': ' + selector + ' must take its color from a token, not ' + value.trim(),
+        );
+      }
     }
   }
 

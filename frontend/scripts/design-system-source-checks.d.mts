@@ -33,3 +33,5 @@ export declare function directRadixImportViolations(source: string, label: strin
 export declare function textRoleBackgroundViolations(source: string, label: string): string[];
 
 export declare function rawRadiusViolations(source: string, label: string): string[];
+
+export declare function websiteContractViolations(root: string): string[];
