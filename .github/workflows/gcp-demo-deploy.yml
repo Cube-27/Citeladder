@@ -54,7 +54,7 @@ jobs:
           sudo apt-get install --yes --no-install-recommends ripgrep
           python -m pip install uv==0.11.28
           uv sync --project backend --frozen --extra dev
-          npm install --global --ignore-scripts pnpm@11.22.0
+          npm install --global --ignore-scripts pnpm@11.25.0
           pnpm --dir frontend install --frozen-lockfile --ignore-scripts
           pnpm --dir frontend exec playwright install --with-deps chromium
       - name: Run repository gates for the deployed commit
