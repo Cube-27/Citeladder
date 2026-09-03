@@ -10,12 +10,14 @@ from dataclasses import dataclass
 from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.analysis.site_health.measurement_aggregation import (
+    AggregateMeasurements,
+    aggregate_measurements,
+)
 from app.analysis.site_health.score_aggregation import aggregate_by_page_kind
 from app.analysis.site_health.scoring import (
-    AggregateMeasurements,
     AnalysisMeasurementInput,
     RuleMeasurementInput,
-    aggregate_measurements,
 )
 from app.core.config.site_health_contracts import (
     PAGE_ANALYSIS_STATUS_COMPLETED,

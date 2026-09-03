@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import pytest
 
+from app.analysis.site_health.measurement_aggregation import (
+    _rule_result,
+    aggregate_measurements,
+)
 from app.analysis.site_health.rules import RuleEvaluation
 from app.analysis.site_health.scoring import (
     AnalysisMeasurementInput,
     RuleMeasurementInput,
-    _rule_result,
-    aggregate_measurements,
     score_analysis,
 )
 from app.core.config.site_health_measurement import (

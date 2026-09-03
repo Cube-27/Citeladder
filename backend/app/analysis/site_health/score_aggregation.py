@@ -5,11 +5,13 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import replace
 
-from app.analysis.site_health.scoring import (
+from app.analysis.site_health.measurement_aggregation import (
     AggregateMeasurements,
+    aggregate_measurements,
+)
+from app.analysis.site_health.scoring import (
     AnalysisMeasurementInput,
     RuleMeasurementInput,
-    aggregate_measurements,
 )
 from app.core.config.site_health_rule_types import RULE_SCOPE_PAGE
 from app.core.config.site_health_taxonomy import PAGE_KIND_OTHER, PAGE_KINDS
