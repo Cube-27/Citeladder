@@ -36,11 +36,6 @@ class CategoryResponse(BaseModel):
     projector_version: str
 
 
-class CategoryEditRequest(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=255)
-    role: Literal["hub", "leaf", "unknown"] | None = None
-
-
 class ProductResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -98,22 +93,6 @@ class CatalogImportResponse(BaseModel):
     unchanged: int
     rejected: int
     row_outcomes: list[CatalogRowOutcome] = Field(default_factory=list)
-
-
-class CatalogEditRequest(BaseModel):
-    canonical_url: str | None = Field(default=None, max_length=2048)
-    name: str | None = Field(default=None, max_length=512)
-    description: str | None = None
-    brand: str | None = Field(default=None, max_length=255)
-    price: float | None = Field(default=None, ge=0)
-    currency: str | None = Field(default=None, max_length=3)
-    sku: str | None = Field(default=None, max_length=255)
-    gtin: str | None = Field(default=None, max_length=64)
-    mpn: str | None = Field(default=None, max_length=255)
-    variants: list | None = None
-    attributes: dict | None = None
-    category_ids: list[uuid.UUID] | None = None
-    lifecycle_state: Literal["active", "archived"] | None = None
 
 
 class DiscoveryRequest(BaseModel):

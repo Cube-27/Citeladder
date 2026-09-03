@@ -131,6 +131,24 @@ def _keep_waiting_for_dependency(*, task_id: uuid.UUID, waited_seconds: float) -
     return False
 
 
+def _dependency_retry_delay(waited_seconds: float) -> float:
+    """The backoff, clamped so a recheck never lands past the hard bound.
+
+    The backoff alone can schedule the next attempt up to a full
+    ``analysis_dependency_retry_max_seconds`` beyond the wait limit, which
+    would let analyze skip its prerequisite well after the deadline the limit
+    names. Trimming the last delay to whatever budget remains keeps the bound
+    the bound.
+    """
+    remaining = (
+        site_health_settings.analysis_dependency_max_wait_seconds - waited_seconds
+    )
+    return min(
+        site_health_settings.analysis_dependency_retry_delay(waited_seconds),
+        max(0.0, remaining),
+    )
+
+
 def _should_defer_for_dependency(
     *,
     task_id: uuid.UUID,
@@ -201,9 +219,7 @@ async def run(ctx: PhaseContext, claimed: SiteCrawlTask) -> None:
         await ctx.queue.defer(
             task_id=task_id,
             owner=ctx.owner,
-            delay_seconds=site_health_settings.analysis_dependency_retry_delay(
-                dependency_waited
-            ),
+            delay_seconds=_dependency_retry_delay(dependency_waited),
         )
         return
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, LoaderCircle, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -312,7 +312,10 @@ export function DemandProjection() {
     queryKey: queryKeys.demand.latest(activeProject?.id),
     queryFn: ({ signal }) => demandApi.getLatest(activeProject!.id, { signal }),
     enabled: Boolean(activeProject),
-    placeholderData: keepPreviousData,
+    // Deliberately NO `keepPreviousData`: the key's only variable is the
+    // project, so keeping previous data would render the PREVIOUS project's
+    // snapshot as a success (placeholder data is not `isLoading`) while
+    // `SearchDemandView` recomputes against the CURRENT project id.
   });
 
   if (projectLoading || latest.isLoading) {

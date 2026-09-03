@@ -10,7 +10,7 @@ import asyncio
 import uuid
 
 import pytest
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.analytics import (
@@ -402,6 +402,39 @@ async def test_cancel_crawl_persists_partial_snapshot_from_completed_analyses(
             "trigger_kind": "site_change",
             "trigger_id": str(change_snapshot_id),
         }
+
+    # The rollup runs in its own best-effort transaction AFTER the transition
+    # commits, so it can fail on its own. Nothing else recomputes a cancelled
+    # crawl's scores, which would strand the evidence permanently -- pressing
+    # Stop again has to retry it.
+    async with session_factory() as session:
+        await session.execute(
+            delete(SiteHealthSnapshot).where(
+                SiteHealthSnapshot.crawl_id == seed.crawl_id
+            )
+        )
+        await session.execute(
+            update(SiteCrawl)
+            .where(SiteCrawl.id == seed.crawl_id)
+            .values(score_summary=None)
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        repaired = await cancel_crawl(
+            session, workspace_id=seed.workspace_id, crawl_id=seed.crawl_id
+        )
+
+    assert repaired["score_summary"] is not None
+    async with session_factory() as session:
+        rewritten = (
+            await session.execute(
+                select(SiteHealthSnapshot).where(
+                    SiteHealthSnapshot.crawl_id == seed.crawl_id
+                )
+            )
+        ).scalar_one()
+        assert rewritten.analyzed_url_count == 1
 
 
 @pytest.mark.asyncio

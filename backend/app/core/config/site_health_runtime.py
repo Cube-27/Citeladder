@@ -50,6 +50,11 @@ class SiteHealthSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="SITE_HEALTH_",
         extra="ignore",
+        # Every threshold below is compared against, and every comparison with
+        # NaN is false: a stray ``SITE_HEALTH_*=nan`` would pass the validators
+        # here AND silently disable the bound it names. Reject non-finite
+        # values at load instead.
+        allow_inf_nan=False,
         # Same .env sources as the root Settings so SITE_HEALTH_* overrides in
         # the repo-root / backend-local .env work without exporting them.
         env_file=dotenv_sources(),

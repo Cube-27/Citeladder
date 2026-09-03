@@ -366,10 +366,10 @@ async def cancel_crawl(
     Stop button with a 500 while leaving the crawl running.
 
     Failing to write that snapshot costs a partially-analyzed run its rolled-up
-    scores until something recomputes them. Failing to stop costs the user the
-    only control they have.
+    scores; pressing Stop again retries it, since nothing else recomputes a
+    cancelled crawl. Failing to stop costs the user the only control they have.
     """
-    transitioned = await _retry_on_lock_conflict(
+    cancelled = await _retry_on_lock_conflict(
         lambda: _cancel_crawl_once(
             session, workspace_id=workspace_id, crawl_id=crawl_id
         ),
@@ -377,7 +377,7 @@ async def cancel_crawl(
         crawl_id=crawl_id,
         operation="cancel",
     )
-    if transitioned:
+    if cancelled:
         await _snapshot_cancelled_crawl(
             session, workspace_id=workspace_id, crawl_id=crawl_id
         )
@@ -484,9 +484,10 @@ async def _cancel_crawl_once(
     Locks the crawl row ``FOR UPDATE``, drives the overall/discovery/analysis
     sub-states to ``cancelled`` where the guarded machine allows it, cancels
     every non-terminal ``SiteCrawlTask``, records a ``crawl.cancelled`` event
-    (payload redacted for Free), and commits. Returns whether THIS call made
-    that transition, so an already-terminal crawl stays idempotent: it commits
-    nothing and does not re-run the rollup.
+    (payload redacted for Free), and commits. Returns whether the crawl is now
+    cancelled — by this call or an earlier one — which is what tells the caller
+    the evidence rollup still applies. Any other terminal state stays fully
+    idempotent: it commits nothing and skips the rollup.
 
     Deliberately nothing else: every statement here touches the crawl and its
     own task rows, so the transaction is short enough to win the crawl row lock
@@ -508,9 +509,17 @@ async def _cancel_crawl_once(
     if crawl.status in CRAWL_TERMINAL_STATUSES:
         # Idempotent cancel of an already-terminal crawl: release the row and
         # let the caller answer with the current projection (including the B1
-        # failure summary when that terminal state is FAILED).
+        # failure summary when that terminal state is FAILED). An already
+        # CANCELLED crawl still reports True, so a rollup that failed on the
+        # first Stop is retried on the next one; nothing else recomputes a
+        # cancelled crawl's scores, and the snapshot write is an idempotent
+        # replay when it already landed.
+        # Read the status BEFORE the rollback: it expires every instance in
+        # the session, and touching an expired attribute afterwards is a lazy
+        # refresh outside the greenlet context.
+        already_cancelled = crawl.status == CRAWL_STATUS_CANCELLED
         await session.rollback()
-        return False
+        return already_cancelled
 
     apply_crawl_status(crawl, CRAWL_STATUS_CANCELLED)
     # Discovery / analysis sub-states are cancelled only from a non-terminal
