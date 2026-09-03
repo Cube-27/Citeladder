@@ -20,6 +20,7 @@ export function organizationJsonLd(): JsonLdObject | null {
       '@type': 'Organization',
       name: PARENT_COMPANY.legalName,
       url: PARENT_COMPANY.href,
+      sameAs: [PARENT_COMPANY.linkedin],
       address: {
         '@type': 'PostalAddress',
         streetAddress: 'Plot No. 12, Mulberry Gardens 1, Magarpatta City',
@@ -29,7 +30,17 @@ export function organizationJsonLd(): JsonLdObject | null {
         addressCountry: 'IN',
       },
     },
-    sameAs: [PRODUCT_HEAD.linkedin, FOUNDER.linkedin, PARENT_COMPANY.linkedin],
+    // `sameAs` asserts "this URL is another identity OF THIS ENTITY", so a
+    // personal profile here would claim CiteLadder and a named individual are
+    // the same thing. The people are related to the organization, not
+    // identical to it, and `employee` is the property that says so. The one
+    // company profile that does identify the parent moves onto the parent.
+    employee: [PRODUCT_HEAD, FOUNDER].map((person) => ({
+      '@type': 'Person',
+      name: person.name,
+      jobTitle: person.role,
+      sameAs: [person.linkedin],
+    })),
   };
 }
 

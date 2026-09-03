@@ -224,8 +224,10 @@ export const COMPETITORS: readonly Competitor[] = [
     rows: [
       {
         ...OURS.engines,
-        competitor:
-          'Six platforms on every plan: ChatGPT, AI Mode, Overviews, Copilot, Perplexity, Gemini.',
+        // Not "on every plan": a rival's per-tier model availability is not
+        // something this repository can stand behind, and the comparison pages
+        // only make claims we can. The platform list itself is published.
+        competitor: 'Six platforms: ChatGPT, AI Mode, Overviews, Copilot, Perplexity, Gemini.',
       },
       {
         ...OURS.scoring,

@@ -67,7 +67,34 @@ export function DemoButtonLink({
   );
 }
 
-export function TextLink({
+/**
+ * The demo CTA as a text link, for the places the segment layout wants a link
+ * rather than a button. Same external contract as `DemoButtonLink` — the
+ * funnel leaves the site, so `target` and a safe `rel` belong here and not at
+ * the call site.
+ */
+export function DemoTextLink({
+  className,
+  children,
+}: Readonly<{ className?: string; children?: ReactNode }>) {
+  return (
+    <TextLink
+      href={DEMO_HREF}
+      className={className}
+      {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
+    >
+      {children ?? DEMO_CTA}
+    </TextLink>
+  );
+}
+
+/**
+ * Module-private: the only text link the marketing surface renders is the demo
+ * CTA, and that goes through `DemoTextLink` so the external target and `rel`
+ * are never left to a call site. Export this again when a second, genuinely
+ * different text link exists.
+ */
+function TextLink({
   href,
   className,
   children,

@@ -180,7 +180,11 @@ export const LANDING_CONTENT = {
     kicker: 'Enterprise-grade',
     title: 'Built for regulated and security-conscious enterprises.',
     lead: 'CiteLadder is a Cube27 product. Cube27 IT Pvt. Ltd. is based in Magarpatta City, Pune. Product is led by Abhineet Jain. Arpan Jain is Founder and CEO. The record stays inspectable from the first crawl to the latest recommendation.',
-    who: 'Keys stay in your provider account. Workspaces do not share facts. New observations append. You save content and you start an audit. We do not publish for you.',
+    // "Keys stay in your provider account" read as though the key never
+    // reaches us, which contradicts the FAQ (encrypted at rest, resolved only
+    // at execution time). Usage and billing stay with the provider; the key
+    // itself is stored here, encrypted. A security claim has to match.
+    who: 'Your provider account keeps the usage and the billing; the key you supply is encrypted at rest and resolved only when a run needs it. Workspaces do not share facts. New observations append. You save content and you start an audit. We do not publish for you.',
     guarantees: [
       {
         icon: 'isolation' as IconKey,

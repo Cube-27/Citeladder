@@ -5,6 +5,7 @@ import type { RefObject } from 'react';
 import { NAV_DROPS, NAV_LINKS, type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
+import type { OpenSource } from './nav';
 import { NavItemLink } from './nav-items';
 
 const NAV_LINK =
@@ -27,7 +28,7 @@ type DesktopNavigationProps = {
   /** Chosen a row: close and stay closed until the pointer leaves the nav. */
   selectDrop: () => void;
   releaseSuppression: () => void;
-  openDropAt: (key: NavDropKey, trigger: HTMLElement) => void;
+  openDropAt: (key: NavDropKey, trigger: HTMLElement, source?: OpenSource) => void;
   moveLens: (element: HTMLElement) => void;
   clearLens: () => void;
 };
@@ -96,7 +97,9 @@ export function DesktopNavigation({
             aria-controls={openDrop === key ? `desktop-nav-panel-${key}` : undefined}
             onFocus={(event) => {
               const parent = event.currentTarget.parentElement;
-              if (parent) openDropAt(key, parent);
+              // 'focus' so tabbing here opens the panel even right after a
+              // selection suppressed hover.
+              if (parent) openDropAt(key, parent, 'focus');
             }}
           >
             {label}

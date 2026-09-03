@@ -1,10 +1,9 @@
 import { Plus } from 'lucide-react';
-import Link from 'next/link';
-import type { ReactNode } from 'react';
 
 import { FAQ_GROUPS, type FaqGroup } from '@/lib/marketing-content/faq';
 
 import { Meta } from '../primitives/label';
+import { Linkify } from '../primitives/linkify';
 import { Container } from '../primitives/section';
 
 /**
@@ -40,57 +39,6 @@ function fallbackAnchor(heading: string): string {
 
 function groupAnchor(group: FaqGroup): string {
   return GROUP_ANCHORS[group.heading] ?? `faq-${fallbackAnchor(group.heading)}`;
-}
-
-// Answers are plain strings from the content module. One inline transform
-// keeps them faithful: bare URLs render as real links.
-//
-// Internal paths count. An answer that says "see /pricing" was rendering that
-// path as dead text, so a reader was told where to go and then had to type it
-// — the one place in the FAQ where the destination is known exactly is the one
-// place that was not a link. The path alternative is deliberately narrow
-// (a leading slash, then word characters and dashes) so ordinary prose
-// containing a slash, like "and/or", is not turned into a link.
-const INLINE_TOKEN_RE = /https?:\/\/\S+|\/[a-z][a-z0-9-]*(?:\/[a-z0-9-]+)*/g;
-// Sentence punctuation straight after a URL belongs to the prose, not the href.
-const TRAILING_PUNCT_RE = /[.,;:!?)]+$/;
-
-function AnswerText({ text }: Readonly<{ text: string }>) {
-  const nodes: ReactNode[] = [];
-  let cursor = 0;
-  let key = 0;
-  for (const match of text.matchAll(INLINE_TOKEN_RE)) {
-    const token = match[0];
-    const start = match.index;
-    if (start > cursor) nodes.push(text.slice(cursor, start));
-    const trailing = token.match(TRAILING_PUNCT_RE)?.[0] ?? '';
-    const href = trailing ? token.slice(0, -trailing.length) : token;
-    // Internal paths stay in this tab and route through the client router;
-    // only an absolute URL leaves the site and needs the new-tab treatment.
-    const internal = href.startsWith('/');
-    nodes.push(
-      internal ? (
-        <Link key={key} href={href} className="text-accent-text underline underline-offset-2">
-          {href}
-        </Link>
-      ) : (
-        <a
-          key={key}
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="text-accent-text underline underline-offset-2"
-        >
-          {href}
-        </a>
-      ),
-    );
-    key += 1;
-    if (trailing) nodes.push(trailing);
-    cursor = start + token.length;
-  }
-  if (cursor < text.length) nodes.push(text.slice(cursor));
-  return nodes;
 }
 
 export function FaqGroups() {
@@ -137,7 +85,7 @@ export function FaqGroups() {
                   />
                 </summary>
                 <p className="website-body-lg text-muted max-w-[75ch] pb-8">
-                  <AnswerText text={item.a} />
+                  <Linkify text={item.a} />
                 </p>
               </details>
             ))}

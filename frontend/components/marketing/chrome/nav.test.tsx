@@ -107,6 +107,30 @@ describe('MarketingNav', () => {
     }
   });
 
+  it('still opens a dropdown on focus after a row was selected', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    renderWithProviders(<MarketingNav />);
+
+    // Selecting a row suppresses hover so a resting pointer cannot reopen the
+    // panel it just closed. That suppression must not reach the keyboard: a
+    // user tabbing to the next trigger has explicitly asked for it, and a flag
+    // only a `mouseleave` can clear would leave them with no dropdowns at all.
+    const [first, second] = NAV_DROPS;
+    const firstTrigger = screen.getByRole('link', { name: new RegExp(`^${first.label}$`, 'i') });
+    await user.hover(firstTrigger);
+    await waitFor(() => expect(firstTrigger).toHaveAttribute('aria-expanded', 'true'));
+
+    const panel = document.getElementById(`desktop-nav-panel-${first.key}`);
+    await user.click(within(panel as HTMLElement).getAllByRole('link')[0]);
+    await waitFor(() => expect(firstTrigger).toHaveAttribute('aria-expanded', 'false'));
+
+    const secondTrigger = screen.getByRole('link', { name: new RegExp(`^${second.label}$`, 'i') });
+    secondTrigger.focus();
+
+    await waitFor(() => expect(secondTrigger).toHaveAttribute('aria-expanded', 'true'));
+  });
+
   it('keeps the navigation surface transparent until the page scrolls', async () => {
     stubAnonymous();
     renderWithProviders(<MarketingNav />);

@@ -18,6 +18,9 @@ import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
 
+/** What asked for a dropdown: a resting pointer, or an explicit focus move. */
+export type OpenSource = 'hover' | 'focus';
+
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 const COLUMN = 380;
 const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
@@ -97,6 +100,11 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
    * alone closed the panel for one frame and the very next `mouseenter`
    * reopened it. The trigger stays suppressed until the pointer actually
    * leaves the navigation.
+   *
+   * It suppresses HOVER only. The problem it solves is a pointer that has not
+   * moved; a keyboard user tabbing to the next trigger has, by definition,
+   * asked for that panel, and gating focus on a flag that only a `mouseleave`
+   * can clear would strand them with no dropdowns at all.
    */
   const suppressed = useRef(false);
 
@@ -125,10 +133,15 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
     const bounds = container.getBoundingClientRect();
     setLens({ left: trigger.left - bounds.left, width: trigger.width });
   };
-  const openDropAt = (key: NavDropKey, trigger: HTMLElement) => {
+  const openDropAt = (key: NavDropKey, trigger: HTMLElement, source: OpenSource = 'hover') => {
     const container = linksRef.current;
     const nav = navRef.current;
-    if (!container || !nav || suppressed.current) return;
+    if (!container || !nav) return;
+    // Focus is an explicit request and always wins; only a resting pointer is
+    // suppressed. Reaching a trigger by keyboard also clears the flag, so the
+    // hover that follows behaves normally.
+    if (source === 'focus') suppressed.current = false;
+    else if (suppressed.current) return;
     clearDropClose();
     setOpenDrop(key);
     moveLens(trigger);

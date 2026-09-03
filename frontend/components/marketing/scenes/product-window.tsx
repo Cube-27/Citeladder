@@ -66,6 +66,7 @@ export function ProductWindow() {
   const [phase, setPhase] = useState(0);
   const [playing, setPlaying] = useState(true);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const tablistRef = useRef<HTMLDivElement>(null);
   const activeLayer = LAYERS[activeIndex];
   const visiblePhase = reduceMotion ? LAST_PHASE : phase;
   const playbackLabel = reduceMotion ? 'Motion reduced' : playing ? 'Pause' : 'Play';
@@ -96,18 +97,29 @@ export function ProductWindow() {
    * Autoplay advances the tab on its own, so on a phone the active tab — and
    * the progress bar that shows how far the phase has run — would otherwise
    * march off the right edge with nothing to tell the reader where it went.
-   * `nearest` scrolls only when the tab is actually out of view, so a tab the
-   * reader tapped does not jump under their finger.
    *
-   * `inline` only: `block: 'nearest'` keeps this from scrolling the PAGE to
-   * the preview while the reader is somewhere else on it. Above `md` the strip
-   * is a grid with nothing to scroll, and the call is a no-op.
+   * This adjusts the STRIP's own `scrollLeft` rather than calling
+   * `scrollIntoView`. That API walks every scrollable ancestor up to the
+   * document, so `block: 'nearest'` is not a guarantee: with the preview off
+   * screen, an autoplay tick would yank the page down to it while the reader
+   * was somewhere else entirely. Writing `scrollLeft` cannot move anything but
+   * this element. Above `md` the strip is a grid with no overflow, so the
+   * arithmetic yields the current value and nothing happens.
    */
   useEffect(() => {
-    tabRefs.current[activeIndex]?.scrollIntoView({
+    const strip = tablistRef.current;
+    const tab = tabRefs.current[activeIndex];
+    if (!strip || !tab) return;
+
+    const overflowLeft = tab.offsetLeft - strip.scrollLeft;
+    const overflowRight = overflowLeft + tab.offsetWidth - strip.clientWidth;
+    // Already fully visible: leave the strip alone so a tab the reader just
+    // tapped does not slide under their finger.
+    if (overflowLeft >= 0 && overflowRight <= 0) return;
+
+    strip.scrollTo({
+      left: overflowLeft < 0 ? tab.offsetLeft : strip.scrollLeft + overflowRight,
       behavior: reduceMotion ? 'auto' : 'smooth',
-      inline: 'nearest',
-      block: 'nearest',
     });
   }, [activeIndex, reduceMotion]);
 
@@ -121,6 +133,7 @@ export function ProductWindow() {
           layers" reading. Below the tablet breakpoint they stay on ONE row
           that scrolls sideways; from `md` up they divide the full width. */}
       <div
+        ref={tablistRef}
         role="tablist"
         aria-label="CiteLadder intelligence layers"
         className="border-border-subtle bg-panel flex snap-x snap-mandatory scrollbar-none overflow-x-auto border-b md:grid md:grid-cols-4 md:overflow-visible"
