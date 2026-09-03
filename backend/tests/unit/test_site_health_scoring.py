@@ -8,6 +8,7 @@ from app.analysis.site_health.rules import RuleEvaluation
 from app.analysis.site_health.scoring import (
     AnalysisMeasurementInput,
     RuleMeasurementInput,
+    _rule_result,
     aggregate_measurements,
     score_analysis,
 )
@@ -727,6 +728,85 @@ def test_site_family_uses_root_evidence_when_root_page_kind_is_other() -> None:
         "aeo.organization_identity",
         "aeo.trust_path_present",
     ]
+
+
+def test_page_rule_rolls_up_pages_that_scored_differently() -> None:
+    """Two company-profile pages may legitimately score differently.
+
+    An apex + ``www`` site serves the SAME About page on both hosts, and the
+    two copies can differ enough to score 0.85 and 1.0. The whole-rule
+    normalized override is the site/entity-set contract (one entity, one
+    result); applying it to a PAGE rule turned that ordinary disagreement into
+    ``conflicting normalized results``. That ValueError escaped through the
+    crawl-finalize pass, so the crawl never terminalized: every task was
+    already succeeded and the crawl sat in ``running`` until it was stopped
+    by hand.
+    """
+    analyses = _analyses(["company_profile", "company_profile"])
+    rows = [
+        RuleMeasurementInput(
+            **{
+                **_technical_input(
+                    analysis,
+                    rule_id="aeo.company_entity_completeness",
+                    outcome=outcome,
+                ).__dict__,
+                "normalized_score": score,
+                "normalized_coverage": 1.0,
+            }
+        )
+        for analysis, outcome, score in zip(
+            analyses, ["partial", "satisfied"], [0.85, 1.0], strict=True
+        )
+    ]
+
+    aggregate = aggregate_measurements(analyses, rows)
+
+    assert aggregate is not None
+
+
+def test_page_rule_credit_prefers_the_rules_own_normalized_score() -> None:
+    """The rule already weighed its atoms, so 0.85 must not collapse to 0.5."""
+    analyses = _analyses(["company_profile", "company_profile"])
+    rows = [
+        RuleMeasurementInput(
+            **{
+                **_technical_input(
+                    analysis,
+                    rule_id="aeo.company_entity_completeness",
+                    outcome=outcome,
+                ).__dict__,
+                "normalized_score": score,
+                "normalized_coverage": 1.0,
+            }
+        )
+        for analysis, outcome, score in zip(
+            analyses, ["partial", "satisfied"], [0.85, 1.0], strict=True
+        )
+    ]
+
+    score, coverage = _rule_result("aeo.company_entity_completeness", rows)
+
+    assert score == pytest.approx((0.85 + 1.0) / 2)
+    assert coverage == pytest.approx(1.0)
+
+
+def test_page_rule_still_rejects_a_corrupt_normalized_score() -> None:
+    analyses = _analyses(["company_profile"])
+    corrupt = RuleMeasurementInput(
+        **{
+            **_technical_input(
+                analyses[0],
+                rule_id="aeo.company_entity_completeness",
+                outcome="satisfied",
+            ).__dict__,
+            "normalized_score": 4.2,
+            "normalized_coverage": 1.0,
+        }
+    )
+
+    with pytest.raises(ValueError, match="invalid normalized result"):
+        _rule_result("aeo.company_entity_completeness", [corrupt])
 
 
 def test_normalized_result_rejects_non_numeric_json_values() -> None:

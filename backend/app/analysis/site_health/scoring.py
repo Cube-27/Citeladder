@@ -530,11 +530,36 @@ class AggregateMeasurements:
     scoring_version: str = SCORING_VERSION
 
 
+def _row_credit(row: RuleMeasurementInput) -> float:
+    """One row's credit, preferring the rule's own normalized score.
+
+    A rule that publishes ``normalized_score`` has already weighed its own
+    atoms (``aeo.company_entity_completeness`` scores four weighted company
+    signals), so that value is strictly better evidence than the three-step
+    credit its coarse outcome maps to. Rules that publish nothing keep the
+    outcome mapping.
+
+    The value is persisted JSON, so it is validated here exactly as the
+    whole-rule override validates it: a non-numeric or out-of-range score is
+    corrupt evidence and must be rejected, never silently scored.
+    """
+    score = row.normalized_score
+    if score is None:
+        return checkpoint_credit(row.outcome)
+    if (
+        isinstance(score, bool)
+        or not isinstance(score, (int, float))
+        or not 0.0 <= score <= 1.0
+    ):
+        raise ValueError(f"Rule {row.rule_id} has an invalid normalized result")
+    return float(score)
+
+
 def _mean_credit(rows: list[RuleMeasurementInput]) -> float | None:
     determinate = [row for row in rows if row.outcome in _DETERMINATE]
     if not determinate:
         return None
-    return sum(checkpoint_credit(row.outcome) for row in determinate) / len(determinate)
+    return sum(_row_credit(row) for row in determinate) / len(determinate)
 
 
 def _weighted_average(values: list[tuple[float, float]]) -> tuple[float | None, float]:
@@ -614,12 +639,20 @@ def _rule_result(
     scopes = {row.scope for row in observations}
     if len(scopes) != 1:
         raise ValueError(f"Rule {rule_id} has inconsistent persisted scopes")
+    scope = next(iter(scopes))
+    if scope == RULE_SCOPE_PAGE:
+        # A page rule measures each page independently, so its rows carry
+        # DIFFERENT normalized scores by design and must roll up rather than
+        # agree. The whole-rule override below is the site/entity-set contract
+        # (one entity, one persisted result); applying it here raised
+        # "conflicting normalized results" the moment two pages of the same
+        # kind scored differently — two About pages on an apex+`www` site, say
+        # — and that exception escaped through the crawl-finalize pass, leaving
+        # the crawl permanently `running` with every task already terminal.
+        return _page_rule_result(observations)
     override = normalized_measurement_result(rule_id, observations)
     if override is not None:
         return override
-    scope = next(iter(scopes))
-    if scope == RULE_SCOPE_PAGE:
-        return _page_rule_result(observations)
     if scope == RULE_SCOPE_SITE:
         return _site_rule_result(observations)
     return _entity_set_rule_result(observations)

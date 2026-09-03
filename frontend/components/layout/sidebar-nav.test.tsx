@@ -3,10 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   prefetchQuery: vi.fn((_options: { queryKey: readonly unknown[] }) => Promise.resolve()),
+  // `prefetchRoute` skips keys whose query already failed, so the stub client
+  // needs the cache lookup that guard performs. Nothing has failed here.
+  find: vi.fn((_filters: { queryKey: readonly unknown[] }) => undefined),
 }));
 
 vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({ prefetchQuery: mocks.prefetchQuery }),
+  useQueryClient: () => ({
+    prefetchQuery: mocks.prefetchQuery,
+    getQueryCache: () => ({ find: mocks.find }),
+  }),
 }));
 
 vi.mock('@/lib/project/project-context', () => ({
@@ -27,6 +33,7 @@ import { NAV_GROUPS } from './nav-items';
 describe('station navigation', () => {
   beforeEach(() => {
     mocks.prefetchQuery.mockClear();
+    mocks.find.mockClear();
   });
 
   it('ships the four loop stations and their canonical destinations', () => {
@@ -96,6 +103,7 @@ describe('station navigation', () => {
     ]);
 
     mocks.prefetchQuery.mockClear();
+    mocks.find.mockClear();
     fireEvent.focus(traffic);
     expect(mocks.prefetchQuery).toHaveBeenCalledOnce();
     expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual([

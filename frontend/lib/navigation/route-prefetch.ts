@@ -21,71 +21,88 @@ type RoutePrefetcher = (client: QueryClient, projectId: string) => void;
  */
 const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
   '/projects': (client, projectId) => {
-    void client.prefetchQuery({
+    warm(client, {
       queryKey: queryKeys.projects.commandCenter(projectId),
-      queryFn: ({ signal }) => projectsApi.getCommandCenter(projectId, { signal }),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        projectsApi.getCommandCenter(projectId, { signal }),
     });
   },
   '/site': prefetchSiteHealth,
   '/issues': prefetchSiteHealth,
   '/demand': (client, projectId) => {
-    void client.prefetchQuery({
+    warm(client, {
       queryKey: queryKeys.demand.latest(projectId),
-      queryFn: ({ signal }) => demandApi.getLatest(projectId, { signal }),
+      queryFn: ({ signal }: { signal: AbortSignal }) => demandApi.getLatest(projectId, { signal }),
     });
   },
   '/traffic': (client, projectId) => {
     const params = { granularity: 'day' as const };
-    void client.prefetchQuery({
+    warm(client, {
       queryKey: queryKeys.traffic.dashboard(projectId, params),
-      queryFn: ({ signal }) => trafficApi.getTraffic(projectId, params, { signal }),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        trafficApi.getTraffic(projectId, params, { signal }),
     });
   },
   '/products': (client, projectId) => {
-    void client.prefetchQuery({
+    warm(client, {
       queryKey: queryKeys.commerce.catalog(projectId),
-      queryFn: ({ signal }) => commerceApi.catalog(projectId, { signal }),
+      queryFn: ({ signal }: { signal: AbortSignal }) => commerceApi.catalog(projectId, { signal }),
     });
   },
   '/opportunities': (client, projectId) => {
-    void client.prefetchQuery(opportunitiesQueries.summary(projectId));
-  },
-  '/content': (client, projectId) => {
-    void client.prefetchQuery({
-      queryKey: queryKeys.demand.latest(projectId),
-      queryFn: ({ signal }) => demandApi.getLatest(projectId, { signal }),
-    });
+    warm(client, opportunitiesQueries.summary(projectId));
   },
   '/prompts': (client, projectId) => {
-    void client.prefetchQuery({
+    warm(client, {
       queryKey: queryKeys.prompts.sets(projectId),
-      queryFn: ({ signal }) => promptsApi.listPromptSets(projectId, { signal }),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        promptsApi.listPromptSets(projectId, { signal }),
     });
   },
   '/visibility': (client, projectId) => {
-    void Promise.all([
-      client.prefetchQuery(runsQueries.list(projectId)),
-      client.prefetchQuery({
-        queryKey: [...queryKeys.visibility.project(projectId), 'core'],
-        queryFn: ({ signal }) =>
-          visibilityApi.getProjectVisibility(projectId, { cohort: 'core' }, { signal }),
-      }),
-    ]);
+    warm(client, runsQueries.list(projectId));
+    warm(client, {
+      queryKey: [...queryKeys.visibility.project(projectId), 'core'],
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        visibilityApi.getProjectVisibility(projectId, { cohort: 'core' }, { signal }),
+    });
   },
   '/runs': (client, projectId) => {
-    void client.prefetchQuery(runsQueries.list(projectId));
+    warm(client, runsQueries.list(projectId));
   },
   '/ai-referrals': (client, projectId) => {
     const params = { granularity: 'week' as const };
-    void client.prefetchQuery({
+    warm(client, {
       queryKey: queryKeys.aiReferrals.dashboard(projectId, params),
-      queryFn: ({ signal }) => aiReferralsApi.getDashboard(projectId, params, { signal }),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        aiReferralsApi.getDashboard(projectId, params, { signal }),
     });
   },
 };
 
 function prefetchSiteHealth(client: QueryClient, projectId: string) {
-  void client.prefetchQuery(siteHealthQueries.dashboard(projectId));
+  warm(client, siteHealthQueries.dashboard(projectId));
+}
+
+/**
+ * Pointer intent must never disturb what the CURRENT screen is rendering.
+ *
+ * An errored query is permanently stale, so `prefetchQuery` always refetches
+ * it, and TanStack resets `error` back to `pending` while that refetch is in
+ * flight. On a screen already showing the failure (Search Demand's "no
+ * snapshot exists yet" 404 alert), that flips `isLoading` true and swaps the
+ * settled alert for a full-page skeleton until the identical 404 returns —
+ * a hover on an unrelated sidebar link visibly flickering the page.
+ *
+ * Warming a cache is strictly an optimisation, so a key that has already
+ * failed is left exactly as it is: the destination screen mounts and retries
+ * on its own terms.
+ */
+function warm<T>(client: QueryClient, options: { queryKey: readonly unknown[] } & T): void {
+  if (client.getQueryCache().find({ queryKey: options.queryKey })?.state.status === 'error') {
+    return;
+  }
+  void client.prefetchQuery(options as never);
 }
 
 export function prefetchRoute(client: QueryClient, href: string, projectId: string | null) {
