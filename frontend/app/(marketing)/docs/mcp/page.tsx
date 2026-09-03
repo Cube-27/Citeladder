@@ -6,7 +6,7 @@ import { Section } from '@/components/marketing/primitives/section';
 import { absoluteUrl } from '@/lib/seo/site';
 
 const DESCRIPTION =
-  'Connect ChatGPT, Claude, Codex, and Perplexity to read your CiteLadder business context.';
+  'Connect ChatGPT, Claude, Codex, or Perplexity to read persisted CiteLadder business context through a hosted, read-only MCP server.';
 
 // The root layout appends '· CiteLadder', so the brand is not repeated here.
 export const metadata: Metadata = {
@@ -63,7 +63,7 @@ export default function McpDocumentationPage() {
         eyebrow="Developer access"
         title="Connect your AI assistant to"
         accent="CiteLadder"
-        lead="A hosted, read-only MCP server that gives supported assistants the persisted business context visible to your CiteLadder account."
+        lead="A hosted, read-only MCP server. Supported assistants can read the persisted business context already visible to your CiteLadder account. They cannot publish."
       >
         <div className="mt-8 max-w-3xl">
           <Code>{MCP_ENDPOINT}</Code>

@@ -21,13 +21,17 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
 
   return (
     <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-card)] border">
-      <div className="overflow-x-auto">
+      {/* The table is wider than a phone by design, so it scrolls INSIDE this
+          box. `overscroll-x-contain` keeps that gesture from chaining out to
+          the page once the table hits its end — without it the whole document
+          slides sideways and the vertical scroll stutters. */}
+      <div className="overflow-x-auto overscroll-x-contain">
         <table className="w-full min-w-[36rem] border-collapse text-left">
           <thead>
             <tr className="border-border-subtle bg-background-alt border-b">
               <th
                 scope="col"
-                className="text-muted bg-background-alt sticky left-0 z-1 px-4 py-3 text-xs font-medium tracking-wide uppercase"
+                className="text-muted bg-background-alt z-1 px-4 py-3 text-xs font-medium tracking-wide uppercase sm:sticky sm:left-0"
               >
                 Capability
               </th>
@@ -54,7 +58,7 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
                 <th
                   scope="row"
                   className={cn(
-                    'text-foreground sticky left-0 z-1 px-4 py-2.5 text-sm font-medium',
+                    'text-foreground z-1 px-4 py-2.5 text-sm font-medium sm:sticky sm:left-0',
                     index % 2 === 1 ? 'bg-background-alt' : 'bg-panel',
                   )}
                 >

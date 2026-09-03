@@ -1,9 +1,9 @@
 import { Plus } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 import { FAQ_GROUPS, type FaqGroup } from '@/lib/marketing-content/faq';
 
 import { Meta } from '../primitives/label';
+import { Linkify } from '../primitives/linkify';
 import { Container } from '../primitives/section';
 
 /**
@@ -39,41 +39,6 @@ function fallbackAnchor(heading: string): string {
 
 function groupAnchor(group: FaqGroup): string {
   return GROUP_ANCHORS[group.heading] ?? `faq-${fallbackAnchor(group.heading)}`;
-}
-
-// Answers are plain strings from the content module. One inline transform
-// keeps them faithful: bare URLs render as real links.
-const INLINE_TOKEN_RE = /https?:\/\/\S+/g;
-// Sentence punctuation straight after a URL belongs to the prose, not the href.
-const TRAILING_PUNCT_RE = /[.,;:!?)]+$/;
-
-function AnswerText({ text }: Readonly<{ text: string }>) {
-  const nodes: ReactNode[] = [];
-  let cursor = 0;
-  let key = 0;
-  for (const match of text.matchAll(INLINE_TOKEN_RE)) {
-    const token = match[0];
-    const start = match.index;
-    if (start > cursor) nodes.push(text.slice(cursor, start));
-    const trailing = token.match(TRAILING_PUNCT_RE)?.[0] ?? '';
-    const href = trailing ? token.slice(0, -trailing.length) : token;
-    nodes.push(
-      <a
-        key={key}
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        className="text-accent-text underline underline-offset-2"
-      >
-        {href}
-      </a>,
-    );
-    key += 1;
-    if (trailing) nodes.push(trailing);
-    cursor = start + token.length;
-  }
-  if (cursor < text.length) nodes.push(text.slice(cursor));
-  return nodes;
 }
 
 export function FaqGroups() {
@@ -120,7 +85,7 @@ export function FaqGroups() {
                   />
                 </summary>
                 <p className="website-body-lg text-muted max-w-[75ch] pb-8">
-                  <AnswerText text={item.a} />
+                  <Linkify text={item.a} />
                 </p>
               </details>
             ))}

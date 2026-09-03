@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { Button as SharedButton } from '@/components/ui/button';
+import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 type Variant = 'primary' | 'dark' | 'nav' | 'ghost';
@@ -41,7 +42,59 @@ export function ButtonLink({
   );
 }
 
-export function TextLink({
+/**
+ * The demo CTA, in one place.
+ *
+ * The funnel leaves this site for the parent company's contact form, so every
+ * one of the dozen call sites would otherwise have to remember `target` and a
+ * safe `rel`. They call this instead, and if the destination ever comes back
+ * in-house only `DEMO_EXTERNAL` changes.
+ */
+export function DemoButtonLink({
+  variant = 'primary',
+  className,
+  children,
+}: VisualProps & { children?: ReactNode }) {
+  return (
+    <ButtonLink
+      href={DEMO_HREF}
+      variant={variant}
+      className={className}
+      {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
+    >
+      {children ?? DEMO_CTA}
+    </ButtonLink>
+  );
+}
+
+/**
+ * The demo CTA as a text link, for the places the segment layout wants a link
+ * rather than a button. Same external contract as `DemoButtonLink` — the
+ * funnel leaves the site, so `target` and a safe `rel` belong here and not at
+ * the call site.
+ */
+export function DemoTextLink({
+  className,
+  children,
+}: Readonly<{ className?: string; children?: ReactNode }>) {
+  return (
+    <TextLink
+      href={DEMO_HREF}
+      className={className}
+      {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
+    >
+      {children ?? DEMO_CTA}
+    </TextLink>
+  );
+}
+
+/**
+ * Module-private: the only text link the marketing surface renders is the demo
+ * CTA, and that goes through `DemoTextLink` so the external target and `rel`
+ * are never left to a call site. Export this again when a second, genuinely
+ * different text link exists.
+ */
+function TextLink({
   href,
   className,
   children,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 
 import { COMPETITORS } from '@/lib/marketing-content/compare';
+import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import { MarketingFooter } from './footer';
@@ -55,18 +56,24 @@ describe('MarketingFooter', () => {
     expect(screen.queryByRole('link', { name: /documentation/i })).toBeNull();
   });
 
-  it('exposes the legal strip with policy links', async () => {
+  it('exposes the legal strip, with the corporate policies on the parent site', async () => {
     render(await MarketingFooter());
 
+    // Privacy and Terms bind Cube27 and are published there, so the strip
+    // must leave the site for them (in a new tab) rather than link a local
+    // copy that would drift out of date.
     const legal = screen.getByRole('navigation', { name: 'Legal' });
-    expect(within(legal).getByRole('link', { name: 'Terms of Service' })).toHaveAttribute(
-      'href',
-      '/terms',
-    );
-    expect(within(legal).getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute(
-      'href',
-      '/privacy',
-    );
+    for (const [name, href] of [
+      ['Terms of Service', PARENT_COMPANY.termsHref],
+      ['Privacy Policy', PARENT_COMPANY.privacyHref],
+    ] as const) {
+      const link = within(legal).getByRole('link', { name });
+      expect(link).toHaveAttribute('href', href);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noreferrer');
+    }
+
+    // The product's own policies stay on this surface.
     expect(within(legal).getByRole('link', { name: 'Cookies' })).toHaveAttribute(
       'href',
       '/cookies',
@@ -74,6 +81,24 @@ describe('MarketingFooter', () => {
     expect(within(legal).getByRole('link', { name: 'AI Policy' })).toHaveAttribute(
       'href',
       '/ai-policy',
+    );
+  });
+
+  it('names the parent company in the ownership line', async () => {
+    render(await MarketingFooter());
+
+    // The line reads "© 2026 CiteLadder. A Cube27 product." with Cube27 as a
+    // link, so the text is split across nodes — match the paragraph's own
+    // normalised content rather than a single text node.
+    const footer = screen.getByRole('contentinfo');
+    const ownership = within(footer).getByText(
+      (_content, element) =>
+        element?.tagName === 'P' && /a cube27 product/i.test(element.textContent ?? ''),
+    );
+    expect(ownership).toBeInTheDocument();
+    expect(within(ownership).getByRole('link', { name: 'Cube27' })).toHaveAttribute(
+      'href',
+      PARENT_COMPANY.href,
     );
   });
 });

@@ -65,9 +65,14 @@ describe('Landing page (public marketing `/`)', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
 
+    // The funnel leaves the site for the parent company's contact form, so the
+    // hero CTA must carry the external target and a safe `rel` alongside its
+    // destination — a bare href here would open cube27.com in this tab.
     const hero = container.querySelector('header');
-    const cta = hero?.querySelector('a[href="/demo"]');
+    const cta = hero?.querySelector(`a[href="${DEMO_HREF}"]`);
     expect(cta).toHaveTextContent('Book a demo');
+    expect(cta).toHaveAttribute('target', '_blank');
+    expect(cta).toHaveAttribute('rel', 'noreferrer');
     expect(cta?.querySelector('svg')).not.toBeNull();
   });
 

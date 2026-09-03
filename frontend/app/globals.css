@@ -317,9 +317,32 @@
   }
 }
 
+/* The page never scrolls sideways.
+   -------------------------------
+   A single overflowing descendant — a wide table, a min-width grid, an
+   element translated during an entrance — widens the whole document and lets
+   the page slide horizontally under the finger, which on a phone also makes
+   the vertical scroll feel like it truncates mid-gesture. Wide content is
+   supposed to scroll inside its OWN container (see `.scrollbar-none` regions
+   and the comparison table), so clipping at the document root corrects the
+   layout bug rather than hiding content that had nowhere else to go.
+
+   Two deliberate choices:
+
+   `overflow-x: clip` rather than `hidden`, because `hidden` makes the element
+   a scroll container, which silently breaks `position: sticky` inside it —
+   the pricing comparison's sticky capability column depends on that not
+   happening.
+
+   On `html`, not on the marketing wrapper: any clipping/scroll container
+   becomes the containing block for `position: fixed` descendants, and the
+   marketing nav is fixed inside that wrapper. Clipping there would cut the
+   nav out of its own viewport-fixed behaviour. The root has no such
+   descendants to steal. */
 html {
   min-height: 100%;
   background: var(--color-background);
+  overflow-x: clip;
 }
 
 body {
@@ -710,6 +733,38 @@ samp {
 }
 .skip-link:focus-visible {
   transform: translateY(0);
+}
+
+/* A scroll region whose scrollbar is not part of the composition — a tab strip
+   that scrolls sideways on a phone, or the product preview's faux sidebar.
+   The region still scrolls by touch, wheel, and keyboard; only the visible
+   track is suppressed, so it never eats a row of pixels inside a bordered
+   panel or draws a grey bar across a preview's chrome. */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scroll anchoring versus scroll-triggered reveals.
+   ------------------------------------------------
+   A reveal fades an element in as it crosses the viewport. That is an
+   opacity change, which costs no layout — but the browser's scroll-anchoring
+   heuristic still picks an anchor node inside the region being revealed, and
+   when the reveal settles (which is exactly when scrolling STOPS, because the
+   trigger fires on the last frames of a flick) it re-anchors and nudges the
+   scroll position. The result reads as the page "shifting by itself" a beat
+   after the finger leaves the glass.
+
+   The reveal roots opt out of anchor selection entirely. They are the only
+   elements on the page whose visual state changes on scroll, so they are the
+   only ones that can produce a spurious adjustment; the rest of the document
+   keeps anchoring, which is what stops content jumping when images load. */
+[data-citeladder-reveal],
+[data-citeladder-reveal] > * {
+  overflow-anchor: none;
 }
 
 /* In-page anchors must clear the fixed chrome so linked sections land below it. */

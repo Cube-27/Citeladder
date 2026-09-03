@@ -1,9 +1,8 @@
 import { ArrowRight } from 'lucide-react';
 
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
-import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
-import { ButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { Eyebrow } from '../primitives/label';
 import { Section } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
@@ -24,10 +23,10 @@ export function FinalCta() {
         </h2>
         <p className="website-lead text-muted mt-4 max-w-[60ch]">{cta.body}</p>
         <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row sm:items-center">
-          <ButtonLink href={DEMO_HREF} variant="primary" className="w-full sm:w-auto">
+          <DemoButtonLink variant="primary" className="w-full sm:w-auto">
             {cta.primaryCta}
             <ArrowRight aria-hidden />
-          </ButtonLink>
+          </DemoButtonLink>
           <ButtonLink
             href="/pricing"
             variant="ghost"

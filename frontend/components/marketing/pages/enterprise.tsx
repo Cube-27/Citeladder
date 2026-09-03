@@ -9,10 +9,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { DEMO_HREF } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
-import { ButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../primitives/page-hero';
 import { Section, SectionHeader } from '../primitives/section';
 import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
@@ -139,14 +138,14 @@ export function EnterpriseHero() {
       eyebrow="Enterprise"
       title="AI visibility your security team"
       accent="can inspect."
-      lead="Measure how your brand appears in answer engines with a managed, workspace-scoped evidence trail — ready for procurement, security review, and the teams who act on the result."
+      lead="Measure how your brand appears in ChatGPT, Gemini, and Claude with a workspace-scoped evidence trail. Ready for procurement, security review, and the teams who act on the result."
       centered
     >
       <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
-        <ButtonLink href={DEMO_HREF}>
+        <DemoButtonLink>
           Book a demo
           <ArrowRight aria-hidden />
-        </ButtonLink>
+        </DemoButtonLink>
         <ButtonLink href="/pricing" variant="ghost">
           Compare plans
         </ButtonLink>
@@ -291,10 +290,10 @@ export function EnterpriseLimits() {
             artifacts, and provenance on each derived metric.
           </p>
         </div>
-        <ButtonLink href={DEMO_HREF} className="shrink-0">
+        <DemoButtonLink className="shrink-0">
           Request custom quote
           <ArrowRight aria-hidden />
-        </ButtonLink>
+        </DemoButtonLink>
       </div>
     </Section>
   );
@@ -312,10 +311,10 @@ export function EnterpriseContactCta() {
           the conversation to the evidence your team needs.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
+          <DemoButtonLink className="w-full sm:w-auto">
             Book a demo
             <ArrowRight aria-hidden />
-          </ButtonLink>
+          </DemoButtonLink>
           <ButtonLink href="/faq" variant="ghost" className="w-full sm:w-auto">
             Read the FAQ
           </ButtonLink>

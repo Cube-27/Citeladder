@@ -22,7 +22,6 @@ const STATIC_PATHS = [
   '/pricing',
   '/enterprise',
   '/solutions',
-  '/demo',
   '/faq',
   '/blog',
   '/compare',

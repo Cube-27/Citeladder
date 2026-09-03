@@ -9,24 +9,22 @@ import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
 // per visitor, so a number baked into a static description would be wrong for
 // most of them and would go stale the moment the catalog changed.
 const DESCRIPTION =
-  'Pricing for CiteLadder, the growth-intelligence platform: self-serve plans plus a ' +
-  'sales-assisted Enterprise agreement. Model calls run on your own provider keys. India is ' +
-  'billed in INR with GST added; international cards are charged in USD.';
+  'Self-serve CiteLadder plans plus Enterprise. You pay for the workspace and the evidence. Model usage bills to your own provider keys, never marked up.';
 
 // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
-  title: 'Pricing — the growth-intelligence platform',
+  title: 'CiteLadder pricing for AI visibility',
   description: DESCRIPTION,
   alternates: { canonical: '/pricing' },
   openGraph: {
-    title: 'Pricing — the growth-intelligence platform',
+    title: 'CiteLadder pricing for AI visibility',
     description: DESCRIPTION,
     type: 'website',
     siteName: 'CiteLadder',
   },
   twitter: {
     card: 'summary',
-    title: 'Pricing — the growth-intelligence platform',
+    title: 'CiteLadder pricing for AI visibility',
     description: DESCRIPTION,
   },
 };
@@ -49,7 +47,7 @@ export default function PricingPage() {
         eyebrow="Pricing"
         title="Pay for the intelligence."
         accent="Not the API markup."
-        lead="Model calls run on your own provider keys — usage bills straight to your accounts at provider rates. CiteLadder charges for the workspace, the intelligence, and the evidence behind every recommendation."
+        lead="Model calls run on your own provider keys. Usage bills straight to your accounts at provider rates. CiteLadder charges for the workspace, the intelligence, and the evidence behind every recommendation."
         centered
       >
         <TrustStrip className="mt-8 justify-center" />

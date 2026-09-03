@@ -28,14 +28,14 @@ export function MobileNavigation({
   return (
     <div
       id="mobile-menu"
-      className="border-border-subtle bg-background-alt safe-bottom max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t px-6 py-5 lg:hidden"
+      className="border-border-subtle bg-panel shadow-elevated safe-bottom max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t px-6 py-2 lg:hidden"
     >
       {NAV_DROPS.map(({ key, label, href, groups }) => (
         <div key={key} className="border-border-subtle border-b last:border-b-0">
           <div className="flex items-center">
             <Link
               href={href}
-              className="website-nav text-foreground flex-1 py-5"
+              className="website-nav text-foreground flex-1 py-3.5"
               onClick={closeMenu}
             >
               {label}
@@ -57,7 +57,7 @@ export function MobileNavigation({
               />
             </button>
           </div>
-          <div id={`acc-${key}`} hidden={openAcc !== key} className="pb-3">
+          <div id={`acc-${key}`} hidden={openAcc !== key} className="pb-2">
             {groups.map((group) => (
               <Fragment key={group.label ?? 'items'}>
                 {group.label && (
@@ -72,12 +72,12 @@ export function MobileNavigation({
         </div>
       ))}
 
-      <div className="mt-5 grid gap-3">
+      <div className="grid">
         {NAV_LINKS.map(({ label, href }) => (
           <Link
             key={href}
             href={href}
-            className="website-nav text-foreground py-3"
+            className="website-nav text-foreground py-3.5"
             onClick={closeMenu}
           >
             {label}
@@ -85,7 +85,7 @@ export function MobileNavigation({
         ))}
         <Link
           href={isAuthenticated ? dashboardHref : '/login'}
-          className="website-nav text-muted py-3"
+          className="website-nav text-muted py-3.5"
           onClick={closeMenu}
         >
           {isAuthenticated ? 'Dashboard' : 'Log in'}

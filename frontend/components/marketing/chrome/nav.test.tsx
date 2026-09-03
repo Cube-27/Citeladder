@@ -107,6 +107,30 @@ describe('MarketingNav', () => {
     }
   });
 
+  it('still opens a dropdown on focus after a row was selected', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    renderWithProviders(<MarketingNav />);
+
+    // Selecting a row suppresses hover so a resting pointer cannot reopen the
+    // panel it just closed. That suppression must not reach the keyboard: a
+    // user tabbing to the next trigger has explicitly asked for it, and a flag
+    // only a `mouseleave` can clear would leave them with no dropdowns at all.
+    const [first, second] = NAV_DROPS;
+    const firstTrigger = screen.getByRole('link', { name: new RegExp(`^${first.label}$`, 'i') });
+    await user.hover(firstTrigger);
+    await waitFor(() => expect(firstTrigger).toHaveAttribute('aria-expanded', 'true'));
+
+    const panel = document.getElementById(`desktop-nav-panel-${first.key}`);
+    await user.click(within(panel as HTMLElement).getAllByRole('link')[0]);
+    await waitFor(() => expect(firstTrigger).toHaveAttribute('aria-expanded', 'false'));
+
+    const secondTrigger = screen.getByRole('link', { name: new RegExp(`^${second.label}$`, 'i') });
+    secondTrigger.focus();
+
+    await waitFor(() => expect(secondTrigger).toHaveAttribute('aria-expanded', 'true'));
+  });
+
   it('keeps the navigation surface transparent until the page scrolls', async () => {
     stubAnonymous();
     renderWithProviders(<MarketingNav />);
@@ -161,6 +185,54 @@ describe('MarketingNav', () => {
 
     await user.click(screen.getByRole('button', { name: 'Close menu' }));
     await waitFor(() => expect(document.querySelector('#mobile-menu')).toBeNull());
+  });
+
+  it('closes the mobile menu when a row is chosen', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    renderWithProviders(<MarketingNav />);
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    const head = document.querySelector<HTMLElement>('button[aria-controls="acc-platform"]');
+    await user.click(head!);
+
+    // Choosing a destination must dismiss the sheet: leaving it open covers
+    // the page the visitor just navigated to.
+    const body = document.querySelector<HTMLElement>('#acc-platform');
+    await user.click(within(body!).getAllByRole('link')[0]);
+
+    await waitFor(() => expect(document.querySelector('#mobile-menu')).toBeNull());
+  });
+
+  it('closes the mobile menu on a tap outside the chrome', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    renderWithProviders(<MarketingNav />);
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    expect(document.querySelector('#mobile-menu')).not.toBeNull();
+
+    // A tap on the page behind the sheet dismisses it — on touch there is no
+    // blur to rely on, so the chrome listens for `pointerdown` on the document.
+    await user.click(document.body);
+
+    await waitFor(() => expect(document.querySelector('#mobile-menu')).toBeNull());
+  });
+
+  it('closes the mobile menu from the toggle, leaving it reopenable', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    renderWithProviders(<MarketingNav />);
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    // The toggle closes the menu exactly once. The outside-click boundary is
+    // the whole chrome rather than the sheet alone — were it the sheet, this
+    // tap would be treated as "outside", close the menu, and the toggle's own
+    // handler would then reopen it, leaving the menu stuck open.
+    await user.click(screen.getByRole('button', { name: 'Close menu' }));
+
+    await waitFor(() => expect(document.querySelector('#mobile-menu')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
   });
 
   it('shows the demo-first CTA and a login link to an anonymous visitor', async () => {

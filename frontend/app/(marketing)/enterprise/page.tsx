@@ -11,9 +11,7 @@ import { JsonLd } from '@/components/marketing/seo/json-ld';
 import { absoluteUrl } from '@/lib/seo/site';
 
 const DESCRIPTION =
-  'CiteLadder Enterprise helps security-conscious teams measure AI visibility with a managed, ' +
-  'workspace-scoped evidence trail, BYOK provider connections, deterministic analysis, and ' +
-  'durable audit history.';
+  'Inspectable AI visibility for security-conscious teams: workspace-scoped evidence, BYOK keys, deterministic scores, and a trail procurement can read.';
 const ENTERPRISE_URL = absoluteUrl('/enterprise');
 
 const ENTERPRISE_SERVICE_JSON_LD = {

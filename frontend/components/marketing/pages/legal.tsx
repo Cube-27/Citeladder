@@ -1,3 +1,4 @@
+import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -7,6 +8,7 @@ import {
 } from '@/lib/marketing-content/legal';
 
 import { Meta } from '../primitives/label';
+import { Linkify } from '../primitives/linkify';
 import { Section } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
 
@@ -69,9 +71,12 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
                 className="border-border-subtle scroll-mt-28 border-b py-8 last:border-b-0"
               >
                 <h2 className="website-section-heading text-foreground">{section.title}</h2>
+                {/* Policy text names the parent company's documents by URL.
+                    Rendered as a plain string those were dead text, so a
+                    reader was pointed at a policy they then had to retype. */}
                 {section.paragraphs?.map((paragraph, index) => (
                   <p key={`${section.id}-p-${index}`} className="website-body-lg text-muted mt-4">
-                    {paragraph}
+                    <Linkify text={paragraph} />
                   </p>
                 ))}
                 {section.bullets && section.bullets.length > 0 ? (
@@ -89,12 +94,25 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
               </section>
             ))}
 
+            {/* Corporate policies live on the parent company's site, so this
+                row mixes external and internal destinations. */}
             <nav
               aria-label="Other legal documents"
               className="border-border-subtle mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t pt-6"
             >
               {FOOTER_LEGAL_LINKS.map((link) =>
-                link.href === `/${document.slug}` ? null : (
+                link.href === `/${document.slug}` ? null : link.external ? (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent-text hover:text-accent-hover inline-flex items-center gap-1.5 text-sm font-medium"
+                  >
+                    {link.label}
+                    <ArrowUpRight className="size-3.5" aria-hidden />
+                  </a>
+                ) : (
                   <Link
                     key={link.href}
                     href={link.href}

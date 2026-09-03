@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   // relative OG/canonical URLs are tolerated by Next in that state.
   metadataBase: siteOrigin() ?? undefined,
   title: {
-    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    default: `${SITE_NAME} · ${SITE_TAGLINE}`,
     template: `%s · ${SITE_NAME}`,
   },
   description:

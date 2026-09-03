@@ -1,10 +1,17 @@
 import { ArrowUpRight } from 'lucide-react';
-import { LogoMark } from '@/components/ui/logo-mark';
 import Link from 'next/link';
 
+import { BrandLogo } from '@/components/ui/brand-logo';
+import { LogoMark } from '@/components/ui/logo-mark';
+
 import { COMPETITORS } from '@/lib/marketing-content/compare';
-import { FOOTER_LEGAL_LINKS, legalDisplayName } from '@/lib/marketing-content/legal';
-import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
+import {
+  FOOTER_LEGAL_LINKS,
+  PARENT_COMPANY,
+  type LegalLink,
+  legalDisplayName,
+} from '@/lib/marketing-content/legal';
+import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { CONTACT_EMAIL, SOCIAL_LINKS, type SocialLink } from '@/lib/marketing-content/social';
 
 import { Container } from '../primitives/section';
@@ -59,7 +66,8 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
     label: 'Company',
     links: [
       ...(CONTACT_EMAIL ? [{ label: 'Contact', href: `mailto:${CONTACT_EMAIL}` }] : []),
-      { label: DEMO_CTA, href: DEMO_HREF },
+      { label: DEMO_CTA, href: DEMO_HREF, external: DEMO_EXTERNAL },
+      { label: PARENT_COMPANY.name, href: PARENT_COMPANY.href, external: true },
       { label: 'Log in', href: '/login' },
     ],
   },
@@ -88,8 +96,25 @@ function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   );
 }
 
+const LEGAL_STRIP_LINK =
+  'text-muted hover:text-foreground text-xs font-medium underline-offset-4 hover:underline';
+
+function LegalStripLink({ link }: Readonly<{ link: LegalLink }>) {
+  if (link.external) {
+    return (
+      <a className={LEGAL_STRIP_LINK} href={link.href} target="_blank" rel="noreferrer">
+        {link.label}
+      </a>
+    );
+  }
+  return (
+    <Link className={LEGAL_STRIP_LINK} href={link.href}>
+      {link.label}
+    </Link>
+  );
+}
+
 function SocialButton({ social }: Readonly<{ social: SocialLink }>) {
-  const Icon = social.icon;
   const external = social.href !== '#';
   return (
     <a
@@ -99,7 +124,7 @@ function SocialButton({ social }: Readonly<{ social: SocialLink }>) {
       aria-label={social.label}
       className="border-border-subtle bg-background text-muted hover:border-accent hover:text-accent-text grid size-10 place-items-center rounded-[var(--radius-control)] border transition-colors duration-200"
     >
-      <Icon aria-hidden className="size-4" />
+      <BrandLogo name={social.brand} websiteUrl={social.href} size="sm" />
     </a>
   );
 }
@@ -127,7 +152,7 @@ export async function MarketingFooter() {
             </Link>
 
             <p className="website-body text-muted max-w-[28ch]">
-              Verifiable AI visibility — every metric opens to the answer it came from.
+              Verifiable AI visibility. Every metric opens to the answer it came from.
             </p>
 
             {SOCIAL_LINKS.length > 0 && (
@@ -152,18 +177,23 @@ export async function MarketingFooter() {
         </nav>
 
         <div className="border-border-subtle mt-12 flex flex-col gap-5 border-t pt-8 lg:flex-row lg:items-center lg:justify-between">
+          {/* CiteLadder is a Cube27 product, so the parent company is named in
+              the ownership line rather than tucked into a link column alone. */}
           <p className="website-label text-muted">
-            © {year} {name}. All rights reserved.
+            © {year} {name}. A{' '}
+            <a
+              href={PARENT_COMPANY.href}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-foreground underline-offset-4 transition-colors hover:underline"
+            >
+              {PARENT_COMPANY.name}
+            </a>{' '}
+            product. All rights reserved.
           </p>
           <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 lg:justify-end">
             {FOOTER_LEGAL_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-muted hover:text-foreground text-xs font-medium underline-offset-4 hover:underline"
-              >
-                {link.label}
-              </Link>
+              <LegalStripLink key={link.href} link={link} />
             ))}
           </nav>
         </div>

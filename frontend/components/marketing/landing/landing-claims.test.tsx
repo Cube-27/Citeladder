@@ -72,10 +72,63 @@ describe('Landing claims', () => {
       /\b(boosts?|lifts?|increases?|improves?|drives?|grows?|doubles?)\s+(your\s+)?(rankings?|traffic|visibility|conversions?|revenue|sales)/i,
     );
     // Explicit cause language tying an action to an outcome.
-    expect(text).not.toMatch(/\b(causes?d?|results? in|leads? to|translates? into)\b/i);
+    //
+    // Denials are the point of this page, not a violation of it. "We do not
+    // claim a page change caused a ranking" is exactly the disclaimer this
+    // guard exists to protect, and matching the bare verb flagged it as the
+    // very claim it refuses to make. Strip the negated forms first, then test
+    // what remains, so a real causal assertion still fails.
+    const CAUSAL = String.raw`causes?d?|results? in|leads? to|translates? into`;
+    // A denial is a negation governing the CLAUSE the causal verb sits in —
+    // not a fixed word distance ("we do not claim a page change caused a
+    // ranking" spans four words), and not the whole sentence either, or
+    // "we do not claim X caused Y, but X caused Y" would clear the guard on
+    // the strength of its first half. Splitting on clause boundaries as well
+    // as sentence ones drops only the denied clause.
+    const asserted = text
+      .split(/(?<=[.!?])\s+|,\s*(?:but|although|though|however|yet)\s+|;\s*/i)
+      .filter((clause) => !/\b(?:do(?:es)?\s+not|don't|doesn't|never|no|without)\b/i.test(clause))
+      .join(' ');
+    expect(asserted).not.toMatch(new RegExp(String.raw`\b(?:${CAUSAL})\b`, 'i'));
     // Quantified outcome deltas — no attributable figure exists.
     expect(text).not.toMatch(/\b\d+(\.\d+)?%\s*(more|higher|increase|lift|uplift|growth|gain)/i);
     expect(text).not.toMatch(/\b(\d+x|\d+×)\s*(more|better|faster|higher)/i);
+  });
+
+  /**
+   * The denial-stripping above is itself logic, so it gets its own cases: a
+   * disclaimer must pass, and a causal assertion must fail even when it shares
+   * a sentence with one.
+   */
+  it('exempts causal denials without exempting the claims beside them', () => {
+    const CAUSAL = /\b(?:causes?d?|results? in|leads? to|translates? into)\b/i;
+    const stripDenials = (value: string) =>
+      value
+        .split(/(?<=[.!?])\s+|,\s*(?:but|although|though|however|yet)\s+|;\s*/i)
+        .filter((clause) => !/\b(?:do(?:es)?\s+not|don't|doesn't|never|no|without)\b/i.test(clause))
+        .join(' ');
+    const flagged = (value: string) => CAUSAL.test(stripDenials(value));
+
+    // Denials are what the page is for.
+    expect(flagged('We do not claim a page change caused a ranking.')).toBe(false);
+    expect(
+      flagged(
+        'The report describes what was observed. It does not claim the change caused a ranking.',
+      ),
+    ).toBe(false);
+
+    // A denial must not launder an assertion sharing its sentence.
+    expect(
+      flagged('We do not claim a page change caused a ranking, but the fix caused a ranking.'),
+    ).toBe(true);
+    expect(
+      flagged('Without evidence, the rewrite caused a ranking; the rewrite caused a ranking.'),
+    ).toBe(true);
+
+    // Plain assertions still fail.
+    expect(flagged('Publishing the brief caused a ranking improvement.')).toBe(true);
+    expect(flagged('Fixing schema leads to more citations.')).toBe(true);
+    expect(flagged('Our audit results in higher visibility.')).toBe(true);
   });
 
   /**

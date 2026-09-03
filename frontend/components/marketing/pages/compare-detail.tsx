@@ -2,10 +2,10 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 import type { Competitor } from '@/lib/marketing-content/compare';
-import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { DEMO_CTA } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
-import { ButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { Eyebrow } from '../primitives/label';
 import { Container, Section } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
@@ -33,7 +33,8 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             <h1 className="website-page-title text-foreground mt-4 max-w-[28ch] text-balance">
               CiteLadder vs <em className="text-accent-text not-italic">{competitor.name}</em>
             </h1>
-            <p className="website-body-lg text-muted mt-3 max-w-[56ch]">{competitor.tagline}</p>
+            <p className="website-body-lg text-muted mt-3 max-w-[56ch]">{competitor.lead}</p>
+            <p className="website-body text-muted mt-2 max-w-[56ch]">{competitor.tagline}</p>
           </Reveal>
         </Container>
       </header>
@@ -121,13 +122,13 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             See your own numbers instead.
           </h2>
           <p className="website-body-lg text-muted mx-auto max-w-[52ch]">
-            Your category, your prompts — raw answers behind every score.
+            Your category, your prompts, raw answers behind every score.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
+            <DemoButtonLink className="w-full sm:w-auto">
               {DEMO_CTA}
               <ArrowRight aria-hidden />
-            </ButtonLink>
+            </DemoButtonLink>
             <ButtonLink href="/faq" variant="ghost" className="w-full sm:w-auto">
               Read the FAQ
             </ButtonLink>
