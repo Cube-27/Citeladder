@@ -34,7 +34,7 @@ const ROLES = [
   ['.flow-group-title', 'font-size: 1.0625rem;'],
   ['.flow-help', 'font-size: 0.9375rem;'],
   ['.flow-meta', 'font-size: 0.875rem;'],
-  ['.website-lead', 'font-size: 1.25rem;'],
+  ['.website-lead', 'font-size: 1.125rem;'],
   ['.website-body', 'font-size: 1rem;'],
   ['.website-nav', ''],
   ['.website-label', ''],

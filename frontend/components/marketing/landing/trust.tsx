@@ -22,7 +22,6 @@ export function Trust() {
           >
             {trust.title}
           </h2>
-          <p className="website-body-lg text-muted mt-5 max-w-[52ch]">{trust.lead}</p>
           <p className="website-body text-muted mt-4 max-w-[52ch]">{trust.who}</p>
         </Reveal>
 

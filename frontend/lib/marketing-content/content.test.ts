@@ -59,7 +59,23 @@ function internalHrefs(): string[] {
 }
 
 function blockText(block: BlogBlock): string {
-  return block.type === 'list' ? block.items.join(' ') : block.text;
+  switch (block.type) {
+    case 'list':
+      return block.items.join(' ');
+    case 'table':
+      return [...block.headers, ...block.rows.flat()].join(' ');
+    case 'checklist':
+      return block.items.map((item) => `${item.title} ${item.description}`).join(' ');
+    case 'diagram':
+      return `${block.title ?? ''} ${JSON.stringify(block.data)}`;
+    case 'callout':
+      return `${block.title ?? ''} ${block.text}`;
+    case 'subheading':
+    case 'heading':
+    case 'paragraph':
+    default:
+      return block.text;
+  }
 }
 
 function marketingRouteFile(href: string): string {

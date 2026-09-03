@@ -47,7 +47,7 @@ describe('Blog index (public marketing `/blog`)', () => {
     const featured = screen.getByRole('region', { name: 'Featured post' });
     expect(within(featured).getByRole('link', { name: POSTS[0].title })).toHaveAttribute(
       'href',
-      '/blog/how-we-measure-ai-visibility-deterministically',
+      `/blog/${POSTS[0].slug}`,
     );
 
     // The empty state is gone now that a real post is live.
@@ -68,6 +68,7 @@ describe('Blog index (public marketing `/blog`)', () => {
       slug: 'second-note',
       title: 'A second note on evidence.',
       excerpt: 'Second excerpt.',
+      image: '/blog/blog-art-connect.webp',
       date: 'Jul 20, 2026',
       readTime: '3 min read',
       author: 'The team',
@@ -84,7 +85,7 @@ describe('Blog index (public marketing `/blog`)', () => {
       '/blog/second-note',
     );
     expect(within(grid).queryByRole('link', { name: POSTS[0].title })).toBeNull();
-    expect(screen.getByText(/4\s+guides/)).toBeInTheDocument();
+    expect(screen.getByText(/5\s+guides/)).toBeInTheDocument();
   });
 
   it('renders the empty state when the posts array is empty', () => {

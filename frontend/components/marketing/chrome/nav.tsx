@@ -69,6 +69,17 @@ function useMarketingSession() {
   const hasProject = (projects.data?.length ?? 0) > 0 || hasStoredProject;
 
   return {
+    // Until `me` has settled (success or 401) we know nothing for certain about
+    // the visitor, and rendering the anonymous actions during that window only
+    // to swap in the dashboard link is the refresh flicker.
+    //
+    // Waiting on every visitor would cure that flicker by hiding the primary
+    // CTA behind an auth round trip for the anonymous majority, who are the
+    // people the marketing site exists for. So the placeholder is shown only
+    // when this browser carries a trace of a previous session — the stored
+    // active project — which is where the swap would actually have happened.
+    // Everyone else gets "Log in" and the demo CTA in the first paint.
+    sessionPending: me.isPending && hasStoredProject,
     isAuthenticated: Boolean(me.data),
     dashboardHref: hasProject ? '/projects' : '/onboarding',
   };
@@ -197,7 +208,7 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
 /** Fixed marketing chrome with accessible desktop dropdowns and mobile accordions. */
 export function MarketingNav() {
   const reduceMotion = useReducedMotion();
-  const { isAuthenticated, dashboardHref } = useMarketingSession();
+  const { isAuthenticated, sessionPending, dashboardHref } = useMarketingSession();
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<NavDropKey | null>(null);
@@ -290,6 +301,7 @@ export function MarketingNav() {
 
         <NavActions
           isAuthenticated={isAuthenticated}
+          sessionPending={sessionPending}
           dashboardHref={dashboardHref}
           mobileOpen={mobileOpen}
           onToggleMenu={() => setMobileOpen((open) => !open)}
@@ -311,18 +323,28 @@ export function MarketingNav() {
 
 function NavActions({
   isAuthenticated,
+  sessionPending,
   dashboardHref,
   mobileOpen,
   onToggleMenu,
 }: Readonly<{
   isAuthenticated: boolean;
+  sessionPending: boolean;
   dashboardHref: string;
   mobileOpen: boolean;
   onToggleMenu: () => void;
 }>) {
   return (
     <div className="ml-auto flex shrink-0 items-center gap-3 lg:ml-0">
-      {isAuthenticated ? (
+      {sessionPending ? (
+        // A returning visitor whose session has not resolved yet: hold the
+        // Dashboard link's own footprint rather than flash the anonymous
+        // actions and swap them a moment later.
+        <div
+          aria-hidden
+          className="bg-background-alt h-[var(--control-height)] w-28 animate-pulse rounded-[var(--radius-control)]"
+        />
+      ) : isAuthenticated ? (
         <ButtonLink href={dashboardHref} variant="primary">
           Dashboard
         </ButtonLink>

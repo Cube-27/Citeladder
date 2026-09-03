@@ -154,7 +154,6 @@ export const LANDING_CONTENT = {
   trust: {
     kicker: 'Enterprise-grade',
     title: 'Built for regulated and security-conscious enterprises.',
-    lead: 'CiteLadder is a Cube27 product. Cube27 IT Pvt. Ltd. is based in Magarpatta City, Pune. Product is led by Abhineet Jain. Arpan Jain is Founder and CEO. The record stays inspectable from the first crawl to the latest recommendation.',
     // "Keys stay in your provider account" read as though the key never
     // reaches us, which contradicts the FAQ (encrypted at rest, resolved only
     // at execution time). Usage and billing stay with the provider; the key
