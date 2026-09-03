@@ -2,16 +2,23 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
 import { authApi } from '@/lib/api/auth';
 import { authErrorMessage, registerFormSchema, type RegisterFormValues } from '@/lib/auth/forms';
+import { safeMcpReturnPath, withMcpReturnPath } from '@/lib/auth/mcp-return-path';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // An MCP handoff can land here when the visitor has no account yet. The
+  // resume path has to survive registration AND the sign-in that follows it,
+  // so it is carried back onto /login rather than consumed here.
+  const returnTo = safeMcpReturnPath(searchParams.get('return_to'));
   const {
     register,
     handleSubmit,
@@ -22,7 +29,7 @@ export default function RegisterPage() {
   });
   const mutation = useMutation({
     mutationFn: (values: RegisterFormValues) => authApi.register(values.email, values.password),
-    onSuccess: () => router.replace('/login?registered=1'),
+    onSuccess: () => router.replace(withMcpReturnPath('/login?registered=1', returnTo)),
   });
   const submit = (values: RegisterFormValues) =>
     mutation.mutateAsync(values).catch(() => undefined);
@@ -37,7 +44,7 @@ export default function RegisterPage() {
         submitLabel="Registration disabled"
         pendingLabel="Registration disabled"
         footerPrompt="Already have the demo account?"
-        footerHref="/login"
+        footerHref={withMcpReturnPath('/login', returnTo)}
         footerLabel="Sign in"
         showOAuth={false}
         showForm={false}
@@ -57,7 +64,7 @@ export default function RegisterPage() {
       submitLabel="Create account"
       pendingLabel="Creating account…"
       footerPrompt="Already have an account?"
-      footerHref="/login"
+      footerHref={withMcpReturnPath('/login', returnTo)}
       footerLabel="Sign in"
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />
@@ -76,5 +83,13 @@ export default function RegisterPage() {
         placeholder="Re-enter your password"
       />
     </AuthFormShell>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
   );
 }

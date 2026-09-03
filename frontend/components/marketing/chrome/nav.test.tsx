@@ -131,6 +131,55 @@ describe('MarketingNav', () => {
     await waitFor(() => expect(secondTrigger).toHaveAttribute('aria-expanded', 'true'));
   });
 
+  it('closes a dropdown when its top-level page link is chosen', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    renderWithProviders(<MarketingNav />);
+
+    const solutions = screen.getByRole('link', { name: /^solutions$/i });
+    await user.hover(solutions);
+    await waitFor(() => expect(solutions).toHaveAttribute('aria-expanded', 'true'));
+
+    await user.click(solutions);
+    await waitFor(() => expect(solutions).toHaveAttribute('aria-expanded', 'false'));
+  });
+
+  it('opens another dropdown when hovering to another option after selecting one', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    renderWithProviders(<MarketingNav />);
+
+    const solutions = screen.getByRole('link', { name: /^solutions$/i });
+    await user.hover(solutions);
+    await waitFor(() => expect(solutions).toHaveAttribute('aria-expanded', 'true'));
+
+    await user.click(solutions);
+    await waitFor(() => expect(solutions).toHaveAttribute('aria-expanded', 'false'));
+
+    // Moving across to another option in the topbar immediately reveals its dropdown.
+    const platform = screen.getByRole('link', { name: /^platform$/i });
+    await user.hover(platform);
+    await waitFor(() => expect(platform).toHaveAttribute('aria-expanded', 'true'));
+  });
+
+  it('re-opens a dropdown when pointer leaves and returns to the trigger', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    renderWithProviders(<MarketingNav />);
+
+    const solutions = screen.getByRole('link', { name: /^solutions$/i });
+    await user.hover(solutions);
+    await waitFor(() => expect(solutions).toHaveAttribute('aria-expanded', 'true'));
+
+    await user.click(solutions);
+    await waitFor(() => expect(solutions).toHaveAttribute('aria-expanded', 'false'));
+
+    // Moving off the trigger and back re-arms hover without needing to leave the topbar completely.
+    await user.unhover(solutions);
+    await user.hover(solutions);
+    await waitFor(() => expect(solutions).toHaveAttribute('aria-expanded', 'true'));
+  });
+
   it('keeps the navigation surface transparent until the page scrolls', async () => {
     stubAnonymous();
     renderWithProviders(<MarketingNav />);
@@ -200,6 +249,19 @@ describe('MarketingNav', () => {
     // the page the visitor just navigated to.
     const body = document.querySelector<HTMLElement>('#acc-platform');
     await user.click(within(body!).getAllByRole('link')[0]);
+
+    await waitFor(() => expect(document.querySelector('#mobile-menu')).toBeNull());
+  });
+
+  it('closes the mobile menu when a dropdown section page is chosen', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    renderWithProviders(<MarketingNav />);
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    const mobile = document.querySelector('#mobile-menu');
+    expect(mobile).not.toBeNull();
+    await user.click(within(mobile as HTMLElement).getByRole('link', { name: /^solutions$/i }));
 
     await waitFor(() => expect(document.querySelector('#mobile-menu')).toBeNull());
   });

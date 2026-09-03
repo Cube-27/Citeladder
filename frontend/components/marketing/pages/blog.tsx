@@ -8,14 +8,15 @@ import {
   type BlogPost,
 } from '@/lib/marketing-content/blog';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
+import { blogPostingJsonLd } from '@/lib/seo/json-ld';
+import { cn } from '@/lib/utils';
 
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
-import { Eyebrow, Meta } from '../primitives/label';
+import { Meta } from '../primitives/label';
+import { LinkedInMark } from '../primitives/linkedin-mark';
 import { PageHero } from '../primitives/page-hero';
-import { Container, Section } from '../primitives/section';
 import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
-import { blogPostingJsonLd } from '@/lib/seo/json-ld';
-
+import { Container, Section } from '../primitives/section';
 import { JsonLd } from '../seo/json-ld';
 
 /**
@@ -26,10 +27,10 @@ import { JsonLd } from '../seo/json-ld';
  * no h2–h6 on the marketing surface may. Post view uses real h2s for body
  * headings (those are editorial, not product-name headings).
  */
-function TagRow({ tags }: Readonly<{ tags: readonly string[] }>) {
+function TagRow({ tags, className }: Readonly<{ tags: readonly string[]; className?: string }>) {
   if (tags.length === 0) return null;
   return (
-    <div className="mb-4 flex flex-wrap gap-2">
+    <div className={cn('mb-4 flex flex-wrap gap-2', className)}>
       {tags.map((tag) => (
         <span
           key={tag}
@@ -42,15 +43,53 @@ function TagRow({ tags }: Readonly<{ tags: readonly string[] }>) {
   );
 }
 
-function PostMeta({ post }: Readonly<{ post: BlogPost }>) {
-  const parts = [post.author, post.date, post.readTime].filter((value): value is string =>
-    Boolean(value),
-  );
-  if (parts.length === 0) return null;
+function AuthorByline({ name, href }: Readonly<{ name: string; href?: string }>) {
+  const mark = href ? (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={`${name} on LinkedIn`}
+      className="text-muted hover:text-accent-text inline-flex"
+    >
+      <LinkedInMark />
+    </a>
+  ) : null;
   return (
-    <Meta as="p" className="mt-3">
-      {parts.join(' · ')}
-    </Meta>
+    <span className="inline-flex items-center gap-1.5">
+      BY : <span className="text-foreground">{name}</span>
+      {mark}
+    </span>
+  );
+}
+
+function PostByline({
+  post,
+  linkedin = false,
+  className,
+}: Readonly<{ post: BlogPost; linkedin?: boolean; className?: string }>) {
+  if (!(post.author || post.date || post.readTime)) return null;
+  const items = [
+    post.author ? (
+      <AuthorByline key="author" name={post.author} href={linkedin ? post.authorUrl : undefined} />
+    ) : null,
+    post.date ? <span key="date">PUBLISHED : {post.date}</span> : null,
+    post.readTime ? <span key="read">READING TIME : {post.readTime}</span> : null,
+  ].filter(Boolean);
+  return (
+    <p
+      className={cn(
+        'website-label text-muted mt-3 flex flex-wrap items-center gap-x-2 gap-y-1',
+        className,
+      )}
+    >
+      {items.map((item, index) => (
+        <span key={index} className="contents">
+          {index > 0 ? <span aria-hidden>,</span> : null}
+          {item}
+        </span>
+      ))}
+    </p>
   );
 }
 
@@ -89,7 +128,7 @@ export function BlogIndex() {
         eyebrow="Resources"
         title="Make AI visibility"
         accent="understandable."
-        lead="Practical guides for answer-engine optimization, evidence-led measurement, and the work between a finding and the next audit. By Abhineet Jain, Product Head."
+        lead="Practical guides for answer-engine optimization, evidence-led measurement, and the work between a finding and the next audit."
         centered
       />
 
@@ -108,7 +147,7 @@ export function BlogIndex() {
                     {featured.title}
                   </h2>
                   <p className="website-body-lg text-muted mt-4 max-w-[65ch]">{featured.excerpt}</p>
-                  <PostMeta post={featured} />
+                  <PostByline post={featured} />
                   <span className="text-accent-text mt-5 inline-flex items-center gap-2 text-sm font-medium">
                     Read guide
                     <ArrowRight
@@ -140,7 +179,7 @@ export function BlogIndex() {
                       <TagRow tags={post.tags} />
                       <h3 className="website-feature-heading text-foreground">{post.title}</h3>
                       <p className="website-body text-muted mt-2 max-w-[65ch]">{post.excerpt}</p>
-                      <PostMeta post={post} />
+                      <PostByline post={post} />
                     </Link>
                   </StaggerItem>
                 ))}
@@ -179,16 +218,6 @@ export function BlogIndex() {
       />
     </>
   );
-}
-
-function authorInitial(author: string) {
-  return /[a-z]/i.exec(author)?.[0].toUpperCase() ?? '?';
-}
-
-function PostMetaByline({ post }: Readonly<{ post: BlogPost }>) {
-  const parts = [post.date, post.readTime].filter((value): value is string => Boolean(value));
-  if (parts.length === 0) return null;
-  return <Meta>{parts.join(' · ')}</Meta>;
 }
 
 /** Slug for a body heading, used as its anchor id and contents target. */
@@ -240,14 +269,19 @@ function PostAside({ post }: Readonly<{ post: BlogPost }>) {
       {post.author && (
         <div className="border-border-subtle mt-6 border-t pt-6 lg:mt-8 lg:pt-8">
           <p className="website-eyebrow text-muted mb-3">Written by</p>
-          <p className="website-body text-foreground flex items-center gap-3 font-medium">
-            <span
-              aria-hidden
-              className="bg-accent-soft text-accent-text grid size-7 shrink-0 place-items-center rounded-[var(--radius-control)] text-xs font-medium"
-            >
-              {authorInitial(post.author)}
-            </span>
+          <p className="website-body text-foreground flex items-center gap-2 font-medium">
             {post.author}
+            {post.authorUrl ? (
+              <a
+                href={post.authorUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`${post.author} on LinkedIn`}
+                className="text-muted hover:text-accent-text inline-flex"
+              >
+                <LinkedInMark />
+              </a>
+            ) : null}
           </p>
           {post.authorRole && (
             <Meta as="p" className="mt-1.5">
@@ -319,38 +353,23 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
       />
       <header className="border-border-subtle border-b pt-16 pb-6 md:pb-8">
         <Container dense>
-          <Reveal className="w-full max-w-[52ch] lg:max-w-[68ch]">
+          <Reveal className="mx-auto w-full max-w-[52ch] text-center lg:max-w-[68ch]">
             <Link
               href="/blog"
-              className="text-muted hover:text-foreground mb-5 flex w-fit items-center gap-2 text-sm font-medium transition-colors"
+              className="text-muted hover:text-foreground mx-auto mb-5 flex w-fit items-center gap-2 text-sm font-medium transition-colors"
             >
               <ArrowLeft className="size-4" aria-hidden />
               All guides
             </Link>
-            <Eyebrow>Guide</Eyebrow>
-            <TagRow tags={post.tags} />
-            <h1 className="website-page-title text-foreground mt-3 max-w-[28ch] text-balance">
+            <TagRow tags={post.tags} className="justify-center" />
+            <h1 className="website-page-title text-foreground mx-auto mt-3 max-w-[28ch] text-balance">
               {post.title}
             </h1>
-            {(post.author ?? post.date ?? post.readTime) && (
-              <div className="border-border-subtle mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-5">
-                {post.author && (
-                  <span className="text-foreground flex items-center gap-3 text-sm font-medium">
-                    <span
-                      aria-hidden
-                      className="bg-accent-soft text-accent-text grid size-7 place-items-center rounded-[var(--radius-control)] text-xs font-medium"
-                    >
-                      {authorInitial(post.author)}
-                    </span>
-                    {post.author}
-                    {post.authorRole ? (
-                      <span className="text-muted font-normal">, {post.authorRole}</span>
-                    ) : null}
-                  </span>
-                )}
-                <PostMetaByline post={post} />
-              </div>
-            )}
+            <PostByline
+              post={post}
+              linkedin
+              className="border-border-subtle mt-5 justify-center border-t pt-5"
+            />
           </Reveal>
         </Container>
       </header>

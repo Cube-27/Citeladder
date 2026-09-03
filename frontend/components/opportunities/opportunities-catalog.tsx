@@ -399,7 +399,7 @@ function RecommendationsTable({
   onOpen,
 }: Readonly<{ projectId: string; rows: Opportunity[]; onOpen: (id: string) => void }>) {
   return (
-    <Table className="min-w-3xl table-fixed">
+    <Table className="min-w-[48rem] table-fixed">
       <TableHeader>
         <TableRow>
           <TableHead className="w-[48%]">Recommendation</TableHead>

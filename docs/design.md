@@ -7,7 +7,7 @@
 
 CiteLadder is a light-only, evidence-led enterprise system. The authenticated
 application uses the **Prism Evidence Workspace**: a lightly violet-tinted paper editorial canvas,
-near-black ink, a blue-violet primary action, one blue for analytical selection, semantic evidence
+near-black ink, a warm terracotta primary action, terracotta for analytical selection, semantic evidence
 washes, useful density, and deliberate negative space. It is an operating
 workspace, not a wall of equal-weight KPI cards.
 
@@ -19,9 +19,9 @@ workspace, not a wall of equal-weight KPI cards.
   and installable-app iconography.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
   and outcomes over generic AI language.
-- **Typography:** Geist for UI, body, and data everywhere, with Plus Jakarta Sans reserved for
-  website and focused-flow display headings. Authentication and onboarding share that roomier
-  flow ladder; the authenticated application uses Geist and the even-number product ladder.
+- **Typography:** Inter for UI, body, and data everywhere, with Uncut Sans reserved for
+  display headings. Authentication and onboarding share that roomier
+  flow ladder; the authenticated application uses Inter and the even-number product ladder.
   Website and flow surfaces use a 16px reading baseline. Size,
   leading, weight, tracking, and
   colour are one role contract, never independent page-level choices.
@@ -33,9 +33,10 @@ workspace, not a wall of equal-weight KPI cards.
   ladder in `app/globals.css` derives it from the size class so every glyph
   lands near a 1.3px stem instead of growing heavier with the icon. Colour stays
   `currentColor` so `text-muted` and `text-accent-text` keep painting the glyph.
-- **Action and selection:** blue-violet (`#5147E5`) owns primary actions across product,
-  public, authentication, and onboarding surfaces. One blue (`#1B44E0`) owns
-  analytical selection, links, active navigation, and focus. Cyan, coral, lime,
+- **Action and selection:** terracotta (`#C15F3C`) owns primary actions across product,
+  public, authentication, and onboarding surfaces. Analytical selection, links,
+  active navigation, and focus consume the semantic accent ladder (`#C15F3C` with
+  `#964226` for accessible high-contrast text). Cyan, coral, lime,
   and amber are evidence/status families, never route decoration.
 - **Composition:** state before features. Product pages prioritise current state,
   movement, next action, then evidence. Marketing is more editorial but uses the
@@ -76,13 +77,13 @@ Tokens are semantic; components use the role, not a colour value.
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
 | Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
 | Borders | `border-subtle` (`#E3E2EC`), `border` (`#D1D0DC`), `border-strong` (`#A2A0B0`), `border-bold` (`#747282`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
-| Primary action | `action-*` (`#5147E5`) | Blue-violet primary actions |
-| Selection and focus | `accent-*` (`#1B44E0`) | One blue for selection, links, tabs, active navigation, and focus |
+| Primary action | `action-*` (`#C15F3C`) | Terracotta primary actions |
+| Selection and focus | `accent-*` (`#C15F3C`) | Terracotta for selection, links, tabs, active navigation, and focus |
 | Status and evidence | cyan, coral, lime, amber, `citation-*`, `run-*`, `score-*`, `chart-*` | Persisted evidence and status, always paired with a label or icon |
 
 The ground is paper and the ink is near-black. Colour appears on under five
-percent of the surface: `action` `#5147E5` owns primary buttons, and a single
-blue `#1B44E0` (`#1A3FD0` for text, hover, and press) owns selection, links,
+percent of the surface: `action` `#C15F3C` owns primary buttons, and terracotta
+`#C15F3C` (`#964226` for text, hover, and press) owns selection, links,
 tabs, active navigation, focus, and the first chart series. Every surface uses
 the same paper ladder: `#F7F6FD` canvas and sidebar, `#F4F4F1` wells and
 tonal bands, `#EFEFEB` hover and selected state. Raised objects, inputs, and
@@ -108,7 +109,7 @@ Functional colour never carries meaning alone.
 
 ## Typography
 
-Two families only: Geist for UI, body, and data (`font-sans`) and for every authenticated-app heading; Plus Jakarta Sans is the website and focused-flow display face. Both are loaded through `next/font/google` with variable fonts and swap display. Interface weights remain concentrated at 400–600. Metrics, dates, ranks,
+Two families only: Inter for UI, body, and data (`font-sans`) and for authenticated-app text; Uncut Sans is the display face (`font-display`) for website headings and display typography. Inter is loaded through `next/font/google` and Uncut Sans is self-hosted via `next/font/local`. Both use variable fonts and swap display. Interface weights remain concentrated at 400–600. Metrics, dates, ranks,
 and percentages use tabular numerals, never a monospace face.
 
 ### Website and focused-flow ladder
@@ -118,35 +119,35 @@ owns its size, leading, weight, tracking, and colour as one unit. Public and aut
 components consume these roles instead of assembling arbitrary size, leading,
 tracking, weight, and colour combinations.
 
-| Role                    | Family            |      Size / line height |  Weight |                       Tracking | Colour                                      |
-| ----------------------- | ----------------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
-| Hero display            | Plus Jakarta Sans | 44/48 → 56/60 → 64/68px |     600 |                        -0.04em | foreground; one short phrase may use accent |
-| Page title              | Plus Jakarta Sans |         40/44 → 48/54px |     600 |                       -0.035em | foreground                                  |
-| Section heading         | Plus Jakarta Sans |         32/38 → 40/46px |     600 |                        -0.03em | foreground                                  |
-| Feature heading         | Plus Jakarta Sans |                 24/30px |     600 |                        -0.02em | foreground                                  |
-| Small heading           | Plus Jakarta Sans |                 20/26px |     600 |                        -0.01em | foreground                                  |
-| Flow title              | Plus Jakarta Sans |         28/34 → 32/38px |     600 |                       -0.025em | foreground                                  |
-| Flow group title        | Geist             |                 17/24px |     600 |                        -0.01em | foreground                                  |
-| Flow help               | Geist             |                 15/22px |     400 |                              0 | muted                                       |
-| Flow metadata           | Geist             |                 14/20px |     500 |                              0 | muted; tabular numerals                     |
-| Lead                    | Geist             |                 20/30px |     400 |                        -0.01em | secondary                                   |
-| Large body              | Geist             |                 18/28px |     400 |                              0 | secondary                                   |
-| Body baseline           | Geist             |                 16/24px |     400 |                              0 | secondary                                   |
-| Navigation and actions  | Geist             |                 16/20px | 500–600 |                              0 | foreground or inverse                       |
-| Label, caption, eyebrow | Geist             |                 14/20px | 500–600 | 0; +0.06em only when uppercase | muted or subtle                             |
+| Role                    | Family     |      Size / line height |  Weight |                       Tracking | Colour                                      |
+| ----------------------- | ---------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
+| Hero display            | Uncut Sans | 44/48 → 56/60 → 64/68px |     600 |                        -0.04em | foreground; one short phrase may use accent |
+| Page title              | Uncut Sans |         40/44 → 48/54px |     600 |                       -0.035em | foreground                                  |
+| Section heading         | Uncut Sans |         32/38 → 40/46px |     600 |                        -0.03em | foreground                                  |
+| Feature heading         | Uncut Sans |                 24/30px |     600 |                        -0.02em | foreground                                  |
+| Small heading           | Uncut Sans |                 20/26px |     600 |                        -0.01em | foreground                                  |
+| Flow title              | Uncut Sans |         28/34 → 32/38px |     600 |                       -0.025em | foreground                                  |
+| Flow group title        | Inter      |                 17/24px |     600 |                        -0.01em | foreground                                  |
+| Flow help               | Inter      |                 15/22px |     400 |                              0 | muted                                       |
+| Flow metadata           | Inter      |                 14/20px |     500 |                              0 | muted; tabular numerals                     |
+| Lead                    | Inter      |                 20/30px |     400 |                        -0.01em | secondary                                   |
+| Large body              | Inter      |                 18/28px |     400 |                              0 | secondary                                   |
+| Body baseline           | Inter      |                 16/24px |     400 |                              0 | secondary                                   |
+| Navigation and actions  | Inter      |                 16/20px | 500–600 |                              0 | foreground or inverse                       |
+| Label, caption, eyebrow | Inter      |                 14/20px | 500–600 | 0; +0.06em only when uppercase | muted or subtle                             |
 
 Ordinary website paragraphs never render below 16px. Fourteen pixels is reserved
 for short labels, metadata, captions, and legal support. Prose stays within a
 45–75 character measure. The accent blue never carries a long paragraph. Large text
 uses tighter leading and tracking; body text stays at zero tracking with more
 leading. Pricing values are the one non-editorial website display role:
-`website-data-display` uses Geist at 40/46px with tabular numerals and never
+`website-data-display` uses Inter at 40/46px with tabular numerals and never
 applies to prose or headings.
 
 ### Product app ladder
 
-The authenticated enterprise application uses a strict Geist-only typography
-ladder. It enforces consistent visual hierarchy, strict tabular numerals for metrics, and
+The authenticated enterprise application uses an Inter-based typography
+ladder with Uncut Sans display headings. It enforces consistent visual hierarchy, strict tabular numerals for metrics, and
 high-density information architecture.
 Ad-hoc inline text sizes, weights, and color overrides are prohibited in favor of token
 classes.

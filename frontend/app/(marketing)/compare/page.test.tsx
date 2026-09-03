@@ -119,12 +119,14 @@ describe('CompareDetailView (/compare/[competitor])', () => {
     ).toBeInTheDocument();
   });
 
-  it('links back to the comparison index', () => {
+  it('links back to the comparison index on its own line', () => {
     render(<CompareDetailView competitor={competitor} />);
 
-    expect(screen.getByRole('link', { name: /all comparisons/i })).toHaveAttribute(
-      'href',
-      '/compare',
-    );
+    const back = screen.getByRole('link', { name: /all comparisons/i });
+    expect(back).toHaveAttribute('href', '/compare');
+    // `flex` (not `inline-flex`) so the freshness eyebrow cannot sit beside
+    // the back link and collide with its last letter.
+    expect(back).toHaveClass('flex');
+    expect(back).not.toHaveClass('inline-flex');
   });
 });

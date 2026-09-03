@@ -25,10 +25,10 @@ from app.core.config.content import (
     CONTENT_FEEDBACK_REASONS,
     CONTENT_GENERATOR_VERSION,
     CONTENT_LIST_MAX_LIMIT,
-    CONTENT_SKILL_REGISTRY,
     FEEDBACK_ACCEPTED,
     FEEDBACK_REJECTED,
     content_settings,
+    skill_version,
 )
 from app.core.config.task_queue import (
     TASK_ACTIVE_STATUSES,
@@ -203,6 +203,15 @@ def _insert_generation(
     row.context_snapshot = context.snapshot()
     row.message_digest = digest
     row.message_snapshot = message_snapshot
+    # Resolved HERE, from the same registry read that just produced the body
+    # above, rather than passed in by the caller. ``build_messages`` renders
+    # whatever pack is deployed when it runs, so a version stamped anywhere
+    # else can name a body that was never sent — and because the digest is
+    # computed over the messages actually built, it would agree with itself
+    # and hide the mismatch. ``try_again`` in particular used to copy the
+    # ORIGINAL row's version onto a retry rendered from today's pack, claiming
+    # old provenance for new instructions.
+    row.skill_version = skill_version(row.skill_id)
     session.add(row)
     return row
 
@@ -307,10 +316,11 @@ async def enqueue_generation(
             opportunity_id=opportunity_id,
             demand_signal_id=demand_signal_id,
             site_health_reference=reference_dict,
-            # The skill catalog and the generator version independently: a
-            # reworded directive changes what was asked for even when the
-            # generator is untouched, so provenance must record both.
-            skill_version=CONTENT_SKILL_REGISTRY[skill_id].version,
+            # `skill_version` is stamped by `_insert_generation`, from the same
+            # registry read that renders the body. The skill catalog and the
+            # generator version move independently: a reworded directive
+            # changes what was asked for even when the generator is untouched,
+            # so provenance records both.
             provider=content_settings.provider,
             requested_model=content_settings.resolved_model,
             generator_version=CONTENT_GENERATOR_VERSION,
@@ -636,7 +646,9 @@ async def try_again(
             opportunity_id=source.opportunity_id,
             demand_signal_id=source.demand_signal_id,
             site_health_reference=source.site_health_reference,
-            skill_version=source.skill_version,
+            # NOT copied from `source`: the retry is rendered from whatever
+            # pack is deployed now, so `_insert_generation` stamps the version
+            # that actually produced it.
             provider=content_settings.provider,
             requested_model=content_settings.resolved_model,
             generator_version=CONTENT_GENERATOR_VERSION,

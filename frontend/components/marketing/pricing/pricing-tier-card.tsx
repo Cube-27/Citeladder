@@ -4,7 +4,7 @@ import { Check } from 'lucide-react';
 
 import type { BillingCatalog, CatalogPlan, CredentialMode } from '@/lib/api/billing';
 import { formatMoney, headlinePrice, majorUnits } from '@/lib/billing/catalog';
-import { planMonthlyPriceUsdMinor } from '@/lib/config/billing';
+import { CONTACT_SALES_HREF, planMonthlyPriceUsdMinor } from '@/lib/config/billing';
 import {
   CONTACT_LABEL,
   FUNDED_UNAVAILABLE_LABEL,
@@ -158,7 +158,9 @@ function PlanCta({
   if (plan.contact_only) {
     return (
       <Button asChild variant="secondary" className="w-full">
-        <a href={plan.contact_url ?? '/demo'}>{CONTACT_LABEL}</a>
+        <a href={plan.contact_url ?? CONTACT_SALES_HREF} target="_blank" rel="noreferrer">
+          {CONTACT_LABEL}
+        </a>
       </Button>
     );
   }

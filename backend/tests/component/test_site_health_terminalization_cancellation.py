@@ -183,6 +183,119 @@ async def test_cancel_crawl_stops_the_crawl_even_when_the_snapshot_fails(
         assert task_status == TASK_STATUS_CANCELLED
 
 
+async def _complete_one_analysis(
+    session: AsyncSession,
+    *,
+    seed,
+    site_url_id: uuid.UUID,
+    task_id: uuid.UUID,
+) -> None:
+    """Mark a seeded analyze task succeeded and give it an aggregable analysis.
+
+    The minimum a cancelled run needs for ``persist_crawl_snapshot`` to have
+    something to roll up: one completed analysis on a still-ACTIVE monitored
+    URL.
+    """
+    from app.core.config.site_health_acquisition import FETCH_PURPOSE_ANALYZE
+    from app.core.config.site_health_contracts import PAGE_ANALYSIS_STATUS_COMPLETED
+
+    task = await session.get(SiteCrawlTask, task_id)
+    assert task is not None
+    task.status = TASK_STATUS_SUCCEEDED
+    artifact = SiteFetchArtifact(
+        task_id=task.id,
+        crawl_id=seed.crawl_id,
+        workspace_id=seed.workspace_id,
+        fetch_purpose=FETCH_PURPOSE_ANALYZE,
+        requested_url=task.requested_url,
+        final_url=task.requested_url,
+    )
+    session.add(artifact)
+    await session.flush()
+    session.add(
+        SitePageAnalysis(
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            crawl_id=seed.crawl_id,
+            site_url_id=site_url_id,
+            artifact_id=artifact.id,
+            status=PAGE_ANALYSIS_STATUS_COMPLETED,
+            web_fundamentals_score=72.0,
+            web_fundamentals_coverage=1.0,
+            web_fundamentals_state="measured",
+            technical_earned_weight=0.72,
+            technical_determinate_weight=1.0,
+            technical_expected_weight=1.0,
+            technical_critical_complete=True,
+        )
+    )
+
+
+@pytest.mark.asyncio
+async def test_second_cancel_recovers_a_snapshot_that_failed_on_the_first(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed rollup is retried by pressing Stop again.
+
+    The transition and the rollup are separate transactions, so the rollup can
+    fail after the crawl is already durably cancelled. Nothing else recomputes
+    a cancelled crawl's scores, so the only recovery is the next Stop — which
+    works solely because ``_cancel_crawl_once`` reports True for an ALREADY
+    cancelled crawl rather than short-circuiting to False. Pin that here: the
+    obvious "it is already terminal, return False" simplification silently
+    strands the run without rolled-up scores forever.
+    """
+    from app.domain.site_health.service import cancel_crawl
+    from app.domain.site_health.service import lifecycle as lifecycle_service
+
+    seed, site_url_id, first_task_id = await _seed_analyze_ready(session_factory)
+    async with session_factory() as session:
+        await _complete_one_analysis(
+            session, seed=seed, site_url_id=site_url_id, task_id=first_task_id
+        )
+        await session.commit()
+
+    real_persist = lifecycle_service.persist_crawl_snapshot
+
+    async def _explode(*_args: object, **_kwargs: object) -> bool:
+        raise RuntimeError("snapshot projection blew up")
+
+    monkeypatch.setattr(lifecycle_service, "persist_crawl_snapshot", _explode)
+    async with session_factory() as session:
+        first = await cancel_crawl(
+            session, workspace_id=seed.workspace_id, crawl_id=seed.crawl_id
+        )
+
+    # Stopped, but with no snapshot row: the rollup was lost.
+    assert first["status"] == CRAWL_STATUS_CANCELLED
+    async with session_factory() as session:
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(SiteHealthSnapshot)
+                .where(SiteHealthSnapshot.crawl_id == seed.crawl_id)
+            )
+        ) == 0
+
+    # Pressing Stop again on the already-cancelled crawl replays the rollup.
+    monkeypatch.setattr(lifecycle_service, "persist_crawl_snapshot", real_persist)
+    async with session_factory() as session:
+        second = await cancel_crawl(
+            session, workspace_id=seed.workspace_id, crawl_id=seed.crawl_id
+        )
+
+    assert second["status"] == CRAWL_STATUS_CANCELLED
+    async with session_factory() as session:
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(SiteHealthSnapshot)
+                .where(SiteHealthSnapshot.crawl_id == seed.crawl_id)
+            )
+        ) == 1
+
+
 @pytest.mark.asyncio
 async def test_cancel_crawl_persists_partial_snapshot_from_completed_analyses(
     session_factory: async_sessionmaker[AsyncSession],

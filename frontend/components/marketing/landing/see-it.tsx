@@ -1,8 +1,5 @@
-import { ArrowRight } from 'lucide-react';
-
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 
-import { DemoButtonLink } from '../primitives/button';
 import { Reveal } from '../primitives/reveal';
 import { ProductWindow } from '../scenes/product-window';
 import { Section } from '../primitives/section';
@@ -30,12 +27,6 @@ export function SeeIt() {
         </h2>
       </Reveal>
       <ProductWindow />
-      <div className="mt-10 flex">
-        <DemoButtonLink variant="primary" className="w-full sm:w-auto">
-          {seeIt.cta}
-          <ArrowRight aria-hidden />
-        </DemoButtonLink>
-      </div>
     </Section>
   );
 }

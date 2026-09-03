@@ -116,9 +116,25 @@ CONTENT_SKILL_IDS: Final[tuple[str, ...]] = tuple(CONTENT_SKILL_REGISTRY)
 CONTENT_SKILLS: Final[frozenset[str]] = frozenset(CONTENT_SKILL_IDS)
 
 
-def skill_body(skill_id: str | None) -> str:
-    """Return the selected authored skill body, defaulting for unknown ids."""
+def _skill(skill_id: str | None):
+    """The selected pack, falling back to the default for an unknown id."""
     return CONTENT_SKILL_REGISTRY.get(
         skill_id or CONTENT_DEFAULT_SKILL,
         CONTENT_SKILL_REGISTRY[CONTENT_DEFAULT_SKILL],
-    ).body
+    )
+
+
+def skill_body(skill_id: str | None) -> str:
+    """Return the selected authored skill body, defaulting for unknown ids."""
+    return _skill(skill_id).body
+
+
+def skill_version(skill_id: str | None) -> int:
+    """The version of the pack ``skill_body`` would return for the same id.
+
+    Provenance must name the body that was actually rendered, so the version
+    is resolved through the same lookup and the same fallback — including the
+    unknown-id case, where ``skill_body`` silently serves the default pack and
+    a version taken from the requested id would describe a different one.
+    """
+    return _skill(skill_id).version

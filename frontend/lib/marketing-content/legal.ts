@@ -135,7 +135,7 @@ export const COOKIE_POLICY: LegalDocument = {
       title: 'How to manage cookies',
       paragraphs: [
         'You can control cookies through your browser settings (block, delete, or alert on cookies). Blocking essential cookies may prevent sign-in or break core features.',
-        'Where a consent banner is available on the site, you can update non-essential preferences there. If no banner is shown, only essential cookies are in use, or preferences are managed via browser controls.',
+        'On your first visit we ask whether you accept non-essential cookies. Strictly necessary cookies run either way; nothing non-essential is set unless you accept. To change your answer, clear this site’s data in your browser and we will ask again.',
       ],
     },
     {

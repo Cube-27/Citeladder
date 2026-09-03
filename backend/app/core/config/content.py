@@ -42,6 +42,7 @@ CONTENT_SKILLS: Final[frozenset[str]] = _skills.CONTENT_SKILLS
 CONTENT_DEFAULT_SKILL: Final = _skills.CONTENT_DEFAULT_SKILL
 CONTENT_SKILL_REGISTRY: Final = _skills.CONTENT_SKILL_REGISTRY
 skill_body = _skills.skill_body
+skill_version = _skills.skill_version
 
 FEEDBACK_ACCEPTED: Final = "accepted"
 FEEDBACK_REJECTED: Final = "rejected"

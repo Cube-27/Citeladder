@@ -20,12 +20,12 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
   if (rows.length === 0) return null;
 
   return (
-    <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-card)] border">
+    <div className="border-border-subtle bg-panel w-full max-w-full min-w-0 overflow-hidden rounded-[var(--radius-card)] border">
       {/* The table is wider than a phone by design, so it scrolls INSIDE this
           box. `overscroll-x-contain` keeps that gesture from chaining out to
           the page once the table hits its end — without it the whole document
           slides sideways and the vertical scroll stutters. */}
-      <div className="overflow-x-auto overscroll-x-contain">
+      <div className="w-full max-w-full min-w-0 overflow-x-auto overscroll-x-contain">
         <table className="w-full min-w-[36rem] border-collapse text-left">
           <thead>
             <tr className="border-border-subtle bg-background-alt border-b">

@@ -1,7 +1,6 @@
 import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 
-import { BrandLogo } from '@/components/ui/brand-logo';
 import { LogoMark } from '@/components/ui/logo-mark';
 
 import { COMPETITORS } from '@/lib/marketing-content/compare';
@@ -12,7 +11,7 @@ import {
   legalDisplayName,
 } from '@/lib/marketing-content/legal';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
-import { CONTACT_EMAIL, SOCIAL_LINKS, type SocialLink } from '@/lib/marketing-content/social';
+import { CONTACT_EMAIL } from '@/lib/marketing-content/social';
 
 import { Container } from '../primitives/section';
 
@@ -68,6 +67,11 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
       ...(CONTACT_EMAIL ? [{ label: 'Contact', href: `mailto:${CONTACT_EMAIL}` }] : []),
       { label: DEMO_CTA, href: DEMO_HREF, external: DEMO_EXTERNAL },
       { label: PARENT_COMPANY.name, href: PARENT_COMPANY.href, external: true },
+      {
+        label: `${PARENT_COMPANY.name} on LinkedIn`,
+        href: PARENT_COMPANY.linkedin,
+        external: true,
+      },
       { label: 'Log in', href: '/login' },
     ],
   },
@@ -114,21 +118,6 @@ function LegalStripLink({ link }: Readonly<{ link: LegalLink }>) {
   );
 }
 
-function SocialButton({ social }: Readonly<{ social: SocialLink }>) {
-  const external = social.href !== '#';
-  return (
-    <a
-      href={social.href}
-      target={external ? '_blank' : undefined}
-      rel={external ? 'noreferrer' : undefined}
-      aria-label={social.label}
-      className="border-border-subtle bg-background text-muted hover:border-accent hover:text-accent-text grid size-10 place-items-center rounded-[var(--radius-control)] border transition-colors duration-200"
-    >
-      <BrandLogo name={social.brand} websiteUrl={social.href} size="sm" />
-    </a>
-  );
-}
-
 /**
  * Marketing footer — link columns plus a compact legal strip. Owner-supplied
  * registration details stay off the public page until they are complete.
@@ -154,14 +143,6 @@ export async function MarketingFooter() {
             <p className="website-body text-muted max-w-[28ch]">
               Verifiable AI visibility. Every metric opens to the answer it came from.
             </p>
-
-            {SOCIAL_LINKS.length > 0 && (
-              <div className="flex gap-3 pt-3">
-                {SOCIAL_LINKS.map((social) => (
-                  <SocialButton key={social.key} social={social} />
-                ))}
-              </div>
-            )}
           </div>
 
           {FOOTER_COLUMNS.map((column) => (

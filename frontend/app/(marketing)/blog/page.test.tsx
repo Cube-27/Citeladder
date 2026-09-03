@@ -145,9 +145,18 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
     // author row rather than omitting it. No unfinished placeholder or
     // internal version id may reach the page.
     const header = container.querySelector('header');
+    expect(header?.textContent).not.toMatch(/\bGUIDE\b/);
     if (post.author) {
-      expect(header?.textContent).toContain(post.author);
+      expect(header?.textContent).toContain(`BY : ${post.author}`);
+      expect(header?.textContent).toContain(`PUBLISHED : ${post.date}`);
+      expect(header?.textContent).toContain(`READING TIME : ${post.readTime}`);
+      expect(header?.querySelector('a[aria-label$="on LinkedIn"]')).toHaveAttribute(
+        'href',
+        post.authorUrl,
+      );
     }
+    expect(h1s[0]).toHaveClass('mx-auto');
+    expect(h1s[0].closest('.text-center')).not.toBeNull();
     expect(container.textContent).not.toMatch(/TODO\(user\)/);
     expect(container.textContent).not.toMatch(
       /scoring-v1|b6-analysis-1|sh-rules-2|opp-formula-1|traffic-formula-1|product-scoring-v2/i,

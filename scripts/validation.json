@@ -486,6 +486,7 @@
         "frontend/app/llms.txt/**",
         "frontend/components/marketing/**",
         "frontend/lib/marketing-content/**",
+        "frontend/lib/consent/**",
         "frontend/lib/seo/**"
       ],
       "frontendTests": [

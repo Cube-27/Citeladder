@@ -30,7 +30,7 @@ describe('Button', () => {
   it('renders default variant/size classes', () => {
     render(<Button>Save</Button>);
     const btn = screen.getByRole('button', { name: 'Save' });
-    // Primary variant → blue-violet action fill with its verified foreground and the
+    // Primary variant → terracotta action fill with its verified foreground and the
     // semantic app control radius; the pill is retired for buttons.
     expect(btn.className).toContain('bg-action');
     expect(btn.className).toContain('text-action-fg');

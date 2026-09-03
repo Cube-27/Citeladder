@@ -41,7 +41,7 @@ class BillingSettings(BaseSettings):
     provider_price_refs: dict[str, str] = {}
 
     # Where a contact-only plan sends the buyer (display metadata, no price).
-    contact_sales_url: str = "/demo"
+    contact_sales_url: str = "https://www.cube27.com/contact/"
 
     # Funded admission budget (minor USD units). The SOLE commercial amount
     # kept here; expected execution costs live in ``config/costs.py``.

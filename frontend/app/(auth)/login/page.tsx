@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form';
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
 import { authApi } from '@/lib/api/auth';
 import { authErrorMessage, loginFormSchema, type LoginFormValues } from '@/lib/auth/forms';
+import { safeMcpReturnPath, withMcpReturnPath } from '@/lib/auth/mcp-return-path';
 import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 
 function LoginForm() {
@@ -41,7 +42,9 @@ function LoginForm() {
       submitLabel="Continue"
       pendingLabel="Signing in…"
       footerPrompt="Don't have an account?"
-      footerHref="/register"
+      // An MCP handoff that needs an account must survive the detour through
+      // registration, so the validated resume path travels with the link.
+      footerHref={withMcpReturnPath('/register', returnTo)}
       footerLabel="Sign up"
       showFooter={!demoMode}
     >
@@ -55,16 +58,6 @@ function LoginForm() {
       />
     </AuthFormShell>
   );
-}
-
-function safeMcpReturnPath(value: string | null): string | undefined {
-  if (!value?.startsWith('/mcp/oauth/consent?')) return undefined;
-  if (value.startsWith('//') || value.includes('#')) return undefined;
-  const parsed = new URL(value, 'https://citeladder.invalid');
-  if (parsed.origin !== 'https://citeladder.invalid') return undefined;
-  const transaction = parsed.searchParams.get('transaction');
-  if (!transaction || transaction.length > 256) return undefined;
-  return `${parsed.pathname}?transaction=${encodeURIComponent(transaction)}`;
 }
 
 export default function LoginPage() {

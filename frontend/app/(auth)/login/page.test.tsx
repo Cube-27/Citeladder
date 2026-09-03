@@ -102,6 +102,24 @@ describe('LoginPage', () => {
     );
   });
 
+  // The first leg of an MCP handoff for a visitor who has no account yet.
+  it('carries the MCP return path onto the registration link', () => {
+    searchParams.set('return_to', '/mcp/oauth/consent?transaction=demo-transaction');
+
+    renderWithProviders(<LoginPage />);
+
+    expect(screen.getByRole('link', { name: /sign up/i })).toHaveAttribute(
+      'href',
+      '/register?return_to=%2Fmcp%2Foauth%2Fconsent%3Ftransaction%3Ddemo-transaction',
+    );
+  });
+
+  it('leaves the registration link bare without a handoff', () => {
+    renderWithProviders(<LoginPage />);
+
+    expect(screen.getByRole('link', { name: /sign up/i })).toHaveAttribute('href', '/register');
+  });
+
   it('ignores an external login return target', async () => {
     const user = userEvent.setup();
     searchParams.set('return_to', 'https://evil.example/steal');

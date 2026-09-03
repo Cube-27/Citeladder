@@ -22,13 +22,14 @@ import {
 } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
-import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import {
   catalogPlanByKey,
   checkoutSelection,
   formatMoney,
   headlinePrice,
 } from '@/lib/billing/catalog';
+import { CONTACT_SALES_HREF } from '@/lib/config/billing';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
 
@@ -373,7 +374,7 @@ function PlanRow({
       <div className="shrink-0">
         {plan.contact_only ? (
           <Button asChild variant="secondary" size="sm">
-            <Link href={plan.contact_url ?? '/demo'}>
+            <Link href={plan.contact_url ?? CONTACT_SALES_HREF} target="_blank" rel="noreferrer">
               Contact sales <ExternalLink className="size-3.5" aria-hidden />
             </Link>
           </Button>
