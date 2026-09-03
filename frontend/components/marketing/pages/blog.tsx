@@ -1,16 +1,13 @@
 import { ArrowLeft, ArrowRight, PenLine } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
-import {
-  BLOG_EMPTY_STATE,
-  POSTS,
-  type BlogBlock,
-  type BlogPost,
-} from '@/lib/marketing-content/blog';
+import { BLOG_EMPTY_STATE, POSTS, type BlogPost } from '@/lib/marketing-content/blog';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 import { blogPostingJsonLd } from '@/lib/seo/json-ld';
 import { cn } from '@/lib/utils';
 
+import { blockIdentity, headingId, PostBlock, withOccurrenceKeys } from '../blog/post-blocks';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { Meta } from '../primitives/label';
 import { LinkedInMark } from '../primitives/linkedin-mark';
@@ -141,20 +138,35 @@ export function BlogIndex() {
                 aria-label={featured.title}
                 className="bg-panel border-border group hover:border-accent-border block overflow-hidden rounded-[var(--radius-card)] border transition-colors duration-200"
               >
-                <div className="p-7 md:p-10">
-                  <TagRow tags={featured.tags} />
-                  <h2 className="website-section-heading text-foreground group-hover:text-accent-text max-w-[32ch] transition-colors duration-200">
-                    {featured.title}
-                  </h2>
-                  <p className="website-body-lg text-muted mt-4 max-w-[65ch]">{featured.excerpt}</p>
-                  <PostByline post={featured} />
-                  <span className="text-accent-text mt-5 inline-flex items-center gap-2 text-sm font-medium">
-                    Read guide
-                    <ArrowRight
-                      className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                      aria-hidden
+                <div className="flex flex-col md:flex-row md:items-stretch">
+                  <div className="bg-panel-tonal relative min-h-[200px] w-full shrink-0 overflow-hidden md:min-h-0 md:w-[22%] lg:w-[20%]">
+                    <Image
+                      src={featured.image}
+                      alt=""
+                      aria-hidden="true"
+                      fill
+                      priority
+                      sizes="(max-width: 768px) 100vw, 320px"
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
                     />
-                  </span>
+                  </div>
+                  <div className="flex flex-1 flex-col justify-center p-7 md:p-10">
+                    <TagRow tags={featured.tags} />
+                    <h2 className="website-section-heading text-foreground group-hover:text-accent-text max-w-[32ch] transition-colors duration-200">
+                      {featured.title}
+                    </h2>
+                    <p className="website-body-lg text-muted mt-4 max-w-[65ch]">
+                      {featured.excerpt}
+                    </p>
+                    <PostByline post={featured} />
+                    <span className="text-accent-text mt-5 inline-flex items-center gap-2 text-sm font-medium">
+                      Read guide
+                      <ArrowRight
+                        className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                        aria-hidden
+                      />
+                    </span>
+                  </div>
                 </div>
               </Link>
             </Reveal>
@@ -174,12 +186,26 @@ export function BlogIndex() {
                     <Link
                       href={`/blog/${post.slug}`}
                       aria-label={post.title}
-                      className="hover:bg-accent-soft group block px-6 py-6 transition-colors duration-200 md:px-8 md:py-7"
+                      className="hover:bg-accent-soft/40 group flex flex-col transition-colors duration-200 md:flex-row md:items-stretch"
                     >
-                      <TagRow tags={post.tags} />
-                      <h3 className="website-feature-heading text-foreground">{post.title}</h3>
-                      <p className="website-body text-muted mt-2 max-w-[65ch]">{post.excerpt}</p>
-                      <PostByline post={post} />
+                      <div className="bg-panel-tonal relative min-h-[160px] w-full shrink-0 overflow-hidden md:min-h-0 md:w-[22%] lg:w-[20%]">
+                        <Image
+                          src={post.image}
+                          alt=""
+                          aria-hidden="true"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 260px"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </div>
+                      <div className="flex flex-1 flex-col justify-center px-6 py-6 md:px-8 md:py-7">
+                        <TagRow tags={post.tags} />
+                        <h3 className="website-feature-heading text-foreground group-hover:text-accent-text transition-colors duration-200">
+                          {post.title}
+                        </h3>
+                        <p className="website-body text-muted mt-2 max-w-[65ch]">{post.excerpt}</p>
+                        <PostByline post={post} />
+                      </div>
                     </Link>
                   </StaggerItem>
                 ))}
@@ -220,14 +246,6 @@ export function BlogIndex() {
   );
 }
 
-/** Slug for a body heading, used as its anchor id and contents target. */
-function headingId(text: string): string {
-  return `s-${text
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')}`;
-}
-
 /**
  * The companion rail beside a post: contents, then the byline.
  *
@@ -239,11 +257,8 @@ function headingId(text: string): string {
  * short guides are a real case and a lone "Contents" label helps nobody.
  */
 function PostAside({ post }: Readonly<{ post: BlogPost }>) {
-  // `paragraph` and `heading` share one union member, so `Extract` by `type`
-  // resolves to `never` — the predicate has to name the shape that carries
-  // `text` rather than the tag alone.
   const headings = post.body.filter(
-    (block): block is { type: 'paragraph' | 'heading'; text: string } => block.type === 'heading',
+    (block): block is { type: 'heading'; text: string } => block.type === 'heading',
   );
 
   return (
@@ -294,53 +309,6 @@ function PostAside({ post }: Readonly<{ post: BlogPost }>) {
   );
 }
 
-function withOccurrenceKeys<T>(
-  values: readonly T[],
-  identity: (value: T) => string,
-): Array<{ key: string; value: T }> {
-  const occurrences = new Map<string, number>();
-  return values.map((value) => {
-    const base = identity(value);
-    const occurrence = occurrences.get(base) ?? 0;
-    occurrences.set(base, occurrence + 1);
-    return { key: `${base}:${occurrence}`, value };
-  });
-}
-
-function blockIdentity(block: BlogBlock): string {
-  switch (block.type) {
-    case 'heading':
-    case 'paragraph':
-      return `${block.type}:${block.text}`;
-    case 'list':
-      return `list:${block.items.join('\u001f')}`;
-  }
-}
-
-function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
-  switch (block.type) {
-    case 'heading':
-      return (
-        <h2
-          id={headingId(block.text)}
-          className="website-feature-heading text-foreground mt-8 mb-3 scroll-mt-28"
-        >
-          {block.text}
-        </h2>
-      );
-    case 'list':
-      return (
-        <ul className="website-body text-muted my-4 grid list-disc gap-2 pl-5 leading-relaxed">
-          {withOccurrenceKeys(block.items, (item) => item).map(({ key, value }) => (
-            <li key={key}>{value}</li>
-          ))}
-        </ul>
-      );
-    case 'paragraph':
-      return <p className="website-body-lg text-muted my-4">{block.text}</p>;
-  }
-}
-
 export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
   return (
     <>
@@ -351,9 +319,9 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
           keywords: post.tags,
         }}
       />
-      <header className="border-border-subtle border-b pt-16 pb-6 md:pb-8">
-        <Container dense>
-          <Reveal className="mx-auto w-full max-w-[52ch] text-center lg:max-w-[68ch]">
+      <header className="border-border-subtle border-b pt-16 pb-8 md:pb-10">
+        <Container>
+          <Reveal className="mx-auto w-full max-w-4xl text-center lg:max-w-5xl">
             <Link
               href="/blog"
               className="text-muted hover:text-foreground mx-auto mb-5 flex w-fit items-center gap-2 text-sm font-medium transition-colors"
@@ -362,27 +330,19 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
               All guides
             </Link>
             <TagRow tags={post.tags} className="justify-center" />
-            <h1 className="website-page-title text-foreground mx-auto mt-3 max-w-[28ch] text-balance">
+            <h1 className="website-page-title text-foreground mx-auto mt-4 max-w-4xl text-balance">
               {post.title}
             </h1>
             <PostByline
               post={post}
               linkedin
-              className="border-border-subtle mt-5 justify-center border-t pt-5"
+              className="border-border-subtle mt-6 justify-center border-t pt-5"
             />
           </Reveal>
         </Container>
       </header>
 
-      {/* The post used one centred 48rem column, which left the container's
-          full width unused either side of it and made a guide look narrower
-          than every other page on the site. Prose still holds a readable
-          measure — a 90ch line is unreadable however much room there is — so
-          the width is spent on a companion rail instead: contents on the
-          left, article on the right, exactly as the legal pages do it. Below
-          `lg` the rail stacks above the prose and the layout is a single
-          column again. */}
-      <Container dense>
+      <Container>
         <div className="grid w-full gap-10 py-8 md:py-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-14">
           <PostAside post={post} />
           <article aria-label="Post content" className="min-w-0">

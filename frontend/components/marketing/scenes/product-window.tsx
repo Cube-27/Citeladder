@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bot, ChevronDown, Pause, Play, Search } from 'lucide-react';
 import { m, useReducedMotion } from 'motion/react';
 
@@ -65,8 +65,6 @@ export function ProductWindow() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [phase, setPhase] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const tablistRef = useRef<HTMLDivElement>(null);
   const activeLayer = LAYERS[activeIndex];
   const visiblePhase = reduceMotion ? LAST_PHASE : phase;
   const playbackLabel = reduceMotion ? 'Motion reduced' : playing ? 'Pause' : 'Play';
@@ -91,52 +89,18 @@ export function ProductWindow() {
     setPhase(0);
   };
 
-  /**
-   * Keep the selected tab on screen in the scrolling row.
-   *
-   * Autoplay advances the tab on its own, so on a phone the active tab — and
-   * the progress bar that shows how far the phase has run — would otherwise
-   * march off the right edge with nothing to tell the reader where it went.
-   *
-   * This adjusts the STRIP's own `scrollLeft` rather than calling
-   * `scrollIntoView`. That API walks every scrollable ancestor up to the
-   * document, so `block: 'nearest'` is not a guarantee: with the preview off
-   * screen, an autoplay tick would yank the page down to it while the reader
-   * was somewhere else entirely. Writing `scrollLeft` cannot move anything but
-   * this element. Above `md` the strip is a grid with no overflow, so the
-   * arithmetic yields the current value and nothing happens.
-   */
-  useEffect(() => {
-    const strip = tablistRef.current;
-    const tab = tabRefs.current[activeIndex];
-    if (!strip || !tab) return;
-
-    const overflowLeft = tab.offsetLeft - strip.scrollLeft;
-    const overflowRight = overflowLeft + tab.offsetWidth - strip.clientWidth;
-    // Already fully visible: leave the strip alone so a tab the reader just
-    // tapped does not slide under their finger.
-    if (overflowLeft >= 0 && overflowRight <= 0) return;
-
-    strip.scrollTo({
-      left: overflowLeft < 0 ? tab.offsetLeft : strip.scrollLeft + overflowRight,
-      behavior: reduceMotion ? 'auto' : 'smooth',
-    });
-  }, [activeIndex, reduceMotion]);
-
   return (
     <div
       data-testid="product-window"
       className="app-type-scale border-border bg-panel mx-auto w-full max-w-[1240px] overflow-hidden rounded-[var(--radius-card)] border [overflow-anchor:none]"
     >
-      {/* Four tabs in a 2x2 block made the preview's header taller than its
-          own toolbar on a phone and broke the single-row "these are the four
-          layers" reading. Below the tablet breakpoint they stay on ONE row
-          that scrolls sideways; from `md` up they divide the full width. */}
+      {/* The preview advances automatically on small screens, where four tabs
+          crowd the product chrome. From `md` up, the layer tabs divide the
+          full width and retain direct scene selection. */}
       <div
-        ref={tablistRef}
         role="tablist"
         aria-label="CiteLadder intelligence layers"
-        className="border-border-subtle bg-panel flex snap-x snap-mandatory scrollbar-none overflow-x-auto border-b md:grid md:grid-cols-4 md:overflow-visible"
+        className="border-border-subtle bg-panel hidden border-b md:grid md:grid-cols-4"
       >
         {LAYERS.map((layer, index) => {
           const Icon = layer.icon;
@@ -144,9 +108,6 @@ export function ProductWindow() {
           return (
             <button
               key={layer.id}
-              ref={(node) => {
-                tabRefs.current[index] = node;
-              }}
               id={`product-preview-tab-${layer.id}`}
               type="button"
               role="tab"
@@ -155,7 +116,7 @@ export function ProductWindow() {
               aria-controls="product-preview-panel"
               onClick={() => selectLayer(index)}
               className={cn(
-                'focus-ring relative flex min-h-14 shrink-0 snap-start items-center justify-center gap-2 px-4 text-sm font-medium whitespace-nowrap transition-colors md:min-h-16 md:shrink md:px-3',
+                'focus-ring relative flex min-h-16 items-center justify-center gap-2 px-3 text-sm font-medium whitespace-nowrap transition-colors',
                 index > 0 && 'border-border-subtle border-l',
                 selected
                   ? 'text-foreground bg-background-alt/60'
@@ -196,7 +157,7 @@ export function ProductWindow() {
             <div className="border-border-strong bg-input text-muted flex h-8 max-w-80 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] border px-3 text-sm lg:mx-auto">
               <Search className="size-3.5 shrink-0" />
               <span className="truncate">Search pages, evidence, prompts…</span>
-              <span className="border-border bg-panel ml-auto hidden rounded-xs border px-1.5 py-0.5 text-xs sm:inline">
+              <span className="border-border bg-panel ml-auto hidden shrink-0 rounded-xs border px-1.5 py-0.5 text-xs whitespace-nowrap sm:inline">
                 ⌘ K
               </span>
             </div>
@@ -233,7 +194,7 @@ export function ProductWindow() {
           <div
             id="product-preview-panel"
             role="tabpanel"
-            aria-labelledby={`product-preview-tab-${activeLayer.id}`}
+            aria-label={activeLayer.label}
             className="min-h-[580px] flex-1 overflow-hidden [overflow-anchor:none]"
           >
             <ProductPreviewPanel

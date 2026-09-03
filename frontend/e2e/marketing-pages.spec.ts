@@ -5,7 +5,7 @@ const MARKETING_PAGES = [
   '/enterprise',
   '/solutions',
   '/blog',
-  '/blog/how-we-measure-ai-visibility-deterministically',
+  '/blog/connecting-owned-evidence-ai-search',
   '/compare',
   '/compare/profound',
   '/faq',
@@ -17,7 +17,7 @@ const MARKETING_PAGES = [
 const PUBLIC_ROUTES = [
   '/',
   ...MARKETING_PAGES,
-  '/blog/how-we-measure-ai-visibility-deterministically',
+  '/blog/connecting-owned-evidence-ai-search',
   '/compare/profound',
   '/login',
   '/register',
@@ -34,7 +34,7 @@ test.describe('marketing routes', () => {
 
   test('published content slugs return 200 and unknown slugs return 404', async ({ page }) => {
     for (const path of [
-      '/blog/how-we-measure-ai-visibility-deterministically',
+      '/blog/connecting-owned-evidence-ai-search',
       '/compare/profound',
       '/compare/otterly-ai',
       '/compare/scrunch-ai',
