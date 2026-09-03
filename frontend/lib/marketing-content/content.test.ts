@@ -7,6 +7,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { headingId } from '@/components/marketing/blog/post-blocks';
+
 import { POSTS, type BlogBlock } from './blog';
 import { COMPETITORS, FACT_ROWS, FAIRNESS_POINTS } from './compare';
 import { FAQ_GROUPS } from './faq';
@@ -181,6 +183,18 @@ describe('blog content', () => {
       for (const block of post.body) {
         expect(blockText(block).trim(), `${post.slug}/${block.type}`).not.toBe('');
       }
+    }
+  });
+
+  it('gives every heading in a post its own anchor', () => {
+    // The contents rail links each heading by its slugged text. Two headings
+    // that slug alike within one post share an `id`, so the second entry
+    // silently jumps to the first section. Retitle one rather than relax this.
+    for (const post of POSTS) {
+      const ids = post.body
+        .filter((block) => block.type === 'heading' || block.type === 'subheading')
+        .map((block) => headingId(blockText(block)));
+      expect(new Set(ids).size, post.slug).toBe(ids.length);
     }
   });
 

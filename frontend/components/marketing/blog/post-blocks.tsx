@@ -3,12 +3,26 @@ import { AlertTriangle, ArrowDown, Check, CheckCircle2, Info } from 'lucide-reac
 import type { BlogBlock, BlogDiagram } from '@/lib/marketing-content/blog';
 import { cn } from '@/lib/utils';
 
-/** Slug for a body heading, used as its anchor id and contents target. */
+/**
+ * Slug for a body heading, used as its anchor id and contents target.
+ *
+ * A heading carrying no ASCII alphanumerics at all — one written entirely in
+ * another script, or in punctuation — would otherwise slug to the bare prefix,
+ * so every such heading in a post would answer to the same anchor. The
+ * character-sum fallback keeps those distinct. Two headings with identical
+ * text still collide by construction; `content.test.ts` fails the build on a
+ * post that contains a pair, which is the point at which an editor can retitle
+ * one rather than ship a contents link that jumps to the wrong section.
+ */
 export function headingId(text: string): string {
-  return `s-${text
+  const slug = text
     .toLowerCase()
     .replaceAll(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')}`;
+    .replace(/^-|-$/g, '');
+  if (slug) return `s-${slug}`;
+  let sum = 0;
+  for (const character of text) sum = (sum * 31 + character.codePointAt(0)!) % 1_000_000;
+  return `s-h${sum}`;
 }
 
 export function withOccurrenceKeys<T>(
@@ -58,13 +72,16 @@ function PostTable({
 }>) {
   return (
     <div className="border-border-subtle bg-panel my-6 overflow-hidden rounded-[var(--radius-card)] border">
-      {caption && (
-        <div className="border-border-subtle bg-panel-tonal border-b px-4 py-2.5">
-          <p className="website-label text-muted">{caption}</p>
-        </div>
-      )}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-sm">
+          {/* A real `<caption>`, not a styled bar above the table: assistive
+              technology only announces the table's name when the text is the
+              table's own caption element. `caption-side` keeps it on top. */}
+          {caption && (
+            <caption className="border-border-subtle bg-panel-tonal website-label text-muted caption-top border-b px-4 py-2.5 text-left">
+              {caption}
+            </caption>
+          )}
           <thead>
             <tr className="border-border-subtle bg-panel-tonal/60 border-b">
               {withOccurrenceKeys(headers, (header) => header).map(({ key, value }) => (

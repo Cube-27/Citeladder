@@ -311,6 +311,7 @@ export function MarketingNav() {
       {mobileOpen && (
         <MobileNavigation
           isAuthenticated={isAuthenticated}
+          sessionPending={sessionPending}
           dashboardHref={dashboardHref}
           openAcc={openAcc}
           setOpenAcc={setOpenAcc}

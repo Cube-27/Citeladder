@@ -164,7 +164,7 @@ export const POST_CONNECT: BlogPost = {
           title: 'Step 3: Map GSC AI Performance Baselines',
           badge: 'GSC Baselines',
           description:
-            'Open Google Search Console Search Appearance filters. Note baseline metrics for AI Overview and AI Mode queries over the last 90 days to track impressions, clicks, and average CTR.',
+            'Open the Generative AI performance report in Google Search Console and record a 90-day baseline. It reports impressions only, broken down by page, country, device, and date, with AI Overviews and AI Mode combined — so the baseline is which pages Google surfaces in AI features, not a click or CTR figure.',
         },
       ],
     },
@@ -249,7 +249,7 @@ export const POST_CONNECT: BlogPost = {
       items: [
         'Pranjal Aggarwal et al., "GEO: Generative Engine Optimization," Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD \'24), August 25–29, 2024, Barcelona, Spain.',
         '"AEO Vs. SEO: Best Strategies For 2026," Yotpo Blog, May 2026.',
-        '"Google Search Console AI Performance Reports: Complete 2026 Guide," Kaival Infotech, July 20, 2026.',
+        '"Generative AI performance report," Google Search Console Help, support.google.com/webmasters/answer/16984139.',
         '"How to Track Perplexity Referrals in GA4 (Google Analytics 4)," Rankshift, January 26, 2026.',
         '"GPTBot vs OAI-SearchBot: Key Differences," Am I Cited, January 3, 2026.',
         '"The complete guide to Generative Engine Optimization (GEO)," Peec AI, August 27, 2025.',

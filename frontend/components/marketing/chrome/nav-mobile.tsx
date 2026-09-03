@@ -9,6 +9,7 @@ import { NavItemLink } from './nav-items';
 
 type MobileNavigationProps = {
   isAuthenticated: boolean;
+  sessionPending: boolean;
   dashboardHref: string;
   openAcc: NavDropKey | null;
   setOpenAcc: (
@@ -20,6 +21,7 @@ type MobileNavigationProps = {
 /** Mobile accordion navigation, rendered only while the menu is open. */
 export function MobileNavigation({
   isAuthenticated,
+  sessionPending,
   dashboardHref,
   openAcc,
   setOpenAcc,
@@ -83,13 +85,22 @@ export function MobileNavigation({
             {label}
           </Link>
         ))}
-        <Link
-          href={isAuthenticated ? dashboardHref : '/login'}
-          className="website-nav text-muted py-3.5"
-          onClick={closeMenu}
-        >
-          {isAuthenticated ? 'Dashboard' : 'Log in'}
-        </Link>
+        {sessionPending ? (
+          // Same rule as the header actions: a returning visitor waits rather
+          // than being offered "Log in" for the moment before `me` resolves.
+          <span
+            aria-hidden
+            className="bg-background-alt my-3.5 h-5 w-24 animate-pulse rounded-[var(--radius-control)]"
+          />
+        ) : (
+          <Link
+            href={isAuthenticated ? dashboardHref : '/login'}
+            className="website-nav text-muted py-3.5"
+            onClick={closeMenu}
+          >
+            {isAuthenticated ? 'Dashboard' : 'Log in'}
+          </Link>
+        )}
       </div>
     </div>
   );
