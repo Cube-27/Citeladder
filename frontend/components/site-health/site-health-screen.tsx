@@ -71,7 +71,7 @@ function SiteHealthContent({
   ) : undefined;
   const prefetchTab = useSiteHealthTabPrefetch(projectId, crawl?.id);
   return (
-    <div className="grid min-w-0 gap-[var(--page-section-gap)]">
+    <div className="grid min-w-0 gap-[var(--workspace-gap)]">
       {!blockingState ? <SiteHealthNotices screen={screen} /> : null}
       <AnalysisTabs
         tab={tab}

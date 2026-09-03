@@ -3,11 +3,9 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 from types import SimpleNamespace
-from typing import cast
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy.exc import IntegrityError
 
 from app.connectors import commerce_competitors as competitor_connector
 from app.connectors.agent.gateway import FakeModelGateway
@@ -36,17 +34,12 @@ from app.domain.commerce.projector import (
 )
 from app.domain.commerce.prompts import _leaks_owned_identity
 from app.domain.commerce.schemas import (
-    CatalogEditRequest,
     CatalogImportRequest,
-    CategoryEditRequest,
     CommerceTarget,
     RecommendationSpan,
 )
 from app.domain.commerce.service import (
-    CommerceConflictError,
-    _apply_edit_values,
     _import_response,
-    edit_category,
 )
 from app.domain.commerce.shelf import (
     _ai_observed_candidate,
@@ -61,7 +54,6 @@ from app.domain.commerce.shelf import (
     _spans,
 )
 from app.domain.commerce.shelf_metrics import _first_position_rate
-from app.models.commerce import CommerceProduct
 
 
 def test_catalog_identity_uses_only_in_scope_declared_canonical() -> None:
@@ -391,49 +383,6 @@ def test_rank_is_present_exactly_when_order_is_observable() -> None:
         RecommendationSpan(title="One", rank=None, order_observable=True)
 
 
-def test_explicit_json_edit_clears_keep_column_types() -> None:
-    product = cast(
-        CommerceProduct,
-        SimpleNamespace(canonical_url="https://shop.test/product"),
-    )
-    payload = CatalogEditRequest(variants=None, attributes=None, price=None)
-
-    observed = _apply_edit_values(
-        product, payload=payload, supplied=payload.model_fields_set
-    )
-
-    assert product.variants == []
-    assert product.attributes == {}
-    assert product.price is None
-    assert observed == {"variants": [], "attributes": {}, "price": None}
-
-
-def test_explicit_json_edit_clears_nullable_identifiers_to_null() -> None:
-    product = cast(
-        CommerceProduct,
-        SimpleNamespace(canonical_url="https://shop.test/product"),
-    )
-    payload = CatalogEditRequest(sku=None, gtin=None, mpn=None)
-
-    observed = _apply_edit_values(
-        product, payload=payload, supplied=payload.model_fields_set
-    )
-
-    assert (product.sku, product.gtin, product.mpn) == (None, None, None)
-    assert observed == {"sku": None, "gtin": None, "mpn": None}
-
-
-def test_lifecycle_state_cannot_be_cleared() -> None:
-    product = cast(
-        CommerceProduct,
-        SimpleNamespace(canonical_url="https://shop.test/product"),
-    )
-    payload = CatalogEditRequest(lifecycle_state=None)
-
-    with pytest.raises(CommerceConflictError):
-        _apply_edit_values(product, payload=payload, supplied=payload.model_fields_set)
-
-
 def test_nested_collection_product_url_is_not_excluded() -> None:
     checked = _precheck(
         {
@@ -692,48 +641,6 @@ async def test_a_listing_page_classified_as_a_product_projects_as_a_category() -
     assert category.name == "Women"  # the breadcrumb leaf, not the title tag
     assert category.canonical_url == "https://shop.test/shop/women"
     assert category.role == "hub"
-
-
-@pytest.mark.asyncio
-async def test_concurrent_category_name_conflict_is_translated() -> None:
-    class UniqueViolation(Exception):
-        constraint_name = "uq_commerce_category_name"
-
-    category = SimpleNamespace(
-        id=uuid.uuid4(), name="Old", normalized_name="old", field_sources={}
-    )
-
-    class Session:
-        def __init__(self) -> None:
-            self.results = iter((SimpleNamespace(), category, None))
-            self.rolled_back = False
-
-        async def scalar(self, *_: object):
-            return next(self.results)
-
-        def add(self, _: object) -> None:
-            return None
-
-        async def flush(self) -> None:
-            return None
-
-        async def commit(self) -> None:
-            raise IntegrityError("update", {}, UniqueViolation())
-
-        async def rollback(self) -> None:
-            self.rolled_back = True
-
-    session = Session()
-    with pytest.raises(CommerceConflictError, match="category name already exists"):
-        await edit_category(
-            session,  # type: ignore[arg-type]
-            workspace_id=uuid.uuid4(),
-            project_id=uuid.uuid4(),
-            category_id=category.id,
-            payload=CategoryEditRequest(name="Duplicate"),
-        )
-
-    assert session.rolled_back is True
 
 
 def test_structured_price_remains_authoritative_over_visible_price() -> None:

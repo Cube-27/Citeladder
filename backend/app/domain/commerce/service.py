@@ -10,14 +10,11 @@ from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.commerce_catalog import (
-    COMMERCE_CATEGORY_EDIT_VERSION,
-    COMMERCE_EDIT_VERSION,
     COMMERCE_IMPORT_ERROR_LIMIT,
     COMMERCE_IMPORT_MAX_BYTES,
     COMMERCE_IMPORT_MAX_ROWS,
@@ -27,21 +24,17 @@ from app.core.config.commerce_catalog import (
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.domain.commerce.eligibility import project_sells_catalog
 from app.domain.commerce.schemas import (
-    CatalogEditRequest,
     CatalogImportRequest,
     CatalogImportResponse,
     CatalogResponse,
     CatalogRowOutcome,
-    CategoryEditRequest,
     CategoryResponse,
     ProductResponse,
 )
-from app.domain.integrations.sync import integrity_constraint_name
 from app.domain.site_health.normalization import canonical_identity
 from app.models.analytics import AnalyticsTask
 from app.models.commerce import (
     CommerceCategory,
-    CommerceCategoryObservation,
     CommerceCsvImport,
     CommerceProduct,
     CommerceProductCategory,
@@ -56,9 +49,6 @@ class CommerceNotFoundError(LookupError):
 
 class CommerceConflictError(ValueError):
     pass
-
-
-_CATEGORY_NAME_UNIQUE_CONSTRAINT = "uq_commerce_category_name"
 
 
 class CommerceImportError(ValueError):
@@ -178,83 +168,6 @@ async def get_catalog(
         ],
         projection_tasks={status: count for status, count in queue_rows},
     )
-
-
-async def edit_category(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    category_id: uuid.UUID,
-    payload: CategoryEditRequest,
-) -> CategoryResponse:
-    await require_project(session, workspace_id=workspace_id, project_id=project_id)
-    category = await session.scalar(
-        select(CommerceCategory).where(
-            CommerceCategory.id == category_id,
-            CommerceCategory.project_id == project_id,
-            CommerceCategory.workspace_id == workspace_id,
-        )
-    )
-    if category is None:
-        raise CommerceNotFoundError("Category not found")
-    observed: dict[str, Any] = {}
-    if "name" in payload.model_fields_set:
-        name = str(payload.name or "").strip()
-        if not name:
-            raise CommerceConflictError("category name cannot be empty")
-        normalized = " ".join(name.casefold().split())
-        duplicate = await session.scalar(
-            select(CommerceCategory.id).where(
-                CommerceCategory.project_id == project_id,
-                CommerceCategory.normalized_name == normalized,
-                CommerceCategory.id != category.id,
-            )
-        )
-        if duplicate is not None:
-            raise CommerceConflictError("category name already exists")
-        category.name = name
-        category.normalized_name = normalized
-        observed["name"] = name
-    if "role" in payload.model_fields_set and payload.role is not None:
-        category.role = payload.role
-        observed["role"] = payload.role
-    if not observed:
-        raise CommerceConflictError("category edit must supply a name or role")
-    observation = CommerceCategoryObservation(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        category_id=category.id,
-        observed_fields=observed,
-        edit_version=COMMERCE_CATEGORY_EDIT_VERSION,
-    )
-    session.add(observation)
-    await session.flush()
-    sources = dict(category.field_sources or {})
-    for field in observed:
-        sources[field] = {
-            "kind": "edit",
-            "source_id": str(observation.id),
-            "version": COMMERCE_CATEGORY_EDIT_VERSION,
-        }
-    category.field_sources = sources
-    await _commit_category_edit(session)
-    product_count = await session.scalar(
-        select(func.count()).where(CommerceProductCategory.category_id == category.id)
-    )
-    return CategoryResponse.model_validate(category).model_copy(
-        update={"product_count": product_count or 0}
-    )
-
-
-async def _commit_category_edit(session: AsyncSession) -> None:
-    try:
-        await session.commit()
-    except IntegrityError as exc:
-        await session.rollback()
-        if integrity_constraint_name(exc) != _CATEGORY_NAME_UNIQUE_CONSTRAINT:
-            raise
-        raise CommerceConflictError("category name already exists") from exc
 
 
 def _csv_reader(content: str) -> csv.DictReader:
@@ -622,139 +535,6 @@ def _import_response(row: CommerceCsvImport) -> CatalogImportResponse:
             CatalogRowOutcome.model_validate(item) for item in (row.row_outcomes or [])
         ][:COMMERCE_IMPORT_ERROR_LIMIT],
     )
-
-
-async def edit_product(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    product_id: uuid.UUID,
-    payload: CatalogEditRequest,
-) -> ProductResponse:
-    await require_project(session, workspace_id=workspace_id, project_id=project_id)
-    product = await session.scalar(
-        select(CommerceProduct).where(
-            CommerceProduct.id == product_id,
-            CommerceProduct.project_id == project_id,
-            CommerceProduct.workspace_id == workspace_id,
-        )
-    )
-    if product is None:
-        raise CommerceNotFoundError("Product not found")
-    supplied = payload.model_fields_set
-    if "canonical_url" in supplied and payload.canonical_url:
-        normalized_url = canonical_identity(payload.canonical_url)[0]
-        duplicate = await session.scalar(
-            select(CommerceProduct.id).where(
-                CommerceProduct.project_id == project_id,
-                CommerceProduct.canonical_url == normalized_url,
-                CommerceProduct.id != product.id,
-            )
-        )
-        if duplicate is not None:
-            raise CommerceConflictError("canonical_url belongs to another product")
-    observed = _apply_edit_values(product, payload=payload, supplied=supplied)
-    observation = CommerceProductObservation(
-        workspace_id=workspace_id,
-        project_id=project_id,
-        product_id=product.id,
-        source_kind="edit",
-        observed_fields=observed,
-        edit_version=COMMERCE_EDIT_VERSION,
-    )
-    session.add(observation)
-    await session.flush()
-    sources = dict(product.field_sources or {})
-    for field in observed:
-        sources[field] = {
-            "kind": "edit",
-            "source_id": str(observation.id),
-            "version": COMMERCE_EDIT_VERSION,
-        }
-    product.field_sources = sources
-    if "category_ids" in supplied:
-        await _replace_product_categories(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            product=product,
-            category_ids=payload.category_ids or [],
-            observation_id=observation.id,
-        )
-    await session.commit()
-    category_ids = list(
-        await session.scalars(
-            select(CommerceProductCategory.category_id).where(
-                CommerceProductCategory.product_id == product.id
-            )
-        )
-    )
-    return _product_response(product, category_ids)
-
-
-def _apply_edit_values(
-    product: CommerceProduct,
-    *,
-    payload: CatalogEditRequest,
-    supplied: set[str],
-) -> dict[str, Any]:
-    observed: dict[str, Any] = {}
-    cleared_values: dict[str, Any] = {
-        "price": None,
-        "sku": None,
-        "gtin": None,
-        "mpn": None,
-        "variants": [],
-        "attributes": {},
-    }
-    for field in supplied & (set(_FIELDS) | {"lifecycle_state"}):
-        value = getattr(payload, field)
-        if field == "canonical_url":
-            if not value:
-                raise CommerceConflictError("canonical_url cannot be cleared")
-            value = canonical_identity(value)[0]
-        if field == "lifecycle_state" and value is None:
-            raise CommerceConflictError("lifecycle_state cannot be cleared")
-        applied = value if value is not None else cleared_values.get(field, "")
-        setattr(product, field, applied)
-        observed[field] = applied
-    return observed
-
-
-async def _replace_product_categories(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    product: CommerceProduct,
-    category_ids: list[uuid.UUID],
-    observation_id: uuid.UUID,
-) -> None:
-    await session.execute(
-        delete(CommerceProductCategory).where(
-            CommerceProductCategory.product_id == product.id
-        )
-    )
-    for category_id in category_ids:
-        valid = await session.scalar(
-            select(CommerceCategory.id).where(
-                CommerceCategory.id == category_id,
-                CommerceCategory.project_id == project_id,
-                CommerceCategory.workspace_id == workspace_id,
-            )
-        )
-        if valid is None:
-            raise CommerceNotFoundError("Category not found")
-        session.add(
-            CommerceProductCategory(
-                workspace_id=workspace_id,
-                project_id=project_id,
-                product_id=product.id,
-                category_id=category_id,
-                source_observation_id=observation_id,
-            )
-        )
 
 
 async def enqueue_catalog_projection(

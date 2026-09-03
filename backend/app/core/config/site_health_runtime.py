@@ -50,6 +50,11 @@ class SiteHealthSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="SITE_HEALTH_",
         extra="ignore",
+        # Every threshold below is compared against, and every comparison with
+        # NaN is false: a stray ``SITE_HEALTH_*=nan`` would pass the validators
+        # here AND silently disable the bound it names. Reject non-finite
+        # values at load instead.
+        allow_inf_nan=False,
         # Same .env sources as the root Settings so SITE_HEALTH_* overrides in
         # the repo-root / backend-local .env work without exporting them.
         env_file=dotenv_sources(),
@@ -188,6 +193,21 @@ class SiteHealthSettings(BaseSettings):
     # Bounded recheck when analyze observes a still-running discover task for
     # the same URL. A non-zero delay prevents a claim/defer hot loop.
     analysis_dependency_retry_seconds: float = 1.0
+    # Ceiling on that recheck delay. The wait backs off from the base towards
+    # this so a prerequisite that is slow (rather than instant) is not polled
+    # once a second for its whole life: every one of those rechecks re-claims
+    # the row and re-runs the crawl's locked reconcile, and that contention is
+    # what starves the user's Stop button of the crawl row lock.
+    analysis_dependency_retry_max_seconds: float = 15.0
+    # Hard bound on how long analyze defers to its prerequisite. ``defer``
+    # spends no attempt budget and leaves the row non-terminal, so a
+    # prerequisite that never resolves is an UNBOUNDED claim/defer loop: the
+    # crawl keeps a non-terminal task forever, never drains, never
+    # terminalizes, and the zero-outstanding-work backstop below can never see
+    # it. Past this bound analyze stops waiting and acquires the page itself —
+    # reuse of a sibling's discover artifact is an optimization, never a
+    # correctness requirement.
+    analysis_dependency_max_wait_seconds: float = 180.0
     # Deterministic bound on how many expired leases the sweeper reclaims in
     # ONE transaction. A mass expiry across a large frontier (e.g. 50,000
     # URLs) would otherwise lock and update every expired row in a single
@@ -206,6 +226,15 @@ class SiteHealthSettings(BaseSettings):
     # Bound on how many stalled crawls one sweep reconciles, keeping the
     # backstop's cost per loop iteration flat.
     stalled_crawl_reconcile_batch: int = 50
+    # Wall-clock ceiling on ONE crawl. The backstop above only rescues a crawl
+    # whose queue is already empty, so any route that holds a task non-terminal
+    # indefinitely strands the crawl outside it -- exactly the state a user
+    # sees as "running forever, 20 of 22 pages". This is the unconditional
+    # answer to that: past this age an active crawl has its outstanding tasks
+    # failed and is terminalized on whatever evidence it did gather. Sized
+    # well above any healthy crawl so it can never truncate live work. 0
+    # disables it.
+    overdue_crawl_seconds: float = 3_600.0
 
     # --- Export ---
     # Bounds how many rows ``_export_items`` materializes into memory for a
@@ -324,10 +353,27 @@ class SiteHealthSettings(BaseSettings):
             self,
             (
                 "stalled_crawl_reconcile_seconds",
+                "overdue_crawl_seconds",
                 "db_conflict_base_delay_seconds",
                 "db_conflict_jitter_seconds",
             ),
         )
+        _require_positive(
+            self,
+            (
+                "analysis_dependency_retry_seconds",
+                "analysis_dependency_retry_max_seconds",
+                "analysis_dependency_max_wait_seconds",
+            ),
+        )
+        if (
+            self.analysis_dependency_retry_max_seconds
+            < self.analysis_dependency_retry_seconds
+        ):
+            raise ValueError(
+                "analysis_dependency_retry_max_seconds must not be below "
+                "analysis_dependency_retry_seconds"
+            )
         if (
             0 < self.stalled_crawl_reconcile_seconds
             and self.stalled_crawl_reconcile_seconds <= self.lease_ttl_seconds
@@ -357,6 +403,22 @@ class SiteHealthSettings(BaseSettings):
         base = self.retry_base_delay_seconds * (2**attempt)
         jitter = (attempt * 0.37) % 1.0 * self.retry_jitter_seconds
         return min(base, cap) + jitter
+
+    def analysis_dependency_retry_delay(self, waited_seconds: float) -> float:
+        """Backoff for the next prerequisite recheck, given the wait so far.
+
+        Doubles from the base delay with the elapsed wait and clamps at the
+        max, so a prerequisite that resolves quickly is still picked up within
+        a second while a slow one costs a handful of rechecks rather than one
+        per second for its whole duration.
+        """
+        base = max(0.0, self.analysis_dependency_retry_seconds)
+        if base <= 0:
+            return 0.0
+        steps = max(0.0, waited_seconds) / base
+        return min(
+            base * (2 ** min(steps, 16.0)), self.analysis_dependency_retry_max_seconds
+        )
 
     def db_conflict_retry_delay(self, conflict_count: int) -> float:
         """Short deterministic jitter for database-only contention retries."""

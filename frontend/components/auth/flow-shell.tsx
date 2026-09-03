@@ -136,6 +136,7 @@ export function FlowGroup({
   help,
   meta,
   action,
+  icon,
   className,
   children,
 }: Readonly<{
@@ -143,15 +144,23 @@ export function FlowGroup({
   help?: ReactNode;
   meta?: ReactNode;
   action?: ReactNode;
+  icon?: ReactNode;
   className?: string;
   children: ReactNode;
 }>) {
   return (
     <section className={cn('flow-group', className)}>
       <div className="flow-group-heading">
-        <div className="flow-group-copy">
-          <h2 className="flow-group-title">{title}</h2>
-          {help ? <p className="flow-help">{help}</p> : null}
+        <div className={cn('flex gap-3', help ? 'items-start' : 'items-center')}>
+          {icon ? (
+            <div className="bg-accent-soft text-accent-text flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
+              {icon}
+            </div>
+          ) : null}
+          <div className="flow-group-copy">
+            <h2 className="flow-group-title">{title}</h2>
+            {help ? <p className="flow-help">{help}</p> : null}
+          </div>
         </div>
         {meta || action ? (
           <div className="flow-group-aside">

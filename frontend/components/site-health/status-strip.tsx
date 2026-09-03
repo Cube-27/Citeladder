@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
-import { Label, displayHeadingLgClasses, textRole } from '@/components/ui/typography';
+import { displayHeadingLgClasses, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@/lib/api/types';
 import { cn } from '@/lib/utils';
@@ -232,17 +232,19 @@ function ProgressRow({
             </span>
           </span>
         </div>
-        <dl className="ml-auto flex flex-wrap items-baseline gap-x-6 gap-y-1">
+        <dl className="ml-auto flex flex-wrap items-center gap-x-6 gap-y-1">
           {counts.map((count) => (
-            <div key={count.label} className="flex items-baseline gap-1.5">
-              <Label>{count.label}</Label>
-              {count.value === null ? (
-                <UnavailableValue state="not_measured" />
-              ) : (
-                <span className={textRole('emphasis', cn('tabular-nums', count.className))}>
-                  {count.value}
-                </span>
-              )}
+            <div key={count.label} className="flex items-center gap-1.5 text-sm">
+              <dt className="text-muted">{count.label}</dt>
+              <dd className="m-0">
+                {count.value === null ? (
+                  <UnavailableValue state="not_measured" />
+                ) : (
+                  <span className={textRole('emphasis', cn('tabular-nums', count.className))}>
+                    {count.value}
+                  </span>
+                )}
+              </dd>
             </div>
           ))}
         </dl>

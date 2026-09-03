@@ -92,7 +92,7 @@ export function ProductWindow() {
   return (
     <div
       data-testid="product-window"
-      className="app-type-scale border-border bg-panel mx-auto w-full max-w-[1240px] overflow-hidden rounded-[var(--radius-card)] border"
+      className="app-type-scale border-border bg-panel mx-auto w-full max-w-[1240px] overflow-hidden rounded-[var(--radius-card)] border [overflow-anchor:none]"
     >
       <div
         role="tablist"
@@ -192,7 +192,7 @@ export function ProductWindow() {
             id="product-preview-panel"
             role="tabpanel"
             aria-labelledby={`product-preview-tab-${activeLayer.id}`}
-            className="min-h-0 flex-1 overflow-hidden"
+            className="min-h-[580px] flex-1 overflow-hidden [overflow-anchor:none]"
           >
             <ProductPreviewPanel
               layer={activeLayer.id}

@@ -195,6 +195,14 @@ ERROR_ACQUISITION_UNAVAILABLE: Final = "acquisition_unavailable"
 
 ERROR_BOT_BLOCKED: Final = "bot_blocked"
 
+# The crawl outran its wall-clock budget while this task was still
+# outstanding. Written by the overdue-crawl watchdog, never by a fetch: it
+# means the page was abandoned so the crawl could terminalize, which is a
+# real failure to analyze it (hence deliberately outside
+# ``CORPUS_EXCLUSION_ERROR_CODES`` -- the crawl reports
+# ``partially_completed``, not a clean finish).
+ERROR_CRAWL_OVERDUE: Final = "crawl_overdue"
+
 CLASSIFICATION_BODYLESS_STATUS_CODES: Final[frozenset[int]] = frozenset({204, 205})
 
 FETCH_ATTEMPT_OUTCOME_SUCCESS: Final = "success"

@@ -10,7 +10,7 @@ import asyncio
 import uuid
 
 import pytest
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.analytics import (
@@ -137,6 +137,43 @@ async def test_cancel_crawl_retries_a_transient_crawl_lock_timeout(
             await asyncio.sleep(0.15)
             await blocker.commit()
             result = await asyncio.wait_for(cancellation, timeout=5)
+
+    assert result["status"] == CRAWL_STATUS_CANCELLED
+    async with session_factory() as session:
+        task_status = await session.scalar(
+            select(SiteCrawlTask.status).where(SiteCrawlTask.crawl_id == seed.crawl_id)
+        )
+        assert task_status == TASK_STATUS_CANCELLED
+
+
+@pytest.mark.asyncio
+async def test_cancel_crawl_stops_the_crawl_even_when_the_snapshot_fails(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The rollup is best effort; stopping is the action the user asked for.
+
+    The cancellation snapshot takes the profile lock and loads the whole
+    measurement projection. Running it inside the transition let a busy crawl
+    time the request out, so Stop answered 500 and left the crawl running.
+    """
+    from app.domain.site_health.service import cancel_crawl
+    from app.domain.site_health.service import lifecycle as lifecycle_service
+
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=1)
+
+    async def _explode(*_args: object, **_kwargs: object) -> bool:
+        raise RuntimeError("snapshot projection blew up")
+
+    monkeypatch.setattr(lifecycle_service, "persist_crawl_snapshot", _explode)
+
+    async with session_factory() as cancel_session:
+        result = await cancel_crawl(
+            cancel_session,
+            workspace_id=seed.workspace_id,
+            crawl_id=seed.crawl_id,
+        )
 
     assert result["status"] == CRAWL_STATUS_CANCELLED
     async with session_factory() as session:
@@ -365,6 +402,39 @@ async def test_cancel_crawl_persists_partial_snapshot_from_completed_analyses(
             "trigger_kind": "site_change",
             "trigger_id": str(change_snapshot_id),
         }
+
+    # The rollup runs in its own best-effort transaction AFTER the transition
+    # commits, so it can fail on its own. Nothing else recomputes a cancelled
+    # crawl's scores, which would strand the evidence permanently -- pressing
+    # Stop again has to retry it.
+    async with session_factory() as session:
+        await session.execute(
+            delete(SiteHealthSnapshot).where(
+                SiteHealthSnapshot.crawl_id == seed.crawl_id
+            )
+        )
+        await session.execute(
+            update(SiteCrawl)
+            .where(SiteCrawl.id == seed.crawl_id)
+            .values(score_summary=None)
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        repaired = await cancel_crawl(
+            session, workspace_id=seed.workspace_id, crawl_id=seed.crawl_id
+        )
+
+    assert repaired["score_summary"] is not None
+    async with session_factory() as session:
+        rewritten = (
+            await session.execute(
+                select(SiteHealthSnapshot).where(
+                    SiteHealthSnapshot.crawl_id == seed.crawl_id
+                )
+            )
+        ).scalar_one()
+        assert rewritten.analyzed_url_count == 1
 
 
 @pytest.mark.asyncio

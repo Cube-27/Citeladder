@@ -6,9 +6,13 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 
 import { DemandProjection } from './demand-projection';
 
+// Mutable so a test can switch projects mid-render; `vi.hoisted` keeps it
+// legal inside the hoisted mock factory.
+const project = vi.hoisted(() => ({ id: '11111111-1111-4111-8111-111111111111' }));
+
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({
-    activeProject: { id: '11111111-1111-4111-8111-111111111111' },
+    activeProject: { id: project.id },
     isLoading: false,
   }),
 }));
@@ -94,14 +98,18 @@ import { demandApi } from '@/lib/api/demand';
 
 describe('DemandProjection', () => {
   beforeEach(() => {
+    project.id = '11111111-1111-4111-8111-111111111111';
     vi.mocked(demandApi.getLatest).mockResolvedValue(snapshot);
   });
 
   // Mirrors the route: `app/(app)/demand/page.tsx` owns the TooltipProvider,
   // as every other tooltip-using page in the app does.
+  let client: QueryClient;
+
   function renderProjection() {
+    client = new QueryClient();
     return render(
-      <QueryClientProvider client={new QueryClient()}>
+      <QueryClientProvider client={client}>
         <TooltipProvider>
           <DemandProjection />
         </TooltipProvider>
@@ -267,6 +275,34 @@ describe('DemandProjection', () => {
     // must NOT silently refetch the identical snapshot as if it had rebuilt.
     expect(await screen.findByText(/Recompute queued/i)).toBeInTheDocument();
     expect(vi.mocked(demandApi.getLatest).mock.calls.length).toBe(fetchesBeforeRecompute);
+  });
+
+  it('shows no snapshot from the project that was just switched away from', async () => {
+    // With `keepPreviousData` the previous project's snapshot renders as a
+    // success (placeholder data is not `isLoading`), so the view would show one
+    // project's demand signals while recomputing against another project's id.
+    const { rerender } = renderProjection();
+    expect(await screen.findByText('ai marketing tools')).toBeInTheDocument();
+
+    vi.mocked(demandApi.getLatest).mockImplementation(
+      () =>
+        new Promise(() => {
+          // The second project's read stays in flight.
+        }),
+    );
+    project.id = '99999999-9999-4999-8999-999999999999';
+    rerender(
+      <QueryClientProvider client={client}>
+        <TooltipProvider>
+          <DemandProjection />
+        </TooltipProvider>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Loading search demand');
+    });
+    expect(screen.queryByText('ai marketing tools')).not.toBeInTheDocument();
   });
 
   it('surfaces a recompute failure instead of returning silently to idle', async () => {

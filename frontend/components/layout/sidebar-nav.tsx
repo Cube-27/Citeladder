@@ -29,8 +29,12 @@ function NavLink({
   return (
     <Link
       href={item.href}
-      onMouseEnter={() => onIntent(item.href)}
-      onFocus={() => onIntent(item.href)}
+      onMouseEnter={() => {
+        if (!active) onIntent(item.href);
+      }}
+      onFocus={() => {
+        if (!active) onIntent(item.href);
+      }}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] border px-2.5 text-sm transition-colors duration-150',
@@ -57,27 +61,34 @@ function StationLinks({
     return (
       <nav aria-label={`${group.title} destinations`} className="overflow-x-auto md:hidden">
         <ul className="flex min-w-max gap-1 px-[var(--content-gutter)] py-2">
-          {items.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                onMouseEnter={() => onIntent(item.href)}
-                onFocus={() => onIntent(item.href)}
-                aria-current={isNavItemActive(pathname, searchParams, item) ? 'page' : undefined}
-                className={cn(
-                  textRole(
-                    'bodyStrong',
-                    'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3',
-                  ),
-                  isNavItemActive(pathname, searchParams, item)
-                    ? textRole('emphasis', 'border-border-subtle bg-panel')
-                    : 'border-transparent text-muted hover:bg-panel/70 hover:text-foreground',
-                )}
-              >
-                {item.label}
-              </Link>
-            </li>
-          ))}
+          {items.map((item) => {
+            const active = isNavItemActive(pathname, searchParams, item);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onMouseEnter={() => {
+                    if (!active) onIntent(item.href);
+                  }}
+                  onFocus={() => {
+                    if (!active) onIntent(item.href);
+                  }}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    textRole(
+                      'bodyStrong',
+                      'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3',
+                    ),
+                    active
+                      ? textRole('emphasis', 'border-border-subtle bg-panel')
+                      : 'border-transparent text-muted hover:bg-panel/70 hover:text-foreground',
+                  )}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
     );
@@ -144,8 +155,12 @@ export function MobilePrimaryNavigation() {
           <Link
             key={item.href}
             href={item.href}
-            onMouseEnter={() => onIntent(item.href)}
-            onFocus={() => onIntent(item.href)}
+            onMouseEnter={() => {
+              if (!active) onIntent(item.href);
+            }}
+            onFocus={() => {
+              if (!active) onIntent(item.href);
+            }}
             aria-current={active ? 'page' : undefined}
             className={cn(
               textRole('label', 'flex min-w-0 flex-col items-center justify-center gap-1'),

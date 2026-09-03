@@ -4,9 +4,10 @@ Extracted from ``SiteHealthWorker`` because this is the subsystem's most
 load-bearing invariant and it was buried at the bottom of a 3,100-line class.
 
 A crawl goes terminal HERE and nowhere else. ``reconcile_after_task`` filters
-only intermediate, successful analysis work through a read-only durable-state
-check; every other task finalize, the lease sweeper's terminal reclaims, and
-the stalled-crawl backstop reach ``reconcile``. It must therefore remain
+a task's finalize through a read-only durable-state check, so a still-queued
+row and an intermediate analysis success skip the lock; every other task
+finalize, the lease sweeper's terminal reclaims, the stalled-crawl backstop and
+the overdue-crawl watchdog reach ``reconcile``. It must therefore remain
 idempotent and safe to call concurrently. It achieves that by holding the
 crawl row ``FOR UPDATE`` and short-circuiting on an already-terminal crawl.
 
@@ -24,14 +25,16 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from enum import Enum
 from typing import Final
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import aliased
 
 from app.core.config.site_health_acquisition import (
     CORPUS_EXCLUSION_ERROR_CODES,
+    ERROR_CRAWL_OVERDUE,
 )
 from app.core.config.site_health_contracts import (
     ANALYSIS_STATUS_CANCELLED,
@@ -128,6 +131,14 @@ def _start_planned_analysis(crawl: SiteCrawl, *, analyze_total: int) -> None:
     """Enter the analysis lifecycle once its first task has been admitted."""
     if analyze_total > 0 and crawl.analysis_status == ANALYSIS_STATUS_PENDING:
         apply_analysis_status(crawl, ANALYSIS_STATUS_RUNNING)
+
+
+class _FinalizeAction(Enum):
+    """How much lifecycle work one task's finalize needs to do."""
+
+    NONE = "none"
+    REFRESH_SCORES = "refresh_scores"
+    RECONCILE = "reconcile"
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,6 +246,13 @@ def _terminalize_analysis_state(
     return True
 
 
+def _is_overdue(crawl: SiteCrawl, *, cutoff: datetime) -> bool:
+    """The overdue scan's predicate, re-asked against a locked crawl row."""
+    if not crawl_is_active(crawl) or crawl.status == CRAWL_STATUS_PAUSED:
+        return False
+    return (crawl.started_at or crawl.created_at) < cutoff
+
+
 def _advance_drained_crawl_to_running(crawl: SiteCrawl) -> None:
     """Walk a drained active crawl through the legal pre-terminal states."""
     if not crawl_is_active(crawl) or crawl.status == CRAWL_STATUS_RUNNING:
@@ -253,24 +271,25 @@ class CrawlLifecycle(CrawlFinalizeMixin):
         self,
         task: SiteCrawlTask,
     ) -> None:
-        """Reconcile a task finalize unless it is safely intermediate analysis.
+        """Reconcile a task finalize, unless the row cannot have moved anything.
 
-        Successful analysis pages dominate crawl volume. While sibling discover
-        or analyze work remains, their persisted evidence cannot change any
-        lifecycle boundary, so taking the crawl lock and recomputing all
-        aggregates is pure overhead. The single query below is deliberately
+        Successful analysis pages dominate crawl volume, and a task that ends
+        its execution still non-terminal (deferred, re-queued, lease lost)
+        dominates a struggling crawl. Neither can change a lifecycle boundary
+        while sibling work remains, so taking the crawl lock and recomputing
+        all aggregates is pure overhead. The single query below is deliberately
         strict: unknown rows and workspace mismatches touch nothing, and every
-        known state outside the narrow standard-crawl case falls through to the
-        authoritative locked reconciliation.
+        known state outside those two cases falls through to the authoritative
+        locked reconciliation.
         """
-        can_skip = await self._can_skip_intermediate_analyze_reconcile(
+        outcome = await self._finalize_reconcile_outcome(
             crawl_id=task.crawl_id,
             task_id=task.id,
             workspace_id=task.workspace_id,
         )
-        if can_skip is None:
+        if outcome is _FinalizeAction.NONE:
             return
-        if can_skip:
+        if outcome is _FinalizeAction.REFRESH_SCORES:
             await refresh_live_score_summary_for_crawl(
                 self._session_factory,
                 crawl_id=task.crawl_id,
@@ -279,18 +298,27 @@ class CrawlLifecycle(CrawlFinalizeMixin):
             return
         await self.reconcile(task.crawl_id)
 
-    async def _can_skip_intermediate_analyze_reconcile(
+    async def _finalize_reconcile_outcome(
         self,
         *,
         crawl_id: uuid.UUID,
         task_id: uuid.UUID,
         workspace_id: uuid.UUID,
-    ) -> bool | None:
-        """Return true only for a durable, non-boundary analyze success.
+    ) -> _FinalizeAction:
+        """Decide how much work this task's finalize actually needs.
 
-        ``None`` means the task/crawl pair was not found in the supplied
-        workspace. It is not safe to reconcile an unscoped crawl id in that
-        case, so the caller intentionally performs no mutation.
+        ``NONE`` covers two cases. The task/crawl pair was not found in the
+        supplied workspace — it is not safe to reconcile an unscoped crawl id,
+        so the caller performs no mutation. Or the row is still NON-TERMINAL:
+        it was deferred behind a prerequisite, re-queued after a lock conflict,
+        or released without a finalize. Such a row moved no lifecycle boundary
+        (it is itself the outstanding work that keeps the crawl from draining)
+        and holds no new evidence, so both the locked reconcile and the live
+        score refresh are pure cost. That matters beyond throughput: each one
+        takes the crawl row ``FOR UPDATE`` and the profile row with it, and a
+        task re-queuing on a short delay used to take them several times a
+        second — enough contention that ``cancel_crawl`` lost the same row
+        lock on every retry and the user's Stop button returned a 500.
         """
         remaining_task = aliased(SiteCrawlTask)
         has_outstanding_work = (
@@ -325,16 +353,18 @@ class CrawlLifecycle(CrawlFinalizeMixin):
                     )
                 )
             ).one_or_none()
-        if row is None:
-            return None
-        return bool(
+        if row is None or row.task_status not in TASK_TERMINAL_STATUSES:
+            return _FinalizeAction.NONE
+        if (
             row.task_kind == TASK_KIND_ANALYZE
             and row.task_status == TASK_STATUS_SUCCEEDED
             and row.artifact_id is not None
             and row.crawl_status == CRAWL_STATUS_RUNNING
             and row.analysis_status == ANALYSIS_STATUS_RUNNING
             and row.has_outstanding_work
-        )
+        ):
+            return _FinalizeAction.REFRESH_SCORES
+        return _FinalizeAction.RECONCILE
 
     async def reconcile(self, crawl_id: uuid.UUID) -> None:
         """Reconcile the crawl's overall status from discovery AND analysis.
@@ -538,6 +568,99 @@ class CrawlLifecycle(CrawlFinalizeMixin):
             )
             await self.reconcile(crawl_id)
         return len(stalled)
+
+    async def reconcile_overdue(self) -> int:
+        """Terminalize crawls that have outrun their wall-clock budget.
+
+        ``reconcile_stalled`` above asks "is this crawl drained?" and so can
+        only rescue a crawl whose queue is already empty. Any route that holds
+        ONE task non-terminal indefinitely is therefore invisible to it, and
+        that is precisely the state a user reports as a crawl running forever
+        at 20 of 22 pages: the crawl never drains, never terminalizes, and
+        never stops polling.
+
+        This asks the other question — has this crawl simply been running too
+        long? The scan below is unlocked and therefore only a candidate list;
+        each candidate is re-checked under its own row lock before anything is
+        failed. The outstanding tasks are then failed with ``crawl_overdue`` (a
+        real failure to analyze those pages, so the crawl settles on
+        ``partially_completed`` rather than claiming a clean finish) and the
+        normal locked reconcile terminalizes the crawl on the evidence it did
+        gather. Sized well above any healthy crawl, so it can never truncate
+        live work. Returns how many crawls it actually terminalized.
+        """
+        threshold = site_health_settings.overdue_crawl_seconds
+        if threshold <= 0:  # disabled
+            return 0
+        cutoff = _utcnow() - timedelta(seconds=threshold)
+        async with self._session_factory() as session:
+            overdue = list(
+                (
+                    await session.scalars(
+                        select(SiteCrawl.id)
+                        .where(SiteCrawl.status.in_(list(CRAWL_ACTIVE_STATUSES)))
+                        .where(SiteCrawl.status != CRAWL_STATUS_PAUSED)
+                        .where(
+                            func.coalesce(SiteCrawl.started_at, SiteCrawl.created_at)
+                            < cutoff
+                        )
+                        .order_by(SiteCrawl.created_at.asc())
+                        .limit(site_health_settings.stalled_crawl_reconcile_batch)
+                    )
+                ).all()
+            )
+        terminalized = 0
+        for crawl_id in overdue:
+            abandoned = await self._abandon_outstanding_tasks(crawl_id, cutoff=cutoff)
+            if abandoned is None:
+                continue
+            terminalized += 1
+            logger.warning(
+                "terminalizing overdue crawl",
+                extra={"crawl_id": str(crawl_id), "abandoned_tasks": abandoned},
+            )
+            await self.reconcile(crawl_id)
+        return terminalized
+
+    async def _abandon_outstanding_tasks(
+        self, crawl_id: uuid.UUID, *, cutoff: datetime
+    ) -> int | None:
+        """Fail every non-terminal task of one crawl so its queue drains.
+
+        The scan above reads no lock, so a selected crawl can be paused,
+        cancelled or restarted before this runs. Re-asking the same three
+        questions under the crawl row's ``FOR UPDATE`` — active, not paused,
+        still past its budget — is what keeps the watchdog from destroying the
+        pending queue of a crawl that is no longer overdue; a paused crawl in
+        particular is meant to resume with that queue intact. ``None`` reports
+        exactly that case: nothing was touched, and the caller must not
+        reconcile.
+        """
+        async with self._session_factory() as session:
+            crawl = await session.get(SiteCrawl, crawl_id, with_for_update=True)
+            if crawl is None or not _is_overdue(crawl, cutoff=cutoff):
+                if crawl is not None:
+                    await session.rollback()
+                return None
+            abandoned = await session.scalars(
+                update(SiteCrawlTask)
+                .where(
+                    SiteCrawlTask.crawl_id == crawl_id,
+                    SiteCrawlTask.status.not_in(list(TASK_TERMINAL_STATUSES)),
+                )
+                .values(
+                    status=TASK_STATUS_FAILED,
+                    lease_owner=None,
+                    lease_expires_at=None,
+                    completed_at=func.now(),
+                    error_code=ERROR_CRAWL_OVERDUE,
+                    error_detail="crawl exceeded its wall-clock budget",
+                )
+                .returning(SiteCrawlTask.id)
+            )
+            count = len(abandoned.all())
+            await session.commit()
+            return count
 
     async def _failed_url_count(
         self, session: AsyncSession, crawl_id: uuid.UUID

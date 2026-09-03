@@ -28,16 +28,15 @@ export function GsapRevealInitializer() {
       elements.forEach((el) => {
         const fromDir = el.dataset.citeladderRevealFrom || 'up';
         const xOffset = X_OFFSET_BY_DIRECTION[fromDir] ?? 0;
-        const yOffset = fromDir === 'up' ? 24 : 0;
-
+        // Use pure opacity fades for scroll reveals. Vertical translations on scroll trigger
+        // cause layout shifting and jarring upward jerks when scrolling stops on mobile and desktop.
         gsap.fromTo(
           el,
-          { opacity: 0, x: xOffset, y: yOffset },
+          { opacity: 0, x: xOffset },
           {
             opacity: 1,
             x: 0,
-            y: 0,
-            duration: 0.8,
+            duration: 0.6,
             ease: 'power2.out',
             scrollTrigger: {
               trigger: el,
@@ -56,12 +55,11 @@ export function GsapRevealInitializer() {
 
         gsap.fromTo(
           children,
-          { opacity: 0, y: 20 },
+          { opacity: 0 },
           {
             opacity: 1,
-            y: 0,
-            duration: 0.6,
-            stagger: 0.12,
+            duration: 0.5,
+            stagger: 0.08,
             ease: 'power2.out',
             scrollTrigger: {
               trigger: group,

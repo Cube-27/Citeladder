@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Globe, Plus, Users } from 'lucide-react';
 
 import { FlowGroup } from '@/components/auth/flow-shell';
 import { ChipRow, ToggleChip } from '@/components/onboarding/choice-controls';
@@ -124,6 +124,7 @@ export function ReviewStep({
   return (
     <div className="flow-groups">
       <FlowGroup
+        icon={<Globe className="size-4" aria-hidden />}
         title="Your websites"
         meta={domains.length > 0 ? `${selectedDomains} of ${domains.length}` : undefined}
         help="Auto-verified from your domain."
@@ -145,6 +146,7 @@ export function ReviewStep({
       </FlowGroup>
 
       <FlowGroup
+        icon={<Users className="size-4" aria-hidden />}
         title="Competitors"
         meta={`${selectedCompetitors} of ${maximumCompetitors ?? '…'}`}
         help="Tracked head-to-head in every answer."
