@@ -1,9 +1,8 @@
 import { ArrowRight } from 'lucide-react';
 
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
-import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
-import { ButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { Eyebrow } from '../primitives/label';
 import { Container } from '../primitives/section';
 import { HeroEntrance } from './hero-entrance';
@@ -25,14 +24,18 @@ export function Hero() {
           <Eyebrow>{hook.eyebrow}</Eyebrow>
           <h1 className="website-hero-display text-foreground mx-auto mt-5 max-w-none text-balance sm:max-w-[22ch]">
             {hook.title}{' '}
-            <em className="text-accent-text font-medium not-italic">{hook.titleAccent}</em>
+            {/* Colour is the only thing that separates the accent clause from
+                the rest of the headline. `font-medium` here dropped it to 500
+                against the display rung's 600, so the second half of one
+                sentence rendered visibly lighter than the first. */}
+            <em className="text-accent-text not-italic">{hook.titleAccent}</em>
           </h1>
           <p className="website-lead text-muted mx-auto mt-6 max-w-[58ch]">{hook.body}</p>
           <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row sm:items-center">
-            <ButtonLink href={DEMO_HREF} variant="primary" className="w-full sm:w-auto">
+            <DemoButtonLink variant="primary" className="w-full sm:w-auto">
               {hook.primaryCta}
               <ArrowRight aria-hidden />
-            </ButtonLink>
+            </DemoButtonLink>
             <ButtonLink
               href="#how-it-works"
               variant="ghost"

@@ -14,12 +14,13 @@ import {
   AI_POLICY,
   COOKIE_POLICY,
   FOOTER_LEGAL_LINKS,
-  PRIVACY_POLICY,
-  TERMS_OF_SERVICE,
+  PARENT_COMPANY,
   type LegalDocument,
 } from './legal';
-import { DEMO_CTA, DEMO_HREF, NAV_DROPS, NAV_LINKS, type NavDropItem } from './nav';
+import { LLMS_TXT } from './llms';
+import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF, NAV_DROPS, NAV_LINKS, type NavDropItem } from './nav';
 import { PLAN_PRESENTATION, capabilityLabel } from './pricing';
+import { CONTACT_EMAIL, SOCIAL_LINKS } from './social';
 import { SOLUTION_SEGMENTS } from './solutions';
 
 /**
@@ -32,12 +33,12 @@ import { SOLUTION_SEGMENTS } from './solutions';
  * repository already enforces at E2E level — a commercial page claiming the
  * product is open source or self-hostable.
  */
-const ALL_LEGAL: readonly LegalDocument[] = [
-  PRIVACY_POLICY,
-  TERMS_OF_SERVICE,
-  COOKIE_POLICY,
-  AI_POLICY,
-];
+/**
+ * The policies this product publishes. Privacy and Terms are the PARENT
+ * company's documents and live on cube27.com, so they are asserted as
+ * external footer links rather than as local documents.
+ */
+const ALL_LEGAL: readonly LegalDocument[] = [COOKIE_POLICY, AI_POLICY];
 
 /** Every internal href declared anywhere in the marketing content. */
 function internalHrefs(): string[] {
@@ -52,8 +53,7 @@ function internalHrefs(): string[] {
   return [
     ...fromDrops,
     ...NAV_LINKS.map((link) => link.href),
-    ...FOOTER_LEGAL_LINKS.map((link) => link.href),
-    DEMO_HREF,
+    ...FOOTER_LEGAL_LINKS.filter((link) => !link.external).map((link) => link.href),
   ];
 }
 
@@ -105,8 +105,12 @@ describe('marketing navigation', () => {
     }
   });
 
-  it('keeps exactly one demo destination for the funnel', () => {
-    expect(DEMO_HREF).toBe('/demo');
+  it('sends the demo funnel to the parent company contact form', () => {
+    // CiteLadder is a Cube27 product and does not own a demo form, so the
+    // funnel leaves the site. An absolute https destination is the contract —
+    // a relative href here would 404 now that `/demo` is gone.
+    expect(DEMO_HREF).toBe('https://www.cube27.com/contact/');
+    expect(DEMO_EXTERNAL).toBe(true);
     expect(DEMO_CTA.trim()).not.toBe('');
   });
 });
@@ -167,10 +171,25 @@ describe('blog content', () => {
     // The module's rule: while a byline field is absent the row is omitted, so
     // an empty string would render an empty byline instead of none.
     for (const post of POSTS) {
-      for (const field of ['date', 'readTime', 'author'] as const) {
+      for (const field of [
+        'date',
+        'dateModified',
+        'readTime',
+        'author',
+        'authorRole',
+        'authorUrl',
+      ] as const) {
         const value = post[field];
         if (value !== undefined) expect(value.trim(), `${post.slug}.${field}`).not.toBe('');
       }
+    }
+  });
+
+  it('publishes a named author and review date on every post', () => {
+    for (const post of POSTS) {
+      expect(post.author, post.slug).toBe('Abhineet Jain');
+      expect(post.authorRole, post.slug).toBe('Product Head');
+      expect(post.date, post.slug).toBe('2026-09-03');
     }
   });
 });
@@ -184,6 +203,17 @@ describe('comparison content', () => {
   it('states the fairness position and the fact rows', () => {
     expect(FAIRNESS_POINTS.length).toBeGreaterThan(0);
     expect(FACT_ROWS.length).toBeGreaterThan(0);
+  });
+
+  it('gives every competitor a unique lead and meta description', () => {
+    const leads = COMPETITORS.map((competitor) => competitor.lead);
+    const metas = COMPETITORS.map((competitor) => competitor.metaDescription);
+    expect(new Set(leads).size).toBe(leads.length);
+    expect(new Set(metas).size).toBe(metas.length);
+    for (const competitor of COMPETITORS) {
+      expect(competitor.lead.length, competitor.slug).toBeGreaterThan(80);
+      expect(competitor.metaDescription.length, competitor.slug).toBeLessThan(170);
+    }
   });
 });
 
@@ -216,10 +246,30 @@ describe('legal content', () => {
 
   it('links every published policy from the footer', () => {
     // A policy with no route out of the footer is effectively unpublished.
-    const linked = new Set(FOOTER_LEGAL_LINKS.map((link) => link.href.replace(/^\//, '')));
+    const linked = new Set(
+      FOOTER_LEGAL_LINKS.filter((link) => !link.external).map((link) =>
+        link.href.replace(/^\//, ''),
+      ),
+    );
     for (const document of ALL_LEGAL) {
       expect(linked.has(document.slug), document.slug).toBe(true);
     }
+  });
+
+  it('sends the corporate policies to the parent company, not to a local copy', () => {
+    // Privacy and Terms bind Cube27, and a second copy of a policy is one that
+    // goes stale silently — so these must stay absolute and external.
+    const external = FOOTER_LEGAL_LINKS.filter((link) => link.external);
+    expect(external.map((link) => link.label).sort()).toEqual([
+      'Privacy Policy',
+      'Terms of Service',
+    ]);
+    for (const link of external) {
+      expect(link.href, link.label).toMatch(/^https:\/\/www\.cube27\.com\//);
+    }
+    expect(PARENT_COMPANY.name).toBe('Cube27');
+    expect(PARENT_COMPANY.legalName).toBe('Cube27 IT Pvt. Ltd.');
+    expect(PARENT_COMPANY.address).toMatch(/Pune/);
   });
 
   it('gives every section an id, a title, and some content', () => {
@@ -271,4 +321,22 @@ describe('commercial positioning', () => {
       expect(everyString.toLowerCase()).not.toContain(phrase.toLowerCase());
     },
   );
+});
+
+describe('entity and llms.txt', () => {
+  it('exposes a public contact email and LinkedIn profiles', () => {
+    expect(CONTACT_EMAIL).toBe('abhineet.jain@cube27.com');
+    expect(SOCIAL_LINKS.length).toBeGreaterThan(0);
+    for (const social of SOCIAL_LINKS) {
+      expect(social.href).toMatch(/^https:\/\/www\.linkedin\.com\//);
+    }
+  });
+
+  it('publishes a machine-readable product brief', () => {
+    expect(LLMS_TXT).toContain('# CiteLadder');
+    expect(LLMS_TXT).toContain('Abhineet Jain');
+    expect(LLMS_TXT).toContain('Arpan Jain');
+    expect(LLMS_TXT).toContain('https://citeladder.com/faq');
+    expect(LLMS_TXT.toLowerCase()).toContain('not an open-source');
+  });
 });

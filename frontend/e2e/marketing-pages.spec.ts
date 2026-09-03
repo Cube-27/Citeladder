@@ -3,7 +3,6 @@ import { expect, test } from '@playwright/test';
 const MARKETING_PAGES = [
   '/pricing',
   '/enterprise',
-  '/demo',
   '/solutions',
   '/blog',
   '/blog/how-we-measure-ai-visibility-deterministically',
@@ -13,7 +12,7 @@ const MARKETING_PAGES = [
   '/docs/mcp',
 ];
 
-// Every visitor-reachable route: the ten marketing pages, one blog post and
+// Every visitor-reachable route: the nine marketing pages, one blog post and
 // one comparison detail, plus the two Proof-surface auth routes.
 const PUBLIC_ROUTES = [
   '/',

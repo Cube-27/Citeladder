@@ -141,10 +141,13 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
       expect(within(article).getAllByRole('listitem')).toHaveLength(listItems.length);
     }
 
-    // No byline row while the owner-supplied fields are absent (B5), and no
-    // unfinished placeholder or internal version ids may reach the page.
+    // The byline is now populated (B5 filled), so the header carries the
+    // author row rather than omitting it. No unfinished placeholder or
+    // internal version id may reach the page.
     const header = container.querySelector('header');
-    expect(header?.querySelector('.border-t')).toBeNull();
+    if (post.author) {
+      expect(header?.textContent).toContain(post.author);
+    }
     expect(container.textContent).not.toMatch(/TODO\(user\)/);
     expect(container.textContent).not.toMatch(
       /scoring-v1|b6-analysis-1|sh-rules-2|opp-formula-1|traffic-formula-1|product-scoring-v2/i,
@@ -158,7 +161,7 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
     );
   });
 
-  it('emits BlogPosting JSON-LD, omitting byline fields until the owner supplies them', () => {
+  it('emits BlogPosting JSON-LD carrying the supplied byline', () => {
     const post = POSTS[0];
     const { container } = render(<BlogPostView post={post} />);
 
@@ -170,8 +173,10 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
     expect(data['@type']).toBe('BlogPosting');
     expect(data.headline).toBe(post.title);
     expect(data.description).toBe(post.excerpt);
-    // B5 unfilled: datePublished/author are omitted, not guessed.
-    expect(data).not.toHaveProperty('datePublished');
-    expect(data).not.toHaveProperty('author');
+    // The byline fields are owner-supplied and now filled, so they must be
+    // EMITTED and must match the post — a hardcoded or guessed date here
+    // would be worse than the omission this used to assert.
+    expect(data.datePublished).toBe(post.date);
+    expect(data.author).toMatchObject({ name: post.author });
   });
 });

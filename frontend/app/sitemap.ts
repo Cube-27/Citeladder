@@ -23,7 +23,6 @@ const STATIC_ROUTES: readonly RouteEntry[] = [
   { path: '/pricing', changeFrequency: 'monthly', priority: 0.9 },
   { path: '/enterprise', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/solutions', changeFrequency: 'monthly', priority: 0.8 },
-  { path: '/demo', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/faq', changeFrequency: 'monthly', priority: 0.6 },
   { path: '/blog', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/compare', changeFrequency: 'monthly', priority: 0.6 },

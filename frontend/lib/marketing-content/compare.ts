@@ -1,13 +1,14 @@
 /**
  * Competitor-comparison content for /compare and /compare/[competitor].
  *
- * Sourcing rule (internal — never rendered): every `citeladder` cell is
- * grounded in this repo's own source code; every `competitor` cell must be
- * confirmed first-party on the vendor's own site before it ships. A row ships
- * only when BOTH cells are written — unsupported dimensions are omitted.
+ * Sourcing rule (internal): every `citeladder` cell is grounded in this repo's
+ * own source code; every `competitor` cell must be confirmed first-party on
+ * the vendor's own site before it ships. A row ships only when BOTH cells are
+ * written. Unsupported dimensions are omitted.
  *
  * Copy rule: one short claim per cell. Detail lives in the product, not here.
  */
+import { CONTENT_REVIEWED } from './people';
 
 type ComparisonRow = {
   dimension: string;
@@ -20,6 +21,10 @@ export type Competitor = {
   name: string;
   /** One-line positioning, drawn from the vendor's own site copy. */
   tagline: string;
+  /** Unique opening for the detail page. Not a template. */
+  lead: string;
+  /** Unique SERP description. */
+  metaDescription: string;
   /** ISO date of the last first-party review, e.g. '2026-08-01'. */
   lastReviewed: string;
   rows: readonly ComparisonRow[];
@@ -32,7 +37,7 @@ export type Competitor = {
 const OURS = {
   engines: {
     dimension: 'Engines',
-    citeladder: 'ChatGPT, Gemini, Claude — same prompts, one audit, your keys.',
+    citeladder: 'ChatGPT, Gemini, Claude. Same prompts, one audit, your keys.',
   },
   scoring: {
     dimension: 'Scoring',
@@ -44,7 +49,7 @@ const OURS = {
   },
   byok: {
     dimension: 'BYOK',
-    citeladder: 'Your keys only — Fernet-encrypted, never returned or logged.',
+    citeladder: 'Your keys only. Fernet-encrypted, never returned or logged.',
   },
   siteHealth: {
     dimension: 'Site health',
@@ -62,9 +67,9 @@ const OURS = {
 
 /** Fairness strip on /compare — repo-grounded, one line each. */
 export const FAIRNESS_POINTS = [
-  'Deterministic scoring — versioned rules, not an LLM judge',
-  'BYOK — measurement runs on your provider keys',
-  'Evidence-first — every metric links to persisted run evidence',
+  'Deterministic scoring: versioned rules, not an LLM judge',
+  'BYOK: measurement runs on your provider keys',
+  'Evidence first: every metric links to persisted run evidence',
 ] as const;
 
 /** CiteLadder glance facts on /compare. */
@@ -77,7 +82,7 @@ export const FACT_ROWS = [
   { key: 'Provenance', value: 'Analyzer + rule on every score' },
 ] as const;
 
-const REVIEWED_2026_08 = '2026-08-01';
+const REVIEWED = CONTENT_REVIEWED;
 
 /**
  * Published comparisons. Sourced from each vendor's public site as of
@@ -88,7 +93,10 @@ export const COMPETITORS: readonly Competitor[] = [
     slug: 'profound',
     name: 'Profound',
     tagline: 'Full-stack marketing platform for AI search.',
-    lastReviewed: REVIEWED_2026_08,
+    lead: 'Profound is built as a wide, hosted AI search suite. We are narrower: three engines, your keys, and a score you can open to the raw answer. Choose them for packaging. Choose us when procurement asks how the number was made.',
+    metaDescription:
+      'Profound offers a hosted multi-engine suite. CiteLadder measures ChatGPT, Gemini, and Claude on your keys with deterministic scores and raw-answer evidence.',
+    lastReviewed: REVIEWED,
     rows: [
       {
         ...OURS.engines,
@@ -97,7 +105,7 @@ export const COMPETITORS: readonly Competitor[] = [
       {
         ...OURS.scoring,
         competitor:
-          'Hosted daily analysis for citations, sentiment and rank — methodology unpublished.',
+          'Hosted daily analysis for citations, sentiment and rank. Methodology unpublished.',
       },
       {
         ...OURS.evidence,
@@ -105,12 +113,12 @@ export const COMPETITORS: readonly Competitor[] = [
       },
       {
         ...OURS.byok,
-        competitor: 'Hosted — platform keys; no BYOK on public plans.',
+        competitor: 'Hosted platform keys. No BYOK on public plans.',
       },
       {
         ...OURS.siteHealth,
         competitor:
-          'Agent Analytics via CDN/server integrations — not a built-in site-health audit.',
+          'Agent Analytics via CDN and server integrations. Not a built-in site-health audit.',
       },
       {
         ...OURS.provenance,
@@ -122,7 +130,7 @@ export const COMPETITORS: readonly Competitor[] = [
       },
     ],
     verdict:
-      'Enterprise breadth and packaging vs our narrower roster, flat published pricing, and deterministic scores with raw evidence under every number.',
+      'Profound wins on enterprise packaging, agent workflows, and engine breadth at the top tier. We win when you need published self-serve pricing, BYOK, and a score that opens to the persisted answer.',
     betterFit:
       'Large marketing orgs that want a hosted all-in-one platform with agents, demand data, SOC 2 and SSO.',
   },
@@ -130,7 +138,10 @@ export const COMPETITORS: readonly Competitor[] = [
     slug: 'otterly-ai',
     name: 'Otterly AI',
     tagline: 'AI search monitoring, kept simple.',
-    lastReviewed: REVIEWED_2026_08,
+    lead: 'Otterly is monitoring with a low entry price and add-on engines. We run ChatGPT, Gemini, and Claude on one audit without per-engine add-ons, then keep the raw response under the metric.',
+    metaDescription:
+      'Otterly AI is simple hosted monitoring with engine add-ons. CiteLadder runs a three-engine BYOK audit with versioned scoring and evidence under every metric.',
+    lastReviewed: REVIEWED,
     rows: [
       {
         ...OURS.engines,
@@ -139,7 +150,7 @@ export const COMPETITORS: readonly Competitor[] = [
       {
         ...OURS.scoring,
         competitor:
-          'Daily hosted tracking for coverage, position, sentiment and SoV — methodology unpublished.',
+          'Daily hosted tracking for coverage, position, sentiment and SoV. Methodology unpublished.',
       },
       {
         ...OURS.evidence,
@@ -147,7 +158,7 @@ export const COMPETITORS: readonly Competitor[] = [
       },
       {
         ...OURS.byok,
-        competitor: 'Hosted — no BYOK; no extra provider subscriptions required.',
+        competitor: 'Hosted. No BYOK. No extra provider subscriptions required.',
       },
       {
         ...OURS.siteHealth,
@@ -163,15 +174,18 @@ export const COMPETITORS: readonly Competitor[] = [
       },
     ],
     verdict:
-      'Low entry price and unlimited seats vs our three-engine audit with no per-engine add-ons, versioned scoring and raw evidence under each metric.',
+      'Otterly is the easy start: lower entry price, unlimited seats, engines as add-ons. We are the inspectable audit: three engines included, versioned rules, site health in the same workspace.',
     betterFit:
       'Solo marketers or small teams watching a few prompts on major engines at the lowest entry price.',
   },
   {
     slug: 'scrunch-ai',
     name: 'Scrunch AI',
-    tagline: 'AI customer experience — get your site AI-ready.',
-    lastReviewed: REVIEWED_2026_08,
+    tagline: 'AI customer experience. Get your site ready for agents.',
+    lead: 'Scrunch treats the problem as infrastructure: serve agents a different view of the site. We treat it as measurement: crawl what people and engines can already see, then score ChatGPT, Gemini, and Claude with a trail.',
+    metaDescription:
+      'Scrunch AI optimizes what agents fetch at the edge. CiteLadder measures ChatGPT, Gemini, and Claude with deterministic AEO health on the pages you already publish.',
+    lastReviewed: REVIEWED,
     rows: [
       {
         ...OURS.engines,
@@ -179,7 +193,7 @@ export const COMPETITORS: readonly Competitor[] = [
       },
       {
         ...OURS.scoring,
-        competitor: 'Monitoring with citations inside a broader suite — methodology unpublished.',
+        competitor: 'Monitoring with citations inside a broader suite. Methodology unpublished.',
       },
       {
         ...OURS.evidence,
@@ -195,24 +209,27 @@ export const COMPETITORS: readonly Competitor[] = [
       },
     ],
     verdict:
-      'Same diagnosis, different treatment: Scrunch serves agents at the edge; we measure ChatGPT, Gemini and Claude with deterministic scores and built-in AEO health.',
+      'Same diagnosis, different treatment. Scrunch serves agents at the edge. We measure ChatGPT, Gemini and Claude with deterministic scores and built-in AEO health on the published site.',
     betterFit:
-      'Teams that want the site to serve optimized content to AI agents at the edge — infrastructure, not just measurement.',
+      'Teams that want the site to serve optimized content to AI agents at the edge: infrastructure, not only measurement.',
   },
   {
     slug: 'peec-ai',
     name: 'Peec AI',
     tagline: 'AI search analytics for marketing teams.',
-    lastReviewed: REVIEWED_2026_08,
+    lead: 'Peec is a clean analytics dashboard across six platforms. We trade that breadth for proof: three engines, your keys, site health, and a metric that still opens to the answer.',
+    metaDescription:
+      'Peec AI covers six AI platforms with hosted analytics. CiteLadder covers ChatGPT, Gemini, and Claude with BYOK, site health, and raw-answer provenance.',
+    lastReviewed: REVIEWED,
     rows: [
       {
         ...OURS.engines,
         competitor:
-          'Six platforms on every plan — ChatGPT, AI Mode, Overviews, Copilot, Perplexity, Gemini.',
+          'Six platforms on every plan: ChatGPT, AI Mode, Overviews, Copilot, Perplexity, Gemini.',
       },
       {
         ...OURS.scoring,
-        competitor: 'Daily visibility, position and sentiment analytics — methodology unpublished.',
+        competitor: 'Daily visibility, position and sentiment analytics. Methodology unpublished.',
       },
       {
         ...OURS.evidence,
@@ -220,7 +237,7 @@ export const COMPETITORS: readonly Competitor[] = [
       },
       {
         ...OURS.byok,
-        competitor: 'Hosted analytics — no BYOK on public plans.',
+        competitor: 'Hosted analytics. No BYOK on public plans.',
       },
       {
         ...OURS.provenance,
@@ -228,7 +245,7 @@ export const COMPETITORS: readonly Competitor[] = [
       },
     ],
     verdict:
-      'Clean breadth across six platforms vs our depth of proof: versioned deterministic scores, built-in site health, and every metric tied to the raw answer.',
+      'Peec is the tidy six-platform dashboard with exports your agency already knows. We are the narrower stack with versioned scores, built-in site health, and every metric tied to the raw answer.',
     betterFit:
       'SEO and content teams that want a simple analytics dashboard across major AI platforms with agency-friendly reporting.',
   },

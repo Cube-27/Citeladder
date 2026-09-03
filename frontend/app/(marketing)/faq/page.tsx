@@ -7,23 +7,22 @@ import { faqPageJsonLd } from '@/lib/seo/json-ld';
 import { FAQ_GROUPS } from '@/lib/marketing-content/faq';
 
 const DESCRIPTION =
-  'The short version of how CiteLadder works — the four intelligence layers, the growth ' +
-  'loop, product systems, data isolation, and billing.';
+  'What AEO is, how AI visibility is measured, which engines CiteLadder audits, and how BYOK, data isolation, and billing work.';
 
 // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
-  title: 'FAQ',
+  title: 'AEO and AI visibility FAQ',
   description: DESCRIPTION,
   alternates: { canonical: '/faq' },
   openGraph: {
-    title: 'FAQ',
+    title: 'AEO and AI visibility FAQ',
     description: DESCRIPTION,
     type: 'website',
     siteName: 'CiteLadder',
   },
   twitter: {
     card: 'summary',
-    title: 'FAQ',
+    title: 'AEO and AI visibility FAQ',
     description: DESCRIPTION,
   },
 };
@@ -43,7 +42,7 @@ export default function FaqPage() {
         eyebrow="FAQ"
         title="Frequently asked"
         accent="questions."
-        lead="The short version of how CiteLadder works — the product systems, the growth loop, data isolation, and billing."
+        lead="Short answers on AEO, AI visibility, evidence, security, and billing. Written by the product team at Cube27."
       />
       <FaqGroups />
     </main>

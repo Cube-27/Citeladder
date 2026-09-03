@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bot, ChevronDown, Pause, Play, Search } from 'lucide-react';
 import { m, useReducedMotion } from 'motion/react';
 
@@ -65,6 +65,7 @@ export function ProductWindow() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [phase, setPhase] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const activeLayer = LAYERS[activeIndex];
   const visiblePhase = reduceMotion ? LAST_PHASE : phase;
   const playbackLabel = reduceMotion ? 'Motion reduced' : playing ? 'Pause' : 'Play';
@@ -89,15 +90,40 @@ export function ProductWindow() {
     setPhase(0);
   };
 
+  /**
+   * Keep the selected tab on screen in the scrolling row.
+   *
+   * Autoplay advances the tab on its own, so on a phone the active tab — and
+   * the progress bar that shows how far the phase has run — would otherwise
+   * march off the right edge with nothing to tell the reader where it went.
+   * `nearest` scrolls only when the tab is actually out of view, so a tab the
+   * reader tapped does not jump under their finger.
+   *
+   * `inline` only: `block: 'nearest'` keeps this from scrolling the PAGE to
+   * the preview while the reader is somewhere else on it. Above `md` the strip
+   * is a grid with nothing to scroll, and the call is a no-op.
+   */
+  useEffect(() => {
+    tabRefs.current[activeIndex]?.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      inline: 'nearest',
+      block: 'nearest',
+    });
+  }, [activeIndex, reduceMotion]);
+
   return (
     <div
       data-testid="product-window"
       className="app-type-scale border-border bg-panel mx-auto w-full max-w-[1240px] overflow-hidden rounded-[var(--radius-card)] border [overflow-anchor:none]"
     >
+      {/* Four tabs in a 2x2 block made the preview's header taller than its
+          own toolbar on a phone and broke the single-row "these are the four
+          layers" reading. Below the tablet breakpoint they stay on ONE row
+          that scrolls sideways; from `md` up they divide the full width. */}
       <div
         role="tablist"
         aria-label="CiteLadder intelligence layers"
-        className="border-border-subtle bg-panel grid grid-cols-2 border-b md:grid-cols-4"
+        className="border-border-subtle bg-panel flex snap-x snap-mandatory scrollbar-none overflow-x-auto border-b md:grid md:grid-cols-4 md:overflow-visible"
       >
         {LAYERS.map((layer, index) => {
           const Icon = layer.icon;
@@ -105,6 +131,9 @@ export function ProductWindow() {
           return (
             <button
               key={layer.id}
+              ref={(node) => {
+                tabRefs.current[index] = node;
+              }}
               id={`product-preview-tab-${layer.id}`}
               type="button"
               role="tab"
@@ -113,7 +142,7 @@ export function ProductWindow() {
               aria-controls="product-preview-panel"
               onClick={() => selectLayer(index)}
               className={cn(
-                'focus-ring relative flex min-h-14 items-center justify-center gap-2 px-3 text-sm font-medium transition-colors md:min-h-16',
+                'focus-ring relative flex min-h-14 shrink-0 snap-start items-center justify-center gap-2 px-4 text-sm font-medium whitespace-nowrap transition-colors md:min-h-16 md:shrink md:px-3',
                 index > 0 && 'border-border-subtle border-l',
                 selected
                   ? 'text-foreground bg-background-alt/60'
@@ -224,7 +253,7 @@ function PreviewSidebar({ activeItem }: Readonly<{ activeItem: PreviewItemLabel 
         </div>
       </div>
       <nav
-        className="sidebar-scroll min-h-0 flex-1 overflow-y-auto p-2"
+        className="min-h-0 flex-1 scrollbar-none overflow-y-auto p-2"
         aria-label="Product preview navigation"
       >
         <div className="grid gap-2.5">
@@ -274,7 +303,7 @@ function MobileSubnav({
 }: Readonly<{ groupTitle: NavGroupTitle; activeItem: PreviewItemLabel }>) {
   const items = previewItems(groupTitle);
   return (
-    <div className="border-border-subtle bg-panel flex gap-1 overflow-x-auto border-b px-3 py-2 lg:hidden">
+    <div className="border-border-subtle bg-panel flex scrollbar-none gap-1 overflow-x-auto border-b px-3 py-2 lg:hidden">
       {items.map((item) => (
         <span
           key={item.label}

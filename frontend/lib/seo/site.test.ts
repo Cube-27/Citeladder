@@ -57,6 +57,6 @@ describe('absoluteUrl', () => {
 describe('site constants', () => {
   it('pins the product name and tagline', () => {
     expect(SITE_NAME).toBe('CiteLadder');
-    expect(SITE_TAGLINE).toBe('Evidence-grounded answer-engine growth');
+    expect(SITE_TAGLINE).toBe('AI visibility with evidence you can open');
   });
 });

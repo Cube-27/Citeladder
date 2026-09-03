@@ -12,7 +12,7 @@ import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { SOLUTION_SEGMENTS, SOLUTIONS_HERO } from '@/lib/marketing-content/solutions';
 import { cn } from '@/lib/utils';
 
-import { ButtonLink, TextLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink, TextLink } from '../primitives/button';
 import { Meta } from '../primitives/label';
 import { PageHero } from '../primitives/page-hero';
 import { Section } from '../primitives/section';
@@ -139,10 +139,10 @@ export function SolutionsCta() {
           how you are measured.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
+          <DemoButtonLink className="w-full sm:w-auto">
             {DEMO_CTA}
             <ArrowRight aria-hidden />
-          </ButtonLink>
+          </DemoButtonLink>
           <ButtonLink href="/pricing" variant="ghost" className="w-full sm:w-auto">
             See pricing
           </ButtonLink>

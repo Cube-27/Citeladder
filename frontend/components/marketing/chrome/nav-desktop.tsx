@@ -24,6 +24,9 @@ type DesktopNavigationProps = {
   clearDropClose: () => void;
   scheduleDropClose: () => void;
   closeDrop: () => void;
+  /** Chosen a row: close and stay closed until the pointer leaves the nav. */
+  selectDrop: () => void;
+  releaseSuppression: () => void;
   openDropAt: (key: NavDropKey, trigger: HTMLElement) => void;
   moveLens: (element: HTMLElement) => void;
   clearLens: () => void;
@@ -41,6 +44,8 @@ export function DesktopNavigation({
   clearDropClose,
   scheduleDropClose,
   closeDrop,
+  selectDrop,
+  releaseSuppression,
   openDropAt,
   moveLens,
   clearLens,
@@ -52,6 +57,8 @@ export function DesktopNavigation({
       className="relative mx-auto hidden items-center lg:flex"
       onMouseEnter={clearDropClose}
       onMouseLeave={() => {
+        // Leaving the nav is what re-arms hover after a selection.
+        releaseSuppression();
         scheduleDropClose();
         clearLens();
       }}
@@ -122,7 +129,7 @@ export function DesktopNavigation({
             layout={layout}
             panelLeft={panelLeft}
             clearDropClose={clearDropClose}
-            closeDrop={closeDrop}
+            selectDrop={selectDrop}
           />
         )}
       </AnimatePresence>
@@ -135,13 +142,13 @@ function DesktopDropPanel({
   layout,
   panelLeft,
   clearDropClose,
-  closeDrop,
+  selectDrop,
 }: Readonly<{
   dropKey: NavDropKey;
   layout: DropLayout;
   panelLeft: number;
   clearDropClose: () => void;
-  closeDrop: () => void;
+  selectDrop: () => void;
 }>) {
   const groups = NAV_DROPS.find((drop) => drop.key === dropKey)?.groups ?? [];
 
@@ -161,7 +168,7 @@ function DesktopDropPanel({
     >
       <div className={cn('grid', layout[dropKey].twoColumn && 'sm:grid-cols-2')}>
         {groups.map((group) => (
-          <DesktopDropGroup key={group.label ?? 'items'} group={group} closeDrop={closeDrop} />
+          <DesktopDropGroup key={group.label ?? 'items'} group={group} selectDrop={selectDrop} />
         ))}
       </div>
     </div>
@@ -170,16 +177,16 @@ function DesktopDropPanel({
 
 function DesktopDropGroup({
   group,
-  closeDrop,
+  selectDrop,
 }: Readonly<{
   group: (typeof NAV_DROPS)[number]['groups'][number];
-  closeDrop: () => void;
+  selectDrop: () => void;
 }>) {
   if (!group.label)
     return (
       <div className="p-2">
         {group.items.map((item) => (
-          <NavItemLink key={item.title} item={item} onSelect={closeDrop} />
+          <NavItemLink key={item.title} item={item} onSelect={selectDrop} />
         ))}
       </div>
     );
@@ -188,7 +195,7 @@ function DesktopDropGroup({
     <div className="border-border-subtle bg-background-alt border-t p-2 sm:border-t-0 sm:border-l">
       <p className="website-eyebrow text-muted px-3 pt-2.5 pb-2">{group.label}</p>
       {group.items.map((item) => (
-        <NavItemLink key={item.title} item={item} onSelect={closeDrop} />
+        <NavItemLink key={item.title} item={item} onSelect={selectDrop} />
       ))}
     </div>
   );

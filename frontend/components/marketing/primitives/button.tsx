@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { Button as SharedButton } from '@/components/ui/button';
+import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 type Variant = 'primary' | 'dark' | 'nav' | 'ghost';
@@ -38,6 +39,31 @@ export function ButtonLink({
         {children}
       </Link>
     </SharedButton>
+  );
+}
+
+/**
+ * The demo CTA, in one place.
+ *
+ * The funnel leaves this site for the parent company's contact form, so every
+ * one of the dozen call sites would otherwise have to remember `target` and a
+ * safe `rel`. They call this instead, and if the destination ever comes back
+ * in-house only `DEMO_EXTERNAL` changes.
+ */
+export function DemoButtonLink({
+  variant = 'primary',
+  className,
+  children,
+}: VisualProps & { children?: ReactNode }) {
+  return (
+    <ButtonLink
+      href={DEMO_HREF}
+      variant={variant}
+      className={className}
+      {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
+    >
+      {children ?? DEMO_CTA}
+    </ButtonLink>
   );
 }
 

@@ -10,11 +10,11 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { authApi } from '@/lib/api/auth';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
-import { DEMO_CTA, DEMO_HREF, type NavDropKey } from '@/lib/marketing-content/nav';
+import { DEMO_CTA, type NavDropKey } from '@/lib/marketing-content/nav';
 import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
 import { cn } from '@/lib/utils';
 
-import { ButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
 
@@ -91,12 +91,29 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
   const closeTimer = useRef<number | null>(null);
   const linksRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
+  /**
+   * Set when a row is chosen. The panel opens on hover, and picking a row
+   * leaves the pointer sitting exactly where the trigger is — so `closeDrop`
+   * alone closed the panel for one frame and the very next `mouseenter`
+   * reopened it. The trigger stays suppressed until the pointer actually
+   * leaves the navigation.
+   */
+  const suppressed = useRef(false);
 
   const clearDropClose = () => {
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
     closeTimer.current = null;
   };
   const closeDrop = () => setOpenDrop(null);
+  const selectDrop = () => {
+    suppressed.current = true;
+    clearDropClose();
+    setOpenDrop(null);
+    setLens(null);
+  };
+  const releaseSuppression = () => {
+    suppressed.current = false;
+  };
   const scheduleDropClose = () => {
     clearDropClose();
     closeTimer.current = window.setTimeout(closeDrop, 220);
@@ -111,7 +128,7 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
   const openDropAt = (key: NavDropKey, trigger: HTMLElement) => {
     const container = linksRef.current;
     const nav = navRef.current;
-    if (!container || !nav) return;
+    if (!container || !nav || suppressed.current) return;
     clearDropClose();
     setOpenDrop(key);
     moveLens(trigger);
@@ -152,6 +169,8 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
     navRef,
     clearDropClose,
     closeDrop,
+    selectDrop,
+    releaseSuppression,
     scheduleDropClose,
     openDropAt,
     moveLens,
@@ -166,6 +185,7 @@ export function MarketingNav() {
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<NavDropKey | null>(null);
+  const chromeRef = useRef<HTMLDivElement>(null);
   const {
     navRef,
     linksRef,
@@ -174,6 +194,8 @@ export function MarketingNav() {
     panelLeft,
     clearDropClose,
     closeDrop,
+    selectDrop,
+    releaseSuppression,
     scheduleDropClose,
     openDropAt,
     moveLens,
@@ -185,17 +207,35 @@ export function MarketingNav() {
     setOpenAcc(null);
   };
 
+  /**
+   * Escape, and a tap anywhere outside the sheet, both close the menu.
+   *
+   * The outside-click listener is `pointerdown` on the document: `click` fires
+   * after the sheet may already have re-rendered, and touch devices never send
+   * a `blur` that would otherwise serve. The whole chrome element is the
+   * boundary, not just the sheet — a tap on the toggle must reach the toggle's
+   * own handler rather than being closed here and reopened by it.
+   */
   useEffect(() => {
     if (!mobileOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeMenu();
     };
+    const onPointerDown = (event: PointerEvent) => {
+      const chrome = chromeRef.current;
+      if (chrome && !chrome.contains(event.target as Node | null)) closeMenu();
+    };
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
   }, [mobileOpen]);
 
   return (
     <div
+      ref={chromeRef}
       data-marketing-nav
       data-scrolled={scrolled ? 'true' : undefined}
       className={cn(
@@ -225,6 +265,8 @@ export function MarketingNav() {
           clearDropClose={clearDropClose}
           scheduleDropClose={scheduleDropClose}
           closeDrop={closeDrop}
+          selectDrop={selectDrop}
+          releaseSuppression={releaseSuppression}
           openDropAt={openDropAt}
           moveLens={moveLens}
           clearLens={clearLens}
@@ -276,9 +318,7 @@ function NavActions({
           >
             Log in
           </Link>
-          <ButtonLink href={DEMO_HREF} variant="primary">
-            {DEMO_CTA}
-          </ButtonLink>
+          <DemoButtonLink variant="primary">{DEMO_CTA}</DemoButtonLink>
         </>
       )}
       <button

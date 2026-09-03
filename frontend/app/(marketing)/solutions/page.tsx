@@ -7,12 +7,9 @@ import {
 } from '@/components/marketing/pages/solutions';
 
 const DESCRIPTION =
-  'How agencies, in-house marketers, founders, ecommerce and PR teams use CiteLadder: ' +
-  'multi-project client workspaces with CSV/MD evidence exports, period-over-period trends, ' +
-  'free sample crawls on BYOK rates, product share of voice and price accuracy, and ' +
-  'citation-ownership evidence for every narrative.';
+  'How agencies, in-house marketers, founders, ecommerce, and PR teams use AI visibility evidence they can re-check, not screenshots.';
 
-const TITLE = 'Solutions — for agencies, in-house teams, founders, ecommerce & PR';
+const TITLE = 'AI visibility for agencies, in-house teams, and ecommerce';
 
 // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {

@@ -2,9 +2,9 @@ import { ArrowRight, Check } from 'lucide-react';
 import Link from 'next/link';
 
 import { COMPETITORS, FACT_ROWS, FAIRNESS_POINTS } from '@/lib/marketing-content/compare';
-import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { DEMO_CTA } from '@/lib/marketing-content/nav';
 
-import { ButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { Meta } from '../primitives/label';
 import { PageHero } from '../primitives/page-hero';
 import { Section } from '../primitives/section';
@@ -23,7 +23,7 @@ export function CompareIndex() {
         eyebrow="Comparisons"
         title="How CiteLadder"
         accent="compares."
-        lead="Side-by-side notes on engines, scoring, evidence and keys. Reviewed 2026-08-01."
+        lead="Side-by-side notes on engines, scoring, evidence and keys. Last reviewed 3 Sep 2026 from each vendor’s public site."
       />
 
       <Section tone="paper" rhythm="tight" aria-label="Competitors">
@@ -120,13 +120,13 @@ export function CompareIndex() {
             Don’t compare pages. Compare evidence.
           </h2>
           <p className="website-body-lg text-muted mx-auto max-w-[56ch]">
-            Same prompts across ChatGPT, Gemini and Claude — raw responses included.
+            Same prompts across ChatGPT, Gemini and Claude. Raw responses included.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
+            <DemoButtonLink className="w-full sm:w-auto">
               {DEMO_CTA}
               <ArrowRight aria-hidden />
-            </ButtonLink>
+            </DemoButtonLink>
             <ButtonLink href="/faq" variant="ghost" className="w-full sm:w-auto">
               Read the FAQ
             </ButtonLink>

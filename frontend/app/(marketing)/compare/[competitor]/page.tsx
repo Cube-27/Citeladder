@@ -27,10 +27,7 @@ export async function generateMetadata({
   // Absolute title: the 'CiteLadder vs X' phrasing stands on its own — the root
   // template would only duplicate the brand.
   const title = `CiteLadder vs ${competitor.name}`;
-  const description =
-    `How CiteLadder compares to ${competitor.name}: engines covered, scoring model, evidence ` +
-    'drill-down, BYOK privacy, and site-health auditing. The CiteLadder column is ' +
-    `sourced from our source code. Last reviewed ${competitor.lastReviewed}.`;
+  const description = competitor.metaDescription;
   return {
     title: { absolute: title },
     description,

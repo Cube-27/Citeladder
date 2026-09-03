@@ -72,7 +72,24 @@ describe('Landing claims', () => {
       /\b(boosts?|lifts?|increases?|improves?|drives?|grows?|doubles?)\s+(your\s+)?(rankings?|traffic|visibility|conversions?|revenue|sales)/i,
     );
     // Explicit cause language tying an action to an outcome.
-    expect(text).not.toMatch(/\b(causes?d?|results? in|leads? to|translates? into)\b/i);
+    //
+    // Denials are the point of this page, not a violation of it. "We do not
+    // claim a page change caused a ranking" is exactly the disclaimer this
+    // guard exists to protect, and matching the bare verb flagged it as the
+    // very claim it refuses to make. Strip the negated forms first, then test
+    // what remains, so a real causal assertion still fails.
+    const CAUSAL = String.raw`causes?d?|results? in|leads? to|translates? into`;
+    // A denial is a negation anywhere in the same SENTENCE as the causal verb,
+    // not within a fixed word distance of it — "We do not claim a page change
+    // caused a ranking" puts four words between the two. Splitting on sentence
+    // boundaries keeps the scope tight without counting words.
+    const asserted = text
+      .split(/(?<=[.!?])\s+/)
+      .filter(
+        (sentence) => !/\b(?:do(?:es)?\s+not|don't|doesn't|never|no|without)\b/i.test(sentence),
+      )
+      .join(' ');
+    expect(asserted).not.toMatch(new RegExp(String.raw`\b(?:${CAUSAL})\b`, 'i'));
     // Quantified outcome deltas — no attributable figure exists.
     expect(text).not.toMatch(/\b\d+(\.\d+)?%\s*(more|higher|increase|lift|uplift|growth|gain)/i);
     expect(text).not.toMatch(/\b(\d+x|\d+×)\s*(more|better|faster|higher)/i);

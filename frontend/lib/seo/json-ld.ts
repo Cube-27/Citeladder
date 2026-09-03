@@ -1,5 +1,7 @@
 import type { BlogPost } from '@/lib/marketing-content/blog';
 import type { FaqGroup } from '@/lib/marketing-content/faq';
+import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
+import { FOUNDER, PRODUCT_HEAD } from '@/lib/marketing-content/people';
 import { absoluteUrl, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
 
 export type JsonLdObject = Record<string, unknown>;
@@ -13,6 +15,21 @@ export function organizationJsonLd(): JsonLdObject | null {
     name: SITE_NAME,
     description: SITE_TAGLINE,
     url,
+    email: PARENT_COMPANY.email,
+    parentOrganization: {
+      '@type': 'Organization',
+      name: PARENT_COMPANY.legalName,
+      url: PARENT_COMPANY.href,
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Plot No. 12, Mulberry Gardens 1, Magarpatta City',
+        addressLocality: 'Hadapsar, Pune',
+        addressRegion: 'Maharashtra',
+        postalCode: '411013',
+        addressCountry: 'IN',
+      },
+    },
+    sameAs: [PRODUCT_HEAD.linkedin, FOUNDER.linkedin, PARENT_COMPANY.linkedin],
   };
 }
 
@@ -55,8 +72,19 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
     ...(organizationUrl
       ? { publisher: { '@type': 'Organization', name: SITE_NAME, url: organizationUrl } }
       : {}),
-    ...(post.date ? { datePublished: post.date } : {}),
-    ...(post.author ? { author: { '@type': 'Person', name: post.author } } : {}),
+    ...(post.date
+      ? { datePublished: post.date, dateModified: post.dateModified ?? post.date }
+      : {}),
+    ...(post.author
+      ? {
+          author: {
+            '@type': 'Person',
+            name: post.author,
+            ...(post.authorRole ? { jobTitle: post.authorRole } : {}),
+            ...(post.authorUrl ? { url: post.authorUrl } : {}),
+          },
+        }
+      : {}),
   };
 }
 

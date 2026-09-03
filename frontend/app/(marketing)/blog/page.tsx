@@ -3,8 +3,7 @@ import type { Metadata } from 'next';
 import { BlogIndex } from '@/components/marketing/pages/blog';
 
 const DESCRIPTION =
-  'Practical resources on answer-engine optimization, AI visibility measurement, provenance, ' +
-  'and the evidence-led work between a finding and the next audit.';
+  'Field notes on answer-engine optimization, AI visibility measurement, provenance, and BYOK. Written by Abhineet Jain, Product Head at Cube27.';
 
 // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {

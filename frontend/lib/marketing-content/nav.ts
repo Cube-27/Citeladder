@@ -113,9 +113,14 @@ export const NAV_LINKS = [
 ] as const;
 
 /**
- * The demo-first funnel. Every primary CTA on the surface points here — the
- * enterprise page owns the contact affordance (and its mailto fallback), so
- * there is exactly one place to change when a real demo form exists.
+ * The demo funnel. CiteLadder is a Cube27 product and the parent company owns
+ * the contact form, so every primary CTA leaves the site for it — there is no
+ * local `/demo` route to keep in sync with a form this product does not own.
+ *
+ * External, so every call site must open it in a new tab with a safe `rel`;
+ * `DEMO_EXTERNAL` is the single flag that says so rather than four call sites
+ * each remembering.
  */
-export const DEMO_HREF = '/demo';
+export const DEMO_HREF = 'https://www.cube27.com/contact/';
+export const DEMO_EXTERNAL = true;
 export const DEMO_CTA = 'Book a demo';

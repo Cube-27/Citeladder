@@ -483,6 +483,7 @@
     {
       "sources": [
         "frontend/app/(marketing)/**",
+        "frontend/app/llms.txt/**",
         "frontend/components/marketing/**",
         "frontend/lib/marketing-content/**",
         "frontend/lib/seo/**"

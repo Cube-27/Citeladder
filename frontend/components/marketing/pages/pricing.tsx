@@ -1,8 +1,8 @@
 import { ArrowRight } from 'lucide-react';
 
-import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { DEMO_CTA } from '@/lib/marketing-content/nav';
 
-import { ButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { Section } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
 
@@ -29,10 +29,10 @@ export function PricingCta() {
           actually need.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <ButtonLink href={DEMO_HREF} className="w-full sm:w-auto">
+          <DemoButtonLink className="w-full sm:w-auto">
             {DEMO_CTA}
             <ArrowRight aria-hidden />
-          </ButtonLink>
+          </DemoButtonLink>
           <ButtonLink href="/faq" variant="ghost" className="w-full sm:w-auto">
             Read the FAQ
           </ButtonLink>

@@ -1,3 +1,4 @@
+import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -89,12 +90,25 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
               </section>
             ))}
 
+            {/* Corporate policies live on the parent company's site, so this
+                row mixes external and internal destinations. */}
             <nav
               aria-label="Other legal documents"
               className="border-border-subtle mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t pt-6"
             >
               {FOOTER_LEGAL_LINKS.map((link) =>
-                link.href === `/${document.slug}` ? null : (
+                link.href === `/${document.slug}` ? null : link.external ? (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent-text hover:text-accent-hover inline-flex items-center gap-1.5 text-sm font-medium"
+                  >
+                    {link.label}
+                    <ArrowUpRight className="size-3.5" aria-hidden />
+                  </a>
+                ) : (
                   <Link
                     key={link.href}
                     href={link.href}
