@@ -4,7 +4,7 @@
 
 <strong>Connect evidence, improve what answer engines can understand, and track observed citation share.</strong>
 
-[Architecture](docs/architecture.md) · [Backend](docs/backend-architecture.md) · [Frontend](docs/frontend-architecture.md) · [Invariants](docs/invariants.md) · [MCP setup](https://citeladder.cube27.com/docs/mcp) · [Plans](docs/plans/) · [Development](docs/DEVELOPMENT.md)
+[Architecture](docs/architecture.md) · [Backend](docs/backend-architecture.md) · [Frontend](docs/frontend-architecture.md) · [Invariants](docs/invariants.md) · [MCP setup](https://citeladder.com/docs/mcp) · [Plans](docs/plans/) · [Development](docs/DEVELOPMENT.md)
 
 <p align="center">
   CiteLadder is an evidence-grounded growth intelligence platform for making a brand more likely to be recommended and cited by answer engines—without pretending leading indicators prove causality.

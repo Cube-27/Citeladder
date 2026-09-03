@@ -47,7 +47,7 @@ variable "zone" {
 
 variable "domain_name" {
   type    = string
-  default = "citeladder.cube27.com"
+  default = "citeladder.com"
   validation {
     condition = length(var.domain_name) <= 253 && alltrue([
       for label in split(".", var.domain_name) :

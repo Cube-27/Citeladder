@@ -13,7 +13,7 @@ account, change billing IAM, and administer `Cube-27/Citeladder`.
 
 Choose once: a globally unique disposable project ID, the billing-account ID,
 a globally unique GCS state-bucket name, the domain
-(`citeladder.cube27.com`), and an immutable UTC expiry such as
+(`citeladder.com`), and an immutable UTC expiry such as
 `2026-09-08T12:00:00Z`. Redeployment must never extend that expiry.
 
 ```powershell
@@ -111,14 +111,14 @@ Set Cloudflare's A record to the static IP in the workflow summary. If DNS was
 not ready for the final smoke test, correct DNS and rerun the same workflow.
 
 ```powershell
-curl.exe --fail --show-error https://citeladder.cube27.com/health
+curl.exe --fail --show-error https://citeladder.com/health
 $registrationPayload = @{
   email = 'dev@citeladder.com'
   password = [guid]::NewGuid().ToString('N')
 } | ConvertTo-Json -Compress
 curl.exe -o NUL -s -w "%{http_code}`n" -X POST `
   -H "content-type: application/json" -d $registrationPayload `
-  https://citeladder.cube27.com/api/v1/auth/register
+  https://citeladder.com/api/v1/auth/register
 ```
 
 Health must succeed and registration must return `403`. Log in, confirm exactly
