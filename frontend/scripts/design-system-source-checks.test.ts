@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   rawRadiusViolations,
@@ -9,7 +12,72 @@ import {
   productControlViolations,
   standalonePlaceholderViolations,
   textRoleBackgroundViolations,
+  websiteContractViolations,
 } from './design-system-source-checks.mjs';
+
+const NEWLINE = String.fromCharCode(10);
+const tempRoots: string[] = [];
+afterEach(() => {
+  for (const directory of tempRoots.splice(0))
+    fs.rmSync(directory, { recursive: true, force: true });
+});
+
+const ROLES = [
+  ['[data-flow-surface]', ''],
+  ['.flow-actions.safe-bottom', ''],
+  ['.website-hero-display', 'font-size: 2.75rem;'],
+  ['.website-page-title', 'font-size: 2.5rem;'],
+  ['.website-section-heading', ''],
+  ['.website-feature-heading', ''],
+  ['.website-small-heading', ''],
+  ['.flow-title', 'font-size: 1.75rem;'],
+  ['.flow-group-title', 'font-size: 1.0625rem;'],
+  ['.flow-help', 'font-size: 0.9375rem;'],
+  ['.flow-meta', 'font-size: 0.875rem;'],
+  ['.website-lead', 'font-size: 1.25rem;'],
+  ['.website-body', 'font-size: 1rem;'],
+  ['.website-nav', ''],
+  ['.website-label', ''],
+  ['.website-eyebrow', ''],
+  ['.website-data-display', ''],
+] as const;
+
+/** A website stylesheet that satisfies every role contract, for edits per test. */
+function websiteRoot(mutate: (css: string) => string = (css) => css) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'citeladder-website-contract-'));
+  tempRoots.push(directory);
+  const css = ROLES.map(
+    ([selector, extra]) => `${selector} {
+  color: var(--color-foreground);
+  ${extra}
+}`,
+  ).join('\n');
+  fs.mkdirSync(path.join(directory, 'app'), { recursive: true });
+  fs.writeFileSync(path.join(directory, 'app', 'website-type.css'), mutate(css));
+  for (const [label] of JSX_FIXTURES) {
+    const file = path.join(directory, ...label.split('/'));
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSX_FIXTURES.get(label) as string);
+  }
+  return directory;
+}
+
+const JSX_FIXTURES = new Map([
+  ['components/marketing/landing/hero.tsx', '<h1 className="website-hero-display">t</h1>;'],
+  ['components/marketing/primitives/page-hero.tsx', '<h1 className="website-page-title">t</h1>;'],
+  [
+    'components/marketing/primitives/section.tsx',
+    '<><h2 className="website-section-heading">a</h2><h3 className="website-feature-heading">b</h3></>;',
+  ],
+  [
+    'components/auth/auth-form.tsx',
+    '<><h1 className="flow-title">a</h1><p className="website-body">b</p></>;',
+  ],
+  [
+    'components/auth/flow-shell.tsx',
+    '<><h2 className="flow-group-title">a</h2><p className="flow-help">b</p><p className="flow-meta">c</p></>;',
+  ],
+]);
 
 describe('standalonePlaceholderViolations', () => {
   it('rejects quoted and JSX em-dash placeholders in product UI', () => {
@@ -225,5 +293,52 @@ describe('textRoleBackgroundViolations', () => {
       textRoleBackgroundViolations(`// never paint with ${banned('subtle')}`, 'lib/x.ts'),
     ).toEqual([]);
     expect(textRoleBackgroundViolations(banned('subtle'), 'app/globals.css')).toEqual([]);
+  });
+});
+
+describe('websiteContractViolations', () => {
+  const withRole = (css: string, selector: string, color: string) =>
+    css.replace(
+      [selector, ' {', NEWLINE, '  color: var(--color-foreground);'].join(''),
+      [selector, ' {', NEWLINE, '  color: ', color, ';'].join(''),
+    );
+
+  it('accepts a retuned type scale and a role moved to another token', () => {
+    // The design system is allowed to change: a bigger hero and a role that
+    // switches token are decisions, not regressions.
+    const root = websiteRoot((css) =>
+      withRole(
+        css
+          .replace('font-size: 2.75rem;', 'font-size: 3.5rem;')
+          .replace('font-size: 1.25rem;', 'font-size: 1.3rem;'),
+        '.website-label',
+        'var(--color-muted)',
+      ),
+    );
+    expect(websiteContractViolations(root)).toEqual([]);
+  });
+
+  it('rejects a role that resolves its color to a literal', () => {
+    // Split so this fixture is not itself a raw color in the source scan.
+    const literal = ['#33', '4155'].join('');
+    const root = websiteRoot((css) => withRole(css, '.website-lead', literal));
+    expect(websiteContractViolations(root)).toEqual([
+      expect.stringContaining('.website-lead must take its color from a token'),
+    ]);
+  });
+
+  it('rejects a role that disappears', () => {
+    const root = websiteRoot((css) => css.replace('.website-eyebrow {', '.website-eyebrow-x {'));
+    // A renamed role is both absent and uncolored, so it reports on both counts.
+    expect(websiteContractViolations(root)).toContainEqual(
+      expect.stringContaining('missing website selector .website-eyebrow'),
+    );
+  });
+
+  it('rejects an inverted type ladder', () => {
+    const root = websiteRoot((css) => css.replace('font-size: 2.75rem;', 'font-size: 1rem;'));
+    expect(websiteContractViolations(root)).toEqual([
+      expect.stringContaining('must not be larger than .website-hero-display'),
+    ]);
   });
 });
