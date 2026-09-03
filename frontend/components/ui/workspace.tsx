@@ -61,6 +61,15 @@ export function MetricGroup({
   );
 }
 
+/**
+ * One cell of a `MetricGroup`. The edge padding is paired with the same
+ * breakpoints the group reflows at, so the first and last cells stay flush with
+ * the card's own padding at every column count. Exported because a band whose
+ * cell is not a plain label/value pair still has to sit on this grid.
+ */
+export const metricItemClasses =
+  'min-w-0 px-0 py-3 sm:px-4 sm:odd:ps-0 sm:even:pe-0 sm:last:pe-0 lg:px-4 lg:odd:ps-4 lg:even:pe-4 lg:first:ps-0 lg:last:pe-0';
+
 export function MetricItem({
   label,
   value,
@@ -75,12 +84,7 @@ export function MetricItem({
   className?: string;
 }>) {
   return (
-    <div
-      className={cn(
-        'min-w-0 px-0 py-3 sm:px-4 sm:odd:ps-0 sm:even:pe-0 sm:last:pe-0 lg:px-4 lg:odd:ps-4 lg:even:pe-4 lg:first:ps-0 lg:last:pe-0',
-        className,
-      )}
-    >
+    <div className={cn(metricItemClasses, className)}>
       <dt className={cn(eyebrowClasses, 'flex min-w-0 items-center justify-between gap-2')}>
         <span className="truncate">{label}</span>
         {marker}

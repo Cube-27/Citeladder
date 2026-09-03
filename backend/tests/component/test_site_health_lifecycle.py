@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 import app.workers.site_health.lifecycle as lifecycle_module
 from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH
+from app.core.config.site_health_acquisition import ERROR_CRAWL_OVERDUE
 from app.core.config.site_health_contracts import (
     ANALYSIS_STATUS_PENDING,
     ANALYSIS_STATUS_RUNNING,
@@ -581,6 +582,166 @@ async def test_leased_heartbeats_across_the_whole_body(
     settled = len(beats)
     await asyncio.sleep(0.35)
     assert len(beats) == settled, "heartbeat outlived the leased body"
+
+
+@pytest.mark.asyncio
+async def test_finalize_of_a_still_queued_task_takes_no_crawl_lock(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A row that ends its execution non-terminal moved no boundary.
+
+    It IS the outstanding work keeping the crawl from draining, so reconciling
+    can only recompute aggregates — while holding the crawl row ``FOR UPDATE``
+    and the profile row with it. A task re-queuing on a short delay took those
+    locks several times a second, which is what left the user's Stop button
+    losing the same lock on every retry and returning a 500.
+    """
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=1)
+        task = await session.scalar(
+            select(SiteCrawlTask).where(SiteCrawlTask.crawl_id == seed.crawl_id)
+        )
+        assert task is not None
+        assert task.status == TASK_STATUS_QUEUED
+        session.expunge(task)
+
+    lifecycle = CrawlLifecycle(session_factory)
+    reconciled: list[uuid.UUID] = []
+
+    async def _record(crawl_id: uuid.UUID) -> None:
+        reconciled.append(crawl_id)
+
+    lifecycle.reconcile = _record  # type: ignore[method-assign]
+    await lifecycle.reconcile_after_task(task)
+
+    assert reconciled == []
+
+
+@pytest.mark.asyncio
+async def test_overdue_crawl_wedged_on_a_live_task_is_terminalized(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The stall a user actually reports: running forever, N of M pages.
+
+    ``reconcile_stalled`` cannot see this one — the queue is NOT drained, which
+    is precisely the problem. The wall-clock watchdog answers it anyway.
+    """
+    old = datetime.now(UTC) - timedelta(seconds=7200)
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=1)
+        await session.execute(
+            update(SiteCrawl)
+            .where(SiteCrawl.id == seed.crawl_id)
+            .values(status=CRAWL_STATUS_RUNNING, started_at=old, created_at=old)
+        )
+        await session.commit()  # task stays QUEUED: the crawl never drains
+
+    assert await _worker(session_factory).run_once() == 0
+
+    crawl = await _crawl(session_factory, seed.crawl_id)
+    assert crawl.status not in CRAWL_ACTIVE_STATUSES
+    assert crawl.completed_at is not None
+    async with session_factory() as session:
+        task = await session.scalar(
+            select(SiteCrawlTask).where(SiteCrawlTask.crawl_id == seed.crawl_id)
+        )
+        assert task is not None
+        assert task.status == TASK_STATUS_FAILED
+        assert task.error_code == ERROR_CRAWL_OVERDUE
+
+
+@pytest.mark.asyncio
+async def test_overdue_watchdog_leaves_a_young_crawl_alone(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A crawl inside its budget is working, however long its queue is."""
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=1)
+        await session.execute(
+            update(SiteCrawl)
+            .where(SiteCrawl.id == seed.crawl_id)
+            .values(status=CRAWL_STATUS_RUNNING, started_at=datetime.now(UTC))
+        )
+        await session.commit()
+
+    assert await CrawlLifecycle(session_factory).reconcile_overdue() == 0
+
+    crawl = await _crawl(session_factory, seed.crawl_id)
+    assert crawl.status == CRAWL_STATUS_RUNNING
+    async with session_factory() as session:
+        task_status = await session.scalar(
+            select(SiteCrawlTask.status).where(SiteCrawlTask.crawl_id == seed.crawl_id)
+        )
+        assert task_status == TASK_STATUS_QUEUED
+
+
+@pytest.mark.asyncio
+async def test_overdue_watchdog_spares_a_crawl_paused_after_the_scan(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The scan is unlocked, so the row is re-checked before anything is failed.
+
+    A pause landing between the two keeps the queue: a paused crawl is meant
+    to resume with its pending work intact.
+    """
+    old = datetime.now(UTC) - timedelta(seconds=7200)
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=1)
+        await session.execute(
+            update(SiteCrawl)
+            .where(SiteCrawl.id == seed.crawl_id)
+            .values(status=CRAWL_STATUS_RUNNING, started_at=old, created_at=old)
+        )
+        await session.commit()
+
+    lifecycle = CrawlLifecycle(session_factory)
+    abandon = lifecycle._abandon_outstanding_tasks
+
+    async def _pause_then_abandon(crawl_id: uuid.UUID, **kwargs: object) -> int | None:
+        async with session_factory() as session:
+            await session.execute(
+                update(SiteCrawl)
+                .where(SiteCrawl.id == crawl_id)
+                .values(status=CRAWL_STATUS_PAUSED)
+            )
+            await session.commit()
+        return await abandon(crawl_id, **kwargs)  # type: ignore[arg-type]
+
+    lifecycle._abandon_outstanding_tasks = _pause_then_abandon  # type: ignore[method-assign]
+    assert await lifecycle.reconcile_overdue() == 0
+
+    crawl = await _crawl(session_factory, seed.crawl_id)
+    assert crawl.status == CRAWL_STATUS_PAUSED
+    async with session_factory() as session:
+        task_status = await session.scalar(
+            select(SiteCrawlTask.status).where(SiteCrawlTask.crawl_id == seed.crawl_id)
+        )
+        assert task_status == TASK_STATUS_QUEUED
+
+
+@pytest.mark.asyncio
+async def test_overdue_watchdog_can_be_disabled(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A zero budget turns the watchdog off."""
+    old = datetime.now(UTC) - timedelta(seconds=7200)
+    async with session_factory() as session:
+        seed = await seed_site_crawl(session, task_count=1)
+        await session.execute(
+            update(SiteCrawl)
+            .where(SiteCrawl.id == seed.crawl_id)
+            .values(status=CRAWL_STATUS_RUNNING, started_at=old, created_at=old)
+        )
+        await session.commit()
+
+    monkeypatch.setattr(
+        site_health_settings, "overdue_crawl_seconds", 0.0, raising=False
+    )
+    assert await CrawlLifecycle(session_factory).reconcile_overdue() == 0
+
+    crawl = await _crawl(session_factory, seed.crawl_id)
+    assert crawl.status == CRAWL_STATUS_RUNNING
 
 
 @pytest.mark.asyncio

@@ -46,7 +46,7 @@ export function SiteHealthDashboardLayout({
   return (
     // `min-w-0` so a wide table inside a section scrolls in its own wrapper
     // instead of widening this column (and every ancestor) to its max-content.
-    <div className="grid min-w-0 gap-[var(--page-section-gap)]" data-testid="site-health-canonical">
+    <div className="grid min-w-0 gap-[var(--workspace-gap)]" data-testid="site-health-canonical">
       {!crawl ? (
         <Card data-testid="site-health-empty">
           <CardContent className="grid justify-items-start gap-3 py-[var(--empty-state-padding)]">
@@ -65,19 +65,22 @@ export function SiteHealthDashboardLayout({
         </Card>
       ) : (
         <>
-          {/* Where the crawl stands. */}
-          <StatusStrip
-            crawl={crawl}
-            phase={phase}
-            entitlement={entitlement}
-            cancelPending={cancelMutation.isPending}
-            startPending={startPending}
-            pages={pagesQuery.data?.items ?? []}
-            selectedTotal={projectSelectedTotal}
-            selectedError={projectSelectedError}
-          />
+          {/* Where the crawl stands and headline summary scores */}
+          <div className="grid gap-3">
+            <StatusStrip
+              crawl={crawl}
+              phase={phase}
+              entitlement={entitlement}
+              cancelPending={cancelMutation.isPending}
+              startPending={startPending}
+              pages={pagesQuery.data?.items ?? []}
+              selectedTotal={projectSelectedTotal}
+              selectedError={projectSelectedError}
+            />
 
-          <ScoreSection crawl={crawl} dashboard={dashboardQuery.data} />
+            <ScoreSection crawl={crawl} dashboard={dashboardQuery.data} />
+          </div>
+
           <InventorySection mode={inventoryMode} crawl={crawl} active={active} />
 
           <PageKindScores crawl={crawl} dashboard={dashboardQuery.data} />

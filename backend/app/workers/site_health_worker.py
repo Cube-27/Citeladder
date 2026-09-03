@@ -217,13 +217,14 @@ class SiteHealthWorker(DrainableWorkerMixin):
         return len(tasks)
 
     async def _maintenance(self) -> None:
-        """Lease sweep, stalled-crawl reconcile, and host-gate eviction."""
+        """Lease sweep, crawl-rescue reconciles, and host-gate eviction."""
         sweep = await self._queue.release_expired_detailed(
             batch_size=site_health_settings.lease_reclaim_batch_size
         )
         for crawl_id in sweep.failed_parent_ids:
             await self._reconcile_crawl_status(crawl_id)
         await self._reconcile_stalled_crawls()
+        await self._reconcile_overdue_crawls()
         self._host_gate.evict_idle()
 
     async def run_pipelined(self, *, drain: bool) -> int:
@@ -771,6 +772,9 @@ class SiteHealthWorker(DrainableWorkerMixin):
 
     async def _reconcile_stalled_crawls(self) -> int:
         return await self._lifecycle.reconcile_stalled()
+
+    async def _reconcile_overdue_crawls(self) -> int:
+        return await self._lifecycle.reconcile_overdue()
 
 
 def main() -> None:  # pragma: no cover - process entrypoint

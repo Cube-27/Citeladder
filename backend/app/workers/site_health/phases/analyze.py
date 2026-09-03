@@ -11,8 +11,10 @@ this remains in-process and does not own claiming or terminalization.
 
 from __future__ import annotations
 
+import logging
 import time
 import uuid
+from datetime import UTC
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,6 +59,7 @@ from app.workers.site_health.helpers import (
     _count_disclosure,
     _is_bot_block,
     _robots_denial_error,
+    _utcnow,
 )
 from app.workers.site_health.phases.analyze_rows import _write_page_analysis
 from app.workers.site_health.phases.contracts import (
@@ -66,6 +69,8 @@ from app.workers.site_health.phases.contracts import (
     PhaseContext,
 )
 from app.workers.site_health.urls import authority_key as _authority_key
+
+logger = logging.getLogger("app.workers.site_health.phases.analyze")
 
 
 def _has_analyzable_outcome(outcome: _AnalyzeOutcome) -> bool:
@@ -91,6 +96,54 @@ async def _mark_classification_expected(
         task.classification_expected = True
         await session.commit()
         return True
+
+
+def _dependency_wait_seconds(task: SiteCrawlTask) -> float:
+    """How long this task has been waiting to run, in seconds.
+
+    Measured from the row's creation rather than a defer counter so the bound
+    holds across worker restarts and lease reclaims without a new column.
+    """
+    created = task.created_at
+    if created is None:
+        return 0.0
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=UTC)
+    return max(0.0, (_utcnow() - created).total_seconds())
+
+
+def _keep_waiting_for_dependency(*, task_id: uuid.UUID, waited_seconds: float) -> bool:
+    """Whether to defer again, or give up waiting and acquire the page here.
+
+    ``defer`` costs no attempt budget and leaves the row non-terminal, so an
+    unbounded wait is a livelock: the crawl keeps an outstanding task forever
+    and can never terminalize. Reusing a sibling discover artifact is only an
+    optimization, so once the bound is spent this analyze fetches its own copy
+    and the crawl drains.
+    """
+    limit = site_health_settings.analysis_dependency_max_wait_seconds
+    if waited_seconds < limit:
+        return True
+    logger.warning(
+        "analyze prerequisite never resolved; acquiring the page directly",
+        extra={"task_id": str(task_id), "waited_seconds": round(waited_seconds, 1)},
+    )
+    return False
+
+
+def _should_defer_for_dependency(
+    *,
+    task_id: uuid.UUID,
+    discover_pending: bool,
+    setup_pending: bool,
+    dependency_waited: float,
+) -> bool:
+    """Whether this analyze still has a prerequisite worth waiting for."""
+    if not (discover_pending or setup_pending):
+        return False
+    return _keep_waiting_for_dependency(
+        task_id=task_id, waited_seconds=dependency_waited
+    )
 
 
 async def run(ctx: PhaseContext, claimed: SiteCrawlTask) -> None:
@@ -137,12 +190,20 @@ async def run(ctx: PhaseContext, claimed: SiteCrawlTask) -> None:
             session, crawl=crawl, task=task
         )
         setup_pending = await root_site_setup_pending(session, crawl=crawl, task=task)
+        dependency_waited = _dependency_wait_seconds(task)
 
-    if discover_pending or setup_pending:
+    if _should_defer_for_dependency(
+        task_id=task_id,
+        discover_pending=discover_pending,
+        setup_pending=setup_pending,
+        dependency_waited=dependency_waited,
+    ):
         await ctx.queue.defer(
             task_id=task_id,
             owner=ctx.owner,
-            delay_seconds=site_health_settings.analysis_dependency_retry_seconds,
+            delay_seconds=site_health_settings.analysis_dependency_retry_delay(
+                dependency_waited
+            ),
         )
         return
 

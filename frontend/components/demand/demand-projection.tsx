@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, LoaderCircle, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -312,6 +312,7 @@ export function DemandProjection() {
     queryKey: queryKeys.demand.latest(activeProject?.id),
     queryFn: ({ signal }) => demandApi.getLatest(activeProject!.id, { signal }),
     enabled: Boolean(activeProject),
+    placeholderData: keepPreviousData,
   });
 
   if (projectLoading || latest.isLoading) {

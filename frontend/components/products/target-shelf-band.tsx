@@ -1,9 +1,14 @@
 'use client';
 
 import { Alert } from '@/components/ui/alert';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
+import { textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { MetricGroup, metricItemClasses } from '@/components/ui/workspace';
+import { cn } from '@/lib/utils';
 
 import type { CommerceQueries } from './commerce-queries';
 
@@ -32,20 +37,29 @@ export function TargetShelfBand({ query }: Readonly<{ query: CommerceQueries['sh
     ['First-position rate', percentage(latest?.first_position_win_rate)],
   ];
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {metrics.map(([label, value]) => (
-        <Card key={label}>
-          <CardHeader>
-            <CardDescription>{label}</CardDescription>
-            {value === null ? (
-              <UnavailableValue state="not_measured" className="inline-flex" />
-            ) : (
-              <CardTitle className="tabular-nums">{value}</CardTitle>
-            )}
-          </CardHeader>
-        </Card>
-      ))}
-    </div>
+    <Card data-testid="target-shelf-band">
+      <CardContent>
+        <MetricGroup>
+          {metrics.map(([label, value]) => (
+            // The cell IS the stack: `dt`/`dd` have to stay direct children of
+            // the `<dl>`'s own child, so an extra wrapper here is invalid.
+            <Stack key={label} gap="tight" className={cn(metricItemClasses, 'content-center')}>
+              <dt className={eyebrowClasses}>{label}</dt>
+              <dd>
+                {value === null ? (
+                  <UnavailableValue state="not_measured" className="inline-flex" />
+                ) : (
+                  // Deliberately a heading: the KPI, not its label, is what a
+                  // reader scans this band for. `target-shelf-band.test.tsx`
+                  // pins the role, and the unmeasured branch must NOT have it.
+                  <CardTitle className={textRole('metric', 'leading-none')}>{value}</CardTitle>
+                )}
+              </dd>
+            </Stack>
+          ))}
+        </MetricGroup>
+      </CardContent>
+    </Card>
   );
 }
 

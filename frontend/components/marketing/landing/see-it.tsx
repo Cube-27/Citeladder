@@ -30,9 +30,7 @@ export function SeeIt() {
           {seeIt.title}
         </h2>
       </Reveal>
-      <Reveal>
-        <ProductWindow />
-      </Reveal>
+      <ProductWindow />
       <div className="mt-10 flex">
         <ButtonLink href={DEMO_HREF} variant="primary" className="w-full sm:w-auto">
           {seeIt.cta}

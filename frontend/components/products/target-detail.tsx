@@ -1,18 +1,13 @@
 'use client';
 
 import { Alert } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
-import { targetKey } from '@/lib/products/use-commerce-target';
 import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 
 import type { CommerceQueries } from './commerce-queries';
 import { TargetCompetitors } from './target-competitors';
-import { TargetCorrections } from './target-corrections';
 import { TargetPrompts } from './target-prompts';
 import { TargetShelfBand, hasShelfMeasurement } from './target-shelf-band';
-import { textRole } from '@/components/ui/typography';
 import { Stack } from '@/components/ui/layout';
 
 /**
@@ -38,20 +33,6 @@ export function TargetDetail({
 }>) {
   return (
     <Stack gap="workspace" className="content-start">
-      <Card className="flex flex-wrap items-start gap-2 p-[var(--card-padding-large)]">
-        <h2 className={textRole('sectionTitle')}>{label}</h2>
-        <Badge variant="status" value="info">
-          {target.kind}
-        </Badge>
-        <div className="ml-auto">
-          <TargetCorrections
-            key={targetKey(target)}
-            projectId={projectId}
-            target={target}
-            catalog={queries.catalog.data}
-          />
-        </div>
-      </Card>
       <TargetShelfBand query={queries.shelf} />
       {hasShelfMeasurement(queries.shelf) ? null : (
         <Alert tone="info">

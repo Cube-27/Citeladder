@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
 from sqlalchemy import and_, func, or_, select, update
@@ -348,17 +349,55 @@ async def _dashboard_crawl_details(
 
 
 # =========================================================================
-# Cancel (atomic)
+# Cancel (transition first, snapshot after)
 # =========================================================================
 async def cancel_crawl(
     session: AsyncSession, *, workspace_id: uuid.UUID, crawl_id: uuid.UUID
 ) -> dict:
-    """Cancel atomically, replaying the transaction after bounded lock races."""
+    """Stop the crawl, then roll its partial evidence up separately.
+
+    Stop is the user's escape hatch from a crawl that is misbehaving, so it has
+    to survive the conditions that make them press it. It is split in two for
+    that reason. The transition itself is one short locked transaction, replayed
+    after a bounded number of lock races. The cancellation-time snapshot then
+    runs in its OWN transaction, best effort: it takes the profile lock and
+    loads the whole measurement projection, and holding that inside the
+    transition meant a busy crawl could time the request out and answer the
+    Stop button with a 500 while leaving the crawl running.
+
+    Failing to write that snapshot costs a partially-analyzed run its rolled-up
+    scores until something recomputes them. Failing to stop costs the user the
+    only control they have.
+    """
+    transitioned = await _retry_on_lock_conflict(
+        lambda: _cancel_crawl_once(
+            session, workspace_id=workspace_id, crawl_id=crawl_id
+        ),
+        session=session,
+        crawl_id=crawl_id,
+        operation="cancel",
+    )
+    if transitioned:
+        await _snapshot_cancelled_crawl(
+            session, workspace_id=workspace_id, crawl_id=crawl_id
+        )
+    refreshed = await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
+    return project_crawl(
+        refreshed, failure_summary=await _failure_summary_for(session, refreshed)
+    )
+
+
+async def _retry_on_lock_conflict[T](
+    run: Callable[[], Awaitable[T]],
+    *,
+    session: AsyncSession,
+    crawl_id: uuid.UUID,
+    operation: str,
+) -> T:
+    """Replay a whole transaction after bounded PostgreSQL lock races."""
     for conflict_count in range(CRAWL_CANCEL_DB_CONFLICT_RETRIES + 1):
         try:
-            return await _cancel_crawl_once(
-                session, workspace_id=workspace_id, crawl_id=crawl_id
-            )
+            return await run()
         except Exception as exc:
             if (
                 conflict_count >= CRAWL_CANCEL_DB_CONFLICT_RETRIES
@@ -369,7 +408,11 @@ async def cancel_crawl(
             retry_number = conflict_count + 1
             logger.info(
                 "site_health.cancel_lock_conflict_retry",
-                extra={"crawl_id": str(crawl_id), "retry_number": retry_number},
+                extra={
+                    "crawl_id": str(crawl_id),
+                    "operation": operation,
+                    "retry_number": retry_number,
+                },
             )
             await asyncio.sleep(
                 site_health_settings.db_conflict_retry_delay(retry_number)
@@ -377,16 +420,78 @@ async def cancel_crawl(
     raise RuntimeError("unreachable cancellation retry state")
 
 
+async def _snapshot_cancelled_crawl(
+    session: AsyncSession, *, workspace_id: uuid.UUID, crawl_id: uuid.UUID
+) -> None:
+    """Roll a cancelled run's partial evidence up, without risking the cancel.
+
+    Runs after the crawl is already durably cancelled. If the run produced
+    completed analyses for ACTIVE monitored URLs, they go into the SAME
+    canonical crawl snapshot the worker writes on clean terminalization (one
+    shared algorithm, no duplication), which makes ``score_summary`` non-null
+    so the frontend keeps the dashboard (partial scores + inventory), labels
+    the run Cancelled, and offers Recrawl instead of hiding results behind a
+    null summary. ``persist_crawl_snapshot`` decides from its single fetched
+    aggregate row set: when nothing aggregable exists (no active completed
+    analyses -- including a completed analysis whose monitored URL was since
+    deactivated) it writes neither the snapshot nor the projection, so the
+    summary stays null (never a fabricated zero) and the UI shows its terminal
+    / selection state. No separate precheck -- that would be a TOCTOU race
+    against membership/analysis changes.
+
+    Every failure here is swallowed: the crawl is stopped either way, and the
+    snapshot is recoverable evidence rather than the user's requested action.
+    """
+    try:
+        await _retry_on_lock_conflict(
+            lambda: _snapshot_cancelled_crawl_once(
+                session, workspace_id=workspace_id, crawl_id=crawl_id
+            ),
+            session=session,
+            crawl_id=crawl_id,
+            operation="cancel_snapshot",
+        )
+    except Exception:
+        await session.rollback()
+        logger.exception(
+            "site_health.cancel_snapshot_failed", extra={"crawl_id": str(crawl_id)}
+        )
+
+
+async def _snapshot_cancelled_crawl_once(
+    session: AsyncSession, *, workspace_id: uuid.UUID, crawl_id: uuid.UUID
+) -> None:
+    locked = await session.execute(
+        select(SiteCrawl)
+        .where(SiteCrawl.id == crawl_id, SiteCrawl.workspace_id == workspace_id)
+        .with_for_update()
+    )
+    crawl = locked.scalar_one_or_none()
+    if crawl is None or crawl.status != CRAWL_STATUS_CANCELLED:
+        await session.rollback()
+        return
+    if await persist_crawl_snapshot(session, crawl=crawl):
+        await enqueue_change_refresh(session, crawl=crawl)
+        await enqueue_link_metric_refresh(session, crawl=crawl)
+    await session.commit()
+
+
 async def _cancel_crawl_once(
     session: AsyncSession, *, workspace_id: uuid.UUID, crawl_id: uuid.UUID
-) -> dict:
+) -> bool:
     """Cancel a crawl atomically: transition states, cancel tasks, record event.
 
     Locks the crawl row ``FOR UPDATE``, drives the overall/discovery/analysis
     sub-states to ``cancelled`` where the guarded machine allows it, cancels
     every non-terminal ``SiteCrawlTask``, records a ``crawl.cancelled`` event
-    (payload redacted for Free), and commits. Cancelling an already-terminal
-    crawl is idempotent (no-op transition, still returns the current summary).
+    (payload redacted for Free), and commits. Returns whether THIS call made
+    that transition, so an already-terminal crawl stays idempotent: it commits
+    nothing and does not re-run the rollup.
+
+    Deliberately nothing else: every statement here touches the crawl and its
+    own task rows, so the transaction is short enough to win the crawl row lock
+    back from a worker mid-reconcile. The evidence rollup is
+    ``_snapshot_cancelled_crawl``'s job, after this has committed.
     """
     locked = await session.execute(
         select(SiteCrawl)
@@ -401,12 +506,11 @@ async def _cancel_crawl_once(
         raise SiteHealthNotFoundError(_CRAWL_NOT_FOUND)
 
     if crawl.status in CRAWL_TERMINAL_STATUSES:
-        # Idempotent cancel of an already-terminal crawl still answers with
-        # the full single-crawl projection — including the B1 failure summary
-        # when the terminal state is FAILED.
-        return project_crawl(
-            crawl, failure_summary=await _failure_summary_for(session, crawl)
-        )
+        # Idempotent cancel of an already-terminal crawl: release the row and
+        # let the caller answer with the current projection (including the B1
+        # failure summary when that terminal state is FAILED).
+        await session.rollback()
+        return False
 
     apply_crawl_status(crawl, CRAWL_STATUS_CANCELLED)
     # Discovery / analysis sub-states are cancelled only from a non-terminal
@@ -447,21 +551,6 @@ async def _cancel_crawl_once(
         )
     )
 
-    # Cancellation-time snapshot: if the run already produced completed
-    # analyses for ACTIVE monitored URLs, roll them up into the SAME canonical
-    # crawl snapshot the worker writes on clean terminalization (one shared
-    # algorithm, no duplication). This makes ``score_summary`` non-null so the
-    # frontend keeps the dashboard (partial scores + inventory), labels the run
-    # Cancelled, and offers Recrawl — instead of hiding results behind a null
-    # summary. ``persist_crawl_snapshot`` decides from its single fetched
-    # aggregate row set: when nothing aggregable exists (no active completed
-    # analyses — including a completed analysis whose monitored URL was since
-    # deactivated) it writes neither the snapshot nor the projection and returns
-    # ``False``, so the summary stays null (never a fabricated zero) and the UI
-    # shows its terminal / selection state. No separate precheck — that would be
-    # a TOCTOU race against membership/analysis changes.
-    snapshot_written = await persist_crawl_snapshot(session, crawl=crawl)
-
     record_crawl_event(
         session,
         crawl_id=crawl.id,
@@ -469,15 +558,8 @@ async def _cancel_crawl_once(
         message="crawl cancelled",
         count_disclosure=crawl_count_disclosure(crawl),
     )
-    if snapshot_written:
-        await enqueue_change_refresh(session, crawl=crawl)
-        await enqueue_link_metric_refresh(session, crawl=crawl)
     await session.commit()
-
-    refreshed = await _load_crawl(session, workspace_id=workspace_id, crawl_id=crawl_id)
-    return project_crawl(
-        refreshed, failure_summary=await _failure_summary_for(session, refreshed)
-    )
+    return True
 
 
 # =========================================================================

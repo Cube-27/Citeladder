@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -41,6 +42,7 @@ from app.core.config.site_health_crawl_policy import (
     SELECTION_SOURCE_FREE_SAMPLE,
 )
 from app.core.config.site_health_rules import SITE_HEALTH_RULES
+from app.core.config.site_health_runtime import site_health_settings
 from app.core.config.site_health_taxonomy import (
     MIN_MEANINGFUL_WORDS,
 )
@@ -136,6 +138,75 @@ async def test_root_analysis_defers_until_durable_site_setup_commits(
         assert analyze_task.attempt_count == 0
         assert analysis_count == 0
     assert requests == []
+
+
+@pytest.mark.asyncio
+async def test_analysis_stops_deferring_once_its_prerequisite_never_arrives(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A prerequisite that never resolves must not wedge the crawl forever.
+
+    ``defer`` spends no attempt budget and leaves the row non-terminal, so the
+    unbounded wait was a livelock: the crawl kept an outstanding task for good,
+    never drained and never terminalized, and the re-claim every second took
+    the crawl row lock often enough to fail the user's Stop button. Past the
+    bound the analysis acquires the page itself — artifact reuse is only ever
+    an optimization.
+    """
+    root = "https://example.com/"
+    waited = site_health_settings.analysis_dependency_max_wait_seconds + 60
+    async with session_factory() as session:
+        seed, ((_site_url_id, analyze_task_id),) = await _seed_analyze_phase_crawl(
+            session, root=root, urls=(root,), site_facts=None
+        )
+        _canonical, root_hash = canonical_identity(root)
+        session.add(
+            SiteCrawlTask(
+                crawl_id=seed.crawl_id,
+                workspace_id=seed.workspace_id,
+                task_kind=TASK_KIND_SITE_SETUP,
+                requested_url=root,
+                url_hash=root_hash,
+                idempotency_key=f"{seed.crawl_id}:{TASK_KIND_SITE_SETUP}:{root_hash}:0",
+                status=TASK_STATUS_QUEUED,
+                randomized_position=-1,
+            )
+        )
+        await session.commit()
+        # The setup task stays queued forever; the analysis has waited it out.
+        await session.execute(
+            update(SiteCrawlTask)
+            .where(SiteCrawlTask.id == analyze_task_id)
+            .values(created_at=datetime.now(UTC) - timedelta(seconds=waited))
+        )
+        await session.commit()
+
+    requests: list[tuple[str, str]] = []
+    worker = _worker(
+        session_factory,
+        {"/": _rich_page()},
+        owner="root-setup-dependency-timeout",
+        requests=requests,
+    )
+    claimed = await worker._queue.claim(
+        owner=worker.owner,
+        limit=1,
+        kinds=[TASK_KIND_ANALYZE],
+    )
+    assert len(claimed) == 1
+    await worker._execute_claimed(claimed[0])
+
+    async with session_factory() as session:
+        analyze_task = await session.get(SiteCrawlTask, analyze_task_id)
+        analysis_count = await session.scalar(
+            select(func.count())
+            .select_from(SitePageAnalysis)
+            .where(SitePageAnalysis.crawl_id == seed.crawl_id)
+        )
+        assert analyze_task is not None
+        assert analyze_task.status == TASK_STATUS_SUCCEEDED
+        assert analysis_count == 1
+    assert requests, "the analysis never fetched its own copy of the page"
 
 
 @pytest.mark.asyncio

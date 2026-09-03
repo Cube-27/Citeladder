@@ -158,7 +158,7 @@ The roles live in `components/ui/typography.tsx` and are reached through
 
 | Role | Job | Size / line height | Weight | Ink |
 | :--- | :--- | ---: | ---: | :--- |
-| `pageTitle` | the top-bar `h1` | 24/32px | 500 | `foreground` |
+| `pageTitle` | the top-bar `h1` | 18/24px | 500 | `foreground` |
 | `sectionTitle` | a screen section `h2` | 18/24px | 500 | `foreground` |
 | `objectTitle` | a card or object `h3` | 16/22px | 500 | `foreground` |
 | `bodyStrong` | copy that leads its block | 14/20px | 500 | `foreground` |

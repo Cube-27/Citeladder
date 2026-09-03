@@ -202,12 +202,7 @@ export function AuthFormShell({
           <form noValidate onSubmit={onSubmit} className="space-y-3">
             {children}
 
-            <Button
-              type="submit"
-              size="lg"
-              className={textRole('bodyStrong', 'mt-2 w-full')}
-              disabled={pending}
-            >
+            <Button type="submit" size="lg" className="mt-2 w-full" disabled={pending}>
               {pending ? pendingLabel : submitLabel}
             </Button>
           </form>

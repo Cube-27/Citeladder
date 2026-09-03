@@ -29,8 +29,12 @@ function NavLink({
   return (
     <Link
       href={item.href}
-      onMouseEnter={() => onIntent(item.href)}
-      onFocus={() => onIntent(item.href)}
+      onMouseEnter={() => {
+        if (!active) onIntent(item.href);
+      }}
+      onFocus={() => {
+        if (!active) onIntent(item.href);
+      }}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] border px-2.5 text-sm transition-colors duration-150',

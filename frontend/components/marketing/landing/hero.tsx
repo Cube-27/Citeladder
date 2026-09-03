@@ -23,7 +23,7 @@ export function Hero() {
       <Container className="relative z-1 pt-20 pb-18 md:pt-32 md:pb-24">
         <HeroEntrance className="mx-auto w-full max-w-5xl text-center">
           <Eyebrow>{hook.eyebrow}</Eyebrow>
-          <h1 className="website-hero-display text-foreground mx-auto mt-5 max-w-[22ch] text-balance">
+          <h1 className="website-hero-display text-foreground mx-auto mt-5 max-w-none text-balance sm:max-w-[22ch]">
             {hook.title}{' '}
             <em className="text-accent-text font-medium not-italic">{hook.titleAccent}</em>
           </h1>
