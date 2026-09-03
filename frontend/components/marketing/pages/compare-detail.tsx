@@ -24,7 +24,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
           <Reveal className="max-w-5xl">
             <Link
               href="/compare"
-              className="text-muted hover:text-foreground mb-5 inline-flex items-center gap-2 text-sm font-medium transition-colors"
+              className="text-muted hover:text-foreground mb-5 flex w-fit items-center gap-2 text-sm font-medium transition-colors"
             >
               <ArrowLeft className="size-4" aria-hidden />
               All comparisons

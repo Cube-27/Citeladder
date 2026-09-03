@@ -593,11 +593,11 @@ export function productContractViolations(root) {
   }
 
   const layout = readFileSync(join(root, 'app', 'layout.tsx'), 'utf8');
-  if (!layout.includes('Geist') || !layout.includes("variable: '--font-geist'")) {
-    violations.push('app/layout.tsx: Geist must own the shared UI/body font variable');
+  if (!layout.includes('Inter') || !layout.includes("variable: '--font-inter'")) {
+    violations.push('app/layout.tsx: Inter must own the shared UI/body font variable');
   }
-  if (/\bInter\b|--font-inter/.test(layout + css)) {
-    violations.push('app layout/global tokens: Inter must not remain in the font contract');
+  if (!layout.includes('uncutSans') || !layout.includes("variable: '--font-uncut-sans'")) {
+    violations.push('app/layout.tsx: Uncut Sans must own the display font variable');
   }
 
   const shell = readFileSync(join(root, 'components', 'layout', 'app-shell.tsx'), 'utf8');

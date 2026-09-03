@@ -15,7 +15,9 @@ function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
         <span className="text-accent-text pt-2 font-mono text-xs tabular-nums">{item.num}</span>
       )}
       <span className="min-w-0">
-        <span className="website-body text-foreground block font-medium">{item.title}</span>
+        <span className="website-body text-foreground group-hover:text-accent-text block font-semibold transition-colors duration-150">
+          {item.title}
+        </span>
         {/* One line, always: a menu row that wraps turns the panel into a
             wall of paragraphs and doubles its height. */}
         <span className="website-label text-muted mt-0.5 block truncate">{item.desc}</span>

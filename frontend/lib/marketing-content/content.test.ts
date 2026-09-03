@@ -19,8 +19,9 @@ import {
 } from './legal';
 import { LLMS_TXT } from './llms';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF, NAV_DROPS, NAV_LINKS, type NavDropItem } from './nav';
+import { FOUNDER, PRODUCT_HEAD } from './people';
 import { PLAN_PRESENTATION, capabilityLabel } from './pricing';
-import { CONTACT_EMAIL, SOCIAL_LINKS } from './social';
+import { CONTACT_EMAIL } from './social';
 import { SOLUTION_SEGMENTS } from './solutions';
 
 /**
@@ -186,9 +187,13 @@ describe('blog content', () => {
   });
 
   it('publishes a named author and review date on every post', () => {
-    for (const post of POSTS) {
+    expect(POSTS[0]?.author).toBe('Arpan Jain');
+    expect(POSTS[0]?.authorRole).toBe('Founder & CEO');
+    for (const post of POSTS.slice(1)) {
       expect(post.author, post.slug).toBe('Abhineet Jain');
       expect(post.authorRole, post.slug).toBe('Product Head');
+    }
+    for (const post of POSTS) {
       expect(post.date, post.slug).toBe('2026-09-03');
     }
   });
@@ -326,10 +331,9 @@ describe('commercial positioning', () => {
 describe('entity and llms.txt', () => {
   it('exposes a public contact email and LinkedIn profiles', () => {
     expect(CONTACT_EMAIL).toBe('abhineet.jain@cube27.com');
-    expect(SOCIAL_LINKS.length).toBeGreaterThan(0);
-    for (const social of SOCIAL_LINKS) {
-      expect(social.href).toMatch(/^https:\/\/www\.linkedin\.com\//);
-    }
+    expect(PRODUCT_HEAD.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//);
+    expect(FOUNDER.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//);
+    expect(PARENT_COMPANY.linkedin).toMatch(/^https:\/\/www\.linkedin\.com\//);
   });
 
   it('publishes a machine-readable product brief', () => {

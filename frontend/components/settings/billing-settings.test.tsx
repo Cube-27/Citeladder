@@ -70,7 +70,7 @@ const CATALOG = {
       cadence: 'custom',
       self_serve: false,
       contact_only: true,
-      contact_url: '/demo',
+      contact_url: 'https://www.cube27.com/contact/',
       base_price: null,
       credit_price: null,
       funded_total_price: null,

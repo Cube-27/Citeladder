@@ -9,7 +9,7 @@ import type { OpenSource } from './nav';
 import { NavItemLink } from './nav-items';
 
 const NAV_LINK =
-  'website-nav text-secondary hover:text-foreground relative z-1 inline-flex items-center gap-2 ' +
+  'website-nav text-foreground hover:text-accent-text relative z-1 inline-flex items-center gap-2 ' +
   'rounded-[var(--radius-control)] px-4 py-4 font-medium transition-colors duration-300';
 
 type DropLayout = Record<NavDropKey, { width: number; twoColumn: boolean }>;
@@ -25,9 +25,9 @@ type DesktopNavigationProps = {
   clearDropClose: () => void;
   scheduleDropClose: () => void;
   closeDrop: () => void;
-  /** Chosen a row: close and stay closed until the pointer leaves the nav. */
-  selectDrop: () => void;
-  releaseSuppression: () => void;
+  /** Chosen a row or trigger: close and stay closed until pointer moves away. */
+  selectDrop: (key?: NavDropKey) => void;
+  releaseSuppression: (key?: NavDropKey) => void;
   openDropAt: (key: NavDropKey, trigger: HTMLElement, source?: OpenSource) => void;
   moveLens: (element: HTMLElement) => void;
   clearLens: () => void;
@@ -88,6 +88,7 @@ export function DesktopNavigation({
           key={key}
           className="relative z-1 flex items-center"
           onMouseEnter={(event) => openDropAt(key, event.currentTarget)}
+          onMouseLeave={() => releaseSuppression(key)}
         >
           <Link
             href={href}
@@ -95,6 +96,7 @@ export function DesktopNavigation({
             aria-haspopup="true"
             aria-expanded={openDrop === key}
             aria-controls={openDrop === key ? `desktop-nav-panel-${key}` : undefined}
+            onClick={() => selectDrop(key)}
             onFocus={(event) => {
               const parent = event.currentTarget.parentElement;
               // 'focus' so tabbing here opens the panel even right after a
@@ -112,11 +114,14 @@ export function DesktopNavigation({
           key={href}
           href={href}
           className={NAV_LINK}
+          onClick={() => selectDrop()}
           onMouseEnter={(event) => {
+            releaseSuppression();
             scheduleDropClose();
             moveLens(event.currentTarget);
           }}
           onFocus={(event) => {
+            releaseSuppression();
             scheduleDropClose();
             moveLens(event.currentTarget);
           }}
@@ -151,7 +156,7 @@ function DesktopDropPanel({
   layout: DropLayout;
   panelLeft: number;
   clearDropClose: () => void;
-  selectDrop: () => void;
+  selectDrop: (key?: NavDropKey) => void;
 }>) {
   const groups = NAV_DROPS.find((drop) => drop.key === dropKey)?.groups ?? [];
 
@@ -183,7 +188,7 @@ function DesktopDropGroup({
   selectDrop,
 }: Readonly<{
   group: (typeof NAV_DROPS)[number]['groups'][number];
-  selectDrop: () => void;
+  selectDrop: (key?: NavDropKey) => void;
 }>) {
   if (!group.label)
     return (

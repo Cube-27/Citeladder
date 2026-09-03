@@ -36,7 +36,7 @@ export const LANDING_CONTENT = {
     // Retained tagline — the hook the site opens on.
     title: 'Your buyers stopped Googling you.',
     titleAccent: 'They ask AI instead.',
-    body: 'AI visibility is whether ChatGPT, Gemini, or Claude names you, cites you, or recommends a rival when someone asks about your category. CiteLadder records those answers, pairs them with what your site actually proves, and shows mention share, citation share, and coverage as separate facts. You bring the provider keys. We do not claim a page change caused a ranking.',
+    body: 'See how often AI mentions, cites, or recommends your brand and whether your website supports it. CiteLadder turns AI answers into measurable visibility.',
     primaryCta: 'Book a demo',
     secondaryCta: 'See how it works',
   },
@@ -73,7 +73,6 @@ export const LANDING_CONTENT = {
   seeIt: {
     kicker: 'The product',
     title: 'The whole system, in one workspace.',
-    cta: 'Run this on your market',
   },
 
   workflow: {
@@ -111,67 +110,43 @@ export const LANDING_CONTENT = {
   packs: {
     kicker: 'Use cases',
     title: 'Built around how your industry actually works.',
-    lead: 'The same loop classifies pages by job (program, product, article, bio) and applies checks that fit that job. Industry here is context, not a separate product.',
+    lead: 'Buyers research differently across sectors. Measuring AI visibility shows where models recommend your brand, where competitors take the lead, and whether your website provides the proof.',
     items: [
       {
         icon: 'education' as IconKey,
         name: 'Education',
-        points: [
-          'Program and course pages with visible facts engines can quote',
-          'Accreditation and faculty entities named on the page',
-          'Student FAQ gaps against questions people already ask',
-          'Admissions and fees pages treated as their own page kinds',
-        ],
+        benefit:
+          'Track whether AI models recommend your programs when students research degree and certificate options, and verify that answer engines quote accurate tuition, admissions, and faculty credentials.',
       },
       {
         icon: 'commerce' as IconKey,
         name: 'Commerce',
-        points: [
-          'Product detail completeness: name, price, availability, spec',
-          'Category pages that explain the set, not only a grid',
-          'Support FAQ coverage for shopping-assistant questions',
-          'Price and SKU accuracy against the catalog you connect',
-        ],
+        benefit:
+          'Discover when AI shopping assistants recommend your products over rivals, and ensure engines pull accurate pricing, availability, and specifications directly from your store.',
       },
       {
         icon: 'services' as IconKey,
         name: 'Professional services',
-        points: [
-          'Service pages classified by role, not by leftover schema',
-          'Case studies with proof a reviewer can open',
-          'Expert biographies with credentials in visible copy',
-          'Trust signals that match what the firm can actually show',
-        ],
+        benefit:
+          'See how AI positions your practice areas and partners when prospects research advisory firms, ensuring your case studies and subject-matter expertise get cited as authoritative sources.',
       },
       {
         icon: 'saas' as IconKey,
         name: 'Enterprise SaaS',
-        points: [
-          'Landing and pricing pages with claims the product supports',
-          'Docs coverage for questions technical buyers ask engines',
-          'Changelog and release-note gaps after a ship',
-          'Integration pages that name the systems you actually connect',
-        ],
+        benefit:
+          'Measure how often your software appears in AI-generated buyer shortlists, identify where competitors get recommended instead, and ensure models rely on your official features and pricing.',
       },
       {
         icon: 'media' as IconKey,
         name: 'Media & publishing',
-        points: [
-          'Article and author markup that matches visible bylines',
-          'Explainer and FAQ gaps in the editorial set',
-          'Citation and summary visibility for flagship stories',
-          'Freshness when an engine is still quoting last year’s piece',
-        ],
+        benefit:
+          'Monitor how frequently AI engines cite your original reporting and research, protect your editorial attribution, and ensure models reference current coverage rather than outdated stories.',
       },
       {
         icon: 'finance' as IconKey,
         name: 'Financial services',
-        points: [
-          'Disclosure completeness on product and advice pages',
-          'Advisor profile and credential gaps',
-          'Review and trust-signal coverage that stays inspectable',
-          'Product assertions checked against source facts, not slogans',
-        ],
+        benefit:
+          'Verify that AI models accurately explain your financial products, rates, and advisory services while citing compliance disclosures correctly to safeguard trust and brand reputation.',
       },
     ],
   },

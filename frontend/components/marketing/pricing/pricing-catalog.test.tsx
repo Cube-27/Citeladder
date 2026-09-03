@@ -7,7 +7,7 @@ import gsap from 'gsap';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
-import { PENDING_PRICING_INTENT_KEY } from '@/lib/config/billing';
+import { CONTACT_SALES_HREF, PENDING_PRICING_INTENT_KEY } from '@/lib/config/billing';
 
 import { PricingCatalog } from './pricing-catalog';
 
@@ -69,7 +69,7 @@ const CATALOG = {
     plan('enterprise', 'Enterprise', {
       self_serve: false,
       contact_only: true,
-      contact_url: '/demo',
+      contact_url: CONTACT_SALES_HREF,
       base_price: null,
       checkout_available: false,
       unavailable_reason: 'contact_sales',
@@ -176,6 +176,10 @@ describe('PricingCatalog', () => {
       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
     }
     expect(document.body.textContent).not.toMatch(/\bFree\b/);
+    expect(screen.getByRole('link', { name: /contact us/i })).toHaveAttribute(
+      'href',
+      CONTACT_SALES_HREF,
+    );
   });
 
   it('defaults to BYOK and shows the approved public tier prices', async () => {

@@ -95,32 +95,30 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
   const linksRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   /**
-   * Set when a row is chosen. The panel opens on hover, and picking a row
-   * leaves the pointer sitting exactly where the trigger is — so `closeDrop`
-   * alone closed the panel for one frame and the very next `mouseenter`
-   * reopened it. The trigger stays suppressed until the pointer actually
-   * leaves the navigation.
+   * Set when a trigger is chosen. The panel opens on hover, and clicking a
+   * top-level trigger leaves the pointer sitting exactly where the trigger is.
    *
-   * It suppresses HOVER only. The problem it solves is a pointer that has not
-   * moved; a keyboard user tabbing to the next trigger has, by definition,
-   * asked for that panel, and gating focus on a flag that only a `mouseleave`
-   * can clear would strand them with no dropdowns at all.
+   * We suppress hover only for that specific trigger while the pointer rests
+   * on it, avoiding instant re-opening. Moving to another trigger, leaving the
+   * trigger, or focusing via keyboard clears the suppression.
    */
-  const suppressed = useRef(false);
+  const suppressedDrop = useRef<NavDropKey | null>(null);
 
   const clearDropClose = () => {
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
     closeTimer.current = null;
   };
   const closeDrop = () => setOpenDrop(null);
-  const selectDrop = () => {
-    suppressed.current = true;
+  const selectDrop = (key?: NavDropKey) => {
+    suppressedDrop.current = key ?? null;
     clearDropClose();
     setOpenDrop(null);
     setLens(null);
   };
-  const releaseSuppression = () => {
-    suppressed.current = false;
+  const releaseSuppression = (key?: NavDropKey) => {
+    if (!key || suppressedDrop.current === key) {
+      suppressedDrop.current = null;
+    }
   };
   const scheduleDropClose = () => {
     clearDropClose();
@@ -137,11 +135,16 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
     const container = linksRef.current;
     const nav = navRef.current;
     if (!container || !nav) return;
-    // Focus is an explicit request and always wins; only a resting pointer is
-    // suppressed. Reaching a trigger by keyboard also clears the flag, so the
-    // hover that follows behaves normally.
-    if (source === 'focus') suppressed.current = false;
-    else if (suppressed.current) return;
+    // Focus is an explicit request and always wins; only a resting pointer on
+    // the just-selected trigger is suppressed. Moving to any other trigger or
+    // focusing clears the suppression.
+    if (source === 'focus') {
+      suppressedDrop.current = null;
+    } else if (suppressedDrop.current === key) {
+      return;
+    } else {
+      suppressedDrop.current = null;
+    }
     clearDropClose();
     setOpenDrop(key);
     moveLens(trigger);
@@ -252,7 +255,7 @@ export function MarketingNav() {
       data-marketing-nav
       data-scrolled={scrolled ? 'true' : undefined}
       className={cn(
-        'safe-top fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300',
+        'safe-top fixed inset-x-0 top-0 z-50 w-full max-w-full border-b transition-[background-color,border-color,backdrop-filter] duration-300',
         surfaceVisible
           ? 'border-border-subtle bg-panel/80 backdrop-blur-md'
           : 'border-transparent bg-transparent',

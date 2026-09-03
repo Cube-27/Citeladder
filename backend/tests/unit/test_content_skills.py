@@ -13,6 +13,7 @@ from app.core.config.content import (
     CONTENT_SKILL_REGISTRY,
     CONTENT_SKILLS,
     skill_body,
+    skill_version,
 )
 from app.core.config.content_skills import CONTENT_CHANNELS, _load_skill
 from app.domain.content.schemas import ContentGenerationCreate, skill_catalog
@@ -61,6 +62,25 @@ def test_selected_skill_body_is_returned_verbatim_and_deterministically() -> Non
     assert skill_body("about_us") == skill.body
     assert "Direct company/organization and offering definition." in skill.body
     assert skill_body("does-not-exist") == skill_body(CONTENT_DEFAULT_SKILL)
+
+
+def test_skill_version_describes_the_body_skill_body_returns() -> None:
+    """Provenance must name the pack that was actually rendered.
+
+    ``skill_version`` is stored beside ``message_digest`` to answer "what
+    produced this output?". The digest is computed over the messages actually
+    built, so it agrees with itself even when the version names a different
+    pack — nothing detects a mismatch here except this. The unknown-id case is
+    the sharp edge: ``skill_body`` silently serves the default pack, so the
+    version has to fall back the same way or it describes a body never sent.
+    """
+    for skill_id, skill in CONTENT_SKILL_REGISTRY.items():
+        assert skill_body(skill_id) == skill.body
+        assert skill_version(skill_id) == skill.version
+
+    default = CONTENT_SKILL_REGISTRY[CONTENT_DEFAULT_SKILL]
+    assert skill_version("does-not-exist") == default.version
+    assert skill_version(None) == default.version
 
 
 def test_loader_rejects_a_pack_with_invalid_required_metadata(tmp_path: Path) -> None:

@@ -9,7 +9,7 @@
  * counts, or formula names. Headings must not contain the product name.
  */
 
-import { CONTENT_REVIEWED, PRODUCT_HEAD } from './people';
+import { CONTENT_REVIEWED, FOUNDER, PRODUCT_HEAD } from './people';
 
 export type BlogBlock =
   | { type: 'paragraph' | 'heading'; text: string }
@@ -79,7 +79,10 @@ export const POSTS: readonly BlogPost[] = [
     title: 'How to measure AI visibility with evidence you can audit',
     excerpt:
       'AI visibility is an observation of an answer, not a ranking position. Persist the response, apply explicit rules, show coverage, and keep every score tied to the evidence that produced it.',
-    ...BYLINE,
+    dateModified: CONTENT_REVIEWED,
+    author: FOUNDER.name,
+    authorRole: FOUNDER.role,
+    authorUrl: FOUNDER.linkedin,
     date: PUBLISHED,
     readTime: '9 min',
     tags: ['AI visibility', 'Measurement'],

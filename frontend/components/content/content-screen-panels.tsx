@@ -20,6 +20,7 @@ import {
 } from './content-screen-data';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { cn } from '@/lib/utils';
 
 export function ContentComposer({
   instruction,
@@ -152,51 +153,77 @@ function TargetPageSelect({
   const selected = pages.find((page) => page.site_url_id === target.siteUrlId);
   return (
     <div className="grid gap-2">
-      <label className={textRole('label')} htmlFor="content-target-page">
-        Target page (optional)
-      </label>
-      <SearchableSelect
-        id="content-target-page"
-        ariaLabel="Target page"
-        value={target.siteUrlId ?? ''}
-        disabled={disabled}
-        placeholder="Search crawled pages"
-        unknownValueFallback={() => ''}
-        options={pages.map((page) => ({
-          value: page.site_url_id,
-          label: page.title,
-          detail: page.display_url,
-        }))}
-        onSearchChange={onSearchChange}
-        onChange={(siteUrlId) => onChange({ siteUrlId })}
-      />
-      <Input
-        aria-label="Enter target URL instead"
-        value={targetUrl}
-        disabled={disabled}
-        placeholder="https://example.com/page"
-        onChange={(event) => onTargetUrlChange(event.target.value)}
-      />
+      <div className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+        <label
+          className={cn(textRole('label'), 'sm:col-start-1 sm:row-start-1')}
+          htmlFor="content-target-page"
+        >
+          Target page (optional)
+        </label>
+        <div className="sm:col-start-1 sm:row-start-2">
+          <SearchableSelect
+            id="content-target-page"
+            ariaLabel="Target page"
+            value={target.siteUrlId ?? ''}
+            disabled={disabled}
+            placeholder="Search crawled pages"
+            unknownValueFallback={() => ''}
+            options={pages.map((page) => ({
+              value: page.site_url_id,
+              label: page.title,
+              detail: page.display_url,
+            }))}
+            onSearchChange={onSearchChange}
+            onChange={(siteUrlId) => {
+              onTargetUrlChange('');
+              onChange({ siteUrlId });
+            }}
+          />
+        </div>
+        <label
+          className={cn(textRole('label'), 'sm:col-start-2 sm:row-start-1')}
+          htmlFor="content-target-url"
+        >
+          Or enter URL instead
+        </label>
+        <div className="sm:col-start-2 sm:row-start-2">
+          <Input
+            id="content-target-url"
+            aria-label="Enter target URL instead"
+            value={targetUrl}
+            disabled={disabled}
+            placeholder="https://example.com/page"
+            onChange={(event) => {
+              const value = event.target.value;
+              onTargetUrlChange(value);
+              const trimmed = value.trim();
+              onChange(isHttpTargetUrl(trimmed) ? { url: trimmed } : {});
+            }}
+          />
+        </div>
+      </div>
       {selected ? (
         <p className="text-muted text-xs">
           Selected: {selected.title} · {selected.display_url}
         </p>
+      ) : target.url ? (
+        <p className="text-muted text-xs">Selected URL: {target.url}</p>
       ) : null}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled={disabled || !isHttpTargetUrl(targetUrl)}
-          onClick={() => onChange({ url: targetUrl.trim() })}
-        >
-          Enter URL instead
-        </Button>
-        {target.siteUrlId || target.url ? (
-          <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onChange({})}>
+      {target.siteUrlId || target.url ? (
+        <div>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={disabled}
+            onClick={() => {
+              onTargetUrlChange('');
+              onChange({});
+            }}
+          >
             No page
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

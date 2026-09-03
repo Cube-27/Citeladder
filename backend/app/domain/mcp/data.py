@@ -41,17 +41,41 @@ def current_user_id() -> uuid.UUID:
         raise PermissionError("The MCP grant has an invalid account identity") from exc
 
 
+def _caller_is_member_of(workspace_column: Any) -> Any:
+    """The predicate authorizing the caller to read rows in a workspace.
+
+    Every read below is workspace-scoped, and each one used to spell its own
+    ``WorkspaceMember`` join out inline. Six of the seven omitted
+    ``Workspace.is_system``, so MCP was the one reader where a stray
+    system-workspace membership row would have authorized — while
+    ``list_account_projects``, which did filter it, hid the same project. Two
+    halves of one boundary disagreeing is the shape of bug that never shows up
+    in tests.
+
+    Stated once here, mirroring ``get_membership`` (T11: system workspaces
+    cannot have memberships, so even a stray row stays inert). An EXISTS
+    subquery rather than a join, so adding it can neither duplicate rows for a
+    caller holding several memberships nor collide with a query's own joins —
+    it drops into any ``where`` unchanged.
+    """
+    return (
+        select(WorkspaceMember.id)
+        .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
+        .where(
+            WorkspaceMember.workspace_id == workspace_column,
+            WorkspaceMember.user_id == current_user_id(),
+            Workspace.is_system.is_(False),
+        )
+        .exists()
+    )
+
+
 async def list_account_projects(session: AsyncSession) -> dict[str, Any]:
-    user_id = current_user_id()
     rows = (
         await session.execute(
             select(Project, Workspace)
             .join(Workspace, Workspace.id == Project.workspace_id)
-            .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
-            .where(
-                WorkspaceMember.user_id == user_id,
-                Workspace.is_system.is_(False),
-            )
+            .where(_caller_is_member_of(Project.workspace_id))
             .order_by(Workspace.created_at.asc(), Project.created_at.asc())
         )
     ).all()
@@ -77,12 +101,25 @@ async def project_business_context(
     session: AsyncSession, project_id: str
 ) -> dict[str, Any]:
     project = await _authorized_project(session, project_id)
-    profile = await session.scalar(
-        select(BrandProfile).where(
-            BrandProfile.workspace_id == project.workspace_id,
-            BrandProfile.project_id == project.id,
+    # Column selects, not entity loads: six of BrandProfile's fields and six of
+    # Prompt's are rendered below, and hydrating whole ORM instances to read
+    # them costs identity-map bookkeeping and serialization for columns this
+    # projection never touches.
+    profile = (
+        await session.execute(
+            select(
+                BrandProfile.description,
+                BrandProfile.positioning,
+                BrandProfile.products_services,
+                BrandProfile.target_audience,
+                BrandProfile.business_context,
+                BrandProfile.sources,
+            ).where(
+                BrandProfile.workspace_id == project.workspace_id,
+                BrandProfile.project_id == project.id,
+            )
         )
-    )
+    ).one_or_none()
     evidence: dict[str, Any] = {}
     context = ToolExecutionContext(
         session=session,
@@ -91,17 +128,22 @@ async def project_business_context(
     )
     for tool_name in _CONTEXT_TOOLS:
         evidence[tool_name] = await execute_tool(tool_name, context, {})
-    prompt_rows = list(
-        (
-            await session.scalars(
-                select(Prompt)
-                .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
-                .where(PromptSet.project_id == project.id, Prompt.enabled.is_(True))
-                .order_by(Prompt.created_at.asc(), Prompt.id.asc())
-                .limit(51)
+    prompt_rows = (
+        await session.execute(
+            select(
+                Prompt.id,
+                Prompt.text,
+                Prompt.theme,
+                Prompt.intent,
+                Prompt.buyer_stage,
+                Prompt.origin,
             )
-        ).all()
-    )
+            .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
+            .where(PromptSet.project_id == project.id, Prompt.enabled.is_(True))
+            .order_by(Prompt.created_at.asc(), Prompt.id.asc())
+            .limit(51)
+        )
+    ).all()
     prompts = prompt_rows[:50]
     return {
         "scope": "project",
@@ -180,7 +222,9 @@ async def search_business_context(
     if not normalized:
         raise ValueError("query must not be empty")
     bounded_limit = max(1, min(limit, MCP_MAX_SEARCH_RESULTS))
-    user_id = current_user_id()
+    # Reject an unauthenticated caller before any query work; the predicates
+    # below re-resolve the same identity.
+    current_user_id()
     project_filter = await _optional_project_filter(session, project_id)
     # Backslash first: it is the LIKE escape character below, so escaping the
     # wildcards before it would double-escape their new prefixes, and leaving a
@@ -192,12 +236,8 @@ async def search_business_context(
         (
             await session.scalars(
                 select(Project)
-                .join(
-                    WorkspaceMember,
-                    WorkspaceMember.workspace_id == Project.workspace_id,
-                )
                 .where(
-                    WorkspaceMember.user_id == user_id,
+                    _caller_is_member_of(Project.workspace_id),
                     or_(
                         Project.name.ilike(pattern, escape="\\"),
                         Project.brand_name.ilike(pattern, escape="\\"),
@@ -221,12 +261,8 @@ async def search_business_context(
                 await session.scalars(
                     select(Opportunity)
                     .join(Project, Project.id == Opportunity.project_id)
-                    .join(
-                        WorkspaceMember,
-                        WorkspaceMember.workspace_id == Opportunity.workspace_id,
-                    )
                     .where(
-                        WorkspaceMember.user_id == user_id,
+                        _caller_is_member_of(Opportunity.workspace_id),
                         Opportunity.superseded_at.is_(None),
                         or_(
                             Opportunity.title.ilike(pattern, escape="\\"),
@@ -252,12 +288,8 @@ async def search_business_context(
                     select(Prompt)
                     .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
                     .join(Project, Project.id == PromptSet.project_id)
-                    .join(
-                        WorkspaceMember,
-                        WorkspaceMember.workspace_id == Project.workspace_id,
-                    )
                     .where(
-                        WorkspaceMember.user_id == user_id,
+                        _caller_is_member_of(Project.workspace_id),
                         or_(
                             Prompt.text.ilike(pattern, escape="\\"),
                             Prompt.theme.ilike(pattern, escape="\\"),
@@ -279,17 +311,17 @@ async def fetch_business_record(
     session: AsyncSession, record_id: str
 ) -> dict[str, Any]:
     kind, row_id = _parse_record_id(record_id)
-    user_id = current_user_id()
+    # Reject an unauthenticated caller before any query work; the predicates
+    # below re-resolve the same identity.
+    current_user_id()
     if kind == "project":
         return await project_business_context(session, str(row_id))
     if kind == "opportunity":
         row = await session.scalar(
-            select(Opportunity)
-            .join(
-                WorkspaceMember,
-                WorkspaceMember.workspace_id == Opportunity.workspace_id,
+            select(Opportunity).where(
+                Opportunity.id == row_id,
+                _caller_is_member_of(Opportunity.workspace_id),
             )
-            .where(Opportunity.id == row_id, WorkspaceMember.user_id == user_id)
         )
         if row:
             return {
@@ -314,8 +346,10 @@ async def fetch_business_record(
             select(Prompt)
             .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
             .join(Project, Project.id == PromptSet.project_id)
-            .join(WorkspaceMember, WorkspaceMember.workspace_id == Project.workspace_id)
-            .where(Prompt.id == row_id, WorkspaceMember.user_id == user_id)
+            .where(
+                Prompt.id == row_id,
+                _caller_is_member_of(Project.workspace_id),
+            )
         )
         if row:
             return {
@@ -353,9 +387,10 @@ async def _authorized_project(session: AsyncSession, project_id: str) -> Project
     except ValueError as exc:
         raise ValueError("project_id must be a UUID") from exc
     row = await session.scalar(
-        select(Project)
-        .join(WorkspaceMember, WorkspaceMember.workspace_id == Project.workspace_id)
-        .where(Project.id == parsed_id, WorkspaceMember.user_id == current_user_id())
+        select(Project).where(
+            Project.id == parsed_id,
+            _caller_is_member_of(Project.workspace_id),
+        )
     )
     if row is None:
         raise LookupError("Project was not found in this account")

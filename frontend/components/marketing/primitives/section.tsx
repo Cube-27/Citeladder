@@ -117,7 +117,7 @@ export function Container({
   return (
     <div
       className={cn(
-        'relative z-1 mx-auto flex w-full max-w-7xl flex-col px-[var(--site-gutter)]',
+        'relative z-1 mx-auto flex w-full max-w-7xl min-w-0 flex-col px-[var(--site-gutter)]',
         dense ? 'gap-3' : 'gap-6 md:gap-8',
         className,
       )}

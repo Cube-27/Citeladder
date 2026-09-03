@@ -5,9 +5,9 @@
 /* CiteLadder's single design-system owner. Prism Evidence now spans product,
    public, authentication, and onboarding surfaces. See docs/design.md. */
 @theme {
-  --font-sans: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-uncut-sans), var(--font-inter), -apple-system, sans-serif;
 
   /* Palette layer. Product code consumes the semantic aliases below. */
   --color-gray-0: #ffffff;
@@ -21,13 +21,13 @@
   --color-gray-700: #5c5c63;
   --color-gray-800: #3a3a40;
   --color-gray-900: #16161a;
-  --color-indigo-50: #f2f5fe;
-  --color-indigo-100: #e4eafd;
-  --color-indigo-200: #c7d4fb;
-  --color-indigo-300: #9fb4f7;
-  --color-indigo-500: #3a63ea;
-  --color-indigo-600: #1b44e0;
-  --color-indigo-700: #1a3fd0;
+  --color-indigo-50: #fbf4f1;
+  --color-indigo-100: #f7e8e1;
+  --color-indigo-200: #ebcfc4;
+  --color-indigo-300: #d9a795;
+  --color-indigo-500: #c15f3c;
+  --color-indigo-600: #a84f30;
+  --color-indigo-700: #964226;
   --color-cyan-50: #edf7f7;
   --color-cyan-100: #ddf1f2;
   --color-cyan-500: #00a9c5;
@@ -69,22 +69,22 @@
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
 
-  /* Analytical selection and focus. Primary actions use ink, below. */
-  --color-accent: #1b44e0;
-  --color-accent-hover: #1a3fd0;
-  --color-accent-active: #1a3fd0;
+  /* Analytical selection and focus. Primary actions use terracotta, below. */
+  --color-accent: #c15f3c;
+  --color-accent-hover: #a84f30;
+  --color-accent-active: #964226;
   --color-accent-fg: #ffffff;
-  --color-accent-subtle: #e4eafd;
-  --color-accent-soft: #f2f5fe;
-  --color-accent-border: #c7d4fb;
-  --color-accent-text: #1a3fd0;
-  --color-focus: #1b44e0;
-  --color-focus-ring: #c7d4fb;
-  --color-selection: #c7d4fb;
+  --color-accent-subtle: #f7e8e1;
+  --color-accent-soft: #fbf4f1;
+  --color-accent-border: #ebcfc4;
+  --color-accent-text: #964226;
+  --color-focus: #c15f3c;
+  --color-focus-ring: #ebcfc4;
+  --color-selection: #ebcfc4;
   --color-selection-fg: #16161a;
-  --color-action: #5147e5;
-  --color-action-hover: #4438d4;
-  --color-action-active: #392fbd;
+  --color-action: #c15f3c;
+  --color-action-hover: #a84f30;
+  --color-action-active: #964226;
   --color-action-fg: #ffffff;
 
   /* Answer-engine brand marks (functional identity, marketing engine chips). */
@@ -134,11 +134,11 @@
   --color-sentiment-negative-bg: #fff3f0;
   --color-sentiment-negative-text: #9a3412;
 
-  /* Owned evidence tracks selection indigo; competitor/third-party stay distinct. */
-  --color-citation-owned: #1b44e0;
-  --color-citation-owned-bg: #e4eafd;
-  --color-citation-owned-border: #c7d4fb;
-  --color-citation-owned-text: #1a3fd0;
+  /* Owned evidence tracks selection terracotta; competitor/third-party stay distinct. */
+  --color-citation-owned: #c15f3c;
+  --color-citation-owned-bg: #f7e8e1;
+  --color-citation-owned-border: #ebcfc4;
+  --color-citation-owned-text: #964226;
   --color-citation-competitor: #00a9c5;
   --color-citation-competitor-bg: #edf7f7;
   --color-citation-competitor-border: #ddf1f2;
@@ -154,8 +154,8 @@
   --color-run-queued-bg: #f4f4f1;
   --color-run-running: #00a9c5;
   --color-run-running-bg: #edf7f7;
-  --color-run-analyzing: #1b44e0;
-  --color-run-analyzing-bg: #e4eafd;
+  --color-run-analyzing: #c15f3c;
+  --color-run-analyzing-bg: #f7e8e1;
   --color-run-completed: #9acd32;
   --color-run-completed-bg: #f4f8ec;
   --color-run-partial: #f59e0b;
@@ -187,16 +187,16 @@
   --color-score-high-text: #3f6212;
   --color-score-high-ring: #9acd32;
 
-  /* Charts — analytical indigo is the first series; the rest stay categorical. */
-  --color-chart-1: #1b44e0;
+  /* Charts — analytical terracotta is the first series; the rest stay categorical. */
+  --color-chart-1: #c15f3c;
   --color-chart-2: #00a9c5;
   --color-chart-3: #f59e0b;
   --color-chart-4: #ff6e56;
   --color-chart-5: #9acd32;
-  --color-chart-6: #9fb4f7;
+  --color-chart-6: #d9a795;
   --color-chart-7: #155e75;
   --color-chart-8: #9a3412;
-  --color-series-1: #1b44e0;
+  --color-series-1: #c15f3c;
   --color-series-2: #00a9c5;
   --color-series-3: #f59e0b;
   --color-series-4: #ff6e56;
@@ -355,6 +355,7 @@ body {
   letter-spacing: normal;
   -webkit-font-smoothing: antialiased;
   text-size-adjust: 100%;
+  overflow-x: clip;
 }
 
 @layer base {
@@ -365,7 +366,7 @@ body {
   h5,
   h6 {
     margin: 0;
-    font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-uncut-sans), var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-weight: 500;
     letter-spacing: normal;
     line-height: 1.2;
@@ -390,7 +391,7 @@ body {
      rendered size: a flat 2 paints a 1px stem at 12px and a 2px stem at
      24px, which is why large icons currently read heavier than small ones.
      These rungs compensate so every glyph lands near a 1.3px stem, in step
-     with Geist at body sizes. Compensation is partial on purpose: an
+     with Inter at body sizes. Compensation is partial on purpose: an
      identical absolute stem at 12px closes up the counters and muddies the
      glyph.
 
@@ -454,14 +455,14 @@ code,
 pre,
 kbd,
 samp {
-  font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-variant-numeric: tabular-nums;
   font-synthesis: none;
 }
 
 .value-placeholder {
   color: var(--value-placeholder);
-  font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: var(--text-xs);
   font-weight: 400;
   line-height: var(--text-xs--line-height);

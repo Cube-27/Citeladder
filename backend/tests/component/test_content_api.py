@@ -456,3 +456,50 @@ async def test_clear_history_removes_only_terminal_rows_for_the_authorized_proje
         assert (
             await session.get(ContentGeneration, other_project_terminal_id)
         ) is not None
+
+
+@pytest.mark.asyncio
+async def test_try_again_stamps_the_version_that_rendered_it(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A retry's provenance must describe the pack it actually used.
+
+    ``try_again`` reuses the source's frozen context but rebuilds the messages
+    from whatever skill pack is deployed now. It used to copy the SOURCE row's
+    ``skill_version`` onto that new row, so a retry rendered from a changed
+    pack claimed the old version — and because ``message_digest`` is computed
+    over the messages actually built, the record was self-consistent and no
+    check could catch it. The seeded row carries a deliberately stale version
+    to stand in for that drift.
+    """
+    monkeypatch.setattr(
+        content_settings, "api_key", SecretStr(_CANARY_SECRET), raising=False
+    )
+    await _register(client, "content-retry-provenance@example.com")
+    project_id = await _create_project(client)
+    generation_id = await _seed_generation(session_factory, project_id)
+
+    async with session_factory() as session:
+        source = await session.get(ContentGeneration, uuid.UUID(generation_id))
+        assert source is not None
+        # The stale value the retry must NOT inherit.
+        assert source.skill_version == 1
+        source.status = TASK_STATUS_SUCCEEDED
+        await session.commit()
+
+    retried = await client.post(
+        f"/api/v1/content/generations/{generation_id}/try-again"
+    )
+    assert retried.status_code == 201
+    body = retried.json()
+
+    assert body["skill_id"] == "article"
+    assert body["skill_version"] == CONTENT_SKILL_REGISTRY["article"].version
+
+    # The source row is never mutated by a retry.
+    async with session_factory() as session:
+        source = await session.get(ContentGeneration, uuid.UUID(generation_id))
+        assert source is not None
+        assert source.skill_version == 1

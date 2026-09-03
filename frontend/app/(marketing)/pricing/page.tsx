@@ -42,7 +42,7 @@ export const metadata: Metadata = {
  */
 export default function PricingPage() {
   return (
-    <main id="main">
+    <main id="main" className="w-full max-w-full min-w-0 overflow-x-clip">
       <PageHero
         eyebrow="Pricing"
         title="Pay for the intelligence."

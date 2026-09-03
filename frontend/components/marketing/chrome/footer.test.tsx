@@ -100,5 +100,9 @@ describe('MarketingFooter', () => {
       'href',
       PARENT_COMPANY.href,
     );
+    expect(screen.getByRole('link', { name: 'Cube27 on LinkedIn' })).toHaveAttribute(
+      'href',
+      PARENT_COMPANY.linkedin,
+    );
   });
 });

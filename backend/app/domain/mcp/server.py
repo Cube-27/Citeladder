@@ -332,7 +332,7 @@ ul {{ margin: 0; padding-left: 1.25rem; }}
 code {{ background: #f4f4f1; padding: 0.1rem 0.3rem; border-radius: 4px;
   font-size: 0.875rem; word-break: break-all; }}
 button {{ margin-top: 1.75rem; width: 100%; padding: 0.75rem 1rem; border: 0;
-  border-radius: 8px; background: #5147e5; color: #fff; font: inherit;
+  border-radius: 8px; background: #c15f3c; color: #fff; font: inherit;
   font-weight: 500; cursor: pointer; }}
 </style>
 </head>
