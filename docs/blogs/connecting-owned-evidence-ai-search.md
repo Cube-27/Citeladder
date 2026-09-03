@@ -79,7 +79,7 @@ Create a custom segment in Google Analytics 4 using regular expressions (Regex) 
 *   *Note*: Treatment of copy-and-paste traffic remains directional, as visits without direct referral headers will still resolve as "Direct" traffic.
 
 ### ☐ Step 3: Map GSC AI Performance baselines
-Open Google Search Console and locate the Search Appearance filters. Note your baseline metrics for "AI Overview" and "AI Mode" queries over the last 90 days to track impressions, clicks, and average CTR.
+Open the Generative AI performance report in Google Search Console and record a 90-day baseline. It reports impressions only, broken down by page, country, device, and date, with AI Overviews and AI Mode combined — so the baseline is which pages Google surfaces in AI features, not a click or CTR figure.
 
 ---
 
@@ -122,7 +122,7 @@ When a user reads a synthesized summary inside ChatGPT or Perplexity, copies a p
 
 1. Pranjal Aggarwal et al., "GEO: Generative Engine Optimization," *Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD '24)*, August 25–29, 2024, Barcelona, Spain.
 2. "AEO Vs. SEO: Best Strategies For 2026," *Yotpo Blog*, May 2026.
-3. "Google Search Console AI Performance Reports: Complete 2026 Guide," *Kaival Infotech*, July 20, 2026.
+3. "Generative AI performance report," *Google Search Console Help*, support.google.com/webmasters/answer/16984139.
 4. "How to Track Perplexity Referrals in GA4 (Google Analytics 4)," *Rankshift*, January 26, 2026.
 5. "GPTBot vs OAI-SearchBot: Key Differences," *Am I Cited*, January 3, 2026.
 6. "The complete guide to Generative Engine Optimization (GEO)," *Peec AI*, August 27, 2025.

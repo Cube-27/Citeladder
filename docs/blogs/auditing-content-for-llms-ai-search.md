@@ -72,17 +72,20 @@ Your server logs and Content Delivery Network (CDN) hold the definitive record o
 
 To run a data-driven GEO program, you must move beyond guess-and-test prompting. Google and Microsoft both offer direct portals into how their AI experiences use your content. Translating these reports is a core part of the Analyze phase.
 
-### Google Search Console: AI Overviews vs. AI Mode
-Google divides its AI performance reporting into two distinct experiences, and analyzing their metrics reveals a fascinating behavioral split:
+### Google Search Console: what the generative AI report does and does not tell you
+Search Console publishes a Generative AI performance report covering the times links to your site were shown inside a generative AI feature on Google Search. Read its shape carefully before you build a workflow on it, because most of the metrics an SEO team reaches for are not in it:
 
-| Metric Comparison | Google AI Overviews | Google AI Mode |
-| :--- | :--- | :--- |
-| **Typical CTR** | Lower (6% to 9% median). | Higher (9% to 14% median). |
-| **Impression Volume** | Significantly higher (triggers on standard search). | Lower (requires active chat-style exploration). |
-| **Page Types Cited** | High-level definitions, short informational answers. | Comparison pages, deep how-to guides, detailed product pages. |
-| **Conversion Intent** | Informational; top-of-funnel brand imprinting. | Highly focused; mid-to-bottom funnel validation. |
+| What you want to know | What the report gives you |
+| :--- | :--- |
+| **Volume** | Impressions: how often your links appeared in a generative AI feature. |
+| **Breakdown** | Four dimensions — pages, countries, dates, and devices. |
+| **AI Overviews versus AI Mode** | Not separated. Both features are folded into one combined figure. |
+| **Queries** | Not reported. There is no query dimension in this report. |
+| **Clicks, CTR, and position** | Not reported for generative AI features. |
 
-**Actionable Analysis:** Check your GSC "Top Cited Pages" report. If you have pages with high AI Overview impressions but very low CTR, your page is winning the citation but losing the user's click. The solution is to optimize your title links and place a clear, high-intent call-to-action within the first 100 words of the cited copy.
+> **Do not compute a citation CTR from this report.** Because clicks and queries are absent, any "AI Overview click-through rate" is a number someone assembled from a different denominator. Use the report for what it can support — which pages Google is showing inside AI features, in which countries, on which devices, and how that moves over time — and get the answer text itself from a run you can open.
+
+**Actionable analysis:** Sort the report by page and compare it with the pages you expected to carry the topic. A page absent from the impressions list is not being surfaced at all, which is a structural or coverage problem. A page present but flat while a competitor gains is a content-depth problem. Neither conclusion needs a click metric that Google does not publish.
 
 ### Microsoft Bing: Intents, Topics, and Citation Share
 Bing Webmaster Tools provides some of the most granular analytics in the category through its AI Performance Report.
@@ -137,4 +140,4 @@ You must inspect your web server's access logs or CDN logs. Search specifically 
 4. "AI Performance - Webmaster Support," *Microsoft Bing Webmaster Tools Documentation*, March 2025.
 5. "GPTBot vs OAI-SearchBot: Key Differences," *Am I Cited*, January 3, 2026.
 6. "The complete guide to Generative Engine Optimization (GEO)," *Peec AI*, August 27, 2025.
-7. "Google Search Console AI Performance Reports: Complete 2026 Guide," *Kaival Infotech*, July 20, 2026.
+7. "Generative AI performance report," *Google Search Console Help*, support.google.com/webmasters/answer/16984139.
