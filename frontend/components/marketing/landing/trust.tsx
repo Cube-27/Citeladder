@@ -30,17 +30,21 @@ export function Trust() {
             {trust.guarantees.map((guarantee) => {
               const Icon = LANDING_ICONS[guarantee.icon];
               return (
+                // A `dl` may only contain `dt`/`dd` pairs, optionally wrapped
+                // in a single `div` per pair — so the icon lives inside the
+                // `dt` rather than as a third sibling, and the description is
+                // indented to the same 40px + 16px gutter the icon occupies.
                 <div
                   key={guarantee.title}
-                  className="hover:bg-background-alt/50 grid grid-cols-[40px_1fr] gap-4 p-5 transition-colors sm:p-6"
+                  className="hover:bg-background-alt/50 p-5 transition-colors sm:p-6"
                 >
-                  <span className="bg-accent-subtle/80 text-accent-text flex size-10 items-center justify-center rounded-[var(--radius-control)]">
-                    <Icon className="size-4.5" aria-hidden />
-                  </span>
-                  <div>
-                    <dt className="website-body text-foreground font-medium">{guarantee.title}</dt>
-                    <dd className="website-body text-muted mt-1">{guarantee.description}</dd>
-                  </div>
+                  <dt className="website-body text-foreground flex items-center gap-4 font-medium">
+                    <span className="bg-accent-subtle/80 text-accent-text flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
+                      <Icon className="size-4.5" aria-hidden />
+                    </span>
+                    <span>{guarantee.title}</span>
+                  </dt>
+                  <dd className="website-body text-muted mt-1 pl-14">{guarantee.description}</dd>
                 </div>
               );
             })}

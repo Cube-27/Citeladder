@@ -5,7 +5,7 @@ import { MarketingFooter } from '@/components/marketing/chrome/footer';
 import { MarketingNav } from '@/components/marketing/chrome/nav';
 import { MarketingMotion } from '@/components/marketing/primitives/marketing-motion';
 import { JsonLd } from '@/components/marketing/seo/json-ld';
-import { organizationJsonLd, websiteJsonLd } from '@/lib/seo/json-ld';
+import { organizationJsonLd, softwareApplicationJsonLd, websiteJsonLd } from '@/lib/seo/json-ld';
 
 /**
  * Marketing route-group layout — the public Prism Evidence surface.
@@ -23,10 +23,12 @@ export default function MarketingLayout({ children }: Readonly<{ children: React
   // is not worth emitting.
   const organization = organizationJsonLd();
   const website = websiteJsonLd();
+  const softwareApp = softwareApplicationJsonLd();
   return (
     <div data-public-surface className="bg-background text-foreground relative isolate min-h-dvh">
       {organization ? <JsonLd id="organization-json-ld" data={organization} /> : null}
       {website ? <JsonLd id="website-json-ld" data={website} /> : null}
+      {softwareApp ? <JsonLd id="software-app-json-ld" data={softwareApp} /> : null}
       <MarketingMotion>
         <MarketingNav />
         <div className="relative z-1 pt-16">{children}</div>

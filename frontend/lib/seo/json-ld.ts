@@ -2,7 +2,7 @@ import type { BlogPost } from '@/lib/marketing-content/blog';
 import type { FaqGroup } from '@/lib/marketing-content/faq';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { FOUNDER, PRODUCT_HEAD } from '@/lib/marketing-content/people';
-import { absoluteUrl, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
+import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
 
 export type JsonLdObject = Record<string, unknown>;
 
@@ -53,6 +53,28 @@ export function websiteJsonLd(): JsonLdObject | null {
     name: SITE_NAME,
     description: SITE_TAGLINE,
     url,
+    publisher: { '@type': 'Organization', name: SITE_NAME, url },
+  };
+}
+
+/**
+ * The product itself, as a web application. Deliberately carries no `offers`:
+ * a price in structured data is a claim Google surfaces verbatim, and the
+ * plans are not fixed here — an omitted offer is accurate, an invented one is
+ * not. `aggregateRating` is likewise absent until there are real reviews.
+ */
+export function softwareApplicationJsonLd(): JsonLdObject | null {
+  const url = absoluteUrl('/');
+  if (!url) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: SITE_NAME,
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'All',
+    browserRequirements: 'Requires JavaScript.',
+    url,
+    description: SITE_DESCRIPTION,
     publisher: { '@type': 'Organization', name: SITE_NAME, url },
   };
 }

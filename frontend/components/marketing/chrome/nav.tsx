@@ -278,7 +278,7 @@ export function MarketingNav() {
         className="mx-auto flex h-16 w-full max-w-7xl items-center gap-5 px-[var(--site-gutter)]"
       >
         <Link href="/" aria-label="CiteLadder home" className="shrink-0">
-          <LogoMark size={24} />
+          <LogoMark size={24} priority />
         </Link>
 
         <DesktopNavigation

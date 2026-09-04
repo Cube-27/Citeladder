@@ -126,7 +126,36 @@ const nextConfig: NextConfig = {
   // renders these `unoptimized`, so nothing is proxied through the Next image
   // optimizer — but the host must still be allowlisted for `next/image`.
   images: {
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [{ protocol: 'https', hostname: 'img.logo.dev' }],
+  },
+  // `/public` assets are served unhashed, so the browser revalidates them on
+  // every navigation without an explicit policy (Lighthouse flags this; only
+  // `/_next/static` is cached by default). The `:file*.:ext(...)` shape anchors
+  // on a real dot — a bare `(png|webp)` suffix group also matches a route like
+  // `/blog/what-is-png` and would freeze an HTML page in the cache.
+  async headers() {
+    return [
+      {
+        // Self-hosted font files are content-stable: a new cut ships under a
+        // new filename, so a year of immutable caching can never go stale.
+        source: '/:file*.:ext(woff2|woff|ttf|otf)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        // Images DO get replaced in place (logo, brand marks, blog art), so
+        // they get a month of freshness with a month of stale-while-revalidate
+        // rather than `immutable` — a swapped asset propagates instead of
+        // being pinned in visitors' caches for a year.
+        source: '/:file*.:ext(png|jpg|jpeg|webp|avif|gif|svg|ico)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=2592000, stale-while-revalidate=2592000',
+          },
+        ],
+      },
+    ];
   },
   async rewrites() {
     return [

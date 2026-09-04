@@ -1,10 +1,11 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { absoluteUrl, SITE_NAME, SITE_TAGLINE, siteOrigin } from './site';
 
 const ORIGINAL = process.env.NEXT_PUBLIC_SITE_URL;
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   if (ORIGINAL === undefined) {
     delete process.env.NEXT_PUBLIC_SITE_URL;
   } else {
@@ -31,6 +32,15 @@ describe('siteOrigin', () => {
   it('returns null for an unparseable value', () => {
     process.env.NEXT_PUBLIC_SITE_URL = 'not a url';
     expect(siteOrigin()).toBeNull();
+  });
+
+  it('falls back to the canonical apex in a production build', () => {
+    // The live site must always emit canonicals, `metadataBase` and JSON-LD,
+    // even if the env var is missing from the deploy. Dev/test keep degrading.
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(siteOrigin()?.origin).toBe('https://citeladder.com');
+    expect(absoluteUrl('/faq')).toBe('https://citeladder.com/faq');
   });
 
   it('returns a URL for a valid https origin', () => {

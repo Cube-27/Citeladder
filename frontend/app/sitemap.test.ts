@@ -94,6 +94,20 @@ describe('robots', () => {
     );
   });
 
+  it('closes the private surface to named AI crawlers too', () => {
+    // robots.txt is most-specific-agent-wins: a bot that matches a named group
+    // ignores the `*` group entirely, so the named group has to repeat the
+    // disallow list or naming a crawler quietly opens the signed-in app to it.
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    const result = robots();
+    const rules = Array.isArray(result.rules) ? result.rules : [result.rules];
+    expect(rules[1]?.userAgent).toEqual(
+      expect.arrayContaining(['GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended']),
+    );
+    expect(rules[1]?.disallow).toEqual(rules[0]?.disallow);
+    expect(rules[1]?.allow).toEqual(expect.arrayContaining(['/', '/llms.txt']));
+  });
+
   it('omits the sitemap directive while no origin is configured', () => {
     delete process.env.NEXT_PUBLIC_SITE_URL;
     expect(robots()).not.toHaveProperty('sitemap');

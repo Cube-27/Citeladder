@@ -64,51 +64,50 @@ export function GsapRevealInitializer() {
     () => {
       if (reduceMotion || typeof window === 'undefined') return;
 
-      // Reveal single elements
       const elements = document.querySelectorAll<HTMLElement>('[data-citeladder-reveal=""]');
+      const staggers = document.querySelectorAll('[data-citeladder-reveal="stagger"]');
+
+      // Phase 1: Batched DOM writes — initialize starting opacity & transforms without interleaving layout reads
       elements.forEach((el) => {
         const fromDir = el.dataset.citeladderRevealFrom || 'up';
         const xOffset = allowHorizontal ? (X_OFFSET_BY_DIRECTION[fromDir] ?? 0) : 0;
-        // Use pure opacity fades for scroll reveals. Vertical translations on scroll trigger
-        // cause layout shifting and jarring upward jerks when scrolling stops on mobile and desktop.
-        gsap.fromTo(
-          el,
-          { opacity: 0, x: xOffset },
-          {
-            opacity: 1,
-            x: 0,
-            duration: 0.6,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: el,
-              start: 'top 88%',
-              once: true,
-            },
-          },
-        );
+        gsap.set(el, { opacity: 0, x: xOffset });
       });
 
-      // Staggered grid/list groups
-      const staggers = document.querySelectorAll('[data-citeladder-reveal="stagger"]');
+      staggers.forEach((group) => {
+        gsap.set(group.children, { opacity: 0 });
+      });
+
+      // Phase 2: Create triggers — measurements run against settled DOM without layout invalidation between elements
+      elements.forEach((el) => {
+        gsap.to(el, {
+          opacity: 1,
+          x: 0,
+          duration: 0.6,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: el,
+            start: 'top 88%',
+            once: true,
+          },
+        });
+      });
+
       staggers.forEach((group) => {
         const children = group.children;
         if (!children.length) return;
 
-        gsap.fromTo(
-          children,
-          { opacity: 0 },
-          {
-            opacity: 1,
-            duration: 0.5,
-            stagger: 0.08,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: group,
-              start: 'top 85%',
-              once: true,
-            },
+        gsap.to(children, {
+          opacity: 1,
+          duration: 0.5,
+          stagger: 0.08,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: group,
+            start: 'top 85%',
+            once: true,
           },
-        );
+        });
       });
     },
     { dependencies: [reduceMotion, allowHorizontal] },

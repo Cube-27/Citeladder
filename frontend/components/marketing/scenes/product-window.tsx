@@ -167,6 +167,11 @@ export function ProductWindow() {
             <Button
               variant={activeLayer.id === 'agent' ? 'secondary' : 'ghost'}
               size="sm"
+              // The label text is `hidden` below `sm`, which drops it out of the
+              // accessibility tree and leaves the button nameless on a phone.
+              // The label mirrors the visible text exactly so the two agree on
+              // wider screens (WCAG 2.5.3, label in name).
+              aria-label="Agent"
               className="h-11 shrink-0 gap-1.5 px-2.5 sm:h-[var(--control-height-sm)]"
             >
               <Bot className="size-3.5" aria-hidden />

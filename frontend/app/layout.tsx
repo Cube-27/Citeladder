@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google';
 import localFont from 'next/font/local';
 
 import { QueryProvider } from '@/lib/providers/query-provider';
-import { SITE_NAME, SITE_TAGLINE, siteOrigin } from '@/lib/seo/site';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, siteOrigin } from '@/lib/seo/site';
 import './globals.css';
 
 const inter = Inter({
@@ -35,8 +35,7 @@ export const metadata: Metadata = {
     default: `${SITE_NAME} · ${SITE_TAGLINE}`,
     template: `%s · ${SITE_NAME}`,
   },
-  description:
-    'Connect site and demand evidence, act on grounded opportunities, and track observed answer-engine citation share.',
+  description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   icons: { icon: '/citeladder-favicon.ico' },
 };
