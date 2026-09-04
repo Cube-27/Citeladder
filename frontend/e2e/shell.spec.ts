@@ -50,11 +50,11 @@ test('primary navigation commits the destination shell instantly', async ({ page
   await instant(page, async () => {
     await page
       .getByRole('navigation', { name: 'Primary' })
-      .getByRole('link', { name: 'Traffic', exact: true })
+      .getByRole('link', { name: 'Performance', exact: true })
       .click();
-    await page.waitForURL((url) => url.pathname === '/traffic');
-    await expect(page.getByRole('heading', { level: 1, name: 'Traffic' })).toBeVisible();
+    await page.waitForURL((url) => url.pathname === '/performance');
+    await expect(page.getByRole('heading', { level: 1, name: 'Performance' })).toBeVisible();
   });
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Traffic' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Performance' })).toBeVisible();
 });

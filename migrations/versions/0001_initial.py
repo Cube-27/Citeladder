@@ -885,7 +885,9 @@ def upgrade() -> None:
         sa.Column("project_id", sa.UUID(), nullable=False),
         sa.Column("opportunity_id", sa.UUID(), nullable=True),
         sa.Column("target_site_url_id", sa.UUID(), nullable=True),
-        sa.Column("target_url", sa.String(length=2048), nullable=False, server_default=""),
+        sa.Column(
+            "target_url", sa.String(length=2048), nullable=False, server_default=""
+        ),
         sa.Column("demand_signal_id", sa.UUID(), nullable=True),
         sa.Column(
             "site_health_reference", postgresql.JSONB(astext_type=Text()), nullable=True
@@ -978,8 +980,16 @@ def upgrade() -> None:
         "content_generations",
         ["opportunity_id"],
     )
-    op.create_index(op.f("ix_content_generations_target_site_url_id"), "content_generations", ["target_site_url_id"])
-    op.create_index(op.f("ix_content_generations_demand_signal_id"), "content_generations", ["demand_signal_id"])
+    op.create_index(
+        op.f("ix_content_generations_target_site_url_id"),
+        "content_generations",
+        ["target_site_url_id"],
+    )
+    op.create_index(
+        op.f("ix_content_generations_demand_signal_id"),
+        "content_generations",
+        ["demand_signal_id"],
+    )
     op.create_table(
         "discovery_model_configs",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -1196,7 +1206,12 @@ def upgrade() -> None:
         sa.Column("window_start", sa.Date(), nullable=False),
         sa.Column("window_end", sa.Date(), nullable=False),
         sa.Column("granularity", sa.String(length=8), nullable=False),
+        sa.Column("preset_window_days", sa.Integer(), nullable=True),
         sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "dimension_counts", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("coverage", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column(
             "source_metric_row_ids", postgresql.JSONB(astext_type=Text()), nullable=True
         ),
@@ -1219,6 +1234,12 @@ def upgrade() -> None:
             name="uq_traffic_snapshot_window",
         ),
         sa.UniqueConstraint("workspace_id", "id", name="uq_traffic_snapshots_ws_id"),
+        sa.UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "id",
+            name="uq_traffic_snapshots_ws_project_id",
+        ),
     )
     op.create_index(
         op.f("ix_traffic_snapshots_project_id"),
@@ -2510,9 +2531,7 @@ def upgrade() -> None:
         sa.Column(
             "classification_formula_version", sa.String(length=32), nullable=False
         ),
-        sa.Column(
-            "scored_page_kind_set", postgresql.ARRAY(sa.String()), nullable=True
-        ),
+        sa.Column("scored_page_kind_set", postgresql.ARRAY(sa.String()), nullable=True),
         sa.Column(
             "scored_page_count_by_kind",
             postgresql.JSONB(astext_type=Text()),
@@ -2544,9 +2563,7 @@ def upgrade() -> None:
         ),
         sa.Column("issue_count", sa.Integer(), nullable=False),
         sa.Column("technical_defect_count", sa.Integer(), nullable=False),
-        sa.Column(
-            "technical_defect_affected_page_count", sa.Integer(), nullable=False
-        ),
+        sa.Column("technical_defect_affected_page_count", sa.Integer(), nullable=False),
         sa.Column("aeo_readiness_gap_count", sa.Integer(), nullable=False),
         sa.Column(
             "aeo_readiness_gap_affected_page_count", sa.Integer(), nullable=False
@@ -3306,6 +3323,69 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_traffic_page_stats_workspace_id"),
         "traffic_page_stats",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "performance_dimension_stats",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("snapshot_id", sa.UUID(), nullable=False),
+        sa.Column("dimension", sa.String(length=32), nullable=False),
+        sa.Column("dimension_key", sa.String(length=2048), nullable=False),
+        sa.Column("display_value", sa.String(length=2048), nullable=False),
+        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column(
+            "source_metric_row_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column(
+            "source_artifact_ids", postgresql.JSONB(astext_type=Text()), nullable=True
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "project_id", "snapshot_id"],
+            [
+                "traffic_snapshots.workspace_id",
+                "traffic_snapshots.project_id",
+                "traffic_snapshots.id",
+            ],
+            name="fk_performance_dimension_stat_snapshot_scoped",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "snapshot_id",
+            "dimension",
+            "dimension_key",
+            name="uq_performance_dimension_stat_key",
+        ),
+    )
+    op.create_index(
+        op.f("ix_performance_dimension_stats_dimension"),
+        "performance_dimension_stats",
+        ["dimension"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_performance_dimension_stats_project_id"),
+        "performance_dimension_stats",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_performance_dimension_stats_snapshot_id"),
+        "performance_dimension_stats",
+        ["snapshot_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_performance_dimension_stats_workspace_id"),
+        "performance_dimension_stats",
         ["workspace_id"],
         unique=False,
     )
@@ -5485,6 +5565,7 @@ def downgrade() -> None:
         "commerce_categories",
         "citations",
         "brand_mentions",
+        "performance_dimension_stats",
         "traffic_page_stats",
         "site_url_observations",
         "site_page_analyses",

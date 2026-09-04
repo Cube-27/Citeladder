@@ -19,7 +19,7 @@ describe('PageHeader', () => {
   it.each([
     ['/visibility', 'AI Visibility'],
     ['/ai-referrals', 'AI Referrals'],
-    ['/traffic', 'Traffic'],
+    ['/performance', 'Performance'],
     ['/prompts', 'Prompts'],
     ['/opportunities', 'Opportunities'],
     ['/site', 'Website'],
@@ -30,7 +30,7 @@ describe('PageHeader', () => {
   });
 
   it.each([
-    ['/traffic/anything', 'Traffic'],
+    ['/performance/anything', 'Performance'],
     ['/runs/abc', 'Run detail'],
     ['/runs/abc/executions/def', 'Execution evidence'],
     ['/products/abc', 'Commerce Suite'],

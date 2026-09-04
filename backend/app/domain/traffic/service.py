@@ -1,16 +1,23 @@
-"""Persist and read deterministic traffic projections.
+"""Persist deterministic traffic projections (the Performance write path).
 
-Refreshes fold persisted integration metrics in bounded batches and replace
-each snapshot's page/query rows atomically. Reads remain workspace-scoped and
-serve only persisted projections; synchronization stays with integrations.
+Two executors, one fold. ``refresh_traffic_snapshot`` rebuilds the triggering
+sync window and then derives the Performance PRESET FAMILY — one day-grained
+snapshot per configured window length, all anchored to the latest complete
+GSC evidence date, so a preset resolves whether the last sync ran today or
+last week. ``project_performance_range`` materializes ONE display snapshot
+for a user-requested custom or comparison window and does nothing else.
+
+Both fold persisted integration metrics in bounded batches and replace a
+snapshot's page/query/dimension rows atomically. Reads live in
+``performance.py``; synchronization stays with integrations.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
-from sqlalchemy import Float, and_, cast, delete, func, or_, select
+from sqlalchemy import and_, delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -18,73 +25,23 @@ from app.core.config.integrations_contracts import (
     GRANT_STATUS_CONNECTED,
     MAPPING_STATUS_ACTIVE,
 )
+from app.core.config.integrations_datasets import DATASET_GSC_DAY_DAILY
 from app.core.config.traffic import (
+    PERFORMANCE_SNAPSHOT_WINDOW_DAYS,
     TRAFFIC_CONSUMED_DATASETS,
     TRAFFIC_DEFAULT_GRANULARITY,
     TRAFFIC_FORMULA_VERSION,
     TRAFFIC_NORMALIZATION_VERSION,
-    TRAFFIC_PAGE_SORT_WHITELIST,
-    TRAFFIC_QUERY_SORT_WHITELIST,
     TRAFFIC_SNAPSHOT_GRANULARITIES,
     TRAFFIC_SYNC_PROVIDERS,
-    TRAFFIC_TABLE_PAGE_SIZE,
 )
 from app.domain.analytics.enqueue import enqueue_demand_snapshot_refresh
-from app.domain.analytics.schemas import metric_series_points
 from app.domain.analytics.tasks import payload_window, raise_if_task_terminal
 from app.domain.demand.projection import stable_hash
-from app.domain.site_health.normalization import (
-    decode_keyset_cursor,
-    encode_keyset_cursor,
-)
 from app.domain.traffic.projection import (
-    TRAFFIC_SERIES_NAMES,
     SnapshotProjection,
     TrafficMetricRowInput,
     build_traffic_projection,
-)
-from app.domain.traffic.query_support import (
-    TrafficCursorError,
-    TrafficQueryError,
-)
-from app.domain.traffic.query_support import (
-    decode_table_cursor as _decode_table_cursor,
-)
-from app.domain.traffic.query_support import (
-    empty_dashboard as _empty_dashboard,
-)
-from app.domain.traffic.query_support import (
-    float_or_none as _float_or_none,
-)
-from app.domain.traffic.query_support import (
-    int_or_none as _int_or_none,
-)
-from app.domain.traffic.query_support import (
-    int_or_zero as _int_or_zero,
-)
-from app.domain.traffic.query_support import load_snapshot as _load_snapshot
-from app.domain.traffic.query_support import (
-    parse_sort as _parse_sort,
-)
-from app.domain.traffic.query_support import (
-    table_filters as _table_filters,
-)
-from app.domain.traffic.query_support import (
-    totals as _totals,
-)
-from app.domain.traffic.query_support import (
-    validate_granularity as _validate_granularity,
-)
-from app.domain.traffic.query_support import (
-    validate_window as _validate_window,
-)
-from app.domain.traffic.schemas import (
-    TrafficDashboardResponse,
-    TrafficPageRow,
-    TrafficPagesPage,
-    TrafficQueriesPage,
-    TrafficQueryRow,
-    TrafficSeries,
 )
 from app.models.analytics import AnalyticsTask
 from app.models.integrations import (
@@ -95,7 +52,12 @@ from app.models.integrations import (
 )
 from app.models.site_health.runtime import SiteHealthProfile
 from app.models.site_health.urls import SiteUrl
-from app.models.traffic import TrafficPageStat, TrafficQueryStat, TrafficSnapshot
+from app.models.traffic import (
+    PerformanceDimensionStat,
+    TrafficPageStat,
+    TrafficQueryStat,
+    TrafficSnapshot,
+)
 
 # Bounded work per read batch: each batch is one cooperative-cancel boundary
 # (the WRITE phase is a single transaction). Module constant (not config) —
@@ -104,9 +66,10 @@ from app.models.traffic import TrafficPageStat, TrafficQueryStat, TrafficSnapsho
 _METRIC_ROW_BATCH_SIZE = 1000
 
 __all__ = [
-    "TrafficCursorError",
-    "TrafficQueryError",
-    "decode_keyset_cursor",
+    "list_traffic_sync_connections",
+    "performance_family_windows",
+    "project_performance_range",
+    "refresh_traffic_snapshot",
 ]
 
 
@@ -178,6 +141,8 @@ async def _upsert_snapshot(
     window_end: date,
     granularity: str,
     projection: SnapshotProjection,
+    coverage: dict[str, object] | None = None,
+    preset_window_days: int | None = None,
 ) -> uuid.UUID:
     """The transactional upsert of the one current snapshot row.
 
@@ -197,6 +162,9 @@ async def _upsert_snapshot(
             window_end=window_end,
             granularity=granularity,
             metrics=projection.metrics,
+            dimension_counts=projection.dimension_counts,
+            coverage=coverage,
+            preset_window_days=preset_window_days,
             source_metric_row_ids=projection.source_metric_row_ids,
             source_artifact_ids=projection.source_artifact_ids,
             formula_version=TRAFFIC_FORMULA_VERSION,
@@ -211,6 +179,9 @@ async def _upsert_snapshot(
             ],
             set_={
                 "metrics": projection.metrics,
+                "dimension_counts": projection.dimension_counts,
+                "coverage": coverage,
+                "preset_window_days": preset_window_days,
                 "source_metric_row_ids": projection.source_metric_row_ids,
                 "source_artifact_ids": projection.source_artifact_ids,
                 "formula_version": TRAFFIC_FORMULA_VERSION,
@@ -318,89 +289,395 @@ async def _replace_query_stats(
     )
 
 
+async def _replace_dimension_stats(
+    session: AsyncSession,
+    *,
+    task: AnalyticsTask,
+    snapshot_id: uuid.UUID,
+    projection: SnapshotProjection,
+) -> None:
+    """Delete-then-insert the snapshot's generic dimension rows (same tx).
+
+    All six Performance tables land in one statement, so a snapshot can
+    never hold QUERIES from one fold beside DAYS from another.
+    """
+    await session.execute(
+        delete(PerformanceDimensionStat).where(
+            PerformanceDimensionStat.snapshot_id == snapshot_id
+        )
+    )
+    if not projection.dimensions:
+        return
+    await session.execute(
+        pg_insert(PerformanceDimensionStat).values(
+            [
+                {
+                    "workspace_id": task.workspace_id,
+                    "project_id": task.project_id,
+                    "snapshot_id": snapshot_id,
+                    "dimension": row.dimension,
+                    "dimension_key": row.dimension_key,
+                    "display_value": row.display_value,
+                    "metrics": row.metrics,
+                    "source_metric_row_ids": row.source_metric_row_ids,
+                    "source_artifact_ids": row.source_artifact_ids,
+                }
+                for row in projection.dimensions
+            ]
+        )
+    )
+
+
+async def _evidence_coverage(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> dict[str, object]:
+    """The project's observed evidence extent over the consumed datasets.
+
+    Persisted with every snapshot so the surface can tell "this range is
+    outside the imported history" apart from "this range measured zero"
+    without scanning evidence at read time (invariant 7).
+    """
+    earliest, latest = (
+        await session.execute(
+            select(
+                func.min(IntegrationMetricRow.date),
+                func.max(IntegrationMetricRow.date),
+            )
+            .where(IntegrationMetricRow.workspace_id == workspace_id)
+            .where(IntegrationMetricRow.project_id == project_id)
+            .where(IntegrationMetricRow.dataset.in_(sorted(TRAFFIC_CONSUMED_DATASETS)))
+        )
+    ).one()
+    return {
+        "earliest_date": earliest.isoformat() if earliest is not None else None,
+        "latest_date": latest.isoformat() if latest is not None else None,
+        "covered_days": (
+            (latest - earliest).days + 1
+            if earliest is not None and latest is not None
+            else 0
+        ),
+    }
+
+
+async def _performance_anchor_date(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> date | None:
+    """The latest complete GSC date the preset family anchors to.
+
+    Read from ``gsc_day_daily`` — the same date-only report the headline
+    totals come from — so a preset window can never end on a date the
+    headline has no evidence for. ``None`` when the project has imported no
+    GSC day rows yet; the family is then simply not derived.
+    """
+    return await session.scalar(
+        select(func.max(IntegrationMetricRow.date))
+        .where(IntegrationMetricRow.workspace_id == workspace_id)
+        .where(IntegrationMetricRow.project_id == project_id)
+        .where(IntegrationMetricRow.dataset == DATASET_GSC_DAY_DAILY)
+    )
+
+
+async def _write_snapshot(
+    session: AsyncSession,
+    *,
+    task: AnalyticsTask,
+    inputs: list[TrafficMetricRowInput],
+    window_start: date,
+    window_end: date,
+    granularity: str,
+    project_origin: str | None,
+    coverage: dict[str, object] | None,
+    preset_window_days: int | None = None,
+) -> uuid.UUID:
+    """Build and persist one snapshot with all of its stat rows (same tx)."""
+    projection = build_traffic_projection(
+        rows=inputs,
+        window_start=window_start,
+        window_end=window_end,
+        granularity=granularity,
+        project_origin=project_origin,
+    )
+    snapshot_id = await _upsert_snapshot(
+        session,
+        task=task,
+        window_start=window_start,
+        window_end=window_end,
+        granularity=granularity,
+        projection=projection,
+        coverage=coverage,
+        preset_window_days=preset_window_days,
+    )
+    await _replace_page_stats(
+        session, task=task, snapshot_id=snapshot_id, projection=projection
+    )
+    await _replace_query_stats(
+        session, task=task, snapshot_id=snapshot_id, projection=projection
+    )
+    await _replace_dimension_stats(
+        session, task=task, snapshot_id=snapshot_id, projection=projection
+    )
+    return snapshot_id
+
+
+def performance_family_windows(anchor: date) -> list[tuple[date, date]]:
+    """The preset family's inclusive windows, newest edge first.
+
+    Every window ENDS on ``anchor`` (the latest complete GSC date), so the
+    presets are nested and one read of the widest span feeds them all.
+    """
+    return [
+        (anchor - timedelta(days=days - 1), anchor)
+        for days in PERFORMANCE_SNAPSHOT_WINDOW_DAYS
+    ]
+
+
+async def _collect_inputs(
+    session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    task: AnalyticsTask,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    window_start: date,
+    window_end: date,
+) -> list[TrafficMetricRowInput]:
+    """Read the span's consumed-dataset rows in bounded keyset batches.
+
+    Cooperative cancel is checked at every batch boundary. Nothing is
+    written during the read, so stopping here leaves no partial projection.
+    """
+    inputs: list[TrafficMetricRowInput] = []
+    after_id: uuid.UUID | None = None
+    while True:
+        await _raise_if_task_terminal(session_factory, task.id)
+        batch = await _metric_row_batch(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            window_start=window_start,
+            window_end=window_end,
+            after_id=after_id,
+            limit=_METRIC_ROW_BATCH_SIZE,
+        )
+        if not batch:
+            break
+        inputs.extend(_to_input(row) for row in batch)
+        after_id = batch[-1].id
+        if len(batch) < _METRIC_ROW_BATCH_SIZE:
+            break
+    return inputs
+
+
+async def _project_origin(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> str | None:
+    return await session.scalar(
+        select(SiteHealthProfile.root_url).where(
+            SiteHealthProfile.workspace_id == workspace_id,
+            SiteHealthProfile.project_id == project_id,
+        )
+    )
+
+
+async def _refresh_sync_window(
+    session: AsyncSession,
+    *,
+    task: AnalyticsTask,
+    project_id: uuid.UUID,
+    inputs: list[TrafficMetricRowInput],
+    window_start: date,
+    window_end: date,
+    project_origin: str | None,
+    coverage: dict[str, object],
+) -> None:
+    """Rebuild the triggering sync window at every configured granularity.
+
+    This is the snapshot Demand reads by exact window, and the one
+    implementation verification is triggered against, so its granularity set
+    and its downstream chain are unchanged.
+    """
+    for granularity in sorted(TRAFFIC_SNAPSHOT_GRANULARITIES):
+        snapshot_id = await _write_snapshot(
+            session,
+            task=task,
+            inputs=inputs,
+            window_start=window_start,
+            window_end=window_end,
+            granularity=granularity,
+            project_origin=project_origin,
+            coverage=coverage,
+        )
+        if granularity == TRAFFIC_DEFAULT_GRANULARITY:
+            from app.domain.opportunities.verification import (
+                enqueue_implementation_verification,
+            )
+
+            await enqueue_implementation_verification(
+                session,
+                workspace_id=task.workspace_id,
+                project_id=project_id,
+                trigger_kind="traffic_snapshot",
+                trigger_id=snapshot_id,
+                trigger_revision=str(task.id),
+            )
+
+
+async def _refresh_performance_family(
+    session: AsyncSession,
+    *,
+    task: AnalyticsTask,
+    inputs: list[TrafficMetricRowInput],
+    anchor: date,
+    project_origin: str | None,
+    coverage: dict[str, object],
+) -> None:
+    """Derive the Performance presets, all anchored at the latest GSC date.
+
+    Day granularity only: the surface charts daily buckets and offers no
+    bucket control, so week/month rows for these windows would never be read.
+    The family fires no verification and no Demand hand-off — those belong to
+    the sync window above, and repeating them per preset would recompute the
+    same downstream work several times for one sync.
+    """
+    for window_start, window_end in performance_family_windows(anchor):
+        await _write_snapshot(
+            session,
+            task=task,
+            inputs=inputs,
+            window_start=window_start,
+            window_end=window_end,
+            granularity=TRAFFIC_DEFAULT_GRANULARITY,
+            project_origin=project_origin,
+            coverage=coverage,
+            # Marks the row as THIS preset's snapshot, so preset resolution
+            # can never land on a same-length custom display range. The
+            # family writes after the sync window, so a window that is both
+            # keeps the marker.
+            preset_window_days=(window_end - window_start).days + 1,
+        )
+
+
 async def refresh_traffic_snapshot(
     session_factory: async_sessionmaker[AsyncSession], task: AnalyticsTask
 ) -> None:
-    """``traffic_snapshot_refresh`` executor: rebuild one window's snapshots.
+    """``traffic_snapshot_refresh`` executor: sync window + preset family.
 
-    Read phase: the window's consumed-dataset metric rows in bounded
-    keyset batches, checking cooperative cancel at every batch boundary.
-    Write phase: for each configured granularity
-    (``TRAFFIC_SNAPSHOT_GRANULARITIES``) the pure projection is upserted and
-    its page/query stat rows replaced — ALL of it in ONE transaction (one
-    commit), so a refresh never leaves a half-written snapshot family.
+    Read phase: ONE keyset scan over the union of the triggering sync window
+    and the preset family's widest span, in bounded batches with a
+    cooperative-cancel check at every boundary. Write phase: the sync window
+    at every configured granularity, then the day-grained preset family, then
+    the Demand hand-off — ALL in ONE transaction, so a refresh never leaves a
+    half-written snapshot family behind.
     """
     if task.project_id is None:
         raise ValueError("traffic_snapshot_refresh task missing project_id")
     window_start, window_end = payload_window(task, kind="traffic_snapshot_refresh")
     async with session_factory() as session:
-        project_origin = await session.scalar(
-            select(SiteHealthProfile.root_url).where(
-                SiteHealthProfile.workspace_id == task.workspace_id,
-                SiteHealthProfile.project_id == task.project_id,
-            )
+        project_origin = await _project_origin(
+            session, workspace_id=task.workspace_id, project_id=task.project_id
         )
-        inputs: list[TrafficMetricRowInput] = []
-        after_id: uuid.UUID | None = None
-        while True:
-            await _raise_if_task_terminal(session_factory, task.id)
-            batch = await _metric_row_batch(
-                session,
-                workspace_id=task.workspace_id,
-                project_id=task.project_id,
-                window_start=window_start,
-                window_end=window_end,
-                after_id=after_id,
-                limit=_METRIC_ROW_BATCH_SIZE,
-            )
-            if not batch:
-                break
-            inputs.extend(_to_input(row) for row in batch)
-            after_id = batch[-1].id
-            if len(batch) < _METRIC_ROW_BATCH_SIZE:
-                break
-
-        for granularity in sorted(TRAFFIC_SNAPSHOT_GRANULARITIES):
-            projection = build_traffic_projection(
-                rows=inputs,
-                window_start=window_start,
-                window_end=window_end,
-                granularity=granularity,
-                project_origin=project_origin,
-            )
-            snapshot_id = await _upsert_snapshot(
+        anchor = await _performance_anchor_date(
+            session, workspace_id=task.workspace_id, project_id=task.project_id
+        )
+        # One scan covers both write phases: the family's windows all end at
+        # the anchor and are nested, so the widest of them plus the sync
+        # window bounds every row either phase can need.
+        family = performance_family_windows(anchor) if anchor is not None else []
+        read_start = min([window_start, *(start for start, _ in family)])
+        read_end = max([window_end, *(end for _, end in family)])
+        inputs = await _collect_inputs(
+            session,
+            session_factory,
+            task=task,
+            workspace_id=task.workspace_id,
+            project_id=task.project_id,
+            window_start=read_start,
+            window_end=read_end,
+        )
+        coverage = await _evidence_coverage(
+            session, workspace_id=task.workspace_id, project_id=task.project_id
+        )
+        await _refresh_sync_window(
+            session,
+            task=task,
+            project_id=task.project_id,
+            inputs=inputs,
+            window_start=window_start,
+            window_end=window_end,
+            project_origin=project_origin,
+            coverage=coverage,
+        )
+        if anchor is not None:
+            await _refresh_performance_family(
                 session,
                 task=task,
-                window_start=window_start,
-                window_end=window_end,
-                granularity=granularity,
-                projection=projection,
+                inputs=inputs,
+                anchor=anchor,
+                project_origin=project_origin,
+                coverage=coverage,
             )
-            await _replace_page_stats(
-                session, task=task, snapshot_id=snapshot_id, projection=projection
-            )
-            await _replace_query_stats(
-                session, task=task, snapshot_id=snapshot_id, projection=projection
-            )
-            if granularity == TRAFFIC_DEFAULT_GRANULARITY:
-                from app.domain.opportunities.verification import (
-                    enqueue_implementation_verification,
-                )
-
-                await enqueue_implementation_verification(
-                    session,
-                    workspace_id=task.workspace_id,
-                    project_id=task.project_id,
-                    trigger_kind="traffic_snapshot",
-                    trigger_id=snapshot_id,
-                    trigger_revision=str(task.id),
-                )
         await _enqueue_demand_refresh(
             session,
             task=task,
             inputs=inputs,
             window_start=window_start,
             window_end=window_end,
+        )
+        await session.commit()
+
+
+async def project_performance_range(
+    session_factory: async_sessionmaker[AsyncSession], task: AnalyticsTask
+) -> None:
+    """``performance_range_projection`` executor: ONE display snapshot.
+
+    Materializes the day-grained snapshot for a user-requested custom or
+    comparison window over ALREADY-PERSISTED evidence, and does nothing else:
+    it calls no provider, refreshes no Demand snapshot, enqueues no
+    opportunity recompute or implementation verification, and touches no
+    other product projection. A window a snapshot already covers is left
+    exactly as it is — a display request must never replace the preset or
+    sync-window snapshot another surface is reading.
+    """
+    if task.project_id is None:
+        raise ValueError("performance_range_projection task missing project_id")
+    window_start, window_end = payload_window(task, kind="performance_range_projection")
+    async with session_factory() as session:
+        existing = await session.scalar(
+            select(TrafficSnapshot.id).where(
+                TrafficSnapshot.workspace_id == task.workspace_id,
+                TrafficSnapshot.project_id == task.project_id,
+                TrafficSnapshot.window_start == window_start,
+                TrafficSnapshot.window_end == window_end,
+                TrafficSnapshot.granularity == TRAFFIC_DEFAULT_GRANULARITY,
+            )
+        )
+        if existing is not None:
+            return
+        project_origin = await _project_origin(
+            session, workspace_id=task.workspace_id, project_id=task.project_id
+        )
+        inputs = await _collect_inputs(
+            session,
+            session_factory,
+            task=task,
+            workspace_id=task.workspace_id,
+            project_id=task.project_id,
+            window_start=window_start,
+            window_end=window_end,
+        )
+        coverage = await _evidence_coverage(
+            session, workspace_id=task.workspace_id, project_id=task.project_id
+        )
+        await _write_snapshot(
+            session,
+            task=task,
+            inputs=inputs,
+            window_start=window_start,
+            window_end=window_end,
+            granularity=TRAFFIC_DEFAULT_GRANULARITY,
+            project_origin=project_origin,
+            coverage=coverage,
         )
         await session.commit()
 
@@ -428,300 +705,6 @@ async def _enqueue_demand_refresh(
         window_start=window_start,
         window_end=window_end,
         source_revision=source_revision,
-    )
-
-
-# =========================================================================
-# A10 — read services (persisted projections only, invariant 7)
-# =========================================================================
-
-
-# Cursor endpoint scope labels (the keyset fingerprint binds the cursor to
-# the endpoint + the active filters — site-health convention, contract C4).
-_PAGES_CURSOR_SCOPE = "traffic-pages"
-_QUERIES_CURSOR_SCOPE = "traffic-queries"
-
-
-async def get_traffic_dashboard(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    from_date: date | None = None,
-    to_date: date | None = None,
-    granularity: str = TRAFFIC_DEFAULT_GRANULARITY,
-) -> TrafficDashboardResponse:
-    """Serve the headline Traffic projection from the persisted snapshot.
-
-    The persisted ``metrics`` JSONB already carries the exact totals/series
-    fragments (A7 writes them in the served shape); this maps them into the
-    strict response model. An absent snapshot yields the empty payload.
-    """
-    granularity = _validate_granularity(granularity)
-    _validate_window(from_date, to_date)
-    snapshot = await _load_snapshot(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        from_date=from_date,
-        to_date=to_date,
-        granularity=granularity,
-    )
-    if snapshot is None:
-        return _empty_dashboard(
-            project_id=project_id,
-            from_date=from_date,
-            to_date=to_date,
-            granularity=granularity,
-        )
-
-    metrics = snapshot.metrics or {}
-    series_raw = metrics.get("series") or {}
-    totals = _totals(metrics.get("totals"))
-    observed = (
-        totals.impressions,
-        totals.clicks,
-        totals.sessions or 0,
-        totals.conversions or 0,
-    )
-    return TrafficDashboardResponse(
-        project_id=project_id,
-        evidence_state="available" if any(observed) else "observed_zero",
-        window_start=snapshot.window_start.isoformat(),
-        window_end=snapshot.window_end.isoformat(),
-        granularity=snapshot.granularity,
-        totals=totals,
-        series=TrafficSeries(
-            **{
-                name: metric_series_points(series_raw.get(name))
-                for name in TRAFFIC_SERIES_NAMES
-            }
-        ),
-        formula_version=snapshot.formula_version,
-        normalization_version=snapshot.normalization_version,
-    )
-
-
-# The two persisted stat models share the columns the keyset read touches
-# (metrics/workspace_id/project_id/snapshot_id/id), so the shared helpers below
-# stay generic in the model and return its CONCRETE row type rather than Base.
-async def _stat_page_rows[StatModel: (TrafficPageStat, TrafficQueryStat)](
-    session: AsyncSession,
-    *,
-    model: type[StatModel],
-    scope: str,
-    filters: dict[str, object],
-    snapshot_id: uuid.UUID,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    sort_key: str,
-    descending: bool,
-    keyset: tuple[float | None, uuid.UUID] | None,
-) -> tuple[list[StatModel], str | None]:
-    """One keyset page of a snapshot's persisted stat rows + the cursor.
-
-    Ordering is ``(sort_metric [direction] NULLS LAST, id ASC)`` over the
-    STORED aggregate in the metrics JSONB — paging/sorting never recomputes
-    from ``IntegrationMetricRow`` (invariant 7). The ``+1`` lookahead row
-    decides whether a continuation cursor is emitted (site-health
-    convention).
-    """
-    # The persisted aggregate column: (metrics ->> '<key>')::float. JSONB
-    # ``->>`` yields SQL NULL for a JSON null/absent key, so NULL ratio /
-    # GA4-absent values sort NULLS LAST and cast cleanly.
-    metric_expr = cast(model.metrics[sort_key].astext, Float)
-    stmt = (
-        select(model)
-        .where(model.workspace_id == workspace_id)
-        .where(model.project_id == project_id)
-        .where(model.snapshot_id == snapshot_id)
-    )
-    if keyset is not None:
-        cur_value, cur_id = keyset
-        if cur_value is None:
-            # Past the non-NULL run: only NULL rows with a later id remain.
-            stmt = stmt.where(metric_expr.is_(None), model.id > cur_id)
-        else:
-            boundary = (
-                metric_expr < cur_value if descending else metric_expr > cur_value
-            )
-            stmt = stmt.where(
-                or_(
-                    boundary,
-                    and_(metric_expr == cur_value, model.id > cur_id),
-                    metric_expr.is_(None),
-                )
-            )
-    direction = metric_expr.desc() if descending else metric_expr.asc()
-    stmt = stmt.order_by(direction.nulls_last(), model.id.asc()).limit(
-        TRAFFIC_TABLE_PAGE_SIZE + 1
-    )
-
-    rows = list((await session.scalars(stmt)).all())
-    next_cursor: str | None = None
-    if len(rows) > TRAFFIC_TABLE_PAGE_SIZE:
-        rows = rows[:TRAFFIC_TABLE_PAGE_SIZE]
-        last = rows[-1]
-        last_value = _float_or_none((last.metrics or {}).get(sort_key))
-        next_cursor = encode_keyset_cursor(
-            scope=scope,
-            filters=filters,
-            sort_values=[
-                "" if last_value is None else last_value,
-                str(last.id),
-            ],
-        )
-    return rows, next_cursor
-
-
-def _page_row(stat: TrafficPageStat) -> TrafficPageRow:
-    metrics = stat.metrics or {}
-    return TrafficPageRow(
-        canonical_url=stat.canonical_url,
-        site_url_id=stat.site_url_id,
-        impressions=_int_or_zero(metrics.get("impressions")),
-        clicks=_int_or_zero(metrics.get("clicks")),
-        ctr=_float_or_none(metrics.get("ctr")),
-        position=_float_or_none(metrics.get("position")),
-        sessions=_int_or_none(metrics.get("sessions")),
-        conversions=_int_or_none(metrics.get("conversions")),
-    )
-
-
-def _query_row(stat: TrafficQueryStat) -> TrafficQueryRow:
-    metrics = stat.metrics or {}
-    return TrafficQueryRow(
-        normalized_query=stat.normalized_query,
-        impressions=_int_or_zero(metrics.get("impressions")),
-        clicks=_int_or_zero(metrics.get("clicks")),
-        ctr=_float_or_none(metrics.get("ctr")),
-        position=_float_or_none(metrics.get("position")),
-    )
-
-
-async def _stat_table[StatModel: (TrafficPageStat, TrafficQueryStat)](
-    session: AsyncSession,
-    *,
-    model: type[StatModel],
-    scope: str,
-    sort_whitelist: frozenset[str],
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    from_date: date | None,
-    to_date: date | None,
-    sort: str | None,
-    cursor: str | None,
-) -> tuple[list[StatModel], str | None]:
-    """The shared keyset-table read behind the pages/queries endpoints.
-
-    Validates the window, parses the whitelist-guarded sort, decodes the
-    fingerprint-bound cursor, loads the default-granularity snapshot (the
-    per-page/per-query folds are granularity-independent, so its stat rows
-    serve every table request — the A9 themes precedent), and returns its
-    persisted rows + continuation cursor. An absent snapshot yields an
-    empty page. Each endpoint owns only its model/scope/whitelist and the
-    row mapping below.
-    """
-    _validate_window(from_date, to_date)
-    sort_key, descending = _parse_sort(sort, whitelist=sort_whitelist)
-    normalized_sort = f"-{sort_key}" if descending else sort_key
-    filters = _table_filters(
-        project_id=project_id,
-        from_date=from_date,
-        to_date=to_date,
-        sort=normalized_sort,
-    )
-    keyset: tuple[float | None, uuid.UUID] | None = None
-    if cursor:
-        keyset = _decode_table_cursor(cursor, scope=scope, filters=filters)
-    snapshot = await _load_snapshot(
-        session,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        from_date=from_date,
-        to_date=to_date,
-        granularity=TRAFFIC_DEFAULT_GRANULARITY,
-    )
-    if snapshot is None:
-        return [], None
-    return await _stat_page_rows(
-        session,
-        model=model,
-        scope=scope,
-        filters=filters,
-        snapshot_id=snapshot.id,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        sort_key=sort_key,
-        descending=descending,
-        keyset=keyset,
-    )
-
-
-async def get_traffic_pages(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    from_date: date | None = None,
-    to_date: date | None = None,
-    sort: str | None = None,
-    cursor: str | None = None,
-) -> TrafficPagesPage:
-    """Page the persisted per-page stat rows (keyset, contract C4).
-
-    A pure read of the persisted ``TrafficPageStat`` rows of the snapshot
-    matching the window (invariant 7). The opaque cursor is
-    fingerprint-bound to this endpoint + the active filters, so a replay
-    against a different window/sort is rejected (400) instead of silently
-    skipping rows. An absent snapshot yields an empty page.
-    """
-    rows, next_cursor = await _stat_table(
-        session,
-        model=TrafficPageStat,
-        scope=_PAGES_CURSOR_SCOPE,
-        sort_whitelist=TRAFFIC_PAGE_SORT_WHITELIST,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        from_date=from_date,
-        to_date=to_date,
-        sort=sort,
-        cursor=cursor,
-    )
-    return TrafficPagesPage(
-        items=[_page_row(row) for row in rows], next_cursor=next_cursor
-    )
-
-
-async def get_traffic_queries(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    from_date: date | None = None,
-    to_date: date | None = None,
-    sort: str | None = None,
-    cursor: str | None = None,
-) -> TrafficQueriesPage:
-    """Page the persisted per-query stat rows (keyset, contract C4).
-
-    Same contract as :func:`get_traffic_pages` over ``TrafficQueryStat``
-    (GSC-only measures; the key is the normalized query string).
-    """
-    rows, next_cursor = await _stat_table(
-        session,
-        model=TrafficQueryStat,
-        scope=_QUERIES_CURSOR_SCOPE,
-        sort_whitelist=TRAFFIC_QUERY_SORT_WHITELIST,
-        workspace_id=workspace_id,
-        project_id=project_id,
-        from_date=from_date,
-        to_date=to_date,
-        sort=sort,
-        cursor=cursor,
-    )
-    return TrafficQueriesPage(
-        items=[_query_row(row) for row in rows], next_cursor=next_cursor
     )
 
 

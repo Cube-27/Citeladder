@@ -1,22 +1,34 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 
 import { integrationsApi, type IntegrationSyncRun } from '@/lib/api/integrations';
+import { performanceApi, type PerformanceSyncEnqueueResponse } from '@/lib/api/performance';
 import { queryKeys } from '@/lib/api/query-keys';
-import { trafficApi, type TrafficSyncEnqueueResponse } from '@/lib/api/traffic';
 import {
   isActiveSyncRun,
   isSucceededSyncRun,
   SYNC_RUN_POLL_MS,
 } from '@/lib/integrations/sync-runs';
 
-export function useTrafficSync(projectId: string | null) {
+/**
+ * "Sync now" for the Performance surface: enqueue one integrations run per
+ * active mapped connection, poll each to terminal, then invalidate the
+ * projections the completed runs refreshed.
+ *
+ * The window each run covers is decided server-side and is INCREMENTAL — it
+ * extends what the connection already imported rather than re-fetching a
+ * fixed trailing window — so repeated syncs accumulate history instead of
+ * rewriting the same dates.
+ */
+export function usePerformanceSync(projectId: string | null) {
   const queryClient = useQueryClient();
-  const [runs, setRuns] = useState<TrafficSyncEnqueueResponse>([]);
+  const [runs, setRuns] = useState<PerformanceSyncEnqueueResponse>([]);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: () => trafficApi.syncNow(projectId ?? ''),
+    mutationFn: () => performanceApi.syncNow(projectId ?? ''),
     onSuccess: (enqueued) => {
       if (!enqueued.length) {
         setNotice(
@@ -53,7 +65,7 @@ export function useTrafficSync(projectId: string | null) {
 
   useEffect(() => {
     if (!allTerminal) return;
-    void queryClient.invalidateQueries({ queryKey: queryKeys.traffic.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.performance.all });
     void queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
   }, [allTerminal, queryClient]);
 

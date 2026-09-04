@@ -22,6 +22,7 @@ from app.core.config.integrations_datasets import (
     DATASET_GA4_CHANNEL_DAILY,
     DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
+    DATASET_GSC_DAY_DAILY,
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
 )
@@ -34,6 +35,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.core.config.traffic import (
+    PERFORMANCE_SNAPSHOT_WINDOW_DAYS,
     TRAFFIC_FORMULA_VERSION,
     TRAFFIC_NORMALIZATION_VERSION,
 )
@@ -73,6 +75,36 @@ async def _seed_traffic_data(
     consent shape); one import artifact per consumed dataset. Returns the
     named row/artifact ids for provenance assertions.
     """
+    # The date-only report OWNS the headline totals and chart series. Its
+    # values are Search Console's own overall totals for each date, which on
+    # this fixture equal the page report's daily aggregate — that agreement
+    # is what the totals assertions below check.
+    days = await seed_ga4_import(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        dataset=DATASET_GSC_DAY_DAILY,
+        provider=INTEGRATION_PROVIDER_GSC,
+        property_ref=GSC_PROPERTY,
+        window=WINDOW,
+    )
+    d1 = await seed_metric_row(
+        session,
+        seed=days,
+        row_date=date(2026, 7, 20),
+        dimension_values=["2026-07-20"],
+        # 10+5 clicks over 100+50 impressions; position weighted 1250/150.
+        metrics={"clicks": 15, "impressions": 150, "position": 1250 / 150},
+    )
+    d2 = await seed_metric_row(
+        session,
+        seed=days,
+        row_date=date(2026, 7, 21),
+        dimension_values=["2026-07-21"],
+        metrics={"clicks": 20, "impressions": 200, "position": 20.0},
+    )
+    gsc_day_connection = await session.get(IntegrationConnection, days.connection_id)
+    assert gsc_day_connection is not None
     pages = await seed_ga4_import(
         session,
         workspace_id=workspace_id,
@@ -81,6 +113,8 @@ async def _seed_traffic_data(
         provider=INTEGRATION_PROVIDER_GSC,
         property_ref=GSC_PROPERTY,
         window=WINDOW,
+        connection=gsc_day_connection,
+        resync_seq=5,
     )
     r1 = await seed_metric_row(
         session,
@@ -88,6 +122,7 @@ async def _seed_traffic_data(
         row_date=date(2026, 7, 20),
         dimension_values=[PAGE_A, "2026-07-20"],
         metrics={"clicks": 10, "impressions": 100, "ctr": 0.1, "position": 10.0},
+        resync_seq=5,
     )
     r2 = await seed_metric_row(
         session,
@@ -95,6 +130,7 @@ async def _seed_traffic_data(
         row_date=date(2026, 7, 21),
         dimension_values=[PAGE_A, "2026-07-21"],
         metrics={"clicks": 20, "impressions": 200, "ctr": 0.1, "position": 20.0},
+        resync_seq=5,
     )
     r3 = await seed_metric_row(
         session,
@@ -102,9 +138,9 @@ async def _seed_traffic_data(
         row_date=date(2026, 7, 20),
         dimension_values=[PAGE_B_RAW, "2026-07-20"],
         metrics={"clicks": 5, "impressions": 50, "ctr": 0.1, "position": 5.0},
+        resync_seq=5,
     )
-    gsc_connection = await session.get(IntegrationConnection, pages.connection_id)
-    assert gsc_connection is not None
+    gsc_connection = gsc_day_connection
     # The second connection rides the SAME Google grant (one consent).
     ga4_connection = IntegrationConnection(
         workspace_id=workspace_id,
@@ -211,9 +247,24 @@ async def _seed_traffic_data(
     )
     await session.commit()
     return {
-        "included_row_ids": [r1.id, r2.id, r3.id, q1.id, c1.id, sm1.id, l1.id, l2.id],
+        "included_row_ids": [
+            d1.id,
+            d2.id,
+            r1.id,
+            r2.id,
+            r3.id,
+            q1.id,
+            c1.id,
+            sm1.id,
+            l1.id,
+            l2.id,
+        ],
+        # Named so provenance assertions do not depend on list order.
+        "page_b_row_ids": [r3.id, l2.id],
+        "query_row_ids": [q1.id],
         "excluded_row_ids": [c2.id, sm2.id],
         "artifact_ids": [
+            days.artifact_id,
             pages.artifact_id,
             queries.artifact_id,
             channels.artifact_id,
@@ -265,7 +316,22 @@ async def _enqueue_and_fetch(
 async def _snapshots_by_granularity(
     session: AsyncSession,
 ) -> dict[str, TrafficSnapshot]:
-    rows = list((await session.scalars(select(TrafficSnapshot))).all())
+    """The SYNC-WINDOW snapshots, keyed by granularity.
+
+    The refresh also derives the day-grained Performance preset family, so a
+    bare select would return several ``day`` rows. Filtering to the triggering
+    window keeps these assertions about the snapshot Demand and verification
+    read.
+    """
+    rows = list(
+        (
+            await session.scalars(
+                select(TrafficSnapshot)
+                .where(TrafficSnapshot.window_start == WINDOW[0])
+                .where(TrafficSnapshot.window_end == WINDOW[1])
+            )
+        ).all()
+    )
     return {row.granularity: row for row in rows}
 
 
@@ -370,7 +436,7 @@ async def test_refresh_builds_snapshots_stats_join_and_provenance(
         assert page_b.metrics["sessions"] == 50
         assert page_b.metrics["conversions"] == 5
         assert page_b.source_metric_row_ids == sorted(
-            [str(ids["included_row_ids"][2]), str(ids["included_row_ids"][7])]
+            str(row_id) for row_id in ids["page_b_row_ids"]
         )
 
         # Query stats: normalized key, GSC-only measures.
@@ -392,7 +458,7 @@ async def test_refresh_builds_snapshots_stats_join_and_provenance(
             "ctr": pytest.approx(0.1),
             "position": pytest.approx(8.0),
         }
-        assert query.source_metric_row_ids == [str(ids["included_row_ids"][3])]
+        assert query.source_metric_row_ids == [str(ids["query_row_ids"][0])]
 
 
 @pytest.mark.asyncio
@@ -449,28 +515,30 @@ async def test_refresh_reads_only_the_latest_resync_seq(
 ) -> None:
     async with session_factory() as session:
         workspace_id, project_id = await seed_workspace_project(session)
-        pages = await seed_ga4_import(
+        # Driven through the date-only dataset, which owns the headline the
+        # assertions below read.
+        days = await seed_ga4_import(
             session,
             workspace_id=workspace_id,
             project_id=project_id,
-            dataset=DATASET_GSC_PAGE_DAILY,
+            dataset=DATASET_GSC_DAY_DAILY,
             provider=INTEGRATION_PROVIDER_GSC,
             property_ref=GSC_PROPERTY,
             window=WINDOW,
         )
         stale = await seed_metric_row(
             session,
-            seed=pages,
+            seed=days,
             row_date=date(2026, 7, 20),
-            dimension_values=[PAGE_A, "2026-07-20"],
+            dimension_values=["2026-07-20"],
             metrics={"clicks": 5, "impressions": 50, "position": 2.0},
             resync_seq=0,
         )
         fresh = await seed_metric_row(
             session,
-            seed=pages,
+            seed=days,
             row_date=date(2026, 7, 20),
-            dimension_values=[PAGE_A, "2026-07-20"],
+            dimension_values=["2026-07-20"],
             metrics={"clicks": 9, "impressions": 90, "position": 4.0},
             resync_seq=1,
         )
@@ -572,7 +640,22 @@ async def test_worker_routes_traffic_snapshot_refresh_kind(
         # executor — SUCCEEDED, never executor_not_wired.
         assert row.status == TASK_STATUS_SUCCEEDED
         assert row.error_code == ""
-        assert await session.scalar(select(func.count(TrafficSnapshot.id))) == 3
+        # Three granularities for the sync window, plus the day-grained
+        # Performance preset family anchored at the latest complete GSC date.
+        assert (
+            await session.scalar(
+                select(func.count(TrafficSnapshot.id)).where(
+                    TrafficSnapshot.window_start == WINDOW[0],
+                    TrafficSnapshot.window_end == WINDOW[1],
+                )
+            )
+            == 3
+        )
+        assert await session.scalar(
+            select(func.count(TrafficSnapshot.id)).where(
+                TrafficSnapshot.granularity == "day"
+            )
+        ) == 1 + len(PERFORMANCE_SNAPSHOT_WINDOW_DAYS)
 
 
 @pytest.mark.asyncio

@@ -48,7 +48,7 @@ describe('ProductWindow', () => {
     expect(within(sidebar).queryByText('Search Demand')).not.toBeInTheDocument();
     expect(within(sidebar).getByText('AI Visibility').closest('div')).toHaveClass('bg-accent-soft');
     screen.getAllByText('AI Visibility');
-    screen.getAllByText('Traffic');
+    screen.getAllByText('Performance');
     screen.getAllByText('Prompts');
   });
 

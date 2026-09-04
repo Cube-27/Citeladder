@@ -132,7 +132,12 @@ from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.runtime import SiteHealthProfile, WorkspaceSiteHealthRuntime
 from app.models.site_health.snapshot import SiteHealthSnapshot
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
-from app.models.traffic import TrafficPageStat, TrafficQueryStat, TrafficSnapshot
+from app.models.traffic import (
+    PerformanceDimensionStat,
+    TrafficPageStat,
+    TrafficQueryStat,
+    TrafficSnapshot,
+)
 from app.models.user import User
 from app.models.user_identity import UserIdentity
 from app.models.workspace import Workspace, WorkspaceMember
@@ -209,6 +214,7 @@ __all__ = [
     "OpportunityVerificationEvent",
     "OwnedDomain",
     "PendingActivation",
+    "PerformanceDimensionStat",
     "Project",
     "Prompt",
     "PromptMetricSnapshot",

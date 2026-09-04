@@ -2,6 +2,12 @@
 
 **Status:** planned 2026-09-04. Not started except where marked *shipped*.
 
+**Superseded in part by `gsc-performance-alignment.md`**, which shipped first.
+Read that document's "What shipped" section before starting any slice here:
+Traffic is now the Performance surface, defects 1–3 and 5's Traffic half are
+resolved differently than described below, and the sequencing notes at the end
+of each affected slice say what is left.
+
 **Problem.** Connecting Search Console, Analytics, or Bing today produces
 almost nothing a user can act on. The collection layer is sound — per-workspace
 OAuth grants, immutable import artifacts, versioned derivation into
@@ -30,16 +36,19 @@ Each was confirmed by reading the shipped code, not inferred.
 
 | # | Defect | Evidence |
 |---|---|---|
-| 1 | Reads require an **exact** window match, so only windows a sync literally ran can ever return data | `TrafficSnapshot.window_start == from_date AND window_end == to_date`, [query_support.py:163](../../backend/app/domain/traffic/query_support.py#L163) |
-| 2 | Snapshots are built **only for sync windows** — the 28-day rolling window and the 3-day late-data pass | [service.py:363](../../backend/app/domain/traffic/service.py#L363), [enqueue.py:441](../../backend/app/domain/analytics/enqueue.py#L441) |
-| 3 | Traffic offers 7d/28d/90d; **7d and 90d can never match**, and 28d only on the same UTC day the sync ran | [traffic.ts RANGE_OPTIONS](../../frontend/lib/traffic/traffic.ts) vs defect 2 |
+| 1 | ~~Reads require an **exact** window match~~ — **fixed** by the Performance alignment: presets resolve by window LENGTH (`resolve_preset_snapshot`), and an exact window is used only for a custom or comparison range | [query_support.py](../../backend/app/domain/traffic/query_support.py) |
+| 2 | ~~Snapshots are built **only for sync windows**~~ — **fixed**: `traffic_snapshot_refresh` also derives the preset family anchored at the latest complete GSC date, and `performance_range_projection` materializes any other requested window | [service.py](../../backend/app/domain/traffic/service.py) |
+| 3 | ~~Traffic offers 7d/28d/90d that can never match~~ — **fixed**: the surface is `/performance` with Day/Week/Month/Custom ranges resolved server-side | [performance.ts](../../frontend/lib/performance/performance.ts) |
 | 4 | AI Referrals is **100% broken for every bounded range**: it anchors `to` at *today* while every sync window ends *yesterday* | [options.ts:60](../../frontend/lib/ai-referrals/options.ts#L60) vs [sync.py:126](../../backend/app/domain/integrations/sync.py#L126) |
-| 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection | [traffic.py:88](../../backend/app/core/config/traffic.py#L88) |
+| 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection. Still open; the Performance surface is deliberately Search-Console-only, so Bing needs its own panel (Slice 4.4) rather than a column on a GSC table | [traffic.py](../../backend/app/core/config/traffic.py) |
 | 6 | The projection **materializes every metric row in the window in memory**, which caps how long a window can safely be | `build_traffic_projection(rows=...)`, [projection.py:590](../../backend/app/domain/traffic/projection.py#L590) |
 | 7 | MCP exposes Site Health, Demand, Opportunities, and Visibility — **no traffic, search, referral, or connection-status tool** | [server.py:110-230](../../backend/app/domain/mcp/server.py#L110-L230) |
 
-Defect 6 is the load-bearing one: it is why defects 1–3 cannot be fixed by
-simply offering more windows.
+Defect 6 is **still open and now the load-bearing one**. The Performance
+alignment fixed defects 1–3 while accepting the in-memory fold: its preset
+family is 1/7/28 days, so the widest automatic projection is small. A long
+custom range still materializes its whole window in memory, which is the
+bound Slice 2 removes.
 
 **Already shipped (2026-09-04)**, on the branch carrying the Google sign-in work:
 
@@ -92,7 +101,8 @@ exist for every timeline the product offers.
 **Mergeable alone:** yes. Backend-only; the existing frontend keeps working
 because `latest` is unchanged and the exact-window path is preserved.
 
-1. **Streaming fold.** Refactor `build_traffic_projection` from
+1. **Streaming fold.** *(Still required — see defect 6.)* Refactor
+   `build_traffic_projection` from
    "take a materialized `rows` list" into an incremental accumulator the
    executor feeds batch by batch. Memory then bounds on distinct pages +
    distinct queries + buckets rather than on row count. The pure-function
@@ -101,18 +111,15 @@ because `latest` is unchanged and the exact-window path is preserved.
    - Watch the per-page/per-query `source_metric_row_ids` provenance lists:
      over a long window these grow per row. Cap or summarize them, and say so
      in the snapshot's provenance rather than silently truncating.
-2. **Config-owned snapshot windows.** Add
-   `TRAFFIC_SNAPSHOT_WINDOW_DAYS: Final = (7, 28, 90, 365)` to
-   `config/traffic.py`. The refresh executor builds one snapshot per
-   (window length × granularity), all anchored at the triggering sync
-   window's end date.
-3. **Resolve reads by window length.** Add an optional `window_days` to
-   `load_snapshot` / `get_traffic_dashboard`, resolving the **newest** snapshot
-   of that length. Keep exact `from`/`to` for callers that want a specific
-   window. This is what makes a preset survive a sync that ran three days ago.
-4. **API.** `GET /projects/{id}/traffic?window_days=28&granularity=day`. The
-   response already returns the true `window_start`/`window_end`, so the client
-   can state the real window it is showing.
+2. ~~**Config-owned snapshot windows.**~~ **Done**, as
+   `PERFORMANCE_SNAPSHOT_WINDOW_DAYS` in `config/traffic.py`. The family is
+   day-granularity only and anchored at the latest complete GSC date rather
+   than the sync window's end. Extending it past 28 days depends on the
+   streaming fold above.
+3. ~~**Resolve reads by window length.**~~ **Done** as
+   `resolve_preset_snapshot` / `resolve_window_snapshot`.
+4. ~~**API.**~~ **Done** as `GET /projects/{id}/performance?range=month`,
+   returning the resolved `snapshot_id` and the true window.
 
 **Cost check before merging:** a 365-day snapshot family is 4 window lengths ×
 3 granularities = 12 snapshots per refresh, each with page and query stat rows.
@@ -133,17 +140,16 @@ it actually rendered.
 
 **Depends on:** Slice 2. **Mergeable alone after it:** yes.
 
-1. **Traffic presets send `window_days`**, not computed dates
-   ([traffic.ts](../../frontend/lib/traffic/traffic.ts)). Preset set becomes
-   the configured window lengths.
+1. ~~**Traffic presets send `window_days`**~~ — **done** by the Performance
+   alignment, in a different shape: the client sends a `range` token and the
+   server resolves the newest snapshot of that length.
 2. **AI Referrals gets the same treatment** — this is defect 4, and it is the
    worst of them: `30d`, `90d` and `1y` currently cannot match a snapshot at
    all. Mirror the `window_days` resolution in
    [analytics/service.py](../../backend/app/domain/analytics/service.py) and
    [options.ts](../../frontend/lib/ai-referrals/options.ts).
-3. **Show the real window.** Both toolbars render "28 days to 2 Sep" from the
-   response rather than the requested range, so a stale snapshot is visible
-   rather than silently mislabelled.
+3. **Show the real window.** Done for Performance (the toolbar renders the
+   resolved window); AI Referrals still needs the same treatment.
 4. **Distinguish the empty states.** `not_run`, `observed_zero`, and
    `available` already exist on the wire; the screens must render "nothing
    synced yet" differently from "measured zero" and from "this provider is not
@@ -203,8 +209,9 @@ The MCP server already exposes `list_projects`, `get_project_business_context`,
 1. **New agent tool executors** in
    [agent/tools.py](../../backend/app/domain/agent/tools.py) `_EXECUTORS`,
    following the existing shape exactly:
-   - `traffic.read_snapshot` — headline totals + series for a window length.
-   - `traffic.read_pages` / `traffic.read_queries` — the paged stat tables.
+   - `performance.read_snapshot` — headline totals + series for a range.
+   - `performance.read_table` — the paged dimension tables (one executor for
+     all six dimensions, mirroring the REST surface).
    - `referrals.read_snapshot` — AI referral volume and share.
    - `integrations.read_status` — connected providers, mapped properties, sync
      progress, coverage window. This is the one that lets a client explain
@@ -271,6 +278,9 @@ From `AGENTS.md` and `docs/invariants.md`, and each already load-bearing here:
   sync is not a zero.
 - One migration: fold any schema change into
   `migrations/versions/0001_initial.py` and reset the database.
+- Read APIs render persisted projections: a range with no snapshot is reported
+  as unprojected and materialized by `performance_range_projection`, never
+  built inside a read.
 - Backend modules stay under 800 LOC / CC 12, frontend production modules under
   500 LOC / CC 12. Both exception maps are empty; split rather than waive.
 - No autonomous publishing or prompt activation.

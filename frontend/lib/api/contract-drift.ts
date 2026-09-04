@@ -87,11 +87,11 @@ export const CONTRACT_SCHEMA_MAP = {
   // Content
   contentGenerationListItemSchema: 'ContentGenerationListItem',
   contentGenerationDetailSchema: 'ContentGenerationDetail',
-  // AI Referrals / traffic
+  // AI Referrals / performance
   aiReferralsSchema: 'AiReferralsResponse',
-  trafficDashboardSchema: 'TrafficDashboardResponse',
-  trafficPagesPageSchema: 'TrafficPagesPage',
-  trafficQueriesPageSchema: 'TrafficQueriesPage',
+  performanceDashboardSchema: 'PerformanceDashboardResponse',
+  performanceTablePageSchema: 'PerformanceTablePage',
+  performanceRangeTaskSchema: 'PerformanceRangeTaskResponse',
   // Integrations
   integrationConnectionSchema: 'IntegrationConnectionResponse',
   integrationSyncRunSchema: 'IntegrationSyncRunResponse',

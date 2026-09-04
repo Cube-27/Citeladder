@@ -53,10 +53,13 @@ from app.core.config.integrations_contracts import (
 )
 from app.core.config.integrations_datasets import (
     DATASET_GSC_COUNTRY_DAILY,
+    DATASET_GSC_DAY_DAILY,
     DATASET_GSC_DEVICE_DAILY,
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
     DATASET_GSC_QUERY_PAGE_DAILY,
+    DATASET_GSC_SEARCH_APPEARANCE_DAILY,
+    INTEGRATION_DATASET_TEMPLATES,
 )
 from app.core.config.integrations_settings import (
     integration_settings,
@@ -176,6 +179,9 @@ class _ProviderFake:
                     "rows": [
                         {
                             "keys": {
+                                # The date-only report: no breakdown
+                                # dimension, so its key is the date alone.
+                                ("date",): ["2026-07-21"],
                                 ("query", "date"): ["admissions", "2026-07-21"],
                                 ("query", "page", "date"): [
                                     "admissions",
@@ -341,6 +347,15 @@ async def _events(db_session, workspace_id: uuid.UUID) -> list[IntegrationEvent]
     return list(result)
 
 
+def _gsc_datasets() -> list[str]:
+    """Every GSC dataset the sync worker pages, straight from the catalog."""
+    return [
+        dataset
+        for dataset, template in INTEGRATION_DATASET_TEMPLATES.items()
+        if template.provider == INTEGRATION_PROVIDER_GSC
+    ]
+
+
 def _canonical_hash(payload: dict) -> str:
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -400,15 +415,19 @@ async def test_fixture_import_writes_immutable_artifacts(
     assert run.completed_at is not None
 
     artifacts = await _artifacts(db_session, run.id)
-    assert len(artifacts) == 6  # two URL pages plus four one-page families
+    # Two URL pages plus six one-page families: the date-only report and
+    # Search Appearance now page alongside the rest.
+    assert len(artifacts) == 8
     by_dataset: dict[str, list[IntegrationImportArtifact]] = {}
     for artifact in artifacts:
         by_dataset.setdefault(artifact.dataset, []).append(artifact)
     assert sorted(by_dataset) == sorted(
         {
             DATASET_GSC_PAGE_DAILY,
+            DATASET_GSC_DAY_DAILY,
             DATASET_GSC_QUERY_DAILY,
             DATASET_GSC_QUERY_PAGE_DAILY,
+            DATASET_GSC_SEARCH_APPEARANCE_DAILY,
             DATASET_GSC_DEVICE_DAILY,
             DATASET_GSC_COUNTRY_DAILY,
         }
@@ -487,8 +506,12 @@ async def test_fixture_import_writes_immutable_artifacts(
     ]
     finished = events[-1]
     assert finished.payload["sync_run_id"] == str(run.id)
-    assert finished.payload["row_count"] == 7
-    assert finished.payload["metric_row_count"] == 7
+    # Three rows from the paged page report plus one from each other GSC
+    # family the worker now covers — including the date-only report and
+    # Search Appearance.
+    expected_rows = 3 + len(_gsc_datasets()) - 1
+    assert finished.payload["row_count"] == expected_rows
+    assert finished.payload["metric_row_count"] == expected_rows
 
     tasks = list((await db_session.scalars(select(AnalyticsTask))).all())
     ingest_tasks = [
@@ -510,7 +533,8 @@ async def test_fixture_import_writes_immutable_artifacts(
 
     # The fresh (non-expired) access token was used; no refresh happened.
     assert fake.token_calls == []
-    assert fake.gsc_auth == ["Bearer access-token-1"] * 6
+    # One call per GSC dataset, plus the paged page report's second fetch.
+    assert fake.gsc_auth == ["Bearer access-token-1"] * (len(_gsc_datasets()) + 1)
 
 
 @pytest.mark.asyncio
@@ -559,8 +583,9 @@ async def test_two_workers_one_grant_exactly_one_remote_refresh(
 
     # The grant row lock serialized the refresh: exactly ONE remote call.
     assert len(fake.token_calls) == 1
-    # Both workers then used the fresh token for every provider call.
-    assert fake.gsc_auth == ["Bearer fresh-access-token"] * 10
+    # Both workers then used the fresh token for every provider call: one
+    # call per GSC dataset, plus the paged page report's extra fetches.
+    assert fake.gsc_auth == ["Bearer fresh-access-token"] * (len(_gsc_datasets()) * 2)
 
     for run_id in (run_a.id, run_b.id):
         run = await db_session.get(IntegrationSyncRun, run_id)

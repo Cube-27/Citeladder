@@ -50,6 +50,7 @@ from app.core.config.integrations_contracts import (
 from app.core.config.integrations_settings import (
     integration_settings,
 )
+from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.integrations.errors import IntegrationConnectionNotFoundError
 from app.domain.integrations.schemas import IntegrationSyncRunResponse
 from app.domain.integrations.service import get_connection
@@ -161,6 +162,58 @@ def backfill_sync_windows(*, today: date | None = None) -> list[tuple[date, date
         windows.append((chunk_start, chunk_end))
         chunk_end = chunk_start - timedelta(days=1)
     return windows
+
+
+def incremental_sync_window(
+    covered_through: date | None, *, today: date | None = None
+) -> tuple[date, date]:
+    """The next on-demand window for a connection, given what it already covers.
+
+    "Sync now" EXTENDS coverage instead of re-fetching a fixed trailing
+    window. The window runs from the day after ``covered_through`` to
+    yesterday (the latest complete UTC day), pulled back by
+    ``sync_late_data_revision_days`` so the most recent days — which Search
+    Console keeps revising for a few days after first publication — are
+    re-read at a bumped ``resync_seq`` rather than frozen at their
+    first-seen, under-reported values.
+
+    A connection that has imported nothing yet gets the default trailing
+    window: there is no coverage to extend, and the caller wants a useful
+    amount of recent data rather than a single day. A connection already
+    current still re-reads the late-data tail, so the button is never a
+    silent no-op. The span is bounded by the same ``sync_backfill_max_days``
+    budget every other window obeys, so a long-neglected connection asks for
+    a large window, not an unbounded one.
+    """
+    end = (today or _utcnow().date()) - timedelta(days=1)
+    if covered_through is None:
+        return default_sync_window(today=today)
+    start = (
+        covered_through
+        + timedelta(days=1)
+        - timedelta(days=integration_settings.sync_late_data_revision_days)
+    )
+    earliest = end - timedelta(days=integration_settings.sync_backfill_max_days - 1)
+    # Clamp to the budget, then to the window end — coverage that somehow
+    # runs past yesterday must still produce a valid one-day window.
+    return min(max(start, earliest), end), end
+
+
+async def connection_covered_through(
+    session: AsyncSession, *, connection_id: uuid.UUID
+) -> date | None:
+    """The latest date any SUCCEEDED run of this connection has imported.
+
+    Only succeeded runs count: a queued, active, or failed run has imported
+    nothing, and treating its window as covered would skip those dates
+    permanently.
+    """
+    return await session.scalar(
+        select(func.max(IntegrationSyncRun.window_end)).where(
+            IntegrationSyncRun.connection_id == connection_id,
+            IntegrationSyncRun.status == TASK_STATUS_SUCCEEDED,
+        )
+    )
 
 
 def clamp_sync_window(window_start: date, window_end: date) -> tuple[date, date]:
@@ -336,8 +389,12 @@ async def enqueue_sync_run(
     """Authorize, allocate, insert, and COMMIT one ``IntegrationSyncRun``.
 
     The one entry point every enqueue path uses (sync API, dispatcher,
-    ``traffic/sync`` pass-through). Absent window bounds resolve to the
-    default trailing window; explicit bounds are validated/clamped first.
+    ``performance/sync`` pass-through). Explicit bounds are validated and
+    clamped first. Absent bounds on an ON-DEMAND run resolve to the
+    INCREMENTAL window — what this connection has not covered yet, plus the
+    late-data tail — so "Sync now" adds to the imported history instead of
+    re-fetching the same trailing window every time. Every other kind keeps
+    the default trailing window.
 
     Raises:
         IntegrationConnectionNotFoundError: missing/cross-workspace
@@ -348,7 +405,12 @@ async def enqueue_sync_run(
     """
     if sync_kind not in INTEGRATION_SYNC_KINDS:
         raise ValueError(f"unknown integration sync kind: {sync_kind!r}")
-    window_start, window_end = resolve_sync_window(window_start, window_end)
+    if window_start is None and window_end is None and sync_kind == SYNC_KIND_ON_DEMAND:
+        window_start, window_end = incremental_sync_window(
+            await connection_covered_through(session, connection_id=connection_id)
+        )
+    else:
+        window_start, window_end = resolve_sync_window(window_start, window_end)
 
     last_error: IntegrityError | None = None
     for _attempt in range(integration_settings.sync_resync_alloc_max_attempts):

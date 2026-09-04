@@ -40,7 +40,13 @@ export const siteHealthKeys = {
     ['site-health', 'aeo-readiness', projectId, crawlId ?? 'latest'] as const,
   architecture: (projectId: string, crawlId?: string) =>
     ['site-health', 'architecture', projectId, crawlId ?? 'latest'] as const,
-  changes: (projectId: string, crawlAId?: string, crawlBId?: string, cursor?: string) =>
+  changes: (
+    projectId: string,
+    crawlAId?: string,
+    crawlBId?: string,
+    cursor?: string,
+    limit?: number,
+  ) =>
     [
       'site-health',
       'changes',
@@ -48,6 +54,7 @@ export const siteHealthKeys = {
       crawlAId ?? 'unselected-a',
       crawlBId ?? 'unselected-b',
       cursor ?? 'first',
+      limit ?? 'default',
     ] as const,
   changesSummary: (projectId: string) => ['site-health', 'changes-summary', projectId] as const,
   crawls: (projectId: string, filters: ListFilters = {}) =>

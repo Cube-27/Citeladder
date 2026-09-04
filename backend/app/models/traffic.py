@@ -33,6 +33,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Integer,
     String,
     UniqueConstraint,
 )
@@ -86,6 +87,16 @@ class TrafficSnapshot(Base):
         # Backs the composite (workspace_id, snapshot_id) FK on the stat
         # tables (same-workspace enforcement, invariant 5).
         UniqueConstraint("workspace_id", "id", name="uq_traffic_snapshots_ws_id"),
+        # Backs the (workspace_id, project_id, snapshot_id) FK on the
+        # Performance dimension rows: same-workspace is not enough there,
+        # because one workspace holds many projects and a stat row must
+        # never hang off a sibling project's snapshot.
+        UniqueConstraint(
+            "workspace_id",
+            "project_id",
+            "id",
+            name="uq_traffic_snapshots_ws_project_id",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -106,8 +117,25 @@ class TrafficSnapshot(Base):
     window_end: Mapped[date] = mapped_column(Date)
     # day | week | month (TRAFFIC_SNAPSHOT_GRANULARITIES).
     granularity: Mapped[str] = mapped_column(String(8))
+    # The Performance preset this snapshot was derived FOR, or NULL when it
+    # was not derived by the preset family (a sync-window snapshot, or a
+    # user-requested display range). Preset resolution matches on this rather
+    # than on window length alone: a custom range can happen to be exactly
+    # seven days long, and resolving "Week" to it would silently show a
+    # window the preset never meant.
+    preset_window_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Headline projection: totals, CTR/position distributions, trend series.
     metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Persisted row count per Performance dimension (``{"query": 412, ...}``)
+    # so a paged table states its exact total without a COUNT(*) per page
+    # navigation. Written in the same transaction as the stat rows it counts,
+    # so the count can never describe a different result set than the rows.
+    dimension_counts: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Observed evidence extent behind this projection: the earliest/latest
+    # dates the project has consumed-dataset rows for, and how many days that
+    # spans. Lets the surface distinguish "this range is outside the imported
+    # history" from "this range measured zero" without a read-time scan.
+    coverage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Provenance (invariant 4): the IntegrationMetricRow ids aggregated and
     # their upstream immutable IntegrationImportArtifact ids (JSONB id
     # arrays — no cross-workstream FK compile dependency).
@@ -175,6 +203,79 @@ class TrafficPageStat(Base):
     canonical_url: Mapped[str] = mapped_column(String(2048))
     # Aggregated page metrics: impressions/clicks/ctr/position (GSC) +
     # sessions/conversions (GA4).
+    metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Provenance to raw evidence (invariant 4), JSONB id arrays.
+    source_metric_row_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    source_artifact_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
+class PerformanceDimensionStat(Base):
+    """One persisted GSC dimension row of a ``TrafficSnapshot``.
+
+    The GENERIC stat row behind every Performance table: Queries, Pages,
+    Countries, Devices, Search Appearance, and Days all fold into this one
+    shape, so the six tabs share one keyset/sort/count implementation
+    instead of six near-identical tables. ``dimension`` is the
+    ``PERFORMANCE_DIMENSION_*`` token; ``dimension_key`` is the row's stable
+    key within it (the normalized query, canonical page URL, country code,
+    device token, search-appearance token, or ISO date) and
+    ``display_value`` the value shown to a reader when those differ.
+
+    GSC measures only (clicks/impressions/ctr/position). GA4 metrics stay on
+    ``TrafficPageStat``, which keeps its own contract: Demand reads it, it
+    carries the crawled ``SiteUrl`` join, and it is the only per-page row
+    that can combine both providers. This table never mixes providers, so a
+    Performance column always means exactly one thing.
+    """
+
+    __tablename__ = "performance_dimension_stats"
+    __table_args__ = (
+        UniqueConstraint(
+            "snapshot_id",
+            "dimension",
+            "dimension_key",
+            name="uq_performance_dimension_stat_key",
+        ),
+        # Workspace AND project scoped: a workspace holds many projects, so
+        # the two-column form would let a row hang off a sibling project's
+        # snapshot (invariant 5).
+        ForeignKeyConstraint(
+            ["workspace_id", "project_id", "snapshot_id"],
+            [
+                "traffic_snapshots.workspace_id",
+                "traffic_snapshots.project_id",
+                _FK_SNAPSHOT,
+            ],
+            ondelete=_ON_DELETE_CASCADE,
+            name="fk_performance_dimension_stat_snapshot_scoped",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
+    snapshot_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
+    # PERFORMANCE_DIMENSION_* token (query|page|country|device|
+    # search_appearance|day).
+    dimension: Mapped[str] = mapped_column(String(32), index=True)
+    # The row's key within its dimension. Sized for the longest key a GSC
+    # dimension can carry (a page URL); shorter dimensions use far less.
+    dimension_key: Mapped[str] = mapped_column(String(2048))
+    display_value: Mapped[str] = mapped_column(String(2048))
+    # Aggregated GSC measures: impressions/clicks/ctr/position.
     metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Provenance to raw evidence (invariant 4), JSONB id arrays.
     source_metric_row_ids: Mapped[list | None] = mapped_column(JSONB, nullable=True)

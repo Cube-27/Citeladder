@@ -12,6 +12,8 @@ from app.core.config.integrations_transport import (
 
 DIMENSION_KEY_SEPARATOR: Final = " | "
 
+DATASET_GSC_DAY_DAILY: Final = "gsc_day_daily"
+
 DATASET_GSC_PAGE_DAILY: Final = "gsc_page_daily"
 
 DATASET_GSC_QUERY_DAILY: Final = "gsc_query_daily"
@@ -24,9 +26,13 @@ DATASET_GSC_DEVICE_DAILY: Final = "gsc_device_daily"
 
 DATASET_GSC_COUNTRY_DAILY: Final = "gsc_country_daily"
 
-INTEGRATION_SYNC_EXCLUDED_DATASETS: Final[frozenset[str]] = frozenset(
-    {DATASET_GSC_SEARCH_APPEARANCE_DAILY}
-)
+# Dataset ids the sync worker must NOT page. Search Appearance used to sit
+# here; Performance now renders it as its own table, and a successful GSC
+# response carrying no Search Appearance rows is an OBSERVED EMPTY state,
+# not a failed connection. Nothing is excluded today — the set stays so a
+# future provider dataset can be withheld from the fan-out without a code
+# change (invariant 2).
+INTEGRATION_SYNC_EXCLUDED_DATASETS: Final[frozenset[str]] = frozenset()
 
 DATASET_GA4_CHANNEL_DAILY: Final = "ga4_channel_daily"
 
@@ -103,6 +109,18 @@ INTEGRATION_DATASET_TEMPLATES: Final[dict[str, IntegrationDatasetTemplate]] = {
         provider=INTEGRATION_PROVIDER_GSC,
         api_method=GSC_SEARCH_ANALYTICS_METHOD,
         dimensions=("page", "date"),
+        metrics=_GSC_SEARCH_ANALYTICS_METRICS,
+    ),
+    # The DATE-ONLY GSC report. Carrying no breakdown dimension, it is the
+    # only dataset whose rows are GSC's own overall totals for a date, so
+    # Performance reads its headline totals, chart series, and DAYS table
+    # from here and never sums a dimensional dataset into a headline number
+    # (a dimensional report drops privacy-filtered rows).
+    DATASET_GSC_DAY_DAILY: IntegrationDatasetTemplate(
+        dataset=DATASET_GSC_DAY_DAILY,
+        provider=INTEGRATION_PROVIDER_GSC,
+        api_method=GSC_SEARCH_ANALYTICS_METHOD,
+        dimensions=("date",),
         metrics=_GSC_SEARCH_ANALYTICS_METRICS,
     ),
     DATASET_GSC_QUERY_DAILY: IntegrationDatasetTemplate(

@@ -26,6 +26,7 @@ from app.core.config.integrations_settings import (
     integration_settings,
 )
 from app.core.config.task_queue import (
+    TASK_STATUS_FAILED,
     TASK_STATUS_QUEUED,
     TASK_STATUS_SUCCEEDED,
 )
@@ -39,6 +40,7 @@ from app.domain.integrations.sync import (
     default_sync_window,
     enqueue_history_backfill,
     enqueue_sync_run,
+    incremental_sync_window,
     resolve_sync_window,
 )
 from app.models.integrations import (
@@ -99,7 +101,9 @@ async def test_default_window_uses_config_trailing_days(db_session) -> None:
     )
 
     expected_start, expected_end = default_sync_window()
-    # Trailing ``sync_default_window_days`` complete days ending yesterday.
+    # A connection that has imported nothing has no coverage to extend, so
+    # the incremental resolver falls back to the trailing default window:
+    # ``sync_default_window_days`` complete days ending yesterday.
     assert expected_end == datetime.now(UTC).date() - timedelta(days=1)
     assert (expected_end - expected_start).days + 1 == (
         integration_settings.sync_default_window_days
@@ -139,6 +143,97 @@ async def test_explicit_window_clamped_to_backfill_max(db_session) -> None:
     assert (run.window_end - run.window_start).days + 1 == (
         integration_settings.sync_backfill_max_days
     )
+
+
+@pytest.mark.asyncio
+async def test_on_demand_window_extends_existing_coverage(db_session) -> None:
+    """Sync now ADDS to the imported history instead of re-fetching it."""
+    workspace_id, connection = await _seed_connection(db_session)
+    today = datetime.now(UTC).date()
+    covered_through = today - timedelta(days=5)
+    db_session.add(
+        IntegrationSyncRun(
+            connection_id=connection.id,
+            workspace_id=workspace_id,
+            sync_kind=SYNC_KIND_ON_DEMAND,
+            window_start=covered_through - timedelta(days=6),
+            window_end=covered_through,
+            resync_seq=0,
+            status=TASK_STATUS_SUCCEEDED,
+            idempotency_key=f"covered-{uuid.uuid4()}",
+        )
+    )
+    await db_session.commit()
+
+    run = await enqueue_sync_run(
+        db_session, workspace_id=workspace_id, connection_id=connection.id
+    )
+
+    assert run.window_end == today - timedelta(days=1)
+    # Starts the day after what is covered, pulled back by the late-data
+    # revision window so Search Console's edits to recent days are re-read
+    # rather than frozen at their first-seen values.
+    assert run.window_start == covered_through + timedelta(days=1) - timedelta(
+        days=integration_settings.sync_late_data_revision_days
+    )
+    # Strictly shorter than the default trailing window: the already-imported
+    # dates are not re-fetched.
+    default_start, _ = default_sync_window()
+    assert run.window_start > default_start
+
+
+@pytest.mark.asyncio
+async def test_only_succeeded_runs_count_as_coverage(db_session) -> None:
+    """A queued or failed run imported nothing, so its window is not covered."""
+    workspace_id, connection = await _seed_connection(db_session)
+    today = datetime.now(UTC).date()
+    db_session.add(
+        IntegrationSyncRun(
+            connection_id=connection.id,
+            workspace_id=workspace_id,
+            sync_kind=SYNC_KIND_ON_DEMAND,
+            window_start=today - timedelta(days=9),
+            window_end=today - timedelta(days=3),
+            resync_seq=0,
+            status=TASK_STATUS_FAILED,
+            idempotency_key=f"failed-{uuid.uuid4()}",
+        )
+    )
+    await db_session.commit()
+
+    run = await enqueue_sync_run(
+        db_session, workspace_id=workspace_id, connection_id=connection.id
+    )
+
+    # Treating the failed window as covered would skip those dates forever.
+    assert (run.window_start, run.window_end) == default_sync_window()
+
+
+def test_incremental_window_helper_is_pure() -> None:
+    today = date(2026, 9, 4)
+    yesterday = date(2026, 9, 3)
+    late = integration_settings.sync_late_data_revision_days
+
+    # Nothing imported yet -> the default trailing window.
+    assert incremental_sync_window(None, today=today) == default_sync_window(
+        today=today
+    )
+    # Already current -> just the late-data tail, never an empty no-op.
+    current_start, current_end = incremental_sync_window(yesterday, today=today)
+    assert current_end == yesterday
+    assert current_start == yesterday + timedelta(days=1) - timedelta(days=late)
+    assert current_start <= current_end
+    # Behind -> reaches back to cover the gap plus the tail.
+    behind_start, _ = incremental_sync_window(date(2026, 8, 20), today=today)
+    assert behind_start == date(2026, 8, 21) - timedelta(days=late)
+    # Bounded by the same budget every other window obeys.
+    long_start, long_end = incremental_sync_window(date(2020, 1, 1), today=today)
+    assert (long_end - long_start).days + 1 <= (
+        integration_settings.sync_backfill_max_days
+    )
+    # Coverage running past yesterday still yields a valid window.
+    skewed_start, skewed_end = incremental_sync_window(date(2026, 9, 20), today=today)
+    assert skewed_start <= skewed_end == yesterday
 
 
 def test_window_helpers_pure() -> None:

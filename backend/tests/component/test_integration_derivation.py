@@ -96,11 +96,26 @@ def _fast_pacing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(integration_settings, "gsc_requests_per_minute", 60000)
 
 
+# One artifact and one derived metric row per provider-compatible GSC family
+# (the stub returns a single row per family). Read from the catalog so a new
+# dataset moves these counts with it.
+_GSC_FAMILIES = len(
+    [
+        template
+        for template in INTEGRATION_DATASET_TEMPLATES.values()
+        if template.provider == INTEGRATION_PROVIDER_GSC
+    ]
+)
+
+
 def _gsc_transport() -> httpx.MockTransport:
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
         dimensions = tuple(body.get("dimensions") or ())
         values = {
+            # The date-only report: no breakdown dimension, so the key is
+            # the date alone.
+            ("date",): ["2026-07-21"],
             ("page", "date"): ["https://example.com/admissions", "2026-07-21"],
             ("query", "date"): ["admissions", "2026-07-21"],
             ("query", "page", "date"): [
@@ -226,9 +241,9 @@ async def test_derivation_provenance_on_every_row(session_factory, db_session) -
     await db_session.refresh(run)
     assert run.status == TASK_STATUS_SUCCEEDED
     artifacts = await _run_artifacts(db_session, run.id)
-    assert len(artifacts) == 5  # one page for each provider-compatible family
+    assert len(artifacts) == _GSC_FAMILIES
     rows = await _run_metric_rows(db_session, run.id)
-    assert len(rows) == 5
+    assert len(rows) == _GSC_FAMILIES
 
     artifact_ids = {artifact.id for artifact in artifacts}
     for row in rows:
@@ -286,7 +301,7 @@ async def test_unmapped_property_fails_run(session_factory, db_session) -> None:
     assert run.completed_at is not None
     # The raw import landed (immutable evidence retained) but NOTHING was
     # derived or projected: the property was never guessed.
-    assert len(await _run_artifacts(db_session, run.id)) == 5
+    assert len(await _run_artifacts(db_session, run.id)) == _GSC_FAMILIES
     assert await _run_metric_rows(db_session, run.id) == []
     assert list((await db_session.scalars(select(AnalyticsTask))).all()) == []
     events = list(
@@ -314,7 +329,7 @@ async def test_resync_writes_new_rows_old_retained(session_factory, db_session) 
     rows0 = await _run_metric_rows(db_session, run0.id)
     artifacts0 = await _run_artifacts(db_session, run0.id)
     hashes0 = {artifact.id: artifact.payload_hash for artifact in artifacts0}
-    assert len(rows0) == 5
+    assert len(rows0) == _GSC_FAMILIES
     assert {row.resync_seq for row in rows0} == {0}
 
     # The completed window re-syncs at resync_seq 1 (I5 allocation).
@@ -325,7 +340,7 @@ async def test_resync_writes_new_rows_old_retained(session_factory, db_session) 
     assert run1.status == TASK_STATUS_SUCCEEDED
 
     rows1 = await _run_metric_rows(db_session, run1.id)
-    assert len(rows1) == 5
+    assert len(rows1) == _GSC_FAMILIES
     assert {row.resync_seq for row in rows1} == {1}
 
     # Old rows + old artifacts are retained, never mutated (invariant 3):
@@ -352,7 +367,8 @@ async def test_resync_writes_new_rows_old_retained(session_factory, db_session) 
         )
     )
     grouped = (await db_session.execute(identity)).all()
-    assert len(grouped) == 10  # five report identities x two revisions
+    # One identity per GSC family, at two revisions.
+    assert len(grouped) == _GSC_FAMILIES * 2
     seqs = {row.resync_seq for row in grouped}
     assert seqs == {0, 1}
     for artifact in artifacts0:
@@ -386,8 +402,8 @@ async def test_derivation_replay_is_a_dedup_noop(session_factory, db_session) ->
         await session.commit()
     # The transform still maps every payload row, but the insert conflicts
     # on the identity tuple and lands NOTHING twice.
-    assert derived.metric_row_count == 5
-    assert len(await _run_metric_rows(db_session, run.id)) == 5
+    assert derived.metric_row_count == _GSC_FAMILIES
+    assert len(await _run_metric_rows(db_session, run.id)) == _GSC_FAMILIES
 
 
 @pytest.mark.asyncio

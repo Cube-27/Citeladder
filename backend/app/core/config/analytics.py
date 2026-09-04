@@ -274,6 +274,12 @@ ANALYTICS_TASK_KIND_AI_REFERRALS_SNAPSHOT_REFRESH: Final = (
     "ai_referrals_snapshot_refresh"
 )
 ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP: Final = "referral_retention_sweep"
+# The Performance surface's display-only projection: materializes ONE
+# day-grained snapshot for a user-requested custom or comparison window
+# over already-persisted evidence. Deliberately its own kind rather than a
+# flag on the refresh: it must never sync a provider, refresh Demand, or
+# enqueue opportunity/verification work.
+ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION: Final = "performance_range_projection"
 ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH: Final = "opportunity_refresh"
 ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION: Final = "opportunity_verification"
 ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH: Final = "demand_snapshot_refresh"
@@ -288,6 +294,7 @@ ANALYTICS_TASK_KINDS: Final[frozenset[str]] = frozenset(
         ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
         ANALYTICS_TASK_KIND_AI_REFERRALS_SNAPSHOT_REFRESH,
         ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
+        ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
         ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
         ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
         ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH,

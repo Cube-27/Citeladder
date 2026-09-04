@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 
 import { Alert } from '@/components/ui/alert';
-import { CursorPager } from '@/components/ui/cursor-pager';
+import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -23,8 +23,8 @@ import { RootErrorsBlock } from '@/components/site-health/root-errors-block';
 import { siteHealthQueries, type PagesParams, type PagesSort } from '@/lib/api/site-health';
 import type { PagesPage, SiteCrawl } from '@/lib/api/types';
 import { Tabs } from '@/components/ui/tabs';
-import { useCursorStack } from '@/lib/site-health/use-cursor-stack';
-import { PAGE_LIMIT, statusLabel, type InventoryMode } from '@/lib/site-health/status';
+import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
+import { statusLabel, type InventoryMode } from '@/lib/site-health/status';
 
 /**
  * Always-mounted inventory section of the canonical Site Health screen.
@@ -77,13 +77,13 @@ export function InventorySection({
  * stay stable under keyset (normalized_url, id) ordering.
  */
 function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
-  const pager = useCursorStack();
+  const pager = useCursorTable(`inventory|${crawl.id}`);
   // No timer here: the screen polls the crawl once and invalidates this query's
   // FIRST page when the crawl actually moved (`invalidateCrawlViews`). Deeper
   // cursor pages stay static either way, so the rows under review don't shift
   // as new URLs are discovered.
   const inventoryQuery = useQuery(
-    siteHealthQueries.inventory(crawl.id, { cursor: pager.cursor, limit: PAGE_LIMIT }),
+    siteHealthQueries.inventory(crawl.id, { cursor: pager.cursor, limit: pager.pageSize }),
   );
   const rows = inventoryQuery.data?.items ?? [];
   const nextCursor = inventoryQuery.data?.next_cursor ?? null;
@@ -134,22 +134,25 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
     <div className="grid gap-3">
       <Label>Pages discovered so far</Label>
       {body}
-      <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-t pt-2">
-        {crawl.status === 'running' || crawl.status === 'queued' ? (
-          <p className="text-muted text-xs">More URLs appear as discovery continues.</p>
-        ) : (
-          <span />
-        )}
-        {pager.canPrev || nextCursor ? (
-          <CursorPager
-            canPrev={pager.canPrev}
-            canNext={Boolean(nextCursor)}
-            page={pager.page}
-            onPrev={pager.pop}
-            onNext={() => pager.push(nextCursor)}
-          />
-        ) : null}
-      </div>
+      {crawl.status === 'running' || crawl.status === 'queued' ? (
+        <p className="text-muted text-xs">More URLs appear as discovery continues.</p>
+      ) : null}
+      <CursorTableFooter
+        {...pageRange(pager.page, pager.pageSize, rows.length)}
+        // The crawl's own persisted visible-URL count IS the exact
+        // unfiltered inventory total this list can return, so the footer
+        // states it without a COUNT(*) on every navigation. It climbs while
+        // discovery runs, which is what the caption above explains.
+        total={crawl.visible_url_count}
+        noun="pages"
+        pageSize={pager.pageSize}
+        onPageSizeChange={pager.setPageSize}
+        canPrev={pager.canPrev}
+        canNext={Boolean(nextCursor)}
+        onPrev={pager.pop}
+        onNext={() => pager.push(nextCursor)}
+        busy={inventoryQuery.isFetching}
+      />
     </div>
   );
 }
@@ -252,9 +255,9 @@ function ScoredInventoryState({
   // fingerprint, so changing it must restart every tab's paging.
   const [sort, setSort] = useState<PagesSort>(() => initialPagesSort(requestedSort));
   // Per-tab cursor stack so Prev/Next walk keyset pages without offsets.
-  const monitoredPager = useCursorStack();
-  const allPager = useCursorStack();
-  const errorsPager = useCursorStack();
+  const monitoredPager = useCursorTable(`pages|${crawl.id}|monitored|${sort}|${pageKind}`);
+  const allPager = useCursorTable(`pages|${crawl.id}|all|${sort}|${pageKind}`);
+  const errorsPager = useCursorTable(`pages|${crawl.id}|errors|${sort}|${pageKind}`);
   const pager = tab === 'monitored' ? monitoredPager : tab === 'all' ? allPager : errorsPager;
   const resetMonitoredPager = monitoredPager.reset;
 
@@ -301,7 +304,7 @@ function ScoredInventoryState({
       page_kind: pageKind || undefined,
       sort,
       cursor: pager.cursor,
-      limit: PAGE_LIMIT,
+      limit: pager.pageSize,
     }),
   );
   const prefetchTab = (nextTab: (typeof TABS)[number]) => {
@@ -310,7 +313,7 @@ function ScoredInventoryState({
         ...nextTab.params,
         page_kind: pageKind || undefined,
         sort,
-        limit: PAGE_LIMIT,
+        limit: pager.pageSize,
       }),
     );
   };
@@ -362,17 +365,22 @@ function ScoredInventoryState({
 
       {body}
 
-      {pager.canPrev || nextCursor ? (
-        <div className="border-border-subtle flex items-center justify-end gap-2 border-t py-2">
-          <CursorPager
-            canPrev={pager.canPrev}
-            canNext={Boolean(nextCursor)}
-            page={pager.page}
-            onPrev={pager.pop}
-            onNext={() => pager.push(nextCursor)}
-          />
-        </div>
-      ) : null}
+      <CursorTableFooter
+        {...pageRange(pager.page, pager.pageSize, rows.length)}
+        // Deliberately no exact total: these tabs are FILTERED views (status,
+        // page kind), and no persisted count describes a filtered set. An
+        // unbounded live COUNT(*) per navigation is the thing this footer
+        // exists to avoid, so the range stands alone rather than carrying an
+        // invented or expensive total.
+        noun="pages"
+        pageSize={pager.pageSize}
+        onPageSizeChange={pager.setPageSize}
+        canPrev={pager.canPrev}
+        canNext={Boolean(nextCursor)}
+        onPrev={pager.pop}
+        onNext={() => pager.push(nextCursor)}
+        busy={pagesQuery.isFetching}
+      />
     </div>
   );
 }

@@ -24,8 +24,12 @@ from app.core.config.integrations_datasets import (
     DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_REFERRER_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
+    DATASET_GSC_COUNTRY_DAILY,
+    DATASET_GSC_DAY_DAILY,
+    DATASET_GSC_DEVICE_DAILY,
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
+    DATASET_GSC_SEARCH_APPEARANCE_DAILY,
 )
 from app.core.config.integrations_transport import (
     INTEGRATION_PROVIDER_GA4,
@@ -84,8 +88,12 @@ TRAFFIC_GA4_REFERRAL_DATASETS: Final[frozenset[str]] = frozenset(
 # dataset.
 TRAFFIC_CONSUMED_DATASETS: Final[frozenset[str]] = frozenset(
     {
+        DATASET_GSC_DAY_DAILY,
         DATASET_GSC_PAGE_DAILY,
         DATASET_GSC_QUERY_DAILY,
+        DATASET_GSC_COUNTRY_DAILY,
+        DATASET_GSC_DEVICE_DAILY,
+        DATASET_GSC_SEARCH_APPEARANCE_DAILY,
         DATASET_GA4_CHANNEL_DAILY,
         DATASET_GA4_SOURCE_MEDIUM_DAILY,
         DATASET_GA4_LANDING_DAILY,
@@ -129,3 +137,130 @@ TRAFFIC_TABLE_PAGE_SIZE: Final = 50
 TRAFFIC_SYNC_PROVIDERS: Final[frozenset[str]] = frozenset(
     {INTEGRATION_PROVIDER_GSC, INTEGRATION_PROVIDER_GA4}
 )
+
+# =========================================================================
+# Performance surface (the GSC-aligned read surface over this projection)
+# =========================================================================
+# Performance is the BROWSER + REST surface; the Traffic domain above stays
+# the one persisted-projection owner. Everything the surface can be asked
+# for lives here (invariant 1) — service code reads these, never literals.
+
+# --- Range vocabulary --------------------------------------------------------
+# The four selectable RANGES (not bucket granularities: every Performance
+# chart is bucketed by day). Each preset resolves the newest persisted
+# snapshot of its length, anchored to the latest complete GSC evidence date;
+# ``custom`` carries an explicit inclusive ``from``/``to``.
+PERFORMANCE_RANGE_DAY: Final = "day"
+PERFORMANCE_RANGE_WEEK: Final = "week"
+PERFORMANCE_RANGE_MONTH: Final = "month"
+PERFORMANCE_RANGE_CUSTOM: Final = "custom"
+# Preset -> inclusive window length in days.
+PERFORMANCE_PRESET_RANGE_DAYS: Final[dict[str, int]] = {
+    PERFORMANCE_RANGE_DAY: 1,
+    PERFORMANCE_RANGE_WEEK: 7,
+    PERFORMANCE_RANGE_MONTH: 28,
+}
+PERFORMANCE_RANGES: Final[frozenset[str]] = frozenset(
+    set(PERFORMANCE_PRESET_RANGE_DAYS) | {PERFORMANCE_RANGE_CUSTOM}
+)
+# The range served when a request names none: the newest persisted snapshot
+# for the project, whatever window the last sync covered.
+PERFORMANCE_DEFAULT_RANGE: Final = PERFORMANCE_RANGE_CUSTOM
+# The snapshot family every refresh derives, anchored at the latest complete
+# GSC evidence date. Day granularity only — the surface has no bucket
+# control, so week/month snapshot rows for these windows would never be read.
+PERFORMANCE_SNAPSHOT_WINDOW_DAYS: Final[tuple[int, ...]] = tuple(
+    sorted(PERFORMANCE_PRESET_RANGE_DAYS.values())
+)
+
+# --- Dimension vocabulary (the six tables) -----------------------------------
+# ``PerformanceDimensionStat.dimension`` values, in TAB ORDER. Each maps to
+# exactly ONE consumed dataset: a headline number is never the sum of a
+# dimensional dataset, and a dimensional table never mixes two datasets.
+PERFORMANCE_DIMENSION_QUERY: Final = "query"
+PERFORMANCE_DIMENSION_PAGE: Final = "page"
+PERFORMANCE_DIMENSION_COUNTRY: Final = "country"
+PERFORMANCE_DIMENSION_DEVICE: Final = "device"
+PERFORMANCE_DIMENSION_SEARCH_APPEARANCE: Final = "search_appearance"
+PERFORMANCE_DIMENSION_DAY: Final = "day"
+PERFORMANCE_DIMENSION_ORDER: Final[tuple[str, ...]] = (
+    PERFORMANCE_DIMENSION_QUERY,
+    PERFORMANCE_DIMENSION_PAGE,
+    PERFORMANCE_DIMENSION_COUNTRY,
+    PERFORMANCE_DIMENSION_DEVICE,
+    PERFORMANCE_DIMENSION_SEARCH_APPEARANCE,
+    PERFORMANCE_DIMENSION_DAY,
+)
+PERFORMANCE_DIMENSIONS: Final[frozenset[str]] = frozenset(PERFORMANCE_DIMENSION_ORDER)
+PERFORMANCE_DEFAULT_DIMENSION: Final = PERFORMANCE_DIMENSION_QUERY
+# dimension -> the single dataset whose rows fold into it.
+PERFORMANCE_DIMENSION_DATASETS: Final[dict[str, str]] = {
+    PERFORMANCE_DIMENSION_QUERY: DATASET_GSC_QUERY_DAILY,
+    PERFORMANCE_DIMENSION_PAGE: DATASET_GSC_PAGE_DAILY,
+    PERFORMANCE_DIMENSION_COUNTRY: DATASET_GSC_COUNTRY_DAILY,
+    PERFORMANCE_DIMENSION_DEVICE: DATASET_GSC_DEVICE_DAILY,
+    PERFORMANCE_DIMENSION_SEARCH_APPEARANCE: DATASET_GSC_SEARCH_APPEARANCE_DAILY,
+    PERFORMANCE_DIMENSION_DAY: DATASET_GSC_DAY_DAILY,
+}
+# The inverse routing the projection folds by (one dataset -> one dimension).
+PERFORMANCE_DATASET_DIMENSIONS: Final[dict[str, str]] = {
+    dataset: dimension for dimension, dataset in PERFORMANCE_DIMENSION_DATASETS.items()
+}
+# --- Table sort + pagination (contract C4) -----------------------------------
+# Sorting hits persisted aggregates only. ``dimension_key`` is the row's own
+# key (the ISO date for DAYS, the query/page/country/device/appearance value
+# elsewhere) and is the only non-metric sort.
+PERFORMANCE_SORT_METRICS: Final[tuple[str, ...]] = (
+    "clicks",
+    "impressions",
+    "ctr",
+    "position",
+)
+PERFORMANCE_SORT_KEY_DIMENSION: Final = "dimension_key"
+PERFORMANCE_SORT_WHITELIST: Final[frozenset[str]] = frozenset(
+    set(PERFORMANCE_SORT_METRICS) | {PERFORMANCE_SORT_KEY_DIMENSION}
+)
+# Rows-per-page options offered by the shared cursor-table footer, and the
+# selection a request that names none gets. A request outside the options is
+# a 422 — never silently clamped to a different page than the cursor encodes.
+PERFORMANCE_PAGE_SIZE_OPTIONS: Final[tuple[int, ...]] = (10, 25, 50, 100)
+PERFORMANCE_DEFAULT_PAGE_SIZE: Final = PERFORMANCE_PAGE_SIZE_OPTIONS[0]
+PERFORMANCE_MAX_PAGE_SIZE: Final = max(PERFORMANCE_PAGE_SIZE_OPTIONS)
+# DAYS reads chronologically; every other table defaults to clicks descending.
+PERFORMANCE_DIMENSION_DEFAULT_SORT: Final[dict[str, str]] = {
+    dimension: (
+        PERFORMANCE_SORT_KEY_DIMENSION
+        if dimension == PERFORMANCE_DIMENSION_DAY
+        else "-clicks"
+    )
+    for dimension in PERFORMANCE_DIMENSION_ORDER
+}
+
+# --- Custom-range projection task --------------------------------------------
+# The inclusive span a custom range may ask for. Bounded by the same
+# ``TRAFFIC_MAX_WINDOW_DAYS`` budget every served window obeys.
+PERFORMANCE_CUSTOM_RANGE_MAX_DAYS: Final = TRAFFIC_MAX_WINDOW_DAYS
+
+
+# --- Compare vocabulary (the GSC Filter/Compare date dialog) -----------------
+# A comparison is a SECOND persisted snapshot, never a derived delta: the
+# response carries both windows' absolute totals and series, and the surface
+# renders them side by side. Nothing here computes a percentage.
+PERFORMANCE_COMPARE_NONE: Final = "none"
+PERFORMANCE_COMPARE_PREVIOUS: Final = "previous"
+PERFORMANCE_COMPARE_YEAR_OVER_YEAR: Final = "year_over_year"
+PERFORMANCE_COMPARE_CUSTOM: Final = "custom"
+PERFORMANCE_COMPARE_MODES: Final[frozenset[str]] = frozenset(
+    {
+        PERFORMANCE_COMPARE_NONE,
+        PERFORMANCE_COMPARE_PREVIOUS,
+        PERFORMANCE_COMPARE_YEAR_OVER_YEAR,
+        PERFORMANCE_COMPARE_CUSTOM,
+    }
+)
+PERFORMANCE_DEFAULT_COMPARE: Final = PERFORMANCE_COMPARE_NONE
+# ``year_over_year`` shifts the selected window back by this many days. A
+# fixed 364 (52 whole weeks) keeps weekday alignment, which is what makes a
+# search-traffic year-over-year comparison legible; a 365-day shift would
+# compare a Monday against a Sunday.
+PERFORMANCE_YEAR_OVER_YEAR_SHIFT_DAYS: Final = 364

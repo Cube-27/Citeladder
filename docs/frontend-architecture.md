@@ -17,7 +17,7 @@ superseded path is deleted.
 |---|---|---|
 | Overview | Overview | `/projects` |
 | Analyze | Website | `/site?tab=pages` (navigation target and non-dashboard default); Overview becomes the default when the server phase is `dashboard`, with `architecture`, `aeo-readiness`, and `changes` also available |
-| Analyze | Issues / Search Demand / Traffic | `/issues`, `/demand`, `/traffic` |
+| Analyze | Issues / Search Demand / Performance | `/issues`, `/demand`, `/performance` |
 | Analyze | Commerce Suite | `/products` |
 | Act | Opportunities / Content | `/opportunities`, `/content` |
 | Track | AI Visibility | `/visibility?tab=trends` (default), `mentions-citations`, `query-fanout` |
@@ -264,7 +264,7 @@ screen from its internal presentation files.
 | Content | `components/content/content-screen.tsx` owns project transitions and generation orchestration | data hooks, generation history, and composer/result panels own their respective concerns |
 | Onboarding | `components/onboarding/onboarding-screen.tsx` selects the active stage and actions | `onboarding-flow.ts` owns transaction state, stage owners render domain UI, and `components/auth/flow-shell.tsx` owns shared auth/onboarding chrome |
 | Projects dashboard | `components/projects/dashboard-screen.tsx` owns query gates and project context | dashboard controls, primitives, sections, and command-center action hook own reusable UI and mutations |
-| Traffic | `components/traffic/traffic-screen.tsx` owns query gates and selected analytical controls | toolbar, unified-performance card, and synchronization hook own their scoped behavior |
+| Performance | `components/performance/performance-screen.tsx` owns project/range/compare selection and the range-projection hand-off | date-range dialog, metric cards, chart, dimension table, and synchronization hook own their scoped behavior |
 | Site Health URL detail | `components/site-health/url-detail.tsx` owns query/rerun control and polling | `url-detail-view.tsx` owns the persisted-detail presentation; `internal-links-card.tsx` owns the link-metric section |
 | Site Health architecture | `components/site-health/architecture-panel.tsx` owns the projection query, page-kind rows, and persisted link/depth summaries | — |
 | Commerce, prompts, providers, and marketing previews | Existing public panels and dialogs remain their caller-facing owners | small view, cell, topic, preview, and message-bus modules own discrete presentation or local interaction regions |
@@ -322,7 +322,7 @@ defaults by decomposition; an exception is not an intended delivery outcome.
 | Route family | Owner |
 |---|---|
 | `/content` | Content Intelligence; user instruction, canonical context summary, generation history |
-| `/demand`, `/traffic`, `/ai-referrals` | Demand Intelligence |
+| `/demand`, `/performance`, `/ai-referrals` | Demand Intelligence |
 | `/prompts`, `/visibility`, `/runs` | Demand/Visibility workflows |
 | `/products` | Commerce: Catalog (default), Competitors, Buyer Prompts, AI Shelf |
 | `/settings` | Shared workspace/project configuration, including Integrations and Providers |
@@ -401,7 +401,7 @@ non-comparable states. Reloading reads
 the same state from the implementation-event projection; a workflow status
 such as Resolved neither creates nor replaces this action record.
 
-## Demand, traffic, referrals, and agent UX
+## Demand, performance, referrals, and agent UX
 
 `/demand` is the single **Search Demand** screen; it does not provide nested
 Overview/Search Demand/AI Visibility tabs. `/visibility` remains the standalone
@@ -420,12 +420,37 @@ as the project is known with `audit_id` omitted; the server resolves latest, and
 only an explicit run choice adds that filter. The shared run list warms in the
 project provider instead of gating the first analytical request.
 
-Traffic treats Day/Week/Month as chart-interval controls. During an interval
-refetch, existing analytical content stays mounted, the analytical region is
-marked busy with compact loading feedback, and focus remains on the selected
-control. Labels and comparisons render from API-returned `granularity` only.
-Top pages and Top queries are accessible underline tabs; their selected-window
-rankings state that chart interval does not affect them.
+`/performance` is the Search Console-aligned surface; `/traffic` is deleted
+and not redirected. Day/Week/Month/Custom are RANGE options, not chart
+intervals: every chart buckets by day, and the range is resolved server-side
+against the latest complete GSC date, so the screen always displays the window
+actually covered rather than one it computed. The dashboard response returns
+the resolved `snapshot_id`, and every table request carries it back, so a chart
+and its tables never read different projections.
+
+The date dialog has Filter and Compare tabs. A comparison is a SECOND persisted
+window rendered beside the first: cards show both absolute values, the chart
+draws the comparison dashed on a positional (day 1..N) x-axis, and each table
+widens to selected/comparison/difference columns per metric with the dimension
+column pinned during horizontal scroll. No percentage change is computed
+anywhere. Year over year renders disabled, with its reason, until more than a
+year of history is imported — never as an observed zero.
+
+A custom or comparison window with no persisted snapshot is materialized by the
+display-only `performance_range_projection` task, which the screen queues and
+polls; reads never build a projection. Selectable metrics are Clicks,
+Impressions, Average CTR, and Average position; Sessions and Conversions render
+as a compact non-interactive GA4 row, never as chart series.
+
+Tables use the shared cursor-table footer (`components/ui/cursor-table-footer.tsx`
+with `lib/table/use-cursor-table.ts`): config-owned rows-per-page, the visible
+range against a PERSISTED total, and compact previous/next arrows. Website
+Pages, Opportunities, and Website Changes use the same footer. Only a view with
+a persisted count states an exact total — the unfiltered page inventory reads
+the crawl's own count; filtered views show the range alone rather than issuing
+an unbounded live count. A cursor stack resets whenever its project,
+snapshot/range, tab, filters, sort, or page size changes, because the server
+binds every cursor to exactly those values and refuses a replay.
 
 `/ai-referrals` renders only referral volume, referral share, and AI-source
 totals, with their measurement context. It has no copied visibility, themes,

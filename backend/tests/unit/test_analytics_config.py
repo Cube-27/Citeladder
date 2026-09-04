@@ -41,6 +41,17 @@ from app.core.config.integrations_datasets import (
 )
 from app.core.config.provider_catalog import LOGICAL_ENGINES
 from app.core.config.traffic import (
+    PERFORMANCE_COMPARE_MODES,
+    PERFORMANCE_DATASET_DIMENSIONS,
+    PERFORMANCE_DEFAULT_PAGE_SIZE,
+    PERFORMANCE_DIMENSION_DATASETS,
+    PERFORMANCE_DIMENSION_DEFAULT_SORT,
+    PERFORMANCE_DIMENSION_ORDER,
+    PERFORMANCE_PAGE_SIZE_OPTIONS,
+    PERFORMANCE_PRESET_RANGE_DAYS,
+    PERFORMANCE_RANGES,
+    PERFORMANCE_SNAPSHOT_WINDOW_DAYS,
+    PERFORMANCE_SORT_WHITELIST,
     TRAFFIC_CONSUMED_DATASETS,
     TRAFFIC_DEFAULT_WINDOW_DAYS,
     TRAFFIC_FORMULA_VERSION,
@@ -106,6 +117,7 @@ def test_analytics_task_kinds_include_commerce_replacement_tasks() -> None:
             "traffic_snapshot_refresh",
             "ai_referrals_snapshot_refresh",
             "referral_retention_sweep",
+            "performance_range_projection",
             "commerce_catalog_projection",
             "commerce_competitor_discovery",
             "opportunity_refresh",
@@ -125,6 +137,66 @@ def test_traffic_sort_whitelists() -> None:
     # Query stats carry no GA4 session aggregates — never sortable by them.
     assert "sessions" not in TRAFFIC_QUERY_SORT_WHITELIST
     assert "conversions" not in TRAFFIC_QUERY_SORT_WHITELIST
+
+
+def test_performance_dimension_routing_is_one_dataset_per_table() -> None:
+    # Six tables, six datasets, no sharing in either direction: a dimensional
+    # GSC report drops privacy-filtered rows, so two of them in one table (or
+    # one of them in two) would report numbers that disagree with Search
+    # Console.
+    assert len(PERFORMANCE_DIMENSION_ORDER) == 6
+    assert set(PERFORMANCE_DIMENSION_DATASETS) == set(PERFORMANCE_DIMENSION_ORDER)
+    datasets = list(PERFORMANCE_DIMENSION_DATASETS.values())
+    assert len(datasets) == len(set(datasets))
+    # The routing is a true inverse, so the fold and the read agree.
+    assert PERFORMANCE_DATASET_DIMENSIONS == {
+        dataset: dimension
+        for dimension, dataset in PERFORMANCE_DIMENSION_DATASETS.items()
+    }
+    # Every dataset a table reads is one the projection actually consumes.
+    assert set(datasets) <= TRAFFIC_CONSUMED_DATASETS
+    assert set(datasets) <= set(INTEGRATION_DATASET_TEMPLATES)
+
+
+def test_headline_dataset_is_the_only_date_only_report() -> None:
+    # The DAYS table and the headline read the same dataset, and it is the
+    # only GSC template carrying no breakdown dimension.
+    day_dataset = PERFORMANCE_DIMENSION_DATASETS["day"]
+    assert INTEGRATION_DATASET_TEMPLATES[day_dataset].dimensions == ("date",)
+    date_only = [
+        dataset
+        for dataset, template in INTEGRATION_DATASET_TEMPLATES.items()
+        if template.dimensions == ("date",)
+    ]
+    assert date_only == [day_dataset]
+
+
+def test_performance_range_and_compare_vocabularies() -> None:
+    assert PERFORMANCE_RANGES == frozenset({"day", "week", "month", "custom"})
+    assert PERFORMANCE_COMPARE_MODES == frozenset(
+        {"none", "previous", "year_over_year", "custom"}
+    )
+    # The derived snapshot family is exactly the preset lengths, so every
+    # preset can resolve and nothing is materialized that no preset reads.
+    assert PERFORMANCE_SNAPSHOT_WINDOW_DAYS == tuple(
+        sorted(PERFORMANCE_PRESET_RANGE_DAYS.values())
+    )
+    assert all(days > 0 for days in PERFORMANCE_SNAPSHOT_WINDOW_DAYS)
+
+
+def test_performance_table_sort_and_page_sizes() -> None:
+    assert PERFORMANCE_SORT_WHITELIST == frozenset(
+        {"clicks", "impressions", "ctr", "position", "dimension_key"}
+    )
+    # DAYS reads chronologically by its own key; the rest lead with clicks.
+    assert PERFORMANCE_DIMENSION_DEFAULT_SORT["day"] == "dimension_key"
+    for dimension in PERFORMANCE_DIMENSION_ORDER:
+        default = PERFORMANCE_DIMENSION_DEFAULT_SORT[dimension]
+        assert default.lstrip("-") in PERFORMANCE_SORT_WHITELIST
+        if dimension != "day":
+            assert default == "-clicks"
+    assert PERFORMANCE_DEFAULT_PAGE_SIZE in PERFORMANCE_PAGE_SIZE_OPTIONS
+    assert sorted(PERFORMANCE_PAGE_SIZE_OPTIONS) == list(PERFORMANCE_PAGE_SIZE_OPTIONS)
 
 
 def test_rule_and_sanitize_versions_stamped() -> None:

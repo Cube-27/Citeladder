@@ -92,25 +92,25 @@ describe('station navigation', () => {
 
   it('prefetches the destination primary query on pointer and keyboard intent', () => {
     render(<SidebarNav />);
-    const traffic = screen.getByRole('link', { name: 'Traffic' });
-    fireEvent.mouseEnter(traffic);
+    const performance = screen.getByRole('link', { name: 'Performance' });
+    fireEvent.mouseEnter(performance);
     expect(mocks.prefetchQuery).toHaveBeenCalled();
     expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual([
-      'traffic',
+      'performance',
       'dashboard',
       '11111111-1111-4111-8111-111111111111',
-      { granularity: 'day' },
+      { range: 'custom', compare: 'none' },
     ]);
 
     mocks.prefetchQuery.mockClear();
     mocks.find.mockClear();
-    fireEvent.focus(traffic);
+    fireEvent.focus(performance);
     expect(mocks.prefetchQuery).toHaveBeenCalledOnce();
     expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual([
-      'traffic',
+      'performance',
       'dashboard',
       '11111111-1111-4111-8111-111111111111',
-      { granularity: 'day' },
+      { range: 'custom', compare: 'none' },
     ]);
   });
 });

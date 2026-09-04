@@ -20,8 +20,12 @@ from app.core.config.integrations_datasets import (
     DATASET_GA4_CHANNEL_DAILY,
     DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
+    DATASET_GSC_COUNTRY_DAILY,
+    DATASET_GSC_DAY_DAILY,
+    DATASET_GSC_DEVICE_DAILY,
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
+    DATASET_GSC_SEARCH_APPEARANCE_DAILY,
     pack_dimension_key,
     unpack_dimension_key,
 )
@@ -89,6 +93,33 @@ def _gsc_page(
         dataset=DATASET_GSC_PAGE_DAILY,
         row_date=row_date,
         dimension_values=[url, row_date.isoformat()],
+        metrics=metrics,
+        **kwargs,
+    )
+
+
+def _gsc_day(
+    row_date: date,
+    *,
+    clicks: int,
+    impressions: int,
+    position: float | None = None,
+    **kwargs: Any,
+) -> TrafficMetricRowInput:
+    """One ``gsc_day_daily`` row — the ONLY source of headline totals.
+
+    The date-only report carries Search Console's own overall totals for a
+    date, so every totals/series assertion below is driven by these rows. A
+    dimensional dataset drops privacy-filtered rows and must never be summed
+    into a headline.
+    """
+    metrics: dict[str, Any] = {"clicks": clicks, "impressions": impressions}
+    if position is not None:
+        metrics["position"] = position
+    return _row(
+        dataset=DATASET_GSC_DAY_DAILY,
+        row_date=row_date,
+        dimension_values=[row_date.isoformat()],
         metrics=metrics,
         **kwargs,
     )
@@ -194,20 +225,8 @@ def test_bucket_labels_aligned_to_window() -> None:
 
 def test_totals_ctr_and_impression_weighted_position() -> None:
     rows = [
-        _gsc_page(
-            "https://example.com/a",
-            date(2026, 7, 20),
-            clicks=10,
-            impressions=100,
-            position=10.0,
-        ),
-        _gsc_page(
-            "https://example.com/a",
-            date(2026, 7, 21),
-            clicks=60,
-            impressions=300,
-            position=20.0,
-        ),
+        _gsc_day(date(2026, 7, 20), clicks=10, impressions=100, position=10.0),
+        _gsc_day(date(2026, 7, 21), clicks=60, impressions=300, position=20.0),
     ]
     totals = _totals(
         rows,
@@ -245,25 +264,14 @@ def test_ctr_and_position_none_without_impressions() -> None:
 
 def test_position_ignores_rows_without_position_in_both_terms() -> None:
     rows = [
-        _gsc_page(
-            "https://example.com/a",
-            date(2026, 7, 20),
-            clicks=5,
-            impressions=100,
-            position=8.0,
-        ),
+        _gsc_day(date(2026, 7, 20), clicks=5, impressions=100, position=8.0),
         # No position key: its impressions must NOT enter the denominator.
-        _gsc_page(
-            "https://example.com/b",
-            date(2026, 7, 20),
-            clicks=5,
-            impressions=900,
-        ),
+        _gsc_day(date(2026, 7, 21), clicks=5, impressions=900),
     ]
     totals = _totals(
         rows,
         window_start=date(2026, 7, 20),
-        window_end=date(2026, 7, 20),
+        window_end=date(2026, 7, 21),
         granularity="day",
     )
     assert totals["position"] == pytest.approx(8.0)
@@ -274,28 +282,11 @@ def test_position_ignores_rows_without_position_in_both_terms() -> None:
 
 def test_select_latest_rows_keeps_highest_resync_seq_per_identity() -> None:
     shared_id = uuid.uuid4()
-    stale = _gsc_page(
-        "https://example.com/a",
-        date(2026, 7, 20),
-        clicks=5,
-        impressions=50,
-        resync_seq=0,
-        row_id=shared_id,
+    stale = _gsc_day(
+        date(2026, 7, 20), clicks=5, impressions=50, resync_seq=0, row_id=shared_id
     )
-    fresh = _gsc_page(
-        "https://example.com/a",
-        date(2026, 7, 20),
-        clicks=9,
-        impressions=90,
-        resync_seq=1,
-    )
-    other_identity = _gsc_page(
-        "https://example.com/b",
-        date(2026, 7, 20),
-        clicks=1,
-        impressions=10,
-        resync_seq=0,
-    )
+    fresh = _gsc_day(date(2026, 7, 20), clicks=9, impressions=90, resync_seq=1)
+    other_identity = _gsc_day(date(2026, 7, 21), clicks=1, impressions=10, resync_seq=0)
     latest = select_latest_rows([stale, fresh, other_identity])
     assert len(latest) == 2
     assert stale.id not in {row.id for row in latest}
@@ -457,12 +448,7 @@ def test_sessions_and_conversions_null_without_included_ga4_rows() -> None:
 
 def test_query_rows_feed_query_stats_but_never_totals() -> None:
     rows = [
-        _gsc_page(
-            "https://example.com/a",
-            date(2026, 7, 20),
-            clicks=10,
-            impressions=100,
-        ),
+        _gsc_day(date(2026, 7, 20), clicks=10, impressions=100),
         _row(
             dataset=DATASET_GSC_QUERY_DAILY,
             row_date=date(2026, 7, 20),
@@ -476,7 +462,7 @@ def test_query_rows_feed_query_stats_but_never_totals() -> None:
         window_end=date(2026, 7, 20),
         granularity="day",
     )
-    # Totals come from the page dataset only — no double counting.
+    # Totals come from the date-only dataset alone — no double counting.
     assert projection.metrics["totals"]["clicks"] == 10
     assert [q.normalized_query for q in projection.queries] == ["best crm tools"]
     assert projection.queries[0].metrics["clicks"] == 7
@@ -562,26 +548,29 @@ def test_page_without_ga4_rows_has_null_sessions() -> None:
     assert projection.pages[0].metrics["conversions"] is None
 
 
-def test_uncanonicalizable_page_skipped_from_stats_but_kept_in_totals() -> None:
-    rows = [
-        _gsc_page(
-            "not a url",
-            date(2026, 7, 20),
-            clicks=6,
-            impressions=60,
-        )
-    ]
+def test_uncanonicalizable_page_skipped_from_stats_but_totals_unaffected() -> None:
+    day = _gsc_day(date(2026, 7, 20), clicks=6, impressions=60)
+    broken_page = _gsc_page(
+        "not a url",
+        date(2026, 7, 20),
+        clicks=6,
+        impressions=60,
+    )
     projection = build_traffic_projection(
-        rows=rows,
+        rows=[day, broken_page],
         window_start=date(2026, 7, 20),
         window_end=date(2026, 7, 20),
         granularity="day",
     )
+    # No page key could be formed, so the row appears in neither the page
+    # stats nor the PAGES dimension table.
     assert projection.pages == ()
-    # The measured traffic is real: it still counts in the totals and the
-    # row stays in the snapshot provenance.
+    assert projection.dimension_counts["page"] == 0
+    # The headline is unaffected either way: it reads the date-only dataset,
+    # never the page report, so a page that cannot be keyed can neither add
+    # to nor subtract from the total.
     assert projection.metrics["totals"]["clicks"] == 6
-    assert str(rows[0].id) in projection.source_metric_row_ids
+    assert str(day.id) in projection.source_metric_row_ids
 
 
 def test_unmappable_dimension_key_is_skipped() -> None:
@@ -600,38 +589,29 @@ def test_unmappable_dimension_key_is_skipped() -> None:
         window_end=date(2026, 7, 20),
         granularity="day",
     )
-    assert projection.metrics["totals"]["clicks"] == 0
+    # Skipping the only row leaves the window with NO date-only evidence, so
+    # the headline is unmeasured (null) rather than an observed zero.
+    assert projection.metrics["totals"]["clicks"] is None
     assert projection.source_metric_row_ids == []
 
 
 def test_out_of_window_rows_are_ignored() -> None:
-    rows = [
-        _gsc_page(
-            "https://example.com/a",
-            date(2026, 7, 19),
-            clicks=9,
-            impressions=90,
-        )
-    ]
+    rows = [_gsc_day(date(2026, 7, 19), clicks=9, impressions=90)]
     totals = _totals(
         rows,
         window_start=date(2026, 7, 20),
         window_end=date(2026, 7, 22),
         granularity="day",
     )
-    assert totals["clicks"] == 0
-    assert totals["impressions"] == 0
+    # Nothing measured the window, so the totals are null — an unimported
+    # window and a window that measured zero are different states.
+    assert totals["clicks"] is None
+    assert totals["impressions"] is None
 
 
 def test_series_buckets_render_gaps_for_rows_free_buckets() -> None:
     rows = [
-        _gsc_page(
-            "https://example.com/a",
-            date(2026, 7, 21),
-            clicks=4,
-            impressions=40,
-            position=6.0,
-        ),
+        _gsc_day(date(2026, 7, 21), clicks=4, impressions=40, position=6.0),
         _row(
             dataset=DATASET_GA4_CHANNEL_DAILY,
             row_date=date(2026, 7, 21),
@@ -667,7 +647,7 @@ def test_series_buckets_render_gaps_for_rows_free_buckets() -> None:
     assert [p["value"] for p in series["position"]] == [None, 6.0, None]
 
 
-def test_empty_window_projects_zeroed_totals_and_gap_series() -> None:
+def test_empty_window_projects_unmeasured_totals_and_gap_series() -> None:
     projection = build_traffic_projection(
         rows=[],
         window_start=date(2026, 7, 20),
@@ -675,9 +655,11 @@ def test_empty_window_projects_zeroed_totals_and_gap_series() -> None:
         granularity="day",
     )
     totals = projection.metrics["totals"]
+    # Every measure is NULL: no evidence reached this window at all. Zero
+    # would assert an observation that was never made.
     assert totals == {
-        "impressions": 0,
-        "clicks": 0,
+        "impressions": None,
+        "clicks": None,
         "ctr": None,
         "position": None,
         "sessions": None,
@@ -687,6 +669,10 @@ def test_empty_window_projects_zeroed_totals_and_gap_series() -> None:
     }
     assert projection.pages == ()
     assert projection.queries == ()
+    assert projection.dimensions == ()
+    assert projection.dimension_counts == dict.fromkeys(
+        ("query", "page", "country", "device", "search_appearance", "day"), 0
+    )
     assert projection.source_metric_row_ids == []
     assert projection.source_artifact_ids == []
     assert len(projection.metrics["series"]["clicks"]) == 2
@@ -786,3 +772,141 @@ def test_unpack_dimension_key_right_peels_separator_inside_leading_value() -> No
 def test_unpack_dimension_key_rejects_wrong_arity_and_unknown_dataset() -> None:
     assert unpack_dimension_key(DATASET_GSC_PAGE_DAILY, "https://example.com/a") is None
     assert unpack_dimension_key("bing_unknown_daily", "a | b") is None
+
+
+# --- Performance dimension fold ------------------------------------------------
+
+
+def test_each_gsc_dataset_folds_into_exactly_one_dimension() -> None:
+    """One dataset feeds one table — never a headline, never a second table."""
+    rows = [
+        _gsc_day(date(2026, 7, 20), clicks=10, impressions=100, position=5.0),
+        _gsc_day(date(2026, 7, 21), clicks=20, impressions=300, position=7.0),
+        _gsc_page("https://example.com/a", date(2026, 7, 20), clicks=6, impressions=60),
+        _row(
+            dataset=DATASET_GSC_QUERY_DAILY,
+            row_date=date(2026, 7, 20),
+            dimension_values=["Blue  Widgets", "2026-07-20"],
+            metrics={"clicks": 3, "impressions": 30, "position": 3.0},
+        ),
+        _row(
+            dataset=DATASET_GSC_COUNTRY_DAILY,
+            row_date=date(2026, 7, 20),
+            dimension_values=["ind", "2026-07-20"],
+            metrics={"clicks": 4, "impressions": 40},
+        ),
+        _row(
+            dataset=DATASET_GSC_DEVICE_DAILY,
+            row_date=date(2026, 7, 21),
+            dimension_values=["MOBILE", "2026-07-21"],
+            metrics={"clicks": 9, "impressions": 90},
+        ),
+        _row(
+            dataset=DATASET_GSC_SEARCH_APPEARANCE_DAILY,
+            row_date=date(2026, 7, 21),
+            dimension_values=["AMP_BLUE_LINK", "2026-07-21"],
+            metrics={"clicks": 1, "impressions": 10},
+        ),
+    ]
+    projection = build_traffic_projection(
+        rows=rows,
+        window_start=date(2026, 7, 20),
+        window_end=date(2026, 7, 21),
+        granularity="day",
+        project_origin="https://example.com",
+    )
+
+    # The headline is the date-only dataset ALONE. Summing the dimensional
+    # reports beside it would report 33 clicks for a 30-click window.
+    assert projection.metrics["totals"]["clicks"] == 30
+    assert projection.metrics["totals"]["impressions"] == 400
+
+    assert projection.dimension_counts == {
+        "query": 1,
+        "page": 1,
+        "country": 1,
+        "device": 1,
+        "search_appearance": 1,
+        "day": 2,
+    }
+    by_dimension = {
+        (row.dimension, row.dimension_key): row.metrics for row in projection.dimensions
+    }
+    assert by_dimension[("query", "blue widgets")]["clicks"] == 3
+    assert by_dimension[("page", "https://example.com/a")]["clicks"] == 6
+    assert by_dimension[("country", "ind")]["clicks"] == 4
+    assert by_dimension[("device", "MOBILE")]["clicks"] == 9
+    assert by_dimension[("search_appearance", "AMP_BLUE_LINK")]["clicks"] == 1
+    # DAYS keys by the row's own date and matches the series exactly.
+    assert by_dimension[("day", "2026-07-20")]["clicks"] == 10
+    assert by_dimension[("day", "2026-07-21")]["clicks"] == 20
+
+
+def test_search_appearance_absence_is_an_observed_empty_table() -> None:
+    """A GSC response with no Search Appearance rows is empty, not broken."""
+    projection = build_traffic_projection(
+        rows=[_gsc_day(date(2026, 7, 20), clicks=5, impressions=50)],
+        window_start=date(2026, 7, 20),
+        window_end=date(2026, 7, 20),
+        granularity="day",
+    )
+    assert projection.dimension_counts["search_appearance"] == 0
+    assert not [
+        row for row in projection.dimensions if row.dimension == "search_appearance"
+    ]
+    # The rest of the projection is unaffected — an empty breakdown is not a
+    # failed connection.
+    assert projection.metrics["totals"]["clicks"] == 5
+
+
+def test_dimension_rows_carry_their_own_provenance() -> None:
+    country = _row(
+        dataset=DATASET_GSC_COUNTRY_DAILY,
+        row_date=date(2026, 7, 20),
+        dimension_values=["usa", "2026-07-20"],
+        metrics={"clicks": 2, "impressions": 20},
+    )
+    projection = build_traffic_projection(
+        rows=[country],
+        window_start=date(2026, 7, 20),
+        window_end=date(2026, 7, 20),
+        granularity="day",
+    )
+    (row,) = projection.dimensions
+    assert row.source_metric_row_ids == [str(country.id)]
+    assert row.source_artifact_ids == [str(country.source_artifact_id)]
+    # The snapshot's provenance is the union of every contributing row.
+    assert str(country.id) in projection.source_metric_row_ids
+
+
+def test_dimension_fold_is_deterministic() -> None:
+    rows = [
+        _gsc_day(date(2026, 7, 20), clicks=1, impressions=10),
+        _row(
+            dataset=DATASET_GSC_COUNTRY_DAILY,
+            row_date=date(2026, 7, 20),
+            dimension_values=["zaf", "2026-07-20"],
+            metrics={"clicks": 1, "impressions": 10},
+        ),
+        _row(
+            dataset=DATASET_GSC_COUNTRY_DAILY,
+            row_date=date(2026, 7, 20),
+            dimension_values=["ind", "2026-07-20"],
+            metrics={"clicks": 2, "impressions": 20},
+        ),
+    ]
+    first = build_traffic_projection(
+        rows=rows,
+        window_start=date(2026, 7, 20),
+        window_end=date(2026, 7, 20),
+        granularity="day",
+    )
+    second = build_traffic_projection(
+        rows=list(reversed(rows)),
+        window_start=date(2026, 7, 20),
+        window_end=date(2026, 7, 20),
+        granularity="day",
+    )
+    assert [
+        (row.dimension, row.dimension_key, row.metrics) for row in first.dimensions
+    ] == [(row.dimension, row.dimension_key, row.metrics) for row in second.dimensions]

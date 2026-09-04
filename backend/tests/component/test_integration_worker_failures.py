@@ -109,14 +109,19 @@ async def test_retry_resumes_from_durable_artifacts(
 
     await db_session.refresh(run)
     assert run.status == TASK_STATUS_SUCCEEDED
+    # The page report resumes at its durable offset; every other GSC family
+    # starts from the top, including the date-only report and Search
+    # Appearance.
     assert sorted(fake.gsc_pages) == sorted(
         [
             (("page", "date"), 2),
+            (("date",), 0),
             (("query", "date"), 0),
             (("query", "page", "date"), 0),
+            (("searchAppearance", "date"), 0),
             (("device", "date"), 0),
             (("country", "date"), 0),
         ]
     )
     artifacts = await worker_tests._artifacts(db_session, run.id)
-    assert len(artifacts) == len({artifact.id for artifact in artifacts}) == 6
+    assert len(artifacts) == len({artifact.id for artifact in artifacts}) == 8
