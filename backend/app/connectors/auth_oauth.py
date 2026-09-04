@@ -106,11 +106,15 @@ def _json_object_or_raise(response: httpx.Response, *, action: str) -> dict:
     return payload
 
 
-# An identity value longer than this is not a real subject or address; it is
-# a malformed or hostile response. Rejected outright rather than truncated —
-# a truncated subject is a DIFFERENT identity, and silently shortening one
-# would be a way to aim a sign-in at the wrong account.
-_IDENTITY_FIELD_MAX_LEN = 320
+# Matches the String(255) columns on ``UserIdentity`` that store these
+# values, so an over-long claim is refused here rather than passing the
+# connector and failing as a database error mid-sign-in. (An address is at
+# most 254 octets per RFC 5321; a Google ``sub`` is ~21 characters.)
+#
+# Rejected outright rather than truncated: a truncated subject is a DIFFERENT
+# identity, and silently shortening one would be a way to aim a sign-in at
+# the wrong account.
+_IDENTITY_FIELD_MAX_LEN = 255
 
 
 def _identity_field(value: object) -> str:

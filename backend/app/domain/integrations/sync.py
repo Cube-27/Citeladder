@@ -33,12 +33,13 @@ workspace, allocates, inserts, and commits in one call.
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.integrations_contracts import (
@@ -61,6 +62,8 @@ from app.models.integrations import (
 # Schema-object names pinned in ``models/integrations.py`` — the partial
 # active-window unique index (409 path), the full re-sync identity unique
 # constraint, and the unique idempotency key (both retry-with-next-value).
+logger = logging.getLogger("app.integrations")
+
 _ACTIVE_WINDOW_INDEX = "ix_integration_sync_runs_active_window"
 _WINDOW_SEQ_CONSTRAINT = "uq_integration_sync_run_window_seq"
 _IDEMPOTENCY_KEY_CONSTRAINT = "uq_integration_sync_run_idempotency_key"
@@ -300,10 +303,23 @@ async def enqueue_history_backfill(
                 )
             )
         except ActiveWindowConflictError:
+            # A concurrent caller raced past the guard above and queued this
+            # window first. The unique indexes are the real arbiter; this
+            # chunk is already covered.
             continue
-        except IntegrationConnectionNotFoundError:
-            # The connection vanished mid-enqueue; the chunks already queued
-            # stay valid and the rest are simply not scheduled.
+        except (IntegrationConnectionNotFoundError, SQLAlchemyError):
+            # The connection vanished mid-enqueue, or the database refused a
+            # chunk. Callers reach here AFTER committing the work that
+            # triggered the backfill, so failing now would report an error
+            # for something that already succeeded. Chunks already queued
+            # stay valid; the rest are simply not scheduled.
+            logger.warning(
+                "integrations.backfill_enqueue_incomplete",
+                extra={
+                    "connection_id": str(connection_id),
+                    "queued_chunks": len(runs),
+                },
+            )
             break
     return runs
 

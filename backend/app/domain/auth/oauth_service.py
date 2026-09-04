@@ -162,7 +162,20 @@ async def _resolve_account(
         await _link_identity(
             session, user=existing, provider=provider, identity=identity
         )
-        await session.commit()
+        try:
+            await session.commit()
+        except IntegrityError as exc:
+            # Two callbacks for the same account raced past the SELECT in
+            # ``_link_identity`` and both inserted. The unique constraint is
+            # the real arbiter; the loser re-reads the winner's row rather
+            # than escaping as a 500 on an otherwise valid sign-in.
+            await session.rollback()
+            linked = await _identity_row(
+                session, provider=provider, subject=identity.subject
+            )
+            if linked is None or linked.user_id != existing.id:
+                raise SignInStateError("account linking conflicted") from exc
+            return existing
         logger.info(
             "auth.oauth_linked",
             extra={"user_id": str(existing.id), "provider": provider},

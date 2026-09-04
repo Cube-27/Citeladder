@@ -62,6 +62,19 @@ describe('LoginPage', () => {
     expect(screen.getByText(/google sign-in did not complete/i)).toBeInTheDocument();
   });
 
+  // The code is attacker-controlled query-string input. A plain-object lookup
+  // returns Object.prototype for `__proto__`, which `?? fallback` does not
+  // catch and React refuses to render — blanking the login page.
+  it.each(['__proto__', 'constructor', 'toString'])(
+    'renders a normal message for the inherited key %s',
+    (code) => {
+      searchParams.set('error', code);
+      renderWithProviders(<LoginPage />);
+
+      expect(screen.getByText(/google sign-in did not complete/i)).toBeInTheDocument();
+    },
+  );
+
   it('renders Google sign-in and email sign-in paths with divider', () => {
     renderWithProviders(<LoginPage />);
 
