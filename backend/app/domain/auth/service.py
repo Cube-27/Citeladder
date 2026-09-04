@@ -74,6 +74,18 @@ async def register_user(
         # response indistinguishable and leave the session usable.
         await session.rollback()
         return None
+    await provision_new_account(session, user)
+    logger.info("auth.registered", extra={"user_id": str(user.id)})
+    return user
+
+
+async def provision_new_account(session: AsyncSession, user: User) -> None:
+    """Give a freshly flushed ``User`` its workspace and billing account.
+
+    Shared by password registration and third-party sign-in so a Google-created
+    account is indistinguishable from a registered one downstream. Commits
+    once so the user, workspace, membership, and billing rows land atomically.
+    """
     workspace = await ensure_personal_workspace(session, user)
     await ensure_user_billing(
         session,
@@ -82,8 +94,6 @@ async def register_user(
     )
     await session.commit()
     await session.refresh(user)
-    logger.info("auth.registered", extra={"user_id": str(user.id)})
-    return user
 
 
 async def authenticate_user(
@@ -96,11 +106,14 @@ async def authenticate_user(
     on first login").
     """
     user = await get_user_by_email(session, email)
-    if (
-        user is None
-        or not user.is_active
-        or not verify_password(password, user.hashed_password)
-    ):
+    if user is None or not user.is_active:
+        return None
+    # A third-party sign-in account carries no password hash. Refuse it here
+    # rather than in ``verify_password``: no password may ever authenticate a
+    # row that never had one.
+    if user.hashed_password is None:
+        return None
+    if not verify_password(password, user.hashed_password):
         return None
     created = await ensure_personal_workspace(session, user)
     needs_billing_repair = (

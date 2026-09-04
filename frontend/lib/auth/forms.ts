@@ -40,3 +40,24 @@ export function authErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim()) return error.message;
   return 'Something went wrong. Please try again.';
 }
+
+/**
+ * Messages for the coded `?error=` the Google sign-in callback redirects with.
+ *
+ * The callback is a full-page navigation, so it cannot return a JSON error
+ * body — it carries a machine-readable code on the login URL instead. Codes
+ * are owned by `backend/app/core/config/oauth.py`. An unrecognized code still
+ * gets a message rather than a silent, unexplained bounce back to /login.
+ */
+const OAUTH_SIGNIN_ERRORS: Record<string, string> = {
+  oauth_signin_state_invalid: 'That sign-in link expired or was already used. Please try again.',
+  oauth_signin_email_unverified:
+    'Google has not verified that email address, so it cannot be linked to an account.',
+  oauth_signin_disabled: 'Google sign-in is unavailable right now. Please use email below.',
+  oauth_signin_failed: 'Google sign-in did not complete. Please try again.',
+};
+
+export function oauthSignInErrorMessage(code: string | null): string | undefined {
+  if (!code) return undefined;
+  return OAUTH_SIGNIN_ERRORS[code] ?? 'Google sign-in did not complete. Please try again.';
+}

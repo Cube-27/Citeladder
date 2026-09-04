@@ -55,7 +55,10 @@ from app.core.config.integrations_transport import (
 )
 from app.domain.integrations.schemas import IntegrationPropertyMappingResponse
 from app.domain.integrations.service import get_connection
-from app.domain.integrations.sync import integrity_constraint_name
+from app.domain.integrations.sync import (
+    enqueue_history_backfill,
+    integrity_constraint_name,
+)
 from app.domain.projects.service import get_project
 from app.models.integrations import IntegrationConnection, IntegrationPropertyMapping
 from app.models.project import Project
@@ -260,6 +263,14 @@ async def create_mapping(
                 f"an active mapping already owns {property_ref!r}"
             ) from exc
         raise
+    # Selecting a property is the first moment this connection knows WHAT to
+    # sync, so it is where the one-time history import belongs. Enqueued
+    # AFTER the mapping commits: the backfill must never be the reason
+    # selecting a property fails, and it is a no-op when this connection has
+    # been backfilled before.
+    await enqueue_history_backfill(
+        session, workspace_id=workspace_id, connection_id=connection.id
+    )
     return _to_mapping_response(mapping)
 
 

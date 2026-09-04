@@ -134,6 +134,7 @@ from app.models.site_health.snapshot import SiteHealthSnapshot
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
 from app.models.traffic import TrafficPageStat, TrafficQueryStat, TrafficSnapshot
 from app.models.user import User
+from app.models.user_identity import UserIdentity
 from app.models.workspace import Workspace, WorkspaceMember
 
 __all__ = [
@@ -247,6 +248,7 @@ __all__ = [
     "UnintendedDomain",
     "UsageWindow",
     "User",
+    "UserIdentity",
     "Workspace",
     "WorkspaceBillingLink",
     "WorkspaceMember",

@@ -33,6 +33,7 @@ afterEach(() => {
   navigate.mockReset();
   searchParams.delete('registered');
   searchParams.delete('return_to');
+  searchParams.delete('error');
 });
 afterAll(() => mswServer.close());
 
@@ -42,6 +43,23 @@ describe('LoginPage', () => {
     renderWithProviders(<LoginPage />);
 
     expect(screen.getByText(/your account is ready/i)).toBeInTheDocument();
+  });
+
+  // The Google callback is a full-page navigation, so it cannot return a JSON
+  // error body — it lands back here with a coded `?error=` instead. Without
+  // this the user is bounced to /login with no explanation at all.
+  it('explains a failed Google sign-in from the coded redirect', () => {
+    searchParams.set('error', 'oauth_signin_email_unverified');
+    renderWithProviders(<LoginPage />);
+
+    expect(screen.getByText(/has not verified that email address/i)).toBeInTheDocument();
+  });
+
+  it('still explains an unrecognized sign-in error code', () => {
+    searchParams.set('error', 'something_new_from_the_backend');
+    renderWithProviders(<LoginPage />);
+
+    expect(screen.getByText(/google sign-in did not complete/i)).toBeInTheDocument();
   });
 
   it('renders Google sign-in and email sign-in paths with divider', () => {

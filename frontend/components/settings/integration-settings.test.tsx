@@ -165,12 +165,12 @@ describe('IntegrationSettings — empty state + OAuth navigation', () => {
     renderWithProviders(<IntegrationSettings />);
 
     expect(await screen.findByText('No integrations connected')).toBeInTheDocument();
-    expect(screen.getByText(/Google Analytics 4 for AI Referrals/)).toBeInTheDocument();
+    expect(screen.getByText(/Search Console and Analytics 4/)).toBeInTheDocument();
 
     await ue.click(screen.getByRole('button', { name: 'Connect Google' }));
     expect(assignMock).toHaveBeenCalledWith('/api/v1/integrations/oauth/gsc/start');
 
-    await ue.click(screen.getByRole('button', { name: 'Connect Microsoft' }));
+    await ue.click(screen.getByRole('button', { name: 'Connect Bing' }));
     expect(assignMock).toHaveBeenCalledWith('/api/v1/integrations/oauth/bing/start');
   });
 });
@@ -238,7 +238,7 @@ describe('IntegrationSettings — grant cards', () => {
 
     const msCard = await screen.findByTestId('grant-card-microsoft');
     expect(within(msCard).getByText('Not connected')).toBeInTheDocument();
-    await ue.click(within(msCard).getByRole('button', { name: 'Connect Microsoft' }));
+    await ue.click(within(msCard).getByRole('button', { name: 'Connect Bing' }));
     expect(assignMock).toHaveBeenCalledWith('/api/v1/integrations/oauth/bing/start');
   });
 
@@ -445,7 +445,7 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
     renderWithProviders(<IntegrationSettings />);
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Microsoft connected.');
+    expect(alert).toHaveTextContent('Bing connected.');
     expect(alert).toHaveTextContent(/appear in Traffic once/i);
     expect(alert).not.toHaveTextContent('AI Referrals');
   });

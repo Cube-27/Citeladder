@@ -417,6 +417,10 @@
         "backend/evaluations/onboarding_identity_competitor_cases.py",
         "backend/app/domain/abuse/**",
         "backend/app/api/auth.py",
+        "backend/app/api/oauth.py",
+        "backend/app/api/rate_limit.py",
+        "backend/app/connectors/auth_oauth.py",
+        "backend/app/models/user_identity.py",
         "backend/app/api/projects.py",
         "backend/app/api/workspaces.py",
         "backend/app/models/user.py",
@@ -437,7 +441,9 @@
         "tests/component/test_auth_api.py",
         "tests/component/test_abuse_controls.py",
         "tests/component/test_workspace_product_tour.py",
-        "tests/component/test_command_center.py"
+        "tests/component/test_command_center.py",
+        "tests/unit/test_oauth_config.py",
+        "tests/component/test_oauth_api.py"
       ]
     },
     {

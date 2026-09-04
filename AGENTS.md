@@ -40,6 +40,7 @@ Read only the documents required by the task.
 | Site Health measurement reliability PR4 | `docs/plans/site-health-measurement-reliability-pr4.md` |
 | Content workflows | `docs/plans/CITELADDER_CONTENT_GENERATION_SIMPLIFIED_PLAN.md` |
 | Demand, prompts, visibility, and Agent | `docs/plans/citeladder-aeo-product-rebuild.md` |
+| Connected-data pipeline (GSC/GA4/Bing) rebuild | `docs/plans/citeladder-data-pipeline-rebuild.md` |
 | Backend ownership and shipped runtime | `docs/backend-architecture.md` |
 | Frontend ownership and shipped runtime | `docs/frontend-architecture.md` |
 | Hard invariants | `docs/invariants.md` |

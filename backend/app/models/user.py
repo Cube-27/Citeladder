@@ -25,7 +25,10 @@ class User(Base):
         PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    hashed_password: Mapped[str] = mapped_column(String(255))
+    # NULL for an account that only signs in through a third-party
+    # provider (``UserIdentity``). ``authenticate_user`` refuses such a
+    # row outright, so a passwordless account is unreachable by password.
+    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role: Mapped[str] = mapped_column(String(20), default="user")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     session_version: Mapped[int] = mapped_column(Integer, default=0)

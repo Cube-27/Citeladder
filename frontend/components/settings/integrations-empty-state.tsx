@@ -14,8 +14,9 @@ import { assignLocation } from '@/lib/navigate';
  *
  * Both CTAs are full-page navigations to the same-origin OAuth start
  * endpoints (302s — never apiClient fetches): one Google consent links Search
- * Console + Analytics 4 on a shared grant; Microsoft links Bing Webmaster
- * Tools.
+ * Console + Analytics 4 on a shared grant; Bing needs its own consent because
+ * a Google token cannot authorize Bing Webmaster Tools (the Bing account
+ * itself may still have been created with a Google ID).
  */
 export function IntegrationsEmptyState() {
   return (
@@ -23,7 +24,7 @@ export function IntegrationsEmptyState() {
       <EmptyState
         icon={Unplug}
         heading="No integrations connected"
-        description="Connect Google Analytics 4 for AI Referrals. Connect Google or Microsoft for Traffic."
+        description="One Google consent connects Search Console and Analytics 4. Bing Webmaster Tools needs its own sign-in."
         action={
           <>
             <Button size="md" onClick={() => assignLocation(integrationsApi.oauthStartUrl('gsc'))}>
@@ -34,7 +35,7 @@ export function IntegrationsEmptyState() {
               size="md"
               onClick={() => assignLocation(integrationsApi.oauthStartUrl('bing'))}
             >
-              Connect Microsoft
+              Connect Bing
             </Button>
           </>
         }

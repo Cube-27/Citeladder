@@ -16,7 +16,8 @@ contract for a ``bing`` connection on a ``microsoft_oauth`` grant:
   - The unpaged-API short-circuit (a request past the first page returns
     an empty page).
   - The cheap authenticated ``GetSites`` probe (the I12 replacement for
-    the refresh round-trip placeholder).
+    the refresh round-trip placeholder) and the property discovery that
+    reuses it, so a Bing site ref is picked rather than hand-typed.
 """
 
 from __future__ import annotations
@@ -386,3 +387,52 @@ async def test_probe_ok_and_auth_failure() -> None:
         await client.probe_access_token(access_token="ms-access-token-1")
     assert excinfo.value.error_code == ERROR_GRANT_AUTH_FAILED
     assert excinfo.value.retryable is False
+
+
+@pytest.mark.asyncio
+async def test_list_properties_returns_the_verified_sites() -> None:
+    """Discovery reuses GetSites so a site ref is selected, never typed.
+
+    Bing matches ``siteUrl`` against its own spelling exactly, so a
+    hand-typed ref is a support ticket waiting to happen.
+    """
+    fake = _ProviderFake()
+    client = build_bing_client(transport=fake.mock_transport())
+    properties = await client.list_properties(access_token="ms-access-token-1")
+
+    assert [(p.property_ref, p.label) for p in properties] == [
+        ("https://example.com", "https://example.com")
+    ]
+    assert fake.bing_calls == [("GetSites", "")]
+    assert fake.bing_auth == ["Bearer ms-access-token-1"]
+
+
+@pytest.mark.asyncio
+async def test_list_properties_tolerates_an_account_with_no_sites() -> None:
+    """No verified sites is an empty list, not a malformed-response error."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"d": []})
+
+    client = build_bing_client(transport=httpx.MockTransport(handler))
+    assert await client.list_properties(access_token="ms-access-token-1") == ()
+
+
+@pytest.mark.asyncio
+async def test_list_properties_rejects_a_malformed_body() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"d": "not-a-list"})
+
+    client = build_bing_client(transport=httpx.MockTransport(handler))
+    with pytest.raises(BingApiError):
+        await client.list_properties(access_token="ms-access-token-1")
+
+
+@pytest.mark.asyncio
+async def test_list_properties_propagates_an_auth_failure() -> None:
+    """A dead grant must surface as auth failure, never as "you own nothing"."""
+    failing = _ProviderFake(bing_status=401)
+    client = build_bing_client(transport=failing.mock_transport())
+    with pytest.raises(BingApiError) as excinfo:
+        await client.list_properties(access_token="ms-access-token-1")
+    assert excinfo.value.error_code == ERROR_GRANT_AUTH_FAILED

@@ -19,11 +19,15 @@ import httpx
 import pytest
 from sqlalchemy import select
 
+from app.core.config.integrations_contracts import SYNC_KIND_BACKFILL
+from app.core.config.integrations_settings import integration_settings
+from app.domain.integrations.sync import backfill_sync_windows
 from app.models.brand import OwnedDomain
 from app.models.integrations import (
     IntegrationConnection,
     IntegrationOAuthGrant,
     IntegrationPropertyMapping,
+    IntegrationSyncRun,
 )
 from app.models.project import Project
 from app.models.workspace import Workspace
@@ -428,3 +432,69 @@ async def test_unauthenticated_mappings_rejected(client: httpx.AsyncClient) -> N
         await client.post(f"{_BASE}/{some_id}/mappings", json={})
     ).status_code == 401
     assert (await client.delete(f"{_BASE}/mappings/{some_id}")).status_code == 401
+
+
+async def _backfills(db_session, connection_id) -> list[IntegrationSyncRun]:
+    rows = await db_session.scalars(
+        select(IntegrationSyncRun).where(
+            IntegrationSyncRun.connection_id == connection_id,
+            IntegrationSyncRun.sync_kind == SYNC_KIND_BACKFILL,
+        )
+    )
+    return list(rows)
+
+
+@pytest.mark.asyncio
+async def test_selecting_a_property_enqueues_the_history_backfill(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """Selecting a property is the first moment the connection knows what to
+    sync, so it is where the one-time history import starts.
+
+    Without it a new connection only ever has the rolling recent window, and
+    every longer timeline is empty no matter what the user picks.
+    """
+    _ws, gsc, _ga4, project = await _setup(
+        client, db_session, "map-backfill@example.com"
+    )
+
+    resp = await client.post(
+        f"{_BASE}/{gsc.id}/mappings",
+        json={
+            "provider": "gsc",
+            "property_ref": "sc-domain:acme.com",
+            "project_id": str(project.id),
+        },
+    )
+    assert resp.status_code == 201
+
+    backfills = await _backfills(db_session, gsc.id)
+    assert backfills
+    windows = sorted((run.window_start, run.window_end) for run in backfills)
+    covered = (windows[-1][1] - windows[0][0]).days + 1
+    assert covered == integration_settings.sync_backfill_window_days
+
+
+@pytest.mark.asyncio
+async def test_changing_the_selected_property_does_not_re_backfill(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """A year of history is paid for once per connection, not per selection."""
+    _ws, gsc, _ga4, project = await _setup(
+        client, db_session, "map-rebackfill@example.com"
+    )
+
+    for property_ref in ("sc-domain:acme.com", "https://acme.com/"):
+        resp = await client.post(
+            f"{_BASE}/{gsc.id}/mappings",
+            json={
+                "provider": "gsc",
+                "property_ref": property_ref,
+                "project_id": str(project.id),
+            },
+        )
+        assert resp.status_code == 201
+
+    # Chunk count is an implementation detail; what matters is that the
+    # second selection added nothing.
+    assert len(await _backfills(db_session, gsc.id)) == len(backfill_sync_windows())

@@ -7,7 +7,12 @@ import { useForm } from 'react-hook-form';
 
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
 import { authApi } from '@/lib/api/auth';
-import { authErrorMessage, loginFormSchema, type LoginFormValues } from '@/lib/auth/forms';
+import {
+  authErrorMessage,
+  loginFormSchema,
+  oauthSignInErrorMessage,
+  type LoginFormValues,
+} from '@/lib/auth/forms';
 import { safeMcpReturnPath, withMcpReturnPath } from '@/lib/auth/mcp-return-path';
 import { useAuthMutation } from '@/lib/auth/use-auth-mutation';
 
@@ -19,6 +24,9 @@ function LoginForm() {
     searchParams.get('registered') === '1'
       ? 'Your account is ready. Sign in to continue.'
       : 'Welcome back! Please sign in to continue.';
+  // The Google callback is a full-page navigation, so it reports failure as a
+  // coded query parameter rather than a response body.
+  const oauthError = oauthSignInErrorMessage(searchParams.get('error'));
   const {
     register,
     handleSubmit,
@@ -36,7 +44,7 @@ function LoginForm() {
     <AuthFormShell
       title="Sign in"
       description={description}
-      error={mutation.isError ? authErrorMessage(mutation.error) : undefined}
+      error={mutation.isError ? authErrorMessage(mutation.error) : oauthError}
       onSubmit={handleSubmit(submit)}
       pending={isSubmitting || mutation.isPending}
       submitLabel="Continue"

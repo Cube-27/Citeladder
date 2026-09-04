@@ -35,6 +35,8 @@ from app.core.config.dotenv import (
     dotenv_disabled,
     dotenv_sources,
 )
+from app.core.config.integrations_settings import IntegrationSettings
+from app.core.config.oauth import OAuthSettings
 from app.core.config.site_health_runtime import SiteHealthSettings
 
 # Every ``BaseSettings`` subclass in the config package that declares an
@@ -46,6 +48,8 @@ DOTENV_SETTINGS_CLASSES: tuple[type[BaseSettings], ...] = (
     DefaultAgentSettings,
     BillingSettings,
     SiteHealthSettings,
+    IntegrationSettings,
+    OAuthSettings,
 )
 
 

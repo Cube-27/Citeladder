@@ -64,10 +64,10 @@ class OAuthProvidersResponse(BaseModel):
 class OAuthStartResponse(BaseModel):
     """Authorize URL + signed state for starting an OAuth flow.
 
-    ``session_nonce`` must be persisted by the caller in an HttpOnly, Secure,
-    SameSite=Lax cookie before redirecting to the provider.
+    The state token's session nonce is deliberately NOT here: the start
+    endpoint puts it straight into an HttpOnly, SameSite=Lax cookie. It is the
+    secret that binds the callback to this browser, so JS must never see it.
     """
 
     authorize_url: str
     state: str
-    session_nonce: str
