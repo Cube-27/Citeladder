@@ -57,6 +57,14 @@ def _google_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+@pytest.fixture
+def _microsoft_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "integration_microsoft_client_id", "bing-client-id")
+    monkeypatch.setattr(
+        settings, "integration_microsoft_client_secret", "bing-client-secret"
+    )
+
+
 def _token_transport(
     handler_payload: dict, *, status: int = 200, captured: list | None = None
 ) -> httpx.MockTransport:
@@ -295,3 +303,73 @@ def test_oauth_client_configured(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_unknown_transport_rejected() -> None:
     with pytest.raises(IntegrationOAuthError):
         IntegrationOAuthClient("netscape_oauth")
+
+
+@pytest.mark.asyncio
+async def test_bing_exchange_posts_to_bings_own_token_endpoint(
+    _microsoft_credentials: None,
+) -> None:
+    """Regression: the exchange must not target Entra.
+
+    Bing Webmaster runs its own OAuth server and issues its own client
+    credentials, so an ``login.microsoftonline.com`` endpoint has no such
+    application — the authorize step failed with AADSTS90013 before consent
+    was ever shown, and the exchange would have failed the same way.
+    """
+    captured: list[httpx.Request] = []
+    client = build_oauth_client(
+        INTEGRATION_TRANSPORT_MICROSOFT,
+        transport=_token_transport(
+            _fixture("microsoft_token_response.json"), captured=captured
+        ),
+    )
+    await client.exchange_code(code=_AUTH_CODE, redirect_uri="http://testserver/cb")
+
+    (request,) = captured
+    assert str(request.url) == "https://www.bing.com/webmasters/oauth/token"
+    assert "microsoftonline" not in str(request.url)
+
+
+@pytest.mark.asyncio
+async def test_bing_grant_records_requested_scope_when_provider_omits_it(
+    _microsoft_credentials: None,
+) -> None:
+    """Bing's token response documents no ``scope`` field.
+
+    Recording nothing would leave the connection card claiming the grant
+    holds no scopes at all, which is false — a single-scope request is
+    granted all-or-nothing, so a successful exchange granted exactly it.
+    """
+    client = build_oauth_client(
+        INTEGRATION_TRANSPORT_MICROSOFT,
+        transport=_token_transport(_fixture("microsoft_token_response.json")),
+    )
+    bundle = await client.exchange_code(
+        code=_AUTH_CODE, redirect_uri="http://testserver/cb"
+    )
+    assert bundle.granted_scopes == ("webmaster.manage",)
+    assert bundle.refresh_token
+
+
+@pytest.mark.asyncio
+async def test_echoed_scope_always_wins_over_the_requested_fallback(
+    _google_credentials: None,
+) -> None:
+    """A provider that NARROWS the grant is still recorded faithfully."""
+    client = build_oauth_client(
+        INTEGRATION_TRANSPORT_GOOGLE,
+        transport=_token_transport(
+            {
+                "access_token": "fake-access-token",
+                "refresh_token": "fake-refresh-token",
+                "scope": "https://www.googleapis.com/auth/webmasters.readonly",
+            }
+        ),
+    )
+    bundle = await client.exchange_code(
+        code=_AUTH_CODE, redirect_uri="http://testserver/cb"
+    )
+    # Only the echoed scope — never widened back to everything requested.
+    assert bundle.granted_scopes == (
+        "https://www.googleapis.com/auth/webmasters.readonly",
+    )

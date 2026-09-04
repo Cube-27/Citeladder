@@ -142,7 +142,7 @@ class _FakeOAuthServer:
             return httpx.Response(200)
         if host == "www.googleapis.com":
             return httpx.Response(200, json=_fixture("gsc_sites_response.json"))
-        if host == "login.microsoftonline.com" and request.url.path.endswith("/token"):
+        if host == "www.bing.com" and request.url.path.endswith("/token"):
             if self.microsoft_token_status != 200:
                 return httpx.Response(
                     self.microsoft_token_status,
@@ -556,16 +556,13 @@ async def test_microsoft_connect_attaches_bing_connection(
     await _register(client, "int-bing@example.com")
     start = await _start(client, "bing")
     location = start.headers["location"]
-    assert location.startswith(
-        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?"
-    )
+    # Bing's OWN authorization server — an Entra endpoint rejects this
+    # client outright (AADSTS90013), before any consent screen.
+    assert location.startswith("https://www.bing.com/webmasters/oauth/authorize?")
     query = parse_qs(urlsplit(location).query)
     assert query["client_id"] == [_MS_CLIENT_ID]
-    # The pinned Bing Webmaster scope (I12) + offline_access for refresh.
-    assert set(query["scope"][0].split(" ")) == {
-        "offline_access",
-        "https://webmaster.bing.com/api/webmaster.manage",
-    }
+    # Bing's bare scope vocabulary — never an Entra resource URL.
+    assert query["scope"] == ["webmaster.manage"]
     # Google-only offline/consent params are not sent to Microsoft.
     assert "access_type" not in query
     assert _MS_CLIENT_SECRET not in location
@@ -579,10 +576,7 @@ async def test_microsoft_connect_attaches_bing_connection(
     expected = _fixture("microsoft_token_response.json")
     assert decrypt_secret(grant.access_token_encrypted) == expected["access_token"]
     assert decrypt_secret(grant.refresh_token_encrypted) == expected["refresh_token"]
-    assert set(grant.granted_scopes) == {
-        "offline_access",
-        "https://webmaster.bing.com/api/webmaster.manage",
-    }
+    assert set(grant.granted_scopes) == {"webmaster.manage"}
     connections = await _connections(db_session)
     assert [c.provider for c in connections] == ["bing"]
     assert connections[0].grant_id == grant.id

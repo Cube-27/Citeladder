@@ -121,7 +121,7 @@ class _FakeProvider:
             )
         if host == "oauth2.googleapis.com" and request.url.path == "/revoke":
             return httpx.Response(self.revoke_status)
-        if host == "login.microsoftonline.com" and request.url.path.endswith("/token"):
+        if host == "www.bing.com" and request.url.path.endswith("/token"):
             return httpx.Response(200, json=_fixture("microsoft_token_response.json"))
         return httpx.Response(404, json={"error": "unexpected"})
 
