@@ -33,6 +33,7 @@ from app.core.config.integrations_datasets import (
     INTEGRATION_SYNC_EXCLUDED_DATASETS,
 )
 from app.core.config.integrations_transport import (
+    INTEGRATION_PROVIDER_BING,
     INTEGRATION_PROVIDER_GA4,
     INTEGRATION_PROVIDER_GSC,
 )
@@ -110,6 +111,21 @@ TRAFFIC_REFRESH_TRIGGER_DATASETS: Final[frozenset[str]] = frozenset(
     TRAFFIC_CONSUMED_DATASETS | {DATASET_BING_PAGE_DAILY, DATASET_BING_QUERY_DAILY}
 )
 
+# --- Provenance bounds (invariant 4) -----------------------------------------
+# The projection folds one window batch at a time, so its memory bounds on
+# DISTINCT keys rather than row count — except for the per-row provenance
+# lists, which grow with every contributing metric row. A 480-day window
+# over a large property would otherwise persist millions of ids across the
+# stat rows.
+#
+# Each provenance list is therefore capped at this many ids, kept as the
+# LOWEST sorted ids so a rebuild of the same window records the same sample.
+# A truncated list is never silently short: the row records its full
+# contributing count alongside the sample, and the snapshot's own provenance
+# says how many of its lists were sampled — a bounded record of the whole,
+# not a quiet loss of the rest (invariant 7 — sampled is not complete).
+TRAFFIC_PROVENANCE_ID_LIMIT: Final = 500
+
 # --- Sort whitelists (``?sort=`` hits stored aggregates only, invariant 7) ---
 # Paging/sorting the /traffic/pages and /traffic/queries endpoints is
 # restricted to these persisted aggregate columns — never a free-form column.
@@ -128,14 +144,25 @@ TRAFFIC_DEFAULT_SORT: Final = "-impressions"
 # ``next_cursor``), so a response is always bounded.
 TRAFFIC_TABLE_PAGE_SIZE: Final = 50
 
-# --- Sync pass-through (``POST /projects/{id}/traffic/sync``) -----------------
-# The provider vocabulary of the traffic-sync fan-out: the project's ACTIVE
-# mapped connections of these providers each get one on-demand
-# ``IntegrationSyncRun`` (Bing carries no Traffic-consumed dataset). The
-# enqueue itself is OWNED by ``domain/integrations/sync.py`` (invariant 2) —
-# only the fan-out vocabulary lives here.
+# --- Sync pass-through (``POST /projects/{id}/performance/sync``) -------------
+# The provider vocabulary of the sync fan-out: the project's ACTIVE mapped
+# connections of these providers each get one on-demand
+# ``IntegrationSyncRun``. The enqueue itself is OWNED by
+# ``domain/integrations/sync.py`` (invariant 2) — only the fan-out
+# vocabulary lives here.
+#
+# Bing is included even though no Bing dataset feeds a Performance table:
+# the fan-out is what KEEPS a connected provider's evidence current, and
+# leaving Bing out meant a connected Bing property silently never imported
+# outside its one-time backfill. Its rows land in ``IntegrationMetricRow``
+# for the Bing panel to read; the Performance surface stays
+# Search-Console-only regardless (a Bing row feeds no GSC total).
 TRAFFIC_SYNC_PROVIDERS: Final[frozenset[str]] = frozenset(
-    {INTEGRATION_PROVIDER_GSC, INTEGRATION_PROVIDER_GA4}
+    {
+        INTEGRATION_PROVIDER_GSC,
+        INTEGRATION_PROVIDER_GA4,
+        INTEGRATION_PROVIDER_BING,
+    }
 )
 
 # =========================================================================

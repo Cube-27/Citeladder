@@ -13,6 +13,7 @@ from app.core.config.analytics import (
     AI_REFERRAL_FORMULA_VERSION,
     ANALYTICS_DEFAULT_GRANULARITY,
     ANALYTICS_MAX_WINDOW_DAYS,
+    ANALYTICS_PRESET_RANGE_DAYS,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
 )
 from app.domain.analytics.schemas import (
@@ -46,6 +47,15 @@ def _validate_window(from_date: date | None, to_date: date | None) -> None:
         )
 
 
+def _validate_range(value: str | None) -> str | None:
+    """The optional preset token, validated against the config vocabulary."""
+    if value is None:
+        return None
+    if value not in ANALYTICS_PRESET_RANGE_DAYS:
+        raise AiReferralsQueryError(f"unknown ai-referrals range: {value!r}")
+    return value
+
+
 def _validate_granularity(granularity: str) -> str:
     granularity = granularity or ANALYTICS_DEFAULT_GRANULARITY
     if granularity not in ANALYTICS_SNAPSHOT_GRANULARITIES:
@@ -60,15 +70,26 @@ async def _load_snapshot(
     project_id: uuid.UUID,
     from_date: date | None,
     to_date: date | None,
+    range_token: str | None,
     granularity: str,
 ) -> AiReferralsSnapshot | None:
     """The persisted snapshot serving the request, or ``None``.
 
-    An explicit ``from``/``to`` selects the snapshot persisted for exactly
-    that window (read endpoints serve persisted snapshot windows only —
-    arbitrary custom windows are never recomputed). Without a window the
-    project's LATEST persisted snapshot at the granularity is served, so a
-    default landing still renders the freshest projection.
+    Three resolution modes, in precedence order:
+
+    - A ``range`` PRESET resolves the newest persisted snapshot of that
+      LENGTH. This is the mode the bounded presets use, and resolving by
+      length is what makes them work at all: provider data lags, so a sync
+      window ends yesterday while a browser computing "last 30 days"
+      anchors on today. Matching those exact dates never succeeded.
+    - An explicit ``from``/``to`` selects the snapshot persisted for exactly
+      that window (read endpoints serve persisted windows only — an
+      arbitrary custom window is never recomputed here).
+    - Neither: the project's LATEST persisted snapshot at the granularity,
+      so a default landing still renders the freshest projection.
+
+    Every mode returns a PERSISTED row or nothing; the caller reports the
+    window that was actually resolved rather than the one requested.
     """
     stmt = (
         select(AiReferralsSnapshot)
@@ -78,14 +99,20 @@ async def _load_snapshot(
         .where(AiReferralsSnapshot.analyzer_version == AI_REFERRAL_ANALYZER_VERSION)
         .where(AiReferralsSnapshot.formula_version == AI_REFERRAL_FORMULA_VERSION)
     )
-    if from_date is not None and to_date is not None:
+    newest = (
+        AiReferralsSnapshot.window_end.desc(),
+        AiReferralsSnapshot.window_start.desc(),
+    )
+    if range_token is not None:
+        days = ANALYTICS_PRESET_RANGE_DAYS[range_token]
+        # Inclusive length: a 30-day window spans 29 days end-to-start.
+        span = AiReferralsSnapshot.window_end - AiReferralsSnapshot.window_start
+        stmt = stmt.where(span == days - 1).order_by(*newest)
+    elif from_date is not None and to_date is not None:
         stmt = stmt.where(AiReferralsSnapshot.window_start == from_date)
         stmt = stmt.where(AiReferralsSnapshot.window_end == to_date)
     else:
-        stmt = stmt.order_by(
-            AiReferralsSnapshot.window_end.desc(),
-            AiReferralsSnapshot.window_start.desc(),
-        )
+        stmt = stmt.order_by(*newest)
     return await session.scalar(stmt.limit(1))
 
 
@@ -117,6 +144,7 @@ async def get_ai_referrals(
     project_id: uuid.UUID,
     from_date: date | None = None,
     to_date: date | None = None,
+    range_token: str | None = None,
     granularity: str = ANALYTICS_DEFAULT_GRANULARITY,
 ) -> AiReferralsResponse:
     """Serve the headline AEO projection from the persisted snapshot.
@@ -126,6 +154,7 @@ async def get_ai_referrals(
     response model. An absent snapshot yields the empty payload.
     """
     granularity = _validate_granularity(granularity)
+    range_token = _validate_range(range_token)
     _validate_window(from_date, to_date)
     snapshot = await _load_snapshot(
         session,
@@ -133,6 +162,7 @@ async def get_ai_referrals(
         project_id=project_id,
         from_date=from_date,
         to_date=to_date,
+        range_token=range_token,
         granularity=granularity,
     )
     if snapshot is None:

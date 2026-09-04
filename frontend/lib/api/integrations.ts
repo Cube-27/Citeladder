@@ -19,6 +19,7 @@ import {
   integrationPropertyMappingListSchema,
   integrationPropertyMappingSchema,
   integrationSyncEnqueueSchema,
+  integrationBackfillProgressSchema,
   integrationSyncRunListSchema,
   integrationSyncRunSchema,
   integrationTestResultSchema,
@@ -33,6 +34,7 @@ export type IntegrationConnection = z.infer<typeof integrationConnectionSchema>;
 export type IntegrationTestResult = z.infer<typeof integrationTestResultSchema>;
 export type IntegrationSyncEnqueue = z.infer<typeof integrationSyncEnqueueSchema>;
 export type IntegrationSyncRun = z.infer<typeof integrationSyncRunSchema>;
+export type IntegrationBackfillProgress = z.infer<typeof integrationBackfillProgressSchema>;
 export type IntegrationProperty = z.infer<typeof integrationPropertySchema>;
 export type IntegrationPropertyMapping = z.infer<typeof integrationPropertyMappingSchema>;
 
@@ -76,6 +78,21 @@ export const integrationsApi = {
       options,
     );
     return strictValidate(integrationSyncRunListSchema, res, 'integrations.listSyncs');
+  },
+  /**
+   * The connection's history-import rollup. A projection, so it is safe to
+   * poll while an import drains — it never triggers one.
+   */
+  getBackfillProgress: async (connectionId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<IntegrationBackfillProgress>(
+      `/integrations/${connectionId}/syncs/progress`,
+      options,
+    );
+    return strictValidate(
+      integrationBackfillProgressSchema,
+      res,
+      'integrations.getBackfillProgress',
+    );
   },
   getSync: async (connectionId: string, syncId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<IntegrationSyncRun>(

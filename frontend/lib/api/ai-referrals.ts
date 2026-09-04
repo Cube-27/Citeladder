@@ -14,9 +14,20 @@ type SnapshotGranularity = z.infer<typeof snapshotGranularitySchema>;
 export type AiReferrals = z.infer<typeof aiReferralsSchema>;
 export type AiSource = z.infer<typeof aiSourceSchema>;
 
-export type AiReferralsWindow = { from: string; to: string } | { from?: never; to?: never };
+/** An exact persisted window. Composed into `AiReferralsWindowParams` below. */
+type AiReferralsWindow = { from: string; to: string } | { from?: never; to?: never };
 
-export type AiReferralsWindowParams = AiReferralsWindow & {
+/**
+ * How a caller names the window it wants: an explicit persisted `from`/`to`,
+ * or a `range` preset the SERVER resolves against persisted evidence. The
+ * two are mutually exclusive — a preset carries no client-computed dates,
+ * which is what keeps a lagging provider's window from being missed.
+ */
+export type AiReferralsRangeParams =
+  | { range: string; from?: never; to?: never }
+  | { range?: never };
+
+export type AiReferralsWindowParams = (AiReferralsWindow | AiReferralsRangeParams) & {
   granularity?: SnapshotGranularity;
 };
 

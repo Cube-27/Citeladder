@@ -44,6 +44,7 @@
 #     reports ``None`` (a chart gap), never a coerced zero.
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
@@ -65,6 +66,7 @@ from app.core.config.traffic import (
     TRAFFIC_GRANULARITY_DAY,
     TRAFFIC_GRANULARITY_MONTH,
     TRAFFIC_GRANULARITY_WEEK,
+    TRAFFIC_PROVENANCE_ID_LIMIT,
     TRAFFIC_SNAPSHOT_GRANULARITIES,
 )
 from app.domain.analytics.classification import classify_referral_signals
@@ -72,8 +74,10 @@ from app.domain.site_health.normalization import canonical_identity
 from app.domain.traffic.accumulators import (
     Ga4Accum,
     GscAccum,
+    Provenance,
     TrafficMetricRowInput,
     absolute_page_value,
+    bounded_provenance,
     metric_count,
     normalize_query,
 )
@@ -93,6 +97,7 @@ __all__ = [
     "QueryProjection",
     "SnapshotProjection",
     "TrafficMetricRowInput",
+    "TrafficProjectionBuilder",
     "bucket_labels",
     "bucket_start",
     "build_traffic_projection",
@@ -214,28 +219,36 @@ def bucket_labels(window_start: date, window_end: date, granularity: str) -> lis
     ]
 
 
+def row_identity(row: TrafficMetricRowInput) -> tuple[object, ...]:
+    """The metric row's re-sync identity.
+
+    ``(property_ref, provider, dataset, date, dimension_key)`` — the
+    ``uq_integration_metric_row_identity`` columns minus ``resync_seq`` (the
+    selection runs per project, so ``project_id`` is constant). Two rows
+    sharing this identity are two revisions of the SAME observation.
+    """
+    return (
+        row.property_ref,
+        row.provider,
+        row.dataset,
+        row.date,
+        row.dimension_key,
+    )
+
+
 def select_latest_rows(
     rows: list[TrafficMetricRowInput],
 ) -> list[TrafficMetricRowInput]:
     """Keep the latest ``resync_seq`` per metric-row identity tuple.
 
-    The identity is ``(property_ref, provider, dataset, date,
-    dimension_key)`` — the ``uq_integration_metric_row_identity`` columns
-    minus ``resync_seq`` (the selection runs per project, so ``project_id``
-    is constant). A row superseded by a later re-sync is stale evidence and
-    never folds into the projection (traffic.md section 3). The result is
-    sorted deterministically so downstream float aggregation is
-    order-independent (invariant 9).
+    A row superseded by a later re-sync is stale evidence and never folds
+    into the projection (traffic.md section 3). The result is sorted
+    deterministically so downstream float aggregation is order-independent
+    (invariant 9).
     """
     latest: dict[tuple[object, ...], TrafficMetricRowInput] = {}
     for row in rows:
-        identity = (
-            row.property_ref,
-            row.provider,
-            row.dataset,
-            row.date,
-            row.dimension_key,
-        )
+        identity = row_identity(row)
         current = latest.get(identity)
         if current is None or row.resync_seq > current.resync_seq:
             latest[identity] = row
@@ -339,16 +352,9 @@ def _validate_projection_inputs(
         raise ValueError("traffic window_end before window_start")
 
 
-def _accumulate_rows(
-    *,
-    rows: list[TrafficMetricRowInput],
-    window_start: date,
-    window_end: date,
-    granularity: str,
-    project_origin: str | None,
-    starts: list[date],
-) -> _ProjectionAccumulators:
-    accumulators = _ProjectionAccumulators(
+def _empty_accumulators(starts: list[date]) -> _ProjectionAccumulators:
+    """The zeroed buckets one projection folds into."""
+    return _ProjectionAccumulators(
         bucket_gsc={start: GscAccum() for start in starts},
         bucket_ga4={start: Ga4Accum() for start in starts},
         totals_gsc=GscAccum(),
@@ -357,20 +363,6 @@ def _accumulate_rows(
         queries={},
         dimensions={dimension: {} for dimension in PERFORMANCE_DIMENSION_ORDER},
     )
-    for row in select_latest_rows(rows):
-        if not (window_start <= row.date <= window_end):
-            continue
-        values = unpack_dimension_key(row.dataset, row.dimension_key)
-        if values is None:
-            continue
-        _accumulate_row(
-            row=row,
-            dimension_values=values[:-1],
-            bucket_start_value=bucket_start(row.date, granularity),
-            project_origin=project_origin,
-            accumulators=accumulators,
-        )
-    return accumulators
 
 
 def _accumulate_row(
@@ -485,30 +477,59 @@ def _build_series(
 def _build_page_projections(
     pages: dict[str, _PageAccum],
 ) -> tuple[PageProjection, ...]:
-    return tuple(
-        PageProjection(
-            canonical_url=canonical_url,
-            url_hash=accum.url_hash,
-            metrics=accum.gsc.measures() | accum.ga4.measures(),
-            source_metric_row_ids=sorted(accum.gsc.row_ids | accum.ga4.row_ids),
-            source_artifact_ids=sorted(accum.gsc.artifact_ids | accum.ga4.artifact_ids),
+    rows: list[PageProjection] = []
+    for canonical_url, accum in sorted(pages.items()):
+        metric_rows = bounded_provenance(accum.gsc.row_ids | accum.ga4.row_ids)
+        artifacts = bounded_provenance(accum.gsc.artifact_ids | accum.ga4.artifact_ids)
+        rows.append(
+            PageProjection(
+                canonical_url=canonical_url,
+                url_hash=accum.url_hash,
+                metrics=accum.gsc.measures()
+                | accum.ga4.measures()
+                | _provenance_counts(metric_rows, artifacts),
+                source_metric_row_ids=metric_rows.ids,
+                source_artifact_ids=artifacts.ids,
+            )
         )
-        for canonical_url, accum in sorted(pages.items())
-    )
+    return tuple(rows)
 
 
 def _build_query_projections(
     queries: dict[str, GscAccum],
 ) -> tuple[QueryProjection, ...]:
-    return tuple(
-        QueryProjection(
-            normalized_query=normalized,
-            metrics=accum.measures(),
-            source_metric_row_ids=sorted(accum.row_ids),
-            source_artifact_ids=sorted(accum.artifact_ids),
+    rows: list[QueryProjection] = []
+    for normalized, accum in sorted(queries.items()):
+        metric_rows = bounded_provenance(accum.row_ids)
+        artifacts = bounded_provenance(accum.artifact_ids)
+        rows.append(
+            QueryProjection(
+                normalized_query=normalized,
+                metrics=accum.measures() | _provenance_counts(metric_rows, artifacts),
+                source_metric_row_ids=metric_rows.ids,
+                source_artifact_ids=artifacts.ids,
+            )
         )
-        for normalized, accum in sorted(queries.items())
-    )
+    return tuple(rows)
+
+
+def _provenance_counts(
+    metric_rows: Provenance, artifacts: Provenance
+) -> dict[str, Any]:
+    """The true contributing counts beside a possibly-sampled id list.
+
+    Emitted ONLY when a list was actually capped, so an uncapped row's
+    metrics keep the exact shape every existing consumer reads. A row that
+    carries these keys is stating "these ids are a sample of this many" —
+    the distinction invariant 7 requires between a complete record and a
+    bounded one.
+    """
+    counts: dict[str, Any] = {}
+    if metric_rows.sampled:
+        counts["source_metric_row_count"] = metric_rows.total
+    if artifacts.sampled:
+        counts["source_artifact_count"] = artifacts.total
+    return counts
 
 
 def _projection_provenance(
@@ -518,7 +539,15 @@ def _projection_provenance(
     pages: tuple[PageProjection, ...],
     queries: tuple[QueryProjection, ...],
     dimensions: tuple[DimensionProjection, ...],
-) -> tuple[list[str], list[str]]:
+) -> tuple[Provenance, Provenance]:
+    """The snapshot's own bounded provenance over every contributing row.
+
+    The union of the headline accumulators and each stat row's (already
+    bounded) lists, capped once more at the same limit. The returned
+    ``total`` is therefore the size of that union — itself a lower bound
+    when the stat rows were sampled, which is exactly why the snapshot
+    records the sampled-row count too (``_provenance_summary``).
+    """
     row_ids = set(totals_gsc.row_ids) | set(totals_ga4.row_ids)
     artifact_ids = set(totals_gsc.artifact_ids) | set(totals_ga4.artifact_ids)
     # All three stat shapes carry the same two provenance lists; the explicit
@@ -531,7 +560,150 @@ def _projection_provenance(
     for projection in contributors:
         row_ids.update(projection.source_metric_row_ids)
         artifact_ids.update(projection.source_artifact_ids)
-    return sorted(row_ids), sorted(artifact_ids)
+    return bounded_provenance(row_ids), bounded_provenance(artifact_ids)
+
+
+def _provenance_summary(
+    *,
+    metric_rows: Provenance,
+    artifacts: Provenance,
+    pages: tuple[PageProjection, ...],
+    queries: tuple[QueryProjection, ...],
+    dimensions: tuple[DimensionProjection, ...],
+) -> dict[str, Any]:
+    """How much of this snapshot's provenance is a sample, stated explicitly.
+
+    The plan's requirement that a capped list "say so in the snapshot's
+    provenance rather than silently truncating". Present on EVERY snapshot,
+    so a reader never has to infer completeness from the absence of a
+    marker: ``sampled_row_count == 0`` is the positive statement that every
+    list is whole.
+    """
+    # Same explicit union as ``_projection_provenance``: all three stat
+    # shapes carry ``metrics``, and naming them keeps the type from widening
+    # to ``object``.
+    rows: tuple[PageProjection | QueryProjection | DimensionProjection, ...] = (
+        *pages,
+        *queries,
+        *dimensions,
+    )
+    sampled = sum(
+        1
+        for row in rows
+        if "source_metric_row_count" in row.metrics
+        or "source_artifact_count" in row.metrics
+    )
+    return {
+        "id_limit": TRAFFIC_PROVENANCE_ID_LIMIT,
+        "metric_row_total": metric_rows.total,
+        "artifact_total": artifacts.total,
+        "metric_rows_sampled": metric_rows.sampled,
+        "artifacts_sampled": artifacts.sampled,
+        "sampled_stat_rows": sampled,
+    }
+
+
+class TrafficProjectionBuilder:
+    """An INCREMENTAL fold of metric rows into one snapshot projection.
+
+    The streaming half of the projection contract. ``build_traffic_projection``
+    below is the batch convenience over it; the executor drives this directly
+    so a window is never materialized as a row list.
+
+    Memory bounds on DISTINCT keys — pages, queries, dimension values, and
+    buckets — plus each row's capped provenance, rather than on the number
+    of metric rows in the window. That is what lets a window be long.
+
+    **Feeding contract.** ``add_batch`` accepts rows in ANY order and applies
+    latest-``resync_seq`` selection itself, buffering one candidate row per
+    identity. Callers that can supply rows ordered by
+    ``(identity, resync_seq)`` — as the executor's keyset scan does — should
+    say so with ``ordered_by_identity=True``: the builder then folds each
+    identity as soon as the next one begins, so its buffer holds ONE row
+    instead of one per distinct observation in the window.
+
+    Determinism is preserved either way: a row folds exactly once, the
+    accumulators are order-independent sums and sets, and the emitted rows
+    are sorted by key.
+    """
+
+    def __init__(
+        self,
+        *,
+        window_start: date,
+        window_end: date,
+        granularity: str,
+        project_origin: str | None = None,
+    ) -> None:
+        _validate_projection_inputs(
+            window_start=window_start,
+            window_end=window_end,
+            granularity=granularity,
+        )
+        self._window_start = window_start
+        self._window_end = window_end
+        self._granularity = granularity
+        self._project_origin = project_origin
+        self._starts = _bucket_starts(window_start, window_end, granularity)
+        self._accumulators = _empty_accumulators(self._starts)
+        # Pending latest-revision candidates awaiting their fold. In the
+        # ordered mode this holds at most one identity at a time.
+        self._pending: dict[tuple[object, ...], TrafficMetricRowInput] = {}
+        self._ordered_identity: tuple[object, ...] | None = None
+
+    def add_batch(
+        self,
+        rows: Iterable[TrafficMetricRowInput],
+        *,
+        ordered_by_identity: bool = False,
+    ) -> None:
+        """Fold one batch of candidate rows into the running projection."""
+        for row in rows:
+            identity = row_identity(row)
+            if ordered_by_identity:
+                if (
+                    self._ordered_identity is not None
+                    and identity != self._ordered_identity
+                ):
+                    self._flush_pending()
+                self._ordered_identity = identity
+            current = self._pending.get(identity)
+            if current is None or row.resync_seq > current.resync_seq:
+                self._pending[identity] = row
+
+    def _flush_pending(self) -> None:
+        """Fold the buffered latest revisions, in deterministic row order."""
+        if not self._pending:
+            return
+        for row in sorted(self._pending.values(), key=_row_sort_key):
+            self._fold(row)
+        self._pending.clear()
+
+    def _fold(self, row: TrafficMetricRowInput) -> None:
+        if not (self._window_start <= row.date <= self._window_end):
+            return
+        values = unpack_dimension_key(row.dataset, row.dimension_key)
+        if values is None:
+            return
+        _accumulate_row(
+            row=row,
+            dimension_values=values[:-1],
+            bucket_start_value=bucket_start(row.date, self._granularity),
+            project_origin=self._project_origin,
+            accumulators=self._accumulators,
+        )
+
+    def build(self) -> SnapshotProjection:
+        """Finalize: fold anything buffered, then emit the projection."""
+        self._flush_pending()
+        self._ordered_identity = None
+        return _finalize_projection(
+            accumulators=self._accumulators,
+            window_start=self._window_start,
+            window_end=self._window_end,
+            granularity=self._granularity,
+            starts=self._starts,
+        )
 
 
 def build_traffic_projection(
@@ -548,20 +720,30 @@ def build_traffic_projection(
     project + window + consumed datasets); latest-``resync_seq`` selection
     is applied inside so a stale revision can never leak in. Deterministic:
     the same inputs always yield byte-identical metrics and provenance.
+
+    The batch door onto :class:`TrafficProjectionBuilder` — identical output
+    for the same rows. Callers holding a whole window in memory already (the
+    unit tests, and any small fixed window) use this; the executor streams
+    the builder instead.
     """
-    _validate_projection_inputs(
-        window_start=window_start, window_end=window_end, granularity=granularity
-    )
-    starts = _bucket_starts(window_start, window_end, granularity)
-    accumulators = _accumulate_rows(
-        rows=rows,
+    builder = TrafficProjectionBuilder(
         window_start=window_start,
         window_end=window_end,
         granularity=granularity,
         project_origin=project_origin,
-        starts=starts,
     )
+    builder.add_batch(rows)
+    return builder.build()
 
+
+def _finalize_projection(
+    *,
+    accumulators: _ProjectionAccumulators,
+    window_start: date,
+    window_end: date,
+    granularity: str,
+    starts: list[date],
+) -> SnapshotProjection:
     labels = bucket_labels(window_start, window_end, granularity)
     series = _build_series(
         starts=starts,
@@ -575,7 +757,7 @@ def build_traffic_projection(
     dimension_projections, dimension_counts = build_dimension_projections(
         accumulators.dimensions
     )
-    source_metric_row_ids, source_artifact_ids = _projection_provenance(
+    metric_rows, artifacts = _projection_provenance(
         totals_gsc=accumulators.totals_gsc,
         totals_ga4=accumulators.totals_ga4,
         pages=page_projections,
@@ -589,11 +771,18 @@ def build_traffic_projection(
             "totals": accumulators.totals_gsc.observed_measures()
             | accumulators.totals_ga4.measures(),
             "series": series,
+            "provenance": _provenance_summary(
+                metric_rows=metric_rows,
+                artifacts=artifacts,
+                pages=page_projections,
+                queries=query_projections,
+                dimensions=dimension_projections,
+            ),
         },
         pages=page_projections,
         queries=query_projections,
         dimensions=dimension_projections,
         dimension_counts=dimension_counts,
-        source_metric_row_ids=source_metric_row_ids,
-        source_artifact_ids=source_artifact_ids,
+        source_metric_row_ids=metric_rows.ids,
+        source_artifact_ids=artifacts.ids,
     )

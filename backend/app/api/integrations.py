@@ -69,6 +69,7 @@ from app.domain.integrations.mappings import (
     list_mappings,
 )
 from app.domain.integrations.schemas import (
+    IntegrationBackfillProgressResponse,
     IntegrationConnectionResponse,
     IntegrationPropertyMappingCreate,
     IntegrationPropertyMappingResponse,
@@ -91,6 +92,7 @@ from app.domain.integrations.sync import (
     SyncRunNotFoundError,
     SyncWindowInvalidError,
     enqueue_sync_run,
+    get_backfill_progress,
     get_sync_run,
     list_sync_runs,
 )
@@ -394,6 +396,26 @@ async def list_syncs_endpoint(
     """Sync-run history for the connection (projection only, invariant 7)."""
     try:
         return await list_sync_runs(
+            session, workspace_id=ctx.workspace_id, connection_id=connection_id
+        )
+    except IntegrationConnectionNotFoundError as exc:
+        raise_not_found(_RES_CONNECTION, cause=exc)
+
+
+@router.get(
+    "/{connection_id}/syncs/progress",
+    response_model=IntegrationBackfillProgressResponse,
+)
+async def get_backfill_progress_endpoint(
+    connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+) -> IntegrationBackfillProgressResponse:
+    """The connection's history-import rollup (projection only, invariant 7).
+
+    Declared BEFORE ``/syncs/{sync_run_id}`` so the literal path wins the
+    match — otherwise "progress" would be parsed as a run id and 422.
+    """
+    try:
+        return await get_backfill_progress(
             session, workspace_id=ctx.workspace_id, connection_id=connection_id
         )
     except IntegrationConnectionNotFoundError as exc:

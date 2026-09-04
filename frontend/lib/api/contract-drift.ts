@@ -95,6 +95,7 @@ export const CONTRACT_SCHEMA_MAP = {
   // Integrations
   integrationConnectionSchema: 'IntegrationConnectionResponse',
   integrationSyncRunSchema: 'IntegrationSyncRunResponse',
+  integrationBackfillProgressSchema: 'IntegrationBackfillProgressResponse',
   integrationSyncEnqueueSchema: 'IntegrationSyncEnqueueResponse',
   integrationTestResultSchema: 'IntegrationTestResponse',
   integrationPropertySchema: 'IntegrationPropertyResponse',

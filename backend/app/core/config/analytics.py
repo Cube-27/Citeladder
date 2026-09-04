@@ -224,6 +224,19 @@ ANALYTICS_DEFAULT_GRANULARITY: Final = TRAFFIC_GRANULARITY_DAY
 ANALYTICS_MAX_WINDOW_DAYS: Final = 480
 # Minimum age before a persisted AI Referrals snapshot is rebuilt (rebuild
 # cadence), in seconds.
+# The AI Referrals range presets, as inclusive window LENGTHS in days. A
+# preset read resolves the newest persisted snapshot of its length rather
+# than a window computed from the client's clock: provider data lags, so
+# every sync window ends YESTERDAY while a browser computing "last 30 days"
+# anchors on TODAY. Matching those exactly never succeeded — the surface's
+# bounded presets could not render at all. Length is the durable identity;
+# the response reports the window it actually resolved.
+ANALYTICS_PRESET_RANGE_DAYS: Final[dict[str, int]] = {
+    "30d": 30,
+    "90d": 90,
+    "1y": 365,
+}
+
 ANALYTICS_SNAPSHOT_TTL_S: Final = 3600
 
 # --- Referral sanitization contract (invariant 6 privacy) ---------------------

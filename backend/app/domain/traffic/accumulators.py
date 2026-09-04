@@ -19,6 +19,8 @@ from datetime import date
 from typing import Any
 from urllib.parse import urljoin, urlsplit
 
+from app.core.config.traffic import TRAFFIC_PROVENANCE_ID_LIMIT
+
 
 @dataclass(frozen=True)
 class TrafficMetricRowInput:
@@ -168,6 +170,33 @@ class Ga4Accum:
             # One compatibility window for the existing Traffic wire contract.
             "conversions": self._observed(self.key_events),
         }
+
+
+@dataclass(frozen=True)
+class Provenance:
+    """One row's source ids, bounded, plus how many actually contributed.
+
+    ``ids`` is at most ``TRAFFIC_PROVENANCE_ID_LIMIT`` entries — the lowest
+    sorted ids, so re-running the same window records the same sample rather
+    than an arbitrary one. ``total`` is the true contributing count, so a
+    ``len(ids) < total`` row is READABLE as sampled instead of appearing
+    complete (invariant 7: a sample is not the whole).
+    """
+
+    ids: list[str]
+    total: int
+
+    @property
+    def sampled(self) -> bool:
+        return len(self.ids) < self.total
+
+
+def bounded_provenance(ids: set[str]) -> Provenance:
+    """Cap a provenance id set at the config-owned limit, deterministically."""
+    total = len(ids)
+    if total <= TRAFFIC_PROVENANCE_ID_LIMIT:
+        return Provenance(ids=sorted(ids), total=total)
+    return Provenance(ids=sorted(ids)[:TRAFFIC_PROVENANCE_ID_LIMIT], total=total)
 
 
 def absolute_page_value(raw_page_value: str, project_origin: str | None) -> str:

@@ -59,9 +59,15 @@ async def get_ai_referrals_endpoint(
     session: _SessionDep,
     from_date: Annotated[date | None, Query(alias="from")] = None,
     to_date: Annotated[date | None, Query(alias="to")] = None,
+    range_token: Annotated[str | None, Query(alias="range")] = None,
     granularity: Annotated[str, Query()] = ANALYTICS_DEFAULT_GRANULARITY,
 ) -> AiReferralsResponse:
-    """Referral volume, share, and AI-source totals from a persisted snapshot."""
+    """Referral volume, share, and AI-source totals from a persisted snapshot.
+
+    ``range`` names a preset and resolves the newest persisted snapshot of
+    that LENGTH; ``from``/``to`` selects one exact persisted window. The
+    response always reports the window it actually resolved.
+    """
     # Authorize the project first (404 for a cross-workspace/missing project).
     await _get_project_or_404(session, ctx.workspace_id, project_id)
     try:
@@ -71,6 +77,7 @@ async def get_ai_referrals_endpoint(
             project_id=project_id,
             from_date=from_date,
             to_date=to_date,
+            range_token=range_token,
             granularity=granularity,
         )
     except AiReferralsQueryError as exc:

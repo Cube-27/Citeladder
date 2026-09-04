@@ -29,6 +29,7 @@ from app.domain.traffic.accumulators import (
     GscAccum,
     TrafficMetricRowInput,
     absolute_page_value,
+    bounded_provenance,
     normalize_query,
 )
 
@@ -138,15 +139,24 @@ def build_dimension_projections(
     for dimension in PERFORMANCE_DIMENSION_ORDER:
         bucket = dimensions.get(dimension) or {}
         counts[dimension] = len(bucket)
-        rows.extend(
-            DimensionProjection(
-                dimension=dimension,
-                dimension_key=key,
-                display_value=accum.display_value,
-                metrics=accum.gsc.measures(),
-                source_metric_row_ids=sorted(accum.gsc.row_ids),
-                source_artifact_ids=sorted(accum.gsc.artifact_ids),
+        for key, accum in sorted(bucket.items()):
+            metric_rows = bounded_provenance(accum.gsc.row_ids)
+            artifacts = bounded_provenance(accum.gsc.artifact_ids)
+            metrics = accum.gsc.measures()
+            # A capped list states its true total beside the sample, so a
+            # sampled row never reads as a complete one (invariant 7).
+            if metric_rows.sampled:
+                metrics["source_metric_row_count"] = metric_rows.total
+            if artifacts.sampled:
+                metrics["source_artifact_count"] = artifacts.total
+            rows.append(
+                DimensionProjection(
+                    dimension=dimension,
+                    dimension_key=key,
+                    display_value=accum.display_value,
+                    metrics=metrics,
+                    source_metric_row_ids=metric_rows.ids,
+                    source_artifact_ids=artifacts.ids,
+                )
             )
-            for key, accum in sorted(bucket.items())
-        )
     return tuple(rows), counts

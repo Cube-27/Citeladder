@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 import httpx
 import pytest
+
+from app.core.config.analytics import ANALYTICS_DEFAULT_GRANULARITY
+from app.models.analytics import AiReferralsSnapshot
 
 WINDOW = (date(2026, 7, 20), date(2026, 7, 22))
 
@@ -59,3 +62,119 @@ async def test_ai_referrals_empty_projection_and_workspace_isolation(
     client.cookies.clear()
     await _register(client, "ai-referrals-outsider@example.com")
     assert (await client.get(endpoint)).status_code == 404
+
+
+async def _seed_snapshot(
+    session_factory,
+    *,
+    project_id: str,
+    workspace_id: str,
+    window_start: date,
+    window_end: date,
+    sessions: int,
+) -> None:
+    """One persisted AI Referrals snapshot for an exact window."""
+    async with session_factory() as session:
+        session.add(
+            AiReferralsSnapshot(
+                workspace_id=uuid.UUID(workspace_id),
+                project_id=uuid.UUID(project_id),
+                window_start=window_start,
+                window_end=window_end,
+                granularity=ANALYTICS_DEFAULT_GRANULARITY,
+                metrics={
+                    "referral_volume": [
+                        {"date": window_end.isoformat(), "value": sessions}
+                    ],
+                    "referral_share": [],
+                    "sources": [{"ai_source": "chatgpt", "sessions": sessions}],
+                },
+                source_classification_ids=[],
+            )
+        )
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_range_preset_resolves_a_snapshot_the_client_clock_would_miss(
+    client: httpx.AsyncClient,
+    session_factory,
+) -> None:
+    """Defect 4: a preset must resolve by LENGTH, not by client-computed dates.
+
+    Provider data lags, so the persisted window ends well before today. The
+    old contract asked for an exact ``from``/``to`` anchored on the browser's
+    today, which no sync window ever matches — every bounded preset rendered
+    empty. Seeded here at a deliberately stale end date to prove the preset
+    still finds it.
+    """
+    await _register(client, "ai-referrals-preset@example.com")
+    project_id, workspace_id = await _create_project(client)
+    stale_end = date.today() - timedelta(days=9)
+    stale_start = stale_end - timedelta(days=29)  # inclusive 30-day window
+    await _seed_snapshot(
+        session_factory,
+        project_id=project_id,
+        workspace_id=workspace_id,
+        window_start=stale_start,
+        window_end=stale_end,
+        sessions=42,
+    )
+    endpoint = f"/api/v1/projects/{project_id}/ai-referrals"
+
+    body = (await client.get(endpoint, params={"range": "30d"})).json()
+    assert body["window_start"] == stale_start.isoformat()
+    assert body["window_end"] == stale_end.isoformat()
+    assert body["sources"] == [{"ai_source": "chatgpt", "sessions": 42, "share": None}]
+
+    # The window the OLD client would have sent still matches nothing — the
+    # preset works because the server resolves it, not because the window
+    # widened.
+    today = date.today()
+    stale = await client.get(
+        endpoint,
+        params={
+            "from": (today - timedelta(days=29)).isoformat(),
+            "to": today.isoformat(),
+        },
+    )
+    assert stale.json()["sources"] == []
+
+
+@pytest.mark.asyncio
+async def test_range_preset_matches_only_its_own_length(
+    client: httpx.AsyncClient,
+    session_factory,
+) -> None:
+    """A 90-day preset must not resolve a 30-day snapshot.
+
+    Length is the preset's identity, so a shorter persisted window is a
+    DIFFERENT range — reporting it under "Last 90 days" would misdescribe
+    the evidence rather than admit the range is unprojected.
+    """
+    await _register(client, "ai-referrals-preset-length@example.com")
+    project_id, workspace_id = await _create_project(client)
+    end = date.today() - timedelta(days=3)
+    await _seed_snapshot(
+        session_factory,
+        project_id=project_id,
+        workspace_id=workspace_id,
+        window_start=end - timedelta(days=29),
+        window_end=end,
+        sessions=7,
+    )
+    endpoint = f"/api/v1/projects/{project_id}/ai-referrals"
+
+    assert (await client.get(endpoint, params={"range": "30d"})).json()["sources"] != []
+    assert (await client.get(endpoint, params={"range": "90d"})).json()["sources"] == []
+    assert (await client.get(endpoint, params={"range": "1y"})).json()["sources"] == []
+
+
+@pytest.mark.asyncio
+async def test_unknown_range_is_422(client: httpx.AsyncClient) -> None:
+    await _register(client, "ai-referrals-bad-range@example.com")
+    project_id, _ = await _create_project(client)
+    response = await client.get(
+        f"/api/v1/projects/{project_id}/ai-referrals", params={"range": "7d"}
+    )
+    assert response.status_code == 422

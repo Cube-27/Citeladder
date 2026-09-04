@@ -42,7 +42,7 @@ from app.core.config.traffic import (
 from app.domain.analytics.enqueue import enqueue_traffic_snapshot_refresh
 from app.domain.analytics.tasks import TaskCancelledError
 from app.domain.site_health.normalization import canonical_identity
-from app.domain.traffic import service as traffic_service
+from app.domain.traffic import streaming as traffic_streaming
 from app.domain.traffic.service import refresh_traffic_snapshot
 from app.models.analytics import AnalyticsTask
 from app.models.integrations import IntegrationConnection
@@ -575,8 +575,8 @@ async def test_refresh_honors_cooperative_cancel_at_metric_row_boundary(
     )
 
     # One row per batch so the boundary lands between metric rows.
-    monkeypatch.setattr(traffic_service, "_METRIC_ROW_BATCH_SIZE", 1)
-    real_check = traffic_service._raise_if_task_terminal
+    monkeypatch.setattr(traffic_streaming, "_METRIC_ROW_BATCH_SIZE", 1)
+    real_check = traffic_streaming._raise_if_task_terminal
     checks = 0
 
     async def _cancel_on_second_check(
@@ -595,7 +595,7 @@ async def test_refresh_honors_cooperative_cancel_at_metric_row_boundary(
         await real_check(factory, row_id)
 
     monkeypatch.setattr(
-        traffic_service, "_raise_if_task_terminal", _cancel_on_second_check
+        traffic_streaming, "_raise_if_task_terminal", _cancel_on_second_check
     )
 
     with pytest.raises(TaskCancelledError):

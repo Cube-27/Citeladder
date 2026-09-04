@@ -36,6 +36,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
@@ -43,6 +44,10 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.integrations_contracts import (
+    BACKFILL_STATE_COMPLETE,
+    BACKFILL_STATE_IMPORTING,
+    BACKFILL_STATE_NOT_STARTED,
+    BACKFILL_STATE_PARTIAL,
     INTEGRATION_SYNC_KINDS,
     SYNC_KIND_BACKFILL,
     SYNC_KIND_ON_DEMAND,
@@ -50,9 +55,16 @@ from app.core.config.integrations_contracts import (
 from app.core.config.integrations_settings import (
     integration_settings,
 )
-from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
+from app.core.config.task_queue import (
+    TASK_STATUS_CANCELLED,
+    TASK_STATUS_FAILED,
+    TASK_STATUS_SUCCEEDED,
+)
 from app.domain.integrations.errors import IntegrationConnectionNotFoundError
-from app.domain.integrations.schemas import IntegrationSyncRunResponse
+from app.domain.integrations.schemas import (
+    IntegrationBackfillProgressResponse,
+    IntegrationSyncRunResponse,
+)
 from app.domain.integrations.service import get_connection
 from app.models.integrations import (
     IntegrationConnection,
@@ -90,6 +102,14 @@ class SyncRunNotFoundError(LookupError):
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+# A backfill window that will never import anything more. Cancelled counts
+# with failed: either way that slice of history is absent, and calling the
+# import "complete" would overstate the coverage.
+_BACKFILL_FAILED_STATUSES: frozenset[str] = frozenset(
+    {TASK_STATUS_FAILED, TASK_STATUS_CANCELLED}
+)
 
 
 def integrity_constraint_name(exc: IntegrityError) -> str:
@@ -570,3 +590,68 @@ async def get_sync_run(
         raise SyncRunNotFoundError(str(sync_run_id))
     run, row_count = row
     return _to_run_response(run, int(row_count))
+
+
+async def get_backfill_progress(
+    session: AsyncSession, *, workspace_id: uuid.UUID, connection_id: uuid.UUID
+) -> IntegrationBackfillProgressResponse:
+    """Roll the connection's backfill runs up into one progress projection.
+
+    A pure projection over ``IntegrationSyncRun`` (invariant 7) — no new
+    table, no recomputation, no provider call. The history import is chunked
+    into rolling-window-sized runs (``backfill_sync_windows``), so counting
+    those rows by status is exactly "how far along is this import".
+
+    Coverage is bounded by the SUCCEEDED windows alone: a queued or failed
+    chunk has imported nothing, and letting it widen the covered range would
+    claim evidence that is not there.
+    """
+    connection = await get_connection(
+        session, workspace_id=workspace_id, connection_id=connection_id
+    )
+    rows = list(
+        (
+            await session.scalars(
+                select(IntegrationSyncRun)
+                .where(IntegrationSyncRun.connection_id == connection.id)
+                .where(IntegrationSyncRun.sync_kind == SYNC_KIND_BACKFILL)
+            )
+        ).all()
+    )
+    return _backfill_progress(connection_id=connection.id, rows=rows)
+
+
+def _backfill_progress(
+    *, connection_id: uuid.UUID, rows: Sequence[IntegrationSyncRun]
+) -> IntegrationBackfillProgressResponse:
+    """The pure rollup, split out so it is testable without a session."""
+    if not rows:
+        return IntegrationBackfillProgressResponse(
+            connection_id=connection_id,
+            state=BACKFILL_STATE_NOT_STARTED,
+            total_windows=0,
+            completed_windows=0,
+            failed_windows=0,
+            pending_windows=0,
+            covered_from=None,
+            covered_through=None,
+        )
+    succeeded = [row for row in rows if row.status == TASK_STATUS_SUCCEEDED]
+    failed = [row for row in rows if row.status in _BACKFILL_FAILED_STATUSES]
+    pending = len(rows) - len(succeeded) - len(failed)
+    if pending > 0:
+        state = BACKFILL_STATE_IMPORTING
+    elif failed:
+        state = BACKFILL_STATE_PARTIAL
+    else:
+        state = BACKFILL_STATE_COMPLETE
+    return IntegrationBackfillProgressResponse(
+        connection_id=connection_id,
+        state=state,
+        total_windows=len(rows),
+        completed_windows=len(succeeded),
+        failed_windows=len(failed),
+        pending_windows=pending,
+        covered_from=min((row.window_start for row in succeeded), default=None),
+        covered_through=max((row.window_end for row in succeeded), default=None),
+    )

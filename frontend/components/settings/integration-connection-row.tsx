@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BarChart3, Globe, LoaderCircle, Search, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { BackfillProgress } from '@/components/settings/backfill-progress';
 import { FAMILY_META, type GrantModel } from '@/components/settings/grant-model';
 import { PropertyPicker, useActiveMapping } from '@/components/settings/property-picker';
 import { Alert } from '@/components/ui/alert';
@@ -131,11 +132,14 @@ function ConnectionMetadata({
 }>) {
   return (
     <div className="border-border-subtle/70 flex flex-wrap items-center justify-between gap-2 border-t pt-2.5">
-      <div className="flex items-center gap-2">
-        <span className={eyebrowClasses}>Last synced</span>
-        <span className="text-secondary font-mono text-xs tabular-nums">
-          {connection.last_synced_at ? formatUtcTimestamp(connection.last_synced_at) : 'Never'}
-        </span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2">
+          <span className={eyebrowClasses}>Last synced</span>
+          <span className="text-secondary font-mono text-xs tabular-nums">
+            {connection.last_synced_at ? formatUtcTimestamp(connection.last_synced_at) : 'Never'}
+          </span>
+        </div>
+        <BackfillProgress connectionId={connection.id} />
       </div>
       {runActive && activeRun ? (
         <div className="flex items-center gap-2">

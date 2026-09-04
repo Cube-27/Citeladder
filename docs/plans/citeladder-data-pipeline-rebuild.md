@@ -1,6 +1,8 @@
 # Connected-data pipeline rebuild — GSC, GA4, and Bing
 
-**Status:** planned 2026-09-04. Not started except where marked *shipped*.
+**Status:** Slices 1-3 shipped 2026-09-04 (PR 1). Slices 4-6 remain, and
+are planned to land together as PR 2 alongside the Bing connection defect.
+See "What PR 1 shipped" at the end of this document.
 
 **Superseded in part by `gsc-performance-alignment.md`**, which shipped first.
 Read that document's "What shipped" section before starting any slice here:
@@ -39,16 +41,14 @@ Each was confirmed by reading the shipped code, not inferred.
 | 1 | ~~Reads require an **exact** window match~~ — **fixed** by the Performance alignment: presets resolve by window LENGTH (`resolve_preset_snapshot`), and an exact window is used only for a custom or comparison range | [query_support.py](../../backend/app/domain/traffic/query_support.py) |
 | 2 | ~~Snapshots are built **only for sync windows**~~ — **fixed**: `traffic_snapshot_refresh` also derives the preset family anchored at the latest complete GSC date, and `performance_range_projection` materializes any other requested window | [service.py](../../backend/app/domain/traffic/service.py) |
 | 3 | ~~Traffic offers 7d/28d/90d that can never match~~ — **fixed**: the surface is `/performance` with Day/Week/Month/Custom ranges resolved server-side | [performance.ts](../../frontend/lib/performance/performance.ts) |
-| 4 | AI Referrals is **100% broken for every bounded range**: it anchors `to` at *today* while every sync window ends *yesterday* | [options.ts:60](../../frontend/lib/ai-referrals/options.ts#L60) vs [sync.py:126](../../backend/app/domain/integrations/sync.py#L126) |
-| 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection. Still open; the Performance surface is deliberately Search-Console-only, so Bing needs its own panel (Slice 4.4) rather than a column on a GSC table | [traffic.py](../../backend/app/core/config/traffic.py) |
-| 6 | The projection **materializes every metric row in the window in memory**, which caps how long a window can safely be | `build_traffic_projection(rows=...)`, [projection.py:590](../../backend/app/domain/traffic/projection.py#L590) |
+| 4 | ~~AI Referrals is **100% broken for every bounded range**~~ — **fixed**: a preset now sends its `range` TOKEN and the server resolves the newest persisted snapshot of that LENGTH (`ANALYTICS_PRESET_RANGE_DAYS`); no date is derived from the browser clock | [options.ts](../../frontend/lib/ai-referrals/options.ts), [analytics/service.py](../../backend/app/domain/analytics/service.py) |
+| 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection. Its *collection* is now unblocked (it joined `TRAFFIC_SYNC_PROVIDERS`, so "Sync now" no longer skips it); the DISPLAY half is still open and needs its own panel (Slice 4.4) rather than a column on a GSC table | [traffic.py](../../backend/app/core/config/traffic.py) |
+| 6 | ~~The projection **materializes every metric row in the window in memory**~~ — **fixed**: `TrafficProjectionBuilder` folds batch by batch and the executor streams into it, so memory bounds on distinct keys | [projection.py](../../backend/app/domain/traffic/projection.py), [streaming.py](../../backend/app/domain/traffic/streaming.py) |
 | 7 | MCP exposes Site Health, Demand, Opportunities, and Visibility — **no traffic, search, referral, or connection-status tool** | [server.py:110-230](../../backend/app/domain/mcp/server.py#L110-L230) |
 
-Defect 6 is **still open and now the load-bearing one**. The Performance
-alignment fixed defects 1–3 while accepting the in-memory fold: its preset
-family is 1/7/28 days, so the widest automatic projection is small. A long
-custom range still materializes its whole window in memory, which is the
-bound Slice 2 removes.
+Defects 1–4 and 6 are now closed. Defect 5's collection half is closed too;
+its display half (a Bing panel) is the remaining piece, in Slice 4.4. Defect 7
+(MCP) is untouched and is the whole of Slice 5.
 
 **Already shipped (2026-09-04)**, on the branch carrying the Google sign-in work:
 
@@ -72,24 +72,27 @@ without anyone watching a log, and the UI can say where it is up to.
 
 **Mergeable alone:** yes. No read contract changes.
 
-1. **Document the knob.** Add `INTEGRATION_SYNC_BACKFILL_WINDOW_DAYS` to
-   `.env.example` beside the existing integration block, with the cost note
-   (it is bounded by `sync_backfill_max_days`, currently 480).
-2. **Bing joins the sync fan-out.** `TRAFFIC_SYNC_PROVIDERS`
-   ([traffic.py](../../backend/app/core/config/traffic.py)) is `{gsc, ga4}`, so
-   the Traffic "Sync now" button silently skips Bing. Add it; the enqueue path
-   is already provider-neutral.
-3. **Backfill progress projection.** Extend the existing sync-run read
-   (`GET /integrations/{id}/syncs`) with a per-connection rollup: total
-   backfill chunks, completed, failed, earliest covered date. Pure projection
-   over `IntegrationSyncRun` — no new table.
-4. **Surface it in Settings → Integrations.** The connection card shows
-   "Importing history — 6 of 14 windows" and then the covered date range,
-   reusing the existing card states.
+1. ~~**Document the knob.**~~ **Was already done** — `.env.example` carries
+   `INTEGRATION_SYNC_BACKFILL_WINDOW_DAYS` with its cost note.
+2. ~~**Bing joins the sync fan-out.**~~ **Done** — `TRAFFIC_SYNC_PROVIDERS`
+   now includes Bing, so "Sync now" no longer skips a connected Bing property.
+3. ~~**Backfill progress projection.**~~ **Done** as
+   `GET /integrations/{id}/syncs/progress` -> `get_backfill_progress`, a pure
+   rollup over the connection's `backfill`-kind runs. No new table. Its
+   `state` keeps `not_started` / `importing` / `complete` / `partial` apart
+   (invariant 7), and coverage is bounded by the SUCCEEDED windows only, so a
+   failed chunk never widens the claimed history.
+4. ~~**Surface it in Settings → Integrations.**~~ **Done** as
+   `components/settings/backfill-progress.tsx`, rendered on the connection
+   card: "Importing — 6 of 14 windows", then the covered range. It renders
+   NOTHING for `not_started`, since no enqueued import is a different state
+   from one that has covered nothing yet.
 
-**Verification.** Connect a real GSC property against a live Google account,
-confirm 14 chunks queue and drain, and confirm `integration_metric_rows`
-spans ~365 days. Re-select the property and confirm no second backfill.
+**Verification.** Component tests cover the rollup's four states, its
+coverage bounds, its per-connection isolation, and its cross-workspace
+refusal. The live check — connect a real GSC property, confirm 14 chunks
+queue and drain, confirm `integration_metric_rows` spans ~365 days, re-select
+the property and confirm no second backfill — is the user's to run.
 
 ---
 
@@ -101,16 +104,17 @@ exist for every timeline the product offers.
 **Mergeable alone:** yes. Backend-only; the existing frontend keeps working
 because `latest` is unchanged and the exact-window path is preserved.
 
-1. **Streaming fold.** *(Still required — see defect 6.)* Refactor
-   `build_traffic_projection` from
-   "take a materialized `rows` list" into an incremental accumulator the
-   executor feeds batch by batch. Memory then bounds on distinct pages +
-   distinct queries + buckets rather than on row count. The pure-function
-   property and determinism must survive; the existing projection unit tests
-   are the contract and must pass unchanged where they assert output.
-   - Watch the per-page/per-query `source_metric_row_ids` provenance lists:
-     over a long window these grow per row. Cap or summarize them, and say so
-     in the snapshot's provenance rather than silently truncating.
+1. ~~**Streaming fold.**~~ **Done** as `TrafficProjectionBuilder`.
+   `build_traffic_projection` is retained as the batch door onto it, so all
+   33 existing projection unit tests pass UNCHANGED — that was the contract.
+   The executor's scan is ordered by re-sync identity, which lets the builder
+   retire each observation as the next begins (`ordered_by_identity=True`):
+   its buffer holds ONE row rather than one per observation in the window.
+   - The provenance lists are capped at `TRAFFIC_PROVENANCE_ID_LIMIT` (500),
+     kept as the lowest sorted ids so a rebuild samples identically. A capped
+     row states its true total beside the sample, and every snapshot carries
+     a `provenance` summary saying how many of its lists were sampled — so
+     "sampled" is never mistakable for "complete" (invariant 7).
 2. ~~**Config-owned snapshot windows.**~~ **Done**, as
    `PERFORMANCE_SNAPSHOT_WINDOW_DAYS` in `config/traffic.py`. The family is
    day-granularity only and anchored at the latest complete GSC date rather
@@ -121,15 +125,17 @@ because `latest` is unchanged and the exact-window path is preserved.
 4. ~~**API.**~~ **Done** as `GET /projects/{id}/performance?range=month`,
    returning the resolved `snapshot_id` and the true window.
 
-**Cost check before merging:** a 365-day snapshot family is 4 window lengths ×
-3 granularities = 12 snapshots per refresh, each with page and query stat rows.
-Measure the row count and refresh duration on a real property before enabling
-the 365 entry; ship `(7, 28, 90)` if 365 does not hold up, and say so.
+**Cost check, unchanged:** the preset family is still `(1, 7, 28)`.
+The streaming fold removes the MEMORY bound on extending it, but the write
+cost per refresh (one snapshot plus its stat rows per family entry) is
+unmeasured on a real property, so the family was deliberately left as is.
+Widening it is a separate, measured decision.
 
-**Verification.** Unit tests for the fold (identical output to the current
-projection for the same inputs). Component test: one sync produces snapshots
-for every configured length, and a `window_days` read served days later still
-resolves.
+**Verification.** Twelve new unit tests assert the fold is batch-invariant
+(any batch size, ordered or not, matches the one-shot projection), that a
+superseded revision split ACROSS batches still never folds in, and that the
+ordered mode really does hold one identity at a time. The existing component
+refresh tests pass unchanged.
 
 ---
 
@@ -143,20 +149,27 @@ it actually rendered.
 1. ~~**Traffic presets send `window_days`**~~ — **done** by the Performance
    alignment, in a different shape: the client sends a `range` token and the
    server resolves the newest snapshot of that length.
-2. **AI Referrals gets the same treatment** — this is defect 4, and it is the
-   worst of them: `30d`, `90d` and `1y` currently cannot match a snapshot at
-   all. Mirror the `window_days` resolution in
-   [analytics/service.py](../../backend/app/domain/analytics/service.py) and
-   [options.ts](../../frontend/lib/ai-referrals/options.ts).
-3. **Show the real window.** Done for Performance (the toolbar renders the
-   resolved window); AI Referrals still needs the same treatment.
-4. **Distinguish the empty states.** `not_run`, `observed_zero`, and
-   `available` already exist on the wire; the screens must render "nothing
-   synced yet" differently from "measured zero" and from "this provider is not
-   connected".
+2. ~~**AI Referrals gets the same treatment**~~ — **done**. `rangeToWindow`
+   (which computed `from`/`to` from the browser clock) is replaced by
+   `rangeToParams`, which sends the preset TOKEN; the server resolves the
+   newest persisted snapshot of that length. Length rather than
+   `preset_window_days` is the match, because `AiReferralsSnapshot` has no
+   preset marker column — a deliberate difference from Performance, recorded
+   here rather than silently diverging.
+3. ~~**Show the real window.**~~ **Done**: the response reports the resolved
+   `window_start`/`window_end`, which is the window the screen renders.
+4. **Distinguish the empty states.** *Partly done.* The AI Referrals
+   unprojected-range state now names the PRESET rather than a window the
+   client invented. The broader `not_run` / `observed_zero` / `available`
+   rendering across the other screens is still open — it moves to Slice 4,
+   whose staged post-connect ladder owns the same distinction.
 
-**Verification.** Playwright: connect → sync → every preset renders non-empty.
-Component tests asserting the three empty states are distinguishable.
+**Verification.** Component tests assert a preset resolves a snapshot whose
+window ends well before today (the exact case that was broken), that the
+window the OLD client would have sent still matches nothing, that a preset
+never resolves a DIFFERENT length's snapshot, and that an unknown range is a
+422. The Playwright connect -> sync -> preset pass is left for PR 2, once the
+Bing connection defect is fixed and a full live connect is possible.
 
 ---
 
@@ -262,8 +275,10 @@ Slices 1, 2 and 5 are independent of each other. Slice 3 needs 2; Slice 4 needs
 5 MCP      ────┘
 ```
 
-Merge each as its own PR with `check.ps1` and `test.ps1` green before starting
-the next.
+Delivered as TWO PRs rather than six, by decision: PR 1 is Slices 1-3 (the
+"data lands and reads correctly" unit), PR 2 is Slices 4-6 plus the Bing
+connection defect. Each PR has `check.ps1` and `test.ps1` green before the
+next begins.
 
 ## Rules that constrain every slice
 
@@ -284,3 +299,72 @@ From `AGENTS.md` and `docs/invariants.md`, and each already load-bearing here:
 - Backend modules stay under 800 LOC / CC 12, frontend production modules under
   500 LOC / CC 12. Both exception maps are empty; split rather than waive.
 - No autonomous publishing or prompt activation.
+
+---
+
+## What PR 1 shipped, and where it differs from the plan above
+
+Slices 1-3, implemented 2026-09-04. Where a decision changed the plan, the
+reason is recorded here rather than silently diverging.
+
+**The streaming fold is a builder, not a rewritten function.**
+`TrafficProjectionBuilder` owns the incremental fold; `build_traffic_projection`
+stays as the batch door onto it. That kept all 33 existing projection unit
+tests passing unchanged, which the plan named as the contract. The executor's
+read now folds each batch into every target and releases it, so peak memory is
+one batch plus each builder's distinct keys.
+
+**Dedup became a scan-order guarantee.** Latest-`resync_seq` selection needs
+every revision of an observation before it can pick one. Rather than buffer a
+row per observation, the executor's keyset scan is ordered by re-sync identity
+then revision — the columns `uq_integration_metric_row_identity` already makes
+unique — so the builder retires each identity as the next begins and buffers
+ONE row. `add_batch` still dedups correctly without that promise, so the pure
+API is safe for any caller; the promise is an optimization the executor can
+make because it controls the query.
+
+**`service.py` split rather than waived.** Adding the target/streaming
+machinery pushed it to 890 lines against the 800 budget. The read half moved
+to `domain/traffic/streaming.py` (the scan, its cursor, and the Demand
+revision); `service.py` keeps the write path at 694. The exception map stays
+empty.
+
+**The Demand hand-off stopped holding row ids.** It hashed the sorted ids of
+every row in the window, which is exactly the retention the fold was removing.
+It now folds an order-independent XOR of per-id digests plus a count. The
+digest is only an idempotency-key input — it must CHANGE when the evidence
+changes, not equal any particular value — so this preserves the behaviour that
+matters.
+
+**Provenance is capped and says so.** `TRAFFIC_PROVENANCE_ID_LIMIT` (500)
+bounds every id list, keeping the lowest sorted ids so a rebuild samples
+identically. A capped row carries its true total beside the sample, and every
+snapshot carries a `provenance` summary — present even when nothing was
+sampled, so completeness is a positive statement rather than an inference from
+a missing marker.
+
+**AI Referrals resolves by LENGTH, not by a preset marker.** Performance
+matches `preset_window_days` because its refresh writes that column.
+`AiReferralsSnapshot` has no such column, so a preset matches on inclusive
+window length instead. The consequence is honest and worth stating: a persisted
+30-day window that was NOT written for the "Last 30 days" preset would still
+resolve it. Performance avoids that; AI Referrals cannot without a schema
+change, and adding one was out of this PR's scope.
+
+**Bing joined collection, not display.** `TRAFFIC_SYNC_PROVIDERS` now includes
+Bing so "Sync now" stops skipping a connected Bing property. No Bing row feeds
+a GSC total or table — the Performance surface stays Search-Console-only, and
+the Bing panel is still Slice 4.4.
+
+**Empty-state work is only partly done.** Item 3.4 asked for `not_run` /
+`observed_zero` / `available` to render distinguishably across the screens.
+AI Referrals' unprojected-range state was fixed here (it names the preset
+rather than a client-invented window). The rest belongs with Slice 4's
+post-connect ladder, which owns the same distinction, so it moved there rather
+than being half-built in two places.
+
+**Not verified here.** No live provider connect was run from this session, and
+the fresh 365-day import remains unverified end to end. The database reset and
+the Google/Bing connect were run by the user, who is verifying the result. The
+Playwright connect -> sync -> preset pass is deferred to PR 2, since the Bing
+connection defect blocks a clean full-provider connect today.
