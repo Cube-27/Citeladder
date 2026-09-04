@@ -63,12 +63,15 @@ def test_0001_initial_is_the_only_migration_revision() -> None:
     assert 'revision = "0001_initial"' in source
     assert "down_revision = None" in source
     tables = _created_tables(source)
-    assert len(tables) == 114
+    assert len(tables) == 115
     assert {
         "mcp_oauth_clients",
         "mcp_authorization_requests",
         "mcp_authorization_codes",
         "mcp_oauth_grants",
+        # Third-party sign-in identities; ``users.hashed_password`` is
+        # nullable for the accounts it creates.
+        "user_identities",
     } <= tables
     assert "site_crawl_phase_runs" not in tables
     assert "industry_pack_id" not in source

@@ -13,10 +13,12 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.config.abuse import abuse_settings
 from app.domain.workspaces import service as workspace_service
+from app.models.user import User
 
 COOKIE = settings.session_cookie_name
 
@@ -270,3 +272,28 @@ async def test_cross_workspace_isolation(client: httpx.AsyncClient) -> None:
     # B sees only its own workspace(s), none of A's.
     assert a_workspaces.isdisjoint(b_workspaces)
     assert len(b_workspaces) == 1
+
+
+@pytest.mark.asyncio
+async def test_password_login_is_refused_for_a_passwordless_account(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
+    """A third-party sign-in account has no password and never gains one.
+
+    ``hashed_password`` is NULL for a Google-created account, so there is no
+    hash for any candidate password to match. The guard is explicit in
+    ``authenticate_user`` rather than left to the hasher, which would raise
+    on None instead of failing the login.
+    """
+    db_session.add(User(email="google-only@example.com", hashed_password=None))
+    await db_session.commit()
+
+    # Every candidate is long enough to pass request validation, so a 401
+    # here is the auth guard refusing and not a schema rejection.
+    for password in ("password123", "NoneNoneNone", "nullnullnull", "        "):
+        resp = await client.post(
+            "/api/v1/auth/login",
+            json={"email": "google-only@example.com", "password": password},
+        )
+        assert resp.status_code == 401
+        assert COOKIE not in resp.cookies

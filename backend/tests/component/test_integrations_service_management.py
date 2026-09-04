@@ -47,6 +47,7 @@ from app.core.config.integrations_transport import (
 )
 from app.core.config.provider_catalog import TEST_STATUS_FAILED, TEST_STATUS_OK
 from app.core.security import decrypt_secret, encrypt_secret
+from app.domain.integrations import service as integrations_service
 from app.domain.integrations.errors import (
     IntegrationConnectionNotFoundError,
     PropertyDiscoveryUnsupportedError,
@@ -302,7 +303,20 @@ async def test_an_unexpected_fault_fails_the_probe_without_leaking_its_message(
 @pytest.mark.asyncio
 async def test_property_discovery_is_refused_rather_than_returning_nothing(
     db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Discovery fails closed for a provider that is not on the allow-list.
+
+    Every shipped provider is discoverable, so the guard is exercised by
+    removing one from the config set rather than by pretending a real one is
+    unsupported. It must refuse before touching the grant or the network: an
+    empty list would read as "you own nothing".
+    """
+    monkeypatch.setattr(
+        integrations_service,
+        "INTEGRATION_PROPERTY_DISCOVERY_PROVIDERS",
+        frozenset({INTEGRATION_PROVIDER_GSC, INTEGRATION_PROVIDER_GA4}),
+    )
     mine = await _workspace(db_session, "Mine")
     grant = await _grant(db_session, mine, transport=INTEGRATION_TRANSPORT_MICROSOFT)
     connection = await _connection(
@@ -310,8 +324,6 @@ async def test_property_discovery_is_refused_rather_than_returning_nothing(
     )
     await db_session.commit()
 
-    # An empty list would read as "you own nothing"; the unsupported provider
-    # has to say so instead.
     with pytest.raises(PropertyDiscoveryUnsupportedError):
         await list_available_properties(
             db_session, workspace_id=mine, connection_id=connection.id

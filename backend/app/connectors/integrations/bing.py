@@ -55,6 +55,7 @@ import httpx
 
 from app.connectors.integrations._http import (
     IntegrationApiError,
+    ProviderProperty,
     RequestPacer,
     assert_approved_url,
     classify_status,
@@ -294,6 +295,41 @@ class BingClient:
         return BingStatsPage(
             payload={"rows": list(rows)}, rows=rows, raw_row_count=len(raw_rows)
         )
+
+    async def list_properties(
+        self, *, access_token: str
+    ) -> tuple[ProviderProperty, ...]:
+        """List the verified sites this grant can read (property discovery).
+
+        Backs the property picker with the same ``GetSites`` call the grant
+        probe already makes, so a user selects from what Bing says they
+        actually own instead of hand-typing a ``siteUrl`` that must match
+        Bing's own spelling exactly. Refs are returned in Bing's ``Url``
+        spelling because that is what the stats endpoints take back.
+        """
+        url = f"{BING_API_BASE_URL}{BING_API_JSON_ROOT}{BING_SITES_PROBE_METHOD}"
+        payload = await self._get(
+            url,
+            access_token=access_token,
+            params={},
+            action=BING_SITES_PROBE_METHOD,
+        )
+        # An account with no verified sites returns an empty ``d`` array.
+        entries = payload.get("d") or []
+        if not isinstance(entries, list):
+            raise BingApiError(
+                f"Bing {BING_SITES_PROBE_METHOD} returned malformed entries",
+                error_code=ERROR_PROVIDER_API,
+            )
+        properties = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            site_url = str(entry.get("Url") or "").strip()
+            if not site_url:
+                continue
+            properties.append(ProviderProperty(property_ref=site_url, label=site_url))
+        return tuple(properties)
 
     async def probe_access_token(self, *, access_token: str) -> None:
         """Cheap authenticated probe validating a Microsoft grant's token.

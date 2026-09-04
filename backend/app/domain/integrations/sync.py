@@ -33,16 +33,18 @@ workspace, allocates, inserts, and commits in one call.
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.integrations_contracts import (
     INTEGRATION_SYNC_KINDS,
+    SYNC_KIND_BACKFILL,
     SYNC_KIND_ON_DEMAND,
 )
 from app.core.config.integrations_settings import (
@@ -60,6 +62,8 @@ from app.models.integrations import (
 # Schema-object names pinned in ``models/integrations.py`` — the partial
 # active-window unique index (409 path), the full re-sync identity unique
 # constraint, and the unique idempotency key (both retry-with-next-value).
+logger = logging.getLogger("app.integrations")
+
 _ACTIVE_WINDOW_INDEX = "ix_integration_sync_runs_active_window"
 _WINDOW_SEQ_CONSTRAINT = "uq_integration_sync_run_window_seq"
 _IDEMPOTENCY_KEY_CONSTRAINT = "uq_integration_sync_run_idempotency_key"
@@ -126,6 +130,37 @@ def default_sync_window(*, today: date | None = None) -> tuple[date, date]:
     end = (today or _utcnow().date()) - timedelta(days=1)
     start = end - timedelta(days=integration_settings.sync_default_window_days - 1)
     return start, end
+
+
+def backfill_sync_windows(*, today: date | None = None) -> list[tuple[date, date]]:
+    """The one-time history import, split into rolling-window-sized chunks.
+
+    Covers ``sync_backfill_window_days`` ending yesterday — the same right
+    edge as every other window (the latest complete UTC day), so backfilled
+    history lines up with the rolling sync instead of forming a second,
+    offset timeline.
+
+    CHUNKED rather than one long run, because a sync window is also a
+    projection window: the post-sync hook enqueues one snapshot refresh per
+    imported window, and that refresh materializes every metric row in the
+    window in memory. A single 365-day run would therefore load a year of
+    rows at once. Chunking keeps each import and each refresh the same size
+    as a normal daily sync, and the queue's lease/retry machinery handles the
+    chunks independently — a failure re-runs one chunk, not the year.
+
+    Returned newest-first so the most useful history is imported first if the
+    worker is interrupted partway through.
+    """
+    end = (today or _utcnow().date()) - timedelta(days=1)
+    earliest = end - timedelta(days=integration_settings.sync_backfill_window_days - 1)
+    chunk = integration_settings.sync_default_window_days
+    windows: list[tuple[date, date]] = []
+    chunk_end = end
+    while chunk_end >= earliest:
+        chunk_start = max(earliest, chunk_end - timedelta(days=chunk - 1))
+        windows.append((chunk_start, chunk_end))
+        chunk_end = chunk_start - timedelta(days=1)
+    return windows
 
 
 def clamp_sync_window(window_start: date, window_end: date) -> tuple[date, date]:
@@ -220,6 +255,73 @@ async def _next_resync_seq(
         )
     )
     return result.scalar_one() + 1
+
+
+async def enqueue_history_backfill(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    connection_id: uuid.UUID,
+    today: date | None = None,
+) -> list[IntegrationSyncRun]:
+    """Enqueue the one-time history import for a connection, or do nothing.
+
+    Called when a property is first selected: before that the connection has
+    no ``account_ref`` and a run would fetch nothing. Returns an empty list
+    when this connection already has a backfill run of ANY status — history
+    is paid for once per connection, and a re-selected property must not
+    re-import a year. A failed chunk is therefore not retried here; the
+    queue's own retry owns that, and a deliberate re-import is an explicit
+    on-demand sync with a window.
+
+    Never raises for an enqueue conflict: selecting a property must succeed
+    even when a chunk cannot start, and the rolling scheduled sync still
+    covers the recent window either way.
+    """
+    existing = await session.scalar(
+        select(IntegrationSyncRun.id)
+        .where(
+            IntegrationSyncRun.connection_id == connection_id,
+            IntegrationSyncRun.workspace_id == workspace_id,
+            IntegrationSyncRun.sync_kind == SYNC_KIND_BACKFILL,
+        )
+        .limit(1)
+    )
+    if existing is not None:
+        return []
+    runs: list[IntegrationSyncRun] = []
+    for window_start, window_end in backfill_sync_windows(today=today):
+        try:
+            runs.append(
+                await enqueue_sync_run(
+                    session,
+                    workspace_id=workspace_id,
+                    connection_id=connection_id,
+                    sync_kind=SYNC_KIND_BACKFILL,
+                    window_start=window_start,
+                    window_end=window_end,
+                )
+            )
+        except ActiveWindowConflictError:
+            # A concurrent caller raced past the guard above and queued this
+            # window first. The unique indexes are the real arbiter; this
+            # chunk is already covered.
+            continue
+        except (IntegrationConnectionNotFoundError, SQLAlchemyError):
+            # The connection vanished mid-enqueue, or the database refused a
+            # chunk. Callers reach here AFTER committing the work that
+            # triggered the backfill, so failing now would report an error
+            # for something that already succeeded. Chunks already queued
+            # stay valid; the rest are simply not scheduled.
+            logger.warning(
+                "integrations.backfill_enqueue_incomplete",
+                extra={
+                    "connection_id": str(connection_id),
+                    "queued_chunks": len(runs),
+                },
+            )
+            break
+    return runs
 
 
 async def enqueue_sync_run(

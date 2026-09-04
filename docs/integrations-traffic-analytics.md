@@ -12,6 +12,23 @@ The active provider set is Google Search Console, Google Analytics 4, and Bing
 Webmaster Tools. Shopify OAuth and product/order synchronization are retired;
 Commerce catalog evidence is owned by Site Health discovery and CSV import.
 
+## Consent boundaries
+
+Google Search Console and Google Analytics 4 ride ONE Google grant per
+workspace, and that grant uses the same OAuth client as "Continue with
+Google" sign-in. Sharing the client is what allows incremental
+authorization: a Google-signed-in user connecting GSC/GA4 is sent with
+`login_hint` and `include_granted_scopes`, so the account chooser is skipped
+and the consent only adds the new scopes. Splitting the client would silently
+cost that.
+
+Bing Webmaster Tools is a separate consent on the Microsoft transport and
+cannot be authorized by a Google grant. Its account may itself have been
+created with a Google ID, which is not the same thing; the UI says so rather
+than implying one click covers all three. All three providers now expose
+property discovery -- GSC and Bing from their verified-site lists, GA4 from
+account summaries -- so no property ref is ever hand-typed.
+
 ## Current guarantees
 
 - encrypted OAuth credentials and provider allowlists;

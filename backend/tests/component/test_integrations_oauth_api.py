@@ -37,6 +37,8 @@ from app.models.integrations import (
     IntegrationOAuthGrant,
     IntegrationOAuthState,
 )
+from app.models.user import User
+from app.models.user_identity import UserIdentity
 from app.models.workspace import WorkspaceMember
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "integrations"
@@ -770,3 +772,74 @@ async def test_state_rows_are_bound_per_mint(
     # uuid sanity: the grant id is a real UUID.
     (grant,) = await _grants(db_session)
     assert isinstance(grant.id, uuid.UUID)
+
+
+async def _link_google_identity(
+    db_session, email: str, *, identity_email: str = "signer@gmail.com"
+) -> None:
+    """Give the registered account a Google sign-in identity."""
+    user = await db_session.scalar(select(User).where(User.email == email))
+    assert user is not None
+    db_session.add(
+        UserIdentity(
+            user_id=user.id,
+            provider="google",
+            subject="google-subject-1",
+            email=identity_email,
+            email_verified=True,
+        )
+    )
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_google_connect_is_incremental_for_a_google_signed_in_user(
+    client: httpx.AsyncClient,
+    db_session,
+    _oauth_credentials: None,
+) -> None:
+    """One click: no account chooser, and the identity scopes carry over.
+
+    Sign-in and this connect flow share one Google ``client_id``, which is
+    what makes ``include_granted_scopes`` compose. ``login_hint`` pre-selects
+    the account the user signed in with.
+    """
+    email = "int-incremental@example.com"
+    await _register(client, email)
+    await _link_google_identity(db_session, email)
+
+    query = parse_qs(urlsplit((await _start(client, "gsc")).headers["location"]).query)
+    assert query["login_hint"] == ["signer@gmail.com"]
+    assert query["include_granted_scopes"] == ["true"]
+    # A refresh token is still mandatory for background syncs, so consent is
+    # still forced — the win is that the account chooser is skipped.
+    assert query["access_type"] == ["offline"]
+    assert query["prompt"] == ["consent"]
+
+
+@pytest.mark.asyncio
+async def test_google_connect_is_unhinted_without_a_google_identity(
+    client: httpx.AsyncClient,
+    _oauth_credentials: None,
+) -> None:
+    """A password-only user gets the plain flow, not a hint for someone else."""
+    await _register(client, "int-no-identity@example.com")
+    query = parse_qs(urlsplit((await _start(client, "gsc")).headers["location"]).query)
+    assert "login_hint" not in query
+    assert "include_granted_scopes" not in query
+
+
+@pytest.mark.asyncio
+async def test_bing_connect_is_never_hinted_with_a_google_account(
+    client: httpx.AsyncClient,
+    db_session,
+    _oauth_credentials: None,
+) -> None:
+    """Bing is a separate consent; a Google address is meaningless to it."""
+    email = "int-bing-hint@example.com"
+    await _register(client, email)
+    await _link_google_identity(db_session, email)
+
+    query = parse_qs(urlsplit((await _start(client, "bing")).headers["location"]).query)
+    assert "login_hint" not in query
+    assert "include_granted_scopes" not in query

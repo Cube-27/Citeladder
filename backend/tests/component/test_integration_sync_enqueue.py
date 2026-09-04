@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from itertools import pairwise
 
 import pytest
 from sqlalchemy import select
@@ -32,9 +33,11 @@ from app.domain.integrations.errors import IntegrationConnectionNotFoundError
 from app.domain.integrations.sync import (
     ActiveWindowConflictError,
     SyncWindowInvalidError,
+    backfill_sync_windows,
     build_sync_idempotency_key,
     clamp_sync_window,
     default_sync_window,
+    enqueue_history_backfill,
     enqueue_sync_run,
     resolve_sync_window,
 )
@@ -324,3 +327,93 @@ async def test_unknown_sync_kind_rejected(db_session) -> None:
             connection_id=connection.id,
             sync_kind="bogus",
         )
+
+
+# --- one-time history backfill --------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_history_backfill_covers_a_year_in_contiguous_chunks(db_session) -> None:
+    """A year of history, imported as rolling-window-sized pieces.
+
+    Chunked deliberately: a sync window is also a projection window, and the
+    refresh it triggers materializes every row in that window in memory. One
+    365-day run would load a year at once.
+    """
+    workspace_id, connection = await _seed_connection(db_session)
+    today = date(2026, 3, 1)
+
+    runs = await enqueue_history_backfill(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection.id,
+        today=today,
+    )
+
+    assert runs
+    assert {run.sync_kind for run in runs} == {SYNC_KIND_BACKFILL}
+    windows = sorted((run.window_start, run.window_end) for run in runs)
+    # The right edge is yesterday — the same edge every other window uses, so
+    # backfilled history lines up with the rolling sync.
+    assert windows[-1][1] == date(2026, 2, 28)
+    assert (windows[-1][1] - windows[0][0]).days + 1 == (
+        integration_settings.sync_backfill_window_days
+    )
+    # Contiguous and non-overlapping: no day is imported twice or skipped.
+    for earlier, later in pairwise(windows):
+        assert (later[0] - earlier[1]).days == 1
+    # No chunk is larger than one rolling window.
+    for start, end in windows:
+        assert (end - start).days + 1 <= integration_settings.sync_default_window_days
+
+
+@pytest.mark.asyncio
+async def test_history_backfill_runs_once_per_connection(db_session) -> None:
+    """Re-selecting a property must not re-import a year of history."""
+    workspace_id, connection = await _seed_connection(db_session)
+    first = await enqueue_history_backfill(
+        db_session, workspace_id=workspace_id, connection_id=connection.id
+    )
+    assert first
+    for run in first:
+        await _complete(db_session, run.id)
+
+    # A later day would otherwise compute different (and so non-colliding)
+    # windows, which is exactly the case a window-based guard would miss.
+    again = await enqueue_history_backfill(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection.id,
+        today=date(2027, 1, 1),
+    )
+
+    assert again == []
+    backfills = [
+        run
+        for run in await _runs(db_session, connection.id)
+        if run.sync_kind == SYNC_KIND_BACKFILL
+    ]
+    assert len(backfills) == len(first)
+
+
+@pytest.mark.asyncio
+async def test_history_backfill_never_raises_for_an_unknown_connection(
+    db_session,
+) -> None:
+    """Selecting a property must succeed even if the backfill cannot start."""
+    workspace_id, _connection = await _seed_connection(db_session)
+    assert (
+        await enqueue_history_backfill(
+            db_session, workspace_id=workspace_id, connection_id=uuid.uuid4()
+        )
+        == []
+    )
+
+
+def test_backfill_windows_are_bounded_by_the_rolling_window() -> None:
+    """Pure window math, independent of any queue state."""
+    windows = backfill_sync_windows(today=date(2026, 3, 1))
+    assert windows[0][1] == date(2026, 2, 28)
+    # Newest-first, so the most useful history lands first if the worker is
+    # interrupted partway through.
+    assert windows == sorted(windows, reverse=True)

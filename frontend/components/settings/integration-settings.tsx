@@ -79,8 +79,8 @@ function CallbackNotice({
     if (family === 'microsoft') {
       return (
         <Alert tone="success">
-          <strong>Microsoft connected.</strong> Bing Webmaster Tools is now linked. Initial syncs
-          are queued and will appear in Traffic once they complete.
+          <strong>Bing connected.</strong> Bing Webmaster Tools is now linked. Initial syncs are
+          queued and will appear in Traffic once they complete.
         </Alert>
       );
     }

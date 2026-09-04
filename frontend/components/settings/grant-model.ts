@@ -35,11 +35,16 @@ export const FAMILY_META: Record<
   google: {
     title: 'Google',
     connectProvider: 'gsc',
-    blurb: 'One consent links Search Console and Analytics 4 on a shared grant.',
+    blurb:
+      'One consent links Search Console and Analytics 4 on a shared grant. Signed in with Google? The account is pre-selected.',
   },
+  // Titled for the product the user is actually connecting, not the identity
+  // provider behind it: a Google grant cannot authorize Bing, and saying
+  // "Microsoft" invites the assumption that it can.
   microsoft: {
-    title: 'Microsoft',
+    title: 'Bing',
     connectProvider: 'bing',
-    blurb: 'Links Bing Webmaster Tools through one Microsoft OAuth grant.',
+    blurb:
+      'Bing Webmaster Tools needs its own consent — a Google grant cannot authorize it. The Bing account itself can still be one created with a Google ID.',
   },
 };

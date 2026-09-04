@@ -508,6 +508,26 @@ referrer rows are provenance, not an additional summand. Derived referral
 snapshots carry formula/analyzer versions and rebuild through an explicit worker
 path, never in a read route.
 
+Third-party sign-in is a separate, narrower flow with the same cookie
+discipline. `/auth/oauth/google/start` requests identity scopes only
+(`openid email profile`) plus `include_granted_scopes`; it never asks for
+offline access and never stores a provider token. Its state is stateless --
+the signed JWT plus the HttpOnly nonce cookie -- because there is no workspace
+or user yet to bind a persisted row to, the callback clears the cookie every
+time, and the provider's code is single-use at its own end. The callback
+resolves an account by `(provider, subject)`, then by provider-VERIFIED email
+(which links), then by creating a passwordless account with the same
+workspace and billing provisioning registration uses. `users.hashed_password`
+is nullable for those accounts and `authenticate_user` refuses a NULL hash
+outright, so no password can ever reach one.
+
+Sign-in and the integrations connect flow share ONE Google OAuth client.
+That is what makes `include_granted_scopes` compose: a Google-signed-in user
+connecting Search Console gets `login_hint` and an incremental consent, so no
+account chooser appears and only the new scopes are shown. `access_type=offline`
+and `prompt=consent` still stand there, because background syncs need a refresh
+token.
+
 Integration OAuth starts persist a one-time state row and set the signed
 state's random nonce in one short-lived, HttpOnly, SameSite=Lax transaction
 cookie. The callback authenticates that transaction independently of the main

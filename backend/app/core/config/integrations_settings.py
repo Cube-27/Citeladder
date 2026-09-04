@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.config.dotenv import dotenv_sources
 from app.core.config.integrations_transport import INTEGRATION_PROVIDERS
 
 
@@ -15,7 +16,13 @@ class IntegrationSettings(BaseSettings):
     (invariant 6).
     """
 
-    model_config = SettingsConfigDict(env_prefix="INTEGRATION_", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="INTEGRATION_",
+        # See the note in ``config/oauth.py``: without this the sync
+        # window/pacing knobs were unreachable from .env on the host.
+        env_file=dotenv_sources(),
+        extra="ignore",
+    )
 
     # --- Sync windows -----------------------------------------------------
     # Import the full Traffic reporting window on every normal sync. Provider
@@ -24,6 +31,11 @@ class IntegrationSettings(BaseSettings):
     # with only one or two usable historical buckets after provider lag.
     sync_default_window_days: int = Field(default=28, gt=0)
     sync_backfill_max_days: int = Field(default=480, gt=0)
+    # One-time history import, enqueued when a property is first selected for
+    # a connection. Deliberately separate from the rolling window above: the
+    # steady-state daily sync stays cheap, and a year of history is paid for
+    # exactly once per connection rather than re-imported every night.
+    sync_backfill_window_days: int = Field(default=365, gt=0)
     # Dispatcher tick (default daily).
     sync_cadence_seconds: float = Field(default=86400.0, gt=0)
     # Recent trailing window re-synced (with a bumped resync_seq) to pick up
@@ -80,6 +92,10 @@ class IntegrationSettings(BaseSettings):
         if self.sync_late_data_revision_days > self.sync_backfill_max_days:
             raise ValueError(
                 "sync_late_data_revision_days must not exceed sync_backfill_max_days"
+            )
+        if self.sync_backfill_window_days > self.sync_backfill_max_days:
+            raise ValueError(
+                "sync_backfill_window_days must not exceed sync_backfill_max_days"
             )
         if self.retry_max_delay_seconds < self.retry_base_delay_seconds:
             raise ValueError(

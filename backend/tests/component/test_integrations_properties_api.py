@@ -10,7 +10,8 @@ pin the three pieces that close that gap:
    read at the provider, so a ref is chosen rather than typed.
 2. Creating a mapping POINTS the connection at the selected property
    (``account_ref``), which is what makes the sync fetch a real URL.
-3. Providers with no discoverable property list are an explicit 422.
+3. A provider with no discoverable property list is an explicit 422 rather
+   than an empty list, which would read as "you own nothing".
 """
 
 from __future__ import annotations
@@ -24,10 +25,12 @@ import httpx
 import pytest
 from sqlalchemy import select
 
+from app.connectors.integrations import bing as bing_connector
 from app.connectors.integrations import ga4 as ga4_connector
 from app.connectors.integrations import gsc as gsc_connector
 from app.connectors.integrations import oauth as integration_oauth
 from app.core.security import decrypt_secret, encrypt_secret
+from app.domain.integrations import service as integrations_service
 from app.models.integrations import (
     IntegrationConnection,
     IntegrationOAuthGrant,
@@ -128,6 +131,8 @@ class _FakeGoogle:
             return httpx.Response(self.status, json={"error": {"message": "boom"}})
         if request.url.host == "www.googleapis.com":
             return httpx.Response(200, json=_fixture("gsc_sites_response.json"))
+        if request.url.host == "ssl.bing.com":
+            return httpx.Response(200, json=_fixture("bing_sites_response.json"))
         if request.url.host == "analyticsadmin.googleapis.com":
             if self.ga4_pages is None:
                 return httpx.Response(
@@ -154,6 +159,11 @@ def _fake_google(monkeypatch: pytest.MonkeyPatch) -> _FakeGoogle:
         ga4_connector,
         "build_ga4_client",
         lambda *, transport=None: ga4_connector.Ga4Client(transport=fake.transport),
+    )
+    monkeypatch.setattr(
+        bing_connector,
+        "build_bing_client",
+        lambda *, transport=None: bing_connector.BingClient(transport=fake.transport),
     )
     monkeypatch.setattr(
         integration_oauth,
@@ -350,11 +360,51 @@ async def test_near_expiry_grant_refreshes_before_listing(
 
 
 @pytest.mark.asyncio
-async def test_unsupported_provider_is_422(
+async def test_lists_bing_verified_sites(
     client: httpx.AsyncClient, db_session, _fake_google: _FakeGoogle
 ) -> None:
-    """Bing exposes no property listing — an explicit token, not [] or 500."""
+    """Bing discovery reuses GetSites, so its ref is picked and not typed.
+
+    Bing matches ``siteUrl`` against its own spelling exactly, so leaving
+    this provider without a picker forced every user to hand-type a ref.
+    """
     await _register(client, "prop-bing@example.com")
+    workspace_id = await _workspace_id(db_session)
+    (bing,) = await _seed(
+        db_session,
+        workspace_id=workspace_id,
+        providers=("bing",),
+        transport="microsoft_oauth",
+    )
+
+    resp = await client.get(f"{_BASE}/{bing.id}/properties")
+
+    assert resp.status_code == 200
+    assert resp.json() == [
+        {"property_ref": "https://example.com", "label": "https://example.com"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_unsupported_provider_is_422(
+    client: httpx.AsyncClient,
+    db_session,
+    monkeypatch: pytest.MonkeyPatch,
+    _fake_google: _FakeGoogle,
+) -> None:
+    """Discovery fails closed for a provider not on the allow-list.
+
+    Every shipped provider is discoverable today, so the guard is exercised
+    by removing one from the config set rather than by pretending a real
+    provider is unsupported. It must stay an explicit token: an empty list
+    would read as "you own nothing".
+    """
+    monkeypatch.setattr(
+        integrations_service,
+        "INTEGRATION_PROPERTY_DISCOVERY_PROVIDERS",
+        frozenset({"gsc", "ga4"}),
+    )
+    await _register(client, "prop-unsupported@example.com")
     workspace_id = await _workspace_id(db_session)
     (bing,) = await _seed(
         db_session,

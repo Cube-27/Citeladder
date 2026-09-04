@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from starlette.requests import Request
 
-from app.api.auth import _trusted_client_identity
+from app.api.rate_limit import trusted_client_identity
 from app.core.config import settings
 from app.core.security import (
     TokenDecodeError,
@@ -72,17 +72,17 @@ def _request(*, peer: str, forwarded: str | None = None) -> Request:
 def test_forwarded_identity_requires_a_trusted_direct_peer(monkeypatch) -> None:
     monkeypatch.setattr(settings, "trusted_proxy_cidrs", "10.0.0.0/8")
     request = _request(peer="203.0.113.8", forwarded="198.51.100.7")
-    assert _trusted_client_identity(request) == "203.0.113.8"
+    assert trusted_client_identity(request) == "203.0.113.8"
 
 
 def test_forwarded_identity_skips_trusted_proxy_hops(monkeypatch) -> None:
     monkeypatch.setattr(settings, "trusted_proxy_cidrs", "10.0.0.0/8")
     request = _request(peer="10.0.1.20", forwarded="198.51.100.7, 10.0.2.30")
-    assert _trusted_client_identity(request) == "198.51.100.7"
+    assert trusted_client_identity(request) == "198.51.100.7"
 
 
 def test_two_clients_through_one_proxy_keep_distinct_identities(monkeypatch) -> None:
     monkeypatch.setattr(settings, "trusted_proxy_cidrs", "10.0.0.0/8")
     first = _request(peer="10.0.1.20", forwarded="198.51.100.7")
     second = _request(peer="10.0.1.20", forwarded="203.0.113.9")
-    assert _trusted_client_identity(first) != _trusted_client_identity(second)
+    assert trusted_client_identity(first) != trusted_client_identity(second)

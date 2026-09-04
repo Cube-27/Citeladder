@@ -56,7 +56,7 @@ from app.core.config.integrations_transport import (
     INTEGRATION_PROVIDER_TRANSPORT,
     INTEGRATION_TRANSPORT_GOOGLE,
 )
-from app.core.config.oauth import oauth_settings
+from app.core.config.oauth import OAUTH_GOOGLE, oauth_settings
 from app.core.config.provider_catalog import TEST_STATUS_FAILED, TEST_STATUS_OK
 from app.core.security import (
     create_oauth_state,
@@ -86,6 +86,7 @@ from app.models.integrations import (
     IntegrationOAuthGrant,
     IntegrationOAuthState,
 )
+from app.models.user_identity import UserIdentity
 
 
 def _utcnow() -> datetime:
@@ -151,12 +152,41 @@ async def start_connect(
         # authorization request.
         params["access_type"] = "offline"
         params["prompt"] = "consent"
+        await _apply_google_signin_hint(session, params, user_id=user_id)
     return IntegrationOAuthStart(
         authorize_url=(
             f"{INTEGRATION_OAUTH_AUTHORIZE_URLS[transport]}?{urlencode(params)}"
         ),
         session_nonce=session_nonce,
     )
+
+
+async def _apply_google_signin_hint(
+    session: AsyncSession, params: dict[str, str], *, user_id: uuid.UUID
+) -> None:
+    """Make the connect consent incremental for a Google-signed-in user.
+
+    Sign-in and this connect flow share ONE Google OAuth client
+    (``app.core.config.oauth.oauth_client_credentials``), which is what lets
+    ``include_granted_scopes`` compose the already-granted identity scopes with
+    the Search Console + Analytics scopes being requested now. ``login_hint``
+    pre-selects the account the user signed in with, so the account chooser is
+    skipped entirely and only the scope consent is shown.
+
+    ``prompt=consent`` still stands: background syncs need a refresh token, and
+    Google only issues one for a consent-forced request. A password-only user
+    has no identity row and gets the unhinted flow unchanged.
+    """
+    identity_email = await session.scalar(
+        select(UserIdentity.email).where(
+            UserIdentity.user_id == user_id,
+            UserIdentity.provider == OAUTH_GOOGLE,
+        )
+    )
+    if not identity_email:
+        return
+    params["login_hint"] = identity_email
+    params["include_granted_scopes"] = "true"
 
 
 async def _find_or_create_grant(
@@ -477,16 +507,17 @@ async def list_available_properties(
 ) -> list[IntegrationPropertyResponse]:
     """List the provider properties this connection's grant can read.
 
-    Backs the property picker: the user selects a site/property that Google
-    confirms they own, so ``account_ref`` is never typed or guessed. The
+    Backs the property picker: the user selects a site/property that the
+    provider confirms they own, so ``account_ref`` is never typed or guessed. The
     token is refreshed when near expiry (a grant connected an hour ago must
     not make the picker fail) and is used for exactly one read-only listing
     call — never logged or returned (invariant 6).
 
-    Only the providers whose property is discoverable are supported. Bing
-    exposes no property listing in this pass and raises
-    ``PropertyDiscoveryUnsupportedError`` rather than returning an empty
-    list, which would read as "you own nothing".
+    Only the providers whose property is discoverable are supported; anything
+    else raises ``PropertyDiscoveryUnsupportedError`` rather than returning an
+    empty list, which would read as "you own nothing". All three shipped
+    providers are discoverable — GSC and Bing from their verified-site lists,
+    GA4 from its account summaries.
     """
     connection = await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id
