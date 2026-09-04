@@ -37,6 +37,7 @@ from app.domain.integrations.sync import (
     backfill_sync_windows,
     build_sync_idempotency_key,
     clamp_sync_window,
+    connection_covered_through,
     default_sync_window,
     enqueue_history_backfill,
     enqueue_sync_run,
@@ -207,6 +208,43 @@ async def test_only_succeeded_runs_count_as_coverage(db_session) -> None:
 
     # Treating the failed window as covered would skip those dates forever.
     assert (run.window_start, run.window_end) == default_sync_window()
+
+
+@pytest.mark.asyncio
+async def test_coverage_stops_at_the_first_gap(db_session) -> None:
+    """A failed middle chunk must not be hidden by later successes.
+
+    A backfill fans out many chunks. If one fails while newer ones succeed,
+    taking MAX(window_end) would treat the hole as imported and no later
+    sync would ever go back for it.
+    """
+    workspace_id, connection = await _seed_connection(db_session)
+    today = datetime.now(UTC).date()
+    # Succeeded: [-40, -34]. FAILED: [-33, -27] (the hole). Succeeded: [-26, -20].
+    for offset_start, offset_end, status in (
+        (40, 34, TASK_STATUS_SUCCEEDED),
+        (33, 27, TASK_STATUS_FAILED),
+        (26, 20, TASK_STATUS_SUCCEEDED),
+    ):
+        db_session.add(
+            IntegrationSyncRun(
+                connection_id=connection.id,
+                workspace_id=workspace_id,
+                sync_kind=SYNC_KIND_ON_DEMAND,
+                window_start=today - timedelta(days=offset_start),
+                window_end=today - timedelta(days=offset_end),
+                resync_seq=0,
+                status=status,
+                idempotency_key=f"chunk-{offset_start}-{uuid.uuid4()}",
+            )
+        )
+    await db_session.commit()
+
+    covered = await connection_covered_through(db_session, connection_id=connection.id)
+
+    # Coverage stops at the edge of the first contiguous block, so the next
+    # sync reaches back over the hole instead of skipping it forever.
+    assert covered == today - timedelta(days=34)
 
 
 def test_incremental_window_helper_is_pure() -> None:

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 
@@ -139,11 +139,11 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
       ) : null}
       <CursorTableFooter
         {...pageRange(pager.page, pager.pageSize, rows.length)}
-        // The crawl's own persisted visible-URL count IS the exact
-        // unfiltered inventory total this list can return, so the footer
-        // states it without a COUNT(*) on every navigation. It climbs while
-        // discovery runs, which is what the caption above explains.
-        total={crawl.visible_url_count}
+        // No exact total: `visible_url_count` counts what THIS crawl
+        // admitted, which a recrawl inheriting monitored URLs need not match
+        // row-for-row. The caption already says the list is still growing,
+        // so the range alone is the honest reading — a total that can drift
+        // from the rows beneath it is worse than no total.
         noun="pages"
         pageSize={pager.pageSize}
         onPageSizeChange={pager.setPageSize}
@@ -255,18 +255,17 @@ function ScoredInventoryState({
   // fingerprint, so changing it must restart every tab's paging.
   const [sort, setSort] = useState<PagesSort>(() => initialPagesSort(requestedSort));
   // Per-tab cursor stack so Prev/Next walk keyset pages without offsets.
-  const monitoredPager = useCursorTable(`pages|${crawl.id}|monitored|${sort}|${pageKind}`);
+  // `active` participates in the monitored scope because that tab's filter
+  // changes from `status=completed` to the full projection when the crawl
+  // terminalizes. Folding it into the key resets the stack DURING the render
+  // that flips it, where an effect would let one request go out carrying the
+  // stale, server-refused cursor first.
+  const monitoredPager = useCursorTable(
+    `pages|${crawl.id}|monitored|${active}|${sort}|${pageKind}`,
+  );
   const allPager = useCursorTable(`pages|${crawl.id}|all|${sort}|${pageKind}`);
   const errorsPager = useCursorTable(`pages|${crawl.id}|errors|${sort}|${pageKind}`);
   const pager = tab === 'monitored' ? monitoredPager : tab === 'all' ? allPager : errorsPager;
-  const resetMonitoredPager = monitoredPager.reset;
-
-  // The monitored query changes from `status=completed` to the full projection
-  // when a crawl becomes terminal. Its cursor is filter-bound, so never carry a
-  // deeper active-view cursor across that boundary.
-  useEffect(() => {
-    resetMonitoredPager();
-  }, [active, resetMonitoredPager]);
 
   const activeTab = TABS.find((t) => t.key === tab)!;
   // A recrawl pre-seeds every monitored URL as pending. Showing that full

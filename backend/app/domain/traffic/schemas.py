@@ -111,6 +111,10 @@ class PerformanceDashboardResponse(BaseModel):
     comparison: PerformanceWindow | None
     coverage: PerformanceCoverage
     dimension_counts: PerformanceDimensionCounts
+    # Dimensions whose provider report is not collected at all. Their table
+    # renders as UNAVAILABLE, never as an observed-empty result — a
+    # breakdown nobody imported is not a breakdown that measured nothing.
+    unavailable_dimensions: list[str]
     formula_version: str
     normalization_version: str
 

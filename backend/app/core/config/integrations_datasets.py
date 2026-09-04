@@ -26,13 +26,21 @@ DATASET_GSC_DEVICE_DAILY: Final = "gsc_device_daily"
 
 DATASET_GSC_COUNTRY_DAILY: Final = "gsc_country_daily"
 
-# Dataset ids the sync worker must NOT page. Search Appearance used to sit
-# here; Performance now renders it as its own table, and a successful GSC
-# response carrying no Search Appearance rows is an OBSERVED EMPTY state,
-# not a failed connection. Nothing is excluded today — the set stays so a
-# future provider dataset can be withheld from the fan-out without a code
-# change (invariant 2).
-INTEGRATION_SYNC_EXCLUDED_DATASETS: Final[frozenset[str]] = frozenset()
+# Dataset ids the sync worker must NOT page.
+#
+# ``gsc_search_appearance_daily`` stays excluded: the Search Analytics API
+# refuses ``searchAppearance`` grouped with ANY other dimension, so the
+# pinned template's ``("searchAppearance", "date")`` shape is not a query
+# GSC will answer — it fails the whole run. Collecting it needs Google's
+# two-step protocol (query the appearance types alone, then re-query
+# filtered by each type to regain a date breakdown) plus derivation support
+# for a date-less report, which is its own change. Performance therefore
+# renders SEARCH APPEARANCE as explicitly UNAVAILABLE rather than as an
+# observed-empty table: not collected and measured zero are different
+# states.
+INTEGRATION_SYNC_EXCLUDED_DATASETS: Final[frozenset[str]] = frozenset(
+    {DATASET_GSC_SEARCH_APPEARANCE_DAILY}
+)
 
 DATASET_GA4_CHANNEL_DAILY: Final = "ga4_channel_daily"
 

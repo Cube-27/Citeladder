@@ -58,8 +58,8 @@ from app.core.config.integrations_datasets import (
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
     DATASET_GSC_QUERY_PAGE_DAILY,
-    DATASET_GSC_SEARCH_APPEARANCE_DAILY,
     INTEGRATION_DATASET_TEMPLATES,
+    INTEGRATION_SYNC_EXCLUDED_DATASETS,
 )
 from app.core.config.integrations_settings import (
     integration_settings,
@@ -353,6 +353,7 @@ def _gsc_datasets() -> list[str]:
         dataset
         for dataset, template in INTEGRATION_DATASET_TEMPLATES.items()
         if template.provider == INTEGRATION_PROVIDER_GSC
+        and template.dataset not in INTEGRATION_SYNC_EXCLUDED_DATASETS
     ]
 
 
@@ -415,9 +416,8 @@ async def test_fixture_import_writes_immutable_artifacts(
     assert run.completed_at is not None
 
     artifacts = await _artifacts(db_session, run.id)
-    # Two URL pages plus six one-page families: the date-only report and
-    # Search Appearance now page alongside the rest.
-    assert len(artifacts) == 8
+    # Two URL pages plus one page per other GSC family the worker covers.
+    assert len(artifacts) == 1 + len(_gsc_datasets())
     by_dataset: dict[str, list[IntegrationImportArtifact]] = {}
     for artifact in artifacts:
         by_dataset.setdefault(artifact.dataset, []).append(artifact)
@@ -427,7 +427,6 @@ async def test_fixture_import_writes_immutable_artifacts(
             DATASET_GSC_DAY_DAILY,
             DATASET_GSC_QUERY_DAILY,
             DATASET_GSC_QUERY_PAGE_DAILY,
-            DATASET_GSC_SEARCH_APPEARANCE_DAILY,
             DATASET_GSC_DEVICE_DAILY,
             DATASET_GSC_COUNTRY_DAILY,
         }

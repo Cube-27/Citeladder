@@ -82,6 +82,7 @@ _DASHBOARD_KEYS = {
     "comparison",
     "coverage",
     "dimension_counts",
+    "unavailable_dimensions",
     "formula_version",
     "normalization_version",
 }
@@ -354,6 +355,24 @@ async def test_unprojected_range_is_reported_not_fabricated(
         "latest_date": None,
         "covered_days": 0,
     }
+
+
+async def test_search_appearance_is_reported_unavailable_not_empty(
+    client: httpx.AsyncClient, seeded: tuple[str, str]
+) -> None:
+    """The uncollected breakdown is named, so the tab can say why it is empty.
+
+    Search Console refuses ``searchAppearance`` grouped with ``date``, so the
+    report is never imported. Rendering that as an observed-empty table would
+    claim a measurement nobody made.
+    """
+    project_id, _workspace_id = seeded
+    body = (await client.get(f"/api/v1/projects/{project_id}/performance")).json()
+    assert body["unavailable_dimensions"] == ["search_appearance"]
+    # Every other tab stays collected.
+    for dimension in PERFORMANCE_DIMENSION_ORDER:
+        if dimension != "search_appearance":
+            assert dimension not in body["unavailable_dimensions"]
 
 
 async def test_headline_totals_come_only_from_the_date_only_dataset(

@@ -41,6 +41,7 @@ from app.core.config.integrations_datasets import (
     DATASET_GSC_QUERY_DAILY,
     DATASET_GSC_QUERY_PAGE_DAILY,
     INTEGRATION_DATASET_TEMPLATES,
+    INTEGRATION_SYNC_EXCLUDED_DATASETS,
 )
 from app.core.config.integrations_settings import (
     integration_settings,
@@ -104,6 +105,7 @@ _GSC_FAMILIES = len(
         template
         for template in INTEGRATION_DATASET_TEMPLATES.values()
         if template.provider == INTEGRATION_PROVIDER_GSC
+        and template.dataset not in INTEGRATION_SYNC_EXCLUDED_DATASETS
     ]
 )
 

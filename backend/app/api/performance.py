@@ -24,6 +24,9 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.core.config.analytics import (
+    ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
+)
 from app.core.config.errors import CODE_INVALID_CURSOR
 from app.core.config.integrations_contracts import (
     ERROR_SYNC_ACTIVE_WINDOW_CONFLICT,
@@ -231,8 +234,9 @@ async def get_performance_range_endpoint(
 ) -> PerformanceRangeTaskResponse:
     """The persisted state of one range-projection task (poll target).
 
-    Scoped to the workspace AND project, so a task id alone never reveals
-    another tenant's work (invariant 5).
+    Scoped to the workspace, the project AND this task kind, so a task id
+    alone never reveals another tenant's work — nor any other analytics
+    task's status and payload through a Performance route (invariant 5).
     """
     await _get_project_or_404(session, ctx.workspace_id, project_id)
     task = await session.get(AnalyticsTask, task_id)
@@ -240,6 +244,7 @@ async def get_performance_range_endpoint(
         task is None
         or task.workspace_id != ctx.workspace_id
         or task.project_id != project_id
+        or task.task_kind != ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION
     ):
         raise_not_found("Performance range task")
     return _range_task_response(task)

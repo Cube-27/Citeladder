@@ -202,18 +202,43 @@ def incremental_sync_window(
 async def connection_covered_through(
     session: AsyncSession, *, connection_id: uuid.UUID
 ) -> date | None:
-    """The latest date any SUCCEEDED run of this connection has imported.
+    """The last date covered by an UNBROKEN run of succeeded imports.
 
-    Only succeeded runs count: a queued, active, or failed run has imported
+    Only succeeded runs count: a queued, active, or failed run imported
     nothing, and treating its window as covered would skip those dates
-    permanently.
+    forever.
+
+    Coverage stops at the FIRST gap rather than jumping to the newest
+    success. A backfill fans out many chunks, and a middle chunk can fail
+    while later ones succeed; taking ``MAX(window_end)`` would treat the
+    hole as imported and no incremental sync would ever go back for it.
+    Walking the windows in order instead makes the next sync resume from the
+    gap, and the ``sync_backfill_max_days`` clamp keeps that bounded.
     """
-    return await session.scalar(
-        select(func.max(IntegrationSyncRun.window_end)).where(
-            IntegrationSyncRun.connection_id == connection_id,
-            IntegrationSyncRun.status == TASK_STATUS_SUCCEEDED,
+    windows = (
+        await session.execute(
+            select(IntegrationSyncRun.window_start, IntegrationSyncRun.window_end)
+            .where(
+                IntegrationSyncRun.connection_id == connection_id,
+                IntegrationSyncRun.status == TASK_STATUS_SUCCEEDED,
+            )
+            .order_by(
+                IntegrationSyncRun.window_start.asc(),
+                IntegrationSyncRun.window_end.asc(),
+            )
         )
-    )
+    ).all()
+    covered: date | None = None
+    for window_start, window_end in windows:
+        if covered is None:
+            covered = window_end
+            continue
+        # A window starting more than one day after the covered edge leaves
+        # a hole; everything past it is unreachable coverage.
+        if window_start > covered + timedelta(days=1):
+            break
+        covered = max(covered, window_end)
+    return covered
 
 
 def clamp_sync_window(window_start: date, window_end: date) -> tuple[date, date]:

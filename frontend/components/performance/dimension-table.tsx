@@ -115,6 +115,7 @@ export function DimensionTable({
   compareSnapshotId,
   selectedLabel,
   compareLabel,
+  unavailable,
 }: Readonly<{
   projectId: string;
   dimension: PerformanceDimension;
@@ -122,6 +123,8 @@ export function DimensionTable({
   compareSnapshotId: string | null;
   selectedLabel: string;
   compareLabel: string;
+  /** The provider report behind this table is never collected. */
+  unavailable?: boolean;
 }>) {
   const tab = dimensionTab(dimension);
   const [sort, setSort] = useState(() => defaultSort(dimension));
@@ -141,6 +144,7 @@ export function DimensionTable({
   const query = useQuery({
     queryKey: queryKeys.performance.table(projectId, params),
     queryFn: ({ signal }) => performanceApi.getTable(projectId, params, { signal }),
+    enabled: !unavailable,
     placeholderData: (previousData, previousQuery) =>
       retainPreviousDataForScope(projectId, previousData, previousQuery),
   });
@@ -156,6 +160,17 @@ export function DimensionTable({
     table.reset();
   };
 
+  if (unavailable) {
+    // Distinct from an empty table: Search Console does not serve this
+    // breakdown in a form this project imports, so nothing was measured —
+    // which is not the same as having measured nothing.
+    return (
+      <Alert tone="info">
+        Search Console does not provide {tab.noun} alongside a date range, so this breakdown is not
+        imported. Every other tab is unaffected.
+      </Alert>
+    );
+  }
   if (query.isError) {
     return (
       <Alert tone="danger">Could not load {tab.noun}. Check your connection and try again.</Alert>
@@ -169,30 +184,37 @@ export function DimensionTable({
           <TableRow>
             {/* Pinned so the row identity survives horizontal scrolling. */}
             <TableHead className="bg-panel sticky left-0 z-10">{tab.header}</TableHead>
-            {METRIC_CARDS.map((metric) => (
-              <SortableHead
-                key={metric.key}
-                metric={metric.key}
-                label={metric.label.replace(/^(Total|Average) /, '')}
-                sublabel={selectedLabel}
-                sort={sort}
-                onSort={onSort}
-              />
-            ))}
-            {comparing
-              ? METRIC_CARDS.flatMap((metric) => [
-                  <StaticHead
-                    key={`${metric.key}-comparison`}
-                    label={metric.label.replace(/^(Total|Average) /, '')}
-                    sublabel={compareLabel}
-                  />,
-                  <StaticHead
-                    key={`${metric.key}-difference`}
-                    label={metric.label.replace(/^(Total|Average) /, '')}
-                    sublabel="Difference"
-                  />,
-                ])
-              : null}
+            {METRIC_CARDS.flatMap((metric) => {
+              const label = metric.label.replace(/^(Total|Average) /, '');
+              const head = (
+                <SortableHead
+                  key={metric.key}
+                  metric={metric.key}
+                  label={label}
+                  sublabel={selectedLabel}
+                  sort={sort}
+                  onSort={onSort}
+                />
+              );
+              // Search Console groups each metric with its own comparison
+              // and difference rather than appending all comparisons at the
+              // end, so a reader compares adjacent columns.
+              return comparing
+                ? [
+                    head,
+                    <StaticHead
+                      key={`${metric.key}-comparison`}
+                      label={label}
+                      sublabel={compareLabel}
+                    />,
+                    <StaticHead
+                      key={`${metric.key}-difference`}
+                      label={label}
+                      sublabel="Difference"
+                    />,
+                  ]
+                : [head];
+            })}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -226,38 +248,38 @@ export function DimensionTable({
                   {formatDimensionValue(dimension, row.display_value)}
                 </span>
               </TableCell>
-              {METRIC_CARDS.map((metric) => (
-                <TableCell key={metric.key} numeric>
-                  <span className="mono">{formatMetric(metric.key, row.metrics[metric.key])}</span>
-                </TableCell>
-              ))}
-              {comparing
-                ? METRIC_CARDS.flatMap((metric) => {
-                    const comparisonValue = row.comparison_metrics
-                      ? row.comparison_metrics[metric.key]
-                      : null;
-                    const difference = metricDifference(
-                      row.metrics[metric.key],
-                      row.comparison_metrics ? comparisonValue : undefined,
-                    );
-                    return [
-                      <TableCell key={`${metric.key}-comparison`} numeric>
-                        <span className="mono text-muted">
-                          {row.comparison_metrics
-                            ? formatMetric(metric.key, comparisonValue)
-                            : formatMetric(metric.key, null)}
-                        </span>
-                      </TableCell>,
-                      <TableCell key={`${metric.key}-difference`} numeric>
-                        <span
-                          className={cn('mono', TONE_CLASS[differenceTone(metric.key, difference)])}
-                        >
-                          {formatDifference(metric.key, difference)}
-                        </span>
-                      </TableCell>,
-                    ];
-                  })
-                : null}
+              {METRIC_CARDS.flatMap((metric) => {
+                const selectedCell = (
+                  <TableCell key={metric.key} numeric>
+                    <span className="mono">
+                      {formatMetric(metric.key, row.metrics[metric.key])}
+                    </span>
+                  </TableCell>
+                );
+                if (!comparing) return [selectedCell];
+                const comparisonValue = row.comparison_metrics
+                  ? row.comparison_metrics[metric.key]
+                  : null;
+                const difference = metricDifference(
+                  row.metrics[metric.key],
+                  row.comparison_metrics ? comparisonValue : undefined,
+                );
+                return [
+                  selectedCell,
+                  <TableCell key={`${metric.key}-comparison`} numeric>
+                    <span className="mono text-muted">
+                      {formatMetric(metric.key, comparisonValue)}
+                    </span>
+                  </TableCell>,
+                  <TableCell key={`${metric.key}-difference`} numeric>
+                    <span
+                      className={cn('mono', TONE_CLASS[differenceTone(metric.key, difference)])}
+                    >
+                      {formatDifference(metric.key, difference)}
+                    </span>
+                  </TableCell>,
+                ];
+              })}
             </TableRow>
           ))}
         </TableBody>

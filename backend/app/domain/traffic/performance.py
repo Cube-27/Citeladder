@@ -28,6 +28,7 @@ from app.core.config.traffic import (
     PERFORMANCE_DIMENSION_DEFAULT_SORT,
     PERFORMANCE_DIMENSION_ORDER,
     PERFORMANCE_SORT_KEY_DIMENSION,
+    PERFORMANCE_UNAVAILABLE_DIMENSIONS,
     TRAFFIC_FORMULA_VERSION,
     TRAFFIC_NORMALIZATION_VERSION,
 )
@@ -229,6 +230,7 @@ async def get_performance_dashboard(
         comparison=comparison,
         coverage=_coverage(snapshot),
         dimension_counts=_dimension_counts(snapshot),
+        unavailable_dimensions=list(PERFORMANCE_UNAVAILABLE_DIMENSIONS),
         formula_version=(
             snapshot.formula_version if snapshot else TRAFFIC_FORMULA_VERSION
         ),

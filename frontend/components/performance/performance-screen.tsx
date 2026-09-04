@@ -203,6 +203,7 @@ export function PerformanceScreen() {
                 dimension={tab.value}
                 snapshotId={selectedWindow.snapshot_id}
                 compareSnapshotId={comparisonWindow?.snapshot_id ?? null}
+                unavailable={data.unavailable_dimensions.includes(tab.value)}
                 selectedLabel={selectedLabel}
                 compareLabel={comparisonLabel}
               />

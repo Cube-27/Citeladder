@@ -30,6 +30,7 @@ from app.core.config.integrations_datasets import (
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
     DATASET_GSC_SEARCH_APPEARANCE_DAILY,
+    INTEGRATION_SYNC_EXCLUDED_DATASETS,
 )
 from app.core.config.integrations_transport import (
     INTEGRATION_PROVIDER_GA4,
@@ -93,7 +94,6 @@ TRAFFIC_CONSUMED_DATASETS: Final[frozenset[str]] = frozenset(
         DATASET_GSC_QUERY_DAILY,
         DATASET_GSC_COUNTRY_DAILY,
         DATASET_GSC_DEVICE_DAILY,
-        DATASET_GSC_SEARCH_APPEARANCE_DAILY,
         DATASET_GA4_CHANNEL_DAILY,
         DATASET_GA4_SOURCE_MEDIUM_DAILY,
         DATASET_GA4_LANDING_DAILY,
@@ -202,6 +202,15 @@ PERFORMANCE_DIMENSION_DATASETS: Final[dict[str, str]] = {
     PERFORMANCE_DIMENSION_SEARCH_APPEARANCE: DATASET_GSC_SEARCH_APPEARANCE_DAILY,
     PERFORMANCE_DIMENSION_DAY: DATASET_GSC_DAY_DAILY,
 }
+# The dimensions whose dataset the sync worker never pages, so their table
+# is UNAVAILABLE rather than empty. Derived from the exclusion set, so a
+# dataset that becomes collectable lights its tab up with no further change.
+PERFORMANCE_UNAVAILABLE_DIMENSIONS: Final[tuple[str, ...]] = tuple(
+    dimension
+    for dimension in PERFORMANCE_DIMENSION_ORDER
+    if PERFORMANCE_DIMENSION_DATASETS[dimension] in INTEGRATION_SYNC_EXCLUDED_DATASETS
+)
+
 # The inverse routing the projection folds by (one dataset -> one dimension).
 PERFORMANCE_DATASET_DIMENSIONS: Final[dict[str, str]] = {
     dataset: dimension for dimension, dataset in PERFORMANCE_DIMENSION_DATASETS.items()

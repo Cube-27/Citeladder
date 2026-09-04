@@ -89,6 +89,9 @@ export const performanceDashboardSchema = responseObject({
   comparison: performanceWindowSchema.nullable(),
   coverage: performanceCoverageSchema,
   dimension_counts: performanceDimensionCountsSchema,
+  // Dimensions whose provider report is never collected. Their table renders
+  // as UNAVAILABLE, never as an observed-empty result.
+  unavailable_dimensions: z.array(performanceDimensionSchema),
   formula_version: z.string(),
   normalization_version: z.string(),
 });

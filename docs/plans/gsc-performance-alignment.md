@@ -169,7 +169,23 @@ persisted count; filtered views show the range alone rather than issuing an
 unbounded live count. `lib/site-health/use-cursor-stack.ts` was removed once it
 had no callers.
 
+**Search Appearance is UNAVAILABLE, not empty.** The plan asked for the
+dataset to leave `INTEGRATION_SYNC_EXCLUDED_DATASETS`, but the Search
+Analytics API refuses `searchAppearance` grouped with any other dimension,
+so the pinned `("searchAppearance", "date")` template is not a query Google
+answers — it fails the whole run. That is why the dataset was excluded in
+the first place. It stays excluded; the dashboard returns
+`unavailable_dimensions` and the tab says the breakdown is not imported,
+which is a different state from a breakdown that measured nothing.
+
+Collecting it properly needs Google's two-step protocol — query the
+appearance types alone, then re-query filtered by each type to regain a date
+breakdown — plus derivation support for a date-less report, since
+`derive.py` currently requires a `date` dimension. That is follow-up work.
+
 **Not verified here.** The database reset and the live Cube27 reconnect were
 not run: the reset is destructive and needs explicit approval. `alembic check`
 against a freshly migrated database, and the fresh 365-day import, remain
-outstanding.
+outstanding. The Search Appearance constraint above was found by review, not
+by a live sync — a reminder that the provider-shaped failures in this area do
+not surface in CI, whose GSC stub answers any dimension tuple.

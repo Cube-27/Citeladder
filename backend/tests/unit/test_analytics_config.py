@@ -38,6 +38,7 @@ from app.core.config.analytics import (
 )
 from app.core.config.integrations_datasets import (
     INTEGRATION_DATASET_TEMPLATES,
+    INTEGRATION_SYNC_EXCLUDED_DATASETS,
 )
 from app.core.config.provider_catalog import LOGICAL_ENGINES
 from app.core.config.traffic import (
@@ -52,6 +53,7 @@ from app.core.config.traffic import (
     PERFORMANCE_RANGES,
     PERFORMANCE_SNAPSHOT_WINDOW_DAYS,
     PERFORMANCE_SORT_WHITELIST,
+    PERFORMANCE_UNAVAILABLE_DIMENSIONS,
     TRAFFIC_CONSUMED_DATASETS,
     TRAFFIC_DEFAULT_WINDOW_DAYS,
     TRAFFIC_FORMULA_VERSION,
@@ -153,9 +155,33 @@ def test_performance_dimension_routing_is_one_dataset_per_table() -> None:
         dataset: dimension
         for dimension, dataset in PERFORMANCE_DIMENSION_DATASETS.items()
     }
-    # Every dataset a table reads is one the projection actually consumes.
-    assert set(datasets) <= TRAFFIC_CONSUMED_DATASETS
+    # Every dataset a table reads is one the catalog owns, and every
+    # COLLECTED dimension reads one the projection actually consumes. A
+    # dimension whose report is never imported is reported as unavailable
+    # instead, so it is deliberately absent from the consumed set.
     assert set(datasets) <= set(INTEGRATION_DATASET_TEMPLATES)
+    collected = {
+        PERFORMANCE_DIMENSION_DATASETS[dimension]
+        for dimension in PERFORMANCE_DIMENSION_ORDER
+        if dimension not in PERFORMANCE_UNAVAILABLE_DIMENSIONS
+    }
+    assert collected <= TRAFFIC_CONSUMED_DATASETS
+    assert collected.isdisjoint(INTEGRATION_SYNC_EXCLUDED_DATASETS)
+
+
+def test_unavailable_dimensions_are_exactly_the_uncollected_reports() -> None:
+    """An unimported breakdown is UNAVAILABLE, never an observed-empty table.
+
+    Search Appearance is the one today: the Search Analytics API refuses
+    ``searchAppearance`` grouped with any other dimension, so the pinned
+    template cannot be queried as declared and the dataset stays out of the
+    sync fan-out.
+    """
+    assert PERFORMANCE_UNAVAILABLE_DIMENSIONS == ("search_appearance",)
+    for dimension in PERFORMANCE_UNAVAILABLE_DIMENSIONS:
+        dataset = PERFORMANCE_DIMENSION_DATASETS[dimension]
+        assert dataset in INTEGRATION_SYNC_EXCLUDED_DATASETS
+        assert dataset not in TRAFFIC_CONSUMED_DATASETS
 
 
 def test_headline_dataset_is_the_only_date_only_report() -> None:

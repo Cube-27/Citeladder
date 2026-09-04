@@ -118,10 +118,9 @@ async def test_retry_resumes_from_durable_artifacts(
             (("date",), 0),
             (("query", "date"), 0),
             (("query", "page", "date"), 0),
-            (("searchAppearance", "date"), 0),
             (("device", "date"), 0),
             (("country", "date"), 0),
         ]
     )
     artifacts = await worker_tests._artifacts(db_session, run.id)
-    assert len(artifacts) == len({artifact.id for artifact in artifacts}) == 8
+    assert len(artifacts) == len({artifact.id for artifact in artifacts}) == 7
