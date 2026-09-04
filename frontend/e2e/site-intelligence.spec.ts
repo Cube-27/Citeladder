@@ -290,7 +290,7 @@ async function stubWebsite(page: Page) {
     [
       new RegExp(
         `/api/v1/projects/${FIXTURE_PROJECT.id}/site-health/changes\\?` +
-          `crawl_a_id=${CRAWL_A}&crawl_b_id=${CRAWL}&limit=50$`,
+          `crawl_a_id=${CRAWL_A}&crawl_b_id=${CRAWL}&limit=[0-9]+$`,
       ),
       {
         state: 'available',

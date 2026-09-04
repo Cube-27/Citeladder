@@ -9,7 +9,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CursorPager } from '@/components/ui/cursor-pager';
+import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import {
   Dropdown,
   DropdownContent,
@@ -46,10 +46,9 @@ import type {
 } from '@/lib/api/types';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
-import { useCursorStack } from '@/lib/site-health/use-cursor-stack';
+import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import { textRole } from '@/components/ui/typography';
 
-const PAGE_LIMIT = 25;
 /**
  * Recommendation catalog: next best action + ranked action table + drawer.
  *
@@ -203,7 +202,7 @@ function StatusControl({ row, projectId }: Readonly<{ row: Opportunity; projectI
 }
 
 export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string }>) {
-  const filters = useCatalogFilters();
+  const filters = useCatalogFilters(projectId);
   const listQuery = useQuery(opportunitiesQueries.list(projectId, filters.params));
   const rows = listQuery.data?.items ?? [];
   const featured = useFeaturedRecommendation(rows, filters.statusFilter, filters.pager.cursor);
@@ -230,12 +229,16 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
   );
 }
 
-function useCatalogFilters() {
+function useCatalogFilters(projectId: string) {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [pathFilter, setPathFilter] = useState<PathFilter>('all');
-  const pager = useCursorStack();
+  // The project participates: cursors are project-bound server-side, so a
+  // project switch must restart paging rather than replay a refused cursor.
+  const pager = useCursorTable(
+    `opportunities|${projectId}|${typeFilter}|${severityFilter}|${statusFilter}|${pathFilter}`,
+  );
   const params: OpportunitiesParams = useMemo(
     () => ({
       type: typeFilter === 'all' ? undefined : typeFilter,
@@ -243,9 +246,9 @@ function useCatalogFilters() {
       status: statusFilter === 'active' ? undefined : statusFilter,
       action_path: pathFilter === 'all' ? undefined : pathFilter,
       cursor: pager.cursor,
-      limit: PAGE_LIMIT,
+      limit: pager.pageSize,
     }),
-    [typeFilter, severityFilter, statusFilter, pathFilter, pager.cursor],
+    [typeFilter, severityFilter, statusFilter, pathFilter, pager.cursor, pager.pageSize],
   );
   const reset =
     <T,>(setter: (value: T) => void) =>
@@ -310,14 +313,21 @@ function RecommendationsSection({
       <RecommendationsHeader filters={filters} />
       <RecommendationsBody projectId={projectId} query={listQuery} rows={rows} onOpen={onOpen} />
       {rows.length ? (
-        <div className="flex items-center justify-end gap-2">
-          <CursorPager
-            canPrev={filters.pager.canPrev}
-            canNext={Boolean(listQuery.data?.next_cursor)}
-            onPrev={filters.pager.pop}
-            onNext={() => filters.pager.push(listQuery.data?.next_cursor ?? null)}
-          />
-        </div>
+        <CursorTableFooter
+          {...pageRange(filters.pager.page, filters.pager.pageSize, rows.length)}
+          // No exact total: every view here is filtered (type, severity,
+          // status, action path) and no persisted count covers a filtered
+          // set. The range alone is honest; a live COUNT(*) per navigation
+          // is not worth its cost.
+          noun="recommendations"
+          pageSize={filters.pager.pageSize}
+          onPageSizeChange={filters.pager.setPageSize}
+          canPrev={filters.pager.canPrev}
+          canNext={Boolean(listQuery.data?.next_cursor)}
+          onPrev={filters.pager.pop}
+          onNext={() => filters.pager.push(listQuery.data?.next_cursor ?? null)}
+          busy={listQuery.isFetching}
+        />
       ) : null}
     </section>
   );

@@ -1,4 +1,4 @@
-"""Component tests for ``POST /projects/{id}/traffic/sync`` (A11).
+"""Component tests for ``POST /projects/{id}/performance/sync`` (A11).
 
 The pass-through acceptance (traffic.md section 6, contract C3):
   - fan-out: ONE on-demand ``IntegrationSyncRun`` per ACTIVE mapped
@@ -147,7 +147,7 @@ async def _seed_mapping(
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_sync_requires_auth(client: httpx.AsyncClient) -> None:
-    resp = await client.post(f"/api/v1/projects/{uuid.uuid4()}/traffic/sync")
+    resp = await client.post(f"/api/v1/projects/{uuid.uuid4()}/performance/sync")
     assert resp.status_code == 401
 
 
@@ -160,7 +160,7 @@ async def test_sync_cross_workspace_project_is_404(
 
     client.cookies.clear()
     await _register(client, "traffic-sync-owner-b@example.com")
-    resp = await client.post(f"/api/v1/projects/{project_id}/traffic/sync")
+    resp = await client.post(f"/api/v1/projects/{project_id}/performance/sync")
     assert resp.status_code == 404
 
 
@@ -214,7 +214,7 @@ async def test_sync_fans_out_one_run_per_active_mapped_connection(
         )
         await session.commit()
 
-    resp = await client.post(f"/api/v1/projects/{project_id}/traffic/sync")
+    resp = await client.post(f"/api/v1/projects/{project_id}/performance/sync")
     assert resp.status_code == 202
     body = resp.json()
     # The contract-C3 bare array: strict shape, one entry per connection.
@@ -316,7 +316,7 @@ async def test_sync_skips_ineligible_connections(
         )
         await session.commit()
 
-    resp = await client.post(f"/api/v1/projects/{project_id}/traffic/sync")
+    resp = await client.post(f"/api/v1/projects/{project_id}/performance/sync")
     assert resp.status_code == 202
     body = resp.json()
     assert len(body) == 1
@@ -334,7 +334,7 @@ async def test_sync_no_active_mapped_connections_returns_empty_array(
     mappings at all, or only a DISABLED mapping."""
     await _register(client, "traffic-sync-empty@example.com")
     project_id, workspace_id = await _create_project(client)
-    url = f"/api/v1/projects/{project_id}/traffic/sync"
+    url = f"/api/v1/projects/{project_id}/performance/sync"
 
     resp = await client.post(url)
     assert resp.status_code == 202
@@ -384,7 +384,7 @@ async def test_sync_active_window_conflict_is_409(
         )
         await session.commit()
 
-    url = f"/api/v1/projects/{project_id}/traffic/sync"
+    url = f"/api/v1/projects/{project_id}/performance/sync"
     first = await client.post(url)
     assert first.status_code == 202
     assert len(first.json()) == 1
@@ -454,9 +454,9 @@ async def test_sync_passes_through_to_integrations_enqueue(
             id=uuid.uuid4(), connection_id=connection_id, status="queued"
         )
 
-    monkeypatch.setattr("app.api.traffic.enqueue_sync_run", _fake_enqueue)
+    monkeypatch.setattr("app.api.performance.enqueue_sync_run", _fake_enqueue)
 
-    resp = await client.post(f"/api/v1/projects/{project_id}/traffic/sync")
+    resp = await client.post(f"/api/v1/projects/{project_id}/performance/sync")
     assert resp.status_code == 202
     body = resp.json()
     # One enqueue call per fanned-out connection, pinned call contract:
@@ -505,9 +505,9 @@ async def test_sync_maps_enqueue_conflict_to_409(
     async def _conflicting_enqueue(session, **kwargs):
         raise ActiveWindowConflictError("an active run already covers the window")
 
-    monkeypatch.setattr("app.api.traffic.enqueue_sync_run", _conflicting_enqueue)
+    monkeypatch.setattr("app.api.performance.enqueue_sync_run", _conflicting_enqueue)
 
-    resp = await client.post(f"/api/v1/projects/{project_id}/traffic/sync")
+    resp = await client.post(f"/api/v1/projects/{project_id}/performance/sync")
     assert resp.status_code == 409
     detail = resp.json()["detail"]
     assert detail["error"] == "sync_active_window_conflict"
@@ -569,10 +569,10 @@ async def test_sync_409_names_already_enqueued_connections(
         )
 
     monkeypatch.setattr(
-        "app.api.traffic.enqueue_sync_run", _partially_conflicting_enqueue
+        "app.api.performance.enqueue_sync_run", _partially_conflicting_enqueue
     )
 
-    resp = await client.post(f"/api/v1/projects/{project_id}/traffic/sync")
+    resp = await client.post(f"/api/v1/projects/{project_id}/performance/sync")
     assert resp.status_code == 409
     detail = resp.json()["detail"]
     assert detail["error"] == "sync_active_window_conflict"

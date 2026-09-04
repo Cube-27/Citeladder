@@ -8,7 +8,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CursorPager } from '@/components/ui/cursor-pager';
+import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import {
   Table,
   TableBody,
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { ChangeObservation, ChangesPage, ChangeSummary } from '@/lib/api/types';
-import { useCursorStack } from '@/lib/site-health/use-cursor-stack';
+import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import { textRole } from '@/components/ui/typography';
 
 const CLASS_LABELS = {
@@ -78,13 +78,15 @@ function Evidence({ row }: Readonly<{ row: ChangeObservation }>) {
 }
 
 export function ChangesPanel({ projectId }: Readonly<{ projectId: string }>) {
-  const pager = useCursorStack();
   const summary = useQuery(siteHealthQueries.changesSummary(projectId));
   const crawlAId = summary.data?.crawl_a_id ?? undefined;
   const crawlBId = summary.data?.crawl_b_id ?? undefined;
   const pairAvailable = summary.data?.state === 'available' && Boolean(crawlAId && crawlBId);
+  // The compared pair is part of the cursor's identity server-side, so a new
+  // pair must restart paging rather than replay a refused cursor.
+  const pager = useCursorTable(`changes|${projectId}|${crawlAId ?? ''}|${crawlBId ?? ''}`);
   const changes = useQuery({
-    ...siteHealthQueries.changes(projectId, crawlAId, crawlBId, pager.cursor),
+    ...siteHealthQueries.changes(projectId, crawlAId, crawlBId, pager.cursor, pager.pageSize),
     enabled: pairAvailable,
   });
 
@@ -107,10 +109,19 @@ function ChangesPanelContent({
   summary: UseQueryResult<ChangeSummary>;
   changes: UseQueryResult<ChangesPage>;
   pairAvailable: boolean;
-  pager: ReturnType<typeof useCursorStack>;
+  pager: ReturnType<typeof useCursorTable>;
 }>) {
   const state = changesState(summary, changes, pairAvailable);
-  return state ?? <ChangesTable summary={summary.data!} changes={changes.data!} pager={pager} />;
+  return (
+    state ?? (
+      <ChangesTable
+        summary={summary.data!}
+        changes={changes.data!}
+        pager={pager}
+        isFetching={changes.isFetching}
+      />
+    )
+  );
 }
 
 function changesState(
@@ -151,10 +162,13 @@ function ChangesTable({
   summary,
   changes,
   pager,
+  isFetching,
 }: Readonly<{
   summary: ChangeSummary;
   changes: ChangesPage;
-  pager: ReturnType<typeof useCursorStack>;
+  pager: ReturnType<typeof useCursorTable>;
+  /** A page is in flight; navigating again would push a stale cursor. */
+  isFetching: boolean;
 }>) {
   const rows = changes.items;
   const counts = summary.summary.counts_by_class as Record<string, number> | undefined;
@@ -225,16 +239,20 @@ function ChangesTable({
               No changes were observed in this comparable pair.
             </p>
           )}
-          {pager.canPrev || changes.next_cursor ? (
-            <div className="flex justify-end">
-              <CursorPager
-                canPrev={pager.canPrev}
-                canNext={Boolean(changes.next_cursor)}
-                onPrev={pager.pop}
-                onNext={() => pager.push(changes.next_cursor)}
-              />
-            </div>
-          ) : null}
+          <CursorTableFooter
+            {...pageRange(pager.page, pager.pageSize, rows.length)}
+            // No exact total: a change set is scoped to one compared crawl
+            // pair and no persisted count describes it, so the range stands
+            // alone rather than paying for a COUNT(*) per navigation.
+            noun="changes"
+            pageSize={pager.pageSize}
+            onPageSizeChange={pager.setPageSize}
+            canPrev={pager.canPrev}
+            canNext={Boolean(changes.next_cursor)}
+            onPrev={pager.pop}
+            onNext={() => pager.push(changes.next_cursor)}
+            busy={isFetching}
+          />
         </CardContent>
       </Card>
     </div>

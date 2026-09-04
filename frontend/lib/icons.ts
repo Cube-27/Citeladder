@@ -62,7 +62,7 @@ export const ICONS = {
   // Nav concepts.
   visibility: Gauge,
   analytics: Bot,
-  traffic: TrendingUp,
+  performance: TrendingUp,
   prompts: MessageSquareText,
   products: Package,
   runs: ListChecks,

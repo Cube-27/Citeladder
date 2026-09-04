@@ -44,7 +44,7 @@ causal claims.
 | Auth/workspaces/projects | Tenant and project boundary |
 | Site Health | Discovery, secure acquisition, page kinds, rules, scores, issues, snapshots, exports |
 | Content | Website-grounded generation queue, attempts, history, feedback |
-| Integrations/Traffic/Analytics/Demand | GSC/Traffic evidence, snapshots, signals |
+| Integrations/Traffic/Analytics/Demand | GSC evidence, Performance snapshots, signals |
 | Prompts/Audits/Visibility | Prompt portfolios and answer-engine measurement |
 | Opportunities | One persisted cross-system action store |
 | Commerce | Site Health-projected canonical catalog, append-only CSV/edit observations, approved competitor candidates, typed buyer prompts, frozen-audit recommendation observations, target-bound persisted AI Shelf metrics, and shared manual/scheduled audit execution |
@@ -131,10 +131,35 @@ candidate projection. Sitemap/preferred-origin signals rank but never prove a
 mapping. All resolver queries are workspace- and project-scoped; large variant
 sets are split into config-bounded SQL batches.
 
-Traffic's existing `load_snapshot` resolver is exact-window when both dates are
-present and explicit-latest only when they are omitted. Dashboard projections
-expose `not_run`, `observed_zero`, or `available`; reads never substitute a
-newer mismatched window or recompute missing state.
+The Traffic domain remains the persisted-projection owner behind the
+Performance surface. `traffic_snapshot_refresh` rebuilds the triggering sync
+window at every configured granularity and then derives the Performance preset
+family — one day-grained snapshot per configured window length, all anchored to
+the latest complete `gsc_day_daily` date — from a single bounded scan.
+Performance reads resolve a preset by window LENGTH (newest of that length), a
+custom range by exact window, and the default by newest snapshot; they never
+substitute a mismatched window or recompute missing state, and they expose
+`not_run`, `observed_zero`, and `available` distinctly.
+
+`gsc_day_daily` is the ONLY source of headline totals and chart series: it is
+the date-only report, so its rows are Search Console's own overall totals. No
+dimensional dataset is ever summed into a headline, because each drops
+privacy-filtered rows. Each of the six Performance tables reads exactly one
+dataset through `PerformanceDimensionStat`, whose per-dimension row counts are
+persisted on the snapshot so a paged table states an exact total without a
+`COUNT(*)` per navigation. With no `gsc_day_daily` evidence the GSC totals are
+null, never zero.
+
+`performance_range_projection` is a separate task kind, not a flag: it
+materializes ONE day-grained display snapshot for a custom or comparison window
+over already-persisted evidence, is idempotent on `(project, window)`, skips a
+window already projected, and syncs no provider, refreshes no Demand snapshot,
+and enqueues no opportunity or verification work.
+
+On-demand sync windows are INCREMENTAL: `enqueue_sync_run` resolves an absent
+window from what the connection has already imported, pulled back by
+`sync_late_data_revision_days` so Search Console's revisions to recent days are
+re-read at a bumped `resync_seq` instead of frozen at first-seen values.
 
 Demand owns the bounded query-evidence projection consumed by its detectors.
 The existing post-GSC Demand queue builds it before `DemandSignal` computation
@@ -501,8 +526,8 @@ remain unavailable rather than becoming zero.
 Search Demand projects its latest snapshot as ranked GSC query/page signals with
 their evidence window, honest detector states, and observed impressions,
 clicks, CTR, and position. It does not
-embed a duplicate AI Visibility projection. Traffic projections make chart
-granularity explicit while retaining selected-window totals. AI Referrals derives
+embed a duplicate AI Visibility projection. Performance projections state the window actually covered and
+return the snapshot identity every tabular read must carry back. AI Referrals derives
 session volume and shares only from `ga4_source_medium_daily`; overlapping
 referrer rows are provenance, not an additional summand. Derived referral
 snapshots carry formula/analyzer versions and rebuild through an explicit worker

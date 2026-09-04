@@ -31,6 +31,7 @@ from app.core.config.integrations_datasets import (
     DATASET_GA4_REFERRER_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
     DATASET_GSC_COUNTRY_DAILY,
+    DATASET_GSC_DAY_DAILY,
     DATASET_GSC_DEVICE_DAILY,
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
@@ -158,6 +159,9 @@ def test_dataset_templates_match_pinned_c1() -> None:
             INTEGRATION_PROVIDER_GSC,
             ("query", "page", "date"),
         ),
+        # The DATE-ONLY report: no breakdown dimension, so its rows are
+        # Search Console's own overall totals for a date.
+        DATASET_GSC_DAY_DAILY: (INTEGRATION_PROVIDER_GSC, ("date",)),
         DATASET_GSC_SEARCH_APPEARANCE_DAILY: (
             INTEGRATION_PROVIDER_GSC,
             ("searchAppearance", "date"),

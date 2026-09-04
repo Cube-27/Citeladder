@@ -41,6 +41,7 @@ from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
     ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH,
     ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
+    ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
     ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
     ERROR_EXECUTOR_NOT_WIRED,
@@ -66,7 +67,10 @@ from app.domain.commerce.projector import project_catalog_analysis
 from app.domain.demand.service import recompute_demand
 from app.domain.opportunities.recompute import recompute as recompute_opportunities
 from app.domain.opportunities.verification import verify_implementation_events
-from app.domain.traffic.service import refresh_traffic_snapshot
+from app.domain.traffic.service import (
+    project_performance_range,
+    refresh_traffic_snapshot,
+)
 from app.models.analytics import AnalyticsTask
 from app.orchestration.executor_errors import TerminalExecutorError
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
@@ -111,6 +115,7 @@ EXECUTORS: dict[str, AnalyticsExecutor] = {
     ANALYTICS_TASK_KIND_INGEST_REFERRALS: ingest_referrals,
     ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS: run_classify_referrals,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH: refresh_traffic_snapshot,
+    ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION: project_performance_range,
     ANALYTICS_TASK_KIND_AI_REFERRALS_SNAPSHOT_REFRESH: refresh_ai_referrals_snapshot,
     ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP: run_referral_retention_sweep,
     ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION: project_catalog_analysis,

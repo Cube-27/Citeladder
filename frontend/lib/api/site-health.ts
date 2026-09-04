@@ -292,11 +292,12 @@ export const siteHealthApi = {
     crawlAId: string,
     crawlBId: string,
     cursor?: string,
+    limit?: number,
     options?: ApiRequestOptions,
   ) => {
     const path = withQuery(
       `/projects/${projectId}/site-health/changes`,
-      definedQuery({ crawl_a_id: crawlAId, crawl_b_id: crawlBId, limit: 50, cursor }),
+      definedQuery({ crawl_a_id: crawlAId, crawl_b_id: crawlBId, limit, cursor }),
     );
     const res = await apiClient.get<ChangesPage>(path, options);
     return strictValidate(changesPageSchema, res, 'siteHealth.getChanges');
@@ -351,12 +352,20 @@ export const siteHealthQueries = {
       queryKey: queryKeys.siteHealth.changesSummary(projectId),
       queryFn: ({ signal }) => siteHealthApi.getChangesSummary(projectId, { signal }),
     }),
-  changes: (projectId: string, crawlAId?: string, crawlBId?: string, cursor?: string) =>
+  changes: (
+    projectId: string,
+    crawlAId?: string,
+    crawlBId?: string,
+    cursor?: string,
+    limit?: number,
+  ) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.changes(projectId, crawlAId, crawlBId, cursor),
+      queryKey: queryKeys.siteHealth.changes(projectId, crawlAId, crawlBId, cursor, limit),
       queryFn: ({ signal }) => {
         if (!crawlAId || !crawlBId) throw new Error('A persisted crawl pair is required');
-        return siteHealthApi.getChanges(projectId, crawlAId, crawlBId, cursor, { signal });
+        return siteHealthApi.getChanges(projectId, crawlAId, crawlBId, cursor, limit, {
+          signal,
+        });
       },
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(projectId, previousData, previousQuery),

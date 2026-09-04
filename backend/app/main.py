@@ -26,6 +26,7 @@ from app.api.executions import router as executions_router
 from app.api.integrations import router as integrations_router
 from app.api.oauth import router as oauth_router
 from app.api.opportunities import router as opportunities_router
+from app.api.performance import router as performance_router
 from app.api.projects import router as projects_router
 from app.api.prompts import router as prompts_router
 from app.api.provider_connections import (
@@ -33,7 +34,6 @@ from app.api.provider_connections import (
 )
 from app.api.provider_connections import router as provider_connections_router
 from app.api.site_health import router as site_health_router
-from app.api.traffic import router as traffic_router
 from app.api.workspaces import router as workspaces_router
 from app.connectors.answer_engines.http_client import aclose_shared_clients
 from app.connectors.billing.http_client import aclose_shared_billing_clients
@@ -95,7 +95,7 @@ _ROUTERS = (
     demand_router,
     integrations_router,
     ai_referrals_router,
-    traffic_router,
+    performance_router,
     opportunities_router,
     commerce_router,
 )

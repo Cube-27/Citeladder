@@ -46,11 +46,6 @@ export const GRANULARITY_OPTIONS: readonly { value: BucketGranularity; label: st
   { value: 'month', label: 'Month' },
 ] as const;
 
-/** Adjective form used inside copy ("n = 12 weekly buckets"). */
-export function bucketAdjective(granularity: BucketGranularity): string {
-  return granularity === 'day' ? 'daily' : granularity === 'week' ? 'weekly' : 'monthly';
-}
-
 /** `2026-07-23` → `Jul 23` (series bucket labels + active-run windows). */
 export function formatShortDate(isoDay: string): string {
   const date = new Date(`${isoDay}T00:00:00Z`);
@@ -94,19 +89,4 @@ const numberFormat = new Intl.NumberFormat('en-US');
 /** Whole-number grouping for counts (`1,162,000`). */
 export function formatCount(value: number): string {
   return numberFormat.format(value);
-}
-
-/** Split a URL into a muted host part + the remaining path for mono url cells. */
-export function splitUrlParts(url: string): { host: string; rest: string } {
-  try {
-    const parsed = new URL(url);
-    return { host: parsed.host, rest: `${parsed.pathname}${parsed.search}` || '/' };
-  } catch {
-    // Scheme-less or non-URL value: split the leading host segment if present.
-    const match = /^([^/]+)(\/.*)?$/.exec(url);
-    if (match && match[1].includes('.')) {
-      return { host: match[1], rest: match[2] ?? '/' };
-    }
-    return { host: '', rest: url };
-  }
 }

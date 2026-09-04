@@ -12,6 +12,8 @@ from app.core.config.integrations_transport import (
 
 DIMENSION_KEY_SEPARATOR: Final = " | "
 
+DATASET_GSC_DAY_DAILY: Final = "gsc_day_daily"
+
 DATASET_GSC_PAGE_DAILY: Final = "gsc_page_daily"
 
 DATASET_GSC_QUERY_DAILY: Final = "gsc_query_daily"
@@ -24,6 +26,18 @@ DATASET_GSC_DEVICE_DAILY: Final = "gsc_device_daily"
 
 DATASET_GSC_COUNTRY_DAILY: Final = "gsc_country_daily"
 
+# Dataset ids the sync worker must NOT page.
+#
+# ``gsc_search_appearance_daily`` stays excluded: the Search Analytics API
+# refuses ``searchAppearance`` grouped with ANY other dimension, so the
+# pinned template's ``("searchAppearance", "date")`` shape is not a query
+# GSC will answer — it fails the whole run. Collecting it needs Google's
+# two-step protocol (query the appearance types alone, then re-query
+# filtered by each type to regain a date breakdown) plus derivation support
+# for a date-less report, which is its own change. Performance therefore
+# renders SEARCH APPEARANCE as explicitly UNAVAILABLE rather than as an
+# observed-empty table: not collected and measured zero are different
+# states.
 INTEGRATION_SYNC_EXCLUDED_DATASETS: Final[frozenset[str]] = frozenset(
     {DATASET_GSC_SEARCH_APPEARANCE_DAILY}
 )
@@ -103,6 +117,18 @@ INTEGRATION_DATASET_TEMPLATES: Final[dict[str, IntegrationDatasetTemplate]] = {
         provider=INTEGRATION_PROVIDER_GSC,
         api_method=GSC_SEARCH_ANALYTICS_METHOD,
         dimensions=("page", "date"),
+        metrics=_GSC_SEARCH_ANALYTICS_METRICS,
+    ),
+    # The DATE-ONLY GSC report. Carrying no breakdown dimension, it is the
+    # only dataset whose rows are GSC's own overall totals for a date, so
+    # Performance reads its headline totals, chart series, and DAYS table
+    # from here and never sums a dimensional dataset into a headline number
+    # (a dimensional report drops privacy-filtered rows).
+    DATASET_GSC_DAY_DAILY: IntegrationDatasetTemplate(
+        dataset=DATASET_GSC_DAY_DAILY,
+        provider=INTEGRATION_PROVIDER_GSC,
+        api_method=GSC_SEARCH_ANALYTICS_METHOD,
+        dimensions=("date",),
         metrics=_GSC_SEARCH_ANALYTICS_METRICS,
     ),
     DATASET_GSC_QUERY_DAILY: IntegrationDatasetTemplate(

@@ -145,4 +145,4 @@ export const integrationSyncEnqueueSchema = responseObject({
 // `POST /projects/{id}/traffic/sync` fans out to every active mapped GSC/GA4
 // connection of the project, so the 202 carries one C3 enqueue object per
 // queued run — a bare array ("{sync_run_id, connection_id, status} per run").
-export const trafficSyncEnqueueResponseSchema = z.array(integrationSyncEnqueueSchema);
+export const performanceSyncEnqueueResponseSchema = z.array(integrationSyncEnqueueSchema);

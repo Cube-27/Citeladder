@@ -341,6 +341,7 @@
         "backend/app/domain/traffic/**",
         "backend/app/domain/analytics/**",
         "backend/app/workers/analytics_worker.py",
+        "backend/app/api/performance.py",
         "backend/app/api/traffic.py",
         "backend/app/api/ai_referrals.py",
         "backend/app/models/traffic.py",
@@ -353,6 +354,7 @@
         "tests/unit/test_referral_*.py",
         "tests/unit/test_analytics_config.py",
         "tests/component/test_traffic_*.py",
+        "tests/component/test_performance_*.py",
         "tests/component/test_ai_referrals_*.py",
         "tests/component/test_analytics_queue.py",
         "tests/component/test_referral_*.py",
@@ -638,8 +640,21 @@
       "frontendTests": ["components/demand/*.test.tsx", "lib/demand/*.test.ts"]
     },
     {
-      "sources": ["frontend/app/(app)/traffic/**", "frontend/components/traffic/**", "frontend/lib/traffic/**"],
-      "frontendTests": ["components/traffic/*.test.tsx", "lib/traffic/*.test.ts", "lib/api/traffic.test.ts"]
+      "sources": [
+        "frontend/app/(app)/performance/**",
+        "frontend/components/performance/**",
+        "frontend/lib/performance/**",
+        "frontend/lib/table/**",
+        "frontend/app/(app)/traffic/**",
+        "frontend/components/traffic/**",
+        "frontend/lib/traffic/**"
+      ],
+      "frontendTests": [
+        "components/performance/*.test.tsx",
+        "lib/performance/*.test.ts",
+        "lib/table/*.test.ts",
+        "lib/api/performance.test.ts"
+      ]
     },
     {
       "sources": ["frontend/app/(app)/ai-referrals/**", "frontend/components/ai-referrals/**", "frontend/lib/ai-referrals/**"],

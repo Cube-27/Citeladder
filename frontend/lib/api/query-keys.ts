@@ -7,7 +7,7 @@
  *   - runs.ts          — runs (audits + executions), visibility
  *   - site-health.ts   — site health (crawls, inventory, monitored, issues)
  *   - integrations.ts  — integrations (connections, sync runs)
- *   - traffic.ts       — traffic (dashboard, pages, queries)
+ *   - performance.ts   — performance (dashboard, dimension tables, range task)
  *   - demand.ts        — search-demand projections
  *   - ai-referrals.ts  — AI-referral measurements
  *   - opportunities.ts — opportunities (catalog, detail, summary)
@@ -33,7 +33,7 @@ import { integrationKeys } from './query-keys/integrations';
 import { opportunityKeys } from './query-keys/opportunities';
 import { runKeys, visibilityKeys } from './query-keys/runs';
 import { siteHealthKeys } from './query-keys/site-health';
-import { trafficKeys } from './query-keys/traffic';
+import { performanceKeys } from './query-keys/performance';
 
 export const queryKeys = {
   agent: agentKeys,
@@ -49,7 +49,7 @@ export const queryKeys = {
   siteHealth: siteHealthKeys,
   content: contentKeys,
   integrations: integrationKeys,
-  traffic: trafficKeys,
+  performance: performanceKeys,
   demand: demandKeys,
   aiReferrals: aiReferralsKeys,
   opportunities: opportunityKeys,

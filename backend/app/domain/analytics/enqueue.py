@@ -33,6 +33,7 @@ from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_CLASSIFY_REFERRALS,
     ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH,
     ANALYTICS_TASK_KIND_INGEST_REFERRALS,
+    ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
     ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
     analytics_settings,
@@ -305,6 +306,58 @@ async def enqueue_demand_snapshot_refresh(
             )
         )
     return task_id
+
+
+async def enqueue_performance_range_projection(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    window_start: date,
+    window_end: date,
+    priority: int = 0,
+) -> uuid.UUID:
+    """Queue ONE display snapshot for a Performance custom/comparison window.
+
+    Idempotent on ``(project, window_start, window_end)`` alone: the same
+    range asked for twice is the same task, whether the second ask comes from
+    a re-render, a second viewer, or the comparison half of a compare
+    request. Unlike the other helpers this returns the EXISTING task id on a
+    dedupe rather than ``None`` — the caller is a foreground request whose
+    client polls that id, so "already queued" and "just queued" must be
+    indistinguishable to it.
+    """
+    idempotency_key = _idempotency_key(
+        ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
+        project_id,
+        window_start,
+        window_end,
+    )
+    task_id = await _enqueue_task(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        task_kind=ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
+        payload={
+            "window_start": window_start.isoformat(),
+            "window_end": window_end.isoformat(),
+        },
+        idempotency_key=idempotency_key,
+        priority=priority,
+    )
+    if task_id is not None:
+        return task_id
+    existing = await session.scalar(
+        select(AnalyticsTask.id).where(
+            AnalyticsTask.workspace_id == workspace_id,
+            AnalyticsTask.idempotency_key == idempotency_key,
+        )
+    )
+    if existing is None:  # the conflicting row must be visible in this session
+        raise RuntimeError(
+            "performance range projection deduped against no visible task"
+        )
+    return existing
 
 
 async def enqueue_referral_retention_sweep(

@@ -9,10 +9,15 @@
 # database.
 #
 # FORMULAS (stamped on every snapshot via ``TRAFFIC_FORMULA_VERSION``):
-#   - GSC totals come from ``gsc_page_daily`` ONLY. ``gsc_query_daily`` feeds
-#     the per-query stats but NEVER the totals: the query dataset is a
-#     privacy-truncated re-dimensioning of the same searches, so adding it
-#     would double-count.
+#   - GSC totals and the chart series come from ``gsc_day_daily`` ONLY — the
+#     DATE-ONLY report, whose rows are GSC's own overall totals for a date.
+#     No dimensional dataset ever feeds a headline number: every GSC
+#     breakdown report drops privacy-filtered rows, so summing one under-
+#     reports the total and silently disagrees with Search Console. The
+#     dimensional datasets feed exactly one table each
+#     (``PERFORMANCE_DIMENSION_DATASETS``) and nothing else. With no
+#     ``gsc_day_daily`` evidence the GSC totals are NULL, never zero: an
+#     unimported dataset and a measured zero are distinct states.
 #   - GA4 totals come from ``ga4_channel_daily`` (Organic Search rows) plus
 #     ``ga4_source_medium_daily`` (AI-referrer rows). ``ga4_landing_daily``
 #     feeds per-page GA4 metrics ONLY (it re-dimensions the same sessions).
@@ -39,24 +44,22 @@
 #     reports ``None`` (a chart gap), never a coerced zero.
 from __future__ import annotations
 
-import unicodedata
-import uuid
-from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
-from urllib.parse import urljoin, urlsplit
 
 from app.connectors.web_evidence.url_policy import UrlPolicyError
 from app.core.config.integrations_datasets import (
     DATASET_GA4_CHANNEL_DAILY,
     DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
+    DATASET_GSC_DAY_DAILY,
     DATASET_GSC_PAGE_DAILY,
     DATASET_GSC_QUERY_DAILY,
     unpack_dimension_key,
 )
 from app.core.config.traffic import (
+    PERFORMANCE_DIMENSION_ORDER,
     TRAFFIC_GA4_ORGANIC_CHANNEL_GROUPS,
     TRAFFIC_GA4_ORGANIC_MEDIUMS,
     TRAFFIC_GRANULARITY_DAY,
@@ -66,6 +69,41 @@ from app.core.config.traffic import (
 )
 from app.domain.analytics.classification import classify_referral_signals
 from app.domain.site_health.normalization import canonical_identity
+from app.domain.traffic.accumulators import (
+    Ga4Accum,
+    GscAccum,
+    TrafficMetricRowInput,
+    absolute_page_value,
+    metric_count,
+    normalize_query,
+)
+from app.domain.traffic.dimensions import (
+    DimensionAccum,
+    DimensionProjection,
+    accumulate_dimension,
+    build_dimension_projections,
+)
+
+# Re-exported so the projection module stays the one import point callers
+# already use for the pure fold (invariant 2 — one owner, one door).
+__all__ = [
+    "TRAFFIC_SERIES_NAMES",
+    "DimensionProjection",
+    "PageProjection",
+    "QueryProjection",
+    "SnapshotProjection",
+    "TrafficMetricRowInput",
+    "bucket_labels",
+    "bucket_start",
+    "build_traffic_projection",
+    "ga4_channel_included",
+    "ga4_landing_included",
+    "ga4_source_medium_ai_match",
+    "metric_count",
+    "normalize_query",
+    "select_latest_rows",
+    "series_point",
+]
 
 # The persisted series names of the headline projection — this module
 # writes exactly these into ``TrafficSnapshot.metrics["series"]`` and the
@@ -80,28 +118,6 @@ TRAFFIC_SERIES_NAMES: tuple[str, ...] = (
     "key_events",
     "conversions",
 )
-
-
-@dataclass(frozen=True)
-class TrafficMetricRowInput:
-    """One ``IntegrationMetricRow`` reduced to what the projection reads.
-
-    The executor fills this from the ORM row; the pure math never sees the
-    model. ``metrics`` carries the provider metric keys declared by the C1
-    dataset template (GSC: clicks/impressions/ctr/position; GA4:
-    sessions/engagedSessions/conversions).
-    """
-
-    id: uuid.UUID
-    property_ref: str
-    provider: str
-    dataset: str
-    date: date
-    dimension_key: str
-    metrics: Mapping[str, Any] | None
-    source_artifact_id: uuid.UUID
-    resync_seq: int
-    importer_version: str = ""
 
 
 @dataclass(frozen=True)
@@ -130,31 +146,25 @@ class SnapshotProjection:
     """The full projection for one (window, granularity), ready to persist.
 
     ``metrics`` is the dashboard payload ``{"totals": ..., "series": ...}``;
-    ``pages`` / ``queries`` are the per-page / per-query stat rows; the
-    top-level provenance lists are the union of every contributing row's
-    ids (sorted string UUIDs, so re-runs serialize identically).
+    ``pages`` / ``queries`` are the per-page / per-query stat rows Demand
+    reads; ``dimensions`` are the generic Performance table rows for all six
+    dimensions, with ``dimension_counts`` recording each one's exact row
+    count so a paged table never needs a ``COUNT(*)``. The top-level
+    provenance lists are the union of every contributing row's ids (sorted
+    string UUIDs, so re-runs serialize identically).
     """
 
     granularity: str
     metrics: dict[str, Any]
     pages: tuple[PageProjection, ...]
     queries: tuple[QueryProjection, ...]
+    dimensions: tuple[DimensionProjection, ...]
+    dimension_counts: dict[str, int]
     source_metric_row_ids: list[str]
     source_artifact_ids: list[str]
 
 
 # --- Small pure primitives ----------------------------------------------------
-
-
-def normalize_query(raw: str) -> str:
-    """The ``TrafficQueryStat`` key: NFKC, casefold, whitespace collapse.
-
-    Deterministic and locale-independent (invariant 9): the same raw GSC
-    query string always keys to the same stat row. An input that collapses
-    to nothing returns ``""`` (the caller skips it — a stat row needs a
-    non-empty key).
-    """
-    return " ".join(unicodedata.normalize("NFKC", raw).casefold().split())
 
 
 def bucket_start(day: date, granularity: str) -> date:
@@ -263,132 +273,28 @@ def _row_sort_key(row: TrafficMetricRowInput) -> tuple[object, ...]:
     return (row.date, row.dataset, row.dimension_key, str(row.id))
 
 
-def metric_count(metrics: Mapping[str, Any] | None, key: str) -> int:
-    """An additive measure: a missing/non-numeric key counts as 0."""
-    value = (metrics or {}).get(key)
-    return int(value) if isinstance(value, (int, float)) else 0
-
-
-def _number(metrics: Mapping[str, Any] | None, key: str) -> float | None:
-    """A non-additive measure (position): absent when not numeric."""
-    value = (metrics or {}).get(key)
-    return float(value) if isinstance(value, (int, float)) else None
-
-
-@dataclass
-class _GscAccum:
-    """Running GSC aggregate (clicks/impressions sums + weighted position)."""
-
-    impressions: int = 0
-    clicks: int = 0
-    position_weighted_sum: float = 0.0
-    position_impressions: int = 0
-    has_rows: bool = False
-    row_ids: set[str] = field(default_factory=set)
-    artifact_ids: set[str] = field(default_factory=set)
-
-    def add(self, row: TrafficMetricRowInput) -> None:
-        self.has_rows = True
-        impressions = metric_count(row.metrics, "impressions")
-        self.impressions += impressions
-        self.clicks += metric_count(row.metrics, "clicks")
-        position = _number(row.metrics, "position")
-        if position is not None:
-            self.position_weighted_sum += position * impressions
-            self.position_impressions += impressions
-        self.row_ids.add(str(row.id))
-        self.artifact_ids.add(str(row.source_artifact_id))
-
-    def ctr(self) -> float | None:
-        # ctr = clicks / impressions; undefined with zero impressions.
-        if self.impressions == 0:
-            return None
-        return self.clicks / self.impressions
-
-    def position(self) -> float | None:
-        # Impression-weighted mean over position-bearing rows only.
-        if self.position_impressions == 0:
-            return None
-        return self.position_weighted_sum / self.position_impressions
-
-    def measures(self) -> dict[str, Any]:
-        return {
-            "impressions": self.impressions,
-            "clicks": self.clicks,
-            "ctr": self.ctr(),
-            "position": self.position(),
-        }
-
-
-@dataclass
-class _Ga4Accum:
-    """Running GA4 aggregate using the stable key-events contract."""
-
-    sessions: int = 0
-    engaged_sessions: int = 0
-    key_events: int = 0
-    has_rows: bool = False
-    row_ids: set[str] = field(default_factory=set)
-    artifact_ids: set[str] = field(default_factory=set)
-
-    @staticmethod
-    def _key_events(metrics: Mapping[str, Any] | None) -> int:
-        key = (
-            "keyEvents"
-            if metrics is not None and "keyEvents" in metrics
-            else "conversions"
-        )
-        return metric_count(metrics, key)
-
-    def _observed(self, value: int) -> int | None:
-        return value if self.has_rows else None
-
-    def add(self, row: TrafficMetricRowInput) -> None:
-        self.has_rows = True
-        self.sessions += metric_count(row.metrics, "sessions")
-        self.engaged_sessions += metric_count(row.metrics, "engagedSessions")
-        # ``conversions`` supports already-persisted pre-Demand rows.
-        self.key_events += self._key_events(row.metrics)
-        self.row_ids.add(str(row.id))
-        self.artifact_ids.add(str(row.source_artifact_id))
-
-    def measures(self) -> dict[str, Any]:
-        # Null (not 0) when no included GA4 row fed this total/bucket.
-        return {
-            "sessions": self._observed(self.sessions),
-            "engaged_sessions": self._observed(self.engaged_sessions),
-            "key_events": self._observed(self.key_events),
-            # One compatibility window for the existing Traffic wire contract.
-            "conversions": self._observed(self.key_events),
-        }
-
-
 @dataclass
 class _PageAccum:
     """One canonical page's combined GSC + GA4 aggregate."""
 
     url_hash: str
-    gsc: _GscAccum = field(default_factory=_GscAccum)
-    ga4: _Ga4Accum = field(default_factory=_Ga4Accum)
+    gsc: GscAccum = field(default_factory=GscAccum)
+    ga4: Ga4Accum = field(default_factory=Ga4Accum)
 
 
 @dataclass
 class _ProjectionAccumulators:
     """All mutable buckets produced while folding latest metric rows."""
 
-    bucket_gsc: dict[date, _GscAccum]
-    bucket_ga4: dict[date, _Ga4Accum]
-    totals_gsc: _GscAccum
-    totals_ga4: _Ga4Accum
+    bucket_gsc: dict[date, GscAccum]
+    bucket_ga4: dict[date, Ga4Accum]
+    totals_gsc: GscAccum
+    totals_ga4: Ga4Accum
     pages: dict[str, _PageAccum]
-    queries: dict[str, _GscAccum]
-
-
-def _absolute_page_value(raw_page_value: str, project_origin: str | None) -> str:
-    value = raw_page_value.strip()
-    if urlsplit(value).scheme or not project_origin:
-        return value
-    return urljoin(project_origin.rstrip("/") + "/", value)
+    queries: dict[str, GscAccum]
+    # dimension token -> row key -> that row's accumulator. One dataset feeds
+    # exactly one dimension, so a key can never mix two reports.
+    dimensions: dict[str, dict[str, DimensionAccum]]
 
 
 def _page_accum(
@@ -408,7 +314,7 @@ def _page_accum(
     """
     try:
         canonical, url_hash = canonical_identity(
-            _absolute_page_value(raw_page_value, project_origin)
+            absolute_page_value(raw_page_value, project_origin)
         )
     except UrlPolicyError:
         return None
@@ -443,12 +349,13 @@ def _accumulate_rows(
     starts: list[date],
 ) -> _ProjectionAccumulators:
     accumulators = _ProjectionAccumulators(
-        bucket_gsc={start: _GscAccum() for start in starts},
-        bucket_ga4={start: _Ga4Accum() for start in starts},
-        totals_gsc=_GscAccum(),
-        totals_ga4=_Ga4Accum(),
+        bucket_gsc={start: GscAccum() for start in starts},
+        bucket_ga4={start: Ga4Accum() for start in starts},
+        totals_gsc=GscAccum(),
+        totals_ga4=Ga4Accum(),
         pages={},
         queries={},
+        dimensions={dimension: {} for dimension in PERFORMANCE_DIMENSION_ORDER},
     )
     for row in select_latest_rows(rows):
         if not (window_start <= row.date <= window_end):
@@ -474,10 +381,21 @@ def _accumulate_row(
     project_origin: str | None,
     accumulators: _ProjectionAccumulators,
 ) -> None:
-    if row.dataset == DATASET_GSC_PAGE_DAILY:
-        (page_value,) = dimension_values
+    # Every GSC dataset feeds its own Performance table, independently of
+    # whether it also feeds the headline or a Demand-facing stat row.
+    accumulate_dimension(
+        row=row,
+        dimension_values=dimension_values,
+        project_origin=project_origin,
+        buckets=accumulators.dimensions,
+    )
+    if row.dataset == DATASET_GSC_DAY_DAILY:
+        # The ONLY headline source: GSC's own overall totals for the date.
         accumulators.totals_gsc.add(row)
         accumulators.bucket_gsc[bucket_start_value].add(row)
+        return
+    if row.dataset == DATASET_GSC_PAGE_DAILY:
+        (page_value,) = dimension_values
         page = _page_accum(accumulators.pages, page_value, project_origin)
         if page is not None:
             page.gsc.add(row)
@@ -486,8 +404,32 @@ def _accumulate_row(
         (query_value,) = dimension_values
         normalized = normalize_query(query_value)
         if normalized:
-            accumulators.queries.setdefault(normalized, _GscAccum()).add(row)
+            accumulators.queries.setdefault(normalized, GscAccum()).add(row)
         return
+    _accumulate_ga4_row(
+        row=row,
+        dimension_values=dimension_values,
+        bucket_start_value=bucket_start_value,
+        project_origin=project_origin,
+        accumulators=accumulators,
+    )
+
+
+def _accumulate_ga4_row(
+    *,
+    row: TrafficMetricRowInput,
+    dimension_values: tuple[str, ...],
+    bucket_start_value: date,
+    project_origin: str | None,
+    accumulators: _ProjectionAccumulators,
+) -> None:
+    """Fold one GA4 row under the organic-plus-AI inclusion rule.
+
+    The three GA4 datasets are disjoint per level, so no session is counted
+    twice: channel and source/medium rows feed the totals and buckets, while
+    landing rows re-dimension the same sessions and feed per-page metrics
+    only.
+    """
     if row.dataset == DATASET_GA4_CHANNEL_DAILY:
         (channel,) = dimension_values
         if ga4_channel_included(channel):
@@ -513,8 +455,8 @@ def _build_series(
     *,
     starts: list[date],
     labels: list[date],
-    bucket_gsc: dict[date, _GscAccum],
-    bucket_ga4: dict[date, _Ga4Accum],
+    bucket_gsc: dict[date, GscAccum],
+    bucket_ga4: dict[date, Ga4Accum],
 ) -> dict[str, list[dict[str, Any]]]:
     series: dict[str, list[dict[str, Any]]] = {
         name: [] for name in TRAFFIC_SERIES_NAMES
@@ -556,7 +498,7 @@ def _build_page_projections(
 
 
 def _build_query_projections(
-    queries: dict[str, _GscAccum],
+    queries: dict[str, GscAccum],
 ) -> tuple[QueryProjection, ...]:
     return tuple(
         QueryProjection(
@@ -571,19 +513,24 @@ def _build_query_projections(
 
 def _projection_provenance(
     *,
-    totals_gsc: _GscAccum,
-    totals_ga4: _Ga4Accum,
+    totals_gsc: GscAccum,
+    totals_ga4: Ga4Accum,
     pages: tuple[PageProjection, ...],
     queries: tuple[QueryProjection, ...],
+    dimensions: tuple[DimensionProjection, ...],
 ) -> tuple[list[str], list[str]]:
     row_ids = set(totals_gsc.row_ids) | set(totals_ga4.row_ids)
     artifact_ids = set(totals_gsc.artifact_ids) | set(totals_ga4.artifact_ids)
-    for page_projection in pages:
-        row_ids.update(page_projection.source_metric_row_ids)
-        artifact_ids.update(page_projection.source_artifact_ids)
-    for query_projection in queries:
-        row_ids.update(query_projection.source_metric_row_ids)
-        artifact_ids.update(query_projection.source_artifact_ids)
+    # All three stat shapes carry the same two provenance lists; the explicit
+    # union keeps that visible instead of widening to ``object``.
+    contributors: tuple[PageProjection | QueryProjection | DimensionProjection, ...] = (
+        *pages,
+        *queries,
+        *dimensions,
+    )
+    for projection in contributors:
+        row_ids.update(projection.source_metric_row_ids)
+        artifact_ids.update(projection.source_artifact_ids)
     return sorted(row_ids), sorted(artifact_ids)
 
 
@@ -625,22 +572,28 @@ def build_traffic_projection(
 
     page_projections = _build_page_projections(accumulators.pages)
     query_projections = _build_query_projections(accumulators.queries)
+    dimension_projections, dimension_counts = build_dimension_projections(
+        accumulators.dimensions
+    )
     source_metric_row_ids, source_artifact_ids = _projection_provenance(
         totals_gsc=accumulators.totals_gsc,
         totals_ga4=accumulators.totals_ga4,
         pages=page_projections,
         queries=query_projections,
+        dimensions=dimension_projections,
     )
 
     return SnapshotProjection(
         granularity=granularity,
         metrics={
-            "totals": accumulators.totals_gsc.measures()
+            "totals": accumulators.totals_gsc.observed_measures()
             | accumulators.totals_ga4.measures(),
             "series": series,
         },
         pages=page_projections,
         queries=query_projections,
+        dimensions=dimension_projections,
+        dimension_counts=dimension_counts,
         source_metric_row_ids=source_metric_row_ids,
         source_artifact_ids=source_artifact_ids,
     )

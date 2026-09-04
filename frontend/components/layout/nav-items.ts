@@ -37,7 +37,7 @@ export const NAV_GROUPS = [
       },
       { label: 'Issues', href: '/issues', icon: ICONS.issues },
       { label: 'Search Demand', href: '/demand', icon: ICONS.demand },
-      { label: 'Traffic', href: '/traffic', icon: ICONS.traffic },
+      { label: 'Performance', href: '/performance', icon: ICONS.performance },
       { label: 'Commerce Suite', href: '/products', icon: ICONS.products },
     ],
   },

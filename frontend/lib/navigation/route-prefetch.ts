@@ -9,7 +9,7 @@ import { promptsApi } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsQueries } from '@/lib/api/runs';
 import { siteHealthQueries } from '@/lib/api/site-health';
-import { trafficApi } from '@/lib/api/traffic';
+import { performanceApi } from '@/lib/api/performance';
 import { visibilityApi } from '@/lib/api/visibility';
 
 type RoutePrefetcher = (client: QueryClient, projectId: string) => void;
@@ -35,12 +35,14 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
       queryFn: ({ signal }: { signal: AbortSignal }) => demandApi.getLatest(projectId, { signal }),
     });
   },
-  '/traffic': (client, projectId) => {
-    const params = { granularity: 'day' as const };
+  '/performance': (client, projectId) => {
+    // Warm the landing view: the latest persisted snapshot, no comparison.
+    // The screen's own default selection sends exactly these params.
+    const params = { range: 'custom' as const, compare: 'none' as const };
     warm(client, {
-      queryKey: queryKeys.traffic.dashboard(projectId, params),
+      queryKey: queryKeys.performance.dashboard(projectId, params),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        trafficApi.getTraffic(projectId, params, { signal }),
+        performanceApi.getDashboard(projectId, params, { signal }),
     });
   },
   '/products': (client, projectId) => {

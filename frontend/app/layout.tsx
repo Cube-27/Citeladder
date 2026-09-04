@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import localFont from 'next/font/local';
+import Script from 'next/script';
 
 import { QueryProvider } from '@/lib/providers/query-provider';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, siteOrigin } from '@/lib/seo/site';
@@ -40,10 +41,32 @@ export const metadata: Metadata = {
   icons: { icon: '/citeladder-favicon.ico' },
 };
 
+// Environment-only, with NO fallback: a hard-coded id would make every
+// local and preview deployment report into the production property. Unset
+// means the tag does not render at all.
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} ${uncutSans.variable}`}>
       <body>
+        {GA_MEASUREMENT_ID ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+            </Script>
+          </>
+        ) : null}
         <span hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
         {/* First tab stop on every route. Visually hidden until focused, so
             keyboard and screen-reader users can skip repeated chrome. Each

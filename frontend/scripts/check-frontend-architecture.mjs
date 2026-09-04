@@ -10,11 +10,11 @@ for (const owner of [
   'content.ts',
   'integrations.ts',
   'opportunities.ts',
+  'performance.ts',
   'projects.ts',
   'prompts.ts',
   'providers.ts',
   'runs.ts',
-  'traffic.ts',
   'visibility.ts',
 ]) {
   if (!fs.existsSync(path.join(root, 'lib', 'api', owner))) {
