@@ -111,6 +111,17 @@ TRAFFIC_REFRESH_TRIGGER_DATASETS: Final[frozenset[str]] = frozenset(
     TRAFFIC_CONSUMED_DATASETS | {DATASET_BING_PAGE_DAILY, DATASET_BING_QUERY_DAILY}
 )
 
+# --- The datasets the projection SCANS ---------------------------------------
+# Wider than the consumed set: Bing's dailies are read so they can fill their
+# OWN panel. They are deliberately NOT in ``TRAFFIC_CONSUMED_DATASETS``, which
+# defines the GSC/GA4 headline and the coverage window behind it — folding a
+# second engine into either would silently change what every existing chart
+# means, and would leave CTR and average position undefined across two
+# engines that do not measure the same thing.
+TRAFFIC_PROJECTED_DATASETS: Final[frozenset[str]] = frozenset(
+    TRAFFIC_CONSUMED_DATASETS | {DATASET_BING_PAGE_DAILY, DATASET_BING_QUERY_DAILY}
+)
+
 # --- Provenance bounds (invariant 4) -----------------------------------------
 # The projection folds one window batch at a time, so its memory bounds on
 # DISTINCT keys rather than row count — except for the per-row provenance
@@ -180,6 +191,9 @@ TRAFFIC_SYNC_PROVIDERS: Final[frozenset[str]] = frozenset(
 PERFORMANCE_RANGE_DAY: Final = "day"
 PERFORMANCE_RANGE_WEEK: Final = "week"
 PERFORMANCE_RANGE_MONTH: Final = "month"
+PERFORMANCE_RANGE_3_MONTHS: Final = "3_months"
+PERFORMANCE_RANGE_6_MONTHS: Final = "6_months"
+PERFORMANCE_RANGE_LAST_SYNCED: Final = "last_synced"
 PERFORMANCE_RANGE_CUSTOM: Final = "custom"
 # Preset -> inclusive window length in days.
 PERFORMANCE_PRESET_RANGE_DAYS: Final[dict[str, int]] = {
@@ -187,12 +201,19 @@ PERFORMANCE_PRESET_RANGE_DAYS: Final[dict[str, int]] = {
     PERFORMANCE_RANGE_WEEK: 7,
     PERFORMANCE_RANGE_MONTH: 28,
 }
+# Extended preset lengths (for dynamic on-demand projection).
+PERFORMANCE_EXTENDED_RANGE_DAYS: Final[dict[str, int]] = {
+    PERFORMANCE_RANGE_3_MONTHS: 90,
+    PERFORMANCE_RANGE_6_MONTHS: 180,
+}
 PERFORMANCE_RANGES: Final[frozenset[str]] = frozenset(
-    set(PERFORMANCE_PRESET_RANGE_DAYS) | {PERFORMANCE_RANGE_CUSTOM}
+    set(PERFORMANCE_PRESET_RANGE_DAYS)
+    | set(PERFORMANCE_EXTENDED_RANGE_DAYS)
+    | {PERFORMANCE_RANGE_LAST_SYNCED, PERFORMANCE_RANGE_CUSTOM}
 )
 # The range served when a request names none: the newest persisted snapshot
 # for the project, whatever window the last sync covered.
-PERFORMANCE_DEFAULT_RANGE: Final = PERFORMANCE_RANGE_CUSTOM
+PERFORMANCE_DEFAULT_RANGE: Final = PERFORMANCE_RANGE_LAST_SYNCED
 # The snapshot family every refresh derives, anchored at the latest complete
 # GSC evidence date. Day granularity only — the surface has no bucket
 # control, so week/month snapshot rows for these windows would never be read.
@@ -218,7 +239,24 @@ PERFORMANCE_DIMENSION_ORDER: Final[tuple[str, ...]] = (
     PERFORMANCE_DIMENSION_SEARCH_APPEARANCE,
     PERFORMANCE_DIMENSION_DAY,
 )
-PERFORMANCE_DIMENSIONS: Final[frozenset[str]] = frozenset(PERFORMANCE_DIMENSION_ORDER)
+# Bing's own two breakdowns. They are a SEPARATE panel, never tabs beside the
+# Search Console six and never columns on a GSC table: the two engines report
+# different populations, so a reader must always know which one a number came
+# from. ``PERFORMANCE_DIMENSION_ORDER`` therefore stays the Search Console
+# tab order, and these ride alongside it.
+PERFORMANCE_DIMENSION_BING_QUERY: Final = "bing_query"
+PERFORMANCE_DIMENSION_BING_PAGE: Final = "bing_page"
+PERFORMANCE_BING_DIMENSION_ORDER: Final[tuple[str, ...]] = (
+    PERFORMANCE_DIMENSION_BING_QUERY,
+    PERFORMANCE_DIMENSION_BING_PAGE,
+)
+# Every dimension a table request may name, in render order.
+PERFORMANCE_TABLE_DIMENSION_ORDER: Final[tuple[str, ...]] = (
+    PERFORMANCE_DIMENSION_ORDER + PERFORMANCE_BING_DIMENSION_ORDER
+)
+PERFORMANCE_DIMENSIONS: Final[frozenset[str]] = frozenset(
+    PERFORMANCE_TABLE_DIMENSION_ORDER
+)
 PERFORMANCE_DEFAULT_DIMENSION: Final = PERFORMANCE_DIMENSION_QUERY
 # dimension -> the single dataset whose rows fold into it.
 PERFORMANCE_DIMENSION_DATASETS: Final[dict[str, str]] = {
@@ -228,6 +266,8 @@ PERFORMANCE_DIMENSION_DATASETS: Final[dict[str, str]] = {
     PERFORMANCE_DIMENSION_DEVICE: DATASET_GSC_DEVICE_DAILY,
     PERFORMANCE_DIMENSION_SEARCH_APPEARANCE: DATASET_GSC_SEARCH_APPEARANCE_DAILY,
     PERFORMANCE_DIMENSION_DAY: DATASET_GSC_DAY_DAILY,
+    PERFORMANCE_DIMENSION_BING_QUERY: DATASET_BING_QUERY_DAILY,
+    PERFORMANCE_DIMENSION_BING_PAGE: DATASET_BING_PAGE_DAILY,
 }
 # The dimensions whose dataset the sync worker never pages, so their table
 # is UNAVAILABLE rather than empty. Derived from the exclusion set, so a
@@ -269,7 +309,7 @@ PERFORMANCE_DIMENSION_DEFAULT_SORT: Final[dict[str, str]] = {
         if dimension == PERFORMANCE_DIMENSION_DAY
         else "-clicks"
     )
-    for dimension in PERFORMANCE_DIMENSION_ORDER
+    for dimension in PERFORMANCE_TABLE_DIMENSION_ORDER
 }
 
 # --- Custom-range projection task --------------------------------------------

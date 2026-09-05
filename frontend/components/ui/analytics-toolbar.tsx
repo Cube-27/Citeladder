@@ -1,4 +1,6 @@
-import { ChevronDown, LoaderCircle } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+
+import { Spinner } from '@/components/ui/spinner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -79,7 +81,7 @@ export function AnalyticsToolbar<Range extends string, Granularity extends strin
       <output className="text-muted flex items-center gap-1.5 text-xs">
         {fetching ? (
           <>
-            <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+            <Spinner size="sm" />
             Updating data… Previous data shown.
           </>
         ) : null}

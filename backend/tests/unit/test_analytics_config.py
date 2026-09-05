@@ -53,6 +53,7 @@ from app.core.config.traffic import (
     PERFORMANCE_RANGES,
     PERFORMANCE_SNAPSHOT_WINDOW_DAYS,
     PERFORMANCE_SORT_WHITELIST,
+    PERFORMANCE_TABLE_DIMENSION_ORDER,
     PERFORMANCE_UNAVAILABLE_DIMENSIONS,
     TRAFFIC_CONSUMED_DATASETS,
     TRAFFIC_DEFAULT_WINDOW_DAYS,
@@ -62,6 +63,7 @@ from app.core.config.traffic import (
     TRAFFIC_MAX_WINDOW_DAYS,
     TRAFFIC_NORMALIZATION_VERSION,
     TRAFFIC_PAGE_SORT_WHITELIST,
+    TRAFFIC_PROJECTED_DATASETS,
     TRAFFIC_QUERY_SORT_WHITELIST,
     TRAFFIC_REFRESH_TRIGGER_DATASETS,
     TRAFFIC_SNAPSHOT_GRANULARITIES,
@@ -142,12 +144,20 @@ def test_traffic_sort_whitelists() -> None:
 
 
 def test_performance_dimension_routing_is_one_dataset_per_table() -> None:
-    # Six tables, six datasets, no sharing in either direction: a dimensional
-    # GSC report drops privacy-filtered rows, so two of them in one table (or
-    # one of them in two) would report numbers that disagree with Search
-    # Console.
+    # Six Search Console tables plus Bing's own two, one dataset each, no
+    # sharing in either direction: a dimensional GSC report drops
+    # privacy-filtered rows, so two of them in one table (or one of them in
+    # two) would report numbers that disagree with Search Console.
     assert len(PERFORMANCE_DIMENSION_ORDER) == 6
-    assert set(PERFORMANCE_DIMENSION_DATASETS) == set(PERFORMANCE_DIMENSION_ORDER)
+    # Bing rides ALONGSIDE the Search Console tabs, never among them: the two
+    # engines measure different populations, so a reader must always know
+    # which one a row came from.
+    assert PERFORMANCE_TABLE_DIMENSION_ORDER == (
+        *PERFORMANCE_DIMENSION_ORDER,
+        "bing_query",
+        "bing_page",
+    )
+    assert set(PERFORMANCE_DIMENSION_DATASETS) == set(PERFORMANCE_TABLE_DIMENSION_ORDER)
     datasets = list(PERFORMANCE_DIMENSION_DATASETS.values())
     assert len(datasets) == len(set(datasets))
     # The routing is a true inverse, so the fold and the read agree.
@@ -167,6 +177,16 @@ def test_performance_dimension_routing_is_one_dataset_per_table() -> None:
     }
     assert collected <= TRAFFIC_CONSUMED_DATASETS
     assert collected.isdisjoint(INTEGRATION_SYNC_EXCLUDED_DATASETS)
+    # Bing is SCANNED but not CONSUMED: its rows reach the fold so they can
+    # fill their own panel, and stay out of the set that defines the GSC/GA4
+    # headline and the coverage window behind it.
+    bing_datasets = {
+        PERFORMANCE_DIMENSION_DATASETS[dimension]
+        for dimension in PERFORMANCE_TABLE_DIMENSION_ORDER
+        if dimension not in PERFORMANCE_DIMENSION_ORDER
+    }
+    assert bing_datasets <= TRAFFIC_PROJECTED_DATASETS
+    assert bing_datasets.isdisjoint(TRAFFIC_CONSUMED_DATASETS)
 
 
 def test_unavailable_dimensions_are_exactly_the_uncollected_reports() -> None:
@@ -198,7 +218,9 @@ def test_headline_dataset_is_the_only_date_only_report() -> None:
 
 
 def test_performance_range_and_compare_vocabularies() -> None:
-    assert PERFORMANCE_RANGES == frozenset({"day", "week", "month", "custom"})
+    assert PERFORMANCE_RANGES == frozenset(
+        {"day", "week", "month", "3_months", "6_months", "last_synced", "custom"}
+    )
     assert PERFORMANCE_COMPARE_MODES == frozenset(
         {"none", "previous", "year_over_year", "custom"}
     )

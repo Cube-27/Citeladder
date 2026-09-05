@@ -26,6 +26,21 @@ def test_task_and_tool_catalogs_are_fixed_and_read_only() -> None:
         "demand.read_snapshot",
         "opportunities.read_ranked",
         "audits.read_latest",
+        "performance.read_snapshot",
+        "performance.read_table",
+        "referrals.read_snapshot",
+        "integrations.read_status",
+    }
+    # Explaining a number needs the connected layer that produced it; a
+    # roadmap is built from analysis, so its allowlist stays the narrower one.
+    assert set(AGENT_TASK_POLICIES["explain"].allowed_tools) == {
+        "site.read_snapshot",
+        "demand.read_snapshot",
+        "opportunities.read_ranked",
+        "audits.read_latest",
+        "performance.read_snapshot",
+        "referrals.read_snapshot",
+        "integrations.read_status",
     }
     assert set(AGENT_TASK_POLICIES["build_roadmap"].allowed_tools) == {
         "site.read_snapshot",

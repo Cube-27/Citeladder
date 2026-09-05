@@ -18,12 +18,12 @@ export function Packs() {
         lead={packs.lead}
         headingId="packs-title"
       />
-      <StaggerGroup className="border-border-subtle bg-border-subtle grid gap-px overflow-hidden rounded-[var(--radius-card)] border md:grid-cols-2 xl:grid-cols-3">
+      <StaggerGroup className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {packs.items.map((pack) => {
           const Icon = LANDING_ICONS[pack.icon];
           return (
             <StaggerItem key={pack.name} className="h-full">
-              <article className="bg-panel hover:bg-accent-soft group flex h-full flex-col p-6 transition-colors duration-200">
+              <article className="bg-panel shadow-card hover:shadow-card-hover group flex h-full flex-col rounded-[var(--radius-card)] p-6 transition-all duration-200 hover:-translate-y-0.5 sm:p-7">
                 <div className="flex items-center gap-3">
                   <span className="bg-accent-subtle text-accent-text flex size-9 items-center justify-center rounded-[var(--radius-control)]">
                     <Icon className="size-4.5" aria-hidden />

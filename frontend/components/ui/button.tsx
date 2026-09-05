@@ -4,7 +4,7 @@ import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
 import type { VariantProps } from 'class-variance-authority';
 
 import { Slot } from '@radix-ui/react-slot';
-import { LoaderCircle } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 
 import { cn } from '@/lib/utils';
 import { buttonVariants } from './button-variants';
@@ -87,7 +87,7 @@ function NativeButton({
       </span>
       {pending ? (
         <span className="absolute inset-0 inline-flex items-center justify-center gap-2 px-2">
-          <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden />
+          <Spinner size="md" />
           {pendingLabel ?? children}
         </span>
       ) : null}

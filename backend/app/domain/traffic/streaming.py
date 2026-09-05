@@ -29,7 +29,7 @@ from typing import Any
 from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config.traffic import TRAFFIC_CONSUMED_DATASETS
+from app.core.config.traffic import TRAFFIC_PROJECTED_DATASETS
 from app.domain.analytics.tasks import raise_if_task_terminal
 from app.domain.demand.projection import stable_hash
 from app.domain.traffic.projection import (
@@ -117,7 +117,7 @@ async def _metric_row_batch(
         select(IntegrationMetricRow)
         .where(IntegrationMetricRow.workspace_id == workspace_id)
         .where(IntegrationMetricRow.project_id == project_id)
-        .where(IntegrationMetricRow.dataset.in_(sorted(TRAFFIC_CONSUMED_DATASETS)))
+        .where(IntegrationMetricRow.dataset.in_(sorted(TRAFFIC_PROJECTED_DATASETS)))
         .where(IntegrationMetricRow.date >= window_start)
         .where(IntegrationMetricRow.date <= window_end)
         .order_by(*_METRIC_ROW_SCAN_ORDER)

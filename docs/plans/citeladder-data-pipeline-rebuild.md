@@ -6,10 +6,11 @@ Referrals preset family, chart granularity, and the Performance UI
 remediation; it is NOT a slice from this plan, but the completion of defect 4
 plus defects reported against the deployed build.
 
-**Slices 4, 5 and 6 are unstarted and currently have no PR assigned.** That
-includes defect 5's display half (the Bing panel, 4.4) and defect 7 (MCP,
-all of Slice 5). Read the three "what shipped" sections at the end of this
-document before starting any of them.
+**Slices 4 and 5 shipped 2026-09-05 in one PR** — the post-connect ladder,
+Bing's own panel (defect 5's display half), and the connected-data MCP tools
+(defect 7). **Slice 6 is unstarted and has no PR assigned**; it was deferred
+deliberately rather than blocked. Read the "what shipped" sections at the end
+of this document before starting it.
 
 **Superseded in part by `gsc-performance-alignment.md`**, which shipped first.
 Read that document's "What shipped" section before starting any slice here:
@@ -49,14 +50,13 @@ Each was confirmed by reading the shipped code, not inferred.
 | 2 | ~~Snapshots are built **only for sync windows**~~ — **fixed**: `traffic_snapshot_refresh` also derives the preset family anchored at the latest complete GSC date, and `performance_range_projection` materializes any other requested window | [service.py](../../backend/app/domain/traffic/service.py) |
 | 3 | ~~Traffic offers 7d/28d/90d that can never match~~ — **fixed**: the surface is `/performance` with Day/Week/Month/Custom ranges resolved server-side | [performance.ts](../../frontend/lib/performance/performance.ts) |
 | 4 | ~~AI Referrals is **100% broken for every bounded range**~~ — **fixed in two halves.** PR 1 fixed the READ: a preset sends its `range` TOKEN and the server resolves the newest snapshot of that LENGTH (`ANALYTICS_PRESET_RANGE_DAYS`), with no date derived from the browser clock. That alone still resolved nothing, because no snapshot of a preset length was ever WRITTEN; PR #24 added the family (`ANALYTICS_SNAPSHOT_WINDOW_DAYS`) that gives those reads something to match | [options.ts](../../frontend/lib/ai-referrals/options.ts), [analytics/service.py](../../backend/app/domain/analytics/service.py), [ai_referrals_snapshot.py](../../backend/app/domain/analytics/ai_referrals_snapshot.py) |
-| 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection. Its *collection* is now unblocked (it joined `TRAFFIC_SYNC_PROVIDERS`, so "Sync now" no longer skips it); the DISPLAY half is still open and needs its own panel (Slice 4.4) rather than a column on a GSC table | [traffic.py](../../backend/app/core/config/traffic.py) |
+| 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection. Its *collection* was unblocked first (it joined `TRAFFIC_SYNC_PROVIDERS`, so "Sync now" no longer skips it); the DISPLAY half shipped in Slice 4.4 as its own panel rather than a column on a GSC table | [traffic.py](../../backend/app/core/config/traffic.py) |
 | 6 | ~~The projection **materializes every metric row in the window in memory**~~ — **fixed**: `TrafficProjectionBuilder` folds batch by batch and the executor streams into it, so memory bounds on distinct keys | [projection.py](../../backend/app/domain/traffic/projection.py), [streaming.py](../../backend/app/domain/traffic/streaming.py) |
 | 7 | MCP exposes Site Health, Demand, Opportunities, and Visibility — **no traffic, search, referral, or connection-status tool** | [server.py:110-230](../../backend/app/domain/mcp/server.py#L110-L230) |
 
-Defects 1-4 and 6 are now closed (4 only as of PR #24 — see its row above).
-Defect 5's collection half is closed; its display half (a Bing panel) is the
-remaining piece, in Slice 4.4. Defect 7 (MCP) is untouched and is the whole of
-Slice 5. **Slices 4-6 have no PR assigned.**
+Every defect above is now closed: 1-4 and 6 by PRs #22-#24 (4 only as of #24
+— see its row above), 5's display half by Slice 4.4 and 7 by Slice 5, both in
+PR #25. **Slice 6 is the only one left, and has no PR assigned.**
 
 **Already shipped (2026-09-04)**, on the branch carrying the Google sign-in work:
 
@@ -300,7 +300,10 @@ second was not a slice at all:
 - **PR #24** — defect 4's remaining half (the AI Referrals snapshot family),
   chart-bucket granularity, and the Performance UI defects reported against
   the deployed build. Unplanned work that displaced Slices 4-6.
-- **Slices 4, 5 and 6 remain unstarted**, in that dependency order.
+- **Slices 4 + 5** — the post-connect ladder, Bing's panel, and the MCP
+  connected-data tools, shipped together because 4.4 and 5 both needed the
+  same readiness projection.
+- **Slice 6 remains unstarted.**
 
 Each PR has `check.ps1` and `test.ps1` green before the next begins.
 
@@ -550,3 +553,74 @@ window that happens to be exactly 30 days wide no longer answers "Last 30
 days" while remaining readable as the exact window it is. The column was
 folded into `0001_initial.py` as the repository requires, which needs a
 database reset.
+## What Slices 4 and 5 shipped
+
+Implemented 2026-09-05. Where a decision changed the plan, the reason is here
+rather than a silent divergence.
+
+**The ladder gained an off-ladder state.** The plan lists `connected` →
+`importing` → `core_data_ready` → `analysis_ready`. A backfill whose every
+window failed or was cancelled fits none of them: it is terminal, so it is not
+`importing`, and nothing projected, so it is not `core_data_ready`. Reporting
+it as `importing` puts a spinner in front of an import that is never coming.
+`import_failed` is therefore a sixth state, off the ladder rather than a rung
+on it, and it renders as an error with a retry rather than as progress.
+
+**Readiness rolls up per connection, not over pooled rows.** The first cut
+pooled every mapped connection's backfill runs into one rollup. A connection
+that never enqueued a backfill contributes no rows, so it disappeared: a
+project with one finished connection and one untouched connection reported a
+COMPLETE import, covered through the finished connection's furthest date.
+Each mapped connection now rolls up on its own — the ones with no rows
+included — and coverage is the earliest date they ALL reach.
+
+**Readiness also reports the connected providers.** Not in the plan, but 4.4
+needs it: Bing's panel must appear only when a Bing connection exists,
+because "we never imported Bing" and "Bing measured nothing" are different
+answers and an always-present empty panel states the second while meaning the
+first. The ladder and the panel read one shared query, so they cannot
+disagree.
+
+**Bing is scanned but not consumed.** `TRAFFIC_CONSUMED_DATASETS` defines the
+Search Console/GA4 headline and the coverage window behind it, so Bing's
+dailies stayed out of it and a new `TRAFFIC_PROJECTED_DATASETS` is what the
+row scan reads. The dimension machinery was already generic, so Bing needed
+routing rather than a parallel implementation: two dimensions of its own,
+keyed by the same canonical URL and normalized query identity Search Console
+rows use. `PERFORMANCE_DIMENSION_ORDER` still means "the Search Console tabs";
+`PERFORMANCE_TABLE_DIMENSION_ORDER` is the full set a table request may name.
+
+**Slice 4.3 needed no fix.** The cold-connect chain — derivation, the traffic
+snapshot refresh, the demand refresh, the opportunity recompute — was driven
+from an empty database against a project with no snapshot, no demand history
+and no opportunities to supersede, and reached `analysis_ready` with a demand
+snapshot behind it on the first run. The test exists to keep it that way.
+
+**The MCP table tool resolves its own snapshot.** The plan mirrors the REST
+surface, where a table request carries the `snapshot_id` the dashboard
+returned. `performance.read_table` still accepts one, but resolves a range
+when none is given: making an agent issue two calls to read "top queries for
+last month" is a worse tool for no gain in truthfulness, since both paths
+resolve through the same service.
+
+**`performance.read_table` is not in the project-context resource.** The plan
+says register the new tools in `_CONTEXT_TOOLS`. The three snapshot-shaped
+reads are there; the paged drill-down is not, because a context resource
+carrying one page of one dimension answers a question the caller has not
+asked yet.
+
+**The connected tools joined `explain`, not `build_roadmap`.** Explaining a
+number means being able to say why it looks that way, which needs the
+connected layer: an empty chart because nothing is connected, because an
+import is still running, and because search traffic really fell are three
+different answers. A roadmap is built from analysis, so its allowlist stayed
+the narrower one.
+
+### Still not live-verified
+
+Unchanged from PR 1 and PR #24: no real consent, no real 365-day import, and
+no deployed Google sign-in was exercised from here. The ladder, the Bing
+routing, the cold-connect chain and all four MCP tools are covered by
+component tests against a real Postgres. The Playwright connect -> sync ->
+preset pass is still unwritten and unassigned, and no MCP client has been
+pointed at a real workspace.

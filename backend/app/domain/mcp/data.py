@@ -23,11 +23,18 @@ from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.workspace import Workspace, WorkspaceMember
 
+# The reads that describe a project as a whole. ``performance.read_table`` is
+# deliberately absent: it is a paged drill-down into one dimension, and a
+# context resource that carried a page of it would be answering a question the
+# caller has not asked yet.
 _CONTEXT_TOOLS = (
     "site.read_snapshot",
     "demand.read_snapshot",
     "opportunities.read_ranked",
     "audits.read_latest",
+    "performance.read_snapshot",
+    "referrals.read_snapshot",
+    "integrations.read_status",
 )
 
 
@@ -367,8 +374,16 @@ async def fetch_business_record(
 
 
 async def read_growth_evidence(
-    session: AsyncSession, project_id: str, tool_name: str
+    session: AsyncSession,
+    project_id: str,
+    tool_name: str,
+    payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Run one evidence tool for a project the CALLER is a member of.
+
+    The project id is authorized first, every time: it is an argument from an
+    MCP client, and on its own it grants nothing (invariant 5).
+    """
     project = await _authorized_project(session, project_id)
     return await execute_tool(
         tool_name,
@@ -377,7 +392,7 @@ async def read_growth_evidence(
             workspace_id=project.workspace_id,
             project_id=project.id,
         ),
-        {},
+        payload or {},
     )
 
 

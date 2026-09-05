@@ -133,6 +133,9 @@ async def test_oauth_grant_is_account_scoped_and_revocable(
         "demand.read_snapshot",
         "opportunities.read_ranked",
         "audits.read_latest",
+        "performance.read_snapshot",
+        "referrals.read_snapshot",
+        "integrations.read_status",
     }
 
     monkeypatch.setattr(mcp_oauth_provider, "_session_factory", session_factory)

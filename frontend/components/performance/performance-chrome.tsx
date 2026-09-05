@@ -6,10 +6,12 @@ import { INITIAL_SELECTION, type RangeSelection } from './date-range-dialog';
 import type { usePerformanceSync } from './use-performance-sync';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Pressable } from '@/components/ui/pressable';
+import { segmentedItemVariants, segmentedTrackVariants } from '@/components/ui/segmented-variants';
 import { Select } from '@/components/ui/select';
 import type { PerformanceGranularity } from '@/lib/api/performance';
-import { GRANULARITY_OPTIONS, RANGE_OPTIONS } from '@/lib/performance/performance';
+import { GRANULARITY_OPTIONS, QUICK_RANGE_OPTIONS } from '@/lib/performance/performance';
+import { cn } from '@/lib/utils';
 
 /**
  * The Performance surface's chrome: the control bar above the cards, the
@@ -19,6 +21,15 @@ import { GRANULARITY_OPTIONS, RANGE_OPTIONS } from '@/lib/performance/performanc
  * budget. These are presentation only — every piece of state they render is
  * owned by the screen and passed in.
  */
+
+function getMoreLabel(selection: RangeSelection, comparing: boolean): string {
+  if (comparing) return 'Compare';
+  if (selection.range === '3_months') return '3 months';
+  if (selection.range === '6_months') return '6 months';
+  if (selection.range === 'last_synced') return 'Last synced';
+  if (selection.range === 'custom') return 'Custom';
+  return 'More';
+}
 
 /** The dashboard's control bar: resolved range, imported coverage, and sync. */
 export function PerformanceToolbar({
@@ -45,31 +56,48 @@ export function PerformanceToolbar({
   comparing: boolean;
   onReset: () => void;
 }>) {
+  const moreLabel = getMoreLabel(selection, comparing);
+  const isMoreActive =
+    comparing ||
+    selection.range === '3_months' ||
+    selection.range === '6_months' ||
+    selection.range === 'last_synced' ||
+    selection.range === 'custom';
+
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {/* Quick-selects first: the ranges people pick most are one click, and
-          Custom opens the dialog for the rest. */}
-      <SegmentedControl
-        value={selection.range}
-        onChange={(range) =>
-          range === 'custom' ? onOpenRange() : onSelectRange({ ...INITIAL_SELECTION, range })
-        }
-        options={RANGE_OPTIONS}
-        ariaLabel="Date range"
-      />
-      {/* "More" until a comparison is chosen, then it BECOMES the compare
-          control and names the active comparison. One button, two states —
-          it never sits next to a separate Compare doing the same job. */}
-      <Button
-        variant={comparing ? 'secondary' : 'ghost'}
-        size="sm"
-        aria-pressed={comparing}
-        data-testid="compare-button"
-        onClick={onOpenCompare}
+      {/* Quick-select buttons: Day, Week, Month, and dynamic More button
+          (showing 3 months, 6 months, Last synced default, or Compare). */}
+      <fieldset
+        className={cn(segmentedTrackVariants(), 'm-0 border-0 p-0')}
+        aria-label="Date range"
       >
-        {comparing ? 'Compare' : 'More'}
-        <ChevronDown className="size-4" aria-hidden />
-      </Button>
+        {QUICK_RANGE_OPTIONS.map((option) => {
+          const isSelected = !comparing && selection.range === option.value;
+          return (
+            <Pressable
+              key={option.value}
+              type="button"
+              className={segmentedItemVariants({ selected: isSelected })}
+              aria-pressed={isSelected}
+              onClick={() => onSelectRange({ ...INITIAL_SELECTION, range: option.value })}
+            >
+              {option.label}
+            </Pressable>
+          );
+        })}
+        <Pressable
+          type="button"
+          className={cn(segmentedItemVariants({ selected: isMoreActive }), 'gap-1')}
+          aria-pressed={isMoreActive}
+          data-testid="compare-button"
+          onClick={comparing ? onOpenCompare : onOpenRange}
+        >
+          {moreLabel}
+          <ChevronDown className="size-3.5 opacity-70" aria-hidden />
+        </Pressable>
+      </fieldset>
+
       <span className="text-muted text-sm" data-testid="performance-window">
         {selectedLabel}
       </span>

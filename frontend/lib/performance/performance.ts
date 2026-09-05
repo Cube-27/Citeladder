@@ -35,6 +35,28 @@ export const RANGE_OPTIONS: readonly { value: PerformanceRange; label: string }[
   { value: 'day', label: 'Day' },
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
+  { value: '3_months', label: '3 months' },
+  { value: '6_months', label: '6 months' },
+  { value: 'last_synced', label: 'Last synced' },
+  { value: 'custom', label: 'Custom' },
+] as const;
+
+export const QUICK_RANGE_OPTIONS: readonly {
+  value: Extract<PerformanceRange, 'day' | 'week' | 'month'>;
+  label: string;
+}[] = [
+  { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+] as const;
+
+export const DIALOG_RANGE_OPTIONS: readonly {
+  value: Extract<PerformanceRange, '3_months' | '6_months' | 'last_synced' | 'custom'>;
+  label: string;
+}[] = [
+  { value: '3_months', label: '3 months' },
+  { value: '6_months', label: '6 months' },
+  { value: 'last_synced', label: 'Last synced' },
   { value: 'custom', label: 'Custom' },
 ] as const;
 
@@ -247,12 +269,47 @@ export function formatAxisTick(key: PerformanceMetricKey, value: number): string
   return `${Math.round(value)}`;
 }
 
+/**
+ * Compute evenly distributed tick indices for the horizontal axis.
+ *
+ * If `columnCount` is small (<= maxTicks), returns all indices 0..columnCount-1.
+ * Otherwise, samples `maxTicks` indices evenly between 0 and columnCount-1.
+ *
+ * A single tick is the explicit one-tick case, not a degenerate span: the
+ * even-spacing step divides by `maxTicks - 1`, so asking for fewer than two
+ * ticks would divide by zero and put NaN in the returned indices.
+ */
+export function computeTickIndices(columnCount: number, maxTicks = 6): number[] {
+  if (columnCount <= 0) return [];
+  if (maxTicks <= 1) return [0];
+  if (columnCount <= maxTicks) {
+    return Array.from({ length: columnCount }, (_, i) => i);
+  }
+  const indices: number[] = [];
+  const step = (columnCount - 1) / (maxTicks - 1);
+  for (let i = 0; i < maxTicks; i++) {
+    const idx = Math.min(columnCount - 1, Math.round(i * step));
+    if (!indices.includes(idx)) {
+      indices.push(idx);
+    }
+  }
+  return indices;
+}
+
 // ---------------------------------------------------------------------------
 // Dimension tabs
 // ---------------------------------------------------------------------------
 
+/**
+ * A dimension the Search Console tab row can show.
+ *
+ * Bing's two are deliberately excluded: they have no tab and no panel in that
+ * row, so a value the tabs cannot represent must not be expressible as one.
+ */
+export type SearchConsoleDimension = Exclude<PerformanceDimension, 'bing_query' | 'bing_page'>;
+
 export const DIMENSION_TABS: readonly {
-  value: PerformanceDimension;
+  value: SearchConsoleDimension;
   /** Uppercase tab label, in Search Console's order. */
   label: string;
   /** The first column's header, e.g. "Top queries". */
@@ -273,13 +330,43 @@ export const DIMENSION_TABS: readonly {
   { value: 'day', label: 'DAYS', header: 'Date', noun: 'days' },
 ] as const;
 
+/**
+ * Bing's own two breakdowns.
+ *
+ * Kept out of DIMENSION_TABS on purpose: Bing is a second engine measuring a
+ * different population, so its rows belong in their own panel rather than as
+ * two more tabs a reader could mistake for Search Console breakdowns. The
+ * headline cards and the chart above never include them.
+ */
+export const BING_DIMENSION_TABS: readonly {
+  value: Extract<PerformanceDimension, 'bing_query' | 'bing_page'>;
+  label: string;
+  header: string;
+  noun: string;
+}[] = [
+  { value: 'bing_query', label: 'QUERIES', header: 'Top queries', noun: 'queries' },
+  { value: 'bing_page', label: 'PAGES', header: 'Top pages', noun: 'pages' },
+] as const;
+
 export function dimensionTab(dimension: PerformanceDimension) {
-  return DIMENSION_TABS.find((tab) => tab.value === dimension) ?? DIMENSION_TABS[0];
+  return (
+    [...DIMENSION_TABS, ...BING_DIMENSION_TABS].find((tab) => tab.value === dimension) ??
+    DIMENSION_TABS[0]
+  );
 }
+
+/**
+ * The first column's sort key — the row's own identity.
+ *
+ * Named because it is the one sort that does NOT belong to a metric column:
+ * the row-identity column is always on screen, so ordering by it can never be
+ * orphaned the way a hidden metric's ordering can.
+ */
+export const DIMENSION_SORT_KEY = 'dimension_key';
 
 /** DAYS reads chronologically; every other table defaults to clicks descending. */
 export function defaultSort(dimension: PerformanceDimension): string {
-  return dimension === 'day' ? 'dimension_key' : '-clicks';
+  return dimension === 'day' ? DIMENSION_SORT_KEY : '-clicks';
 }
 
 /** The sort idiom: a leading `-` is descending (the "top rows" view). */

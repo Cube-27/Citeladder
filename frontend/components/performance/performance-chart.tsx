@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 
 import {
   axisDomainMax,
+  computeTickIndices,
   formatAxisTick,
   formatMetric,
   isInvertedMetric,
@@ -11,6 +12,7 @@ import {
   type PerformanceChartPoint,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
+import { formatShortDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -139,11 +141,23 @@ export function PerformanceChart({
     PADDING.left + (columnCount > 1 ? (index / (columnCount - 1)) * innerWidth : innerWidth / 2);
   const bandWidth = columnCount > 1 ? innerWidth / (columnCount - 1) : innerWidth;
 
+  // Axis dates come from the LONGEST selected series, never the first
+  // non-empty one: columnCount spans comparisons too, so a shorter first
+  // series left the tail of the axis with no date for its index — and the
+  // fallback printed a bare position number beside real dates.
+  const axisEntry = series.reduce<ChartSeries | null>(
+    (longest, entry) =>
+      longest === null || entry.selected.length > longest.selected.length ? entry : longest,
+    null,
+  );
+  const axisPoints: readonly PerformanceChartPoint[] = axisEntry?.selected ?? [];
+  const tickIndices = computeTickIndices(columnCount, 6);
+
   return (
     // The pointer handler lives on the wrapper, not the svg: the svg is a
     // non-interactive graphic, and its <title> already names it for
     // assistive technology.
-    <div className={cn('relative', className)} onMouseLeave={() => setHover(null)}>
+    <div className={cn('relative grid gap-2', className)} onMouseLeave={() => setHover(null)}>
       <svg
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         className="h-[220px] w-full"
@@ -163,6 +177,19 @@ export function PerformanceChart({
           strokeWidth={1}
           vectorEffect="non-scaling-stroke"
         />
+        {/* Horizontal axis tick marks */}
+        {tickIndices.map((idx) => (
+          <line
+            key={`tick-${idx}`}
+            x1={pointX(idx)}
+            x2={pointX(idx)}
+            y1={VIEW_HEIGHT - PADDING.bottom}
+            y2={VIEW_HEIGHT - PADDING.bottom + 4}
+            className="stroke-border"
+            strokeWidth={1}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
         {series.map((entry) => {
           const domain = domainFor(entry);
           const inverted = isInvertedMetric(entry.key);
@@ -225,12 +252,39 @@ export function PerformanceChart({
           />
         ))}
       </svg>
-      {hover !== null ? <ChartTooltip series={series} index={hover} /> : null}
-      <div className="grid gap-2">
-        <div className="text-muted flex justify-between px-3 text-xs">
-          <span className="mono">1</span>
-          <span className="mono">{columnCount}</span>
-        </div>
+      {hover !== null ? (
+        <ChartTooltip series={series} index={hover} dateSource={axisEntry} />
+      ) : null}
+
+      {/* Horizontal axis date labels */}
+      <div className="text-muted relative h-5 w-full select-none" aria-hidden>
+        {tickIndices.map((idx, i) => {
+          const dateStr = axisPoints[idx]?.date;
+          // No date for this bucket means the selected window does not reach
+          // it (a comparison runs longer). An unlabelled tick is honest; a
+          // position number pretending to be a date is not.
+          if (!dateStr) return null;
+          const label = formatShortDate(dateStr);
+          const pct = (pointX(idx) / VIEW_WIDTH) * 100;
+          const alignClass =
+            i === 0
+              ? 'translate-x-0 text-left'
+              : i === tickIndices.length - 1
+                ? '-translate-x-full text-right'
+                : '-translate-x-1/2 text-center';
+          return (
+            <span
+              key={`x-label-${idx}`}
+              className={cn('absolute text-xs mono', alignClass)}
+              style={{ left: `${pct}%` }}
+            >
+              {label}
+            </span>
+          );
+        })}
+      </div>
+
+      <div>
         <ul className="flex flex-wrap gap-x-4 gap-y-1">
           {series.map((entry) => {
             const domain = domainFor(entry);
@@ -260,9 +314,21 @@ export function PerformanceChart({
 function ChartTooltip({
   series,
   index,
-}: Readonly<{ series: readonly ChartSeries[]; index: number }>) {
-  const selectedDate = series[0]?.selected[index]?.date ?? null;
-  const comparisonDate = series[0]?.comparison?.[index]?.date ?? null;
+  dateSource,
+}: Readonly<{
+  series: readonly ChartSeries[];
+  index: number;
+  /**
+   * The series the AXIS labels its dates from. Every series in one chart
+   * covers the same window, so any of them would date a bucket the same way
+   * — but a shorter one has no point at the far end, and reading dates from a
+   * different series than the axis does is how a tooltip ends up blank under
+   * a labelled tick.
+   */
+  dateSource: ChartSeries | null;
+}>) {
+  const selectedDate = dateSource?.selected[index]?.date ?? null;
+  const comparisonDate = dateSource?.comparison?.[index]?.date ?? null;
   return (
     <output className="bg-panel border-border-subtle shadow-elevated pointer-events-none absolute top-2 right-2 grid gap-1 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
       <p className="text-secondary">

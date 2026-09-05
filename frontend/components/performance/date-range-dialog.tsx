@@ -9,7 +9,7 @@ import { Field } from '@/components/ui/field';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import type { PerformanceCompare, PerformanceRange } from '@/lib/api/performance';
-import { COMPARE_OPTIONS, RANGE_OPTIONS } from '@/lib/performance/performance';
+import { COMPARE_OPTIONS, DIALOG_RANGE_OPTIONS } from '@/lib/performance/performance';
 
 /**
  * The Search-Console-shaped date dialog: a **Filter** tab that chooses the
@@ -46,7 +46,7 @@ export type RangeSelection = {
  * it is that type's empty value, and both the screen and its chrome need it.
  */
 export const INITIAL_SELECTION: RangeSelection = {
-  range: 'custom',
+  range: 'last_synced',
   from: '',
   to: '',
   compare: 'none',
@@ -174,7 +174,11 @@ export function DateRangeDialog({
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setDraft(selection);
+      const isDialogRange = DIALOG_RANGE_OPTIONS.some((o) => o.value === selection.range);
+      setDraft({
+        ...selection,
+        range: isDialogRange ? selection.range : 'last_synced',
+      });
       // Opening from Compare lands on Compare; opening from a range lands on
       // Filter. The tab a previous visit ended on is not a preference.
       setTab(initialTab);
@@ -235,7 +239,7 @@ export function DateRangeDialog({
             ariaLabel="Date range"
             value={draft.range}
             onValueChange={(range) => patch({ range })}
-            options={RANGE_OPTIONS.map((option) => ({
+            options={DIALOG_RANGE_OPTIONS.map((option) => ({
               value: option.value,
               label: option.label,
             }))}

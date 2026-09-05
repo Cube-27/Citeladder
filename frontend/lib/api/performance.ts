@@ -18,12 +18,14 @@ import {
   performanceDashboardSchema,
   performanceRangeTaskSchema,
   performanceTablePageSchema,
+  projectReadinessSchema,
   strictValidate,
   performanceSyncEnqueueResponseSchema,
   type performanceCompareSchema,
   type performanceDimensionSchema,
   type performanceGranularitySchema,
   type performanceRangeSchema,
+  type projectReadinessStageSchema,
 } from './schemas';
 import { definedQuery, withQuery } from './shared';
 
@@ -37,6 +39,8 @@ export type PerformanceSeriesPoint = PerformanceWindow['series']['clicks'][numbe
 export type PerformanceTablePage = z.infer<typeof performanceTablePageSchema>;
 export type PerformanceRangeTask = z.infer<typeof performanceRangeTaskSchema>;
 export type PerformanceSyncEnqueueResponse = z.infer<typeof performanceSyncEnqueueResponseSchema>;
+export type ProjectReadiness = z.infer<typeof projectReadinessSchema>;
+export type ProjectReadinessStage = z.infer<typeof projectReadinessStageSchema>;
 
 /** Dashboard query: the selected range, and optionally a comparison range. */
 export type PerformanceDashboardParams = {
@@ -75,6 +79,17 @@ export const performanceApi = {
     const path = withQuery(`/projects/${projectId}/performance`, definedQuery(params));
     const res = await apiClient.get<PerformanceDashboard>(path, options);
     return strictValidate(performanceDashboardSchema, res, 'performance.getDashboard');
+  },
+  /**
+   * `GET /projects/{id}/readiness` — the post-connect ladder.
+   *
+   * A projection over rows that already exist (grant status, backfill runs,
+   * snapshot presence), so the surface can say WHERE a freshly connected
+   * project's data is instead of showing one undifferentiated spinner.
+   */
+  getReadiness: async (projectId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<ProjectReadiness>(`/projects/${projectId}/readiness`, options);
+    return strictValidate(projectReadinessSchema, res, 'performance.getReadiness');
   },
   getTable: async (
     projectId: string,

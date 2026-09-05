@@ -6,8 +6,9 @@ import { cardClasses, type CardTone } from './card-variants';
 
 /**
  * Card is reserved for a meaningful semantic object. It owns a white fill, the
- * card radius and a hairline border, with no elevation — elevation belongs to
- * overlays. Structural layout uses metric groups, ledgers, editorial sections,
+ * card radius, and subtle directional bottom-weighted elevation (shadow-card),
+ * replacing hairline borders. Dropdowns and overlays retain stronger omnidirectional
+ * elevation. Structural layout uses metric groups, ledgers, editorial sections,
  * and workspace panes.
  *
  * Optional eyebrow header hook: render <CardEyebrow> above <CardTitle> for the

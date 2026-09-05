@@ -17,6 +17,8 @@ from typing import Any
 import pytest
 
 from app.core.config.integrations_datasets import (
+    DATASET_BING_PAGE_DAILY,
+    DATASET_BING_QUERY_DAILY,
     DATASET_GA4_CHANNEL_DAILY,
     DATASET_GA4_LANDING_DAILY,
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
@@ -674,7 +676,17 @@ def test_empty_window_projects_unmeasured_totals_and_gap_series() -> None:
     assert projection.queries == ()
     assert projection.dimensions == ()
     assert projection.dimension_counts == dict.fromkeys(
-        ("query", "page", "country", "device", "search_appearance", "day"), 0
+        (
+            "query",
+            "page",
+            "country",
+            "device",
+            "search_appearance",
+            "day",
+            "bing_query",
+            "bing_page",
+        ),
+        0,
     )
     assert projection.source_metric_row_ids == []
     assert projection.source_artifact_ids == []
@@ -831,6 +843,9 @@ def test_each_gsc_dataset_folds_into_exactly_one_dimension() -> None:
         "device": 1,
         "search_appearance": 1,
         "day": 2,
+        # No Bing row was offered, so its panel is genuinely empty.
+        "bing_query": 0,
+        "bing_page": 0,
     }
     by_dimension = {
         (row.dimension, row.dimension_key): row.metrics for row in projection.dimensions
@@ -1113,3 +1128,60 @@ def test_bounded_ids_union_merges_both_samples_and_totals() -> None:
     merged = (left | right).provenance()
     assert merged.ids == ["id-a", "id-b"]
     assert merged.total == 4
+
+
+def test_bing_fills_its_own_panel_and_never_a_search_console_number() -> None:
+    """Bing is a SECOND engine, so it is a second panel — never a summand.
+
+    Adding Bing impressions to Search Console impressions would silently
+    change what every existing chart means, and would leave CTR and average
+    position undefined across two engines that do not measure the same
+    population. The projection therefore routes Bing rows to their own two
+    dimensions and to nothing else.
+    """
+    rows = [
+        _gsc_day(date(2026, 7, 20), clicks=10, impressions=100, position=5.0),
+        _row(
+            dataset=DATASET_GSC_QUERY_DAILY,
+            row_date=date(2026, 7, 20),
+            dimension_values=["blue widgets", "2026-07-20"],
+            metrics={"clicks": 3, "impressions": 30},
+        ),
+        _row(
+            dataset=DATASET_BING_QUERY_DAILY,
+            row_date=date(2026, 7, 20),
+            dimension_values=["blue widgets", "2026-07-20"],
+            metrics={"clicks": 7, "impressions": 70},
+            provider="bing",
+            property_ref="https://example.com/",
+        ),
+        _row(
+            dataset=DATASET_BING_PAGE_DAILY,
+            row_date=date(2026, 7, 20),
+            dimension_values=["https://example.com/a", "2026-07-20"],
+            metrics={"clicks": 2, "impressions": 20},
+            provider="bing",
+            property_ref="https://example.com/",
+        ),
+    ]
+
+    projection = build_traffic_projection(
+        rows=rows,
+        window_start=date(2026, 7, 20),
+        window_end=date(2026, 7, 20),
+        granularity="day",
+    )
+
+    # The headline stays exactly the Search Console day report.
+    assert projection.metrics["totals"]["clicks"] == 10
+    assert projection.metrics["totals"]["impressions"] == 100
+    by_dimension = {
+        (row.dimension, row.dimension_key): row.metrics for row in projection.dimensions
+    }
+    # The SAME query text in both engines stays two rows with two totals.
+    assert by_dimension[("query", "blue widgets")]["clicks"] == 3
+    assert by_dimension[("bing_query", "blue widgets")]["clicks"] == 7
+    assert by_dimension[("bing_page", "https://example.com/a")]["clicks"] == 2
+    assert projection.dimension_counts["bing_query"] == 1
+    assert projection.dimension_counts["bing_page"] == 1
+    assert projection.dimension_counts["page"] == 0

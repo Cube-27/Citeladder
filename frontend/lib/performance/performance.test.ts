@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import type { PerformanceWindow } from '@/lib/api/performance';
 import {
+  DIALOG_RANGE_OPTIONS,
   DIMENSION_TABS,
   METRIC_CARDS,
+  QUICK_RANGE_OPTIONS,
+  RANGE_OPTIONS,
   axisDomainMax,
   canCompareYearOverYear,
+  computeTickIndices,
   defaultSort,
   describeWindow,
   differenceTone,
@@ -142,5 +146,48 @@ describe('dimension tabs', () => {
     expect(toggleSort('-clicks', 'impressions')).toBe('-impressions');
     expect(toggleSort('-clicks', 'clicks')).toBe('clicks');
     expect(toggleSort('clicks', 'clicks')).toBe('-clicks');
+  });
+});
+
+describe('range options', () => {
+  it('includes quick ranges and extended presets', () => {
+    expect(QUICK_RANGE_OPTIONS.map((o) => o.value)).toEqual(['day', 'week', 'month']);
+    expect(DIALOG_RANGE_OPTIONS.map((o) => o.value)).toEqual([
+      '3_months',
+      '6_months',
+      'last_synced',
+      'custom',
+    ]);
+    expect(RANGE_OPTIONS.map((o) => o.value)).toEqual([
+      'day',
+      'week',
+      'month',
+      '3_months',
+      '6_months',
+      'last_synced',
+      'custom',
+    ]);
+  });
+});
+
+describe('tick indices calculation', () => {
+  it('returns empty for 0 columns', () => {
+    expect(computeTickIndices(0)).toEqual([]);
+  });
+
+  it('returns all indices when count is smaller than max ticks', () => {
+    expect(computeTickIndices(4)).toEqual([0, 1, 2, 3]);
+  });
+
+  it('samples evenly when count exceeds max ticks', () => {
+    const ticks = computeTickIndices(28, 6);
+    expect(ticks.length).toBe(6);
+    expect(ticks[0]).toBe(0);
+    expect(ticks[ticks.length - 1]).toBe(27);
+  });
+
+  it('returns one real tick rather than NaN when fewer than two are asked for', () => {
+    expect(computeTickIndices(28, 1)).toEqual([0]);
+    expect(computeTickIndices(28, 0)).toEqual([0]);
   });
 });

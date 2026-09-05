@@ -1,17 +1,28 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Check, HelpCircle } from 'lucide-react';
 
+import { MetricValue } from '@/components/ui/metric-value';
 import { Pressable } from '@/components/ui/pressable';
 import { panelClasses } from '@/components/ui/panel';
+import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import type { PerformanceWindow } from '@/lib/api/performance';
+import { availabilityLabel } from '@/lib/format';
 import {
   METRIC_CARDS,
   formatMetric,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
 import { cn } from '@/lib/utils';
+
+/** The one missing-figure label on this surface. */
+const NOT_MEASURED = availabilityLabel('not_measured');
+
+/** A formatted figure, or null when the window measured nothing for it. */
+function measured(key: PerformanceMetricKey, value: number | null | undefined): string | null {
+  return value === null || value === undefined ? null : formatMetric(key, value);
+}
 
 /**
  * The four selectable GSC metric cards.
@@ -55,103 +66,215 @@ function seamClasses(index: number): string {
   );
 }
 
+const METRIC_HELP: Record<PerformanceMetricKey, string> = {
+  clicks: 'Total clicks from Google Search results',
+  impressions: 'Total impressions in Google Search results',
+  ctr: 'Average click-through rate (Clicks / Impressions)',
+  position: 'Average ranking position in Google Search results',
+};
+
+/**
+ * The comparison half of a card: the comparison window's own absolute value,
+ * under a label that names THAT window.
+ *
+ * The label LEADS its value here rather than trailing it. The rule above this
+ * block detaches it from the selected value higher up, so a label sitting at
+ * the top of the block reads as this block's caption — which makes naming the
+ * selected period there a mislabel of the comparison figure.
+ */
+function MetricCardComparison({
+  metricKey,
+  comparison,
+  comparisonValue,
+  isActive,
+  compareLabel,
+  loading,
+}: Readonly<{
+  metricKey: PerformanceMetricKey;
+  comparison: PerformanceWindow;
+  comparisonValue: number | null | undefined;
+  isActive: boolean;
+  compareLabel: string;
+  loading: boolean;
+}>) {
+  const statusLabel =
+    comparison.evidence_state === 'not_run' ? `${compareLabel} — not imported` : compareLabel;
+  return (
+    <div className="grid gap-0.5 border-t border-current/20 pt-1">
+      <span className={textRole('meta', isActive ? 'text-inverse/80' : undefined)}>
+        {statusLabel}
+      </span>
+      <MetricValue
+        size="metricSm"
+        value={measured(metricKey, comparisonValue)}
+        label={NOT_MEASURED}
+        loading={loading}
+        tone={isActive ? 'text-inverse' : undefined}
+      />
+    </div>
+  );
+}
+
+function MetricCard({
+  card,
+  index,
+  isActive,
+  value,
+  comparisonValue,
+  comparison,
+  selectedLabel,
+  compareLabel,
+  color,
+  loading,
+  onToggle,
+}: Readonly<{
+  card: (typeof METRIC_CARDS)[number];
+  index: number;
+  isActive: boolean;
+  value: number | null;
+  comparisonValue: number | null | undefined;
+  comparison: PerformanceWindow | null;
+  selectedLabel: string;
+  compareLabel: string;
+  color: string;
+  loading: boolean;
+  onToggle: (key: PerformanceMetricKey) => void;
+}>) {
+  return (
+    <Pressable
+      type="button"
+      aria-pressed={isActive}
+      onClick={() => onToggle(card.key)}
+      data-testid={`metric-card-${card.key}`}
+      className={cn(
+        panelClasses({ tone: 'panel', pad: 'compact', edge: 'flush' }),
+        'relative flex min-h-[96px] flex-col justify-between gap-1 p-3.5 text-left transition-colors',
+        index === 0 && 'rounded-tl-[var(--radius-card)]',
+        seamClasses(index),
+        isActive ? 'text-inverse' : 'bg-panel hover:bg-panel-hover text-foreground',
+      )}
+      style={
+        isActive
+          ? {
+              backgroundColor: color,
+              color: 'var(--color-inverse)',
+            }
+          : undefined
+      }
+    >
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className={cn(
+            'inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border transition-colors',
+            isActive
+              ? 'border-inverse bg-inverse/20 text-inverse'
+              : 'border-border-strong bg-panel text-transparent',
+          )}
+        >
+          {isActive ? <Check className="text-inverse size-3 stroke-[2.5]" /> : null}
+        </span>
+        <span
+          className={cn('select-none', textRole('label', isActive ? 'text-inverse' : undefined))}
+        >
+          {card.label}
+        </span>
+      </div>
+
+      {/* The period labels earn their place only when TWO values stack: with
+          one number the range is already stated once in the toolbar, and
+          repeating it on four cards is noise. */}
+      <div className="grid gap-0.5">
+        {comparison ? (
+          <span className={textRole('meta', isActive ? 'text-inverse/80' : undefined)}>
+            {selectedLabel}
+          </span>
+        ) : null}
+        <MetricValue
+          value={measured(card.key, value)}
+          label={NOT_MEASURED}
+          loading={loading}
+          tone={isActive ? 'text-inverse' : undefined}
+        />
+      </div>
+
+      {comparison ? (
+        <MetricCardComparison
+          metricKey={card.key}
+          comparison={comparison}
+          comparisonValue={comparisonValue}
+          isActive={isActive}
+          compareLabel={compareLabel}
+          loading={loading}
+        />
+      ) : null}
+
+      <div className="mt-auto flex justify-end pt-1">
+        <Tooltip content={METRIC_HELP[card.key]}>
+          <span
+            className={cn(
+              'inline-flex size-4 shrink-0 items-center justify-center rounded-full text-xs transition-opacity',
+              isActive ? 'text-inverse/70 hover:text-inverse' : 'text-muted hover:text-foreground',
+            )}
+            aria-label={METRIC_HELP[card.key]}
+          >
+            <HelpCircle className="size-3.5" aria-hidden />
+          </span>
+        </Tooltip>
+      </div>
+    </Pressable>
+  );
+}
+
 export function MetricCards({
   selected,
   comparison,
-  compareLabel,
   selectedLabel,
+  compareLabel,
   active,
   onToggle,
   colors,
+  loading = false,
+  className,
 }: Readonly<{
   selected: PerformanceWindow;
   comparison: PerformanceWindow | null;
-  /** Describes the comparison period, e.g. "Previous period". */
-  compareLabel: string;
-  /** Describes the selected period, e.g. "Last 3 months". */
   selectedLabel: string;
+  compareLabel: string;
   active: ReadonlySet<PerformanceMetricKey>;
   onToggle: (key: PerformanceMetricKey) => void;
-  colors: Readonly<Record<PerformanceMetricKey, string>>;
+  colors: Record<PerformanceMetricKey, string>;
+  /** A read is in flight. The cards spin rather than claiming a value is absent. */
+  loading?: boolean;
+  className?: string;
 }>) {
   return (
     <fieldset
       className={cn(
-        // No outer border or radius: the strip sits INSIDE the chart card,
-        // which already draws them. Only the seams between cards are ours,
-        // and they are drawn per card below rather than with divide-*, whose
-        // sibling-wide rules put a TOP border on cards 2-4 in the lg row and
-        // a LEFT border on the first card of the sm second row.
+        // The strip sits inside the chart card. Only internal seams are drawn
+        // between cards; outer borders are managed by the container.
         'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
-        'border-border-subtle border-b',
+        className,
       )}
       data-testid="metric-card-strip"
     >
       <legend className="sr-only">Search Console metrics</legend>
-      {METRIC_CARDS.map((card, index) => {
-        const isActive = active.has(card.key);
-        const value = selected.totals[card.key];
-        const comparisonValue = comparison ? comparison.totals[card.key] : undefined;
-        return (
-          <Pressable
-            key={card.key}
-            type="button"
-            aria-pressed={isActive}
-            onClick={() => onToggle(card.key)}
-            data-testid={`metric-card-${card.key}`}
-            className={cn(
-              panelClasses({ tone: 'panel', pad: 'compact', edge: 'flush' }),
-              'grid gap-1 transition-opacity',
-              seamClasses(index),
-              // Unselected reads as dimmed, never as a different surface —
-              // the colour stays so the card keeps naming its own series.
-              isActive ? 'opacity-100' : 'opacity-65 hover:opacity-85',
-            )}
-            style={{
-              backgroundColor: colors[card.key],
-              color: 'var(--color-on-accent)',
-            }}
-          >
-            <span
-              className={cn(
-                'flex items-center gap-2 text-xs',
-                textRole('emphasis', 'text-inherit'),
-              )}
-            >
-              {/* Decorative: the card itself is the control and carries
-                  aria-pressed, so a second focusable checkbox here would
-                  announce the same state twice. */}
-              <span
-                aria-hidden
-                className={cn(
-                  'inline-flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border',
-                  isActive ? 'border-current' : 'border-current/50',
-                )}
-              >
-                {isActive ? <Check className="size-2.5" /> : null}
-              </span>
-              {card.label}
-            </span>
-            <span className="mono text-2xl leading-tight">{formatMetric(card.key, value)}</span>
-            {/* The period labels earn their place only when TWO values are
-                stacked: with one number the range is already stated once, in
-                the toolbar, and repeating it four times is noise. */}
-            {comparison ? <span className="text-xs opacity-80">{selectedLabel}</span> : null}
-            {comparison ? (
-              <>
-                <span className="mono text-lg leading-tight">
-                  {formatMetric(card.key, comparisonValue ?? null)}
-                </span>
-                <span className="text-xs opacity-80">
-                  {comparison.evidence_state === 'not_run'
-                    ? `${compareLabel} — not imported`
-                    : compareLabel}
-                </span>
-              </>
-            ) : null}
-          </Pressable>
-        );
-      })}
+      {METRIC_CARDS.map((card, index) => (
+        <MetricCard
+          key={card.key}
+          card={card}
+          index={index}
+          isActive={active.has(card.key)}
+          value={selected.totals[card.key]}
+          comparisonValue={comparison ? comparison.totals[card.key] : undefined}
+          comparison={comparison}
+          selectedLabel={selectedLabel}
+          compareLabel={compareLabel}
+          color={colors[card.key]}
+          loading={loading}
+          onToggle={onToggle}
+        />
+      ))}
     </fieldset>
   );
 }
@@ -169,10 +292,12 @@ export function Ga4SummaryRow({
   selected,
   comparison,
   compareLabel,
+  loading = false,
 }: Readonly<{
   selected: PerformanceWindow;
   comparison: PerformanceWindow | null;
   compareLabel: string;
+  loading?: boolean;
 }>) {
   const entries = [
     { key: 'sessions' as const, label: 'Sessions' },
@@ -189,13 +314,18 @@ export function Ga4SummaryRow({
         return (
           <div key={entry.key} className="flex items-baseline gap-2">
             <dt className="text-muted text-xs">{entry.label}</dt>
-            <dd className="mono text-sm">
-              {value === null ? 'Not measured' : value.toLocaleString()}
+            <dd>
+              <MetricValue
+                size="metricSm"
+                value={value === null ? null : value.toLocaleString()}
+                label={NOT_MEASURED}
+                loading={loading}
+              />
             </dd>
             {comparison ? (
               <dd className="text-muted mono text-xs">
                 {comparisonValue === null || comparisonValue === undefined
-                  ? `${compareLabel}: not measured`
+                  ? `${compareLabel}: ${NOT_MEASURED.toLowerCase()}`
                   : `${compareLabel}: ${comparisonValue.toLocaleString()}`}
               </dd>
             ) : null}

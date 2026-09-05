@@ -15,7 +15,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.traffic import (
@@ -25,16 +25,20 @@ from app.core.config.traffic import (
     PERFORMANCE_COMPARE_YEAR_OVER_YEAR,
     PERFORMANCE_CUSTOM_RANGE_MAX_DAYS,
     PERFORMANCE_DIMENSIONS,
+    PERFORMANCE_EXTENDED_RANGE_DAYS,
     PERFORMANCE_PAGE_SIZE_OPTIONS,
     PERFORMANCE_PRESET_RANGE_DAYS,
-    PERFORMANCE_RANGE_CUSTOM,
+    PERFORMANCE_RANGE_LAST_SYNCED,
     PERFORMANCE_RANGES,
     PERFORMANCE_SORT_WHITELIST,
     PERFORMANCE_YEAR_OVER_YEAR_SHIFT_DAYS,
+    TRAFFIC_CONSUMED_DATASETS,
     TRAFFIC_DEFAULT_GRANULARITY,
+    TRAFFIC_MAX_WINDOW_DAYS,
     TRAFFIC_SNAPSHOT_GRANULARITIES,
 )
 from app.domain.site_health.normalization import decode_keyset_cursor
+from app.models.integrations import IntegrationMetricRow
 from app.models.traffic import TrafficSnapshot
 
 
@@ -291,6 +295,38 @@ async def load_snapshot_by_id(
     )
 
 
+async def coverage_window(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> tuple[date, date] | None:
+    """The FULL window this project has imported evidence for.
+
+    "Last synced" means everything that has landed, not the most recent
+    snapshot: a first connect imports a year in chunked windows, and each
+    chunk writes a snapshot of its own, so resolving the newest one lands a
+    reader on the last few weeks and makes a completed year-long import look
+    like it never ran.
+
+    Clamped to ``TRAFFIC_MAX_WINDOW_DAYS`` at the FRESH end, which is the
+    budget every served window obeys — a longer history keeps its most
+    recent days rather than being refused outright.
+    """
+    earliest, latest = (
+        await session.execute(
+            select(
+                func.min(IntegrationMetricRow.date),
+                func.max(IntegrationMetricRow.date),
+            )
+            .where(IntegrationMetricRow.workspace_id == workspace_id)
+            .where(IntegrationMetricRow.project_id == project_id)
+            .where(IntegrationMetricRow.dataset.in_(sorted(TRAFFIC_CONSUMED_DATASETS)))
+        )
+    ).one()
+    if earliest is None or latest is None:
+        return None
+    floor = latest - timedelta(days=TRAFFIC_MAX_WINDOW_DAYS - 1)
+    return max(earliest, floor), latest
+
+
 async def resolve_selected_window(
     session: AsyncSession,
     *,
@@ -306,15 +342,7 @@ async def resolve_selected_window(
     snapshot for it exists (the caller then queues the range projection), and
     a project with no snapshots at all has neither.
     """
-    if range_token != PERFORMANCE_RANGE_CUSTOM:
-        snapshot = await resolve_preset_snapshot(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            range_token=range_token,
-            granularity=granularity,
-        )
-    elif custom is not None:
+    if custom is not None:
         snapshot = await resolve_window_snapshot(
             session,
             workspace_id=workspace_id,
@@ -323,6 +351,53 @@ async def resolve_selected_window(
             granularity=granularity,
         )
         return snapshot, custom
+    elif range_token in PERFORMANCE_PRESET_RANGE_DAYS:
+        snapshot = await resolve_preset_snapshot(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            range_token=range_token,
+            granularity=granularity,
+        )
+    elif range_token in PERFORMANCE_EXTENDED_RANGE_DAYS:
+        days = PERFORMANCE_EXTENDED_RANGE_DAYS[range_token]
+        latest = await resolve_latest_snapshot(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            granularity=granularity,
+        )
+        if latest is not None and latest.window_end:
+            target_window = (
+                latest.window_end - timedelta(days=days - 1),
+                latest.window_end,
+            )
+            snapshot = await resolve_window_snapshot(
+                session,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                window=target_window,
+                granularity=granularity,
+            )
+            return snapshot, target_window
+        return None, None
+    elif range_token == PERFORMANCE_RANGE_LAST_SYNCED:
+        window = await coverage_window(
+            session, workspace_id=workspace_id, project_id=project_id
+        )
+        if window is None:
+            return None, None
+        snapshot = await resolve_window_snapshot(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            window=window,
+            granularity=granularity,
+        )
+        # The window is stated even with no snapshot for it: the caller then
+        # queues the range projection for exactly these dates, which is how a
+        # freshly imported year becomes readable at all.
+        return snapshot, window
     else:
         snapshot = await resolve_latest_snapshot(
             session,
