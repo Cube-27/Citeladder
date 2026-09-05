@@ -6,10 +6,11 @@ Referrals preset family, chart granularity, and the Performance UI
 remediation; it is NOT a slice from this plan, but the completion of defect 4
 plus defects reported against the deployed build.
 
-**Slices 4, 5 and 6 are unstarted and currently have no PR assigned.** That
-includes defect 5's display half (the Bing panel, 4.4) and defect 7 (MCP,
-all of Slice 5). Read the three "what shipped" sections at the end of this
-document before starting any of them.
+**Slices 4 and 5 shipped 2026-09-05 in one PR** — the post-connect ladder,
+Bing's own panel (defect 5's display half), and the connected-data MCP tools
+(defect 7). **Slice 6 is unstarted and has no PR assigned**; it was deferred
+deliberately rather than blocked. Read the "what shipped" sections at the end
+of this document before starting it.
 
 **Superseded in part by `gsc-performance-alignment.md`**, which shipped first.
 Read that document's "What shipped" section before starting any slice here:
@@ -300,7 +301,10 @@ second was not a slice at all:
 - **PR #24** — defect 4's remaining half (the AI Referrals snapshot family),
   chart-bucket granularity, and the Performance UI defects reported against
   the deployed build. Unplanned work that displaced Slices 4-6.
-- **Slices 4, 5 and 6 remain unstarted**, in that dependency order.
+- **Slices 4 + 5** — the post-connect ladder, Bing's panel, and the MCP
+  connected-data tools, shipped together because 4.4 and 5 both needed the
+  same readiness projection.
+- **Slice 6 remains unstarted.**
 
 Each PR has `check.ps1` and `test.ps1` green before the next begins.
 
@@ -550,3 +554,74 @@ window that happens to be exactly 30 days wide no longer answers "Last 30
 days" while remaining readable as the exact window it is. The column was
 folded into `0001_initial.py` as the repository requires, which needs a
 database reset.
+## What Slices 4 and 5 shipped
+
+Implemented 2026-09-05. Where a decision changed the plan, the reason is here
+rather than a silent divergence.
+
+**The ladder gained an off-ladder state.** The plan lists `connected` →
+`importing` → `core_data_ready` → `analysis_ready`. A backfill whose every
+window failed or was cancelled fits none of them: it is terminal, so it is not
+`importing`, and nothing projected, so it is not `core_data_ready`. Reporting
+it as `importing` puts a spinner in front of an import that is never coming.
+`import_failed` is therefore a sixth state, off the ladder rather than a rung
+on it, and it renders as an error with a retry rather than as progress.
+
+**Readiness rolls up per connection, not over pooled rows.** The first cut
+pooled every mapped connection's backfill runs into one rollup. A connection
+that never enqueued a backfill contributes no rows, so it disappeared: a
+project with one finished connection and one untouched connection reported a
+COMPLETE import, covered through the finished connection's furthest date.
+Each mapped connection now rolls up on its own — the ones with no rows
+included — and coverage is the earliest date they ALL reach.
+
+**Readiness also reports the connected providers.** Not in the plan, but 4.4
+needs it: Bing's panel must appear only when a Bing connection exists,
+because "we never imported Bing" and "Bing measured nothing" are different
+answers and an always-present empty panel states the second while meaning the
+first. The ladder and the panel read one shared query, so they cannot
+disagree.
+
+**Bing is scanned but not consumed.** `TRAFFIC_CONSUMED_DATASETS` defines the
+Search Console/GA4 headline and the coverage window behind it, so Bing's
+dailies stayed out of it and a new `TRAFFIC_PROJECTED_DATASETS` is what the
+row scan reads. The dimension machinery was already generic, so Bing needed
+routing rather than a parallel implementation: two dimensions of its own,
+keyed by the same canonical URL and normalized query identity Search Console
+rows use. `PERFORMANCE_DIMENSION_ORDER` still means "the Search Console tabs";
+`PERFORMANCE_TABLE_DIMENSION_ORDER` is the full set a table request may name.
+
+**Slice 4.3 needed no fix.** The cold-connect chain — derivation, the traffic
+snapshot refresh, the demand refresh, the opportunity recompute — was driven
+from an empty database against a project with no snapshot, no demand history
+and no opportunities to supersede, and reached `analysis_ready` with a demand
+snapshot behind it on the first run. The test exists to keep it that way.
+
+**The MCP table tool resolves its own snapshot.** The plan mirrors the REST
+surface, where a table request carries the `snapshot_id` the dashboard
+returned. `performance.read_table` still accepts one, but resolves a range
+when none is given: making an agent issue two calls to read "top queries for
+last month" is a worse tool for no gain in truthfulness, since both paths
+resolve through the same service.
+
+**`performance.read_table` is not in the project-context resource.** The plan
+says register the new tools in `_CONTEXT_TOOLS`. The three snapshot-shaped
+reads are there; the paged drill-down is not, because a context resource
+carrying one page of one dimension answers a question the caller has not
+asked yet.
+
+**The connected tools joined `explain`, not `build_roadmap`.** Explaining a
+number means being able to say why it looks that way, which needs the
+connected layer: an empty chart because nothing is connected, because an
+import is still running, and because search traffic really fell are three
+different answers. A roadmap is built from analysis, so its allowlist stayed
+the narrower one.
+
+### Still not live-verified
+
+Unchanged from PR 1 and PR #24: no real consent, no real 365-day import, and
+no deployed Google sign-in was exercised from here. The ladder, the Bing
+routing, the cold-connect chain and all four MCP tools are covered by
+component tests against a real Postgres. The Playwright connect -> sync ->
+preset pass is still unwritten and unassigned, and no MCP client has been
+pointed at a real workspace.
