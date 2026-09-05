@@ -30,6 +30,7 @@ from app.core.config.integrations_datasets import (
     unpack_dimension_key,
 )
 from app.core.config.traffic import TRAFFIC_GA4_ORGANIC_CHANNEL_GROUPS
+from app.domain.traffic.accumulators import BoundedIds
 from app.domain.traffic.projection import (
     TRAFFIC_SERIES_NAMES,
     TrafficMetricRowInput,
@@ -1068,3 +1069,47 @@ def test_unordered_streaming_still_dedups_a_late_superseding_revision() -> None:
     older, newer = _superseded_pair()
     streamed = _stream([newer, older], batch_size=1, ordered=False, **_STREAM_WINDOW)
     assert streamed.metrics["totals"]["clicks"] == 9
+
+
+def test_bounded_ids_retains_only_the_sample_it_reports() -> None:
+    """Provenance accumulation is bounded by the LIMIT, not by row count.
+
+    ``bounded_provenance`` always kept the lowest sorted ids, but the
+    accumulators used to hold every id until finalization, so streaming
+    memory still grew with the window. Retaining the sample as it folds
+    gives the identical answer at a fixed ceiling.
+    """
+    limit = 10
+    ids = BoundedIds(limit=limit)
+    offered = [f"id-{index:04d}" for index in range(500)]
+    for value in reversed(offered):  # worst case: every add displaces
+        ids.add(value)
+
+    provenance = ids.provenance()
+    # Same answer a full-set cap would give: the lowest ``limit`` ids...
+    assert provenance.ids == sorted(offered)[:limit]
+    # ...an honest distinct total, and therefore a sampled row.
+    assert provenance.total == len(offered)
+    assert provenance.sampled is True
+    # The bound that matters: the retained sample never exceeds the limit.
+    assert len(list(ids)) == limit
+
+
+def test_bounded_ids_counts_repeats_once() -> None:
+    """``total`` is a DISTINCT count, including ids already discarded."""
+    ids = BoundedIds(limit=2)
+    for value in ("id-a", "id-b", "id-c", "id-c", "id-a"):
+        ids.add(value)
+    provenance = ids.provenance()
+    assert provenance.ids == ["id-a", "id-b"]
+    assert provenance.total == 3
+
+
+def test_bounded_ids_union_merges_both_samples_and_totals() -> None:
+    """A union caps the merged sample and keeps the distinct total."""
+    left, right = BoundedIds(limit=2), BoundedIds(limit=2)
+    left.update(["id-a", "id-c"])
+    right.update(["id-b", "id-d"])
+    merged = (left | right).provenance()
+    assert merged.ids == ["id-a", "id-b"]
+    assert merged.total == 4

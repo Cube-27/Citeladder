@@ -48,15 +48,22 @@ _METRIC_ROW_BATCH_SIZE = 1000
 # The read scan's ordering: re-sync identity, then revision, then id. Keeps
 # every revision of one observation adjacent so the projection can dedup as
 # a stream (see ``_metric_row_batch``).
-_METRIC_ROW_SCAN_ORDER = (
-    IntegrationMetricRow.property_ref.asc(),
-    IntegrationMetricRow.provider.asc(),
-    IntegrationMetricRow.dataset.asc(),
-    IntegrationMetricRow.date.asc(),
-    IntegrationMetricRow.dimension_key.asc(),
-    IntegrationMetricRow.resync_seq.asc(),
-    IntegrationMetricRow.id.asc(),
+#
+# The COLUMNS are kept separate from the ``.asc()`` ordering expressions
+# because the keyset cursor compares them as a row value: ``tuple_()`` over
+# ordering expressions renders ``(col ASC, ...) > (...)``, which Postgres
+# rejects as a syntax error. The scan is ascending on every column, so the
+# plain columns carry the same meaning in the comparison.
+_METRIC_ROW_SCAN_COLUMNS = (
+    IntegrationMetricRow.property_ref,
+    IntegrationMetricRow.provider,
+    IntegrationMetricRow.dataset,
+    IntegrationMetricRow.date,
+    IntegrationMetricRow.dimension_key,
+    IntegrationMetricRow.resync_seq,
+    IntegrationMetricRow.id,
 )
+_METRIC_ROW_SCAN_ORDER = tuple(column.asc() for column in _METRIC_ROW_SCAN_COLUMNS)
 
 __all__ = [
     "DemandRevision",
@@ -123,7 +130,7 @@ async def _metric_row_batch(
 
 def _metric_row_scan_cursor() -> Any:
     """The scan's ordering columns as one row-value cursor expression."""
-    return tuple_(*_METRIC_ROW_SCAN_ORDER)
+    return tuple_(*_METRIC_ROW_SCAN_COLUMNS)
 
 
 def _scan_cursor_value(row: IntegrationMetricRow) -> tuple[Any, ...]:
