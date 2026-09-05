@@ -55,18 +55,17 @@ export function MetricCards({
     <fieldset
       className={cn(
         // No outer border or radius: the strip sits INSIDE the chart card,
-        // which already draws them. Only the seams between cards are ours.
-        'grid',
-        'divide-border-subtle divide-y sm:grid-cols-2 sm:divide-x lg:grid-cols-4',
+        // which already draws them. Only the seams between cards are ours,
+        // and they are drawn per card below rather than with divide-*, whose
+        // sibling-wide rules put a TOP border on cards 2-4 in the lg row and
+        // a LEFT border on the first card of the sm second row.
+        'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
         'border-border-subtle border-b',
-        // The divider between rows is the strip's only internal seam; the
-        // second row must not re-draw the top border on wrap.
-        '[&>*]:border-0',
       )}
       data-testid="metric-card-strip"
     >
       <legend className="sr-only">Search Console metrics</legend>
-      {METRIC_CARDS.map((card) => {
+      {METRIC_CARDS.map((card, index) => {
         const isActive = active.has(card.key);
         const value = selected.totals[card.key];
         const comparisonValue = comparison ? comparison.totals[card.key] : undefined;
@@ -79,7 +78,15 @@ export function MetricCards({
             data-testid={`metric-card-${card.key}`}
             className={cn(
               panelClasses({ tone: 'panel', pad: 'compact' }),
-              'grid gap-1 rounded-none transition-opacity',
+              'grid gap-1 rounded-none border-0 transition-opacity',
+              // Seams by POSITION: a left edge except at the start of each
+              // row, and a top edge only where a row actually wraps above.
+              'border-border-subtle',
+              index > 0 && 'sm:border-l lg:border-l',
+              index % 2 === 0 && 'sm:border-l-0',
+              index % 4 === 0 && 'lg:border-l-0',
+              index > 0 && 'border-t sm:border-t-0',
+              index >= 2 && 'sm:border-t lg:border-t-0',
               // Unselected reads as dimmed, never as a different surface —
               // the colour stays so the card keeps naming its own series.
               isActive ? 'opacity-100' : 'opacity-65 hover:opacity-85',

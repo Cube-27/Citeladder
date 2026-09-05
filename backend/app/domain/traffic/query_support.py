@@ -65,8 +65,12 @@ def validate_granularity(
     charted in weekly buckets is one range and one granularity, not two
     ranges. Every refresh already writes the window at all three, so this
     only chooses which persisted rows the surface reads.
+
+    ``None`` means the parameter was OMITTED and takes the default; an empty
+    string means it was SENT empty, which is a malformed request rather than
+    an absent one, so it fails validation instead of silently charting days.
     """
-    effective = value or default
+    effective = default if value is None else value
     if effective not in TRAFFIC_SNAPSHOT_GRANULARITIES:
         raise PerformanceQueryError(f"unknown performance granularity: {effective!r}")
     return effective

@@ -72,8 +72,14 @@ async def _seed_snapshot(
     window_start: date,
     window_end: date,
     sessions: int,
+    preset_window_days: int | None = None,
 ) -> None:
-    """One persisted AI Referrals snapshot for an exact window."""
+    """One persisted AI Referrals snapshot for an exact window.
+
+    ``preset_window_days`` marks the row as the refresh's preset family would:
+    a preset read matches that marker, not the window's length, so a row
+    seeded without it is a sync-window snapshot and answers no preset.
+    """
     async with session_factory() as session:
         session.add(
             AiReferralsSnapshot(
@@ -82,6 +88,7 @@ async def _seed_snapshot(
                 window_start=window_start,
                 window_end=window_end,
                 granularity=ANALYTICS_DEFAULT_GRANULARITY,
+                preset_window_days=preset_window_days,
                 metrics={
                     "referral_volume": [
                         {"date": window_end.isoformat(), "value": sessions}
@@ -100,7 +107,7 @@ async def test_range_preset_resolves_a_snapshot_the_client_clock_would_miss(
     client: httpx.AsyncClient,
     session_factory,
 ) -> None:
-    """Defect 4: a preset must resolve by LENGTH, not by client-computed dates.
+    """Defect 4: a preset resolves its MARKED snapshot, not client dates.
 
     Provider data lags, so the persisted window ends well before today. The
     old contract asked for an exact ``from``/``to`` anchored on the browser's
@@ -119,6 +126,7 @@ async def test_range_preset_resolves_a_snapshot_the_client_clock_would_miss(
         window_start=stale_start,
         window_end=stale_end,
         sessions=42,
+        preset_window_days=30,
     )
     endpoint = f"/api/v1/projects/{project_id}/ai-referrals"
 
@@ -148,9 +156,10 @@ async def test_range_preset_matches_only_its_own_length(
 ) -> None:
     """A 90-day preset must not resolve a 30-day snapshot.
 
-    Length is the preset's identity, so a shorter persisted window is a
-    DIFFERENT range — reporting it under "Last 90 days" would misdescribe
-    the evidence rather than admit the range is unprojected.
+    The preset's identity is the MARKER the refresh wrote, so another
+    preset's window is a DIFFERENT range — reporting it under "Last 90 days"
+    would misdescribe the evidence rather than admit the range is
+    unprojected.
     """
     await _register(client, "ai-referrals-preset-length@example.com")
     project_id, workspace_id = await _create_project(client)
@@ -162,6 +171,7 @@ async def test_range_preset_matches_only_its_own_length(
         window_start=end - timedelta(days=29),
         window_end=end,
         sessions=7,
+        preset_window_days=30,
     )
     endpoint = f"/api/v1/projects/{project_id}/ai-referrals"
 
@@ -178,3 +188,42 @@ async def test_unknown_range_is_422(client: httpx.AsyncClient) -> None:
         f"/api/v1/projects/{project_id}/ai-referrals", params={"range": "7d"}
     )
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_unmarked_window_of_preset_length_does_not_answer_the_preset(
+    client: httpx.AsyncClient,
+    session_factory,
+) -> None:
+    """A sync window that happens to be 30 days long is not "Last 30 days".
+
+    Matching on inclusive LENGTH alone could not tell the two apart, so a
+    sync-run window of the right size silently answered a preset it was never
+    derived for. Only the refresh's preset family writes
+    ``preset_window_days``, and that marker is what the read matches.
+    """
+    await _register(client, "ai-referrals-unmarked@example.com")
+    project_id, workspace_id = await _create_project(client)
+    end = date.today() - timedelta(days=3)
+    await _seed_snapshot(
+        session_factory,
+        project_id=project_id,
+        workspace_id=workspace_id,
+        window_start=end - timedelta(days=29),
+        window_end=end,
+        sessions=11,
+        # No marker: this is a sync-window snapshot, exactly 30 days wide.
+        preset_window_days=None,
+    )
+    endpoint = f"/api/v1/projects/{project_id}/ai-referrals"
+
+    assert (await client.get(endpoint, params={"range": "30d"})).json()["sources"] == []
+    # It is still readable as the exact window it actually is.
+    exact = await client.get(
+        endpoint,
+        params={
+            "from": (end - timedelta(days=29)).isoformat(),
+            "to": end.isoformat(),
+        },
+    )
+    assert exact.json()["sources"] != []

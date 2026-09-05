@@ -33,22 +33,52 @@ export type RangeSelection = {
   compareTo: string;
 };
 
+/**
+ * A real Gregorian day in ISO form.
+ *
+ * The shape test alone accepts "2026-02-31", which `Date.UTC` silently rolls
+ * forward to March 3 — Apply would then request a window the user never
+ * chose. The round trip is what rejects it.
+ */
 function isoDay(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
+  return (
+    !Number.isNaN(date.getTime()) &&
+    date.getUTCFullYear() === Number(year) &&
+    date.getUTCMonth() === Number(month) - 1 &&
+    date.getUTCDate() === Number(day)
+  );
+}
+
+/** Whether both ends are real days, ordered, and inside imported coverage. */
+function isUsableWindow(
+  from: string,
+  to: string,
+  coverage: { earliest: string | null; latest: string | null },
+): boolean {
+  if (!isoDay(from) || !isoDay(to) || to < from) return false;
+  // ISO days compare correctly as strings, so no parsing is needed here.
+  if (coverage.earliest && from < coverage.earliest) return false;
+  if (coverage.latest && to > coverage.latest) return false;
+  return true;
 }
 
 /** Whether a draft is internally consistent enough to request. */
-function isApplicable(draft: RangeSelection): boolean {
-  if (draft.range === 'custom') {
-    if (!isoDay(draft.from) || !isoDay(draft.to) || draft.to < draft.from) return false;
+function isApplicable(
+  draft: RangeSelection,
+  coverage: { earliest: string | null; latest: string | null },
+): boolean {
+  if (draft.range === 'custom' && !isUsableWindow(draft.from, draft.to, coverage)) {
+    return false;
   }
-  if (draft.compare === 'custom') {
-    if (
-      !isoDay(draft.compareFrom) ||
-      !isoDay(draft.compareTo) ||
-      draft.compareTo < draft.compareFrom
-    )
-      return false;
+  if (
+    draft.compare === 'custom' &&
+    !isUsableWindow(draft.compareFrom, draft.compareTo, coverage)
+  ) {
+    return false;
   }
   return true;
 }
@@ -168,7 +198,7 @@ export function DateRangeDialog({
             Cancel
           </Button>
           <Button
-            disabled={!isApplicable(draft)}
+            disabled={!isApplicable(draft, coverage)}
             onClick={() => {
               onApply(draft);
               onOpenChange(false);

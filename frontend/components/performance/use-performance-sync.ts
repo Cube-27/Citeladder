@@ -82,6 +82,12 @@ export function usePerformanceSync(projectId: string | null) {
     : runQueries.every((query) => query.data && isSucceededSyncRun(query.data.status))
       ? 'succeeded'
       : 'failed';
+  // ANY succeeded run enqueues projections, so this is not `outcome ===
+  // 'succeeded'`: that is all-or-nothing, and a batch where GSC imported and
+  // Bing failed still has fresh evidence to project.
+  const anySucceeded = runQueries.some(
+    (query) => query.data && isSucceededSyncRun(query.data.status),
+  );
 
   // Refetch on the terminal edge, then keep polling while the projection
   // catches up. Bounded so a projection that never lands (a failed refresh
@@ -95,7 +101,10 @@ export function usePerformanceSync(projectId: string | null) {
   const [wasTerminal, setWasTerminal] = useState(allTerminal);
   if (allTerminal !== wasTerminal) {
     setWasTerminal(allTerminal);
-    if (allTerminal) setPollsLeft(PROJECTION_SETTLE_POLLS);
+    // A batch where EVERY run failed enqueues no projection, so there is
+    // nothing to wait for — polling would just hold the "syncing" banner up
+    // for half a minute after a failure the user can already see.
+    if (allTerminal && anySucceeded) setPollsLeft(PROJECTION_SETTLE_POLLS);
   }
 
   const projecting = pollsLeft > 0;

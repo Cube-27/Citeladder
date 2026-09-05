@@ -324,6 +324,13 @@ class AiReferralsSnapshot(Base):
     window_end: Mapped[date] = mapped_column(Date)
     # day | week | month (ANALYTICS_SNAPSHOT_GRANULARITIES).
     granularity: Mapped[str] = mapped_column(String(8))
+    # The AI Referrals preset this snapshot was derived FOR, or NULL when it
+    # was not derived by the preset family (a sync-window snapshot). Preset
+    # resolution matches on this rather than on window length alone: a
+    # sync-run window can happen to be exactly 30 days long, and resolving
+    # "Last 30 days" to it would silently show a window the preset never
+    # meant. Mirrors TrafficSnapshot.preset_window_days (invariant 2).
+    preset_window_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Headline projection: AI-referral volume, share, and source totals.
     metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Provenance (invariant 4): the ReferralClassification ids folded in.

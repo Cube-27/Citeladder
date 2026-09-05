@@ -189,7 +189,14 @@ export function DimensionTable({
         // out identically, so switching QUERIES -> PAGES does not reflow
         // the metric columns under the pointer. Without it each tab sizes
         // to its own longest cell and the whole table jumps.
-        className="w-full table-fixed text-xs [&_td]:text-xs [&_th]:text-xs"
+        // table-fixed divides the available width evenly, so a comparison
+        // (13 columns) would squeeze each metric to a few characters on a
+        // narrow viewport. A min-width keeps them readable and lets the
+        // wrapper scroll instead, which is what overflow-x-auto is there for.
+        className={cn(
+          'w-full table-fixed text-xs [&_td]:text-xs [&_th]:text-xs',
+          comparing ? 'min-w-[64rem]' : 'min-w-[36rem]',
+        )}
       >
         <colgroup>
           <col className="w-[40%] min-w-[12rem]" />

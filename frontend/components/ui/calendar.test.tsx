@@ -38,6 +38,16 @@ describe('Calendar', () => {
     expect(screen.getByRole('button', { name: '2026-09-03' })).toBeEnabled();
   });
 
+  it('ignores a date that only looks valid', () => {
+    // Date.UTC OVERFLOWS: Feb 31 becomes March 3. The shape test alone would
+    // accept it and the grid would open on the wrong month.
+    render(<Calendar value="2026-02-31" onSelect={vi.fn()} ariaLabel="Start date" />);
+    const pressed = screen
+      .getAllByRole('button')
+      .filter((button) => button.getAttribute('aria-pressed') === 'true');
+    expect(pressed).toHaveLength(0);
+  });
+
   it('moves between months without changing the selection', () => {
     const onSelect = vi.fn();
     render(<Calendar value="2026-09-05" onSelect={onSelect} ariaLabel="Start date" />);

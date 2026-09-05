@@ -541,14 +541,12 @@ granularity parameter and the settling poll are covered by component tests
 against a real Postgres, but the deployment items (the compose flag,
 `runtime.env` credentials) can only be confirmed on the deployed host.
 
-### Known gap left open
+### The length-vs-marker ambiguity is closed
 
-**The AI Referrals family is derived, but its presets still match by LENGTH
-rather than by a preset marker.** `AiReferralsSnapshot` has no
-`preset_window_days` column, so a custom 30-day window that was never written
-for the "Last 30 days" preset would still resolve it. The family now makes
-sure a preset-length row EXISTS; it does not make the match unambiguous.
-Performance avoids this because its refresh writes the marker column. Closing
-it needs a schema change, and this repo folds every migration into
-`0001_initial.py` with a database reset — deliberately out of scope for a
-defect-fix PR, and still open.
+`AiReferralsSnapshot` now carries `preset_window_days`, mirroring
+`TrafficSnapshot`. Only the refresh's preset family writes it, and a preset
+read matches THAT rather than the window's inclusive length — so a sync-run
+window that happens to be exactly 30 days wide no longer answers "Last 30
+days" while remaining readable as the exact window it is. The column was
+folded into `0001_initial.py` as the repository requires, which needs a
+database reset.

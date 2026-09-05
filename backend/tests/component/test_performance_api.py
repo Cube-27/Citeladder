@@ -1040,3 +1040,7 @@ async def test_granularity_selects_the_bucket_size(
     # An unknown bucket size is refused rather than silently served as day.
     bad = await client.get(endpoint, params={"granularity": "fortnight"})
     assert bad.status_code == 422
+    # An explicitly EMPTY value is malformed, not absent: only omitting the
+    # parameter takes the default.
+    empty = await client.get(endpoint, params={"granularity": ""})
+    assert empty.status_code == 422
