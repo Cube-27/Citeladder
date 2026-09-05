@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { integrationProviderSchema } from './integrations';
+
 // ---------------------------------------------------------------------------
 // Performance (projection over persisted TrafficSnapshot / dimension stat rows
 // — no read-time recomputation and no provider calls anywhere, invariant 7)
@@ -35,6 +37,11 @@ export const performanceDimensionSchema = z.enum([
   'device',
   'search_appearance',
   'day',
+  // Bing's own two breakdowns. They are a SEPARATE panel, never tabs beside
+  // the Search Console six: the engines report different populations, so a
+  // reader must always know which one a row came from.
+  'bing_query',
+  'bing_page',
 ]);
 export const evidenceStateSchema = z.enum(['not_run', 'observed_zero', 'available']);
 /** The chart's BUCKET size — distinct from the range, which is its LENGTH. */
@@ -88,6 +95,44 @@ export const performanceDimensionCountsSchema = responseObject({
   device: z.number().int(),
   search_appearance: z.number().int(),
   day: z.number().int(),
+  bing_query: z.number().int(),
+  bing_page: z.number().int(),
+});
+
+/**
+ * `GET /projects/{id}/readiness` — where a project sits after its connect.
+ *
+ * The stages are distinct STATES, never a progress percentage: nothing
+ * connected, connected with no import enqueued, importing, an import that
+ * failed outright, core data ready with analysis still computing, and
+ * analysis ready. `import_failed` is off the ladder rather than on it —
+ * nothing further is coming, so rendering it as a slower `importing` would
+ * spin forever in front of an import that needs retrying.
+ */
+export const projectReadinessStageSchema = z.enum([
+  'not_connected',
+  'connected',
+  'importing',
+  'import_failed',
+  'core_data_ready',
+  'analysis_ready',
+]);
+
+export const projectReadinessSchema = responseObject({
+  project_id: uuid(),
+  stage: projectReadinessStageSchema,
+  connection_count: z.number().int(),
+  // The engines actually connected to this project. A surface uses it to
+  // decide whether an engine's panel belongs on screen at all: no Bing
+  // connection is not the same answer as a Bing panel measuring nothing.
+  providers: z.array(integrationProviderSchema),
+  backfill_state: z.string().nullable(),
+  // The date EVERY mapped connection has imported through; null as soon as
+  // one of them has imported nothing.
+  imported_through: z.string().nullable(),
+  has_performance_snapshot: z.boolean(),
+  has_demand_snapshot: z.boolean(),
+  opportunity_count: z.number().int(),
 });
 
 // `GET /projects/{id}/performance`

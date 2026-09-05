@@ -322,8 +322,29 @@ export const DIMENSION_TABS: readonly {
   { value: 'day', label: 'DAYS', header: 'Date', noun: 'days' },
 ] as const;
 
+/**
+ * Bing's own two breakdowns.
+ *
+ * Kept out of DIMENSION_TABS on purpose: Bing is a second engine measuring a
+ * different population, so its rows belong in their own panel rather than as
+ * two more tabs a reader could mistake for Search Console breakdowns. The
+ * headline cards and the chart above never include them.
+ */
+export const BING_DIMENSION_TABS: readonly {
+  value: Extract<PerformanceDimension, 'bing_query' | 'bing_page'>;
+  label: string;
+  header: string;
+  noun: string;
+}[] = [
+  { value: 'bing_query', label: 'QUERIES', header: 'Top queries', noun: 'queries' },
+  { value: 'bing_page', label: 'PAGES', header: 'Top pages', noun: 'pages' },
+] as const;
+
 export function dimensionTab(dimension: PerformanceDimension) {
-  return DIMENSION_TABS.find((tab) => tab.value === dimension) ?? DIMENSION_TABS[0];
+  return (
+    [...DIMENSION_TABS, ...BING_DIMENSION_TABS].find((tab) => tab.value === dimension) ??
+    DIMENSION_TABS[0]
+  );
 }
 
 /** DAYS reads chronologically; every other table defaults to clicks descending. */

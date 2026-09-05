@@ -3,20 +3,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
-import { DateRangeDialog, INITIAL_SELECTION, type RangeSelection } from './date-range-dialog';
+import { DateRangeDialog, type RangeSelection } from './date-range-dialog';
 import { GranularitySelect, PerformanceNotices, PerformanceToolbar } from './performance-chrome';
-import { DimensionTable } from './dimension-table';
 import { Ga4SummaryRow, MetricCards } from './metric-cards';
+import { PerformanceBreakdowns } from './performance-breakdowns';
 import { PerformanceChart, type ChartSeries } from './performance-chart';
+import { ReadinessLadder, useConnectedProviders } from './readiness-ladder';
+import { usePerformanceSelection } from './use-performance-selection';
 import { usePerformanceSync } from './use-performance-sync';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { integrationsApi } from '@/lib/api/integrations';
 import {
   performanceApi,
   type PerformanceDashboard,
-  type PerformanceDimension,
   type PerformanceGranularity,
 } from '@/lib/api/performance';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -24,7 +24,6 @@ import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { useProjectContext } from '@/lib/project/project-context';
 import {
   COMPARE_OPTIONS,
-  DIMENSION_TABS,
   METRIC_CARDS,
   canCompareYearOverYear,
   describeWindow,
@@ -77,26 +76,19 @@ export function PerformanceScreen() {
   const { activeProject, isLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
   const workspaceId = activeProject?.workspace_id ?? null;
-  const [selection, setSelection] = useState<RangeSelection>(INITIAL_SELECTION);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<'filter' | 'compare'>('filter');
-  const [dimension, setDimension] = useState<PerformanceDimension>('query');
-  const [granularity, setGranularity] = useState<PerformanceGranularity>('day');
-  const [activeMetrics, setActiveMetrics] = useState<ReadonlySet<PerformanceMetricKey>>(
-    () => new Set<PerformanceMetricKey>(['clicks', 'impressions']),
-  );
-
-  // Reset returns the surface to its landing state: the newest synced
-  // window, daily buckets, no comparison, the first tab, and the two default
-  // metrics. It is offered only while a comparison is active — that is the
-  // state it exists to clear.
-  const DEFAULT_METRICS: readonly PerformanceMetricKey[] = ['clicks', 'impressions'];
-  const resetFilters = () => {
-    setSelection(INITIAL_SELECTION);
-    setGranularity('day');
-    setDimension('query');
-    setActiveMetrics(new Set<PerformanceMetricKey>(DEFAULT_METRICS));
-  };
+  const {
+    selection,
+    setSelection,
+    granularity,
+    setGranularity,
+    dimension,
+    setDimension,
+    activeMetrics,
+    toggleMetric,
+    reset: resetFilters,
+  } = usePerformanceSelection();
 
   const params = dashboardParams(selection, granularity);
   const dashboard = useQuery({
@@ -111,22 +103,9 @@ export function PerformanceScreen() {
     queryFn: ({ signal }) => integrationsApi.list({ signal }),
     enabled: Boolean(workspaceId),
   });
+  const connectedProviders = useConnectedProviders(projectId);
   const sync = usePerformanceSync(projectId);
   const projection = useRangeProjection(projectId, dashboard.data);
-
-  const toggleMetric = (key: PerformanceMetricKey) =>
-    setActiveMetrics((current) => {
-      const next = new Set(current);
-      // The chart must always draw something, so the last selected metric
-      // cannot be turned off.
-      if (next.has(key)) {
-        if (next.size === 1) return current;
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
 
   if (isLoading || (projectId && dashboard.isLoading)) return <PerformanceSkeleton />;
   if (!projectId)
@@ -174,6 +153,8 @@ export function PerformanceScreen() {
         onReset={resetFilters}
       />
 
+      <ReadinessLadder projectId={projectId} />
+
       <PerformanceNotices
         sync={sync}
         projecting={projection.projecting}
@@ -211,33 +192,20 @@ export function PerformanceScreen() {
         compareLabel={comparisonLabel}
       />
 
-      <Tabs
-        value={dimension}
-        onValueChange={setDimension}
-        items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
-        ariaLabel="Performance breakdowns"
-        rootClassName="grid gap-3 min-h-[560px]"
-        // The tab row heads the table card, so it spans the full width
-        // rather than hugging six labels and leaving dead space to the right.
-        fill
-      >
-        {DIMENSION_TABS.map((tab) => (
-          <TabPanel key={tab.value} value={tab.value} className="focus-ring min-h-[520px]">
-            {dimension === tab.value && selectedWindow.snapshot_id ? (
-              <DimensionTable
-                projectId={projectId}
-                dimension={tab.value}
-                snapshotId={selectedWindow.snapshot_id}
-                compareSnapshotId={comparisonWindow?.snapshot_id ?? null}
-                activeMetrics={activeMetrics}
-                unavailable={data.unavailable_dimensions.includes(tab.value)}
-                selectedLabel={selectedLabel}
-                compareLabel={comparisonLabel}
-              />
-            ) : null}
-          </TabPanel>
-        ))}
-      </Tabs>
+      <PerformanceBreakdowns
+        projectId={projectId}
+        dimension={dimension}
+        onDimensionChange={setDimension}
+        snapshotId={selectedWindow.snapshot_id}
+        compareSnapshotId={comparisonWindow?.snapshot_id ?? null}
+        unavailableDimensions={data.unavailable_dimensions}
+        activeMetrics={activeMetrics}
+        selectedLabel={selectedLabel}
+        compareLabel={comparisonLabel}
+        // Only when a Bing connection exists: Bing's panel states "measured
+        // nothing", which is not what an absent connection means.
+        hasBing={connectedProviders.includes('bing')}
+      />
 
       <DateRangeDialog
         open={dialogOpen}

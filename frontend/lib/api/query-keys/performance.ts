@@ -19,4 +19,5 @@ export const performanceKeys = {
     ['performance', 'table', projectId, filters] as const,
   rangeTask: (projectId: string, taskId: string) =>
     ['performance', 'range-task', projectId, taskId] as const,
+  readiness: (projectId: string) => ['performance', 'readiness', projectId] as const,
 };
