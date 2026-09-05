@@ -35,7 +35,7 @@ export const hairlineBandItemClasses = 'min-w-0 py-3 sm:px-4 sm:first:ps-0 sm:la
 const LEDGER_SHELL = {
   open: '',
   ruled: 'border-border-subtle border-y',
-  boxed: 'bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border',
+  boxed: 'bg-panel shadow-card overflow-hidden rounded-[var(--radius-card)]',
 } as const;
 
 export type LedgerShell = keyof typeof LEDGER_SHELL;

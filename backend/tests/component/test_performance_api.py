@@ -430,6 +430,29 @@ async def test_every_preset_resolves_and_states_its_real_window(
         assert len(selected["series"]["clicks"]) == days
 
 
+async def test_last_synced_and_extended_ranges_resolve_or_state_window(
+    client: httpx.AsyncClient, seeded: tuple[str, str]
+) -> None:
+    project_id, _ = seeded
+    resp_synced = await client.get(
+        f"/api/v1/projects/{project_id}/performance",
+        params={"range": "last_synced"},
+    )
+    assert resp_synced.status_code == 200
+    selected_synced = resp_synced.json()["selected"]
+    assert selected_synced["snapshot_id"] is not None
+    assert selected_synced["window_end"] == ANCHOR.isoformat()
+
+    resp_3m = await client.get(
+        f"/api/v1/projects/{project_id}/performance",
+        params={"range": "3_months"},
+    )
+    assert resp_3m.status_code == 200
+    selected_3m = resp_3m.json()["selected"]
+    assert selected_3m["window_end"] == ANCHOR.isoformat()
+    assert selected_3m["window_start"] == (ANCHOR - timedelta(days=89)).isoformat()
+
+
 async def test_preset_never_resolves_to_a_same_length_custom_range(
     client: httpx.AsyncClient,
     seeded: tuple[str, str],

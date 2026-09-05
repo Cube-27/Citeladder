@@ -18,7 +18,15 @@ import { z } from 'zod';
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
-export const performanceRangeSchema = z.enum(['day', 'week', 'month', 'custom']);
+export const performanceRangeSchema = z.enum([
+  'day',
+  'week',
+  'month',
+  '3_months',
+  '6_months',
+  'last_synced',
+  'custom',
+]);
 export const performanceCompareSchema = z.enum(['none', 'previous', 'year_over_year', 'custom']);
 export const performanceDimensionSchema = z.enum([
   'query',

@@ -180,6 +180,9 @@ TRAFFIC_SYNC_PROVIDERS: Final[frozenset[str]] = frozenset(
 PERFORMANCE_RANGE_DAY: Final = "day"
 PERFORMANCE_RANGE_WEEK: Final = "week"
 PERFORMANCE_RANGE_MONTH: Final = "month"
+PERFORMANCE_RANGE_3_MONTHS: Final = "3_months"
+PERFORMANCE_RANGE_6_MONTHS: Final = "6_months"
+PERFORMANCE_RANGE_LAST_SYNCED: Final = "last_synced"
 PERFORMANCE_RANGE_CUSTOM: Final = "custom"
 # Preset -> inclusive window length in days.
 PERFORMANCE_PRESET_RANGE_DAYS: Final[dict[str, int]] = {
@@ -187,12 +190,19 @@ PERFORMANCE_PRESET_RANGE_DAYS: Final[dict[str, int]] = {
     PERFORMANCE_RANGE_WEEK: 7,
     PERFORMANCE_RANGE_MONTH: 28,
 }
+# Extended preset lengths (for dynamic on-demand projection).
+PERFORMANCE_EXTENDED_RANGE_DAYS: Final[dict[str, int]] = {
+    PERFORMANCE_RANGE_3_MONTHS: 90,
+    PERFORMANCE_RANGE_6_MONTHS: 180,
+}
 PERFORMANCE_RANGES: Final[frozenset[str]] = frozenset(
-    set(PERFORMANCE_PRESET_RANGE_DAYS) | {PERFORMANCE_RANGE_CUSTOM}
+    set(PERFORMANCE_PRESET_RANGE_DAYS)
+    | set(PERFORMANCE_EXTENDED_RANGE_DAYS)
+    | {PERFORMANCE_RANGE_LAST_SYNCED, PERFORMANCE_RANGE_CUSTOM}
 )
 # The range served when a request names none: the newest persisted snapshot
 # for the project, whatever window the last sync covered.
-PERFORMANCE_DEFAULT_RANGE: Final = PERFORMANCE_RANGE_CUSTOM
+PERFORMANCE_DEFAULT_RANGE: Final = PERFORMANCE_RANGE_LAST_SYNCED
 # The snapshot family every refresh derives, anchored at the latest complete
 # GSC evidence date. Day granularity only — the surface has no bucket
 # control, so week/month snapshot rows for these windows would never be read.

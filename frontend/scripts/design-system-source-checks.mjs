@@ -543,6 +543,7 @@ export function productContractViolations(root) {
     '--radius-control',
     '--radius-card',
     '--radius-overlay',
+    '--shadow-card',
     '--color-background',
     '--color-background-alt',
     '--color-panel-tonal',
@@ -622,13 +623,10 @@ export function productContractViolations(root) {
   }
   const card = readFileSync(join(root, 'components', 'ui', 'card-variants.ts'), 'utf8');
   const cardRecipe = card.match(/cva\(([^;]+)\)/s)?.[1] ?? '';
-  // A card is defined by its edge. Elevation stays overlay-only; the border now
-  // belongs to the owner, so no call site has to rebuild a bordered panel.
-  if (/shadow-/.test(cardRecipe)) {
-    violations.push('components/ui/card-variants.ts: Card elevation belongs to overlays');
-  }
-  if (!/\bborder-border-subtle\b/.test(cardRecipe) || !/\bborder\b/.test(cardRecipe)) {
-    violations.push('components/ui/card-variants.ts: Card must own its hairline border');
+  // A card uses subtle directional bottom-weighted elevation (shadow-card) instead
+  // of harsh wireframe hairline borders.
+  if (!cardRecipe.includes('shadow-card')) {
+    violations.push('components/ui/card-variants.ts: Card must own shadow-card elevation');
   }
   const button = readFileSync(join(root, 'components', 'ui', 'button-variants.ts'), 'utf8');
   if (!button.includes('bg-action text-action-fg')) {

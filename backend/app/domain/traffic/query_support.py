@@ -25,9 +25,9 @@ from app.core.config.traffic import (
     PERFORMANCE_COMPARE_YEAR_OVER_YEAR,
     PERFORMANCE_CUSTOM_RANGE_MAX_DAYS,
     PERFORMANCE_DIMENSIONS,
+    PERFORMANCE_EXTENDED_RANGE_DAYS,
     PERFORMANCE_PAGE_SIZE_OPTIONS,
     PERFORMANCE_PRESET_RANGE_DAYS,
-    PERFORMANCE_RANGE_CUSTOM,
     PERFORMANCE_RANGES,
     PERFORMANCE_SORT_WHITELIST,
     PERFORMANCE_YEAR_OVER_YEAR_SHIFT_DAYS,
@@ -306,15 +306,7 @@ async def resolve_selected_window(
     snapshot for it exists (the caller then queues the range projection), and
     a project with no snapshots at all has neither.
     """
-    if range_token != PERFORMANCE_RANGE_CUSTOM:
-        snapshot = await resolve_preset_snapshot(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            range_token=range_token,
-            granularity=granularity,
-        )
-    elif custom is not None:
+    if custom is not None:
         snapshot = await resolve_window_snapshot(
             session,
             workspace_id=workspace_id,
@@ -323,6 +315,36 @@ async def resolve_selected_window(
             granularity=granularity,
         )
         return snapshot, custom
+    elif range_token in PERFORMANCE_PRESET_RANGE_DAYS:
+        snapshot = await resolve_preset_snapshot(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            range_token=range_token,
+            granularity=granularity,
+        )
+    elif range_token in PERFORMANCE_EXTENDED_RANGE_DAYS:
+        days = PERFORMANCE_EXTENDED_RANGE_DAYS[range_token]
+        latest = await resolve_latest_snapshot(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            granularity=granularity,
+        )
+        if latest is not None and latest.window_end:
+            target_window = (
+                latest.window_end - timedelta(days=days - 1),
+                latest.window_end,
+            )
+            snapshot = await resolve_window_snapshot(
+                session,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                window=target_window,
+                granularity=granularity,
+            )
+            return snapshot, target_window
+        return None, None
     else:
         snapshot = await resolve_latest_snapshot(
             session,

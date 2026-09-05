@@ -30,6 +30,7 @@ export function ButtonLink({
       asChild
       variant={sharedVariant(variant)}
       className={cn(
+        'rounded-full min-h-[2.75rem] px-6 text-sm font-medium tracking-tight shadow-sm transition-all duration-200',
         '[&_svg]:size-4 [&_svg]:shrink-0',
         (variant === 'dark' || variant === 'nav') && marketingSecondary,
         className,
@@ -107,8 +108,8 @@ function TextLink({
     <Link
       href={href}
       className={cn(
-        'text-accent-text hover:text-accent-hover inline-flex items-center gap-2 font-medium',
-        '[&_svg]:size-4 [&_svg]:shrink-0',
+        'group text-foreground hover:text-accent-text inline-flex items-center gap-1.5 font-medium underline underline-offset-4 decoration-border-strong hover:decoration-accent transition-colors',
+        '[&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:transition-transform [&_svg]:duration-200 group-hover:[&_svg]:translate-x-0.5 group-hover:[&_svg]:-translate-y-0.5',
         className,
       )}
       {...rest}
@@ -151,7 +152,11 @@ export function IconButtonLink({
     <SharedButton
       asChild
       variant={variant === 'default' ? 'primary' : 'secondary'}
-      className={cn(variant !== 'default' && marketingSecondary, className)}
+      className={cn(
+        'rounded-full min-h-[2.75rem] px-6 text-sm font-medium tracking-tight shadow-sm transition-all duration-200',
+        variant !== 'default' && marketingSecondary,
+        className,
+      )}
     >
       <Link href={href} {...targetProps} {...rest}>
         {side === 'left' ? arrow : null}

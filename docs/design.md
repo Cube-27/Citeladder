@@ -198,11 +198,12 @@ and crisp semantic hairlines to maintain clear structure without visual clutter:
 
 - **Elevation and borders**: structural sections are open on the canvas or use a
   tonal well. `Card` is reserved for a real semantic object: a white fill, the
-  card radius, and a hairline border. It carries no shadow — a card is defined
-  by its edge — and shadows belong only to overlays, menus, drawers, dialogs,
-  the command palette, and toasts. `Card` sets no display of its own: making it
-  a flex column would re-flow every existing card and put an overflow boundary
-  between a sticky child and its scroll container, so a row that needs aligned
+  card radius, and a subtle directional bottom-weighted elevation (`--shadow-card`).
+  It replaces harsh wireframe hairline borders with clean organic depth. Stronger
+  omnidirectional all-side shadows belong to floating overlays: dropdown menus,
+  drawers, dialogs, the command palette, and toasts. `Card` sets no display of its own:
+  making it a flex column would re-flow every existing card and put an overflow
+  boundary between a sticky child and its scroll container, so a row that needs aligned
   footers opts in at the call site.
 - **The nested box is a `Panel`**: a bordered, filled, padded box *inside* a card
   or a section uses `panelClasses({ tone, pad })` from `components/ui/panel.tsx`.
@@ -536,11 +537,11 @@ focused grid, then an optional CTA.
 
 ### Controls
 
-Buttons use the 8px control-radius role with no decorative inset border, on
-every surface.
-Website and flow primary buttons use the same shared Button behaviour and blue
-fill, but add the reference treatment: 12px corners, a subtle light inset edge,
-a defined outer blue edge, and quiet elevation. Secondary, neutral, ghost, and
+Buttons use the 8px control-radius role with no decorative inset border in the
+authenticated application; app button sizes remain compact (32px/36px on desktop,
+44px on touch).
+Website and marketing primary buttons use modern pill geometry (`rounded-full`, 9999px)
+with `min-h-[2.75rem]` (44px) and deep navy action fill. Secondary, neutral, ghost, and
 danger remain shared semantic variants. Every control has a direct label, a
 visible focus ring (an opaque accent halo, ≥3:1), immediate pressed feedback, and
 at least a 44px touch target.
@@ -554,10 +555,10 @@ focus ring on its shared frame rather than a second outline on its native input.
 ### Panels, badges, and evidence
 
 Elevation is shared between marketing and the app. Structural sections remain
-open on the canvas or use a tonal well; semantic object panels use a white fill
-without a shadow. Shadows are reserved for floating surfaces such as menus,
-drawers, dialogs, the command palette, and toasts. Feature code must not restore
-card elevation or hover translation. Badges
+open on the canvas or use a tonal well; semantic object cards use a white fill
+with subtle directional bottom-weighted elevation (`--shadow-card`). Stronger
+all-side shadows are reserved for floating surfaces such as menus,
+drawers, dialogs, the command palette, and toasts. Badges
 pair a text label with their state mark; a colour, dot, or icon is never the sole
 signal. Evidence rows identify source, measurement context, and the action that
 opens the persisted record. Empty and loading states preserve layout and explain

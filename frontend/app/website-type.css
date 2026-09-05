@@ -226,7 +226,7 @@
 }
 
 .website-lead {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   line-height: 1.875rem;
   font-weight: 400;
   letter-spacing: -0.01em;
@@ -276,6 +276,15 @@
   line-height: 1.25rem;
   font-weight: 500;
   letter-spacing: 0;
+}
+
+/* Pill geometry is the WEBSITE and marketing treatment (docs/design.md,
+   Controls). The focused auth/onboarding flow is not marketing: its buttons
+   sit beside fields and chips that carry the control radius, so it keeps the
+   shared control geometry rather than inheriting a marketing shape. */
+:where([data-public-surface]) [data-button-size='md']:not(.app-type-scale *),
+:where([data-public-surface]) [data-button-size='lg']:not(.app-type-scale *) {
+  border-radius: var(--radius-full);
 }
 
 .flow-bar {

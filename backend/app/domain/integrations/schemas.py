@@ -162,3 +162,47 @@ class IntegrationPropertyMappingResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+
+
+class ProjectReadinessResponse(BaseModel):
+    """Where a project sits on the post-connect ladder, and why.
+
+    A pure projection over already-persisted rows (invariant 7): grant
+    status, backfill runs, snapshot presence, demand snapshot presence and
+    live opportunity count. It reports the HIGHEST stage reached, plus the
+    individual facts, so a surface can render the ladder rather than one
+    undifferentiated spinner.
+
+    The stages are distinct STATES, never a percentage:
+
+    - ``not_connected`` — the project has no active mapped connection. Not
+      "importing nothing": nobody has connected a provider.
+    - ``connected`` — a connection exists, but no import has been enqueued.
+    - ``importing`` — at least one backfill window is still queued or running.
+    - ``import_failed`` — every window reached a terminal status, none
+      succeeded, and nothing projected. Off the ladder rather than on it: no
+      further data is coming, so this is not a slower ``importing``.
+    - ``core_data_ready`` — a Performance snapshot exists, so the user's own
+      GSC/GA4 numbers can render, while analysis may still be computing.
+    - ``analysis_ready`` — a demand snapshot exists too, so CiteLadder's own
+      layer is present.
+
+    ``opportunity_count`` counts LIVE opportunities only (superseded rows are
+    history). Zero of them with ``analysis_ready`` is a measured zero — the
+    analysis ran and found nothing — which is NOT the same as analysis that
+    has not run, and the stage is what keeps those apart.
+    """
+
+    project_id: uuid.UUID
+    stage: str
+    connection_count: int
+    #: The backfill rollup across every mapped connection, or null when the
+    #: project has no mapped connection at all.
+    backfill_state: str | None
+    #: The date through which EVERY mapped connection has imported — null as
+    #: soon as one of them has imported nothing. Never the furthest
+    #: connection's reach, which would claim coverage the project lacks.
+    imported_through: date | None
+    has_performance_snapshot: bool
+    has_demand_snapshot: bool
+    opportunity_count: int

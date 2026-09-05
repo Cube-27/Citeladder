@@ -198,7 +198,9 @@ def test_headline_dataset_is_the_only_date_only_report() -> None:
 
 
 def test_performance_range_and_compare_vocabularies() -> None:
-    assert PERFORMANCE_RANGES == frozenset({"day", "week", "month", "custom"})
+    assert PERFORMANCE_RANGES == frozenset(
+        {"day", "week", "month", "3_months", "6_months", "last_synced", "custom"}
+    )
     assert PERFORMANCE_COMPARE_MODES == frozenset(
         {"none", "previous", "year_over_year", "custom"}
     )

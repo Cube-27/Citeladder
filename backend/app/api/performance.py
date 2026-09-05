@@ -35,7 +35,11 @@ from app.core.config.integrations_contracts import (
 from app.core.errors import ApiException
 from app.core.http_errors import api_error, raise_api_error, raise_not_found
 from app.domain.analytics.enqueue import enqueue_performance_range_projection
-from app.domain.integrations.schemas import IntegrationSyncEnqueueResponse
+from app.domain.integrations.readiness import get_project_readiness
+from app.domain.integrations.schemas import (
+    IntegrationSyncEnqueueResponse,
+    ProjectReadinessResponse,
+)
 from app.domain.integrations.sync import (
     ActiveWindowConflictError,
     enqueue_sync_run,
@@ -310,3 +314,25 @@ async def sync_performance_endpoint(
             )
         )
     return enqueued
+
+
+@router.get(
+    "/{project_id}/readiness",
+    response_model=ProjectReadinessResponse,
+)
+async def get_project_readiness_endpoint(
+    project_id: uuid.UUID,
+    ctx: _WorkspaceDep,
+    session: _SessionDep,
+) -> ProjectReadinessResponse:
+    """Where the project sits on the post-connect ladder (projection only).
+
+    Lets the surface render "importing", "core data ready" or "analysis
+    ready" instead of one spinner: the user's own GSC/GA4 numbers appear as
+    soon as they exist, with the analysis layer explicitly still computing
+    rather than looking empty. Reads persisted rows only (invariant 7).
+    """
+    await _get_project_or_404(session, ctx.workspace_id, project_id)
+    return await get_project_readiness(
+        session, workspace_id=ctx.workspace_id, project_id=project_id
+    )

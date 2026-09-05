@@ -78,12 +78,16 @@ function SortableHead({
   const descending = sortDirection(sort) === 'descending';
   const Icon = active ? (descending ? ArrowDown : ArrowUp) : ArrowUpDown;
   return (
-    <TableHead numeric aria-sort={active ? (descending ? 'descending' : 'ascending') : undefined}>
+    <TableHead
+      numeric
+      aria-sort={active ? (descending ? 'descending' : 'ascending') : undefined}
+      className={cn('text-right', sublabel ? 'min-w-[7.5rem]' : undefined)}
+    >
       <Pressable
         type="button"
         onClick={() => onSort(metric)}
         className={cn(
-          'inline-flex w-auto flex-col items-end gap-0.5',
+          'inline-flex w-full flex-col items-end gap-0.5 text-right',
           active ? 'text-accent-text' : 'hover:text-foreground',
         )}
       >
@@ -91,7 +95,11 @@ function SortableHead({
           <Icon className={cn('size-3', !active && 'text-muted')} aria-hidden />
           {label}
         </span>
-        {sublabel ? <span className={textRole('meta')}>{sublabel}</span> : null}
+        {sublabel ? (
+          <span className={cn('max-w-[10rem] truncate', textRole('meta'))} title={sublabel}>
+            {sublabel}
+          </span>
+        ) : null}
       </Pressable>
     </TableHead>
   );
@@ -100,10 +108,12 @@ function SortableHead({
 /** A header cell for a derived column — not sortable, since it is not stored. */
 function StaticHead({ label, sublabel }: Readonly<{ label: string; sublabel: string }>) {
   return (
-    <TableHead numeric>
-      <span className="inline-flex flex-col items-end gap-0.5">
+    <TableHead numeric className="min-w-[7.5rem] text-right">
+      <span className="inline-flex w-full flex-col items-end gap-0.5 text-right">
         <span>{label}</span>
-        <span className={textRole('meta')}>{sublabel}</span>
+        <span className={cn('max-w-[10rem] truncate', textRole('meta'))} title={sublabel}>
+          {sublabel}
+        </span>
       </span>
     </TableHead>
   );
@@ -116,6 +126,7 @@ export function DimensionTable({
   compareSnapshotId,
   selectedLabel,
   compareLabel,
+  activeMetrics,
   unavailable,
 }: Readonly<{
   projectId: string;
@@ -124,6 +135,7 @@ export function DimensionTable({
   compareSnapshotId: string | null;
   selectedLabel: string;
   compareLabel: string;
+  activeMetrics?: ReadonlySet<PerformanceMetricKey>;
   /** The provider report behind this table is never collected. */
   unavailable?: boolean;
 }>) {
@@ -154,7 +166,10 @@ export function DimensionTable({
   const nextCursor = query.data?.next_cursor ?? null;
   const total = query.data?.total_count;
   const { from, to } = pageRange(table.page, table.pageSize, rows.length);
-  const columnCount = 1 + METRIC_CARDS.length * (comparing ? 3 : 1);
+  const displayedMetrics = METRIC_CARDS.filter((card) =>
+    activeMetrics ? activeMetrics.has(card.key) : true,
+  );
+  const columnCount = 1 + displayedMetrics.length * (comparing ? 3 : 1);
 
   const onSort = (key: PerformanceMetricKey) => {
     setSort((current) => toggleSort(current, key));
@@ -179,7 +194,7 @@ export function DimensionTable({
   }
 
   return (
-    <div className="border-border-subtle overflow-hidden rounded-[var(--radius-panel)] border">
+    <div className="border-border-subtle bg-panel flex min-h-[520px] flex-col justify-between overflow-hidden rounded-[var(--radius-panel)] border">
       {/* 12px for the data inside the tab: these tables are dense and read
           as a block of figures, so the smaller size fits more of a row on
           screen without shrinking the tab labels that head them. */}
@@ -189,26 +204,22 @@ export function DimensionTable({
         // out identically, so switching QUERIES -> PAGES does not reflow
         // the metric columns under the pointer. Without it each tab sizes
         // to its own longest cell and the whole table jumps.
-        // table-fixed divides the available width evenly, so a comparison
-        // (13 columns) would squeeze each metric to a few characters on a
-        // narrow viewport. A min-width keeps them readable and lets the
-        // wrapper scroll instead, which is what overflow-x-auto is there for.
         className={cn(
           'w-full table-fixed text-xs [&_td]:text-xs [&_th]:text-xs',
-          comparing ? 'min-w-[64rem]' : 'min-w-[36rem]',
+          comparing ? 'min-w-[48rem]' : 'min-w-[32rem]',
         )}
       >
         <colgroup>
-          <col className="w-[40%] min-w-[12rem]" />
+          <col className="w-[32%] min-w-[14rem]" />
           {Array.from({ length: columnCount - 1 }, (_, index) => (
-            <col key={index} />
+            <col key={index} className={comparing ? 'min-w-[7.5rem]' : 'min-w-[6rem]'} />
           ))}
         </colgroup>
         <TableHeader>
           <TableRow>
             {/* Pinned so the row identity survives horizontal scrolling. */}
             <TableHead className="bg-panel sticky left-0 z-10">{tab.header}</TableHead>
-            {METRIC_CARDS.flatMap((metric) => {
+            {displayedMetrics.flatMap((metric) => {
               const label = metric.label.replace(/^(Total|Average) /, '');
               const head = (
                 <SortableHead
@@ -247,11 +258,15 @@ export function DimensionTable({
         </TableHeader>
         <TableBody>
           {query.isLoading
-            ? Array.from({ length: 5 }, (_, index) => (
-                <TableRow key={`skeleton-${index}`}>
+            ? Array.from({ length: 10 }, (_, index) => (
+                <TableRow key={`skeleton-${index}`} className="h-11">
                   {Array.from({ length: columnCount }, (_, cell) => (
-                    <TableCell key={cell} numeric={cell > 0}>
-                      <Skeleton className="h-4 w-16" />
+                    <TableCell
+                      key={cell}
+                      numeric={cell > 0}
+                      className={cell > 0 ? 'text-right' : undefined}
+                    >
+                      <Skeleton className={cell === 0 ? 'h-4 w-3/4' : 'ml-auto h-4 w-16'} />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -265,7 +280,7 @@ export function DimensionTable({
             </TableRow>
           ) : null}
           {rows.map((row) => (
-            <TableRow key={row.dimension_key}>
+            <TableRow key={row.dimension_key} className="h-11">
               <TableCell className="bg-panel sticky left-0 z-10">
                 <span
                   className={cn(
@@ -276,9 +291,9 @@ export function DimensionTable({
                   {formatDimensionValue(dimension, row.display_value)}
                 </span>
               </TableCell>
-              {METRIC_CARDS.flatMap((metric) => {
+              {displayedMetrics.flatMap((metric) => {
                 const selectedCell = (
-                  <TableCell key={metric.key} numeric>
+                  <TableCell key={metric.key} numeric className="text-right">
                     <span className="mono">
                       {formatMetric(metric.key, row.metrics[metric.key])}
                     </span>
@@ -294,12 +309,12 @@ export function DimensionTable({
                 );
                 return [
                   selectedCell,
-                  <TableCell key={`${metric.key}-comparison`} numeric>
+                  <TableCell key={`${metric.key}-comparison`} numeric className="text-right">
                     <span className="mono text-muted">
                       {formatMetric(metric.key, comparisonValue)}
                     </span>
                   </TableCell>,
-                  <TableCell key={`${metric.key}-difference`} numeric>
+                  <TableCell key={`${metric.key}-difference`} numeric className="text-right">
                     <span
                       className={cn('mono', TONE_CLASS[differenceTone(metric.key, difference)])}
                     >

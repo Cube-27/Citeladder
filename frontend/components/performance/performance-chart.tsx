@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 
 import {
   axisDomainMax,
+  computeTickIndices,
   formatAxisTick,
   formatMetric,
   isInvertedMetric,
@@ -11,6 +12,7 @@ import {
   type PerformanceChartPoint,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
+import { formatShortDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -139,11 +141,14 @@ export function PerformanceChart({
     PADDING.left + (columnCount > 1 ? (index / (columnCount - 1)) * innerWidth : innerWidth / 2);
   const bandWidth = columnCount > 1 ? innerWidth / (columnCount - 1) : innerWidth;
 
+  const basePoints = series.find((s) => s.selected.length > 0)?.selected ?? [];
+  const tickIndices = computeTickIndices(columnCount, 6);
+
   return (
     // The pointer handler lives on the wrapper, not the svg: the svg is a
     // non-interactive graphic, and its <title> already names it for
     // assistive technology.
-    <div className={cn('relative', className)} onMouseLeave={() => setHover(null)}>
+    <div className={cn('relative grid gap-2', className)} onMouseLeave={() => setHover(null)}>
       <svg
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         className="h-[220px] w-full"
@@ -163,6 +168,19 @@ export function PerformanceChart({
           strokeWidth={1}
           vectorEffect="non-scaling-stroke"
         />
+        {/* Horizontal axis tick marks */}
+        {tickIndices.map((idx) => (
+          <line
+            key={`tick-${idx}`}
+            x1={pointX(idx)}
+            x2={pointX(idx)}
+            y1={VIEW_HEIGHT - PADDING.bottom}
+            y2={VIEW_HEIGHT - PADDING.bottom + 4}
+            className="stroke-border"
+            strokeWidth={1}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
         {series.map((entry) => {
           const domain = domainFor(entry);
           const inverted = isInvertedMetric(entry.key);
@@ -226,11 +244,32 @@ export function PerformanceChart({
         ))}
       </svg>
       {hover !== null ? <ChartTooltip series={series} index={hover} /> : null}
-      <div className="grid gap-2">
-        <div className="text-muted flex justify-between px-3 text-xs">
-          <span className="mono">1</span>
-          <span className="mono">{columnCount}</span>
-        </div>
+
+      {/* Horizontal axis date labels */}
+      <div className="text-muted relative h-5 w-full select-none" aria-hidden>
+        {tickIndices.map((idx, i) => {
+          const dateStr = basePoints[idx]?.date;
+          const label = dateStr ? formatShortDate(dateStr) : `${idx + 1}`;
+          const pct = (pointX(idx) / VIEW_WIDTH) * 100;
+          const alignClass =
+            i === 0
+              ? 'translate-x-0 text-left'
+              : i === tickIndices.length - 1
+                ? '-translate-x-full text-right'
+                : '-translate-x-1/2 text-center';
+          return (
+            <span
+              key={`x-label-${idx}`}
+              className={cn('absolute text-xs mono', alignClass)}
+              style={{ left: `${pct}%` }}
+            >
+              {label}
+            </span>
+          );
+        })}
+      </div>
+
+      <div>
         <ul className="flex flex-wrap gap-x-4 gap-y-1">
           {series.map((entry) => {
             const domain = domainFor(entry);

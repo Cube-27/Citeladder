@@ -184,11 +184,11 @@ describe('Card', () => {
     );
     expect(screen.getByTestId('card').className).toContain('bg-panel');
     expect(screen.getByTestId('card').className).toContain('rounded-[var(--radius-card)]');
-    // The border belongs to the owner: it is what stopped call sites from
-    // hand-rolling a bordered panel. Elevation still does not — a card is
-    // defined by its edge, and shadows stay on overlays.
-    expect(screen.getByTestId('card').className).toContain('border-border-subtle');
-    expect(screen.getByTestId('card').className).not.toContain('shadow');
+    // Cards use subtle directional bottom-weighted elevation (shadow-card)
+    // instead of harsh wireframe hairline borders. Stronger omnidirectional
+    // shadows belong to floating overlays (dropdowns, dialogs, toasts).
+    expect(screen.getByTestId('card').className).toContain('shadow-card');
+    expect(screen.getByTestId('card').className).not.toContain('border-border-subtle');
     expect(screen.getByText('Visibility').tagName).toBe('H3');
     expect(screen.getByText('Body')).toBeInTheDocument();
   });

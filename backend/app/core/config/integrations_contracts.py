@@ -112,3 +112,47 @@ ERROR_PROPERTY_DISCOVERY_UNSUPPORTED: Final = "property_discovery_unsupported"
 ERROR_GA4_DIMENSION_INCOMPATIBLE: Final = "ga4_dimension_incompatible"
 
 INTEGRATION_IMPORTER_VERSION: Final = "integrations-importer-1"
+
+
+# --- Post-connect readiness ladder (Slice 4.1) -------------------------------
+# The stages a project passes through after its first connect, in order. The
+# surface renders WHERE a project is rather than one long spinner, so a user
+# who has just connected sees their own numbers as soon as they exist instead
+# of an empty dashboard that looks broken.
+#
+# Every input is already persisted — grant status, backfill runs, snapshot
+# presence, demand snapshot presence, opportunity count — so the ladder is a
+# pure projection over them (invariant 7), never a new table and never a
+# recomputation.
+#
+# The stages are DISTINCT states, not a progress percentage: "no connection"
+# is not "importing with nothing yet", and core data present with analysis
+# still running is not the same as analysis that ran and found nothing
+# (invariant 7 — unknown, unavailable and zero stay apart).
+READINESS_NOT_CONNECTED: Final = "not_connected"
+READINESS_CONNECTED: Final = "connected"
+READINESS_IMPORTING: Final = "importing"
+READINESS_CORE_DATA_READY: Final = "core_data_ready"
+READINESS_ANALYSIS_READY: Final = "analysis_ready"
+
+# OFF the ladder, not a rung on it: every backfill window reached a terminal
+# status and none succeeded, so no further data is coming. It is reported
+# separately because "importing" here would spin forever over an import that
+# already failed — the user needs a retry, not patience (invariant 7: a
+# failure and a pending state are not the same unknown).
+READINESS_IMPORT_FAILED: Final = "import_failed"
+
+# In ladder order; the projection returns the HIGHEST stage a project has
+# reached, and the surface may render the ones below it as completed.
+INTEGRATION_READINESS_STAGES: Final[tuple[str, ...]] = (
+    READINESS_NOT_CONNECTED,
+    READINESS_CONNECTED,
+    READINESS_IMPORTING,
+    READINESS_CORE_DATA_READY,
+    READINESS_ANALYSIS_READY,
+)
+
+# Every value ``stage`` can carry: the ladder plus the off-ladder failure.
+INTEGRATION_READINESS_STATES: Final[frozenset[str]] = frozenset(
+    set(INTEGRATION_READINESS_STAGES) | {READINESS_IMPORT_FAILED}
+)

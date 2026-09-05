@@ -618,13 +618,18 @@ async def get_backfill_progress(
             )
         ).all()
     )
-    return _backfill_progress(connection_id=connection.id, rows=rows)
+    return backfill_progress_rollup(connection_id=connection.id, rows=rows)
 
 
-def _backfill_progress(
+def backfill_progress_rollup(
     *, connection_id: uuid.UUID, rows: Sequence[IntegrationSyncRun]
 ) -> IntegrationBackfillProgressResponse:
-    """The pure rollup, split out so it is testable without a session."""
+    """The pure rollup, split out so it is testable without a session.
+
+    Public because the readiness ladder rolls the SAME statuses up across a
+    project's connections (invariant 2 — one owner of the rule, reused rather
+    than restated).
+    """
     if not rows:
         return IntegrationBackfillProgressResponse(
             connection_id=connection_id,

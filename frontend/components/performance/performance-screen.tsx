@@ -11,7 +11,6 @@ import { PerformanceChart, type ChartSeries } from './performance-chart';
 import { usePerformanceSync } from './use-performance-sync';
 import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Stack } from '@/components/ui/layout';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { integrationsApi } from '@/lib/api/integrations';
 import {
@@ -45,13 +44,13 @@ import {
  * browser. What the screen displays is always the window actually covered.
  */
 
-// One token-backed stroke per metric, shared by the cards and the chart so a
-// card's colour is the same signal as its line.
+// Authentic Search Console colors: Blue for Clicks, Purple for Impressions,
+// Teal for CTR, Orange for Position. Shared by cards and chart lines.
 const METRIC_COLORS: Record<PerformanceMetricKey, string> = {
-  clicks: 'var(--color-chart-1)',
-  impressions: 'var(--color-chart-2)',
-  ctr: 'var(--color-chart-3)',
-  position: 'var(--color-chart-4)',
+  clicks: 'var(--color-gsc-clicks)',
+  impressions: 'var(--color-gsc-impressions)',
+  ctr: 'var(--color-gsc-ctr)',
+  position: 'var(--color-gsc-position)',
 };
 
 function dashboardParams(selection: RangeSelection, granularity: PerformanceGranularity) {
@@ -184,24 +183,27 @@ export function PerformanceScreen() {
 
       {/* One card holds the strip and the plot it drives: selecting a card
           changes the lines directly beneath it, so a gap between them would
-          split a control from its own result. The strip sits flush at the
-          top edge; the granularity control floats over the plot's top-right. */}
+          split a control from its own result. The strip sits flush with the
+          granularity control aligned on the right of the header row. */}
       <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-panel)] border">
-        <MetricCards
-          selected={selectedWindow}
-          comparison={comparisonWindow}
-          compareLabel={comparisonLabel}
-          selectedLabel={selectedLabel}
-          active={activeMetrics}
-          onToggle={toggleMetric}
-          colors={METRIC_COLORS}
-        />
-        <Stack gap="compact" className="p-3">
-          <div className="flex justify-end">
+        <div className="border-border-subtle flex flex-col border-b lg:flex-row lg:items-stretch lg:justify-between">
+          <MetricCards
+            selected={selectedWindow}
+            comparison={comparisonWindow}
+            compareLabel={comparisonLabel}
+            selectedLabel={selectedLabel}
+            active={activeMetrics}
+            onToggle={toggleMetric}
+            colors={METRIC_COLORS}
+            className="flex-1"
+          />
+          <div className="border-border-subtle flex shrink-0 items-center justify-end border-t px-3 py-2 lg:border-t-0 lg:border-l">
             <GranularitySelect value={granularity} onChange={setGranularity} />
           </div>
+        </div>
+        <div className="p-3">
           <PerformanceChart series={series} />
-        </Stack>
+        </div>
       </div>
       <Ga4SummaryRow
         selected={selectedWindow}
@@ -214,19 +216,20 @@ export function PerformanceScreen() {
         onValueChange={setDimension}
         items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
         ariaLabel="Performance breakdowns"
-        rootClassName="grid gap-3"
+        rootClassName="grid gap-3 min-h-[560px]"
         // The tab row heads the table card, so it spans the full width
         // rather than hugging six labels and leaving dead space to the right.
         fill
       >
         {DIMENSION_TABS.map((tab) => (
-          <TabPanel key={tab.value} value={tab.value} className="focus-ring">
+          <TabPanel key={tab.value} value={tab.value} className="focus-ring min-h-[520px]">
             {dimension === tab.value && selectedWindow.snapshot_id ? (
               <DimensionTable
                 projectId={projectId}
                 dimension={tab.value}
                 snapshotId={selectedWindow.snapshot_id}
                 compareSnapshotId={comparisonWindow?.snapshot_id ?? null}
+                activeMetrics={activeMetrics}
                 unavailable={data.unavailable_dimensions.includes(tab.value)}
                 selectedLabel={selectedLabel}
                 compareLabel={comparisonLabel}
