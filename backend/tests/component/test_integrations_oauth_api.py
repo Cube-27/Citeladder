@@ -142,7 +142,7 @@ class _FakeOAuthServer:
             return httpx.Response(200)
         if host == "www.googleapis.com":
             return httpx.Response(200, json=_fixture("gsc_sites_response.json"))
-        if host == "www.bing.com" and request.url.path.endswith("/token"):
+        if host == "www.bing.com" and request.url.path == "/webmasters/oauth/token":
             if self.microsoft_token_status != 200:
                 return httpx.Response(
                     self.microsoft_token_status,

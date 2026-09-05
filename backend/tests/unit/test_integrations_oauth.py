@@ -373,3 +373,28 @@ async def test_echoed_scope_always_wins_over_the_requested_fallback(
     assert bundle.granted_scopes == (
         "https://www.googleapis.com/auth/webmasters.readonly",
     )
+
+
+@pytest.mark.asyncio
+async def test_scopeless_refresh_never_widens_a_narrowed_google_grant(
+    _google_credentials: None,
+) -> None:
+    """A scope-less refresh leaves a narrowed grant alone (no re-widening).
+
+    Google requests two scopes but a user may consent to only one. That
+    narrowed grant is already on record from the code exchange, so falling
+    back to the CONFIGURED scopes on refresh would silently restore the
+    scope the user declined. Empty means "keep what is recorded" — the
+    persistence layer only writes ``granted_scopes`` when it is non-empty.
+    """
+    client = build_oauth_client(
+        INTEGRATION_TRANSPORT_GOOGLE,
+        transport=_token_transport(
+            {"access_token": "fake-new-access-token", "expires_in": 3600}
+        ),
+    )
+    bundle = await client.refresh(refresh_token="fake-old-refresh-token")
+    assert bundle.granted_scopes == ()
+    assert "https://www.googleapis.com/auth/analytics.readonly" not in (
+        bundle.granted_scopes
+    )

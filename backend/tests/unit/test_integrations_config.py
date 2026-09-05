@@ -167,8 +167,11 @@ def test_microsoft_transport_targets_bings_own_oauth_server() -> None:
     assert "microsoftonline" not in authorize
     assert "microsoftonline" not in token
     # Both Bing hosts are allow-listed: the OAuth server and the API host.
-    assert "www.bing.com" in INTEGRATION_APPROVED_ENDPOINT_HOSTS
-    assert "ssl.bing.com" in INTEGRATION_APPROVED_ENDPOINT_HOSTS
+    # ``issuperset`` over the frozenset is EXACT host membership; a plain
+    # ``in`` here reads to static analysis as a substring URL check.
+    assert INTEGRATION_APPROVED_ENDPOINT_HOSTS.issuperset(
+        {"www.bing.com", "ssl.bing.com"}
+    )
 
 
 def test_dataset_templates_match_pinned_c1() -> None:
