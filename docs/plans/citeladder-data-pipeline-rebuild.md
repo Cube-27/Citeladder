@@ -437,3 +437,50 @@ running build; all are PR 2 scope:
   (e.g. sharp corners) — design-system components only, never one-off styles.
 - Tab labels inside the data card use a 12px font size.
 - A "reset filters" control belongs in that same top row above the cards.
+
+
+## PR 2 — what shipped, and what still needs live verification
+
+**The AI Referrals preset family now exists.** `ai_referrals_snapshot_refresh`
+derives 30/90/365-day snapshots anchored on the latest referral evidence date,
+folded from the same single scan, exactly as `performance_family_windows`
+does. Resolving a preset by window LENGTH only works when a row of that
+length exists, and none did.
+
+**Chart granularity is a real control.** Every refresh already wrote the
+window at day, week AND month; `query_support.py` hardcoded day, so week and
+month rows were written and never read. The dashboard endpoint takes a
+`granularity` parameter and echoes what it resolved. Note the vocabulary
+collision this surfaced: `RANGE_OPTIONS` (day/week/month/custom) are window
+LENGTHS, while granularity is the chart's BUCKET size. They share three words
+and are deliberately kept in different places on screen.
+
+**Google sign-in in the deployed app** was not a redirect-URI problem.
+`OAuthSettings.google_enabled` defaults to False and the deployed compose
+never set `OAUTH_GOOGLE_ENABLED`; local dev's `.env` did, which is exactly why
+one worked and the other did not. The client id/secret need no new variable —
+sign-in falls back to the INTEGRATION Google pair by design, because Google's
+`include_granted_scopes` composes only within one client. **Deployment still
+needs `INTEGRATION_GOOGLE_CLIENT_ID` / `_SECRET` present in `runtime.env`**;
+that file is provisioned outside the repo and could not be checked from here.
+
+**GA4 "only updates after a few refreshes"** was a race, not a sync failure. A
+terminal sync run means the IMPORT finished; the projection tasks
+(`traffic_snapshot_refresh`, or ingest -> classify -> snapshot for referrals)
+are enqueued after derivation and are still queued at that moment. The single
+invalidate refetched the old snapshot. The sync hook now keeps refetching for
+a bounded settling period and reports `syncing` throughout.
+
+**Calendar and DateField are new design-system primitives.** The date picker
+was the one control the system never had, so the dialog used
+`<input type="date">`, whose popup the browser draws — untokenized and
+different per browser. Both are built from existing tokens with no new
+dependency, and dates stay ISO strings end to end (a local `Date` round trip
+shifts the day across UTC, the classic "returns yesterday" bug).
+
+**Still not live-verified.** The same boundary as PR 1: no real consent, no
+real 365-day import, and no deployed Google sign-in was exercised from here.
+The preset family, the granularity parameter and the settling poll are
+covered by component tests against a real Postgres, but the deployment items
+(the compose flag, `runtime.env` credentials) can only be confirmed on the
+deployed host.
