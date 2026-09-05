@@ -237,6 +237,21 @@ ANALYTICS_PRESET_RANGE_DAYS: Final[dict[str, int]] = {
     "1y": 365,
 }
 
+# The snapshot family every AI Referrals refresh derives, anchored at the
+# latest referral evidence date — the exact counterpart of
+# ``PERFORMANCE_SNAPSHOT_WINDOW_DAYS``.
+#
+# Resolving a preset by window LENGTH only works if a row of that length
+# exists, and none did: a snapshot is written for the SYNC RUN's window
+# (28 days for a routine sync, chunked for a backfill), so no row was ever
+# 30, 90 or 365 days long and every preset read fell through to the empty
+# payload. Deriving the family makes the length a real identity rather than
+# a hope. Day granularity only — the surface charts daily buckets and offers
+# no bucket control, so week/month rows for these windows are never read.
+ANALYTICS_SNAPSHOT_WINDOW_DAYS: Final[tuple[int, ...]] = tuple(
+    sorted(ANALYTICS_PRESET_RANGE_DAYS.values())
+)
+
 ANALYTICS_SNAPSHOT_TTL_S: Final = 3600
 
 # --- Referral sanitization contract (invariant 6 privacy) ---------------------

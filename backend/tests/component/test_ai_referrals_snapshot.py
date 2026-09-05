@@ -16,6 +16,9 @@ from app.core.config.analytics import (
     AI_SOURCE_GEMINI,
     AI_SOURCE_OTHER,
     AI_SOURCE_PERPLEXITY,
+    ANALYTICS_DEFAULT_GRANULARITY,
+    ANALYTICS_SNAPSHOT_GRANULARITIES,
+    ANALYTICS_SNAPSHOT_WINDOW_DAYS,
 )
 from app.core.config.integrations_datasets import (
     DATASET_GA4_REFERRER_DAILY,
@@ -197,8 +200,39 @@ async def _enqueue(
 
 
 async def _snapshots(session: AsyncSession) -> dict[str, AiReferralsSnapshot]:
-    rows = list((await session.scalars(select(AiReferralsSnapshot))).all())
+    """The SYNC WINDOW's snapshot per granularity.
+
+    A refresh also derives the preset family (several day-granularity rows
+    at other window lengths), so this filters to the enqueued window —
+    otherwise keying by granularity alone would collapse those rows and
+    return an arbitrary one. ``_family_snapshots`` covers the family.
+    """
+    rows = list(
+        (
+            await session.scalars(
+                select(AiReferralsSnapshot)
+                .where(AiReferralsSnapshot.window_start == WINDOW[0])
+                .where(AiReferralsSnapshot.window_end == WINDOW[1])
+            )
+        ).all()
+    )
     return {row.granularity: row for row in rows}
+
+
+async def _family_snapshots(
+    session: AsyncSession,
+) -> dict[int, AiReferralsSnapshot]:
+    """Every day-granularity snapshot, keyed by inclusive window LENGTH."""
+    rows = list(
+        (
+            await session.scalars(
+                select(AiReferralsSnapshot).where(
+                    AiReferralsSnapshot.granularity == ANALYTICS_DEFAULT_GRANULARITY
+                )
+            )
+        ).all()
+    )
+    return {(row.window_end - row.window_start).days + 1: row for row in rows}
 
 
 @pytest.mark.asyncio
@@ -302,7 +336,11 @@ async def test_refresh_upsert_is_idempotent(
     async with session_factory() as session:
         second = await _snapshots(session)
         assert {key: row.id for key, row in second.items()} == first_ids
-        assert await session.scalar(select(func.count(AiReferralsSnapshot.id))) == 3
+        # The rerun REWRITES every row in place — the sync window's
+        # granularities plus the preset family — and duplicates none.
+        assert await session.scalar(select(func.count(AiReferralsSnapshot.id))) == len(
+            ANALYTICS_SNAPSHOT_GRANULARITIES
+        ) + len(ANALYTICS_SNAPSHOT_WINDOW_DAYS)
 
 
 @pytest.mark.asyncio
@@ -412,7 +450,52 @@ async def test_worker_routes_snapshot_refresh(
         row = await session.get(AnalyticsTask, task_id)
         assert row is not None
         assert row.status == TASK_STATUS_SUCCEEDED
-        assert await session.scalar(select(func.count(AiReferralsSnapshot.id))) == 3
+        # The sync window at every granularity, PLUS the day-granularity
+        # preset family (30/90/365) the bounded reads resolve against.
+        assert await session.scalar(select(func.count(AiReferralsSnapshot.id))) == len(
+            ANALYTICS_SNAPSHOT_GRANULARITIES
+        ) + len(ANALYTICS_SNAPSHOT_WINDOW_DAYS)
+
+
+@pytest.mark.asyncio
+async def test_refresh_derives_the_bounded_preset_family(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Regression: a bounded preset read must find a snapshot of its length.
+
+    A snapshot used to be written ONLY for the sync run's window — 28 days
+    for a routine sync, chunked for a backfill — so no persisted row was
+    ever 30, 90 or 365 days long and every preset resolved the empty
+    payload. The family is derived from the same folded facts, anchored on
+    the latest referral evidence date.
+    """
+    async with session_factory() as session:
+        workspace_id, project_id = await seed_workspace_project(session)
+        await _seed_canonical_chain(
+            session, workspace_id=workspace_id, project_id=project_id
+        )
+    task = await _enqueue(
+        session_factory, workspace_id=workspace_id, project_id=project_id
+    )
+
+    await refresh_ai_referrals_snapshot(session_factory, task)
+
+    async with session_factory() as session:
+        family = await _family_snapshots(session)
+        # One row per configured preset LENGTH — what the range token resolves.
+        for days in ANALYTICS_SNAPSHOT_WINDOW_DAYS:
+            assert days in family, f"no {days}-day snapshot for the preset to match"
+        anchor = max(row.window_end for row in family.values())
+        for days, row in family.items():
+            # Every family window ends on the anchor and spans its length,
+            # so the presets are nested rather than arbitrary spans.
+            if days in ANALYTICS_SNAPSHOT_WINDOW_DAYS:
+                assert row.window_end == anchor
+                assert (row.window_end - row.window_start).days + 1 == days
+        # The family carries the SAME evidence the sync window folded: the
+        # widest window contains every seeded day, so its sources match.
+        widest = family[max(ANALYTICS_SNAPSHOT_WINDOW_DAYS)]
+        assert widest.metrics["sources"], "the family must fold the same facts"
 
 
 @pytest.mark.asyncio
