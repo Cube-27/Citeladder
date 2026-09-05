@@ -13,6 +13,16 @@ import {
 } from '@/lib/integrations/sync-runs';
 
 /**
+ * How long to keep refetching after the last sync run goes terminal, and how
+ * often. The projection chain (derive -> snapshot refresh, or ingest ->
+ * classify -> snapshot for referrals) runs on the analytics worker after the
+ * import, so the fresh numbers appear seconds later, not instantly. Ten
+ * polls at three seconds covers ~30s of catch-up.
+ */
+const PROJECTION_SETTLE_POLLS = 10;
+const PROJECTION_POLL_MS = 3_000;
+
+/**
  * "Sync now" for the Performance surface: enqueue one integrations run per
  * active mapped connection, poll each to terminal, then invalidate the
  * projections the completed runs refreshed.
@@ -21,6 +31,16 @@ import {
  * extends what the connection already imported rather than re-fetching a
  * fixed trailing window — so repeated syncs accumulate history instead of
  * rewriting the same dates.
+ *
+ * A terminal sync run means the IMPORT finished, NOT that the projection did:
+ * the worker enqueues `traffic_snapshot_refresh` (and, for referral datasets,
+ * ingest -> classify -> `ai_referrals_snapshot_refresh`) only after
+ * derivation, so those tasks are still queued when the run reports success.
+ * Invalidating once at that moment refetches the OLD snapshot and the screen
+ * looks unchanged until something else triggers a refetch — the "GA4 only
+ * updates after a few refreshes" symptom, worst on the longest chain. So the
+ * hook keeps refetching for a bounded settling period after the run goes
+ * terminal, and stops as soon as the projection lands.
  */
 export function usePerformanceSync(projectId: string | null) {
   const queryClient = useQueryClient();
@@ -63,11 +83,29 @@ export function usePerformanceSync(projectId: string | null) {
       ? 'succeeded'
       : 'failed';
 
+  // Refetch on the terminal edge, then keep polling while the projection
+  // catches up. Bounded so a projection that never lands (a failed refresh
+  // task) settles into a normal screen instead of polling forever.
+  // Counted in POLLS rather than a wall-clock deadline: the count is pure to
+  // compute during render, where the ACTIVE -> TERMINAL edge is detected
+  // (React's derived-state pattern, as the date dialog uses for its draft).
+  // An effect that setState'd here would render the stale screen once before
+  // polling started — the very lag this exists to remove.
+  const [pollsLeft, setPollsLeft] = useState(0);
+  const [wasTerminal, setWasTerminal] = useState(allTerminal);
+  if (allTerminal !== wasTerminal) {
+    setWasTerminal(allTerminal);
+    if (allTerminal) setPollsLeft(PROJECTION_SETTLE_POLLS);
+  }
+
+  const projecting = pollsLeft > 0;
   useEffect(() => {
-    if (!allTerminal) return;
+    if (pollsLeft <= 0) return;
     void queryClient.invalidateQueries({ queryKey: queryKeys.performance.all });
     void queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
-  }, [allTerminal, queryClient]);
+    const timer = setTimeout(() => setPollsLeft((current) => current - 1), PROJECTION_POLL_MS);
+    return () => clearTimeout(timer);
+  }, [pollsLeft, queryClient]);
 
-  return { mutation, notice, outcome, startedAt, syncing };
+  return { mutation, notice, outcome, startedAt, syncing: syncing || projecting };
 }
