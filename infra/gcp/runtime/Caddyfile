@@ -21,7 +21,9 @@ https://__DOMAIN_NAME__ {
     -Server
   }
 
-  @mcp_protocol path /mcp /mcp/* /authorize /token /register /revoke /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource/mcp
+  # /register is deliberately absent: it is the frontend's signup page. MCP's
+  # RFC 7591 registration endpoint lives at /mcp/register, covered by /mcp/*.
+  @mcp_protocol path /mcp /mcp/* /authorize /token /revoke /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource/mcp
   reverse_proxy @mcp_protocol 127.0.0.1:8000 {
     header_up X-Forwarded-Host {host}
     header_up X-Forwarded-Proto https

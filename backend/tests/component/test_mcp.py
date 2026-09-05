@@ -32,7 +32,7 @@ from app.domain.mcp.oauth_provider import (
     consent_csrf_token,
     resource_url,
 )
-from app.domain.mcp.server import mcp_oauth_provider
+from app.domain.mcp.server import MCP_REGISTRATION_PATH, mcp_oauth_provider
 from app.models.opportunity import Opportunity
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
@@ -241,7 +241,7 @@ async def test_mcp_discovery_registration_and_bearer_challenge(
     monkeypatch.setattr(mcp_oauth_provider, "_session_factory", session_factory)
     authorization = await client.get("/.well-known/oauth-authorization-server")
     assert authorization.status_code == 200
-    assert authorization.json()["registration_endpoint"].endswith("/register")
+    assert authorization.json()["registration_endpoint"].endswith(MCP_REGISTRATION_PATH)
     assert authorization.json()["code_challenge_methods_supported"] == ["S256"]
 
     resource = await client.get("/.well-known/oauth-protected-resource/mcp")
@@ -250,7 +250,7 @@ async def test_mcp_discovery_registration_and_bearer_challenge(
     assert resource.json()["scopes_supported"] == [MCP_READ_SCOPE]
 
     registration = await client.post(
-        "/register",
+        MCP_REGISTRATION_PATH,
         json={
             "client_name": "Protocol test client",
             "redirect_uris": ["http://127.0.0.1/callback"],
@@ -424,7 +424,7 @@ async def test_disabled_mcp_exposes_no_protocol_surface(
     """A deployment that never opted in must not answer as an OAuth server."""
     monkeypatch.setattr(mcp_settings, "enabled", False)
     for path in (
-        "/register",
+        MCP_REGISTRATION_PATH,
         "/authorize",
         "/mcp",
         "/.well-known/oauth-authorization-server",

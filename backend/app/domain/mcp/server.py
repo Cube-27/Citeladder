@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote, urlsplit
 
 from mcp.server import MCPServer
+from mcp.server.auth import routes as auth_routes
 from mcp.server.auth.settings import (
     AuthSettings,
     ClientRegistrationOptions,
@@ -75,6 +76,16 @@ def _startup_origin() -> str:
 
 _STARTUP_ORIGIN = _startup_origin()
 _CONSENT_PATH = "/mcp/oauth/consent"
+
+# The SDK hardcodes RFC 7591 dynamic client registration at /register, which
+# collides with the frontend's signup page: Caddy sends the shared path to the
+# backend and every GET /register 405s. Rebinding the SDK's module constant
+# before the ASGI app is built moves the route and the advertised
+# registration_endpoint together -- build_metadata reads this global when
+# streamable_http_app() runs below, so the discovery document cannot drift from
+# the route that serves it.
+MCP_REGISTRATION_PATH = "/mcp/register"
+auth_routes.REGISTRATION_PATH = MCP_REGISTRATION_PATH
 
 mcp_oauth_provider = CiteLadderOAuthProvider()
 mcp_server = MCPServer(
@@ -539,7 +550,7 @@ class McpDispatchMiddleware:
             "/mcp/oauth/consent",
             "/authorize",
             "/token",
-            "/register",
+            MCP_REGISTRATION_PATH,
             "/revoke",
             "/.well-known/oauth-authorization-server",
             "/.well-known/oauth-protected-resource/mcp",
