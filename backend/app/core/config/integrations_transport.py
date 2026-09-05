@@ -40,18 +40,23 @@ INTEGRATION_OAUTH_REFRESHABLE: Final[dict[str, bool]] = {
     INTEGRATION_TRANSPORT_MICROSOFT: True,
 }
 
+# Bing Webmaster runs its OWN OAuth 2.0 authorization server — it is NOT on
+# the Microsoft identity platform, despite the transport's name. Its client
+# id/secret come from Bing Webmaster Tools -> Settings -> API Access, not from
+# an Azure app registration, so an Entra endpoint has no such application and
+# rejects the authorize request outright (AADSTS90013) before any consent
+# screen. Endpoints and the scope vocabulary below are pinned from
+# learn.microsoft.com/bingwebmaster/oauth2.
 INTEGRATION_OAUTH_AUTHORIZE_URLS: Final[dict[str, str]] = {
     INTEGRATION_TRANSPORT_GOOGLE: "https://accounts.google.com/o/oauth2/v2/auth",
     INTEGRATION_TRANSPORT_MICROSOFT: (
-        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
+        "https://www.bing.com/webmasters/oauth/authorize"
     ),
 }
 
 INTEGRATION_OAUTH_TOKEN_URLS: Final[dict[str, str]] = {
     INTEGRATION_TRANSPORT_GOOGLE: "https://oauth2.googleapis.com/token",
-    INTEGRATION_TRANSPORT_MICROSOFT: (
-        "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-    ),
+    INTEGRATION_TRANSPORT_MICROSOFT: "https://www.bing.com/webmasters/oauth/token",
 }
 
 INTEGRATION_OAUTH_REVOKE_URLS: Final[dict[str, str]] = {
@@ -64,10 +69,13 @@ INTEGRATION_OAUTH_SCOPES: Final[dict[str, tuple[str, ...]]] = {
         "https://www.googleapis.com/auth/webmasters.readonly",
         "https://www.googleapis.com/auth/analytics.readonly",
     ),
-    INTEGRATION_TRANSPORT_MICROSOFT: (
-        "offline_access",
-        "https://webmaster.bing.com/api/webmaster.manage",
-    ),
+    # Bing's own scope vocabulary is BARE tokens (``webmaster.read`` /
+    # ``webmaster.manage``) — not resource URLs, and it defines no
+    # ``offline_access``: its token endpoint returns a refresh token with the
+    # authorization-code exchange unconditionally. Sending either an Entra
+    # resource-style scope or ``offline_access`` is an invalid request to this
+    # server.
+    INTEGRATION_TRANSPORT_MICROSOFT: ("webmaster.manage",),
 }
 
 INTEGRATION_OAUTH_CALLBACK_PATH: Final = (
@@ -184,7 +192,8 @@ INTEGRATION_APPROVED_ENDPOINT_HOSTS: Final[frozenset[str]] = frozenset(
         "analyticsdata.googleapis.com",
         # GA4 Admin API — property discovery only (see GA4_ADMIN_API_BASE_URL).
         "analyticsadmin.googleapis.com",
-        "login.microsoftonline.com",
+        # Bing Webmaster: its OAuth server (www) and its API host (ssl).
+        "www.bing.com",
         "ssl.bing.com",
     }
 )

@@ -37,6 +37,7 @@ from app.core.config.integrations_transport import (
     GSC_API_BASE_URL,
     GSC_SITES_PATH,
     INTEGRATION_OAUTH_REVOKE_URLS,
+    INTEGRATION_OAUTH_SCOPES,
     INTEGRATION_OAUTH_TOKEN_URLS,
     INTEGRATION_TRANSPORT_GOOGLE,
     INTEGRATION_TRANSPORT_MICROSOFT,
@@ -218,8 +219,35 @@ class IntegrationOAuthClient:
             access_token=access_token,
             refresh_token=str(payload.get("refresh_token") or ""),
             expires_in=_coerce_expires_in(payload.get("expires_in")),
-            granted_scopes=_split_scopes(payload.get("scope")),
+            granted_scopes=self._granted_scopes(payload),
         )
+
+    def _granted_scopes(self, payload: dict[str, object]) -> tuple[str, ...]:
+        """The scopes the provider says it granted, on a CODE EXCHANGE.
+
+        Google echoes ``scope`` on every token response; Bing Webmaster's
+        server documents none. Falling back to the REQUESTED scopes is
+        accurate for a provider that grants all-or-nothing — it cannot
+        partially grant a single-scope request, so a successful exchange
+        granted exactly that scope. An echoed value always wins, so a
+        provider that DOES narrow the grant is still recorded faithfully.
+
+        This fallback is safe ONLY on a code exchange, where no prior grant
+        record exists to contradict. See :meth:`_refreshed_scopes`.
+        """
+        echoed = _split_scopes(payload.get("scope"))
+        return echoed or INTEGRATION_OAUTH_SCOPES[self._transport_kind]
+
+    def _refreshed_scopes(self, payload: dict[str, object]) -> tuple[str, ...]:
+        """The scopes echoed on a REFRESH, or empty to keep the stored grant.
+
+        A refresh must never WIDEN a grant. Google requests two scopes but a
+        user may consent to only one, and that narrowed grant is already on
+        record from the code exchange; falling back to the configured pair
+        here would silently restore the scope the user declined. An empty
+        tuple tells the caller to leave the recorded scopes untouched.
+        """
+        return _split_scopes(payload.get("scope"))
 
     async def refresh(self, *, refresh_token: str) -> OAuthTokenBundle:
         """Exchange a refresh token for a fresh access token.
@@ -248,7 +276,7 @@ class IntegrationOAuthClient:
             access_token=access_token,
             refresh_token=str(payload.get("refresh_token") or "") or refresh_token,
             expires_in=_coerce_expires_in(payload.get("expires_in")),
-            granted_scopes=_split_scopes(payload.get("scope")),
+            granted_scopes=self._refreshed_scopes(payload),
         )
 
     async def revoke(self, *, token: str) -> None:

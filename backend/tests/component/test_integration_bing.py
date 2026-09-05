@@ -5,7 +5,7 @@ injected fake Microsoft token endpoint + Bing Webmaster API
 (``httpx.MockTransport``; recorded fixtures). Covers the full worker
 contract for a ``bing`` connection on a ``microsoft_oauth`` grant:
 
-  - claim -> serialized refresh against login.microsoftonline.com ->
+  - claim -> serialized refresh against Bing's own OAuth server ->
     ``GetPageStats``/``GetQueryStats`` import on the pinned
     ``ssl.bing.com`` host -> derivation metric rows with provenance.
   - The Bing row mapping (``d``-array ``Query``/``Date``/``Clicks``/
@@ -108,7 +108,7 @@ class _ProviderFake:
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         host = request.url.host
-        if host == "login.microsoftonline.com":
+        if host == "www.bing.com":
             self.token_calls.append(request)
             return httpx.Response(
                 200,
@@ -157,7 +157,7 @@ async def _seed_graph(
         access_token_encrypted=encrypt_secret("ms-access-token-1"),
         refresh_token_encrypted=encrypt_secret("ms-refresh-token-1"),
         token_expires_at=token_expires_at or (datetime.now(UTC) + timedelta(hours=1)),
-        granted_scopes=["offline_access"],
+        granted_scopes=["webmaster.manage"],
         status=GRANT_STATUS_CONNECTED,
     )
     db_session.add(grant)

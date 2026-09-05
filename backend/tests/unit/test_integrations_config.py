@@ -142,13 +142,36 @@ def test_google_grant_combines_gsc_and_ga4_scopes() -> None:
     assert "https://www.googleapis.com/auth/webmasters.readonly" in google_scopes
     assert "https://www.googleapis.com/auth/analytics.readonly" in google_scopes
     assert len(google_scopes) == 2
-    # The Microsoft grant carries the pinned Bing Webmaster scope (I12)
-    # and stays refreshable via offline_access.
+    # Bing Webmaster runs its OWN authorization server, whose scope vocabulary
+    # is BARE tokens — not Entra resource URLs, and with no ``offline_access``
+    # (its code exchange returns a refresh token unconditionally). Sending
+    # either shape made the authorize request invalid before consent.
     microsoft_scopes = INTEGRATION_OAUTH_SCOPES[INTEGRATION_TRANSPORT_MICROSOFT]
-    assert "offline_access" in microsoft_scopes
-    assert "https://webmaster.bing.com/api/webmaster.manage" in microsoft_scopes
+    assert microsoft_scopes == ("webmaster.manage",)
     # bingads.manage is the ADS API scope — never requested here.
     assert all("bingads" not in scope for scope in microsoft_scopes)
+
+
+def test_microsoft_transport_targets_bings_own_oauth_server() -> None:
+    """Regression: an Entra endpoint rejects this client (AADSTS90013).
+
+    The Bing Webmaster client id/secret come from Bing Webmaster Tools ->
+    Settings -> API Access, not from an Azure app registration, so
+    ``login.microsoftonline.com`` has no such application and refuses the
+    authorize request before any consent screen is shown.
+    """
+    authorize = INTEGRATION_OAUTH_AUTHORIZE_URLS[INTEGRATION_TRANSPORT_MICROSOFT]
+    token = INTEGRATION_OAUTH_TOKEN_URLS[INTEGRATION_TRANSPORT_MICROSOFT]
+    assert authorize == "https://www.bing.com/webmasters/oauth/authorize"
+    assert token == "https://www.bing.com/webmasters/oauth/token"
+    assert "microsoftonline" not in authorize
+    assert "microsoftonline" not in token
+    # Both Bing hosts are allow-listed: the OAuth server and the API host.
+    # ``issuperset`` over the frozenset is EXACT host membership; a plain
+    # ``in`` here reads to static analysis as a substring URL check.
+    assert INTEGRATION_APPROVED_ENDPOINT_HOSTS.issuperset(
+        {"www.bing.com", "ssl.bing.com"}
+    )
 
 
 def test_dataset_templates_match_pinned_c1() -> None:
