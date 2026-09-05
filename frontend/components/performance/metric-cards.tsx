@@ -32,6 +32,29 @@ import { cn } from '@/lib/utils';
  * always on-accent. Selection is carried by the check and a dimmed fill, not
  * by whether the card is coloured at all.
  */
+/**
+ * The internal seams of the four-card strip, by POSITION.
+ *
+ * Not `divide-*`: those rules are sibling-wide, so they draw a top border on
+ * cards 2-4 once the strip is one `lg` row, and a left border on the first
+ * card of the `sm` second row. The strip's OUTER edges belong to the chart
+ * card that contains it, so only the seams between cards are drawn here.
+ */
+function seamClasses(index: number): string {
+  return cn(
+    'border-border-subtle',
+    // One column: every card after the first sits below its predecessor.
+    index > 0 && 'border-t',
+    // Two columns: the left seam applies to the odd cards, the top seam only
+    // to the second row.
+    index % 2 === 0 ? 'sm:border-l-0' : 'sm:border-l',
+    index >= 2 ? 'sm:border-t' : 'sm:border-t-0',
+    // Four columns: one row, so every seam is a left edge except the first.
+    index === 0 ? 'lg:border-l-0' : 'lg:border-l',
+    'lg:border-t-0',
+  );
+}
+
 export function MetricCards({
   selected,
   comparison,
@@ -77,16 +100,9 @@ export function MetricCards({
             onClick={() => onToggle(card.key)}
             data-testid={`metric-card-${card.key}`}
             className={cn(
-              panelClasses({ tone: 'panel', pad: 'compact' }),
-              'grid gap-1 rounded-none border-0 transition-opacity',
-              // Seams by POSITION: a left edge except at the start of each
-              // row, and a top edge only where a row actually wraps above.
-              'border-border-subtle',
-              index > 0 && 'sm:border-l lg:border-l',
-              index % 2 === 0 && 'sm:border-l-0',
-              index % 4 === 0 && 'lg:border-l-0',
-              index > 0 && 'border-t sm:border-t-0',
-              index >= 2 && 'sm:border-t lg:border-t-0',
+              panelClasses({ tone: 'panel', pad: 'compact', edge: 'flush' }),
+              'grid gap-1 transition-opacity',
+              seamClasses(index),
               // Unselected reads as dimmed, never as a different surface —
               // the colour stays so the card keeps naming its own series.
               isActive ? 'opacity-100' : 'opacity-65 hover:opacity-85',

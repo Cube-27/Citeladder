@@ -40,6 +40,20 @@ export type RangeSelection = {
  * forward to March 3 — Apply would then request a window the user never
  * chose. The round trip is what rejects it.
  */
+/**
+ * The landing selection: no preset, no comparison — the server then serves
+ * the newest, widest snapshot it holds. Lives with `RangeSelection` because
+ * it is that type's empty value, and both the screen and its chrome need it.
+ */
+export const INITIAL_SELECTION: RangeSelection = {
+  range: 'custom',
+  from: '',
+  to: '',
+  compare: 'none',
+  compareFrom: '',
+  compareTo: '',
+};
+
 function isoDay(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return false;
@@ -74,10 +88,7 @@ function isApplicable(
   if (draft.range === 'custom' && !isUsableWindow(draft.from, draft.to, coverage)) {
     return false;
   }
-  if (
-    draft.compare === 'custom' &&
-    !isUsableWindow(draft.compareFrom, draft.compareTo, coverage)
-  ) {
+  if (draft.compare === 'custom' && !isUsableWindow(draft.compareFrom, draft.compareTo, coverage)) {
     return false;
   }
   return true;
