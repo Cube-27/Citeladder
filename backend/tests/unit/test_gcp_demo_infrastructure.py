@@ -262,12 +262,14 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     mcp_matcher = next(
         line for line in caddy.splitlines() if "@mcp_protocol path" in line
     )
+    # /register is absent on purpose: it is the frontend's signup page, and
+    # proxying it to the backend 405s every GET. MCP's RFC 7591 registration
+    # endpoint moved to /mcp/register, which /mcp/* already covers.
     assert mcp_matcher.split()[2:] == [
         "/mcp",
         "/mcp/*",
         "/authorize",
         "/token",
-        "/register",
         "/revoke",
         "/.well-known/oauth-authorization-server",
         "/.well-known/oauth-protected-resource/mcp",
