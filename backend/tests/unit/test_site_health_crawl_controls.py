@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import ast
-import inspect
 from typing import ClassVar
 
 import pytest
@@ -17,8 +15,6 @@ from app.core.config.site_health_runtime import (
 from app.domain.site_health import discovery, frontier
 from app.domain.site_health.planner import (
     CrawlPlanError,
-    create_crawl,
-    create_page_rerun_crawl,
 )
 from app.domain.site_health.planner_controls import resolve_controls
 from app.domain.site_health.planner_policy import frozen_configuration
@@ -216,17 +212,6 @@ def test_frozen_configuration_stamps_supplemental_page_profile_rule_version():
     )
 
     assert configuration["page_profile_rule_version"] == RULE_CATALOG_VERSION
-
-
-def test_normal_and_page_rerun_creation_share_the_frozen_configuration() -> None:
-    for creation_path in (create_crawl, create_page_rerun_crawl):
-        tree = ast.parse(inspect.getsource(creation_path))
-        assert any(
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "frozen_configuration"
-            for node in ast.walk(tree)
-        )
 
 
 async def test_hard_excluded_candidate_never_reaches_enqueue_or_fetch(monkeypatch):

@@ -27,6 +27,7 @@ from app.core.config.site_health_contracts import (
     CRAWL_STATUS_PAUSED,
     CRAWL_STATUS_RUNNING,
     INITIAL_TASK_GENERATION,
+    RULE_CATALOG_VERSION,
     TASK_KIND_ANALYZE,
     TASK_KIND_SITE_SETUP,
 )
@@ -1268,3 +1269,57 @@ async def test_full_crawl_before_page_rerun_reuses_active_crawl(
             )
         ).scalar_one()
     assert active == 1
+
+
+@pytest.mark.asyncio
+async def test_both_creation_paths_stamp_the_frozen_configuration(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A crawl minted either way carries the frozen configuration.
+
+    Replaces an AST check that only proved ``frozen_configuration`` was
+    *called*: this asserts the stamp actually reaches ``crawl.configuration``,
+    which is what every downstream reader depends on.
+    """
+    async with session_factory() as session:
+        seed = await _seed_workspace(session, projects=[{"name": "a", "url_count": 1}])
+        proj = seed.projects[0]
+        session.add(
+            MonitoredSiteUrl(
+                workspace_id=seed.workspace_id,
+                project_id=proj.project_id,
+                profile_id=proj.profile_id,
+                site_url_id=proj.site_url_ids[0],
+                active=True,
+                selection_source=SELECTION_SOURCE_USER,
+            )
+        )
+        await session.commit()
+
+    # Path 1: the full crawl.
+    async with session_factory() as session:
+        crawl = await create_crawl(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=proj.project_id,
+        )
+        await session.commit()
+        full_configuration = dict(crawl.configuration or {})
+
+    # Path 2: the single-page rerun on a project with no active crawl, so it
+    # mints its own crawl.
+    async with session_factory() as session:
+        result = await rerun_page(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=rerun_proj.project_id,
+            site_url_id=rerun_proj.site_url_ids[0],
+        )
+        await session.commit()
+        assert result.created_new_crawl is True
+        rerun_crawl = await session.get(SiteCrawl, result.crawl_id)
+        rerun_configuration = dict((rerun_crawl and rerun_crawl.configuration) or {})
+
+    for configuration in (full_configuration, rerun_configuration):
+        assert configuration["page_profile_rule_version"] == RULE_CATALOG_VERSION
+        assert configuration["root_registrable_domain"]

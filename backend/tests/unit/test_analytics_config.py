@@ -68,6 +68,7 @@ from app.core.config.traffic import (
     TRAFFIC_REFRESH_TRIGGER_DATASETS,
     TRAFFIC_SNAPSHOT_GRANULARITIES,
 )
+from app.workers.analytics_worker import EXECUTORS
 
 
 def test_traffic_window_and_granularity_knobs() -> None:
@@ -129,6 +130,12 @@ def test_analytics_task_kinds_include_commerce_replacement_tasks() -> None:
             "demand_snapshot_refresh",
         }
     )
+    # The worker must actually register an executor for each replacement kind:
+    # a kind in the config with no executor is queued and never drained.
+    assert {
+        ANALYTICS_TASK_KIND_COMMERCE_CATALOG_PROJECTION,
+        ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY,
+    } <= set(EXECUTORS)
 
 
 def test_traffic_sort_whitelists() -> None:

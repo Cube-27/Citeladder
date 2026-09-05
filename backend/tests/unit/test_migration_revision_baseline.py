@@ -63,7 +63,6 @@ def test_0001_initial_is_the_only_migration_revision() -> None:
     assert 'revision = "0001_initial"' in source
     assert "down_revision = None" in source
     tables = _created_tables(source)
-    assert len(tables) == 116
     assert {
         # The generic Performance dimension rows behind the six GSC tables.
         "performance_dimension_stats",

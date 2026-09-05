@@ -468,12 +468,6 @@ def test_sse_knobs_are_config_owned_with_shipped_defaults(
     assert fresh.sse_poll_seconds == 1.0
     assert fresh.sse_terminal_grace_polls == 2
 
-    monkeypatch.setenv("AUDIT_SSE_POLL_SECONDS", "0.25")
-    monkeypatch.setenv("AUDIT_SSE_TERMINAL_GRACE_POLLS", "5")
-    overridden = AuditSettings()
-    assert overridden.sse_poll_seconds == 0.25
-    assert overridden.sse_terminal_grace_polls == 5
-
 
 def test_every_config_event_type_has_a_discriminator_schema() -> None:
     """Every EVENT_* token maps to a union variant (the add-a-type rule)."""

@@ -32,10 +32,12 @@ def _client(handler) -> KeenableClient:
         "https://user@api.keenable.ai",
     ],
 )
-def test_settings_bind_api_key_to_canonical_host(base_url: str) -> None:
+def test_settings_reject_non_canonical_keenable_hosts(base_url: str) -> None:
     with pytest.raises(ValidationError):
         BrandDiscoverySettings(_env_file=None, KEENABLE_BASE_URL=base_url)
 
+
+def test_settings_bind_api_key_canonical_host_success() -> None:
     configured = BrandDiscoverySettings(
         _env_file=None, KEENABLE_BASE_URL="https://api.keenable.ai:443/"
     )

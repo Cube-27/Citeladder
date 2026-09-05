@@ -11,22 +11,10 @@ it directly while CiteLadder has no data-retention requirement.
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import Text
 from sqlalchemy.dialects import postgresql
-
-_COMMERCE_SCHEMA_PATH = Path(__file__).parents[1] / "commerce_atomic_schema.py"
-_COMMERCE_SCHEMA_SPEC = importlib.util.spec_from_file_location(
-    "commerce_atomic_schema", _COMMERCE_SCHEMA_PATH
-)
-if _COMMERCE_SCHEMA_SPEC is None or _COMMERCE_SCHEMA_SPEC.loader is None:
-    raise RuntimeError("Unable to load the Commerce initial-schema operations")
-_COMMERCE_SCHEMA = importlib.util.module_from_spec(_COMMERCE_SCHEMA_SPEC)
-_COMMERCE_SCHEMA_SPEC.loader.exec_module(_COMMERCE_SCHEMA)
 
 revision = "0001_initial"
 down_revision = None
@@ -654,55 +642,6 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_analytics_tasks_workspace_id"),
         "analytics_tasks",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
-        "attribution_snapshots",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("window_start", sa.Date(), nullable=False),
-        sa.Column("window_end", sa.Date(), nullable=False),
-        sa.Column("granularity", sa.String(length=8), nullable=False),
-        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
-        sa.Column(
-            "source_link_ids", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column(
-            "source_order_fact_ids", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column(
-            "source_metric_row_ids", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column(
-            "source_snapshot_ids", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column("analyzer_version", sa.String(length=64), nullable=False),
-        sa.Column("formula_version", sa.String(length=64), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "project_id",
-            "window_start",
-            "window_end",
-            "granularity",
-            name="uq_attribution_snapshot_window",
-        ),
-    )
-    op.create_index(
-        op.f("ix_attribution_snapshots_project_id"),
-        "attribution_snapshots",
-        ["project_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_attribution_snapshots_workspace_id"),
-        "attribution_snapshots",
         ["workspace_id"],
         unique=False,
     )
@@ -2434,46 +2373,6 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
-        "products",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("sku", sa.String(length=128), nullable=False),
-        sa.Column("name", sa.String(length=255), nullable=False),
-        sa.Column("aliases", postgresql.JSONB(astext_type=Text()), nullable=False),
-        sa.Column("variants", postgresql.JSONB(astext_type=Text()), nullable=False),
-        sa.Column("price", sa.Numeric(precision=12, scale=2), nullable=True),
-        sa.Column("currency", sa.String(length=3), nullable=False),
-        sa.Column("url", sa.Text(), nullable=False),
-        sa.Column("attributes", postgresql.JSONB(astext_type=Text()), nullable=False),
-        sa.Column("origin", sa.String(length=32), nullable=False),
-        sa.Column("connection_id", sa.UUID(), nullable=True),
-        sa.Column("external_item_ref", sa.String(length=255), nullable=False),
-        sa.Column("last_seen_sync_run_id", sa.UUID(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["connection_id"], ["integration_connections.id"], ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(
-            ["last_seen_sync_run_id"], ["integration_sync_runs.id"], ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("project_id", "sku", name="uq_product_project_sku"),
-    )
-    op.create_index(
-        op.f("ix_products_connection_id"), "products", ["connection_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_products_last_seen_sync_run_id"),
-        "products",
-        ["last_seen_sync_run_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_products_project_id"), "products", ["project_id"], unique=False
-    )
-    op.create_table(
         "site_crawl_events",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("crawl_id", sa.UUID(), nullable=False),
@@ -2853,79 +2752,6 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
-        "feed_issues",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("connection_id", sa.UUID(), nullable=False),
-        sa.Column("sync_run_id", sa.UUID(), nullable=False),
-        sa.Column("external_item_ref", sa.String(length=255), nullable=False),
-        sa.Column("product_id", sa.UUID(), nullable=True),
-        sa.Column("source_artifact_id", sa.UUID(), nullable=False),
-        sa.Column("rule_id", sa.String(length=64), nullable=False),
-        sa.Column("severity", sa.String(length=16), nullable=False),
-        sa.Column("evidence", postgresql.JSONB(astext_type=Text()), nullable=False),
-        sa.Column("importer_version", sa.String(length=64), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["product_id"], ["products.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id", "connection_id"],
-            ["integration_connections.workspace_id", "integration_connections.id"],
-            name="fk_feed_issue_connection_scoped",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["workspace_id", "source_artifact_id"],
-            [
-                "integration_import_artifacts.workspace_id",
-                "integration_import_artifacts.id",
-            ],
-            name="fk_feed_issue_artifact_scoped",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["workspace_id", "sync_run_id"],
-            ["integration_sync_runs.workspace_id", "integration_sync_runs.id"],
-            name="fk_feed_issue_sync_run_scoped",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "sync_run_id",
-            "external_item_ref",
-            "rule_id",
-            name="uq_feed_issue_run_item_rule",
-        ),
-    )
-    op.create_index(
-        op.f("ix_feed_issues_connection_id"),
-        "feed_issues",
-        ["connection_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_feed_issues_project_id"), "feed_issues", ["project_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_feed_issues_source_artifact_id"),
-        "feed_issues",
-        ["source_artifact_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_feed_issues_sync_run_id"), "feed_issues", ["sync_run_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_feed_issues_workspace_id"),
-        "feed_issues",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
         "integration_metric_rows",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
@@ -3043,146 +2869,6 @@ def upgrade() -> None:
         "monitored_site_urls",
         ["workspace_id", "active"],
         unique=False,
-    )
-    op.create_table(
-        "order_facts",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("connection_id", sa.UUID(), nullable=False),
-        sa.Column("provider", sa.String(length=16), nullable=False),
-        sa.Column("order_ref_hash", sa.String(length=64), nullable=False),
-        sa.Column("resync_seq", sa.Integer(), nullable=False),
-        sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("currency", sa.String(length=3), nullable=False),
-        sa.Column("total_amount", sa.Numeric(precision=12, scale=2), nullable=False),
-        sa.Column("line_items", postgresql.JSONB(astext_type=Text()), nullable=False),
-        sa.Column(
-            "attribution_keys", postgresql.JSONB(astext_type=Text()), nullable=False
-        ),
-        sa.Column("source_artifact_id", sa.UUID(), nullable=False),
-        sa.Column("importer_version", sa.String(length=64), nullable=False),
-        sa.Column("order_sanitize_version", sa.String(length=64), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id", "connection_id"],
-            ["integration_connections.workspace_id", "integration_connections.id"],
-            name="fk_order_fact_connection_scoped",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["workspace_id", "source_artifact_id"],
-            [
-                "integration_import_artifacts.workspace_id",
-                "integration_import_artifacts.id",
-            ],
-            name="fk_order_fact_artifact_scoped",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "connection_id",
-            "order_ref_hash",
-            "resync_seq",
-            name="uq_order_fact_identity",
-        ),
-        sa.UniqueConstraint("workspace_id", "id", name="uq_order_facts_ws_id"),
-    )
-    op.create_index(
-        op.f("ix_order_facts_connection_id"),
-        "order_facts",
-        ["connection_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_order_facts_order_ref_hash"),
-        "order_facts",
-        ["order_ref_hash"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_order_facts_project_id"), "order_facts", ["project_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_order_facts_source_artifact_id"),
-        "order_facts",
-        ["source_artifact_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_order_facts_workspace_id"),
-        "order_facts",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
-        "product_metric_snapshots",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("audit_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("product_id", sa.UUID(), nullable=True),
-        sa.Column("product_analyzer_version", sa.String(length=32), nullable=False),
-        sa.Column("product_scoring_rule_version", sa.String(length=32), nullable=False),
-        sa.Column("mention_count", sa.Integer(), nullable=False),
-        sa.Column("sov_share", sa.Float(), nullable=False),
-        sa.Column("avg_rank", sa.Float(), nullable=True),
-        sa.Column(
-            "rank_distribution", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column("price_mention_count", sa.Integer(), nullable=False),
-        sa.Column("price_accuracy_rate", sa.Float(), nullable=True),
-        sa.Column("win_rate", sa.Float(), nullable=True),
-        sa.Column("price_mismatch_rate", sa.Float(), nullable=True),
-        sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
-        sa.Column(
-            "source_analysis_ids", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column(
-            "source_artifact_ids", postgresql.JSONB(astext_type=Text()), nullable=True
-        ),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["product_id"], ["products.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_product_metric_snapshots_audit_id"),
-        "product_metric_snapshots",
-        ["audit_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_product_metric_snapshots_project_id"),
-        "product_metric_snapshots",
-        ["project_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_product_metric_snapshots_workspace_id"),
-        "product_metric_snapshots",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_index(
-        "uq_product_metric_snapshot_product",
-        "product_metric_snapshots",
-        [
-            "audit_id",
-            "product_id",
-            "product_analyzer_version",
-            "product_scoring_rule_version",
-        ],
-        unique=True,
-        postgresql_where=sa.text("product_id IS NOT NULL"),
     )
     op.create_table(
         "site_crawl_tasks",
@@ -3387,59 +3073,6 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_performance_dimension_stats_workspace_id"),
         "performance_dimension_stats",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
-        "attribution_links",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("project_id", sa.UUID(), nullable=False),
-        sa.Column("order_fact_id", sa.UUID(), nullable=False),
-        sa.Column("method", sa.String(length=24), nullable=False),
-        sa.Column("confidence", sa.String(length=16), nullable=False),
-        sa.Column("matched_rule_id", sa.String(length=64), nullable=False),
-        sa.Column("rule_version", sa.String(length=64), nullable=False),
-        sa.Column("analyzer_version", sa.String(length=64), nullable=False),
-        sa.Column(
-            "evidence_refs", postgresql.JSONB(astext_type=Text()), nullable=False
-        ),
-        sa.Column("revenue_amount", sa.Numeric(precision=12, scale=2), nullable=False),
-        sa.Column("currency", sa.String(length=3), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id", "order_fact_id"],
-            ["order_facts.workspace_id", "order_facts.id"],
-            name="fk_attribution_link_order_fact_scoped",
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "order_fact_id",
-            "matched_rule_id",
-            "rule_version",
-            name="uq_attribution_link_order_rule_version",
-        ),
-    )
-    op.create_index(
-        op.f("ix_attribution_links_order_fact_id"),
-        "attribution_links",
-        ["order_fact_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_attribution_links_project_id"),
-        "attribution_links",
-        ["project_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_attribution_links_workspace_id"),
-        "attribution_links",
         ["workspace_id"],
         unique=False,
     )
@@ -3661,58 +3294,6 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_site_fetch_artifacts_workspace_id"),
         "site_fetch_artifacts",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
-        "product_response_analyses",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("audit_id", sa.UUID(), nullable=False),
-        sa.Column("task_id", sa.UUID(), nullable=False),
-        sa.Column("artifact_id", sa.UUID(), nullable=True),
-        sa.Column("product_analyzer_version", sa.String(length=32), nullable=False),
-        sa.Column("product_scoring_rule_version", sa.String(length=32), nullable=False),
-        sa.Column("logical_engine", sa.String(length=32), nullable=False),
-        sa.Column("transport_provider", sa.String(length=32), nullable=False),
-        sa.Column("transport_model", sa.String(length=255), nullable=False),
-        sa.Column("prompt_index", sa.Integer(), nullable=False),
-        sa.Column("repetition", sa.Integer(), nullable=False),
-        sa.Column("own_product_mention_count", sa.Integer(), nullable=False),
-        sa.Column("products_with_price_match", sa.Integer(), nullable=False),
-        sa.Column("score", postgresql.JSONB(astext_type=Text()), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "task_id",
-            "product_analyzer_version",
-            "product_scoring_rule_version",
-            name="uq_product_response_analysis_task_version",
-        ),
-    )
-    op.create_index(
-        op.f("ix_product_response_analyses_audit_id"),
-        "product_response_analyses",
-        ["audit_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_product_response_analyses_task_id"),
-        "product_response_analyses",
-        ["task_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_product_response_analyses_workspace_id"),
-        "product_response_analyses",
         ["workspace_id"],
         unique=False,
     )
@@ -4300,107 +3881,6 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_competitor_mentions_workspace_id"),
         "competitor_mentions",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
-        "merchant_mentions",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("audit_id", sa.UUID(), nullable=False),
-        sa.Column("analysis_id", sa.UUID(), nullable=False),
-        sa.Column("artifact_id", sa.UUID(), nullable=True),
-        sa.Column("product_id", sa.UUID(), nullable=True),
-        sa.Column("merchant_name", sa.String(length=255), nullable=False),
-        sa.Column("merchant_domain", sa.String(length=255), nullable=False),
-        sa.Column("merchant_kind", sa.String(length=16), nullable=False),
-        sa.Column("destination_url", sa.Text(), nullable=False),
-        sa.Column("price_text", sa.String(length=64), nullable=False),
-        sa.Column("price_value", sa.Numeric(precision=12, scale=2), nullable=True),
-        sa.Column("price_currency", sa.String(length=3), nullable=False),
-        sa.Column("product_analyzer_version", sa.String(length=32), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["analysis_id"], ["product_response_analyses.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["product_id"], ["products.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_merchant_mentions_analysis_id"),
-        "merchant_mentions",
-        ["analysis_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_merchant_mentions_audit_id"),
-        "merchant_mentions",
-        ["audit_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_merchant_mentions_workspace_id"),
-        "merchant_mentions",
-        ["workspace_id"],
-        unique=False,
-    )
-    op.create_table(
-        "product_mentions",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("audit_id", sa.UUID(), nullable=False),
-        sa.Column("analysis_id", sa.UUID(), nullable=False),
-        sa.Column("artifact_id", sa.UUID(), nullable=True),
-        sa.Column("product_analyzer_version", sa.String(length=32), nullable=False),
-        sa.Column("product_id", sa.UUID(), nullable=True),
-        sa.Column("matched_name", sa.String(length=255), nullable=False),
-        sa.Column("matched_sku", sa.String(length=128), nullable=False),
-        sa.Column("first_offset", sa.Integer(), nullable=True),
-        sa.Column("rank_position", sa.Integer(), nullable=True),
-        sa.Column("price_text", sa.String(length=64), nullable=False),
-        sa.Column("price_value", sa.Numeric(precision=12, scale=2), nullable=True),
-        sa.Column("price_currency", sa.String(length=3), nullable=False),
-        sa.Column("price_matches_catalog", sa.Boolean(), nullable=True),
-        sa.Column("price_relation", sa.String(length=16), nullable=True),
-        sa.Column(
-            "attribute_mentions", postgresql.JSONB(astext_type=Text()), nullable=False
-        ),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["analysis_id"], ["product_response_analyses.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["product_id"], ["products.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_product_mentions_analysis_id"),
-        "product_mentions",
-        ["analysis_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_product_mentions_audit_id"),
-        "product_mentions",
-        ["audit_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_product_mentions_workspace_id"),
-        "product_mentions",
         ["workspace_id"],
         unique=False,
     )
@@ -5535,7 +5015,624 @@ def upgrade() -> None:
     _create_indexes(
         "agent_tool_attempts", ("workspace_id", "project_id", "task_run_id")
     )
-    _COMMERCE_SCHEMA.upgrade()
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.create_table(
+        "commerce_csv_imports",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("content_hash", sa.String(length=64), nullable=False),
+        sa.Column("filename", sa.String(length=255), nullable=False),
+        sa.Column("content_type", sa.String(length=128), nullable=False),
+        sa.Column("raw_payload", sa.Text(), nullable=False),
+        sa.Column(
+            "row_outcomes", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
+        sa.Column("created_count", sa.Integer(), nullable=False),
+        sa.Column("updated_count", sa.Integer(), nullable=False),
+        sa.Column("unchanged_count", sa.Integer(), nullable=False),
+        sa.Column("rejected_count", sa.Integer(), nullable=False),
+        sa.Column("importer_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_id", "content_hash", name="uq_commerce_csv_import_hash"
+        ),
+    )
+    op.create_index(
+        op.f("ix_commerce_csv_imports_project_id"),
+        "commerce_csv_imports",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_csv_imports_workspace_id"),
+        "commerce_csv_imports",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_products",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("canonical_url", sa.Text(), nullable=False),
+        sa.Column("name", sa.String(length=512), nullable=False),
+        sa.Column("description", sa.Text(), nullable=False),
+        sa.Column("brand", sa.String(length=255), nullable=False),
+        sa.Column("price", sa.Numeric(precision=14, scale=2), nullable=True),
+        sa.Column("currency", sa.String(length=3), nullable=False),
+        sa.Column("sku", sa.String(length=255), nullable=True),
+        sa.Column("gtin", sa.String(length=64), nullable=True),
+        sa.Column("mpn", sa.String(length=255), nullable=True),
+        sa.Column("observed_external_id", sa.String(length=255), nullable=False),
+        sa.Column("variants", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column(
+            "attributes", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
+        sa.Column(
+            "field_sources", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
+        sa.Column("lifecycle_state", sa.String(length=16), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_id", "canonical_url", name="uq_commerce_product_url"
+        ),
+    )
+    op.create_index(
+        op.f("ix_commerce_products_project_id"),
+        "commerce_products",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_commerce_products_project_lifecycle",
+        "commerce_products",
+        ["project_id", "lifecycle_state"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_products_workspace_id"),
+        "commerce_products",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_competitor_attempts",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("target_kind", sa.String(length=16), nullable=False),
+        sa.Column("target_id", sa.UUID(), nullable=False),
+        sa.Column("attempt_number", sa.Integer(), nullable=False),
+        sa.Column("query", sa.Text(), nullable=False),
+        sa.Column("locale", sa.String(length=32), nullable=False),
+        sa.Column("status", sa.String(length=24), nullable=False),
+        sa.Column(
+            "result_payload", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
+        sa.Column("error_code", sa.String(length=64), nullable=False),
+        sa.Column("provider_version", sa.String(length=64), nullable=False),
+        sa.Column("validator_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["task_id"], ["analytics_tasks.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "task_id", "attempt_number", name="uq_commerce_competitor_attempt"
+        ),
+    )
+    op.create_index(
+        op.f("ix_commerce_competitor_attempts_project_id"),
+        "commerce_competitor_attempts",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_competitor_attempts_target_id"),
+        "commerce_competitor_attempts",
+        ["target_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_competitor_attempts_task_id"),
+        "commerce_competitor_attempts",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_competitor_attempts_workspace_id"),
+        "commerce_competitor_attempts",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_competitor_candidates",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("attempt_id", sa.UUID(), nullable=True),
+        sa.Column("target_kind", sa.String(length=16), nullable=False),
+        sa.Column("target_id", sa.UUID(), nullable=False),
+        sa.Column("canonical_url", sa.Text(), nullable=False),
+        sa.Column("product_name", sa.String(length=512), nullable=False),
+        sa.Column("brand_name", sa.String(length=255), nullable=False),
+        sa.Column("evidence", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("source_kind", sa.String(length=24), nullable=False),
+        sa.Column("state", sa.String(length=16), nullable=False),
+        sa.Column("decision_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["attempt_id"], ["commerce_competitor_attempts.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_id",
+            "target_kind",
+            "target_id",
+            "canonical_url",
+            name="uq_commerce_competitor_candidate",
+        ),
+    )
+    op.create_index(
+        op.f("ix_commerce_competitor_candidates_project_id"),
+        "commerce_competitor_candidates",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_competitor_candidates_target_id"),
+        "commerce_competitor_candidates",
+        ["target_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_competitor_candidates_workspace_id"),
+        "commerce_competitor_candidates",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_prompt_targets",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("prompt_id", sa.UUID(), nullable=False),
+        sa.Column("target_kind", sa.String(length=16), nullable=False),
+        sa.Column("target_id", sa.UUID(), nullable=False),
+        sa.Column("template_version", sa.String(length=64), nullable=False),
+        sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["prompt_id"], ["prompts.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("prompt_id", name="uq_commerce_prompt_target_prompt"),
+    )
+    op.create_index(
+        op.f("ix_commerce_prompt_targets_project_id"),
+        "commerce_prompt_targets",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_prompt_targets_prompt_id"),
+        "commerce_prompt_targets",
+        ["prompt_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_prompt_targets_target_id"),
+        "commerce_prompt_targets",
+        ["target_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_prompt_targets_workspace_id"),
+        "commerce_prompt_targets",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_recommendation_observations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("task_id", sa.UUID(), nullable=False),
+        sa.Column("artifact_id", sa.UUID(), nullable=False),
+        sa.Column("target_kind", sa.String(length=16), nullable=False),
+        sa.Column("target_id", sa.UUID(), nullable=False),
+        sa.Column("product_id", sa.UUID(), nullable=True),
+        sa.Column("competitor_candidate_id", sa.UUID(), nullable=True),
+        sa.Column("observed_product", sa.String(length=512), nullable=False),
+        sa.Column("observed_brand", sa.String(length=255), nullable=False),
+        sa.Column("classification", sa.String(length=32), nullable=False),
+        sa.Column("observed_title", sa.String(length=512), nullable=False),
+        sa.Column("observed_price", sa.Numeric(precision=14, scale=2), nullable=True),
+        sa.Column("observed_currency", sa.String(length=3), nullable=False),
+        sa.Column("merchant_url", sa.Text(), nullable=False),
+        sa.Column("merchant_domain", sa.String(length=512), nullable=False),
+        sa.Column("surface_kind", sa.String(length=32), nullable=False),
+        sa.Column("rank", sa.Integer(), nullable=True),
+        sa.Column("order_observable", sa.Boolean(), nullable=False),
+        sa.Column("match_confidence", sa.Float(), nullable=False),
+        sa.Column("parser_version", sa.String(length=64), nullable=False),
+        sa.Column("matcher_version", sa.String(length=64), nullable=False),
+        sa.Column("model_version", sa.String(length=128), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["artifact_id"], ["raw_response_artifacts.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["competitor_candidate_id"],
+            ["commerce_competitor_candidates.id"],
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["product_id"], ["commerce_products.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        "ix_commerce_observations_audit_target",
+        "commerce_recommendation_observations",
+        ["audit_id", "target_kind", "target_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_recommendation_observations_artifact_id"),
+        "commerce_recommendation_observations",
+        ["artifact_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_recommendation_observations_audit_id"),
+        "commerce_recommendation_observations",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_recommendation_observations_project_id"),
+        "commerce_recommendation_observations",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_recommendation_observations_target_id"),
+        "commerce_recommendation_observations",
+        ["target_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_recommendation_observations_task_id"),
+        "commerce_recommendation_observations",
+        ["task_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_recommendation_observations_workspace_id"),
+        "commerce_recommendation_observations",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_shelf_snapshots",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("audit_id", sa.UUID(), nullable=False),
+        sa.Column("target_kind", sa.String(length=16), nullable=False),
+        sa.Column("target_id", sa.UUID(), nullable=False),
+        sa.Column("product_visibility", sa.Float(), nullable=False),
+        sa.Column("share_of_shelf", sa.Float(), nullable=True),
+        sa.Column("average_shelf_position", sa.Float(), nullable=True),
+        sa.Column("first_position_win_rate", sa.Float(), nullable=True),
+        sa.Column("successful_execution_count", sa.Integer(), nullable=False),
+        sa.Column("recognized_slot_count", sa.Integer(), nullable=False),
+        sa.Column("ranked_execution_count", sa.Integer(), nullable=False),
+        sa.Column(
+            "source_observation_ids",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+        ),
+        sa.Column(
+            "context_snapshot", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
+        sa.Column("formula_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "audit_id",
+            "target_kind",
+            "target_id",
+            "formula_version",
+            name="uq_commerce_shelf_snapshot",
+        ),
+    )
+    op.create_index(
+        "ix_commerce_shelf_project_created",
+        "commerce_shelf_snapshots",
+        ["project_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_shelf_snapshots_audit_id"),
+        "commerce_shelf_snapshots",
+        ["audit_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_shelf_snapshots_project_id"),
+        "commerce_shelf_snapshots",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_shelf_snapshots_target_id"),
+        "commerce_shelf_snapshots",
+        ["target_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_shelf_snapshots_workspace_id"),
+        "commerce_shelf_snapshots",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_categories",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("normalized_name", sa.String(length=255), nullable=False),
+        sa.Column("role", sa.String(length=16), nullable=False),
+        sa.Column("canonical_url", sa.Text(), nullable=False),
+        sa.Column("editable", sa.Boolean(), nullable=False),
+        sa.Column(
+            "field_sources", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
+        sa.Column("source_analysis_id", sa.UUID(), nullable=True),
+        sa.Column("projector_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["source_analysis_id"], ["site_page_analyses.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_id", "normalized_name", name="uq_commerce_category_name"
+        ),
+    )
+    op.create_index(
+        op.f("ix_commerce_categories_project_id"),
+        "commerce_categories",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_categories_workspace_id"),
+        "commerce_categories",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_category_observations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("category_id", sa.UUID(), nullable=False),
+        sa.Column(
+            "observed_fields", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
+        sa.Column("edit_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["category_id"], ["commerce_categories.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_commerce_category_observations_category_id"),
+        "commerce_category_observations",
+        ["category_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_category_observations_project_id"),
+        "commerce_category_observations",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_category_observations_workspace_id"),
+        "commerce_category_observations",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_product_observations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("product_id", sa.UUID(), nullable=False),
+        sa.Column("source_kind", sa.String(length=16), nullable=False),
+        sa.Column("source_analysis_id", sa.UUID(), nullable=True),
+        sa.Column("source_artifact_id", sa.UUID(), nullable=True),
+        sa.Column("csv_import_id", sa.UUID(), nullable=True),
+        sa.Column("csv_row_number", sa.Integer(), nullable=True),
+        sa.Column(
+            "observed_fields", postgresql.JSONB(astext_type=sa.Text()), nullable=False
+        ),
+        sa.Column("extractor_version", sa.String(length=64), nullable=False),
+        sa.Column("classifier_version", sa.String(length=64), nullable=False),
+        sa.Column("importer_version", sa.String(length=64), nullable=False),
+        sa.Column("projector_version", sa.String(length=64), nullable=False),
+        sa.Column("edit_version", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint(
+            "(source_kind = 'site_health' AND source_analysis_id IS NOT NULL AND source_artifact_id IS NOT NULL AND csv_import_id IS NULL) OR (source_kind = 'csv' AND csv_import_id IS NOT NULL AND csv_row_number IS NOT NULL AND source_analysis_id IS NULL) OR (source_kind = 'edit' AND source_analysis_id IS NULL AND csv_import_id IS NULL)",
+            name="ck_commerce_product_observation_source",
+        ),
+        sa.ForeignKeyConstraint(
+            ["csv_import_id"], ["commerce_csv_imports.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["product_id"], ["commerce_products.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["source_analysis_id"], ["site_page_analyses.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["source_artifact_id"], ["site_fetch_artifacts.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "source_analysis_id",
+            "projector_version",
+            name="uq_commerce_projection_analysis_version",
+        ),
+    )
+    op.create_index(
+        op.f("ix_commerce_product_observations_product_id"),
+        "commerce_product_observations",
+        ["product_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_product_observations_project_id"),
+        "commerce_product_observations",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_product_observations_workspace_id"),
+        "commerce_product_observations",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_observation_citations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("observation_id", sa.UUID(), nullable=False),
+        sa.Column("citation_id", sa.UUID(), nullable=False),
+        sa.ForeignKeyConstraint(["citation_id"], ["citations.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["observation_id"],
+            ["commerce_recommendation_observations.id"],
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "observation_id", "citation_id", name="uq_commerce_observation_citation"
+        ),
+    )
+    op.create_index(
+        op.f("ix_commerce_observation_citations_citation_id"),
+        "commerce_observation_citations",
+        ["citation_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_observation_citations_observation_id"),
+        "commerce_observation_citations",
+        ["observation_id"],
+        unique=False,
+    )
+    op.create_table(
+        "commerce_product_categories",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
+        sa.Column("product_id", sa.UUID(), nullable=False),
+        sa.Column("category_id", sa.UUID(), nullable=False),
+        sa.Column("source_observation_id", sa.UUID(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["category_id"], ["commerce_categories.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["product_id"], ["commerce_products.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "product_id", "category_id", name="uq_commerce_product_category"
+        ),
+    )
+    op.create_index(
+        op.f("ix_commerce_product_categories_category_id"),
+        "commerce_product_categories",
+        ["category_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_product_categories_product_id"),
+        "commerce_product_categories",
+        ["product_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_product_categories_project_id"),
+        "commerce_product_categories",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_commerce_product_categories_workspace_id"),
+        "commerce_product_categories",
+        ["workspace_id"],
+        unique=False,
+    )
 
 
 def downgrade() -> None:

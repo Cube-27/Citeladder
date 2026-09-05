@@ -55,13 +55,16 @@ from tests.component.audit_helpers import seed_audit_fixtures
 GEMINI_MODEL = measurement_route(ENGINE_GEMINI).transport_model
 
 
-def test_logo_lookup_distinguishes_same_named_brand_and_competitor() -> None:
+def test_ranking_rows_key_logo_and_website_by_brand_flag_not_name() -> None:
+    """A competitor sharing the brand's name must not inherit its logo.
+
+    Exercised through ``_ranking_row``, the row builder every visibility
+    response goes through, rather than the two private lookups it calls: the
+    contract that matters is that the emitted row keys on ``(is_brand, name)``.
+    """
     brand_id = _uuid.uuid4()
     competitor_id = _uuid.uuid4()
-    logo_urls = {
-        brand_id: "/brand-logo",
-        competitor_id: "/competitor-logo",
-    }
+    logo_urls = {brand_id: "/brand-logo", competitor_id: "/competitor-logo"}
     identity_ids = {
         (True, "Shared name"): brand_id,
         (False, "Shared name"): competitor_id,
@@ -71,27 +74,41 @@ def test_logo_lookup_distinguishes_same_named_brand_and_competitor() -> None:
         (False, "Shared name"): "competitor.example",
     }
 
-    assert (
-        analysis_service._logo_url_for_name(
-            "Shared name", True, logo_urls, identity_ids
+    def _row(is_brand: bool):
+        return analysis_service._ranking_row(
+            name="Shared name",
+            is_brand=is_brand,
+            mention_rate=1.0,
+            citation_rate=1.0,
+            share={},
+            counts={},
+            logo_urls=logo_urls,
+            identity_ids=identity_ids,
+            website_urls=website_urls,
         )
-        == "/brand-logo"
+
+    brand_row = _row(True)
+    competitor_row = _row(False)
+
+    assert brand_row.logo_url == "/brand-logo"
+    assert brand_row.website_url == "brand.example"
+    assert competitor_row.logo_url == "/competitor-logo"
+    assert competitor_row.website_url == "competitor.example"
+
+    # An unknown name resolves to no logo/site rather than borrowing one.
+    missing = analysis_service._ranking_row(
+        name="Missing",
+        is_brand=False,
+        mention_rate=0.0,
+        citation_rate=0.0,
+        share={},
+        counts={},
+        logo_urls=logo_urls,
+        identity_ids=identity_ids,
+        website_urls=None,
     )
-    assert (
-        analysis_service._logo_url_for_name(
-            "Shared name", False, logo_urls, identity_ids
-        )
-        == "/competitor-logo"
-    )
-    assert (
-        analysis_service._website_url_for_name("Shared name", True, website_urls)
-        == "brand.example"
-    )
-    assert (
-        analysis_service._website_url_for_name("Shared name", False, website_urls)
-        == "competitor.example"
-    )
-    assert analysis_service._website_url_for_name("Missing", False, None) is None
+    assert missing.logo_url is None
+    assert missing.website_url is None
 
 
 @pytest.mark.parametrize(

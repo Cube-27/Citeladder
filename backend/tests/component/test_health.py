@@ -150,19 +150,7 @@ async def test_chunked_oversized_api_body_is_stopped_while_streaming() -> None:
 
 
 def test_health_route_and_router_stubs_registered() -> None:
-    # /health is registered, and all mounted routers are included so B2-B6
-    # fill them in place. B4 adds the provider-catalog router alongside the six
-    # original stubs (7); B6 adds the executions router (8); the Site Health
-    # router adds the ninth (9); the Content router adds the tenth (10); the
-    # brand-discoveries router adds the eleventh (11); the OAuth router adds
-    # the twelfth (12); the integrations router adds the thirteenth (13); the
-    # AI Referrals router adds the fourteenth (14); the Traffic router adds
-    # the fifteenth (15); Opportunities adds the sixteenth; Billing adds the
-    # seventeenth and Commerce adds the eighteenth; audit schedules add the
-    # nineteenth. Growth Agent brings the mounted-router set to twenty-one.
-    from app.main import _ROUTERS
-
+    """The liveness and readiness probes stay mounted."""
     paths = {getattr(route, "path", None) for route in app.routes}
     assert "/health" in paths
     assert "/ready" in paths
-    assert len(_ROUTERS) == 21

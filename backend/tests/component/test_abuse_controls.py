@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.sql.elements import ClauseElement, ColumnClause
+from sqlalchemy.sql.selectable import Select, Subquery
 
 from app.core.config.abuse import abuse_settings
 from app.core.config.audits import AUDIT_QUEUE_SPEC, AUDIT_TRIGGER_MANUAL
@@ -227,13 +229,41 @@ async def test_claim_rechecks_eligibility_on_the_locked_relation(
         queue_name="audit_tasks",
     )
     compiled = str(statement.compile(dialect=postgresql.dialect()))
-    locked, _, tail = compiled.partition("FOR UPDATE")
+    assert "FOR UPDATE OF audit_tasks SKIP LOCKED" in compiled
 
-    assert "FOR UPDATE OF audit_tasks SKIP LOCKED" in "FOR UPDATE" + tail
-    # The predicate has to appear at BOTH levels: once to rank each
-    # workspace's backlog, once on the locked relation for the re-check.
-    assert locked.count("audit_tasks.status IN") == 2
-    assert locked.count("audit_tasks.available_at <=") == 2
+    def _eligibility_columns(clause: ClauseElement | None) -> set[str]:
+        """The ``status``/``available_at`` columns this predicate constrains."""
+        if clause is None:
+            return set()
+        return {
+            element.name
+            for element in clause.get_children(column_collections=False)
+            if isinstance(element, ColumnClause)
+            and element.table is not None
+            and element.table.name == "audit_tasks"
+            and element.name in {"status", "available_at"}
+        } | {
+            name
+            for child in clause.get_children(column_collections=False)
+            for name in _eligibility_columns(child)
+        }
+
+    # The predicate has to constrain BOTH levels: the ranked subquery that
+    # orders each workspace's backlog, and the outer statement whose rows are
+    # the ones actually locked and re-checked under READ COMMITTED.
+    outer = _eligibility_columns(statement.whereclause)
+    assert outer == {"status", "available_at"}
+
+    ranked = [
+        element for element in statement.get_children() if isinstance(element, Subquery)
+    ]
+    assert ranked, "the claim no longer ranks candidates in a subquery"
+    inner: set[str] = set()
+    for subquery in ranked:
+        for child in subquery.get_children():
+            if isinstance(child, Select):
+                inner |= _eligibility_columns(child.whereclause)
+    assert inner == {"status", "available_at"}
 
 
 @pytest.mark.asyncio

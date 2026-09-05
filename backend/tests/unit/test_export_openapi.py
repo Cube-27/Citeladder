@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts.export_openapi import export_openapi
 
 
@@ -29,9 +31,5 @@ def test_export_openapi_rejects_output_outside_the_workspace(
     workspace.mkdir()
     monkeypatch.chdir(workspace)
 
-    try:
+    with pytest.raises(ValueError, match="must stay within"):
         export_openapi(tmp_path / "openapi.json")
-    except ValueError as error:
-        assert "must stay within" in str(error)
-    else:
-        raise AssertionError("export_openapi accepted an output outside the workspace")

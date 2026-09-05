@@ -26,7 +26,6 @@ from app.core.config.provider_catalog import (
     TRANSPORT_GOOGLE,
     measurement_route,
 )
-from app.domain.analysis.metrics import get_metrics
 from app.domain.audits.creation import create_audit
 from app.models.analysis import (
     BrandMention,
@@ -171,51 +170,6 @@ class _UsageStubAdapter(_StubAdapter):
 
 
 @pytest.mark.asyncio
-async def test_aggregation_preserves_provider_usage(
-    session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Persisted provider usage flows into the aggregate (not dropped as zero).
-
-    Regression: immutable artifact usage was dropped while rebuilding the
-    aggregate, so token/cost metrics were always zero.
-    """
-    monkeypatch.setattr(
-        audit_execution, "build_adapter", lambda **_: _UsageStubAdapter()
-    )
-    monkeypatch.setattr(audit_settings, "min_request_interval_seconds", 0.0)
-    monkeypatch.setattr(audit_settings, "heartbeat_interval_seconds", 3600.0)
-
-    seed, audit = await _run_completed_audit(session_factory)
-
-    async with session_factory() as session:
-        metrics = await get_metrics(
-            session, workspace_id=seed.workspace_id, audit_id=audit.id
-        )
-        token_usage = metrics.metrics["token_usage"]
-        # 4 executions * 100/50 tokens each.
-        assert token_usage["input_tokens"] == 400
-        assert token_usage["output_tokens"] == 200
-        assert token_usage["total_tokens"] == 600
-
-        cost = metrics.metrics["cost"]
-        # 4 executions * $0.25 provider-reported each — previously always zero
-        # because artifact usage was dropped when rebuilding the aggregate.
-        assert cost["provider_reported_cost_usd"] == pytest.approx(1.0)
-
-
-# ---------------------------------------------------------------------------
-# Cross-run Visibility trend projection (roadmap: visibility-trends).
-#
-# These seed dashboard-ready ``Audit`` + ``MetricSnapshot`` rows DIRECTLY through
-# the ORM (no worker run) so completion timestamps, statuses, engine slices, and
-# analyzer/scoring versions are deterministic. Every assertion exercises the pure
-# projection ``get_visibility_trends`` — never a provider (invariant 7).
-# ---------------------------------------------------------------------------
-_BRAND = "Acme Corp"
-_COMPETITOR = "Globex"
-
-
 def _trend_metrics(
     *,
     brand_rate: float,

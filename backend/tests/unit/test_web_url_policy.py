@@ -199,6 +199,20 @@ def test_is_admissible_combines_scope_and_narrowing():
         include_globs=["*/blog/*"],
         exclude_globs=[],
     )
+    # In scope but excluded.
+    assert not is_admissible(
+        "https://example.com/blog/1",
+        root_registrable_domain="example.com",
+        include_globs=[],
+        exclude_globs=["*/blog/*"],
+    )
+    # Out of scope (a glob can never authorize another registrable domain).
+    assert not is_admissible(
+        "https://evil.com/blog/1",
+        root_registrable_domain="example.com",
+        include_globs=["*"],
+        exclude_globs=[],
+    )
 
 
 @pytest.mark.parametrize(
@@ -332,13 +346,6 @@ def test_value_aware_admission_returns_safe_scope_and_priority_details():
     assert product.value_kind == "product"
     assert product.priority > 0
     assert external.reason_code == "out_of_scope"
-    # In scope but excluded.
-    assert not is_admissible(
-        "https://example.com/blog/1",
-        root_registrable_domain="example.com",
-        include_globs=[],
-        exclude_globs=["*/blog/*"],
-    )
 
 
 @pytest.mark.asyncio
@@ -366,13 +373,6 @@ async def test_infrastructure_txt_exception_is_purpose_scoped():
             enforce_scope=True,
             infrastructure_purpose="robots",
         )
-    # Out of scope (glob can never authorize another registrable domain).
-    assert not is_admissible(
-        "https://evil.com/blog/1",
-        root_registrable_domain="example.com",
-        include_globs=["*"],
-        exclude_globs=[],
-    )
 
 
 # --- SSRF address validation ----------------------------------------------
