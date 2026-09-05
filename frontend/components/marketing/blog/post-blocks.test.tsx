@@ -56,8 +56,7 @@ describe('PostBlock', () => {
 
     // The rule, not the paint: a bare percentage at or above the threshold is
     // the only cell marked, so this survives a change of visual treatment.
-    const emphasis = (text: string) =>
-      screen.getByText(text).getAttribute('data-emphasised');
+    const emphasis = (text: string) => screen.getByText(text).getAttribute('data-emphasised');
     expect(emphasis('+40%')).toBe('true');
     expect(emphasis('+12%')).toBeNull();
     expect(emphasis('-8%')).toBeNull();
