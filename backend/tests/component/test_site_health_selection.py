@@ -1282,18 +1282,27 @@ async def test_both_creation_paths_stamp_the_frozen_configuration(
     which is what every downstream reader depends on.
     """
     async with session_factory() as session:
-        seed = await _seed_workspace(session, projects=[{"name": "a", "url_count": 1}])
-        proj = seed.projects[0]
-        session.add(
-            MonitoredSiteUrl(
-                workspace_id=seed.workspace_id,
-                project_id=proj.project_id,
-                profile_id=proj.profile_id,
-                site_url_id=proj.site_url_ids[0],
-                active=True,
-                selection_source=SELECTION_SOURCE_USER,
-            )
+        # Two projects: path 1 leaves an active crawl on its own project, so
+        # the rerun needs a project of its own to actually mint a new crawl.
+        seed = await _seed_workspace(
+            session,
+            projects=[
+                {"name": "a", "url_count": 1},
+                {"name": "b", "url_count": 1},
+            ],
         )
+        proj, rerun_proj = seed.projects[0], seed.projects[1]
+        for project in (proj, rerun_proj):
+            session.add(
+                MonitoredSiteUrl(
+                    workspace_id=seed.workspace_id,
+                    project_id=project.project_id,
+                    profile_id=project.profile_id,
+                    site_url_id=project.site_url_ids[0],
+                    active=True,
+                    selection_source=SELECTION_SOURCE_USER,
+                )
+            )
         await session.commit()
 
     # Path 1: the full crawl.
