@@ -205,11 +205,17 @@ jobs:
           test -z "$BING_OAUTH_CLIENT_SECRET" || add_value_once citeladder-bing-oauth-client-secret "$BING_OAUTH_CLIENT_SECRET"
           # Without a client pair the provider reports "not configured" and the
           # connect button 503s, so refuse the deploy rather than ship that.
-          for required in citeladder-google-oauth-client-id citeladder-google-oauth-client-secret citeladder-bing-oauth-client-id citeladder-bing-oauth-client-secret; do
+          # Google is the demo's primary connector and stays blocking.
+          for required in citeladder-google-oauth-client-id citeladder-google-oauth-client-secret; do
             has_version "$required" || {
-              echo "::error::$required has no enabled version. Add the matching gcp-demo environment secret (GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, BING_OAUTH_CLIENT_ID, BING_OAUTH_CLIENT_SECRET) and re-run."
+              echo "::error::$required has no enabled version. Add the matching gcp-demo environment secret (GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET) and re-run."
               exit 1
             }
+          done
+          # Bing is optional: warn and deploy without it. Its connect button
+          # 503s until BING_OAUTH_CLIENT_ID/SECRET are added to the environment.
+          for optional in citeladder-bing-oauth-client-id citeladder-bing-oauth-client-secret; do
+            has_version "$optional" || echo "::warning::$optional has no enabled version; Bing stays unconfigured for this deploy. Add BING_OAUTH_CLIENT_ID and BING_OAUTH_CLIENT_SECRET to the gcp-demo environment to enable it."
           done
 
           tls_dir="$(mktemp -d)"

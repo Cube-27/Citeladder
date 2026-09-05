@@ -80,17 +80,18 @@ agent_key="$(secret citeladder-default-agent-api-key 2>/dev/null || true)"
 content_key="$(secret citeladder-content-api-key 2>/dev/null || true)"
 keenable_key="$(secret citeladder-keenable-api-key 2>/dev/null || true)"
 tavily_key="$(secret citeladder-tavily-api-key 2>/dev/null || true)"
-# Required, not best-effort: without these Google sign-in and the GSC/GA4/Bing
+# Required, not best-effort: without these Google sign-in and the GSC/GA4
 # connect buttons 503 for every visitor.
 google_client_id="$(secret citeladder-google-oauth-client-id)"
 google_client_secret="$(secret citeladder-google-oauth-client-secret)"
-bing_client_id="$(secret citeladder-bing-oauth-client-id)"
-bing_client_secret="$(secret citeladder-bing-oauth-client-secret)"
+# Bing is optional; when unset its connect button 503s but the rest deploys.
+bing_client_id="$(secret citeladder-bing-oauth-client-id 2>/dev/null || true)"
+bing_client_secret="$(secret citeladder-bing-oauth-client-secret 2>/dev/null || true)"
 
 for value in "$db_password" "$jwt_secret" "$encryption_key" "$referral_salt" "$demo_password"; do
   test "${#value}" -ge 32
 done
-for value in "$google_client_id" "$google_client_secret" "$bing_client_id" "$bing_client_secret"; do
+for value in "$google_client_id" "$google_client_secret"; do
   test -n "$value"
 done
 

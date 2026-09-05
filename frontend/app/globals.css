@@ -351,6 +351,10 @@ html {
   min-height: 100%;
   background: var(--color-background);
   overflow-x: clip;
+  /* Reserve the scrollbar track always, so short pages and long pages line up
+     and locking body scroll for a modal doesn't shift layout sideways.
+     No-op where the OS uses overlay scrollbars. */
+  scrollbar-gutter: stable;
 }
 
 body {

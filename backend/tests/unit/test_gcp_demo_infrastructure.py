@@ -118,9 +118,9 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
     assert "secrets.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE" in workflow
     assert "--build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=" in workflow
     assert "citeladder-logo" not in locals_tf
-    # An unwired client pair leaves sign-in and every connect button 503ing,
-    # so the secret -> runtime.env chain is asserted end to end.
-    oauth_secret_mappings = {
+    # An unwired Google pair leaves sign-in and the GSC/GA4 connect buttons
+    # 503ing, so the secret -> runtime.env chain is asserted end to end.
+    required_oauth_mappings = {
         "GOOGLE_OAUTH_CLIENT_ID": (
             "citeladder-google-oauth-client-id",
             "INTEGRATION_GOOGLE_CLIENT_ID",
@@ -129,6 +129,10 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
             "citeladder-google-oauth-client-secret",
             "INTEGRATION_GOOGLE_CLIENT_SECRET",
         ),
+    }
+    # Bing is optional: absent credentials warn and deploy, leaving only its
+    # own connect button 503ing rather than blocking the whole demo.
+    optional_oauth_mappings = {
         "BING_OAUTH_CLIENT_ID": (
             "citeladder-bing-oauth-client-id",
             "INTEGRATION_MICROSOFT_CLIENT_ID",
@@ -138,14 +142,22 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
             "INTEGRATION_MICROSOFT_CLIENT_SECRET",
         ),
     }
-    for variable, (secret_id, runtime_var) in oauth_secret_mappings.items():
+    for variable, (secret_id, runtime_var) in required_oauth_mappings.items():
         assert f"secrets.{variable}" in workflow
         assert f'"{secret_id}"' in locals_tf
         assert f"add_value_once {secret_id}" in workflow
         # Read without a ``|| true`` fallback: a missing secret stops the deploy.
         assert f'secret {secret_id})"' in deploy
         assert f"write_env {runtime_var}" in deploy
+    for variable, (secret_id, runtime_var) in optional_oauth_mappings.items():
+        assert f"secrets.{variable}" in workflow
+        assert f'"{secret_id}"' in locals_tf
+        assert f"add_value_once {secret_id}" in workflow
+        # Read behind ``|| true``: a missing secret must not stop the deploy.
+        assert f"secret {secret_id} 2>/dev/null || true)\"" in deploy
+        assert f"write_env {runtime_var}" in deploy
     assert 'has_version "$required" ||' in workflow
+    assert 'has_version "$optional" ||' in workflow
     assert "/api/v1/auth/oauth/providers" in workflow
     # Content and the default agent are each a provider-neutral trio
     # (key + url + model): neither may silently inherit a baked-in default.
