@@ -26,6 +26,13 @@ x-backend: &backend
     SITE_HEALTH_AUTOMATIC_PAGE_LIMIT: "200"
     FRONTEND_URL: https://${DOMAIN_NAME:?DOMAIN_NAME is required}
     FRONTEND_ORIGINS: https://${DOMAIN_NAME}
+    # Google sign-in is OFF by default (OAuthSettings.google_enabled = False),
+    # so a deployment that never sets this serves a catalog without Google and
+    # the button 503s -- while local dev, whose .env sets it, works fine. The
+    # client id/secret fall back to the INTEGRATION Google pair by design (one
+    # client for sign-in and the GSC/GA4 connect), so enabling is all that is
+    # needed here; the redirect URI derives from FRONTEND_URL above.
+    OAUTH_GOOGLE_ENABLED: ${OAUTH_GOOGLE_ENABLED:-true}
     TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:?TRUSTED_PROXY_CIDRS is required}
   depends_on:
     db:
