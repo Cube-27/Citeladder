@@ -38,6 +38,7 @@ from app.core.config.traffic import (
     PERFORMANCE_SNAPSHOT_WINDOW_DAYS,
     TRAFFIC_FORMULA_VERSION,
     TRAFFIC_NORMALIZATION_VERSION,
+    TRAFFIC_SNAPSHOT_GRANULARITIES,
 )
 from app.domain.analytics.enqueue import enqueue_traffic_snapshot_refresh
 from app.domain.analytics.tasks import TaskCancelledError
@@ -318,10 +319,10 @@ async def _snapshots_by_granularity(
 ) -> dict[str, TrafficSnapshot]:
     """The SYNC-WINDOW snapshots, keyed by granularity.
 
-    The refresh also derives the day-grained Performance preset family, so a
-    bare select would return several ``day`` rows. Filtering to the triggering
-    window keeps these assertions about the snapshot Demand and verification
-    read.
+    The refresh also derives the Performance preset family at every
+    granularity, so a bare select would return many more rows. Filtering to
+    the triggering window keeps these assertions about the snapshot Demand
+    and verification read.
     """
     rows = list(
         (
@@ -702,8 +703,11 @@ async def test_worker_routes_traffic_snapshot_refresh_kind(
         # executor — SUCCEEDED, never executor_not_wired.
         assert row.status == TASK_STATUS_SUCCEEDED
         assert row.error_code == ""
-        # Three granularities for the sync window, plus the day-grained
-        # Performance preset family anchored at the latest complete GSC date.
+        # Three granularities for the sync window, plus the Performance
+        # preset family anchored at the latest complete GSC date — which is
+        # written at all three too, because the surface lets a reader chart
+        # a preset in weekly or monthly buckets and a day-only family gives
+        # those nothing to read.
         assert (
             await session.scalar(
                 select(func.count(TrafficSnapshot.id)).where(
@@ -713,11 +717,20 @@ async def test_worker_routes_traffic_snapshot_refresh_kind(
             )
             == 3
         )
-        assert await session.scalar(
-            select(func.count(TrafficSnapshot.id)).where(
-                TrafficSnapshot.granularity == "day"
-            )
-        ) == 1 + len(PERFORMANCE_SNAPSHOT_WINDOW_DAYS)
+        for granularity in sorted(TRAFFIC_SNAPSHOT_GRANULARITIES):
+            assert await session.scalar(
+                select(func.count(TrafficSnapshot.id)).where(
+                    TrafficSnapshot.granularity == granularity
+                )
+            ) == 1 + len(PERFORMANCE_SNAPSHOT_WINDOW_DAYS), granularity
+        # Every preset window carries its marker at every bucket size, so
+        # preset resolution finds one whichever way the chart is drawn.
+        for days in PERFORMANCE_SNAPSHOT_WINDOW_DAYS:
+            assert await session.scalar(
+                select(func.count(TrafficSnapshot.id)).where(
+                    TrafficSnapshot.preset_window_days == days
+                )
+            ) == len(TRAFFIC_SNAPSHOT_GRANULARITIES), days
 
 
 @pytest.mark.asyncio

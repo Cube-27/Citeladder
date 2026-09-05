@@ -53,6 +53,7 @@ from app.core.config.traffic import (
     PERFORMANCE_DIMENSION_ORDER,
     PERFORMANCE_PAGE_SIZE_OPTIONS,
     PERFORMANCE_SNAPSHOT_WINDOW_DAYS,
+    TRAFFIC_SNAPSHOT_GRANULARITIES,
 )
 from app.domain.traffic.service import (
     project_performance_range,
@@ -922,19 +923,26 @@ async def test_range_task_writes_only_its_display_snapshot(
             for row in (await session.scalars(select(TrafficSnapshot))).all()
             if row.id not in before_snapshots
         ]
-        # EXACTLY one new snapshot: the requested display window, day-grained.
-        assert len(added) == 1
-        assert (added[0].window_start, added[0].window_end) == window
-        assert added[0].granularity == "day"
+        # EXACTLY one new WINDOW — the requested display range — projected
+        # at every bucket size the chart can ask for. Three rows rather than
+        # one because the reader who queued this may have been looking at
+        # Weekly, and healing only the day rows would leave that request
+        # unanswered and requeuing forever.
+        assert {(row.window_start, row.window_end) for row in added} == {window}
+        assert {row.granularity for row in added} == set(TRAFFIC_SNAPSHOT_GRANULARITIES)
+        # A display range is never marked as a preset: it must not be what a
+        # preset resolves to.
+        assert all(row.preset_window_days is None for row in added)
         # Its dimension rows landed in the same transaction.
-        dimension_rows = (
-            await session.scalars(
-                select(PerformanceDimensionStat).where(
-                    PerformanceDimensionStat.snapshot_id == added[0].id
+        for row in added:
+            dimension_rows = (
+                await session.scalars(
+                    select(PerformanceDimensionStat).where(
+                        PerformanceDimensionStat.snapshot_id == row.id
+                    )
                 )
-            )
-        ).all()
-        assert dimension_rows
+            ).all()
+            assert dimension_rows, row.granularity
 
         new_tasks = [
             row
@@ -1067,3 +1075,54 @@ async def test_granularity_selects_the_bucket_size(
     # parameter takes the default.
     empty = await client.get(endpoint, params={"granularity": ""})
     assert empty.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_granularity_re_buckets_the_selected_range(
+    client: httpx.AsyncClient,
+    seeded: tuple[str, str],
+) -> None:
+    """A bucket change re-buckets the SAME dates — it never moves the range.
+
+    Granularity and range are different questions: the range picks the dates,
+    the granularity picks how the chart divides them. Resolving the range
+    itself per-granularity conflated the two, so Weekly and Monthly landed on
+    no snapshot at all and the surface reported an already-covered range as
+    having no imported data.
+
+    Both halves are pinned here: every bucket size returns the same window
+    and resolves a real (and distinct) projection of it, and the series it
+    returns actually is coarser.
+    """
+    project_id, _ = seeded
+    endpoint = f"/api/v1/projects/{project_id}/performance"
+
+    for range_token in ("day", "week", "month", "last_synced"):
+        windows: set[tuple[str, str]] = set()
+        snapshot_ids: set[str] = set()
+        for granularity in ("day", "week", "month"):
+            resp = await client.get(
+                endpoint, params={"range": range_token, "granularity": granularity}
+            )
+            assert resp.status_code == 200
+            selected = resp.json()["selected"]
+            assert selected["snapshot_id"] is not None, (range_token, granularity)
+            windows.add((selected["window_start"], selected["window_end"]))
+            snapshot_ids.add(selected["snapshot_id"])
+        # One window, three projections of it.
+        assert len(windows) == 1, (range_token, windows)
+        assert len(snapshot_ids) == 3, (range_token, snapshot_ids)
+
+    # The buckets really are coarser: the 28-day preset charts one point per
+    # day, fewer per week, and fewer again per month.
+    lengths = [
+        len(
+            (
+                await client.get(
+                    endpoint, params={"range": "month", "granularity": granularity}
+                )
+            ).json()["selected"]["series"]["clicks"]
+        )
+        for granularity in ("day", "week", "month")
+    ]
+    assert lengths[0] > lengths[1] > lengths[2]

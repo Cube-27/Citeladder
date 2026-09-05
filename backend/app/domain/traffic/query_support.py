@@ -227,7 +227,6 @@ async def resolve_preset_snapshot(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     range_token: str,
-    granularity: str = TRAFFIC_DEFAULT_GRANULARITY,
 ) -> TrafficSnapshot | None:
     """The NEWEST persisted snapshot of a preset's length.
 
@@ -240,10 +239,15 @@ async def resolve_preset_snapshot(
     The match is on ``preset_window_days``, not on window length: a custom
     display range can be exactly seven days long, and resolving "Week" to it
     would silently show a window the preset never meant.
+
+    Day-grained on purpose, and not parameterised: this answers WHICH DATES
+    the preset means, and those dates are the same whatever bucket size the
+    chart is drawing. Letting a caller pass a granularity here is what made
+    a bucket change look like a range with no imported data.
     """
     days = PERFORMANCE_PRESET_RANGE_DAYS[range_token]
     return await session.scalar(
-        _snapshots(workspace_id, project_id, granularity)
+        _snapshots(workspace_id, project_id, TRAFFIC_DEFAULT_GRANULARITY)
         .where(TrafficSnapshot.preset_window_days == days)
         .order_by(TrafficSnapshot.window_end.desc(), TrafficSnapshot.id.desc())
         .limit(1)
@@ -255,16 +259,18 @@ async def resolve_latest_snapshot(
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-    granularity: str = TRAFFIC_DEFAULT_GRANULARITY,
 ) -> TrafficSnapshot | None:
-    """The project's newest snapshot at this granularity — the landing view.
+    """The project's newest day-grained snapshot — the landing view's dates.
 
     Ordered by window END first and then by WIDTH, so a project holding the
     whole preset family lands on the widest window at the freshest end date
     rather than on the one-day preset that happens to share that end.
+
+    Day-grained for the same reason as the preset resolver above: it names a
+    window, not a bucket size.
     """
     return await session.scalar(
-        _snapshots(workspace_id, project_id, granularity)
+        _snapshots(workspace_id, project_id, TRAFFIC_DEFAULT_GRANULARITY)
         .order_by(
             TrafficSnapshot.window_end.desc(),
             TrafficSnapshot.window_start.asc(),
@@ -327,6 +333,57 @@ async def coverage_window(
     return max(earliest, floor), latest
 
 
+async def _resolve_selected_dates(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    range_token: str,
+    custom: tuple[date, date] | None,
+) -> tuple[date, date] | None:
+    """The DATES a selected range means — independent of the chart's buckets.
+
+    Bucket size must never move the window. Switching Daily to Weekly asks for
+    the SAME dates re-bucketed, so resolving the range itself against
+    week-grained rows answers a different question — and, for any window a
+    sync has not written weekly rows for, answers none at all, which is how
+    a bucket change came to report an already-covered range as uncovered.
+
+    Every range therefore resolves against the day-grained family, which
+    every refresh writes; the caller then looks that window up at whichever
+    granularity is being charted. ``None`` means the project has nothing to
+    resolve against yet.
+    """
+    if custom is not None:
+        return custom
+    if range_token in PERFORMANCE_PRESET_RANGE_DAYS:
+        snapshot = await resolve_preset_snapshot(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            range_token=range_token,
+        )
+        return (
+            None if snapshot is None else (snapshot.window_start, snapshot.window_end)
+        )
+    if range_token in PERFORMANCE_EXTENDED_RANGE_DAYS:
+        days = PERFORMANCE_EXTENDED_RANGE_DAYS[range_token]
+        latest = await resolve_latest_snapshot(
+            session, workspace_id=workspace_id, project_id=project_id
+        )
+        if latest is None or latest.window_end is None:
+            return None
+        return (latest.window_end - timedelta(days=days - 1), latest.window_end)
+    if range_token == PERFORMANCE_RANGE_LAST_SYNCED:
+        return await coverage_window(
+            session, workspace_id=workspace_id, project_id=project_id
+        )
+    latest = await resolve_latest_snapshot(
+        session, workspace_id=workspace_id, project_id=project_id
+    )
+    return None if latest is None else (latest.window_start, latest.window_end)
+
+
 async def resolve_selected_window(
     session: AsyncSession,
     *,
@@ -338,76 +395,33 @@ async def resolve_selected_window(
 ) -> tuple[TrafficSnapshot | None, tuple[date, date] | None]:
     """Resolve the selected range into ``(snapshot, window)``.
 
+    The window comes first and the snapshot second, because the two answer
+    different questions: which dates are selected, and whether THIS bucket
+    size has been projected for them yet.
+
     Either half can be absent: an explicit custom range has a window before a
-    snapshot for it exists (the caller then queues the range projection), and
-    a project with no snapshots at all has neither.
+    snapshot for it exists, as does a window that has only ever been
+    projected at another granularity (the caller then queues the range
+    projection, which materializes every missing bucket size for it), and a
+    project with no snapshots at all has neither.
     """
-    if custom is not None:
-        snapshot = await resolve_window_snapshot(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            window=custom,
-            granularity=granularity,
-        )
-        return snapshot, custom
-    elif range_token in PERFORMANCE_PRESET_RANGE_DAYS:
-        snapshot = await resolve_preset_snapshot(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            range_token=range_token,
-            granularity=granularity,
-        )
-    elif range_token in PERFORMANCE_EXTENDED_RANGE_DAYS:
-        days = PERFORMANCE_EXTENDED_RANGE_DAYS[range_token]
-        latest = await resolve_latest_snapshot(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            granularity=granularity,
-        )
-        if latest is not None and latest.window_end:
-            target_window = (
-                latest.window_end - timedelta(days=days - 1),
-                latest.window_end,
-            )
-            snapshot = await resolve_window_snapshot(
-                session,
-                workspace_id=workspace_id,
-                project_id=project_id,
-                window=target_window,
-                granularity=granularity,
-            )
-            return snapshot, target_window
+    window = await _resolve_selected_dates(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        range_token=range_token,
+        custom=custom,
+    )
+    if window is None:
         return None, None
-    elif range_token == PERFORMANCE_RANGE_LAST_SYNCED:
-        window = await coverage_window(
-            session, workspace_id=workspace_id, project_id=project_id
-        )
-        if window is None:
-            return None, None
-        snapshot = await resolve_window_snapshot(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            window=window,
-            granularity=granularity,
-        )
-        # The window is stated even with no snapshot for it: the caller then
-        # queues the range projection for exactly these dates, which is how a
-        # freshly imported year becomes readable at all.
-        return snapshot, window
-    else:
-        snapshot = await resolve_latest_snapshot(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            granularity=granularity,
-        )
-    if snapshot is None:
-        return None, None
-    return snapshot, (snapshot.window_start, snapshot.window_end)
+    snapshot = await resolve_window_snapshot(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        window=window,
+        granularity=granularity,
+    )
+    return snapshot, window
 
 
 # --- Scalar coercion ----------------------------------------------------------

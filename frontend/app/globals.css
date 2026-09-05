@@ -436,6 +436,51 @@ body {
   .lucide.size-8 {
     stroke-width: 1.25;
   }
+
+  /* The pointer affordance, declared once for the whole app.
+
+     Tailwind v4's preflight leaves `button` at the browser default
+     `cursor: default`, so every button-based control pointed at nothing:
+     tab strips, segmented radios, sortable column headers, menu items,
+     dropdown triggers. A `cursor-pointer` class at each call site is the
+     same rule written a few hundred times and forgotten at the few hundred
+     and first, which is exactly how the gaps appeared.
+
+     Keyed on ROLE as well as tag, because the same control is a `button`
+     in one primitive and a `div` in another — a reader hovering a tab must
+     get the hand either way. Anchors are listed for the same reason: Next's
+     `Link` renders one, and stating it here keeps the whole affordance in
+     one place rather than half here and half in the UA sheet. */
+  button,
+  summary,
+  select,
+  a[href],
+  input[type='checkbox'],
+  input[type='radio'],
+  [role='button'],
+  [role='tab'],
+  [role='radio'],
+  [role='option'],
+  [role='menuitem'],
+  [role='menuitemradio'],
+  [role='menuitemcheckbox'],
+  [role='switch'],
+  [role='checkbox'],
+  [role='link'] {
+    cursor: pointer;
+  }
+
+  /* A hand over a control that will not respond is a promise the interface
+     cannot keep, so the disabled forms are excluded in the same breath.
+     `aria-disabled` is here alongside `:disabled` because a control that
+     stays focusable while inert says so that way and carries no attribute
+     the UA sheet knows about. */
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
 }
 
 :focus-visible {

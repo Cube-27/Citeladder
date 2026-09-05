@@ -421,11 +421,15 @@ def _refresh_targets(
 ) -> list[_SnapshotTarget]:
     """Every snapshot one refresh writes: the sync window, then the presets.
 
-    The sync window is rebuilt at every configured granularity — it is the
+    Both are rebuilt at every configured granularity. The sync window is the
     snapshot Demand reads by exact window and the one verification triggers
-    against. The preset family is day-granularity only: the surface charts
-    daily buckets and offers no bucket control, so week/month rows for those
-    windows would never be read.
+    against; the preset family is what the Performance surface lands on, and
+    that surface DOES offer a bucket control — a preset written at day grain
+    alone leaves Weekly and Monthly with no rows to read, which the surface
+    can only report as a range nothing has imported.
+
+    One extra builder per preset per bucket is cheap next to that: the scan
+    below is shared, so the added cost is the fold, not another read.
 
     The family is listed AFTER the sync window so a window that is both
     keeps its preset marker (the later write wins the upsert).
@@ -446,11 +450,12 @@ def _refresh_targets(
         _snapshot_target(
             window_start=preset_start,
             window_end=preset_end,
-            granularity=TRAFFIC_DEFAULT_GRANULARITY,
+            granularity=granularity,
             project_origin=project_origin,
             preset_window_days=(preset_end - preset_start).days + 1,
         )
         for preset_start, preset_end in performance_family_windows(anchor)
+        for granularity in sorted(TRAFFIC_SNAPSHOT_GRANULARITIES)
     )
     return targets
 
@@ -562,44 +567,59 @@ async def refresh_traffic_snapshot(
 async def project_performance_range(
     session_factory: async_sessionmaker[AsyncSession], task: AnalyticsTask
 ) -> None:
-    """``performance_range_projection`` executor: ONE display snapshot.
+    """``performance_range_projection`` executor: ONE display window.
 
-    Materializes the day-grained snapshot for a user-requested custom or
-    comparison window over ALREADY-PERSISTED evidence, and does nothing else:
-    it calls no provider, refreshes no Demand snapshot, enqueues no
-    opportunity recompute or implementation verification, and touches no
-    other product projection. A window a snapshot already covers is left
-    exactly as it is — a display request must never replace the preset or
-    sync-window snapshot another surface is reading.
+    Materializes a user-requested custom or comparison window over
+    ALREADY-PERSISTED evidence at every bucket size the chart can ask for,
+    and does nothing else: it calls no provider, refreshes no Demand
+    snapshot, enqueues no opportunity recompute or implementation
+    verification, and touches no other product projection. A bucket size the
+    window already has is left exactly as it is — a display request must
+    never replace the preset or sync-window snapshot another surface is
+    reading — so a window already complete is a no-op.
+
+    All three granularities rather than day alone, because this is the path
+    that heals a window the surface reported as unprojected: the reader who
+    switched the chart to Weekly is waiting on the WEEK rows, and rebuilding
+    only the day rows would leave the request that queued this task
+    unanswered and requeuing forever.
 
     This is the one path a user can point at a long window, so it is also
     the one that most needs the streaming fold: the request is bounded by
-    ``PERFORMANCE_CUSTOM_RANGE_MAX_DAYS``, not by a sync window.
+    ``PERFORMANCE_CUSTOM_RANGE_MAX_DAYS``, not by a sync window. The three
+    builders share that single scan.
     """
     if task.project_id is None:
         raise ValueError("performance_range_projection task missing project_id")
     window_start, window_end = payload_window(task, kind="performance_range_projection")
     async with session_factory() as session:
-        existing = await session.scalar(
-            select(TrafficSnapshot.id).where(
-                TrafficSnapshot.workspace_id == task.workspace_id,
-                TrafficSnapshot.project_id == task.project_id,
-                TrafficSnapshot.window_start == window_start,
-                TrafficSnapshot.window_end == window_end,
-                TrafficSnapshot.granularity == TRAFFIC_DEFAULT_GRANULARITY,
-            )
+        existing = set(
+            (
+                await session.scalars(
+                    select(TrafficSnapshot.granularity).where(
+                        TrafficSnapshot.workspace_id == task.workspace_id,
+                        TrafficSnapshot.project_id == task.project_id,
+                        TrafficSnapshot.window_start == window_start,
+                        TrafficSnapshot.window_end == window_end,
+                    )
+                )
+            ).all()
         )
-        if existing is not None:
+        missing = sorted(TRAFFIC_SNAPSHOT_GRANULARITIES - existing)
+        if not missing:
             return
         project_origin = await _project_origin(
             session, workspace_id=task.workspace_id, project_id=task.project_id
         )
-        target = _snapshot_target(
-            window_start=window_start,
-            window_end=window_end,
-            granularity=TRAFFIC_DEFAULT_GRANULARITY,
-            project_origin=project_origin,
-        )
+        targets = [
+            _snapshot_target(
+                window_start=window_start,
+                window_end=window_end,
+                granularity=granularity,
+                project_origin=project_origin,
+            )
+            for granularity in missing
+        ]
         await stream_metric_rows(
             session,
             session_factory,
@@ -608,18 +628,16 @@ async def project_performance_range(
             project_id=task.project_id,
             window_start=window_start,
             window_end=window_end,
-            consumers=[target.builder],
+            consumers=[target.builder for target in targets],
         )
         coverage = await _evidence_coverage(
             session, workspace_id=task.workspace_id, project_id=task.project_id
         )
-        await _write_snapshot(
+        await _write_targets(
             session,
             task=task,
-            projection=target.builder.build(),
-            window_start=window_start,
-            window_end=window_end,
-            granularity=TRAFFIC_DEFAULT_GRANULARITY,
+            project_id=task.project_id,
+            targets=targets,
             coverage=coverage,
         )
         await session.commit()
