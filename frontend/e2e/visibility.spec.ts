@@ -493,23 +493,15 @@ test('evidence error state renders a retryable error', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
 });
 
-test('mobile viewport: tablist is a single horizontally-scrollable row, one panel', async ({
-  page,
-}) => {
+test('mobile viewport keeps the visibility tabs and one active panel usable', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 720 });
   await setup(page);
   await page.goto('/visibility');
 
   const tablist = page.getByRole('tablist', { name: 'Visibility views' });
   await expect(tablist).toBeVisible();
-  // Shared underline tablist: a single horizontally-scrollable row (not wrapped
-  // / stacked) with the full-width border under the tabs.
-  await expect(tablist).toHaveClass(/overflow-x-auto/);
-  await expect(tablist).toHaveClass(/flex-nowrap/);
-  await expect(tablist).toHaveClass(/border-b/);
-  // The selected tab carries the 2px accent indicator, not a pill fill.
   const selectedTab = tablist.getByRole('tab', { selected: true });
-  await expect(selectedTab.locator('span.bg-accent')).toBeVisible();
+  await expect(selectedTab).toBeVisible();
 
   // All three retained tabs are still present in the one row.
   await expect(tablist.getByRole('tab')).toHaveCount(3);

@@ -47,15 +47,15 @@ describe('Insight', () => {
     ).toBeInTheDocument();
   });
 
-  it('allows long evidence labels to wrap inside the insight surface', () => {
+  it('preserves long evidence labels and their target', () => {
     const longLabel =
       'https://www.example.com/categories/women/womens-accessories/cotton-shopping-bag/very-long-product-name';
     render(
       <Insight insight={insightFixture({ evidence: { href: '/issues/1', label: longLabel } })} />,
     );
 
-    expect(screen.getByText(longLabel)).toHaveClass('[overflow-wrap:anywhere]');
-    expect(screen.getByRole('link', { name: longLabel })).toHaveClass('min-w-0');
+    expect(screen.getByText(longLabel)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: longLabel })).toHaveAttribute('href', '/issues/1');
   });
 });
 

@@ -245,7 +245,6 @@ describe('RunDetailPage', () => {
 
     const evidenceDrawer = await screen.findByRole('dialog');
     expect(evidenceDrawer).toHaveTextContent('Execution evidence');
-    expect(evidenceDrawer).toHaveClass('sm:max-w-220');
     expect(await screen.findByText('An answer')).toBeInTheDocument();
     expect(screen.getByText('Why it scored this way')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Acme research/ })).toHaveAttribute(

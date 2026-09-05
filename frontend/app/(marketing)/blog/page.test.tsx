@@ -55,12 +55,10 @@ describe('Blog index (public marketing `/blog`)', () => {
     expect(screen.queryByText(BLOG_EMPTY_STATE.body)).toBeNull();
   });
 
-  it('centers the hero content', () => {
+  it('renders the hero heading', () => {
     render(<BlogPage />);
 
-    const h1 = screen.getByRole('heading', { level: 1 });
-    expect(h1).toHaveClass('mx-auto');
-    expect(h1.closest('.text-center')).not.toBeNull();
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
   });
 
   it('maps posts beyond the featured one to the card grid', () => {
@@ -156,8 +154,6 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
         post.authorUrl,
       );
     }
-    expect(h1s[0]).toHaveClass('mx-auto');
-    expect(h1s[0].closest('.text-center')).not.toBeNull();
     expect(container.textContent).not.toMatch(/TODO\(user\)/);
     expect(container.textContent).not.toMatch(
       /scoring-v1|b6-analysis-1|sh-rules-2|opp-formula-1|traffic-formula-1|product-scoring-v2/i,

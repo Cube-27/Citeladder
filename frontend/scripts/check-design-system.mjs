@@ -11,6 +11,7 @@ import {
   standalonePlaceholderViolations,
   textContrastViolations,
   rawRadiusViolations,
+  styleAssertionViolations,
   textRoleBackgroundViolations,
   websiteContractViolations,
 } from './design-system-source-checks.mjs';
@@ -59,6 +60,7 @@ for (const path of files(root)) {
     violations.push(`${label}: @theme outside app/globals.css`);
   }
   violations.push(...directRadixImportViolations(source, label));
+  violations.push(...styleAssertionViolations(source, label));
   const ownsWebsiteEditorialCopy =
     !label.includes('.test.') &&
     ((label.startsWith('components/marketing/') &&

@@ -57,16 +57,6 @@ function NavWithAnonymousPricingSession() {
  * file guards behaviour only.
  */
 describe('MarketingNav', () => {
-  it('aligns the logo and account actions with the website content container', () => {
-    stubAnonymous();
-    renderWithProviders(<MarketingNav />);
-
-    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toHaveClass(
-      'max-w-7xl',
-      'px-[var(--site-gutter)]',
-    );
-  });
-
   it('gives every Platform menu row a distinct destination', () => {
     const platform = NAV_DROPS.find((drop) => drop.key === 'platform');
     const hrefs = platform?.groups.flatMap((group) => group.items.map((item) => item.href)) ?? [];
@@ -180,12 +170,12 @@ describe('MarketingNav', () => {
     await waitFor(() => expect(solutions).toHaveAttribute('aria-expanded', 'true'));
   });
 
-  it('keeps the navigation surface transparent until the page scrolls', async () => {
+  it('marks the navigation as scrolled after the page scrolls', async () => {
     stubAnonymous();
     renderWithProviders(<MarketingNav />);
 
     const chrome = document.querySelector<HTMLElement>('[data-marketing-nav]');
-    expect(chrome).toHaveClass('bg-transparent', 'border-transparent');
+    expect(chrome).not.toBeNull();
 
     // `scrollY` is an accessor on the jsdom window, and overriding it with a
     // data property leaks into every later test in the file unless the

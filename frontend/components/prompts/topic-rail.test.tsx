@@ -38,39 +38,7 @@ function renderRail(props: Partial<ComponentProps<typeof TopicRail>> = {}) {
   );
 }
 
-describe('TopicRail layout containment', () => {
-  it('renders as a contained raised panel without clipping its action edge', () => {
-    renderRail();
-
-    const rail = screen.getByRole('navigation', { name: 'Topics' });
-    // Long labels truncate within their row; the panel itself does not clip
-    // the reserved delete-action slot or its focus treatment.
-    expect(rail).not.toHaveClass('overflow-hidden');
-    expect(rail).toHaveClass('min-w-0');
-    expect(rail).not.toHaveClass('border');
-    expect(rail).toHaveClass('bg-panel');
-    expect(rail).not.toHaveClass('shadow-card');
-    // Desktop: sticky so the rail stays put while the right pane scrolls.
-    expect(rail).toHaveClass('lg:sticky');
-    // The full rail is desktop-only; the narrow selector is hidden at lg+.
-    expect(rail).toHaveClass('hidden');
-    expect(rail).toHaveClass('lg:grid');
-  });
-
-  it('truncates long topic names inside the rail without expanding it', () => {
-    const longName = 'Best storage solutions for very small studio apartments in dense cities';
-    renderRail({ topics: [makeTopic({ name: longName })] });
-
-    // Scope to the rail nav — the narrow <select> also renders the name.
-    const rail = screen.getByRole('navigation', { name: 'Topics' });
-    const label = within(rail).getByText(longName);
-    expect(label).toHaveClass('truncate');
-    expect(label).toHaveClass('min-w-0');
-    const deleteAction = within(rail).getByRole('button', { name: `Delete topic ${longName}` });
-    expect(deleteAction).toHaveClass('size-8');
-    expect(deleteAction).not.toHaveClass('opacity-0');
-  });
-
+describe('TopicRail', () => {
   it('preserves topic selection and create/delete actions', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();

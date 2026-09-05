@@ -15,16 +15,13 @@ import { MarketingFooter } from './footer';
  */
 describe('MarketingFooter', () => {
   it('renders five labelled columns inside the Footer landmark', async () => {
-    const { container } = render(await MarketingFooter());
+    render(await MarketingFooter());
 
-    expect(container.querySelector('footer')).toHaveClass('bg-active/60');
-    const footerNav = screen.getByRole('navigation', { name: 'Footer' });
+    const footer = screen.getByRole('contentinfo');
+    const footerNav = within(footer).getByRole('navigation', { name: 'Footer' });
     expect(within(footerNav).getAllByRole('link').length).toBeGreaterThan(0);
     const headings = within(footerNav).getAllByRole('heading', { level: 2 });
     expect(headings).toHaveLength(5);
-    for (const heading of headings) {
-      expect(heading).toHaveClass('text-foreground', 'font-medium');
-    }
   });
 
   it('derives the Compare column from the content module', async () => {

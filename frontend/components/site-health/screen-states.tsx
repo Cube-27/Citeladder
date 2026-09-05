@@ -1,7 +1,5 @@
 'use client';
 
-import type { ReactNode } from 'react';
-
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -13,13 +11,6 @@ import { textRole } from '@/components/ui/typography';
  * content of the canonical layout (`StatusStrip` / `InventorySection`), not
  * separate cards — the screen never swaps panels.
  */
-
-export function ScreenHeader({ actions }: Readonly<{ actions?: ReactNode }>) {
-  if (!actions) return null;
-  return (
-    <div className="relative z-10 flex flex-wrap items-center justify-end gap-2">{actions}</div>
-  );
-}
 
 export function ScreenSkeleton({ label = 'Loading Site Health…' }: Readonly<{ label?: string }>) {
   return (

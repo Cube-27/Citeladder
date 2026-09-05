@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -148,8 +148,10 @@ export function FlowGroup({
   className?: string;
   children: ReactNode;
 }>) {
+  const headingId = useId();
+
   return (
-    <section className={cn('flow-group', className)}>
+    <section aria-labelledby={headingId} className={cn('flow-group', className)}>
       <div className="flow-group-heading">
         <div className={cn('flex gap-3', help ? 'items-start' : 'items-center')}>
           {icon ? (
@@ -158,7 +160,9 @@ export function FlowGroup({
             </div>
           ) : null}
           <div className="flow-group-copy">
-            <h2 className="flow-group-title">{title}</h2>
+            <h2 id={headingId} className="flow-group-title">
+              {title}
+            </h2>
             {help ? <p className="flow-help">{help}</p> : null}
           </div>
         </div>

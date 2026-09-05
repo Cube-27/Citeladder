@@ -93,6 +93,21 @@ const succeededGeneration = generation({
 function mockBase(listItems: Record<string, unknown>[] = []) {
   mswServer.use(
     http.get('/api/v1/projects', () => HttpResponse.json([project])),
+    // ProjectProvider warms these shared navigation queries for every active
+    // project, so the composer fixture must own them even though this screen
+    // does not render either response.
+    http.get('/api/v1/audits', () => HttpResponse.json([])),
+    http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
+      HttpResponse.json({
+        project_id: PROJECT,
+        crawl: null,
+        score_summary: null,
+        phase: 'empty',
+        snapshot_id: null,
+        quota: { used: 0, limit: 50 },
+        root_errors: [],
+      }),
+    ),
     http.get('/api/v1/content/skills', () => HttpResponse.json(skillCatalog)),
     http.get('/api/v1/content/context-preview', () =>
       HttpResponse.json({

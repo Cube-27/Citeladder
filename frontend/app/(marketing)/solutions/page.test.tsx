@@ -24,15 +24,11 @@ describe('Solutions page (public marketing `/solutions`)', () => {
     }
   });
 
-  it('centers only the hero content and solution links', () => {
+  it('renders the hero heading and solution navigation', () => {
     render(<Page />);
 
-    const h1 = screen.getByRole('heading', { level: 1 });
-    expect(h1).toHaveClass('mx-auto');
-    expect(h1.closest('.text-center')).not.toBeNull();
-    expect(screen.getByRole('navigation', { name: 'Solutions by team' })).toHaveClass(
-      'justify-center',
-    );
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Solutions by team' })).toBeInTheDocument();
   });
 
   it('exposes the five segment anchors the nav Solutions dropdown targets', () => {

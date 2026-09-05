@@ -37,7 +37,7 @@ describe('PostBlock', () => {
     expect(screen.getByText('Directional priority')).toBeInTheDocument();
   });
 
-  it('emphasises only the percentages a heatmap table calls out', () => {
+  it('emphasises only the bare percentages at or above the heatmap threshold', () => {
     render(
       <PostBlock
         block={{
@@ -48,14 +48,20 @@ describe('PostBlock', () => {
             ['Strong', '+40%'],
             ['Weak', '+12%'],
             ['Regression', '-8%'],
+            ['Not a percentage', '40'],
           ],
         }}
       />,
     );
 
-    expect(screen.getByText('+40%').className).toContain('text-accent-text');
-    expect(screen.getByText('+12%').className).not.toContain('text-accent-text');
-    expect(screen.getByText('-8%').className).not.toContain('text-accent-text');
+    // The rule, not the paint: a bare percentage at or above the threshold is
+    // the only cell marked, so this survives a change of visual treatment.
+    const emphasis = (text: string) =>
+      screen.getByText(text).getAttribute('data-emphasised');
+    expect(emphasis('+40%')).toBe('true');
+    expect(emphasis('+12%')).toBeNull();
+    expect(emphasis('-8%')).toBeNull();
+    expect(emphasis('40')).toBeNull();
   });
 
   it('renders every checklist item with its badge', () => {

@@ -106,10 +106,7 @@ describe('Architecture panel', () => {
     expect(screen.getByText('Internal linking')).toBeInTheDocument();
     expect(screen.getByText('Structure depth')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Observed hierarchy' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Observed hierarchy pages' })).toHaveClass(
-      'max-h-96',
-      'overflow-y-auto',
-    );
+    expect(screen.getByRole('region', { name: 'Observed hierarchy pages' })).toBeInTheDocument();
     expect(screen.getByText('67%')).toBeInTheDocument();
     expect(screen.getByText('8')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /View pages by inbound links/i })).toBeNull();

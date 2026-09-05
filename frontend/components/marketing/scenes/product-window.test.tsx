@@ -46,7 +46,6 @@ describe('ProductWindow', () => {
     expect(document.querySelector('[data-preview-layer="demand"]')).not.toBeNull();
     expect(within(sidebar).getByText('Website')).toBeInTheDocument();
     expect(within(sidebar).queryByText('Search Demand')).not.toBeInTheDocument();
-    expect(within(sidebar).getByText('AI Visibility').closest('div')).toHaveClass('bg-accent-soft');
     screen.getAllByText('AI Visibility');
     screen.getAllByText('Performance');
     screen.getAllByText('Prompts');

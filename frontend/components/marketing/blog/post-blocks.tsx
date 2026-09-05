@@ -108,6 +108,7 @@ function PostTable({
                     return (
                       <td
                         key={cellKey}
+                        data-emphasised={emphasised || undefined}
                         className={cn(
                           'px-4 py-3 align-top text-sm text-muted',
                           cIdx === 0 && 'font-medium text-foreground',

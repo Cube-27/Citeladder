@@ -262,12 +262,6 @@ describe('IssuesCatalog', () => {
     expect(await screen.findByText('Expected WebSite; found Organization.')).toBeInTheDocument();
     expect(screen.queryByText('Reason: expected_schema_absent')).not.toBeInTheDocument();
     expect(screen.getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'WebSite schema is missing' }).closest('section'),
-    ).toHaveClass(
-      'lg:max-h-[calc(100dvh-var(--topbar-height)-2*var(--workspace-gap))]',
-      'lg:overflow-hidden',
-    );
     // No unsupported "mark reviewed/resolved" action is rendered.
     expect(screen.queryByText(/mark reviewed/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/mark resolved/i)).not.toBeInTheDocument();

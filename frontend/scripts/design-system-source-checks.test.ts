@@ -11,6 +11,7 @@ import {
   productUiSourceViolations,
   productControlViolations,
   standalonePlaceholderViolations,
+  styleAssertionViolations,
   textRoleBackgroundViolations,
   websiteContractViolations,
 } from './design-system-source-checks.mjs';
@@ -293,6 +294,39 @@ describe('textRoleBackgroundViolations', () => {
       textRoleBackgroundViolations(`// never paint with ${banned('subtle')}`, 'lib/x.ts'),
     ).toEqual([]);
     expect(textRoleBackgroundViolations(banned('subtle'), 'app/globals.css')).toEqual([]);
+  });
+});
+
+describe('styleAssertionViolations', () => {
+  const classMatcher = ['toHave', 'Class'].join('');
+  const rawUtility = ['bg', '-', 'panel'].join('');
+  const semanticRole = ['flow', '-', 'title'].join('');
+
+  it('rejects raw visual utilities in test class assertions', () => {
+    const source = `expect(node).${classMatcher}('${rawUtility}')`;
+    expect(styleAssertionViolations(source, 'components/example.test.tsx')).toHaveLength(1);
+  });
+
+  it('rejects dynamic className assertions outside the contract suite', () => {
+    const source = `expect(node.class${'Name'}).toContain(classes)`;
+    expect(styleAssertionViolations(source, 'components/example.test.tsx')).toHaveLength(1);
+  });
+
+  it('rejects a dynamic interpolated class assertion', () => {
+    const source = `expect(node).${classMatcher}(\`${semanticRole} \${extra}\`)`;
+    expect(styleAssertionViolations(source, 'components/example.test.tsx')).toHaveLength(1);
+  });
+
+  it('rejects classList membership checks that bypass the class matcher', () => {
+    const source = `expect(node.classList.contains('${rawUtility}')).toBe(true)`;
+    expect(styleAssertionViolations(source, 'components/example.test.tsx')).toHaveLength(1);
+  });
+
+  it('allows semantic roles and the sanctioned visual contract suite', () => {
+    const semantic = `expect(node).${classMatcher}('${semanticRole}', 'focus-ring')`;
+    expect(styleAssertionViolations(semantic, 'components/example.test.tsx')).toEqual([]);
+    const contract = `expect(node).${classMatcher}('${rawUtility}')`;
+    expect(styleAssertionViolations(contract, 'components/ui/primitives.test.tsx')).toEqual([]);
   });
 });
 

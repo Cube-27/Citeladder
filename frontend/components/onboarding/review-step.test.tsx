@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -25,14 +25,12 @@ describe('ReviewStep competitor limit', () => {
 
     const websites = screen.getByRole('heading', { name: 'Your websites' });
     const competitors = screen.getByRole('heading', { name: 'Competitors' });
-    expect(websites).toHaveClass('flow-group-title');
-    expect(competitors).toHaveClass('flow-group-title');
-    expect(websites.closest('section')?.parentElement).toBe(
-      competitors.closest('section')?.parentElement,
-    );
-    expect(websites.closest('section')?.parentElement).toHaveClass('flow-groups');
-    expect(competitors.closest('section')).toHaveClass('flow-group');
-    expect(screen.getByText('Auto-verified from your domain.')).toHaveClass('flow-help');
+    const websiteGroup = screen.getByRole('region', { name: 'Your websites' });
+    const competitorGroup = screen.getByRole('region', { name: 'Competitors' });
+    expect(within(websiteGroup).getByRole('heading', { level: 2 })).toBe(websites);
+    expect(within(competitorGroup).getByRole('heading', { level: 2 })).toBe(competitors);
+    expect(within(websiteGroup).getByText('Auto-verified from your domain.')).toBeInTheDocument();
+    expect(websiteGroup.parentElement).toBe(competitorGroup.parentElement);
   });
 
   it('shows only the competitor URL beneath its name', () => {
@@ -117,7 +115,7 @@ describe('ReviewStep competitor limit', () => {
     );
 
     expect(screen.getByText('5 of 5')).toBeInTheDocument();
-    expect(screen.getByText('Tracked head-to-head in every answer.')).toHaveClass('flow-help');
+    expect(screen.getByText('Tracked head-to-head in every answer.')).toBeInTheDocument();
     const button = screen.getByRole('button', { name: 'Add' });
     expect(button).toBeDisabled();
     await userEvent.click(button);
