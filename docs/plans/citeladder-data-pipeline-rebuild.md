@@ -368,3 +368,72 @@ the fresh 365-day import remains unverified end to end. The database reset and
 the Google/Bing connect were run by the user, who is verifying the result. The
 Playwright connect -> sync -> preset pass is deferred to PR 2, since the Bing
 connection defect blocks a clean full-provider connect today.
+
+## Review findings fixed before merge (PR 1 / PR 22)
+
+**The keyset cursor was invalid SQL.** Slice 2's resume query built
+`tuple_()` over the scan's `.asc()` ordering expressions, rendering
+`(col ASC, ...) > (...)` — a Postgres syntax error on every scan that needed
+a second batch. It passed CI because no test crossed a batch boundary: the
+only test setting `_METRIC_ROW_BATCH_SIZE = 1` cancels on the second check,
+before a cursor query is ever issued. The scan columns are now kept separate
+from the ordering expressions, and
+`test_refresh_scans_across_keyset_batch_boundaries` forces the resume path
+(it fails without the fix with exactly that syntax error) while also placing
+a superseded revision in a different batch than the one superseding it.
+
+**Provenance accumulation was not actually bounded.** `bounded_provenance`
+truncated only at finalization while the accumulators retained every source
+id, so streaming memory stayed proportional to the window's row count — the
+bound the batch-by-batch fold exists to establish. `BoundedIds` keeps the
+lowest `TRAFFIC_PROVENANCE_ID_LIMIT` ids as it folds (the same sample a
+full-set cap yields) and counts distinct ids offered, so `sampled` stays
+honest.
+
+**A scope-less refresh could widen a Google grant.** The scope fallback
+returned all configured scopes whenever a token response omitted `scope`.
+Google requests two scopes but a user may consent to one; the narrowed grant
+recorded at code exchange was then overwritten on the next refresh, silently
+restoring the declined scope. The fallback now applies only to the code
+exchange, where no prior record exists to contradict.
+
+**The OAuth stubs accepted any Bing token path.** Both fake servers matched
+any `www.bing.com` path ending in `/token`, so a wrong token path still
+passed — the same permissive-stub shape that let the Entra URLs ship. Both
+now require `/webmasters/oauth/token` exactly.
+
+## Carried into PR 2
+
+**AI Referrals presets still resolve nothing.** Slice 3 fixed the clock-skew
+half of defect 4, but the snapshot side is still broken: `AiReferralsSnapshot`
+rows are only ever persisted at sync-run window lengths — 28 days for a
+routine sync, chunked for backfill — so no row is 30, 90 or 365 days long and
+every preset misses. Performance does not have this problem because its
+refresh derives a whole snapshot family at each preset length
+(`PERFORMANCE_SNAPSHOT_WINDOW_DAYS`, via `performance_family_windows`).
+The fix is to give `ai_referrals_snapshot_refresh` the same treatment: scan
+the widest span once and fold the nested preset windows. That is an executor
+rewrite, not a review fix, so it lands in PR 2.
+
+**Defects reported from the deployed app.** Raised by the user against the
+running build; all are PR 2 scope:
+
+- Google sign-in does not work in the deployed app.
+- GA4 data does not refresh promptly (updates only after several refreshes).
+- Performance/GSC has no granularity control — day/week/month belongs in the
+  same row as the four coloured cards, as a dropdown after them.
+- No quick-select range buttons (day/week/month, placed before the custom
+  button).
+- The default selection must be the full synced range, as it was previously.
+- Column widths must be fixed across tabs so switching tabs does not shift
+  the layout.
+- Tabs are left-aligned with dead space on the right; they must fill the card
+  width, and must not carry the date range as a subtitle.
+- The four coloured cards must be one connected strip with white text, and
+  the graph's layout card must contain that strip.
+- The graph must not draw horizontal internal gridlines.
+- The date picker must be built from HeroUI components
+  (https://github.com/heroui-inc/heroui), replacing the ad-hoc styling
+  (e.g. sharp corners) — design-system components only, never one-off styles.
+- Tab labels inside the data card use a 12px font size.
+- A "reset filters" control belongs in that same top row above the cards.
