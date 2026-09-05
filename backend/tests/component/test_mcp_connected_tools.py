@@ -267,3 +267,29 @@ async def test_a_project_in_another_account_is_not_found_by_any_tool(
                     )
     finally:
         auth_context_var.reset(token)
+
+
+@pytest.mark.asyncio
+async def test_an_empty_argument_is_refused_not_defaulted(
+    db_session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """An empty string is a malformed argument, not an omitted one.
+
+    Most of the query validators spell their default as ``value or default``,
+    so an empty range would silently become the default and answer a question
+    the caller did not ask.
+    """
+    user_id, _workspace_id, project_id = await _seed_account(
+        db_session, f"mcp-empty-arg-{uuid.uuid4().hex[:8]}@example.com"
+    )
+
+    token = _as_caller(user_id)
+    try:
+        async with session_factory() as session:
+            with pytest.raises(ValueError, match="range must not be empty"):
+                await read_growth_evidence(
+                    session, str(project_id), "performance.read_snapshot", {"range": ""}
+                )
+    finally:
+        auth_context_var.reset(token)

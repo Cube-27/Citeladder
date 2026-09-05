@@ -3,8 +3,8 @@
 import { useState } from 'react';
 
 import { INITIAL_SELECTION, type RangeSelection } from './date-range-dialog';
-import type { PerformanceDimension, PerformanceGranularity } from '@/lib/api/performance';
-import type { PerformanceMetricKey } from '@/lib/performance/performance';
+import type { PerformanceGranularity } from '@/lib/api/performance';
+import type { PerformanceMetricKey, SearchConsoleDimension } from '@/lib/performance/performance';
 
 /**
  * Everything the reader has CHOSEN on the Performance surface: the range and
@@ -24,8 +24,9 @@ export type PerformanceSelection = {
   setSelection: (selection: RangeSelection) => void;
   granularity: PerformanceGranularity;
   setGranularity: (granularity: PerformanceGranularity) => void;
-  dimension: PerformanceDimension;
-  setDimension: (dimension: PerformanceDimension) => void;
+  /** The open Search Console tab. Bing's panel owns its own tab state. */
+  dimension: SearchConsoleDimension;
+  setDimension: (dimension: SearchConsoleDimension) => void;
   activeMetrics: ReadonlySet<PerformanceMetricKey>;
   toggleMetric: (key: PerformanceMetricKey) => void;
   reset: () => void;
@@ -33,7 +34,7 @@ export type PerformanceSelection = {
 
 export function usePerformanceSelection(): PerformanceSelection {
   const [selection, setSelection] = useState<RangeSelection>(INITIAL_SELECTION);
-  const [dimension, setDimension] = useState<PerformanceDimension>('query');
+  const [dimension, setDimension] = useState<SearchConsoleDimension>('query');
   const [granularity, setGranularity] = useState<PerformanceGranularity>('day');
   const [activeMetrics, setActiveMetrics] = useState<ReadonlySet<PerformanceMetricKey>>(
     () => new Set<PerformanceMetricKey>(DEFAULT_METRICS),

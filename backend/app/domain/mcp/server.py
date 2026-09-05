@@ -230,16 +230,21 @@ async def read_visibility_audit(project_id: str) -> dict[str, Any]:
     "Read the persisted Search Console/GA4 performance projection for a "
     "project: clicks, impressions, CTR, average position and their series "
     "for a range, with an optional comparison window. Ranges are day, week, "
-    "month, 3_months, 6_months, last_synced, or an explicit from/to.",
+    "month, 3_months, 6_months, last_synced, or custom with start_date and "
+    "end_date (ISO YYYY-MM-DD).",
 )
 async def read_performance(
     project_id: str,
     range: str | None = None,
     granularity: str | None = None,
     compare: str | None = None,
-    from_: str | None = None,
-    to: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> dict[str, Any]:
+    # ``start_date``/``end_date`` rather than the REST surface's from/to:
+    # ``from`` is a Python keyword, so a parameter of that name cannot exist
+    # here, and a trailing-underscore spelling is one a client would have to
+    # guess from the signature rather than the description.
     async with SessionLocal() as session:
         return await read_growth_evidence(
             session,
@@ -249,8 +254,8 @@ async def read_performance(
                 "range": range,
                 "granularity": granularity,
                 "compare": compare,
-                "from": from_,
-                "to": to,
+                "from": start_date,
+                "to": end_date,
             },
         )
 
@@ -259,14 +264,17 @@ async def read_performance(
     "read_performance_table",
     "Read a performance breakdown",
     "Read one paged breakdown of the persisted performance projection: "
-    "query, page, country, device, search_appearance or day. Pass the "
-    "snapshot_id a performance read returned, or a range to resolve it.",
+    "query, page, country, device, search_appearance, day, bing_query or "
+    "bing_page. Pass the snapshot_id a performance read returned, or a range "
+    "(with start_date/end_date when the range is custom) to resolve it.",
 )
 async def read_performance_table(
     project_id: str,
     dimension: str | None = None,
     snapshot_id: str | None = None,
     range: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
     sort: str | None = None,
     cursor: str | None = None,
 ) -> dict[str, Any]:
@@ -279,6 +287,11 @@ async def read_performance_table(
                 "dimension": dimension,
                 "snapshot_id": snapshot_id,
                 "range": range,
+                # Forwarded so a custom range resolves the window the caller
+                # asked for; without them the resolver falls back to the
+                # latest snapshot and answers a different question.
+                "from": start_date,
+                "to": end_date,
                 "sort": sort,
                 "cursor": cursor,
             },
@@ -290,20 +303,21 @@ async def read_performance_table(
     "Read AI referral traffic",
     "Read the persisted AI-referral projection for a project: sessions "
     "referred by AI answer engines, their share of traffic, and the sources "
-    "behind them.",
+    "behind them. Pass start_date and end_date (ISO YYYY-MM-DD) for an "
+    "explicit window.",
 )
 async def read_ai_referrals(
     project_id: str,
     range: str | None = None,
-    from_: str | None = None,
-    to: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> dict[str, Any]:
     async with SessionLocal() as session:
         return await read_growth_evidence(
             session,
             project_id,
             "referrals.read_snapshot",
-            {"range": range, "from": from_, "to": to},
+            {"range": range, "from": start_date, "to": end_date},
         )
 
 

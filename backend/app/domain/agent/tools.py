@@ -230,14 +230,20 @@ async def _latest_audit(
 def _text(payload: dict[str, Any], key: str) -> str | None:
     """One optional string argument, or ``None`` when it was not supplied.
 
-    An empty string is NOT an absent argument: it is a malformed one, and the
-    validators downstream reject it rather than silently taking a default.
+    An empty string is NOT an absent argument, and it is refused HERE. Most of
+    the validators downstream spell their default as ``value or default``, so
+    an empty range, compare mode, dimension or sort would silently become the
+    default — and an empty cursor would skip decoding and quietly serve page
+    one. A caller that sent a field meant something by it; answering a
+    different question is worse than refusing.
     """
     value = payload.get(key)
     if value is None:
         return None
     if not isinstance(value, str):
         raise ValueError(f"{key} must be a string")
+    if not value:
+        raise ValueError(f"{key} must not be empty")
     return value
 
 
@@ -470,6 +476,11 @@ async def _integration_status(
         # Never "unavailable": "nothing is connected" is itself the answer this
         # tool exists to give.
         "state": "available",
+        # ``connection_count`` counts only connections on a LIVE grant, while
+        # ``connections`` lists every active mapping with the grant status
+        # behind it. They differ exactly when a grant was revoked or needs
+        # re-auth — which is the most useful thing this tool can say about an
+        # empty chart, so the row stays rather than being filtered away.
         "stage": readiness.stage,
         "connection_count": readiness.connection_count,
         "backfill_state": readiness.backfill_state,

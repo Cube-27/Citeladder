@@ -23,6 +23,7 @@ import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 import {
   METRIC_CARDS,
+  DIMENSION_SORT_KEY,
   defaultSort,
   differenceTone,
   dimensionTab,
@@ -105,6 +106,24 @@ function SortableHead({
   );
 }
 
+/**
+ * The sort ACTUALLY applied, given which columns are on screen.
+ *
+ * Deselecting a metric removes its header, so an ordering by that column
+ * would have no visible indicator and no way back to it — the rows would just
+ * be in an order the reader cannot explain. The row-identity column is always
+ * present, so ordering by that is never orphaned.
+ */
+function orderableSort(
+  sort: string,
+  dimension: PerformanceDimension,
+  displayed: readonly { key: PerformanceMetricKey }[],
+): string {
+  const key = sortKey(sort);
+  if (key === DIMENSION_SORT_KEY) return sort;
+  return displayed.some((card) => card.key === key) ? sort : defaultSort(dimension);
+}
+
 /** A header cell for a derived column — not sortable, since it is not stored. */
 function StaticHead({ label, sublabel }: Readonly<{ label: string; sublabel: string }>) {
   return (
@@ -144,12 +163,18 @@ export function DimensionTable({
   // Every value the server binds the cursor to participates, so switching
   // any of them drops the stack instead of replaying a refused cursor.
   const table = useCursorTable(`${projectId}|${snapshotId}|${dimension}|${sort}`);
+  // NOTE: keyed on the raw `sort` so hiding a column drops the cursor stack
+  // too — the page it points at was ordered by the column just removed.
   const comparing = compareSnapshotId !== null;
+  const displayedMetrics = METRIC_CARDS.filter((card) =>
+    activeMetrics ? activeMetrics.has(card.key) : true,
+  );
+  const activeSort = orderableSort(sort, dimension, displayedMetrics);
 
   const params = {
     snapshot_id: snapshotId,
     dimension,
-    sort,
+    sort: activeSort,
     cursor: table.cursor,
     page_size: table.pageSize,
     compare_snapshot_id: compareSnapshotId ?? undefined,
@@ -166,13 +191,10 @@ export function DimensionTable({
   const nextCursor = query.data?.next_cursor ?? null;
   const total = query.data?.total_count;
   const { from, to } = pageRange(table.page, table.pageSize, rows.length);
-  const displayedMetrics = METRIC_CARDS.filter((card) =>
-    activeMetrics ? activeMetrics.has(card.key) : true,
-  );
   const columnCount = 1 + displayedMetrics.length * (comparing ? 3 : 1);
 
   const onSort = (key: PerformanceMetricKey) => {
-    setSort((current) => toggleSort(current, key));
+    setSort(toggleSort(activeSort, key));
     table.reset();
   };
 
@@ -231,7 +253,7 @@ export function DimensionTable({
                   // its place when a comparison makes the columns AMBIGUOUS
                   // (selected vs comparison vs difference).
                   sublabel={comparing ? selectedLabel : undefined}
-                  sort={sort}
+                  sort={activeSort}
                   onSort={onSort}
                 />
               );

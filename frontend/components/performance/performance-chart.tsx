@@ -145,10 +145,12 @@ export function PerformanceChart({
   // non-empty one: columnCount spans comparisons too, so a shorter first
   // series left the tail of the axis with no date for its index — and the
   // fallback printed a bare position number beside real dates.
-  const axisPoints = series.reduce<readonly PerformanceChartPoint[]>(
-    (longest, entry) => (entry.selected.length > longest.length ? entry.selected : longest),
-    [],
+  const axisEntry = series.reduce<ChartSeries | null>(
+    (longest, entry) =>
+      longest === null || entry.selected.length > longest.selected.length ? entry : longest,
+    null,
   );
+  const axisPoints: readonly PerformanceChartPoint[] = axisEntry?.selected ?? [];
   const tickIndices = computeTickIndices(columnCount, 6);
 
   return (
@@ -250,7 +252,9 @@ export function PerformanceChart({
           />
         ))}
       </svg>
-      {hover !== null ? <ChartTooltip series={series} index={hover} /> : null}
+      {hover !== null ? (
+        <ChartTooltip series={series} index={hover} dateSource={axisEntry} />
+      ) : null}
 
       {/* Horizontal axis date labels */}
       <div className="text-muted relative h-5 w-full select-none" aria-hidden>
@@ -310,9 +314,21 @@ export function PerformanceChart({
 function ChartTooltip({
   series,
   index,
-}: Readonly<{ series: readonly ChartSeries[]; index: number }>) {
-  const selectedDate = series[0]?.selected[index]?.date ?? null;
-  const comparisonDate = series[0]?.comparison?.[index]?.date ?? null;
+  dateSource,
+}: Readonly<{
+  series: readonly ChartSeries[];
+  index: number;
+  /**
+   * The series the AXIS labels its dates from. Every series in one chart
+   * covers the same window, so any of them would date a bucket the same way
+   * — but a shorter one has no point at the far end, and reading dates from a
+   * different series than the axis does is how a tooltip ends up blank under
+   * a labelled tick.
+   */
+  dateSource: ChartSeries | null;
+}>) {
+  const selectedDate = dateSource?.selected[index]?.date ?? null;
+  const comparisonDate = dateSource?.comparison?.[index]?.date ?? null;
   return (
     <output className="bg-panel border-border-subtle shadow-elevated pointer-events-none absolute top-2 right-2 grid gap-1 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
       <p className="text-secondary">

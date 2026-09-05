@@ -4,7 +4,11 @@ import { BingPanel } from './bing-panel';
 import { DimensionTable } from './dimension-table';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import type { PerformanceDimension } from '@/lib/api/performance';
-import { DIMENSION_TABS, type PerformanceMetricKey } from '@/lib/performance/performance';
+import {
+  DIMENSION_TABS,
+  type PerformanceMetricKey,
+  type SearchConsoleDimension,
+} from '@/lib/performance/performance';
 
 /**
  * Everything below the chart: the six Search Console breakdowns, and Bing's
@@ -29,8 +33,13 @@ export function PerformanceBreakdowns({
   hasBing,
 }: Readonly<{
   projectId: string;
-  dimension: PerformanceDimension;
-  onDimensionChange: (dimension: PerformanceDimension) => void;
+  /**
+   * Which Search Console tab is open. Narrower than PerformanceDimension on
+   * purpose: a Bing dimension names no tab here, so it would render a tab row
+   * with nothing selected and every panel closed.
+   */
+  dimension: SearchConsoleDimension;
+  onDimensionChange: (dimension: SearchConsoleDimension) => void;
   /** Null while the selected range has no persisted projection. */
   snapshotId: string | null;
   compareSnapshotId: string | null;

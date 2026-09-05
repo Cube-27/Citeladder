@@ -300,8 +300,16 @@ export function computeTickIndices(columnCount: number, maxTicks = 6): number[] 
 // Dimension tabs
 // ---------------------------------------------------------------------------
 
+/**
+ * A dimension the Search Console tab row can show.
+ *
+ * Bing's two are deliberately excluded: they have no tab and no panel in that
+ * row, so a value the tabs cannot represent must not be expressible as one.
+ */
+export type SearchConsoleDimension = Exclude<PerformanceDimension, 'bing_query' | 'bing_page'>;
+
 export const DIMENSION_TABS: readonly {
-  value: PerformanceDimension;
+  value: SearchConsoleDimension;
   /** Uppercase tab label, in Search Console's order. */
   label: string;
   /** The first column's header, e.g. "Top queries". */
@@ -347,9 +355,18 @@ export function dimensionTab(dimension: PerformanceDimension) {
   );
 }
 
+/**
+ * The first column's sort key — the row's own identity.
+ *
+ * Named because it is the one sort that does NOT belong to a metric column:
+ * the row-identity column is always on screen, so ordering by it can never be
+ * orphaned the way a hidden metric's ordering can.
+ */
+export const DIMENSION_SORT_KEY = 'dimension_key';
+
 /** DAYS reads chronologically; every other table defaults to clicks descending. */
 export function defaultSort(dimension: PerformanceDimension): string {
-  return dimension === 'day' ? 'dimension_key' : '-clicks';
+  return dimension === 'day' ? DIMENSION_SORT_KEY : '-clicks';
 }
 
 /** The sort idiom: a leading `-` is descending (the "top rows" view). */

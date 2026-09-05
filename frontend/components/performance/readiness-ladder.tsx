@@ -52,6 +52,20 @@ const EXPLANATION: Record<ProjectReadinessStage, string> = {
 /** Stable identity so an unknown answer never re-renders its readers. */
 const EMPTY_PROVIDERS: readonly IntegrationProvider[] = [];
 
+/**
+ * Stages nothing will advance on its own.
+ *
+ * Everything else is work in flight — including `core_data_ready`, where the
+ * search numbers have landed but CiteLadder's analysis is still computing.
+ * Polling only the earlier rungs left the ladder stuck one step short of
+ * ready until the reader reloaded the page.
+ */
+const SETTLED_STAGES: ReadonlySet<ProjectReadinessStage> = new Set([
+  'analysis_ready',
+  'import_failed',
+  'not_connected',
+]);
+
 function stageIndex(stage: ProjectReadinessStage): number {
   const index = LADDER.findIndex((step) => step.stage === stage);
   // Off-ladder states (nothing connected, a failed import) have no rung, so
@@ -98,7 +112,8 @@ function useProjectReadiness(projectId: string | null) {
     // keeps asking rather than stranding the user on a stale stage.
     refetchInterval: (query) => {
       const stage = query.state.data?.stage;
-      return stage === 'importing' || stage === 'connected' ? 15_000 : false;
+      if (stage === undefined) return false;
+      return SETTLED_STAGES.has(stage) ? false : 15_000;
     },
   });
 }

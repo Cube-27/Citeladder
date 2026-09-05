@@ -50,14 +50,13 @@ Each was confirmed by reading the shipped code, not inferred.
 | 2 | ~~Snapshots are built **only for sync windows**~~ — **fixed**: `traffic_snapshot_refresh` also derives the preset family anchored at the latest complete GSC date, and `performance_range_projection` materializes any other requested window | [service.py](../../backend/app/domain/traffic/service.py) |
 | 3 | ~~Traffic offers 7d/28d/90d that can never match~~ — **fixed**: the surface is `/performance` with Day/Week/Month/Custom ranges resolved server-side | [performance.ts](../../frontend/lib/performance/performance.ts) |
 | 4 | ~~AI Referrals is **100% broken for every bounded range**~~ — **fixed in two halves.** PR 1 fixed the READ: a preset sends its `range` TOKEN and the server resolves the newest snapshot of that LENGTH (`ANALYTICS_PRESET_RANGE_DAYS`), with no date derived from the browser clock. That alone still resolved nothing, because no snapshot of a preset length was ever WRITTEN; PR #24 added the family (`ANALYTICS_SNAPSHOT_WINDOW_DAYS`) that gives those reads something to match | [options.ts](../../frontend/lib/ai-referrals/options.ts), [analytics/service.py](../../backend/app/domain/analytics/service.py), [ai_referrals_snapshot.py](../../backend/app/domain/analytics/ai_referrals_snapshot.py) |
-| 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection. Its *collection* is now unblocked (it joined `TRAFFIC_SYNC_PROVIDERS`, so "Sync now" no longer skips it); the DISPLAY half is still open and needs its own panel (Slice 4.4) rather than a column on a GSC table | [traffic.py](../../backend/app/core/config/traffic.py) |
+| 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection. Its *collection* was unblocked first (it joined `TRAFFIC_SYNC_PROVIDERS`, so "Sync now" no longer skips it); the DISPLAY half shipped in Slice 4.4 as its own panel rather than a column on a GSC table | [traffic.py](../../backend/app/core/config/traffic.py) |
 | 6 | ~~The projection **materializes every metric row in the window in memory**~~ — **fixed**: `TrafficProjectionBuilder` folds batch by batch and the executor streams into it, so memory bounds on distinct keys | [projection.py](../../backend/app/domain/traffic/projection.py), [streaming.py](../../backend/app/domain/traffic/streaming.py) |
 | 7 | MCP exposes Site Health, Demand, Opportunities, and Visibility — **no traffic, search, referral, or connection-status tool** | [server.py:110-230](../../backend/app/domain/mcp/server.py#L110-L230) |
 
-Defects 1-4 and 6 are now closed (4 only as of PR #24 — see its row above).
-Defect 5's collection half is closed; its display half (a Bing panel) is the
-remaining piece, in Slice 4.4. Defect 7 (MCP) is untouched and is the whole of
-Slice 5. **Slices 4-6 have no PR assigned.**
+Every defect above is now closed: 1-4 and 6 by PRs #22-#24 (4 only as of #24
+— see its row above), 5's display half by Slice 4.4 and 7 by Slice 5, both in
+PR #25. **Slice 6 is the only one left, and has no PR assigned.**
 
 **Already shipped (2026-09-04)**, on the branch carrying the Google sign-in work:
 
