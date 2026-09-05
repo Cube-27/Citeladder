@@ -224,6 +224,104 @@ async def read_visibility_audit(project_id: str) -> dict[str, Any]:
         return await read_growth_evidence(session, project_id, "audits.read_latest")
 
 
+@_evidence_tool(
+    "read_performance",
+    "Read Search Console performance",
+    "Read the persisted Search Console/GA4 performance projection for a "
+    "project: clicks, impressions, CTR, average position and their series "
+    "for a range, with an optional comparison window. Ranges are day, week, "
+    "month, 3_months, 6_months, last_synced, or an explicit from/to.",
+)
+async def read_performance(
+    project_id: str,
+    range: str | None = None,
+    granularity: str | None = None,
+    compare: str | None = None,
+    from_: str | None = None,
+    to: str | None = None,
+) -> dict[str, Any]:
+    async with SessionLocal() as session:
+        return await read_growth_evidence(
+            session,
+            project_id,
+            "performance.read_snapshot",
+            {
+                "range": range,
+                "granularity": granularity,
+                "compare": compare,
+                "from": from_,
+                "to": to,
+            },
+        )
+
+
+@_evidence_tool(
+    "read_performance_table",
+    "Read a performance breakdown",
+    "Read one paged breakdown of the persisted performance projection: "
+    "query, page, country, device, search_appearance or day. Pass the "
+    "snapshot_id a performance read returned, or a range to resolve it.",
+)
+async def read_performance_table(
+    project_id: str,
+    dimension: str | None = None,
+    snapshot_id: str | None = None,
+    range: str | None = None,
+    sort: str | None = None,
+    cursor: str | None = None,
+) -> dict[str, Any]:
+    async with SessionLocal() as session:
+        return await read_growth_evidence(
+            session,
+            project_id,
+            "performance.read_table",
+            {
+                "dimension": dimension,
+                "snapshot_id": snapshot_id,
+                "range": range,
+                "sort": sort,
+                "cursor": cursor,
+            },
+        )
+
+
+@_evidence_tool(
+    "read_ai_referrals",
+    "Read AI referral traffic",
+    "Read the persisted AI-referral projection for a project: sessions "
+    "referred by AI answer engines, their share of traffic, and the sources "
+    "behind them.",
+)
+async def read_ai_referrals(
+    project_id: str,
+    range: str | None = None,
+    from_: str | None = None,
+    to: str | None = None,
+) -> dict[str, Any]:
+    async with SessionLocal() as session:
+        return await read_growth_evidence(
+            session,
+            project_id,
+            "referrals.read_snapshot",
+            {"range": range, "from": from_, "to": to},
+        )
+
+
+@_evidence_tool(
+    "read_integration_status",
+    "Read data connection status",
+    "Read which providers are connected to a project, which properties are "
+    "mapped, how far the history import has progressed, and how far its "
+    "coverage reaches. This is the read that explains why a projection is "
+    "empty.",
+)
+async def read_integration_status(project_id: str) -> dict[str, Any]:
+    async with SessionLocal() as session:
+        return await read_growth_evidence(
+            session, project_id, "integrations.read_status"
+        )
+
+
 @mcp_server.tool(
     name="list_skills",
     title="List CiteLadder skills",

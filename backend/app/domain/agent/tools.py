@@ -1,17 +1,42 @@
-"""Read-only, workspace-authorized evidence tools for Growth Agent tasks."""
+"""Read-only, workspace-authorized evidence tools for Growth Agent tasks.
+
+Every executor here is a PROJECTION over persisted rows: no provider call, no
+recomputation, and no write (invariant 7). Each returns one of two shapes —
+``available`` with its facts, or ``unavailable`` with the reason the source
+does not exist. Those are distinct answers, and neither is an observed zero.
+
+The connected-data readers (Performance, AI referrals, integration status)
+delegate to the very services the REST surface uses, so an MCP client and the
+dashboard can never disagree about a number (invariant 2 — one owner of the
+rule).
+"""
 
 from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import date
 from typing import Any, Final
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.integrations_contracts import MAPPING_STATUS_ACTIVE
+from app.domain.analytics.service import get_ai_referrals
+from app.domain.integrations.readiness import get_project_readiness
+from app.domain.traffic.performance import (
+    get_performance_dashboard,
+    get_performance_table,
+)
+from app.domain.traffic.query_support import PerformanceQueryError
 from app.models.audit import Audit
 from app.models.demand import DemandSnapshot
+from app.models.integrations import (
+    IntegrationConnection,
+    IntegrationOAuthGrant,
+    IntegrationPropertyMapping,
+)
 from app.models.opportunity import Opportunity
 from app.models.site_health.snapshot import SiteHealthSnapshot
 
@@ -193,6 +218,296 @@ async def _latest_audit(
     }
 
 
+# --- Connected-data readers (Slice 5) ----------------------------------------
+#
+# Performance, AI referrals and integration status, reachable from an MCP
+# client exactly as the dashboard reads them. Each delegates to the domain
+# service that owns the rule rather than re-deriving it, and each takes its
+# arguments through the same validators the REST query string uses — so a bad
+# range is refused here for the same reason and with the same message.
+
+
+def _text(payload: dict[str, Any], key: str) -> str | None:
+    """One optional string argument, or ``None`` when it was not supplied.
+
+    An empty string is NOT an absent argument: it is a malformed one, and the
+    validators downstream reject it rather than silently taking a default.
+    """
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"{key} must be a string")
+    return value
+
+
+def _day(payload: dict[str, Any], key: str) -> date | None:
+    value = _text(payload, key)
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(f"{key} must be an ISO date (YYYY-MM-DD)") from exc
+
+
+def _identifier(payload: dict[str, Any], key: str) -> uuid.UUID | None:
+    value = _text(payload, key)
+    if value is None:
+        return None
+    try:
+        return uuid.UUID(value)
+    except ValueError as exc:
+        raise ValueError(f"{key} must be a UUID") from exc
+
+
+def _count(payload: dict[str, Any], key: str) -> int | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{key} must be an integer")
+    return value
+
+
+async def _dashboard(context: ToolExecutionContext, payload: dict[str, Any]) -> Any:
+    """The dashboard projection for the requested range.
+
+    A query-validation failure becomes a ``ValueError`` so the caller is told
+    which argument was wrong, rather than being handed a default window that
+    answers a question nobody asked.
+    """
+    try:
+        return await get_performance_dashboard(
+            context.session,
+            workspace_id=context.workspace_id,
+            project_id=context.project_id,
+            range_token=_text(payload, "range"),
+            from_date=_day(payload, "from"),
+            to_date=_day(payload, "to"),
+            compare=_text(payload, "compare"),
+            compare_from=_day(payload, "compare_from"),
+            compare_to=_day(payload, "compare_to"),
+            granularity=_text(payload, "granularity"),
+        )
+    except PerformanceQueryError as exc:
+        raise ValueError(str(exc)) from exc
+
+
+async def _performance_snapshot(
+    context: ToolExecutionContext, payload: dict[str, Any]
+) -> dict[str, Any]:
+    dashboard = await _dashboard(context, payload)
+    if dashboard.selected.snapshot_id is None:
+        # The range has no persisted projection. That is NOT "no traffic": the
+        # window was never derived, and a client told zero here would report a
+        # measured collapse that nobody measured.
+        return _unavailable("performance_range_not_projected")
+    body = dashboard.model_dump(mode="json")
+    refs = [{"kind": "traffic_snapshot", "id": str(dashboard.selected.snapshot_id)}]
+    if dashboard.comparison is not None and dashboard.comparison.snapshot_id:
+        refs.append(
+            {
+                "kind": "traffic_snapshot",
+                "id": str(dashboard.comparison.snapshot_id),
+            }
+        )
+    return {
+        "state": "available",
+        "range": dashboard.range,
+        "granularity": dashboard.granularity,
+        "compare": dashboard.compare,
+        "selected": body["selected"],
+        "comparison": body["comparison"],
+        "coverage": body["coverage"],
+        "dimension_counts": body["dimension_counts"],
+        # Reports nobody collects. Their tables are UNAVAILABLE, never empty.
+        "unavailable_dimensions": body["unavailable_dimensions"],
+        "versions": {
+            "formula": dashboard.formula_version,
+            "normalization": dashboard.normalization_version,
+        },
+        "artifact_refs": refs,
+        "omissions": [],
+    }
+
+
+async def _performance_table(
+    context: ToolExecutionContext, payload: dict[str, Any]
+) -> dict[str, Any]:
+    """One paged dimension table, for any of the six dimensions.
+
+    ``snapshot_id`` may be omitted, in which case the range resolves the same
+    way the dashboard resolves it — a client should not have to make two calls
+    to read the top queries for "last month".
+    """
+    snapshot_id = _identifier(payload, "snapshot_id")
+    if snapshot_id is None:
+        dashboard = await _dashboard(context, payload)
+        if dashboard.selected.snapshot_id is None:
+            return _unavailable("performance_range_not_projected")
+        snapshot_id = dashboard.selected.snapshot_id
+    try:
+        page = await get_performance_table(
+            context.session,
+            workspace_id=context.workspace_id,
+            project_id=context.project_id,
+            snapshot_id=snapshot_id,
+            dimension=_text(payload, "dimension"),
+            sort=_text(payload, "sort"),
+            cursor=_text(payload, "cursor"),
+            page_size=_count(payload, "page_size"),
+            compare_snapshot_id=_identifier(payload, "compare_snapshot_id"),
+        )
+    except PerformanceQueryError as exc:
+        raise ValueError(str(exc)) from exc
+    body = page.model_dump(mode="json")
+    return {
+        "state": "available",
+        "dimension": page.dimension,
+        "items": body["items"],
+        "next_cursor": page.next_cursor,
+        "total_count": page.total_count,
+        "page_size": page.page_size,
+        "artifact_refs": [{"kind": "traffic_snapshot", "id": str(snapshot_id)}],
+        "omissions": (
+            [{"reason": "page_size_limit", "count": page.total_count - len(page.items)}]
+            if page.total_count > len(page.items)
+            else []
+        ),
+    }
+
+
+async def _referrals_snapshot(
+    context: ToolExecutionContext, payload: dict[str, Any]
+) -> dict[str, Any]:
+    referrals = await get_ai_referrals(
+        context.session,
+        workspace_id=context.workspace_id,
+        project_id=context.project_id,
+        from_date=_day(payload, "from"),
+        to_date=_day(payload, "to"),
+        range_token=_text(payload, "range"),
+    )
+    if not referrals.window_start or not referrals.window_end:
+        # No snapshot for the requested window. The service returns an empty
+        # payload rather than recomputing; reporting it as available would
+        # dress "never derived" up as "no AI referrals".
+        return _unavailable("no_ai_referrals_snapshot")
+    return {
+        "state": "available",
+        "window": {
+            "start": referrals.window_start,
+            "end": referrals.window_end,
+        },
+        "granularity": referrals.granularity,
+        "referral_volume": [
+            point.model_dump(mode="json") for point in referrals.referral_volume
+        ],
+        "referral_share": [
+            point.model_dump(mode="json") for point in referrals.referral_share
+        ],
+        "sources": [source.model_dump(mode="json") for source in referrals.sources],
+        "versions": {
+            "analyzer": referrals.analyzer_version,
+            "formula": referrals.formula_version,
+        },
+        "artifact_refs": [],
+        "omissions": [],
+    }
+
+
+async def _integration_status(
+    context: ToolExecutionContext, _payload: dict[str, Any]
+) -> dict[str, Any]:
+    """Why a project's data looks the way it does: connections and progress.
+
+    This is the tool that answers "why is this empty" — a project with no
+    mapped connection, an import still running, and an import that failed are
+    three different answers, and only this read tells them apart.
+    """
+    readiness = await get_project_readiness(
+        context.session,
+        workspace_id=context.workspace_id,
+        project_id=context.project_id,
+    )
+    mappings = (
+        await context.session.execute(
+            select(
+                IntegrationConnection.id,
+                IntegrationConnection.provider,
+                IntegrationConnection.label,
+                IntegrationConnection.last_synced_at,
+                IntegrationOAuthGrant.status,
+                IntegrationPropertyMapping.property_ref,
+            )
+            .join(
+                IntegrationPropertyMapping,
+                and_(
+                    IntegrationPropertyMapping.workspace_id
+                    == IntegrationConnection.workspace_id,
+                    IntegrationPropertyMapping.connection_id
+                    == IntegrationConnection.id,
+                ),
+            )
+            .join(
+                IntegrationOAuthGrant,
+                and_(
+                    IntegrationOAuthGrant.workspace_id
+                    == IntegrationConnection.workspace_id,
+                    IntegrationOAuthGrant.id == IntegrationConnection.grant_id,
+                ),
+            )
+            .where(IntegrationConnection.workspace_id == context.workspace_id)
+            .where(IntegrationPropertyMapping.project_id == context.project_id)
+            .where(IntegrationPropertyMapping.status == MAPPING_STATUS_ACTIVE)
+            .order_by(
+                IntegrationConnection.provider.asc(), IntegrationConnection.id.asc()
+            )
+        )
+    ).all()
+    return {
+        # Never "unavailable": "nothing is connected" is itself the answer this
+        # tool exists to give.
+        "state": "available",
+        "stage": readiness.stage,
+        "connection_count": readiness.connection_count,
+        "backfill_state": readiness.backfill_state,
+        "imported_through": (
+            readiness.imported_through.isoformat()
+            if readiness.imported_through is not None
+            else None
+        ),
+        "has_performance_snapshot": readiness.has_performance_snapshot,
+        "has_demand_snapshot": readiness.has_demand_snapshot,
+        "opportunity_count": readiness.opportunity_count,
+        "connections": [
+            {
+                "provider": provider,
+                "label": label,
+                "property_ref": property_ref,
+                "grant_status": grant_status,
+                "last_synced_at": (
+                    last_synced_at.isoformat() if last_synced_at is not None else None
+                ),
+            }
+            for (
+                _connection_id,
+                provider,
+                label,
+                last_synced_at,
+                grant_status,
+                property_ref,
+            ) in mappings
+        ],
+        "artifact_refs": [
+            {"kind": "integration_connection", "id": str(connection_id)}
+            for (connection_id, *_rest) in mappings
+        ],
+        "omissions": [],
+    }
+
+
 def _unavailable(reason: str) -> dict[str, Any]:
     return {
         "state": "unavailable",
@@ -207,4 +522,8 @@ _EXECUTORS: Final[dict[str, ToolExecutor]] = {
     "demand.read_snapshot": _demand_snapshot,
     "opportunities.read_ranked": _ranked_opportunities,
     "audits.read_latest": _latest_audit,
+    "performance.read_snapshot": _performance_snapshot,
+    "performance.read_table": _performance_table,
+    "referrals.read_snapshot": _referrals_snapshot,
+    "integrations.read_status": _integration_status,
 }

@@ -59,6 +59,10 @@ class AgentTaskPolicy:
 AGENT_TASK_POLICIES: Final[dict[str, AgentTaskPolicy]] = {
     policy.task_type: policy
     for policy in (
+        # Explaining a project means being able to say why a number looks
+        # the way it does, which needs the connected layer: an empty chart
+        # because nothing is connected, because an import is still running,
+        # and because search traffic really fell are three different answers.
         AgentTaskPolicy(
             "explain",
             (
@@ -66,6 +70,9 @@ AGENT_TASK_POLICIES: Final[dict[str, AgentTaskPolicy]] = {
                 "demand.read_snapshot",
                 "opportunities.read_ranked",
                 "audits.read_latest",
+                "performance.read_snapshot",
+                "referrals.read_snapshot",
+                "integrations.read_status",
             ),
         ),
         AgentTaskPolicy(
