@@ -116,7 +116,7 @@ export function ProductWindow() {
               aria-controls="product-preview-panel"
               onClick={() => selectLayer(index)}
               className={cn(
-                'focus-ring relative flex min-h-16 items-center justify-center gap-2 px-3 text-sm font-medium whitespace-nowrap transition-colors',
+                'focus-ring relative flex min-h-12 items-center justify-center gap-2 px-3 text-sm font-medium whitespace-nowrap transition-colors',
                 index > 0 && 'border-border-subtle border-l',
                 selected
                   ? 'text-foreground bg-background-alt/60'
@@ -146,7 +146,12 @@ export function ProductWindow() {
         })}
       </div>
 
-      <div className="bg-background grid min-h-[690px] lg:grid-cols-[220px_minmax(0,1fr)]">
+      {/* FIXED height, not `min-h`. With a minimum, the window was as tall as
+          whichever layer happened to be tallest, so adding the Agent tab grew
+          the frame for all four and the page reflowed as the preview advanced.
+          A fixed box means the chrome is a constant and each panel scrolls
+          inside it — the same contract the real app shell has. */}
+      <div className="bg-background grid h-[var(--preview-height)] [--preview-height:26rem] sm:[--preview-height:30rem] lg:grid-cols-[220px_minmax(0,1fr)] lg:[--preview-height:34rem]">
         <PreviewSidebar activeItem={activeLayer.activeItem} />
 
         <div className="flex min-w-0 flex-col">
@@ -200,7 +205,10 @@ export function ProductWindow() {
             id="product-preview-panel"
             role="tabpanel"
             aria-label={activeLayer.label}
-            className="min-h-[580px] flex-1 overflow-hidden [overflow-anchor:none]"
+            // `min-h-0` is what lets a flex child actually shrink to its
+            // container instead of growing it; with the old `min-h-[580px]`
+            // the panel set the window's height rather than fitting into it.
+            className="min-h-0 flex-1 scrollbar-none overflow-y-auto [overflow-anchor:none]"
           >
             <ProductPreviewPanel
               layer={activeLayer.id}
@@ -216,7 +224,7 @@ export function ProductWindow() {
 
 function PreviewSidebar({ activeItem }: Readonly<{ activeItem: PreviewItemLabel }>) {
   return (
-    <aside className="border-border-subtle bg-sidebar hidden border-r lg:flex lg:flex-col">
+    <aside className="border-border-subtle bg-sidebar hidden min-h-0 overflow-hidden border-r lg:flex lg:flex-col">
       <div className="border-border-subtle flex h-13 items-center gap-2.5 border-b px-4">
         <LogoMark size={18} />
       </div>

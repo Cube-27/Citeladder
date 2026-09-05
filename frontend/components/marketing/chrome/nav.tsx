@@ -5,6 +5,7 @@ import { LogoMark } from '@/components/ui/logo-mark';
 import { Menu, X } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { authApi } from '@/lib/api/auth';
@@ -277,9 +278,7 @@ export function MarketingNav() {
         aria-label="Main navigation"
         className="mx-auto flex h-16 w-full max-w-7xl items-center gap-5 px-[var(--site-gutter)]"
       >
-        <Link href="/" aria-label="CiteLadder home" className="shrink-0">
-          <LogoMark size={24} priority />
-        </Link>
+        <HomeLogoLink onNavigate={closeMenu} />
 
         <DesktopNavigation
           layout={DROP_LAYOUT}
@@ -319,6 +318,45 @@ export function MarketingNav() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * The wordmark, which is the site's "go home" affordance.
+ *
+ * On every route but `/` this is an ordinary `Link`. On `/` itself it was one
+ * too, and that was the bug: clicking the logo on the landing page navigated
+ * from `/` to `/`, which the router correctly treats as a no-op, so the click
+ * did nothing at all — the page did not move and the reader got no feedback.
+ *
+ * The convention it should follow is the one every site with a fixed header
+ * uses: on the page you are already on, the logo takes you to the TOP of it.
+ * `preventDefault` on the same-route case keeps the router out of it entirely,
+ * and the scroll respects reduced motion. It stays a real `<a href="/">` so
+ * middle-click, ctrl-click, and "open in new tab" behave, and so the link is
+ * still a link to assistive tech.
+ */
+function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
+  const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <Link
+      href="/"
+      aria-label="CiteLadder home"
+      className="focus-ring shrink-0 rounded-xs"
+      onClick={(event) => {
+        onNavigate();
+        if (pathname !== '/') return;
+        // Modified clicks are the reader asking for a new tab/window; leave them
+        // to the browser rather than swallowing them into a scroll.
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+      }}
+    >
+      <LogoMark size={24} priority />
+    </Link>
   );
 }
 

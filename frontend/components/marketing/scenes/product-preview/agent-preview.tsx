@@ -22,11 +22,14 @@ import {
 } from './shared';
 
 const AGENT_PROMPT = 'What should we improve next?';
+/* Three steps, not four. The fourth ("Request review") repeated what the
+   footer's trust line already says — that the agent prepares and the operator
+   decides — and it was the row that pushed the tallest layer past the height
+   the other three panels fit in. */
 const AGENT_TOOL_STEPS = [
   ['Read Site findings', '12 evidence-backed gaps'],
   ['Read Demand signals', 'GSC, GA4, AI Visibility'],
   ['Prioritize next steps', 'Deterministic priority order'],
-  ['Request review', 'No external action taken'],
 ] as const;
 
 export function AgentPreview({ phase, reduceMotion }: PreviewProps) {
@@ -46,7 +49,7 @@ export function AgentPreview({ phase, reduceMotion }: PreviewProps) {
       />
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(270px,0.75fr)]">
-        <section className={cn(PRIMARY_SURFACE, 'flex min-h-[390px] flex-col overflow-hidden')}>
+        <section className={cn(PRIMARY_SURFACE, 'flex min-h-[330px] flex-col overflow-hidden')}>
           <div className="border-border flex items-center gap-3 border-b px-4 py-3">
             <span className="bg-accent-soft text-accent-text grid size-7 place-items-center rounded-[var(--radius-control)]">
               <MessageSquareText className="size-3.5" />
@@ -98,14 +101,12 @@ export function AgentPreview({ phase, reduceMotion }: PreviewProps) {
                 <CheckCircle2 className="text-success-text size-4" />
                 <p className="text-foreground text-sm font-medium">Recommended next action</p>
               </div>
-              <p className="text-secondary mt-2 text-sm leading-relaxed">
-                Close the admissions question gap with an evidence-backed FAQ brief, then verify it
-                after publication.
+              <p className="text-secondary mt-1.5 text-sm">
+                Close the admissions question gap with an evidence-backed FAQ brief.
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-2.5 flex flex-wrap gap-2">
                 <PreviewBadge>Site evidence</PreviewBadge>
                 <PreviewBadge>Demand signal</PreviewBadge>
-                <PreviewBadge>Pack rule</PreviewBadge>
               </div>
             </PhaseItem>
           </div>
@@ -155,19 +156,11 @@ export function AgentPreview({ phase, reduceMotion }: PreviewProps) {
               </PhaseItem>
             ))}
           </div>
-          <PhaseItem visible={phase >= 3} className="mt-4 grid grid-cols-2 gap-2">
-            <span className="bg-well text-secondary inline-flex h-8 items-center justify-center rounded-[var(--radius-control)] text-xs font-medium">
-              View evidence
-            </span>
-            <span className="bg-action text-action-fg inline-flex h-8 items-center justify-center rounded-[var(--radius-control)] text-xs font-medium">
-              Review brief
-            </span>
-          </PhaseItem>
-          <div className="border-border mt-4 flex items-start gap-2 border-t pt-3">
-            <ShieldCheck className="text-success-text mt-0.5 size-3.5 shrink-0" />
-            <p className="text-subtle text-xs leading-relaxed">
-              The agent explains and prepares. You decide when content is saved or an audit runs.
-            </p>
+          {/* The two mock buttons went with the fourth tool step: the panel
+              already ends on the trust line, which is the actual point. */}
+          <div className="border-border mt-3 flex items-center gap-2 border-t pt-3">
+            <ShieldCheck className="text-success-text size-3.5 shrink-0" />
+            <p className="text-subtle text-xs">The agent prepares. You decide.</p>
           </div>
         </section>
       </div>

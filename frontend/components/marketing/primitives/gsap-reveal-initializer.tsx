@@ -44,8 +44,23 @@ function subscribeToHorizontal(onStoreChange: () => void): () => void {
 const readHorizontal = () => window.matchMedia(HORIZONTAL_QUERY).matches;
 const horizontalOnServer = () => false;
 
-/** Horizontal entry offset per `data-citeladder-reveal-from` direction. */
-const X_OFFSET_BY_DIRECTION: Record<string, number> = { left: -30, right: 30 };
+/**
+ * Entry offsets per `data-citeladder-reveal-from` direction.
+ *
+ * `up` is the default and it previously had NO offset at all — the x-offset map
+ * held only `left`/`right`, so the overwhelming majority of reveals on the site
+ * were a bare opacity fade with nothing moving. That is why the choreography
+ * read as "no animation": it literally wasn't one. Every direction now carries
+ * a real displacement, and `up` carries it on y.
+ */
+const OFFSET_BY_DIRECTION: Record<string, { x: number; y: number }> = {
+  up: { x: 0, y: 32 },
+  left: { x: -44, y: 0 },
+  right: { x: 44, y: 0 },
+};
+
+/** Narrow viewports keep the vertical lift but drop horizontal travel. */
+const NARROW_OFFSET = { x: 0, y: 20 };
 
 export function GsapRevealInitializer() {
   const reduceMotion = useReducedMotion();
@@ -70,24 +85,33 @@ export function GsapRevealInitializer() {
       // Phase 1: Batched DOM writes — initialize starting opacity & transforms without interleaving layout reads
       elements.forEach((el) => {
         const fromDir = el.dataset.citeladderRevealFrom || 'up';
-        const xOffset = allowHorizontal ? (X_OFFSET_BY_DIRECTION[fromDir] ?? 0) : 0;
-        gsap.set(el, { opacity: 0, x: xOffset });
+        const offset = allowHorizontal
+          ? (OFFSET_BY_DIRECTION[fromDir] ?? OFFSET_BY_DIRECTION.up)
+          : NARROW_OFFSET;
+        gsap.set(el, { opacity: 0, x: offset.x, y: offset.y });
       });
 
       staggers.forEach((group) => {
-        gsap.set(group.children, { opacity: 0 });
+        gsap.set(group.children, { opacity: 0, y: allowHorizontal ? 24 : 16 });
       });
 
       // Phase 2: Create triggers — measurements run against settled DOM without layout invalidation between elements
+      //
+      // `start` was 'top 88%', which fires when the element's top has barely
+      // crossed the fold — by the time the reader's eye arrives the tween has
+      // already finished, so they see a settled element and no motion. 'top 82%'
+      // starts it inside the reader's attention. The easing is `power3.out`
+      // rather than `power2.out` for a firmer settle over the longer travel.
       elements.forEach((el) => {
         gsap.to(el, {
           opacity: 1,
           x: 0,
-          duration: 0.6,
-          ease: 'power2.out',
+          y: 0,
+          duration: 0.75,
+          ease: 'power3.out',
           scrollTrigger: {
             trigger: el,
-            start: 'top 88%',
+            start: 'top 82%',
             once: true,
           },
         });
@@ -97,14 +121,18 @@ export function GsapRevealInitializer() {
         const children = group.children;
         if (!children.length) return;
 
+        // A 0.08s stagger over a fade-only tween is below the threshold where a
+        // sequence reads as a sequence. 0.11s with real travel makes the group
+        // arrive as a cascade instead of as one block.
         gsap.to(children, {
           opacity: 1,
-          duration: 0.5,
-          stagger: 0.08,
-          ease: 'power2.out',
+          y: 0,
+          duration: 0.65,
+          stagger: 0.11,
+          ease: 'power3.out',
           scrollTrigger: {
             trigger: group,
-            start: 'top 85%',
+            start: 'top 80%',
             once: true,
           },
         });

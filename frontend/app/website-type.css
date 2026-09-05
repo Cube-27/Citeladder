@@ -5,24 +5,30 @@
   --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-display: var(--font-uncut-sans), var(--font-inter), -apple-system, sans-serif;
-  --text-xs: 0.875rem;
-  --text-sm: 1rem;
-  --text-base: 1.125rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 2rem;
-  --text-3xl: 2.75rem;
-  --text-4xl: 3.5rem;
-  --text-heading-sm: 1.25rem;
-  --text-heading-xs: 1.125rem;
-  --text-xs--line-height: 1.25rem;
-  --text-sm--line-height: 1.5rem;
-  --text-base--line-height: 1.75rem;
-  --text-lg--line-height: 1.875rem;
-  --text-xl--line-height: 1.875rem;
-  --text-2xl--line-height: 2.375rem;
-  --text-3xl--line-height: 3rem;
-  --text-4xl--line-height: 3.75rem;
+  /* One ladder, one ratio. Each rung is ~1.2x its neighbour (the minor third
+     the display rungs already used), so the steps are even instead of the old
+     mix of 1.14x at the bottom and 1.27x at the top. The bottom three rungs are
+     also no longer shifted up a size: `xs` is 12px and `base` is 16px here, the
+     same as everywhere else, because a marketing surface being "roomier" is a
+     job for measure and rhythm, not for renaming 14px to `xs`. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-heading-sm: 1.125rem;
+  --text-heading-xs: 1rem;
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
   --tracking-tight: -0.03em;
   --tracking-wide: 0.02em;
   --tracking-wider: 0.06em;
@@ -147,33 +153,38 @@
   font-weight: 600;
 }
 
+/* The display ladder is mobile-first and steps at 768/1024 below. Every rung
+   is a ~1.2x step from the next one down at EVERY breakpoint, which is what
+   the old ladder lost: at 641–767px `section-heading` (32px) sat one hair under
+   `page-title` (40px) while `feature-heading` (24px) was a 33% drop, so the
+   middle of the page had no discernible hierarchy and the top had too much. */
 .website-hero-display {
-  font-size: 2.75rem;
-  line-height: 3rem;
-  letter-spacing: -0.04em;
-}
-
-.website-page-title {
-  font-size: 2.5rem;
-  line-height: 2.75rem;
+  font-size: 2.25rem;
+  line-height: 2.5rem;
   letter-spacing: -0.035em;
 }
 
-.website-section-heading {
-  font-size: 2rem;
-  line-height: 2.375rem;
+.website-page-title {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
   letter-spacing: -0.03em;
 }
 
+.website-section-heading {
+  font-size: 1.625rem;
+  line-height: 2rem;
+  letter-spacing: -0.025em;
+}
+
 .website-feature-heading {
-  font-size: 1.5rem;
-  line-height: 1.875rem;
+  font-size: 1.25rem;
+  line-height: 1.625rem;
   letter-spacing: -0.02em;
 }
 
 .website-small-heading {
-  font-size: 1.25rem;
-  line-height: 1.625rem;
+  font-size: 1.0625rem;
+  line-height: 1.4375rem;
   letter-spacing: -0.01em;
 }
 
@@ -198,8 +209,8 @@
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
-  font-size: 2.5rem;
-  line-height: 2.875rem;
+  font-size: 1.875rem;
+  line-height: 2.25rem;
   font-weight: 400;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -225,29 +236,32 @@
   color: var(--color-muted);
 }
 
+/* Body rungs are mobile-first too. `lead` steps up at 768px (below); the rest
+   hold one size across breakpoints, because body copy that grows with the
+   viewport just makes the measure fight the column. */
 .website-lead {
-  font-size: 1.25rem;
-  line-height: 1.875rem;
+  font-size: 1.0625rem;
+  line-height: 1.625rem;
   font-weight: 400;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
 }
 
 .website-body-lg {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
+  font-size: 1rem;
+  line-height: 1.625rem;
   font-weight: 400;
   letter-spacing: 0;
 }
 
 .website-body {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   line-height: 1.5rem;
   font-weight: 400;
   letter-spacing: 0;
 }
 
 .website-nav {
-  font-size: 1rem;
+  font-size: 0.875rem;
   line-height: 1.25rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -255,8 +269,8 @@
 
 .website-label,
 .website-eyebrow {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
   font-weight: 500;
 }
 
@@ -679,25 +693,55 @@
   line-height: 1.125rem;
 }
 
+/* Two steps, not three. The ladder above is the phone; this is the tablet-and-up
+   step, and 1024px lifts only the hero. There is deliberately no `max-width:640px`
+   block any more — it existed to walk back two rungs that the base ladder had
+   set too large for a phone, and patching two of five rungs is exactly how the
+   641–767px band ended up with a hierarchy nothing else on the page shared. */
 @media (min-width: 768px) {
   :where([data-public-surface], [data-flow-surface]) {
-    --text-2xl: 2.5rem;
-    --text-2xl--line-height: 2.875rem;
-    --text-3xl: 3rem;
-    --text-3xl--line-height: 3.375rem;
+    --text-2xl: 1.75rem;
+    --text-2xl--line-height: 2.125rem;
+    --text-3xl: 2.25rem;
+    --text-3xl--line-height: 2.5rem;
+    --text-4xl: 2.75rem;
+    --text-4xl--line-height: 3rem;
   }
 
   .website-hero-display {
-    font-size: 3.5rem;
-    line-height: 3.75rem;
+    font-size: 3rem;
+    line-height: 3.25rem;
+    letter-spacing: -0.04em;
   }
 
   .website-page-title {
-    font-size: 3rem;
-    line-height: 3.375rem;
+    font-size: 2.5rem;
+    line-height: 2.75rem;
+    letter-spacing: -0.035em;
   }
 
   .website-section-heading {
+    font-size: 2rem;
+    line-height: 2.375rem;
+    letter-spacing: -0.03em;
+  }
+
+  .website-feature-heading {
+    font-size: 1.5rem;
+    line-height: 1.875rem;
+  }
+
+  .website-small-heading {
+    font-size: 1.25rem;
+    line-height: 1.625rem;
+  }
+
+  .website-lead {
+    font-size: 1.1875rem;
+    line-height: 1.75rem;
+  }
+
+  .website-data-display {
     font-size: 2.5rem;
     line-height: 2.875rem;
   }
@@ -705,21 +749,7 @@
 
 @media (min-width: 1024px) {
   .website-hero-display {
-    font-size: 4rem;
-    line-height: 4.25rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .website-hero-display {
-    font-size: 2rem;
-    line-height: 2.375rem;
-    letter-spacing: -0.03em;
-  }
-
-  .website-page-title {
-    font-size: 1.75rem;
-    line-height: 2.125rem;
-    letter-spacing: -0.025em;
+    font-size: 3.5rem;
+    line-height: 3.75rem;
   }
 }
