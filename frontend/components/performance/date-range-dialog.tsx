@@ -4,8 +4,8 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
+import { DateField } from '@/components/ui/date-field';
 import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import type { PerformanceCompare, PerformanceRange } from '@/lib/api/performance';
@@ -76,26 +76,26 @@ function DateRangeFields({
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Start date" hint="YYYY-MM-DD">
           {(props) => (
-            <Input
+            <DateField
               {...props}
-              type="date"
+              ariaLabel="Start date"
               value={from}
               min={min}
               max={max}
-              onChange={(event) => onFrom(event.target.value)}
+              onChange={onFrom}
             />
           )}
         </Field>
         <span className="text-muted pb-2">–</span>
         <Field label="End date" hint="YYYY-MM-DD">
           {(props) => (
-            <Input
+            <DateField
               {...props}
-              type="date"
+              ariaLabel="End date"
               value={to}
               min={min}
               max={max}
-              onChange={(event) => onTo(event.target.value)}
+              onChange={onTo}
             />
           )}
         </Field>

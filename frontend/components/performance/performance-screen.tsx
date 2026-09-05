@@ -1,14 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  CalendarDays,
-  Check,
-  ChevronDown,
-  LoaderCircle,
-  RefreshCw,
-  RotateCcw,
-} from 'lucide-react';
+import { ChevronDown, LoaderCircle, RefreshCw, RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { DateRangeDialog, type RangeSelection } from './date-range-dialog';
@@ -18,7 +11,7 @@ import { PerformanceChart, type ChartSeries } from './performance-chart';
 import { usePerformanceSync } from './use-performance-sync';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Pressable } from '@/components/ui/pressable';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
@@ -32,7 +25,6 @@ import {
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { useProjectContext } from '@/lib/project/project-context';
-import { cn } from '@/lib/utils';
 import {
   COMPARE_OPTIONS,
   DIMENSION_TABS,
@@ -368,55 +360,29 @@ function PerformanceToolbar({
 }>) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {/* Quick-selects first, as one segmented row: the ranges people pick
-          most are one click, and Custom opens the dialog for the rest. */}
-      <fieldset className="border-border-subtle inline-flex overflow-hidden rounded-[var(--radius-control)] border">
-        <legend className="sr-only">Date range</legend>
-        {RANGE_OPTIONS.map((option) => {
-          const active = selection.range === option.value;
-          return (
-            <Pressable
-              key={option.value}
-              type="button"
-              aria-pressed={active}
-              data-testid={`range-quick-${option.value}`}
-              onClick={() =>
-                option.value === 'custom'
-                  ? onOpenRange()
-                  : onSelectRange({ ...INITIAL_SELECTION, range: option.value })
-              }
-              className={cn(
-                'border-border-subtle inline-flex h-8 items-center gap-1.5 border-r px-3 text-sm last:border-r-0',
-                active ? 'bg-active text-accent-text font-medium' : 'hover:bg-active',
-              )}
-            >
-              {active && option.value !== 'custom' ? (
-                <Check className="size-3.5" aria-hidden />
-              ) : null}
-              {option.value === 'custom' ? (
-                <CalendarDays className="size-3.5" aria-hidden />
-              ) : null}
-              {option.label}
-            </Pressable>
-          );
-        })}
-      </fieldset>
+      {/* Quick-selects first: the ranges people pick most are one click, and
+          Custom opens the dialog for the rest. */}
+      <SegmentedControl
+        value={selection.range}
+        onChange={(range) =>
+          range === 'custom' ? onOpenRange() : onSelectRange({ ...INITIAL_SELECTION, range })
+        }
+        options={RANGE_OPTIONS}
+        ariaLabel="Date range"
+      />
       {/* "More" until a comparison is chosen, then it BECOMES the compare
           control and names the active comparison. One button, two states —
           it never sits next to a separate Compare doing the same job. */}
-      <Pressable
-        type="button"
+      <Button
+        variant={comparing ? 'secondary' : 'ghost'}
+        size="sm"
         aria-pressed={comparing}
         data-testid="compare-button"
         onClick={onOpenCompare}
-        className={cn(
-          'border-border-subtle inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-control)] border px-3 text-sm',
-          comparing ? 'bg-active text-accent-text font-medium' : 'hover:bg-active',
-        )}
       >
         {comparing ? 'Compare' : 'More'}
-        <ChevronDown className="size-3.5" aria-hidden />
-      </Pressable>
+        <ChevronDown className="size-4" aria-hidden />
+      </Button>
       <span className="text-muted text-sm" data-testid="performance-window">
         {selectedLabel}
       </span>
