@@ -154,7 +154,7 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
         assert f'"{secret_id}"' in locals_tf
         assert f"add_value_once {secret_id}" in workflow
         # Read behind ``|| true``: a missing secret must not stop the deploy.
-        assert f"secret {secret_id} 2>/dev/null || true)\"" in deploy
+        assert f'secret {secret_id} 2>/dev/null || true)"' in deploy
         assert f"write_env {runtime_var}" in deploy
     assert 'has_version "$required" ||' in workflow
     assert 'has_version "$optional" ||' in workflow
