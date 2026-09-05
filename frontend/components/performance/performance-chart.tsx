@@ -141,7 +141,14 @@ export function PerformanceChart({
     PADDING.left + (columnCount > 1 ? (index / (columnCount - 1)) * innerWidth : innerWidth / 2);
   const bandWidth = columnCount > 1 ? innerWidth / (columnCount - 1) : innerWidth;
 
-  const basePoints = series.find((s) => s.selected.length > 0)?.selected ?? [];
+  // Axis dates come from the LONGEST selected series, never the first
+  // non-empty one: columnCount spans comparisons too, so a shorter first
+  // series left the tail of the axis with no date for its index — and the
+  // fallback printed a bare position number beside real dates.
+  const axisPoints = series.reduce<readonly PerformanceChartPoint[]>(
+    (longest, entry) => (entry.selected.length > longest.length ? entry.selected : longest),
+    [],
+  );
   const tickIndices = computeTickIndices(columnCount, 6);
 
   return (
@@ -248,8 +255,12 @@ export function PerformanceChart({
       {/* Horizontal axis date labels */}
       <div className="text-muted relative h-5 w-full select-none" aria-hidden>
         {tickIndices.map((idx, i) => {
-          const dateStr = basePoints[idx]?.date;
-          const label = dateStr ? formatShortDate(dateStr) : `${idx + 1}`;
+          const dateStr = axisPoints[idx]?.date;
+          // No date for this bucket means the selected window does not reach
+          // it (a comparison runs longer). An unlabelled tick is honest; a
+          // position number pretending to be a date is not.
+          if (!dateStr) return null;
+          const label = formatShortDate(dateStr);
           const pct = (pointX(idx) / VIEW_WIDTH) * 100;
           const alignClass =
             i === 0

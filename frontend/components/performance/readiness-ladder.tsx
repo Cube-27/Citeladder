@@ -1,10 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Check, Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { panelClasses } from '@/components/ui/panel';
+import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import type { IntegrationProvider } from '@/lib/api/integrations';
 import { performanceApi, type ProjectReadinessStage } from '@/lib/api/performance';
@@ -69,7 +70,7 @@ function StepMark({ state }: Readonly<{ state: 'done' | 'active' | 'pending' }>)
   if (state === 'active') {
     return (
       <span className="border-accent text-accent-text inline-flex size-5 shrink-0 items-center justify-center rounded-full border">
-        <Loader2 className="size-3 animate-spin" aria-hidden />
+        <Spinner size="sm" />
       </span>
     );
   }

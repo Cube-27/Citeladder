@@ -258,7 +258,9 @@ export function DimensionTable({
         </TableHeader>
         <TableBody>
           {query.isLoading
-            ? Array.from({ length: 10 }, (_, index) => (
+            ? // As many rows as a full page holds, so the table does not
+              // resize when the real ones arrive.
+              Array.from({ length: table.pageSize }, (_, index) => (
                 <TableRow key={`skeleton-${index}`} className="h-11">
                   {Array.from({ length: columnCount }, (_, cell) => (
                     <TableCell

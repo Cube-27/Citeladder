@@ -2,17 +2,27 @@
 
 import { Check, HelpCircle } from 'lucide-react';
 
+import { MetricValue } from '@/components/ui/metric-value';
 import { Pressable } from '@/components/ui/pressable';
 import { panelClasses } from '@/components/ui/panel';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import type { PerformanceWindow } from '@/lib/api/performance';
+import { availabilityLabel } from '@/lib/format';
 import {
   METRIC_CARDS,
   formatMetric,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
 import { cn } from '@/lib/utils';
+
+/** The one missing-figure label on this surface. */
+const NOT_MEASURED = availabilityLabel('not_measured');
+
+/** A formatted figure, or null when the window measured nothing for it. */
+function measured(key: PerformanceMetricKey, value: number | null | undefined): string | null {
+  return value === null || value === undefined ? null : formatMetric(key, value);
+}
 
 /**
  * The four selectable GSC metric cards.
@@ -78,12 +88,14 @@ function MetricCardComparison({
   comparisonValue,
   isActive,
   compareLabel,
+  loading,
 }: Readonly<{
   metricKey: PerformanceMetricKey;
   comparison: PerformanceWindow;
   comparisonValue: number | null | undefined;
   isActive: boolean;
   compareLabel: string;
+  loading: boolean;
 }>) {
   const statusLabel =
     comparison.evidence_state === 'not_run' ? `${compareLabel} — not imported` : compareLabel;
@@ -92,9 +104,13 @@ function MetricCardComparison({
       <span className={textRole('meta', isActive ? 'text-inverse/80' : undefined)}>
         {statusLabel}
       </span>
-      <span className={textRole('metricSm', isActive ? 'text-inverse' : undefined)}>
-        {formatMetric(metricKey, comparisonValue ?? null)}
-      </span>
+      <MetricValue
+        size="metricSm"
+        value={measured(metricKey, comparisonValue)}
+        label={NOT_MEASURED}
+        loading={loading}
+        tone={isActive ? 'text-inverse' : undefined}
+      />
     </div>
   );
 }
@@ -109,6 +125,7 @@ function MetricCard({
   selectedLabel,
   compareLabel,
   color,
+  loading,
   onToggle,
 }: Readonly<{
   card: (typeof METRIC_CARDS)[number];
@@ -120,6 +137,7 @@ function MetricCard({
   selectedLabel: string;
   compareLabel: string;
   color: string;
+  loading: boolean;
   onToggle: (key: PerformanceMetricKey) => void;
 }>) {
   return (
@@ -172,9 +190,12 @@ function MetricCard({
             {selectedLabel}
           </span>
         ) : null}
-        <div className={textRole('metric', isActive ? 'text-inverse' : undefined)}>
-          {formatMetric(card.key, value)}
-        </div>
+        <MetricValue
+          value={measured(card.key, value)}
+          label={NOT_MEASURED}
+          loading={loading}
+          tone={isActive ? 'text-inverse' : undefined}
+        />
       </div>
 
       {comparison ? (
@@ -184,6 +205,7 @@ function MetricCard({
           comparisonValue={comparisonValue}
           isActive={isActive}
           compareLabel={compareLabel}
+          loading={loading}
         />
       ) : null}
 
@@ -212,6 +234,7 @@ export function MetricCards({
   active,
   onToggle,
   colors,
+  loading = false,
   className,
 }: Readonly<{
   selected: PerformanceWindow;
@@ -221,6 +244,8 @@ export function MetricCards({
   active: ReadonlySet<PerformanceMetricKey>;
   onToggle: (key: PerformanceMetricKey) => void;
   colors: Record<PerformanceMetricKey, string>;
+  /** A read is in flight. The cards spin rather than claiming a value is absent. */
+  loading?: boolean;
   className?: string;
 }>) {
   return (
@@ -246,6 +271,7 @@ export function MetricCards({
           selectedLabel={selectedLabel}
           compareLabel={compareLabel}
           color={colors[card.key]}
+          loading={loading}
           onToggle={onToggle}
         />
       ))}
@@ -266,10 +292,12 @@ export function Ga4SummaryRow({
   selected,
   comparison,
   compareLabel,
+  loading = false,
 }: Readonly<{
   selected: PerformanceWindow;
   comparison: PerformanceWindow | null;
   compareLabel: string;
+  loading?: boolean;
 }>) {
   const entries = [
     { key: 'sessions' as const, label: 'Sessions' },
@@ -286,13 +314,18 @@ export function Ga4SummaryRow({
         return (
           <div key={entry.key} className="flex items-baseline gap-2">
             <dt className="text-muted text-xs">{entry.label}</dt>
-            <dd className="mono text-sm">
-              {value === null ? 'Not measured' : value.toLocaleString()}
+            <dd>
+              <MetricValue
+                size="metricSm"
+                value={value === null ? null : value.toLocaleString()}
+                label={NOT_MEASURED}
+                loading={loading}
+              />
             </dd>
             {comparison ? (
               <dd className="text-muted mono text-xs">
                 {comparisonValue === null || comparisonValue === undefined
-                  ? `${compareLabel}: not measured`
+                  ? `${compareLabel}: ${NOT_MEASURED.toLowerCase()}`
                   : `${compareLabel}: ${comparisonValue.toLocaleString()}`}
               </dd>
             ) : null}

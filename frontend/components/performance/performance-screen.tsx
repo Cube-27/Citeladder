@@ -66,6 +66,21 @@ function dashboardParams(selection: RangeSelection, granularity: PerformanceGran
   };
 }
 
+/** The drawn lines: one per selected metric, each with its comparison peer. */
+function chartSeries(
+  selected: PerformanceDashboard['selected'],
+  comparison: PerformanceDashboard['comparison'],
+  active: ReadonlySet<PerformanceMetricKey>,
+): ChartSeries[] {
+  return METRIC_CARDS.filter((card) => active.has(card.key)).map((card) => ({
+    key: card.key,
+    label: card.label,
+    color: METRIC_COLORS[card.key],
+    selected: toChartPoints(selected.series[card.key]),
+    comparison: comparison ? toChartPoints(comparison.series[card.key]) : null,
+  }));
+}
+
 function compareLabel(selection: RangeSelection): string {
   return (
     COMPARE_OPTIONS.find((option) => option.value === selection.compare)?.label ?? 'Comparison'
@@ -107,9 +122,15 @@ export function PerformanceScreen() {
   const sync = usePerformanceSync(projectId);
   const projection = useRangeProjection(projectId, dashboard.data);
 
-  if (isLoading || (projectId && dashboard.isLoading)) return <PerformanceSkeleton />;
+  // No project yet is either "still resolving which one" or "there is none";
+  // only the second is something to tell the reader about.
   if (!projectId)
-    return <Alert tone="info">Select or create a project to see its search performance.</Alert>;
+    return isLoading ? (
+      <PerformanceSkeleton />
+    ) : (
+      <Alert tone="info">Select or create a project to see its search performance.</Alert>
+    );
+  if (dashboard.isLoading) return <PerformanceSkeleton />;
   if (dashboard.isError)
     return (
       <Alert tone="danger">
@@ -118,19 +139,15 @@ export function PerformanceScreen() {
     );
 
   const data = dashboard.data as PerformanceDashboard;
+  // A read in flight, or a window whose projection is still being built. The
+  // value slots spin instead of claiming a figure is absent — and they keep
+  // their boxes, so nothing below them moves.
+  const refreshing = dashboard.isFetching || projection.projecting;
   const selectedWindow = data.selected;
   const comparisonWindow = data.comparison;
   const selectedLabel = describeWindow(selectedWindow);
   const comparisonLabel = compareLabel(selection);
-  const series: ChartSeries[] = METRIC_CARDS.filter((card) => activeMetrics.has(card.key)).map(
-    (card) => ({
-      key: card.key,
-      label: card.label,
-      color: METRIC_COLORS[card.key],
-      selected: toChartPoints(selectedWindow.series[card.key]),
-      comparison: comparisonWindow ? toChartPoints(comparisonWindow.series[card.key]) : null,
-    }),
-  );
+  const series = chartSeries(selectedWindow, comparisonWindow, activeMetrics);
 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
@@ -176,6 +193,7 @@ export function PerformanceScreen() {
             active={activeMetrics}
             onToggle={toggleMetric}
             colors={METRIC_COLORS}
+            loading={refreshing}
             className="flex-1"
           />
           <div className="border-border-subtle flex shrink-0 items-center justify-end border-t px-3 py-2 lg:border-t-0 lg:border-l">
@@ -190,6 +208,7 @@ export function PerformanceScreen() {
         selected={selectedWindow}
         comparison={comparisonWindow}
         compareLabel={comparisonLabel}
+        loading={refreshing}
       />
 
       <PerformanceBreakdowns
@@ -291,6 +310,15 @@ function missingWindow(data: PerformanceDashboard | undefined) {
   return null;
 }
 
+/**
+ * The first paint, in the SAME boxes the loaded screen occupies.
+ *
+ * A skeleton whose shape differs from the content it stands in for does not
+ * avoid a layout shift, it schedules one: the page re-flows the moment real
+ * data lands. Every box below mirrors a real one — the card strip, the plot,
+ * the GA4 row, the tabbed table — so the swap changes pixels inside the boxes
+ * and never the boxes themselves.
+ */
 function PerformanceSkeleton() {
   return (
     <div
@@ -298,14 +326,27 @@ function PerformanceSkeleton() {
       aria-busy="true"
       data-testid="performance-skeleton"
     >
-      <Skeleton className="h-9 w-80" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="h-28" />
-        ))}
+      <div className="flex min-h-9 items-center">
+        <Skeleton className="h-9 w-80" />
       </div>
-      <Skeleton className="h-60" />
-      <Skeleton className="h-80" />
+      <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-panel)] border">
+        <div className="border-border-subtle grid grid-cols-1 border-b sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className="grid min-h-[96px] content-start gap-2 p-3.5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-7 w-20" />
+            </div>
+          ))}
+        </div>
+        <div className="p-3">
+          <Skeleton className="h-[220px]" />
+        </div>
+      </div>
+      <Skeleton className="h-[42px]" />
+      <div className="grid min-h-[560px] gap-3">
+        <Skeleton className="h-9" />
+        <Skeleton className="min-h-[520px] flex-1" />
+      </div>
     </div>
   );
 }
