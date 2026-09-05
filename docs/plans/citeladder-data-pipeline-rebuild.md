@@ -1,8 +1,15 @@
 # Connected-data pipeline rebuild — GSC, GA4, and Bing
 
-**Status:** Slices 1-3 shipped 2026-09-04 (PR 1). Slices 4-6 remain, and
-are planned to land together as PR 2 alongside the Bing connection defect.
-See "What PR 1 shipped" at the end of this document.
+**Status:** Slices 1-3 shipped 2026-09-04 across PRs #22 (Bing OAuth) and #23
+(the pipeline work) — together "PR 1" below. PR #24 followed with the AI
+Referrals preset family, chart granularity, and the Performance UI
+remediation; it is NOT a slice from this plan, but the completion of defect 4
+plus defects reported against the deployed build.
+
+**Slices 4, 5 and 6 are unstarted and currently have no PR assigned.** That
+includes defect 5's display half (the Bing panel, 4.4) and defect 7 (MCP,
+all of Slice 5). Read the three "what shipped" sections at the end of this
+document before starting any of them.
 
 **Superseded in part by `gsc-performance-alignment.md`**, which shipped first.
 Read that document's "What shipped" section before starting any slice here:
@@ -41,14 +48,15 @@ Each was confirmed by reading the shipped code, not inferred.
 | 1 | ~~Reads require an **exact** window match~~ — **fixed** by the Performance alignment: presets resolve by window LENGTH (`resolve_preset_snapshot`), and an exact window is used only for a custom or comparison range | [query_support.py](../../backend/app/domain/traffic/query_support.py) |
 | 2 | ~~Snapshots are built **only for sync windows**~~ — **fixed**: `traffic_snapshot_refresh` also derives the preset family anchored at the latest complete GSC date, and `performance_range_projection` materializes any other requested window | [service.py](../../backend/app/domain/traffic/service.py) |
 | 3 | ~~Traffic offers 7d/28d/90d that can never match~~ — **fixed**: the surface is `/performance` with Day/Week/Month/Custom ranges resolved server-side | [performance.ts](../../frontend/lib/performance/performance.ts) |
-| 4 | ~~AI Referrals is **100% broken for every bounded range**~~ — **fixed**: a preset now sends its `range` TOKEN and the server resolves the newest persisted snapshot of that LENGTH (`ANALYTICS_PRESET_RANGE_DAYS`); no date is derived from the browser clock | [options.ts](../../frontend/lib/ai-referrals/options.ts), [analytics/service.py](../../backend/app/domain/analytics/service.py) |
+| 4 | ~~AI Referrals is **100% broken for every bounded range**~~ — **fixed in two halves.** PR 1 fixed the READ: a preset sends its `range` TOKEN and the server resolves the newest snapshot of that LENGTH (`ANALYTICS_PRESET_RANGE_DAYS`), with no date derived from the browser clock. That alone still resolved nothing, because no snapshot of a preset length was ever WRITTEN; PR #24 added the family (`ANALYTICS_SNAPSHOT_WINDOW_DAYS`) that gives those reads something to match | [options.ts](../../frontend/lib/ai-referrals/options.ts), [analytics/service.py](../../backend/app/domain/analytics/service.py), [ai_referrals_snapshot.py](../../backend/app/domain/analytics/ai_referrals_snapshot.py) |
 | 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection. Its *collection* is now unblocked (it joined `TRAFFIC_SYNC_PROVIDERS`, so "Sync now" no longer skips it); the DISPLAY half is still open and needs its own panel (Slice 4.4) rather than a column on a GSC table | [traffic.py](../../backend/app/core/config/traffic.py) |
 | 6 | ~~The projection **materializes every metric row in the window in memory**~~ — **fixed**: `TrafficProjectionBuilder` folds batch by batch and the executor streams into it, so memory bounds on distinct keys | [projection.py](../../backend/app/domain/traffic/projection.py), [streaming.py](../../backend/app/domain/traffic/streaming.py) |
 | 7 | MCP exposes Site Health, Demand, Opportunities, and Visibility — **no traffic, search, referral, or connection-status tool** | [server.py:110-230](../../backend/app/domain/mcp/server.py#L110-L230) |
 
-Defects 1–4 and 6 are now closed. Defect 5's collection half is closed too;
-its display half (a Bing panel) is the remaining piece, in Slice 4.4. Defect 7
-(MCP) is untouched and is the whole of Slice 5.
+Defects 1-4 and 6 are now closed (4 only as of PR #24 — see its row above).
+Defect 5's collection half is closed; its display half (a Bing panel) is the
+remaining piece, in Slice 4.4. Defect 7 (MCP) is untouched and is the whole of
+Slice 5. **Slices 4-6 have no PR assigned.**
 
 **Already shipped (2026-09-04)**, on the branch carrying the Google sign-in work:
 
@@ -163,13 +171,22 @@ it actually rendered.
    client invented. The broader `not_run` / `observed_zero` / `available`
    rendering across the other screens is still open — it moves to Slice 4,
    whose staged post-connect ladder owns the same distinction.
+5. **Chart bucket granularity.** *Not in the original plan; added by PR #24.*
+   Every refresh already wrote each window at day, week AND month granularity,
+   but `query_support.py` hardcoded day, so two thirds of the rows written
+   were unreadable. `GET /performance` now takes a `granularity` parameter and
+   echoes what it resolved. This is a THIRD axis alongside range and
+   comparison, and the vocabulary collides: `RANGE_OPTIONS`
+   (day/week/month/custom) are window LENGTHS, granularity is the BUCKET size.
+   Anything built on this surface later must keep them apart.
 
 **Verification.** Component tests assert a preset resolves a snapshot whose
 window ends well before today (the exact case that was broken), that the
 window the OLD client would have sent still matches nothing, that a preset
 never resolves a DIFFERENT length's snapshot, and that an unknown range is a
-422. The Playwright connect -> sync -> preset pass is left for PR 2, once the
-Bing connection defect is fixed and a full live connect is possible.
+422. The Playwright connect -> sync -> preset pass is STILL NOT WRITTEN. It
+was deferred from PR 1 pending the Bing OAuth fix (shipped in #22) and was not
+picked up by PR #24 either, so it remains open and unassigned.
 
 ---
 
@@ -275,10 +292,17 @@ Slices 1, 2 and 5 are independent of each other. Slice 3 needs 2; Slice 4 needs
 5 MCP      ────┘
 ```
 
-Delivered as TWO PRs rather than six, by decision: PR 1 is Slices 1-3 (the
-"data lands and reads correctly" unit), PR 2 is Slices 4-6 plus the Bing
-connection defect. Each PR has `check.ps1` and `test.ps1` green before the
-next begins.
+Planned as TWO PRs rather than six. What actually shipped was three, and the
+second was not a slice at all:
+
+- **PR #22 + #23 ("PR 1")** — Slices 1-3, the "data lands and reads correctly"
+  unit. Split in two because the Bing OAuth fix was independent and blocking.
+- **PR #24** — defect 4's remaining half (the AI Referrals snapshot family),
+  chart-bucket granularity, and the Performance UI defects reported against
+  the deployed build. Unplanned work that displaced Slices 4-6.
+- **Slices 4, 5 and 6 remain unstarted**, in that dependency order.
+
+Each PR has `check.ps1` and `test.ps1` green before the next begins.
 
 ## Rules that constrain every slice
 
@@ -366,10 +390,11 @@ than being half-built in two places.
 **Not verified here.** No live provider connect was run from this session, and
 the fresh 365-day import remains unverified end to end. The database reset and
 the Google/Bing connect were run by the user, who is verifying the result. The
-Playwright connect -> sync -> preset pass is deferred to PR 2, since the Bing
-connection defect blocks a clean full-provider connect today.
+Playwright connect -> sync -> preset pass was deferred pending the Bing
+connection defect, which #22 has since fixed — the pass itself is still
+unwritten and unassigned.
 
-## Review findings fixed before merge (PR 1 / PR 22)
+## Review findings fixed before merging PR 1 (#22 and #23)
 
 **The keyset cursor was invalid SQL.** Slice 2's resume query built
 `tuple_()` over the scan's `.asc()` ordering expressions, rendering
@@ -402,21 +427,24 @@ any `www.bing.com` path ending in `/token`, so a wrong token path still
 passed — the same permissive-stub shape that let the Entra URLs ship. Both
 now require `/webmasters/oauth/token` exactly.
 
-## Carried into PR 2
+## Handed from PR 1 to PR #24 — all closed there
 
-**AI Referrals presets still resolve nothing.** Slice 3 fixed the clock-skew
-half of defect 4, but the snapshot side is still broken: `AiReferralsSnapshot`
-rows are only ever persisted at sync-run window lengths — 28 days for a
-routine sync, chunked for backfill — so no row is 30, 90 or 365 days long and
-every preset misses. Performance does not have this problem because its
-refresh derives a whole snapshot family at each preset length
-(`PERFORMANCE_SNAPSHOT_WINDOW_DAYS`, via `performance_family_windows`).
-The fix is to give `ai_referrals_snapshot_refresh` the same treatment: scan
-the widest span once and fold the nested preset windows. That is an executor
-rewrite, not a review fix, so it lands in PR 2.
+Recorded when PR 1 merged; every item below shipped in PR #24. Kept because
+the reasoning explains why the work existed, not to track open defects.
+
+**AI Referrals presets still resolved nothing.** Slice 3 fixed the clock-skew
+half of defect 4, but the snapshot side stayed broken: `AiReferralsSnapshot`
+rows were only ever persisted at sync-run window lengths — 28 days for a
+routine sync, chunked for backfill — so no row was 30, 90 or 365 days long and
+every preset missed. Performance did not have this problem because its refresh
+derives a whole snapshot family at each preset length
+(`PERFORMANCE_SNAPSHOT_WINDOW_DAYS`, via `performance_family_windows`). The fix
+was to give `ai_referrals_snapshot_refresh` the same treatment: scan the widest
+span once and fold the nested preset windows — an executor change rather than a
+review fix, which is why it was deferred rather than patched at merge time.
 
 **Defects reported from the deployed app.** Raised by the user against the
-running build; all are PR 2 scope:
+running build:
 
 - Google sign-in does not work in the deployed app.
 - GA4 data does not refresh promptly (updates only after several refreshes).
@@ -439,7 +467,7 @@ running build; all are PR 2 scope:
 - A "reset filters" control belongs in that same top row above the cards.
 
 
-## PR 2 — what shipped, and what still needs live verification
+## PR #24 — what shipped, where it diverged, and what needs live verification
 
 **The AI Referrals preset family now exists.** `ai_referrals_snapshot_refresh`
 derives 30/90/365-day snapshots anchored on the latest referral evidence date,
@@ -478,9 +506,49 @@ different per browser. Both are built from existing tokens with no new
 dependency, and dates stay ISO strings end to end (a local `Date` round trip
 shifts the day across UTC, the classic "returns yesterday" bug).
 
-**Still not live-verified.** The same boundary as PR 1: no real consent, no
-real 365-day import, and no deployed Google sign-in was exercised from here.
-The preset family, the granularity parameter and the settling poll are
-covered by component tests against a real Postgres, but the deployment items
-(the compose flag, `runtime.env` credentials) can only be confirmed on the
-deployed host.
+### Where PR #24 diverged from what was asked
+
+**The date picker is NOT HeroUI.** The request named HeroUI as the reference.
+This repo runs a mature Radix + Tailwind v4 + CVA system with its own
+`components/ui/` primitives, so adding HeroUI would have meant a second
+component system with its own provider, theming and Tailwind plugin fighting
+the existing tokens. Decision taken with the user: build `Calendar` and
+`DateField` as first-class primitives from the existing tokens, with HeroUI's
+layout as the visual reference and no new dependency. If the actual HeroUI
+components are wanted later, that is a deliberate dependency decision, not a
+styling tweak.
+
+**The granularity dropdown is not in the row that was asked for.** The request
+put it in the same row as the four coloured cards. It sits at the chart's
+top-right instead, because that row already holds the range quick-selects
+labelled Day/Week/Month — placing a second day/week/month control beside them
+would read as one control with two copies. The screenshots supplied later
+confirmed GSC does the same.
+
+**Tab labels stayed 14px.** The written list said 12px for tab labels; the
+user corrected this mid-implementation to mean the DATA INSIDE the tabs. Tab
+labels are 14px, table content is 12px.
+
+**"Reset filters" is comparison-scoped.** Corrected mid-implementation: it
+appears only while a comparison is active, and the neighbouring button reads
+"More" until then and "Compare" after, rather than Reset being always visible.
+
+### Still not live-verified
+
+The same boundary as PR 1: no real consent, no real 365-day import, and no
+deployed Google sign-in was exercised from here. The preset family, the
+granularity parameter and the settling poll are covered by component tests
+against a real Postgres, but the deployment items (the compose flag,
+`runtime.env` credentials) can only be confirmed on the deployed host.
+
+### Known gap left open
+
+**The AI Referrals family is derived, but its presets still match by LENGTH
+rather than by a preset marker.** `AiReferralsSnapshot` has no
+`preset_window_days` column, so a custom 30-day window that was never written
+for the "Last 30 days" preset would still resolve it. The family now makes
+sure a preset-length row EXISTS; it does not make the match unambiguous.
+Performance avoids this because its refresh writes the marker column. Closing
+it needs a schema change, and this repo folds every migration into
+`0001_initial.py` with a database reset — deliberately out of scope for a
+defect-fix PR, and still open.
