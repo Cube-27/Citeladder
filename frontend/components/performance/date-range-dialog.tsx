@@ -4,8 +4,8 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
+import { DateField } from '@/components/ui/date-field';
 import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import type { PerformanceCompare, PerformanceRange } from '@/lib/api/performance';
@@ -33,22 +33,63 @@ export type RangeSelection = {
   compareTo: string;
 };
 
+/**
+ * A real Gregorian day in ISO form.
+ *
+ * The shape test alone accepts "2026-02-31", which `Date.UTC` silently rolls
+ * forward to March 3 — Apply would then request a window the user never
+ * chose. The round trip is what rejects it.
+ */
+/**
+ * The landing selection: no preset, no comparison — the server then serves
+ * the newest, widest snapshot it holds. Lives with `RangeSelection` because
+ * it is that type's empty value, and both the screen and its chrome need it.
+ */
+export const INITIAL_SELECTION: RangeSelection = {
+  range: 'custom',
+  from: '',
+  to: '',
+  compare: 'none',
+  compareFrom: '',
+  compareTo: '',
+};
+
 function isoDay(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
+  return (
+    !Number.isNaN(date.getTime()) &&
+    date.getUTCFullYear() === Number(year) &&
+    date.getUTCMonth() === Number(month) - 1 &&
+    date.getUTCDate() === Number(day)
+  );
+}
+
+/** Whether both ends are real days, ordered, and inside imported coverage. */
+function isUsableWindow(
+  from: string,
+  to: string,
+  coverage: { earliest: string | null; latest: string | null },
+): boolean {
+  if (!isoDay(from) || !isoDay(to) || to < from) return false;
+  // ISO days compare correctly as strings, so no parsing is needed here.
+  if (coverage.earliest && from < coverage.earliest) return false;
+  if (coverage.latest && to > coverage.latest) return false;
+  return true;
 }
 
 /** Whether a draft is internally consistent enough to request. */
-function isApplicable(draft: RangeSelection): boolean {
-  if (draft.range === 'custom') {
-    if (!isoDay(draft.from) || !isoDay(draft.to) || draft.to < draft.from) return false;
+function isApplicable(
+  draft: RangeSelection,
+  coverage: { earliest: string | null; latest: string | null },
+): boolean {
+  if (draft.range === 'custom' && !isUsableWindow(draft.from, draft.to, coverage)) {
+    return false;
   }
-  if (draft.compare === 'custom') {
-    if (
-      !isoDay(draft.compareFrom) ||
-      !isoDay(draft.compareTo) ||
-      draft.compareTo < draft.compareFrom
-    )
-      return false;
+  if (draft.compare === 'custom' && !isUsableWindow(draft.compareFrom, draft.compareTo, coverage)) {
+    return false;
   }
   return true;
 }
@@ -76,26 +117,26 @@ function DateRangeFields({
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Start date" hint="YYYY-MM-DD">
           {(props) => (
-            <Input
+            <DateField
               {...props}
-              type="date"
+              ariaLabel="Start date"
               value={from}
               min={min}
               max={max}
-              onChange={(event) => onFrom(event.target.value)}
+              onChange={onFrom}
             />
           )}
         </Field>
         <span className="text-muted pb-2">–</span>
         <Field label="End date" hint="YYYY-MM-DD">
           {(props) => (
-            <Input
+            <DateField
               {...props}
-              type="date"
+              ariaLabel="End date"
               value={to}
               min={min}
               max={max}
-              onChange={(event) => onTo(event.target.value)}
+              onChange={onTo}
             />
           )}
         </Field>
@@ -111,6 +152,7 @@ export function DateRangeDialog({
   onApply,
   coverage,
   yearOverYearAvailable,
+  initialTab = 'filter',
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -119,9 +161,11 @@ export function DateRangeDialog({
   /** Imported evidence extent, used to bound the pickers honestly. */
   coverage: { earliest: string | null; latest: string | null };
   yearOverYearAvailable: boolean;
+  /** Which tab the dialog opens on — Compare when opened from that button. */
+  initialTab?: 'filter' | 'compare';
 }>) {
   const [draft, setDraft] = useState(selection);
-  const [tab, setTab] = useState<'filter' | 'compare'>('filter');
+  const [tab, setTab] = useState<'filter' | 'compare'>(initialTab);
   // Re-seed on the CLOSED -> OPEN transition so a cancelled edit is truly
   // discarded. Tracked as state and adjusted during render (React's own
   // pattern for derived-from-props state) rather than in an effect, which
@@ -129,7 +173,12 @@ export function DateRangeDialog({
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setDraft(selection);
+    if (open) {
+      setDraft(selection);
+      // Opening from Compare lands on Compare; opening from a range lands on
+      // Filter. The tab a previous visit ended on is not a preference.
+      setTab(initialTab);
+    }
   }
 
   const patch = (next: Partial<RangeSelection>) => setDraft((current) => ({ ...current, ...next }));
@@ -160,7 +209,7 @@ export function DateRangeDialog({
             Cancel
           </Button>
           <Button
-            disabled={!isApplicable(draft)}
+            disabled={!isApplicable(draft, coverage)}
             onClick={() => {
               onApply(draft);
               onOpenChange(false);
@@ -191,17 +240,19 @@ export function DateRangeDialog({
               label: option.label,
             }))}
           />
-          {draft.range === 'custom' ? (
-            <DateRangeFields
-              legend="Custom date range"
-              from={draft.from}
-              to={draft.to}
-              min={coverage.earliest ?? undefined}
-              max={coverage.latest ?? undefined}
-              onFrom={(from) => patch({ from })}
-              onTo={(to) => patch({ to })}
-            />
-          ) : null}
+          {/* Always visible: the dates are the point of the Custom option, so
+              hiding them behind selecting the radio first costs a click for
+              no benefit. Typing a date IS choosing Custom, so the inputs
+              select the radio themselves. */}
+          <DateRangeFields
+            legend="Custom date range"
+            from={draft.from}
+            to={draft.to}
+            min={coverage.earliest ?? undefined}
+            max={coverage.latest ?? undefined}
+            onFrom={(from) => patch({ from, range: 'custom' })}
+            onTo={(to) => patch({ to, range: 'custom' })}
+          />
         </TabPanel>
         <TabPanel value="compare" className="grid gap-3">
           <RadioGroup
@@ -210,17 +261,15 @@ export function DateRangeDialog({
             onValueChange={(compare) => patch({ compare })}
             options={compareOptions}
           />
-          {draft.compare === 'custom' ? (
-            <DateRangeFields
-              legend="Custom comparison range"
-              from={draft.compareFrom}
-              to={draft.compareTo}
-              min={coverage.earliest ?? undefined}
-              max={coverage.latest ?? undefined}
-              onFrom={(compareFrom) => patch({ compareFrom })}
-              onTo={(compareTo) => patch({ compareTo })}
-            />
-          ) : null}
+          <DateRangeFields
+            legend="Custom comparison range"
+            from={draft.compareFrom}
+            to={draft.compareTo}
+            min={coverage.earliest ?? undefined}
+            max={coverage.latest ?? undefined}
+            onFrom={(compareFrom) => patch({ compareFrom, compare: 'custom' })}
+            onTo={(compareTo) => patch({ compareTo, compare: 'custom' })}
+          />
         </TabPanel>
       </Tabs>
     </Dialog>

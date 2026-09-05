@@ -29,17 +29,28 @@ const PANEL_PAD = {
   large: 'p-[var(--card-padding-large)]',
 } as const;
 
+/**
+ * Panels normally carry their own border and radius. `flush` is for a panel
+ * TILED inside another surface — a strip of cards filling a card — where the
+ * container already draws the outer edge and a per-tile radius would show as
+ * notches along the seams.
+ */
+const PANEL_EDGE = {
+  rounded: 'border-border-subtle rounded-[var(--radius-control)] border',
+  flush: '',
+} as const;
+
+export type PanelEdge = keyof typeof PANEL_EDGE;
 export type PanelTone = keyof typeof PANEL_TONE;
 export type PanelPad = keyof typeof PANEL_PAD;
 
 export function panelClasses(
-  { tone = 'panel', pad = 'default' }: { tone?: PanelTone; pad?: PanelPad } = {},
+  {
+    tone = 'panel',
+    pad = 'default',
+    edge = 'rounded',
+  }: { tone?: PanelTone; pad?: PanelPad; edge?: PanelEdge } = {},
   className?: string,
 ) {
-  return cn(
-    'border-border-subtle rounded-[var(--radius-control)] border',
-    PANEL_TONE[tone],
-    PANEL_PAD[pad],
-    className,
-  );
+  return cn(PANEL_EDGE[edge], PANEL_TONE[tone], PANEL_PAD[pad], className);
 }

@@ -558,6 +558,7 @@ def upgrade() -> None:
         sa.Column("window_start", sa.Date(), nullable=False),
         sa.Column("window_end", sa.Date(), nullable=False),
         sa.Column("granularity", sa.String(length=8), nullable=False),
+        sa.Column("preset_window_days", sa.Integer(), nullable=True),
         sa.Column("metrics", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column(
             "source_classification_ids",

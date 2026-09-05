@@ -1,23 +1,24 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, LoaderCircle, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { DateRangeDialog, type RangeSelection } from './date-range-dialog';
+import { DateRangeDialog, INITIAL_SELECTION, type RangeSelection } from './date-range-dialog';
+import { GranularitySelect, PerformanceNotices, PerformanceToolbar } from './performance-chrome';
 import { DimensionTable } from './dimension-table';
 import { Ga4SummaryRow, MetricCards } from './metric-cards';
 import { PerformanceChart, type ChartSeries } from './performance-chart';
 import { usePerformanceSync } from './use-performance-sync';
 import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Stack } from '@/components/ui/layout';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { integrationsApi } from '@/lib/api/integrations';
 import {
   performanceApi,
   type PerformanceDashboard,
   type PerformanceDimension,
+  type PerformanceGranularity,
 } from '@/lib/api/performance';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
@@ -25,7 +26,6 @@ import { useProjectContext } from '@/lib/project/project-context';
 import {
   COMPARE_OPTIONS,
   DIMENSION_TABS,
-  RANGE_OPTIONS,
   METRIC_CARDS,
   canCompareYearOverYear,
   describeWindow,
@@ -54,18 +54,10 @@ const METRIC_COLORS: Record<PerformanceMetricKey, string> = {
   position: 'var(--color-chart-4)',
 };
 
-const INITIAL_SELECTION: RangeSelection = {
-  range: 'custom',
-  from: '',
-  to: '',
-  compare: 'none',
-  compareFrom: '',
-  compareTo: '',
-};
-
-function dashboardParams(selection: RangeSelection) {
+function dashboardParams(selection: RangeSelection, granularity: PerformanceGranularity) {
   return {
     range: selection.range,
+    granularity,
     from: selection.range === 'custom' && selection.from ? selection.from : undefined,
     to: selection.range === 'custom' && selection.to ? selection.to : undefined,
     compare: selection.compare,
@@ -82,22 +74,32 @@ function compareLabel(selection: RangeSelection): string {
   );
 }
 
-function rangeLabel(selection: RangeSelection): string {
-  return RANGE_OPTIONS.find((option) => option.value === selection.range)?.label ?? selection.range;
-}
-
 export function PerformanceScreen() {
   const { activeProject, isLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
   const workspaceId = activeProject?.workspace_id ?? null;
   const [selection, setSelection] = useState<RangeSelection>(INITIAL_SELECTION);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTab, setDialogTab] = useState<'filter' | 'compare'>('filter');
   const [dimension, setDimension] = useState<PerformanceDimension>('query');
+  const [granularity, setGranularity] = useState<PerformanceGranularity>('day');
   const [activeMetrics, setActiveMetrics] = useState<ReadonlySet<PerformanceMetricKey>>(
     () => new Set<PerformanceMetricKey>(['clicks', 'impressions']),
   );
 
-  const params = dashboardParams(selection);
+  // Reset returns the surface to its landing state: the newest synced
+  // window, daily buckets, no comparison, the first tab, and the two default
+  // metrics. It is offered only while a comparison is active — that is the
+  // state it exists to clear.
+  const DEFAULT_METRICS: readonly PerformanceMetricKey[] = ['clicks', 'impressions'];
+  const resetFilters = () => {
+    setSelection(INITIAL_SELECTION);
+    setGranularity('day');
+    setDimension('query');
+    setActiveMetrics(new Set<PerformanceMetricKey>(DEFAULT_METRICS));
+  };
+
+  const params = dashboardParams(selection, granularity);
   const dashboard = useQuery({
     queryKey: queryKeys.performance.dashboard(projectId ?? '', params),
     queryFn: ({ signal }) => performanceApi.getDashboard(projectId ?? '', params, { signal }),
@@ -160,7 +162,17 @@ export function PerformanceScreen() {
         latestDate={data.coverage.latest_date}
         hasConnections={Boolean(connections.data?.length)}
         sync={sync}
-        onOpenRange={() => setDialogOpen(true)}
+        onOpenRange={() => {
+          setDialogTab('filter');
+          setDialogOpen(true);
+        }}
+        onOpenCompare={() => {
+          setDialogTab('compare');
+          setDialogOpen(true);
+        }}
+        onSelectRange={setSelection}
+        comparing={selection.compare !== 'none'}
+        onReset={resetFilters}
       />
 
       <PerformanceNotices
@@ -170,17 +182,26 @@ export function PerformanceScreen() {
         comparisonMissing={comparisonWindow !== null && comparisonWindow.snapshot_id === null}
       />
 
-      <MetricCards
-        selected={selectedWindow}
-        comparison={comparisonWindow}
-        selectedLabel={selectedLabel}
-        compareLabel={comparisonLabel}
-        active={activeMetrics}
-        onToggle={toggleMetric}
-        colors={METRIC_COLORS}
-      />
-      <div className="border-border-subtle bg-panel rounded-[var(--radius-panel)] border p-3">
-        <PerformanceChart series={series} />
+      {/* One card holds the strip and the plot it drives: selecting a card
+          changes the lines directly beneath it, so a gap between them would
+          split a control from its own result. The strip sits flush at the
+          top edge; the granularity control floats over the plot's top-right. */}
+      <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-panel)] border">
+        <MetricCards
+          selected={selectedWindow}
+          comparison={comparisonWindow}
+          compareLabel={comparisonLabel}
+          selectedLabel={selectedLabel}
+          active={activeMetrics}
+          onToggle={toggleMetric}
+          colors={METRIC_COLORS}
+        />
+        <Stack gap="compact" className="p-3">
+          <div className="flex justify-end">
+            <GranularitySelect value={granularity} onChange={setGranularity} />
+          </div>
+          <PerformanceChart series={series} />
+        </Stack>
       </div>
       <Ga4SummaryRow
         selected={selectedWindow}
@@ -194,6 +215,9 @@ export function PerformanceScreen() {
         items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
         ariaLabel="Performance breakdowns"
         rootClassName="grid gap-3"
+        // The tab row heads the table card, so it spans the full width
+        // rather than hugging six labels and leaving dead space to the right.
+        fill
       >
         {DIMENSION_TABS.map((tab) => (
           <TabPanel key={tab.value} value={tab.value} className="focus-ring">
@@ -215,6 +239,7 @@ export function PerformanceScreen() {
       <DateRangeDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        initialTab={dialogTab}
         selection={selection}
         onApply={setSelection}
         coverage={{
@@ -293,107 +318,6 @@ function missingWindow(data: PerformanceDashboard | undefined) {
     }
   }
   return null;
-}
-
-/** The dashboard's control bar: resolved range, imported coverage, and sync. */
-function PerformanceToolbar({
-  selection,
-  selectedLabel,
-  latestDate,
-  hasConnections,
-  sync,
-  onOpenRange,
-}: Readonly<{
-  selection: RangeSelection;
-  selectedLabel: string;
-  latestDate: string | null;
-  hasConnections: boolean;
-  sync: ReturnType<typeof usePerformanceSync>;
-  onOpenRange: () => void;
-}>) {
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Button variant="secondary" size="sm" onClick={onOpenRange}>
-        <CalendarDays className="size-4" aria-hidden />
-        {rangeLabel(selection)}
-        {selection.compare === 'none' ? null : ` · ${compareLabel(selection)}`}
-      </Button>
-      <span className="text-muted text-sm" data-testid="performance-window">
-        {selectedLabel}
-      </span>
-      <div className="ml-auto flex items-center gap-3">
-        <span className="text-muted text-xs">
-          {latestDate ? `Data through ${latestDate}` : 'No imported history'}
-        </span>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => sync.mutation.mutate()}
-          disabled={!hasConnections || sync.syncing || sync.mutation.isPending}
-          data-testid="sync-now-button"
-        >
-          {sync.syncing || sync.mutation.isPending ? (
-            <>
-              <LoaderCircle className="size-4 animate-spin" aria-hidden />
-              Syncing…
-            </>
-          ) : (
-            <>
-              <RefreshCw className="size-4" aria-hidden />
-              Sync now
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function PerformanceNotices({
-  sync,
-  projecting,
-  selectedMissing,
-  comparisonMissing,
-}: Readonly<{
-  sync: ReturnType<typeof usePerformanceSync>;
-  projecting: boolean;
-  selectedMissing: boolean;
-  comparisonMissing: boolean;
-}>) {
-  return (
-    <>
-      {sync.syncing ? (
-        <Alert tone="info" hideIcon>
-          <span className="flex items-center gap-2" data-testid="sync-status-banner">
-            <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden />
-            <span>
-              Sync in progress — importing the dates not yet covered. Charts and tables update when
-              it completes.
-            </span>
-          </span>
-        </Alert>
-      ) : null}
-      {sync.notice ? <Alert tone="info">{sync.notice}</Alert> : null}
-      {sync.outcome === 'failed' ? (
-        <Alert tone="warning">
-          Sync finished with errors — previously imported data is unchanged. Check Settings →
-          Integrations for details.
-        </Alert>
-      ) : null}
-      {projecting ? <Alert tone="info">Building this range from imported data…</Alert> : null}
-      {!projecting && selectedMissing ? (
-        <Alert tone="info">
-          No imported data covers this range yet. Sync to import it, or choose a range inside the
-          covered history.
-        </Alert>
-      ) : null}
-      {!projecting && comparisonMissing ? (
-        <Alert tone="info">
-          The comparison period has no imported data, so its columns show as not measured.
-        </Alert>
-      ) : null}
-    </>
-  );
 }
 
 function PerformanceSkeleton() {

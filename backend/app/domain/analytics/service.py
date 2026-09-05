@@ -105,9 +105,13 @@ async def _load_snapshot(
     )
     if range_token is not None:
         days = ANALYTICS_PRESET_RANGE_DAYS[range_token]
-        # Inclusive length: a 30-day window spans 29 days end-to-start.
-        span = AiReferralsSnapshot.window_end - AiReferralsSnapshot.window_start
-        stmt = stmt.where(span == days - 1).order_by(*newest)
+        # Match the PRESET MARKER, not the window's length: a sync-run window
+        # can happen to be exactly 30 days long, and resolving "Last 30 days"
+        # to it would show a window the preset never meant. Only the refresh's
+        # preset family writes this column (precedent: TrafficSnapshot).
+        stmt = stmt.where(AiReferralsSnapshot.preset_window_days == days).order_by(
+            *newest
+        )
     elif from_date is not None and to_date is not None:
         stmt = stmt.where(AiReferralsSnapshot.window_start == from_date)
         stmt = stmt.where(AiReferralsSnapshot.window_end == to_date)

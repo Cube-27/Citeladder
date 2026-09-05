@@ -45,10 +45,10 @@ from __future__ import annotations
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -58,7 +58,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config.analytics import (
     AI_REFERRAL_ANALYZER_VERSION,
     AI_REFERRAL_FORMULA_VERSION,
+    ANALYTICS_DEFAULT_GRANULARITY,
     ANALYTICS_SNAPSHOT_GRANULARITIES,
+    ANALYTICS_SNAPSHOT_WINDOW_DAYS,
 )
 from app.core.config.integrations_datasets import (
     DATASET_GA4_SOURCE_MEDIUM_DAILY,
@@ -295,10 +297,15 @@ def build_ai_referrals_projection(
             "referral_share": referral_share,
             "sources": sources,
         },
+        # Provenance is the evidence THIS window folded, so it carries the
+        # same date filter the metrics do. The caller now scans one span for
+        # a whole family of nested windows, so an unfiltered list would claim
+        # every snapshot was built from every fact in the span (invariant 4).
         source_classification_ids=sorted(
             str(fact.classification_id)
             for fact in latest
             if fact.classification_id is not None
+            and window_start <= fact.occurred_date <= window_end
         ),
     )
 
@@ -320,6 +327,63 @@ async def _raise_if_task_terminal(
     await raise_if_task_terminal(
         session_factory, task_id, boundary="classification batch"
     )
+
+
+async def _referral_anchor_date(
+    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+) -> date | None:
+    """The latest referral evidence date the preset family anchors to.
+
+    Read from the SAME dataset the projection folds
+    (``ga4_source_medium_daily``), so a preset window can never end on a
+    date the projection has no evidence for. ``None`` when the project has
+    imported no referral rows yet; the family is then not derived.
+    """
+    return await session.scalar(
+        select(func.max(IntegrationMetricRow.date))
+        .where(IntegrationMetricRow.workspace_id == workspace_id)
+        .where(IntegrationMetricRow.project_id == project_id)
+        .where(IntegrationMetricRow.dataset == DATASET_GA4_SOURCE_MEDIUM_DAILY)
+    )
+
+
+def ai_referrals_family_windows(anchor: date) -> list[tuple[date, date]]:
+    """The preset family's inclusive windows, all ending on ``anchor``.
+
+    Nested by construction, so ONE scan of the widest span feeds them all
+    (precedent: ``domain/traffic/service.py::performance_family_windows``).
+    """
+    return [
+        (anchor - timedelta(days=days - 1), anchor)
+        for days in ANALYTICS_SNAPSHOT_WINDOW_DAYS
+    ]
+
+
+def _refresh_windows(
+    *, window_start: date, window_end: date, anchor: date | None
+) -> list[tuple[date, date, str, int | None]]:
+    """Every (start, end, granularity, preset_window_days) one refresh writes.
+
+    The sync window at every configured granularity — the snapshot an exact
+    from/to read resolves, carrying NO preset marker — then the preset family
+    at day granularity, each marked with the preset it was derived for.
+
+    The family is listed LAST so a window that is both keeps the family's
+    write: the content is identical, but the marker is what a preset read
+    matches on, and a sync window that happens to be exactly 30 days long
+    must not answer "Last 30 days" unless it was derived for it.
+    """
+    windows: list[tuple[date, date, str, int | None]] = [
+        (window_start, window_end, granularity, None)
+        for granularity in sorted(ANALYTICS_SNAPSHOT_GRANULARITIES)
+    ]
+    if anchor is None:
+        return windows
+    for start, end in ai_referrals_family_windows(anchor):
+        windows.append(
+            (start, end, ANALYTICS_DEFAULT_GRANULARITY, (end - start).days + 1)
+        )
+    return windows
 
 
 async def _classification_batch(
@@ -405,6 +469,7 @@ async def _upsert_snapshot(
     window_end: date,
     granularity: str,
     projection: AiReferralsProjection,
+    preset_window_days: int | None = None,
 ) -> None:
     """The transactional upsert of the one current snapshot row.
 
@@ -423,6 +488,7 @@ async def _upsert_snapshot(
             window_start=window_start,
             window_end=window_end,
             granularity=granularity,
+            preset_window_days=preset_window_days,
             metrics=projection.metrics,
             source_classification_ids=projection.source_classification_ids,
             analyzer_version=AI_REFERRAL_ANALYZER_VERSION,
@@ -436,6 +502,7 @@ async def _upsert_snapshot(
                 "granularity",
             ],
             set_={
+                "preset_window_days": preset_window_days,
                 "metrics": projection.metrics,
                 "source_classification_ids": projection.source_classification_ids,
                 "analyzer_version": AI_REFERRAL_ANALYZER_VERSION,
@@ -451,11 +518,17 @@ async def refresh_ai_referrals_snapshot(
 ) -> None:
     """``ai_referrals_snapshot_refresh`` executor: rebuild one window's snapshots.
 
-    Read phase: every canonical GA4 source/medium metric row in the window,
-    left-linked to its optional referral event and classification, in bounded
-    keyset batches (cooperative cancel at every batch boundary). Write phase:
-    for each configured granularity
-    (``ANALYTICS_SNAPSHOT_GRANULARITIES``) the pure projection is upserted —
+    Read phase: every canonical GA4 source/medium metric row in the scanned
+    span, left-linked to its optional referral event and classification, in
+    bounded keyset batches (cooperative cancel at every batch boundary).
+
+    Write phase: the sync window at every configured granularity
+    (``ANALYTICS_SNAPSHOT_GRANULARITIES``), PLUS the preset family
+    (``ANALYTICS_SNAPSHOT_WINDOW_DAYS``) at day granularity, anchored on the
+    latest referral evidence date. Without the family a bounded preset read
+    resolves nothing: snapshots existed only at sync-run window lengths, so
+    no persisted row was ever 30, 90 or 365 days long.
+
     ALL of it in ONE transaction (one commit), so a refresh never leaves a
     half-written snapshot family. NO provider I/O (invariant 7).
     """
@@ -465,6 +538,17 @@ async def refresh_ai_referrals_snapshot(
         task, kind="ai_referrals_snapshot_refresh"
     )
     async with session_factory() as session:
+        anchor = await _referral_anchor_date(
+            session, workspace_id=task.workspace_id, project_id=task.project_id
+        )
+        windows = _refresh_windows(
+            window_start=window_start, window_end=window_end, anchor=anchor
+        )
+        # One scan covers every window: the family is nested and ends at the
+        # anchor, so the widest window plus the sync window bounds every row
+        # any projection below can need.
+        read_start = min(start for start, _, _, _ in windows)
+        read_end = max(end for _, end, _, _ in windows)
         referral_facts: list[ReferralFactInput] = []
         after_id: uuid.UUID | None = None
         while True:
@@ -473,8 +557,8 @@ async def refresh_ai_referrals_snapshot(
                 session,
                 workspace_id=task.workspace_id,
                 project_id=task.project_id,
-                window_start=window_start,
-                window_end=window_end,
+                window_start=read_start,
+                window_end=read_end,
                 after_id=after_id,
                 limit=_CLASSIFICATION_BATCH_SIZE,
             )
@@ -488,19 +572,23 @@ async def refresh_ai_referrals_snapshot(
             if len(batch) < _CLASSIFICATION_BATCH_SIZE:
                 break
 
-        for granularity in sorted(ANALYTICS_SNAPSHOT_GRANULARITIES):
+        # The builder filters the shared facts to each window, so a preset
+        # snapshot is the same projection the sync window would produce for
+        # that span — never a re-scan and never a client-derived window.
+        for start, end, granularity, preset_window_days in windows:
             projection = build_ai_referrals_projection(
                 referral_facts=referral_facts,
-                window_start=window_start,
-                window_end=window_end,
+                window_start=start,
+                window_end=end,
                 granularity=granularity,
             )
             await _upsert_snapshot(
                 session,
                 task=task,
-                window_start=window_start,
-                window_end=window_end,
+                window_start=start,
+                window_end=end,
                 granularity=granularity,
                 projection=projection,
+                preset_window_days=preset_window_days,
             )
         await session.commit()

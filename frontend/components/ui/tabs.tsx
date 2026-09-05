@@ -18,6 +18,11 @@ export type TabsProps<T extends string> = {
   className?: string;
   rootClassName?: string;
   onIntent?: (value: T) => void;
+  /**
+   * Triggers share the list's full width instead of hugging their labels.
+   * For a tab strip that heads a card, so the row has no dead right edge.
+   */
+  fill?: boolean;
 };
 
 export function Tabs<T extends string>({
@@ -29,6 +34,7 @@ export function Tabs<T extends string>({
   className,
   rootClassName,
   onIntent,
+  fill = false,
 }: Readonly<TabsProps<T>>) {
   return (
     <ActiveTabContext value={value}>
@@ -41,6 +47,8 @@ export function Tabs<T extends string>({
           aria-label={ariaLabel}
           className={cn(
             'border-border relative flex w-full max-w-full flex-nowrap gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            // Filled tabs must not scroll: sharing the width is the point.
+            fill && 'gap-0 overflow-x-visible',
             className,
           )}
         >
@@ -51,11 +59,19 @@ export function Tabs<T extends string>({
               disabled={item.disabled}
               onMouseEnter={() => onIntent?.(item.value)}
               onFocus={() => onIntent?.(item.value)}
-              className="focus-ring text-secondary hover:text-foreground data-[state=active]:text-accent-text relative inline-flex h-10 shrink-0 items-center px-3 text-sm font-medium whitespace-nowrap transition-colors disabled:opacity-50"
+              className={cn(
+                'focus-ring text-secondary hover:text-foreground data-[state=active]:text-accent-text relative inline-flex h-10 items-center px-3 text-sm font-medium whitespace-nowrap transition-colors disabled:opacity-50',
+                fill ? 'flex-1 basis-0 justify-center' : 'shrink-0',
+              )}
             >
               {item.label}
               {item.value === value ? (
-                <span className="bg-accent absolute inset-x-2 bottom-0 h-0.5" />
+                <span
+                  className={cn(
+                    'bg-accent absolute bottom-0 h-0.5',
+                    fill ? 'inset-x-0' : 'inset-x-2',
+                  )}
+                />
               ) : null}
             </TabsPrimitive.Trigger>
           ))}

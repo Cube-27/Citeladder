@@ -77,6 +77,7 @@ WINDOW = (ANCHOR - timedelta(days=27), ANCHOR)
 _DASHBOARD_KEYS = {
     "project_id",
     "range",
+    "granularity",
     "compare",
     "selected",
     "comparison",
@@ -343,6 +344,7 @@ async def test_unprojected_range_is_reported_not_fabricated(
     body = resp.json()
     assert set(body) == _DASHBOARD_KEYS
     assert set(body["selected"]) == _WINDOW_KEYS
+
     assert body["selected"]["snapshot_id"] is None
     assert body["selected"]["evidence_state"] == "not_run"
     # Never a zero: an unimported window is UNMEASURED.
@@ -1010,3 +1012,35 @@ async def test_dimension_rows_carry_provenance_to_raw_evidence(
         for row in rows:
             assert row.source_metric_row_ids
             assert row.source_artifact_ids
+
+
+@pytest.mark.asyncio
+async def test_granularity_selects_the_bucket_size(
+    client: httpx.AsyncClient,
+) -> None:
+    """The chart's bucket size is a request parameter, not a hardcoded day.
+
+    Every refresh already writes the window at day, week AND month
+    granularity; the surface simply never read anything but day. The
+    response echoes what it resolved, so the client renders the buckets it
+    actually got.
+    """
+    await _register(client, f"granularity-{uuid.uuid4().hex[:8]}@example.com")
+    project_id, _ = await _create_project(client)
+    endpoint = f"/api/v1/projects/{project_id}/performance"
+
+    default = (await client.get(endpoint)).json()
+    assert default["granularity"] == "day"
+
+    for granularity in ("day", "week", "month"):
+        resp = await client.get(endpoint, params={"granularity": granularity})
+        assert resp.status_code == 200
+        assert resp.json()["granularity"] == granularity
+
+    # An unknown bucket size is refused rather than silently served as day.
+    bad = await client.get(endpoint, params={"granularity": "fortnight"})
+    assert bad.status_code == 422
+    # An explicitly EMPTY value is malformed, not absent: only omitting the
+    # parameter takes the default.
+    empty = await client.get(endpoint, params={"granularity": ""})
+    assert empty.status_code == 422

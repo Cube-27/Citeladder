@@ -106,6 +106,8 @@ class PerformanceDashboardResponse(BaseModel):
 
     project_id: uuid.UUID
     range: str
+    #: The chart's BUCKET size (day/week/month) — not the window's length.
+    granularity: str
     compare: str
     selected: PerformanceWindow
     comparison: PerformanceWindow | None

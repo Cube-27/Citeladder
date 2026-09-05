@@ -151,21 +151,18 @@ export function PerformanceChart({
         preserveAspectRatio="none"
       >
         <title id={titleId}>{summary}</title>
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-          const y = PADDING.top + (VIEW_HEIGHT - PADDING.top - PADDING.bottom) * ratio;
-          return (
-            <line
-              key={ratio}
-              x1={PADDING.left}
-              x2={VIEW_WIDTH - PADDING.right}
-              y1={y}
-              y2={y}
-              className="stroke-border-subtle"
-              strokeWidth={1}
-              vectorEffect="non-scaling-stroke"
-            />
-          );
-        })}
+        {/* No horizontal gridlines: the lines themselves carry the shape, and
+            banding the plot competes with them for attention. Only the
+            BASELINE is drawn, so a series still reads against a floor. */}
+        <line
+          x1={PADDING.left}
+          x2={VIEW_WIDTH - PADDING.right}
+          y1={VIEW_HEIGHT - PADDING.bottom}
+          y2={VIEW_HEIGHT - PADDING.bottom}
+          className="stroke-border-subtle"
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
+        />
         {series.map((entry) => {
           const domain = domainFor(entry);
           const inverted = isInvertedMetric(entry.key);

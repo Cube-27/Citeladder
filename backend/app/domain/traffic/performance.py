@@ -50,6 +50,7 @@ from app.domain.traffic.query_support import (
     validate_compare,
     validate_custom_window,
     validate_dimension,
+    validate_granularity,
     validate_page_size,
     validate_range,
 )
@@ -184,6 +185,7 @@ async def get_performance_dashboard(
     compare: str | None = None,
     compare_from: date | None = None,
     compare_to: date | None = None,
+    granularity: str | None = None,
 ) -> PerformanceDashboardResponse:
     """Serve the selected window — and its comparison — from persisted rows.
 
@@ -194,6 +196,7 @@ async def get_performance_dashboard(
     exactly that window.
     """
     resolved_range = validate_range(range_token, PERFORMANCE_DEFAULT_RANGE)
+    resolved_granularity = validate_granularity(granularity)
     resolved_compare = validate_compare(compare, PERFORMANCE_DEFAULT_COMPARE)
     custom = validate_custom_window(from_date, to_date)
 
@@ -203,6 +206,7 @@ async def get_performance_dashboard(
         project_id=project_id,
         range_token=resolved_range,
         custom=custom,
+        granularity=resolved_granularity,
     )
     comparison: PerformanceWindow | None = None
     if window is not None:
@@ -219,12 +223,14 @@ async def get_performance_dashboard(
                     workspace_id=workspace_id,
                     project_id=project_id,
                     window=compare_span,
+                    granularity=resolved_granularity,
                 ),
                 compare_span,
             )
     return PerformanceDashboardResponse(
         project_id=project_id,
         range=resolved_range,
+        granularity=resolved_granularity,
         compare=resolved_compare,
         selected=_window_payload(snapshot, window),
         comparison=comparison,

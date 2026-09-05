@@ -17,6 +17,7 @@
 import type {
   PerformanceCompare,
   PerformanceDimension,
+  PerformanceGranularity,
   PerformanceRange,
   PerformanceSeriesPoint,
   PerformanceWindow,
@@ -35,6 +36,21 @@ export const RANGE_OPTIONS: readonly { value: PerformanceRange; label: string }[
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
   { value: 'custom', label: 'Custom' },
+] as const;
+
+/**
+ * The chart's bucket sizes, labelled as Search Console labels them.
+ *
+ * These are BUCKETS, not window lengths: "Last 28 days" charted Weekly is
+ * one range at one granularity. RANGE_OPTIONS above carries the lengths.
+ */
+export const GRANULARITY_OPTIONS: readonly {
+  value: PerformanceGranularity;
+  label: string;
+}[] = [
+  { value: 'day', label: 'Daily' },
+  { value: 'week', label: 'Weekly' },
+  { value: 'month', label: 'Monthly' },
 ] as const;
 
 export const COMPARE_OPTIONS: readonly {

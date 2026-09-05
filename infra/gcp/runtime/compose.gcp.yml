@@ -26,6 +26,14 @@ x-backend: &backend
     SITE_HEALTH_AUTOMATIC_PAGE_LIMIT: "200"
     FRONTEND_URL: https://${DOMAIN_NAME:?DOMAIN_NAME is required}
     FRONTEND_ORIGINS: https://${DOMAIN_NAME}
+    # Google sign-in, ON here unless the host explicitly overrides it.
+    # The application default is OFF (OAuthSettings.google_enabled = False),
+    # which is why the deployed app served a catalog without Google before
+    # this line existed while local dev, whose .env sets it, worked fine.
+    # The client id/secret fall back to the INTEGRATION Google pair by design
+    # (one client for sign-in and the GSC/GA4 connect), so those must be
+    # present in runtime.env; the redirect URI derives from FRONTEND_URL.
+    OAUTH_GOOGLE_ENABLED: ${OAUTH_GOOGLE_ENABLED:-true}
     TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:?TRUSTED_PROXY_CIDRS is required}
   depends_on:
     db:

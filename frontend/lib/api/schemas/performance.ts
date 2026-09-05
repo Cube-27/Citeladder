@@ -29,6 +29,8 @@ export const performanceDimensionSchema = z.enum([
   'day',
 ]);
 export const evidenceStateSchema = z.enum(['not_run', 'observed_zero', 'available']);
+/** The chart's BUCKET size — distinct from the range, which is its LENGTH. */
+export const performanceGranularitySchema = z.enum(['day', 'week', 'month']);
 
 export const performanceSeriesPointSchema = responseObject({
   date: z.string(),
@@ -84,6 +86,7 @@ export const performanceDimensionCountsSchema = responseObject({
 export const performanceDashboardSchema = responseObject({
   project_id: uuid(),
   range: performanceRangeSchema,
+  granularity: performanceGranularitySchema,
   compare: performanceCompareSchema,
   selected: performanceWindowSchema,
   comparison: performanceWindowSchema.nullable(),

@@ -69,7 +69,8 @@ function SortableHead({
 }: Readonly<{
   metric: PerformanceMetricKey;
   label: string;
-  sublabel: string;
+  /** Omitted when the column needs no qualifier (no comparison active). */
+  sublabel?: string;
   sort: string;
   onSort: (key: PerformanceMetricKey) => void;
 }>) {
@@ -90,7 +91,7 @@ function SortableHead({
           <Icon className={cn('size-3', !active && 'text-muted')} aria-hidden />
           {label}
         </span>
-        <span className={textRole('meta')}>{sublabel}</span>
+        {sublabel ? <span className={textRole('meta')}>{sublabel}</span> : null}
       </Pressable>
     </TableHead>
   );
@@ -179,7 +180,30 @@ export function DimensionTable({
 
   return (
     <div className="border-border-subtle overflow-hidden rounded-[var(--radius-panel)] border">
-      <Table wrapperClassName="overflow-x-auto">
+      {/* 12px for the data inside the tab: these tables are dense and read
+          as a block of figures, so the smaller size fits more of a row on
+          screen without shrinking the tab labels that head them. */}
+      <Table
+        wrapperClassName="overflow-x-auto"
+        // Fixed layout with an explicit first column: every tab then lays
+        // out identically, so switching QUERIES -> PAGES does not reflow
+        // the metric columns under the pointer. Without it each tab sizes
+        // to its own longest cell and the whole table jumps.
+        // table-fixed divides the available width evenly, so a comparison
+        // (13 columns) would squeeze each metric to a few characters on a
+        // narrow viewport. A min-width keeps them readable and lets the
+        // wrapper scroll instead, which is what overflow-x-auto is there for.
+        className={cn(
+          'w-full table-fixed text-xs [&_td]:text-xs [&_th]:text-xs',
+          comparing ? 'min-w-[64rem]' : 'min-w-[36rem]',
+        )}
+      >
+        <colgroup>
+          <col className="w-[40%] min-w-[12rem]" />
+          {Array.from({ length: columnCount - 1 }, (_, index) => (
+            <col key={index} />
+          ))}
+        </colgroup>
         <TableHeader>
           <TableRow>
             {/* Pinned so the row identity survives horizontal scrolling. */}
@@ -191,7 +215,11 @@ export function DimensionTable({
                   key={metric.key}
                   metric={metric.key}
                   label={label}
-                  sublabel={selectedLabel}
+                  // The range is stated once, in the toolbar. Repeating it
+                  // under every column adds no information — it only earns
+                  // its place when a comparison makes the columns AMBIGUOUS
+                  // (selected vs comparison vs difference).
+                  sublabel={comparing ? selectedLabel : undefined}
                   sort={sort}
                   onSort={onSort}
                 />
