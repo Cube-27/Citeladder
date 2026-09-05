@@ -80,14 +80,6 @@ variable "frontend_image" {
   }
 }
 
-variable "demo_expires_at" {
-  type = string
-  validation {
-    condition     = can(timecmp(var.demo_expires_at, timestamp()))
-    error_message = "demo_expires_at must be an RFC3339 timestamp."
-  }
-}
-
 variable "cloudflare_ipv4_cidrs" {
   type = set(string)
   validation {

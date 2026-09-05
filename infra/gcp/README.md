@@ -36,5 +36,7 @@ payloads never enter state, command arguments, logs, or workflow outputs.
 `runtime/compose.gcp.yml` uses host networking while PostgreSQL, FastAPI, and
 Next.js bind loopback. Caddy alone binds ports 80/443. The deployer uploads the
 runtime files through IAP, pulls backend/frontend images by digest, takes a
-quiesced pre-deploy backup, migrates and bootstraps the single demo account,
-and installs nightly-backup and fixed-expiry systemd timers.
+quiesced pre-deploy backup, migrates, and installs the nightly-backup systemd
+timer. The host never tears itself down; use the destroy workflow. `DEMO_MODE`
+defaults to `false` (public sign-up) and bootstraps the single demo account
+only when set to `true`.

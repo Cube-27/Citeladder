@@ -33,12 +33,10 @@ jobs:
           ACTION: ${{ inputs.action }}
           PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
           ZONE: ${{ vars.GCP_ZONE }}
-          DEMO_EXPIRES_AT: ${{ vars.DEMO_EXPIRES_AT }}
         run: |
           set -euo pipefail
           test "$GITHUB_SHA" = "$(git rev-parse origin/main)"
           if [ "$ACTION" = start ]; then
-            test "$(date -u +%s)" -lt "$(date -u -d "$DEMO_EXPIRES_AT" +%s)" || { echo 'Demo has expired'; exit 1; }
             gcloud compute instances start citeladder-demo --project "$PROJECT_ID" --zone "$ZONE" --quiet
           else
             gcloud compute instances stop citeladder-demo --project "$PROJECT_ID" --zone "$ZONE" --quiet

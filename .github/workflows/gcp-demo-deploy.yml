@@ -36,7 +36,11 @@ jobs:
       BILLING_ACCOUNT: ${{ vars.GCP_BILLING_ACCOUNT }}
       BUDGET_CURRENCY_CODE: ${{ vars.GCP_BUDGET_CURRENCY_CODE }}
       BUDGET_UNITS: ${{ vars.GCP_BUDGET_UNITS }}
+      # Optional, and read only in demo mode. The host no longer self-expires;
+      # tear it down with the destroy workflow.
       DEMO_EXPIRES_AT: ${{ vars.DEMO_EXPIRES_AT }}
+      # 'true' restores the single-account demo (no public sign-up).
+      DEMO_MODE: ${{ vars.DEMO_MODE || 'false' }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       DEMO_LOGIN_EMAIL: ${{ vars.DEMO_LOGIN_EMAIL }}
     steps:
@@ -79,23 +83,17 @@ jobs:
         with:
           terraform_version: 1.10.5
           terraform_wrapper: false
-      - name: Initialize Terraform and validate the fixed expiry
+      - name: Initialize and validate Terraform
         working-directory: infra/gcp
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$PROJECT_ID" && test -n "$STATE_BUCKET" && test -n "$DEMO_EXPIRES_AT"
+          test -n "$PROJECT_ID" && test -n "$STATE_BUCKET"
           test -n "$BILLING_ACCOUNT" && test -n "$BUDGET_CURRENCY_CODE" && test -n "$BUDGET_UNITS"
           test -n "$DOMAIN_NAME"
           terraform init -input=false -backend-config="bucket=$STATE_BUCKET"
           terraform fmt -check
           terraform validate
-          existing=$(terraform output -json | jq -r '.demo_expires_at.value // empty')
-          test -z "$existing" || test "$existing" = "$DEMO_EXPIRES_AT" || {
-            echo 'Refusing to change the original demo expiry' >&2
-            exit 1
-          }
-          test "$(date -u +%s)" -lt "$(date -u -d "$DEMO_EXPIRES_AT" +%s)"
       - name: Render reviewed Terraform inputs
         working-directory: infra/gcp
         shell: bash
@@ -116,14 +114,13 @@ jobs:
             --arg project "$PROJECT_ID" --arg billing "$BILLING_ACCOUNT" \
             --arg budget_currency "$BUDGET_CURRENCY_CODE" --argjson budget_units "$BUDGET_UNITS" \
             --arg region "$REGION" --arg zone "$ZONE" --arg domain "$DOMAIN_NAME" \
-            --arg expiry "$DEMO_EXPIRES_AT" \
             --arg backend "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/backend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
             --arg frontend "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" \
             --argjson v4 "$(jq -Rsc 'split("\n")|map(select(length>0))' /tmp/cf-v4)" \
             --argjson v6 "$(jq -Rsc 'split("\n")|map(select(length>0))' /tmp/cf-v6)" \
             '{project_id:$project,billing_account:$billing,budget_currency_code:$budget_currency,
               budget_units:$budget_units,region:$region,zone:$zone,domain_name:$domain,
-              demo_expires_at:$expiry,backend_image:$backend,frontend_image:$frontend,
+              backend_image:$backend,frontend_image:$frontend,
               cloudflare_ipv4_cidrs:$v4,cloudflare_ipv6_cidrs:$v6}' > demo.auto.tfvars.json
           terraform apply -input=false -auto-approve \
             -target=google_artifact_registry_repository.images \
@@ -147,7 +144,7 @@ jobs:
             docker build --build-arg BUILD_REVISION="$GITHUB_SHA" \
               --build-arg BACKEND_ORIGIN=http://127.0.0.1:8000 \
               --build-arg CITELADDER_TASK_LOCAL_BACKEND=true \
-              --build-arg NEXT_PUBLIC_DEMO_MODE=true \
+              --build-arg NEXT_PUBLIC_DEMO_MODE="$DEMO_MODE" \
               --build-arg NEXT_PUBLIC_SITE_URL="https://$DOMAIN_NAME" \
               --build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE="$NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE" \
               -t "$registry/frontend:$GITHUB_SHA" -f ../../frontend/Dockerfile ../..
@@ -173,6 +170,10 @@ jobs:
           DEFAULT_AGENT_API_KEY: ${{ secrets.DEFAULT_AGENT_API_KEY }}
           KEENABLE_API_KEY: ${{ secrets.KEENABLE_API_KEY }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          BING_OAUTH_CLIENT_ID: ${{ secrets.BING_OAUTH_CLIENT_ID }}
+          BING_OAUTH_CLIENT_SECRET: ${{ secrets.BING_OAUTH_CLIENT_SECRET }}
         run: |
           set -euo pipefail
           has_version() {
@@ -198,6 +199,18 @@ jobs:
           test -z "$DEFAULT_AGENT_API_KEY" || add_value_once citeladder-default-agent-api-key "$DEFAULT_AGENT_API_KEY"
           test -z "$KEENABLE_API_KEY" || add_value_once citeladder-keenable-api-key "$KEENABLE_API_KEY"
           test -z "$TAVILY_API_KEY" || add_value_once citeladder-tavily-api-key "$TAVILY_API_KEY"
+          test -z "$GOOGLE_OAUTH_CLIENT_ID" || add_value_once citeladder-google-oauth-client-id "$GOOGLE_OAUTH_CLIENT_ID"
+          test -z "$GOOGLE_OAUTH_CLIENT_SECRET" || add_value_once citeladder-google-oauth-client-secret "$GOOGLE_OAUTH_CLIENT_SECRET"
+          test -z "$BING_OAUTH_CLIENT_ID" || add_value_once citeladder-bing-oauth-client-id "$BING_OAUTH_CLIENT_ID"
+          test -z "$BING_OAUTH_CLIENT_SECRET" || add_value_once citeladder-bing-oauth-client-secret "$BING_OAUTH_CLIENT_SECRET"
+          # Without a client pair the provider reports "not configured" and the
+          # connect button 503s, so refuse the deploy rather than ship that.
+          for required in citeladder-google-oauth-client-id citeladder-google-oauth-client-secret citeladder-bing-oauth-client-id citeladder-bing-oauth-client-secret; do
+            has_version "$required" || {
+              echo "::error::$required has no enabled version. Add the matching gcp-demo environment secret (GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, BING_OAUTH_CLIENT_ID, BING_OAUTH_CLIENT_SECRET) and re-run."
+              exit 1
+            }
+          done
 
           tls_dir="$(mktemp -d)"
           trap 'rm -rf "$tls_dir"' EXIT
@@ -254,9 +267,10 @@ jobs:
             --quiet --command='rm -rf /tmp/citeladder-deploy && mkdir -m 700 /tmp/citeladder-deploy'
           gcloud compute scp infra/gcp/runtime/* /tmp/cf-v4 /tmp/cf-v6 "$VM_NAME:/tmp/citeladder-deploy/" \
             --project "$PROJECT_ID" --zone "$ZONE" --tunnel-through-iap --quiet
-          printf -v remote 'sudo env PROJECT_ID=%q REGION=%q BACKEND_IMAGE=%q FRONTEND_IMAGE=%q BACKUP_BUCKET=%q DOMAIN_NAME=%q SOURCE_COMMIT=%q DEV_LOGIN_EMAIL=%q DEFAULT_AGENT_BASE_URL=%q DEFAULT_AGENT_MODEL=%q CONTENT_PROVIDER=%q CONTENT_PROVIDER_ENDPOINT=%q CONTENT_MODEL=%q bash /tmp/citeladder-deploy/deploy-vm.sh' \
+          printf -v remote 'sudo env PROJECT_ID=%q REGION=%q BACKEND_IMAGE=%q FRONTEND_IMAGE=%q BACKUP_BUCKET=%q DOMAIN_NAME=%q SOURCE_COMMIT=%q DEMO_MODE=%q DEMO_EXPIRES_AT=%q DEV_LOGIN_EMAIL=%q DEFAULT_AGENT_BASE_URL=%q DEFAULT_AGENT_MODEL=%q CONTENT_PROVIDER=%q CONTENT_PROVIDER_ENDPOINT=%q CONTENT_MODEL=%q bash /tmp/citeladder-deploy/deploy-vm.sh' \
             "$PROJECT_ID" "$REGION" "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$BACKUP_BUCKET" \
-            "$DOMAIN_NAME" "$GITHUB_SHA" "${DEMO_LOGIN_EMAIL:-dev@citeladder.com}" \
+            "$DOMAIN_NAME" "$GITHUB_SHA" "$DEMO_MODE" "$DEMO_EXPIRES_AT" \
+            "${DEMO_LOGIN_EMAIL:-dev@citeladder.com}" \
             "$DEFAULT_AGENT_BASE_URL" "$DEFAULT_AGENT_MODEL" \
             "$CONTENT_PROVIDER" "$CONTENT_PROVIDER_ENDPOINT" "$CONTENT_MODEL"
           gcloud compute ssh "$VM_NAME" --project "$PROJECT_ID" --zone "$ZONE" --tunnel-through-iap --quiet --command="$remote"
@@ -269,17 +283,28 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --retry 12 --retry-delay 5 "https://$DOMAIN_NAME/health" >/dev/null
-          registration_payload="$(jq -nc --arg email "$DEMO_LOGIN_EMAIL" --arg password "$(openssl rand -hex 16)" \
-            '{email:$email,password:$password}')"
-          status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            -X POST -H 'content-type: application/json' --data "$registration_payload" \
-            "https://$DOMAIN_NAME/api/v1/auth/register")
-          test "$status" = 403
+          # A dead "Continue with Google" is a 503 behind a button, not a failed
+          # deploy, so assert the catalog reports Google usable.
+          curl --fail --silent --show-error "https://$DOMAIN_NAME/api/v1/auth/oauth/providers" \
+            | jq -e '[.providers[] | select(.provider == "google" and .configured)] | length == 1' >/dev/null
+          # Read the page rather than POSTing, which would squat an address.
+          # Also catches an image cached with the old NEXT_PUBLIC_DEMO_MODE.
+          register_page="$(curl --fail --silent --show-error "https://$DOMAIN_NAME/register")"
+          if test "$DEMO_MODE" = "true"; then
+            registration_payload="$(jq -nc --arg email "$DEMO_LOGIN_EMAIL" --arg password "$(openssl rand -hex 16)" \
+              '{email:$email,password:$password}')"
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              -X POST -H 'content-type: application/json' --data "$registration_payload" \
+              "https://$DOMAIN_NAME/api/v1/auth/register")
+            test "$status" = 403
+            grep -q 'Registration unavailable' <<<"$register_page"
+          else
+            ! grep -q 'Registration unavailable' <<<"$register_page"
+          fi
           {
             echo '### GCP demo deployment'
             echo "- Source commit: \`$GITHUB_SHA\`"
             echo "- Backend: \`$BACKEND_IMAGE\`"
             echo "- Frontend: \`$FRONTEND_IMAGE\`"
             echo "- Static IP: \`$STATIC_IP\`"
-            echo "- Fixed expiry: \`$DEMO_EXPIRES_AT\`"
           } >> "$GITHUB_STEP_SUMMARY"

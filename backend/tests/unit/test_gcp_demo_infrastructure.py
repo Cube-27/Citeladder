@@ -51,7 +51,6 @@ def test_vm_is_shielded_fixed_size_and_has_no_default_identity() -> None:
         r'data "google_compute_image".*?\n}', "", compute, flags=re.S
     )
     assert "default" not in instance_only
-    assert 'ignore_changes = [metadata["demo-expires-at"]]' in compute
 
 
 def test_wif_is_exact_and_no_service_account_keys_exist() -> None:
@@ -119,6 +118,35 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
     assert "secrets.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE" in workflow
     assert "--build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=" in workflow
     assert "citeladder-logo" not in locals_tf
+    # An unwired client pair leaves sign-in and every connect button 503ing,
+    # so the secret -> runtime.env chain is asserted end to end.
+    oauth_secret_mappings = {
+        "GOOGLE_OAUTH_CLIENT_ID": (
+            "citeladder-google-oauth-client-id",
+            "INTEGRATION_GOOGLE_CLIENT_ID",
+        ),
+        "GOOGLE_OAUTH_CLIENT_SECRET": (
+            "citeladder-google-oauth-client-secret",
+            "INTEGRATION_GOOGLE_CLIENT_SECRET",
+        ),
+        "BING_OAUTH_CLIENT_ID": (
+            "citeladder-bing-oauth-client-id",
+            "INTEGRATION_MICROSOFT_CLIENT_ID",
+        ),
+        "BING_OAUTH_CLIENT_SECRET": (
+            "citeladder-bing-oauth-client-secret",
+            "INTEGRATION_MICROSOFT_CLIENT_SECRET",
+        ),
+    }
+    for variable, (secret_id, runtime_var) in oauth_secret_mappings.items():
+        assert f"secrets.{variable}" in workflow
+        assert f'"{secret_id}"' in locals_tf
+        assert f"add_value_once {secret_id}" in workflow
+        # Read without a ``|| true`` fallback: a missing secret stops the deploy.
+        assert f'secret {secret_id})"' in deploy
+        assert f"write_env {runtime_var}" in deploy
+    assert 'has_version "$required" ||' in workflow
+    assert "/api/v1/auth/oauth/providers" in workflow
     # Content and the default agent are each a provider-neutral trio
     # (key + url + model): neither may silently inherit a baked-in default.
     for variable in (
@@ -131,6 +159,27 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
         assert f"vars.{variable}" in workflow
         assert f"${{{variable}:?{variable} is required}}" in deploy
         assert f"write_env {variable}" in deploy
+
+
+def test_public_access_is_the_default_and_demo_mode_stays_switchable() -> None:
+    """``DEMO_MODE`` blocks registration and third-party sign-up, so it stays a
+    switch that defaults to public rather than a hard-coded value."""
+    compose = (RUNTIME / "compose.gcp.yml").read_text(encoding="utf-8")
+    deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
+    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
+    assert 'DEMO_MODE: "true"' not in compose
+    assert "DEMO_MODE: ${DEMO_MODE:-false}" in compose
+    assert 'DEMO_MODE="${DEMO_MODE:-false}"' in deploy
+    assert '[[ "$DEMO_MODE" =~ ^(true|false)$ ]]' in deploy
+    assert "write_env DEMO_MODE" in deploy
+    assert "vars.DEMO_MODE || 'false'" in workflow
+    assert '--build-arg NEXT_PUBLIC_DEMO_MODE="$DEMO_MODE"' in workflow
+    # The bootstrap rejects a database holding anyone but the demo account.
+    assert (
+        'if [ \\"$$DEMO_MODE\\" = \\"true\\" ]; then python -m app.demo.bootstrap; fi'
+        in compose
+    )
+    assert 'write_env MCP_ALLOWED_ACCOUNT_EMAIL ""' in deploy
 
 
 def test_deploy_validates_the_latest_commit_as_a_full_diff() -> None:
@@ -183,7 +232,7 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert "ssl=on" in compose
     assert "DB_SSL_MODE: require" in compose
     assert 'CITELADDER_TASK_LOCAL_BACKEND: "true"' in compose
-    assert 'NEXT_PUBLIC_DEMO_MODE: "true"' in compose
+    assert "NEXT_PUBLIC_DEMO_MODE: ${DEMO_MODE:-false}" in compose
     assert 'AUDIT_WORKER_CONCURRENCY: "2"' in compose
     assert 'DB_POOL_SIZE: "8"' in compose
     assert 'DB_MAX_OVERFLOW: "0"' in compose
@@ -195,7 +244,7 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert "TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS" in compose
     assert 'MCP_ENABLED: "true"' in compose
     assert "MCP_PUBLIC_BASE_URL: https://${DOMAIN_NAME" in compose
-    assert "MCP_ALLOWED_ACCOUNT_EMAIL: ${DEV_LOGIN_EMAIL}" in compose
+    assert "MCP_ALLOWED_ACCOUNT_EMAIL: ${MCP_ALLOWED_ACCOUNT_EMAIL-}" in compose
     caddy = (RUNTIME / "Caddyfile").read_text(encoding="utf-8")
     assert "trusted_proxies static __CLOUDFLARE_CIDRS__" in caddy
     mcp_matcher = next(
@@ -220,7 +269,30 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert "chown 70:70" in tls_init
 
 
-def test_backups_and_expiry_are_fixed_and_operational() -> None:
+def test_the_host_never_tears_itself_down() -> None:
+    """Teardown is a deliberate act: the destroy workflow, nothing automatic."""
+    deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
+    compose = (RUNTIME / "compose.gcp.yml").read_text(encoding="utf-8")
+    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
+    terraform = _read_tree(GCP, "*.tf")
+    assert not (RUNTIME / "expire.sh").exists()
+    assert not (WORKFLOWS / "gcp-demo-expiry.yml").exists()
+    assert (WORKFLOWS / "gcp-demo-destroy.yml").exists()
+    assert "citeladder-expiry.timer citeladder-backup.timer" not in deploy
+    assert "shutdown -h now" not in deploy
+    assert "demo-expires-at" not in deploy + terraform
+    assert "demo_expires_at" not in terraform
+    assert "Demo has expired" not in deploy
+    assert "Refusing to change the original demo expiry" not in workflow
+    # The retired timers are removed from hosts that already run them.
+    assert "citeladder-idle.timer citeladder-expiry.timer" in deploy
+    assert "/etc/systemd/system/citeladder-expiry.timer" in deploy
+    # Demo mode still honours an expiry when one is configured.
+    assert 'write_env DEMO_EXPIRES_AT "$DEMO_EXPIRES_AT"' in deploy
+    assert "DEMO_EXPIRES_AT:" not in compose
+
+
+def test_backups_are_fixed_and_operational() -> None:
     deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
     backup = (RUNTIME / "backup.sh").read_text(encoding="utf-8")
     storage = (GCP / "storage.tf").read_text(encoding="utf-8")
@@ -239,14 +311,7 @@ def test_backups_and_expiry_are_fixed_and_operational() -> None:
     assert 'for service in "${stopped_services[@]}" db' in deploy
     assert "{{.RestartCount}}" in deploy
     assert "{{.State.ExitCode}}" in deploy
-    assert "citeladder-expiry.timer" in deploy
-    assert "OnCalendar=$calendar" in deploy
-    assert "demo-expires-at" in deploy
+    assert "citeladder-backup.timer" in deploy
     assert "pg_dump" in backup
     assert "age = 10" in storage
-    assert "Refusing to change the original demo expiry" in workflow
-    expire = (RUNTIME / "expire.sh").read_text(encoding="utf-8")
-    assert "(cd /opt/citeladder &&" in expire
-    expiry_workflow = (WORKFLOWS / "gcp-demo-expiry.yml").read_text(encoding="utf-8")
-    assert "compute instances list" in expiry_workflow
-    assert "--quiet || true" not in expiry_workflow
+    assert "gcloud artifacts docker images describe" in workflow

@@ -13,11 +13,15 @@ set -euo pipefail
 : "${CONTENT_PROVIDER:?CONTENT_PROVIDER is required}"
 : "${CONTENT_PROVIDER_ENDPOINT:?CONTENT_PROVIDER_ENDPOINT is required}"
 : "${CONTENT_MODEL:?CONTENT_MODEL is required}"
+# "true" restores the single-account demo: no registration, no third-party
+# sign-up, MCP limited to DEV_LOGIN_EMAIL.
+DEMO_MODE="${DEMO_MODE:-false}"
 
 [[ "$PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
 [[ "$REGION" =~ ^[a-z]+-[a-z]+[0-9]+$ ]]
 [[ "$DOMAIN_NAME" =~ ^[a-z0-9][a-z0-9.-]*[a-z0-9]$ ]]
 [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$DEMO_MODE" =~ ^(true|false)$ ]]
 [[ "$BACKEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
 [[ "$FRONTEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
 expected_registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
@@ -35,22 +39,21 @@ if [[ -n "$running_services" ]]; then
   had_previous=true
 fi
 
-# Remove the retired inactivity shutdown from hosts deployed by older revisions.
-systemctl disable --now citeladder-idle.timer 2>/dev/null || true
+# Remove the retired inactivity and expiry shutdowns from hosts deployed by
+# older revisions. Teardown is manual now: run the destroy workflow.
+systemctl disable --now citeladder-idle.timer citeladder-expiry.timer 2>/dev/null || true
 rm -f /etc/systemd/system/citeladder-idle.timer \
   /etc/systemd/system/citeladder-idle.service \
+  /etc/systemd/system/citeladder-expiry.timer \
+  /etc/systemd/system/citeladder-expiry.service \
   /opt/citeladder/idle-shutdown.sh \
+  /opt/citeladder/expire.sh \
   /opt/citeladder/activity-start
 
 install -d -m 0750 /opt/citeladder /opt/citeladder/tls
 install -m 0644 /tmp/citeladder-deploy/compose.gcp.yml /opt/citeladder/compose.gcp.yml
 install -m 0755 /tmp/citeladder-deploy/init-postgres-tls.sh /opt/citeladder/init-postgres-tls.sh
 install -m 0750 /tmp/citeladder-deploy/backup.sh /opt/citeladder/backup.sh
-install -m 0750 /tmp/citeladder-deploy/expire.sh /opt/citeladder/expire.sh
-
-expiry="$(curl --fail --silent --show-error -H 'Metadata-Flavor: Google' \
-  http://metadata.google.internal/computeMetadata/v1/instance/attributes/demo-expires-at)"
-test "$(date -u +%s)" -lt "$(date -u -d "$expiry" +%s)" || { echo 'Demo has expired'; exit 1; }
 
 test -s /tmp/citeladder-deploy/cf-v4
 test -s /tmp/citeladder-deploy/cf-v6
@@ -77,9 +80,18 @@ agent_key="$(secret citeladder-default-agent-api-key 2>/dev/null || true)"
 content_key="$(secret citeladder-content-api-key 2>/dev/null || true)"
 keenable_key="$(secret citeladder-keenable-api-key 2>/dev/null || true)"
 tavily_key="$(secret citeladder-tavily-api-key 2>/dev/null || true)"
+# Required, not best-effort: without these Google sign-in and the GSC/GA4/Bing
+# connect buttons 503 for every visitor.
+google_client_id="$(secret citeladder-google-oauth-client-id)"
+google_client_secret="$(secret citeladder-google-oauth-client-secret)"
+bing_client_id="$(secret citeladder-bing-oauth-client-id)"
+bing_client_secret="$(secret citeladder-bing-oauth-client-secret)"
 
 for value in "$db_password" "$jwt_secret" "$encryption_key" "$referral_salt" "$demo_password"; do
   test "${#value}" -ge 32
+done
+for value in "$google_client_id" "$google_client_secret" "$bing_client_id" "$bing_client_secret"; do
+  test -n "$value"
 done
 
 write_env() {
@@ -109,8 +121,17 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env DOMAIN_NAME "$DOMAIN_NAME"
   write_env SOURCE_COMMIT "$SOURCE_COMMIT"
   write_env TRUSTED_PROXY_CIDRS "$trusted_proxy_cidrs"
-  write_env DEMO_EXPIRES_AT "$expiry"
+  # Only demo mode reads an expiry; the host itself no longer self-terminates.
+  test -z "${DEMO_EXPIRES_AT:-}" || write_env DEMO_EXPIRES_AT "$DEMO_EXPIRES_AT"
+  write_env DEMO_MODE "$DEMO_MODE"
   write_env DEV_LOGIN_EMAIL "${DEV_LOGIN_EMAIL:-dev@citeladder.com}"
+  # Demo mode admits one MCP account and the backend refuses to start if it is
+  # not the provisioned one; a public deployment admits every account.
+  if test "$DEMO_MODE" = "true"; then
+    write_env MCP_ALLOWED_ACCOUNT_EMAIL "${DEV_LOGIN_EMAIL:-dev@citeladder.com}"
+  else
+    write_env MCP_ALLOWED_ACCOUNT_EMAIL ""
+  fi
   write_env POSTGRES_PASSWORD "$db_password"
   write_env DATABASE_URL "$database_url"
   write_env JWT_SECRET_KEY "$jwt_secret"
@@ -126,6 +147,10 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env DEFAULT_AGENT_MODEL "$DEFAULT_AGENT_MODEL"
   test -z "$keenable_key" || write_env KEENABLE_API_KEY "$keenable_key"
   test -z "$tavily_key" || write_env TAVILY_API_KEY "$tavily_key"
+  write_env INTEGRATION_GOOGLE_CLIENT_ID "$google_client_id"
+  write_env INTEGRATION_GOOGLE_CLIENT_SECRET "$google_client_secret"
+  write_env INTEGRATION_MICROSOFT_CLIENT_ID "$bing_client_id"
+  write_env INTEGRATION_MICROSOFT_CLIENT_SECRET "$bing_client_secret"
 } > /opt/citeladder/runtime.env.new
 mv /opt/citeladder/runtime.env.new /opt/citeladder/runtime.env
 
@@ -154,24 +179,6 @@ fi
 docker compose --env-file runtime.env -f compose.gcp.yml pull
 docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate
 
-calendar="$(date -u -d "$expiry" '+%Y-%m-%d %H:%M:%S UTC')"
-cat > /etc/systemd/system/citeladder-expiry.service <<'UNIT'
-[Unit]
-Description=Expire the CiteLadder temporary demo
-[Service]
-Type=oneshot
-ExecStart=/opt/citeladder/expire.sh
-UNIT
-cat > /etc/systemd/system/citeladder-expiry.timer <<UNIT
-[Unit]
-Description=Stop CiteLadder at its fixed deadline
-[Timer]
-OnCalendar=$calendar
-Persistent=true
-AccuracySec=1min
-[Install]
-WantedBy=timers.target
-UNIT
 cat > /etc/systemd/system/citeladder-backup.service <<'UNIT'
 [Unit]
 Description=Back up the CiteLadder demo database
@@ -190,7 +197,7 @@ RandomizedDelaySec=15m
 WantedBy=timers.target
 UNIT
 systemctl daemon-reload
-systemctl enable --now citeladder-expiry.timer citeladder-backup.timer
+systemctl enable --now citeladder-backup.timer
 
 for attempt in $(seq 1 30); do
   if curl --fail --silent http://127.0.0.1:3000/health >/dev/null; then break; fi

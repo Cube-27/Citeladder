@@ -39,7 +39,6 @@ resource "google_compute_instance" "demo" {
     enable-oslogin         = "TRUE"
     block-project-ssh-keys = "TRUE"
     serial-port-enable     = "FALSE"
-    demo-expires-at        = var.demo_expires_at
   }
 
   metadata_startup_script = file("${path.module}/runtime/bootstrap-vm.sh")
@@ -48,9 +47,5 @@ resource "google_compute_instance" "demo" {
     enable_secure_boot          = true
     enable_vtpm                 = true
     enable_integrity_monitoring = true
-  }
-
-  lifecycle {
-    ignore_changes = [metadata["demo-expires-at"]]
   }
 }

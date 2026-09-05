@@ -24,7 +24,7 @@ Cloudflare → Caddy → Next.js → FastAPI
 - GCP: dedicated disposable project in `asia-south1` (Mumbai).
 - Runtime: one on-demand `e2-standard-2` VM, 2 vCPU/8 GiB, 30 GiB balanced disk.
 - URL: `https://citeladder.com`.
-- Lifetime: seven days, with the existing fixed demo expiry and one-account restriction.
+- Lifetime: runs until torn down deliberately. Public sign-up is on by default; `DEMO_MODE=true` restores the one-account restriction.
 - Expected GCP cost: approximately USD $15–25 for seven continuously running days; set an equivalent alert in the billing-account currency. The reviewed INR account uses INR 2,400. Provider/API usage is separate.
 - Do not use Cloud Run, Cloud SQL, a load balancer, Kubernetes, Redis, or Spot VMs for this temporary demo.
 
@@ -57,7 +57,7 @@ Cloudflare → Caddy → Next.js → FastAPI
 - Build backend and frontend images in GitHub Actions, push immutable digests to Artifact Registry, deploy those exact digests over IAP, and record the source commit and digests in the GitHub deployment summary.
 - Keep core credentials, database password, demo password, provider keys, and Cloudflare origin private key in Secret Manager. The frontend receives only public/demo configuration.
 - Create a nightly compressed PostgreSQL dump with a ten-day bucket lifecycle. Before each update, take an additional pre-deploy dump.
-- Install a systemd expiry timer that stops Compose and powers off the VM at `DEMO_EXPIRES_AT`. Redeployment must reuse—not extend—the original deadline.
+- Do not install any self-teardown timer. Stopping and destroying the host are deliberate acts run through the protected control and destroy workflows.
 
 The baseline schema includes MCP OAuth clients, one-time authorization state,
 and revocable grants. Because pre-launch migrations remain a single folded
@@ -74,9 +74,9 @@ elsewhere in this repository.
 - `infra/gcp/bootstrap.ps1`: disposable-project APIs, versioned GCS state
   bucket, deploy service account, and exact GitHub Workload Identity trust.
 - `infra/gcp/runtime/`: loopback-only production Compose stack, Caddy, database
-  TLS, IAP deployment, backup, and fixed-expiry scripts.
-- `.github/workflows/gcp-demo-*.yml`: protected deployment, VM control, expiry
-  guard, and authoritative project teardown.
+  TLS, IAP deployment, and backup scripts.
+- `.github/workflows/gcp-demo-*.yml`: protected deployment, VM control, and
+  authoritative project teardown.
 - `backend/tests/unit/test_gcp_demo_infrastructure.py`: deterministic security
   and deployment-contract checks selected by `scripts/validation.json`.
 
@@ -85,11 +85,13 @@ elsewhere in this repository.
 Configure these variables on `gcp-demo`: `GCP_PROJECT_ID`,
 `GCP_PROJECT_NUMBER`, `GCP_REGION`, `GCP_ZONE`, `GCP_WIF_PROVIDER`,
 `GCP_DEPLOY_SERVICE_ACCOUNT`, `GCP_TF_STATE_BUCKET`, `GCP_BILLING_ACCOUNT`,
-`GCP_BUDGET_CURRENCY_CODE`, `GCP_BUDGET_UNITS`, `DOMAIN_NAME`,
-`DEMO_EXPIRES_AT`, and optionally `DEMO_LOGIN_EMAIL`.
+`GCP_BUDGET_CURRENCY_CODE`, `GCP_BUDGET_UNITS`, `DOMAIN_NAME`, and optionally
+`DEMO_MODE`, `DEMO_EXPIRES_AT` (demo mode only), and `DEMO_LOGIN_EMAIL`.
 
 Configure these environment secrets: `DEMO_LOGIN_PASSWORD`, <!-- pragma: allowlist secret -- variable name, not a value -->
-`CLOUDFLARE_ORIGIN_CERT`, `CLOUDFLARE_ORIGIN_KEY`, and only the provider keys
+`CLOUDFLARE_ORIGIN_CERT`, `CLOUDFLARE_ORIGIN_KEY`, the four OAuth client
+values (`GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`,
+`BING_OAUTH_CLIENT_ID`, `BING_OAUTH_CLIENT_SECRET`), and only the provider keys
 needed for the demonstration. The deploy workflow creates independent database,
 JWT, encryption, and referral secrets directly in Secret Manager on first use.
 
@@ -104,9 +106,9 @@ JWT, encryption, and referral secrets directly in Secret Manager on first use.
    `project=citeladder`, `environment=demo`, and `managed_by=terraform`, and
    select Mumbai.
 3. Run the checked-in owner bootstrap to enable billing, Compute, IAM, IAP, Artifact Registry, Secret Manager, Cloud Build, and Storage APIs; create the state bucket and exact GitHub WIF trust.
-4. Set GitHub environment variables for project ID, project number, region, zone, WIF provider, deploy service account, state bucket, domain, and the fixed RFC3339 expiry.
+4. Set GitHub environment variables for project ID, project number, region, zone, WIF provider, deploy service account, state bucket, and domain.
 5. Generate the demo login password in a password manager and install it as a protected environment secret. Allow the first deployment to generate independent database, JWT, encryption, and referral secrets directly into Secret Manager.
-6. Add only provider credentials needed for the demonstration. Leave billing checkout, OAuth integrations, and unused providers disabled.
+6. Add the Google and Bing OAuth client pairs, plus any other provider credentials needed. Publish the Google consent screen and register the sign-in and connect redirect URIs against the deployed hostname. Leave billing checkout and unused providers disabled.
 7. In Cloudflare:
    - preserve all MX, SPF, DKIM, and DMARC records;
    - create an Origin CA certificate covering `citeladder.com` and `*.citeladder.com`;
@@ -147,7 +149,7 @@ JWT, encryption, and referral secrets directly in Secret Manager on first use.
 ### Incident and teardown
 
 - If anything appears compromised, disable the Cloudflare record, stop the VM, rotate the affected secrets, and inspect logs before restarting.
-- At demo expiry, verify login is rejected and the VM has powered off.
+- To take the demo down, stop the VM through the control workflow and then destroy the project.
 - Export only explicitly required evidence; otherwise retain no demo data.
 - Remove the Cloudflare A record and revoke the Origin CA certificate.
 - Delete the dedicated GCP project, then verify no separately billed resources or Artifact Registry images remain. Project deletion is the authoritative teardown.
@@ -159,10 +161,10 @@ JWT, encryption, and referral secrets directly in Secret Manager on first use.
   - Cloudflare-only 80/443 and IAP-only SSH;
   - exact WIF repository/environment claims;
   - no service-account key files or secret payloads in Git, Terraform, outputs, logs, or workflow arguments;
-  - immutable image digests, Shielded VM controls, fixed expiry, and least-privilege service accounts.
-- Validate rendered Compose configuration, PostgreSQL TLS, one-account bootstrap idempotency, frontend secret isolation, and Caddy routing.
+  - immutable image digests, Shielded VM controls, no self-teardown timer, and least-privilege service accounts.
+- Validate rendered Compose configuration, PostgreSQL TLS, demo-mode bootstrap idempotency, frontend secret isolation, and Caddy routing.
 - Run `.\scripts\check.ps1` followed by `.\scripts\test.ps1`.
-- On the deployed stack, verify login, registration denial, expiry behavior, persisted data after VM restart, two or more representative site crawls reaching terminal state, worker recovery, backup/restore, and spoofed forwarded-header handling.
+- On the deployed stack, verify registration, Google sign-in, Search Console and Bing connect, persisted data after VM restart, two or more representative site crawls reaching terminal state, worker recovery, backup/restore, and spoofed forwarded-header handling.
 - Acceptance requires a successful fresh deployment and a successful disposable-project teardown rehearsal.
 
 ## Assumptions

@@ -12,9 +12,8 @@ later. The operator needs permission to create a GCP project, link its billing
 account, change billing IAM, and administer `Cube-27/Citeladder`.
 
 Choose once: a globally unique disposable project ID, the billing-account ID,
-a globally unique GCS state-bucket name, the domain
-(`citeladder.com`), and an immutable UTC expiry such as
-`2026-09-08T12:00:00Z`. Redeployment must never extend that expiry.
+a globally unique GCS state-bucket name, and the domain (`citeladder.com`). The
+host runs until it is torn down deliberately; there is no automatic expiry.
 
 ```powershell
 gcloud auth login
@@ -60,7 +59,8 @@ Add these environment variables:
 | `GCP_BUDGET_CURRENCY_CODE` | Billing-account ISO 4217 currency code; currently `INR` |
 | `GCP_BUDGET_UNITS` | Positive whole-unit amount; currently `2400` (about USD 25 at review) |
 | `DOMAIN_NAME` | Lower-case public DNS hostname |
-| `DEMO_EXPIRES_AT` | Fixed RFC3339 expiry |
+| `DEMO_MODE` | Optional; `false` (public sign-up) unless set to `true` |
+| `DEMO_EXPIRES_AT` | Optional RFC3339 expiry; required only when `DEMO_MODE` is `true` |
 | `DEMO_LOGIN_EMAIL` | Optional; defaults to `dev@citeladder.com` |
 | `DEFAULT_AGENT_BASE_URL` | HTTPS base URL for the demo's OpenAI-compatible agent provider |
 | `DEFAULT_AGENT_MODEL` | Exact provider model identifier used by the Growth Agent |
@@ -78,6 +78,30 @@ Add these environment secrets:
 - `NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE`: optional Logo.dev publishable token. It
   is injected only while building the frontend and becomes public client
   configuration; do not use a Logo.dev secret key here.
+- `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`: required. One Google
+  OAuth client serves both sign-in and the Search Console / Analytics connect.
+- `BING_OAUTH_CLIENT_ID` / `BING_OAUTH_CLIENT_SECRET`: required. Issued by Bing
+  Webmaster Tools -> Settings -> API Access, not by an Azure app registration.
+
+The deploy fails before touching the VM if any of the four OAuth values has no
+Secret Manager version, because a missing pair leaves sign-in and every connect
+button returning 503 to visitors.
+
+### Provider-side setup
+
+Both clients must be registered against the deployed hostname:
+
+| Provider | Registered redirect URI |
+|---|---|
+| Google sign-in | `https://<DOMAIN_NAME>/api/v1/auth/oauth/google/callback` |
+| Search Console | `https://<DOMAIN_NAME>/api/v1/integrations/oauth/gsc/callback` |
+| Analytics | `https://<DOMAIN_NAME>/api/v1/integrations/oauth/ga4/callback` |
+| Bing | `https://<DOMAIN_NAME>/api/v1/integrations/oauth/bing/callback` |
+
+The Google consent screen must be **published**, not in Testing: a Testing
+project admits only its listed test users, which looks exactly like sign-in
+being broken for the public. `webmasters.readonly` and `analytics.readonly` are
+sensitive scopes, so publishing requires Google's verification review.
 
 The first deployment generates independent database, JWT, encryption, and
 referral secrets directly in Secret Manager. They never enter Terraform state.
@@ -99,39 +123,34 @@ firewall permits web traffic only from current Cloudflare address ranges.
 Merge the intended commit to `main` and wait for required CI. Run **GCP Demo -
 Deploy** from `main` and approve `gcp-demo`. It serializes deployments, safely
 reuses immutable images when retrying the same commit, applies Terraform,
-installs secrets once, deploys exact digests over IAP, migrates, and bootstraps
-the single development account. Project slots remain unprovisioned, which is
-the pre-commercial unlimited-project behavior. Each project crawl is capped at
-200 URLs, while the account receives an expiry-bounded 50,000 monitored-URL
-development ceiling so projects do not consume one shared 200-URL allowance.
-The demo crawler runs with eight global and six per-host slots. Deployment
-then validates every long-running service and performs smoke tests.
+installs secrets once, deploys exact digests over IAP, and migrates. With
+`DEMO_MODE` unset the deployment is public: visitors register or sign in with
+Google and own their own accounts. Set `DEMO_MODE` to `true` to bootstrap the
+single development account instead. Project slots remain unprovisioned, which
+is the pre-commercial unlimited-project behavior. Each project crawl is capped
+at 200 URLs. The crawler runs with eight global and six per-host slots.
+Deployment then validates every long-running service and performs smoke
+tests.
 
 Set Cloudflare's A record to the static IP in the workflow summary. If DNS was
 not ready for the final smoke test, correct DNS and rerun the same workflow.
 
 ```powershell
 curl.exe --fail --show-error https://citeladder.com/health
-$registrationPayload = @{
-  email = 'dev@citeladder.com'
-  password = [guid]::NewGuid().ToString('N')
-} | ConvertTo-Json -Compress
-curl.exe -o NUL -s -w "%{http_code}`n" -X POST `
-  -H "content-type: application/json" -d $registrationPayload `
-  https://citeladder.com/api/v1/auth/register
+curl.exe --fail --show-error https://citeladder.com/api/v1/auth/oauth/providers
 ```
 
-Health must succeed and registration must return `403`. Log in, confirm exactly
-one user, exercise required demo flows, and confirm ports 22, 3000, 5432, and
-8000 are not publicly reachable. Only Cloudflare may reach origin 80/443; use
+Health must succeed and the provider catalog must report Google as
+`configured`. Register a throwaway account, sign in with Google, connect Search
+Console and Bing end to end, then confirm ports 22, 3000, 5432, and 8000 are
+not publicly reachable. Only Cloudflare may reach origin 80/443; use
 IAP for administration. After deployment and review, make the repository
 private as planned and recheck environment reviewers and the WIF claim.
 
 ## 6. Daily operation
 
 Use **GCP Demo - Control** with `start` or `stop`; do not bypass its protected
-environment. Starting is refused after expiry. A stopped VM still incurs disk
-and reserved-address charges.
+environment. A stopped VM still incurs disk and reserved-address charges.
 
 For emergency read-only inspection:
 
@@ -146,7 +165,7 @@ On the VM:
 cd /opt/citeladder
 sudo docker compose --env-file runtime.env -f compose.gcp.yml ps
 sudo docker compose --env-file runtime.env -f compose.gcp.yml logs --tail=200 web frontend caddy
-sudo systemctl status citeladder-backup.timer citeladder-expiry.timer
+sudo systemctl status citeladder-backup.timer
 sudo journalctl -u citeladder-backup.service --since '24 hours ago'
 df -h /
 bucket=$(sudo sed -n "s/^BACKUP_BUCKET='\(.*\)'$/\1/p" runtime.env)
@@ -154,7 +173,7 @@ gcloud storage ls "gs://${bucket}/nightly/"
 ```
 
 Daily, check VM and container state, restart counts, disk usage, worker logs,
-the latest backup, expiry timer, and GCP billing. Treat any worker restart or a
+the latest backup, and GCP billing. Treat any worker restart or a
 missing nightly backup as an incident before presenting.
 
 ## 7. Updates, backups, and rollback
@@ -185,12 +204,11 @@ sudo docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recr
 rm -f /tmp/citeladder-restore.sql.gz
 ```
 
-## 8. Expiry, incidents, and teardown
+## 8. Incidents and teardown
 
-The systemd timer tears down Compose and powers off at `DEMO_EXPIRES_AT`; **GCP
-Demo - Expiry Guard** is the independent control-plane backstop. If the site is
-reachable after expiry, stop the VM through **GCP Demo - Control**, then inspect
-both workflow and timer logs.
+The host does not expire or power itself off. Stop it with **GCP Demo -
+Control** and remove it with **GCP Demo - Destroy Project**, both from `main`
+through the protected environment.
 
 For suspected credential exposure, stop the VM, disable and rotate the affected
 Secret Manager version or provider key, review GitHub/GCP audit logs, and

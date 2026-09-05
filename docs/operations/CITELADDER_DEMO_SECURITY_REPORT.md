@@ -24,8 +24,8 @@ deployed runtime.
 - PASS: PostgreSQL, FastAPI, and Next.js bind loopback under host networking;
   PostgreSQL TLS is required; only Caddy binds public web ports.
 - PASS: the runtime includes all ten worker/scheduler processes, a quiesced
-  pre-deploy dump, nightly backups, a ten-day object lifecycle, and an immutable
-  metadata-backed expiry timer.
+  pre-deploy dump, nightly backups, and a ten-day object lifecycle. The
+  self-terminating expiry timer was removed; teardown is the destroy workflow.
 - PASS: AWS demo workflows, Terraform, infrastructure tests, and active AWS
   runbooks were removed rather than retained as a second deployment authority.
 
