@@ -216,12 +216,8 @@ describe('Card', () => {
 });
 
 describe('Workspace structures', () => {
-  it('keeps panes open by default and makes semantic object styling explicit', () => {
-    const { rerender } = render(<WorkspacePane data-testid="pane">Open</WorkspacePane>);
-    const pane = screen.getByTestId('pane');
-    expect(pane).not.toHaveClass('bg-panel', 'rounded-[var(--radius-card)]');
-
-    rerender(
+  it('applies semantic object styling when requested', () => {
+    render(
       <WorkspacePane data-testid="pane" surface="object">
         Object
       </WorkspacePane>,

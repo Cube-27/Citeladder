@@ -222,9 +222,6 @@ describe('PagesTable', () => {
       'aria-sort',
       'ascending',
     );
-    expect(screen.getByRole('columnheader', { name: /^Status/ })).not.toHaveClass('tabular-nums');
-    expect(screen.getByRole('columnheader', { name: /^Page URL/ })).not.toHaveClass('tabular-nums');
-    expect(screen.getByRole('columnheader', { name: /^Inbound/ })).toHaveClass('tabular-nums');
     fireEvent.click(screen.getByRole('button', { name: /^Page URL/ }));
     expect(onSortChange).toHaveBeenCalledWith('url');
   });

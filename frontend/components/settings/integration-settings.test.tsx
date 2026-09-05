@@ -211,21 +211,20 @@ describe('IntegrationSettings — grant cards', () => {
     ).toBeEnabled();
   });
 
-  it('maps grant statuses to badge tokens', async () => {
+  it('maps grant statuses to badge labels', async () => {
     const cases = [
-      { status: 'connected', label: 'Connected', classes: 'bg-success' },
-      { status: 'needs_reauth', label: 'Needs reauth', classes: 'bg-warning' },
-      { status: 'pending_revocation', label: 'Pending revocation', classes: 'bg-warning' },
-      { status: 'error', label: 'Error', classes: 'bg-danger' },
-      { status: 'revoked', label: 'Revoked', classes: 'bg-border-strong' },
+      { status: 'connected', label: 'Connected' },
+      { status: 'needs_reauth', label: 'Needs reauth' },
+      { status: 'pending_revocation', label: 'Pending revocation' },
+      { status: 'error', label: 'Error' },
+      { status: 'revoked', label: 'Revoked' },
     ] as const;
 
-    for (const { status, label, classes } of cases) {
+    for (const { status, label } of cases) {
       mockList([connection({ grant_status: status })]);
       const { unmount } = renderWithProviders(<IntegrationSettings />);
       const badge = await screen.findByTestId('grant-status-google');
       expect(badge).toHaveTextContent(label);
-      expect(badge.querySelector('span')?.className).toContain(classes);
       unmount();
     }
   });

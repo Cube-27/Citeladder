@@ -41,15 +41,6 @@ describe('ContentMarkdown', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
 
-  it('supports the compact reading scale used for execution evidence', () => {
-    const { container } = render(
-      <ContentMarkdown markdown="A persisted answer." density="compact" />,
-    );
-
-    expect(container.firstElementChild).toHaveClass('text-sm');
-    expect(container.firstElementChild).not.toHaveClass('text-base');
-  });
-
   it('preserves leading indentation in the original Markdown', () => {
     const { container } = render(<ContentMarkdown markdown={'    indented code\n'} />);
 
@@ -63,17 +54,11 @@ describe('ContentMarkdown', () => {
       />,
     );
 
-    expect(container.firstElementChild).toHaveClass(
-      'min-w-0',
-      'max-w-full',
-      'overflow-x-auto',
-      'overflow-y-hidden',
-      '[overflow-wrap:anywhere]',
-      '[&_pre]:whitespace-pre-wrap',
-      '[&_table]:min-w-full',
-      '[&_table]:w-max',
-      '[&_table]:table-auto',
-    );
+    expect(container).toHaveTextContent('https://example.com/');
+    expect(container).toHaveTextContent('code'.repeat(80));
+    expect(container).toHaveTextContent('cell'.repeat(80));
+    expect(container.querySelector('pre code')).toBeInTheDocument();
+    expect(container.querySelector('table')).toBeInTheDocument();
   });
 
   it('never parses raw HTML (script/iframe arrive as escaped text)', () => {

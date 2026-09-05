@@ -49,21 +49,21 @@ describe('PageHeader', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Custom');
   });
 
-  it('keeps the route title visible by default', () => {
+  it('renders the route title as a level-one heading by default', () => {
     pathname.value = '/site';
     render(<PageHeader />);
-    expect(screen.getByRole('heading', { level: 1 })).not.toHaveClass('sr-only');
+    expect(screen.getByRole('heading', { level: 1, name: 'Website' })).toBeInTheDocument();
   });
 
-  it('can retain an accessible-only title for an entity-owned screen', () => {
+  it('keeps an accessible level-one title when visual display is disabled', () => {
     pathname.value = '/site';
     render(<PageHeader showTitle={false} />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveClass('sr-only');
+    expect(screen.getByRole('heading', { level: 1, name: 'Website' })).toBeInTheDocument();
   });
 
-  it('keeps the page-detail route title accessible-only by default', () => {
+  it('keeps the page-detail route title accessible', () => {
     pathname.value = '/site/crawls/crawl-id/pages/page-id';
     render(<PageHeader />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Page detail' })).toHaveClass('sr-only');
+    expect(screen.getByRole('heading', { level: 1, name: 'Page detail' })).toBeInTheDocument();
   });
 });

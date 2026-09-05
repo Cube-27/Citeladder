@@ -56,16 +56,17 @@ describe('FlowShell', () => {
     expect(labels).toEqual(['Back', 'Create project']);
   });
 
-  it('renders one flat ruled group with the flow type roles', () => {
+  it('renders a labelled group with its heading, help, and meta copy', () => {
     render(
       <FlowGroup title="Your websites" help="Auto-verified from your domain." meta="1 of 1">
         <span>example.com</span>
       </FlowGroup>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Your websites' })).toHaveClass('flow-group-title');
-    expect(screen.getByText('Auto-verified from your domain.')).toHaveClass('flow-help');
-    expect(screen.getByText('1 of 1')).toHaveClass('flow-meta');
-    expect(screen.getByRole('heading').closest('section')).toHaveClass('flow-group');
+    const group = screen.getByRole('region', { name: 'Your websites' });
+    const heading = within(group).getByRole('heading', { level: 2, name: 'Your websites' });
+    expect(group).toHaveAttribute('aria-labelledby', heading.id);
+    expect(within(group).getByText('Auto-verified from your domain.')).toBeInTheDocument();
+    expect(within(group).getByText('1 of 1')).toBeInTheDocument();
   });
 });

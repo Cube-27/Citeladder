@@ -98,7 +98,7 @@ const readyDiscovery = {
   updated_at: '2026-08-09T00:00:01Z',
 };
 
-test('onboarding renders one centered flow, sequential progress, and a prompt-free review', async ({
+test('onboarding advances through a prompt-free review with sequential progress', async ({
   page,
 }) => {
   await stubAuthedShell(page, [
@@ -110,40 +110,20 @@ test('onboarding renders one centered flow, sequential progress, and a prompt-fr
   await page.goto('/onboarding');
   await expect(page.locator('[data-brand-canvas]')).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Setup progress' })).toBeVisible();
-  const initialHeading = page.getByRole('heading', { name: "Let's get started" });
-  const initialHeadingBox = await initialHeading.boundingBox();
-  expect(initialHeadingBox).not.toBeNull();
-  const stageHeadingFontSize = await initialHeading.evaluate(
-    (element) => getComputedStyle(element).fontSize,
-  );
-  const brandStage = await page.locator('.flow-content[data-flow-measure="default"]').boundingBox();
-  expect(brandStage).not.toBeNull();
+  await expect(page.getByRole('heading', { name: "Let's get started" })).toBeVisible();
 
   await page.getByLabel(/^Brand name/).fill('The Asian School');
   await page.getByLabel(/^Website/).fill('theasianschool.net');
   await page.getByRole('button', { name: 'Continue' }).click();
   const discoveryHeading = page.getByRole('heading', { name: 'Finding what to track' });
-  const discoveryHeadingBox = await discoveryHeading.boundingBox();
-  expect(discoveryHeadingBox).not.toBeNull();
-  expect(discoveryHeadingBox!.y).toBeCloseTo(initialHeadingBox!.y, 0);
-  const discoveryStage = await page
-    .locator('.flow-content[data-flow-measure="default"]')
-    .boundingBox();
-  expect(discoveryStage).not.toBeNull();
+  await expect(discoveryHeading).toBeVisible();
 
   const progress = page.getByRole('progressbar', { name: /steps complete/ });
   await expect(progress).not.toHaveAttribute('aria-valuenow', '4');
   await expect(progress).toHaveAttribute('aria-valuenow', '4', { timeout: 4_000 });
 
   await page.getByRole('button', { name: 'Review' }).click();
-  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toHaveCSS(
-    'font-size',
-    stageHeadingFontSize,
-  );
-  const reviewStage = await page.locator('.flow-content[data-flow-measure="wide"]').boundingBox();
-  expect(reviewStage).not.toBeNull();
-  expect(brandStage?.width).toBeCloseTo(discoveryStage!.width, 0);
-  expect(reviewStage!.width).toBeGreaterThan(brandStage!.width);
+  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible();
   await expect(page.getByText('Online Footprint & Peers')).toHaveCount(0);
   await expect(page.getByText('AI Discovered')).toHaveCount(0);
   await expect(page.getByText('theasianschool.net')).toBeVisible();

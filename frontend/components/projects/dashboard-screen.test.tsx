@@ -164,8 +164,6 @@ describe('DashboardScreen', () => {
     expect(screen.getByText('Evidence-first analytics')).toBeVisible();
     expect(screen.getByText('Growth leaders')).toBeVisible();
     expect(screen.getByText('Analytics')).toBeVisible();
-    expect(screen.getByText('32.5%')).toHaveClass('text-3xl');
-    expect(screen.getByText('Citation share')).toHaveClass('font-display', 'text-base');
 
     const facts = screen.getByRole('heading', { name: 'Company facts' });
     const nextAction = screen.getByText('Monitor — no required action');

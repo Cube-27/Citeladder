@@ -166,7 +166,6 @@ describe('CatalogList', () => {
     );
 
     const controls = screen.getByTestId('catalog-search-controls');
-    expect(controls).toHaveClass('sticky', 'top-0', 'z-20', 'bg-panel');
     expect(controls.parentElement?.firstElementChild).toBe(controls);
   });
 

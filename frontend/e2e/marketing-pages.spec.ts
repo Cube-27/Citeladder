@@ -78,18 +78,6 @@ test.describe('marketing routes', () => {
     }
   });
 
-  test('marketing subpages render the unified light canvas', async ({ page }) => {
-    await page.goto('/pricing');
-    // docs/design.md §Colour: the canvas is the shared violet-tinted paper
-    // `background` token. Crisp white is `panel` / `elevated`, and the
-    // recessed tone is the grouped-region well (`background-alt` / `well`) —
-    // neither of those is the canvas.
-    await expect(page.locator('.bg-background').first()).toHaveCSS(
-      'background-color',
-      'rgb(247, 246, 253)',
-    );
-  });
-
   test('the logged-out auth screens run the same Prism surface', async ({ page }) => {
     for (const path of ['/login', '/register']) {
       await page.goto(path);

@@ -46,17 +46,6 @@ describe('Dialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('allows a consumer width utility to replace the default width', () => {
-    render(
-      <Dialog open onOpenChange={() => {}} title="CSV preview" className="w-205">
-        Preview
-      </Dialog>,
-    );
-
-    expect(screen.getByRole('dialog')).toHaveClass('w-205');
-    expect(screen.getByRole('dialog')).not.toHaveClass('w-[42rem]');
-  });
-
   it('restores focus to the control that opened it', async () => {
     const user = userEvent.setup();
 
@@ -93,23 +82,6 @@ describe('Drawer', () => {
     expect(screen.getByRole('dialog', { name: 'Evidence' })).toBeInTheDocument();
     expect(screen.getByText('Persisted sources')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close drawer' })).toBeInTheDocument();
-  });
-
-  it('owns footer separation and modal padding', () => {
-    render(
-      <Drawer
-        open
-        onOpenChange={() => {}}
-        title="Evidence"
-        footer={<button type="button">Save</button>}
-      >
-        <p>Source details</p>
-      </Drawer>,
-    );
-    expect(screen.getByRole('button', { name: 'Save' }).closest('footer')).toHaveClass(
-      'border-t',
-      'px-[var(--modal-padding)]',
-    );
   });
 
   it('closes from Escape or the scrim and restores focus to the opening control', async () => {
@@ -182,7 +154,7 @@ describe('Dropdown', () => {
     expect(screen.queryByText('Edit')).not.toBeInTheDocument();
   });
 
-  it('marks the selected radio filter and uses the elevated menu recipe', () => {
+  it('marks the selected radio filter', () => {
     render(
       <Dropdown open>
         <DropdownTrigger>Range</DropdownTrigger>
@@ -193,10 +165,6 @@ describe('Dropdown', () => {
           </DropdownRadioGroup>
         </DropdownContent>
       </Dropdown>,
-    );
-    expect(screen.getByRole('menu')).toHaveClass(
-      'shadow-elevated',
-      'rounded-[var(--radius-overlay)]',
     );
     expect(screen.getByRole('menuitemradio', { name: 'Month' })).toHaveAttribute(
       'data-state',
@@ -217,7 +185,7 @@ describe('Tooltip', () => {
     expect(screen.getByRole('button', { name: 'Generate' })).toBeInTheDocument();
   });
 
-  it('renders the shared inverse chip when open (never white-on-white)', async () => {
+  it('renders its content when opened', async () => {
     render(
       <TooltipProvider>
         <Tooltip content="Coming soon" delayDuration={0}>
@@ -227,10 +195,7 @@ describe('Tooltip', () => {
     );
     fireEvent.focus(screen.getByRole('button', { name: 'Generate' }));
     const tip = await screen.findByRole('tooltip');
-    expect(tip.className).toContain('bg-surface-inverse');
-    expect(tip.className).toContain('text-on-inverse');
-    expect(tip.className).toContain('shadow-elevated');
-    expect(tip.className).toContain('rounded-[var(--radius-overlay)]');
+    expect(tip).toHaveTextContent('Coming soon');
   });
 });
 

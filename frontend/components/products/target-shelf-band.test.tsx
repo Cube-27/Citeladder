@@ -16,7 +16,6 @@ describe('TargetShelfBand', () => {
     render(<TargetShelfBand query={shelfQuery(undefined)} />);
 
     for (const value of screen.getAllByText('Not measured')) {
-      expect(value).toHaveClass('value-placeholder');
       expect(value.tagName).not.toBe('H3');
     }
   });

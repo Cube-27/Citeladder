@@ -157,7 +157,7 @@ describe('VisibilityPage — tablist', () => {
     expect(screen.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('exposes a horizontally scrollable tablist for narrow viewports', async () => {
+  it('exposes the visibility tabs on narrow viewports', async () => {
     useBaseVisibilityHandlers([
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility`, () =>
         HttpResponse.json(makeVisibility(AUDIT_LATEST, 67)),
@@ -166,8 +166,9 @@ describe('VisibilityPage — tablist', () => {
     renderVisibilityPage();
 
     const tablist = await screen.findByRole('tablist', { name: 'Visibility views' });
-    expect(tablist.className).toContain('overflow-x-auto');
-    expect(tablist.className).toContain('flex-nowrap');
+    for (const name of ['Trends', 'Mentions', 'Search queries']) {
+      expect(within(tablist).getByRole('tab', { name })).toBeInTheDocument();
+    }
   });
 });
 

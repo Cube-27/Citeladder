@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -50,12 +50,12 @@ describe('IcpConfirmation', () => {
     const what = screen.getByRole('heading', { name: 'What you sell' });
     const who = screen.getByRole('heading', { name: 'Who buys it' });
     const where = screen.getByRole('heading', { name: 'Where they buy it' });
-    expect(what).toHaveClass('flow-group-title');
-    expect(who).toHaveClass('flow-group-title');
-    expect(where).toHaveClass('flow-group-title');
-    expect(who.closest('section')?.parentElement).toBe(where.closest('section')?.parentElement);
-    expect(who.closest('section')?.parentElement).toHaveClass('flow-pair');
-    expect(where.closest('section')).toHaveClass('flow-group');
+    expect(what.tagName).toBe('H2');
+    const buyerGroup = screen.getByRole('region', { name: 'Who buys it' });
+    const marketGroup = screen.getByRole('region', { name: 'Where they buy it' });
+    expect(within(buyerGroup).getByRole('heading', { level: 2 })).toBe(who);
+    expect(within(marketGroup).getByRole('heading', { level: 2 })).toBe(where);
+    expect(buyerGroup.parentElement).toBe(marketGroup.parentElement);
     expect(screen.queryByLabelText(/positioning/i)).toBeNull();
     expect(screen.queryByLabelText(/description/i)).toBeNull();
   });

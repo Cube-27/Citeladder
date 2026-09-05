@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import type { UsageItem } from '@/lib/api/billing';
-import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/config/billing';
 
 import { UsageMeter } from './usage-meter';
 
@@ -81,16 +80,6 @@ describe('UsageMeter', () => {
     const bar = screen.getByRole('progressbar');
     expect(bar).toHaveAttribute('aria-valuemax', '0');
     expect(bar.firstElementChild).toHaveStyle({ width: '0%' });
-  });
-
-  it.each([
-    ['normal', 10, 'bg-brand-solid'],
-    ['warning', Math.ceil(USAGE_METER_WARNING_RATIO * 100), 'bg-warning-solid'],
-    ['critical', Math.ceil(USAGE_METER_CRITICAL_RATIO * 100), 'bg-danger-solid'],
-  ])('uses the %s tone at that consumption band', (_name, consumed, tone) => {
-    render(<UsageMeter item={item({ allowance: 100, consumed: consumed as number })} />);
-
-    expect(screen.getByRole('progressbar').firstElementChild).toHaveClass(tone as string);
   });
 
   it('never overfills the bar past full', () => {

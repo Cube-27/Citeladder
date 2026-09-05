@@ -77,7 +77,6 @@ describe('authenticated interaction primitives', () => {
     }
     render(<Harness />);
     await user.click(screen.getByRole('combobox', { name: 'Severity' }));
-    expect(screen.getByRole('listbox')).toHaveClass('z-modal');
     await user.click(screen.getByRole('option', { name: 'High' }));
     expect(screen.getByRole('combobox', { name: 'Severity' })).toHaveTextContent('High');
   });
@@ -145,12 +144,6 @@ describe('authenticated interaction primitives', () => {
     );
     const checkbox = screen.getByRole('checkbox', { name: 'Select all products' });
     expect(checkbox).toHaveAttribute('data-state', 'indeterminate');
-    expect(checkbox).toHaveClass(
-      'min-h-[var(--control-height)]',
-      'min-w-[var(--control-height)]',
-      'disabled:opacity-60',
-    );
-    expect(checkbox.firstElementChild).toHaveClass('border-border-bold', 'bg-input');
     await user.click(checkbox);
     expect(onCheck).toHaveBeenCalledWith(true);
   });

@@ -34,4 +34,6 @@ export declare function textRoleBackgroundViolations(source: string, label: stri
 
 export declare function rawRadiusViolations(source: string, label: string): string[];
 
+export declare function styleAssertionViolations(source: string, label: string): string[];
+
 export declare function websiteContractViolations(root: string): string[];

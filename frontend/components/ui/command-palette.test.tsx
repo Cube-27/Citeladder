@@ -51,7 +51,6 @@ describe('CommandPalette', () => {
     render(<CommandPalette />);
     const trigger = screen.getByRole('button', { name: /search or jump to/i });
     expect(trigger).toHaveAttribute('aria-keyshortcuts', 'Meta+K Control+K');
-    expect(trigger).toHaveClass('[&>span]:w-full');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 

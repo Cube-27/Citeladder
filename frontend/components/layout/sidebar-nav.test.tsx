@@ -61,8 +61,6 @@ describe('station navigation', () => {
     render(<SidebarNav />);
     const activeLink = screen.getByRole('link', { name: 'Website' });
     expect(activeLink).toHaveAttribute('aria-current', 'page');
-    expect(activeLink).toHaveClass('bg-panel');
-    expect(screen.getByRole('link', { name: 'Issues' })).toHaveClass('hover:bg-panel/70');
   });
 
   it('renders exact mobile stations and shared secondary destinations', () => {
