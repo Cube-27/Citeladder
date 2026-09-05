@@ -58,6 +58,23 @@ EVENT_INTEGRATION_REVOKED: Final = "integration.revoked"
 
 EVENT_INTEGRATION_DISCONNECTED: Final = "integration.disconnected"
 
+# --- Backfill progress states (the Settings connection card) ----------------
+# The history import's rollup state. These stay DISTINCT (invariant 7): a
+# connection that never enqueued a backfill is not one that imported zero
+# windows, and a partially-failed import is not a complete one.
+BACKFILL_STATE_NOT_STARTED: Final = "not_started"
+BACKFILL_STATE_IMPORTING: Final = "importing"
+BACKFILL_STATE_COMPLETE: Final = "complete"
+BACKFILL_STATE_PARTIAL: Final = "partial"
+BACKFILL_STATES: Final[frozenset[str]] = frozenset(
+    {
+        BACKFILL_STATE_NOT_STARTED,
+        BACKFILL_STATE_IMPORTING,
+        BACKFILL_STATE_COMPLETE,
+        BACKFILL_STATE_PARTIAL,
+    }
+)
+
 EVENT_INTEGRATION_REVOKE_FAILED: Final = "integration.revoke_failed"
 
 ERROR_UNMAPPED_PROPERTY: Final = "unmapped_property"

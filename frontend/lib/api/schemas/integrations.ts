@@ -107,6 +107,30 @@ export const integrationSyncRunSchema = responseObject({
 // `GET /integrations/{id}/syncs` — bare array of run projections.
 export const integrationSyncRunListSchema = z.array(integrationSyncRunSchema);
 
+// `GET /integrations/{id}/syncs/progress` — the history-import rollup behind
+// the connection card. A projection over the connection's backfill runs, so
+// `state` keeps the cases apart that a count alone would blur: `not_started`
+// (no import was ever enqueued) is not zero imported windows, and `partial`
+// (all terminal, some failed) is not `complete`. `covered_from`/`_through`
+// bound the SUCCEEDED windows only and are null until one succeeds.
+export const integrationBackfillStateSchema = z.enum([
+  'not_started',
+  'importing',
+  'complete',
+  'partial',
+]);
+
+export const integrationBackfillProgressSchema = responseObject({
+  connection_id: uuid(),
+  state: integrationBackfillStateSchema,
+  total_windows: z.number().int(),
+  completed_windows: z.number().int(),
+  failed_windows: z.number().int(),
+  pending_windows: z.number().int(),
+  covered_from: z.string().nullable(),
+  covered_through: z.string().nullable(),
+});
+
 // `GET /integrations/{id}/properties` — the provider properties this grant can
 // read, for the property picker. Discovery output, not stored state:
 // `property_ref` is the canonical ref posted back to create a mapping

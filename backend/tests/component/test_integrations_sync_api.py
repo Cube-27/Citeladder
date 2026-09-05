@@ -371,3 +371,156 @@ async def test_unauthenticated_sync_rejected(client: httpx.AsyncClient) -> None:
     assert (await client.post(f"{_BASE}/{some_id}/sync")).status_code == 401
     assert (await client.get(f"{_BASE}/{some_id}/syncs")).status_code == 401
     assert (await client.get(f"{_BASE}/{some_id}/syncs/{some_id}")).status_code == 401
+
+
+# --- Backfill progress projection (the Settings connection card) -------------
+
+_PROGRESS_KEYS = {
+    "connection_id",
+    "state",
+    "total_windows",
+    "completed_windows",
+    "failed_windows",
+    "pending_windows",
+    "covered_from",
+    "covered_through",
+}
+
+
+async def _seed_backfill_runs(
+    db_session,
+    *,
+    workspace_id: uuid.UUID,
+    connection_id: uuid.UUID,
+    statuses: tuple[str, ...],
+) -> None:
+    """One backfill run per status, each covering its own 28-day window."""
+    end = date(2026, 7, 31)
+    for index, status in enumerate(statuses):
+        window_end = end - timedelta(days=28 * index)
+        db_session.add(
+            IntegrationSyncRun(
+                workspace_id=workspace_id,
+                connection_id=connection_id,
+                sync_kind="backfill",
+                status=status,
+                window_start=window_end - timedelta(days=27),
+                window_end=window_end,
+                resync_seq=0,
+                idempotency_key=f"backfill:{connection_id}:{window_end}",
+            )
+        )
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_backfill_progress_without_runs_is_not_started(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """No backfill run is NOT "zero windows imported" (invariant 7)."""
+    await _register(client, "backfill-none@example.com")
+    ws = await _workspace_id(db_session)
+    _grant, connections = await _seed_grant(db_session, workspace_id=ws)
+    gsc = next(c for c in connections if c.provider == "gsc")
+
+    body = (await client.get(f"{_BASE}/{gsc.id}/syncs/progress")).json()
+    assert set(body) == _PROGRESS_KEYS
+    assert body["state"] == "not_started"
+    assert body["total_windows"] == 0
+    assert body["covered_from"] is None
+    assert body["covered_through"] is None
+
+
+@pytest.mark.asyncio
+async def test_backfill_progress_counts_windows_and_bounds_coverage(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """Coverage spans the SUCCEEDED windows only, never a pending one."""
+    await _register(client, "backfill-progress@example.com")
+    ws = await _workspace_id(db_session)
+    _grant, connections = await _seed_grant(db_session, workspace_id=ws)
+    gsc = next(c for c in connections if c.provider == "gsc")
+    # Newest window succeeded, the next is still queued, the third failed.
+    await _seed_backfill_runs(
+        db_session,
+        workspace_id=ws,
+        connection_id=gsc.id,
+        statuses=("succeeded", "queued", "failed"),
+    )
+
+    body = (await client.get(f"{_BASE}/{gsc.id}/syncs/progress")).json()
+    assert body["state"] == "importing"
+    assert body["total_windows"] == 3
+    assert body["completed_windows"] == 1
+    assert body["failed_windows"] == 1
+    assert body["pending_windows"] == 1
+    # Only the succeeded window bounds coverage.
+    assert body["covered_from"] == date(2026, 7, 4).isoformat()
+    assert body["covered_through"] == date(2026, 7, 31).isoformat()
+
+
+@pytest.mark.asyncio
+async def test_backfill_progress_distinguishes_complete_from_partial(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """All-terminal-with-a-failure is PARTIAL, never complete."""
+    await _register(client, "backfill-partial@example.com")
+    ws = await _workspace_id(db_session)
+    _grant, connections = await _seed_grant(db_session, workspace_id=ws)
+    gsc = next(c for c in connections if c.provider == "gsc")
+    ga4 = next(c for c in connections if c.provider == "ga4")
+    await _seed_backfill_runs(
+        db_session,
+        workspace_id=ws,
+        connection_id=gsc.id,
+        statuses=("succeeded", "failed"),
+    )
+    await _seed_backfill_runs(
+        db_session,
+        workspace_id=ws,
+        connection_id=ga4.id,
+        statuses=("succeeded", "succeeded"),
+    )
+
+    partial = (await client.get(f"{_BASE}/{gsc.id}/syncs/progress")).json()
+    assert partial["state"] == "partial"
+    complete = (await client.get(f"{_BASE}/{ga4.id}/syncs/progress")).json()
+    assert complete["state"] == "complete"
+    # Each connection's rollup covers only its OWN runs.
+    assert complete["total_windows"] == 2
+    assert complete["failed_windows"] == 0
+
+
+@pytest.mark.asyncio
+async def test_backfill_progress_ignores_non_backfill_runs(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """A scheduled/on-demand run is not part of the HISTORY import."""
+    await _register(client, "backfill-kinds@example.com")
+    ws = await _workspace_id(db_session)
+    _grant, connections = await _seed_grant(db_session, workspace_id=ws)
+    gsc = next(c for c in connections if c.provider == "gsc")
+    assert (await client.post(f"{_BASE}/{gsc.id}/sync")).status_code == 202
+
+    body = (await client.get(f"{_BASE}/{gsc.id}/syncs/progress")).json()
+    assert body["state"] == "not_started"
+    assert body["total_windows"] == 0
+
+
+@pytest.mark.asyncio
+async def test_backfill_progress_authorization(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """Unknown connection 404s; another workspace never reads this rollup."""
+    await _register(client, "backfill-owner@example.com")
+    ws = await _workspace_id(db_session)
+    _grant, connections = await _seed_grant(db_session, workspace_id=ws)
+    gsc = next(c for c in connections if c.provider == "gsc")
+
+    assert (
+        await client.get(f"{_BASE}/{uuid.uuid4()}/syncs/progress")
+    ).status_code == 404
+
+    client.cookies.clear()
+    await _register(client, "backfill-outsider@example.com")
+    assert (await client.get(f"{_BASE}/{gsc.id}/syncs/progress")).status_code == 404

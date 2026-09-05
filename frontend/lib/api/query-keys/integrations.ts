@@ -9,6 +9,9 @@ export const integrationKeys = {
   connections: (workspaceId: string | null) =>
     ['integrations', 'connections', workspaceId ?? 'default'] as const,
   syncs: (connectionId: string) => ['integrations', 'syncs', connectionId] as const,
+  // The history-import rollup, polled only while windows drain.
+  backfillProgress: (connectionId: string) =>
+    ['integrations', 'backfill-progress', connectionId] as const,
   sync: (connectionId: string, syncId: string) =>
     ['integrations', 'sync', connectionId, syncId] as const,
   // Property discovery hits the provider live, so it is fetched lazily (only

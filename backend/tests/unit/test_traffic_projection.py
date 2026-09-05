@@ -30,15 +30,18 @@ from app.core.config.integrations_datasets import (
     unpack_dimension_key,
 )
 from app.core.config.traffic import TRAFFIC_GA4_ORGANIC_CHANNEL_GROUPS
+from app.domain.traffic.accumulators import BoundedIds
 from app.domain.traffic.projection import (
     TRAFFIC_SERIES_NAMES,
     TrafficMetricRowInput,
+    TrafficProjectionBuilder,
     bucket_labels,
     bucket_start,
     build_traffic_projection,
     ga4_channel_included,
     ga4_source_medium_ai_match,
     normalize_query,
+    row_identity,
     select_latest_rows,
 )
 
@@ -910,3 +913,203 @@ def test_dimension_fold_is_deterministic() -> None:
     assert [
         (row.dimension, row.dimension_key, row.metrics) for row in first.dimensions
     ] == [(row.dimension, row.dimension_key, row.metrics) for row in second.dimensions]
+
+
+# --- TrafficProjectionBuilder: the streaming fold -----------------------------
+# The builder is the contract ``build_traffic_projection`` is now a door onto,
+# so these assert the two properties the batch API cannot: that batching
+# changes nothing, and that a caller promising identity order gets the same
+# latest-revision selection while the builder retires each observation.
+
+
+def _stream(
+    rows: list[TrafficMetricRowInput],
+    *,
+    batch_size: int,
+    ordered: bool,
+    **kwargs: Any,
+) -> Any:
+    """Feed ``rows`` through the builder in batches of ``batch_size``."""
+    ordered_rows = (
+        sorted(rows, key=lambda row: (row_identity(row), row.resync_seq))
+        if ordered
+        else rows
+    )
+    builder = TrafficProjectionBuilder(**kwargs)
+    for start in range(0, len(ordered_rows), batch_size):
+        builder.add_batch(
+            ordered_rows[start : start + batch_size], ordered_by_identity=ordered
+        )
+    return builder.build()
+
+
+def _mixed_rows() -> list[TrafficMetricRowInput]:
+    """Rows spanning every fold path, including a superseded revision."""
+    return [
+        _gsc_day(date(2026, 7, 20), clicks=5, impressions=100, position=3.0),
+        _gsc_day(date(2026, 7, 21), clicks=7, impressions=140, position=2.0),
+        _gsc_page("https://example.com/a", date(2026, 7, 20), clicks=3, impressions=60),
+        _gsc_page("https://example.com/b", date(2026, 7, 21), clicks=1, impressions=25),
+        _row(
+            dataset=DATASET_GSC_QUERY_DAILY,
+            row_date=date(2026, 7, 20),
+            dimension_values=["crm software", "2026-07-20"],
+            metrics={"clicks": 2, "impressions": 30, "position": 8.0},
+        ),
+        _row(
+            dataset=DATASET_GSC_COUNTRY_DAILY,
+            row_date=date(2026, 7, 20),
+            dimension_values=["usa", "2026-07-20"],
+            metrics={"clicks": 4, "impressions": 50},
+        ),
+        _row(
+            dataset=DATASET_GSC_DEVICE_DAILY,
+            row_date=date(2026, 7, 21),
+            dimension_values=["MOBILE", "2026-07-21"],
+            metrics={"clicks": 2, "impressions": 22},
+        ),
+        _row(
+            dataset=DATASET_GA4_CHANNEL_DAILY,
+            row_date=date(2026, 7, 20),
+            dimension_values=[
+                next(iter(TRAFFIC_GA4_ORGANIC_CHANNEL_GROUPS)),
+                "2026-07-20",
+            ],
+            metrics={"sessions": 40, "engagedSessions": 25, "keyEvents": 4},
+        ),
+    ]
+
+
+def _superseded_pair() -> list[TrafficMetricRowInput]:
+    """Two revisions of ONE observation — only the later may fold."""
+    shared = {
+        "dataset": DATASET_GSC_DAY_DAILY,
+        "row_date": date(2026, 7, 22),
+        "dimension_values": ["2026-07-22"],
+    }
+    return [
+        _row(**shared, metrics={"clicks": 1, "impressions": 10}, resync_seq=0),
+        _row(**shared, metrics={"clicks": 9, "impressions": 90}, resync_seq=1),
+    ]
+
+
+_STREAM_WINDOW = {
+    "window_start": date(2026, 7, 20),
+    "window_end": date(2026, 7, 22),
+    "granularity": "day",
+}
+
+
+@pytest.mark.parametrize("batch_size", [1, 2, 3, 100])
+@pytest.mark.parametrize("ordered", [False, True])
+def test_streaming_fold_matches_the_batch_projection(
+    batch_size: int, ordered: bool
+) -> None:
+    """Batching is invisible: any batch size yields the one-shot result.
+
+    This is the property the executor relies on when it stops materializing
+    a window — the fold must not depend on how the rows were delivered.
+    """
+    rows = [*_mixed_rows(), *_superseded_pair()]
+    expected = build_traffic_projection(rows=rows, **_STREAM_WINDOW)
+    streamed = _stream(rows, batch_size=batch_size, ordered=ordered, **_STREAM_WINDOW)
+
+    assert streamed.metrics == expected.metrics
+    assert streamed.pages == expected.pages
+    assert streamed.queries == expected.queries
+    assert streamed.dimensions == expected.dimensions
+    assert streamed.dimension_counts == expected.dimension_counts
+    assert streamed.source_metric_row_ids == expected.source_metric_row_ids
+    assert streamed.source_artifact_ids == expected.source_artifact_ids
+
+
+@pytest.mark.parametrize("ordered", [False, True])
+def test_streaming_fold_drops_superseded_revisions_across_batches(
+    ordered: bool,
+) -> None:
+    """A stale revision split across batches must still never fold in.
+
+    The revisions are delivered in SEPARATE batches, so the builder cannot
+    see them together at ``add_batch`` time — it has to carry the pending
+    candidate across the boundary.
+    """
+    rows = _superseded_pair()
+    streamed = _stream(rows, batch_size=1, ordered=ordered, **_STREAM_WINDOW)
+    totals = streamed.metrics["totals"]
+    # Only resync_seq=1 contributes: 9/90, never the superseded 1/10 or 10/100.
+    assert totals["clicks"] == 9
+    assert totals["impressions"] == 90
+    assert streamed.source_metric_row_ids == [str(rows[1].id)]
+
+
+def test_ordered_streaming_retires_each_observation_immediately() -> None:
+    """The ordered mode's whole point: the buffer holds ONE identity.
+
+    That bound is what makes a long window affordable, so it is asserted
+    directly rather than inferred from the output.
+    """
+    rows = sorted(
+        [*_mixed_rows(), *_superseded_pair()],
+        key=lambda row: (row_identity(row), row.resync_seq),
+    )
+    builder = TrafficProjectionBuilder(**_STREAM_WINDOW)
+    for row in rows:
+        builder.add_batch([row], ordered_by_identity=True)
+        assert len(builder._pending) <= 1
+    assert builder.build().metrics["totals"]["clicks"] == 9 + 5 + 7
+
+
+def test_unordered_streaming_still_dedups_a_late_superseding_revision() -> None:
+    """An out-of-order caller keeps the safe (buffered) behavior.
+
+    ``ordered_by_identity`` is a promise about delivery, not a mode switch:
+    a caller that does not make it must still get correct dedup, whatever
+    order the revisions arrive in.
+    """
+    older, newer = _superseded_pair()
+    streamed = _stream([newer, older], batch_size=1, ordered=False, **_STREAM_WINDOW)
+    assert streamed.metrics["totals"]["clicks"] == 9
+
+
+def test_bounded_ids_retains_only_the_sample_it_reports() -> None:
+    """Provenance accumulation is bounded by the LIMIT, not by row count.
+
+    ``bounded_provenance`` always kept the lowest sorted ids, but the
+    accumulators used to hold every id until finalization, so streaming
+    memory still grew with the window. Retaining the sample as it folds
+    gives the identical answer at a fixed ceiling.
+    """
+    limit = 10
+    ids = BoundedIds(limit=limit)
+    offered = [f"id-{index:04d}" for index in range(500)]
+    for value in reversed(offered):  # worst case: every add displaces
+        ids.add(value)
+
+    provenance = ids.provenance()
+    # Same answer a full-set cap would give: the lowest ``limit`` ids...
+    assert provenance.ids == sorted(offered)[:limit]
+    # ...an honest distinct total, and therefore a sampled row.
+    assert provenance.total == len(offered)
+    assert provenance.sampled is True
+    # The bound that matters: the retained sample never exceeds the limit.
+    assert len(list(ids)) == limit
+
+
+def test_bounded_ids_counts_repeats_once() -> None:
+    """``total`` is a DISTINCT count, including ids already discarded."""
+    ids = BoundedIds(limit=2)
+    for value in ("id-a", "id-b", "id-c", "id-c", "id-a"):
+        ids.add(value)
+    provenance = ids.provenance()
+    assert provenance.ids == ["id-a", "id-b"]
+    assert provenance.total == 3
+
+
+def test_bounded_ids_union_merges_both_samples_and_totals() -> None:
+    """A union caps the merged sample and keeps the distinct total."""
+    left, right = BoundedIds(limit=2), BoundedIds(limit=2)
+    left.update(["id-a", "id-c"])
+    right.update(["id-b", "id-d"])
+    merged = (left | right).provenance()
+    assert merged.ids == ["id-a", "id-b"]
+    assert merged.total == 4

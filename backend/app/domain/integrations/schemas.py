@@ -92,6 +92,35 @@ class IntegrationSyncRunResponse(BaseModel):
     completed_at: datetime | None
 
 
+class IntegrationBackfillProgressResponse(BaseModel):
+    """The connection's history-import rollup (a projection, not a table).
+
+    Derived entirely from the connection's ``backfill``-kind
+    ``IntegrationSyncRun`` rows, so it says exactly what those rows say and
+    nothing more. ``state`` distinguishes the cases invariant 7 keeps apart:
+
+    - ``not_started`` — no backfill run exists. NOT "zero windows imported":
+      a property was never selected, or the import was never enqueued.
+    - ``importing`` — at least one window is still queued or running.
+    - ``complete`` — every window reached a terminal state, none failed.
+    - ``partial`` — every window is terminal but some failed, so the covered
+      history has holes the counts make visible.
+
+    ``covered_from`` / ``covered_through`` bound the SUCCEEDED windows only,
+    so a failed chunk never widens the claimed coverage. Both are null until
+    one window succeeds.
+    """
+
+    connection_id: uuid.UUID
+    state: str
+    total_windows: int
+    completed_windows: int
+    failed_windows: int
+    pending_windows: int
+    covered_from: date | None
+    covered_through: date | None
+
+
 class IntegrationPropertyResponse(BaseModel):
     """One selectable provider property from ``GET /{id}/properties``.
 

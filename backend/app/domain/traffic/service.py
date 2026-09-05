@@ -7,14 +7,17 @@ GSC evidence date, so a preset resolves whether the last sync ran today or
 last week. ``project_performance_range`` materializes ONE display snapshot
 for a user-requested custom or comparison window and does nothing else.
 
-Both fold persisted integration metrics in bounded batches and replace a
-snapshot's page/query/dimension rows atomically. Reads live in
+Both fold persisted integration metrics and replace a snapshot's
+page/query/dimension rows atomically. The bounded, streaming SCAN that feeds
+them lives in ``streaming.py``; the surface's own reads live in
 ``performance.py``; synchronization stays with integrations.
 """
 
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import date, timedelta
 
 from sqlalchemy import and_, delete, func, select
@@ -36,13 +39,12 @@ from app.core.config.traffic import (
     TRAFFIC_SYNC_PROVIDERS,
 )
 from app.domain.analytics.enqueue import enqueue_demand_snapshot_refresh
-from app.domain.analytics.tasks import payload_window, raise_if_task_terminal
-from app.domain.demand.projection import stable_hash
+from app.domain.analytics.tasks import payload_window
 from app.domain.traffic.projection import (
     SnapshotProjection,
-    TrafficMetricRowInput,
-    build_traffic_projection,
+    TrafficProjectionBuilder,
 )
+from app.domain.traffic.streaming import DemandRevision, stream_metric_rows
 from app.models.analytics import AnalyticsTask
 from app.models.integrations import (
     IntegrationConnection,
@@ -59,78 +61,12 @@ from app.models.traffic import (
     TrafficSnapshot,
 )
 
-# Bounded work per read batch: each batch is one cooperative-cancel boundary
-# (the WRITE phase is a single transaction). Module constant (not config) —
-# the same precedent as A6's ``_CLASSIFY_BATCH_SIZE``; tests monkeypatch it
-# down to 1 to exercise the boundary per row.
-_METRIC_ROW_BATCH_SIZE = 1000
-
 __all__ = [
     "list_traffic_sync_connections",
     "performance_family_windows",
     "project_performance_range",
     "refresh_traffic_snapshot",
 ]
-
-
-async def _raise_if_task_terminal(
-    session_factory: async_sessionmaker[AsyncSession], task_id: uuid.UUID | None
-) -> None:
-    """Cooperative-cancel boundary check (invariant 9).
-
-    Thin label adapter over the single owner (``domain/analytics/tasks.py``)
-    so this executor's message names its own batch boundary and tests keep
-    a module-local patch point. The refresh writes nothing before its
-    single write transaction, so stopping here leaves no partial
-    projection behind.
-    """
-    await raise_if_task_terminal(session_factory, task_id, boundary="metric-row batch")
-
-
-async def _metric_row_batch(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    window_start: date,
-    window_end: date,
-    after_id: uuid.UUID | None,
-    limit: int,
-) -> list[IntegrationMetricRow]:
-    """One keyset batch of the window's consumed-dataset metric rows.
-
-    Workspace + project scoped (invariant 5); the id-keyset order keeps the
-    scan stable across batches. Latest-``resync_seq`` selection is applied
-    by the pure projection (one owner of the rule), not here.
-    """
-    stmt = (
-        select(IntegrationMetricRow)
-        .where(IntegrationMetricRow.workspace_id == workspace_id)
-        .where(IntegrationMetricRow.project_id == project_id)
-        .where(IntegrationMetricRow.dataset.in_(sorted(TRAFFIC_CONSUMED_DATASETS)))
-        .where(IntegrationMetricRow.date >= window_start)
-        .where(IntegrationMetricRow.date <= window_end)
-        .order_by(IntegrationMetricRow.id.asc())
-        .limit(limit)
-    )
-    if after_id is not None:
-        stmt = stmt.where(IntegrationMetricRow.id > after_id)
-    return list((await session.scalars(stmt)).all())
-
-
-def _to_input(row: IntegrationMetricRow) -> TrafficMetricRowInput:
-    return TrafficMetricRowInput(
-        id=row.id,
-        property_ref=row.property_ref,
-        provider=row.provider,
-        dataset=row.dataset,
-        date=row.date,
-        dimension_key=row.dimension_key,
-        metrics=row.metrics,
-        source_artifact_id=row.source_artifact_id,
-        resync_seq=row.resync_seq,
-        importer_version=row.importer_version,
-    )
 
 
 async def _upsert_snapshot(
@@ -381,22 +317,14 @@ async def _write_snapshot(
     session: AsyncSession,
     *,
     task: AnalyticsTask,
-    inputs: list[TrafficMetricRowInput],
+    projection: SnapshotProjection,
     window_start: date,
     window_end: date,
     granularity: str,
-    project_origin: str | None,
     coverage: dict[str, object] | None,
     preset_window_days: int | None = None,
 ) -> uuid.UUID:
-    """Build and persist one snapshot with all of its stat rows (same tx)."""
-    projection = build_traffic_projection(
-        rows=inputs,
-        window_start=window_start,
-        window_end=window_end,
-        granularity=granularity,
-        project_origin=project_origin,
-    )
+    """Persist one already-folded projection with its stat rows (same tx)."""
     snapshot_id = await _upsert_snapshot(
         session,
         task=task,
@@ -431,43 +359,6 @@ def performance_family_windows(anchor: date) -> list[tuple[date, date]]:
     ]
 
 
-async def _collect_inputs(
-    session: AsyncSession,
-    session_factory: async_sessionmaker[AsyncSession],
-    *,
-    task: AnalyticsTask,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    window_start: date,
-    window_end: date,
-) -> list[TrafficMetricRowInput]:
-    """Read the span's consumed-dataset rows in bounded keyset batches.
-
-    Cooperative cancel is checked at every batch boundary. Nothing is
-    written during the read, so stopping here leaves no partial projection.
-    """
-    inputs: list[TrafficMetricRowInput] = []
-    after_id: uuid.UUID | None = None
-    while True:
-        await _raise_if_task_terminal(session_factory, task.id)
-        batch = await _metric_row_batch(
-            session,
-            workspace_id=workspace_id,
-            project_id=project_id,
-            window_start=window_start,
-            window_end=window_end,
-            after_id=after_id,
-            limit=_METRIC_ROW_BATCH_SIZE,
-        )
-        if not batch:
-            break
-        inputs.extend(_to_input(row) for row in batch)
-        after_id = batch[-1].id
-        if len(batch) < _METRIC_ROW_BATCH_SIZE:
-            break
-    return inputs
-
-
 async def _project_origin(
     session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
 ) -> str | None:
@@ -479,81 +370,129 @@ async def _project_origin(
     )
 
 
-async def _refresh_sync_window(
-    session: AsyncSession,
+@dataclass
+class _SnapshotTarget:
+    """One snapshot the refresh will write, and the builder folding it.
+
+    A target owns its own builder, so the single scan below folds each row
+    into every window that contains it exactly once. ``preset_window_days``
+    marks the row as a preset's snapshot; ``verifies`` marks the one target
+    that triggers implementation verification.
+    """
+
+    window_start: date
+    window_end: date
+    granularity: str
+    builder: TrafficProjectionBuilder
+    preset_window_days: int | None = None
+    verifies: bool = False
+
+
+def _snapshot_target(
     *,
-    task: AnalyticsTask,
-    project_id: uuid.UUID,
-    inputs: list[TrafficMetricRowInput],
     window_start: date,
     window_end: date,
+    granularity: str,
     project_origin: str | None,
-    coverage: dict[str, object],
-) -> None:
-    """Rebuild the triggering sync window at every configured granularity.
-
-    This is the snapshot Demand reads by exact window, and the one
-    implementation verification is triggered against, so its granularity set
-    and its downstream chain are unchanged.
-    """
-    for granularity in sorted(TRAFFIC_SNAPSHOT_GRANULARITIES):
-        snapshot_id = await _write_snapshot(
-            session,
-            task=task,
-            inputs=inputs,
+    preset_window_days: int | None = None,
+    verifies: bool = False,
+) -> _SnapshotTarget:
+    return _SnapshotTarget(
+        window_start=window_start,
+        window_end=window_end,
+        granularity=granularity,
+        builder=TrafficProjectionBuilder(
             window_start=window_start,
             window_end=window_end,
             granularity=granularity,
             project_origin=project_origin,
-            coverage=coverage,
+        ),
+        preset_window_days=preset_window_days,
+        verifies=verifies,
+    )
+
+
+def _refresh_targets(
+    *,
+    window_start: date,
+    window_end: date,
+    anchor: date | None,
+    project_origin: str | None,
+) -> list[_SnapshotTarget]:
+    """Every snapshot one refresh writes: the sync window, then the presets.
+
+    The sync window is rebuilt at every configured granularity — it is the
+    snapshot Demand reads by exact window and the one verification triggers
+    against. The preset family is day-granularity only: the surface charts
+    daily buckets and offers no bucket control, so week/month rows for those
+    windows would never be read.
+
+    The family is listed AFTER the sync window so a window that is both
+    keeps its preset marker (the later write wins the upsert).
+    """
+    targets = [
+        _snapshot_target(
+            window_start=window_start,
+            window_end=window_end,
+            granularity=granularity,
+            project_origin=project_origin,
+            verifies=granularity == TRAFFIC_DEFAULT_GRANULARITY,
         )
-        if granularity == TRAFFIC_DEFAULT_GRANULARITY:
-            from app.domain.opportunities.verification import (
-                enqueue_implementation_verification,
-            )
+        for granularity in sorted(TRAFFIC_SNAPSHOT_GRANULARITIES)
+    ]
+    if anchor is None:
+        return targets
+    targets.extend(
+        _snapshot_target(
+            window_start=preset_start,
+            window_end=preset_end,
+            granularity=TRAFFIC_DEFAULT_GRANULARITY,
+            project_origin=project_origin,
+            preset_window_days=(preset_end - preset_start).days + 1,
+        )
+        for preset_start, preset_end in performance_family_windows(anchor)
+    )
+    return targets
 
-            await enqueue_implementation_verification(
-                session,
-                workspace_id=task.workspace_id,
-                project_id=project_id,
-                trigger_kind="traffic_snapshot",
-                trigger_id=snapshot_id,
-                trigger_revision=str(task.id),
-            )
 
-
-async def _refresh_performance_family(
+async def _write_targets(
     session: AsyncSession,
     *,
     task: AnalyticsTask,
-    inputs: list[TrafficMetricRowInput],
-    anchor: date,
-    project_origin: str | None,
+    project_id: uuid.UUID,
+    targets: Sequence[_SnapshotTarget],
     coverage: dict[str, object],
 ) -> None:
-    """Derive the Performance presets, all anchored at the latest GSC date.
+    """Persist every folded target, in order, inside the caller's tx.
 
-    Day granularity only: the surface charts daily buckets and offers no
-    bucket control, so week/month rows for these windows would never be read.
-    The family fires no verification and no Demand hand-off — those belong to
-    the sync window above, and repeating them per preset would recompute the
-    same downstream work several times for one sync.
+    Only the sync window's default-granularity target hands off to
+    verification; repeating that per preset would recompute the same
+    downstream work several times for one sync.
     """
-    for window_start, window_end in performance_family_windows(anchor):
-        await _write_snapshot(
+    for target in targets:
+        snapshot_id = await _write_snapshot(
             session,
             task=task,
-            inputs=inputs,
-            window_start=window_start,
-            window_end=window_end,
-            granularity=TRAFFIC_DEFAULT_GRANULARITY,
-            project_origin=project_origin,
+            projection=target.builder.build(),
+            window_start=target.window_start,
+            window_end=target.window_end,
+            granularity=target.granularity,
             coverage=coverage,
-            # Marks the row as THIS preset's snapshot, so preset resolution
-            # can never land on a same-length custom display range. The
-            # family writes after the sync window, so a window that is both
-            # keeps the marker.
-            preset_window_days=(window_end - window_start).days + 1,
+            preset_window_days=target.preset_window_days,
+        )
+        if not target.verifies:
+            continue
+        from app.domain.opportunities.verification import (
+            enqueue_implementation_verification,
+        )
+
+        await enqueue_implementation_verification(
+            session,
+            workspace_id=task.workspace_id,
+            project_id=project_id,
+            trigger_kind="traffic_snapshot",
+            trigger_id=snapshot_id,
+            trigger_revision=str(task.id),
         )
 
 
@@ -564,10 +503,14 @@ async def refresh_traffic_snapshot(
 
     Read phase: ONE keyset scan over the union of the triggering sync window
     and the preset family's widest span, in bounded batches with a
-    cooperative-cancel check at every boundary. Write phase: the sync window
-    at every configured granularity, then the day-grained preset family, then
-    the Demand hand-off — ALL in ONE transaction, so a refresh never leaves a
-    half-written snapshot family behind.
+    cooperative-cancel check at every boundary. Each batch is FOLDED into
+    every target's builder and released, so the executor's memory bounds on
+    distinct keys rather than on the window's row count — what lets a long
+    window be projected at all.
+
+    Write phase: every folded target, then the Demand hand-off — ALL in ONE
+    transaction, so a refresh never leaves a half-written snapshot family
+    behind.
     """
     if task.project_id is None:
         raise ValueError("traffic_snapshot_refresh task missing project_id")
@@ -579,13 +522,19 @@ async def refresh_traffic_snapshot(
         anchor = await _performance_anchor_date(
             session, workspace_id=task.workspace_id, project_id=task.project_id
         )
-        # One scan covers both write phases: the family's windows all end at
-        # the anchor and are nested, so the widest of them plus the sync
-        # window bounds every row either phase can need.
-        family = performance_family_windows(anchor) if anchor is not None else []
-        read_start = min([window_start, *(start for start, _ in family)])
-        read_end = max([window_end, *(end for _, end in family)])
-        inputs = await _collect_inputs(
+        targets = _refresh_targets(
+            window_start=window_start,
+            window_end=window_end,
+            anchor=anchor,
+            project_origin=project_origin,
+        )
+        # One scan covers every target: the family's windows all end at the
+        # anchor and are nested, so the widest of them plus the sync window
+        # bounds every row any target can need.
+        read_start = min(target.window_start for target in targets)
+        read_end = max(target.window_end for target in targets)
+        demand = DemandRevision(window_start=window_start, window_end=window_end)
+        await stream_metric_rows(
             session,
             session_factory,
             task=task,
@@ -593,36 +542,20 @@ async def refresh_traffic_snapshot(
             project_id=task.project_id,
             window_start=read_start,
             window_end=read_end,
+            consumers=[target.builder for target in targets],
+            demand=demand,
         )
         coverage = await _evidence_coverage(
             session, workspace_id=task.workspace_id, project_id=task.project_id
         )
-        await _refresh_sync_window(
+        await _write_targets(
             session,
             task=task,
             project_id=task.project_id,
-            inputs=inputs,
-            window_start=window_start,
-            window_end=window_end,
-            project_origin=project_origin,
+            targets=targets,
             coverage=coverage,
         )
-        if anchor is not None:
-            await _refresh_performance_family(
-                session,
-                task=task,
-                inputs=inputs,
-                anchor=anchor,
-                project_origin=project_origin,
-                coverage=coverage,
-            )
-        await _enqueue_demand_refresh(
-            session,
-            task=task,
-            inputs=inputs,
-            window_start=window_start,
-            window_end=window_end,
-        )
+        await _enqueue_demand_refresh(session, task=task, demand=demand)
         await session.commit()
 
 
@@ -638,6 +571,10 @@ async def project_performance_range(
     other product projection. A window a snapshot already covers is left
     exactly as it is — a display request must never replace the preset or
     sync-window snapshot another surface is reading.
+
+    This is the one path a user can point at a long window, so it is also
+    the one that most needs the streaming fold: the request is bounded by
+    ``PERFORMANCE_CUSTOM_RANGE_MAX_DAYS``, not by a sync window.
     """
     if task.project_id is None:
         raise ValueError("performance_range_projection task missing project_id")
@@ -657,7 +594,13 @@ async def project_performance_range(
         project_origin = await _project_origin(
             session, workspace_id=task.workspace_id, project_id=task.project_id
         )
-        inputs = await _collect_inputs(
+        target = _snapshot_target(
+            window_start=window_start,
+            window_end=window_end,
+            granularity=TRAFFIC_DEFAULT_GRANULARITY,
+            project_origin=project_origin,
+        )
+        await stream_metric_rows(
             session,
             session_factory,
             task=task,
@@ -665,6 +608,7 @@ async def project_performance_range(
             project_id=task.project_id,
             window_start=window_start,
             window_end=window_end,
+            consumers=[target.builder],
         )
         coverage = await _evidence_coverage(
             session, workspace_id=task.workspace_id, project_id=task.project_id
@@ -672,11 +616,10 @@ async def project_performance_range(
         await _write_snapshot(
             session,
             task=task,
-            inputs=inputs,
+            projection=target.builder.build(),
             window_start=window_start,
             window_end=window_end,
             granularity=TRAFFIC_DEFAULT_GRANULARITY,
-            project_origin=project_origin,
             coverage=coverage,
         )
         await session.commit()
@@ -686,25 +629,17 @@ async def _enqueue_demand_refresh(
     session: AsyncSession,
     *,
     task: AnalyticsTask,
-    inputs: list[TrafficMetricRowInput],
-    window_start: date,
-    window_end: date,
+    demand: DemandRevision,
 ) -> None:
     if task.project_id is None:
         raise ValueError("traffic refresh requires project_id")
-    source_revision = stable_hash(
-        {
-            "metric_row_ids": sorted(str(row.id) for row in inputs),
-            "window": [window_start.isoformat(), window_end.isoformat()],
-        }
-    )[:24]
     await enqueue_demand_snapshot_refresh(
         session,
         workspace_id=task.workspace_id,
         project_id=task.project_id,
-        window_start=window_start,
-        window_end=window_end,
-        source_revision=source_revision,
+        window_start=demand.window_start,
+        window_end=demand.window_end,
+        source_revision=demand.source_revision(),
     )
 
 
@@ -719,15 +654,17 @@ async def list_traffic_sync_connections(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
 ) -> list[IntegrationConnection]:
-    """The distinct ACTIVE mapped GSC/GA4 connections of the project.
+    """The distinct ACTIVE mapped sync-provider connections of the project.
 
-    The ``POST /projects/{id}/traffic/sync`` fan-out set: every ACTIVE
+    The "Sync now" fan-out set: every ACTIVE
     ``IntegrationPropertyMapping`` of the project joined to its connection,
-    restricted to the Traffic-consumed providers (``TRAFFIC_SYNC_PROVIDERS``
-    — Bing carries no Traffic dataset) on a CONNECTED grant. One entry per
-    connection (a connection with several mapped properties gets ONE run —
-    sync runs are connection-scoped). Read-only; the enqueue per connection
-    is owned by ``domain/integrations/sync.py`` (invariant 2).
+    restricted to ``TRAFFIC_SYNC_PROVIDERS`` on a CONNECTED grant. One entry
+    per connection (a connection with several mapped properties gets ONE run
+    — sync runs are connection-scoped). Bing is in that set so a connected
+    Bing property keeps importing; whether a provider's rows feed the
+    Performance tables is a projection question, not a collection one.
+    Read-only; the enqueue per connection is owned by
+    ``domain/integrations/sync.py`` (invariant 2).
     """
     stmt = (
         select(IntegrationConnection)

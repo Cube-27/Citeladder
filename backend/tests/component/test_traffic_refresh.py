@@ -42,7 +42,7 @@ from app.core.config.traffic import (
 from app.domain.analytics.enqueue import enqueue_traffic_snapshot_refresh
 from app.domain.analytics.tasks import TaskCancelledError
 from app.domain.site_health.normalization import canonical_identity
-from app.domain.traffic import service as traffic_service
+from app.domain.traffic import streaming as traffic_streaming
 from app.domain.traffic.service import refresh_traffic_snapshot
 from app.models.analytics import AnalyticsTask
 from app.models.integrations import IntegrationConnection
@@ -561,6 +561,68 @@ async def test_refresh_reads_only_the_latest_resync_seq(
 
 
 @pytest.mark.asyncio
+async def test_refresh_scans_across_keyset_batch_boundaries(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression: the keyset cursor must be a valid row-value comparison.
+
+    Every earlier scan test fits in ONE batch, so the resume query was never
+    issued and a malformed cursor -- ``tuple_()`` built over ``.asc()``
+    ordering expressions, which Postgres rejects as a syntax error -- passed
+    CI. One row per batch forces the resume path, and the superseded
+    revision lands in a DIFFERENT batch than the one that supersedes it, so
+    the stream's cross-batch latest-``resync_seq`` selection is covered too.
+    """
+    async with session_factory() as session:
+        workspace_id, project_id = await seed_workspace_project(session)
+        days = await seed_ga4_import(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            dataset=DATASET_GSC_DAY_DAILY,
+            provider=INTEGRATION_PROVIDER_GSC,
+            property_ref=GSC_PROPERTY,
+            window=WINDOW,
+        )
+        stale = await seed_metric_row(
+            session,
+            seed=days,
+            row_date=date(2026, 7, 20),
+            dimension_values=["2026-07-20"],
+            metrics={"clicks": 5, "impressions": 50, "position": 2.0},
+            resync_seq=0,
+        )
+        fresh = await seed_metric_row(
+            session,
+            seed=days,
+            row_date=date(2026, 7, 20),
+            dimension_values=["2026-07-20"],
+            metrics={"clicks": 9, "impressions": 90, "position": 4.0},
+            resync_seq=1,
+        )
+        await session.commit()
+    task = await _enqueue_and_fetch(
+        session_factory, workspace_id=workspace_id, project_id=project_id
+    )
+
+    # One row per batch: every row after the first arrives via the cursor.
+    monkeypatch.setattr(traffic_streaming, "_METRIC_ROW_BATCH_SIZE", 1)
+
+    await refresh_traffic_snapshot(session_factory, task)
+
+    async with session_factory() as session:
+        snapshots = await _snapshots_by_granularity(session)
+        day = snapshots["day"]
+        # Identical to the single-batch result: batching is invisible to the
+        # projection, and the revision that supersedes still wins.
+        assert day.metrics["totals"]["clicks"] == 9
+        assert day.metrics["totals"]["position"] == pytest.approx(4.0)
+        assert day.source_metric_row_ids == [str(fresh.id)]
+        assert str(stale.id) not in day.source_metric_row_ids
+
+
+@pytest.mark.asyncio
 async def test_refresh_honors_cooperative_cancel_at_metric_row_boundary(
     session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
@@ -575,8 +637,8 @@ async def test_refresh_honors_cooperative_cancel_at_metric_row_boundary(
     )
 
     # One row per batch so the boundary lands between metric rows.
-    monkeypatch.setattr(traffic_service, "_METRIC_ROW_BATCH_SIZE", 1)
-    real_check = traffic_service._raise_if_task_terminal
+    monkeypatch.setattr(traffic_streaming, "_METRIC_ROW_BATCH_SIZE", 1)
+    real_check = traffic_streaming._raise_if_task_terminal
     checks = 0
 
     async def _cancel_on_second_check(
@@ -595,7 +657,7 @@ async def test_refresh_honors_cooperative_cancel_at_metric_row_boundary(
         await real_check(factory, row_id)
 
     monkeypatch.setattr(
-        traffic_service, "_raise_if_task_terminal", _cancel_on_second_check
+        traffic_streaming, "_raise_if_task_terminal", _cancel_on_second_check
     )
 
     with pytest.raises(TaskCancelledError):

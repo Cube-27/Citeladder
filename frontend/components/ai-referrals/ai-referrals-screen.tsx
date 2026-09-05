@@ -12,7 +12,7 @@ import {
   GRANULARITY_OPTIONS,
   RANGE_OPTIONS,
   rangeLabel,
-  rangeToWindow,
+  rangeToParams,
   type AiReferralsGranularity,
   type AiReferralsRange,
 } from '@/lib/ai-referrals/options';
@@ -23,11 +23,11 @@ export function AiReferralsScreen() {
   const projectId = activeProject?.id ?? null;
   const [range, setRange] = useState<AiReferralsRange>('latest');
   const [granularity, setGranularity] = useState<AiReferralsGranularity>('week');
-  const windowBounds = useMemo(() => rangeToWindow(range), [range]);
+  const rangeParams = useMemo(() => rangeToParams(range), [range]);
   const dashboardQuery = useQuery({
-    queryKey: queryKeys.aiReferrals.dashboard(projectId ?? '', { ...windowBounds, granularity }),
+    queryKey: queryKeys.aiReferrals.dashboard(projectId ?? '', { ...rangeParams, granularity }),
     queryFn: ({ signal }) =>
-      aiReferralsApi.getDashboard(projectId!, { ...windowBounds, granularity }, { signal }),
+      aiReferralsApi.getDashboard(projectId!, { ...rangeParams, granularity }, { signal }),
     enabled: Boolean(projectId),
     placeholderData: (previousData, previousQuery) =>
       retainPreviousDataForScope(projectId!, previousData, previousQuery),
@@ -38,7 +38,6 @@ export function AiReferralsScreen() {
       projectId={projectId}
       projectLoading={isProjectLoading}
       range={range}
-      windowBounds={windowBounds}
       query={dashboardQuery}
       toolbar={
         <AiReferralsToolbar

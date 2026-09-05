@@ -13,11 +13,13 @@ from __future__ import annotations
 
 import unicodedata
 import uuid
-from collections.abc import Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
 from urllib.parse import urljoin, urlsplit
+
+from app.core.config.traffic import TRAFFIC_PROVENANCE_ID_LIMIT
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,66 @@ def number_or_none(metrics: Mapping[str, Any] | None, key: str) -> float | None:
     return float(value) if isinstance(value, (int, float)) else None
 
 
+class BoundedIds:
+    """A provenance id set that stays bounded WHILE accumulating.
+
+    ``bounded_provenance`` keeps the lowest sorted ids, so an accumulator
+    never needs to hold more than the limit to produce the same answer: any
+    id above the current cut can never enter the kept sample. Retaining the
+    full set instead made streaming memory proportional to the window's row
+    count -- the very bound the batch-by-batch fold exists to establish.
+
+    ``total`` counts every DISTINCT id offered, so ``sampled`` stays honest
+    (invariant 7) even though only a bounded sample is retained. Distinctness
+    beyond the cut is decided against the kept sample plus the ids already
+    discarded as too large, which is exact: a discarded id is always greater
+    than the cut, so re-offering it is recognized without storing it.
+    """
+
+    __slots__ = ("_kept", "_limit", "_over_cut")
+
+    def __init__(self, limit: int = TRAFFIC_PROVENANCE_ID_LIMIT) -> None:
+        self._kept: set[str] = set()
+        # Ids seen that sorted ABOVE the cut. Bounded in practice by the
+        # distinct ids a single fold offers past the limit; held only to keep
+        # ``total`` a distinct count rather than an occurrence count.
+        self._over_cut: set[str] = set()
+        self._limit = limit
+
+    def add(self, value: str) -> None:
+        if value in self._kept or value in self._over_cut:
+            return
+        self._kept.add(value)
+        if len(self._kept) > self._limit:
+            # Evict the largest: the kept sample is the lowest ``limit`` ids.
+            largest = max(self._kept)
+            self._kept.discard(largest)
+            self._over_cut.add(largest)
+
+    def update(self, values: Iterable[str]) -> None:
+        for value in values:
+            self.add(value)
+
+    def __len__(self) -> int:
+        """The DISTINCT count offered, not the retained sample size."""
+        return len(self._kept) + len(self._over_cut)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._kept)
+
+    def __or__(self, other: BoundedIds) -> BoundedIds:
+        merged = BoundedIds(self._limit)
+        merged.update(self._kept)
+        merged.update(other._kept)
+        # Preserve both sides' discarded ids so the union's ``total`` counts
+        # every distinct id either side ever saw.
+        merged._over_cut |= (self._over_cut | other._over_cut) - merged._kept
+        return merged
+
+    def provenance(self) -> Provenance:
+        return Provenance(ids=sorted(self._kept), total=len(self))
+
+
 @dataclass
 class GscAccum:
     """Running GSC aggregate (clicks/impressions sums + weighted position)."""
@@ -74,8 +136,8 @@ class GscAccum:
     position_weighted_sum: float = 0.0
     position_impressions: int = 0
     has_rows: bool = False
-    row_ids: set[str] = field(default_factory=set)
-    artifact_ids: set[str] = field(default_factory=set)
+    row_ids: BoundedIds = field(default_factory=BoundedIds)
+    artifact_ids: BoundedIds = field(default_factory=BoundedIds)
 
     def add(self, row: TrafficMetricRowInput) -> None:
         self.has_rows = True
@@ -135,8 +197,8 @@ class Ga4Accum:
     engaged_sessions: int = 0
     key_events: int = 0
     has_rows: bool = False
-    row_ids: set[str] = field(default_factory=set)
-    artifact_ids: set[str] = field(default_factory=set)
+    row_ids: BoundedIds = field(default_factory=BoundedIds)
+    artifact_ids: BoundedIds = field(default_factory=BoundedIds)
 
     @staticmethod
     def _key_events(metrics: Mapping[str, Any] | None) -> int:
@@ -168,6 +230,35 @@ class Ga4Accum:
             # One compatibility window for the existing Traffic wire contract.
             "conversions": self._observed(self.key_events),
         }
+
+
+@dataclass(frozen=True)
+class Provenance:
+    """One row's source ids, bounded, plus how many actually contributed.
+
+    ``ids`` is at most ``TRAFFIC_PROVENANCE_ID_LIMIT`` entries — the lowest
+    sorted ids, so re-running the same window records the same sample rather
+    than an arbitrary one. ``total`` is the true contributing count, so a
+    ``len(ids) < total`` row is READABLE as sampled instead of appearing
+    complete (invariant 7: a sample is not the whole).
+    """
+
+    ids: list[str]
+    total: int
+
+    @property
+    def sampled(self) -> bool:
+        return len(self.ids) < self.total
+
+
+def bounded_provenance(ids: set[str] | BoundedIds) -> Provenance:
+    """Cap a provenance id set at the config-owned limit, deterministically."""
+    if isinstance(ids, BoundedIds):
+        return ids.provenance()
+    total = len(ids)
+    if total <= TRAFFIC_PROVENANCE_ID_LIMIT:
+        return Provenance(ids=sorted(ids), total=total)
+    return Provenance(ids=sorted(ids)[:TRAFFIC_PROVENANCE_ID_LIMIT], total=total)
 
 
 def absolute_page_value(raw_page_value: str, project_origin: str | None) -> str:
