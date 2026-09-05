@@ -1,7 +1,14 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, LoaderCircle, RefreshCw } from 'lucide-react';
+import {
+  CalendarDays,
+  Check,
+  ChevronDown,
+  LoaderCircle,
+  RefreshCw,
+  RotateCcw,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { DateRangeDialog, type RangeSelection } from './date-range-dialog';
@@ -11,6 +18,8 @@ import { PerformanceChart, type ChartSeries } from './performance-chart';
 import { usePerformanceSync } from './use-performance-sync';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Pressable } from '@/components/ui/pressable';
+import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { integrationsApi } from '@/lib/api/integrations';
@@ -18,13 +27,16 @@ import {
   performanceApi,
   type PerformanceDashboard,
   type PerformanceDimension,
+  type PerformanceGranularity,
 } from '@/lib/api/performance';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { useProjectContext } from '@/lib/project/project-context';
+import { cn } from '@/lib/utils';
 import {
   COMPARE_OPTIONS,
   DIMENSION_TABS,
+  GRANULARITY_OPTIONS,
   RANGE_OPTIONS,
   METRIC_CARDS,
   canCompareYearOverYear,
@@ -63,9 +75,10 @@ const INITIAL_SELECTION: RangeSelection = {
   compareTo: '',
 };
 
-function dashboardParams(selection: RangeSelection) {
+function dashboardParams(selection: RangeSelection, granularity: PerformanceGranularity) {
   return {
     range: selection.range,
+    granularity,
     from: selection.range === 'custom' && selection.from ? selection.from : undefined,
     to: selection.range === 'custom' && selection.to ? selection.to : undefined,
     compare: selection.compare,
@@ -82,22 +95,32 @@ function compareLabel(selection: RangeSelection): string {
   );
 }
 
-function rangeLabel(selection: RangeSelection): string {
-  return RANGE_OPTIONS.find((option) => option.value === selection.range)?.label ?? selection.range;
-}
-
 export function PerformanceScreen() {
   const { activeProject, isLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
   const workspaceId = activeProject?.workspace_id ?? null;
   const [selection, setSelection] = useState<RangeSelection>(INITIAL_SELECTION);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTab, setDialogTab] = useState<'filter' | 'compare'>('filter');
   const [dimension, setDimension] = useState<PerformanceDimension>('query');
+  const [granularity, setGranularity] = useState<PerformanceGranularity>('day');
   const [activeMetrics, setActiveMetrics] = useState<ReadonlySet<PerformanceMetricKey>>(
     () => new Set<PerformanceMetricKey>(['clicks', 'impressions']),
   );
 
-  const params = dashboardParams(selection);
+  // Reset returns the surface to its landing state: the newest synced
+  // window, daily buckets, no comparison, the first tab, and the two default
+  // metrics. It is offered only while a comparison is active — that is the
+  // state it exists to clear.
+  const DEFAULT_METRICS: readonly PerformanceMetricKey[] = ['clicks', 'impressions'];
+  const resetFilters = () => {
+    setSelection(INITIAL_SELECTION);
+    setGranularity('day');
+    setDimension('query');
+    setActiveMetrics(new Set<PerformanceMetricKey>(DEFAULT_METRICS));
+  };
+
+  const params = dashboardParams(selection, granularity);
   const dashboard = useQuery({
     queryKey: queryKeys.performance.dashboard(projectId ?? '', params),
     queryFn: ({ signal }) => performanceApi.getDashboard(projectId ?? '', params, { signal }),
@@ -160,7 +183,17 @@ export function PerformanceScreen() {
         latestDate={data.coverage.latest_date}
         hasConnections={Boolean(connections.data?.length)}
         sync={sync}
-        onOpenRange={() => setDialogOpen(true)}
+        onOpenRange={() => {
+          setDialogTab('filter');
+          setDialogOpen(true);
+        }}
+        onOpenCompare={() => {
+          setDialogTab('compare');
+          setDialogOpen(true);
+        }}
+        onSelectRange={setSelection}
+        comparing={selection.compare !== 'none'}
+        onReset={resetFilters}
       />
 
       <PerformanceNotices
@@ -170,17 +203,26 @@ export function PerformanceScreen() {
         comparisonMissing={comparisonWindow !== null && comparisonWindow.snapshot_id === null}
       />
 
-      <MetricCards
-        selected={selectedWindow}
-        comparison={comparisonWindow}
-        selectedLabel={selectedLabel}
-        compareLabel={comparisonLabel}
-        active={activeMetrics}
-        onToggle={toggleMetric}
-        colors={METRIC_COLORS}
-      />
-      <div className="border-border-subtle bg-panel rounded-[var(--radius-panel)] border p-3">
-        <PerformanceChart series={series} />
+      {/* One card holds the strip and the plot it drives: selecting a card
+          changes the lines directly beneath it, so a gap between them would
+          split a control from its own result. The strip sits flush at the
+          top edge; the granularity control floats over the plot's top-right. */}
+      <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-panel)] border">
+        <MetricCards
+          selected={selectedWindow}
+          comparison={comparisonWindow}
+          compareLabel={comparisonLabel}
+          selectedLabel={selectedLabel}
+          active={activeMetrics}
+          onToggle={toggleMetric}
+          colors={METRIC_COLORS}
+        />
+        <div className="relative p-3">
+          <div className="mb-2 flex justify-end">
+            <GranularitySelect value={granularity} onChange={setGranularity} />
+          </div>
+          <PerformanceChart series={series} />
+        </div>
       </div>
       <Ga4SummaryRow
         selected={selectedWindow}
@@ -194,6 +236,9 @@ export function PerformanceScreen() {
         items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
         ariaLabel="Performance breakdowns"
         rootClassName="grid gap-3"
+        // The tab row heads the table card, so it spans the full width
+        // rather than hugging six labels and leaving dead space to the right.
+        fill
       >
         {DIMENSION_TABS.map((tab) => (
           <TabPanel key={tab.value} value={tab.value} className="focus-ring">
@@ -215,6 +260,7 @@ export function PerformanceScreen() {
       <DateRangeDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        initialTab={dialogTab}
         selection={selection}
         onApply={setSelection}
         coverage={{
@@ -303,6 +349,10 @@ function PerformanceToolbar({
   hasConnections,
   sync,
   onOpenRange,
+  onOpenCompare,
+  onSelectRange,
+  comparing,
+  onReset,
 }: Readonly<{
   selection: RangeSelection;
   selectedLabel: string;
@@ -310,17 +360,79 @@ function PerformanceToolbar({
   hasConnections: boolean;
   sync: ReturnType<typeof usePerformanceSync>;
   onOpenRange: () => void;
+  onOpenCompare: () => void;
+  onSelectRange: (next: RangeSelection) => void;
+  /** True while a comparison is active — the button's and Reset's state. */
+  comparing: boolean;
+  onReset: () => void;
 }>) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button variant="secondary" size="sm" onClick={onOpenRange}>
-        <CalendarDays className="size-4" aria-hidden />
-        {rangeLabel(selection)}
-        {selection.compare === 'none' ? null : ` · ${compareLabel(selection)}`}
-      </Button>
+      {/* Quick-selects first, as one segmented row: the ranges people pick
+          most are one click, and Custom opens the dialog for the rest. */}
+      <fieldset className="border-border-subtle inline-flex overflow-hidden rounded-[var(--radius-control)] border">
+        <legend className="sr-only">Date range</legend>
+        {RANGE_OPTIONS.map((option) => {
+          const active = selection.range === option.value;
+          return (
+            <Pressable
+              key={option.value}
+              type="button"
+              aria-pressed={active}
+              data-testid={`range-quick-${option.value}`}
+              onClick={() =>
+                option.value === 'custom'
+                  ? onOpenRange()
+                  : onSelectRange({ ...INITIAL_SELECTION, range: option.value })
+              }
+              className={cn(
+                'border-border-subtle inline-flex h-8 items-center gap-1.5 border-r px-3 text-sm last:border-r-0',
+                active ? 'bg-active text-accent-text font-medium' : 'hover:bg-active',
+              )}
+            >
+              {active && option.value !== 'custom' ? (
+                <Check className="size-3.5" aria-hidden />
+              ) : null}
+              {option.value === 'custom' ? (
+                <CalendarDays className="size-3.5" aria-hidden />
+              ) : null}
+              {option.label}
+            </Pressable>
+          );
+        })}
+      </fieldset>
+      {/* "More" until a comparison is chosen, then it BECOMES the compare
+          control and names the active comparison. One button, two states —
+          it never sits next to a separate Compare doing the same job. */}
+      <Pressable
+        type="button"
+        aria-pressed={comparing}
+        data-testid="compare-button"
+        onClick={onOpenCompare}
+        className={cn(
+          'border-border-subtle inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-control)] border px-3 text-sm',
+          comparing ? 'bg-active text-accent-text font-medium' : 'hover:bg-active',
+        )}
+      >
+        {comparing ? 'Compare' : 'More'}
+        <ChevronDown className="size-3.5" aria-hidden />
+      </Pressable>
       <span className="text-muted text-sm" data-testid="performance-window">
         {selectedLabel}
       </span>
+      {/* Reset belongs to the comparison: it is what returns "Compare" to
+          "More". With no comparison active there is nothing it would undo. */}
+      {comparing ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onReset}
+          data-testid="reset-filters-button"
+        >
+          <RotateCcw className="size-4" aria-hidden />
+          Reset filters
+        </Button>
+      ) : null}
       <div className="ml-auto flex items-center gap-3">
         <span className="text-muted text-xs">
           {latestDate ? `Data through ${latestDate}` : 'No imported history'}
@@ -346,6 +458,32 @@ function PerformanceToolbar({
         </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * The chart's bucket-size control, at the plot's top-right.
+ *
+ * Deliberately NOT in the toolbar with the range quick-selects: the range
+ * picks which window is charted, this picks how that window is bucketed, and
+ * putting both in one row invites reading them as the same control (they
+ * even share the words day/week/month).
+ */
+function GranularitySelect({
+  value,
+  onChange,
+}: Readonly<{
+  value: PerformanceGranularity;
+  onChange: (next: PerformanceGranularity) => void;
+}>) {
+  return (
+    <Select
+      value={value}
+      onValueChange={onChange}
+      options={GRANULARITY_OPTIONS}
+      ariaLabel="Chart bucket size"
+      className="w-36"
+    />
   );
 }
 

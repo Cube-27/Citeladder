@@ -22,6 +22,7 @@ import {
   performanceSyncEnqueueResponseSchema,
   type performanceCompareSchema,
   type performanceDimensionSchema,
+  type performanceGranularitySchema,
   type performanceRangeSchema,
 } from './schemas';
 import { definedQuery, withQuery } from './shared';
@@ -29,6 +30,7 @@ import { definedQuery, withQuery } from './shared';
 export type PerformanceRange = z.infer<typeof performanceRangeSchema>;
 export type PerformanceCompare = z.infer<typeof performanceCompareSchema>;
 export type PerformanceDimension = z.infer<typeof performanceDimensionSchema>;
+export type PerformanceGranularity = z.infer<typeof performanceGranularitySchema>;
 export type PerformanceDashboard = z.infer<typeof performanceDashboardSchema>;
 export type PerformanceWindow = PerformanceDashboard['selected'];
 export type PerformanceSeriesPoint = PerformanceWindow['series']['clicks'][number];
@@ -44,6 +46,8 @@ export type PerformanceDashboardParams = {
   compare?: PerformanceCompare;
   compare_from?: string;
   compare_to?: string;
+  /** Chart bucket size. Omitted means day, the server's default. */
+  granularity?: PerformanceGranularity;
 };
 
 /**

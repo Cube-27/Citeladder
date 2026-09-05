@@ -100,6 +100,7 @@ async def get_performance_endpoint(
     compare: Annotated[str | None, Query()] = None,
     compare_from: Annotated[date | None, Query()] = None,
     compare_to: Annotated[date | None, Query()] = None,
+    granularity: Annotated[str | None, Query()] = None,
 ) -> PerformanceDashboardResponse:
     """The selected window's exact GSC totals and daily series, plus its peer.
 
@@ -121,6 +122,7 @@ async def get_performance_endpoint(
             compare=compare,
             compare_from=compare_from,
             compare_to=compare_to,
+            granularity=granularity,
         )
     except PerformanceQueryError as exc:
         raise _unprocessable(exc) from exc

@@ -24,6 +24,13 @@ import { cn } from '@/lib/utils';
  *
  * Selecting a card toggles its series on the chart below. At least one metric
  * always stays selected, so the chart never renders as an empty plot.
+ *
+ * The four render as ONE connected strip rather than four detached cards:
+ * they are a single control group over one window, and gaps between them
+ * read as unrelated panels. Each card is always filled with its metric's
+ * colour — that colour IS the series identity on the chart — so the text is
+ * always on-accent. Selection is carried by the check and a dimmed fill, not
+ * by whether the card is coloured at all.
  */
 export function MetricCards({
   selected,
@@ -38,14 +45,26 @@ export function MetricCards({
   comparison: PerformanceWindow | null;
   /** Describes the comparison period, e.g. "Previous period". */
   compareLabel: string;
-  /** Describes the selected period, e.g. "Last 7 days". */
+  /** Describes the selected period, e.g. "Last 3 months". */
   selectedLabel: string;
   active: ReadonlySet<PerformanceMetricKey>;
   onToggle: (key: PerformanceMetricKey) => void;
   colors: Readonly<Record<PerformanceMetricKey, string>>;
 }>) {
   return (
-    <fieldset className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <fieldset
+      className={cn(
+        // No outer border or radius: the strip sits INSIDE the chart card,
+        // which already draws them. Only the seams between cards are ours.
+        'grid',
+        'divide-border-subtle divide-y sm:grid-cols-2 sm:divide-x lg:grid-cols-4',
+        'border-border-subtle border-b',
+        // The divider between rows is the strip's only internal seam; the
+        // second row must not re-draw the top border on wrap.
+        '[&>*]:border-0',
+      )}
+      data-testid="metric-card-strip"
+    >
       <legend className="sr-only">Search Console metrics</legend>
       {METRIC_CARDS.map((card) => {
         const isActive = active.has(card.key);
@@ -60,14 +79,15 @@ export function MetricCards({
             data-testid={`metric-card-${card.key}`}
             className={cn(
               panelClasses({ tone: 'panel', pad: 'compact' }),
-              'grid gap-1',
-              isActive ? 'border-transparent' : 'hover:bg-active',
+              'grid gap-1 rounded-none transition-opacity',
+              // Unselected reads as dimmed, never as a different surface —
+              // the colour stays so the card keeps naming its own series.
+              isActive ? 'opacity-100' : 'opacity-65 hover:opacity-85',
             )}
-            style={
-              isActive
-                ? { backgroundColor: colors[card.key], color: 'var(--color-on-accent)' }
-                : undefined
-            }
+            style={{
+              backgroundColor: colors[card.key],
+              color: 'var(--color-on-accent)',
+            }}
           >
             <span
               className={cn(
@@ -82,7 +102,7 @@ export function MetricCards({
                 aria-hidden
                 className={cn(
                   'inline-flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border',
-                  isActive ? 'border-current' : 'border-border',
+                  isActive ? 'border-current' : 'border-current/50',
                 )}
               >
                 {isActive ? <Check className="size-2.5" /> : null}
@@ -90,15 +110,16 @@ export function MetricCards({
               {card.label}
             </span>
             <span className="mono text-2xl leading-tight">{formatMetric(card.key, value)}</span>
-            <span className={cn('text-xs', isActive ? 'opacity-80' : 'text-muted')}>
-              {selectedLabel}
-            </span>
+            {/* The period labels earn their place only when TWO values are
+                stacked: with one number the range is already stated once, in
+                the toolbar, and repeating it four times is noise. */}
+            {comparison ? <span className="text-xs opacity-80">{selectedLabel}</span> : null}
             {comparison ? (
               <>
                 <span className="mono text-lg leading-tight">
                   {formatMetric(card.key, comparisonValue ?? null)}
                 </span>
-                <span className={cn('text-xs', isActive ? 'opacity-80' : 'text-muted')}>
+                <span className="text-xs opacity-80">
                   {comparison.evidence_state === 'not_run'
                     ? `${compareLabel} — not imported`
                     : compareLabel}

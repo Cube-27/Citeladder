@@ -32,6 +32,7 @@ from app.core.config.traffic import (
     PERFORMANCE_SORT_WHITELIST,
     PERFORMANCE_YEAR_OVER_YEAR_SHIFT_DAYS,
     TRAFFIC_DEFAULT_GRANULARITY,
+    TRAFFIC_SNAPSHOT_GRANULARITIES,
 )
 from app.domain.site_health.normalization import decode_keyset_cursor
 from app.models.traffic import TrafficSnapshot
@@ -52,6 +53,22 @@ def validate_range(value: str | None, default: str) -> str:
     effective = value or default
     if effective not in PERFORMANCE_RANGES:
         raise PerformanceQueryError(f"unknown performance range: {effective!r}")
+    return effective
+
+
+def validate_granularity(
+    value: str | None, default: str = TRAFFIC_DEFAULT_GRANULARITY
+) -> str:
+    """The chart's BUCKET size — day, week or month.
+
+    Distinct from the range, which is the window's LENGTH: "last 28 days"
+    charted in weekly buckets is one range and one granularity, not two
+    ranges. Every refresh already writes the window at all three, so this
+    only chooses which persisted rows the surface reads.
+    """
+    effective = value or default
+    if effective not in TRAFFIC_SNAPSHOT_GRANULARITIES:
+        raise PerformanceQueryError(f"unknown performance granularity: {effective!r}")
     return effective
 
 
@@ -158,12 +175,23 @@ def comparison_window(
 # --- Snapshot resolution ------------------------------------------------------
 
 
-def _day_snapshots(workspace_id: uuid.UUID, project_id: uuid.UUID):
+def _snapshots(
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    granularity: str = TRAFFIC_DEFAULT_GRANULARITY,
+):
+    """The project's snapshots at one BUCKET granularity.
+
+    Every refresh writes the window at all of
+    ``TRAFFIC_SNAPSHOT_GRANULARITIES``; the surface picks which buckets to
+    chart. Day remains the default, so a caller that names none is served
+    exactly what it was before.
+    """
     return (
         select(TrafficSnapshot)
         .where(TrafficSnapshot.workspace_id == workspace_id)
         .where(TrafficSnapshot.project_id == project_id)
-        .where(TrafficSnapshot.granularity == TRAFFIC_DEFAULT_GRANULARITY)
+        .where(TrafficSnapshot.granularity == granularity)
     )
 
 
@@ -173,11 +201,12 @@ async def resolve_window_snapshot(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     window: tuple[date, date],
+    granularity: str = TRAFFIC_DEFAULT_GRANULARITY,
 ) -> TrafficSnapshot | None:
-    """The persisted day-grained snapshot for an EXACT inclusive window."""
+    """The persisted snapshot for an EXACT inclusive window and granularity."""
     window_start, window_end = window
     return await session.scalar(
-        _day_snapshots(workspace_id, project_id)
+        _snapshots(workspace_id, project_id, granularity)
         .where(TrafficSnapshot.window_start == window_start)
         .where(TrafficSnapshot.window_end == window_end)
         .limit(1)
@@ -190,6 +219,7 @@ async def resolve_preset_snapshot(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     range_token: str,
+    granularity: str = TRAFFIC_DEFAULT_GRANULARITY,
 ) -> TrafficSnapshot | None:
     """The NEWEST persisted snapshot of a preset's length.
 
@@ -205,7 +235,7 @@ async def resolve_preset_snapshot(
     """
     days = PERFORMANCE_PRESET_RANGE_DAYS[range_token]
     return await session.scalar(
-        _day_snapshots(workspace_id, project_id)
+        _snapshots(workspace_id, project_id, granularity)
         .where(TrafficSnapshot.preset_window_days == days)
         .order_by(TrafficSnapshot.window_end.desc(), TrafficSnapshot.id.desc())
         .limit(1)
@@ -213,16 +243,20 @@ async def resolve_preset_snapshot(
 
 
 async def resolve_latest_snapshot(
-    session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    granularity: str = TRAFFIC_DEFAULT_GRANULARITY,
 ) -> TrafficSnapshot | None:
-    """The project's newest day-grained snapshot — the default landing view.
+    """The project's newest snapshot at this granularity — the landing view.
 
     Ordered by window END first and then by WIDTH, so a project holding the
     whole preset family lands on the widest window at the freshest end date
     rather than on the one-day preset that happens to share that end.
     """
     return await session.scalar(
-        _day_snapshots(workspace_id, project_id)
+        _snapshots(workspace_id, project_id, granularity)
         .order_by(
             TrafficSnapshot.window_end.desc(),
             TrafficSnapshot.window_start.asc(),
@@ -260,6 +294,7 @@ async def resolve_selected_window(
     project_id: uuid.UUID,
     range_token: str,
     custom: tuple[date, date] | None,
+    granularity: str = TRAFFIC_DEFAULT_GRANULARITY,
 ) -> tuple[TrafficSnapshot | None, tuple[date, date] | None]:
     """Resolve the selected range into ``(snapshot, window)``.
 
@@ -273,6 +308,7 @@ async def resolve_selected_window(
             workspace_id=workspace_id,
             project_id=project_id,
             range_token=range_token,
+            granularity=granularity,
         )
     elif custom is not None:
         snapshot = await resolve_window_snapshot(
@@ -280,11 +316,15 @@ async def resolve_selected_window(
             workspace_id=workspace_id,
             project_id=project_id,
             window=custom,
+            granularity=granularity,
         )
         return snapshot, custom
     else:
         snapshot = await resolve_latest_snapshot(
-            session, workspace_id=workspace_id, project_id=project_id
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            granularity=granularity,
         )
     if snapshot is None:
         return None, None

@@ -111,6 +111,7 @@ export function DateRangeDialog({
   onApply,
   coverage,
   yearOverYearAvailable,
+  initialTab = 'filter',
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -119,9 +120,11 @@ export function DateRangeDialog({
   /** Imported evidence extent, used to bound the pickers honestly. */
   coverage: { earliest: string | null; latest: string | null };
   yearOverYearAvailable: boolean;
+  /** Which tab the dialog opens on — Compare when opened from that button. */
+  initialTab?: 'filter' | 'compare';
 }>) {
   const [draft, setDraft] = useState(selection);
-  const [tab, setTab] = useState<'filter' | 'compare'>('filter');
+  const [tab, setTab] = useState<'filter' | 'compare'>(initialTab);
   // Re-seed on the CLOSED -> OPEN transition so a cancelled edit is truly
   // discarded. Tracked as state and adjusted during render (React's own
   // pattern for derived-from-props state) rather than in an effect, which
@@ -129,7 +132,12 @@ export function DateRangeDialog({
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setDraft(selection);
+    if (open) {
+      setDraft(selection);
+      // Opening from Compare lands on Compare; opening from a range lands on
+      // Filter. The tab a previous visit ended on is not a preference.
+      setTab(initialTab);
+    }
   }
 
   const patch = (next: Partial<RangeSelection>) => setDraft((current) => ({ ...current, ...next }));
@@ -191,17 +199,19 @@ export function DateRangeDialog({
               label: option.label,
             }))}
           />
-          {draft.range === 'custom' ? (
-            <DateRangeFields
-              legend="Custom date range"
-              from={draft.from}
-              to={draft.to}
-              min={coverage.earliest ?? undefined}
-              max={coverage.latest ?? undefined}
-              onFrom={(from) => patch({ from })}
-              onTo={(to) => patch({ to })}
-            />
-          ) : null}
+          {/* Always visible: the dates are the point of the Custom option, so
+              hiding them behind selecting the radio first costs a click for
+              no benefit. Typing a date IS choosing Custom, so the inputs
+              select the radio themselves. */}
+          <DateRangeFields
+            legend="Custom date range"
+            from={draft.from}
+            to={draft.to}
+            min={coverage.earliest ?? undefined}
+            max={coverage.latest ?? undefined}
+            onFrom={(from) => patch({ from, range: 'custom' })}
+            onTo={(to) => patch({ to, range: 'custom' })}
+          />
         </TabPanel>
         <TabPanel value="compare" className="grid gap-3">
           <RadioGroup
@@ -210,17 +220,15 @@ export function DateRangeDialog({
             onValueChange={(compare) => patch({ compare })}
             options={compareOptions}
           />
-          {draft.compare === 'custom' ? (
-            <DateRangeFields
-              legend="Custom comparison range"
-              from={draft.compareFrom}
-              to={draft.compareTo}
-              min={coverage.earliest ?? undefined}
-              max={coverage.latest ?? undefined}
-              onFrom={(compareFrom) => patch({ compareFrom })}
-              onTo={(compareTo) => patch({ compareTo })}
-            />
-          ) : null}
+          <DateRangeFields
+            legend="Custom comparison range"
+            from={draft.compareFrom}
+            to={draft.compareTo}
+            min={coverage.earliest ?? undefined}
+            max={coverage.latest ?? undefined}
+            onFrom={(compareFrom) => patch({ compareFrom, compare: 'custom' })}
+            onTo={(compareTo) => patch({ compareTo, compare: 'custom' })}
+          />
         </TabPanel>
       </Tabs>
     </Dialog>
