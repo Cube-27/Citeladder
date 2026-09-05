@@ -1,16 +1,17 @@
 # Performance dimension folding — the PURE per-dimension half of the traffic
 # projection (no DB, no network, no clock; invariants 7 + 9).
 #
-# Six GSC reports, one row shape. ``projection.py`` owns the headline totals,
-# the chart series, and the Demand-facing page/query stat rows; this module
-# owns the generic ``PerformanceDimensionStat`` rows behind the QUERIES,
-# PAGES, COUNTRIES, DEVICES, SEARCH APPEARANCE, and DAYS tables, plus each
-# dimension's exact row count.
+# Six GSC reports plus Bing's two, one row shape. ``projection.py`` owns the
+# headline totals, the chart series, and the Demand-facing page/query stat
+# rows; this module owns the generic ``PerformanceDimensionStat`` rows behind
+# the QUERIES, PAGES, COUNTRIES, DEVICES, SEARCH APPEARANCE and DAYS tables
+# and behind Bing's own panel, plus each dimension's exact row count.
 #
 # The routing is strictly one dataset -> one dimension
 # (``PERFORMANCE_DATASET_DIMENSIONS``): a dimensional GSC report drops
 # privacy-filtered rows, so mixing two of them into one table — or summing
-# one into a headline — would silently disagree with Search Console.
+# one into a headline — would silently disagree with Search Console. Bing
+# rides the same rule for the same reason, one engine further out.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -19,10 +20,12 @@ from typing import Any
 from app.connectors.web_evidence.url_policy import UrlPolicyError
 from app.core.config.traffic import (
     PERFORMANCE_DATASET_DIMENSIONS,
+    PERFORMANCE_DIMENSION_BING_PAGE,
+    PERFORMANCE_DIMENSION_BING_QUERY,
     PERFORMANCE_DIMENSION_DAY,
-    PERFORMANCE_DIMENSION_ORDER,
     PERFORMANCE_DIMENSION_PAGE,
     PERFORMANCE_DIMENSION_QUERY,
+    PERFORMANCE_TABLE_DIMENSION_ORDER,
 )
 from app.domain.site_health.normalization import canonical_identity
 from app.domain.traffic.accumulators import (
@@ -31,6 +34,17 @@ from app.domain.traffic.accumulators import (
     absolute_page_value,
     bounded_provenance,
     normalize_query,
+)
+
+# The dimensions keyed by a canonical page URL, and by a normalized query
+# string. Bing reports the same two shapes Search Console does, so they key
+# identically — the engine decides which TABLE a row lands in, never how its
+# identity is formed.
+_PAGE_DIMENSIONS = frozenset(
+    {PERFORMANCE_DIMENSION_PAGE, PERFORMANCE_DIMENSION_BING_PAGE}
+)
+_QUERY_DIMENSIONS = frozenset(
+    {PERFORMANCE_DIMENSION_QUERY, PERFORMANCE_DIMENSION_BING_QUERY}
 )
 
 
@@ -48,7 +62,13 @@ class DimensionProjection:
 
 @dataclass
 class DimensionAccum:
-    """One Performance dimension row while folding (key -> display + measures)."""
+    """One Performance dimension row while folding (key -> display + measures).
+
+    ``GscAccum`` is the clicks/impressions/CTR/position aggregate, and Bing
+    reports the same measures, so both engines fold through it. They never
+    share a BUCKET: the dataset routes each row to its own dimension, so a
+    Bing row and a Search Console row are never summed together.
+    """
 
     display_value: str
     gsc: GscAccum = field(default_factory=GscAccum)
@@ -78,13 +98,13 @@ def dimension_row_key(
     if not dimension_values:
         return None
     raw = dimension_values[0]
-    if dimension == PERFORMANCE_DIMENSION_PAGE:
+    if dimension in _PAGE_DIMENSIONS:
         try:
             canonical, _ = canonical_identity(absolute_page_value(raw, project_origin))
         except UrlPolicyError:
             return None
         return canonical, canonical
-    if dimension == PERFORMANCE_DIMENSION_QUERY:
+    if dimension in _QUERY_DIMENSIONS:
         normalized = normalize_query(raw)
         return (normalized, normalized) if normalized else None
     token = raw.strip()
@@ -98,7 +118,7 @@ def accumulate_dimension(
     project_origin: str | None,
     buckets: dict[str, dict[str, DimensionAccum]],
 ) -> None:
-    """Fold one GSC row into the single Performance dimension it belongs to.
+    """Fold one row into the single Performance dimension it belongs to.
 
     ``buckets`` is the caller's ``dimension -> key -> accumulator`` map. A
     row whose dataset feeds no Performance table, or whose value cannot form
@@ -136,7 +156,7 @@ def build_dimension_projections(
     """
     rows: list[DimensionProjection] = []
     counts: dict[str, int] = {}
-    for dimension in PERFORMANCE_DIMENSION_ORDER:
+    for dimension in PERFORMANCE_TABLE_DIMENSION_ORDER:
         bucket = dimensions.get(dimension) or {}
         counts[dimension] = len(bucket)
         for key, accum in sorted(bucket.items()):

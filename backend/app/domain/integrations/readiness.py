@@ -51,17 +51,18 @@ from app.models.traffic import TrafficSnapshot
 __all__ = ["get_project_readiness"]
 
 
-async def _mapped_connection_ids(
+async def _mapped_connections(
     session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
-) -> list[uuid.UUID]:
+) -> list[tuple[uuid.UUID, str]]:
     """The project's ACTIVE mapped connections on a CONNECTED grant.
 
     The same set "Sync now" fans out over, minus the provider restriction:
     readiness is about whether the project has a live connection at all, not
-    about which providers feed the Performance tables.
+    about which providers feed the Performance tables. Each connection's
+    provider rides along so a surface can say WHICH engines are connected.
     """
     stmt = (
-        select(IntegrationConnection.id)
+        select(IntegrationConnection.id, IntegrationConnection.provider)
         .join(
             IntegrationPropertyMapping,
             and_(
@@ -84,7 +85,7 @@ async def _mapped_connection_ids(
         .where(IntegrationOAuthGrant.status == GRANT_STATUS_CONNECTED)
         .distinct()
     )
-    return list((await session.scalars(stmt)).all())
+    return [(row.id, row.provider) for row in (await session.execute(stmt)).all()]
 
 
 def _project_backfill(
@@ -180,9 +181,11 @@ async def get_project_readiness(
     from persisted rows; nothing here triggers a sync, a projection or a
     provider call.
     """
-    connection_ids = await _mapped_connection_ids(
+    connections = await _mapped_connections(
         session, workspace_id=workspace_id, project_id=project_id
     )
+    connection_ids = [connection_id for connection_id, _provider in connections]
+    providers = sorted({provider for _connection_id, provider in connections})
 
     backfill_state: str | None = None
     imported_through: date | None = None
@@ -250,6 +253,7 @@ async def get_project_readiness(
             has_demand_snapshot=has_demand_snapshot,
         ),
         connection_count=len(connection_ids),
+        providers=providers,
         backfill_state=backfill_state,
         imported_through=imported_through,
         has_performance_snapshot=has_performance_snapshot,

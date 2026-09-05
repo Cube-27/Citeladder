@@ -196,6 +196,11 @@ class ProjectReadinessResponse(BaseModel):
     project_id: uuid.UUID
     stage: str
     connection_count: int
+    #: The distinct providers behind those connections, sorted. A surface uses
+    #: it to decide whether an engine's panel belongs on screen at all: a
+    #: project with no Bing connection has no Bing panel, which is not the
+    #: same as a Bing panel that measured nothing.
+    providers: list[str]
     #: The backfill rollup across every mapped connection, or null when the
     #: project has no mapped connection at all.
     backfill_state: str | None

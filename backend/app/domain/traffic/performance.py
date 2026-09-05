@@ -26,8 +26,8 @@ from app.core.config.traffic import (
     PERFORMANCE_DEFAULT_PAGE_SIZE,
     PERFORMANCE_DEFAULT_RANGE,
     PERFORMANCE_DIMENSION_DEFAULT_SORT,
-    PERFORMANCE_DIMENSION_ORDER,
     PERFORMANCE_SORT_KEY_DIMENSION,
+    PERFORMANCE_TABLE_DIMENSION_ORDER,
     PERFORMANCE_UNAVAILABLE_DIMENSIONS,
     TRAFFIC_FORMULA_VERSION,
     TRAFFIC_NORMALIZATION_VERSION,
@@ -169,7 +169,7 @@ def _dimension_counts(snapshot: TrafficSnapshot | None) -> PerformanceDimensionC
                 if isinstance(raw.get(dimension), (int, float))
                 else 0
             )
-            for dimension in PERFORMANCE_DIMENSION_ORDER
+            for dimension in PERFORMANCE_TABLE_DIMENSION_ORDER
         }
     )
 

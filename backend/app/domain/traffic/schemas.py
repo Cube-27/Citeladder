@@ -86,7 +86,11 @@ class PerformanceCoverage(BaseModel):
 
 
 class PerformanceDimensionCounts(BaseModel):
-    """Exact persisted row count per table, written with the rows counted."""
+    """Exact persisted row count per table, written with the rows counted.
+
+    Bing's two counts stand apart from the Search Console six because they
+    describe a different engine's panel, never a wider Search Console total.
+    """
 
     query: int
     page: int
@@ -94,6 +98,8 @@ class PerformanceDimensionCounts(BaseModel):
     device: int
     search_appearance: int
     day: int
+    bing_query: int
+    bing_page: int
 
 
 class PerformanceDashboardResponse(BaseModel):

@@ -60,7 +60,7 @@ from app.core.config.integrations_datasets import (
     unpack_dimension_key,
 )
 from app.core.config.traffic import (
-    PERFORMANCE_DIMENSION_ORDER,
+    PERFORMANCE_TABLE_DIMENSION_ORDER,
     TRAFFIC_GA4_ORGANIC_CHANNEL_GROUPS,
     TRAFFIC_GA4_ORGANIC_MEDIUMS,
     TRAFFIC_GRANULARITY_DAY,
@@ -361,7 +361,7 @@ def _empty_accumulators(starts: list[date]) -> _ProjectionAccumulators:
         totals_ga4=Ga4Accum(),
         pages={},
         queries={},
-        dimensions={dimension: {} for dimension in PERFORMANCE_DIMENSION_ORDER},
+        dimensions={dimension: {} for dimension in PERFORMANCE_TABLE_DIMENSION_ORDER},
     )
 
 
