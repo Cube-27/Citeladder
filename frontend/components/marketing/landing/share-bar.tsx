@@ -42,6 +42,8 @@ const SEGMENT_DELAY: Record<SegmentKey, string> = {
  * both get the final state without any animation. Collapsing happens after
  * hydration (the bar sits far below the first paint), and the width transition
  * itself carries the timing, so the IntersectionObserver only flips a value.
+ * The observer fires on any contact with the viewport, so the collapsed state is
+ * always transient.
  */
 export function ShareBar({ segments }: Readonly<{ segments: readonly Segment[] }>) {
   const barRef = useRef<HTMLDivElement>(null);
@@ -67,7 +69,11 @@ export function ShareBar({ segments }: Readonly<{ segments: readonly Segment[] }
           piece.style.width = `${piece.dataset.width}%`;
         });
       },
-      { threshold: 0.4 },
+      // Both thresholds matter: 0.4 is the reveal the design wants, and 0 is the
+      // floor that guarantees a fill. A bar that is on screen but never 40%
+      // visible — a short viewport, a reader who stops scrolling just above it —
+      // would otherwise sit collapsed at 0% forever.
+      { threshold: [0, 0.4] },
     );
     observer.observe(bar);
     return () => observer.disconnect();
@@ -100,7 +106,7 @@ export function ShareBar({ segments }: Readonly<{ segments: readonly Segment[] }
       <div className="text-secondary mt-2.5 flex flex-wrap gap-x-6 gap-y-1.5 text-xs">
         {segments.map((segment) => (
           <span key={segment.key} className="flex items-center gap-2">
-            <i aria-hidden className={cn('size-2.5 rounded-[3px]', SEGMENT_FILL[segment.key])} />
+            <i aria-hidden className={cn('size-2.5 rounded-xs', SEGMENT_FILL[segment.key])} />
             {segment.name}
           </span>
         ))}

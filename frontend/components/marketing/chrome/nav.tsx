@@ -355,7 +355,11 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
         window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
       }}
     >
-      <LogoMark size={24} priority />
+      {/* The lockup's optical center rides high against the 64px bar's text
+          row; this sits it on the nav baseline. */}
+      <span className="block translate-y-[2px]">
+        <LogoMark size={24} priority />
+      </span>
     </Link>
   );
 }
@@ -384,7 +388,9 @@ function NavActions({
           className="bg-background-alt h-[var(--control-height)] w-28 animate-pulse rounded-[var(--radius-control)]"
         />
       ) : isAuthenticated ? (
-        <ButtonLink href={dashboardHref} variant="primary">
+        // The topbar CTA runs one step smaller than the page CTAs — chrome,
+        // not a section action.
+        <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
           Dashboard
         </ButtonLink>
       ) : (
@@ -395,7 +401,9 @@ function NavActions({
           >
             Log in
           </Link>
-          <DemoButtonLink variant="primary">{DEMO_CTA}</DemoButtonLink>
+          <DemoButtonLink variant="primary" className="min-h-10 px-4">
+            {DEMO_CTA}
+          </DemoButtonLink>
         </>
       )}
       <button

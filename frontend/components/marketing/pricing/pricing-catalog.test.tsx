@@ -3,8 +3,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import gsap from 'gsap';
-
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { CONTACT_SALES_HREF, PENDING_PRICING_INTENT_KEY } from '@/lib/config/billing';
@@ -237,12 +235,12 @@ describe('PricingCatalog', () => {
   });
 
   it('tweens between the two approved numeric price sets', async () => {
-    const spy = vi.spyOn(gsap, 'to');
+    const raf = vi.spyOn(window, 'requestAnimationFrame');
     mswServer.use(catalogHandler(), anonymous());
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Starter' });
-    spy.mockClear();
+    raf.mockClear();
 
     await userEvent.click(screen.getByRole('switch', { name: /use your own api keys/i }));
     await waitFor(() =>
@@ -250,7 +248,7 @@ describe('PricingCatalog', () => {
         [...document.querySelectorAll('[data-price]')].some((n) => n.textContent === '$299'),
       ).toBe(true),
     );
-    expect(spy).toHaveBeenCalled();
+    expect(raf).toHaveBeenCalled();
   });
 
   it('captures an anonymous click as an intent and issues no billing POST', async () => {

@@ -5,8 +5,8 @@ import type { NavDropItem } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 const ROW =
-  'group rounded-[var(--radius-control)] flex items-start gap-3 px-3 py-2.5 transition-colors duration-150 ' +
-  'hover:bg-background focus-visible:bg-background';
+  'group flex items-start gap-3 rounded-[var(--radius-control)] px-3.5 py-3 transition-colors duration-150 ' +
+  'hover:bg-background-alt focus-visible:bg-background-alt active:bg-background-alt';
 
 function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
   return (
@@ -15,12 +15,15 @@ function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
         <span className="text-accent-text pt-2 font-mono text-xs tabular-nums">{item.num}</span>
       )}
       <span className="min-w-0">
-        <span className="website-body text-foreground group-hover:text-accent-text block font-semibold transition-colors duration-150">
+        {/* The name stays ink on hover — the row's fill carries the hover, the
+            way the reference header does; accent text here would read as a
+            state change. */}
+        <span className="font-display text-foreground block text-base font-medium tracking-[-0.02em]">
           {item.title}
         </span>
         {/* One line, always: a menu row that wraps turns the panel into a
             wall of paragraphs and doubles its height. */}
-        <span className="website-label text-muted mt-0.5 block truncate">{item.desc}</span>
+        <span className="text-muted mt-1 block truncate text-sm">{item.desc}</span>
       </span>
     </>
   );

@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import { AnimatePresence, m, type Transition } from 'motion/react';
 import Link from 'next/link';
 import type { RefObject } from 'react';
@@ -9,8 +10,8 @@ import type { OpenSource } from './nav';
 import { NavItemLink } from './nav-items';
 
 const NAV_LINK =
-  'website-nav text-foreground hover:text-accent-text relative z-1 inline-flex items-center gap-2 ' +
-  'rounded-[var(--radius-control)] px-4 py-4 font-medium transition-colors duration-300';
+  'website-nav text-foreground relative z-1 inline-flex items-center gap-1.5 ' +
+  'rounded-full px-4 py-2.5 font-medium transition-colors duration-300';
 
 type DropLayout = Record<NavDropKey, { width: number; twoColumn: boolean }>;
 
@@ -76,17 +77,14 @@ export function DesktopNavigation({
           aria-hidden
           style={{ left: lens.left, width: lens.width }}
           transition={lensTransition}
-          className={cn(
-            'border-border-subtle bg-panel shadow-elevated pointer-events-none rounded-[var(--radius-control)]',
-            'absolute inset-y-0 border',
-          )}
+          className={cn('bg-active pointer-events-none rounded-full', 'absolute inset-y-0')}
         />
       )}
 
       {NAV_DROPS.map(({ key, label, href }) => (
         <div
           key={key}
-          className="relative z-1 flex items-center"
+          className="group/drop relative z-1 flex items-center"
           onMouseEnter={(event) => openDropAt(key, event.currentTarget)}
           onMouseLeave={() => releaseSuppression(key)}
         >
@@ -105,6 +103,10 @@ export function DesktopNavigation({
             }}
           >
             {label}
+            <ChevronDown
+              aria-hidden
+              className="text-muted size-3.5 transition-transform duration-200 group-hover/drop:rotate-180"
+            />
           </Link>
         </div>
       ))}
@@ -170,8 +172,8 @@ function DesktopDropPanel({
         maxWidth: 'calc(100vw - 2rem)',
       }}
       className={cn(
-        'border-border-subtle bg-panel shadow-elevated absolute top-full rounded-[var(--radius-control)]',
-        'mt-2 overflow-hidden border',
+        'bg-panel shadow-elevated absolute top-full rounded-[var(--radius-overlay)] p-3',
+        'mt-2 overflow-hidden',
       )}
     >
       <div className={cn('grid', layout[dropKey].twoColumn && 'sm:grid-cols-2')}>
@@ -192,7 +194,7 @@ function DesktopDropGroup({
 }>) {
   if (!group.label)
     return (
-      <div className="p-2">
+      <div>
         {group.items.map((item) => (
           <NavItemLink key={item.title} item={item} onSelect={selectDrop} />
         ))}
@@ -200,8 +202,8 @@ function DesktopDropGroup({
     );
 
   return (
-    <div className="border-border-subtle bg-background-alt border-t p-2 sm:border-t-0 sm:border-l">
-      <p className="website-eyebrow text-muted px-3 pt-2.5 pb-2">{group.label}</p>
+    <div>
+      <p className="website-eyebrow text-muted px-3.5 pt-2.5 pb-2">{group.label}</p>
       {group.items.map((item) => (
         <NavItemLink key={item.title} item={item} onSelect={selectDrop} />
       ))}

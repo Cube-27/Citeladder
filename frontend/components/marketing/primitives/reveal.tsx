@@ -4,9 +4,12 @@ type MotionChildren = Readonly<{ children: ReactNode; className?: string }>;
 type Direction = 'up' | 'left' | 'right';
 
 /**
- * Enhanced cross-browser scroll choreography for page content using GSAP ScrollTrigger.
- * Elements render fully visible in SSR HTML, and GSAP handles smooth scroll entrances
- * across all browsers (including Firefox, Safari, Chrome, Edge).
+ * Scroll choreography for page content. These wrappers only stamp the
+ * `data-citeladder-reveal` hooks; the entrances are CSS scroll-driven
+ * animations owned by `globals.css`, so no JavaScript runs here. Elements
+ * render fully visible in the SSR HTML — where `animation-timeline: view()`
+ * is unsupported, or the reader asked for reduced motion, they simply stay
+ * settled.
  */
 export function Reveal({
   children,

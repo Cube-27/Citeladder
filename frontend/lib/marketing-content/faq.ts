@@ -44,7 +44,7 @@ export const FAQ_GROUPS: readonly FaqGroup[] = [
       ),
       faqItem(
         'Which answer engines does CiteLadder measure?',
-        'Direct answer-engine routes are ChatGPT, Gemini, and Claude. Availability still depends on the provider account you connect. Marketing pages may name Grok, Copilot, or Perplexity as the market buyers already live in. That is context, not a promise of a direct audit route on every plan.',
+        'Three are available today: ChatGPT, Gemini, and Claude. Three are coming soon: Perplexity, Grok, and Copilot. Availability still depends on the provider account you connect.',
       ),
       faqItem(
         'How is the product organized?',

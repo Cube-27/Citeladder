@@ -7,22 +7,25 @@
 
 CiteLadder is a light-only, evidence-led enterprise system. The authenticated
 application uses the **Prism Evidence Workspace**: a lightly violet-tinted paper editorial canvas,
-near-black ink, an ink primary action, terracotta for analytical selection, semantic evidence
+near-black ink, a brand-green primary action, green for analytical selection, semantic evidence
 washes, useful density, and deliberate negative space. It is an operating
 workspace, not a wall of equal-weight KPI cards.
 
 - **Name and domain:** CiteLadder, `citeladder.com`.
-- **Logo:** the canonical full-colour horizontal CiteLadder lockup in
-  `frontend/public/citeladder-logo.png`; product, marketing, authentication, and
-  onboarding surfaces reuse that asset rather than reconstructing the symbol and
-  wordmark independently. `frontend/public/citeladder-favicon.ico` owns browser
-  and installable-app iconography.
+- **Logo:** the canonical monochrome horizontal CiteLadder lockup in
+  `frontend/public/citeladder-logo.png` — a black silhouette drawn for light
+  ground, so it survives any accent change; dark surfaces knock it out white
+  with `brightness-0 invert` rather than owning a second asset. Product,
+  marketing, authentication, and onboarding surfaces reuse that asset rather
+  than reconstructing the symbol and wordmark independently.
+  `frontend/public/citeladder-favicon.ico` owns browser and installable-app
+  iconography with the same black silhouette across its frames.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
   and outcomes over generic AI language.
-- **Typography:** Inter for UI, body, and data everywhere, with Uncut Sans reserved for
+- **Typography:** Remus Variable for UI, body, and data everywhere, with Uncut Sans reserved for
   display headings. Authentication and onboarding share that roomier
-  flow ladder; the authenticated application uses Inter and the even-number product ladder.
-  Website and flow surfaces use a 16px reading baseline. Size,
+  flow ladder; the authenticated application uses Remus and the even-number product ladder.
+  Website and flow surfaces use a 15px reading baseline. Size,
   leading, weight, tracking, and
   colour are one role contract, never independent page-level choices.
 - **Iconography:** lucide only, imported by concept from `frontend/lib/icons.ts`
@@ -33,10 +36,11 @@ workspace, not a wall of equal-weight KPI cards.
   ladder in `app/globals.css` derives it from the size class so every glyph
   lands near a 1.3px stem instead of growing heavier with the icon. Colour stays
   `currentColor` so `text-muted` and `text-accent-text` keep painting the glyph.
-- **Action and selection:** ink (`#16161A`) owns primary actions across product,
-  public, authentication, and onboarding surfaces. Analytical selection, links,
-  active navigation, and focus consume the semantic accent ladder (`#C15F3C` with
-  `#964226` for accessible high-contrast text). Cyan, coral, lime,
+- **Action and selection:** brand green (`#0B7A3C`, from the reference system's
+  product-hue set) owns primary actions across product, public, authentication,
+  and onboarding surfaces. Analytical selection, links, active navigation, and
+  focus consume the semantic accent ladder (`#0B7A3C` with `#08592C` for
+  hover/press depth). Cyan, coral, lime,
   and amber are evidence/status families, never route decoration.
 - **Composition:** state before features. Product pages prioritise current state,
   movement, next action, then evidence. Marketing is more editorial but uses the
@@ -77,18 +81,23 @@ Tokens are semantic; components use the role, not a colour value.
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
 | Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
 | Borders | `border-subtle` (`#E3E2EC`), `border` (`#D1D0DC`), `border-strong` (`#A2A0B0`), `border-bold` (`#747282`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
-| Primary action | `action-*` (`#16161A`) | Ink primary actions |
-| Selection and focus | `accent-*` (`#C15F3C`) | Terracotta for selection, links, tabs, active navigation, and focus |
+| Primary action | `action-*` (`#0B7A3C`) | Brand-green primary actions; public CTAs use the `accent` outlined treatment |
+| Selection and focus | `accent-*` (`#0B7A3C`) | Green for selection, links, tabs, active navigation, and focus |
 | Status and evidence | cyan, coral, lime, amber, `citation-*`, `run-*`, `score-*`, `chart-*` | Persisted evidence and status, always paired with a label or icon |
 
 The ground is paper and the ink is near-black. Colour appears on under five
-percent of the surface: `action` `#16161A` owns primary buttons (hover steps one
-rung lighter along the neutral ladder, `#3A3A40`; press settles at `#2E2E34`),
-and terracotta
-`#C15F3C` (`#964226` for text, hover, and press) owns selection, links,
-tabs, active navigation, focus, and the first chart series. Every surface uses
+percent of the surface: `action` `#0B7A3C` owns solid primary buttons (hover
+steps one rung deeper along the accent ramp, `#08592C`; press settles at
+`#074D27`), and green
+`#0B7A3C` owns selection, links,
+tabs, active navigation, focus, and the first chart series. The public-website
+CTA is the `accent` button variant instead of a solid fill: a light green
+fill (`#EEF6F1`) with a green border and green label at rest, filling solid
+green with a white label on hover. Every surface uses
 the same paper ladder: `#F7F6FD` canvas and sidebar, `#F4F4F1` wells and
-tonal bands, `#EFEFEB` hover and selected state. Raised objects, inputs, and
+tonal bands, `#EFEFEB` hover and selected state — while the public surface
+(`[data-public-surface]`) rebinds `background` to white, so marketing prints on
+plain white with the tonal bands doing the separating. Raised objects, inputs, and
 overlays remain white. Product, marketing, authentication, and onboarding
 consume these shared tokens without route-scoped palette overrides.
 
@@ -102,56 +111,72 @@ requires all four neutral text roles to meet WCAG 2.1 AA normal-text contrast
 (`4.5:1`) on every shared light surface, including `active`.
 
 Marketing uses the same neutral paper ladder (`background`, `sidebar` / `well`,
-`panel-tonal`, and `active`), ink action, and terracotta accent roles as the product,
+`panel-tonal`, and `active`), green action, and green accent roles as the product,
 without route-scoped palette overrides. On paper a tonal band is a whisper, so a
 public section separates with a hairline (`divided`) unless the fill edge is
 doing real work. Functional evidence families remain inside
 product data and faithful preview scenes because those states must stay legible at a glance.
 Functional colour never carries meaning alone. The one sanctioned decorative
-family on the public surface is the pastel icon tile (`tile-blue`, `tile-violet`,
-`tile-amber`, `tile-green`): 48px rounded carriers for section iconography on
-the landing page, never used for state.
+family on the public surface is the pastel icon tile (`tile-blue`, `tile-indigo`,
+`tile-purple`, `tile-green` — the reference system's four product hues, each a
+soft fill with a deep ink rung): 48px rounded carriers for section iconography on
+the landing page and the per-segment hue accents on `/solutions`, never used for
+state. The public band arc deepens down a
+page — canvas, tint (`background-alt`), deep (`band-deep` `#E9E8F2`), and a
+closing dark band (`band-dark` `#16161A`) that carries a 28px rounded shoulder
+into the footer. A dark band rebinds the semantic tokens in one place
+(`[data-citeladder-section='dark']` in `globals.css`): components inside keep
+naming roles, the accent steps up to a lighter green, primary actions
+invert to the light ink, and the accent's own foreground flips dark because the
+lightened green fill is what its label would sit on — no dark hex is ever named
+at a call site.
 
 ## Typography
 
-Two families only: Inter for UI, body, and data (`font-sans`) and for authenticated-app text; Uncut Sans is the display face (`font-display`) for website headings and display typography. Inter is loaded through `next/font/google` and Uncut Sans is self-hosted via `next/font/local`. Both use variable fonts and swap display. Interface weights remain concentrated at 400–600. Metrics, dates, ranks,
+Two families only: Remus Variable for UI, body, and data (`font-sans`) and for authenticated-app text; Uncut Sans is the display face (`font-display`) for website headings and display typography. Both are self-hosted variable fonts via `next/font/local` with declared weight ranges — Remus `400–700`, Uncut Sans `300–700`; an undeclared range makes the `@font-face` default to 400 and the browser synthesise every heavier heading. Both swap display. Interface weights remain concentrated at 400–600. Metrics, dates, ranks,
 and percentages use tabular numerals, never a monospace face.
 
 ### Website and focused-flow ladder
 
-The website scale is role-based and starts from a 16px reading baseline. A role
+The website scale is role-based and starts from a 15px reading baseline. A role
 owns its size, leading, weight, tracking, and colour as one unit. Public and auth
 components consume these roles instead of assembling arbitrary size, leading,
 tracking, weight, and colour combinations.
 
+The ladder is mobile-first: the base value applies below 768px and the arrows
+mark the 768px and 1024px step-ups. Every rung is roughly a 1.2× step from the
+one below it at every breakpoint, so the hierarchy survives the mid-range widths
+rather than collapsing between 641 and 767px.
+
 | Role                    | Family     |      Size / line height |  Weight |                       Tracking | Colour                                      |
 | ----------------------- | ---------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
-| Hero display            | Uncut Sans | 44/48 → 56/60 → 64/68px |     500 |                        -0.04em | foreground; one short phrase may use accent |
-| Page title              | Uncut Sans |         40/44 → 48/54px |     500 |                       -0.035em | foreground                                  |
-| Section heading         | Uncut Sans |         32/38 → 40/46px |     500 |                        -0.03em | foreground                                  |
-| Feature heading         | Uncut Sans |                 24/30px |     500 |                        -0.02em | foreground                                  |
-| Small heading           | Uncut Sans |                 20/26px |     500 |                        -0.01em | foreground                                  |
+| Hero display            | Uncut Sans | 36/40 → 48/52 → 56/60px |     500 |          -0.04em → -0.045em    | foreground; one short phrase may use accent |
+| Page title              | Uncut Sans |         30/36 → 40/44px |     500 |           -0.035em → -0.04em   | foreground                                  |
+| Section heading         | Uncut Sans |         28/34 → 34/40px |     500 |          -0.028em → -0.034em   | foreground                                  |
+| Feature heading         | Uncut Sans |         20/26 → 24/30px |     500 |                        -0.02em | foreground                                  |
+| Small heading           | Uncut Sans |         17/23 → 20/26px |     500 |                        -0.02em | foreground                                  |
 | Flow title              | Uncut Sans |         28/34 → 32/38px |     500 |                       -0.025em | foreground                                  |
-| Flow group title        | Inter      |                 17/24px |     500 |                        -0.01em | foreground                                  |
-| Flow help               | Inter      |                 15/22px |     400 |                              0 | muted                                       |
-| Flow metadata           | Inter      |                 14/20px |     500 |                              0 | muted; tabular numerals                     |
-| Lead                    | Inter      |                 20/30px |     400 |                        -0.01em | secondary                                   |
-| Large body              | Inter      |                 18/28px |     400 |                              0 | secondary                                   |
-| Body baseline           | Inter      |                 16/24px |     400 |                              0 | secondary                                   |
-| Navigation and actions  | Inter      |                 16/20px | 500–600 |                              0 | foreground or inverse                       |
-| Label, caption, eyebrow | Inter      |                 14/20px | 500–600 | 0; +0.06em only when uppercase | muted or subtle                             |
+| Flow group title        | Remus      |                 17/24px |     500 |                        -0.01em | foreground                                  |
+| Flow help               | Remus      |                 15/22px |     400 |                              0 | muted                                       |
+| Flow metadata           | Remus      |                 14/20px |     500 |                              0 | muted; tabular numerals                     |
+| Lead                    | Remus      |         17/26 → 19/28px |     400 |                       -0.018em | secondary                                   |
+| Large body              | Remus      |                 16/26px |     400 |                       -0.011em | secondary                                   |
+| Body baseline           | Remus      |                 15/24px |     400 |                       -0.011em | secondary                                   |
+| Navigation and actions  | Remus      |                 14/20px | 500–600 |                              0 | foreground or inverse                       |
+| Label, caption, eyebrow | Remus      |                 13/18px | 500–600 | 0; +0.06em only when uppercase | muted or subtle                             |
 
-Ordinary website paragraphs never render below 16px. Fourteen pixels is reserved
-for short labels, metadata, captions, and legal support. Prose stays within a
-45–75 character measure. The accent blue never carries a long paragraph. Large text
-uses tighter leading and tracking; body text stays at zero tracking with more
-leading. Pricing values are the one non-editorial website display role:
-`website-data-display` uses Inter at 40/46px with tabular numerals and never
-applies to prose or headings.
+Ordinary website paragraphs never render below the 15px body rung. Thirteen
+pixels is reserved for short labels, metadata, captions, and legal support.
+Prose stays within a 45–75 character measure. The accent green never carries a
+long paragraph. Large text uses tighter leading and tracking; body text stays at
+near-zero tracking with more leading. Pricing values are the one non-editorial
+website display role: `website-data-display` uses Remus at 30/36px stepping to
+40/46px at 768px, with tabular numerals, and never applies to prose or
+headings.
 
 ### Product app ladder
 
-The authenticated enterprise application uses an Inter-based typography
+The authenticated enterprise application uses a Remus-based typography
 ladder with Uncut Sans display headings. It enforces consistent visual hierarchy, strict tabular numerals for metrics, and
 high-density information architecture.
 Ad-hoc inline text sizes, weights, and color overrides are prohibited in favor of token
@@ -546,9 +571,13 @@ Buttons use the 8px control-radius role with no decorative inset border in the
 authenticated application; app button sizes remain compact (32px/36px on desktop,
 44px on touch).
 Website and marketing primary buttons use modern pill geometry (`rounded-full`, 9999px)
-with `min-h-[2.75rem]` (44px) and ink action fill. Secondary, neutral, ghost, and
+with `min-h-[2.75rem]` (44px) and the `accent` outlined treatment: a light
+green fill with a green border and green label at rest that fills solid green
+with a white label on hover. Secondary, neutral, ghost, and
 danger remain shared semantic variants. Every control has a direct label, a
-visible focus ring (an opaque accent halo, ≥3:1), immediate pressed feedback, and
+visible focus ring — the control's own border turns accent and one soft glow
+attaches to it (no panel gap, no second floating ring) — immediate pressed
+feedback, and
 at least a 44px touch target.
 
 Inputs use the semantic input and border roles. Labels sit with their control,
@@ -625,18 +654,18 @@ fast route and query-state changes.
 
 Every one of these stops under `prefers-reduced-motion: reduce`: CSS animations and
 transitions are neutralised globally, the SMIL pipeline dots are hidden, and the
-GSAP reveals do not run. WCAG 2.1 AA is the minimum. Focus is always visible via an
-opaque accent halo; state is never colour-only; forced-colours and print remain
-usable.
+GSAP reveals do not run. WCAG 2.1 AA is the minimum. Focus is always visible via
+the accent border plus its attached glow; state is never colour-only;
+forced-colours and print remain usable.
 
 ## Review checklist
 
 Before merging a visual change, verify:
 
 - It uses semantic global tokens and an existing primitive where one applies.
-- Website and focused-flow type use documented content roles with a 16px body
-  baseline; authenticated-app type uses Geist at weights 400 and 500 only.
-- Marketing stays monochrome-plus-blue; functional colour appears only in the app.
+- Website and focused-flow type use documented content roles with a 15px body
+  baseline; authenticated-app type uses Remus at weights 400 and 500 only.
+- Marketing stays monochrome-plus-green; functional colour appears only in the app.
 - Every product, marketing, authentication, and onboarding surface consumes the
   same token ladder: `#F7F6FD` canvas and sidebar, `#F4F4F1` structure/well/tonal
   panel, and `#EFEFEB` hover and selected state. Sections separate with a hairline
@@ -655,7 +684,7 @@ Before merging a visual change, verify:
   prose punctuation is unaffected.
 
 The focused flow introduces no new colour family, gradient, decorative glow,
-nested card, or competitor mutation. Blue-violet owns the primary action; the accent blue owns
+nested card, or competitor mutation. Brand green owns the primary action and also owns
 the current step and selected-answer state without changing font weight. The
 transaction flow and all explicit confirmation gates remain unchanged.
 - Repository-owned static, test, and appropriate visual commands pass. External

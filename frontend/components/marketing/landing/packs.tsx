@@ -2,12 +2,15 @@ import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 
 import { StaggerGroup, StaggerItem } from '../primitives/reveal';
 import { Section, SectionHeader } from '../primitives/section';
-import { LANDING_ICONS } from './landing-icons';
+import { LANDING_ICONS, LANDING_TILES } from './landing-icons';
 
 /**
- * Use cases — six industry contexts showing how measuring AI visibility benefits
- * brands across different markets.
+ * Use cases — six industry contexts as a quiet editorial grid, not a card wall:
+ * one icon tile, one name, one line. The industries are the content; boxes
+ * would just frame six sentences of the same idea.
  */
+const ITEM_TILES = ['blue', 'indigo', 'purple', 'green'] as const;
+
 export function Packs() {
   const { packs } = LANDING_CONTENT;
   return (
@@ -18,22 +21,22 @@ export function Packs() {
         lead={packs.lead}
         headingId="packs-title"
       />
-      <StaggerGroup className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {packs.items.map((pack) => {
+      <StaggerGroup className="grid gap-x-8 gap-y-10 md:grid-cols-2 xl:grid-cols-3">
+        {packs.items.map((pack, index) => {
           const Icon = LANDING_ICONS[pack.icon];
           return (
-            <StaggerItem key={pack.name} className="h-full">
-              <article className="bg-panel shadow-card hover:shadow-card-hover group flex h-full flex-col rounded-[var(--radius-card)] p-6 transition-all duration-200 hover:-translate-y-0.5 sm:p-7">
-                <div className="flex items-center gap-3">
-                  <span className="bg-accent-subtle text-accent-text flex size-9 items-center justify-center rounded-[var(--radius-control)]">
-                    <Icon className="size-4.5" aria-hidden />
-                  </span>
-                  <h3 className="website-small-heading text-foreground group-hover:text-accent-text transition-colors">
-                    {pack.name}
-                  </h3>
+            <StaggerItem key={pack.name}>
+              <div className="flex items-start gap-4">
+                <span
+                  className={`${LANDING_TILES[ITEM_TILES[index % ITEM_TILES.length]]} flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)]`}
+                >
+                  <Icon className="size-4.5" aria-hidden />
+                </span>
+                <div>
+                  <h3 className="website-small-heading text-foreground">{pack.name}</h3>
+                  <p className="website-body text-muted mt-1.5">{pack.benefit}</p>
                 </div>
-                <p className="website-body text-muted mt-4 leading-relaxed">{pack.benefit}</p>
-              </article>
+              </div>
             </StaggerItem>
           );
         })}

@@ -1,243 +1,470 @@
-import { Download, FileSpreadsheet, ShoppingBag } from 'lucide-react';
+import { Download, FileSpreadsheet } from 'lucide-react';
+import Image from 'next/image';
 
 import type { SolutionScene } from '@/lib/marketing-content/solutions';
+import { cn } from '@/lib/utils';
 
 import { Badge } from '@/components/ui/badge';
-import { Meta } from '../primitives/label';
-import { Panel, WallpaperPanel } from './wallpaper-panel';
+import { LogoMark } from '@/components/ui/logo-mark';
+
+import { WallpaperPanel } from './wallpaper-panel';
 
 /**
- * Product snapshot panels, one per audience segment.
- * Displays clear, structured, and realistic evidence metrics for each segment.
+ * Product windows, one per audience segment — the same instrument the landing
+ * canvas shows, cut per team. Each panel is a faithful product surface (rows,
+ * bars, chips, tabular numerals) with an app-chrome bar, never an invented
+ * customer result: every body is hidden from assistive technology.
+ *
+ * Hue lives in the SURFACES — wallpaper, wells, marker bars, rival bars — the
+ * way the reference system tints its product planes; the words themselves stay
+ * in ink.
  */
-function Bar({ width, own = false }: Readonly<{ width: number; own?: boolean }>) {
+type Tint = 'blue' | 'indigo' | 'purple' | 'green';
+
+const PLATFORM_LOGOS: Record<string, string> = {
+  ChatGPT: '/brand/chatgpt.webp',
+  Claude: '/brand/claude.webp',
+  Perplexity: '/brand/perplexity.webp',
+  Gemini: '/brand/gemini.webp',
+};
+
+const TINT_CLASSES: Record<Tint, string> = {
+  blue: 'bg-tile-blue',
+  indigo: 'bg-tile-indigo',
+  purple: 'bg-tile-purple',
+  green: 'bg-tile-green',
+};
+
+/** Tinted wells and chips inside the window — the section's hue at low strength. */
+const TINT_WASH: Record<Tint, string> = {
+  blue: 'bg-tile-blue/50',
+  indigo: 'bg-tile-indigo/50',
+  purple: 'bg-tile-purple/50',
+  green: 'bg-tile-green/50',
+};
+
+/** The small hue marker bar above a window head (the reference's 24×3 marker). */
+const TINT_MARK: Record<Tint, string> = {
+  blue: 'bg-tile-blue-ink',
+  indigo: 'bg-tile-indigo-ink',
+  purple: 'bg-tile-purple-ink',
+  green: 'bg-tile-green-ink',
+};
+
+/** Rival bars carry the section's hue; only the leading brand bar is accent. */
+const TINT_RIVAL: Record<Tint, string> = {
+  blue: 'bg-tile-blue-ink/30',
+  indigo: 'bg-tile-indigo-ink/30',
+  purple: 'bg-tile-purple-ink/30',
+  green: 'bg-tile-green-ink/30',
+};
+
+function PlatformChip({ name }: Readonly<{ name: string }>) {
   return (
-    <span className="bg-background-alt block h-2 flex-1 overflow-hidden rounded-full">
+    <span className="text-muted inline-flex items-center gap-1.5 text-xs font-medium">
+      {PLATFORM_LOGOS[name] ? (
+        <Image
+          src={PLATFORM_LOGOS[name]}
+          alt=""
+          width={14}
+          height={14}
+          className="size-3.5 shrink-0 object-contain"
+        />
+      ) : null}
+      {name}
+    </span>
+  );
+}
+
+function StateChip({ cited }: Readonly<{ cited: boolean }>) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 text-xs font-medium',
+        cited ? 'text-accent-text' : 'text-muted',
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn('size-1.5 rounded-full', cited ? 'bg-accent' : 'border-muted border-[1.5px]')}
+      />
+      {cited ? 'Cited' : 'Not cited'}
+    </span>
+  );
+}
+
+function Bar({
+  width,
+  own = false,
+  tint,
+  className,
+}: Readonly<{ width: number; own?: boolean; tint?: Tint; className?: string }>) {
+  return (
+    <span className={cn('bg-background-alt block h-2 overflow-hidden rounded-full', className)}>
       {/* Scaled rather than sized: animating `width` relayouts the row on every
           frame, while `transform` stays on the compositor. */}
       <span
         style={{ transform: `scaleX(${width / 100})` }}
-        className={`block h-full w-full origin-left rounded-full transition-transform duration-300 ${
-          own ? 'bg-accent' : 'bg-border'
-        }`}
+        className={cn(
+          'block h-full w-full origin-left rounded-full transition-transform duration-300',
+          own ? 'bg-accent' : tint ? TINT_RIVAL[tint] : 'bg-border',
+        )}
       />
     </span>
   );
 }
 
-const PANELS: Record<SolutionScene, { label: string; body: React.ReactNode }> = {
-  share: {
-    label: 'Client report — share of answers',
-    body: (
-      <>
-        <div className="grid gap-5">
-          {[
-            { name: 'Acme Corp (Client)', share: 68, mentions: '84 mentions', own: true },
-            { name: 'Vortex AI (Rival)', share: 42, mentions: '52 mentions', own: false },
-            { name: 'Apex Labs (Rival)', share: 24, mentions: '30 mentions', own: false },
-          ].map(({ name, share, mentions, own }) => (
-            <div key={name} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-sm">
-                <span
-                  className={`font-medium ${own ? 'text-foreground font-medium' : 'text-muted'}`}
-                >
-                  {name}
-                </span>
-                <span className="text-muted font-mono text-xs">
-                  {share}% SOV · {mentions}
-                </span>
-              </div>
-              <Bar width={share} own={own} />
-            </div>
-          ))}
-        </div>
-        <div className="border-border-subtle mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-5">
-          <div className="flex flex-wrap gap-3">
-            <span className="border-border-subtle bg-background-alt text-muted inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-4 py-2 text-sm font-medium">
-              <Download aria-hidden className="size-4" />
-              Mentions (CSV)
-            </span>
-            <span className="border-border-subtle bg-background-alt text-muted inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-4 py-2 text-sm font-medium">
-              <FileSpreadsheet aria-hidden className="size-4" />
-              Evidence (Markdown)
-            </span>
-          </div>
-          <Badge variant="status" value="info">
-            4 Engines Audited
-          </Badge>
-        </div>
-      </>
-    ),
-  },
-  health: {
-    label: 'Site health — Web Fundamentals & AEO',
-    body: (
-      <>
-        <div className="grid gap-5">
-          {[
-            { name: 'Web Fundamentals', value: 88, status: 'Optimal' },
-            { name: 'AEO Readiness', value: 74, status: 'Good' },
-            { name: 'Schema Validation', value: 92, status: 'Validated' },
-          ].map(({ name, value, status }) => (
-            <div key={name} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-foreground font-medium">{name}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-muted text-xs">{status}</span>
-                  <span className="text-foreground font-mono font-medium tabular-nums">
-                    {value}/100
-                  </span>
-                </div>
-              </div>
-              <Bar width={value} own={value >= 80} />
-            </div>
-          ))}
-        </div>
-        <div className="border-border-subtle mt-5 flex flex-wrap gap-3 border-t pt-5">
-          <Badge variant="status" value="success">
-            Search Console Synced
-          </Badge>
-          <Badge variant="status" value="success">
-            GA4 Connected
-          </Badge>
-          <Badge>33 Rules Checked</Badge>
-        </div>
-      </>
-    ),
-  },
-  sample: {
-    label: 'Sample crawl — seeded and capped',
-    body: (
-      <>
-        <div className="grid gap-4">
-          {[
-            { label: 'Pages Sampled', val: '25 / 25 Seeded URLs' },
-            { label: 'Prompts Tested', val: '50 Target Queries' },
-            { label: 'AI Recommendation Rate', val: '78% Positive Mention' },
-            { label: 'BYOK Provider Cost', val: '$0.14 Total API Cost' },
-          ].map(({ label, val }) => (
-            <div
-              key={label}
-              className="border-border-subtle flex items-center justify-between border-b pb-3 text-sm last:border-b-0 last:pb-0"
-            >
-              <span className="text-muted">{label}</span>
-              <span className="text-foreground font-mono font-medium">{val}</span>
-            </div>
-          ))}
-        </div>
-        <div className="border-border-subtle mt-5 flex flex-wrap gap-3 border-t pt-5">
-          <Badge variant="status" value="info">
-            Raw Run Persisted
-          </Badge>
-          <Badge>Zero Lock-In</Badge>
-        </div>
-      </>
-    ),
-  },
-  commerce: {
-    label: 'Ecommerce — product AI visibility',
-    body: (
-      <>
-        <div className="border-border-subtle bg-background-alt rounded-[var(--radius-control)] border p-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-foreground flex items-center gap-3 font-medium">
-              <ShoppingBag className="text-accent-text size-4" aria-hidden />
-              Acoustic Pro ANC Headphones
-            </span>
-            <Badge variant="status" value="success">
-              100% Price Match
-            </Badge>
-          </div>
-          <div className="border-border-subtle mt-4 grid grid-cols-2 gap-3 border-t pt-4 text-sm">
-            <div>
-              <span className="text-muted block text-xs">Quoted Price</span>
-              <span className="text-foreground font-mono font-medium">$299.00</span>
-            </div>
-            <div>
-              <span className="text-muted block text-xs">Engine Rank</span>
-              <span className="text-accent-text font-medium">#1 Recommended</span>
-            </div>
-          </div>
-        </div>
-        <div className="text-muted mt-5 flex items-center justify-between text-sm">
-          <span>Competitor Co-Placement:</span>
-          <span className="text-foreground font-medium">Sony WH-1000XM5</span>
-        </div>
-        <div className="border-border-subtle mt-5 flex flex-wrap gap-3 border-t pt-5">
-          <Badge variant="status" value="info">
-            Catalog Evidence Synced
-          </Badge>
-          <Badge variant="status" value="success">
-            64% SKU Share of Voice
-          </Badge>
-        </div>
-      </>
-    ),
-  },
-  citations: {
-    label: 'Citation ownership — per prompt',
-    body: (
-      <>
-        <div className="bg-background-alt border-border-subtle text-foreground mb-5 rounded-[var(--radius-control)] border p-4 text-sm font-medium">
-          &quot;What are the top enterprise AI search platforms?&quot;
-        </div>
-        <div className="grid gap-4">
-          {[
-            {
-              label: 'Owned Domain (Press Release)',
-              share: 58,
-              engines: 'Cited in 4/5 engines',
-              own: true,
-            },
-            {
-              label: 'TechCrunch (Earned Media)',
-              share: 34,
-              engines: 'Cited in 3/5 engines',
-              own: false,
-            },
-            {
-              label: 'Competitor Domain',
-              share: 18,
-              engines: 'Cited in 1/5 engines',
-              own: false,
-            },
-          ].map(({ label, share, engines, own }) => (
-            <div key={label} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-sm">
-                <span
-                  className={`font-medium ${own ? 'text-foreground font-medium' : 'text-muted'}`}
-                >
-                  {label}
-                </span>
-                <span className="text-muted font-mono text-xs">{engines}</span>
-              </div>
-              <Bar width={share} own={own} />
-            </div>
-          ))}
-        </div>
-        <div className="border-border-subtle mt-5 flex flex-wrap gap-3 border-t pt-5">
-          <Badge variant="status" value="info">
-            Query Fanout Tracked
-          </Badge>
-          <Badge>Coverage Report Ready</Badge>
-        </div>
-      </>
-    ),
-  },
+/** The shared window chrome: product lockup, surface name, illustrative marker. */
+function WindowChrome({ label, tint }: Readonly<{ label: string; tint: Tint }>) {
+  return (
+    <div className="border-border-subtle flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-1.5">
+      {/* The lockup rides high inside its image box; sit it on the text row. */}
+      <span className="shrink-0 translate-y-[1px]">
+        <LogoMark size={14} />
+      </span>
+      <span className="text-foreground text-xs font-medium">{label}</span>
+      <span
+        className={cn(
+          'text-muted ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium',
+          TINT_WASH[tint],
+        )}
+      >
+        Illustrative
+      </span>
+    </div>
+  );
+}
+
+function WindowHead({ title, note, tint }: Readonly<{ title: string; note: string; tint: Tint }>) {
+  return (
+    <div>
+      <span aria-hidden className={cn('mb-2.5 block h-[3px] w-6 rounded-full', TINT_MARK[tint])} />
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="website-small-heading text-foreground">{title}</h3>
+        <span className="text-muted text-xs">{note}</span>
+      </div>
+    </div>
+  );
+}
+
+function ExportRow({ tint, badge }: Readonly<{ tint: Tint; badge: string }>) {
+  return (
+    <div className="border-border-subtle mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+      <div className="flex flex-wrap gap-2.5">
+        <span
+          className={cn(
+            'text-muted inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 text-xs font-medium',
+            TINT_WASH[tint],
+          )}
+        >
+          <Download aria-hidden className="size-3.5" />
+          Mentions (CSV)
+        </span>
+        <span
+          className={cn(
+            'text-muted inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 text-xs font-medium',
+            TINT_WASH[tint],
+          )}
+        >
+          <FileSpreadsheet aria-hidden className="size-3.5" />
+          Evidence (Markdown)
+        </span>
+      </div>
+      <Badge variant="status" value="info">
+        {badge}
+      </Badge>
+    </div>
+  );
+}
+
+const PANEL_LABELS: Record<SolutionScene, string> = {
+  share: 'Client report — share of answers',
+  health: 'Site health — Web Fundamentals & AEO',
+  sample: 'First audit — seeded and capped',
+  commerce: 'Ecommerce — product AI visibility',
+  citations: 'Citation ownership — per prompt',
 };
 
-export function SolutionEvidencePanel({ scene }: Readonly<{ scene: SolutionScene }>) {
-  const { label, body } = PANELS[scene];
+const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
+  share: (tint) => (
+    <>
+      <WindowHead
+        title="Share of citations"
+        note="412 recorded answers · four platforms"
+        tint={tint}
+      />
+      <div className="mt-3 flex h-2.5 overflow-hidden rounded-full">
+        <span className="bg-accent w-[68%]" />
+        <span className={cn('w-[22%]', TINT_RIVAL[tint])} />
+        <span className="bg-active w-[10%]" />
+      </div>
+      <div className="text-muted mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="bg-accent size-1.5 rounded-full" />
+          Your brand 68%
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className={cn('size-1.5 rounded-full', TINT_MARK[tint])} />
+          Competitors 22%
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="bg-active size-1.5 rounded-full" />
+          No brand 10%
+        </span>
+      </div>
+
+      <div className="border-border-subtle mt-5 grid gap-3 border-t pt-4">
+        {[
+          {
+            q: 'Best project management tools for startups?',
+            s: '“Notion, Linear, and ClickUp are top picks…”',
+            p: 'ChatGPT',
+            c: '5',
+            cited: true,
+          },
+          {
+            q: 'How does Stripe compare to Adyen?',
+            s: '“Stripe is easier to integrate and… ”',
+            p: 'Claude',
+            c: '4',
+            cited: false,
+          },
+          {
+            q: 'What is revenue intelligence?',
+            s: '“Revenue intelligence is a way to…”',
+            p: 'Perplexity',
+            c: '6',
+            cited: true,
+          },
+          {
+            q: 'Top enterprise AI search platforms?',
+            s: '“Leading platforms include…”',
+            p: 'Gemini',
+            c: '3',
+            cited: true,
+          },
+        ].map(({ q, s, p, c, cited }) => (
+          <div
+            key={q}
+            className="border-border-subtle flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-3 last:border-b-0 last:pb-0"
+          >
+            <div className="min-w-0">
+              <p className="text-foreground truncate text-sm font-medium">{q}</p>
+              <p className="text-muted truncate text-xs">{s}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-4">
+              <PlatformChip name={p} />
+              <span className="text-foreground w-4 text-right text-sm font-medium tabular-nums">
+                {c}
+              </span>
+              <StateChip cited={cited} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <ExportRow badge="4 Engines Audited" tint={tint} />
+    </>
+  ),
+  health: (tint) => (
+    <>
+      <WindowHead title="Site health" note="33 rules · weighted 50/50 Tech & AEO" tint={tint} />
+      <div className="mt-4 grid gap-5">
+        {[
+          { name: 'Web Fundamentals', value: 88, status: 'Optimal', delta: '+2 vs last run' },
+          { name: 'AEO Readiness', value: 74, status: 'Good', delta: '+6 vs last run' },
+          { name: 'Schema Validation', value: 92, status: 'Validated', delta: 'No change' },
+        ].map(({ name, value, status, delta }) => (
+          <div key={name} className="grid gap-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-foreground text-sm font-medium">{name}</span>
+              <div className="flex items-baseline gap-2.5">
+                <span className="text-muted text-xs">{delta}</span>
+                <span className="text-foreground text-xl font-medium tabular-nums">
+                  {value}
+                  <span className="text-muted text-xs">/100</span>
+                </span>
+              </div>
+            </div>
+            <Bar width={value} own={value >= 80} tint={tint} />
+            <span className="text-muted text-xs">{status}</span>
+          </div>
+        ))}
+      </div>
+      <div className="border-border-subtle mt-5 flex flex-wrap gap-2.5 border-t pt-4">
+        <Badge variant="status" value="success">
+          Search Console Synced
+        </Badge>
+        <Badge variant="status" value="success">
+          GA4 Connected
+        </Badge>
+        <Badge>Next run Thursday</Badge>
+      </div>
+    </>
+  ),
+  sample: (tint) => (
+    <>
+      <WindowHead title="Sample crawl" note="Your API keys · at cost" tint={tint} />
+      <div className="mt-3">
+        <Bar width={100} own className="h-1.5" />
+      </div>
+      <div className="mt-4 grid gap-3">
+        {[
+          { label: 'Pages sampled', val: '25 / 25 seeded URLs', state: 'Complete', done: true },
+          { label: 'Prompts tested', val: '50 target queries', state: 'Complete', done: true },
+          { label: 'Positive mention rate', val: '78%', state: 'Computed', done: true },
+          {
+            label: 'BYOK provider cost',
+            val: '$0.14 total API cost',
+            state: 'At cost',
+            done: false,
+          },
+        ].map(({ label, val, state, done }) => (
+          <div
+            key={label}
+            className="border-border-subtle flex items-center justify-between gap-3 border-b pb-3 text-sm last:border-b-0 last:pb-0"
+          >
+            <span className="text-muted">{label}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-foreground font-mono text-sm font-medium">{val}</span>
+              <span
+                className={cn(
+                  'rounded-full px-2 py-0.5 text-[11px] font-medium',
+                  done ? TINT_WASH[tint] : 'bg-background-alt text-muted',
+                )}
+              >
+                {state}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="border-border-subtle mt-5 flex flex-wrap gap-2.5 border-t pt-4">
+        <Badge variant="status" value="info">
+          Raw Run Persisted
+        </Badge>
+        <Badge>Zero Lock-In</Badge>
+      </div>
+    </>
+  ),
+  commerce: (tint) => (
+    <>
+      <WindowHead
+        title="Product visibility"
+        note="AI shopping answers · last 30 days"
+        tint={tint}
+      />
+      <div className="mt-4 grid gap-4">
+        {[
+          {
+            name: 'Acoustic Pro ANC Headphones',
+            price: '$299.00',
+            share: 68,
+            rank: '#1 Recommended',
+            cited: true,
+          },
+          {
+            name: 'Sony WH-1000XM5',
+            price: '$349.00',
+            share: 41,
+            rank: '#2 Recommended',
+            cited: false,
+          },
+          {
+            name: 'Bose QC Ultra Headphones',
+            price: '$379.00',
+            share: 22,
+            rank: '#5 Not cited',
+            cited: false,
+          },
+        ].map(({ name, price, share, rank, cited }) => (
+          <div key={name} className="grid gap-1.5">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="text-foreground text-sm font-medium">{name}</span>
+              <div className="flex items-baseline gap-3">
+                <span className="text-foreground font-mono text-xs font-medium">{price}</span>
+                <StateChip cited={cited} />
+              </div>
+            </div>
+            <Bar width={share} own={rank.startsWith('#1')} tint={tint} />
+            <span className="text-muted text-xs font-medium">{rank}</span>
+          </div>
+        ))}
+      </div>
+      <div className="border-border-subtle mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border-t pt-4">
+        <span className="text-muted text-xs">Competitor co-placement: Sony WH-1000XM5</span>
+        <Badge variant="status" value="success">
+          64% SKU Share of Voice
+        </Badge>
+      </div>
+    </>
+  ),
+  citations: (tint) => (
+    <>
+      <WindowHead title="Citation ownership" note="Query fanout tracked" tint={tint} />
+      <div
+        className={cn(
+          'border-border-subtle text-foreground mt-3 rounded-[var(--radius-control)] border px-3.5 py-2.5 text-sm font-medium',
+          TINT_WASH[tint],
+        )}
+      >
+        &ldquo;What are the top enterprise AI search platforms?&rdquo;
+      </div>
+      <div className="mt-4 grid gap-4">
+        {[
+          {
+            label: 'Owned domain (press release)',
+            share: 58,
+            engines: 'Cited 4/5 engines',
+            own: true,
+          },
+          {
+            label: 'TechCrunch (earned media)',
+            share: 34,
+            engines: 'Cited 3/5 engines',
+            own: false,
+          },
+          { label: 'Competitor domain', share: 18, engines: 'Cited 1/5 engines', own: false },
+        ].map(({ label, share, engines, own }) => (
+          <div key={label} className="grid gap-1.5">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className={cn('text-sm', own ? 'text-foreground font-medium' : 'text-muted')}>
+                {label}
+              </span>
+              <span className="text-muted font-mono text-xs">{engines}</span>
+            </div>
+            <Bar width={share} own={own} tint={tint} />
+          </div>
+        ))}
+      </div>
+      <div className="border-border-subtle mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+        <span className="text-muted text-xs">Press release earned 58% of this prompt</span>
+        <Badge variant="status" value="info">
+          Coverage Report Ready
+        </Badge>
+      </div>
+    </>
+  ),
+};
+
+export function SolutionEvidencePanel({
+  scene,
+  tint,
+  className,
+}: Readonly<{
+  scene: SolutionScene;
+  tint: Tint;
+  className?: string;
+}>) {
   return (
-    <WallpaperPanel className="p-5 sm:p-8">
-      <Meta as="p" className="text-muted mb-4 font-medium">
-        {label}
-      </Meta>
-      <Panel className="p-5">
+    <WallpaperPanel className={cn('p-3 sm:p-5', TINT_CLASSES[tint], className)}>
+      <div className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border shadow-[0_2px_8px_rgb(12_16_36/0.06),0_24px_56px_-24px_rgb(12_16_36/0.18)]">
+        <WindowChrome label={PANEL_LABELS[scene]} tint={tint} />
         {/* The illustrative rows stay hidden from assistive technology so they
             are never announced as persisted customer evidence. */}
-        <div aria-hidden>{body}</div>
-      </Panel>
+        <div aria-hidden className="px-4 py-5 sm:px-5">
+          {PANELS[scene](tint)}
+        </div>
+      </div>
     </WallpaperPanel>
   );
 }

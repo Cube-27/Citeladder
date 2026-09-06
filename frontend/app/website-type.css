@@ -2,9 +2,9 @@
    product ladder. Both surfaces share the Prism palette and semantic geometry;
    this scope changes type scale only. */
 :where([data-public-surface], [data-flow-surface]) {
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: var(--font-uncut-sans), var(--font-inter), -apple-system, sans-serif;
+  --font-sans: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-uncut-sans), var(--font-remus), -apple-system, sans-serif;
   /* One ladder, one ratio. Each rung is ~1.2x its neighbour (the minor third
      the display rungs already used), so the steps are even instead of the old
      mix of 1.14x at the bottom and 1.27x at the top. The bottom three rungs are
@@ -68,7 +68,7 @@
 .flow-group-title {
   margin: 0;
   font-family:
-    var(--font-inter),
+    var(--font-remus),
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
@@ -83,7 +83,7 @@
 .flow-help {
   margin: 0;
   font-family:
-    var(--font-inter),
+    var(--font-remus),
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
@@ -97,7 +97,7 @@
 
 .flow-meta {
   font-family:
-    var(--font-inter),
+    var(--font-remus),
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
@@ -114,7 +114,7 @@
   :where(h1, h2, h3, h4, h5, h6):not(.app-type-scale *) {
   font-family:
     var(--font-uncut-sans),
-    var(--font-inter),
+    var(--font-remus),
     -apple-system,
     sans-serif;
   font-optical-sizing: auto;
@@ -146,7 +146,7 @@
 .website-small-heading {
   font-family:
     var(--font-uncut-sans),
-    var(--font-inter),
+    var(--font-remus),
     -apple-system,
     sans-serif;
   font-optical-sizing: auto;
@@ -161,19 +161,19 @@
 .website-hero-display {
   font-size: 2.25rem;
   line-height: 2.5rem;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.04em;
 }
 
 .website-page-title {
   font-size: 1.875rem;
   line-height: 2.25rem;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
 }
 
 .website-section-heading {
   font-size: 1.75rem;
   line-height: 2.125rem;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.028em;
 }
 
 .website-feature-heading {
@@ -185,7 +185,7 @@
 .website-small-heading {
   font-size: 1.0625rem;
   line-height: 1.4375rem;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .website-lead,
@@ -195,7 +195,7 @@
 .website-label,
 .website-eyebrow {
   font-family:
-    var(--font-inter),
+    var(--font-remus),
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
@@ -204,7 +204,7 @@
 
 .website-data-display {
   font-family:
-    var(--font-inter),
+    var(--font-remus),
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
@@ -243,21 +243,21 @@
   font-size: 1.0625rem;
   line-height: 1.625rem;
   font-weight: 400;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.018em;
 }
 
 .website-body-lg {
   font-size: 1rem;
   line-height: 1.625rem;
   font-weight: 400;
-  letter-spacing: 0;
+  letter-spacing: -0.011em;
 }
 
 .website-body {
   font-size: 0.9375rem;
   line-height: 1.5rem;
   font-weight: 400;
-  letter-spacing: 0;
+  letter-spacing: -0.011em;
 }
 
 .website-nav {
@@ -711,19 +711,19 @@
   .website-hero-display {
     font-size: 3rem;
     line-height: 3.25rem;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.045em;
   }
 
   .website-page-title {
     font-size: 2.5rem;
     line-height: 2.75rem;
-    letter-spacing: -0.035em;
+    letter-spacing: -0.04em;
   }
 
   .website-section-heading {
     font-size: 2.125rem;
     line-height: 2.5rem;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.034em;
   }
 
   .website-feature-heading {

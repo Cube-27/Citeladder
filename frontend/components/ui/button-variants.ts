@@ -8,8 +8,10 @@ import { cva } from 'class-variance-authority';
  * Buttons use the semantic control radius, not pills. Focused-flow fields may
  * opt into their documented 12px auth-control role; action behaviour and
  * semantics remain shared here.
- * Primary uses the ink action role. Accent remains analytical selection.
- * Secondary/neutral/ghost stay quiet so a screen has one obvious action.
+ * Primary uses the solid accent (brand green) role. The `accent` variant is
+ * the public-website CTA treatment: a light accent fill with an accent border
+ * and label that fills solid on hover. Secondary/neutral/ghost stay quiet so
+ * a screen has one obvious action.
  *
  * Hover moves the fill one step along the action ramp rather than fading
  * opacity, so the label keeps its verified AA contrast in every state.
@@ -29,6 +31,12 @@ export const buttonVariants = cva(
       variant: {
         primary:
           'border-transparent bg-action text-action-fg hover:bg-action-hover active:bg-action-active',
+        // The public-website CTA treatment: a light accent fill with an accent
+        // border and accent label at rest, filling solid accent on hover and
+        // stepping one rung deeper on press. The marketing button primitives
+        // map their `primary` here; authenticated flows keep the solid fill.
+        accent:
+          'border-accent bg-accent-soft text-accent-text hover:bg-accent hover:text-accent-fg active:bg-accent-hover',
         // Secondary is the quiet tonal alternate action in authenticated flows.
         secondary:
           'border-border-subtle bg-well text-foreground hover:border-border hover:bg-active active:bg-active',

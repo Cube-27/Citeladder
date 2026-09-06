@@ -17,8 +17,10 @@ import { RotatingEngineLogos } from './rotating-engine-logos';
  */
 export function Hero() {
   const { hook } = LANDING_CONTENT;
+  // White, not the tinted band: the public surface prints on white, and
+  // the tint bands belong to the alternating sections below the fold.
   return (
-    <header className="bg-background-alt border-border-subtle relative -mt-16 overflow-hidden border-b pt-16">
+    <header className="band-grain bg-background border-border-subtle relative -mt-16 overflow-hidden border-b pt-16">
       <Container className="relative z-1 pt-20 pb-18 md:pt-32 md:pb-24">
         <HeroEntrance className="mx-auto w-full max-w-5xl text-center">
           <Eyebrow>{hook.eyebrow}</Eyebrow>

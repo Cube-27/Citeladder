@@ -36,7 +36,7 @@ export const LLMS_TXT = [
   '',
   '## Engines measured directly',
   '',
-  'ChatGPT, Gemini, and Claude. Other engines named on the marketing site are context, not a promise of a direct audit route.',
+  'ChatGPT, Gemini, and Claude. Perplexity, Grok, and Copilot are coming soon.',
   '',
   '## Public pages',
   '',
