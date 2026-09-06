@@ -8,10 +8,10 @@ import { cva } from 'class-variance-authority';
  * Buttons use the semantic control radius, not pills. Focused-flow fields may
  * opt into their documented 12px auth-control role; action behaviour and
  * semantics remain shared here.
- * Primary uses the terracotta action role. Accent remains analytical selection.
+ * Primary uses the ink action role. Accent remains analytical selection.
  * Secondary/neutral/ghost stay quiet so a screen has one obvious action.
  *
- * Hover moves the fill one step along the accent ramp rather than fading
+ * Hover moves the fill one step along the action ramp rather than fading
  * opacity, so the label keeps its verified AA contrast in every state.
  *
  * Quiet variants walk the semantic alpha-neutral ladder

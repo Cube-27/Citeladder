@@ -28,7 +28,7 @@ export const NAV_DROPS: readonly NavDrop[] = [
         items: [
           {
             title: 'See it',
-            desc: 'The whole system in one workspace',
+            desc: 'Share of answer, recorded and inspectable',
             href: '/#see-it',
           },
           {
@@ -42,8 +42,8 @@ export const NAV_DROPS: readonly NavDrop[] = [
             href: '/#use-cases',
           },
           {
-            title: 'Evidence and privacy',
-            desc: 'Inspectable evidence with isolated data',
+            title: 'For enterprise teams',
+            desc: 'Your keys, scoped access, and a full audit trail',
             href: '/#trust',
           },
         ],

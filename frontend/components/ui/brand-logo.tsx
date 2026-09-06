@@ -53,7 +53,7 @@ export function BrandLogo({
     <span
       aria-hidden
       className={cn(
-        'bg-accent-soft text-accent-text relative grid shrink-0 place-items-center overflow-hidden font-medium uppercase',
+        'relative grid shrink-0 place-items-center overflow-hidden font-medium uppercase',
         spec.className,
         className,
       )}
@@ -69,11 +69,18 @@ export function BrandLogo({
           width={spec.pixels}
           height={spec.pixels}
           unoptimized
+          // The plate stays: fetched marks are frequently transparent with dark
+          // glyphs, and the app-shell rows these sit in are tonal, not white.
           className="bg-panel size-full object-contain p-[2px]"
           onError={() => setFailed((prev) => ({ ...prev, [src]: true }))}
         />
       ) : (
-        brandInitials(name)
+        // Only the initials fallback gets a ground: it is generated text, not
+        // a logo asset. Brand marks are transparent and render on the surface
+        // they sit on.
+        <span className="bg-accent-soft text-accent-text grid size-full place-items-center">
+          {brandInitials(name)}
+        </span>
       )}
     </span>
   );

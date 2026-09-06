@@ -1,56 +1,61 @@
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
+import { cn } from '@/lib/utils';
 
 import { Eyebrow } from '../primitives/label';
-import { Reveal } from '../primitives/reveal';
+import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
 import { Section } from '../primitives/section';
-import { LANDING_ICONS } from './landing-icons';
+import { LANDING_ICONS, LANDING_TILES } from './landing-icons';
 
 /**
- * Enterprise trust — an asymmetric split between the promise and one concise
- * proof ledger. Each guarantee appears once, with its supporting detail.
+ * Enterprise trust — the promise and its audience statement share the top
+ * split, then one four-up row of icon-tiled guarantees carries the detail.
  */
 export function Trust() {
   const { trust } = LANDING_CONTENT;
   return (
     <Section id="trust" tone="sunken" rhythm="base" aria-labelledby="trust-title">
-      <div className="grid items-center gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-        <Reveal className="lg:py-8">
+      <div className="grid gap-x-16 gap-y-6 lg:grid-cols-2">
+        <Reveal>
           <Eyebrow>{trust.kicker}</Eyebrow>
           <h2
             id="trust-title"
-            className="website-section-heading text-foreground mt-6 max-w-[20ch] text-balance"
+            className="website-section-heading text-foreground mt-3 max-w-[18ch] text-balance"
           >
             {trust.title}
           </h2>
-          <p className="website-body text-muted mt-4 max-w-[52ch]">{trust.who}</p>
         </Reveal>
-
-        <Reveal className="bg-panel overflow-hidden rounded-[var(--radius-card)]">
-          <dl className="divide-border divide-y">
-            {trust.guarantees.map((guarantee) => {
-              const Icon = LANDING_ICONS[guarantee.icon];
-              return (
-                // A `dl` may only contain `dt`/`dd` pairs, optionally wrapped
-                // in a single `div` per pair — so the icon lives inside the
-                // `dt` rather than as a third sibling, and the description is
-                // indented to the same 40px + 16px gutter the icon occupies.
-                <div
-                  key={guarantee.title}
-                  className="hover:bg-background-alt/50 p-5 transition-colors sm:p-6"
-                >
-                  <dt className="website-body text-foreground flex items-center gap-4 font-medium">
-                    <span className="bg-accent-subtle/80 text-accent-text flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
-                      <Icon className="size-4.5" aria-hidden />
-                    </span>
-                    <span>{guarantee.title}</span>
-                  </dt>
-                  <dd className="website-body text-muted mt-1 pl-14">{guarantee.description}</dd>
-                </div>
-              );
-            })}
-          </dl>
+        <Reveal className="lg:self-center">
+          <p className="website-body text-muted max-w-[52ch]">{trust.who}</p>
         </Reveal>
       </div>
+
+      {/* The extra top margin keeps the four-up row clear of the compact
+          header split above it — the container gap alone reads as cramped. */}
+      <StaggerGroup className="mt-8 grid gap-x-8 gap-y-8 sm:grid-cols-2 md:mt-12 xl:grid-cols-4">
+        {trust.guarantees.map((guarantee) => {
+          const Icon = LANDING_ICONS[guarantee.icon];
+          return (
+            <StaggerItem key={guarantee.title} className="flex items-start gap-4">
+              <span
+                className={cn(
+                  'flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-card)]',
+                  LANDING_TILES[guarantee.tile],
+                )}
+              >
+                <Icon className="size-5" aria-hidden />
+              </span>
+              <div>
+                {/* Same title rung as the reveal/loop item headers so the
+                    three sections read identically. `website-body` pins 400
+                    and utility weight overrides lose the cascade to it, so a
+                    heavier weight has to come from the type ladder. */}
+                <h3 className="website-small-heading text-foreground">{guarantee.title}</h3>
+                <p className="website-body text-muted mt-1.5">{guarantee.description}</p>
+              </div>
+            </StaggerItem>
+          );
+        })}
+      </StaggerGroup>
     </Section>
   );
 }

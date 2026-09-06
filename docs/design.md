@@ -7,7 +7,7 @@
 
 CiteLadder is a light-only, evidence-led enterprise system. The authenticated
 application uses the **Prism Evidence Workspace**: a lightly violet-tinted paper editorial canvas,
-near-black ink, a warm terracotta primary action, terracotta for analytical selection, semantic evidence
+near-black ink, an ink primary action, terracotta for analytical selection, semantic evidence
 washes, useful density, and deliberate negative space. It is an operating
 workspace, not a wall of equal-weight KPI cards.
 
@@ -33,7 +33,7 @@ workspace, not a wall of equal-weight KPI cards.
   ladder in `app/globals.css` derives it from the size class so every glyph
   lands near a 1.3px stem instead of growing heavier with the icon. Colour stays
   `currentColor` so `text-muted` and `text-accent-text` keep painting the glyph.
-- **Action and selection:** terracotta (`#C15F3C`) owns primary actions across product,
+- **Action and selection:** ink (`#16161A`) owns primary actions across product,
   public, authentication, and onboarding surfaces. Analytical selection, links,
   active navigation, and focus consume the semantic accent ladder (`#C15F3C` with
   `#964226` for accessible high-contrast text). Cyan, coral, lime,
@@ -77,12 +77,14 @@ Tokens are semantic; components use the role, not a colour value.
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
 | Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
 | Borders | `border-subtle` (`#E3E2EC`), `border` (`#D1D0DC`), `border-strong` (`#A2A0B0`), `border-bold` (`#747282`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
-| Primary action | `action-*` (`#C15F3C`) | Terracotta primary actions |
+| Primary action | `action-*` (`#16161A`) | Ink primary actions |
 | Selection and focus | `accent-*` (`#C15F3C`) | Terracotta for selection, links, tabs, active navigation, and focus |
 | Status and evidence | cyan, coral, lime, amber, `citation-*`, `run-*`, `score-*`, `chart-*` | Persisted evidence and status, always paired with a label or icon |
 
 The ground is paper and the ink is near-black. Colour appears on under five
-percent of the surface: `action` `#C15F3C` owns primary buttons, and terracotta
+percent of the surface: `action` `#16161A` owns primary buttons (hover steps one
+rung lighter along the neutral ladder, `#3A3A40`; press settles at `#2E2E34`),
+and terracotta
 `#C15F3C` (`#964226` for text, hover, and press) owns selection, links,
 tabs, active navigation, focus, and the first chart series. Every surface uses
 the same paper ladder: `#F7F6FD` canvas and sidebar, `#F4F4F1` wells and
@@ -100,12 +102,15 @@ requires all four neutral text roles to meet WCAG 2.1 AA normal-text contrast
 (`4.5:1`) on every shared light surface, including `active`.
 
 Marketing uses the same neutral paper ladder (`background`, `sidebar` / `well`,
-`panel-tonal`, and `active`), blue-violet action, and blue link/focus roles as the product,
+`panel-tonal`, and `active`), ink action, and terracotta accent roles as the product,
 without route-scoped palette overrides. On paper a tonal band is a whisper, so a
 public section separates with a hairline (`divided`) unless the fill edge is
 doing real work. Functional evidence families remain inside
 product data and faithful preview scenes because those states must stay legible at a glance.
-Functional colour never carries meaning alone.
+Functional colour never carries meaning alone. The one sanctioned decorative
+family on the public surface is the pastel icon tile (`tile-blue`, `tile-violet`,
+`tile-amber`, `tile-green`): 48px rounded carriers for section iconography on
+the landing page, never used for state.
 
 ## Typography
 
@@ -121,13 +126,13 @@ tracking, weight, and colour combinations.
 
 | Role                    | Family     |      Size / line height |  Weight |                       Tracking | Colour                                      |
 | ----------------------- | ---------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
-| Hero display            | Uncut Sans | 44/48 → 56/60 → 64/68px |     600 |                        -0.04em | foreground; one short phrase may use accent |
-| Page title              | Uncut Sans |         40/44 → 48/54px |     600 |                       -0.035em | foreground                                  |
-| Section heading         | Uncut Sans |         32/38 → 40/46px |     600 |                        -0.03em | foreground                                  |
-| Feature heading         | Uncut Sans |                 24/30px |     600 |                        -0.02em | foreground                                  |
-| Small heading           | Uncut Sans |                 20/26px |     600 |                        -0.01em | foreground                                  |
-| Flow title              | Uncut Sans |         28/34 → 32/38px |     600 |                       -0.025em | foreground                                  |
-| Flow group title        | Inter      |                 17/24px |     600 |                        -0.01em | foreground                                  |
+| Hero display            | Uncut Sans | 44/48 → 56/60 → 64/68px |     500 |                        -0.04em | foreground; one short phrase may use accent |
+| Page title              | Uncut Sans |         40/44 → 48/54px |     500 |                       -0.035em | foreground                                  |
+| Section heading         | Uncut Sans |         32/38 → 40/46px |     500 |                        -0.03em | foreground                                  |
+| Feature heading         | Uncut Sans |                 24/30px |     500 |                        -0.02em | foreground                                  |
+| Small heading           | Uncut Sans |                 20/26px |     500 |                        -0.01em | foreground                                  |
+| Flow title              | Uncut Sans |         28/34 → 32/38px |     500 |                       -0.025em | foreground                                  |
+| Flow group title        | Inter      |                 17/24px |     500 |                        -0.01em | foreground                                  |
 | Flow help               | Inter      |                 15/22px |     400 |                              0 | muted                                       |
 | Flow metadata           | Inter      |                 14/20px |     500 |                              0 | muted; tabular numerals                     |
 | Lead                    | Inter      |                 20/30px |     400 |                        -0.01em | secondary                                   |
@@ -541,7 +546,7 @@ Buttons use the 8px control-radius role with no decorative inset border in the
 authenticated application; app button sizes remain compact (32px/36px on desktop,
 44px on touch).
 Website and marketing primary buttons use modern pill geometry (`rounded-full`, 9999px)
-with `min-h-[2.75rem]` (44px) and deep navy action fill. Secondary, neutral, ghost, and
+with `min-h-[2.75rem]` (44px) and ink action fill. Secondary, neutral, ghost, and
 danger remain shared semantic variants. Every control has a direct label, a
 visible focus ring (an opaque accent halo, ≥3:1), immediate pressed feedback, and
 at least a 44px touch target.

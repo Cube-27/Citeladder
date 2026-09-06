@@ -14,9 +14,9 @@ import type { ReactNode } from 'react';
  * `createMotionComponent(C, opts, featureBundle, createDomVisualElement)`), and
  * gets both from a `LazyMotion` ancestor. There was no such ancestor, so every
  * `m` in the marketing tree rendered as an inert element — the nav's `layout`
- * lens and `product-window`'s `AnimatePresence` exits silently did nothing
- * while still paying for `motion-dom` in the bundle. `domMax` rather than
- * `domAnimation` because the nav animates `layout`, which only `domMax` carries.
+ * lens silently did nothing while still paying for `motion-dom` in the bundle.
+ * `domMax` rather than `domAnimation` because the nav animates `layout`, which
+ * only `domMax` carries.
  *
  * The feature bundle is loaded through a FUNCTION, not imported eagerly: that is
  * what keeps it in its own async chunk instead of the initial payload.
