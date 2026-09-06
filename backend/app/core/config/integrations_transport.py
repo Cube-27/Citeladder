@@ -182,7 +182,15 @@ BING_API_BASE_URL: Final = "https://ssl.bing.com"
 
 BING_API_JSON_ROOT: Final = "/webmaster/api.svc/json/"
 
-BING_SITES_PROBE_METHOD: Final = "GetSites"
+# The verified-site listing method, spelled EXACTLY as the Bing Webmaster
+# service contract defines it (``IWebmasterApi.GetUserSites`` —
+# learn.microsoft.com/dotnet/api/microsoft.bing.webmaster.api.interfaces
+# .iwebmasterapi). There is no ``GetSites``: the JSON endpoint validates the
+# credential BEFORE it routes the method name, so an invented spelling still
+# answers "InvalidToken" to an unauthenticated probe and only fails once a
+# real grant is in hand — which is why this literal has to come from the
+# contract, never from a plausible guess.
+BING_SITES_PROBE_METHOD: Final = "GetUserSites"
 
 INTEGRATION_APPROVED_ENDPOINT_HOSTS: Final[frozenset[str]] = frozenset(
     {

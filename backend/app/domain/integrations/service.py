@@ -457,7 +457,7 @@ async def run_connection_test(
         else:
             # Real cheap authenticated probe against the pinned Bing host
             # (I12, replacing the refresh round-trip placeholder): the
-            # ``GetSites`` verified-site list validates the Microsoft
+            # ``GetUserSites`` verified-site list validates the Microsoft
             # grant's access token. The grant is untouched — a probe is
             # not a credential rotation.
             bing_client = bing_connector.build_bing_client()

@@ -15,7 +15,7 @@ contract for a ``bing`` connection on a ``microsoft_oauth`` grant:
     are kept on the artifact but never derived).
   - The unpaged-API short-circuit (a request past the first page returns
     an empty page).
-  - The cheap authenticated ``GetSites`` probe (the I12 replacement for
+  - The cheap authenticated ``GetUserSites`` probe (the I12 replacement for
     the refresh round-trip placeholder) and the property discovery that
     reuses it, so a Bing site ref is picked rather than hand-typed.
 """
@@ -55,6 +55,7 @@ from app.core.config.integrations_settings import (
     integration_settings,
 )
 from app.core.config.integrations_transport import (
+    BING_SITES_PROBE_METHOD,
     INTEGRATION_PROVIDER_BING,
     INTEGRATION_TRANSPORT_MICROSOFT,
 )
@@ -130,7 +131,7 @@ class _ProviderFake:
                 return httpx.Response(200, json=_fixture("bing_page_stats.json"))
             if method == "GetQueryStats":
                 return httpx.Response(200, json=_fixture("bing_query_stats.json"))
-            if method == "GetSites":
+            if method == BING_SITES_PROBE_METHOD:
                 return httpx.Response(200, json=_fixture("bing_sites_response.json"))
             return httpx.Response(404, json={"Message": "unknown method"})
         raise AssertionError(f"unexpected request: {request.url}")
@@ -374,11 +375,11 @@ async def test_fresh_token_skips_refresh(session_factory, db_session) -> None:
 
 @pytest.mark.asyncio
 async def test_probe_ok_and_auth_failure() -> None:
-    """The cheap GetSites probe validates the token (I12 replacement)."""
+    """The cheap GetUserSites probe validates the token (I12 replacement)."""
     fake = _ProviderFake()
     client = build_bing_client(transport=fake.mock_transport())
     await client.probe_access_token(access_token="ms-access-token-1")
-    assert fake.bing_calls == [("GetSites", "")]
+    assert fake.bing_calls == [(BING_SITES_PROBE_METHOD, "")]
     assert fake.bing_auth == ["Bearer ms-access-token-1"]
 
     failing = _ProviderFake(bing_status=401)
@@ -391,7 +392,7 @@ async def test_probe_ok_and_auth_failure() -> None:
 
 @pytest.mark.asyncio
 async def test_list_properties_returns_the_verified_sites() -> None:
-    """Discovery reuses GetSites so a site ref is selected, never typed.
+    """Discovery reuses GetUserSites so a site ref is selected, never typed.
 
     Bing matches ``siteUrl`` against its own spelling exactly, so a
     hand-typed ref is a support ticket waiting to happen.
@@ -403,7 +404,7 @@ async def test_list_properties_returns_the_verified_sites() -> None:
     assert [(p.property_ref, p.label) for p in properties] == [
         ("https://example.com", "https://example.com")
     ]
-    assert fake.bing_calls == [("GetSites", "")]
+    assert fake.bing_calls == [(BING_SITES_PROBE_METHOD, "")]
     assert fake.bing_auth == ["Bearer ms-access-token-1"]
 
 

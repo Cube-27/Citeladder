@@ -68,7 +68,7 @@ INTEGRATION_PROPERTY_DISCOVERY_PROVIDERS: Final[frozenset[str]] = frozenset(
     {
         INTEGRATION_PROVIDER_GSC,
         INTEGRATION_PROVIDER_GA4,
-        # Bing discovery reuses the GetSites call that already backs the
+        # Bing discovery reuses the GetUserSites call that already backs the
         # grant probe, so every provider offers a picker and no user has to
         # hand-type a property ref.
         INTEGRATION_PROVIDER_BING,

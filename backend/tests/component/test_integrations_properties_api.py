@@ -363,7 +363,7 @@ async def test_near_expiry_grant_refreshes_before_listing(
 async def test_lists_bing_verified_sites(
     client: httpx.AsyncClient, db_session, _fake_google: _FakeGoogle
 ) -> None:
-    """Bing discovery reuses GetSites, so its ref is picked and not typed.
+    """Bing discovery reuses GetUserSites, so its ref is picked and not typed.
 
     Bing matches ``siteUrl`` against its own spelling exactly, so leaving
     this provider without a picker forced every user to hand-type a ref.

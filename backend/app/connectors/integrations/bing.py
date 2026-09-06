@@ -39,7 +39,7 @@ config-owned error tokens, with provider error text length-capped.
 
 ``BingClient.probe_access_token`` is the cheap authenticated grant probe
 behind ``POST /integrations/{id}/test`` for Microsoft grants (the I12
-replacement for the refresh round-trip placeholder): ``GetSites``
+replacement for the refresh round-trip placeholder): ``GetUserSites``
 returns the caller's verified-site list — the analogue of the GSC
 ``GET /webmasters/v3/sites`` probe.
 """
@@ -301,7 +301,7 @@ class BingClient:
     ) -> tuple[ProviderProperty, ...]:
         """List the verified sites this grant can read (property discovery).
 
-        Backs the property picker with the same ``GetSites`` call the grant
+        Backs the property picker with the same ``GetUserSites`` call the grant
         probe already makes, so a user selects from what Bing says they
         actually own instead of hand-typing a ``siteUrl`` that must match
         Bing's own spelling exactly. Refs are returned in Bing's ``Url``
@@ -334,7 +334,7 @@ class BingClient:
     async def probe_access_token(self, *, access_token: str) -> None:
         """Cheap authenticated probe validating a Microsoft grant's token.
 
-        GETs the caller's verified-site list (``GetSites``) with the
+        GETs the caller's verified-site list (``GetUserSites``) with the
         Bearer token (never logged) — the analogue of the GSC sites probe
         on the shared Google grant. Raises ``BingApiError`` on any failure.
         """

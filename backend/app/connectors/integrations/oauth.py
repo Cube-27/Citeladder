@@ -49,7 +49,7 @@ from app.core.config.integrations_transport import (
 # for both the GSC and the GA4 connection, so the site list validates the
 # grant behind either connection). The host is config-owned
 # (``GSC_API_BASE_URL``) and allow-listed. The Microsoft-grant probe
-# (``GetSites``) lives with the Bing data-API client (I12).
+# (``GetUserSites``) lives with the Bing data-API client (I12).
 _GSC_SITES_PROBE_PATH = GSC_SITES_PATH
 
 

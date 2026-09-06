@@ -250,9 +250,9 @@ async def test_probe_ok_microsoft_via_bing_get_sites(
     assert resp.status_code == 200
     assert resp.json()["status"] == "ok"
     # Microsoft grants probe through a real authenticated call against the
-    # pinned Bing host (GetSites — I12), never a token-endpoint round-trip.
+    # pinned Bing host (GetUserSites — I12), never a token-endpoint round-trip.
     (probe,) = _fake_provider.bing_probe_calls()
-    assert probe.url.path.endswith("/GetSites")
+    assert probe.url.path.endswith("/GetUserSites")
     assert probe.headers["authorization"] == f"Bearer {_FAKE_ACCESS}"
     assert _fake_provider.token_calls() == []
     # The stored grant is untouched by the probe (no rotation persisted).
