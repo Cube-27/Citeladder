@@ -57,7 +57,10 @@ function categoryChoices(profile: DiscoveryProfile): string[] {
     ...profile.category_aliases,
   ]) {
     const item = candidate.trim();
-    const key = item.toLowerCase();
+    // Keyed on what the chip will SAY, not on what it stores: two tokens that
+    // differ only by an underscore render the same word and would otherwise
+    // produce two identical chips.
+    const key = titleCaseStatus(item).toLowerCase();
     if (!item || seen.has(key)) continue;
     seen.add(key);
     choices.push(item);

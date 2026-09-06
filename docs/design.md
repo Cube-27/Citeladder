@@ -127,7 +127,7 @@ collapsed and dense screens lost their hierarchy. The design-system policy
 requires all four neutral text roles to meet WCAG 2.1 AA normal-text contrast
 (`4.5:1`) on every shared light surface, including `active`.
 
-Marketing uses the same neutral paper ladder (`background`, `sidebar` / `well`,
+Marketing uses the same neutral paper ladder (`background`, `well`,
 `panel-tonal`, and `active`), green action, and green accent roles as the product,
 without route-scoped palette overrides. On paper a tonal band is a whisper, so a
 public section separates with a hairline (`divided`) unless the fill edge is

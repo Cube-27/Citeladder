@@ -26,11 +26,10 @@ const ARROW_DELTA: Readonly<Record<string, number>> = {
  *
  * `trailing` is for a control that shares the track but is NOT one of the
  * choices — Performance's "More" button, which opens the range dialog. It has to
- * sit outside the radio group (a radio does not open a dialog) while still
- * riding the same rail, which is why the group carries `display: contents`.
- * Without this slot the only way to get that layout was to rebuild the track by
- * hand, and the one place that did lost the radio semantics and the arrow keys
- * along with it.
+ * sit outside the radio group, because a radio does not open a dialog, while
+ * still riding the same rail. Without this slot the only way to get that layout
+ * was to rebuild the track by hand, and the one place that did lost the radio
+ * semantics and the arrow keys along with it.
  */
 export function SegmentedControl<T extends string>({
   value,
@@ -69,15 +68,17 @@ export function SegmentedControl<T extends string>({
 
   return (
     <div className={cn(segmentedTrackVariants(), className)}>
-      {/* `display: contents` keeps the group's semantics without putting a box
-          in the track's flex row, so a trailing control sits on the same rail
-          while staying outside the radio group. */}
+      {/* A nested flex row on the track's own gap, NOT `display: contents`:
+          some browsers drop a contents box from the accessibility tree, which
+          would cost the group its name and its radio semantics. Matching the
+          gap keeps every segment and the trailing control evenly spaced on one
+          rail. */}
       <div
         id={id}
         role="radiogroup"
         aria-label={ariaLabel}
         aria-describedby={describedBy}
-        className="contents"
+        className="flex items-center gap-0.5"
       >
         {options.map((option, index) => {
           const selected = option.value === value;

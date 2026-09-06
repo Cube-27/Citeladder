@@ -173,7 +173,9 @@ describe('IssuesCatalog', () => {
     );
 
     renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
-    await screen.findAllByText('WebSite schema is missing');
+    // Anchor on the DETAIL response, not the catalog row: the row renders
+    // first, so asserting here would pass even if the detail pager arrived.
+    await screen.findByRole('link', { name: /Homepage/ });
 
     expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Previous' })).toBeNull();
