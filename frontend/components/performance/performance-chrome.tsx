@@ -6,12 +6,17 @@ import { INITIAL_SELECTION, type RangeSelection } from './date-range-dialog';
 import type { usePerformanceSync } from './use-performance-sync';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Pressable } from '@/components/ui/pressable';
-import { segmentedItemVariants, segmentedTrackVariants } from '@/components/ui/segmented-variants';
+import { SegmentedAction, SegmentedControl } from '@/components/ui/segmented-control';
 import { Select } from '@/components/ui/select';
 import type { PerformanceGranularity } from '@/lib/api/performance';
-import { GRANULARITY_OPTIONS, QUICK_RANGE_OPTIONS } from '@/lib/performance/performance';
-import { cn } from '@/lib/utils';
+import {
+  DIALOG_RANGE_OPTIONS,
+  GRANULARITY_OPTIONS,
+  QUICK_RANGE_OPTIONS,
+} from '@/lib/performance/performance';
+
+/** The three ranges that live on the track; everything else is behind More. */
+type QuickRange = (typeof QUICK_RANGE_OPTIONS)[number]['value'];
 
 /**
  * The Performance surface's chrome: the control bar above the cards, the
@@ -29,6 +34,22 @@ function getMoreLabel(selection: RangeSelection, comparing: boolean): string {
   if (selection.range === 'last_synced') return 'Last synced';
   if (selection.range === 'custom') return 'Custom';
   return 'More';
+}
+
+/** True when the active range is one of the ones hiding behind More. */
+function isRangeBehindMore(selection: RangeSelection, comparing: boolean): boolean {
+  if (comparing) return true;
+  return DIALOG_RANGE_OPTIONS.some((option) => option.value === selection.range);
+}
+
+/**
+ * The quick-range track's value. Comparing, or any range that lives in the
+ * dialog, is deliberately off-list: the control renders that as "nothing
+ * selected" and More carries the state instead.
+ */
+function quickRangeValue(selection: RangeSelection, comparing: boolean): QuickRange {
+  if (comparing) return '' as QuickRange;
+  return selection.range as QuickRange;
 }
 
 /** The dashboard's control bar: resolved range, imported coverage, and sync. */
@@ -57,46 +78,35 @@ export function PerformanceToolbar({
   onReset: () => void;
 }>) {
   const moreLabel = getMoreLabel(selection, comparing);
-  const isMoreActive =
-    comparing ||
-    selection.range === '3_months' ||
-    selection.range === '6_months' ||
-    selection.range === 'last_synced' ||
-    selection.range === 'custom';
+  const isMoreActive = isRangeBehindMore(selection, comparing);
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      {/* Quick-select buttons: Day, Week, Month, and dynamic More button
-          (showing 3 months, 6 months, Last synced default, or Compare). */}
-      <fieldset
-        className={cn(segmentedTrackVariants(), 'm-0 border-0 p-0')}
-        aria-label="Date range"
-      >
-        {QUICK_RANGE_OPTIONS.map((option) => {
-          const isSelected = !comparing && selection.range === option.value;
-          return (
-            <Pressable
-              key={option.value}
-              type="button"
-              className={segmentedItemVariants({ selected: isSelected })}
-              aria-pressed={isSelected}
-              onClick={() => onSelectRange({ ...INITIAL_SELECTION, range: option.value })}
-            >
-              {option.label}
-            </Pressable>
-          );
-        })}
-        <Pressable
-          type="button"
-          className={cn(segmentedItemVariants({ selected: isMoreActive }), 'gap-1')}
-          aria-pressed={isMoreActive}
-          data-testid="compare-button"
-          onClick={comparing ? onOpenCompare : onOpenRange}
-        >
-          {moreLabel}
-          <ChevronDown className="size-3.5 opacity-70" aria-hidden />
-        </Pressable>
-      </fieldset>
+      {/* Day, Week and Month are the three choices; More opens the dialog that
+          holds 3 months, 6 months, Last synced, Custom and Compare.
+
+          This was a hand-built <fieldset> of aria-pressed toggles wrapped around
+          Pressable, which is the ROW affordance — it forced w-full and text-left
+          onto every segment — and it described three mutually exclusive ranges
+          as independent toggles with no arrow-key navigation. The shared control
+          owns all of that; More rides its trailing slot. */}
+      <SegmentedControl
+        value={quickRangeValue(selection, comparing)}
+        onChange={(range) => onSelectRange({ ...INITIAL_SELECTION, range })}
+        options={QUICK_RANGE_OPTIONS}
+        ariaLabel="Date range"
+        trailing={
+          <SegmentedAction
+            selected={isMoreActive}
+            aria-haspopup="dialog"
+            data-testid="compare-button"
+            onClick={comparing ? onOpenCompare : onOpenRange}
+          >
+            {moreLabel}
+            <ChevronDown className="size-3.5 opacity-70" aria-hidden />
+          </SegmentedAction>
+        }
+      />
 
       <span className="text-muted text-sm" data-testid="performance-window">
         {selectedLabel}

@@ -159,6 +159,29 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('IssuesCatalog', () => {
+  it('shows no pagination when everything already fits on one page', async () => {
+    // Both pagers used to key off "are there rows" and then disable themselves
+    // when there was nowhere to go, so a five-issue crawl rendered two dead
+    // controls in the catalog and two more in the detail panel.
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
+        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
+      ),
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () =>
+        HttpResponse.json(issueDetail({ next_cursor: null })),
+      ),
+    );
+
+    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    // Anchor on the DETAIL response, not the catalog row: the row renders
+    // first, so asserting here would pass even if the detail pager arrived.
+    await screen.findByRole('link', { name: /Homepage/ });
+
+    expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Previous' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
+  });
+
   it('seeds the server query from an Overview rule deep link', async () => {
     const seen: URLSearchParams[] = [];
     navigation.set(

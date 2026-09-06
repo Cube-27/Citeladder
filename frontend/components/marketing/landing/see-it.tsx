@@ -70,11 +70,7 @@ export function SeeIt() {
             {/* On phones the bar wraps so the tab strip gets a full second row
               instead of slivering between the lockup and the marker. */}
             <div className="border-border-subtle flex min-h-13 flex-wrap items-center gap-x-4 gap-y-1 border-b px-4 py-2 sm:h-13 sm:flex-nowrap sm:gap-y-0 sm:px-5 sm:py-0">
-              {/* LogoMark is the full lockup — the wordmark ships with the mark.
-                  The nudge sits its glyphs on the tab-strip text row. */}
-              <span className="shrink-0 translate-y-[2px]">
-                <LogoMark size={20} />
-              </span>
+              <LogoMark size={22} />
               <div className="order-last flex h-full min-w-0 basis-full scrollbar-none items-stretch gap-5 overflow-x-auto sm:order-none sm:flex-1 sm:basis-auto">
                 {canvas.tabs.map((tab) => (
                   <span

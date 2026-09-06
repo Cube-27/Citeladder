@@ -7,6 +7,7 @@ import { FlowGroup } from '@/components/auth/flow-shell';
 import { Input } from '@/components/ui/input';
 import { RadioGroup } from '@/components/ui/radio-group';
 import type { DiscoveryProfile } from '@/lib/api/brand-discoveries';
+import { titleCaseStatus } from '@/lib/utils';
 
 /**
  * Everything the user actually decides at onboarding.
@@ -56,7 +57,10 @@ function categoryChoices(profile: DiscoveryProfile): string[] {
     ...profile.category_aliases,
   ]) {
     const item = candidate.trim();
-    const key = item.toLowerCase();
+    // Keyed on what the chip will SAY, not on what it stores: two tokens that
+    // differ only by an underscore render the same word and would otherwise
+    // produce two identical chips.
+    const key = titleCaseStatus(item).toLowerCase();
     if (!item || seen.has(key)) continue;
     seen.add(key);
     choices.push(item);
@@ -91,7 +95,10 @@ export function IcpConfirmation({
           ariaLabel="What you sell"
           value={isOther ? OTHER_CATEGORY : profile.category}
           options={[
-            ...choices.map((option) => ({ value: option, label: option })),
+            // The value stays exactly as discovery supplied it — this is only
+            // the label. `brand_audit_services` was the first thing a new
+            // customer read on this screen.
+            ...choices.map((option) => ({ value: option, label: titleCaseStatus(option) })),
             { value: OTHER_CATEGORY, label: choices.length > 0 ? 'None of these' : 'Other' },
           ]}
           onValueChange={(value) => {

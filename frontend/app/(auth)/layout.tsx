@@ -18,6 +18,8 @@ export default async function AuthLayout({ children }: Readonly<{ children: Reac
     <FlowShell
       mainLabel="Account access"
       align="center"
+      // The shell owns the one sheet. This route only narrows it.
+      measure="auth"
       footer={
         <div className="website-label text-muted flex flex-wrap justify-center gap-x-1.5 text-center">
           <span>
@@ -44,7 +46,7 @@ export default async function AuthLayout({ children }: Readonly<{ children: Reac
         </div>
       }
     >
-      <div className="flow-auth-content">{children}</div>
+      {children}
     </FlowShell>
   );
 }

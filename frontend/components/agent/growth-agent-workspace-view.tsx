@@ -144,7 +144,7 @@ function DataUsed({ result }: Readonly<{ result: AgentResult }>) {
     : 'No saved data artifact was available for this result.';
 
   return (
-    <details className="border-border-subtle bg-background grid gap-3 rounded-[var(--radius-control)] border px-3 py-3">
+    <details className="border-border-subtle bg-well grid gap-3 rounded-[var(--radius-control)] border px-3 py-3">
       <summary
         className={textRole(
           'bodyStrong',

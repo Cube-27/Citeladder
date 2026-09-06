@@ -22,7 +22,7 @@ function OnboardingFallback() {
   return (
     <main
       id="main"
-      className="bg-background grid min-h-dvh place-items-center p-[var(--page-section-gap)]"
+      className="bg-shell grid min-h-dvh place-items-center p-[var(--page-section-gap)]"
     >
       <p className="text-muted text-sm">Loading your workspace…</p>
     </main>

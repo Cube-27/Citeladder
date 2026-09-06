@@ -355,11 +355,7 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
         window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
       }}
     >
-      {/* The lockup's optical center rides high against the 64px bar's text
-          row; this sits it on the nav baseline. */}
-      <span className="block translate-y-[2px]">
-        <LogoMark size={24} priority />
-      </span>
+      <LogoMark size={26} />
     </Link>
   );
 }

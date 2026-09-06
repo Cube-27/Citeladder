@@ -41,10 +41,15 @@ type Rhythm = keyof typeof RHYTHM;
  * the light field. A dark section rebinds the semantic tokens (globals.css
  * `[data-citeladder-section='dark']`), so its children never name a dark
  * colour themselves.
+ *
+ * `sunken` is the shared ground: the same sheet the app shell and the focused
+ * flow stand on. It used to be a neutral tint with no relationship to anything
+ * behind the login, which is most of why the site and the product read as two
+ * different pieces of software.
  */
 const TONE = {
   paper: '',
-  sunken: 'bg-background-alt',
+  sunken: 'bg-shell',
   deep: 'bg-band-deep',
   dark: 'bg-band-dark rounded-t-[28px]',
 } as const;

@@ -53,14 +53,30 @@
   --color-well: #f4f4f1;
   --color-active: #efefeb;
   --color-input: #ffffff;
-  --color-sidebar: #f4f4f1;
+  /* The sidebar is a region of the ground now, not a surface of its own. The
+     token stays because check:policy requires it, and it holds the ground value
+     so a call site reaching for it cannot resurrect the old slab. It must be a
+     literal (the policy requires six-digit hex here), so it moves with
+     --color-shell below. */
+  --color-sidebar: #f1f4f1;
   --color-surface-inverse: #16161a;
+
+  /* The ground. Chrome — app sidebar and top bar, the flow bar and its action
+     bar, the quiet marketing band — sits on ONE grained sheet, and content sits
+     on white paper inset in it. That tonal step plus a radius is what separates
+     the two planes, which is why the rules between them are gone. The hue is
+     green at very low chroma: enough that the sheet reads as a material rather
+     than as grey, far too little to compete with the accent that owns actions.
+     Both rungs clear AA for all four neutral inks (subtle, the tightest pair,
+     measures 4.77:1 and 4.62:1). */
+  --color-shell: #f1f4f1;
+  --color-shell-alt: #ecf1ec;
 
   /* The marketing band ramp: canvas (paper) → tint (sunken) → deep → dark.
      Dark bands rebind the semantic tokens in one place — see the
      `[data-citeladder-section='dark']` scope below — so nothing inside a dark
      band names a dark colour itself. */
-  --color-band-deep: #e9e8f2;
+  --color-band-deep: #e4eae4;
   --color-band-dark: #16161a;
 
   --color-border: #d1d0dc;
@@ -314,6 +330,10 @@
   --card-padding-large: 20px;
   --shadow-card: 0 10px 24px -4px rgb(20 33 61 / 0.06), 0 3px 8px -2px rgb(20 33 61 / 0.03);
   --shadow-card-hover: 0 18px 36px -6px rgb(20 33 61 / 0.10), 0 6px 14px -3px rgb(20 33 61 / 0.04);
+  /* The content pane's lift off the ground. Wide and very soft: the pane is a
+     sheet resting on a sheet, not an object floating over one, so this must
+     read as a cast edge rather than as a card's elevation. */
+  --shadow-pane: 0 1px 2px rgb(22 22 26 / 0.04), 0 12px 32px -12px rgb(22 22 26 / 0.10);
   --modal-padding: 20px;
   --empty-state-padding: 24px;
   --control-height-sm: 32px;
@@ -348,6 +368,7 @@
    light ink for the same reason, and the accent's own foreground flips dark
    because the lightened green fill is what white text would sit on there. */
 [data-citeladder-section='dark'] {
+  --grain-opacity: 0.09;
   --color-foreground: #f2f2f6;
   --color-secondary: #cfcfda;
   --color-muted: #a2a2b0;
@@ -625,9 +646,54 @@ input:-webkit-autofill:focus {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.05;
+  opacity: var(--grain-opacity, 0.05);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
   background-size: 180px 180px;
+}
+
+/* Chrome takes the texture at a lower strength than an editorial band. At
+   product density the marketing value reads as dirt rather than as stock. */
+.grain-soft {
+  --grain-opacity: 0.03;
+}
+
+/* A tinted band takes a little more grain than paper does, so the fill reads as
+   stock rather than as a flat wash; the dark close takes more again, because
+   noise all but disappears into a dark ground. */
+[data-citeladder-section='sunken'],
+[data-citeladder-section='deep'] {
+  --grain-opacity: 0.07;
+}
+
+/* The white paper. One recipe, shared by the app's content region and the
+   focused flow's task column, so both planes are the same object on the same
+   ground. No border: the tonal step off the ground and the radius are the
+   separation, and adding a rule back would put a hard edge on the one seam this
+   model exists to soften. */
+.app-pane {
+  background: var(--color-panel);
+  border-radius: var(--radius-overlay);
+  box-shadow: var(--shadow-pane);
+}
+
+/* The workspace pane fills the shell rather than floating in it: it meets the
+   sidebar on the left and the viewport on the right and bottom, so only its top
+   corners have ground behind them. Rounding an edge with nothing behind it cuts
+   a notch instead of softening anything. */
+.app-pane-workspace {
+  border-radius: var(--radius-overlay) var(--radius-overlay) 0 0;
+}
+
+/* A 16px corner against the viewport edge reads as a rendering artefact rather
+   than as a sheet, so on a phone the paper runs edge to edge and gives up its
+   radius and its lift. The radius ladder is a role, not a call-site choice, so
+   this cannot be a utility at the consumer. */
+@media (max-width: 767px) {
+  .app-pane,
+  .app-pane-workspace {
+    border-radius: 0;
+    box-shadow: none;
+  }
 }
 
 .mono,
@@ -1004,7 +1070,7 @@ samp {
   left: 0.5rem;
   z-index: 100;
   transform: translateY(-200%);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-control);
   background: var(--color-panel);
   border: 1px solid var(--color-accent);
   color: var(--color-accent-text);
