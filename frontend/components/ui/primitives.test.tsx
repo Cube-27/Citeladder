@@ -330,7 +330,7 @@ describe('Input + Field', () => {
     // (canvas tint on the white card) and its accent focus border, and the
     // Invalid state has its own semantic danger border.
     expect(input.className).toContain('bg-input');
-    expect(input.className).toContain('focus:border-accent');
+    expect(input.className).toContain('focus-visible:border-accent');
     expect(input.className).toContain('aria-invalid:border-danger');
   });
 

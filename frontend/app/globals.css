@@ -5,9 +5,9 @@
 /* CiteLadder's single design-system owner. Prism Evidence now spans product,
    public, authentication, and onboarding surfaces. See docs/design.md. */
 @theme {
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: var(--font-uncut-sans), var(--font-inter), -apple-system, sans-serif;
+  --font-sans: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-uncut-sans), var(--font-remus), -apple-system, sans-serif;
 
   /* Palette layer. Product code consumes the semantic aliases below. */
   --color-gray-0: #ffffff;
@@ -56,6 +56,13 @@
   --color-sidebar: #f4f4f1;
   --color-surface-inverse: #16161a;
 
+  /* The marketing band ramp: canvas (paper) → tint (sunken) → deep → dark.
+     Dark bands rebind the semantic tokens in one place — see the
+     `[data-citeladder-section='dark']` scope below — so nothing inside a dark
+     band names a dark colour itself. */
+  --color-band-deep: #e9e8f2;
+  --color-band-dark: #16161a;
+
   --color-border: #d1d0dc;
   --color-border-subtle: #e3e2ec;
   --color-border-strong: #a2a0b0;
@@ -69,25 +76,28 @@
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
 
-  /* Analytical selection and focus. Primary actions use ink, below. */
-  --color-accent: #c15f3c;
-  --color-accent-hover: #a84f30;
-  --color-accent-active: #964226;
+  /* Analytical selection and focus, and the brand accent itself: the green of
+     the reference system's hue set (#0b7a3c, soft #e6f2ea, deep #08592c). */
+  --color-accent: #0b7a3c;
+  --color-accent-hover: #08592c;
+  --color-accent-active: #074d27;
   --color-accent-fg: #ffffff;
-  --color-accent-subtle: #f7e8e1;
-  --color-accent-soft: #fbf4f1;
-  --color-accent-border: #ebcfc4;
-  --color-accent-text: #964226;
-  --color-focus: #c15f3c;
-  --color-focus-ring: #ebcfc4;
-  --color-selection: #ebcfc4;
+  --color-accent-subtle: #e6f2ea;
+  --color-accent-soft: #eef6f1;
+  --color-accent-border: #b7dcc8;
+  --color-accent-text: #0b7a3c;
+  --color-focus: #0b7a3c;
+  /* The focus indicator is the control's own border plus a soft glow attached
+     to it — blurred, so there is no second crisp edge. */
+  --color-focus-ring: rgb(11 122 60 / 32%);
+  --color-selection: #cde8db;
   --color-selection-fg: #16161a;
-  /* Primary actions are ink. There is no darker rung above the base, so hover
-     steps one rung LIGHTER along the neutral ladder (the same ramp-walk rule
-     the terracotta ramp followed, inverted) and press settles between them. */
-  --color-action: #16161a;
-  --color-action-hover: #3a3a40;
-  --color-action-active: #2e2e34;
+  /* Primary actions are the brand green, one ramp: hover steps one rung deeper
+     (the reference accent ramp walks darker, unlike the old ink ramp that had
+     no darker rung) and press settles between base and hover. */
+  --color-action: #0b7a3c;
+  --color-action-hover: #08592c;
+  --color-action-active: #074d27;
   --color-action-fg: #ffffff;
 
   /* Answer-engine brand marks (functional identity, marketing engine chips). */
@@ -130,14 +140,17 @@
   /* Marketing icon tiles — the pastel colour carriers for public-section
      iconography (docs/design.md §Colour). Decorative only: they never carry
      state, so they stay out of the status families. */
-  --color-tile-blue: #dff0fa;
-  --color-tile-blue-ink: #1470a3;
-  --color-tile-violet: #ebe9fc;
-  --color-tile-violet-ink: #4438c8;
-  --color-tile-amber: #f9efcf;
-  --color-tile-amber-ink: #8f6e14;
-  --color-tile-green: #cdebda;
-  --color-tile-green-ink: #1f7a46;
+  /* The four product hues of the reference system, drawn from its mark's
+     quadrants: each carries a soft tile fill and the deep rung that inks
+     icons and titles sitting on that fill. */
+  --color-tile-blue: #e6eff8;
+  --color-tile-blue-ink: #05568c;
+  --color-tile-indigo: #eaeaf6;
+  --color-tile-indigo-ink: #26276b;
+  --color-tile-purple: #f1eaf4;
+  --color-tile-purple-ink: #522e60;
+  --color-tile-green: #e6f2ea;
+  --color-tile-green-ink: #08592c;
 
   --color-sentiment-positive: #9acd32;
   --color-sentiment-positive-bg: #f4f8ec;
@@ -320,11 +333,52 @@
      are the base and the media queries below step them up. */
   --site-gutter: 20px;
   --section-y: 56px;
-  /* A 2px panel gap then a solid, opaque accent ring. */
-  --focus-ring: 0 0 0 2px var(--color-panel), 0 0 0 4px var(--color-focus-ring);
+  /* The focus glow hugs the focused border with real blur — the border reads
+     as glowing, never as a second ring floating outside it. */
+  --focus-ring: 0 0 8px 1px var(--color-focus-ring);
   --skeleton-base: #efefeb;
   --skeleton-highlight: #ffffff;
   --value-placeholder: var(--color-subtle);
+}
+
+/* The one-place dark rebind (the reference system's `.on-dark`). Everything
+   inside a dark band resolves against these semantic values — components name
+   the role, never a dark hex. The accent steps up to a lighter green because
+   `#0b7a3c` fails contrast on `#16161a`; solid action buttons invert to the
+   light ink for the same reason, and the accent's own foreground flips dark
+   because the lightened green fill is what white text would sit on there. */
+[data-citeladder-section='dark'] {
+  --color-foreground: #f2f2f6;
+  --color-secondary: #cfcfda;
+  --color-muted: #a2a2b0;
+  --color-subtle: #8e8e9a;
+  --color-disabled: #6e6e7a;
+  --color-panel: #1f1f26;
+  --color-elevated: #1f1f26;
+  --color-well: #242430;
+  --color-background-alt: #242430;
+  --color-active: #2c2c38;
+  --color-input: #1f1f26;
+  --color-border-subtle: #2c2c38;
+  --color-border: #3a3a48;
+  --color-border-strong: #4c4c5c;
+  --color-accent: #58b98a;
+  --color-accent-hover: #6fc99e;
+  --color-accent-active: #85d7b0;
+  --color-accent-fg: #0c2417;
+  --color-accent-text: #7cc9a2;
+  --color-accent-subtle: rgb(88 185 138 / 12%);
+  --color-accent-soft: rgb(88 185 138 / 8%);
+  --color-accent-border: rgb(88 185 138 / 30%);
+  --color-focus: #58b98a;
+  --color-focus-ring: rgb(88 185 138 / 38%);
+  --color-selection: rgb(88 185 138 / 30%);
+  --color-action: #f2f2f6;
+  --color-action-hover: #d4d4de;
+  --color-action-active: #b8b8c6;
+  --color-action-fg: #16161a;
+  --skeleton-base: #242430;
+  --skeleton-highlight: #2c2c38;
 }
 
 *,
@@ -393,7 +447,7 @@ body {
   h5,
   h6 {
     margin: 0;
-    font-family: var(--font-uncut-sans), var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-uncut-sans), var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     /* App headings sit at body weight; the public/flow roles in
        website-type.css carry the one emphasis rung above (500). */
     font-weight: 400;
@@ -514,13 +568,66 @@ body {
 }
 
 .focus-ring:focus-visible {
+  /* The global :focus-visible outline above is the fallback for controls with
+     no shared ring. These controls carry the border-plus-glow instead, and the
+     outline would stack on it as a second border. */
+  outline: none;
   border-color: var(--color-focus) !important;
   box-shadow: var(--focus-ring);
+}
+
+/* A composed control — a field wrapping its own input plus an adornment (the
+   password eye, the date picker button) — carries the SAME contract: the glow
+   lands on the frame's own border, and the inner input never draws one of its
+   own. Declared here rather than at each call site because the global
+   `:focus-visible` outline is unlayered and beats a plain `outline-none`
+   utility, which is how one composed field ended up with a second border
+   floating outside it while every plain field beside it had none. */
+.focus-frame:has(:focus-visible) {
+  border-color: var(--color-focus);
+  box-shadow: var(--focus-ring);
+}
+
+.focus-frame :focus-visible {
+  outline: none;
 }
 
 ::selection {
   background: var(--color-selection);
   color: var(--color-selection-fg);
+}
+
+/* Chrome paints autofilled inputs with its own blue, and on a composed control
+   (eye button beside the field) that fill lands only on the inner text box — a
+   blue patch inside the pill. Override both the paint and the transition
+   Chrome uses to make the override stick, so the whole control keeps the
+   shared input surface. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-foreground);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-input) inset;
+  caret-color: var(--color-foreground);
+  transition: background-color 9999s ease-out;
+}
+
+/* The public surface prints on white, not the app's tinted paper canvas. */
+[data-public-surface] {
+  --color-background: #ffffff;
+}
+
+/* Paper, not screen. A fractal-noise tile at a few percent over the marketing
+   planes, so large light grounds don't read as flat voids (the reference
+   system's grain). Sections are `relative` and their content sits above it. */
+.band-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
 }
 
 .mono,
@@ -529,14 +636,14 @@ code,
 pre,
 kbd,
 samp {
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-variant-numeric: tabular-nums;
   font-synthesis: none;
 }
 
 .value-placeholder {
   color: var(--value-placeholder);
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: var(--text-xs);
   font-weight: 400;
   line-height: var(--text-xs--line-height);
@@ -702,6 +809,106 @@ samp {
      dots directly (platform.tsx). The static conduit paths remain. */
   .pipeline-stream circle {
     display: none;
+  }
+}
+
+/* Hero on-load entrance — one beat per direct child of .hero-entrance, in
+   markup order. `both` fill holds the from-state through each delay, which is
+   what the old GSAP `set` + stagger did; the global reduced-motion rule
+   collapses every animation to 1ms, which lands on the settled frame. */
+@keyframes hero-beat-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+.hero-entrance > *:nth-child(1) { animation: hero-beat-in 0.85s var(--ease-standard) 0.1s both; }
+.hero-entrance > *:nth-child(2) { animation: hero-beat-in 0.85s var(--ease-standard) 0.19s both; }
+.hero-entrance > *:nth-child(3) { animation: hero-beat-in 0.85s var(--ease-standard) 0.28s both; }
+.hero-entrance > *:nth-child(4) { animation: hero-beat-in 0.85s var(--ease-standard) 0.37s both; }
+.hero-entrance > *:nth-child(5) { animation: hero-beat-in 0.85s var(--ease-standard) 0.46s both; }
+.hero-entrance > *:nth-child(6) { animation: hero-beat-in 0.85s var(--ease-standard) 0.55s both; }
+
+/* The global reduced-motion rule above collapses animation DURATION, but the
+   per-beat delays survive it: a `both`-filled child would hold its opacity-0
+   from-state for up to 550ms, so the reader who asked for less motion is the
+   one who gets a blank hero. Zero the delays so every beat lands settled. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-entrance > * {
+    animation-delay: 0ms !important;
+  }
+}
+
+/* Scroll reveals — CSS scroll-driven animations replace the GSAP ScrollTrigger
+   engine. LONGHANDS ONLY: the `animation` shorthand folds a following
+   `animation-timeline` into itself when minified and the whole declaration
+   dies silently. Content is server-rendered in its settled state; where
+   `view()` is unsupported or the reader reduced motion, nothing ever hides. */
+@keyframes citeladder-reveal-up-narrow {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+@keyframes citeladder-reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+}
+
+@keyframes citeladder-reveal-left {
+  from {
+    opacity: 0;
+    transform: translateX(-44px);
+  }
+}
+
+@keyframes citeladder-reveal-right {
+  from {
+    opacity: 0;
+    transform: translateX(44px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    [data-citeladder-reveal=''],
+    [data-citeladder-reveal='stagger'] > * {
+      animation-name: citeladder-reveal-up-narrow;
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: entry 10% entry 70%;
+    }
+
+    /* A group staggers by shifting each child's range, not by a time delay:
+       every child of a row shares one scroll position, so the offset is
+       expressed in scroll space. */
+    [data-citeladder-reveal='stagger'] > *:nth-child(2) { animation-range: entry 16% entry 76%; }
+    [data-citeladder-reveal='stagger'] > *:nth-child(3) { animation-range: entry 22% entry 82%; }
+    [data-citeladder-reveal='stagger'] > *:nth-child(4) { animation-range: entry 28% entry 88%; }
+    [data-citeladder-reveal='stagger'] > *:nth-child(5) { animation-range: entry 34% entry 94%; }
+    [data-citeladder-reveal='stagger'] > *:nth-child(n + 6) { animation-range: entry 40% entry 100%; }
+
+    /* Wide screens take the full travel and the horizontal directions. */
+    @media (min-width: 768px) {
+      [data-citeladder-reveal=''],
+      [data-citeladder-reveal='stagger'] > * {
+        animation-name: citeladder-reveal-up;
+      }
+
+      [data-citeladder-reveal-from='left'] {
+        animation-name: citeladder-reveal-left;
+      }
+
+      [data-citeladder-reveal-from='right'] {
+        animation-name: citeladder-reveal-right;
+      }
+    }
   }
 }
 

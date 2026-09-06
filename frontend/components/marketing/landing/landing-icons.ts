@@ -47,7 +47,7 @@ export const LANDING_ICONS: Record<IconKey, LucideIcon> = {
 
 export const LANDING_TILES: Record<TileKey, string> = {
   blue: 'bg-tile-blue text-tile-blue-ink',
-  violet: 'bg-tile-violet text-tile-violet-ink',
-  amber: 'bg-tile-amber text-tile-amber-ink',
+  indigo: 'bg-tile-indigo text-tile-indigo-ink',
+  purple: 'bg-tile-purple text-tile-purple-ink',
   green: 'bg-tile-green text-tile-green-ink',
 };

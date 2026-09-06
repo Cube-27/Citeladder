@@ -28,7 +28,7 @@ export const NAV_DROPS: readonly NavDrop[] = [
         items: [
           {
             title: 'See it',
-            desc: 'Share of answer, recorded and inspectable',
+            desc: 'Share of citations, recorded and inspectable',
             href: '/#see-it',
           },
           {

@@ -36,15 +36,17 @@ const RHYTHM = {
 type Rhythm = keyof typeof RHYTHM;
 
 /**
- * Band fills. On the paper canvas a tonal band is a whisper, so most sections
- * separate with `divided` (a hairline) instead — a rule reads at any size, a
- * two-percent fill difference does not. Only two fills exist by design: the
- * paper canvas and one recessed tone. A section background is never a new hue,
- * and never a gradient (§1).
+ * Band fills. The marketing arc deepens down the page — paper → sunken → deep
+ * → dark — and the dark band carries a 28px rounded shoulder where it meets
+ * the light field. A dark section rebinds the semantic tokens (globals.css
+ * `[data-citeladder-section='dark']`), so its children never name a dark
+ * colour themselves.
  */
 const TONE = {
   paper: '',
   sunken: 'bg-background-alt',
+  deep: 'bg-band-deep',
+  dark: 'bg-band-dark rounded-t-[28px]',
 } as const;
 
 type Tone = keyof typeof TONE;
@@ -86,7 +88,7 @@ export function Section({
       // is the boundary and needs the room.
       data-citeladder-section={tone}
       className={cn(
-        'relative w-full',
+        'band-grain relative w-full',
         TONE[tone],
         RHYTHM[rhythm],
         divided && 'border-border-subtle border-t',

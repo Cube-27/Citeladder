@@ -19,7 +19,7 @@ import { Reveal } from '../primitives/reveal';
 /** Closing band — evaluation first, then the workspace. */
 export function PricingCta() {
   return (
-    <Section tone="paper" rhythm="base" aria-label="Get started">
+    <Section tone="dark" rhythm="base" aria-label="Get started">
       <Reveal className="mx-auto max-w-5xl text-center">
         <h2 className="website-section-heading text-foreground mx-auto mb-5 max-w-[32ch]">
           Start from the evidence, not the invoice.

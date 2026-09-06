@@ -709,11 +709,23 @@ export function productContractViolations(root) {
   }
 
   const layout = readFileSync(join(root, 'app', 'layout.tsx'), 'utf8');
-  if (!layout.includes('Inter') || !layout.includes("variable: '--font-inter'")) {
-    violations.push('app/layout.tsx: Inter must own the shared UI/body font variable');
+  if (
+    !layout.includes('Remus') ||
+    !layout.includes("variable: '--font-remus'") ||
+    !layout.includes("weight: '400 700'")
+  ) {
+    violations.push(
+      'app/layout.tsx: Remus must own the shared UI/body font variable with its real weight range',
+    );
   }
-  if (!layout.includes('uncutSans') || !layout.includes("variable: '--font-uncut-sans'")) {
-    violations.push('app/layout.tsx: Uncut Sans must own the display font variable');
+  if (
+    !layout.includes('uncutSans') ||
+    !layout.includes("variable: '--font-uncut-sans'") ||
+    !layout.includes("weight: '300 700'")
+  ) {
+    violations.push(
+      'app/layout.tsx: Uncut Sans must own the display font variable with its real weight range',
+    );
   }
 
   const shell = readFileSync(join(root, 'components', 'layout', 'app-shell.tsx'), 'utf8');

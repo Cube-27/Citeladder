@@ -8,16 +8,18 @@ import { Section } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
 
 /**
- * The close. One big line and a single primary action, full width. Named as a
- * landmark region so the CTA is reachable directly from a screen-reader
- * landmark list rather than only by scrolling the page.
+ * The close. One big line and a single primary action, on the page's dark
+ * closing band — the dark rebind flips every token beneath it, so the buttons
+ * invert to light ink without any call-site colour. Named as a landmark region
+ * so the CTA is reachable directly from a screen-reader landmark list rather
+ * than only by scrolling the page.
  */
 export function FinalCta() {
   const { cta } = LANDING_CONTENT;
   return (
-    <Section id="get-started" tone="paper" rhythm="base" aria-label="Get started">
-      <Reveal className="bg-well border-border-subtle mx-auto flex max-w-4xl flex-col items-center rounded-[var(--radius-card)] border p-8 text-center md:p-12">
-        <Eyebrow className="text-accent-text">{cta.kicker}</Eyebrow>
+    <Section id="get-started" tone="dark" rhythm="base" aria-label="Get started">
+      <Reveal className="mx-auto flex max-w-4xl flex-col items-center text-center">
+        <Eyebrow>{cta.kicker}</Eyebrow>
         <h2 className="website-section-heading text-foreground mt-6 max-w-[24ch] text-balance">
           {cta.title}
         </h2>

@@ -67,7 +67,7 @@ export function Select<T extends string>({
         aria-required={required || undefined}
         id={id}
         className={cn(
-          'focus-ring border-border-strong/80 bg-input text-foreground data-[placeholder]:text-muted flex h-[var(--control-height)] min-w-0 items-center justify-between gap-2 rounded-[var(--radius-control)] border px-2.5 text-sm transition-[border-color,box-shadow] hover:border-border-bold focus:border-accent disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger',
+          'focus-ring border-border-strong/80 bg-input text-foreground data-[placeholder]:text-muted flex h-[var(--control-height)] min-w-0 items-center justify-between gap-2 rounded-[var(--radius-control)] border px-2.5 text-sm transition-[border-color,box-shadow] hover:border-border-bold focus-visible:border-accent disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger',
           className,
         )}
       >

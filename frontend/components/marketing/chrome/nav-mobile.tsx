@@ -28,16 +28,19 @@ export function MobileNavigation({
   closeMenu,
 }: Readonly<MobileNavigationProps>) {
   return (
+    // A sheet, not a dropdown card: it fills the viewport below the bar, the
+    // destinations step up (they are the content), the labels step down, and
+    // the account links pin to the bottom.
     <div
       id="mobile-menu"
-      className="border-border-subtle bg-panel shadow-elevated safe-bottom max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t px-6 py-2 lg:hidden"
+      className="safe-bottom bg-background flex max-h-[calc(100dvh-4rem)] min-h-[calc(100dvh-4rem)] flex-col overflow-y-auto overscroll-contain px-6 py-3 lg:hidden"
     >
       {NAV_DROPS.map(({ key, label, href, groups }) => (
         <div key={key} className="border-border-subtle border-b last:border-b-0">
           <div className="flex items-center">
             <Link
               href={href}
-              className="website-nav text-foreground flex-1 py-3.5"
+              className="text-foreground flex-1 py-3.5 text-lg font-medium tracking-[-0.02em]"
               onClick={closeMenu}
             >
               {label}
@@ -74,12 +77,12 @@ export function MobileNavigation({
         </div>
       ))}
 
-      <div className="grid">
+      <div className="border-border-subtle mt-auto grid border-t pt-2">
         {NAV_LINKS.map(({ label, href }) => (
           <Link
             key={href}
             href={href}
-            className="website-nav text-foreground py-3.5"
+            className="text-foreground py-3.5 text-lg font-medium tracking-[-0.02em]"
             onClick={closeMenu}
           >
             {label}
@@ -95,7 +98,7 @@ export function MobileNavigation({
         ) : (
           <Link
             href={isAuthenticated ? dashboardHref : '/login'}
-            className="website-nav text-muted py-3.5"
+            className="text-muted py-3.5 text-lg font-medium"
             onClick={closeMenu}
           >
             {isAuthenticated ? 'Dashboard' : 'Log in'}

@@ -169,7 +169,12 @@ function PlanCta({
   // vanishing and the card silently losing its call to action.
   const disabled = priceKind !== 'price' || pending;
   return (
-    <Button disabled={disabled} onClick={() => onCheckout(plan)} className="w-full">
+    <Button
+      disabled={disabled}
+      variant="accent"
+      onClick={() => onCheckout(plan)}
+      className="w-full"
+    >
       {pending ? 'Starting checkout…' : `Choose ${plan.name}`}
     </Button>
   );

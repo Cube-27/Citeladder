@@ -31,13 +31,3 @@ export function WallpaperPanel({
     </div>
   );
 }
-
-/**
- * Scene window — the white panel that sits on the tonal wallpaper.
- */
-export function Panel({
-  children,
-  className,
-}: Readonly<{ children: ReactNode; className?: string }>) {
-  return <div className={cn('bg-panel rounded-[var(--radius-card)]', className)}>{children}</div>;
-}

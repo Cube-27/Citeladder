@@ -119,8 +119,12 @@ function LegalStripLink({ link }: Readonly<{ link: LegalLink }>) {
 }
 
 /**
- * Marketing footer — link columns plus a compact legal strip. Owner-supplied
- * registration details stay off the public page until they are complete.
+ * Marketing footer — link columns plus a compact legal strip. It closes the
+ * dark run that begins at the landing's FinalCta: the dark rebind
+ * (`data-citeladder-section='dark'`) flips every token beneath it, and the
+ * 28px rounded shoulders overlap the section above by their own height, so a
+ * dark-on-dark seam shows no light corner nicks while a light-preceded footer
+ * still reads as its own dark plane.
  */
 export async function MarketingFooter() {
   'use cache';
@@ -129,7 +133,10 @@ export async function MarketingFooter() {
   const name = legalDisplayName();
 
   return (
-    <footer className="border-border-subtle bg-active/60 relative border-t">
+    <footer
+      data-citeladder-section="dark"
+      className="band-grain bg-band-dark relative -mt-7 overflow-hidden rounded-t-[28px]"
+    >
       <Container className="py-12 sm:py-16">
         <nav
           aria-label="Footer"
@@ -137,7 +144,12 @@ export async function MarketingFooter() {
         >
           <div className="col-span-2 space-y-5 sm:col-span-3 lg:col-span-1">
             <Link href="/" aria-label="CiteLadder home" className="inline-block">
-              <LogoMark size={24} />
+              {/* The canonical lockup is drawn for light ground; brightness-0
+                  knocks it to a white silhouette so the same asset reads on
+                  the dark close. */}
+              <span className="block brightness-0 invert">
+                <LogoMark size={24} />
+              </span>
             </Link>
 
             <p className="website-body text-muted max-w-[28ch]">
@@ -147,7 +159,10 @@ export async function MarketingFooter() {
 
           {FOOTER_COLUMNS.map((column) => (
             <div key={column.key} className="space-y-4">
-              <h2 className="website-eyebrow text-foreground mb-4 font-medium">{column.label}</h2>
+              {/* Title-case white headers: the small-heading role carries the
+                  weight and the foreground pin, so the dark rebind renders it
+                  white without a hand-picked color. */}
+              <h2 className="website-small-heading text-foreground mb-4">{column.label}</h2>
               <div className="grid justify-items-start gap-4">
                 {column.links.map((link) => (
                   <FooterColumnLink key={link.label} link={link} />

@@ -31,7 +31,7 @@ export type IconKey =
   | 'finance';
 
 /** The pastel icon-tile families (globals.css `--color-tile-*`). */
-export type TileKey = 'blue' | 'violet' | 'amber' | 'green';
+export type TileKey = 'blue' | 'indigo' | 'purple' | 'green';
 
 export const LANDING_CONTENT = {
   hook: {
@@ -61,7 +61,7 @@ export const LANDING_CONTENT = {
       },
       {
         icon: 'cited' as IconKey,
-        tile: 'violet' as TileKey,
+        tile: 'indigo' as TileKey,
         title: 'What gets cited?',
         body: 'Open the sources behind every answer — your pages, a competitor, editorial coverage, or nothing at all.',
       },
@@ -146,14 +146,14 @@ export const LANDING_CONTENT = {
       {
         stage: 'Prioritize',
         icon: 'analyze' as IconKey,
-        tile: 'violet' as TileKey,
+        tile: 'indigo' as TileKey,
         label: 'Find the opportunities',
         desc: 'Surface gaps, mixed messages, and high-value topics where your brand can win.',
       },
       {
         stage: 'Improve',
         icon: 'improve' as IconKey,
-        tile: 'amber' as TileKey,
+        tile: 'purple' as TileKey,
         label: 'Take action',
         desc: 'Create and update content, sharpen positioning, and influence what AI cites.',
       },
@@ -170,43 +170,37 @@ export const LANDING_CONTENT = {
   packs: {
     kicker: 'Use cases',
     title: 'Built around how your industry actually works.',
-    lead: 'Buyers research differently across sectors. Measuring AI visibility shows where models recommend your brand, where competitors take the lead, and whether your website provides the proof.',
+    lead: 'Buyers research differently across sectors. CiteLadder shows where AI recommends you, where rivals take the lead, and whether your site backs the claim.',
     items: [
       {
         icon: 'education' as IconKey,
         name: 'Education',
-        benefit:
-          'Track whether AI models recommend your programs when students research degree and certificate options, and verify that answer engines quote accurate tuition, admissions, and faculty credentials.',
+        benefit: 'Programs, admissions, and tuition facts, quoted accurately.',
       },
       {
         icon: 'commerce' as IconKey,
         name: 'Commerce',
-        benefit:
-          'Discover when AI shopping assistants recommend your products over rivals, and ensure engines pull accurate pricing, availability, and specifications directly from your store.',
+        benefit: 'Product recommendations, prices, and availability in AI answers.',
       },
       {
         icon: 'services' as IconKey,
         name: 'Professional services',
-        benefit:
-          'See how AI positions your practice areas and partners when prospects research advisory firms, ensuring your case studies and subject-matter expertise get cited as authoritative sources.',
+        benefit: 'How AI positions your practice areas and expertise.',
       },
       {
         icon: 'saas' as IconKey,
         name: 'Enterprise SaaS',
-        benefit:
-          'Measure how often your software appears in AI-generated buyer shortlists, identify where competitors get recommended instead, and ensure models rely on your official features and pricing.',
+        benefit: 'Your share of AI-generated buyer shortlists.',
       },
       {
         icon: 'media' as IconKey,
         name: 'Media & publishing',
-        benefit:
-          'Monitor how frequently AI engines cite your original reporting and research, protect your editorial attribution, and ensure models reference current coverage rather than outdated stories.',
+        benefit: 'Attribution for original reporting and research.',
       },
       {
         icon: 'finance' as IconKey,
         name: 'Financial services',
-        benefit:
-          'Verify that AI models accurately explain your financial products, rates, and advisory services while citing compliance disclosures correctly to safeguard trust and brand reputation.',
+        benefit: 'Product, rate, and compliance explanations that hold up.',
       },
     ],
   },
@@ -224,21 +218,21 @@ export const LANDING_CONTENT = {
       },
       {
         icon: 'sso' as IconKey,
-        tile: 'blue' as TileKey,
+        tile: 'indigo' as TileKey,
         title: 'Advanced permissions and SSO',
         description: 'Roles and project-scoped access across your workspace.',
       },
       {
         icon: 'audit' as IconKey,
-        tile: 'blue' as TileKey,
+        tile: 'purple' as TileKey,
         title: 'Audit trail and exportable reports',
         description: 'Every run, answer, and change is persisted and inspectable.',
       },
       {
         icon: 'support' as IconKey,
-        tile: 'blue' as TileKey,
+        tile: 'green' as TileKey,
         title: 'Dedicated support and success',
-        description: 'Onboarding, prompt-portfolio reviews, and quarterly health checks.',
+        description: 'Onboarding, prompt-portfolio reviews, and health checks, scoped by contract.',
       },
     ],
   },

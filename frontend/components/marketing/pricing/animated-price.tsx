@@ -1,9 +1,7 @@
 'use client';
 
-import { useGSAP } from '@gsap/react';
-import gsap from 'gsap';
 import { useReducedMotion } from 'motion/react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { PRICING_PRICE_TWEEN_MS } from '@/lib/config/billing';
 
@@ -15,6 +13,8 @@ import { PRICING_PRICE_TWEEN_MS } from '@/lib/config/billing';
  * value the catalog did not send would put fabricated prices on screen mid-
  * tween — the one thing this page must never do. Reduced motion always snaps.
  *
+ * The tween is a plain requestAnimationFrame loop with a quad ease-out — the
+ * GSAP tween it replaced pulled the whole library in for one number.
  * `announce` is the settled semantic result; the live region emits one final
  * announcement rather than narrating every interpolated frame.
  */
@@ -32,37 +32,46 @@ export function AnimatedPrice({
   announce: string;
   className?: string;
 }>) {
-  const ref = useRef<HTMLSpanElement>(null);
   const previous = useRef<number | null>(value);
+  const formatRef = useRef(format);
+  // Refs are not written during render (React Compiler rule); this runs after
+  // every commit, so an in-flight tween always reads the latest formatter.
+  useEffect(() => {
+    formatRef.current = format;
+  });
   const [display, setDisplay] = useState<string>(value === null ? announce : format(value));
   const reduceMotion = useReducedMotion();
 
-  useGSAP(
-    () => {
-      const from = previous.current;
-      previous.current = value;
+  useEffect(() => {
+    const from = previous.current;
+    previous.current = value;
 
-      // Semantic state, reduced motion, or a first paint: snap.
-      if (value === null || from === null || reduceMotion || from === value) {
-        setDisplay(value === null ? announce : format(value));
-        return;
-      }
+    // Semantic state, reduced motion, or a first paint: snap.
+    if (value === null || from === null || reduceMotion || from === value) {
+      setDisplay(value === null ? announce : formatRef.current(value));
+      return;
+    }
 
-      const tweened = { value: from };
-      gsap.to(tweened, {
-        value,
-        duration: PRICING_PRICE_TWEEN_MS / 1000,
-        ease: 'power2.out',
-        onUpdate: () => setDisplay(format(Math.round(tweened.value))),
-        onComplete: () => setDisplay(format(value)),
-      });
-    },
-    { scope: ref, dependencies: [value, announce, reduceMotion] },
-  );
+    let frame = 0;
+    // The clock is the rAF timestamp itself: its base matches the callbacks it
+    // drives (a performance.now() base desynchronises under jsdom and drives
+    // the ease past zero), and the clamp keeps any late frame from overshooting.
+    let startedAt: number | null = null;
+    const tick = (now: number) => {
+      if (startedAt === null) startedAt = now;
+      const progress = Math.min(Math.max((now - startedAt) / PRICING_PRICE_TWEEN_MS, 0), 1);
+      const eased = 1 - (1 - progress) * (1 - progress);
+      setDisplay(formatRef.current(Math.round(from + (value - from) * eased)));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+      else setDisplay(formatRef.current(value));
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value, announce, reduceMotion]);
 
   return (
     <>
-      <span ref={ref} data-price className={className}>
+      <span data-price className={className}>
         {display}
       </span>
       {/* One polite announcement of the settled result, not of each frame. */}

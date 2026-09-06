@@ -1,5 +1,7 @@
 import Image from 'next/image';
 
+import { cn } from '@/lib/utils';
+
 const LOGO = { src: '/citeladder-logo.png', width: 1182, height: 205 } as const;
 
 /**
@@ -9,18 +11,23 @@ const LOGO = { src: '/citeladder-logo.png', width: 1182, height: 205 } as const;
  * marketing nav): it adds the `<link rel=preload fetchpriority=high>` that
  * pulls the lockup off the LCP critical path. Every other instance stays
  * eager — never lazy — so chrome logos don't pop in after hydration.
+ *
+ * `className` exists because the lockup's glyphs ride high inside the image
+ * box; rows that center the mark against text pass a small `translate-y-*`
+ * here rather than wrapping it again at every call site.
  */
 export function LogoMark({
   size = 16,
   priority = false,
-}: Readonly<{ size?: number; priority?: boolean }>) {
+  className,
+}: Readonly<{ size?: number; priority?: boolean; className?: string }>) {
   // The source is a 1182×205 lockup. Telling the optimizer the width the mark
   // actually renders at keeps it from serving a 1182px-wide candidate for a
   // ~140px slot.
   const renderedWidth = Math.round(size * (LOGO.width / LOGO.height));
   return (
     <span
-      className="inline-flex shrink-0 overflow-hidden rounded-xs"
+      className={cn('inline-flex shrink-0 overflow-hidden rounded-xs', className)}
       style={{ width: renderedWidth, height: size }}
       aria-hidden="true"
     >

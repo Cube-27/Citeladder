@@ -28,7 +28,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
           {/* Logo row — matches topbar height */}
           <div className="flex h-[var(--topbar-height)] shrink-0 items-center px-[var(--sidebar-pad-x)]">
             <span className="px-2.5">
-              <LogoMark size={22} />
+              <LogoMark size={22} className="translate-y-[2px]" />
             </span>
           </div>
 
@@ -53,7 +53,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 className="flex shrink-0 items-center gap-2 md:hidden"
                 aria-label="CiteLadder command center"
               >
-                <LogoMark size={20} />
+                <LogoMark size={20} className="translate-y-[2px]" />
               </Link>
               <PageHeader className="min-w-0 flex-1 [&_h1]:truncate" />
             </div>
