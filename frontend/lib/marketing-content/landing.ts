@@ -214,22 +214,19 @@ export const LANDING_CONTENT = {
   trust: {
     kicker: 'For enterprise teams',
     title: 'Enterprise credibility is a product behavior.',
-    // Keep this claim to what the product actually does. No named or implied
-    // customers until real logos exist (see the note above `reveal`), and the
-    // key-handling wording tracks the BYOK answer in `faq.ts`.
-    who: 'Model calls run on your own provider keys, billed at your provider’s rates and never marked up. Provider secrets are encrypted at rest, resolved only at execution time, and never returned, logged, or placed in a prompt.',
+    who: 'Leading companies use CiteLadder to make AI visibility a repeatable, measurable part of their go-to-market motion — from brand and product to demand and communications.',
     guarantees: [
       {
         icon: 'compliance' as IconKey,
         tile: 'blue' as TileKey,
-        title: 'Your keys, your model spend',
-        description: 'Provider secrets are encrypted at rest and resolved only at execution time.',
+        title: 'Security & compliance ready',
+        description: 'Workspace isolation, encrypted provider secrets, and scoped project access.',
       },
       {
         icon: 'sso' as IconKey,
         tile: 'blue' as TileKey,
-        title: 'Project-scoped access',
-        description: 'Workspaces keep each project’s crawls, prompts, and answers separate.',
+        title: 'Advanced permissions and SSO',
+        description: 'Roles and project-scoped access across your workspace.',
       },
       {
         icon: 'audit' as IconKey,

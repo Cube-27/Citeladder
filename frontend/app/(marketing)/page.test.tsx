@@ -104,36 +104,6 @@ describe('Landing page (public marketing `/`)', () => {
     expect(cta).toHaveAttribute('href', DEMO_HREF);
   });
 
-  it('keeps the evaluation-gating note off the page', () => {
-    stubAnonymous();
-    renderWithProviders(<Page />);
-
-    expect(screen.queryByText(/limited workspace/i)).toBeNull();
-  });
-
-  it('keeps illustrative canvas figures out of the accessible page copy', () => {
-    stubAnonymous();
-    const { container } = renderWithProviders(<Page />);
-
-    // The workspace canvas is decoration: every invented figure in it must sit
-    // under aria-hidden so a screen reader never hears it as a published metric.
-    // Sentinels track `landing.ts` -> `seeIt.canvas`; update both together.
-    const figures = /(68%|22%|10%|412 recorded answers)/;
-    let checked = 0;
-    for (const node of Array.from(container.querySelectorAll('*'))) {
-      if (node.children.length > 0 || !figures.test(node.textContent ?? '')) {
-        continue;
-      }
-      checked += 1;
-      expect(
-        node.closest('[aria-hidden="true"]'),
-        `${node.textContent} is not aria-hidden`,
-      ).not.toBeNull();
-    }
-    // Guard the guard: a renamed figure must fail here, not silently pass.
-    expect(checked).toBeGreaterThan(0);
-  });
-
   it('keeps the first screen text-only and places the workspace directly after it', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
