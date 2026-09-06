@@ -3,12 +3,12 @@
  *
  * Structure and copy follow the governed product loop. Durable Site, Content,
  * Demand, and Agent capabilities sit behind user-facing loop
- * stations. Sections carry icons and the prototype's fuller detail (a four-step
- * loop, use-case item lists, and a security ledger). Only the hero tagline, the
- * product visual, and the type scale/weight are ours.
+ * stations. Sections carry icons and tiles; only the hero tagline, the product
+ * visual, and the type scale/weight are ours.
  *
- * Icons are named here as string keys and resolved to lucide components in the
- * section files (keeps this a pure data module).
+ * Icons and tiles are named here as string keys and resolved to lucide
+ * components and token classes in the section files (keeps this a pure data
+ * module).
  */
 
 export type IconKey =
@@ -16,19 +16,22 @@ export type IconKey =
   | 'analyze'
   | 'improve'
   | 'verify'
+  | 'named'
+  | 'cited'
+  | 'prove'
+  | 'compliance'
+  | 'sso'
+  | 'audit'
+  | 'support'
   | 'education'
   | 'commerce'
   | 'services'
   | 'saas'
   | 'media'
-  | 'finance'
-  | 'isolation'
-  | 'provenance'
-  | 'correction'
-  | 'versioned'
-  | 'ask'
-  | 'prove'
-  | 'see';
+  | 'finance';
+
+/** The pastel icon-tile families (globals.css `--color-tile-*`). */
+export type TileKey = 'blue' | 'violet' | 'amber' | 'green';
 
 export const LANDING_CONTENT = {
   hook: {
@@ -45,64 +48,121 @@ export const LANDING_CONTENT = {
   // it named fictional customers, and fabricated endorsements must not ship on
   // the real site. Add a real customer/logo strip here when logos exist.
 
-  shift: {
-    kicker: 'The shift',
-    title: 'Growth stopped being a guessing game.',
-    facts: [
+  reveal: {
+    kicker: 'What CiteLadder reveals',
+    title: 'One record. Three questions.',
+    lead: 'CiteLadder separates the facts that AI visibility tools often blur together.',
+    questions: [
       {
-        icon: 'ask' as IconKey,
-        label: 'Ask',
-        title: 'Buyers ask before they browse.',
-        body: 'Shortlists now start inside an answer engine, and they often end there.',
+        icon: 'named' as IconKey,
+        tile: 'blue' as TileKey,
+        title: 'Are you named?',
+        body: 'Measure whether ChatGPT, Gemini, Claude, and Perplexity mention or recommend your brand when buyers ask about your category.',
+      },
+      {
+        icon: 'cited' as IconKey,
+        tile: 'violet' as TileKey,
+        title: 'What gets cited?',
+        body: 'Open the sources behind every answer — your pages, a competitor, editorial coverage, or nothing at all.',
       },
       {
         icon: 'prove' as IconKey,
-        label: 'Prove',
-        title: 'Answers cite evidence, not opinions.',
-        body: 'Either your pages prove the claim an engine needs, or a competitor’s pages do.',
-      },
-      {
-        icon: 'see' as IconKey,
-        label: 'See',
-        title: 'You can’t fix what you can’t see.',
-        body: 'Scattered tools hide the gap. One record makes mention, citation, and coverage measurable.',
+        tile: 'green' as TileKey,
+        title: 'Can your site prove it?',
+        body: 'Compare what AI says with what your own pages support, then move the highest-confidence gap into work.',
       },
     ],
   },
 
   seeIt: {
     kicker: 'The product',
-    title: 'The whole system, in one workspace.',
+    title: 'From answer to action, without the black box.',
+    aside:
+      'One workspace for the questions, the answers, the citations, and the fixes — with the evidence attached to every number.',
+    link: 'See the product',
+    // The workspace canvas is an editorial illustration, not a live view: the
+    // share bar and the ledger render aria-hidden, and the marker pill names
+    // the workspace illustrative. No measured figure is published here.
+    canvas: {
+      marker: 'Illustrative workspace',
+      range: 'Last 30 days',
+      tabs: ['Overview', 'Answers', 'Citations', 'Brands', 'Reports'],
+      activeTab: 'Answers',
+      share: {
+        label: 'Share of citations',
+        note: '412 recorded answers · four platforms',
+        segments: [
+          { key: 'yours', name: 'Your brand', width: 68, label: '68%' },
+          { key: 'competitors', name: 'Competitors', width: 22, label: '22%' },
+          { key: 'none', name: 'No brand', width: 10, label: '10%' },
+        ],
+      },
+      columns: ['Question', 'Platform', 'Citations', 'Your brand', 'Action'],
+      rows: [
+        {
+          question: 'Best project management tools for startups?',
+          snippet: '“Notion, Linear, and ClickUp are top…”',
+          platform: 'ChatGPT',
+          citations: 5,
+          state: 'cited',
+        },
+        {
+          question: 'How does Stripe compare to Adyen?',
+          snippet: '“Stripe is easier to integrate and o…”',
+          platform: 'Claude',
+          citations: 4,
+          state: 'not',
+        },
+        {
+          question: 'What is revenue intelligence?',
+          snippet: '“Revenue intelligence is a way to…”',
+          platform: 'Perplexity',
+          citations: 6,
+          state: 'cited',
+        },
+        {
+          question: 'Top AI visibility platforms for enterprise?',
+          snippet: '“CiteLadder leads for source-level trac…”',
+          platform: 'Gemini',
+          citations: 7,
+          state: 'cited',
+        },
+      ],
+    },
   },
 
   workflow: {
-    kicker: 'How it works',
-    title: 'Evidence to improvement, in a closed loop.',
-    lead: 'Each pass collects evidence, ranks the next gap, waits for you to save a change, then recrawls or reruns the same prompts so you can see what the engines said afterwards.',
+    kicker: 'The operating loop',
+    title: 'A continuous cycle for stronger AI visibility.',
+    lead: 'From tracking answers to taking action, CiteLadder turns AI insights into measurable progress — week after week.',
     steps: [
       {
-        num: '01',
+        stage: 'Collect',
         icon: 'collect' as IconKey,
-        label: 'Collect evidence',
-        desc: 'Crawl pages, ingest Search Console and GA4, and persist engine answers. Every artifact stays versioned so a later score can open the source.',
+        tile: 'blue' as TileKey,
+        label: 'Track AI answers',
+        desc: 'Capture what AI says about your brand, competitors, and category — across all major platforms.',
       },
       {
-        num: '02',
+        stage: 'Prioritize',
         icon: 'analyze' as IconKey,
-        label: 'Analyze and prioritize',
-        desc: 'Apply deterministic checks. Score gaps by evidence strength, not by a model grading another model. Rank the queue your team will actually work.',
+        tile: 'violet' as TileKey,
+        label: 'Find the opportunities',
+        desc: 'Surface gaps, mixed messages, and high-value topics where your brand can win.',
       },
       {
-        num: '03',
+        stage: 'Improve',
         icon: 'improve' as IconKey,
-        label: 'Improve content',
-        desc: 'Turn a gap into a brief, draft, schema, or FAQ. Claims the draft cannot support from your facts are flagged. Saving is your decision.',
+        tile: 'amber' as TileKey,
+        label: 'Take action',
+        desc: 'Create and update content, sharpen positioning, and influence what AI cites.',
       },
       {
-        num: '04',
+        stage: 'Verify',
         icon: 'verify' as IconKey,
-        label: 'Measure and verify',
-        desc: 'Recrawl after publication and rerun the same prompt set. The report describes what was observed. It does not claim the change caused a ranking.',
+        tile: 'green' as TileKey,
+        label: 'Measure progress',
+        desc: 'Track changes over time and validate that your brand shows up more often — and more accurately.',
       },
     ],
   },
@@ -152,38 +212,33 @@ export const LANDING_CONTENT = {
   },
 
   trust: {
-    kicker: 'Enterprise-grade',
-    title: 'Built for regulated and security-conscious enterprises.',
-    // "Keys stay in your provider account" read as though the key never
-    // reaches us, which contradicts the FAQ (encrypted at rest, resolved only
-    // at execution time). Usage and billing stay with the provider; the key
-    // itself is stored here, encrypted. A security claim has to match.
-    who: 'Your provider account keeps the usage and the billing; the key you supply is encrypted at rest and resolved only when a run needs it. Workspaces do not share facts. New observations append. You save content and you start an audit. We do not publish for you.',
+    kicker: 'For enterprise teams',
+    title: 'Enterprise credibility is a product behavior.',
+    who: 'Leading companies use CiteLadder to make AI visibility a repeatable, measurable part of their go-to-market motion — from brand and product to demand and communications.',
     guarantees: [
       {
-        icon: 'isolation' as IconKey,
-        title: 'Data isolation',
-        description: 'Every customer fact stays project-scoped and never crosses workspaces.',
+        icon: 'compliance' as IconKey,
+        tile: 'blue' as TileKey,
+        title: 'Security & compliance ready',
+        description: 'Workspace isolation, encrypted provider secrets, and scoped project access.',
       },
       {
-        icon: 'provenance' as IconKey,
-        title: 'Full provenance',
-        description: 'Every recommendation links to the typed evidence chain behind it.',
+        icon: 'sso' as IconKey,
+        tile: 'blue' as TileKey,
+        title: 'Advanced permissions and SSO',
+        description: 'Roles and project-scoped access across your workspace.',
       },
       {
-        icon: 'correction' as IconKey,
-        // NOT "durable corrections": EditableFact has no production caller and
-        // no persistence path yet, and the site does not advertise capability
-        // the product cannot keep (§9.1). Restore the stronger claim when
-        // corrections are wired to a durable mutation.
-        title: 'No silent rewrites',
-        description: 'New observations append to the record instead of replacing earlier evidence.',
+        icon: 'audit' as IconKey,
+        tile: 'blue' as TileKey,
+        title: 'Audit trail and exportable reports',
+        description: 'Every run, answer, and change is persisted and inspectable.',
       },
       {
-        icon: 'versioned' as IconKey,
-        title: 'Versioned analysis',
-        description:
-          'Classifiers, rules, formulas, and source evidence stay versioned and inspectable.',
+        icon: 'support' as IconKey,
+        tile: 'blue' as TileKey,
+        title: 'Dedicated support and success',
+        description: 'Onboarding, prompt-portfolio reviews, and quarterly health checks.',
       },
     ],
   },

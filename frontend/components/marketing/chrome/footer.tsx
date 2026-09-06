@@ -23,8 +23,8 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
     key: 'platform',
     label: 'Platform',
     links: [
-      { label: 'The shift', href: '/#why' },
-      { label: 'How it works', href: '/#how-it-works' },
+      { label: 'What CiteLadder reveals', href: '/#why' },
+      { label: 'The operating loop', href: '/#how-it-works' },
       { label: 'See it', href: '/#see-it' },
       { label: 'Pricing', href: '/pricing' },
       { label: 'Enterprise', href: '/enterprise' },

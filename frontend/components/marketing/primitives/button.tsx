@@ -90,12 +90,11 @@ export function DemoTextLink({
 }
 
 /**
- * Module-private: the only text link the marketing surface renders is the demo
- * CTA, and that goes through `DemoTextLink` so the external target and `rel`
- * are never left to a call site. Export this again when a second, genuinely
- * different text link exists.
+ * The marketing text link. `DemoTextLink` wraps this for the external demo
+ * funnel; in-page anchors (e.g. the product section's jump to the loop) call
+ * it directly — internal hrefs carry no `target`/`rel` contract.
  */
-function TextLink({
+export function TextLink({
   href,
   className,
   children,

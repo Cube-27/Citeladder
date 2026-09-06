@@ -69,7 +69,7 @@
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
 
-  /* Analytical selection and focus. Primary actions use terracotta, below. */
+  /* Analytical selection and focus. Primary actions use ink, below. */
   --color-accent: #c15f3c;
   --color-accent-hover: #a84f30;
   --color-accent-active: #964226;
@@ -82,9 +82,12 @@
   --color-focus-ring: #ebcfc4;
   --color-selection: #ebcfc4;
   --color-selection-fg: #16161a;
-  --color-action: #b85432;
-  --color-action-hover: #9c4427;
-  --color-action-active: #964226;
+  /* Primary actions are ink. There is no darker rung above the base, so hover
+     steps one rung LIGHTER along the neutral ladder (the same ramp-walk rule
+     the terracotta ramp followed, inverted) and press settles between them. */
+  --color-action: #16161a;
+  --color-action-hover: #3a3a40;
+  --color-action-active: #2e2e34;
   --color-action-fg: #ffffff;
 
   /* Answer-engine brand marks (functional identity, marketing engine chips). */
@@ -123,6 +126,18 @@
   --color-info-border: #ddf1f2;
   --color-info-text: #155e75;
   --color-neutral-bg: #f4f4f1;
+
+  /* Marketing icon tiles — the pastel colour carriers for public-section
+     iconography (docs/design.md §Colour). Decorative only: they never carry
+     state, so they stay out of the status families. */
+  --color-tile-blue: #dff0fa;
+  --color-tile-blue-ink: #1470a3;
+  --color-tile-violet: #ebe9fc;
+  --color-tile-violet-ink: #4438c8;
+  --color-tile-amber: #f9efcf;
+  --color-tile-amber-ink: #8f6e14;
+  --color-tile-green: #cdebda;
+  --color-tile-green-ink: #1f7a46;
 
   --color-sentiment-positive: #9acd32;
   --color-sentiment-positive-bg: #f4f8ec;
@@ -379,7 +394,9 @@ body {
   h6 {
     margin: 0;
     font-family: var(--font-uncut-sans), var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-weight: 500;
+    /* App headings sit at body weight; the public/flow roles in
+       website-type.css carry the one emphasis rung above (500). */
+    font-weight: 400;
     letter-spacing: normal;
     line-height: 1.2;
     color: var(--color-foreground);

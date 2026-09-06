@@ -47,10 +47,10 @@ export const ENGINE_DOMAINS: Record<string, string> = {
 
 /** Local brand logo assets for engines when available. */
 export const ENGINE_LOGOS: Record<string, string> = {
-  claude: '/brand/claude.png',
-  copilot: '/brand/copilot.jpg',
-  grok: '/brand/grok.png',
-  perplexity: '/brand/perplexity.png',
+  claude: '/brand/claude.webp',
+  copilot: '/brand/copilot.webp',
+  grok: '/brand/grok.webp',
+  perplexity: '/brand/perplexity.webp',
 };
 
 /** Human label for an engine key (falls back to the raw key). */

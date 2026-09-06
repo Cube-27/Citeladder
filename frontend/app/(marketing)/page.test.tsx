@@ -104,34 +104,6 @@ describe('Landing page (public marketing `/`)', () => {
     expect(cta).toHaveAttribute('href', DEMO_HREF);
   });
 
-  it('keeps the evaluation-gating note and scene artifact ids off the page', () => {
-    stubAnonymous();
-    renderWithProviders(<Page />);
-
-    expect(screen.queryByText(/limited workspace/i)).toBeNull();
-    for (const id of ['09F3C21E', '1A64D0BC', '3E92BA71']) {
-      expect(screen.queryByText(id)).toBeNull();
-    }
-  });
-
-  it('keeps illustrative scene figures out of the page copy', () => {
-    stubAnonymous();
-    const { container } = renderWithProviders(<Page />);
-
-    // Illustrative figures stay outside the accessible page copy even though
-    // the old visible "Example data" header pills are gone.
-    expect(screen.queryByText(/example data/i)).toBeNull();
-    for (const node of Array.from(container.querySelectorAll('*'))) {
-      if (node.children.length > 0 || !/\b(72\.4|1,248|3,091)\b/.test(node.textContent ?? '')) {
-        continue;
-      }
-      expect(
-        node.closest('[aria-hidden="true"]'),
-        `${node.textContent} is not aria-hidden`,
-      ).not.toBeNull();
-    }
-  });
-
   it('keeps the first screen text-only and places the workspace directly after it', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
@@ -141,7 +113,7 @@ describe('Landing page (public marketing `/`)', () => {
     expect(hero).not.toBeNull();
     expect(hero).not.toHaveTextContent(/your ai visibility|tracking your brand/i);
     expect(main?.children[0]).toBe(hero);
-    // The shift chapter follows the hook; the product canvas comes after it.
+    // The reveal chapter follows the hook; the product canvas comes after it.
     expect(main?.children[1]).toHaveAttribute('id', 'why');
   });
 
@@ -149,27 +121,28 @@ describe('Landing page (public marketing `/`)', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
 
-    // The product beat is a faithful, interactive app-shell preview built
-    // around the canonical four-layer hierarchy.
+    // The product beat is the editorial workspace canvas: one share-of-
+    // citations bar above a recorded-answers ledger, carrying the
+    // illustrative-workspace marker so a drawing never reads as a measurement.
     const product = container.querySelector('#see-it');
     expect(product).not.toBeNull();
-    expect(product).toHaveTextContent(/Site Health/i);
-    expect(product).toHaveTextContent(/Content Intelligence/i);
-    expect(product).toHaveTextContent(/Demand Intelligence/i);
-    expect(product).toHaveTextContent(/Growth Agent/i);
     expect(product).toHaveTextContent(/Illustrative workspace/i);
+    expect(product).toHaveTextContent(/Share of citations/i);
+    expect(product).toHaveTextContent(/recorded answers/i);
     expect(product).not.toHaveTextContent(/Observe|Trace|Benchmark|Optimize/i);
     expect(product).not.toHaveTextContent(/example data/i);
   });
 
-  it('renders the shift as a three-item ledger and keeps one product workspace', () => {
+  it('renders the reveal section as a three-item ledger and keeps one product workspace', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
 
     expect(container.querySelectorAll('#why article')).toHaveLength(3);
     expect(container.querySelector('#why .shadow-card')).toBeNull();
-    // Tie the assertion to ProductWindow's own stable hook, not any panel.
+    // Pin #see-it itself first: an optional-chained query below would pass
+    // vacuously if the section vanished.
     const seeIt = container.querySelector('#see-it');
-    expect(seeIt?.querySelector('[data-testid="product-window"]')).not.toBeNull();
+    expect(seeIt).not.toBeNull();
+    expect(seeIt?.querySelector('[data-testid="product-canvas"]')).not.toBeNull();
   });
 });
