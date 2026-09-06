@@ -74,11 +74,52 @@ describe('IcpConfirmation', () => {
     // Three suggestions plus the explicit escape hatch. Matched by exact name:
     // a loose regex counted the escape chip too, because "None of these"
     // contains "one".
-    for (const name of ['product feed management platform', 'one', 'two']) {
+    for (const name of ['Product feed management platform', 'One', 'Two']) {
       expect(screen.getByRole('radio', { name })).toBeVisible();
     }
-    expect(screen.queryByRole('radio', { name: 'three' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Three' })).toBeNull();
     expect(screen.getByRole('radio', { name: 'None of these' })).toBeVisible();
+  });
+
+  it('never shows a discovered category as the raw stored token', () => {
+    const onChange = vi.fn();
+    render(
+      <IcpConfirmation
+        profile={profile({
+          category: 'brand_audit_services',
+          category_options: ['marketing_consulting'],
+          category_aliases: [],
+        })}
+        onChange={onChange}
+      />,
+    );
+
+    // A database value was the first thing a new customer read on this screen.
+    expect(screen.queryByRole('radio', { name: /brand_audit_services/ })).toBeNull();
+    expect(screen.getByRole('radio', { name: 'Brand Audit Services' })).toBeVisible();
+    expect(screen.getByRole('radio', { name: 'Marketing Consulting' })).toBeVisible();
+  });
+
+  it('stores the discovered token, not the label it displays', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <IcpConfirmation
+        profile={profile({
+          category: 'brand_audit_services',
+          category_options: ['marketing_consulting'],
+          category_aliases: [],
+        })}
+        onChange={onChange}
+      />,
+    );
+
+    // Humanising is a display concern; round-tripping the prettified string
+    // back into the payload would change what the project is built from.
+    await user.click(screen.getByRole('radio', { name: 'Marketing Consulting' }));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'marketing_consulting' }),
+    );
   });
 
   it('names the escape hatch for what it is when there is nothing to reject', () => {

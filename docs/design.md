@@ -6,18 +6,26 @@
 ## Direction and identity
 
 CiteLadder is a light-only, evidence-led enterprise system. The authenticated
-application uses the **Prism Evidence Workspace**: a lightly violet-tinted paper editorial canvas,
+application uses the **Prism Evidence Workspace**: one grained ground carrying the chrome and white paper carrying the work,
 near-black ink, a brand-green primary action, green for analytical selection, semantic evidence
 washes, useful density, and deliberate negative space. It is an operating
 workspace, not a wall of equal-weight KPI cards.
 
 - **Name and domain:** CiteLadder, `citeladder.com`.
-- **Logo:** the canonical monochrome horizontal CiteLadder lockup in
-  `frontend/public/citeladder-logo.png` — a black silhouette drawn for light
-  ground, so it survives any accent change; dark surfaces knock it out white
-  with `brightness-0 invert` rather than owning a second asset. Product,
-  marketing, authentication, and onboarding surfaces reuse that asset rather
-  than reconstructing the symbol and wordmark independently.
+- **Logo:** one lockup component, `frontend/components/ui/logo-mark.tsx` — the
+  mark drawn as inline SVG at `currentColor`, followed by the wordmark set as
+  live text in the display face at weight 500. The mark’s path data is the
+  supplied glyph (`frontend/public/citeladder-logo-black.svg`, with
+  `-white.svg` as the knocked-out source of record) re-boxed to its own ink,
+  because the source viewBox padded the artwork by roughly 15% a side and a
+  centred box still sat low. With the box equal to the ink the lockup centres on
+  any text row and no call site nudges it. Inheriting `currentColor` is what
+  lets a dark band’s token rebind ink it white on its own — there is no filtered
+  second asset and no `brightness-0 invert`. One `size` prop sets the mark
+  height and derives the wordmark from it at the lockup’s 1.2 ratio, so the two
+  halves cannot drift apart; `wordmark={false}` is the mark-only mode for chrome
+  too small to set the word. Product, marketing, authentication, and onboarding
+  all reuse that component rather than rebuilding the lockup.
   `frontend/public/citeladder-favicon.ico` owns browser and installable-app
   iconography with the same black silhouette across its frames.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
@@ -77,7 +85,8 @@ Tokens are semantic; components use the role, not a colour value.
 
 | Role | Token family | Use |
 | --- | --- | --- |
-| Canvas and structure | `background` / `sidebar` (`#F7F6FD`), `well` / `background-alt` / `panel-tonal` (`#F4F4F1`), `active` (`#EFEFEB`) | One lightly violet-tinted paper hierarchy across product, marketing, authentication, and onboarding |
+| Ground | `shell` (`#F1F4F1`), `shell-alt` (`#ECF1EC`) | The single grained sheet every chrome region stands on: app sidebar and top bar, the flow bar and action bar, and the marketing `sunken` band |
+| Canvas and structure | `background` (`#F7F6FD`), `well` / `background-alt` / `panel-tonal` (`#F4F4F1`), `active` (`#EFEFEB`) | The neutral inset ladder used *inside* paper — wells, tonal panels, hover and selected state |
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
 | Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
 | Borders | `border-subtle` (`#E3E2EC`), `border` (`#D1D0DC`), `border-strong` (`#A2A0B0`), `border-bold` (`#747282`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
@@ -93,11 +102,19 @@ steps one rung deeper along the accent ramp, `#08592C`; press settles at
 tabs, active navigation, focus, and the first chart series. The public-website
 CTA is the `accent` button variant instead of a solid fill: a light green
 fill (`#EEF6F1`) with a green border and green label at rest, filling solid
-green with a white label on hover. Every surface uses
-the same paper ladder: `#F7F6FD` canvas and sidebar, `#F4F4F1` wells and
-tonal bands, `#EFEFEB` hover and selected state — while the public surface
-(`[data-public-surface]`) rebinds `background` to white, so marketing prints on
-plain white with the tonal bands doing the separating. Raised objects, inputs, and
+green with a white label on hover. The model is **one ground, two papers**. Chrome — the app sidebar and top bar,
+the focused flow's bar and action bar, and the marketing `sunken` band — is one
+grained sheet in `shell` (`#F1F4F1`), and content sits on white paper inset in
+it via the `.app-pane` recipe. The tonal step between those two planes plus the
+pane's overlay radius **is** the separation: the hairline rules that used to
+divide sidebar from content and flow bar from flow made the chrome read as
+boxes bolted together. Inside paper the neutral ladder still applies —
+`#F4F4F1` wells and tonal panels, `#EFEFEB` hover and selected state — while
+the public surface (`[data-public-surface]`) rebinds `background` to white, so
+marketing prints on plain white with the ground and the tonal bands separating.
+The ground's hue is green at very low chroma: enough to read as a material
+rather than as grey, far too little to compete with the accent that owns
+actions. Both rungs clear AA for all four neutral inks. Raised objects, inputs, and
 overlays remain white. Product, marketing, authentication, and onboarding
 consume these shared tokens without route-scoped palette overrides.
 
@@ -116,13 +133,17 @@ without route-scoped palette overrides. On paper a tonal band is a whisper, so a
 public section separates with a hairline (`divided`) unless the fill edge is
 doing real work. Functional evidence families remain inside
 product data and faithful preview scenes because those states must stay legible at a glance.
-Functional colour never carries meaning alone. The one sanctioned decorative
+Functional colour never carries meaning alone. Grain is the material the ground is made of, not an effect: `.band-grain` lays a
+fractal-noise tile over a plane at `--grain-opacity`, which a band overrides —
+`.grain-soft` (3%) for app and flow chrome, 5% on paper, 7% on a tinted band and
+9% on the dark close, because noise all but disappears into a dark ground and
+reads as dirt at product density. The one sanctioned decorative
 family on the public surface is the pastel icon tile (`tile-blue`, `tile-indigo`,
 `tile-purple`, `tile-green` — the reference system's four product hues, each a
 soft fill with a deep ink rung): 48px rounded carriers for section iconography on
 the landing page and the per-segment hue accents on `/solutions`, never used for
 state. The public band arc deepens down a
-page — canvas, tint (`background-alt`), deep (`band-deep` `#E9E8F2`), and a
+page — canvas, the shared ground (`shell`), deep (`band-deep` `#E4EAE4`), and a
 closing dark band (`band-dark` `#16161A`) that carries a 28px rounded shoulder
 into the footer. A dark band rebinds the semantic tokens in one place
 (`[data-citeladder-section='dark']` in `globals.css`): components inside keep
@@ -316,8 +337,17 @@ series retain visual gaps for unavailable points and explain those gaps accessib
 
 - Use sections, ledgers, tables, and split workspaces as page architecture. Cards
   support a section; they do not replace one. Avoid nested decorative cards.
-- The warm paper canvas remains visible between regions, while analytical objects
-  sit on white surfaces. Overview sections, Website metric cards and page tables,
+- The shell is a ground with an inset pane, not a bordered sidebar beside a
+  bordered header. The sidebar and top bar paint nothing and rule nothing; the
+  content pane owns the scroll, so its top edge stays put while the workspace
+  moves. The pane fills the shell — it meets the sidebar on the left and the
+  viewport on the right and bottom, so the work gets the room and the top edge
+  alone carries the seam. Only its top corners are therefore rounded
+  (`.app-pane-workspace`); rounding an edge with nothing behind it cuts a notch
+  rather than softening anything. Below 768px the pane runs edge to edge and
+  gives up its radius and its lift — a 16px corner against the viewport edge
+  reads as a rendering artefact. Everything in the sidebar rail sits on one 18px
+  inset. Overview sections, Website metric cards and page tables,
   Opportunities tables, and Prompts tables use the shared white panel role without
   added elevation.
 - Recommendations show impact, deterministic priority factors, affected scope,
@@ -554,8 +584,11 @@ focused grid, then an optional CTA.
   workspace canvas carries the visual weight.
 - Keep body copy around 60–70 characters wide and use one H1 per page.
 - Auth uses the website type ladder and shared focus treatment; the form remains
-  the primary task. Auth and onboarding use one centred light flow shell with a
-  compact wordmark bar; onboarding adds three-step progress and a sticky action bar.
+  the primary task. Auth and onboarding use the same ground and the same paper
+  as the app: the flow bar and the sticky action bar sit on the ground with no
+  fill and no rule of their own, and the task column is an `.app-pane`. A group
+  inside that pane is not a box — space and its title separate it, the same rule
+  that forbids a Card inside a Card. Onboarding adds three-step progress.
 - Onboarding review makes the category, buyer type, market scope, owned domains,
   and competitors directly confirmable. Prompt generation begins only after the
   user confirms the visible structured ICP facts.
@@ -666,10 +699,12 @@ Before merging a visual change, verify:
 - Website and focused-flow type use documented content roles with a 15px body
   baseline; authenticated-app type uses Remus at weights 400 and 500 only.
 - Marketing stays monochrome-plus-green; functional colour appears only in the app.
-- Every product, marketing, authentication, and onboarding surface consumes the
-  same token ladder: `#F7F6FD` canvas and sidebar, `#F4F4F1` structure/well/tonal
-  panel, and `#EFEFEB` hover and selected state. Sections separate with a hairline
-  rule and space, not with a box around their contents.
+- Chrome stands on the `shell` ground and content on `.app-pane` paper, on every
+  one of product, marketing, authentication, and onboarding. Inside paper the
+  neutral ladder holds: `#F4F4F1` structure/well/tonal panel, `#EFEFEB` hover and
+  selected state. Sections separate with a hairline rule and space, not with a
+  box around their contents; the ground/paper seam separates with tone and
+  radius, never a rule.
 - Controls use 8px, semantic objects use 12px, and overlays use 16px — one
   ladder on every surface, with no per-surface redeclaration of a role.
 - Text names a role from `textRole`; no call site writes a font weight.

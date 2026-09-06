@@ -144,12 +144,7 @@ export async function MarketingFooter() {
         >
           <div className="col-span-2 space-y-5 sm:col-span-3 lg:col-span-1">
             <Link href="/" aria-label="CiteLadder home" className="inline-block">
-              {/* The canonical lockup is drawn for light ground; brightness-0
-                  knocks it to a white silhouette so the same asset reads on
-                  the dark close. */}
-              <span className="block brightness-0 invert">
-                <LogoMark size={24} />
-              </span>
+              <LogoMark size={26} />
             </Link>
 
             <p className="website-body text-muted max-w-[28ch]">

@@ -162,34 +162,51 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
       )}
 
       {rows.length > 0 ? (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              setOccurrenceCursors([]);
-              navigate(filters, null);
-            }}
-            disabled={!cursor}
-          >
-            First page
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              const next = issuesQuery.data?.next_cursor;
-              if (next) {
-                setOccurrenceCursors([]);
-                navigate(filters, next);
-              }
-            }}
-            disabled={!issuesQuery.data?.next_cursor}
-          >
-            Next
-          </Button>
-        </div>
+        <CatalogPager
+          cursor={cursor}
+          page={issuesQuery.data}
+          onGo={(next) => {
+            setOccurrenceCursors([]);
+            navigate(filters, next);
+          }}
+        />
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The catalog's page controls.
+ *
+ * Renders nothing at all when there is no page to go to. It used to render
+ * whenever there were rows and then disable both buttons, so a crawl whose
+ * issues all fit on one page showed two permanently dead controls — the same
+ * noise the one-point trend chart rule exists to prevent.
+ */
+function CatalogPager({
+  cursor,
+  page,
+  onGo,
+}: Readonly<{
+  cursor: string | null;
+  page: { next_cursor?: string | null } | undefined;
+  onGo: (cursor: string | null) => void;
+}>) {
+  const nextCursor = page?.next_cursor ?? null;
+  if (!cursor && !nextCursor) return null;
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <Button variant="secondary" size="sm" onClick={() => onGo(null)} disabled={!cursor}>
+        First page
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => nextCursor && onGo(nextCursor)}
+        disabled={!nextCursor}
+      >
+        Next
+      </Button>
     </div>
   );
 }
@@ -365,7 +382,7 @@ function IssueDetailRail({
             isLoading={detailQuery.isLoading}
           />
         </div>
-        {detail && (detail.occurrences.length > 0 || canPrevious) ? (
+        {detail && (canPrevious || detail.next_cursor) ? (
           <footer className="border-border-subtle bg-panel flex shrink-0 items-center justify-end gap-2 border-t p-3">
             <Button variant="secondary" size="sm" onClick={onPrevious} disabled={!canPrevious}>
               Previous

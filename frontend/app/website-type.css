@@ -305,8 +305,6 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--color-panel);
-  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .flow-bar-content {
@@ -377,7 +375,7 @@
 
 .flow-step-mark-done {
   border-color: var(--color-border-strong);
-  background: var(--color-active);
+  background: var(--color-shell-alt);
   color: var(--color-secondary);
 }
 
@@ -408,6 +406,8 @@
 }
 
 .flow-main {
+  position: relative;
+  z-index: 1;
   min-height: 0;
   overflow-y: auto;
   padding: var(--flow-header-gap) var(--flow-gutter) var(--flow-block);
@@ -429,9 +429,20 @@
   width: min(100%, var(--flow-measure-wide));
 }
 
-.flow-auth-content {
+/* Auth has no step list and one short form, so its sheet is narrower than the
+   onboarding measure. It is still the SAME sheet: the auth layout used to wrap
+   its children in a second surface inside this one, which is how login ended up
+   as a white card sitting on a white card. */
+.flow-content[data-flow-measure='auth'] {
   width: min(100%, var(--flow-auth-measure));
-  margin-inline: auto;
+}
+
+/* The task column is the white paper (it carries `app-pane` at its call site);
+   this is the inset that keeps its content off the sheet's edge.
+   `.flow-action-content` is deliberately excluded: it shares the measure so its
+   buttons line up with the pane, but it is a row on the ground. */
+.flow-content {
+  padding: var(--flow-block) var(--flow-gutter);
 }
 
 .flow-footer,
@@ -439,8 +450,6 @@
   position: sticky;
   bottom: 0;
   z-index: 10;
-  border-top: 1px solid var(--color-border-subtle);
-  background: var(--color-panel);
   padding: var(--flow-answer) var(--flow-gutter);
 }
 
@@ -472,15 +481,6 @@
 
 .flow-group {
   min-width: 0;
-  background-color: var(--color-panel);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-card);
-  padding: 1.25rem 1.5rem;
-  transition: border-color 0.15s ease;
-}
-
-.flow-group:hover {
-  border-color: var(--color-border-strong);
 }
 
 .flow-group-heading {
@@ -556,6 +556,13 @@
 
 .flow-activity-row[data-state='active'] .flow-activity-indicator {
   color: var(--color-accent-text);
+}
+
+.flow-activity-row[data-state='attention'] {
+  margin-inline: calc(var(--flow-stack) * -1);
+  padding-inline: var(--flow-stack);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
 }
 
 .flow-activity-row[data-state='attention'] .flow-activity-indicator,

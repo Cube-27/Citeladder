@@ -108,7 +108,7 @@ export function ContentComposer({
           aria-label="Your instruction"
           aria-labelledby="content-user-instruction-label"
           placeholder="Describe the website content you want to create…"
-          className="border-border bg-background focus:bg-panel rounded-[var(--radius-control)] p-4 text-sm leading-relaxed"
+          className="border-border bg-well focus:bg-panel rounded-[var(--radius-control)] p-4 text-sm leading-relaxed"
         />
         <SkillPicker
           skills={skills}

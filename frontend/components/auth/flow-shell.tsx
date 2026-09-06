@@ -30,16 +30,16 @@ export function FlowShell({
   exitHref?: string;
   mainLabel: string;
   align?: 'start' | 'center';
-  measure?: 'default' | 'wide';
+  measure?: 'default' | 'wide' | 'auth';
 }>) {
   return (
     <div
       data-flow-surface
-      className="bg-background text-foreground grid h-dvh min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden antialiased"
+      className="bg-shell band-grain grain-soft text-foreground relative grid h-dvh min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden antialiased"
     >
       <FlowBar steps={steps} currentStep={currentStep} exitHref={exitHref} />
       <main id="main" aria-label={mainLabel} className="flow-main" data-flow-align={align}>
-        <div className="flow-content" data-flow-measure={measure}>
+        <div className="flow-content app-pane" data-flow-measure={measure}>
           {children}
         </div>
       </main>
@@ -60,7 +60,7 @@ function FlowBar({
   return (
     <header className="flow-bar">
       <div className="flow-bar-content">
-        <AuthWordmark compact />
+        <AuthWordmark />
         {steps ? <FlowProgress steps={steps} currentStep={currentStep} /> : <span />}
         {exitHref ? (
           <Link href={exitHref} className="flow-exit">

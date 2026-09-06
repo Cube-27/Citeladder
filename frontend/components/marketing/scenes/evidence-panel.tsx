@@ -118,10 +118,7 @@ function Bar({
 function WindowChrome({ label, tint }: Readonly<{ label: string; tint: Tint }>) {
   return (
     <div className="border-border-subtle flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-1.5">
-      {/* The lockup rides high inside its image box; sit it on the text row. */}
-      <span className="shrink-0 translate-y-[1px]">
-        <LogoMark size={14} />
-      </span>
+      <LogoMark size={16} wordmark={false} />
       <span className="text-foreground text-xs font-medium">{label}</span>
       <span
         className={cn(
