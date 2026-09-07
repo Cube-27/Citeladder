@@ -15,10 +15,10 @@
   Remus and Uncut assets have no runtime references.
 - **Accent:** terracotta stays for now. The crimson swap is a later, larger
   decision.
-- **Page arc:** bands deepen down the page and the marketing surface **closes
-  on a dark band** — FinalCta and footer on a dark ground (`#16161a`, lighter
-  than black) with a 28px rounded top shoulder, using a one-place dark token
-  rebind (`.on-dark` pattern), never hand-picked dark colours at call sites.
+- **Page arc:** bands deepen down the page and the marketing surface closes on
+  the deep-teal CTA band, followed by the light footer. The teal token rebind
+  owns inverse text and actions; no component hand-picks dark colours or adds
+  a rounded shoulder.
 - **Product canvas (SeeIt):** structure and copy stay as shipped (Direction A
   canvas). Only *effects* are added: hue-bloomed ambient ground, cast shadow,
   bottom bleed fade, quiet row hover, coloured delta pills inside the
@@ -50,8 +50,8 @@
 2. **Motion debt** — CSS reveal engine replaces `gsap-reveal-initializer`;
    hero entrance and animated price ported off GSAP; `gsap`/`@gsap/react`
    removed; LazyMotion retained.
-3. **Dark close** — `deep`/`dark` section tones, dark token rebind,
-   `accent-dark`, FinalCta + footer on dark with 28px shoulders.
+3. **Teal close** — the `teal` section tone and one-place teal token rebind;
+   FinalCta closes on teal and the footer resolves to light paper.
 4. **Topbar + dropdown** — reference parity per the decisions above.
 5. **Product canvas effects** — blooms, cast shadow, bleed, hovers, delta
    colours; no structural or copy changes.
