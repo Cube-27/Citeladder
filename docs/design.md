@@ -14,7 +14,7 @@ workspace, not a wall of equal-weight KPI cards.
 - **Name and domain:** CiteLadder, `citeladder.com`.
 - **Logo:** one lockup component, `frontend/components/ui/logo-mark.tsx` — the
   mark drawn as inline SVG at `currentColor`, followed by the wordmark set as
-  live text at one weight on every surface (`.logo-wordmark`: Uncut Sans 600 —
+  live text at one weight on every surface (`.logo-wordmark`: Geist 600 —
   the wordmark cannot ride the scoped `--font-display` variable, because the
   public scope rebinds that to a 400-only serif face). The mark’s path data is the
   supplied glyph (`frontend/public/citeladder-logo-black.svg`, with
@@ -34,10 +34,9 @@ workspace, not a wall of equal-weight KPI cards.
   iconography with the same black silhouette across its frames.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
   and outcomes over generic AI language.
-- **Typography:** two scoped pairings from one `next/font/local` owner. The
-  authenticated product keeps Remus Variable for UI, body, and data with Uncut
-  Sans for display headings and the even-number product ladder. The public and
-  focused-flow surfaces render **Instrument Serif** as the display face — a
+- **Typography:** two scoped treatments from one `next/font/local` owner. The
+  authenticated product uses **Geist Variable** exclusively for UI, body, data,
+  and headings. The public and focused-flow surfaces render **Instrument Serif** as the display face — a
   400-only single-weight serif whose display rungs are set at 700, a
   deliberate browser synthesis and the chosen headline treatment, and
   stretched 8% wider than their text column by the `--display-squeeze`
@@ -182,11 +181,9 @@ hue accents on `/solutions`, never used for state.
 
 ## Typography
 
-Four self-hosted faces in two scoped pairings, all owned by
-`next/font/local` declarations in `app/layout.tsx`. The authenticated product
-pairs **Remus Variable** (`400–700`) for UI, body, and data with **Uncut Sans**
-(`300–700`) for display headings; the variable faces declare their full weight
-ranges so no product heading is synthesised. The public and focused-flow
+Two self-hosted faces, both owned by `next/font/local` declarations in
+`app/layout.tsx`. The authenticated product uses **Geist Variable** (`100–900`)
+exclusively for UI, body, data, and headings. The public and focused-flow
 surfaces pair **Instrument Serif** as the display face — a 400-only
 single-weight serif, so its display rungs' 700 is a deliberate browser
 synthesis and the `--display-squeeze` knob (1.08) stretches the rungs 8% wider
@@ -236,8 +233,8 @@ or headings.
 
 ### Product app ladder
 
-The authenticated enterprise application uses a Remus-based typography
-ladder with Uncut Sans display headings. It enforces consistent visual hierarchy, strict tabular numerals for metrics, and
+The authenticated enterprise application uses Geist exclusively. It enforces
+consistent visual hierarchy, strict tabular numerals for metrics, and
 high-density information architecture.
 Ad-hoc inline text sizes, weights, and color overrides are prohibited in favor of token
 classes.
@@ -751,7 +748,7 @@ Before merging a visual change, verify:
 
 - It uses semantic global tokens and an existing primitive where one applies.
 - Website and focused-flow type use documented content roles with a 15px body
-  baseline; authenticated-app type uses Remus at weights 400 and 500 only.
+  baseline; authenticated-app type uses Geist at weights 400 and 500 only.
 - Marketing renders the light editorial system: centred serif hero on the
   pastel atmosphere, white body over `canvas-soft` alternates with near-black
   inks, deep-teal close, light footer, and the real product canvas kept as the

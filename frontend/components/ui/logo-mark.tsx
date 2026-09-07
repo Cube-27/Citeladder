@@ -79,10 +79,9 @@ export function LogoMark({
       {/* An arbitrary `text-[..]` utility is rejected by check:policy and the
           size is a prop rather than a ladder rung, so it travels as a style.
           The wordmark itself is one brand face at one weight on every surface
-          (`.logo-wordmark`, globals.css): it cannot ride the scoped
-          `--font-display` variable, because the public scope rebinds that to
-          Instrument Serif, a serif face — the wordmark stays one sans face
-          everywhere. */}
+          (`.logo-wordmark`, globals.css): it stays on Geist rather than the
+          public scope's serif display variable, so the brand lockup remains
+          one sans treatment everywhere. */}
       {wordmark ? (
         <span
           className="logo-wordmark whitespace-nowrap"

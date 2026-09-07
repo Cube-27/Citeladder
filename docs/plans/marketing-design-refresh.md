@@ -1,4 +1,4 @@
-# Marketing design refresh — Remus type system, dark close, reference parity
+# Marketing design refresh — Geist/Instrument type system, dark close, reference parity
 
 > Active plan for the public marketing surface. Approved by the product owner on
 > 2026-09-06. This file is the reference point for the redesign; implementation
@@ -6,13 +6,13 @@
 
 ## Resolved decisions
 
-- **Display face:** Uncut Sans stays. Its variable file was declared without a
-  `weight` descriptor, so every 500/600 heading was browser-synthesised bold —
-  the "broken typography" report. Fixed by declaring the real range (300–700).
-- **Body/UI face:** Inter is replaced by **Remus Variable** (TeX Gyre Heros
-  lineage, `wght 400–700`), copied from the ai.cube27 project. Uncut Sans
-  remains the only display face; Remus carries body, labels, nav, and the
-  `mono`/tabular role. No third family, no italics.
+- **Display face:** Public and focused-flow display roles use **Instrument
+  Serif**. It is a 400-only face, so its 700 display treatment is deliberately
+  browser-synthesised.
+- **Body/UI face:** **Geist Variable** (`wght 100–900`) carries public and
+  focused-flow body, labels, nav, and the `mono`/tabular role. The authenticated
+  product uses Geist exclusively, including product headings. The retired
+  Remus and Uncut assets have no runtime references.
 - **Accent:** terracotta stays for now. The crimson swap is a later, larger
   decision.
 - **Page arc:** bands deepen down the page and the marketing surface **closes
@@ -38,16 +38,15 @@
   option names in black (foreground) display type at 500, promise line muted,
   rotating chevron, pill hover fill on triggers; mobile menu becomes a
   full-viewport sheet. Keyboard and focus handling preserved.
-- **Out of scope:** crimson accent swap, single-family font swap, hue-tinted
-  full sections, product canvas restructure.
+- **Out of scope:** crimson accent swap, hue-tinted full sections, product
+  canvas restructure.
 
 ## Phases
 
-1. **Type foundation** — weight-range fix; Remus asset + `next/font/local`
-   declaration; `--font-inter` → Remus everywhere (`globals.css`,
-   `website-type.css`, component references); tracking ramp per role
-   (body −0.011em, lead −0.018em, small/feature −0.02em, section −0.028em,
-   page/hero −0.035…−0.045em); design.md typography section rewritten.
+1. **Type foundation** — Geist + Instrument `next/font/local` declarations;
+   Geist owns the product and all body/UI roles, while Instrument Serif owns
+   public and focused-flow display roles. The legacy Remus/Uncut assets and
+   variables are removed; `docs/design.md` owns the current role ladder.
 2. **Motion debt** — CSS reveal engine replaces `gsap-reveal-initializer`;
    hero entrance and animated price ported off GSAP; `gsap`/`@gsap/react`
    removed; LazyMotion retained.

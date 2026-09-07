@@ -710,21 +710,20 @@ export function productContractViolations(root) {
 
   const layout = readFileSync(join(root, 'app', 'layout.tsx'), 'utf8');
   if (
-    !layout.includes('Remus') ||
-    !layout.includes("variable: '--font-remus'") ||
-    !layout.includes("weight: '400 700'")
+    !layout.includes('geist') ||
+    !layout.includes("variable: '--font-geist'") ||
+    !layout.includes("weight: '100 900'")
   ) {
     violations.push(
-      'app/layout.tsx: Remus must own the shared UI/body font variable with its real weight range',
+      'app/layout.tsx: Geist must own the shared product UI/body font variable with its real weight range',
     );
   }
   if (
-    !layout.includes('uncutSans') ||
-    !layout.includes("variable: '--font-uncut-sans'") ||
-    !layout.includes("weight: '300 700'")
+    !layout.includes('instrumentSerif') ||
+    !layout.includes("variable: '--font-instrument-serif'")
   ) {
     violations.push(
-      'app/layout.tsx: Uncut Sans must own the display font variable with its real weight range',
+      'app/layout.tsx: Instrument Serif must own the public and focused-flow display font variable',
     );
   }
 
