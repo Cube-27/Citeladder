@@ -1,46 +1,43 @@
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
+import { cn } from '@/lib/utils';
 
 import { StaggerGroup, StaggerItem } from '../primitives/reveal';
 import { Section, SectionHeader } from '../primitives/section';
-import { LANDING_ICONS, LANDING_TILES } from './landing-icons';
+import { LANDING_ICONS, LANDING_TILE_INKS, LANDING_TILES } from './landing-icons';
 
+/**
+ * The operating loop — four steps as full pastel panels on the reference
+ * system's model (docs/design.md §Marketing): each stage lives on its own
+ * product-hue band, the way the reference site tints its numbered lifecycle
+ * steps. Colour is decorative rhythm only; the stage label names the step.
+ */
 export function Workflow() {
   const { workflow } = LANDING_CONTENT;
   return (
     <Section id="how-it-works" tone="sunken" rhythm="base" aria-labelledby="workflow-title">
-      <SectionHeader
-        eyebrow={workflow.kicker}
-        title={workflow.title}
-        lead={workflow.lead}
-        headingId="workflow-title"
-      />
-      <div className="relative">
-        {/* Connector — a dashed rule through the tile rung on wide screens,
-            running behind the opaque tiles so it shows only in the gaps
-            between steps. Below `xl` the grid folds to two columns and the
-            rule would cross rows, so it drops out. */}
-        <div
-          aria-hidden
-          className="border-border absolute inset-x-0 top-6 hidden border-t border-dashed xl:block"
-        />
-        <StaggerGroup className="relative grid gap-x-8 gap-y-10 sm:grid-cols-2 xl:grid-cols-4">
-          {workflow.steps.map((step) => {
-            const Icon = LANDING_ICONS[step.icon];
-            return (
-              <StaggerItem key={step.stage} className="flex flex-col items-start">
-                <span
-                  className={`flex size-12 items-center justify-center rounded-[var(--radius-card)] ${LANDING_TILES[step.tile]}`}
-                >
-                  <Icon className="size-5" aria-hidden />
+      <SectionHeader title={workflow.title} lead={workflow.lead} headingId="workflow-title" />
+      <StaggerGroup className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        {workflow.steps.map((step) => {
+          const Icon = LANDING_ICONS[step.icon];
+          return (
+            <StaggerItem key={step.stage} className="h-full">
+              <article
+                className={cn(
+                  'flex h-full flex-col rounded-[var(--radius-card)] p-6',
+                  LANDING_TILES[step.tile],
+                )}
+              >
+                <span className="bg-panel flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
+                  <Icon className={cn('size-4.5', LANDING_TILE_INKS[step.tile])} aria-hidden />
                 </span>
-                <span className="website-label text-muted mt-4 uppercase">{step.stage}</span>
+                <span className="website-label mt-5 uppercase">{step.stage}</span>
                 <h3 className="website-small-heading text-foreground mt-2">{step.label}</h3>
-                <p className="website-body text-muted mt-2 max-w-[34ch]">{step.desc}</p>
-              </StaggerItem>
-            );
-          })}
-        </StaggerGroup>
-      </div>
+                <p className="website-body text-secondary mt-2">{step.desc}</p>
+              </article>
+            </StaggerItem>
+          );
+        })}
+      </StaggerGroup>
     </Section>
   );
 }

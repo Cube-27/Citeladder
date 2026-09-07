@@ -1,7 +1,6 @@
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 import { cn } from '@/lib/utils';
 
-import { Eyebrow } from '../primitives/label';
 import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
 import { Section } from '../primitives/section';
 import { LANDING_ICONS, LANDING_TILES } from './landing-icons';
@@ -16,10 +15,9 @@ export function Trust() {
     <Section id="trust" tone="sunken" rhythm="base" aria-labelledby="trust-title">
       <div className="grid gap-x-16 gap-y-6 lg:grid-cols-2">
         <Reveal>
-          <Eyebrow>{trust.kicker}</Eyebrow>
           <h2
             id="trust-title"
-            className="website-section-heading text-foreground mt-3 max-w-[18ch] text-balance"
+            className="website-section-heading text-foreground mt-3 text-balance"
           >
             {trust.title}
           </h2>

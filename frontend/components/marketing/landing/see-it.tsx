@@ -6,7 +6,6 @@ import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 import { cn } from '@/lib/utils';
 
 import { TextLink } from '../primitives/button';
-import { Eyebrow } from '../primitives/label';
 import { Reveal } from '../primitives/reveal';
 import { Section } from '../primitives/section';
 import { ShareBar } from './share-bar';
@@ -14,11 +13,11 @@ import { ShareBar } from './share-bar';
 /**
  * The scroll-driving beat: the product itself.
  *
- * An editorial workspace canvas in the Direction A mold — one share-of-
- * citations bar (not a KPI card row) above a recorded-answers ledger. The bar
- * and the ledger are illustrations, so both render aria-hidden and the app bar
- * carries the illustrative-workspace marker; the header aside states what the
- * workspace is.
+ * The real product UI, kept on the landing page: an editorial workspace
+ * canvas — one share-of-citations bar (not a KPI card row) above a
+ * recorded-answers ledger. The bar and the ledger are illustrations, so both
+ * render aria-hidden and the app bar carries the illustrative-workspace
+ * marker; the header aside states what the workspace is.
  */
 const PLATFORM_LOGOS: Record<string, string> = {
   ChatGPT: '/brand/chatgpt.webp',
@@ -34,11 +33,7 @@ export function SeeIt() {
     <Section id="see-it" tone="paper" rhythm="base" aria-labelledby="see-it-title">
       <div className="grid gap-x-16 gap-y-6 lg:grid-cols-2">
         <Reveal>
-          <Eyebrow>{seeIt.kicker}</Eyebrow>
-          <h2
-            id="see-it-title"
-            className="website-section-heading text-foreground mt-3 max-w-[16ch] text-balance"
-          >
+          <h2 id="see-it-title" className="website-section-heading text-foreground text-balance">
             {seeIt.title}
           </h2>
         </Reveal>
@@ -52,15 +47,16 @@ export function SeeIt() {
       </div>
 
       <Reveal>
-        {/* The ambient ground blooms in one hue — low-alpha radial washes over
-            a tint→white→tint gradient — and the white pane floats on it. One
-            hue, tokens only, never an action colour. */}
+        {/* The ambient ground blooms in the brand's own pastel washes — the
+            same atmosphere family as the hero — over a soft→white→soft
+            gradient, and the white pane floats on it. Tokens only, never an
+            action colour. */}
         <div
           aria-hidden
           className="rounded-[var(--radius-overlay)] p-2 sm:p-4"
           style={{
             background:
-              'radial-gradient(120% 90% at 88% 0%, var(--color-info-border) 0%, transparent 60%), radial-gradient(90% 80% at 0% 100%, var(--color-cyan-100) 0%, transparent 55%), linear-gradient(135deg, var(--color-info-bg), var(--color-panel) 55%, var(--color-info-bg))',
+              'radial-gradient(120% 90% at 88% 0%, var(--color-atmosphere-blue) 0%, transparent 60%), radial-gradient(90% 80% at 0% 100%, var(--color-atmosphere-green) 0%, transparent 55%), linear-gradient(135deg, var(--color-canvas-soft), var(--color-panel) 55%, var(--color-canvas-soft))',
           }}
         >
           <div

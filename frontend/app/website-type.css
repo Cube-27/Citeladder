@@ -2,9 +2,17 @@
    product ladder. Both surfaces share the Prism palette and semantic geometry;
    this scope changes type scale only. */
 :where([data-public-surface], [data-flow-surface]) {
-  --font-sans: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: var(--font-uncut-sans), var(--font-remus), -apple-system, sans-serif;
+  /* The public and focused-flow type world (docs/design.md §Typography):
+     Geist Variable carries body/UI/data, Instrument Serif is the
+     display serif. The authenticated product keeps Geist throughout; this
+     scope is where public and focused-flow headings opt into Instrument. */
+  --font-sans: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-instrument-serif), Georgia, serif;
+  /* Horizontal stretch for the display serif: the approved headline
+     treatment sets the display rungs 8% wider than their text column. One
+     knob, documented in docs/design.md; 1 is the neutral (unstretched) value. */
+  --display-squeeze: 1.08;
   /* One ladder, one ratio. Each rung is ~1.2x its neighbour (the minor third
      the display rungs already used), so the steps are even instead of the old
      mix of 1.14x at the bottom and 1.27x at the top. The bottom three rungs are
@@ -61,18 +69,15 @@
   font-size: 1.75rem;
   line-height: 2.125rem;
   font-weight: 500;
-  letter-spacing: -0.025em;
+  transform: scaleX(var(--display-squeeze));
+  transform-origin: left center;
+  letter-spacing: -0.01em;
   color: var(--color-foreground);
 }
 
 .flow-group-title {
   margin: 0;
-  font-family:
-    var(--font-remus),
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: var(--font-sans);
   font-size: 1.0625rem;
   line-height: 1.5rem;
   font-weight: 500;
@@ -82,12 +87,7 @@
 
 .flow-help {
   margin: 0;
-  font-family:
-    var(--font-remus),
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.9375rem;
   line-height: 1.375rem;
   font-weight: 400;
@@ -96,12 +96,7 @@
 }
 
 .flow-meta {
-  font-family:
-    var(--font-remus),
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.875rem;
   line-height: 1.25rem;
   font-weight: 500;
@@ -112,80 +107,85 @@
 
 :where([data-public-surface], [data-flow-surface])
   :where(h1, h2, h3, h4, h5, h6):not(.app-type-scale *) {
-  font-family:
-    var(--font-uncut-sans),
-    var(--font-remus),
-    -apple-system,
-    sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 500;
+  font-family: var(--font-display);
+  font-weight: 400;
 }
 
 :where([data-public-surface], [data-flow-surface]) :where(h1):not(.app-type-scale *) {
   line-height: 1.1;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.01em;
 }
 
 :where([data-public-surface], [data-flow-surface]) :where(h2):not(.app-type-scale *) {
   line-height: 1.15;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.01em;
 }
 
 :where([data-public-surface], [data-flow-surface]) :where(h3, h4, h5, h6):not(.app-type-scale *) {
   line-height: 1.25;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.005em;
 }
 
 /* Named website/auth roles. Size, leading, weight, tracking, and default colour
    travel as one contract. The low-specificity colour defaults let explicit
-   semantic utilities override them for warnings and evidence states. */
+   semantic utilities override them for warnings and evidence states.
+
+   Display rungs render at 700 on a 400-only face: Instrument Serif ships a
+   single weight, so the headline's bold is a deliberate browser synthesis —
+   the treatment the brand chose over a heavier drawn serif — and the
+   `--display-squeeze` knob carries its 1.08 horizontal stretch
+   (`.origin-centre` flips the origin for centred headings). Product previews
+   reset display transforms (`.app-type-scale` below) so they keep reading as
+   the product. Body rungs render in Geist at 400/500/600. */
 .website-hero-display,
 .website-page-title,
 .website-section-heading,
 .website-feature-heading,
 .website-small-heading {
-  font-family:
-    var(--font-uncut-sans),
-    var(--font-remus),
-    -apple-system,
-    sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 500;
+  font-family: var(--font-display);
+  /* 700 on a 400-only face: the synthesis is the treatment, not a fallback. */
+  font-weight: 700;
+  transform: scaleX(var(--display-squeeze));
+  transform-origin: left center;
 }
 
-/* The display ladder is mobile-first and steps at 768/1024 below. Every rung
-   is a ~1.2x step from the next one down at EVERY breakpoint, which is what
-   the old ladder lost: at 641–767px `section-heading` (32px) sat one hair under
-   `page-title` (40px) while `feature-heading` (24px) was a 33% drop, so the
-   middle of the page had no discernible hierarchy and the top had too much. */
+/* Centred display headings compress around their own centre line instead of
+   the left edge. Declared after the role block so it wins the origin. */
+.origin-centre {
+  transform-origin: center;
+}
+
+/* The display ladder is mobile-first and steps at 768/1024 below. The serif
+   reads best with calm leading (1.03–1.1) and near-zero tracking — tight
+   sans-style tracking closes up its counters. */
 .website-hero-display {
   font-size: 2.25rem;
-  line-height: 2.5rem;
-  letter-spacing: -0.04em;
+  line-height: 2.45rem;
+  letter-spacing: -0.01em;
 }
 
 .website-page-title {
   font-size: 1.875rem;
-  line-height: 2.25rem;
-  letter-spacing: -0.035em;
+  line-height: 2.1rem;
+  letter-spacing: -0.01em;
 }
 
 .website-section-heading {
   font-size: 1.75rem;
-  line-height: 2.125rem;
-  letter-spacing: -0.028em;
+  line-height: 2rem;
+  letter-spacing: -0.005em;
 }
 
 .website-feature-heading {
   font-size: 1.25rem;
-  line-height: 1.625rem;
-  letter-spacing: -0.02em;
+  line-height: 1.4rem;
+  letter-spacing: -0.005em;
 }
 
 .website-small-heading {
   font-size: 1.0625rem;
   line-height: 1.4375rem;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.005em;
 }
 
 .website-lead,
@@ -194,24 +194,14 @@
 .website-nav,
 .website-label,
 .website-eyebrow {
-  font-family:
-    var(--font-remus),
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: var(--font-sans);
 }
 
 .website-data-display {
-  font-family:
-    var(--font-remus),
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: var(--font-sans);
   font-size: 1.875rem;
   line-height: 2.25rem;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
@@ -243,21 +233,21 @@
   font-size: 1.0625rem;
   line-height: 1.625rem;
   font-weight: 400;
-  letter-spacing: -0.018em;
+  letter-spacing: 0;
 }
 
 .website-body-lg {
   font-size: 1rem;
   line-height: 1.625rem;
   font-weight: 400;
-  letter-spacing: -0.011em;
+  letter-spacing: 0;
 }
 
 .website-body {
   font-size: 0.9375rem;
   line-height: 1.5rem;
   font-weight: 400;
-  letter-spacing: -0.011em;
+  letter-spacing: 0;
 }
 
 .website-nav {
@@ -271,7 +261,7 @@
 .website-eyebrow {
   font-size: 0.8125rem;
   line-height: 1.125rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .website-label {
@@ -292,12 +282,18 @@
   letter-spacing: 0;
 }
 
-/* Pill geometry is the WEBSITE and marketing treatment (docs/design.md,
-   Controls). The focused auth/onboarding flow is not marketing: its buttons
-   sit beside fields and chips that carry the control radius, so it keeps the
-   shared control geometry rather than inheriting a marketing shape. */
+/* Rectangle geometry is the WEBSITE and marketing treatment (docs/design.md,
+   Controls): the shared 8px control radius everywhere, because the brand's
+   rounded-rectangle CTA is the signature shape on every band. The one pill
+   exception is the hero CTA, which opts in with `data-shape='pill'`. The
+   focused auth/onboarding flow is not marketing: it keeps the shared control
+   geometry rather than inheriting a marketing shape. */
 :where([data-public-surface]) [data-button-size='md']:not(.app-type-scale *),
 :where([data-public-surface]) [data-button-size='lg']:not(.app-type-scale *) {
+  border-radius: var(--radius-control);
+}
+
+:where([data-public-surface]) [data-shape='pill']:not(.app-type-scale *) {
   border-radius: var(--radius-full);
 }
 
@@ -313,7 +309,12 @@
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: var(--flow-stack);
-  padding-inline: var(--flow-gutter);
+  /* The flow bar's logo shares the marketing nav's left edge: the same
+     1280px container and site gutter, so entering the product does not
+     move the wordmark. */
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: var(--site-gutter);
 }
 
 .flow-exit {
@@ -663,7 +664,8 @@
 
 /* A coded product preview is product UI, not oversized marketing copy. */
 .app-type-scale {
-  --font-display: var(--font-uncut-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -676,6 +678,20 @@
   --leading-relaxed: 1.625;
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+/* The squeeze stays marketing-only: product windows reset it, so an
+   embedded canvas keeps reading as the product. */
+.app-type-scale
+  :where(
+    .website-hero-display,
+    .website-page-title,
+    .website-section-heading,
+    .website-feature-heading,
+    .website-small-heading
+  ) {
+  transform: none;
+  transform-origin: unset;
 }
 
 .app-type-scale :where(.website-feature-heading) {
@@ -716,31 +732,28 @@
   }
 
   .website-hero-display {
-    font-size: 3rem;
-    line-height: 3.25rem;
-    letter-spacing: -0.045em;
+    font-size: 3.5rem;
+    line-height: 3.7rem;
   }
 
   .website-page-title {
-    font-size: 2.5rem;
-    line-height: 2.75rem;
-    letter-spacing: -0.04em;
+    font-size: 3.25rem;
+    line-height: 3.5rem;
   }
 
   .website-section-heading {
-    font-size: 2.125rem;
-    line-height: 2.5rem;
-    letter-spacing: -0.034em;
+    font-size: 2.75rem;
+    line-height: 3rem;
   }
 
   .website-feature-heading {
-    font-size: 1.5rem;
-    line-height: 1.875rem;
+    font-size: 1.875rem;
+    line-height: 2.1rem;
   }
 
   .website-small-heading {
-    font-size: 1.25rem;
-    line-height: 1.625rem;
+    font-size: 1.375rem;
+    line-height: 1.65rem;
   }
 
   .website-lead {
@@ -754,9 +767,11 @@
   }
 }
 
+/* The hero reaches its full 64px editorial scale on wide screens, where the
+   0.96 leading lands. */
 @media (min-width: 1024px) {
   .website-hero-display {
-    font-size: 3.5rem;
-    line-height: 3.75rem;
+    font-size: 4.75rem;
+    line-height: 5rem;
   }
 }

@@ -709,22 +709,18 @@ export function productContractViolations(root) {
   }
 
   const layout = readFileSync(join(root, 'app', 'layout.tsx'), 'utf8');
-  if (
-    !layout.includes('Remus') ||
-    !layout.includes("variable: '--font-remus'") ||
-    !layout.includes("weight: '400 700'")
-  ) {
+  const geistDeclaration =
+    /const\s+geist\s*=\s*localFont\(\{\s*src:\s*'\.\.\/public\/fonts\/Geist-Variable\.woff2',\s*variable:\s*'--font-geist',\s*weight:\s*'100 900',\s*display:\s*'swap',\s*\}\);/s;
+  if (!geistDeclaration.test(layout)) {
     violations.push(
-      'app/layout.tsx: Remus must own the shared UI/body font variable with its real weight range',
+      'app/layout.tsx: Geist must declare the shared product UI/body font with its real source and weight range',
     );
   }
-  if (
-    !layout.includes('uncutSans') ||
-    !layout.includes("variable: '--font-uncut-sans'") ||
-    !layout.includes("weight: '300 700'")
-  ) {
+  const instrumentDeclaration =
+    /const\s+instrumentSerif\s*=\s*localFont\(\{\s*src:\s*'\.\.\/public\/fonts\/InstrumentSerif-Regular\.woff2',\s*variable:\s*'--font-instrument-serif',\s*display:\s*'swap',\s*\}\);/s;
+  if (!instrumentDeclaration.test(layout)) {
     violations.push(
-      'app/layout.tsx: Uncut Sans must own the display font variable with its real weight range',
+      'app/layout.tsx: Instrument Serif must declare the public and focused-flow display font source',
     );
   }
 

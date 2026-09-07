@@ -15,10 +15,10 @@ function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
         <span className="text-accent-text pt-2 font-mono text-xs tabular-nums">{item.num}</span>
       )}
       <span className="min-w-0">
-        {/* The name stays ink on hover — the row's fill carries the hover, the
-            way the reference header does; accent text here would read as a
-            state change. */}
-        <span className="font-display text-foreground block text-base font-medium tracking-[-0.02em]">
+        {/* Row titles are a UI role, not a display rung: Geist at 600, one
+            size above the 400 description, so the hierarchy reads even though
+            the row is only two lines tall. */}
+        <span className="text-foreground block font-sans text-base font-semibold">
           {item.title}
         </span>
         {/* One line, always: a menu row that wraps turns the panel into a

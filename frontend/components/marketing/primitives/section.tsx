@@ -36,22 +36,21 @@ const RHYTHM = {
 type Rhythm = keyof typeof RHYTHM;
 
 /**
- * Band fills. The marketing arc deepens down the page — paper → sunken → deep
- * → dark — and the dark band carries a 28px rounded shoulder where it meets
- * the light field. A dark section rebinds the semantic tokens (globals.css
- * `[data-citeladder-section='dark']`), so its children never name a dark
- * colour themselves.
+ * Band fills. The marketing arc is the three-canvas system (docs/design.md
+ * §Marketing): the indigo hero canvas at the top, a white body that alternates
+ * with the barely warm `sunken` off-white, and the deep-teal close. The two
+ * dark canvases rebind the semantic tokens in one place (globals.css
+ * `[data-citeladder-section='indigo'|'teal']`), so their children never name a
+ * dark colour themselves.
  *
- * `sunken` is the shared ground: the same sheet the app shell and the focused
- * flow stand on. It used to be a neutral tint with no relationship to anything
- * behind the login, which is most of why the site and the product read as two
- * different pieces of software.
+ * `sunken` is the barely warm off-white (`canvas-soft`) of the Superhuman body
+ * system. It is marketing's own neutral now, not the app's green-grey ground.
  */
 const TONE = {
   paper: '',
-  sunken: 'bg-shell',
-  deep: 'bg-band-deep',
-  dark: 'bg-band-dark rounded-t-[28px]',
+  sunken: 'bg-canvas-soft',
+  indigo: 'bg-band-indigo',
+  teal: 'bg-band-teal',
 } as const;
 
 type Tone = keyof typeof TONE;

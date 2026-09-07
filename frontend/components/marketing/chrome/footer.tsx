@@ -119,12 +119,10 @@ function LegalStripLink({ link }: Readonly<{ link: LegalLink }>) {
 }
 
 /**
- * Marketing footer — link columns plus a compact legal strip. It closes the
- * dark run that begins at the landing's FinalCta: the dark rebind
- * (`data-citeladder-section='dark'`) flips every token beneath it, and the
- * 28px rounded shoulders overlap the section above by their own height, so a
- * dark-on-dark seam shows no light corner nicks while a light-preceded footer
- * still reads as its own dark plane.
+ * Marketing footer — link columns plus a compact legal strip, on the light
+ * canvas the three-canvas system closes with (docs/design.md §Marketing): the
+ * teal band above carries the page's final action, and the footer resolves
+ * back to white paper with a warm hairline.
  */
 export async function MarketingFooter() {
   'use cache';
@@ -133,10 +131,7 @@ export async function MarketingFooter() {
   const name = legalDisplayName();
 
   return (
-    <footer
-      data-citeladder-section="dark"
-      className="band-grain bg-band-dark relative -mt-7 overflow-hidden rounded-t-[28px]"
-    >
+    <footer className="band-grain bg-background border-hairline-warm relative overflow-hidden border-t">
       <Container className="py-12 sm:py-16">
         <nav
           aria-label="Footer"
@@ -154,9 +149,9 @@ export async function MarketingFooter() {
 
           {FOOTER_COLUMNS.map((column) => (
             <div key={column.key} className="space-y-4">
-              {/* Title-case white headers: the small-heading role carries the
-                  weight and the foreground pin, so the dark rebind renders it
-                  white without a hand-picked color. */}
+              {/* Title-case headers: the small-heading role carries the
+                  weight and the foreground pin, so no call site hand-picks an
+                  ink for them. */}
               <h2 className="website-small-heading text-foreground mb-4">{column.label}</h2>
               <div className="grid justify-items-start gap-4">
                 {column.links.map((link) => (

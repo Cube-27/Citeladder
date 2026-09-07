@@ -15,12 +15,7 @@ export function Packs() {
   const { packs } = LANDING_CONTENT;
   return (
     <Section id="use-cases" tone="paper" rhythm="base" aria-labelledby="packs-title">
-      <SectionHeader
-        eyebrow={packs.kicker}
-        title={packs.title}
-        lead={packs.lead}
-        headingId="packs-title"
-      />
+      <SectionHeader title={packs.title} lead={packs.lead} headingId="packs-title" />
       <StaggerGroup className="grid gap-x-8 gap-y-10 md:grid-cols-2 xl:grid-cols-3">
         {packs.items.map((pack, index) => {
           const Icon = LANDING_ICONS[pack.icon];

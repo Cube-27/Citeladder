@@ -193,7 +193,7 @@ function DiagramArchitecture({
       </div>
       {data.destination && (
         <div className="border-accent-border/60 bg-accent-soft/30 rounded-[var(--radius-control)] border p-4 text-center">
-          <h4 className="website-small-heading text-foreground font-bold tracking-wide">
+          <h4 className="website-small-heading origin-centre text-foreground font-bold tracking-wide">
             {data.destination.title}
           </h4>
           <p className="website-body text-muted mt-1 leading-relaxed">

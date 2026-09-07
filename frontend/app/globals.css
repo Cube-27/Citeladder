@@ -5,9 +5,9 @@
 /* CiteLadder's single design-system owner. Prism Evidence now spans product,
    public, authentication, and onboarding surfaces. See docs/design.md. */
 @theme {
-  --font-sans: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: var(--font-uncut-sans), var(--font-remus), -apple-system, sans-serif;
+  --font-sans: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   /* Palette layer. Product code consumes the semantic aliases below. */
   --color-gray-0: #ffffff;
@@ -72,12 +72,27 @@
   --color-shell: #f1f4f1;
   --color-shell-alt: #ecf1ec;
 
-  /* The marketing band ramp: canvas (paper) → tint (sunken) → deep → dark.
-     Dark bands rebind the semantic tokens in one place — see the
-     `[data-citeladder-section='dark']` scope below — so nothing inside a dark
-     band names a dark colour itself. */
-  --color-band-deep: #e4eae4;
-  --color-band-dark: #16161a;
+  /* The marketing band ramp: canvas (paper) → soft (sunken) → indigo → teal.
+     The two dark canvases rebind the semantic tokens in one place — see the
+     `[data-citeladder-section='indigo']` and `='teal'` scopes below — so
+     nothing inside those bands names a dark colour itself. */
+  --color-band-indigo: #1b1938;
+  --color-band-indigo-deep: #0e0c1f;
+  --color-band-teal: #0e3030;
+  --color-band-teal-mid: #155555;
+
+  /* The marketing canvases (docs/design.md §Marketing): the barely warm
+     off-white for alternating body bands, warm hairlines for white surfaces,
+     the indigo navy kept for inverted feature surfaces (the pricing card),
+     and the deep-teal close. Decorative families — they never carry state, so
+     they stay out of the status ladder. */
+  --color-canvas-soft: #fafaf8;
+  --color-hairline-warm: #e8e4dd;
+  --color-hairline-dark: #3f3a52;
+  --color-violet-soft: #c9b4fa;
+  --color-violet-soft-strong: #d8c9fb;
+  --color-atmosphere-green: rgb(214 236 222 / 60%);
+  --color-atmosphere-blue: rgb(219 234 248 / 55%);
 
   --color-border: #d1d0dc;
   --color-border-subtle: #e3e2ec;
@@ -361,45 +376,81 @@
   --value-placeholder: var(--color-subtle);
 }
 
-/* The one-place dark rebind (the reference system's `.on-dark`). Everything
-   inside a dark band resolves against these semantic values — components name
-   the role, never a dark hex. The accent steps up to a lighter green because
-   `#0b7a3c` fails contrast on `#16161a`; solid action buttons invert to the
-   light ink for the same reason, and the accent's own foreground flips dark
-   because the lightened green fill is what white text would sit on there. */
-[data-citeladder-section='dark'] {
+/* The one-place rebinds for the two dark feature surfaces (the reference
+   system's `.on-dark`). Everything inside an indigo or teal band resolves
+   against these semantic values — components name the role, never a dark hex.
+   The indigo band steps its accent up to the pale violet; the teal band
+   inverts its primary action to the white canvas with a teal label
+   (`button-on-teal`). Panels stay dark inside the rebinds so dropdowns and
+   sheets opened from the band keep their ground. */
+[data-citeladder-section='indigo'] {
   --grain-opacity: 0.09;
-  --color-foreground: #f2f2f6;
-  --color-secondary: #cfcfda;
-  --color-muted: #a2a2b0;
-  --color-subtle: #8e8e9a;
-  --color-disabled: #6e6e7a;
-  --color-panel: #1f1f26;
-  --color-elevated: #1f1f26;
-  --color-well: #242430;
-  --color-background-alt: #242430;
-  --color-active: #2c2c38;
-  --color-input: #1f1f26;
-  --color-border-subtle: #2c2c38;
-  --color-border: #3a3a48;
-  --color-border-strong: #4c4c5c;
-  --color-accent: #58b98a;
-  --color-accent-hover: #6fc99e;
-  --color-accent-active: #85d7b0;
-  --color-accent-fg: #0c2417;
-  --color-accent-text: #7cc9a2;
-  --color-accent-subtle: rgb(88 185 138 / 12%);
-  --color-accent-soft: rgb(88 185 138 / 8%);
-  --color-accent-border: rgb(88 185 138 / 30%);
-  --color-focus: #58b98a;
-  --color-focus-ring: rgb(88 185 138 / 38%);
-  --color-selection: rgb(88 185 138 / 30%);
-  --color-action: #f2f2f6;
-  --color-action-hover: #d4d4de;
-  --color-action-active: #b8b8c6;
-  --color-action-fg: #16161a;
-  --skeleton-base: #242430;
-  --skeleton-highlight: #2c2c38;
+  --color-foreground: #f4f3fa;
+  --color-secondary: #d6d3e8;
+  --color-muted: #a5a1c2;
+  --color-subtle: #8d89ad;
+  --color-disabled: #6d6a8e;
+  --color-panel: #242244;
+  --color-elevated: #242244;
+  --color-well: #2b2950;
+  --color-background-alt: #2b2950;
+  --color-active: #34325c;
+  --color-input: #242244;
+  --color-border-subtle: #34325c;
+  --color-border: #43406e;
+  --color-border-strong: #565293;
+  --color-accent: #c9b4fa;
+  --color-accent-hover: #d8c9fb;
+  --color-accent-active: #e4dafc;
+  --color-accent-fg: #1b1938;
+  --color-accent-text: #c9b4fa;
+  --color-accent-subtle: rgb(201 180 250 / 12%);
+  --color-accent-soft: rgb(201 180 250 / 8%);
+  --color-accent-border: rgb(201 180 250 / 30%);
+  --color-focus: #c9b4fa;
+  --color-focus-ring: rgb(201 180 250 / 38%);
+  --color-selection: rgb(201 180 250 / 30%);
+  --color-action: #c9b4fa;
+  --color-action-hover: #d8c9fb;
+  --color-action-active: #e4dafc;
+  --color-action-fg: #1b1938;
+  --skeleton-base: #2b2950;
+  --skeleton-highlight: #34325c;
+}
+
+[data-citeladder-section='teal'] {
+  --grain-opacity: 0.09;
+  --color-foreground: #eef4f2;
+  --color-secondary: #cfdedb;
+  --color-muted: #9db8b2;
+  --color-subtle: #8aa6a0;
+  --color-disabled: #6f8a85;
+  --color-panel: #143b3b;
+  --color-elevated: #143b3b;
+  --color-well: #1a4545;
+  --color-background-alt: #1a4545;
+  --color-active: #205050;
+  --color-input: #143b3b;
+  --color-border-subtle: #205050;
+  --color-border: #2a5b5b;
+  --color-border-strong: #3a6c6c;
+  --color-accent: #eef4f2;
+  --color-accent-hover: #ffffff;
+  --color-accent-active: #ffffff;
+  --color-accent-fg: #0e3030;
+  --color-accent-text: #eef4f2;
+  --color-accent-subtle: rgb(238 244 242 / 12%);
+  --color-accent-soft: rgb(238 244 242 / 8%);
+  --color-accent-border: rgb(238 244 242 / 30%);
+  --color-focus: #ffffff;
+  --color-focus-ring: rgb(255 255 255 / 40%);
+  --color-selection: rgb(255 255 255 / 25%);
+  --color-action: #ffffff;
+  --color-action-hover: #eef1ee;
+  --color-action-active: #dfe4e0;
+  --color-action-fg: #0e3030;
+  --skeleton-base: #1a4545;
+  --skeleton-highlight: #205050;
 }
 
 *,
@@ -468,7 +519,7 @@ body {
   h5,
   h6 {
     margin: 0;
-    font-family: var(--font-uncut-sans), var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     /* App headings sit at body weight; the public/flow roles in
        website-type.css carry the one emphasis rung above (500). */
     font-weight: 400;
@@ -632,9 +683,46 @@ input:-webkit-autofill:focus {
   transition: background-color 9999s ease-out;
 }
 
-/* The public surface prints on white, not the app's tinted paper canvas. */
+/* The public surface prints on white, not the app's tinted paper canvas. Its
+   editorial ink is a near-black indigo rather than the reference site's navy:
+   the navy family read as a tinted wash at small sizes, so the whole page sat
+   back. A near-black ink puts the words forward and lets the accent own the
+   colour; the hairlines and the warm ground step up a rung for the same
+   reason. The brand green takes a deeper cut here only — the product keeps
+   the reference green — and the two dark bands run darker still, so a band
+   reads as depth rather than as a mid-tone. Selection, focus, and the
+   evidence marks inside embedded product previews follow the accent, so
+   previews keep reading as the product. */
 [data-public-surface] {
   --color-background: #ffffff;
+  --color-foreground: #121216;
+  --color-secondary: #34343e;
+  --color-muted: #55555f;
+  --color-subtle: #5f5f6a;
+  --color-background-alt: #f2f1ee;
+  --color-canvas-soft: #f6f5f1;
+  --color-active: #eae9e5;
+  --color-border: #c9c8d2;
+  --color-border-subtle: #dcdbe2;
+  --color-border-strong: #8f8d9c;
+  --color-hairline-warm: #d8d3c8;
+  --color-accent: #0a6e35;
+  --color-accent-hover: #085c2c;
+  --color-accent-active: #064a23;
+  --color-accent-subtle: #d9ecdf;
+  --color-accent-soft: #e2f0e6;
+  --color-accent-border: #9ed2b4;
+  --color-accent-text: #0a6e35;
+  --color-focus: #0a6e35;
+  --color-focus-ring: rgb(10 110 53 / 32%);
+  --color-selection: #c2e3cd;
+  --color-action: #0a6e35;
+  --color-action-hover: #085c2c;
+  --color-action-active: #064a23;
+  --color-band-indigo: #131028;
+  --color-band-indigo-deep: #0d0a1c;
+  --color-band-teal: #0c2626;
+  --color-band-teal-mid: #114747;
 }
 
 /* Paper, not screen. A fractal-noise tile at a few percent over the marketing
@@ -658,11 +746,35 @@ input:-webkit-autofill:focus {
 }
 
 /* A tinted band takes a little more grain than paper does, so the fill reads as
-   stock rather than as a flat wash; the dark close takes more again, because
-   noise all but disappears into a dark ground. */
-[data-citeladder-section='sunken'],
-[data-citeladder-section='deep'] {
+   stock rather than as a flat wash; the indigo and teal canvases take more
+   again, because noise all but disappears into a dark ground. */
+[data-citeladder-section='sunken'] {
   --grain-opacity: 0.07;
+}
+
+/* The blog photography takes the same noise as the bands, but blended into the
+   picture instead of laid over a flat ground, so a shot reads as a printed
+   plate rather than a flat digital crop. The saturation and contrast lift keeps
+   the grain from greying the image; the overlay blend rides the photo's own
+   light and dark, so the texture is loudest where the eye already is. */
+.photo-grain {
+  position: relative;
+}
+
+.photo-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+.photo-grain > img {
+  filter: saturate(1.08) contrast(1.05);
 }
 
 /* The white paper. One recipe, shared by the app's content region and the
@@ -702,14 +814,14 @@ code,
 pre,
 kbd,
 samp {
-  font-family: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-variant-numeric: tabular-nums;
   font-synthesis: none;
 }
 
 .value-placeholder {
   color: var(--value-placeholder);
-  font-family: var(--font-remus), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: var(--text-xs);
   font-weight: 400;
   line-height: var(--text-xs--line-height);
@@ -1060,6 +1172,15 @@ samp {
   :focus-visible {
     outline: 3px solid ButtonText;
   }
+}
+
+/* The wordmark is one brand face at one weight on every surface. It cannot
+   ride the scoped `--font-display` variable: the public/flow scope rebinds
+   that to Instrument Serif, a serif face — the wordmark stays one sans
+   face everywhere. Geist carries the real 600. */
+.logo-wordmark {
+  font-family: var(--font-geist), -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 600;
 }
 
 /* Skip link — the first tab stop on every route (app/layout.tsx). Off-screen

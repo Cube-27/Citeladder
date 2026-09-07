@@ -19,11 +19,12 @@ export function Meta({
 }
 
 /**
- * The eyebrow / pre-title (docs/design.md §5.5): Text XS Bold
- * in slate, optionally led by a 6px accent dot at a 10px gap. It sits 10–20px
- * above the heading, which is the SectionHeader gap — never spaced by the call
- * site. The dot is the only decorative use of the accent on paper; everywhere
- * else colour has to mean a state.
+ * The eyebrow / pre-title (docs/design.md §Marketing): a small, quiet label a
+ * half-step above the heading. No accent dot — the canvas system's accent is
+ * reserved for actions and evidence, and a decorative marker before every
+ * label is exactly the templated rhythm this primitive layer exists to
+ * prevent. It sits 10–20px above the heading, which is the SectionHeader
+ * gap — never spaced by the call site.
  *
  * ONE definition, here. `section.tsx` shipped a second component of the same
  * name at a different rung, gap and dot treatment — the exact token drift this
@@ -31,17 +32,10 @@ export function Meta({
  */
 export function Eyebrow({
   children,
-  dot = true,
   className,
-}: Readonly<{ children: ReactNode; dot?: boolean; className?: string }>) {
+}: Readonly<{ children: ReactNode; className?: string }>) {
   return (
-    <div
-      className={cn(
-        'website-eyebrow text-muted inline-flex items-center gap-2 font-medium',
-        className,
-      )}
-    >
-      {dot && <span aria-hidden className="bg-accent size-2 shrink-0 rounded-full" />}
+    <div className={cn('website-eyebrow text-muted inline-flex items-center', className)}>
       <span>{children}</span>
     </div>
   );

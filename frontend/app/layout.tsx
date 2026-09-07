@@ -6,28 +6,26 @@ import { QueryProvider } from '@/lib/providers/query-provider';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, siteOrigin } from '@/lib/seo/site';
 import './globals.css';
 
-// Remus Variable (TeX Gyre Heros lineage) carries body, UI, and the tabular
-// role. Its real axes are wght 400–700 — stating them keeps the browser from
-// synthesising a weight the file cannot interpolate.
-const remusSans = localFont({
-  src: '../public/fonts/RemusVariableVF.woff2',
-  variable: '--font-remus',
-  weight: '400 700',
+// Geist is the sole product face and carries body, UI, data, and product
+// headings. Instrument Serif is reserved for public and focused-flow display
+// roles (docs/design.md §Typography). Declaring Geist's full wght axis keeps
+// every sanctioned UI weight within the supplied variable font.
+const geist = localFont({
+  src: '../public/fonts/Geist-Variable.woff2',
+  variable: '--font-geist',
+  weight: '100 900',
   display: 'swap',
 });
 
-// Without a declared range the @font-face defaults to weight 400 and every
-// 500/600 heading is faux-bold synthesised by the browser.
-const uncutSans = localFont({
-  src: '../public/fonts/UncutSans-Variable.woff2',
-  variable: '--font-uncut-sans',
-  weight: '300 700',
+const instrumentSerif = localFont({
+  src: '../public/fonts/InstrumentSerif-Regular.woff2',
+  variable: '--font-instrument-serif',
   display: 'swap',
 });
 
 const DIRECTION_CONTRACT = `<!--
 THESIS: Prism Evidence is one calm editorial system from first visit through the operating workspace.
-OWN-WORLD: paper ground and near-black ink, brand-green primary actions, green for selection, focus and links, hairline rules and negative space carrying hierarchy, Uncut Sans editorial display with Remus body, and shadows reserved for floating UI.
+OWN-WORLD: paper ground and near-black ink, brand-green primary actions, green for selection, focus and links, hairline rules and negative space carrying hierarchy, Geist throughout the product and Instrument Serif for public/flow display, and shadows reserved for floating UI.
 STORY: Understand the evidence loop, evaluate the product, enter the essential site facts, confirm exactly what will be tracked, then operate from persisted evidence.
 FIRST VIEWPORT: Public pages use generous editorial rhythm and faithful product scenes; focused flows use a compact wordmark bar, centred task column, and persistent action bar.
 FORM: shared semantic tokens, flat ruled ledgers rather than nested boxes, with a roomier public/focused-flow type ladder over the same visual world.
@@ -54,7 +52,7 @@ const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${remusSans.variable} ${uncutSans.variable}`}>
+    <html lang="en" className={`${geist.variable} ${instrumentSerif.variable}`}>
       <body>
         {GA_MEASUREMENT_ID ? (
           <>
