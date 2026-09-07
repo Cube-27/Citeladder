@@ -709,21 +709,18 @@ export function productContractViolations(root) {
   }
 
   const layout = readFileSync(join(root, 'app', 'layout.tsx'), 'utf8');
-  if (
-    !layout.includes('geist') ||
-    !layout.includes("variable: '--font-geist'") ||
-    !layout.includes("weight: '100 900'")
-  ) {
+  const geistDeclaration =
+    /const\s+geist\s*=\s*localFont\(\{\s*src:\s*'\.\.\/public\/fonts\/Geist-Variable\.woff2',\s*variable:\s*'--font-geist',\s*weight:\s*'100 900',\s*display:\s*'swap',\s*\}\);/s;
+  if (!geistDeclaration.test(layout)) {
     violations.push(
-      'app/layout.tsx: Geist must own the shared product UI/body font variable with its real weight range',
+      'app/layout.tsx: Geist must declare the shared product UI/body font with its real source and weight range',
     );
   }
-  if (
-    !layout.includes('instrumentSerif') ||
-    !layout.includes("variable: '--font-instrument-serif'")
-  ) {
+  const instrumentDeclaration =
+    /const\s+instrumentSerif\s*=\s*localFont\(\{\s*src:\s*'\.\.\/public\/fonts\/InstrumentSerif-Regular\.woff2',\s*variable:\s*'--font-instrument-serif',\s*display:\s*'swap',\s*\}\);/s;
+  if (!instrumentDeclaration.test(layout)) {
     violations.push(
-      'app/layout.tsx: Instrument Serif must own the public and focused-flow display font variable',
+      'app/layout.tsx: Instrument Serif must declare the public and focused-flow display font source',
     );
   }
 
