@@ -21,7 +21,7 @@ _ANSWER_TAGS = frozenset({"p", "dd", "div", "span", "li"})
 _QUESTION_FORM_RE = re.compile(
     r"^(?:(?:what|why|how|where|when|who|which)\s+"
     r"(?:is|are|was|were|do|does|did|can|could|will|would|should|has|have)\b"
-    r"|(?:is|are|was|were|do|does|did|can|could|will|would|should|has|have)\s+)",
+    r"|(?:is|are|was|were|do|does|did|can|could|will|would|should|has|have)\s+.+\?$)",
     re.IGNORECASE,
 )
 
@@ -92,6 +92,21 @@ def available_question_count(value: Any) -> int:
         ):
             questions.add(" ".join(question.casefold().split()))
     return len(questions)
+
+
+def observed_question_count(value: Any) -> int:
+    """Count distinct bounded question relationships, regardless of answer state."""
+    if not isinstance(value, list | tuple):
+        return 0
+    return len(
+        {
+            " ".join(str(item.get("question") or "").casefold().split())
+            for item in value
+            if isinstance(item, dict)
+            and is_answer_heading(str(item.get("question") or ""))
+        }
+        - {""}
+    )
 
 
 def _native_details_relationships(

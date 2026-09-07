@@ -1,21 +1,41 @@
 """Race-safe billing bootstrap for users and owner workspaces.
 
-Ensures only the ``BillingAccount`` and ``WorkspaceBillingLink`` rows. There
-is deliberately NO baseline grant and NO Site Health seeding: a new account
-has an explicit resolved entitlement with no capabilities and no funding,
-and the workspace runtime row seeds lazily (fail-closed sample policy) on
-first Site Health use.
+Ensures the ``BillingAccount`` and ``WorkspaceBillingLink`` rows, then applies
+the idempotent public-signup or configured-development entitlement baseline.
 """
 
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import exists, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.billing import BillingAccount, WorkspaceBillingLink
+from app.core.config import settings
+from app.core.config.entitlements import (
+    ACTOR_KIND_SYSTEM,
+    BASELINE_GRANT_REVISION,
+    CAPABILITY_REGISTRY,
+    DEV_LOGIN_UNBOUNDED_COUNTER_ALLOWANCE,
+    FREE_MONITORED_URLS,
+    FREE_PROJECT_SLOTS,
+    FREE_PROMPT_SLOTS,
+    GRANT_SOURCE_OVERRIDE,
+    KEY_MONITORED_URLS,
+    KEY_PROJECT_SLOTS,
+    KEY_PROMPT_SLOTS,
+    CapabilityType,
+)
+from app.domain.entitlements.grants import issue_grant_bundle, revoke_grants
+from app.domain.entitlements.types import GrantSpec
+from app.models.billing import (
+    AccountGrant,
+    BillingAccount,
+    GrantRevocation,
+    WorkspaceBillingLink,
+)
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
 
@@ -25,6 +45,7 @@ async def ensure_user_billing(
     user: User,
     *,
     workspace_ids: tuple[uuid.UUID, ...] | None = None,
+    provision_access: bool = True,
 ) -> BillingAccount:
     """Ensure one account and links for owned workspaces.
 
@@ -63,7 +84,109 @@ async def ensure_user_billing(
         )
 
     await session.flush()
+    if provision_access:
+        await _ensure_baseline_access(session, user=user, account=account)
     return account
+
+
+def _dev_login_grants() -> tuple[GrantSpec, ...]:
+    grants: list[GrantSpec] = []
+    for capability in CAPABILITY_REGISTRY.entries:
+        if not capability.issuable:
+            continue
+        if capability.key == KEY_MONITORED_URLS:
+            continue
+        if capability.capability_type is CapabilityType.FLAG:
+            value = 1
+        elif capability.capability_type is CapabilityType.LEVEL:
+            value = len(capability.ordered_values) - 1
+        else:
+            value = DEV_LOGIN_UNBOUNDED_COUNTER_ALLOWANCE
+        grants.append(GrantSpec(key=capability.key, value=value))
+    return tuple(grants)
+
+
+async def _ensure_baseline_access(
+    session: AsyncSession, *, user: User, account: BillingAccount
+) -> None:
+    """Idempotently provision the configured dev login or public free tier."""
+    dev_login = user.email.casefold() == settings.dev_login_email.strip().casefold()
+    grants = (
+        _dev_login_grants()
+        if dev_login
+        else (
+            GrantSpec(key=KEY_PROJECT_SLOTS, value=FREE_PROJECT_SLOTS),
+            GrantSpec(key=KEY_PROMPT_SLOTS, value=FREE_PROMPT_SLOTS),
+            GrantSpec(key=KEY_MONITORED_URLS, value=FREE_MONITORED_URLS),
+        )
+    )
+    source_ref = "system:dev-login" if dev_login else "system:public-signup"
+    await issue_grant_bundle(
+        session,
+        account_id=account.id,
+        source_kind=GRANT_SOURCE_OVERRIDE,
+        source_ref=source_ref,
+        grants=grants,
+        catalog_revision=CAPABILITY_REGISTRY.revision,
+        idempotency_key=f"{BASELINE_GRANT_REVISION}:{source_ref}",
+        valid_from=datetime.now(UTC),
+        valid_until=None,
+    )
+    if dev_login:
+        await _sync_dev_monitored_access(session, user=user, account=account)
+
+
+async def _sync_dev_monitored_access(
+    session: AsyncSession, *, user: User, account: BillingAccount
+) -> None:
+    """Make the configured dev crawl allowance exact, even over legacy grants."""
+    now = datetime.now(UTC)
+    allowance = settings.dev_login_counter_allowance
+    desired_ref = f"system:dev-login-monitored:{allowance}"
+    revoked = exists(
+        select(GrantRevocation.id).where(
+            GrantRevocation.grant_id == AccountGrant.id,
+            GrantRevocation.effective_from <= now,
+        )
+    )
+    stale_ids = tuple(
+        (
+            await session.scalars(
+                select(AccountGrant.id).where(
+                    AccountGrant.billing_account_id == account.id,
+                    AccountGrant.key == KEY_MONITORED_URLS,
+                    AccountGrant.source_ref != desired_ref,
+                    AccountGrant.valid_from <= now,
+                    or_(
+                        AccountGrant.valid_until.is_(None),
+                        AccountGrant.valid_until > now,
+                    ),
+                    ~revoked,
+                )
+            )
+        ).all()
+    )
+    if stale_ids:
+        await revoke_grants(
+            session,
+            grant_ids=stale_ids,
+            effective_from=now,
+            reason="synchronize configured dev monitored URL allowance",
+            actor_kind=ACTOR_KIND_SYSTEM,
+            actor_user_id=user.id,
+            idempotency_key=f"dev-login-monitored-sync:{allowance}",
+        )
+    await issue_grant_bundle(
+        session,
+        account_id=account.id,
+        source_kind=GRANT_SOURCE_OVERRIDE,
+        source_ref=desired_ref,
+        grants=(GrantSpec(key=KEY_MONITORED_URLS, value=allowance),),
+        catalog_revision=CAPABILITY_REGISTRY.revision,
+        idempotency_key=f"{BASELINE_GRANT_REVISION}:{desired_ref}",
+        valid_from=now,
+        valid_until=None,
+    )
 
 
 async def user_billing_bootstrap_complete(session: AsyncSession, user: User) -> bool:

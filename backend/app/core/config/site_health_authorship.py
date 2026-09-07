@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from typing import Final
 
-BYLINE_PATTERN: Final = r"\b[Bb]y\s+[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){1,2}\b"
+BYLINE_PATTERN: Final = (
+    r"\b(?:(?i:written|reviewed)\s+(?i:by)|[Bb]y)\s+"
+    r"[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){1,2}\b"
+)
 VISIBLE_AUTHOR_NAME_PATTERN: Final = r"^[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){0,3}$"
 VISIBLE_PUBLISHER_PATTERN: Final = (
-    r"\b(?i:maintained|published|written|reviewed)\s+(?i:by)\s+"
-    r"(?:(?i:the)\s+)?(?P<publisher>[A-Z][\w'’&.-]*"
-    r"(?:\s+(?:[A-Z][\w'’&.-]*|team)){0,4})"
+    r"\b(?i:maintained|published)\s+(?i:by)\s+"
+    r"(?:(?i:the)\s+)?(?P<publisher>[A-Z](?:[\w'’&-]|\.(?=[\w'’&-]))*"
+    r"(?:\s+(?:[A-Z](?:[\w'’&-]|\.(?=[\w'’&-]))*|team|for|of|and|the)){0,4})"
     r"(?=\s*(?:\s+(?i:from)\b|[.,;]|$))"
 )
 

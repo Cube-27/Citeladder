@@ -15,11 +15,9 @@
  */
 export const PRICING_BYOK_DEFAULT_ON = true;
 
-/**
- * Additional project creation and project deletion stay unavailable until the
- * self-serve billing lifecycle can enforce project entitlements safely.
- */
-export const ADDITIONAL_PROJECT_CREATION_ENABLED: boolean = false;
+export const PROJECT_SLOTS_CAPABILITY = 'project_slots';
+export const CONTENT_CREATION_CAPABILITY = 'content_creation';
+export const GROWTH_AGENT_CAPABILITY = 'growth_agent';
 
 /** Duration of the numeric price tween. Only real number-to-number changes animate. */
 export const PRICING_PRICE_TWEEN_MS = 275;

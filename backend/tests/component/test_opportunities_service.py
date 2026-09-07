@@ -414,11 +414,22 @@ async def test_recompute_persists_atom_specific_guidance_idempotently(
     assert first.source_issue_ids == [str(scn.issue_structured_id)]
     assert first.evidence["issue_rule_id"] == "aeo.entity_value_proposition"
 
+    current_snapshot = (
+        await db_session.scalars(
+            select(OpportunitySnapshot).order_by(OpportunitySnapshot.created_at.desc())
+        )
+    ).first()
+    assert current_snapshot is not None
+    current_snapshot.rule_version = "opp-rules-8"
+    first.title = "Improve content structure"
+    first.remediation = "Review the page structure."
+    await db_session.commit()
+
     await recompute.recompute(
         db_session,
         workspace_id=scn.workspace_id,
         project_id=scn.project_id,
-        skip_if_current=False,
+        skip_if_current=True,
     )
     second = _by_rule(await _live_rows(db_session, scn), "content_structure_incomplete")
 

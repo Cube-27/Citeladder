@@ -29,7 +29,9 @@ from app.analysis.site_health.fact_regions import (
 from app.analysis.site_health.fact_signals import page_owned_content_facts
 from app.analysis.site_health.page_kinds import classify
 from app.analysis.site_health.parser import extract_page_facts
+from app.analysis.site_health.rules import evaluate_rule, rule_for
 from app.core.config import site_health_taxonomy as config
+from app.core.config.site_health_contracts import RULE_OUTCOME_MISSING
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "site_health"
 
@@ -172,6 +174,19 @@ def test_hidden_page_header_does_not_contribute_content_facts() -> None:
     ]
 
 
+def test_whitespace_padded_aria_hidden_region_is_excluded() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <section aria-hidden=" TRUE "><h1>Hidden title</h1></section>
+        <h1>Visible title</h1>
+        </main></body></html>""",
+        final_url="https://example.test/",
+        content_type="text/html",
+    )
+
+    assert facts["primary_heading_outline"] == [{"level": 1, "text": "Visible title"}]
+
+
 def test_native_details_preserve_answered_and_unanswered_question_evidence() -> None:
     facts = extract_page_facts(
         b"""<html><body><main>
@@ -200,6 +215,37 @@ def test_native_details_preserve_answered_and_unanswered_question_evidence() -> 
             "answer_state": "missing",
             "reason": "answer_content_missing",
         },
+    ]
+
+
+def test_unanswered_observed_questions_stay_in_faq_evaluation() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main><h1>Questions</h1>
+        <h2>What is CiteLadder?</h2>
+        <h2>How does CiteLadder work?</h2>
+        </main></body></html>""",
+        final_url="https://example.test/questions",
+        content_type="text/html",
+    )
+
+    assert facts["page_kind"] == "faq"
+    evaluation = evaluate_rule(rule_for("aeo.question_headings"), facts)
+    assert evaluation.outcome == RULE_OUTCOME_MISSING
+    assert evaluation.evidence["reason"] == "question_answer_missing"
+
+
+def test_bare_auxiliary_heading_requires_question_mark() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <h2>Can improve visibility</h2><p>This is an imperative heading.</p>
+        <h2>Can this improve visibility?</h2><p>Yes, with evidence.</p>
+        </main></body></html>""",
+        final_url="https://example.test/guide",
+        content_type="text/html",
+    )
+
+    assert [item["question"] for item in facts["question_answer_relationships"]] == [
+        "Can this improve visibility?"
     ]
 
 

@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { Pressable } from '@/components/ui/pressable';
 import type { AgentTaskType } from '@/lib/api/agent';
+import { useEntitlement } from '@/lib/billing/entitlement-context';
+import { GROWTH_AGENT_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext } from '@/lib/project/project-context';
 
 const OPEN_AGENT_EVENT = 'citeladder:open-agent';
@@ -68,6 +70,7 @@ export function AgentSheet() {
   const pathname = usePathname() ?? '/projects';
   const searchParams = useSearchParams();
   const { activeProject } = useProjectContext();
+  const { hasCapability, isLoading } = useEntitlement();
   const [open, setOpen] = useState(false);
   const [launch, setLaunch] = useState<AgentLaunch>({ taskType: 'explain', objective: '' });
   const previousProjectId = useRef(activeProject?.id ?? null);
@@ -101,6 +104,8 @@ export function AgentSheet() {
       filters: boundedFilters(searchParams),
     };
   }, [activeProject, pathname, searchParams]);
+
+  if (isLoading || !hasCapability(GROWTH_AGENT_CAPABILITY)) return null;
 
   return (
     <>

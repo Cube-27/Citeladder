@@ -45,7 +45,7 @@ from app.core.config.source_patterns import (
 # row is always traceable to the exact logic that produced it (mirrors
 # ``SCORING_RULE_VERSION`` in ``config/analysis.py``).
 ANALYZER_VERSION: Final = "opp-analyzer-7"
-RULE_VERSION: Final = "opp-rules-8"
+RULE_VERSION: Final = "opp-rules-9"
 RULE_PRODUCT_NOT_MENTIONED: Final = "product_not_mentioned"
 RULE_CITED_ALTERNATIVES: Final = "cited_alternatives_without_uploaded_presence"
 RULE_CATALOG_FIELDS_MISSING: Final = "catalog_fields_missing"

@@ -66,7 +66,9 @@ async def _run(email: str, password: str, counter_allowance: int) -> None:
         async with SessionLocal() as session:
             user = await get_user_by_email(session, email)
             if user is None:
-                user = await register_user(session, email, password, role="admin")
+                user = await register_user(
+                    session, email, password, role="admin", provision_access=False
+                )
                 if user is None:
                     user = await get_user_by_email(session, email)
                 if user is None:
@@ -87,7 +89,10 @@ async def _run(email: str, password: str, counter_allowance: int) -> None:
             if workspace is None:
                 raise RuntimeError("Development user has no workspace membership")
             account = await ensure_user_billing(
-                session, user, workspace_ids=(workspace.id,)
+                session,
+                user,
+                workspace_ids=(workspace.id,),
+                provision_access=False,
             )
             await issue_override_bundle(
                 session,

@@ -22,7 +22,8 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
 import type { Project } from '@/lib/api/types';
 import { textRole } from '@/components/ui/typography';
-import { ADDITIONAL_PROJECT_CREATION_ENABLED } from '@/lib/config/billing';
+import { capabilityLimit, useEntitlement } from '@/lib/billing/entitlement-context';
+import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 
 export function ProjectControls({
   projects,
@@ -38,6 +39,10 @@ export function ProjectControls({
   onEditProject?: (project: Project) => void;
 }>) {
   const router = useRouter();
+  const { entitlement } = useEntitlement();
+  const projectLimit = capabilityLimit(entitlement, PROJECT_SLOTS_CAPABILITY);
+  const canAddProject =
+    projectLimit !== undefined && (projectLimit === null || projects.length < projectLimit);
   return (
     <Dropdown>
       <DropdownTrigger asChild>
@@ -69,7 +74,7 @@ export function ProjectControls({
             <Pencil className="size-4" aria-hidden /> Edit active project
           </DropdownItem>
         ) : null}
-        {ADDITIONAL_PROJECT_CREATION_ENABLED ? (
+        {canAddProject ? (
           <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
             <Plus className="size-4" aria-hidden /> Add project
           </DropdownItem>

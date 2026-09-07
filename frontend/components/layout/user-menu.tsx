@@ -26,7 +26,10 @@ import { textRole } from '@/components/ui/typography';
  */
 const SettingsIcon = ICONS.settings;
 
-export function UserMenu({ className }: Readonly<{ className?: string }>) {
+export function UserMenu({
+  className,
+  compact = false,
+}: Readonly<{ className?: string; compact?: boolean }>) {
   const { user, clearSession } = useSession();
 
   // clearSession removes account-scoped cache only after cookie revocation succeeds.
@@ -39,7 +42,10 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
   return (
     <div className={cn('flex items-center gap-1', className)}>
       <Dropdown>
-        <DropdownTrigger className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1 text-left transition-colors">
+        <DropdownTrigger
+          aria-label={compact ? `Account menu for ${user.email}` : undefined}
+          className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1 text-left transition-colors"
+        >
           <span
             aria-hidden
             className={textRole(
@@ -49,9 +55,15 @@ export function UserMenu({ className }: Readonly<{ className?: string }>) {
           >
             {emailInitials(user.email)}
           </span>
-          <span className="text-secondary min-w-0 flex-1 truncate text-sm">{user.email}</span>
+          {compact ? null : (
+            <span className="text-secondary min-w-0 flex-1 truncate text-sm">{user.email}</span>
+          )}
         </DropdownTrigger>
-        <DropdownContent align="start" side="top" className="w-56">
+        <DropdownContent
+          align={compact ? 'end' : 'start'}
+          side={compact ? 'bottom' : 'top'}
+          className="w-56"
+        >
           <DropdownLabel>{user.email}</DropdownLabel>
           <DropdownSeparator />
           <DropdownItem asChild>

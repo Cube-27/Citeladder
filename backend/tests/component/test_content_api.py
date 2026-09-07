@@ -11,6 +11,7 @@ from pydantic import SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config import settings
 from app.core.config.content import (
     CONTENT_GENERATOR_VERSION,
     CONTENT_SKILL_REGISTRY,
@@ -62,16 +63,22 @@ def _configured_provider(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
-    assert (
-        await client.post(
-            "/api/v1/auth/register", json={"email": email, "password": "password123"}
-        )
-    ).status_code == 202
-    assert (
-        await client.post(
-            "/api/v1/auth/login", json={"email": email, "password": "password123"}
-        )
-    ).status_code == 200
+    previous = settings.dev_login_email
+    settings.dev_login_email = email
+    try:
+        assert (
+            await client.post(
+                "/api/v1/auth/register",
+                json={"email": email, "password": "password123"},
+            )
+        ).status_code == 202
+        assert (
+            await client.post(
+                "/api/v1/auth/login", json={"email": email, "password": "password123"}
+            )
+        ).status_code == 200
+    finally:
+        settings.dev_login_email = previous
 
 
 async def _create_project(
@@ -116,6 +123,37 @@ async def _seed_generation(
         session.add(row)
         await session.commit()
         return str(row.id)
+
+
+@pytest.mark.asyncio
+async def test_free_account_cannot_create_content(client: httpx.AsyncClient) -> None:
+    email = "free-content@example.com"
+    assert (
+        await client.post(
+            "/api/v1/auth/register",
+            json={"email": email, "password": "password123"},
+        )
+    ).status_code == 202
+    assert (
+        await client.post(
+            "/api/v1/auth/login",
+            json={"email": email, "password": "password123"},
+        )
+    ).status_code == 200
+    project_id = await _create_project(client)
+
+    denied = await client.post(
+        "/api/v1/content/generations",
+        json={
+            "project_id": project_id,
+            "skill_id": "content_page",
+            "user_instruction": "Draft a page.",
+        },
+        headers={"Idempotency-Key": "free-content-denied"},
+    )
+
+    assert denied.status_code == 403
+    assert denied.json()["error"]["code"] == "capability_not_granted"
 
 
 def _worker(

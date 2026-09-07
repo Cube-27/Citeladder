@@ -828,7 +828,26 @@ def test_multiword_responsible_publisher_is_preserved():
         b"</main></body></html>"
     )
 
-    assert facts["authorship"]["visible_byline"] == "Acme Research Foundation"
+    assert facts["authorship"]["visible_byline"] == (
+        "Reviewed by Acme Research Foundation"
+    )
+
+
+def test_publisher_capture_keeps_connectors_and_excludes_sentence_period() -> None:
+    facts = _facts(
+        b"<html><body><main><p>Published by Research for the Web.</p>"
+        b"</main></body></html>"
+    )
+
+    assert facts["authorship"]["visible_byline"] == "Research for the Web"
+
+
+def test_written_by_is_author_evidence_not_publisher_evidence() -> None:
+    facts = _facts(
+        b"<html><body><main><p>Written by Priya Shah.</p></main></body></html>"
+    )
+
+    assert facts["authorship"]["visible_byline"] == "Written by Priya Shah"
 
 
 def test_related_card_publisher_does_not_become_page_attribution():

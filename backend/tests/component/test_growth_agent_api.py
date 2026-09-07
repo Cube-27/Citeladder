@@ -8,21 +8,27 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.gateway import FakeModelGateway
+from app.core.config import settings
 from app.domain.agent.service import _public_result, claim_task, execute_claimed_task
 from app.models.agent import AgentTaskRun
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert response.status_code == 202
-    login = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login.status_code == 200
+    previous = settings.dev_login_email
+    settings.dev_login_email = email
+    try:
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={"email": email, "password": "password123"},
+        )
+        assert response.status_code == 202
+        login = await client.post(
+            "/api/v1/auth/login",
+            json={"email": email, "password": "password123"},
+        )
+        assert login.status_code == 200
+    finally:
+        settings.dev_login_email = previous
 
 
 async def _project(client: httpx.AsyncClient, name: str = "Agent Project") -> str:
@@ -59,6 +65,35 @@ def test_partial_persisted_result_is_normalized_to_the_typed_contract() -> None:
         "limitations",
         "artifact_refs",
     }
+
+
+@pytest.mark.asyncio
+async def test_free_account_cannot_submit_agent_work(client: httpx.AsyncClient) -> None:
+    email = "free-agent@example.com"
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "password123"},
+    )
+    assert response.status_code == 202
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "password123"},
+    )
+    assert login.status_code == 200
+    project_id = await _project(client)
+
+    denied = await client.post(
+        "/api/v1/agent/tasks",
+        json={
+            "project_id": project_id,
+            "task_type": "explain",
+            "objective": "Explain the current evidence.",
+        },
+        headers={"Idempotency-Key": "free-agent-denied"},
+    )
+
+    assert denied.status_code == 403
+    assert denied.json()["error"]["code"] == "capability_not_granted"
 
 
 @pytest.mark.asyncio

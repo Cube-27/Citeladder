@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from app.analysis.site_health.fact_questions import available_question_count
+from app.analysis.site_health.fact_questions import observed_question_count
 from app.core.config import site_health_authorship as _authorship_config
 from app.core.config import site_health_taxonomy as _config
 
@@ -47,13 +47,13 @@ def _mapping(value: Any) -> dict[str, Any]:
 
 def _faq_signal(facts: dict[str, Any]) -> dict[str, Any] | None:
     relationships = facts.get("question_answer_relationships")
-    answered_count = available_question_count(relationships)
-    if answered_count < _config.PAGE_KIND_FAQ_MIN_HEADINGS:
+    question_count = observed_question_count(relationships)
+    if question_count < _config.PAGE_KIND_FAQ_MIN_HEADINGS:
         return None
     return {
         "signal": _config.PAGE_KIND_SIGNAL_CONTENT_HEURISTIC,
         "page_kind": _config.PAGE_KIND_FAQ,
-        "detail": f"question_answer_relationships:{answered_count}",
+        "detail": f"question_answer_relationships:{question_count}",
     }
 
 

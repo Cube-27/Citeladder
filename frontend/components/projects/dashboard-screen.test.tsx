@@ -102,6 +102,13 @@ const commandCenter = {
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
+vi.mock('@/lib/billing/entitlement-context', () => ({
+  useEntitlement: () => ({
+    entitlement: { status: 'resolved', capabilities: [{ key: 'project_slots', value: 1 }] },
+  }),
+  capabilityLimit: () => 1,
+}));
+
 // This file mocks useQuery wholesale to return the command-center fixture, so
 // TopInsights would receive that shape instead of an opportunities page. It is
 // a separate unit with its own tests (components/intelligence); stub it out

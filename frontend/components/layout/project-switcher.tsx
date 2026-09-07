@@ -15,7 +15,8 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
-import { ADDITIONAL_PROJECT_CREATION_ENABLED } from '@/lib/config/billing';
+import { capabilityLimit, useEntitlement } from '@/lib/billing/entitlement-context';
+import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 
 /**
  * ProjectSwitcher (F5) — brand avatar + active project name with a dropdown of
@@ -26,6 +27,10 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
   const router = useRouter();
   const { projects, activeProject, activeProjectId, setActiveProjectId, isLoading } =
     useProjectContext();
+  const { entitlement } = useEntitlement();
+  const projectLimit = capabilityLimit(entitlement, PROJECT_SLOTS_CAPABILITY);
+  const canAddProject =
+    projectLimit !== undefined && (projectLimit === null || projects.length < projectLimit);
 
   const label = activeProject?.brand_name ?? activeProject?.name ?? 'No project';
 
@@ -72,7 +77,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
             </DropdownItem>
           );
         })}
-        {ADDITIONAL_PROJECT_CREATION_ENABLED ? (
+        {canAddProject ? (
           <>
             <DropdownSeparator />
             <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>

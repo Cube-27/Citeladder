@@ -9,6 +9,8 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 import { prefetchRoute } from '@/lib/navigation/route-prefetch';
 import { useProjectContext } from '@/lib/project/project-context';
+import { useEntitlement } from '@/lib/billing/entitlement-context';
+import { CONTENT_CREATION_CAPABILITY } from '@/lib/config/billing';
 
 import {
   MOBILE_NAV_ITEMS,
@@ -56,7 +58,10 @@ function StationLinks({
   const pathname = usePathname() ?? '';
   const searchParams = useSearchParams();
   const onIntent = useRouteIntent();
-  const items = group.items;
+  const { hasCapability } = useEntitlement();
+  const items = group.items.filter(
+    (item) => item.href !== '/content' || hasCapability(CONTENT_CREATION_CAPABILITY),
+  );
   if (compact) {
     return (
       <nav aria-label={`${group.title} destinations`} className="overflow-x-auto md:hidden">

@@ -19,6 +19,7 @@ from app.core.config.content import (
     ERROR_IDEMPOTENCY_CONFLICT,
     ERROR_PROVIDER_NOT_CONFIGURED,
 )
+from app.core.config.entitlements import KEY_CONTENT_CREATION
 from app.core.errors import ApiException
 from app.core.http_errors import api_error, raise_api_error
 from app.domain.abuse.service import UsageLimitExceededError
@@ -54,6 +55,10 @@ from app.domain.content.service import (
     to_list_item,
     try_again,
 )
+from app.domain.entitlements.enforcement import (
+    CapabilityNotGrantedError,
+    require_workspace_capability,
+)
 
 router = APIRouter(prefix="/content", tags=["content"])
 
@@ -81,6 +86,19 @@ def _enqueue_conflict(exc: Exception) -> ApiException:
     else:
         detail = ERROR_IDEMPOTENCY_CONFLICT
     return api_error(status.HTTP_409_CONFLICT, detail)
+
+
+async def _require_content_creation(
+    session: AsyncSession, *, workspace_id: uuid.UUID
+) -> None:
+    try:
+        await require_workspace_capability(
+            session, workspace_id=workspace_id, key=KEY_CONTENT_CREATION
+        )
+    except CapabilityNotGrantedError as exc:
+        raise ApiException.coded(
+            status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
+        ) from exc
 
 
 @router.get("/skills", response_model=ContentSkillCatalog)
@@ -217,6 +235,7 @@ async def enqueue_generation_endpoint(
         Header(alias="Idempotency-Key", max_length=CONTENT_IDEMPOTENCY_KEY_MAX_LEN),
     ] = None,
 ) -> ContentGenerationDetail:
+    await _require_content_creation(session, workspace_id=ctx.workspace_id)
     try:
         row, _created = await enqueue_generation(
             session,
@@ -322,6 +341,7 @@ async def _repeat_generation(
     workspace_id: uuid.UUID,
     session: AsyncSession,
 ) -> ContentGenerationDetail:
+    await _require_content_creation(session, workspace_id=workspace_id)
     try:
         row = await operation(
             session, workspace_id=workspace_id, generation_id=generation_id

@@ -30,10 +30,16 @@ shared station-navigation owner exposes secondary destinations and resolves
 active state from pathname plus recognized `tab`/`mode` values. The Growth
 Agent moves to an accessible top-bar sheet with typed persisted route context;
 it is not a sidebar destination. Retired internal routes receive no redirects.
+The compact account menu also remains in the mobile top bar, keeping Settings
+and Sign out reachable without the desktop sidebar.
 
 Desktop and mobile now consume that shared station owner. Commerce Suite is an
 Analyze destination for every project. Providers and Integrations are Settings
 tabs, and prompt read/manage modes live only under `/prompts`.
+Content, Growth Agent, and additional-project controls render from resolved
+capabilities. Direct onboarding navigation uses the same project allowance and
+redirects an account whose capacity is already full; the backend remains the
+authoritative concurrent-write gate.
 
 Overview renders before any audit: canonical Facts with an editable drawer,
 competitor suggestions, four evidence-labelled loop states, one server-selected

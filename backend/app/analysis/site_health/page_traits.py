@@ -29,7 +29,7 @@ import re
 from typing import Any
 from urllib.parse import urlsplit
 
-from app.analysis.site_health.fact_questions import available_question_count
+from app.analysis.site_health.fact_questions import observed_question_count
 from app.core.config import site_health_company_entity as _company_config
 from app.core.config import site_health_taxonomy as _taxonomy
 from app.core.config import site_health_traits as _config
@@ -114,14 +114,14 @@ def _company_profile_intent(final_url: str, facts: dict[str, Any]) -> bool:
 
 
 def _has_faq(facts: dict[str, Any]) -> bool:
-    """FAQPage markup or a complete set of explicit question-answer relationships."""
+    """FAQPage markup or a bounded set of explicit observed questions."""
     if set(_config.PAGE_TRAIT_SCHEMA_TYPES[_config.PAGE_TRAIT_HAS_FAQ]) & _schema_types(
         facts
     ):
         return True
     raw_relationships = facts.get("question_answer_relationships")
     return (
-        available_question_count(raw_relationships)
+        observed_question_count(raw_relationships)
         >= _taxonomy.PAGE_KIND_FAQ_MIN_HEADINGS
     )
 

@@ -256,6 +256,15 @@ User-created workspaces are transaction-serialized per account and capped by
 the config-owned `MAX_WORKSPACES_PER_USER`. The personal workspace counts
 toward the cap; excess creates return `workspace_limit_exceeded`.
 
+Billing bootstrap also owns the idempotent access baseline. Public signups
+receive account-wide allowances for 1 project, 10 persisted prompts, and 20
+monitored Site Health URLs; Content creation and Growth Agent submission require
+explicit boolean capabilities and therefore fail closed for that baseline. The
+configured `DEV_LOGIN_EMAIL` receives every issuable capability with practical
+unbounded counters, while its monitored-URL allowance is synchronized exactly
+to `DEV_LOGIN_COUNTER_ALLOWANCE`. Password and OAuth sign-in both repair older
+accounts onto the current baseline.
+
 ### Remote MCP authorization
 
 The hosted MCP endpoint is `/mcp` using stateless Streamable HTTP. Its OAuth

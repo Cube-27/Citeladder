@@ -1,14 +1,25 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { replace, projectState } = vi.hoisted(() => ({
+const { replace, projectState, entitlementState } = vi.hoisted(() => ({
   replace: vi.fn(),
   projectState: { projects: [{ id: 'existing-project' }], isLoading: false },
+  entitlementState: {
+    entitlement: {
+      status: 'resolved',
+      capabilities: [{ key: 'project_slots', value: 1 }],
+    },
+    isLoading: false,
+  },
 }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace }),
-  useSearchParams: () => new URLSearchParams('new=1'),
+}));
+
+vi.mock('@/lib/billing/entitlement-context', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/billing/entitlement-context')>()),
+  useEntitlement: () => entitlementState,
 }));
 
 vi.mock('@/lib/project/project-context', () => ({
@@ -26,9 +37,11 @@ describe('OnboardingPageClient', () => {
     replace.mockClear();
     projectState.projects = [{ id: 'existing-project' }];
     projectState.isLoading = false;
+    entitlementState.entitlement.capabilities = [{ key: 'project_slots', value: 1 }];
+    entitlementState.isLoading = false;
   });
 
-  it('redirects an additional-project URL when creation is unavailable', async () => {
+  it('redirects direct onboarding navigation when the project allowance is full', async () => {
     render(<OnboardingPageClient />);
 
     expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
@@ -50,6 +63,15 @@ describe('OnboardingPageClient', () => {
     render(<OnboardingPageClient />);
 
     expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('keeps additional-project onboarding available without a project cap', () => {
+    entitlementState.entitlement.capabilities = [];
+
+    render(<OnboardingPageClient />);
+
+    expect(screen.getByText('Onboarding flow')).toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
   });
 });

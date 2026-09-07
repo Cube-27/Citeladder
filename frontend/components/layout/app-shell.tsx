@@ -74,6 +74,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             </div>
             <div className="flex items-center justify-end gap-2.5 justify-self-end">
               <AgentSheet />
+              <UserMenu compact className="md:hidden" />
             </div>
           </header>
 

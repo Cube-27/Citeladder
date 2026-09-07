@@ -16,6 +16,9 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeProject }),
 }));
+vi.mock('@/lib/billing/entitlement-context', () => ({
+  useEntitlement: () => ({ hasCapability: () => true, isLoading: false }),
+}));
 vi.mock('@/components/agent/growth-agent-workspace', () => ({
   GrowthAgentWorkspace: (props: unknown) => <pre>{JSON.stringify(props)}</pre>,
 }));

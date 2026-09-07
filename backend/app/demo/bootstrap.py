@@ -37,6 +37,7 @@ async def ensure_demo_account(
             session,
             expected_email,
             candidate.dev_login_password,
+            provision_access=False,
         )
         if user is None:
             raise RuntimeError("Demo account creation lost a concurrent race")
@@ -48,7 +49,7 @@ async def ensure_demo_account(
         user.is_active = True
         user.session_version += 1
 
-    account = await ensure_user_billing(session, user)
+    account = await ensure_user_billing(session, user, provision_access=False)
     expires_at = candidate.demo_expires_at
     if expires_at is None:  # validate_production_security rejects this first
         raise RuntimeError("Demo expiry is required for entitlement provisioning")

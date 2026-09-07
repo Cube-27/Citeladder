@@ -46,7 +46,7 @@ _EXCLUDED_PREDICATE: Final = " or ".join(
     + [
         "ancestor-or-self::*["
         + " or ".join(f"@{name}" for name in _config.REGION_HIDDEN_ATTRIBUTE_NAMES)
-        + " or translate(@aria-hidden, 'TRUE', 'true')='true']"
+        + " or translate(normalize-space(@aria-hidden), 'TRUE', 'true')='true']"
     ]
     + [f"ancestor-or-self::*[@role={role!r}]" for role in _config.REGION_EXCLUDED_ROLES]
 )

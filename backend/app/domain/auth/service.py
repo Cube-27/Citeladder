@@ -20,7 +20,6 @@ from app.core.security import (
 )
 from app.domain.billing.bootstrap import (
     ensure_user_billing,
-    user_billing_bootstrap_complete,
 )
 from app.domain.workspaces.service import ensure_personal_workspace
 from app.models.user import User
@@ -50,7 +49,12 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
 
 
 async def register_user(
-    session: AsyncSession, email: str, password: str, role: str = "user"
+    session: AsyncSession,
+    email: str,
+    password: str,
+    role: str = "user",
+    *,
+    provision_access: bool = True,
 ) -> User | None:
     """Create a user, then auto-create a workspace + membership for them.
 
@@ -74,12 +78,14 @@ async def register_user(
         # response indistinguishable and leave the session usable.
         await session.rollback()
         return None
-    await provision_new_account(session, user)
+    await provision_new_account(session, user, provision_access=provision_access)
     logger.info("auth.registered", extra={"user_id": str(user.id)})
     return user
 
 
-async def provision_new_account(session: AsyncSession, user: User) -> None:
+async def provision_new_account(
+    session: AsyncSession, user: User, *, provision_access: bool = True
+) -> None:
     """Give a freshly flushed ``User`` its workspace and billing account.
 
     Shared by password registration and third-party sign-in so a Google-created
@@ -91,6 +97,7 @@ async def provision_new_account(session: AsyncSession, user: User) -> None:
         session,
         user,
         workspace_ids=(workspace.id,) if workspace is not None else None,
+        provision_access=provision_access,
     )
     await session.commit()
     await session.refresh(user)
@@ -116,16 +123,12 @@ async def authenticate_user(
     if not verify_password(password, user.hashed_password):
         return None
     created = await ensure_personal_workspace(session, user)
-    needs_billing_repair = (
-        created is not None or not await user_billing_bootstrap_complete(session, user)
+    await ensure_user_billing(
+        session,
+        user,
+        workspace_ids=(created.id,) if created is not None else None,
     )
-    if needs_billing_repair:
-        await ensure_user_billing(
-            session,
-            user,
-            workspace_ids=(created.id,) if created is not None else None,
-        )
-        await session.commit()
+    await session.commit()
     if created is not None:
         logger.info(
             "auth.workspace_autocreated",

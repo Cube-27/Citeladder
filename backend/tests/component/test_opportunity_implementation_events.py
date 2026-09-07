@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config import settings
 from app.domain.opportunities.verification import verify_implementation_events
 from app.models.analytics import AnalyticsTask
 from app.models.content import ContentGeneration
@@ -27,14 +28,19 @@ async def _seed_and_recompute(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> tuple[Scenario, Opportunity, SiteUrl]:
-    await client.post(
-        "/api/v1/auth/register",
-        json={"email": _EMAIL, "password": "password123"},
-    )
-    login = await client.post(
-        "/api/v1/auth/login",
-        json={"email": _EMAIL, "password": "password123"},
-    )
+    previous = settings.dev_login_email
+    settings.dev_login_email = _EMAIL
+    try:
+        await client.post(
+            "/api/v1/auth/register",
+            json={"email": _EMAIL, "password": "password123"},
+        )
+        login = await client.post(
+            "/api/v1/auth/login",
+            json={"email": _EMAIL, "password": "password123"},
+        )
+    finally:
+        settings.dev_login_email = previous
     assert login.status_code == 200
     async with session_factory() as session:
         scenario = await _seed_scenario(session, email=_EMAIL)

@@ -107,6 +107,14 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("DEV_LOGIN_PASSWORD", "dev_login_password"),
     )
+    dev_login_counter_allowance: int = Field(
+        default=200,
+        ge=1,
+        le=50_000,
+        validation_alias=AliasChoices(
+            "DEV_LOGIN_COUNTER_ALLOWANCE", "dev_login_counter_allowance"
+        ),
+    )
     encryption_key: str = Field(
         default="replace-with-32-byte-minimum-secret",
         validation_alias=AliasChoices("ENCRYPTION_KEY", "encryption_key"),

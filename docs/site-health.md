@@ -113,7 +113,9 @@ repair lifecycle state, or call a model.
 ## Crawl controls, limits, and progressive UI
 
 The production path is one standard crawl: its default is **50** and paid-plan
-allowances remain entitlement-owned. The technical/development requested-page
+  allowances remain entitlement-owned. Public signups receive 20 monitored
+  URLs; the configured development login uses `DEV_LOGIN_COUNTER_ALLOWANCE`.
+  The technical/development requested-page
 ceiling is **500**; using it requires the existing audited operator override on
 the dev/demo workspace. Advanced input, seed, and page-kind controls are
 development-only; their separate discovery and analysis safety ceilings remain
