@@ -1,0 +1,71 @@
+{
+  "title": "CiteLadder billing & pricing: catalog-driven states, no-card early access, and honest disabled checkout",
+  "summary": "Lean, product-native updates to the existing CiteLadder billing/pricing surfaces, preserving the current light-only blue (#395afa) / Barlow-display + Geist-body token system and reusing existing components (marketing pricing tier cards, Settings billing panels, usage meters, badges, alerts, and the Provider settings engine cards). Plans are referred to by their backend keys as Tier 1 / Tier 2 / Tier 3 / Enterprise — no new brand names are introduced (Starter/Growth/Scale appear only as test fixtures; real names come from GET /billing/catalog at runtime). Five reviewable states: (1) the public /pricing page rendered from the catalog with BYOK prices $49/$99/$149, funded prices ($99/$149/$299) that are set but unavailable until allowances and provider readiness are verified, an illustrative catalog-driven first-cycle offer, paid checkout buttons disabled per-plan via checkout_available (not a global gate), and an operative no-card 'Claim 7-day early access' action on Tier 1; Content and the Growth Agent are shown as one shared, token-weighted AI-credit pool (Tier 2/Tier 3). (2) the authenticated Settings billing screen for a simulated Tier 1 no-card early-access account showing its single early-access base grant (no separate paid base) plus a read-only operator BYOK access override that grants no funded credits, catalog change-plan rows with checkout disabled, Tier 1 usage meters, and the shared token-weighted Content/Growth AI-credit pool shown as not-entitled-on-Tier-1. (3) the FUTURE Tier 1 card-mandate trial confirmation shown as UNAVAILABLE, illustrating quote structure with an illustrative first-cycle offer, tax 'not configured — checkout unavailable' and no committed final total, consent subject to legal approval, and a Razorpay-hosted authorization that stores only an opaque subscription/mandate reference and status and never PAN/CVV. (4) the NEW no-card early-access offer confirmation — at launch OPEN to any new account with no email/work-domain verification and no card, an explicit 7-day expiry, no charge, no renewal, an optional operator exception-code field, a descriptive (non-blocking) note that future backend config may restrict to verified work-email + operator exceptions, and an explicit grant consent, distinct from the card-mandate trial. (5) the custom BYOK provider configuration (Settings › Providers) for Content & Growth Agent: write-only masked keys stored via the existing encrypted provider settings API (never returned, never localStorage), a custom base URL + model + key, server-validated connection probes with honest connected/missing/failed states, per-feature route and customer-funded status, no silent platform fallback, and a Test button disabled until saved. True BYOK spends no platform AI credits; funded plans consume the shared pool. All commercial terms are provisional policy placeholders pending plan approval; there is no admin UI (the operator CLI owns admin). Barlow/Geist are not embeddable, so system-sans fallbacks are used. Recommended default per section is the product-default (only) light theme. Assumptions: Barlow/Geist are not embeddable here, so mockups use system-sans fallbacks; illustrative numeric quantities (limits, offer amounts, dates) are catalog placeholders, not committed values; concrete privacy/data-sharing disclosures are subject to legal approval. Implementation should keep Settings billing (frontend/components/settings/billing-settings.tsx), usage meters (frontend/components/billing/usage-meter*.tsx), and marketing pricing (frontend/components/marketing/pricing/*) consuming the catalog and entitlement grant provenance via frontend/lib/billing/catalog.ts rather than hardcoded prices or global feature gates.",
+  "sections": [
+    {
+      "title": "Public pricing (catalog-driven, checkout disabled, no-card early access)",
+      "key": "billing-marketing-pricing",
+      "description": "Marketing /pricing page: Tier 1–3 + Enterprise from the catalog, BYOK switch, illustrative offer, per-plan disabled checkout, and an operative no-card early-access claim on Tier 1.",
+      "variations": [
+        {
+          "title": "Payment-disabled state (light)",
+          "key": "payment-disabled",
+          "html_link": "billing-marketing-pricing-payment-disabled.html",
+          "is_recommended": true
+        }
+      ]
+    },
+    {
+      "title": "Settings billing: early-access account, usage & overrides",
+      "key": "billing-settings",
+      "description": "Settings billing for a simulated Tier 1 no-card early-access account: single early-access base grant, BYOK access override, disabled change-plan rows, usage meters, and the shared token-weighted Content/Growth AI-credit pool shown not-entitled-on-Tier-1.",
+      "variations": [
+        {
+          "title": "Account, usage & overrides state (light)",
+          "key": "account-usage-overrides",
+          "html_link": "billing-settings-account-usage-overrides.html",
+          "is_recommended": true
+        }
+      ]
+    },
+    {
+      "title": "No-card early-access offer: confirmation & expiry",
+      "key": "billing-no-card-offer",
+      "description": "No-card 7-day Tier 1 early-access confirmation, open to any new account at launch: capabilities, explicit expiry with no charge or renewal, optional operator exception code, a non-blocking future-restriction note, and an explicit grant consent.",
+      "variations": [
+        {
+          "title": "No-card offer confirmation state (light)",
+          "key": "confirmation",
+          "html_link": "billing-no-card-early-access-offer.html",
+          "is_recommended": true
+        }
+      ]
+    },
+    {
+      "title": "Future card-mandate trial: quote & consent (unavailable)",
+      "key": "billing-card-trial",
+      "description": "Future Tier 1 card-mandate trial shown as unavailable: illustrative quote with tax not configured and no committed total, consent subject to legal approval, and Razorpay-hosted card authorization that never stores PAN/CVV.",
+      "variations": [
+        {
+          "title": "Card-trial quote & consent state (light)",
+          "key": "quote-consent",
+          "html_link": "billing-trial-discount-quote-consent.html",
+          "is_recommended": true
+        }
+      ]
+    },
+    {
+      "title": "Custom BYOK provider configuration (Content & Growth Agent)",
+      "key": "billing-byok-provider",
+      "description": "Settings › Providers custom BYOK: write-only masked keys stored via the existing encrypted provider settings API, custom base URL + model, server-validated probes with honest connected/missing/failed states, per-feature route and customer-funded status, no silent platform fallback, and a Test button disabled until saved.",
+      "variations": [
+        {
+          "title": "BYOK provider configuration state (light)",
+          "key": "configuration",
+          "html_link": "billing-byok-provider-configuration.html",
+          "is_recommended": true
+        }
+      ]
+    }
+  ]
+}

@@ -23,6 +23,11 @@ implementation authority. The current authoritative replacement is
 
 ## Delivery references
 
+- [`plans/billing-consolidation-summary.md`](plans/billing-consolidation-summary.md)
+  summarizes the approved billing, credits and BYOK consolidation;
+  [`plans/billing-consolidation.md`](plans/billing-consolidation.md) is the
+  execution authority and [`plans/billing-consolidation-progress.md`](plans/billing-consolidation-progress.md)
+  records verified progress and the next bounded task. This is future work, not shipped behavior.
 - [`DEVELOPMENT.md`](DEVELOPMENT.md) documents the local and clean-clone Compose workflows.
 - [`release-checklist.md`](release-checklist.md) defines pre-release verification; it does not
   authorize tagging or publishing.
