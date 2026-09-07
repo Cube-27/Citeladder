@@ -127,12 +127,13 @@ describe('Landing page (public marketing `/`)', () => {
     const { container } = renderWithProviders(<Page />);
 
     // The product beat is the editorial workspace canvas: one share-of-
-    // citations bar above a recorded-answers ledger, carrying the
-    // illustrative-workspace marker so a drawing never reads as a measurement.
+    // citations bar above a recorded-answers ledger, both rendered
+    // aria-hidden so a drawing never reads as a measurement.
     const product = container.querySelector('#see-it');
     expect(product).not.toBeNull();
-    expect(product).toHaveTextContent(/Illustrative workspace/i);
     expect(product).toHaveTextContent(/Share of citations/i);
+    expect(screen.getByText('Illustrative workspace')).toBeVisible();
+    expect(screen.queryByText(/Explore (Collect|Prioritize|Improve|Verify)/i)).toBeNull();
     expect(product).toHaveTextContent(/recorded answers/i);
     expect(product).not.toHaveTextContent(/Observe|Trace|Benchmark|Optimize/i);
     expect(product).not.toHaveTextContent(/example data/i);

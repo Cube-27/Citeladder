@@ -178,6 +178,18 @@ describe('DashboardScreen', () => {
     expect(state.compareDocumentPosition(movement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it('does not expose additional project creation before billing is live', async () => {
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: /manage project/i }));
+    expect(screen.queryByText('Add project')).not.toBeInTheDocument();
+  });
+
   it('downloads the authenticated executive PDF', async () => {
     const user = userEvent.setup();
     const createObjectURL = vi.fn(() => 'blob:report');

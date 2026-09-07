@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CompareDetailView } from '@/components/marketing/pages/compare-detail';
 import { COMPETITORS } from '@/lib/marketing-content/compare';
+import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
@@ -111,12 +112,22 @@ describe('CompareDetailView (/compare/[competitor])', () => {
   });
 
   it('shows the freshness line under the table', () => {
-    render(<CompareDetailView competitor={competitor} />);
+    const { container } = render(<CompareDetailView competitor={competitor} />);
 
-    expect(screen.getByText(/Maintained by the CiteLadder team/i)).toBeInTheDocument();
+    expect(screen.getByText(/Publisher-authored and maintained by/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'the CiteLadder team' })).toHaveAttribute(
+      'href',
+      PARENT_COMPANY.href,
+    );
     expect(
       screen.getByText(new RegExp(`Last reviewed\\s+${competitor.lastReviewed}`, 'i')),
     ).toBeInTheDocument();
+    expect(container.querySelector(`time[datetime="${competitor.lastReviewed}"]`)).not.toBeNull();
+    for (const source of competitor.sources) {
+      for (const link of screen.getAllByRole('link', { name: new RegExp(source.label) })) {
+        expect(link).toHaveAttribute('href', source.url);
+      }
+    }
   });
 
   it('links back to the comparison index', () => {

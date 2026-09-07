@@ -61,6 +61,7 @@ _ARCHIVE_PATH_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
 _DOCUMENTATION_CONTEXT_SIGNAL = "documentation_context"
 _SERVICE_EXPRESSION_SIGNAL = "service_capability_expression"
 _EXACT_ARCHIVE_ROOTS = frozenset({"/blog", "/blogs", "/news"})
+_EXACT_COMPARISON_HUB_ROOTS = frozenset({"/compare", "/comparisons"})
 _DECISIVE_LISTING_AFFORDANCE_CLASSES = frozenset(
     {"result_count", "sort", "filter", "facet", "empty_state"}
 )
@@ -188,21 +189,6 @@ def _signal(signal: str, page_kind: str, detail: str) -> dict[str, Any]:
         ),
         "detail": detail[:_MAX_SIGNAL_DETAIL_CHARS],
     }
-
-
-def is_question_heading(text: str) -> bool:
-    """Question-form heading: ends with "?" or starts with a question word.
-
-    Public since sh-extractor-2: the parser's ``question_heading_ratio`` fact
-    and the FAQ content heuristic share this one definition.
-    """
-    normalized = " ".join(str(text or "").split()).lower()
-    if not normalized:
-        return False
-    if normalized.endswith("?"):
-        return True
-    first_word = normalized.split(" ", 1)[0].strip("¿?¡!.,:;\"'")
-    return first_word in _config.PAGE_KIND_QUESTION_WORDS
 
 
 def _mapping(value: Any) -> dict[str, Any]:
@@ -441,8 +427,8 @@ def _structural_signals(
         )
     listing = _mapping(entity.get("listing"))
     listing_detail = _listing_evidence(listing)
-    if not listing_detail and _is_archive_path(path):
-        listing_detail = _archive_listing_evidence(listing)
+    if not listing_detail and _is_collection_hub_path(path):
+        listing_detail = _hub_listing_evidence(listing)
     if listing_detail:
         signals.append(
             _signal(
@@ -554,17 +540,21 @@ def _is_archive_path(path: str) -> bool:
     )
 
 
-def _archive_listing_evidence(listing: dict) -> str:
-    """An exact archive route corroborated by one repeated linked collection."""
+def _is_collection_hub_path(path: str) -> bool:
+    return path in _EXACT_COMPARISON_HUB_ROOTS or _is_archive_path(path)
+
+
+def _hub_listing_evidence(listing: dict) -> str:
+    """An exact hub route corroborated by one repeated linked collection."""
     collection = _mapping(listing.get("collection_evidence"))
     container = _mapping(collection.get("container"))
     size = container.get("item_count")
     targets = container.get("distinct_targets")
-    if not isinstance(size, int) or size < _config.LISTING_MIN_CARD_ITEMS:
+    if not isinstance(size, int) or size < _config.CARD_LIST_MIN_ITEMS:
         return ""
-    if not isinstance(targets, int) or targets < _config.LISTING_MIN_CARD_ITEMS:
+    if not isinstance(targets, int) or targets < _config.CARD_LIST_MIN_ITEMS:
         return ""
-    return f"archive_collection:{size}"
+    return f"hub_collection:{size}"
 
 
 def _location_evidence(location: dict, *, has_local_route: bool) -> str:

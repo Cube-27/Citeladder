@@ -59,7 +59,6 @@ from app.core.config.site_health_rule_types import (
 from app.core.config.site_health_rules import (
     ANSWER_FIRST_MIN_WORDS,
     META_DESCRIPTION_LENGTH_BAND,
-    QUESTION_HEADINGS_MIN_RATIO,
     SERVER_RENDERED_MIN_WORDS,
     SITE_HEALTH_RULES,
     TITLE_LENGTH_BAND,
@@ -169,7 +168,7 @@ def _html_facts(**overrides):
             "ambiguous_source_count": 0,
             "invalid_source_count": 0,
         },
-        "question_heading_ratio": 0.5,
+        "question_answer_relationships": [],
         "direct_answer": (
             "Acme widgets are reliable little gadgets that just work for every team."
         ),
@@ -511,7 +510,7 @@ def _js_shell_facts():
         headings={"h1_count": 0, "counts": {"h1": 0, "h2": 0}},
         body={"word_count": 0, "text": ""},
         inline_script_chars=1269,
-        question_heading_ratio=0.0,
+        question_answer_relationships=[],
         authorship={
             "declared_author": "",
             "declared_author_source": "",
@@ -2283,48 +2282,88 @@ def test_answer_first_missing_without_headings():
 
 
 def _faq_facts(**overrides):
-    """The healthy fixture as an FAQ with primary-content question headings."""
-    values = {"question_heading_ratio": 1.0, **overrides}
-    if "primary_heading_outline" not in values and "headings" not in values:
-        question_ratio = float(values["question_heading_ratio"])
-        subheadings = (
-            ["What are Acme widgets?", "How do Acme widgets work?"]
-            if question_ratio > QUESTION_HEADINGS_MIN_RATIO
-            else ["Acme widget overview", "Using Acme widgets"]
-        )
-        values["primary_heading_outline"] = [
-            {"level": 1, "text": "Acme Widget FAQ"},
-            *({"level": 2, "text": text} for text in subheadings),
-        ]
+    """A healthy FAQ with explicit, server-rendered answer relationships."""
+    values = {
+        "question_answer_relationships": [
+            {
+                "question": "What are Acme widgets?",
+                "answer": "Acme widgets are reliable tools.",
+                "source": "heading",
+                "answer_state": "available",
+                "reason": "",
+            },
+            {
+                "question": "How do Acme widgets work?",
+                "answer": "They use a documented workflow.",
+                "source": "heading",
+                "answer_state": "available",
+                "reason": "",
+            },
+        ],
+        **overrides,
+    }
     return _html_facts(page_kind="faq", **values)
 
 
-def test_question_headings():
+def test_question_answer_relationships():
     assert (
         _outcome(_faq_facts(), "aeo.question_headings").outcome
         == RULE_OUTCOME_SATISFIED
     )
-    ev = _outcome(_faq_facts(question_heading_ratio=0.0), "aeo.question_headings")
+    ev = _outcome(_faq_facts(question_answer_relationships=[]), "aeo.question_headings")
     assert ev.outcome == RULE_OUTCOME_MISSING
-    assert ev.evidence["question_heading_ratio"] == 0.0
-    assert ev.evidence["minimum_ratio"] == QUESTION_HEADINGS_MIN_RATIO
+    assert ev.evidence["reason"] == "no_question_answer_relationships"
 
 
-def test_question_headings_missing_without_subheadings():
-    ev = _outcome(
+def test_question_answer_relationships_require_every_answer():
+    complete = _outcome(
         _faq_facts(
-            question_heading_ratio=0.0,
-            headings={
-                "h1_count": 1,
-                "counts": {"h1": 1},
-                "h2_texts": [],
-                "h3_texts": [],
-            },
+            question_answer_relationships=[
+                {
+                    "question": "What is Acme?",
+                    "answer": "Acme is a widget.",
+                    "source": "details",
+                    "answer_state": "available",
+                    "reason": "",
+                }
+            ]
         ),
         "aeo.question_headings",
     )
-    assert ev.outcome == RULE_OUTCOME_MISSING
-    assert ev.evidence["reason"] == "no_subheadings"
+    incomplete = _outcome(
+        _faq_facts(
+            question_answer_relationships=[
+                {
+                    "question": "What is Acme?",
+                    "answer": "Acme is a widget.",
+                    "source": "details",
+                    "answer_state": "available",
+                    "reason": "",
+                },
+                {
+                    "question": "How does Acme work?",
+                    "answer": "",
+                    "source": "details",
+                    "answer_state": "missing",
+                    "reason": "answer_content_missing",
+                },
+            ]
+        ),
+        "aeo.question_headings",
+    )
+
+    assert complete.outcome == RULE_OUTCOME_SATISFIED
+    assert incomplete.outcome == RULE_OUTCOME_MISSING
+    assert incomplete.evidence["reason"] == "question_answer_missing"
+
+
+def test_empty_question_answer_relationships_do_not_fall_back_to_headings():
+    evaluation = _outcome(
+        _faq_facts(question_answer_relationships=[]), "aeo.question_headings"
+    )
+
+    assert evaluation.outcome == RULE_OUTCOME_MISSING
+    assert evaluation.evidence["reason"] == "no_question_answer_relationships"
 
 
 def test_server_rendered_content():
@@ -2441,7 +2480,7 @@ def test_question_headings_apply_to_faq_pages_only():
     # An FAQ whose sections are not questions is not really an FAQ, so the
     # finding survives there. A guide, a reference page or an essay carries no
     # such obligation and was being failed for prose style.
-    facts = _html_facts(question_heading_ratio=0.0)
+    facts = _html_facts(question_answer_relationships=[])
     assert (
         _outcome({**facts, "page_kind": "faq"}, "aeo.question_headings").outcome
         == RULE_OUTCOME_MISSING
@@ -2466,14 +2505,23 @@ def test_only_faq_kind_produces_determinate_answer_expectations():
         assert _outcome(embedded_faq, rule_id).outcome == RULE_OUTCOME_NOT_APPLICABLE
 
 
-def test_question_heading_ratio_requires_a_real_faq_pattern():
-    sparse = _faq_facts(question_heading_ratio=QUESTION_HEADINGS_MIN_RATIO - 0.1)
-    boundary = _faq_facts(question_heading_ratio=QUESTION_HEADINGS_MIN_RATIO)
-    for facts in (sparse, boundary):
-        assert _outcome(facts, "aeo.answer_first").outcome != (
-            RULE_OUTCOME_NOT_APPLICABLE
-        )
-        assert _outcome(facts, "aeo.question_headings").outcome == RULE_OUTCOME_MISSING
+def test_unavailable_faq_answers_remain_unknown():
+    facts = _faq_facts(
+        question_answer_relationships=[
+            {
+                "question": "How does Acme work?",
+                "answer": "",
+                "source": "aria_controls",
+                "answer_state": "unavailable",
+                "reason": "answer_panel_missing",
+            }
+        ]
+    )
+
+    evaluation = _outcome(facts, "aeo.question_headings")
+
+    assert evaluation.outcome == RULE_OUTCOME_UNKNOWN
+    assert evaluation.evidence["reason"] == "question_answers_unavailable"
 
 
 def test_triggered_rule_requires_same_family_sibling_in_each_profile():

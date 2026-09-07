@@ -97,7 +97,12 @@ export function ShareBar({ segments }: Readonly<{ segments: readonly Segment[] }
               SEGMENT_FILL[segment.key],
             )}
           >
-            <span className={cn('truncate px-2.5 text-xs font-medium', SEGMENT_LABEL[segment.key])}>
+            <span
+              className={cn(
+                'hidden truncate px-2.5 text-xs font-medium sm:inline',
+                SEGMENT_LABEL[segment.key],
+              )}
+            >
               {segment.label}
             </span>
           </div>

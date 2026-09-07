@@ -71,11 +71,8 @@ def test_observed_traits_per_fixture(fixture, url, expected) -> None:
 def test_an_article_with_descriptive_headings_is_not_an_faq() -> None:
     """The false positive this trait was tightened to avoid.
 
-    The classifier's FAQ signal counts any heading opening with what/why/how
-    as a question, which is right where it competes with other signals and is
-    resolved by tier precedence. A trait stands alone -- whatever keys on it
-    fires with no second opinion -- so ``has_faq`` requires a literal question
-    mark. "What drying actually removes" is a section, not a question.
+    Descriptive headings such as "What drying actually removes" are not
+    grammatical questions and cannot create question-answer relationships.
     """
     url = "https://northgate.example/blog/kiln-dried-oak"
     facts = _facts("article_no_schema.html", url)
@@ -83,6 +80,30 @@ def test_an_article_with_descriptive_headings_is_not_an_faq() -> None:
     assert len(headings) >= config.PAGE_KIND_FAQ_MIN_HEADINGS
     assert not any(text.strip().endswith("?") for text in headings)
     assert "has_faq" not in derive_traits(url, facts)
+
+
+def test_answered_question_pairs_are_an_faq_trait_without_heading_markup() -> None:
+    facts = {
+        "question_answer_relationships": [
+            {
+                "question": "What is Acme?",
+                "answer": "Acme is a widget.",
+                "answer_state": "available",
+            },
+            {
+                "question": "How does Acme work?",
+                "answer": "It has a workflow.",
+                "answer_state": "available",
+            },
+            {
+                "question": "Can Acme export?",
+                "answer": "Yes, it can export.",
+                "answer_state": "available",
+            },
+        ]
+    }
+
+    assert "has_faq" in derive_traits("https://example.test/page", facts)
 
 
 def test_about_page_ignores_footer_contact_chrome() -> None:
@@ -124,6 +145,23 @@ def test_a_product_page_carrying_an_faq_keeps_both() -> None:
             "Do you deliver outside the UK?",
         ],
     }
+    facts["question_answer_relationships"] = [
+        {
+            "question": "How long does delivery take?",
+            "answer": "Delivery has a schedule.",
+            "answer_state": "available",
+        },
+        {
+            "question": "Can I return a made-to-measure piece?",
+            "answer": "Returns are supported.",
+            "answer_state": "available",
+        },
+        {
+            "question": "Do you deliver outside the UK?",
+            "answer": "International delivery is available.",
+            "answer_state": "available",
+        },
+    ]
     assessment = classify(url, facts)
     assert assessment.page_kind == "product"
     traits = derive_traits(url, facts)

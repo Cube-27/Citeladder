@@ -31,7 +31,7 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
             <tr className="border-border-subtle bg-background-alt border-b">
               <th
                 scope="col"
-                className="text-muted bg-background-alt z-1 px-4 py-3 text-xs font-medium tracking-wide uppercase sm:sticky sm:left-0"
+                className="text-muted bg-background-alt sticky left-0 z-1 px-4 py-3 text-xs font-medium tracking-wide uppercase"
               >
                 Capability
               </th>
@@ -58,7 +58,7 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
                 <th
                   scope="row"
                   className={cn(
-                    'text-foreground z-1 px-4 py-2.5 text-sm font-medium sm:sticky sm:left-0',
+                    'text-foreground z-1 sticky left-0 px-4 py-2.5 text-sm font-medium',
                     index % 2 === 1 ? 'bg-background-alt' : 'bg-panel',
                   )}
                 >

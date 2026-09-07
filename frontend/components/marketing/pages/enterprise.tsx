@@ -269,7 +269,7 @@ export function EnterpriseLimits() {
               key={item.title}
               className="bg-panel hover:bg-accent-soft p-6 transition-colors duration-200 md:p-7"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
                 <h4 className="website-small-heading text-foreground">{item.title}</h4>
                 <span className="bg-well text-secondary shrink-0 rounded-[var(--radius-control)] px-2.5 py-1 text-xs font-medium">
                   {item.badge}

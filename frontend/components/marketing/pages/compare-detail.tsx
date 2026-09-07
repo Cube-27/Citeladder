@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 import type { Competitor } from '@/lib/marketing-content/compare';
+import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
@@ -47,7 +48,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                 <tr className="border-border-subtle bg-background-alt border-b">
                   <th
                     scope="col"
-                    className="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase"
+                    className="text-muted bg-background-alt sticky left-0 z-1 px-4 py-3 text-xs font-medium tracking-wide uppercase"
                   >
                     Dimension
                   </th>
@@ -77,7 +78,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                     <th
                       scope="row"
                       className={cn(
-                        'text-foreground w-36 px-4 py-2.5 align-top text-sm font-medium',
+                        'text-foreground z-1 w-36 sticky left-0 px-4 py-2.5 align-top text-sm font-medium',
                         index % 2 === 1 ? 'bg-background-alt' : 'bg-panel',
                       )}
                     >
@@ -88,6 +89,24 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                     </td>
                     <td className="text-muted px-4 py-2.5 align-top text-sm leading-snug">
                       {row.competitor}
+                      <span className="text-subtle mt-1 block text-xs">
+                        Sources:{' '}
+                        {competitor.sources
+                          .filter((source) => source.dimensions.includes(row.dimension))
+                          .map((source, sourceIndex) => (
+                            <span key={source.url}>
+                              {sourceIndex > 0 ? ' · ' : ''}
+                              <a
+                                href={source.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-accent-text hover:text-foreground underline"
+                              >
+                                {source.label}
+                              </a>
+                            </span>
+                          ))}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -95,10 +114,39 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
             </table>
           </div>
         </Reveal>
-        <p className="website-label text-subtle mt-3">
-          Maintained by the CiteLadder team from each vendor’s public pages. Last reviewed{' '}
-          {competitor.lastReviewed}. Re-check before quoting.
-        </p>
+        <div className="website-label text-subtle mt-3 space-y-1">
+          <p>
+            Publisher-authored and maintained by{' '}
+            <a
+              href={PARENT_COMPANY.href}
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent-text hover:text-foreground underline"
+            >
+              the CiteLadder team
+            </a>
+            .{' '}
+            <time dateTime={competitor.lastReviewed}>Last reviewed {competitor.lastReviewed}</time>.
+          </p>
+          <p>
+            Comparison criteria: published product capabilities, pricing, evidence access, and
+            measurement method. Source links appear beside the dimensions they support:{' '}
+            {competitor.sources.map((source, index) => (
+              <span key={source.url}>
+                {index > 0 ? ' · ' : ''}
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent-text hover:text-foreground underline"
+                >
+                  {source.label} ({source.dimensions.join(', ')})
+                </a>
+              </span>
+            ))}
+            . Re-check before quoting.
+          </p>
+        </div>
       </Section>
 
       <Section tone="sunken" rhythm="tight" aria-label="Verdict and fit">

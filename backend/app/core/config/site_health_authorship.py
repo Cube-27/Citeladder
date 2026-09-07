@@ -6,6 +6,12 @@ from typing import Final
 
 BYLINE_PATTERN: Final = r"\b[Bb]y\s+[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){1,2}\b"
 VISIBLE_AUTHOR_NAME_PATTERN: Final = r"^[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){0,3}$"
+VISIBLE_PUBLISHER_PATTERN: Final = (
+    r"\b(?i:maintained|published|written|reviewed)\s+(?i:by)\s+"
+    r"(?:(?i:the)\s+)?(?P<publisher>[A-Z][\w'’&.-]*"
+    r"(?:\s+(?:[A-Z][\w'’&.-]*|team)){0,4})"
+    r"(?=\s*(?:\s+(?i:from)\b|[.,;]|$))"
+)
 
 # ISO, month-first, and day-first publication-shaped dates.
 DATE_PATTERN: Final = (

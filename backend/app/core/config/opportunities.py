@@ -573,6 +573,40 @@ SITE_ISSUE_TO_OPPORTUNITY_RULE_ID: Final[dict[str, str]] = {
     "aeo.product_brand_identity": "citability_trust_incomplete",
 }
 
+# Atom-specific copy remains presentation policy, while the detector merely
+# selects it from persisted composite-rule evidence. Missing/legacy atom
+# evidence deliberately falls back to the catalog rule's general wording.
+SITE_ISSUE_ATOM_PRESENTATION: Final[
+    dict[str, dict[tuple[str, ...], tuple[str, str]]]
+] = {
+    "aeo.entity_value_proposition": {
+        ("entity_identity",): (
+            "Name the organization in the page introduction",
+            "Add a clear, reader-visible organization identity to the page's "
+            "primary content; keep the existing value proposition intact.",
+        ),
+        ("value_proposition",): (
+            "State what the organization provides",
+            "Add a substantive, reader-visible explanation of what the "
+            "identified organization provides or helps visitors accomplish.",
+        ),
+        ("entity_identity", "value_proposition"): (
+            "Identify the organization and what it provides",
+            "Add a clear organization identity and a substantive explanation "
+            "of what it provides in the page's primary content.",
+        ),
+        ("contact_path",): (
+            "Provide a usable contact path",
+            "Add a reader-visible contact method or a clearly labelled contact form.",
+        ),
+        ("contact_path", "entity_identity"): (
+            "Identify the organization and provide a contact path",
+            "Name the organization in primary content and add a reader-visible "
+            "contact method or clearly labelled contact form.",
+        ),
+    }
+}
+
 # =========================================================================
 # Deterministic scoring formula (config-owned tables, invariants 1 + 9)
 # =========================================================================

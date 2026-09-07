@@ -114,20 +114,12 @@ function Bar({
   );
 }
 
-/** The shared window chrome: product lockup, surface name, illustrative marker. */
-function WindowChrome({ label, tint }: Readonly<{ label: string; tint: Tint }>) {
+/** The shared window chrome: product lockup and surface name. */
+function WindowChrome({ label }: Readonly<{ label: string }>) {
   return (
     <div className="border-border-subtle flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-1.5">
-      <LogoMark size={16} wordmark={false} />
+      <LogoMark variant="mini" wordmark={false} />
       <span className="text-foreground text-xs font-medium">{label}</span>
-      <span
-        className={cn(
-          'text-muted ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium',
-          TINT_WASH[tint],
-        )}
-      >
-        Illustrative
-      </span>
     </div>
   );
 }
@@ -272,7 +264,7 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
           { name: 'Schema Validation', value: 92, status: 'Validated', delta: 'No change' },
         ].map(({ name, value, status, delta }) => (
           <div key={name} className="grid gap-2">
-            <div className="flex items-baseline justify-between gap-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
               <span className="text-foreground text-sm font-medium">{name}</span>
               <div className="flex items-baseline gap-2.5">
                 <span className="text-muted text-xs">{delta}</span>
@@ -318,7 +310,7 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
         ].map(({ label, val, state, done }) => (
           <div
             key={label}
-            className="border-border-subtle flex items-center justify-between gap-3 border-b pb-3 text-sm last:border-b-0 last:pb-0"
+            className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b pb-3 text-sm last:border-b-0 last:pb-0"
           >
             <span className="text-muted">{label}</span>
             <div className="flex items-center gap-3">
@@ -423,7 +415,7 @@ const PANELS: Record<SolutionScene, (tint: Tint) => React.ReactNode> = {
           { label: 'Competitor domain', share: 18, engines: 'Cited 1/5 engines', own: false },
         ].map(({ label, share, engines, own }) => (
           <div key={label} className="grid gap-1.5">
-            <div className="flex items-baseline justify-between gap-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
               <span className={cn('text-sm', own ? 'text-foreground font-medium' : 'text-muted')}>
                 {label}
               </span>
@@ -455,7 +447,7 @@ export function SolutionEvidencePanel({
   return (
     <WallpaperPanel className={cn('p-3 sm:p-5', TINT_CLASSES[tint], className)}>
       <div className="bg-panel border-border-subtle overflow-hidden rounded-[var(--radius-card)] border shadow-[0_2px_8px_rgb(12_16_36/0.06),0_24px_56px_-24px_rgb(12_16_36/0.18)]">
-        <WindowChrome label={PANEL_LABELS[scene]} tint={tint} />
+        <WindowChrome label={PANEL_LABELS[scene]} />
         {/* The illustrative rows stay hidden from assistive technology so they
             are never announced as persisted customer evidence. */}
         <div aria-hidden className="px-4 py-5 sm:px-5">

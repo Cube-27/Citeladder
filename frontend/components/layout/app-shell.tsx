@@ -35,9 +35,13 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         <aside className="relative z-1 hidden w-[var(--sidebar-width)] shrink-0 flex-col transition-[width] md:flex">
           {/* Logo row — matches topbar height */}
           <div className="flex h-[var(--topbar-height)] shrink-0 items-center px-[var(--sidebar-pad-x)]">
-            <span className="px-2.5">
-              <LogoMark size={24} />
-            </span>
+            <Link
+              href="/projects"
+              className="focus-ring flex items-center rounded-xs px-2.5 transition-opacity hover:opacity-90"
+              aria-label="CiteLadder command center"
+            >
+              <LogoMark variant="sidebar" priority />
+            </Link>
           </div>
 
           <div className="px-[var(--sidebar-pad-x)] py-[var(--sidebar-pad-y)]">
@@ -61,7 +65,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 className="flex shrink-0 items-center gap-2 md:hidden"
                 aria-label="CiteLadder command center"
               >
-                <LogoMark size={22} />
+                <LogoMark variant="compact" priority />
               </Link>
               <PageHeader className="min-w-0 flex-1 [&_h1]:truncate" />
             </div>

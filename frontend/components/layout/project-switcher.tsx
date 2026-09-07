@@ -15,6 +15,7 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
+import { ADDITIONAL_PROJECT_CREATION_ENABLED } from '@/lib/config/billing';
 
 /**
  * ProjectSwitcher (F5) — brand avatar + active project name with a dropdown of
@@ -71,16 +72,20 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
             </DropdownItem>
           );
         })}
-        <DropdownSeparator />
-        <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
-          <span
-            aria-hidden
-            className="bg-accent-soft text-accent-text flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
-          >
-            <Plus className="size-4" />
-          </span>
-          <span className="min-w-0 flex-1 truncate">New project</span>
-        </DropdownItem>
+        {ADDITIONAL_PROJECT_CREATION_ENABLED ? (
+          <>
+            <DropdownSeparator />
+            <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
+              <span
+                aria-hidden
+                className="bg-accent-soft text-accent-text flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"
+              >
+                <Plus className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1 truncate">New project</span>
+            </DropdownItem>
+          </>
+        ) : null}
       </DropdownContent>
     </Dropdown>
   );

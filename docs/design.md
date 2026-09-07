@@ -7,42 +7,27 @@
 
 CiteLadder is a light-only, evidence-led enterprise system. The authenticated
 application uses the **Prism Evidence Workspace**: one grained ground carrying the chrome and white paper carrying the work,
-near-black ink, a brand-green primary action, green for analytical selection, semantic evidence
+dark navy ink, a brand-blue primary action, semantic evidence
 washes, useful density, and deliberate negative space. It is an operating
 workspace, not a wall of equal-weight KPI cards.
 
 - **Name and domain:** CiteLadder, `citeladder.com`.
-- **Logo:** one lockup component, `frontend/components/ui/logo-mark.tsx` — the
-  mark drawn as inline SVG at `currentColor`, followed by the wordmark set as
-  live text at one weight on every surface (`.logo-wordmark`: Geist 600 —
-  the wordmark cannot ride the scoped `--font-display` variable, because the
-  public scope rebinds that to a 400-only serif face). The mark’s path data is the
-  supplied glyph (`frontend/public/citeladder-logo-black.svg`, with
-  `-white.svg` as the knocked-out source of record) re-boxed to its own ink,
-  because the source viewBox padded the artwork by roughly 15% a side and a
-  centred box still sat low. With the box equal to the ink the lockup centres on
-  any text row and no call site nudges it. Inheriting `currentColor` is what
-  lets a dark band’s token rebind ink it white on its own — there is no filtered
-  second asset and no `brightness-0 invert`. One `size` prop sets the mark
-  height and derives the wordmark from it at the lockup’s 1.2 ratio, so the two
-  halves cannot drift apart; `wordmark={false}` is the mark-only mode for chrome
-  too small to set the word. Product, marketing, authentication, and onboarding
-  all reuse that component rather than rebuilding the lockup, and the flow bar
-  shares the marketing nav's container and gutter, so the wordmark sits at the
-  same left edge on every surface.
+- **Logo:** one lockup component, `frontend/components/ui/logo-mark.tsx` uses
+  the canonical `frontend/public/citeladder-logo.svg` asset for the full
+  wordmark and the matching inline vector glyph for mark-only mode. The shared
+  `BRAND_LOGO_SIZES` ladder owns standard heights; an explicit `size` remains
+  available for exceptional layouts. Mark-only mode inherits `currentColor`,
+  while a non-empty `alt` exposes either rendering with that accessible name.
+  Product, marketing, authentication, and onboarding all reuse this owner.
   `frontend/public/citeladder-favicon.ico` owns browser and installable-app
   iconography with the same black silhouette across its frames.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
   and outcomes over generic AI language.
 - **Typography:** two scoped treatments from one `next/font/local` owner. The
   authenticated product uses **Geist Variable** exclusively for UI, body, data,
-  and headings. The public and focused-flow surfaces render **Instrument Serif** as the display face — a
-  400-only single-weight serif whose display rungs are set at 700, a
-  deliberate browser synthesis and the chosen headline treatment, and
-  stretched 8% wider than their text column by the `--display-squeeze`
-  knob (1.08; 1 is neutral, and `.origin-centre` flips the stretch origin
-  for centred headings) —
-  over **Geist Variable** (the full 100–900
+  and headings. The public and focused-flow surfaces render **Barlow** as the display face — a
+  clean, modern typeface rendered with natural weights (500 default across headings) and a 48px
+  landing page hero — over **Geist Variable** (the full 100–900
   wght axis) for body, UI, and data; the flow ladder shares that pairing.
   Website and flow surfaces use a 15px reading baseline. Size,
   leading, weight, tracking, and
@@ -55,15 +40,12 @@ workspace, not a wall of equal-weight KPI cards.
   ladder in `app/globals.css` derives it from the size class so every glyph
   lands near a 1.3px stem instead of growing heavier with the icon. Colour stays
   `currentColor` so `text-muted` and `text-accent-text` keep painting the glyph.
-- **Action and selection:** brand green (`#0B7A3C`, from the reference system's
-  product-hue set) owns primary actions on every surface — product,
-  authentication, onboarding, and the public marketing site (the shared solid
-  `primary` button). Analytical selection, links, active navigation, and focus
-  consume the semantic accent ladder (`#0B7A3C` with `#08592C` for hover/press
-  depth). The public surface takes a deeper cut of that green (`#0A6E35`) and a
-  near-black indigo ink, so type and actions print with more contrast than the
-  reference navy wash, and the deep teal (`#0C2626`) carries the closing band
-  on every marketing page. Cyan, coral, lime,
+- **Action and selection:** primary accent (`#395AFA`) owns primary actions on
+  every surface — product, authentication, onboarding, and the public marketing site
+  (the shared solid `primary` button). Analytical selection, links, active navigation, and focus
+  consume the semantic accent ladder (`#395AFA` with `#2947E3` for hover and `#203CC9` for press
+  depth). A single definition in `@theme` in `globals.css` propagates token-driven primary color
+  to all surfaces without arbitrary per-surface overrides. Cyan, coral, lime,
   and amber are evidence/status families, never route decoration.
 - **Composition:** state before features. Product pages prioritise current state,
   movement, next action, then evidence. Marketing is more editorial but uses the
@@ -107,18 +89,18 @@ Tokens are semantic; components use the role, not a colour value.
 | Ground | `shell` (`#F1F4F1`), `shell-alt` (`#ECF1EC`) | The single grained sheet every chrome region stands on: the app sidebar and top bar and the focused flow's bar and action bar |
 | Canvas and structure | `background` (`#F7F6FD`), `well` / `background-alt` / `panel-tonal` (`#F4F4F1`), `active` (`#EFEFEB`) | The neutral inset ladder used *inside* paper — wells, tonal panels, hover and selected state |
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
-| Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
+| Text | `foreground` (`#172554`), `secondary` (`#24356B`), `muted` (`#3D4F8C`), `subtle` (`#55639A`), disabled (`#9A9AA0`) | Editorial ink roles — a dark navy family, five distinct steps; grey survives only for the disabled state |
 | Borders | `border-subtle` (`#E3E2EC`), `border` (`#D1D0DC`), `border-strong` (`#A2A0B0`), `border-bold` (`#747282`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
-| Marketing canvases | `band-indigo` (`#131028`), `band-teal` (`#0C2626`), `canvas-soft` (`#F6F5F1`), `violet-soft` (`#C9B4FA`), `atmosphere-blue`, `atmosphere-green`, `hairline-warm` (`#D8D3C8`) | The public surface's editorial system — see the marketing arc below. Decorative; never state |
-| Primary action | `action-*` (`#0B7A3C`) | Brand-green primary actions on every surface, public site included |
-| Selection and focus | `accent-*` (`#0B7A3C`) | Green for selection, links, tabs, active navigation, and focus; violet (`#C9B4FA`) inside the indigo band, near-white inside the teal band |
+| Marketing canvases | `band-indigo` (`#131028`), `band-teal` (`#0C2626`), `canvas-soft` (`#F8FAFC`), `violet-soft` (`#C9B4FA`), `atmosphere-blue`, `atmosphere-green`, `hairline-warm` (`#E2E8F0`) | The public surface's editorial system — see the marketing arc below. Decorative; never state |
+| Primary action | `action-*` (`#395AFA`) | Brand-blue primary actions on every surface, public site included |
+| Selection and focus | `accent-*` (`#395AFA`) | Blue for selection, links, tabs, active navigation, and focus; violet (`#C9B4FA`) inside the indigo band, near-white inside the teal band |
 | Status and evidence | cyan, coral, lime, amber, `citation-*`, `run-*`, `score-*`, `chart-*` | Persisted evidence and status, always paired with a label or icon |
 
-The ground is paper and the ink is near-black. Colour appears on under five
-percent of the surface: `action` `#0B7A3C` owns solid primary buttons on
+The ground is paper and the ink is dark navy. Colour appears on under five
+percent of the surface: `action` `#395AFA` owns solid primary buttons on
 product, authentication, and onboarding (hover steps one rung deeper along the
-accent ramp, `#08592C`; press settles at `#074D27`), and green
-`#0B7A3C` owns selection, links,
+accent ramp, `#2947E3`; press settles at `#203CC9`), and blue
+`#395AFA` owns selection, links,
 tabs, active navigation, focus, and the first chart series. The model is
 **one ground, two papers**. Chrome — the app sidebar and top bar, the focused
 flow's bar and action bar — is one grained sheet in `shell` (`#F1F4F1`), and
@@ -144,17 +126,15 @@ requires all four neutral text roles to meet WCAG 2.1 AA normal-text contrast
 (`4.5:1`) on every shared light surface, including `active`.
 
 Marketing renders the **light editorial system**: a white page that opens on a
-centred serif hero over the pastel atmosphere washes, alternates white body
-bands with the barely warm `sunken` off-white (`canvas-soft` `#F6F5F1`), and
+centred Barlow hero over the pastel atmosphere washes, alternates white body
+bands with the cool `sunken` off-white (`canvas-soft` `#F8FAFC`), and
 closes on the deep-teal band (`band-teal` `#0C2626`) that resolves every
-marketing page. The public surface rebinds the text inks to a near-black
-indigo family (`[data-public-surface]` in `globals.css` — `#121216`
-foreground through `#5F5F6A` subtle) and steps the hairlines up a rung, so the
-site prints with more contrast than the reference navy wash; the brand green
-keeps its ownership of primary actions (the shared solid `primary` button),
-selection, focus, and links at a deeper public cut (`#0A6E35`, with
-`#085C2C` and `#064A23` for hover and press) — the product keeps the
-reference green. The indigo canvas (`band-indigo` `#131028`) survives as a
+marketing page. The public surface rebinds the text inks to a deeper dark
+navy family (`[data-public-surface]` in `globals.css` — `#0F172A`
+foreground through `#64748B` subtle) and steps the hairlines up a rung, so the
+site prints with more contrast than the product. The public surface inherits
+the shared blue action/accent ramp rather than declaring a route-local cut.
+The indigo canvas (`band-indigo` `#131028`) survives as a
 depth accent, not a page ground: the featured pricing
 tier inverts onto it, and its one-place token rebind
 (`[data-citeladder-section='indigo']`) steps that card's accent and action up
@@ -167,8 +147,8 @@ Functional evidence families remain inside product data and faithful preview
 scenes because those states must stay legible at a glance. Functional colour
 never carries meaning alone. Grain is the material the ground is made of, not
 an effect: `.band-grain` lays a fractal-noise tile over a plane at
-`--grain-opacity`, which a band overrides — `.grain-soft` (3%) for app and flow
-chrome, 5% on paper, 7% on a tinted band and 9% on the teal
+`--grain-opacity`, which a band overrides — `.grain-soft` (1%) for app and flow
+chrome, 1.5% on paper and tinted bands, and 9% on the teal
 canvas, because noise all but disappears into a dark ground and reads as dirt
 at product density. The same noise blends into the blog photography at 16%
 with an overlay blend (`.photo-grain`), so a shot reads as a printed plate
@@ -184,11 +164,8 @@ hue accents on `/solutions`, never used for state.
 Two self-hosted faces, both owned by `next/font/local` declarations in
 `app/layout.tsx`. The authenticated product uses **Geist Variable** (`100–900`)
 exclusively for UI, body, data, and headings. The public and focused-flow
-surfaces pair **Instrument Serif** as the display face — a 400-only
-single-weight serif, so its display rungs' 700 is a deliberate browser
-synthesis and the `--display-squeeze` knob (1.08) stretches the rungs 8% wider
-than their text column — with **Geist Variable** (`100–900`) for body, UI, and
-data. All swap display.
+surfaces pair **Barlow** (`400`, `500`, `600`, and `700`) as the display face
+with **Geist Variable** (`100–900`) for body, UI, and data. All swap display.
 Metrics, dates, ranks,
 and percentages use tabular numerals, never a monospace face.
 
@@ -200,19 +177,10 @@ components consume these roles instead of assembling arbitrary size, leading,
 tracking, weight, and colour combinations.
 
 The ladder is mobile-first: the base value applies below 768px and the arrows
-mark the 768px and 1024px step-ups. The display rungs run large — the serif
-carries hierarchy through size, its synthesised 700, and the near-black ink —
-with
-calm leading (1.03–1.1) and near-zero tracking; tight sans-style tracking
-closes up its counters.
+mark the 768px and 1024px step-ups. Barlow carries display hierarchy through
+size, its natural 500 weight, tight tracking, and dark navy ink.
 | Role                    | Family           |      Size / line height |  Weight |                       Tracking | Colour                                      |
 | ----------------------- | ---------------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
-| Hero display            | Instrument Serif | 36/39 → 56/58 → 76/78px |     700 |                       -0.01em  | foreground; one short phrase may use accent |
-| Page title              | Instrument Serif |         30/34 → 52/56px |     700 |                       -0.01em  | foreground                                  |
-| Section heading         | Instrument Serif |         28/32 → 44/48px |     700 |                      -0.005em  | foreground                                  |
-| Feature heading         | Instrument Serif |         20/22 → 30/34px |     700 |                      -0.005em  | foreground                                  |
-| Small heading           | Instrument Serif |         17/23 → 22/26px |     700 |                      -0.005em  | foreground                                  |
-| Flow title              | Instrument Serif |         28/34 → 32/38px |     500 |                       -0.01em  | foreground                                  |
 | Flow group title        | Geist            |                 17/24px |     500 |                        -0.01em | foreground                                  |
 | Flow help               | Geist            |                 15/22px |     400 |                              0 | muted                                       |
 | Flow metadata           | Geist            |                 14/20px |     500 |                              0 | muted; tabular numerals                     |
@@ -610,7 +578,7 @@ Rules:
 ### Marketing and auth
 
 Marketing is editorial rather than dense, and renders the light editorial
-system: a page opens on a centred serif hero standing on the pastel atmosphere
+system: a page opens on a centred Barlow hero standing on the pastel atmosphere
 washes with the rotating engine roster on the first screen itself (or, on
 subpages, a white opener above a warm hairline), the body
 alternates white with the barely warm `sunken` off-white, and every marketing
@@ -634,6 +602,9 @@ on the page already categorises it, so most sections need no label.
   step panels — one product hue per stage, the way the reference system tints
   its numbered lifecycle — with the stage label naming the step.
 - Keep body copy around 60–70 characters wide and use one H1 per page.
+- The topbar keeps a Log in link at every width and the Book a demo CTA from
+  `sm` up; on phones the demo CTA moves into the full-screen menu sheet,
+  pinned with the account links.
 - Auth uses the website type ladder and shared focus treatment; the form remains
   the primary task. Auth and onboarding use the same ground and the same paper
   as the app: the flow bar and the sticky action bar sit on the ground with no
@@ -655,7 +626,7 @@ Buttons use the 8px control-radius role with no decorative inset border in the
 authenticated application; app button sizes remain compact (32px/36px on desktop,
 44px on touch).
 Website and marketing primary buttons use the shared 8px control radius
-(`min-h-[2.75rem]`, 44px touch target) filled solid with the brand green —
+(`min-h-[2.75rem]`, 44px touch target) filled solid with the brand blue —
 the same `primary` action role the app uses, walking one rung deeper on hover.
 Secondary, neutral, ghost,
 and danger remain shared semantic variants. Every control has a direct label, a
@@ -749,11 +720,11 @@ Before merging a visual change, verify:
 - It uses semantic global tokens and an existing primitive where one applies.
 - Website and focused-flow type use documented content roles with a 15px body
   baseline; authenticated-app type uses Geist at weights 400 and 500 only.
-- Marketing renders the light editorial system: centred serif hero on the
-  pastel atmosphere, white body over `canvas-soft` alternates with near-black
+- Marketing renders the light editorial system: centred Barlow hero on the
+  pastel atmosphere, white body over `canvas-soft` alternates with dark navy
   inks, deep-teal close, light footer, and the real product canvas kept as the
   landing's product beat. One primary CTA per
-  band; brand green owns primary actions on every surface; decorative washes
+  band; brand blue owns primary actions on every surface; decorative washes
   and the pastel tiles never carry state; functional colour appears only in the
   app and inside faithful product previews.
 - Chrome stands on the `shell` ground and content on `.app-pane` paper, on every
@@ -776,7 +747,7 @@ Before merging a visual change, verify:
   prose punctuation is unaffected.
 
 The focused flow introduces no new colour family, gradient, decorative glow,
-nested card, or competitor mutation. Brand green owns the primary action and also owns
+nested card, or competitor mutation. Brand blue owns the primary action and also owns
 the current step and selected-answer state without changing font weight. The
 transaction flow and all explicit confirmation gates remain unchanged.
 - Repository-owned static, test, and appropriate visual commands pass. External

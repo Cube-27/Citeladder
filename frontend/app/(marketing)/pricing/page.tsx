@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { PricingCta } from '@/components/marketing/pages/pricing';
 import { PricingCatalog } from '@/components/marketing/pricing/pricing-catalog';
+import { PricingComingSoonStrip } from '@/components/marketing/pricing/pricing-coming-soon-strip';
 import { PageHero } from '@/components/marketing/primitives/page-hero';
 import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
 
@@ -52,6 +53,7 @@ export default function PricingPage() {
       >
         <TrustStrip className="mt-8 justify-center" />
       </PageHero>
+      <PricingComingSoonStrip />
       <PricingCatalog />
       <PricingCta />
     </main>

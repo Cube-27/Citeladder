@@ -699,6 +699,19 @@ def test_link_context_is_internal_anchor_text_only():
     assert "External partner" not in facts["link_context"]
 
 
+def test_hidden_and_non_rendered_anchors_are_not_persisted() -> None:
+    facts = _facts(
+        b"""<html><body><main>
+        <a href='/visible'>Visible</a>
+        <div hidden><a href='/hidden'>Hidden</a></div>
+        <div inert><a href='/inert'>Inert</a></div>
+        <template><a href='/template'>Template</a></template>
+        </main></body></html>"""
+    )
+
+    assert [anchor["url"] for anchor in facts["links"]["anchors"]] == ["/visible"]
+
+
 def test_role_facts_are_empty_for_a_page_without_them():
     facts = _facts(b"<html><body><p>Just prose.</p></body></html>")
     assert facts["cta_text"] == []
@@ -706,13 +719,26 @@ def test_role_facts_are_empty_for_a_page_without_them():
     assert facts["link_context"] == []
 
 
-def test_h3_texts_and_question_heading_ratio():
+def test_h3_texts_and_question_answer_relationships():
     facts = _facts(_V2_PAGE)
     headings = facts["headings"]
     assert headings["h3_texts"] == ["Do widgets work offline?"]
-    # h2 ("What are widgets?", "Installation") + h3 ("Do widgets work
-    # offline?"): 2 questions out of 3 headings.
-    assert facts["question_heading_ratio"] == round(2 / 3, 4)
+    assert facts["question_answer_relationships"] == [
+        {
+            "question": "What are widgets?",
+            "answer": "Answer text here.",
+            "source": "heading",
+            "answer_state": "available",
+            "reason": "",
+        },
+        {
+            "question": "Do widgets work offline?",
+            "answer": "",
+            "source": "heading",
+            "answer_state": "missing",
+            "reason": "answer_content_missing",
+        },
+    ]
 
 
 def test_author_and_dates_jsonld_wins_over_meta():
@@ -775,6 +801,66 @@ def test_visible_byline_and_date_are_read_when_no_markup_declares_them():
         "declared_author": "",
         "declared_author_source": "",
     }
+
+
+def test_visible_responsible_publisher_is_read_from_ordinary_copy():
+    facts = _facts(
+        b"<html><body><main><p>Maintained by <a href='https://www.cube27.com/'>"
+        b"the CiteLadder team</a>.</p></main></body></html>"
+    )
+
+    assert facts["authorship"]["visible_byline"] == "CiteLadder team"
+    assert facts["authorship"]["visible_profile_url"] == "https://www.cube27.com/"
+
+
+def test_existing_comparison_maintainer_sentence_has_a_bounded_publisher_name():
+    facts = _facts(
+        b"<html><body><main><p>Maintained by the CiteLadder team from each "
+        b"vendor's public pages. Last reviewed 2026-09-03.</p></main></body></html>"
+    )
+
+    assert facts["authorship"]["visible_byline"] == "CiteLadder team"
+
+
+def test_multiword_responsible_publisher_is_preserved():
+    facts = _facts(
+        b"<html><body><main><p>Reviewed by Acme Research Foundation.</p>"
+        b"</main></body></html>"
+    )
+
+    assert facts["authorship"]["visible_byline"] == "Acme Research Foundation"
+
+
+def test_related_card_publisher_does_not_become_page_attribution():
+    facts = _facts(
+        b"""<html><body><main><h1>Comparison guide</h1>
+        <section>
+          <article><a href='/a'>A</a><p>Reviewed by Vendor One.</p></article>
+          <article><a href='/b'>B</a><p>Reviewed by Vendor Two.</p></article>
+          <article><a href='/c'>C</a><p>Reviewed by Vendor Three.</p></article>
+        </section></main></body></html>"""
+    )
+
+    assert facts["authorship"]["visible_byline"] == ""
+
+
+def test_unrelated_primary_content_copy_is_not_responsible_publisher_evidence():
+    facts = _facts(
+        b"<html><body><main><p>Powered by Vendor Example.</p></main></body></html>"
+    )
+
+    assert facts["authorship"]["visible_byline"] == ""
+
+
+def test_responsible_publisher_does_not_take_a_later_unrelated_link_as_profile():
+    facts = _facts(
+        b"<html><body><main><p>Maintained by CiteLadder team.</p>"
+        b"<p><a href='https://vendor.example/'>Vendor documentation</a></p>"
+        b"</main></body></html>"
+    )
+
+    assert facts["authorship"]["visible_byline"] == "CiteLadder team"
+    assert facts["authorship"]["visible_profile_url"] == ""
 
 
 def test_visible_attribution_accepts_heading_byline_and_explicit_author_name():
@@ -1165,7 +1251,7 @@ def test_page_owned_content_facts_are_distinct_and_exclude_chrome_modules() -> N
     assert "Related one" not in facts["primary_content_text"]
     assert lead in " ".join(facts["primary_content_text"].split())
     assert facts["entity_proposition"] == {
-        "identity": "Enterprise Search",
+        "identity": "Acme Search",
         "proposition": lead,
         "provider": "Acme Search",
         "named_capability": "answer discovery",

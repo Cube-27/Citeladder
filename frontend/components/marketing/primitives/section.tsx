@@ -165,7 +165,7 @@ export function SectionHeader({
       {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
       <Heading
         id={headingId}
-        className={cn('text-foreground max-w-[32ch] text-balance', SECTION_HEADING_CLASSES[size])}
+        className={cn('text-foreground max-w-[48ch] text-balance', SECTION_HEADING_CLASSES[size])}
       >
         {title}
       </Heading>

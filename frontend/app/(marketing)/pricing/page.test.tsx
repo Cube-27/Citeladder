@@ -68,4 +68,17 @@ describe('Pricing page (public marketing `/pricing`)', () => {
       '/faq',
     );
   });
+
+  it('renders the coming soon early access strip above the catalog', () => {
+    render(<Page />);
+
+    expect(
+      screen.getByRole('complementary', { name: /early access announcement/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /request early access/i })).toHaveAttribute(
+      'href',
+      DEMO_HREF,
+    );
+  });
 });

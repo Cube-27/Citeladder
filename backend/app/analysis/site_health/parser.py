@@ -43,7 +43,6 @@ from app.analysis.site_health.fact_source_support import (
     empty_source_support_facts,
     extract_source_support_facts,
 )
-from app.analysis.site_health.page_kinds import is_question_heading
 from app.analysis.site_health.robots_directives import (
     extract_robots_directives,
     merge_x_robots_tag,
@@ -442,16 +441,6 @@ def _landmarks(root: Any) -> dict[str, bool]:
     return out
 
 
-def _question_heading_ratio(headings: dict[str, Any]) -> float:
-    """Question-form ratio over the bounded h2 + h3 heading texts (0..1)."""
-    texts = [str(t) for t in (headings.get("h2_texts") or [])]
-    texts += [str(t) for t in (headings.get("h3_texts") or [])]
-    if not texts:
-        return 0.0
-    questions = sum(1 for text in texts if is_question_heading(text))
-    return round(questions / len(texts), 4)
-
-
 def _hreflang_alternates(root: Any, *, final_url: str) -> list[dict[str, str]]:
     """Bounded ``<link rel="alternate" hreflang>`` annotations (absolute URLs).
 
@@ -619,7 +608,6 @@ def _empty_facts() -> dict[str, Any]:
         },
         "landmarks": {"main": False, "article": False, "nav": False},
         "ordered_list_steps": 0,
-        "question_heading_ratio": 0.0,
         "hreflang_alternates": [],
         **empty_page_owned_content_facts(),
         "source_support": empty_source_support_facts(),
@@ -699,7 +687,6 @@ def _extract_document(root: Any, *, final_url: str, settings: Any) -> dict[str, 
     facts["contact_points"] = _contact_points(root)
     facts["landmarks"] = _landmarks(root)
     facts["ordered_list_steps"] = ordered_list_steps(root)
-    facts["question_heading_ratio"] = _question_heading_ratio(facts["headings"])
     facts["hreflang_alternates"] = _hreflang_alternates(root, final_url=final_url)
     facts.update(page_owned_content_facts(root))
     facts["source_support"] = extract_source_support_facts(root, final_url=final_url)

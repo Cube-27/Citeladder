@@ -387,6 +387,47 @@ async def test_recompute_persists_rows_and_snapshot_with_provenance(
     )
 
 
+async def test_recompute_persists_atom_specific_guidance_idempotently(
+    db_session: AsyncSession,
+) -> None:
+    scn = await _seed_scenario(db_session)
+    issue = await db_session.get(SiteIssue, scn.issue_structured_id)
+    assert issue is not None
+    issue.rule_id = "aeo.entity_value_proposition"
+    issue.evidence = {
+        "atoms": [
+            {"name": "entity_identity", "outcome": "missing"},
+            {"name": "value_proposition", "outcome": "satisfied"},
+        ]
+    }
+    await db_session.commit()
+
+    await recompute.recompute(
+        db_session,
+        workspace_id=scn.workspace_id,
+        project_id=scn.project_id,
+        skip_if_current=False,
+    )
+    first = _by_rule(await _live_rows(db_session, scn), "content_structure_incomplete")
+
+    assert first.title == "Name the organization in the page introduction"
+    assert first.source_issue_ids == [str(scn.issue_structured_id)]
+    assert first.evidence["issue_rule_id"] == "aeo.entity_value_proposition"
+
+    await recompute.recompute(
+        db_session,
+        workspace_id=scn.workspace_id,
+        project_id=scn.project_id,
+        skip_if_current=False,
+    )
+    second = _by_rule(await _live_rows(db_session, scn), "content_structure_incomplete")
+
+    assert second.title == first.title
+    assert second.remediation == first.remediation
+    assert second.target_key == first.target_key
+    assert second.source_issue_ids == first.source_issue_ids
+
+
 async def test_cancelled_site_evidence_freezes_coverage_and_limitations(
     db_session: AsyncSession,
 ) -> None:

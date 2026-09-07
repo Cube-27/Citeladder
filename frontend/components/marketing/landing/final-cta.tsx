@@ -19,13 +19,15 @@ import { Reveal } from '../primitives/reveal';
 export function FinalCta() {
   const { cta } = LANDING_CONTENT;
   return (
-    <Section id="get-started" tone="teal" rhythm="base" aria-label="Get started">
-      <Reveal className="mx-auto flex max-w-4xl flex-col items-center text-center">
-        <Eyebrow>{cta.kicker}</Eyebrow>
+    <Section id="get-started" tone="sunken" rhythm="base" aria-label="Get started">
+      <Reveal className="mx-auto flex max-w-3xl flex-col items-center text-center">
+        <div className="border-border-subtle bg-panel inline-flex items-center rounded-full border px-3.5 py-1 shadow-xs">
+          <Eyebrow>{cta.kicker}</Eyebrow>
+        </div>
         <h2 className="website-section-heading origin-centre text-foreground mt-6 text-balance">
           {cta.title}
         </h2>
-        <p className="website-lead text-muted mt-4 max-w-[60ch]">{cta.body}</p>
+        <p className="website-lead text-muted mt-4 max-w-[56ch]">{cta.body}</p>
         <div className="mt-8">
           <DemoButtonLink className="w-full sm:w-auto">
             {cta.primaryCta}

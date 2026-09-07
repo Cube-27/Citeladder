@@ -81,10 +81,10 @@ export const LANDING_CONTENT = {
       'One workspace for the questions, the answers, the citations, and the fixes — with the evidence attached to every number.',
     link: 'See the product',
     // The workspace canvas is an editorial illustration, not a live view: the
-    // share bar and the ledger render aria-hidden, and the marker pill names
-    // the workspace illustrative. No measured figure is published here.
+    // share bar and the ledger render aria-hidden. No measured figure is
+    // published here.
     canvas: {
-      marker: 'Illustrative workspace',
+      contextLabel: 'Illustrative workspace',
       range: 'Last 30 days',
       tabs: ['Overview', 'Answers', 'Citations', 'Brands', 'Reports'],
       activeTab: 'Answers',

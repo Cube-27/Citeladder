@@ -12,7 +12,12 @@ from app.analysis.site_health.content_heuristics import (
     visible_date,
 )
 from app.analysis.site_health.dom import DOM_ERRORS, dom_failure, node_text
-from app.analysis.site_health.fact_regions import primary_region, region_node_is_visible
+from app.analysis.site_health.fact_regions import (
+    card_list_containers,
+    node_outside_container_nodes,
+    primary_region,
+    region_node_is_visible,
+)
 from app.core.config import site_health_acquisition as acquisition_config
 from app.core.config import site_health_authorship as authorship_config
 from app.core.config import site_health_taxonomy as taxonomy_config
@@ -60,18 +65,30 @@ class _VisibleAuthorshipEvidence:
         tag = str(getattr(node, "tag", "") or "").lower()
         author_tokens = tokens & authorship_config.VISIBLE_AUTHOR_NODE_TOKENS
         heading_candidate = tag in {"h1", "h2", "h3"}
-        if not self.author and (author_tokens or heading_candidate):
-            self.author = _visible_author_candidate(
+        author = ""
+        if tag in {"p", "small", "span"}:
+            author = _visible_responsible_publisher(text)
+        if not author and (author_tokens or heading_candidate):
+            author = _visible_author_candidate(
                 text, tag=tag, has_author_tokens=bool(author_tokens)
             )
-            self.profile_url = _visible_profile_url(node) if self.author else ""
+        if not self.author and author:
+            self.author = author
+            self.profile_url = _visible_profile_url(node, author=author)
         if not self.published and (
             node.tag == "time" or tokens & authorship_config.VISIBLE_DATE_NODE_TOKENS
         ):
             self.published = visible_date(text)
 
 
-def _visible_author_candidate(text: str, *, tag: str, has_author_tokens: bool) -> str:
+def _visible_responsible_publisher(text: str) -> str:
+    match = re.search(authorship_config.VISIBLE_PUBLISHER_PATTERN, text)
+    if match is None:
+        return ""
+    return str(match.group("publisher") or "").strip().rstrip(".,;:")
+
+
+def _visible_author_candidate(text: str, tag: str, has_author_tokens: bool) -> str:
     if byline := visible_byline(text):
         return byline
     if has_author_tokens:
@@ -96,12 +113,15 @@ def _visible_node_text(node: Any) -> str:
 def _visible_values(root: Any) -> tuple[str, str, str]:
     """Targeted visible byline/date evidence from the primary content region."""
     region, _source = primary_region(root)
+    card_containers = card_list_containers(region)
     evidence = _VisibleAuthorshipEvidence()
     try:
         for scanned, node in enumerate(region.iter(), start=1):
             if scanned > taxonomy_config.REGION_MAX_CONTAINERS_SCANNED:
                 break
             if not region_node_is_visible(node):
+                continue
+            if not node_outside_container_nodes(node, card_containers):
                 continue
             evidence.observe(node)
             if evidence.author and evidence.published:
@@ -111,17 +131,32 @@ def _visible_values(root: Any) -> tuple[str, str, str]:
     return evidence.author, evidence.profile_url, evidence.published
 
 
-def _visible_profile_url(node: Any) -> str:
+def _visible_profile_url(node: Any, *, author: str) -> str:
     try:
-        links = [node] if node.tag == "a" else node.xpath(".//a[@href]")
+        if node.tag == "a":
+            links = [node]
+        else:
+            links = [*node.xpath("ancestor::a[@href][1]"), *node.xpath(".//a[@href]")]
+        normalized_author = " ".join(author.casefold().split())
         href = next(
-            (str(link.get("href") or "").strip() for link in links if link.get("href")),
+            (
+                str(link.get("href") or "").strip()
+                for link in links
+                if link.get("href") and _link_names_author(link, normalized_author)
+            ),
             "",
         )
     except DOM_ERRORS as exc:
         dom_failure("_visible_profile_url", exc)
         return ""
     return href[: acquisition_config.SITE_HEALTH_MAX_URL_CHARS]
+
+
+def _link_names_author(link: Any, normalized_author: str) -> bool:
+    link_text = " ".join(_visible_node_text(link).casefold().split())
+    return bool(link_text) and (
+        normalized_author in link_text or link_text in normalized_author
+    )
 
 
 def _declared_author(

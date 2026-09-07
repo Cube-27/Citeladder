@@ -85,7 +85,7 @@ describe('SettingsScreen', () => {
     window.history.replaceState(null, '', '/settings');
   });
 
-  it('renders the five settings tabs with Account selected by default', () => {
+  it('renders the available settings tabs with Account selected by default', () => {
     renderScreen();
     const tablist = screen.getByRole('tablist', { name: /settings sections/i });
     const tabs = within(tablist).getAllByRole('tab');
@@ -94,7 +94,6 @@ describe('SettingsScreen', () => {
       'Billing',
       'Providers',
       'Integrations',
-      'Danger zone',
     ]);
     expect(within(tablist).getByRole('tab', { name: 'Account' })).toHaveAttribute(
       'aria-selected',
@@ -203,49 +202,17 @@ describe('SettingsScreen', () => {
     await ue.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: 'Billing' })).toHaveAttribute('aria-selected', 'true');
     await ue.keyboard('{End}');
-    expect(screen.getByRole('tab', { name: 'Danger zone' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Integrations' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
   });
 
-  it('shows the danger zone with the active project name on the Danger Zone tab', async () => {
-    const ue = userEvent.setup();
+  it('does not expose project deletion while self-serve billing is unavailable', () => {
     renderScreen();
 
-    await ue.click(screen.getByRole('tab', { name: 'Danger zone' }));
-    // Scoped to the heading: the tab shares the same label now that both are
-    // sentence case.
-    expect(screen.getByRole('heading', { name: 'Danger zone' })).toBeInTheDocument();
-    expect(screen.getByText('Acme Storage')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /delete project/i })).toBeInTheDocument();
-  });
-
-  it('deletes the active project after confirming in the dialog', async () => {
-    const ue = userEvent.setup();
-    renderScreen();
-
-    await ue.click(screen.getByRole('tab', { name: 'Danger zone' }));
-    await ue.click(screen.getByRole('button', { name: /delete project/i }));
-
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument();
-
-    await ue.click(within(dialog).getByRole('button', { name: /delete project/i }));
-
-    expect(deleteProject).toHaveBeenCalledWith(activeProject.id);
-    expect(replace).toHaveBeenCalledWith('/onboarding?new=1');
-  });
-
-  it('does not delete when the dialog is cancelled', async () => {
-    const ue = userEvent.setup();
-    renderScreen();
-
-    await ue.click(screen.getByRole('tab', { name: 'Danger zone' }));
-    await ue.click(screen.getByRole('button', { name: /delete project/i }));
-    const dialog = await screen.findByRole('dialog');
-    await ue.click(within(dialog).getByRole('button', { name: /cancel/i }));
-
+    expect(screen.queryByRole('tab', { name: 'Danger zone' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /delete project/i })).not.toBeInTheDocument();
     expect(deleteProject).not.toHaveBeenCalled();
   });
 });

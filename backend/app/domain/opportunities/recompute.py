@@ -42,6 +42,7 @@ from app.core.config.opportunities import (
     RECOMPUTE_MAX_ISSUES,
     RULE_VERSION,
     STATUS_OPEN,
+    OpportunityRule,
 )
 from app.core.config.site_health_contracts import (
     CRAWL_STATUS_CANCELLED,
@@ -337,7 +338,11 @@ async def _load_site_evidence(
             (
                 await session.scalars(
                     select(SiteUrl)
-                    .where(SiteUrl.id.in_(url_ids))
+                    .where(
+                        SiteUrl.id.in_(url_ids),
+                        SiteUrl.workspace_id == workspace_id,
+                        SiteUrl.project_id == crawl.project_id,
+                    )
                     .order_by(SiteUrl.id.asc())
                 )
             ).all()
@@ -534,8 +539,7 @@ def _stamp_source_projections(*, audit, snapshots, gap_indices, projections) -> 
 
 
 def _score_hits(hits: list[DetectorHit]) -> list[tuple[DetectorHit, float]]:
-    scored: list[tuple[DetectorHit, float]] = []
-    seen_targets: set[tuple[str, str]] = set()
+    consolidated: dict[tuple[str, str], tuple[DetectorHit, float]] = {}
     for hit in hits:
         rule = OPPORTUNITY_RULES_BY_ID[hit.rule_id]
         score = priority_score(
@@ -544,10 +548,42 @@ def _score_hits(hits: list[DetectorHit]) -> list[tuple[DetectorHit, float]]:
             gap_factor=hit.gap_factor,
         )
         target = (hit.rule_id, hit.target_key)
-        if score >= MIN_PRIORITY_TO_SURFACE and target not in seen_targets:
-            seen_targets.add(target)
-            scored.append((hit, score))
-    return sorted(scored, key=lambda item: (item[0].rule_id, item[0].target_key))
+        if score < MIN_PRIORITY_TO_SURFACE:
+            continue
+        current = consolidated.get(target)
+        if current is None:
+            consolidated[target] = (hit, score)
+            continue
+        current_hit, current_score = current
+        selected, selected_score = max(
+            ((current_hit, current_score), (hit, score)),
+            key=lambda item: (
+                item[1],
+                bool(item[0].title_override) + bool(item[0].remediation_override),
+                item[0].title_override or "",
+                item[0].remediation_override or "",
+            ),
+        )
+        consolidated[target] = (
+            replace(
+                selected,
+                source_analysis_ids=tuple(
+                    sorted(
+                        set(current_hit.source_analysis_ids + hit.source_analysis_ids)
+                    )
+                ),
+                source_issue_ids=tuple(
+                    sorted(set(current_hit.source_issue_ids + hit.source_issue_ids))
+                ),
+                source_metric_ids=tuple(
+                    sorted(set(current_hit.source_metric_ids + hit.source_metric_ids))
+                ),
+            ),
+            selected_score,
+        )
+    return sorted(
+        consolidated.values(), key=lambda item: (item[0].rule_id, item[0].target_key)
+    )
 
 
 def _snapshot_is_current(
@@ -611,6 +647,7 @@ async def _write_recompute(
     new_rows: list[Opportunity] = []
     for hit, score in scored:
         rule = OPPORTUNITY_RULES_BY_ID[hit.rule_id]
+        title, remediation = _opportunity_copy(hit, rule)
         live = live_by_target.get((hit.rule_id, hit.target_key))
         new_id = uuid.uuid4()
         new_rows.append(
@@ -622,8 +659,8 @@ async def _write_recompute(
                 opportunity_type=rule.opportunity_type,
                 severity=rule.severity,
                 priority_score=score,
-                title=rule.title,
-                remediation=rule.remediation,
+                title=title,
+                remediation=remediation,
                 target_key=hit.target_key,
                 target_prompt_id=hit.target_prompt_id,
                 target_url=hit.target_url,
@@ -666,6 +703,16 @@ async def _write_recompute(
     session.add(snapshot)
     await session.commit()
     return project_snapshot(snapshot)
+
+
+def _opportunity_copy(hit: DetectorHit, rule: OpportunityRule) -> tuple[str, str]:
+    title = hit.title_override if hit.title_override is not None else rule.title
+    remediation = (
+        hit.remediation_override
+        if hit.remediation_override is not None
+        else rule.remediation
+    )
+    return title, remediation
 
 
 async def recompute(

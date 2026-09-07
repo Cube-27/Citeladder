@@ -22,6 +22,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
 import type { Project } from '@/lib/api/types';
 import { textRole } from '@/components/ui/typography';
+import { ADDITIONAL_PROJECT_CREATION_ENABLED } from '@/lib/config/billing';
 
 export function ProjectControls({
   projects,
@@ -68,9 +69,11 @@ export function ProjectControls({
             <Pencil className="size-4" aria-hidden /> Edit active project
           </DropdownItem>
         ) : null}
-        <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
-          <Plus className="size-4" aria-hidden /> Add project
-        </DropdownItem>
+        {ADDITIONAL_PROJECT_CREATION_ENABLED ? (
+          <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
+            <Plus className="size-4" aria-hidden /> Add project
+          </DropdownItem>
+        ) : null}
       </DropdownContent>
     </Dropdown>
   );

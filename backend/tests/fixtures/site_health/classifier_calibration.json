@@ -74,7 +74,7 @@
     {
       "id": "healthy_faq", "source_label": "Synthetic healthy control", "observation_date": "2026-08-30", "condition": "healthy",
       "url": "https://healthy.example.test/answers", "content_type": "text/html",
-      "fixture": {"kind": "facts", "facts": {"headings": {"h1_texts": ["Answers"], "h2_texts": ["What is delivery?", "How do returns work?", "Where can I get help?"]}}},
+      "fixture": {"kind": "facts", "facts": {"headings": {"h1_texts": ["Answers"], "h2_texts": ["What is delivery?", "How do returns work?", "Where can I get help?"]}, "question_answer_relationships": [{"question": "What is delivery?", "answer": "Delivery is tracked from dispatch.", "source": "heading", "answer_state": "available", "reason": ""}, {"question": "How do returns work?", "answer": "Returns follow the published policy.", "source": "heading", "answer_state": "available", "reason": ""}, {"question": "Where can I get help?", "answer": "Support is available through the contact page.", "source": "heading", "answer_state": "available", "reason": ""}]}},
       "expected": {"page_kind": "faq", "traits": ["has_faq"], "deciding_signal": "content_heuristic", "allowed_deciding_tiers": ["semantic"], "allowed_confidence": ["low"], "rejected_kinds": ["docs", "article"], "other_reason": null},
       "deliberate_abstention": false, "structural_reason": "Three page-owned question headings meet the configured question-form threshold."
     },
@@ -232,7 +232,7 @@
     {
       "id": "conflicting_semantic_evidence", "source_label": "Synthetic conflicting control", "observation_date": "2026-08-30", "condition": "conflicting",
       "url": "https://conflicting.example.test/answers-and-notes", "content_type": "text/html",
-      "fixture": {"kind": "facts", "facts": {"title": "Shipping policy questions and answers", "headings": {"h1_texts": ["Shipping policy questions and answers"], "h2_texts": ["What changed?", "Why did it change?", "How does it work?"]}}},
+      "fixture": {"kind": "facts", "facts": {"title": "Shipping policy questions and answers", "headings": {"h1_texts": ["Shipping policy questions and answers"], "h2_texts": ["What changed?", "Why did it change?", "How does it work?"]}, "question_answer_relationships": [{"question": "What changed?", "answer": "The shipping window changed.", "source": "heading", "answer_state": "available", "reason": ""}, {"question": "Why did it change?", "answer": "Carrier schedules changed.", "source": "heading", "answer_state": "available", "reason": ""}, {"question": "How does it work?", "answer": "The new window appears at checkout.", "source": "heading", "answer_state": "available", "reason": ""}]}},
       "expected": {"page_kind": "faq", "traits": ["has_faq"], "deciding_signal": "content_heuristic", "allowed_deciding_tiers": ["semantic"], "allowed_confidence": ["low"], "rejected_kinds": ["trust_policy"], "other_reason": null},
       "deliberate_abstention": false, "structural_reason": "FAQ content and a trust-policy semantic title conflict in the same semantic tier; fixed signal priority selects the more specific FAQ structure and retains the policy conflict in evidence."
     },

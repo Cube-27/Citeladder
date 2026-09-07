@@ -17,10 +17,10 @@
   --color-gray-300: #e3e2ec;
   --color-gray-400: #d1d0dc;
   --color-gray-500: #9a9aa0;
-  --color-gray-600: #6b6b72;
-  --color-gray-700: #5c5c63;
-  --color-gray-800: #3a3a40;
-  --color-gray-900: #16161a;
+  --color-gray-600: #55639a;
+  --color-gray-700: #3d4f8c;
+  --color-gray-800: #24356b;
+  --color-gray-900: #172554;
   --color-indigo-50: #fbf4f1;
   --color-indigo-100: #f7e8e1;
   --color-indigo-200: #ebcfc4;
@@ -59,7 +59,7 @@
      literal (the policy requires six-digit hex here), so it moves with
      --color-shell below. */
   --color-sidebar: #f1f4f1;
-  --color-surface-inverse: #16161a;
+  --color-surface-inverse: #172554;
 
   /* The ground. Chrome — app sidebar and top bar, the flow bar and its action
      bar, the quiet marketing band — sits on ONE grained sheet, and content sits
@@ -68,7 +68,7 @@
      green at very low chroma: enough that the sheet reads as a material rather
      than as grey, far too little to compete with the accent that owns actions.
      Both rungs clear AA for all four neutral inks (subtle, the tightest pair,
-     measures 4.77:1 and 4.62:1). */
+     measures 5.15:1 and 5.00:1). */
   --color-shell: #f1f4f1;
   --color-shell-alt: #ecf1ec;
 
@@ -99,36 +99,39 @@
   --color-border-strong: #a2a0b0;
   --color-border-bold: #747282;
 
-  --color-foreground: #16161a;
-  --color-secondary: #3a3a40;
-  --color-muted: #5c5c63;
-  --color-subtle: #6b6b72;
+  /* Neutral ink is a dark navy family, not grey: a very dark navy
+     foreground stepping through navy variants down the ladder. Grey survives
+     only for the disabled state. */
+  --color-foreground: #172554;
+  --color-secondary: #24356b;
+  --color-muted: #3d4f8c;
+  --color-subtle: #55639a;
   --color-disabled: #9a9aa0;
   --color-inverse: #ffffff;
   --color-on-inverse: #ffffff;
 
-  /* Analytical selection and focus, and the brand accent itself: the green of
-     the reference system's hue set (#0b7a3c, soft #e6f2ea, deep #08592c). */
-  --color-accent: #0b7a3c;
-  --color-accent-hover: #08592c;
-  --color-accent-active: #074d27;
+  /* Analytical selection and focus, and the brand primary accent (#395afa):
+     Single source of truth across website, onboarding, auth/login, and app.
+     All surfaces inherit this ramp so changing it here propagates everywhere. */
+  --color-accent: #395afa;
+  --color-accent-hover: #2947e3;
+  --color-accent-active: #203cc9;
   --color-accent-fg: #ffffff;
-  --color-accent-subtle: #e6f2ea;
-  --color-accent-soft: #eef6f1;
-  --color-accent-border: #b7dcc8;
-  --color-accent-text: #0b7a3c;
-  --color-focus: #0b7a3c;
+  --color-accent-subtle: #edf2ff;
+  --color-accent-soft: #f4f7ff;
+  --color-accent-border: #b8ccfd;
+  --color-accent-text: #2643df;
+  --color-focus: #395afa;
   /* The focus indicator is the control's own border plus a soft glow attached
      to it — blurred, so there is no second crisp edge. */
-  --color-focus-ring: rgb(11 122 60 / 32%);
-  --color-selection: #cde8db;
-  --color-selection-fg: #16161a;
-  /* Primary actions are the brand green, one ramp: hover steps one rung deeper
-     (the reference accent ramp walks darker, unlike the old ink ramp that had
-     no darker rung) and press settles between base and hover. */
-  --color-action: #0b7a3c;
-  --color-action-hover: #08592c;
-  --color-action-active: #074d27;
+  --color-focus-ring: rgb(57 90 250 / 32%);
+  --color-selection: #dbe4fe;
+  --color-selection-fg: #172554;
+  /* Primary actions are the brand accent (#395afa), one ramp: hover steps one rung deeper
+     and press settles between base and hover. */
+  --color-action: #395afa;
+  --color-action-hover: #2947e3;
+  --color-action-active: #203cc9;
   --color-action-fg: #ffffff;
 
   /* Answer-engine brand marks (functional identity, marketing engine chips). */
@@ -174,14 +177,19 @@
   /* The four product hues of the reference system, drawn from its mark's
      quadrants: each carries a soft tile fill and the deep rung that inks
      icons and titles sitting on that fill. */
-  --color-tile-blue: #e6eff8;
-  --color-tile-blue-ink: #05568c;
-  --color-tile-indigo: #eaeaf6;
-  --color-tile-indigo-ink: #26276b;
-  --color-tile-purple: #f1eaf4;
-  --color-tile-purple-ink: #522e60;
-  --color-tile-green: #e6f2ea;
-  --color-tile-green-ink: #08592c;
+  --color-tile-blue: #e0f2fe;
+  --color-tile-blue-ink: #0284c7;
+  --color-tile-indigo: #ede9fe;
+  --color-tile-indigo-ink: #4f46e5;
+  --color-tile-purple: #ffede8;
+  --color-tile-purple-ink: #ea580c;
+  --color-tile-green: #dcfce7;
+  --color-tile-green-ink: #16a34a;
+  /* Marketing preview-only states preserve the authored illustration palette
+     without leaking raw framework colours into component code. */
+  --color-preview-success-dot: oklch(69.6% 0.17 162.48);
+  --color-preview-success: oklch(59.6% 0.145 163.225);
+  --color-preview-success-strong: oklch(50.8% 0.118 165.612);
 
   --color-sentiment-positive: #9acd32;
   --color-sentiment-positive-bg: #f4f8ec;
@@ -265,9 +273,9 @@
   --color-series-4: #ff6e56;
   --color-series-5: #9acd32;
   --color-series-other: #6b6b72;
-  --color-chart-tooltip: #16161a;
+  --color-chart-tooltip: #172554;
   --color-chart-tooltip-fg: #ffffff;
-  --color-overlay-scrim: rgb(22 22 26 / 45%);
+  --color-overlay-scrim: rgb(20 33 61 / 45%);
 
   /* Tailwind's default radius scale is cleared so the ladder cannot be
      side-stepped by reaching for a size name. What remains is the 4px micro
@@ -279,12 +287,13 @@
 
   /* Elevation — cards use subtle bottom-weighted shadows, while dropdowns
      and overlays retain stronger omnidirectional all-side shadows. */
-  --shadow-xs: 0 1px 2px 0 rgb(22 22 26 / 0.05);
-  --shadow-sm: 0 1px 3px 0 rgb(22 22 26 / 0.04), 0 1px 2px -1px rgb(22 22 26 / 0.04);
-  --shadow-card: 0 10px 24px -4px rgb(20 33 61 / 0.06), 0 3px 8px -2px rgb(20 33 61 / 0.03);
-  --shadow-card-hover: 0 18px 36px -6px rgb(20 33 61 / 0.10), 0 6px 14px -3px rgb(20 33 61 / 0.04);
-  --shadow-elevated: 0 0 0 1px rgb(20 33 61 / 0.06), 0 10px 30px -4px rgb(20 33 61 / 0.12), 0 20px 48px -8px rgb(20 33 61 / 0.14);
-  --shadow-modal-value: 0 0 0 1px rgb(20 33 61 / 0.08), 0 16px 36px -6px rgb(20 33 61 / 0.16), 0 32px 72px -12px rgb(20 33 61 / 0.22);
+  --shadow-xs: 0 1px 2px 0 rgb(17 28 69 / 0.04);
+  --shadow-sm: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 1px 3px 0 rgb(17 28 69 / 0.04), 0 1px 2px -1px rgb(17 28 69 / 0.04);
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 8px 24px -4px rgb(17 28 69 / 0.06), 0 2px 6px -1px rgb(17 28 69 / 0.03);
+  --shadow-card-hover: 0 1px 0 0 rgb(255 255 255 / 0.9) inset, 0 16px 32px -6px rgb(17 28 69 / 0.09), 0 4px 12px -2px rgb(17 28 69 / 0.04);
+  --shadow-elevated: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 0 0 1px rgb(17 28 69 / 0.06), 0 10px 30px -4px rgb(17 28 69 / 0.12), 0 20px 48px -8px rgb(17 28 69 / 0.14);
+  --shadow-modal-value: 0 0 0 1px rgb(17 28 69 / 0.08), 0 16px 36px -6px rgb(17 28 69 / 0.16), 0 32px 72px -12px rgb(17 28 69 / 0.22);
+  --shadow-pricing-featured: 0 12px 36px -6px rgb(19 16 40 / 35%);
 
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
@@ -306,6 +315,12 @@
   --text-4xl--line-height: 2.5rem;
   --text-heading-sm: 1.125rem; /* 18px — compact headings */
   --text-heading-xs: 1rem; /* 16px — structural sub-headings */
+  --text-preview-caption: 0.6875rem;
+  --text-preview-caption--line-height: 1rem;
+  --text-preview-status: 0.625rem;
+  --text-preview-status--line-height: 0.875rem;
+  --text-preview-code: 0.65625rem;
+  --text-preview-code--line-height: 0.875rem;
 
   --leading-tight: 1.25;
 
@@ -343,12 +358,12 @@
   --card-padding: 16px;
   --card-padding-compact: 12px;
   --card-padding-large: 20px;
-  --shadow-card: 0 10px 24px -4px rgb(20 33 61 / 0.06), 0 3px 8px -2px rgb(20 33 61 / 0.03);
-  --shadow-card-hover: 0 18px 36px -6px rgb(20 33 61 / 0.10), 0 6px 14px -3px rgb(20 33 61 / 0.04);
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 8px 24px -4px rgb(17 28 69 / 0.06), 0 2px 6px -1px rgb(17 28 69 / 0.03);
+  --shadow-card-hover: 0 1px 0 0 rgb(255 255 255 / 0.9) inset, 0 16px 32px -6px rgb(17 28 69 / 0.09), 0 4px 12px -2px rgb(17 28 69 / 0.04);
   /* The content pane's lift off the ground. Wide and very soft: the pane is a
      sheet resting on a sheet, not an object floating over one, so this must
      read as a cast edge rather than as a card's elevation. */
-  --shadow-pane: 0 1px 2px rgb(22 22 26 / 0.04), 0 12px 32px -12px rgb(22 22 26 / 0.10);
+  --shadow-pane: 0 1px 2px rgb(20 33 61 / 0.04), 0 12px 32px -12px rgb(20 33 61 / 0.10);
   --modal-padding: 20px;
   --empty-state-padding: 24px;
   --control-height-sm: 32px;
@@ -368,12 +383,24 @@
      are the base and the media queries below step them up. */
   --site-gutter: 20px;
   --section-y: 56px;
+  --marketing-nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
+  --interaction-press-scale: 0.98;
+  --preview-grid-image: radial-gradient(#0000000a 1px, transparent 1px);
+  --preview-grid-size: 10px 10px;
+  --workflow-share-yours: 68%;
+  --workflow-share-competitors: 22%;
+  --workflow-share-none: 10%;
   /* The focus glow hugs the focused border with real blur — the border reads
      as glowing, never as a second ring floating outside it. */
   --focus-ring: 0 0 8px 1px var(--color-focus-ring);
   --skeleton-base: #efefeb;
   --skeleton-highlight: #ffffff;
   --value-placeholder: var(--color-subtle);
+}
+
+.preview-grid {
+  background-image: var(--preview-grid-image);
+  background-size: var(--preview-grid-size);
 }
 
 /* The one-place rebinds for the two dark feature surfaces (the reference
@@ -684,41 +711,28 @@ input:-webkit-autofill:focus {
 }
 
 /* The public surface prints on white, not the app's tinted paper canvas. Its
-   editorial ink is a near-black indigo rather than the reference site's navy:
-   the navy family read as a tinted wash at small sizes, so the whole page sat
-   back. A near-black ink puts the words forward and lets the accent own the
-   colour; the hairlines and the warm ground step up a rung for the same
-   reason. The brand green takes a deeper cut here only — the product keeps
-   the reference green — and the two dark bands run darker still, so a band
-   reads as depth rather than as a mid-tone. Selection, focus, and the
+   editorial ink is a dark navy family: a very dark navy foreground stepping
+   through navy variants, so type prints in clearly blue ink rather than
+   neutral grey; the hairlines and the warm ground step up a rung for the
+   same reason. Brand primary accent and action tokens inherit directly
+   from @theme so the primary color stays consistent across website, onboarding,
+   auth/login, and app. The two dark bands run darker still, so a
+   band reads as depth rather than as a mid-tone. Selection, focus, and the
    evidence marks inside embedded product previews follow the accent, so
    previews keep reading as the product. */
 [data-public-surface] {
   --color-background: #ffffff;
-  --color-foreground: #121216;
-  --color-secondary: #34343e;
-  --color-muted: #55555f;
-  --color-subtle: #5f5f6a;
-  --color-background-alt: #f2f1ee;
-  --color-canvas-soft: #f6f5f1;
-  --color-active: #eae9e5;
-  --color-border: #c9c8d2;
-  --color-border-subtle: #dcdbe2;
-  --color-border-strong: #8f8d9c;
-  --color-hairline-warm: #d8d3c8;
-  --color-accent: #0a6e35;
-  --color-accent-hover: #085c2c;
-  --color-accent-active: #064a23;
-  --color-accent-subtle: #d9ecdf;
-  --color-accent-soft: #e2f0e6;
-  --color-accent-border: #9ed2b4;
-  --color-accent-text: #0a6e35;
-  --color-focus: #0a6e35;
-  --color-focus-ring: rgb(10 110 53 / 32%);
-  --color-selection: #c2e3cd;
-  --color-action: #0a6e35;
-  --color-action-hover: #085c2c;
-  --color-action-active: #064a23;
+  --color-foreground: #0f172a;
+  --color-secondary: #1e293b;
+  --color-muted: #475569;
+  --color-subtle: #64748b;
+  --color-background-alt: #f8fafc;
+  --color-canvas-soft: #f8fafc;
+  --color-active: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+  --color-border-strong: #cbd5e1;
+  --color-hairline-warm: #e2e8f0;
   --color-band-indigo: #131028;
   --color-band-indigo-deep: #0d0a1c;
   --color-band-teal: #0c2626;
@@ -734,7 +748,7 @@ input:-webkit-autofill:focus {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: var(--grain-opacity, 0.05);
+  opacity: var(--grain-opacity, 0.015);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
   background-size: 180px 180px;
 }
@@ -742,14 +756,14 @@ input:-webkit-autofill:focus {
 /* Chrome takes the texture at a lower strength than an editorial band. At
    product density the marketing value reads as dirt rather than as stock. */
 .grain-soft {
-  --grain-opacity: 0.03;
+  --grain-opacity: 0.01;
 }
 
 /* A tinted band takes a little more grain than paper does, so the fill reads as
    stock rather than as a flat wash; the indigo and teal canvases take more
    again, because noise all but disappears into a dark ground. */
 [data-citeladder-section='sunken'] {
-  --grain-opacity: 0.07;
+  --grain-opacity: 0.015;
 }
 
 /* The blog photography takes the same noise as the bands, but blended into the
@@ -1174,14 +1188,6 @@ samp {
   }
 }
 
-/* The wordmark is one brand face at one weight on every surface. It cannot
-   ride the scoped `--font-display` variable: the public/flow scope rebinds
-   that to Instrument Serif, a serif face — the wordmark stays one sans
-   face everywhere. Geist carries the real 600. */
-.logo-wordmark {
-  font-family: var(--font-geist), -apple-system, 'Segoe UI', sans-serif;
-  font-weight: 600;
-}
 
 /* Skip link — the first tab stop on every route (app/layout.tsx). Off-screen
    until focused, then it lands as a normal control against the panel fill. */

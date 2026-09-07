@@ -161,33 +161,7 @@ PAGE_KIND_ARCHIVE_PATH_PATTERNS: Final[tuple[str, ...]] = (
     r"^/(?:[^/]+/)*?blogs?/(?:category|categories|topics?|tags?)/[^/]+/?$",
 )
 
-PAGE_KIND_QUESTION_WORDS: Final[frozenset[str]] = frozenset(
-    {
-        "who",
-        "what",
-        "when",
-        "where",
-        "why",
-        "how",
-        "which",
-        "whose",
-        "whom",
-        "can",
-        "could",
-        "should",
-        "would",
-        "will",
-        "is",
-        "are",
-        "do",
-        "does",
-        "did",
-    }
-)
-
 PAGE_KIND_FAQ_MIN_HEADINGS: Final = 3
-
-PAGE_KIND_FAQ_QUESTION_RATIO: Final = 0.6
 
 PAGE_KIND_PRICE_PATTERN: Final = (
     r"(?:[$€£¥]\s?\d+(?:[.,]\d{1,2})?"
@@ -233,13 +207,16 @@ PAGE_REGIONS: Final[tuple[str, ...]] = (
 # Subtrees excluded from the primary region. Chrome landmarks plus non-rendered
 # elements: an inline <script> body is why every crawled page reported a visible
 # price of "$1" taken from a JavaScript regex replacement string.
-REGION_EXCLUDED_TAGS: Final[tuple[str, ...]] = (
+REGION_NON_RENDERED_TAGS: Final[tuple[str, ...]] = (
     "script",
     "style",
     "noscript",
     "template",
+)
+
+REGION_EXCLUDED_TAGS: Final[tuple[str, ...]] = (
+    *REGION_NON_RENDERED_TAGS,
     "nav",
-    "header",
     "footer",
     "aside",
 )
@@ -250,6 +227,9 @@ REGION_EXCLUDED_ROLES: Final[tuple[str, ...]] = (
     "contentinfo",
     "complementary",
 )
+
+REGION_HIDDEN_ATTRIBUTE_NAMES: Final[tuple[str, ...]] = ("hidden", "inert")
+REGION_HIDDEN_ARIA_VALUES: Final[frozenset[str]] = frozenset({"true"})
 
 # A container is a repeated card list when it holds at least this many
 # structurally similar linked children. A recommendation carousel, a product
@@ -265,6 +245,7 @@ CONTENT_RECOMMENDATION_TOKENS: Final[frozenset[str]] = frozenset(
 RICH_TEXT_CONTAINER_TOKENS: Final[frozenset[str]] = frozenset(
     {"article-body", "article-content", "prose", "rich-text", "rte"}
 )
+RICH_TEXT_CONTAINER_TAGS: Final[frozenset[str]] = frozenset({"article"})
 
 # A listing PAGE needs a substantially larger grid than an incidental carousel.
 LISTING_MIN_CARD_ITEMS: Final = 6
@@ -278,6 +259,8 @@ REGION_MAX_TEXT_CHARS: Final = 200_000
 
 # Persist only enough page-owned prose for bounded downstream rule evidence.
 PAGE_OWNED_TEXT_MAX_CHARS: Final = 12_000
+
+PAGE_OWNED_MAX_QUESTION_ANSWER_PAIRS: Final = 24
 
 # Candidate ranking is bounded because invalid documents may declare many
 # primary landmarks. Only enough visible text to distinguish page content from

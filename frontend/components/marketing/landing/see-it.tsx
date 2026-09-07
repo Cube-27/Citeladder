@@ -16,8 +16,7 @@ import { ShareBar } from './share-bar';
  * The real product UI, kept on the landing page: an editorial workspace
  * canvas — one share-of-citations bar (not a KPI card row) above a
  * recorded-answers ledger. The bar and the ledger are illustrations, so both
- * render aria-hidden and the app bar carries the illustrative-workspace
- * marker; the header aside states what the workspace is.
+ * render aria-hidden; the section aside states what the workspace is.
  */
 const PLATFORM_LOGOS: Record<string, string> = {
   ChatGPT: '/brand/chatgpt.webp',
@@ -47,6 +46,9 @@ export function SeeIt() {
       </div>
 
       <Reveal>
+        <p className="website-label text-muted mb-2 tracking-wider uppercase">
+          {canvas.contextLabel}
+        </p>
         {/* The ambient ground blooms in the brand's own pastel washes — the
             same atmosphere family as the hero — over a soft→white→soft
             gradient, and the white pane floats on it. Tokens only, never an
@@ -61,12 +63,12 @@ export function SeeIt() {
         >
           <div
             data-testid="product-canvas"
-            className="border-border-subtle bg-panel app-type-scale relative overflow-hidden rounded-[var(--radius-card)] border shadow-[0_12px_32px_-8px_rgb(22_22_26/0.16)]"
+            className="border-border-subtle bg-panel app-type-scale shadow-elevated relative overflow-hidden rounded-[var(--radius-card)] border"
           >
             {/* On phones the bar wraps so the tab strip gets a full second row
-              instead of slivering between the lockup and the marker. */}
+              below the lockup instead of slivering beside it. */}
             <div className="border-border-subtle flex min-h-13 flex-wrap items-center gap-x-4 gap-y-1 border-b px-4 py-2 sm:h-13 sm:flex-nowrap sm:gap-y-0 sm:px-5 sm:py-0">
-              <LogoMark size={22} />
+              <LogoMark variant="compact" />
               <div className="order-last flex h-full min-w-0 basis-full scrollbar-none items-stretch gap-5 overflow-x-auto sm:order-none sm:flex-1 sm:basis-auto">
                 {canvas.tabs.map((tab) => (
                   <span
@@ -82,9 +84,6 @@ export function SeeIt() {
                   </span>
                 ))}
               </div>
-              <span className="text-muted border-border-subtle bg-background-alt ml-auto shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium sm:ml-0">
-                {canvas.marker}
-              </span>
               <span className="text-muted hidden shrink-0 text-xs lg:block">{canvas.range}</span>
             </div>
 
@@ -99,12 +98,13 @@ export function SeeIt() {
               </div>
 
               {/* The recorded-answers ledger. The grid is the concept's five
-                columns; below its floor the whole sheet scrolls sideways in
-                its own region rather than reflowing. */}
+                columns; on phones the rows stack — the question owns the top
+                row, its platform, count, and state share the one beneath —
+                and the sheet keeps its five columns from `sm` up. */}
               <div aria-hidden className="mt-6">
                 <div className="scrollbar-none overflow-x-auto">
-                  <div className="min-w-[704px]">
-                    <div className="text-muted grid grid-cols-[minmax(280px,2.4fr)_minmax(90px,0.9fr)_90px_minmax(96px,1fr)_76px] items-center gap-x-[18px] pb-3 text-[11px] font-medium tracking-[0.12em] uppercase">
+                  <div className="sm:min-w-[704px]">
+                    <div className="text-muted hidden grid-cols-[minmax(280px,2.4fr)_minmax(90px,0.9fr)_90px_minmax(96px,1fr)_76px] items-center gap-x-[18px] pb-3 text-[11px] font-medium tracking-[0.12em] uppercase sm:grid">
                       {canvas.columns.map((column, index) => (
                         <span
                           key={column}
@@ -119,9 +119,9 @@ export function SeeIt() {
                     {canvas.rows.map((row) => (
                       <div
                         key={row.question}
-                        className="border-border-subtle grid grid-cols-[minmax(280px,2.4fr)_minmax(90px,0.9fr)_90px_minmax(96px,1fr)_76px] items-center gap-x-[18px] border-t py-4"
+                        className="border-border-subtle grid grid-cols-3 gap-x-[18px] gap-y-1.5 border-t py-4 sm:grid-cols-[minmax(280px,2.4fr)_minmax(90px,0.9fr)_90px_minmax(96px,1fr)_76px] sm:items-center"
                       >
-                        <span className="min-w-0">
+                        <span className="col-span-3 min-w-0 sm:col-span-1">
                           <span className="text-foreground block text-sm leading-snug font-medium">
                             {row.question}
                           </span>
@@ -155,7 +155,7 @@ export function SeeIt() {
                           />
                           {row.state === 'cited' ? 'Cited' : 'Not cited'}
                         </span>
-                        <span className="text-foreground border-border-strong justify-self-end border-b pb-0.5 text-sm font-medium">
+                        <span className="text-foreground border-border-strong hidden justify-self-end border-b pb-0.5 text-sm font-medium sm:block">
                           View →
                         </span>
                       </div>

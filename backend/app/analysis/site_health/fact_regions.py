@@ -38,6 +38,16 @@ from app.core.config import site_health_taxonomy as _config
 # element reads and the per-anchor region label.
 _EXCLUDED_PREDICATE: Final = " or ".join(
     [f"ancestor-or-self::{tag}" for tag in _config.REGION_EXCLUDED_TAGS]
+    + [
+        "ancestor-or-self::header[not(ancestor::main or ancestor::article or "
+        "ancestor::*[translate(normalize-space(@role), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', "
+        "'abcdefghijklmnopqrstuvwxyz')='main'])]"
+    ]
+    + [
+        "ancestor-or-self::*["
+        + " or ".join(f"@{name}" for name in _config.REGION_HIDDEN_ATTRIBUTE_NAMES)
+        + " or translate(@aria-hidden, 'TRUE', 'true')='true']"
+    ]
     + [f"ancestor-or-self::*[@role={role!r}]" for role in _config.REGION_EXCLUDED_ROLES]
 )
 
@@ -154,15 +164,13 @@ def region_node_is_visible(node: Any) -> bool:
     for _depth in range(_config.REGION_MAX_ANCESTOR_DEPTH):
         if current is None:
             return True
-        try:
-            tag = current.tag
-            role = (current.get("role") or "").strip().lower()
-        except DOM_ERRORS as exc:
-            dom_failure("region_node_is_visible", exc)
+        state = _region_node_state(current)
+        if state is None:
             return False
-        if isinstance(tag, str) and tag in _config.REGION_EXCLUDED_TAGS:
+        tag, _role, eligible = state
+        if not eligible:
             return False
-        if role in _config.REGION_EXCLUDED_ROLES:
+        if tag == "header" and not _header_is_page_owned(current):
             return False
         try:
             current = current.getparent()
@@ -170,6 +178,80 @@ def region_node_is_visible(node: Any) -> bool:
             dom_failure("region_node_is_visible", exc)
             return False
     return True
+
+
+def _region_node_state(node: Any) -> tuple[Any, str, bool] | None:
+    try:
+        tag = node.tag
+        role = str(node.get("role") or "").strip().casefold()
+        hidden = any(
+            node.get(name) is not None for name in _config.REGION_HIDDEN_ATTRIBUTE_NAMES
+        )
+        aria_hidden = str(node.get("aria-hidden") or "").strip().casefold()
+    except DOM_ERRORS as exc:
+        dom_failure("_region_node_state", exc)
+        return None
+    if isinstance(tag, str) and tag in _config.REGION_EXCLUDED_TAGS:
+        return tag, role, False
+    if role in _config.REGION_EXCLUDED_ROLES:
+        return tag, role, False
+    if hidden:
+        return tag, role, False
+    if aria_hidden in _config.REGION_HIDDEN_ARIA_VALUES:
+        return tag, role, False
+    return tag, role, True
+
+
+def node_is_rendered(node: Any) -> bool:
+    """Whether an element is outside non-rendered or explicitly hidden subtrees."""
+    current = node
+    for _depth in range(_config.REGION_MAX_ANCESTOR_DEPTH):
+        if current is None:
+            return True
+        try:
+            tag = str(current.tag or "").casefold()
+            hidden = any(
+                current.get(name) is not None
+                for name in _config.REGION_HIDDEN_ATTRIBUTE_NAMES
+            )
+            aria_hidden = str(current.get("aria-hidden") or "").strip().casefold()
+        except DOM_ERRORS as exc:
+            dom_failure("node_is_rendered", exc)
+            return False
+        if (
+            tag in _config.REGION_NON_RENDERED_TAGS
+            or hidden
+            or aria_hidden in _config.REGION_HIDDEN_ARIA_VALUES
+        ):
+            return False
+        try:
+            current = current.getparent()
+        except DOM_ERRORS as exc:
+            dom_failure("node_is_rendered", exc)
+            return False
+    return True
+
+
+def _header_is_page_owned(node: Any) -> bool:
+    """Whether a header belongs to the page's main/article content."""
+    current = node
+    for _depth in range(_config.REGION_MAX_ANCESTOR_DEPTH):
+        try:
+            current = current.getparent()
+        except DOM_ERRORS as exc:
+            dom_failure("_header_is_page_owned", exc)
+            return False
+        if current is None:
+            return False
+        try:
+            tag = str(current.tag or "").lower()
+            role = str(current.get("role") or "").strip().lower()
+        except DOM_ERRORS as exc:
+            dom_failure("_header_is_page_owned", exc)
+            return False
+        if tag in {"main", "article"} or role == "main":
+            return True
+    return False
 
 
 def region_text(node: Any, *, excluded_container_ids: set[int] | None = None) -> str:
@@ -221,6 +303,22 @@ def node_outside_containers(node: Any, container_ids: set[int]) -> bool:
     return True
 
 
+def node_outside_container_nodes(node: Any, containers: list[Any]) -> bool:
+    """Whether ``node`` is outside the supplied element subtrees."""
+    current = node
+    for _depth in range(_config.REGION_MAX_ANCESTOR_DEPTH):
+        if current is None:
+            return True
+        if current in containers:
+            return False
+        try:
+            current = current.getparent()
+        except DOM_ERRORS as exc:
+            dom_failure("node_outside_container_nodes", exc)
+            return True
+    return True
+
+
 def element_region(node: Any) -> str:
     """Label one element with the landmark region it sits in.
 
@@ -253,6 +351,8 @@ def _region_of(node: Any) -> str | None:
         return None
     if role in _REGION_BY_ROLE:
         return _REGION_BY_ROLE[role]
+    if tag == "header" and _header_is_page_owned(node):
+        return _config.PAGE_REGION_MAIN
     if isinstance(tag, str) and tag in _REGION_BY_TAG:
         return _REGION_BY_TAG[tag]
     return None
@@ -317,6 +417,9 @@ def _is_card_list(candidate: Any) -> bool:
 
 
 def _is_rich_text_container(candidate: Any) -> bool:
+    tag = str(getattr(candidate, "tag", "") or "").casefold()
+    if tag in _config.RICH_TEXT_CONTAINER_TAGS:
+        return True
     try:
         identity = " ".join(
             str(candidate.get(name) or "") for name in ("id", "class", "data-testid")

@@ -21,7 +21,6 @@ from app.analysis.site_health.indexing import (
     normalized_url_for_compare,
     resolve_canonical,
 )
-from app.analysis.site_health.page_kinds import is_question_heading
 from app.analysis.site_health.page_traits import has_contact_form_fields
 from app.analysis.site_health.product_rules import (
     check_assortment_freshness_signal,
@@ -32,6 +31,7 @@ from app.analysis.site_health.product_rules import (
     check_product_brand_identity,
     check_product_evidence_facts,
 )
+from app.analysis.site_health.question_rules import check_question_answers
 from app.analysis.site_health.rule_scope import (
     applicability,
     observed_traits,
@@ -76,7 +76,6 @@ from app.core.config.site_health_rule_types import (
 from app.core.config.site_health_rules import (
     ANSWER_FIRST_MIN_WORDS,
     META_DESCRIPTION_LENGTH_BAND,
-    QUESTION_HEADINGS_MIN_RATIO,
     SITE_HEALTH_RULES,
     SITE_HEALTH_RULES_BY_ID,
     TITLE_LENGTH_BAND,
@@ -489,25 +488,6 @@ def _check_listing_answer_set(facts: dict) -> tuple[str, dict]:
     )
 
 
-def _check_question_headings(facts: dict) -> tuple[str, dict]:
-    outline = list(facts.get("primary_heading_outline") or ())
-    subheadings = [
-        str(item.get("text") or "")
-        for item in outline
-        if int(item.get("level") or 0) in {2, 3}
-    ]
-    if not subheadings:
-        return RULE_OUTCOME_MISSING, {"reason": "no_subheadings"}
-    question_count = sum(is_question_heading(value) for value in subheadings)
-    ratio = question_count / len(subheadings)
-    return _pass_fail(ratio > QUESTION_HEADINGS_MIN_RATIO), {
-        "question_heading_ratio": round(ratio, 4),
-        "question_heading_count": question_count,
-        "subheading_count": len(subheadings),
-        "minimum_ratio": QUESTION_HEADINGS_MIN_RATIO,
-    }
-
-
 def _check_primary_heading_hierarchy(facts: dict) -> tuple[str, dict]:
     outline = list(facts.get("primary_heading_outline") or ())
     levels = [int(item.get("level") or 0) for item in outline]
@@ -556,7 +536,7 @@ _CHECKS: dict[str, Callable[[dict], tuple[str, dict]]] = {
     "aeo.editorial_lead_present": _check_editorial_lead_present,
     "aeo.entity_value_proposition": _check_entity_value_proposition,
     "aeo.company_entity_completeness": check_company_entity_completeness,
-    "aeo.question_headings": _check_question_headings,
+    "aeo.question_headings": check_question_answers,
     "aeo.heading_hierarchy": _check_primary_heading_hierarchy,
     "aeo.product_answer_facts": _check_product_answer_facts,
     "aeo.product_evidence_facts": check_product_evidence_facts,

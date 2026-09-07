@@ -344,7 +344,7 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
     <Link
       href="/"
       aria-label="CiteLadder home"
-      className="focus-ring shrink-0 rounded-xs"
+      className="focus-ring inline-flex shrink-0 items-center rounded-xs"
       onClick={(event) => {
         onNavigate();
         if (pathname !== '/') return;
@@ -355,7 +355,7 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
         window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
       }}
     >
-      <LogoMark size={26} />
+      <LogoMark priority />
     </Link>
   );
 }
@@ -381,7 +381,7 @@ function NavActions({
         // actions and swap them a moment later.
         <div
           aria-hidden
-          className="bg-background-alt h-[var(--control-height)] w-28 animate-pulse rounded-[var(--radius-control)]"
+          className="bg-background-alt h-[var(--control-height)] w-20 animate-pulse rounded-[var(--radius-control)] sm:w-28"
         />
       ) : isAuthenticated ? (
         // The topbar CTA runs one step smaller than the page CTAs — chrome,
@@ -393,11 +393,11 @@ function NavActions({
         <>
           <Link
             href="/login"
-            className="website-nav text-muted hover:text-foreground hidden px-4 transition-colors sm:inline-flex"
+            className="website-nav text-muted hover:text-foreground inline-flex px-4 transition-colors"
           >
             Log in
           </Link>
-          <DemoButtonLink variant="primary" className="min-h-10 px-4">
+          <DemoButtonLink variant="primary" className="hidden min-h-10 px-4 sm:inline-flex">
             {DEMO_CTA}
           </DemoButtonLink>
         </>
