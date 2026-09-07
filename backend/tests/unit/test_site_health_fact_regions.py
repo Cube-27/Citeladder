@@ -223,12 +223,15 @@ def test_unanswered_observed_questions_stay_in_faq_evaluation() -> None:
         b"""<html><body><main><h1>Questions</h1>
         <h2>What is CiteLadder?</h2>
         <h2>How does CiteLadder work?</h2>
+        <h2>Can CiteLadder track progress?</h2>
         </main></body></html>""",
         final_url="https://example.test/questions",
         content_type="text/html",
     )
 
-    assert facts["page_kind"] == "faq"
+    assessment = classify("https://example.test/questions", facts)
+    assert assessment.page_kind == "faq"
+    facts["page_kind"] = assessment.page_kind
     evaluation = evaluate_rule(rule_for("aeo.question_headings"), facts)
     assert evaluation.outcome == RULE_OUTCOME_MISSING
     assert evaluation.evidence["reason"] == "question_answer_missing"

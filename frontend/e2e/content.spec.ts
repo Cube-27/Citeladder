@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { PERMITTED_ENTITLEMENT } from './helpers/app-fixture';
+
 /**
  * Content screen stubbed e2e (Task 5).
  *
@@ -117,6 +119,9 @@ test('content nav link is live and the enqueue → output flow renders sanitised
 
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
+  await page.route('**/api/v1/billing/entitlement', (route) =>
+    route.fulfill({ json: PERMITTED_ENTITLEMENT }),
+  );
   await page.route('**/api/v1/content/generations?*', (route) =>
     route.fulfill({ json: enqueued ? [succeeded] : [] }),
   );
@@ -177,6 +182,9 @@ test('cancel during generation returns the screen to a non-generating state', as
 
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
+  await page.route('**/api/v1/billing/entitlement', (route) =>
+    route.fulfill({ json: PERMITTED_ENTITLEMENT }),
+  );
   await page.route('**/api/v1/content/generations?*', (route) => route.fulfill({ json: [] }));
   await page.route('**/api/v1/content/generations', (route) => {
     if (route.request().method() === 'POST') {

@@ -43,6 +43,7 @@ from app.models.billing import (
 )
 from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
 from tests.component.auth_helpers import register_and_login as _register
+from tests.component.occupancy_helpers import revoke_signup_baseline_grants
 
 _SECRET = "component-webhook-secret"
 
@@ -129,6 +130,27 @@ async def _account_version(db_session: AsyncSession) -> int:
     return account.entitlement_lifecycle_version
 
 
+async def _total_grant_count(db_session: AsyncSession) -> int:
+    return int(await db_session.scalar(select(func.count(AccountGrant.id))) or 0)
+
+
+async def _commercial_grant_count(db_session: AsyncSession) -> int:
+    """Count only authority created by the billing flow under test.
+
+    Signup deliberately seeds free baseline grants; payment/webhook negatives
+    must prove they add no plan/topup authority rather than expect no account
+    grants at all.
+    """
+    return int(
+        await db_session.scalar(
+            select(func.count(AccountGrant.id)).where(
+                AccountGrant.source_kind.in_(("plan", "addon", "topup", "trial"))
+            )
+        )
+        or 0
+    )
+
+
 @pytest.mark.asyncio
 async def test_webhook_rejects_invalid_signature(client: httpx.AsyncClient) -> None:
     response = await client.post(
@@ -173,7 +195,7 @@ async def test_signed_unmatched_webhook_is_acknowledged_and_grants_nothing(
     # A valid but unmatched event is recorded safely and grants NOTHING.
     event = (await db_session.scalars(select(BillingWebhookEvent))).one()
     assert event.result_code == "unmatched"
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
+    assert await _total_grant_count(db_session) == 0
 
 
 @pytest.mark.asyncio
@@ -185,12 +207,21 @@ async def test_activation_issues_one_period_bundle_and_projects_runtime(
     monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-activate@example.com")
+    baseline_version = await _account_version(db_session)
     account = (await db_session.scalars(select(BillingAccount))).one()
     subscription = await _seed_subscription(
         db_session, account, external_id="sub_activation"
     )
     subscription_id = subscription.id
     workspace = (await client.get("/api/v1/workspaces")).json()[0]
+    # This narrow period-bundle projection fixture needs a bare account so its
+    # runtime assertion remains exact. The Phase 2 paid/free composition defect
+    # is intentionally not normalized here.
+    await revoke_signup_baseline_grants(
+        db_session, workspace_id=uuid.UUID(workspace["id"])
+    )
+    await db_session.commit()
+    baseline_version = await _account_version(db_session)
 
     now = datetime.now(UTC)
     start = int(now.timestamp())
@@ -207,8 +238,12 @@ async def test_activation_issues_one_period_bundle_and_projects_runtime(
 
     db_session.expire_all()
     # Accepted event bump (+1) plus one logical grant bundle bump (+1).
-    assert await _account_version(db_session) == 2
-    grants = (await db_session.scalars(select(AccountGrant))).all()
+    assert await _account_version(db_session) == baseline_version + 2
+    grants = (
+        await db_session.scalars(
+            select(AccountGrant).where(AccountGrant.source_kind == GRANT_SOURCE_PLAN)
+        )
+    ).all()
     assert len(grants) == 1
     grant = grants[0]
     assert grant.key == KEY_MONITORED_URLS
@@ -244,8 +279,8 @@ async def test_activation_issues_one_period_bundle_and_projects_runtime(
     retry = await _post_webhook(client, raw, event_id="evt_activation_2")
     assert retry.status_code == 204
     db_session.expire_all()
-    assert await _account_version(db_session) == 3
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 1
+    assert await _account_version(db_session) == baseline_version + 3
+    assert await _commercial_grant_count(db_session) == 1
     assert await db_session.scalar(select(func.count(BillingWebhookEvent.id))) == 2
 
 
@@ -258,6 +293,8 @@ async def test_stale_event_is_rejected_without_a_version_bump(
     monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-stale@example.com")
+    baseline_version = await _account_version(db_session)
+    baseline_grants = await _total_grant_count(db_session)
     account = (await db_session.scalars(select(BillingAccount))).one()
     await _seed_subscription(
         db_session,
@@ -277,8 +314,9 @@ async def test_stale_event_is_rejected_without_a_version_bump(
     assert response.status_code == 204
 
     db_session.expire_all()
-    assert await _account_version(db_session) == 0
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
+    assert await _account_version(db_session) == baseline_version
+    assert await _total_grant_count(db_session) == baseline_grants
+    assert await _commercial_grant_count(db_session) == 0
     event = (await db_session.scalars(select(BillingWebhookEvent))).one()
     assert event.result_code == "stale"
 
@@ -292,6 +330,14 @@ async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
     monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-terminal@example.com")
+    workspace = (await client.get("/api/v1/workspaces")).json()[0]
+    # Terminal-loss projection is exact-zero only on a bare account; retaining
+    # the free baseline would mask whether the paid grant was fully revoked.
+    await revoke_signup_baseline_grants(
+        db_session, workspace_id=uuid.UUID(workspace["id"])
+    )
+    await db_session.commit()
+    baseline_version = await _account_version(db_session)
     account = (await db_session.scalars(select(BillingAccount))).one()
     subscription = await _seed_subscription(
         db_session, account, external_id="sub_terminal"
@@ -322,17 +368,21 @@ async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
 
     db_session.expire_all()
     # Activation (2) + terminal event bump (+1) + revocation write bump (+1).
-    assert await _account_version(db_session) == 4
+    assert await _account_version(db_session) == baseline_version + 4
     persisted_sub = await db_session.get(BillingSubscription, subscription_id)
     assert persisted_sub is not None
     assert persisted_sub.status == "cancelled"
     assert persisted_sub.is_current is False
     assert persisted_sub.ended_at is not None
-    revocations = (await db_session.scalars(select(GrantRevocation))).all()
+    revocations = (
+        await db_session.scalars(
+            select(GrantRevocation).where(
+                GrantRevocation.idempotency_key
+                == f"sub:{subscription_id}:terminal:{cancelled_at}"
+            )
+        )
+    ).all()
     assert len(revocations) == 1
-    assert revocations[0].idempotency_key == (
-        f"sub:{subscription_id}:terminal:{cancelled_at}"
-    )
     assert revocations[0].reason == "subscription_ended"
 
     # The lost allowance re-projected the workspace runtime row to zero.
@@ -350,8 +400,16 @@ async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
     replay = await _post_webhook(client, cancel, event_id="evt_term_cxl_2")
     assert replay.status_code == 204
     db_session.expire_all()
-    assert await db_session.scalar(select(func.count(GrantRevocation.id))) == 1
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 1
+    assert (
+        await db_session.scalar(
+            select(func.count(GrantRevocation.id)).where(
+                GrantRevocation.idempotency_key
+                == f"sub:{subscription_id}:terminal:{cancelled_at}"
+            )
+        )
+        == 1
+    )
+    assert await _commercial_grant_count(db_session) == 1
 
 
 @pytest.mark.asyncio
@@ -363,6 +421,7 @@ async def test_cancel_at_period_end_keeps_access_and_writes_no_revocations(
     monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-cape@example.com")
+    baseline_version = await _account_version(db_session)
     account = (await db_session.scalars(select(BillingAccount))).one()
     subscription = await _seed_subscription(db_session, account, external_id="sub_cape")
     subscription_id = subscription.id
@@ -400,8 +459,8 @@ async def test_cancel_at_period_end_keeps_access_and_writes_no_revocations(
     assert persisted_sub.ended_at is None
     # Accepted event bump only: the bundle replayed (same period key) and
     # nothing was revoked.
-    assert await _account_version(db_session) == 3
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 1
+    assert await _account_version(db_session) == baseline_version + 3
+    assert await _commercial_grant_count(db_session) == 1
     assert await db_session.scalar(select(func.count(GrantRevocation.id))) == 0
 
 
@@ -434,6 +493,7 @@ async def test_cancel_marks_cancel_at_period_end(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     await _register(client, "billing-cancel@example.com")
+    baseline_version = await _account_version(db_session)
     account = (await db_session.scalars(select(BillingAccount))).one()
     now = datetime.now(UTC)
     subscription = BillingSubscription(
@@ -488,7 +548,7 @@ async def test_cancel_marks_cancel_at_period_end(
     # Two bumps: the accepted lifecycle projection, plus the tier_1 period
     # bundle the config-owned catalog now issues on a cancel-scheduled event.
     # Cancel-at-period-end still never revokes.
-    assert await _account_version(db_session) == 2
+    assert await _account_version(db_session) == baseline_version + 2
     assert await db_session.scalar(select(func.count(GrantRevocation.id))) == 0
 
     # Cancelling again reports already_scheduled with NO second provider call.

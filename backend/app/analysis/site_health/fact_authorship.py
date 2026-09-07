@@ -67,7 +67,9 @@ class _VisibleAuthorshipEvidence:
         heading_candidate = tag in {"h1", "h2", "h3"}
         author = ""
         if tag in {"p", "small", "span"}:
-            author = _visible_responsible_publisher(text) or visible_byline(text)
+            author = _visible_responsible_publisher(text) or visible_byline(
+                text, leading_attribution=True
+            )
         if not author and (author_tokens or heading_candidate):
             author = _visible_author_candidate(
                 text, tag=tag, has_author_tokens=bool(author_tokens)

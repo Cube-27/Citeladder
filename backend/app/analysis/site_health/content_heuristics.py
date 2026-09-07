@@ -19,14 +19,18 @@ _AUTHOR_NAME_RE = re.compile(_authorship_config.VISIBLE_AUTHOR_NAME_PATTERN)
 _DATE_RE = re.compile(_authorship_config.DATE_PATTERN, re.IGNORECASE)
 
 
-def visible_byline(text: str) -> str:
+def visible_byline(text: str, *, leading_attribution: bool = False) -> str:
     """The first visible "By <Name>" byline in ``text``, or "".
 
-    Shared with the extractor's author fact so the classifier's notion of a
-    byline and the analyzer's notion of one cannot drift apart.
+    ``leading_attribution`` keeps ordinary copy from lending an interior
+    ``by <Name>`` phrase authorship meaning. Heading and explicit-author-node
+    evidence may still use the broader form.
     """
-    match = _BYLINE_RE.search(str(text or ""))
-    return match.group(0).strip() if match else ""
+    value = str(text or "")
+    match = _BYLINE_RE.search(value)
+    if match is None or (leading_attribution and value[: match.start()].strip()):
+        return ""
+    return match.group(0).strip()
 
 
 def visible_author_name(text: str) -> str:

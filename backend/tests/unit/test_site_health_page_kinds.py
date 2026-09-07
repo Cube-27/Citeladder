@@ -392,11 +392,11 @@ def test_faq_requires_minimum_relationship_count() -> None:
     assert classify("https://example.com/answers", facts).page_kind == "other"
 
 
-def test_faq_requires_answers() -> None:
+def test_faq_with_missing_answers_remains_in_faq_evaluation() -> None:
     facts = _facts(
         question_answer_relationships=_question_relationships(4, answered=False)
     )
-    assert classify("https://example.com/answers", facts).page_kind == "other"
+    assert classify("https://example.com/answers", facts).page_kind == "faq"
 
 
 def test_duplicate_question_relationships_do_not_classify_faq() -> None:
