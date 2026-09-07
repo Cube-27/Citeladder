@@ -47,9 +47,9 @@
 
 | Phase | Status | Evidence / next action |
 |---|---|---|
-| Plan checkpoint | Prepared in this documentation commit | Push and verify on PR #35 before code |
-| 0: proven CI repairs | Not started | Use exact failures in audit; preserve authorization/concurrency tests |
-| 1: catalog/schema/operator | Not started | Depends on baseline; draft/disabled campaign only |
+| Plan checkpoint | **Complete** | `e16604b14c507f4551e557a9c7a387f4ba54aae1` pushed and verified on PR #35 |
+| 0: proven CI repairs | **Complete locally; CI pending on `abf4f521`** | Commit `abf4f521` pushed. Focused evidence: 16 backend repairs, 308 Site Health checks, 1 opportunities component check, 4 E2E failures now pass. Full selector initially 1764 passed / 5 failed; repaired all 5, then retry delta selected 171 backend checks and passed. `scripts/check.ps1 -CheckOnly` passed. Do not treat old full-selector run as final green; CI still must verify the pushed SHA |
+| 1: catalog/schema/operator | **Ready to start** | Baseline pushed at `abf4f521`; draft/disabled campaign only. No live activation |
 | 2A: access/ledger | Not started | Exclusive base, real PostgreSQL races, canonical refund/expiry |
 | 2B: custom BYOK | Not started | Existing provider owner, secure authenticated POST boundary |
 | 2C: Content metering | Not started | Native dispatch evidence, bounded reservations and settlement |
