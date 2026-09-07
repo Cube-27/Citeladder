@@ -28,21 +28,26 @@ export function PageHero({
   centered?: boolean;
 }>) {
   return (
-    <header className="band-grain bg-shell relative overflow-hidden pt-16 pb-16 md:pt-30 md:pb-20">
+    <header className="band-grain bg-background border-hairline-warm relative overflow-hidden border-b pt-16 pb-16 md:pt-30 md:pb-20">
       <Container className="relative z-1">
         <Reveal className={cn('max-w-5xl', centered && 'mx-auto text-center')}>
           <Eyebrow>{eyebrow}</Eyebrow>
           <h1
             className={cn(
               'website-page-title text-foreground mt-6 mb-6 max-w-[28ch] text-balance',
-              centered && 'mx-auto',
+              // Centred openers must centre the measure box itself (mx-auto),
+              // not just the text inside it — text-align centres within the
+              // box, and a max-width box without auto margins hugs the left
+              // of the wrapper. The transform then compresses around the box's
+              // own centre line, which is the page centre.
+              centered && 'mx-auto origin-centre',
             )}
           >
             {title}
             {accent && (
               <>
                 {' '}
-                <em className="text-accent-text not-italic">{accent}</em>
+                <em className="text-band-indigo not-italic">{accent}</em>
               </>
             )}
           </h1>

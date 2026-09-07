@@ -77,10 +77,15 @@ export function LogoMark({
         ))}
       </svg>
       {/* An arbitrary `text-[..]` utility is rejected by check:policy and the
-          size is a prop rather than a ladder rung, so it travels as a style. */}
+          size is a prop rather than a ladder rung, so it travels as a style.
+          The wordmark itself is one brand face at one weight on every surface
+          (`.logo-wordmark`, globals.css): it cannot ride the scoped
+          `--font-display` variable, because the public scope rebinds that to
+          Instrument Serif, a serif face — the wordmark stays one sans face
+          everywhere. */}
       {wordmark ? (
         <span
-          className="font-display font-medium whitespace-nowrap"
+          className="logo-wordmark whitespace-nowrap"
           style={{ fontSize, letterSpacing: '-0.02em' } as CSSProperties}
         >
           CiteLadder

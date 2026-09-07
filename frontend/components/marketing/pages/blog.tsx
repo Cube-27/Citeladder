@@ -95,9 +95,9 @@ function BlogCta({
   secondary,
 }: Readonly<{ title: string; secondary: { href: string; label: string } }>) {
   return (
-    <Section tone="dark" rhythm="base" aria-label="Get started">
+    <Section tone="teal" rhythm="base" aria-label="Get started">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="website-section-heading text-foreground mx-auto mb-3 max-w-[28ch]">
+        <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-3 max-w-[28ch]">
           {title}
         </h2>
         <p className="website-body-lg text-muted mx-auto max-w-[52ch]">
@@ -330,7 +330,7 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
               All guides
             </Link>
             <TagRow tags={post.tags} className="justify-center" />
-            <h1 className="website-page-title text-foreground mx-auto mt-4 max-w-4xl text-balance">
+            <h1 className="website-page-title origin-centre text-foreground mx-auto mt-4 max-w-4xl text-balance">
               {post.title}
             </h1>
             <PostByline

@@ -72,12 +72,27 @@
   --color-shell: #f1f4f1;
   --color-shell-alt: #ecf1ec;
 
-  /* The marketing band ramp: canvas (paper) → tint (sunken) → deep → dark.
-     Dark bands rebind the semantic tokens in one place — see the
-     `[data-citeladder-section='dark']` scope below — so nothing inside a dark
-     band names a dark colour itself. */
-  --color-band-deep: #e4eae4;
-  --color-band-dark: #16161a;
+  /* The marketing band ramp: canvas (paper) → soft (sunken) → indigo → teal.
+     The two dark canvases rebind the semantic tokens in one place — see the
+     `[data-citeladder-section='indigo']` and `='teal'` scopes below — so
+     nothing inside those bands names a dark colour itself. */
+  --color-band-indigo: #1b1938;
+  --color-band-indigo-deep: #0e0c1f;
+  --color-band-teal: #0e3030;
+  --color-band-teal-mid: #155555;
+
+  /* The marketing canvases (docs/design.md §Marketing): the barely warm
+     off-white for alternating body bands, warm hairlines for white surfaces,
+     the indigo navy kept for inverted feature surfaces (the pricing card),
+     and the deep-teal close. Decorative families — they never carry state, so
+     they stay out of the status ladder. */
+  --color-canvas-soft: #fafaf8;
+  --color-hairline-warm: #e8e4dd;
+  --color-hairline-dark: #3f3a52;
+  --color-violet-soft: #c9b4fa;
+  --color-violet-soft-strong: #d8c9fb;
+  --color-atmosphere-green: rgb(214 236 222 / 60%);
+  --color-atmosphere-blue: rgb(219 234 248 / 55%);
 
   --color-border: #d1d0dc;
   --color-border-subtle: #e3e2ec;
@@ -361,45 +376,81 @@
   --value-placeholder: var(--color-subtle);
 }
 
-/* The one-place dark rebind (the reference system's `.on-dark`). Everything
-   inside a dark band resolves against these semantic values — components name
-   the role, never a dark hex. The accent steps up to a lighter green because
-   `#0b7a3c` fails contrast on `#16161a`; solid action buttons invert to the
-   light ink for the same reason, and the accent's own foreground flips dark
-   because the lightened green fill is what white text would sit on there. */
-[data-citeladder-section='dark'] {
+/* The one-place rebinds for the two dark feature surfaces (the reference
+   system's `.on-dark`). Everything inside an indigo or teal band resolves
+   against these semantic values — components name the role, never a dark hex.
+   The indigo band steps its accent up to the pale violet; the teal band
+   inverts its primary action to the white canvas with a teal label
+   (`button-on-teal`). Panels stay dark inside the rebinds so dropdowns and
+   sheets opened from the band keep their ground. */
+[data-citeladder-section='indigo'] {
   --grain-opacity: 0.09;
-  --color-foreground: #f2f2f6;
-  --color-secondary: #cfcfda;
-  --color-muted: #a2a2b0;
-  --color-subtle: #8e8e9a;
-  --color-disabled: #6e6e7a;
-  --color-panel: #1f1f26;
-  --color-elevated: #1f1f26;
-  --color-well: #242430;
-  --color-background-alt: #242430;
-  --color-active: #2c2c38;
-  --color-input: #1f1f26;
-  --color-border-subtle: #2c2c38;
-  --color-border: #3a3a48;
-  --color-border-strong: #4c4c5c;
-  --color-accent: #58b98a;
-  --color-accent-hover: #6fc99e;
-  --color-accent-active: #85d7b0;
-  --color-accent-fg: #0c2417;
-  --color-accent-text: #7cc9a2;
-  --color-accent-subtle: rgb(88 185 138 / 12%);
-  --color-accent-soft: rgb(88 185 138 / 8%);
-  --color-accent-border: rgb(88 185 138 / 30%);
-  --color-focus: #58b98a;
-  --color-focus-ring: rgb(88 185 138 / 38%);
-  --color-selection: rgb(88 185 138 / 30%);
-  --color-action: #f2f2f6;
-  --color-action-hover: #d4d4de;
-  --color-action-active: #b8b8c6;
-  --color-action-fg: #16161a;
-  --skeleton-base: #242430;
-  --skeleton-highlight: #2c2c38;
+  --color-foreground: #f4f3fa;
+  --color-secondary: #d6d3e8;
+  --color-muted: #a5a1c2;
+  --color-subtle: #8d89ad;
+  --color-disabled: #6d6a8e;
+  --color-panel: #242244;
+  --color-elevated: #242244;
+  --color-well: #2b2950;
+  --color-background-alt: #2b2950;
+  --color-active: #34325c;
+  --color-input: #242244;
+  --color-border-subtle: #34325c;
+  --color-border: #43406e;
+  --color-border-strong: #565293;
+  --color-accent: #c9b4fa;
+  --color-accent-hover: #d8c9fb;
+  --color-accent-active: #e4dafc;
+  --color-accent-fg: #1b1938;
+  --color-accent-text: #c9b4fa;
+  --color-accent-subtle: rgb(201 180 250 / 12%);
+  --color-accent-soft: rgb(201 180 250 / 8%);
+  --color-accent-border: rgb(201 180 250 / 30%);
+  --color-focus: #c9b4fa;
+  --color-focus-ring: rgb(201 180 250 / 38%);
+  --color-selection: rgb(201 180 250 / 30%);
+  --color-action: #c9b4fa;
+  --color-action-hover: #d8c9fb;
+  --color-action-active: #e4dafc;
+  --color-action-fg: #1b1938;
+  --skeleton-base: #2b2950;
+  --skeleton-highlight: #34325c;
+}
+
+[data-citeladder-section='teal'] {
+  --grain-opacity: 0.09;
+  --color-foreground: #eef4f2;
+  --color-secondary: #cfdedb;
+  --color-muted: #9db8b2;
+  --color-subtle: #8aa6a0;
+  --color-disabled: #6f8a85;
+  --color-panel: #143b3b;
+  --color-elevated: #143b3b;
+  --color-well: #1a4545;
+  --color-background-alt: #1a4545;
+  --color-active: #205050;
+  --color-input: #143b3b;
+  --color-border-subtle: #205050;
+  --color-border: #2a5b5b;
+  --color-border-strong: #3a6c6c;
+  --color-accent: #eef4f2;
+  --color-accent-hover: #ffffff;
+  --color-accent-active: #ffffff;
+  --color-accent-fg: #0e3030;
+  --color-accent-text: #eef4f2;
+  --color-accent-subtle: rgb(238 244 242 / 12%);
+  --color-accent-soft: rgb(238 244 242 / 8%);
+  --color-accent-border: rgb(238 244 242 / 30%);
+  --color-focus: #ffffff;
+  --color-focus-ring: rgb(255 255 255 / 40%);
+  --color-selection: rgb(255 255 255 / 25%);
+  --color-action: #ffffff;
+  --color-action-hover: #eef1ee;
+  --color-action-active: #dfe4e0;
+  --color-action-fg: #0e3030;
+  --skeleton-base: #1a4545;
+  --skeleton-highlight: #205050;
 }
 
 *,
@@ -632,9 +683,19 @@ input:-webkit-autofill:focus {
   transition: background-color 9999s ease-out;
 }
 
-/* The public surface prints on white, not the app's tinted paper canvas. */
+/* The public surface prints on white, not the app's tinted paper canvas, and
+   it sets the editorial ink of the reference system (docs/design.md
+   §Marketing): a navy ink ladder with almost no grey — headings, body, and
+   captions all sit in the navy family, the way the reference site runs dark
+   navy text on white. Primary actions stay the brand green; selection, focus,
+   and the evidence marks inside embedded product previews remain the shared
+   green accent, so previews keep reading as the product. */
 [data-public-surface] {
   --color-background: #ffffff;
+  --color-foreground: #191945;
+  --color-secondary: #33335c;
+  --color-muted: #4b4b73;
+  --color-subtle: #63638a;
 }
 
 /* Paper, not screen. A fractal-noise tile at a few percent over the marketing
@@ -658,10 +719,9 @@ input:-webkit-autofill:focus {
 }
 
 /* A tinted band takes a little more grain than paper does, so the fill reads as
-   stock rather than as a flat wash; the dark close takes more again, because
-   noise all but disappears into a dark ground. */
-[data-citeladder-section='sunken'],
-[data-citeladder-section='deep'] {
+   stock rather than as a flat wash; the indigo and teal canvases take more
+   again, because noise all but disappears into a dark ground. */
+[data-citeladder-section='sunken'] {
   --grain-opacity: 0.07;
 }
 
@@ -1060,6 +1120,15 @@ samp {
   :focus-visible {
     outline: 3px solid ButtonText;
   }
+}
+
+/* The wordmark is one brand face at one weight on every surface. It cannot
+   ride the scoped `--font-display` variable: the public/flow scope rebinds
+   that to Instrument Serif, a serif face — the wordmark stays one sans
+   face everywhere. Uncut Sans carries the real 600. */
+.logo-wordmark {
+  font-family: var(--font-uncut-sans), var(--font-remus), -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 600;
 }
 
 /* Skip link — the first tab stop on every route (app/layout.tsx). Off-screen

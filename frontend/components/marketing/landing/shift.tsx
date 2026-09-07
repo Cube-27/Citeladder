@@ -16,12 +16,7 @@ export function Shift() {
   // until the questions and the product read as one block.
   return (
     <Section id="why" tone="sunken" rhythm="base" aria-labelledby="reveal-title">
-      <SectionHeader
-        eyebrow={reveal.kicker}
-        title={reveal.title}
-        lead={reveal.lead}
-        headingId="reveal-title"
-      />
+      <SectionHeader title={reveal.title} lead={reveal.lead} headingId="reveal-title" />
       <StaggerGroup className="grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
         {reveal.questions.map((question) => {
           const Icon = LANDING_ICONS[question.icon];

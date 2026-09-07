@@ -14,7 +14,9 @@ workspace, not a wall of equal-weight KPI cards.
 - **Name and domain:** CiteLadder, `citeladder.com`.
 - **Logo:** one lockup component, `frontend/components/ui/logo-mark.tsx` — the
   mark drawn as inline SVG at `currentColor`, followed by the wordmark set as
-  live text in the display face at weight 500. The mark’s path data is the
+  live text at one weight on every surface (`.logo-wordmark`: Uncut Sans 600 —
+  the wordmark cannot ride the scoped `--font-display` variable, because the
+  public scope rebinds that to a 400-only serif face). The mark’s path data is the
   supplied glyph (`frontend/public/citeladder-logo-black.svg`, with
   `-white.svg` as the knocked-out source of record) re-boxed to its own ink,
   because the source viewBox padded the artwork by roughly 15% a side and a
@@ -25,14 +27,24 @@ workspace, not a wall of equal-weight KPI cards.
   height and derives the wordmark from it at the lockup’s 1.2 ratio, so the two
   halves cannot drift apart; `wordmark={false}` is the mark-only mode for chrome
   too small to set the word. Product, marketing, authentication, and onboarding
-  all reuse that component rather than rebuilding the lockup.
+  all reuse that component rather than rebuilding the lockup, and the flow bar
+  shares the marketing nav's container and gutter, so the wordmark sits at the
+  same left edge on every surface.
   `frontend/public/citeladder-favicon.ico` owns browser and installable-app
   iconography with the same black silhouette across its frames.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
   and outcomes over generic AI language.
-- **Typography:** Remus Variable for UI, body, and data everywhere, with Uncut Sans reserved for
-  display headings. Authentication and onboarding share that roomier
-  flow ladder; the authenticated application uses Remus and the even-number product ladder.
+- **Typography:** two scoped pairings from one `next/font/local` owner. The
+  authenticated product keeps Remus Variable for UI, body, and data with Uncut
+  Sans for display headings and the even-number product ladder. The public and
+  focused-flow surfaces render **Instrument Serif** as the display face — a
+  400-only single-weight serif whose display rungs are set at 700, a
+  deliberate browser synthesis and the chosen headline treatment, and
+  stretched 8% wider than their text column by the `--display-squeeze`
+  knob (1.08; 1 is neutral, and `.origin-centre` flips the stretch origin
+  for centred headings) —
+  over **Geist Variable** (the full 100–900
+  wght axis) for body, UI, and data; the flow ladder shares that pairing.
   Website and flow surfaces use a 15px reading baseline. Size,
   leading, weight, tracking, and
   colour are one role contract, never independent page-level choices.
@@ -45,18 +57,25 @@ workspace, not a wall of equal-weight KPI cards.
   lands near a 1.3px stem instead of growing heavier with the icon. Colour stays
   `currentColor` so `text-muted` and `text-accent-text` keep painting the glyph.
 - **Action and selection:** brand green (`#0B7A3C`, from the reference system's
-  product-hue set) owns primary actions across product, public, authentication,
-  and onboarding surfaces. Analytical selection, links, active navigation, and
-  focus consume the semantic accent ladder (`#0B7A3C` with `#08592C` for
-  hover/press depth). Cyan, coral, lime,
+  product-hue set) owns primary actions on every surface — product,
+  authentication, onboarding, and the public marketing site (the shared solid
+  `primary` button). Analytical selection, links, active navigation, and focus
+  consume the semantic accent ladder (`#0B7A3C` with `#08592C` for hover/press
+  depth). The public surface rebinds its text inks to the navy family so type
+  reads in dark navy rather than grey, and the deep teal (`#0E3030`) carries the
+  closing band on every marketing page. Cyan, coral, lime,
   and amber are evidence/status families, never route decoration.
 - **Composition:** state before features. Product pages prioritise current state,
   movement, next action, then evidence. Marketing is more editorial but uses the
   same tokens, type, and restraint.
 
-There is no user-selectable dark theme, parallel marketing colour namespace, or
-route-local palette. Authentication and onboarding use one centred light-ground
-flow; neither surface reserves viewport width for a decorative brand rail.
+There is no user-selectable dark theme or parallel CSS colour namespace. The
+public surface renders its own **light editorial marketing system** (below)
+through the same token owner and the sanctioned band-rebind mechanism — no
+route-local
+hex, no second stylesheet. Authentication and onboarding use one centred
+light-ground flow; neither surface reserves viewport width for a decorative
+brand rail.
 
 ## Source of truth and implementation rules
 
@@ -85,38 +104,35 @@ Tokens are semantic; components use the role, not a colour value.
 
 | Role | Token family | Use |
 | --- | --- | --- |
-| Ground | `shell` (`#F1F4F1`), `shell-alt` (`#ECF1EC`) | The single grained sheet every chrome region stands on: app sidebar and top bar, the flow bar and action bar, and the marketing `sunken` band |
+| Ground | `shell` (`#F1F4F1`), `shell-alt` (`#ECF1EC`) | The single grained sheet every chrome region stands on: the app sidebar and top bar and the focused flow's bar and action bar |
 | Canvas and structure | `background` (`#F7F6FD`), `well` / `background-alt` / `panel-tonal` (`#F4F4F1`), `active` (`#EFEFEB`) | The neutral inset ladder used *inside* paper — wells, tonal panels, hover and selected state |
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
 | Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
 | Borders | `border-subtle` (`#E3E2EC`), `border` (`#D1D0DC`), `border-strong` (`#A2A0B0`), `border-bold` (`#747282`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
-| Primary action | `action-*` (`#0B7A3C`) | Brand-green primary actions; public CTAs use the `accent` outlined treatment |
-| Selection and focus | `accent-*` (`#0B7A3C`) | Green for selection, links, tabs, active navigation, and focus |
+| Marketing canvases | `band-indigo` (`#1B1938`), `band-teal` (`#0E3030`), `canvas-soft` (`#FAFAF8`), `violet-soft` (`#C9B4FA`), `atmosphere-blue`, `atmosphere-green`, `hairline-warm` (`#E8E4DD`) | The public surface's editorial system — see the marketing arc below. Decorative; never state |
+| Primary action | `action-*` (`#0B7A3C`) | Brand-green primary actions on every surface, public site included |
+| Selection and focus | `accent-*` (`#0B7A3C`) | Green for selection, links, tabs, active navigation, and focus; violet (`#C9B4FA`) inside the indigo band, near-white inside the teal band |
 | Status and evidence | cyan, coral, lime, amber, `citation-*`, `run-*`, `score-*`, `chart-*` | Persisted evidence and status, always paired with a label or icon |
 
 The ground is paper and the ink is near-black. Colour appears on under five
-percent of the surface: `action` `#0B7A3C` owns solid primary buttons (hover
-steps one rung deeper along the accent ramp, `#08592C`; press settles at
-`#074D27`), and green
+percent of the surface: `action` `#0B7A3C` owns solid primary buttons on
+product, authentication, and onboarding (hover steps one rung deeper along the
+accent ramp, `#08592C`; press settles at `#074D27`), and green
 `#0B7A3C` owns selection, links,
-tabs, active navigation, focus, and the first chart series. The public-website
-CTA is the `accent` button variant instead of a solid fill: a light green
-fill (`#EEF6F1`) with a green border and green label at rest, filling solid
-green with a white label on hover. The model is **one ground, two papers**. Chrome — the app sidebar and top bar,
-the focused flow's bar and action bar, and the marketing `sunken` band — is one
-grained sheet in `shell` (`#F1F4F1`), and content sits on white paper inset in
-it via the `.app-pane` recipe. The tonal step between those two planes plus the
-pane's overlay radius **is** the separation: the hairline rules that used to
-divide sidebar from content and flow bar from flow made the chrome read as
-boxes bolted together. Inside paper the neutral ladder still applies —
-`#F4F4F1` wells and tonal panels, `#EFEFEB` hover and selected state — while
-the public surface (`[data-public-surface]`) rebinds `background` to white, so
-marketing prints on plain white with the ground and the tonal bands separating.
-The ground's hue is green at very low chroma: enough to read as a material
-rather than as grey, far too little to compete with the accent that owns
-actions. Both rungs clear AA for all four neutral inks. Raised objects, inputs, and
-overlays remain white. Product, marketing, authentication, and onboarding
-consume these shared tokens without route-scoped palette overrides.
+tabs, active navigation, focus, and the first chart series. The model is
+**one ground, two papers**. Chrome — the app sidebar and top bar, the focused
+flow's bar and action bar — is one grained sheet in `shell` (`#F1F4F1`), and
+content sits on white paper inset in it via the `.app-pane` recipe. The tonal
+step between those two planes plus the pane's overlay radius **is** the
+separation: the hairline rules that used to divide sidebar from content and
+flow bar from flow made the chrome read as boxes bolted together. Inside paper
+the neutral ladder still applies — `#F4F4F1` wells and tonal panels, `#EFEFEB`
+hover and selected state. The ground's hue is green at very low chroma: enough
+to read as a material rather than as grey, far too little to compete with the
+accent that owns actions. Both rungs clear AA for all four neutral inks. Raised
+objects, inputs, and overlays remain white. Product, authentication, and
+onboarding consume these shared tokens without route-scoped palette overrides;
+the public surface renders its own canvas system below.
 
 Text hierarchy is semantic rather than route-specific: `foreground` owns headings,
 primary values, and actions; `secondary` owns body copy and row values; `muted`
@@ -127,34 +143,50 @@ collapsed and dense screens lost their hierarchy. The design-system policy
 requires all four neutral text roles to meet WCAG 2.1 AA normal-text contrast
 (`4.5:1`) on every shared light surface, including `active`.
 
-Marketing uses the same neutral paper ladder (`background`, `well`,
-`panel-tonal`, and `active`), green action, and green accent roles as the product,
-without route-scoped palette overrides. On paper a tonal band is a whisper, so a
-public section separates with a hairline (`divided`) unless the fill edge is
-doing real work. Functional evidence families remain inside
-product data and faithful preview scenes because those states must stay legible at a glance.
-Functional colour never carries meaning alone. Grain is the material the ground is made of, not an effect: `.band-grain` lays a
-fractal-noise tile over a plane at `--grain-opacity`, which a band overrides —
-`.grain-soft` (3%) for app and flow chrome, 5% on paper, 7% on a tinted band and
-9% on the dark close, because noise all but disappears into a dark ground and
-reads as dirt at product density. The one sanctioned decorative
-family on the public surface is the pastel icon tile (`tile-blue`, `tile-indigo`,
-`tile-purple`, `tile-green` — the reference system's four product hues, each a
-soft fill with a deep ink rung): 48px rounded carriers for section iconography on
-the landing page and the per-segment hue accents on `/solutions`, never used for
-state. The public band arc deepens down a
-page — canvas, the shared ground (`shell`), deep (`band-deep` `#E4EAE4`), and a
-closing dark band (`band-dark` `#16161A`) that carries a 28px rounded shoulder
-into the footer. A dark band rebinds the semantic tokens in one place
-(`[data-citeladder-section='dark']` in `globals.css`): components inside keep
-naming roles, the accent steps up to a lighter green, primary actions
-invert to the light ink, and the accent's own foreground flips dark because the
-lightened green fill is what its label would sit on — no dark hex is ever named
-at a call site.
+Marketing renders the **light editorial system**: a white page that opens on a
+centred serif hero over the pastel atmosphere washes, alternates white body
+bands with the barely warm `sunken` off-white (`canvas-soft` `#FAFAF8`), and
+closes on the deep-teal band (`band-teal` `#0E3030`) that resolves every
+marketing page. The public surface rebinds the text inks to the navy family
+(`[data-public-surface]` in `globals.css` — `#191945` foreground through
+`#63638a` subtle), so the site reads in dark navy rather than grey; the brand
+green keeps its ownership of primary actions (the shared solid `primary`
+button), selection, focus, and links. The indigo canvas (`band-indigo`
+`#1B1938`) survives as a depth accent, not a page ground: the featured pricing
+tier inverts onto it, and its one-place token rebind
+(`[data-citeladder-section='indigo']`) steps that card's accent and action up
+to the pale violet so the inverted CTA stays legible. The teal band rebinds the
+same way (`='teal'`): components inside keep naming roles, the primary action
+inverts to the white canvas with a teal label, and no dark hex is ever named at
+a call site. On paper a tonal band is a whisper, so a public section
+separates with a hairline (`divided`) unless the fill edge is doing real work.
+Functional evidence families remain inside product data and faithful preview
+scenes because those states must stay legible at a glance. Functional colour
+never carries meaning alone. Grain is the material the ground is made of, not
+an effect: `.band-grain` lays a fractal-noise tile over a plane at
+`--grain-opacity`, which a band overrides — `.grain-soft` (3%) for app and flow
+chrome, 5% on paper, 7% on a tinted band and 9% on the teal
+canvas, because noise all but disappears into a dark ground and reads as dirt
+at product density. The sanctioned decorative families on the public surface
+are the pastel atmosphere washes (`atmosphere-blue`, `atmosphere-green` — the
+hero's backdrop, echoed around the product window) and
+the pastel icon tiles (`tile-blue`, `tile-indigo`, `tile-purple`, `tile-green`)
+for section iconography, the workflow's full step panels, and the per-segment
+hue accents on `/solutions`, never used for state.
 
 ## Typography
 
-Two families only: Remus Variable for UI, body, and data (`font-sans`) and for authenticated-app text; Uncut Sans is the display face (`font-display`) for website headings and display typography. Both are self-hosted variable fonts via `next/font/local` with declared weight ranges — Remus `400–700`, Uncut Sans `300–700`; an undeclared range makes the `@font-face` default to 400 and the browser synthesise every heavier heading. Both swap display. Interface weights remain concentrated at 400–600. Metrics, dates, ranks,
+Four self-hosted faces in two scoped pairings, all owned by
+`next/font/local` declarations in `app/layout.tsx`. The authenticated product
+pairs **Remus Variable** (`400–700`) for UI, body, and data with **Uncut Sans**
+(`300–700`) for display headings; the variable faces declare their full weight
+ranges so no product heading is synthesised. The public and focused-flow
+surfaces pair **Instrument Serif** as the display face — a 400-only
+single-weight serif, so its display rungs' 700 is a deliberate browser
+synthesis and the `--display-squeeze` knob (1.08) stretches the rungs 8% wider
+than their text column — with **Geist Variable** (`100–900`) for body, UI, and
+data. All swap display.
+Metrics, dates, ranks,
 and percentages use tabular numerals, never a monospace face.
 
 ### Website and focused-flow ladder
@@ -165,35 +197,35 @@ components consume these roles instead of assembling arbitrary size, leading,
 tracking, weight, and colour combinations.
 
 The ladder is mobile-first: the base value applies below 768px and the arrows
-mark the 768px and 1024px step-ups. Every rung is roughly a 1.2× step from the
-one below it at every breakpoint, so the hierarchy survives the mid-range widths
-rather than collapsing between 641 and 767px.
-
-| Role                    | Family     |      Size / line height |  Weight |                       Tracking | Colour                                      |
-| ----------------------- | ---------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
-| Hero display            | Uncut Sans | 36/40 → 48/52 → 56/60px |     500 |          -0.04em → -0.045em    | foreground; one short phrase may use accent |
-| Page title              | Uncut Sans |         30/36 → 40/44px |     500 |           -0.035em → -0.04em   | foreground                                  |
-| Section heading         | Uncut Sans |         28/34 → 34/40px |     500 |          -0.028em → -0.034em   | foreground                                  |
-| Feature heading         | Uncut Sans |         20/26 → 24/30px |     500 |                        -0.02em | foreground                                  |
-| Small heading           | Uncut Sans |         17/23 → 20/26px |     500 |                        -0.02em | foreground                                  |
-| Flow title              | Uncut Sans |         28/34 → 32/38px |     500 |                       -0.025em | foreground                                  |
-| Flow group title        | Remus      |                 17/24px |     500 |                        -0.01em | foreground                                  |
-| Flow help               | Remus      |                 15/22px |     400 |                              0 | muted                                       |
-| Flow metadata           | Remus      |                 14/20px |     500 |                              0 | muted; tabular numerals                     |
-| Lead                    | Remus      |         17/26 → 19/28px |     400 |                       -0.018em | secondary                                   |
-| Large body              | Remus      |                 16/26px |     400 |                       -0.011em | secondary                                   |
-| Body baseline           | Remus      |                 15/24px |     400 |                       -0.011em | secondary                                   |
-| Navigation and actions  | Remus      |                 14/20px | 500–600 |                              0 | foreground or inverse                       |
-| Label, caption, eyebrow | Remus      |                 13/18px | 500–600 | 0; +0.06em only when uppercase | muted or subtle                             |
+mark the 768px and 1024px step-ups. The display rungs run large — the serif
+carries hierarchy through size, its synthesised 700, and the navy ink — with
+calm leading (1.03–1.1) and near-zero tracking; tight sans-style tracking
+closes up its counters.
+| Role                    | Family           |      Size / line height |  Weight |                       Tracking | Colour                                      |
+| ----------------------- | ---------------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
+| Hero display            | Instrument Serif | 36/39 → 56/58 → 76/78px |     700 |                       -0.01em  | foreground; one short phrase may use accent |
+| Page title              | Instrument Serif |         30/34 → 52/56px |     700 |                       -0.01em  | foreground                                  |
+| Section heading         | Instrument Serif |         28/32 → 44/48px |     700 |                      -0.005em  | foreground                                  |
+| Feature heading         | Instrument Serif |         20/22 → 30/34px |     700 |                      -0.005em  | foreground                                  |
+| Small heading           | Instrument Serif |         17/23 → 22/26px |     700 |                      -0.005em  | foreground                                  |
+| Flow title              | Instrument Serif |         28/34 → 32/38px |     500 |                       -0.01em  | foreground                                  |
+| Flow group title        | Geist            |                 17/24px |     500 |                        -0.01em | foreground                                  |
+| Flow help               | Geist            |                 15/22px |     400 |                              0 | muted                                       |
+| Flow metadata           | Geist            |                 14/20px |     500 |                              0 | muted; tabular numerals                     |
+| Lead                    | Geist            |         17/26 → 19/28px |     400 |                              0 | secondary                                   |
+| Large body              | Geist            |                 16/26px |     400 |                              0 | secondary                                   |
+| Body baseline           | Geist            |                 15/24px |     400 |                              0 | secondary                                   |
+| Navigation and actions  | Geist            |                 14/20px | 500–600 |                              0 | foreground or inverse                       |
+| Label, caption, eyebrow | Geist            |                 13/18px |     600 | 0; +0.06em only when uppercase | muted or subtle                             |
 
 Ordinary website paragraphs never render below the 15px body rung. Thirteen
 pixels is reserved for short labels, metadata, captions, and legal support.
-Prose stays within a 45–75 character measure. The accent green never carries a
-long paragraph. Large text uses tighter leading and tracking; body text stays at
-near-zero tracking with more leading. Pricing values are the one non-editorial
-website display role: `website-data-display` uses Remus at 30/36px stepping to
-40/46px at 768px, with tabular numerals, and never applies to prose or
-headings.
+Prose stays within a 45–75 character measure. The accent never carries a
+long paragraph. Large text uses calm leading; body text stays at
+zero tracking with more leading. Pricing values are the one non-editorial
+website display role: `website-data-display` uses Geist at 500 at 30/36px
+stepping to 40/46px at 768px, with tabular numerals, and never applies to prose
+or headings.
 
 ### Product app ladder
 
@@ -573,15 +605,30 @@ Rules:
 
 ### Marketing and auth
 
-Marketing is editorial rather than dense, while staying recognisably part of the
-product. A page is a vertical stack of full-width sections with content in a
-centred container. Use the recipe: eyebrow, heading, short lead, evidence/media or
-focused grid, then an optional CTA.
-
+Marketing is editorial rather than dense, and renders the light editorial
+system: a page opens on a centred serif hero standing on the pastel atmosphere
+washes with the rotating engine roster on the first screen itself (or, on
+subpages, a white opener above a warm hairline), the body
+alternates white with the barely warm `sunken` off-white, and every marketing
+page closes on the deep-teal band — one closing headline
+and a single primary CTA there; the footer resolves back to white paper. The
+product UI is part of the story: the landing page keeps the real workspace
+canvas as its product beat, so the page shows the actual instrument rather
+than a rebuilt fake. A page
+is a vertical stack of full-width sections with content in a centred container.
+Use the recipe: optional eyebrow, heading, short lead, evidence/media or a
+focused grid, then at most one primary CTA per band — a band anchors one
+action, and secondary intents live in the nav or another band. Eyebrows are
+rationed (at most one per three sections, hero included); a section's position
+on the page already categorises it, so most sections need no label.
 - Give sections breathing room on the global rhythm rather than route-local values.
 - Prefer asymmetric text-and-media compositions, a proof ledger, or a concise grid
   over a wall of feature cards. The product UI is the "photography": a real
-  workspace canvas carries the visual weight.
+  workspace canvas carries the visual weight, never a
+  rebuilt fake screenshot. The hero itself stays text-only: value proposition
+  and one action. The operating loop renders its four stages as full pastel
+  step panels — one product hue per stage, the way the reference system tints
+  its numbered lifecycle — with the stage label naming the step.
 - Keep body copy around 60–70 characters wide and use one H1 per page.
 - Auth uses the website type ladder and shared focus treatment; the form remains
   the primary task. Auth and onboarding use the same ground and the same paper
@@ -603,11 +650,11 @@ focused grid, then an optional CTA.
 Buttons use the 8px control-radius role with no decorative inset border in the
 authenticated application; app button sizes remain compact (32px/36px on desktop,
 44px on touch).
-Website and marketing primary buttons use modern pill geometry (`rounded-full`, 9999px)
-with `min-h-[2.75rem]` (44px) and the `accent` outlined treatment: a light
-green fill with a green border and green label at rest that fills solid green
-with a white label on hover. Secondary, neutral, ghost, and
-danger remain shared semantic variants. Every control has a direct label, a
+Website and marketing primary buttons use the shared 8px control radius
+(`min-h-[2.75rem]`, 44px touch target) filled solid with the brand green —
+the same `primary` action role the app uses, walking one rung deeper on hover.
+Secondary, neutral, ghost,
+and danger remain shared semantic variants. Every control has a direct label, a
 visible focus ring — the control's own border turns accent and one soft glow
 attaches to it (no panel gap, no second floating ring) — immediate pressed
 feedback, and
@@ -698,10 +745,16 @@ Before merging a visual change, verify:
 - It uses semantic global tokens and an existing primitive where one applies.
 - Website and focused-flow type use documented content roles with a 15px body
   baseline; authenticated-app type uses Remus at weights 400 and 500 only.
-- Marketing stays monochrome-plus-green; functional colour appears only in the app.
+- Marketing renders the light editorial system: centred serif hero on the
+  pastel atmosphere, white body over `canvas-soft` alternates with navy inks,
+  deep-teal close, light footer, and the real product canvas kept as the
+  landing's product beat. One primary CTA per
+  band; brand green owns primary actions on every surface; decorative washes
+  and the pastel tiles never carry state; functional colour appears only in the
+  app and inside faithful product previews.
 - Chrome stands on the `shell` ground and content on `.app-pane` paper, on every
-  one of product, marketing, authentication, and onboarding. Inside paper the
-  neutral ladder holds: `#F4F4F1` structure/well/tonal panel, `#EFEFEB` hover and
+  one of product, authentication, and onboarding. Inside paper the neutral ladder
+  holds: `#F4F4F1` structure/well/tonal panel, `#EFEFEB` hover and
   selected state. Sections separate with a hairline rule and space, not with a
   box around their contents; the ground/paper seam separates with tone and
   radius, never a rule.

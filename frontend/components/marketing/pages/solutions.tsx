@@ -145,9 +145,9 @@ export function SolutionSegments() {
 
 export function SolutionsCta() {
   return (
-    <Section tone="dark" rhythm="base" aria-label="Get started">
+    <Section tone="teal" rhythm="base" aria-label="Get started">
       <Reveal className="mx-auto max-w-5xl text-center">
-        <h2 className="website-section-heading text-foreground mx-auto mb-5 max-w-[32ch]">
+        <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-5 max-w-[32ch]">
           Bring your team the version of the truth it reports in.
         </h2>
         <p className="website-lead text-muted mx-auto max-w-[75ch]">

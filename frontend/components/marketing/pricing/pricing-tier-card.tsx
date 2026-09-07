@@ -66,9 +66,14 @@ export function PricingTierCard({
     <div
       data-tier={plan.key}
       data-highlighted={highlighted ? 'true' : undefined}
+      // The featured tier inverts to the indigo canvas (docs/design.md
+      // §Marketing). The band rebind flips the card's tokens in place, so the
+      // label inks, hairlines, and CTA all step onto the dark surface without
+      // this component naming a dark colour.
+      data-citeladder-section={highlighted ? 'indigo' : undefined}
       className={cn(
         'flex h-full flex-col rounded-[var(--radius-card)] p-6 md:p-7 xl:p-6 shadow-card hover:shadow-card-hover transition-all duration-200',
-        highlighted ? 'bg-background-alt ring-accent ring-1' : 'bg-panel',
+        highlighted ? 'bg-band-indigo' : 'bg-panel',
       )}
     >
       <div className="flex min-h-7 items-center justify-between gap-3">
@@ -171,7 +176,7 @@ function PlanCta({
   return (
     <Button
       disabled={disabled}
-      variant="accent"
+      variant="primary"
       onClick={() => onCheckout(plan)}
       className="w-full"
     >

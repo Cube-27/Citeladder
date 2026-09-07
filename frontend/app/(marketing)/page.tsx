@@ -38,10 +38,11 @@ export const metadata: Metadata = {
  * forwards signed-in visitors to their dashboard (`/projects`) or to
  * first-run `/onboarding` — the contract `/` had before this page existed.
  *
- * Seven beats, in order: the hook (Hero), why growth changed (Shift), the
- * product itself (SeeIt), how the loop runs (Workflow), who it is shaped for
- * (Packs), the data promise (Trust), and the close (FinalCta). Shared chrome
- * (nav + footer) lives in the (marketing) route-group layout.
+ * Eight beats, in order: the hook with the rotating engine roster (Hero), why
+ * growth changed (Shift), the product itself (SeeIt), how the loop runs
+ * (Workflow), who it is shaped for (Packs), the data promise (Trust), and the
+ * close (FinalCta). Shared chrome (nav + footer) lives in the (marketing)
+ * route-group layout.
  *
  * Section tones are owned by the section components, not here. `Section` sets
  * the rule that no two adjacent bands share a tone, so reordering these beats

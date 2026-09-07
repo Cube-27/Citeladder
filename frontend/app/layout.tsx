@@ -25,6 +25,24 @@ const uncutSans = localFont({
   display: 'swap',
 });
 
+// The public/flow type world (docs/design.md §Typography): Geist is the
+// variable text face — the full wght 100–900 axis declared so every UI weight
+// interpolates — and Instrument Serif is the display serif, self-hosted from
+// the open-source project. It is a 400-only face, so the display rungs' 700
+// headline weight is a deliberate browser synthesis — the chosen treatment.
+const geist = localFont({
+  src: '../public/fonts/Geist-Variable.woff2',
+  variable: '--font-geist',
+  weight: '100 900',
+  display: 'swap',
+});
+
+const instrumentSerif = localFont({
+  src: '../public/fonts/InstrumentSerif-Regular.woff2',
+  variable: '--font-instrument-serif',
+  display: 'swap',
+});
+
 const DIRECTION_CONTRACT = `<!--
 THESIS: Prism Evidence is one calm editorial system from first visit through the operating workspace.
 OWN-WORLD: paper ground and near-black ink, brand-green primary actions, green for selection, focus and links, hairline rules and negative space carrying hierarchy, Uncut Sans editorial display with Remus body, and shadows reserved for floating UI.
@@ -54,7 +72,10 @@ const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${remusSans.variable} ${uncutSans.variable}`}>
+    <html
+      lang="en"
+      className={`${remusSans.variable} ${uncutSans.variable} ${geist.variable} ${instrumentSerif.variable}`}
+    >
       <body>
         {GA_MEASUREMENT_ID ? (
           <>

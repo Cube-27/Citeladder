@@ -301,9 +301,9 @@ export function EnterpriseLimits() {
 
 export function EnterpriseContactCta() {
   return (
-    <Section id="contact" tone="dark" rhythm="base" aria-label="Contact sales">
+    <Section id="contact" tone="teal" rhythm="base" aria-label="Contact sales">
       <Reveal className="mx-auto max-w-3xl text-center">
-        <h2 className="website-section-heading text-foreground mx-auto mb-4 max-w-[28ch]">
+        <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-4 max-w-[28ch]">
           Give your AI visibility program a reviewable operating model.
         </h2>
         <p className="website-lead text-muted mx-auto max-w-[56ch]">

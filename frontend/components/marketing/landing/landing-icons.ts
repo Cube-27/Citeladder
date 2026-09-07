@@ -51,3 +51,12 @@ export const LANDING_TILES: Record<TileKey, string> = {
   purple: 'bg-tile-purple text-tile-purple-ink',
   green: 'bg-tile-green text-tile-green-ink',
 };
+
+/** The deep ink rung alone, for glyphs sitting on a white chip inside a
+    tinted panel (the workflow steps' icon carriers). */
+export const LANDING_TILE_INKS: Record<TileKey, string> = {
+  blue: 'text-tile-blue-ink',
+  indigo: 'text-tile-indigo-ink',
+  purple: 'text-tile-purple-ink',
+  green: 'text-tile-green-ink',
+};

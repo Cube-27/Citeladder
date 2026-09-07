@@ -104,7 +104,7 @@ describe('Landing page (public marketing `/`)', () => {
     expect(cta).toHaveAttribute('href', DEMO_HREF);
   });
 
-  it('keeps the first screen text-only and places the workspace directly after it', () => {
+  it('keeps the first screen text-only and the reveal chapter directly after the hero', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
 
@@ -112,9 +112,14 @@ describe('Landing page (public marketing `/`)', () => {
     const main = container.querySelector('main');
     expect(hero).not.toBeNull();
     expect(hero).not.toHaveTextContent(/your ai visibility|tracking your brand/i);
+    // The hero carries no product UI: type, one action, and the rotating
+    // engine roster on the first screen. The reveal chapter follows it.
     expect(main?.children[0]).toBe(hero);
-    // The reveal chapter follows the hook; the product canvas comes after it.
+    expect(
+      within(hero!).getByRole('img', { name: /ChatGPT, Grok, Gemini, Copilot, Claude/i }),
+    ).toBeInTheDocument();
     expect(main?.children[1]).toHaveAttribute('id', 'why');
+    expect(main?.children[2]).toHaveAttribute('id', 'see-it');
   });
 
   it('shows the product canvas once, after the hero states the problem', () => {
@@ -133,16 +138,11 @@ describe('Landing page (public marketing `/`)', () => {
     expect(product).not.toHaveTextContent(/example data/i);
   });
 
-  it('renders the reveal section as a three-item ledger and keeps one product workspace', () => {
+  it('renders the reveal section as a three-item ledger', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
 
     expect(container.querySelectorAll('#why article')).toHaveLength(3);
     expect(container.querySelector('#why .shadow-card')).toBeNull();
-    // Pin #see-it itself first: an optional-chained query below would pass
-    // vacuously if the section vanished.
-    const seeIt = container.querySelector('#see-it');
-    expect(seeIt).not.toBeNull();
-    expect(seeIt?.querySelector('[data-testid="product-canvas"]')).not.toBeNull();
   });
 });
