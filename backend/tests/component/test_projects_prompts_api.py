@@ -22,7 +22,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.brand_logos import BRAND_LOGO_STATUS_READY
-from app.core.config.entitlements import KEY_PROJECT_SLOTS, KEY_PROMPT_SLOTS
+from app.core.config.entitlements import (
+    KEY_PROJECT_DELETION,
+    KEY_PROJECT_SLOTS,
+    KEY_PROMPT_SLOTS,
+)
 from app.domain.entitlements.types import GrantSpec
 from app.models.brand import Brand, BrandLogoAsset, Competitor
 from app.models.site_health.crawl import SiteCrawl
@@ -258,6 +262,7 @@ async def test_logo_is_served_without_the_active_workspace_header(
 @pytest.mark.asyncio
 async def test_project_list_and_update_and_delete(
     client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     await _register(client, "p2@example.com")
     created = (await client.post("/api/v1/projects", json=_project_payload())).json()
@@ -278,6 +283,18 @@ async def test_project_list_and_update_and_delete(
     assert patched.json()["name"] == "Renamed"
     assert patched.json()["brand"]["aliases"] == ["NewAlias"]
     assert patched.json()["benchmark_mode"] == "forced_grounded"
+
+    denied = await client.delete(f"/api/v1/projects/{created['id']}")
+    assert denied.status_code == 403
+    assert denied.json()["error"]["details"] == {"key": KEY_PROJECT_DELETION}
+
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(created["workspace_id"]),
+            grants=(GrantSpec(key=KEY_PROJECT_DELETION, value=1),),
+        )
+        await session.commit()
 
     deleted = await client.delete(f"/api/v1/projects/{created['id']}")
     assert deleted.status_code == 204

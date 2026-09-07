@@ -77,8 +77,10 @@ export function useEntitlement() {
 export function capabilityLimit(
   entitlement: BillingEntitlement | null,
   key: string,
-): number | null | undefined {
+): number | undefined {
   if (!entitlement || entitlement.status !== 'resolved') return undefined;
-  const value = entitlement.capabilities.find((capability) => capability.key === key)?.value;
-  return typeof value === 'number' ? value : null;
+  const capability = entitlement.capabilities.find((item) => item.key === key);
+  if (!capability) return undefined;
+  const value = capability.value;
+  return typeof value === 'number' ? value : undefined;
 }

@@ -68,6 +68,7 @@ KEY_EXPORTS: Final = "exports"
 KEY_MANUAL_RUNS_PER_DAY: Final = "manual_runs_per_day"
 KEY_CONTENT_CREATION: Final = "content_creation"
 KEY_GROWTH_AGENT: Final = "growth_agent"
+KEY_PROJECT_DELETION: Final = "project_deletion"
 
 # Public-signup baseline. These are account-wide allowances; occupancy is
 # counted across every workspace linked to the account.
@@ -75,6 +76,7 @@ FREE_PROJECT_SLOTS: Final = 1
 FREE_PROMPT_SLOTS: Final = 10
 FREE_MONITORED_URLS: Final = 20
 BASELINE_GRANT_REVISION: Final = "signup-baseline-v1"
+DEV_PROJECT_DELETION_GRANT_REVISION: Final = "dev-project-deletion-v1"
 
 # The entitlement algebra uses finite integer counters. This value is the
 # practical no-quota allowance for the configured development login; its
@@ -279,6 +281,12 @@ def _build_registry() -> CapabilityRegistry:
                 key=KEY_GROWTH_AGENT,
                 capability_type=CapabilityType.FLAG,
                 resolution_rule=ResolutionRule.ANY,
+            ),
+            CapabilityDefinition(
+                key=KEY_PROJECT_DELETION,
+                capability_type=CapabilityType.FLAG,
+                resolution_rule=ResolutionRule.ANY,
+                public=False,
             ),
         ),
     )

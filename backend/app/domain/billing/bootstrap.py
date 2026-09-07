@@ -19,11 +19,13 @@ from app.core.config.entitlements import (
     BASELINE_GRANT_REVISION,
     CAPABILITY_REGISTRY,
     DEV_LOGIN_UNBOUNDED_COUNTER_ALLOWANCE,
+    DEV_PROJECT_DELETION_GRANT_REVISION,
     FREE_MONITORED_URLS,
     FREE_PROJECT_SLOTS,
     FREE_PROMPT_SLOTS,
     GRANT_SOURCE_OVERRIDE,
     KEY_MONITORED_URLS,
+    KEY_PROJECT_DELETION,
     KEY_PROJECT_SLOTS,
     KEY_PROMPT_SLOTS,
     CapabilityType,
@@ -96,6 +98,11 @@ def _dev_login_grants() -> tuple[GrantSpec, ...]:
             continue
         if capability.key == KEY_MONITORED_URLS:
             continue
+        # Existing dev accounts receive this separately below so adding the
+        # capability repairs them without replaying or duplicating every
+        # counter in the original baseline bundle.
+        if capability.key == KEY_PROJECT_DELETION:
+            continue
         if capability.capability_type is CapabilityType.FLAG:
             value = 1
         elif capability.capability_type is CapabilityType.LEVEL:
@@ -133,6 +140,17 @@ async def _ensure_baseline_access(
         valid_until=None,
     )
     if dev_login:
+        await issue_grant_bundle(
+            session,
+            account_id=account.id,
+            source_kind=GRANT_SOURCE_OVERRIDE,
+            source_ref="system:dev-project-deletion",
+            grants=(GrantSpec(key=KEY_PROJECT_DELETION, value=1),),
+            catalog_revision=CAPABILITY_REGISTRY.revision,
+            idempotency_key=DEV_PROJECT_DELETION_GRANT_REVISION,
+            valid_from=datetime.now(UTC),
+            valid_until=None,
+        )
         await _sync_dev_monitored_access(session, user=user, account=account)
 
 

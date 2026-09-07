@@ -8,7 +8,10 @@ import type { Project, SessionUser } from '@/lib/api/types';
 
 // Stub imperative navigation used by the delete-project flow. Shallow tab
 // state uses the browser History API, matching production.
-const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
+const { replace, entitlementState } = vi.hoisted(() => ({
+  replace: vi.fn(),
+  entitlementState: { canDeleteProject: false },
+}));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace, prefetch: vi.fn() }),
   usePathname: () => '/settings',
@@ -25,6 +28,11 @@ const user: SessionUser = {
 };
 vi.mock('@/lib/auth/session-guard', () => ({
   useSessionUser: () => user,
+}));
+vi.mock('@/lib/billing/entitlement-context', () => ({
+  useEntitlement: () => ({
+    hasCapability: () => entitlementState.canDeleteProject,
+  }),
 }));
 
 // Active project context — the danger zone deletes the active project.
@@ -82,6 +90,7 @@ describe('SettingsScreen', () => {
     deleteProject.mockClear();
     replace.mockClear();
     setActiveProjectId.mockClear();
+    entitlementState.canDeleteProject = false;
     window.history.replaceState(null, '', '/settings');
   });
 
@@ -214,5 +223,17 @@ describe('SettingsScreen', () => {
     expect(screen.queryByRole('tab', { name: 'Danger zone' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /delete project/i })).not.toBeInTheDocument();
     expect(deleteProject).not.toHaveBeenCalled();
+  });
+
+  it('lets an explicitly entitled development account delete its active project', async () => {
+    entitlementState.canDeleteProject = true;
+    const ue = userEvent.setup();
+    renderScreen();
+
+    await ue.click(screen.getByRole('button', { name: /delete project/i }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete project' });
+    await ue.click(within(dialog).getByRole('button', { name: 'Delete project' }));
+
+    expect(deleteProject).toHaveBeenCalledWith(activeProject.id);
   });
 });

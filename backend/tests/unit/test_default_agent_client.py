@@ -157,14 +157,14 @@ def test_endpoint_and_model_are_required_for_configuration(missing: str) -> None
         DefaultAgentClient(settings)
 
 
-def test_matching_provider_key_precedes_generic_key(
+def test_explicit_default_agent_key_precedes_provider_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("DEFAULT_AGENT_API_KEY", "application-key")
     monkeypatch.setenv("DEFAULT_AGENT_BASE_URL", "https://api.mistral.ai/v1")
     monkeypatch.setenv("MISTRAL_API_KEY", "provider-key")
     settings = DefaultAgentSettings(_env_file=None)
-    assert settings.resolved_api_key == "provider-key"
+    assert settings.resolved_api_key == "application-key"
 
 
 @pytest.mark.parametrize(

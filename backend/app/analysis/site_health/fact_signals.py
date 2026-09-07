@@ -21,6 +21,7 @@ from app.analysis.site_health.fact_regions import (
     region_text,
 )
 from app.core.config import site_health_acquisition as config
+from app.core.config import site_health_company_entity as company_entity_config
 from app.core.config import site_health_taxonomy as taxonomy
 from app.core.config.site_health_rules import (
     ANSWER_FIRST_MIN_WORDS,
@@ -254,7 +255,12 @@ def _provider_identity(proposition: str) -> str:
     for sentence in re.split(r"(?<=[.!?])\s+", proposition.strip()):
         match = _PROVIDER_RE.match(sentence)
         if match is not None:
-            return match.group("provider").strip()
+            provider = match.group("provider").strip()
+            if (
+                provider.casefold()
+                not in company_entity_config.PROVIDER_IDENTITY_EXCLUSIONS
+            ):
+                return provider
     return ""
 
 
@@ -459,7 +465,8 @@ def ordered_list_steps(root: Any) -> int:
     """Longest primary-content ordered list outside repeated card grids."""
     try:
         region, _source = primary_region(root)
-        excluded = {id(item) for item in card_list_containers(region)}
+        containers = card_list_containers(region)
+        excluded = {id(item) for item in containers}
         return max(
             (
                 len(ordered.xpath("./li"))

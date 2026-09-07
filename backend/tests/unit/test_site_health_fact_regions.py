@@ -25,12 +25,14 @@ from app.analysis.site_health.fact_regions import (
     element_region,
     primary_region,
     primary_region_text,
+    region_node_is_visible,
 )
 from app.analysis.site_health.fact_signals import page_owned_content_facts
 from app.analysis.site_health.page_kinds import classify
 from app.analysis.site_health.parser import extract_page_facts
 from app.analysis.site_health.rules import evaluate_rule, rule_for
 from app.core.config import site_health_taxonomy as config
+from app.core.config.site_health_acquisition import SITE_HEALTH_MAX_HEADING_CHARS
 from app.core.config.site_health_contracts import RULE_OUTCOME_MISSING
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "site_health"
@@ -187,6 +189,17 @@ def test_whitespace_padded_aria_hidden_region_is_excluded() -> None:
     assert facts["primary_heading_outline"] == [{"level": 1, "text": "Visible title"}]
 
 
+def test_visibility_fails_closed_before_hidden_ancestor_beyond_scan_limit() -> None:
+    nested = "<div>" * (config.REGION_MAX_ANCESTOR_DEPTH + 1)
+    closing = "</div>" * (config.REGION_MAX_ANCESTOR_DEPTH + 1)
+    tree = lxml_html.fromstring(
+        f"<main><section hidden>{nested}<p>Hidden</p>{closing}</section></main>"
+    )
+    paragraph = tree.xpath(".//p")[0]
+
+    assert region_node_is_visible(paragraph) is False
+
+
 def test_native_details_preserve_answered_and_unanswered_question_evidence() -> None:
     facts = extract_page_facts(
         b"""<html><body><main>
@@ -250,6 +263,32 @@ def test_bare_auxiliary_heading_requires_question_mark() -> None:
     assert [item["question"] for item in facts["question_answer_relationships"]] == [
         "Can this improve visibility?"
     ]
+
+
+def test_heading_answer_does_not_cross_into_a_later_section() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <section><h2>What is CiteLadder?</h2></section>
+        <section><p>This belongs to an unrelated section.</p></section>
+        </main></body></html>""",
+        final_url="https://example.test/faq",
+        content_type="text/html",
+    )
+
+    assert facts["question_answer_relationships"][0]["answer_state"] == "missing"
+
+
+def test_long_question_keeps_its_terminal_question_mark() -> None:
+    question = "Can " + ("very long context " * 30) + "work?"
+    facts = extract_page_facts(
+        f"<html><body><main><h2>{question}</h2><p>Yes.</p></main></body></html>".encode(),
+        final_url="https://example.test/faq",
+        content_type="text/html",
+    )
+
+    stored = facts["question_answer_relationships"][0]["question"]
+    assert len(stored) <= SITE_HEALTH_MAX_HEADING_CHARS
+    assert stored.endswith("?")
 
 
 def test_aria_accordion_requires_a_control_panel_relationship() -> None:

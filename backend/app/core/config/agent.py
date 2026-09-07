@@ -256,7 +256,10 @@ class DefaultAgentSettings(BaseSettings):
                 (_is_bedrock_host(host), self.bedrock_bearer_token),
             )
         )
-        return provider_key or self.api_key.strip()
+        # DEFAULT_AGENT_* is the explicit application-model route. Provider
+        # aliases are compatibility fallbacks only; a stale alias must not
+        # shadow a deliberately rotated default-agent credential.
+        return self.api_key.strip() or provider_key
 
 
 default_agent_settings = DefaultAgentSettings()

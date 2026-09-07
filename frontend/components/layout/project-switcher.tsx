@@ -29,8 +29,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
     useProjectContext();
   const { entitlement } = useEntitlement();
   const projectLimit = capabilityLimit(entitlement, PROJECT_SLOTS_CAPABILITY);
-  const canAddProject =
-    projectLimit !== undefined && (projectLimit === null || projects.length < projectLimit);
+  const canAddProject = projectLimit !== undefined && projects.length < projectLimit;
 
   const label = activeProject?.brand_name ?? activeProject?.name ?? 'No project';
 

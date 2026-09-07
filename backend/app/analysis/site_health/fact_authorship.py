@@ -156,8 +156,11 @@ def _visible_profile_url(node: Any, *, author: str) -> str:
 
 def _link_names_author(link: Any, normalized_author: str) -> bool:
     link_text = " ".join(_visible_node_text(link).casefold().split())
+    comparable_author = re.sub(
+        r"^(?:(?:written|reviewed)\s+by|by)\s+", "", normalized_author
+    )
     return bool(link_text) and (
-        normalized_author in link_text or link_text in normalized_author
+        comparable_author in link_text or link_text in comparable_author
     )
 
 

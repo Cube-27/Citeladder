@@ -194,6 +194,7 @@ describe('DashboardScreen', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /manage project/i }));
+    expect(screen.getByText('Workspace brands')).toBeInTheDocument();
     expect(screen.queryByText('Add project')).not.toBeInTheDocument();
   });
 

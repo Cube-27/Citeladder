@@ -126,6 +126,7 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   test -z "${DEMO_EXPIRES_AT:-}" || write_env DEMO_EXPIRES_AT "$DEMO_EXPIRES_AT"
   write_env DEMO_MODE "$DEMO_MODE"
   write_env DEV_LOGIN_EMAIL "${DEV_LOGIN_EMAIL:-dev@citeladder.com}"
+  write_env DEV_LOGIN_COUNTER_ALLOWANCE "${DEV_LOGIN_COUNTER_ALLOWANCE:-200}"
   # Demo mode admits one MCP account and the backend refuses to start if it is
   # not the provisioned one; a public deployment admits every account.
   if test "$DEMO_MODE" = "true"; then

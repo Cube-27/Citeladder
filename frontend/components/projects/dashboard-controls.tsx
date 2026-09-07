@@ -41,8 +41,7 @@ export function ProjectControls({
   const router = useRouter();
   const { entitlement } = useEntitlement();
   const projectLimit = capabilityLimit(entitlement, PROJECT_SLOTS_CAPABILITY);
-  const canAddProject =
-    projectLimit !== undefined && (projectLimit === null || projects.length < projectLimit);
+  const canAddProject = projectLimit !== undefined && projects.length < projectLimit;
   return (
     <Dropdown>
       <DropdownTrigger asChild>

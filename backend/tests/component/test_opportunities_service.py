@@ -411,6 +411,10 @@ async def test_recompute_persists_atom_specific_guidance_idempotently(
     first = _by_rule(await _live_rows(db_session, scn), "content_structure_incomplete")
 
     assert first.title == "Name the organization in the page introduction"
+    assert first.remediation == (
+        "Add a clear, reader-visible organization identity to the page's "
+        "primary content; keep the existing value proposition intact."
+    )
     assert first.source_issue_ids == [str(scn.issue_structured_id)]
     assert first.evidence["issue_rule_id"] == "aeo.entity_value_proposition"
     expected_title = first.title

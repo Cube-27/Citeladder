@@ -40,6 +40,23 @@ COMPANY_PROFILE_EXCLUDED_TERMS: Final[tuple[str, ...]] = (
     "team",
 )
 
+# Generic page-language subjects that fit the provider sentence grammar but do
+# not identify a legal or product entity (for example, "Our team provides …").
+PROVIDER_IDENTITY_EXCLUSIONS: Final[frozenset[str]] = frozenset(
+    {
+        "our company",
+        "our platform",
+        "our product",
+        "our products",
+        "our service",
+        "our services",
+        "our solution",
+        "our solutions",
+        "our team",
+        "the team",
+    }
+)
+
 # These expressions describe factual sentence grammar, not benchmark wording.
 COMPANY_IDENTITY_PATTERN: Final = (
     r"\b(?P<value>[A-Z][A-Za-z0-9&'.-]*(?:\s+[A-Z][A-Za-z0-9&'.-]*){0,5})\s+"

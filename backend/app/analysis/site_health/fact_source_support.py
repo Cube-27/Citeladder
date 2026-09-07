@@ -46,7 +46,11 @@ def extract_source_support_facts(root: Any, *, final_url: str) -> dict[str, Any]
     facts = empty_source_support_facts()
     try:
         region, _source = primary_region(root)
-        container_ids = {id(item) for item in card_list_containers(region)}
+        # Keep the lxml wrappers alive while their identities are used. A bare
+        # set comprehension can release them immediately and permit CPython to
+        # reuse an id for a later anchor, intermittently excluding valid links.
+        containers = card_list_containers(region)
+        container_ids = {id(item) for item in containers}
         facts["primary_content_available"] = True
         base_host = urlsplit(final_url).hostname or ""
         _scan_source_nodes(

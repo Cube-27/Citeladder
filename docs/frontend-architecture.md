@@ -38,8 +38,9 @@ Analyze destination for every project. Providers and Integrations are Settings
 tabs, and prompt read/manage modes live only under `/prompts`.
 Content, Growth Agent, and additional-project controls render from resolved
 capabilities. Direct onboarding navigation uses the same project allowance and
-redirects an account whose capacity is already full; the backend remains the
-authoritative concurrent-write gate.
+shows an explicit blocked state when capacity is full; it never flashes the
+flow and redirects. Project deletion renders only from its resolved private
+capability. The backend remains the authoritative mutation gate for both.
 
 Overview renders before any audit: canonical Facts with an editable drawer,
 competitor suggestions, four evidence-labelled loop states, one server-selected

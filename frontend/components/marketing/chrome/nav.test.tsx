@@ -321,6 +321,8 @@ describe('MarketingNav', () => {
     const menuDemo = within(menu as HTMLElement).getByRole('link', { name: /book a demo/i });
     expect(menuDemo).toHaveAttribute('href', DEMO_HREF);
     expect(menuDemo).toHaveAttribute('target', '_blank');
+    await user.click(menuDemo);
+    await waitFor(() => expect(document.querySelector('#mobile-menu')).toBeNull());
   });
 
   it('does not treat a successful null session cache entry as authenticated', async () => {

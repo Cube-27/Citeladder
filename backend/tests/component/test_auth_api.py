@@ -24,6 +24,7 @@ from app.core.config.entitlements import (
     KEY_CONTENT_CREATION,
     KEY_GROWTH_AGENT,
     KEY_MONITORED_URLS,
+    KEY_PROJECT_DELETION,
     KEY_PROJECT_SLOTS,
     KEY_PROMPT_SLOTS,
 )
@@ -168,6 +169,7 @@ async def test_configured_dev_login_receives_full_access_with_env_crawl_limit(
     assert capabilities[KEY_PROMPT_SLOTS] > 1_000_000
     assert capabilities[KEY_CONTENT_CREATION] is True
     assert capabilities[KEY_GROWTH_AGENT] is True
+    assert capabilities[KEY_PROJECT_DELETION] is True
 
 
 @pytest.mark.asyncio

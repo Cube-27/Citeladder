@@ -143,6 +143,7 @@ export function PricingTierCard({
         <PlanCta
           plan={plan}
           priceKind={catalogPrice.kind}
+          checkoutAvailable={plan.checkout_available}
           onCheckout={onCheckout}
           pending={pending}
         />
@@ -154,11 +155,13 @@ export function PricingTierCard({
 function PlanCta({
   plan,
   priceKind,
+  checkoutAvailable,
   onCheckout,
   pending,
 }: Readonly<{
   plan: CatalogPlan;
   priceKind: 'price' | 'contact' | 'unavailable';
+  checkoutAvailable: boolean;
   onCheckout: (plan: CatalogPlan) => void;
   pending: boolean;
 }>) {
@@ -174,7 +177,7 @@ function PlanCta({
   // Funded mode is unpurchasable while `credit_price` is null: the button is
   // present but disabled, so the state is visible rather than the CTA
   // vanishing and the card silently losing its call to action.
-  const disabled = priceKind !== 'price' || pending;
+  const disabled = !checkoutAvailable || priceKind !== 'price' || pending;
   return (
     <Button
       disabled={disabled}
@@ -182,7 +185,11 @@ function PlanCta({
       onClick={() => onCheckout(plan)}
       className="w-full"
     >
-      {pending ? 'Starting checkout…' : `Choose ${plan.name}`}
+      {pending
+        ? 'Starting checkout…'
+        : checkoutAvailable
+          ? `Choose ${plan.name}`
+          : `Choose ${plan.name} — coming soon`}
     </Button>
   );
 }

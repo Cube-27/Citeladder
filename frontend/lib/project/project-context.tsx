@@ -34,6 +34,8 @@ type ProjectContextValue = {
   setActiveProjectId: (projectId: string) => void;
   /** True while the project list is loading. */
   isLoading: boolean;
+  /** True when project ownership could not be resolved. */
+  isError: boolean;
 };
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
@@ -56,7 +58,11 @@ const ProjectContext = createContext<ProjectContextValue | null>(null);
  */
 export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>) {
   const queryClient = useQueryClient();
-  const { data: projects = [], isLoading } = useQuery({
+  const {
+    data: projects = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.projects.list(),
     queryFn: ({ signal }) => projectsApi.listProjects({ signal }),
   });
@@ -174,8 +180,9 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
       activeProjectId,
       setActiveProjectId,
       isLoading,
+      isError,
     }),
-    [projects, activeProject, activeProjectId, setActiveProjectId, isLoading],
+    [projects, activeProject, activeProjectId, setActiveProjectId, isLoading, isError],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
