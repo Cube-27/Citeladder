@@ -683,19 +683,46 @@ input:-webkit-autofill:focus {
   transition: background-color 9999s ease-out;
 }
 
-/* The public surface prints on white, not the app's tinted paper canvas, and
-   it sets the editorial ink of the reference system (docs/design.md
-   §Marketing): a navy ink ladder with almost no grey — headings, body, and
-   captions all sit in the navy family, the way the reference site runs dark
-   navy text on white. Primary actions stay the brand green; selection, focus,
-   and the evidence marks inside embedded product previews remain the shared
-   green accent, so previews keep reading as the product. */
+/* The public surface prints on white, not the app's tinted paper canvas. Its
+   editorial ink is a near-black indigo rather than the reference site's navy:
+   the navy family read as a tinted wash at small sizes, so the whole page sat
+   back. A near-black ink puts the words forward and lets the accent own the
+   colour; the hairlines and the warm ground step up a rung for the same
+   reason. The brand green takes a deeper cut here only — the product keeps
+   the reference green — and the two dark bands run darker still, so a band
+   reads as depth rather than as a mid-tone. Selection, focus, and the
+   evidence marks inside embedded product previews follow the accent, so
+   previews keep reading as the product. */
 [data-public-surface] {
   --color-background: #ffffff;
-  --color-foreground: #191945;
-  --color-secondary: #33335c;
-  --color-muted: #4b4b73;
-  --color-subtle: #63638a;
+  --color-foreground: #121216;
+  --color-secondary: #34343e;
+  --color-muted: #55555f;
+  --color-subtle: #5f5f6a;
+  --color-background-alt: #f2f1ee;
+  --color-canvas-soft: #f6f5f1;
+  --color-active: #eae9e5;
+  --color-border: #c9c8d2;
+  --color-border-subtle: #dcdbe2;
+  --color-border-strong: #8f8d9c;
+  --color-hairline-warm: #d8d3c8;
+  --color-accent: #0a6e35;
+  --color-accent-hover: #085c2c;
+  --color-accent-active: #064a23;
+  --color-accent-subtle: #d9ecdf;
+  --color-accent-soft: #e2f0e6;
+  --color-accent-border: #9ed2b4;
+  --color-accent-text: #0a6e35;
+  --color-focus: #0a6e35;
+  --color-focus-ring: rgb(10 110 53 / 32%);
+  --color-selection: #c2e3cd;
+  --color-action: #0a6e35;
+  --color-action-hover: #085c2c;
+  --color-action-active: #064a23;
+  --color-band-indigo: #131028;
+  --color-band-indigo-deep: #0d0a1c;
+  --color-band-teal: #0c2626;
+  --color-band-teal-mid: #114747;
 }
 
 /* Paper, not screen. A fractal-noise tile at a few percent over the marketing
@@ -723,6 +750,31 @@ input:-webkit-autofill:focus {
    again, because noise all but disappears into a dark ground. */
 [data-citeladder-section='sunken'] {
   --grain-opacity: 0.07;
+}
+
+/* The blog photography takes the same noise as the bands, but blended into the
+   picture instead of laid over a flat ground, so a shot reads as a printed
+   plate rather than a flat digital crop. The saturation and contrast lift keeps
+   the grain from greying the image; the overlay blend rides the photo's own
+   light and dark, so the texture is loudest where the eye already is. */
+.photo-grain {
+  position: relative;
+}
+
+.photo-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+.photo-grain > img {
+  filter: saturate(1.08) contrast(1.05);
 }
 
 /* The white paper. One recipe, shared by the app's content region and the

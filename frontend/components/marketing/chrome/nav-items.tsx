@@ -18,7 +18,7 @@ function RowBody({ item }: Readonly<{ item: NavDropItem }>) {
         {/* Row titles are a UI role, not a display rung: Geist at 600, one
             size above the 400 description, so the hierarchy reads even though
             the row is only two lines tall. */}
-        <span className="font-sans text-foreground block text-base font-semibold">
+        <span className="text-foreground block font-sans text-base font-semibold">
           {item.title}
         </span>
         {/* One line, always: a menu row that wraps turns the panel into a

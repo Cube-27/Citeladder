@@ -61,9 +61,10 @@ workspace, not a wall of equal-weight KPI cards.
   authentication, onboarding, and the public marketing site (the shared solid
   `primary` button). Analytical selection, links, active navigation, and focus
   consume the semantic accent ladder (`#0B7A3C` with `#08592C` for hover/press
-  depth). The public surface rebinds its text inks to the navy family so type
-  reads in dark navy rather than grey, and the deep teal (`#0E3030`) carries the
-  closing band on every marketing page. Cyan, coral, lime,
+  depth). The public surface takes a deeper cut of that green (`#0A6E35`) and a
+  near-black indigo ink, so type and actions print with more contrast than the
+  reference navy wash, and the deep teal (`#0C2626`) carries the closing band
+  on every marketing page. Cyan, coral, lime,
   and amber are evidence/status families, never route decoration.
 - **Composition:** state before features. Product pages prioritise current state,
   movement, next action, then evidence. Marketing is more editorial but uses the
@@ -109,7 +110,7 @@ Tokens are semantic; components use the role, not a colour value.
 | Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
 | Text | `foreground` (`#16161A`), `secondary` (`#3A3A40`), `muted` (`#5C5C63`), `subtle` (`#6B6B72`), disabled (`#9A9AA0`) | Editorial ink roles — five distinct steps, not two |
 | Borders | `border-subtle` (`#E3E2EC`), `border` (`#D1D0DC`), `border-strong` (`#A2A0B0`), `border-bold` (`#747282`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
-| Marketing canvases | `band-indigo` (`#1B1938`), `band-teal` (`#0E3030`), `canvas-soft` (`#FAFAF8`), `violet-soft` (`#C9B4FA`), `atmosphere-blue`, `atmosphere-green`, `hairline-warm` (`#E8E4DD`) | The public surface's editorial system — see the marketing arc below. Decorative; never state |
+| Marketing canvases | `band-indigo` (`#131028`), `band-teal` (`#0C2626`), `canvas-soft` (`#F6F5F1`), `violet-soft` (`#C9B4FA`), `atmosphere-blue`, `atmosphere-green`, `hairline-warm` (`#D8D3C8`) | The public surface's editorial system — see the marketing arc below. Decorative; never state |
 | Primary action | `action-*` (`#0B7A3C`) | Brand-green primary actions on every surface, public site included |
 | Selection and focus | `accent-*` (`#0B7A3C`) | Green for selection, links, tabs, active navigation, and focus; violet (`#C9B4FA`) inside the indigo band, near-white inside the teal band |
 | Status and evidence | cyan, coral, lime, amber, `citation-*`, `run-*`, `score-*`, `chart-*` | Persisted evidence and status, always paired with a label or icon |
@@ -145,14 +146,17 @@ requires all four neutral text roles to meet WCAG 2.1 AA normal-text contrast
 
 Marketing renders the **light editorial system**: a white page that opens on a
 centred serif hero over the pastel atmosphere washes, alternates white body
-bands with the barely warm `sunken` off-white (`canvas-soft` `#FAFAF8`), and
-closes on the deep-teal band (`band-teal` `#0E3030`) that resolves every
-marketing page. The public surface rebinds the text inks to the navy family
-(`[data-public-surface]` in `globals.css` — `#191945` foreground through
-`#63638a` subtle), so the site reads in dark navy rather than grey; the brand
-green keeps its ownership of primary actions (the shared solid `primary`
-button), selection, focus, and links. The indigo canvas (`band-indigo`
-`#1B1938`) survives as a depth accent, not a page ground: the featured pricing
+bands with the barely warm `sunken` off-white (`canvas-soft` `#F6F5F1`), and
+closes on the deep-teal band (`band-teal` `#0C2626`) that resolves every
+marketing page. The public surface rebinds the text inks to a near-black
+indigo family (`[data-public-surface]` in `globals.css` — `#121216`
+foreground through `#5F5F6A` subtle) and steps the hairlines up a rung, so the
+site prints with more contrast than the reference navy wash; the brand green
+keeps its ownership of primary actions (the shared solid `primary` button),
+selection, focus, and links at a deeper public cut (`#0A6E35`, with
+`#085C2C` and `#064A23` for hover and press) — the product keeps the
+reference green. The indigo canvas (`band-indigo` `#131028`) survives as a
+depth accent, not a page ground: the featured pricing
 tier inverts onto it, and its one-place token rebind
 (`[data-citeladder-section='indigo']`) steps that card's accent and action up
 to the pale violet so the inverted CTA stays legible. The teal band rebinds the
@@ -167,7 +171,9 @@ an effect: `.band-grain` lays a fractal-noise tile over a plane at
 `--grain-opacity`, which a band overrides — `.grain-soft` (3%) for app and flow
 chrome, 5% on paper, 7% on a tinted band and 9% on the teal
 canvas, because noise all but disappears into a dark ground and reads as dirt
-at product density. The sanctioned decorative families on the public surface
+at product density. The same noise blends into the blog photography at 16%
+with an overlay blend (`.photo-grain`), so a shot reads as a printed plate
+rather than a flat digital crop. The sanctioned decorative families on the public surface
 are the pastel atmosphere washes (`atmosphere-blue`, `atmosphere-green` — the
 hero's backdrop, echoed around the product window) and
 the pastel icon tiles (`tile-blue`, `tile-indigo`, `tile-purple`, `tile-green`)
@@ -198,7 +204,8 @@ tracking, weight, and colour combinations.
 
 The ladder is mobile-first: the base value applies below 768px and the arrows
 mark the 768px and 1024px step-ups. The display rungs run large — the serif
-carries hierarchy through size, its synthesised 700, and the navy ink — with
+carries hierarchy through size, its synthesised 700, and the near-black ink —
+with
 calm leading (1.03–1.1) and near-zero tracking; tight sans-style tracking
 closes up its counters.
 | Role                    | Family           |      Size / line height |  Weight |                       Tracking | Colour                                      |
@@ -746,8 +753,8 @@ Before merging a visual change, verify:
 - Website and focused-flow type use documented content roles with a 15px body
   baseline; authenticated-app type uses Remus at weights 400 and 500 only.
 - Marketing renders the light editorial system: centred serif hero on the
-  pastel atmosphere, white body over `canvas-soft` alternates with navy inks,
-  deep-teal close, light footer, and the real product canvas kept as the
+  pastel atmosphere, white body over `canvas-soft` alternates with near-black
+  inks, deep-teal close, light footer, and the real product canvas kept as the
   landing's product beat. One primary CTA per
   band; brand green owns primary actions on every surface; decorative washes
   and the pastel tiles never carry state; functional colour appears only in the

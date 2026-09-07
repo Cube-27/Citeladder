@@ -139,7 +139,7 @@ export function BlogIndex() {
                 className="bg-panel border-border group hover:border-accent-border block overflow-hidden rounded-[var(--radius-card)] border transition-colors duration-200"
               >
                 <div className="flex flex-col md:flex-row md:items-stretch">
-                  <div className="bg-panel-tonal relative min-h-[200px] w-full shrink-0 overflow-hidden md:min-h-0 md:w-[22%] lg:w-[20%]">
+                  <div className="bg-panel-tonal photo-grain relative min-h-[200px] w-full shrink-0 overflow-hidden md:min-h-0 md:w-[22%] lg:w-[20%]">
                     <Image
                       src={featured.image}
                       alt=""
@@ -188,7 +188,7 @@ export function BlogIndex() {
                       aria-label={post.title}
                       className="hover:bg-accent-soft/40 group flex flex-col transition-colors duration-200 md:flex-row md:items-stretch"
                     >
-                      <div className="bg-panel-tonal relative min-h-[160px] w-full shrink-0 overflow-hidden md:min-h-0 md:w-[22%] lg:w-[20%]">
+                      <div className="bg-panel-tonal photo-grain relative min-h-[160px] w-full shrink-0 overflow-hidden md:min-h-0 md:w-[22%] lg:w-[20%]">
                         <Image
                           src={post.image}
                           alt=""
