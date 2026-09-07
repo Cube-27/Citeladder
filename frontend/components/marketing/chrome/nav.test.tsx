@@ -299,6 +299,30 @@ describe('MarketingNav', () => {
     expect(screen.queryByRole('button', { name: /toggle color theme/i })).toBeNull();
   });
 
+  it('keeps log in in the topbar at every width and puts the demo CTA in the mobile menu', async () => {
+    stubAnonymous();
+    const user = userEvent.setup();
+    renderWithProviders(<MarketingNav />);
+
+    // jsdom cannot evaluate media queries, so the responsive split is
+    // asserted on the gating classes: the login link carries none, and the
+    // topbar demo CTA is gated to `sm` and above.
+    const login = await screen.findByRole('link', { name: /log in/i });
+    expect(login).toHaveAttribute('href', '/login');
+    expect(login.getAttribute('class') ?? '').not.toMatch(/\bhidden\b/);
+
+    const topbarDemo = screen.getByRole('link', { name: /book a demo/i });
+    expect(topbarDemo.getAttribute('class')?.includes('hidden')).toBe(true);
+    expect(topbarDemo.getAttribute('class')?.includes('sm:inline-flex')).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    const menu = document.querySelector('#mobile-menu');
+    expect(menu).not.toBeNull();
+    const menuDemo = within(menu as HTMLElement).getByRole('link', { name: /book a demo/i });
+    expect(menuDemo).toHaveAttribute('href', DEMO_HREF);
+    expect(menuDemo).toHaveAttribute('target', '_blank');
+  });
+
   it('does not treat a successful null session cache entry as authenticated', async () => {
     renderWithProviders(<NavWithAnonymousPricingSession />);
 

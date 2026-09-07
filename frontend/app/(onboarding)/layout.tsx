@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 
 import { SessionGuard } from '@/lib/auth/session-guard';
+import { EntitlementProvider } from '@/lib/billing/entitlement-context';
 import { ProjectProvider } from '@/lib/project/project-context';
 
 /**
@@ -13,7 +14,9 @@ import { ProjectProvider } from '@/lib/project/project-context';
 export default function OnboardingLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <SessionGuard fallback={<OnboardingFallback />}>
-      <ProjectProvider>{children}</ProjectProvider>
+      <ProjectProvider>
+        <EntitlementProvider>{children}</EntitlementProvider>
+      </ProjectProvider>
     </SessionGuard>
   );
 }

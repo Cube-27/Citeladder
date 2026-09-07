@@ -17,6 +17,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.config.abuse import abuse_settings
+from app.core.config.entitlements import (
+    FREE_MONITORED_URLS,
+    FREE_PROJECT_SLOTS,
+    FREE_PROMPT_SLOTS,
+    KEY_CONTENT_CREATION,
+    KEY_GROWTH_AGENT,
+    KEY_MONITORED_URLS,
+    KEY_PROJECT_SLOTS,
+    KEY_PROMPT_SLOTS,
+)
 from app.domain.workspaces import service as workspace_service
 from app.models.user import User
 
@@ -115,6 +125,49 @@ async def test_login_sets_cookie_and_workspace_autocreated(
     assert len(workspaces) == 1
     assert workspaces[0]["role"] == "owner"
     assert workspaces[0]["name"]
+
+
+@pytest.mark.asyncio
+async def test_public_signup_receives_the_free_account_limits(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "free-limits@example.com")
+
+    response = await client.get("/api/v1/billing/entitlement")
+
+    assert response.status_code == 200
+    capabilities = {
+        item["key"]: item["value"] for item in response.json()["capabilities"]
+    }
+    assert capabilities == {
+        KEY_MONITORED_URLS: FREE_MONITORED_URLS,
+        KEY_PROJECT_SLOTS: FREE_PROJECT_SLOTS,
+        KEY_PROMPT_SLOTS: FREE_PROMPT_SLOTS,
+    }
+    assert KEY_CONTENT_CREATION not in capabilities
+    assert KEY_GROWTH_AGENT not in capabilities
+
+
+@pytest.mark.asyncio
+async def test_configured_dev_login_receives_full_access_with_env_crawl_limit(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    email = "configured-dev@example.com"
+    monkeypatch.setattr(settings, "dev_login_email", email)
+    monkeypatch.setattr(settings, "dev_login_counter_allowance", 200)
+    await _register(client, email)
+
+    response = await client.get("/api/v1/billing/entitlement")
+
+    assert response.status_code == 200
+    capabilities = {
+        item["key"]: item["value"] for item in response.json()["capabilities"]
+    }
+    assert capabilities[KEY_MONITORED_URLS] == 200
+    assert capabilities[KEY_PROJECT_SLOTS] > 1_000_000
+    assert capabilities[KEY_PROMPT_SLOTS] > 1_000_000
+    assert capabilities[KEY_CONTENT_CREATION] is True
+    assert capabilities[KEY_GROWTH_AGENT] is True
 
 
 @pytest.mark.asyncio

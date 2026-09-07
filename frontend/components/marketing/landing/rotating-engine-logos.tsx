@@ -103,7 +103,7 @@ function LogoFace({
   return (
     <span className={cn('engine-rotor-face', alternate && 'engine-rotor-face-alternate')}>
       <ProviderLogo logo={logo.key} />
-      <span className="text-foreground text-base font-medium">{logo.label}</span>
+      <span className="website-nav text-foreground">{logo.label}</span>
     </span>
   );
 }
@@ -116,7 +116,10 @@ export function RotatingEngineLogos({ className }: Readonly<{ className?: string
       role="img"
       aria-label="ChatGPT, Grok, Gemini, Copilot, Claude and Perplexity."
     >
-      <ul aria-hidden className="engine-roster-motion mx-auto grid max-w-2xl grid-cols-3 gap-3">
+      <ul
+        aria-hidden
+        className="engine-roster-motion mx-auto grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-3"
+      >
         {LOGO_PAIRS.map(([primary, alternate], index) => (
           <li key={primary.key} className="engine-rotor-slot">
             <span
@@ -133,7 +136,7 @@ export function RotatingEngineLogos({ className }: Readonly<{ className?: string
         {LOGO_PAIRS.flat().map((logo) => (
           <li key={logo.key} className="engine-roster-static-item">
             <ProviderLogo logo={logo.key} />
-            <span className="text-base font-medium">{logo.label}</span>
+            <span className="website-nav text-foreground">{logo.label}</span>
           </li>
         ))}
       </ul>

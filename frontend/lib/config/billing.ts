@@ -15,6 +15,10 @@
  */
 export const PRICING_BYOK_DEFAULT_ON = true;
 
+export const PROJECT_SLOTS_CAPABILITY = 'project_slots';
+export const CONTENT_CREATION_CAPABILITY = 'content_creation';
+export const GROWTH_AGENT_CAPABILITY = 'growth_agent';
+
 /** Duration of the numeric price tween. Only real number-to-number changes animate. */
 export const PRICING_PRICE_TWEEN_MS = 275;
 

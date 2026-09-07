@@ -1,4 +1,4 @@
-import { ArrowRight, Briefcase, Building2, Megaphone, Rocket, ShoppingBag } from 'lucide-react';
+import { ArrowRight, Briefcase, Building2, Megaphone, ShoppingBag, Sparkles } from 'lucide-react';
 
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 import { SOLUTION_SEGMENTS, SOLUTIONS_HERO } from '@/lib/marketing-content/solutions';
@@ -20,7 +20,7 @@ import { SolutionEvidencePanel } from '../scenes/evidence-panel';
 const SEGMENT_ICONS = {
   agencies: Briefcase,
   'in-house': Building2,
-  founders: Rocket,
+  founders: Sparkles,
   commerce: ShoppingBag,
   pr: Megaphone,
 } as const;
@@ -145,12 +145,12 @@ export function SolutionSegments() {
 
 export function SolutionsCta() {
   return (
-    <Section tone="teal" rhythm="base" aria-label="Get started">
-      <Reveal className="mx-auto max-w-5xl text-center">
-        <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-5 max-w-[32ch]">
+    <Section tone="sunken" rhythm="base" aria-label="Get started">
+      <Reveal className="mx-auto max-w-3xl text-center">
+        <h2 className="website-section-heading origin-centre text-foreground mx-auto mb-5 max-w-[32ch] text-balance">
           Bring your team the version of the truth it reports in.
         </h2>
-        <p className="website-lead text-muted mx-auto max-w-[75ch]">
+        <p className="website-lead text-muted mx-auto max-w-[58ch]">
           One observation field, five ways of reading it. We will walk through the one that matches
           how you are measured.
         </p>

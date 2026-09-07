@@ -56,6 +56,7 @@ from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.workspace import Workspace
 from tests.component.occupancy_helpers import (
+    revoke_signup_baseline_grants,
     seed_account_workspace,
     seed_occupancy_grants,
 )
@@ -314,6 +315,7 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
     assert topic_response.status_code == 201
     workspace_id = uuid.UUID(project["workspace_id"])
     async with session_factory() as session:
+        await revoke_signup_baseline_grants(session, workspace_id=workspace_id)
         await seed_occupancy_grants(
             session,
             workspace_id=workspace_id,

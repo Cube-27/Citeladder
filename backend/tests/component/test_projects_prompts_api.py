@@ -27,7 +27,10 @@ from app.domain.entitlements.types import GrantSpec
 from app.models.brand import Brand, BrandLogoAsset, Competitor
 from app.models.site_health.crawl import SiteCrawl
 from tests.component.auth_helpers import register_and_login as _register
-from tests.component.occupancy_helpers import seed_occupancy_grants
+from tests.component.occupancy_helpers import (
+    revoke_signup_baseline_grants,
+    seed_occupancy_grants,
+)
 
 
 def _project_payload(**overrides: object) -> dict:
@@ -455,6 +458,7 @@ async def test_create_project_over_occupancy_returns_coded_403(
     first = (await client.post("/api/v1/projects", json=_project_payload())).json()
     workspace_id = uuid.UUID(first["workspace_id"])
     async with session_factory() as session:
+        await revoke_signup_baseline_grants(session, workspace_id=workspace_id)
         await seed_occupancy_grants(
             session,
             workspace_id=workspace_id,
@@ -487,9 +491,11 @@ async def test_create_prompt_over_occupancy_returns_coded_403(
         )
     ).json()["id"]
     async with session_factory() as session:
+        workspace_id = uuid.UUID(project["workspace_id"])
+        await revoke_signup_baseline_grants(session, workspace_id=workspace_id)
         await seed_occupancy_grants(
             session,
-            workspace_id=uuid.UUID(project["workspace_id"]),
+            workspace_id=workspace_id,
             grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=1),),
         )
         await session.commit()

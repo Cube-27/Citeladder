@@ -19,33 +19,32 @@ import { RotatingEngineLogos } from './rotating-engine-logos';
 export function Hero() {
   const { hook } = LANDING_CONTENT;
   return (
-    <header className="band-grain bg-background relative -mt-16 overflow-hidden pt-16">
-      {/* The pastel atmosphere: two low-alpha radial washes from the brand's
-          own tile families over the white ground. Decorative only. */}
+    <header className="band-grain bg-background relative -mt-[var(--marketing-nav-offset)] overflow-hidden pt-[var(--marketing-nav-offset)]">
+      {/* Layered atmosphere: refined ambient light field over the white ground. Decorative only. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(90% 70% at 82% 4%, var(--color-atmosphere-blue) 0%, transparent 60%), radial-gradient(85% 70% at 12% 100%, var(--color-atmosphere-green) 0%, transparent 62%)',
+            'radial-gradient(110% 80% at 75% 0%, var(--color-atmosphere-blue) 0%, transparent 55%), radial-gradient(85% 70% at 20% 90%, var(--color-atmosphere-green) 0%, transparent 60%)',
         }}
       />
       <Container className="relative z-1 pt-20 pb-18 text-center md:pt-28 md:pb-24">
         <HeroEntrance className="mx-auto w-full max-w-4xl">
-          <Eyebrow>{hook.eyebrow}</Eyebrow>
+          <div className="border-border-subtle bg-panel/80 inline-flex items-center rounded-full border px-3.5 py-1 shadow-xs backdrop-blur-xs">
+            <Eyebrow>{hook.eyebrow}</Eyebrow>
+          </div>
           <h1 className="website-hero-display origin-centre text-foreground mx-auto mt-5 max-w-[24ch] text-balance">
             {hook.title} <em className="text-accent-text not-italic">{hook.titleAccent}</em>
           </h1>
           <p className="website-lead text-muted mx-auto mt-6 max-w-[58ch]">{hook.body}</p>
-          <div className="mt-8 flex justify-center">
+          <div className="mt-8 flex flex-col items-center justify-center gap-3">
             <DemoButtonLink className="w-full sm:w-auto">
               {hook.primaryCta}
               <ArrowRight aria-hidden />
             </DemoButtonLink>
           </div>
-          {/* w-full: the roster is a flex-column grandchild here, and `mx-auto`
-              alone would disable flex stretch and collapse the rotor slots. */}
-          <RotatingEngineLogos className="mx-auto mt-14 w-full max-w-2xl" />
+          <RotatingEngineLogos className="mx-auto mt-10 w-full max-w-2xl" />
         </HeroEntrance>
       </Container>
     </header>

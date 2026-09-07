@@ -72,8 +72,10 @@ export function PricingTierCard({
       // this component naming a dark colour.
       data-citeladder-section={highlighted ? 'indigo' : undefined}
       className={cn(
-        'flex h-full flex-col rounded-[var(--radius-card)] p-6 md:p-7 xl:p-6 shadow-card hover:shadow-card-hover transition-all duration-200',
-        highlighted ? 'bg-band-indigo' : 'bg-panel',
+        'flex h-full flex-col rounded-[var(--radius-card)] p-6 md:p-7 xl:p-6 shadow-card hover:shadow-card-hover transition-all duration-200 ease-out hover:-translate-y-1',
+        highlighted
+          ? 'bg-band-indigo ring-1 ring-violet-soft/30 shadow-pricing-featured'
+          : 'bg-panel border border-border-subtle/80',
       )}
     >
       <div className="flex min-h-7 items-center justify-between gap-3">
@@ -137,7 +139,7 @@ export function PricingTierCard({
           })}
       </ul>
 
-      <div className="mt-6">
+      <div className="mt-auto pt-6">
         <PlanCta
           plan={plan}
           priceKind={catalogPrice.kind}

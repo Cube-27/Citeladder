@@ -66,6 +66,20 @@ KEY_PROVIDER_PERPLEXITY: Final = "provider.perplexity"
 KEY_PROVIDER_COPILOT: Final = "provider.copilot"
 KEY_EXPORTS: Final = "exports"
 KEY_MANUAL_RUNS_PER_DAY: Final = "manual_runs_per_day"
+KEY_CONTENT_CREATION: Final = "content_creation"
+KEY_GROWTH_AGENT: Final = "growth_agent"
+
+# Public-signup baseline. These are account-wide allowances; occupancy is
+# counted across every workspace linked to the account.
+FREE_PROJECT_SLOTS: Final = 1
+FREE_PROMPT_SLOTS: Final = 10
+FREE_MONITORED_URLS: Final = 20
+BASELINE_GRANT_REVISION: Final = "signup-baseline-v1"
+
+# The entitlement algebra uses finite integer counters. This value is the
+# practical no-quota allowance for the configured development login; its
+# monitored URL allowance remains separately deployment-configured.
+DEV_LOGIN_UNBOUNDED_COUNTER_ALLOWANCE: Final = 2_147_483_647
 
 
 # The default rolling window (seconds) for rate capabilities. 86_400 = 1 day.
@@ -256,6 +270,16 @@ def _build_registry() -> CapabilityRegistry:
                 resolution_rule=ResolutionRule.SUM,
                 rolling_window_seconds=MANUAL_RUNS_ROLLING_WINDOW_SECONDS,
             ),
+            CapabilityDefinition(
+                key=KEY_CONTENT_CREATION,
+                capability_type=CapabilityType.FLAG,
+                resolution_rule=ResolutionRule.ANY,
+            ),
+            CapabilityDefinition(
+                key=KEY_GROWTH_AGENT,
+                capability_type=CapabilityType.FLAG,
+                resolution_rule=ResolutionRule.ANY,
+            ),
         ),
     )
 
@@ -388,11 +412,13 @@ OCCUPANCY_LOCK_NAMESPACE: Final = 0x43415041  # "CAPA"
 
 CODE_OCCUPANCY_LIMIT_EXCEEDED: Final = "occupancy_limit_exceeded"
 CODE_OCCUPANCY_UNRESOLVED: Final = "occupancy_unresolved"
+CODE_CAPABILITY_NOT_GRANTED: Final = "capability_not_granted"
 
 # Structured-log event names. Safe fields only: account/workspace ids,
 # capability keys, and integer counts — never user data (invariant 6).
 EVENT_OCCUPANCY_LIMIT_EXCEEDED: Final = "billing.occupancy_limit_exceeded"
 EVENT_OCCUPANCY_UNRESOLVED: Final = "billing.occupancy_unresolved"
+EVENT_CAPABILITY_NOT_GRANTED: Final = "billing.capability_not_granted"
 
 # ---------------------------------------------------------------------------
 # Funded + manual-rate admission (slice23 Task 4 Part B; config-owned)

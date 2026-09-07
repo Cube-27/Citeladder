@@ -225,6 +225,27 @@ async def _account_version(db_session: AsyncSession) -> int:
     return (await _account(db_session)).entitlement_lifecycle_version
 
 
+async def _commercial_grants(
+    db_session: AsyncSession, *, source_kind: str | None = None
+) -> list[AccountGrant]:
+    statement = select(AccountGrant).where(
+        AccountGrant.source_kind.in_(("plan", "addon", "topup", "trial"))
+    )
+    if source_kind is not None:
+        statement = statement.where(AccountGrant.source_kind == source_kind)
+    return list((await db_session.scalars(statement)).all())
+
+
+async def _commercial_grant_count(
+    db_session: AsyncSession, *, source_kind: str | None = None
+) -> int:
+    return len(await _commercial_grants(db_session, source_kind=source_kind))
+
+
+async def _total_grant_count(db_session: AsyncSession) -> int:
+    return int(await db_session.scalar(select(func.count(AccountGrant.id))) or 0)
+
+
 async def _seed_live_base(
     db_session: AsyncSession, account: BillingAccount, *, period_days: int = 30
 ) -> BillingSubscription:
@@ -307,6 +328,7 @@ async def test_base_purchase_is_202_pending_and_grants_nothing(
     provider = _FakeProvider(session_factory)
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "buyer@example.com")
+    baseline_grants = await _total_grant_count(db_session)
 
     response = await client.post(
         "/api/v1/billing/subscriptions",
@@ -340,7 +362,8 @@ async def test_base_purchase_is_202_pending_and_grants_nothing(
 
     # The intent path NEVER writes a grant, and the submitted ISO country is
     # locked on the account server-side (single writer now profile is gone).
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
+    assert await _commercial_grant_count(db_session) == 0
+    assert await _total_grant_count(db_session) == baseline_grants
     account = await _account(db_session)
     assert account.billing_country == "US"
     assert account.country_verification == "declared"
@@ -357,6 +380,7 @@ async def test_base_purchase_rejects_a_deferred_trial_before_any_write(
     provider = _FakeProvider(session_factory)
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "trial@example.com")
+    baseline_grants = await _total_grant_count(db_session)
 
     response = await client.post(
         "/api/v1/billing/subscriptions",
@@ -374,7 +398,8 @@ async def test_base_purchase_rejects_a_deferred_trial_before_any_write(
     assert provider.base_calls == []
     assert await db_session.scalar(select(func.count(PendingActivation.id))) == 0
     assert await db_session.scalar(select(func.count(IdempotencyRecord.id))) == 0
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
+    assert await _commercial_grant_count(db_session) == 0
+    assert await _total_grant_count(db_session) == baseline_grants
 
 
 @pytest.mark.asyncio
@@ -480,6 +505,7 @@ async def test_uncertain_provider_error_returns_202_pending_then_replays(
     provider = _UncertainProvider(session_factory)
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "uncertain@example.com")
+    baseline_grants = await _total_grant_count(db_session)
     payload = {
         "catalog_key": "tier_1",
         "credential_mode": "byok",
@@ -504,7 +530,8 @@ async def test_uncertain_provider_error_returns_202_pending_then_replays(
     assert pending.status == "pending"
     record = (await db_session.scalars(select(IdempotencyRecord))).one()
     assert record.state == "started"
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
+    assert await _commercial_grant_count(db_session) == 0
+    assert await _total_grant_count(db_session) == baseline_grants
 
     # A same-key retry replays the pending projection — no second call.
     replay = await client.post(
@@ -909,6 +936,7 @@ async def test_renewal_with_a_removed_catalog_key_logs_and_issues_nothing(
     """
     monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
     await _register(client, "renew-removed@example.com")
+    baseline_grants = await _total_grant_count(db_session)
     account = await _account(db_session)
     subscription = await _seed_live_base(db_session, account)
     subscription.catalog_key = "tier_removed"
@@ -930,7 +958,8 @@ async def test_renewal_with_a_removed_catalog_key_logs_and_issues_nothing(
     assert response.status_code == 204
     assert any("no grant specs" in message for message in messages)
     # Nothing was issued for the unresolvable key.
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
+    assert await _commercial_grant_count(db_session) == 0
+    assert await _total_grant_count(db_session) == baseline_grants
 
 
 # --- Activation via the signed webhook ---------------------------------------
@@ -945,6 +974,7 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     provider = _FakeProvider(session_factory, subscription_id="sub_activate")
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "activate@example.com")
+    baseline_version = await _account_version(db_session)
     account = await _account(db_session)
 
     purchase = await client.post(
@@ -985,8 +1015,8 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     assert subscription.external_subscription_id == "sub_activate"
     # The REAL tier_1 catalog bundle: 8 grants, one version bump for the event
     # plus one for the bundle.
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 7
-    assert await _account_version(db_session) == 2
+    assert await _commercial_grant_count(db_session, source_kind="plan") == 7
+    assert await _account_version(db_session) == baseline_version + 2
 
     # The account read now reports the subscription and the issued grants.
     entitlement = await client.get("/api/v1/billing/entitlement")
@@ -995,7 +1025,8 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     assert view["status"] == "resolved"
     assert view["subscription"]["catalog_key"] == "tier_1"
     assert view["subscription"]["cancel_at_period_end"] is False
-    assert len(view["grants"]) == 7
+    plan_grants = [g for g in view["grants"] if g["source_kind"] == "plan"]
+    assert len(plan_grants) == 7
     assert "funded_execution_allowed" not in view
 
     # A redelivery under a NEW event id never duplicates the subscription or
@@ -1003,7 +1034,7 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
     duplicate = await _post_webhook(client, raw, event_id="evt_act_2")
     assert duplicate.status_code == 204
     db_session.expire_all()
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 7
+    assert await _commercial_grant_count(db_session, source_kind="plan") == 7
     assert await db_session.scalar(select(func.count(BillingSubscription.id))) == 1
     assert await db_session.scalar(select(func.count(BillingWebhookEvent.id))) == 2
 
@@ -1069,7 +1100,7 @@ async def test_webhook_reconciliation_race_settles_exactly_once(
     assert sweep_result.already_settled is True
     db_session.expire_all()
     assert await db_session.scalar(select(func.count(BillingSubscription.id))) == 1
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 7
+    assert await _commercial_grant_count(db_session, source_kind="plan") == 7
     assert await _account_version(db_session) == version_after_first
 
 
@@ -1124,6 +1155,7 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     provider = _FakeProvider(session_factory, payment_id="pay_topup")
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "topup@example.com")
+    baseline_grants = await _total_grant_count(db_session)
     account = await _account(db_session)
     base = await _seed_live_base(db_session, account, period_days=10)
     base_period_end = base.current_period_end
@@ -1137,7 +1169,8 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     assert body["quote"]["total_price"] == {"currency": "USD", "amount_minor": 2_000}
     assert provider.payment_calls == [{"amount_minor": 2_000, "currency": "USD"}]
     # Nothing is granted in the intent path.
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
+    assert await _commercial_grant_count(db_session) == 0
+    assert await _total_grant_count(db_session) == baseline_grants
 
     paid_at = int(datetime.now(UTC).timestamp())
     raw = _payment_payload(
@@ -1154,7 +1187,7 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     pending = await db_session.get(PendingActivation, uuid.UUID(body["activation_id"]))
     assert pending is not None
     assert pending.status == "activated"
-    grant = (await db_session.scalars(select(AccountGrant))).one()
+    (grant,) = await _commercial_grants(db_session, source_kind="topup")
     assert grant.key == "audit_credits"
     assert grant.value == 50  # 25 per pack x 2 packs
     assert grant.source_kind == "topup"
@@ -1181,7 +1214,7 @@ async def test_topup_activates_with_fixed_expiry_and_moving_effective_expiry(
     duplicate = await _post_webhook(client, raw, event_id="evt_topup_2")
     assert duplicate.status_code == 204
     db_session.expire_all()
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 1
+    assert await _commercial_grant_count(db_session, source_kind="topup") == 1
 
 
 @pytest.mark.asyncio
@@ -1195,6 +1228,7 @@ async def test_payment_with_a_mismatched_amount_is_rejected_and_grants_nothing(
     provider = _FakeProvider(session_factory, payment_id="pay_mismatch")
     monkeypatch.setattr(billing_api, "get_billing_provider", lambda: provider)
     await _register(client, "mismatch@example.com")
+    baseline_grants = await _total_grant_count(db_session)
     account = await _account(db_session)
     await _seed_live_base(db_session, account)
 
@@ -1217,7 +1251,8 @@ async def test_payment_with_a_mismatched_amount_is_rejected_and_grants_nothing(
     pending = await db_session.get(PendingActivation, uuid.UUID(activation_id))
     assert pending is not None
     assert pending.status == "pending"
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 0
+    assert await _commercial_grant_count(db_session) == 0
+    assert await _total_grant_count(db_session) == baseline_grants
 
 
 # --- Add-ons -------------------------------------------------------------------
@@ -1342,7 +1377,7 @@ async def test_reconciliation_settles_fails_and_abandons_from_provider_state(
     assert settled is not None
     assert settled.status == "activated"
     assert settled.settled_by == "reconciliation"
-    grant = (await db_session.scalars(select(AccountGrant))).one()
+    (grant,) = await _commercial_grants(db_session, source_kind="topup")
     assert grant.key == "audit_credits"
     assert grant.value == 25
     assert grant.valid_until == (
@@ -1366,7 +1401,7 @@ async def test_reconciliation_settles_fails_and_abandons_from_provider_state(
         abandon_after=timedelta(minutes=5),
     )
     assert again.claimed == 0
-    assert await db_session.scalar(select(func.count(AccountGrant.id))) == 1
+    assert await _commercial_grant_count(db_session, source_kind="topup") == 1
 
 
 @pytest.mark.asyncio

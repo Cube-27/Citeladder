@@ -34,7 +34,7 @@ import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select, text
@@ -43,9 +43,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.audits import AUDIT_TRIGGER_MANUAL
 from app.core.config.entitlements import (
     CAPABILITY_REGISTRY,
+    CODE_CAPABILITY_NOT_GRANTED,
     CODE_MANUAL_RUN_RATE_EXCEEDED,
     CODE_OCCUPANCY_LIMIT_EXCEEDED,
     CODE_OCCUPANCY_UNRESOLVED,
+    EVENT_CAPABILITY_NOT_GRANTED,
     EVENT_OCCUPANCY_LIMIT_EXCEEDED,
     EVENT_OCCUPANCY_UNRESOLVED,
     KEY_MANUAL_RUNS_PER_DAY,
@@ -53,6 +55,7 @@ from app.core.config.entitlements import (
     KEY_PROMPT_SLOTS,
     MANUAL_RUNS_ROLLING_WINDOW_SECONDS,
     OCCUPANCY_LOCK_NAMESPACE,
+    CapabilityType,
 )
 from app.domain.entitlements.service import resolve_account_entitlement
 from app.domain.entitlements.types import (
@@ -117,6 +120,41 @@ class OccupancyLimitExceededError(OccupancyError):
             "current": snapshot.current,
             "requested": snapshot.requested,
         }
+
+
+class CapabilityNotGrantedError(OccupancyError):
+    """The account does not hold the required boolean capability."""
+
+    code = CODE_CAPABILITY_NOT_GRANTED
+
+    def __init__(self, *, key: str) -> None:
+        super().__init__(f"The account does not include the {key} capability")
+        self.details = {"key": key}
+
+
+async def require_workspace_capability(
+    session: AsyncSession, *, workspace_id: uuid.UUID, key: str
+) -> None:
+    """Require one resolved, enabled flag at the workspace billing boundary."""
+    definition = CAPABILITY_REGISTRY.require(key)
+    if definition.capability_type is not CapabilityType.FLAG:
+        raise ValueError(f"capability is not a flag: {key!r}")
+    account_id = await lock_workspace_capacity(session, workspace_id)
+    entitlement = await resolve_account_entitlement(
+        session, account_id=account_id, at=datetime.now(UTC)
+    )
+    capability = entitlement.capability(key)
+    if (
+        entitlement.status != STATUS_RESOLVED
+        or capability is None
+        or capability.value != 1
+    ):
+        logger.info(
+            EVENT_CAPABILITY_NOT_GRANTED + " account_id=%s key=%s",
+            account_id,
+            key,
+        )
+        raise CapabilityNotGrantedError(key=key)
 
 
 def _capacity_lock_key(account_id: uuid.UUID) -> int:

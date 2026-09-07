@@ -21,9 +21,9 @@ export function Packs() {
           const Icon = LANDING_ICONS[pack.icon];
           return (
             <StaggerItem key={pack.name}>
-              <div className="flex items-start gap-4">
+              <div className="hover:border-border-subtle/80 hover:bg-background-alt/50 -m-3 flex items-start gap-4 rounded-[var(--radius-card)] border border-transparent p-3 transition-all duration-200">
                 <span
-                  className={`${LANDING_TILES[ITEM_TILES[index % ITEM_TILES.length]]} flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)]`}
+                  className={`${LANDING_TILES[ITEM_TILES[index % ITEM_TILES.length]]} flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] shadow-xs`}
                 >
                   <Icon className="size-4.5" aria-hidden />
                 </span>

@@ -16,6 +16,12 @@ type ComparisonRow = {
   competitor: string;
 };
 
+type ComparisonSource = {
+  label: string;
+  url: string;
+  dimensions: readonly string[];
+};
+
 export type Competitor = {
   slug: string;
   name: string;
@@ -27,10 +33,16 @@ export type Competitor = {
   metaDescription: string;
   /** ISO date of the last first-party review, e.g. '2026-08-01'. */
   lastReviewed: string;
+  /** First-party pages reviewed for the claims on this comparison. */
+  sources: readonly ComparisonSource[];
   rows: readonly ComparisonRow[];
   /** Short editorial verdict, in our voice. */
   verdict: string;
-  /** Honest fit: the customer profile the other tool genuinely serves well. */
+  /**
+   * Honest fit concession: when to choose the competitor instead.
+   * CiteLadder is not for everyone; naming where the other tool is better
+   * earns trust for the claims above.
+   */
   betterFit: string;
 };
 
@@ -82,8 +94,6 @@ export const FACT_ROWS = [
   { key: 'Provenance', value: 'Analyzer + rule on every score' },
 ] as const;
 
-const REVIEWED = CONTENT_REVIEWED;
-
 /**
  * Published comparisons. Sourced from each vendor's public site as of
  * `lastReviewed`. Dimensions the vendor does not publish are omitted.
@@ -96,7 +106,19 @@ export const COMPETITORS: readonly Competitor[] = [
     lead: 'Profound is built as a wide, hosted AI search suite. We are narrower: three engines, your keys, and a score you can open to the raw answer. Choose them for packaging. Choose us when procurement asks how the number was made.',
     metaDescription:
       'Profound offers a hosted multi-engine suite. CiteLadder measures ChatGPT, Gemini, and Claude on your keys with deterministic scores and raw-answer evidence.',
-    lastReviewed: REVIEWED,
+    lastReviewed: CONTENT_REVIEWED,
+    sources: [
+      {
+        label: 'Profound product',
+        url: 'https://www.tryprofound.com/',
+        dimensions: ['Engines', 'Scoring', 'Evidence', 'BYOK', 'Site health', 'Provenance'],
+      },
+      {
+        label: 'Profound pricing',
+        url: 'https://www.tryprofound.com/pricing',
+        dimensions: ['Pricing', 'Engines'],
+      },
+    ],
     rows: [
       {
         ...OURS.engines,
@@ -141,7 +163,19 @@ export const COMPETITORS: readonly Competitor[] = [
     lead: 'Otterly is monitoring with a low entry price and add-on engines. We run ChatGPT, Gemini, and Claude on one audit without per-engine add-ons, then keep the raw response under the metric.',
     metaDescription:
       'Otterly AI is simple hosted monitoring with engine add-ons. CiteLadder runs a three-engine BYOK audit with versioned scoring and evidence under every metric.',
-    lastReviewed: REVIEWED,
+    lastReviewed: CONTENT_REVIEWED,
+    sources: [
+      {
+        label: 'OtterlyAI features',
+        url: 'https://otterly.ai/features/',
+        dimensions: ['Engines', 'Scoring', 'Evidence', 'BYOK', 'Site health', 'Provenance'],
+      },
+      {
+        label: 'OtterlyAI pricing',
+        url: 'https://otterly.ai/pricing/',
+        dimensions: ['Pricing', 'Engines'],
+      },
+    ],
     rows: [
       {
         ...OURS.engines,
@@ -185,7 +219,19 @@ export const COMPETITORS: readonly Competitor[] = [
     lead: 'Scrunch treats the problem as infrastructure: serve agents a different view of the site. We treat it as measurement: crawl what people and engines can already see, then score ChatGPT, Gemini, and Claude with a trail.',
     metaDescription:
       'Scrunch AI optimizes what agents fetch at the edge. CiteLadder measures ChatGPT, Gemini, and Claude with deterministic AEO health on the pages you already publish.',
-    lastReviewed: REVIEWED,
+    lastReviewed: CONTENT_REVIEWED,
+    sources: [
+      {
+        label: 'Scrunch platform',
+        url: 'https://scrunch.com/about/',
+        dimensions: ['Scoring', 'Evidence', 'Site health', 'Provenance'],
+      },
+      {
+        label: 'Scrunch supported platforms',
+        url: 'https://scrunch.com/faqs/which-ai-platforms-and-llms-can-scrunch-track-and-monitor/',
+        dimensions: ['Engines'],
+      },
+    ],
     rows: [
       {
         ...OURS.engines,
@@ -220,7 +266,19 @@ export const COMPETITORS: readonly Competitor[] = [
     lead: 'Peec is a clean analytics dashboard across six platforms. We trade that breadth for proof: three engines, your keys, site health, and a metric that still opens to the answer.',
     metaDescription:
       'Peec AI covers six AI platforms with hosted analytics. CiteLadder covers ChatGPT, Gemini, and Claude with BYOK, site health, and raw-answer provenance.',
-    lastReviewed: REVIEWED,
+    lastReviewed: CONTENT_REVIEWED,
+    sources: [
+      {
+        label: 'Peec AI pricing',
+        url: 'https://peec.ai/pricing',
+        dimensions: ['Engines', 'Scoring', 'Evidence', 'BYOK', 'Provenance'],
+      },
+      {
+        label: 'Peec AI for agencies',
+        url: 'https://peec.ai/pricing-agencies',
+        dimensions: ['Engines', 'Scoring', 'Evidence', 'BYOK', 'Provenance'],
+      },
+    ],
     rows: [
       {
         ...OURS.engines,

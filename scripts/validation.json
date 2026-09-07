@@ -117,8 +117,22 @@
       "frontendTests": ["scripts/check-jscpd.test.ts"]
     },
     {
-      "sources": ["frontend/playwright.config.ts", "frontend/e2e/helpers/**"],
-      "frontendE2E": ["e2e/smoke.spec.ts"]
+      "sources": ["frontend/playwright.config.ts"],
+      "frontendE2E": [
+        "e2e/content.spec.ts",
+        "e2e/design-repair.spec.ts",
+        "e2e/shell.spec.ts",
+        "e2e/smoke.spec.ts"
+      ]
+    },
+    {
+      "sources": ["frontend/e2e/helpers/**"],
+      "frontendE2E": [
+        "e2e/content.spec.ts",
+        "e2e/design-repair.spec.ts",
+        "e2e/shell.spec.ts",
+        "e2e/site-intelligence.spec.ts"
+      ]
     },
 
     {
@@ -398,7 +412,11 @@
         "tests/unit/test_entitlement*.py",
         "tests/component/test_billing_*.py",
         "tests/component/test_entitlement*.py",
-        "tests/component/test_funded_ledger.py"
+        "tests/component/test_funded_ledger.py",
+        "tests/component/test_agent_worker.py",
+        "tests/component/test_projects_prompts_api.py",
+        "tests/component/test_prompt_generation_api.py",
+        "tests/component/test_traffic_sync_api.py"
       ]
     },
     {
@@ -445,7 +463,12 @@
         "tests/component/test_workspace_product_tour.py",
         "tests/component/test_command_center.py",
         "tests/unit/test_oauth_config.py",
-        "tests/component/test_oauth_api.py"
+        "tests/component/test_oauth_api.py",
+        "tests/component/test_agent_worker.py",
+        "tests/component/test_entitlement_occupancy.py",
+        "tests/component/test_projects_prompts_api.py",
+        "tests/component/test_prompt_generation_api.py",
+        "tests/component/test_traffic_sync_api.py"
       ]
     },
     {
@@ -528,7 +551,8 @@
         "lib/onboarding/*.test.ts",
         "lib/setup/*.test.ts",
         "components/layout/onboarding-gate.test.tsx"
-      ]
+      ],
+      "frontendE2E": ["e2e/design-repair.spec.ts"]
     },
     {
       "sources": [
@@ -547,7 +571,7 @@
         "lib/navigation/*.test.ts",
         "app/(app)/route-states.test.tsx"
       ],
-      "frontendE2E": ["e2e/shell.spec.ts"]
+      "frontendE2E": ["e2e/content.spec.ts", "e2e/design-repair.spec.ts", "e2e/shell.spec.ts"]
     },
     {
       "sources": [
@@ -686,7 +710,8 @@
         "components/settings/*.test.tsx",
         "components/billing/*.test.tsx",
         "lib/billing/*.test.ts"
-      ]
+      ],
+      "frontendE2E": ["e2e/content.spec.ts", "e2e/design-repair.spec.ts", "e2e/shell.spec.ts"]
     },
     {
       "sources": ["frontend/components/agent/**"],

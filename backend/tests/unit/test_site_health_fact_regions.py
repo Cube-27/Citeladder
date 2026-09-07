@@ -26,9 +26,12 @@ from app.analysis.site_health.fact_regions import (
     primary_region,
     primary_region_text,
 )
+from app.analysis.site_health.fact_signals import page_owned_content_facts
 from app.analysis.site_health.page_kinds import classify
 from app.analysis.site_health.parser import extract_page_facts
+from app.analysis.site_health.rules import evaluate_rule, rule_for
 from app.core.config import site_health_taxonomy as config
+from app.core.config.site_health_contracts import RULE_OUTCOME_MISSING
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "site_health"
 
@@ -86,6 +89,287 @@ def test_region_text_excludes_navigation_and_footer() -> None:
     assert "Sleepwear" not in text  # nav
     assert "Privacy" not in text  # footer
     assert "56 results" in text
+
+
+def test_page_owned_header_contributes_hero_facts_but_global_chrome_does_not() -> None:
+    facts = extract_page_facts(
+        b"""<html><body>
+        <header><h1>Global navigation title</h1></header>
+        <main><header><h1>CiteLadder measures AI visibility</h1>
+        <p>CiteLadder provides evidence-grounded growth intelligence.</p>
+        <nav><a href='/x'>Chrome link</a></nav></header></main>
+        </body></html>""",
+        final_url="https://example.test/",
+        content_type="text/html",
+    )
+
+    assert facts["primary_heading_outline"] == [
+        {"level": 1, "text": "CiteLadder measures AI visibility"}
+    ]
+    assert "Global navigation title" not in facts["primary_content_text"]
+    assert "Chrome link" not in facts["primary_content_text"]
+
+
+def test_slogan_heading_is_not_identity_without_named_provider_copy() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main><header><h1>Grow smarter with AI</h1>
+        <p>We provide a measurement workspace for growth teams.</p></header></main>
+        </body></html>""",
+        final_url="https://example.test/",
+        content_type="text/html",
+    )
+
+    assert facts["entity_proposition"]["identity"] == ""
+
+
+def test_slogan_heading_is_not_identity_for_lowercase_first_person_copy() -> None:
+    facts = extract_page_facts(
+        b"<html><body><main><h1>Better Search</h1>"
+        b"<p>we provide a measurement workspace for growth teams.</p>"
+        b"</main></body></html>",
+        final_url="https://example.test/",
+        content_type="text/html",
+    )
+
+    assert facts["entity_proposition"]["identity"] == ""
+
+
+@pytest.mark.parametrize(
+    ("heading", "lead"),
+    [
+        (
+            "Be the answer AI recommends",
+            "CiteLadder turns site and demand evidence into prioritized growth work.",
+        ),
+        (
+            "Turn visibility into a measurable system",
+            "CiteLadder measures how answer engines discover and cite your brand.",
+        ),
+    ],
+)
+def test_named_provider_copy_supplies_entity_identity(heading: str, lead: str) -> None:
+    tree = lxml_html.fromstring(
+        f"<html><body><main><header><h1>{heading}</h1><p>{lead}</p>"
+        "</header></main></body></html>"
+    )
+
+    facts = page_owned_content_facts(tree)
+
+    assert facts["entity_proposition"]["identity"] == "CiteLadder"
+    assert facts["entity_proposition"]["provider"] == "CiteLadder"
+
+
+def test_hidden_page_header_does_not_contribute_content_facts() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <header hidden><h1>Hidden campaign title</h1></header>
+        <h1>Visible page title</h1><p>Visible page content is available.</p>
+        </main></body></html>""",
+        final_url="https://example.test/",
+        content_type="text/html",
+    )
+
+    assert facts["primary_heading_outline"] == [
+        {"level": 1, "text": "Visible page title"}
+    ]
+
+
+def test_whitespace_padded_aria_hidden_region_is_excluded() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <section aria-hidden=" TRUE "><h1>Hidden title</h1></section>
+        <h1>Visible title</h1>
+        </main></body></html>""",
+        final_url="https://example.test/",
+        content_type="text/html",
+    )
+
+    assert facts["primary_heading_outline"] == [{"level": 1, "text": "Visible title"}]
+
+
+def test_native_details_preserve_answered_and_unanswered_question_evidence() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <details>
+          <summary>What is CiteLadder?</summary>
+          <p>It measures AI visibility.</p>
+        </details>
+        <details><summary>How is it configured?</summary></details>
+        </main></body></html>""",
+        final_url="https://example.test/faq",
+        content_type="text/html",
+    )
+
+    assert facts["question_answer_relationships"] == [
+        {
+            "question": "What is CiteLadder?",
+            "answer": "It measures AI visibility.",
+            "source": "details",
+            "answer_state": "available",
+            "reason": "",
+        },
+        {
+            "question": "How is it configured?",
+            "answer": "",
+            "source": "details",
+            "answer_state": "missing",
+            "reason": "answer_content_missing",
+        },
+    ]
+
+
+def test_unanswered_observed_questions_stay_in_faq_evaluation() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main><h1>Questions</h1>
+        <h2>What is CiteLadder?</h2>
+        <h2>How does CiteLadder work?</h2>
+        <h2>Can CiteLadder track progress?</h2>
+        </main></body></html>""",
+        final_url="https://example.test/questions",
+        content_type="text/html",
+    )
+
+    assessment = classify("https://example.test/questions", facts)
+    assert assessment.page_kind == "faq"
+    facts["page_kind"] = assessment.page_kind
+    evaluation = evaluate_rule(rule_for("aeo.question_headings"), facts)
+    assert evaluation.outcome == RULE_OUTCOME_MISSING
+    assert evaluation.evidence["reason"] == "question_answer_missing"
+
+
+def test_bare_auxiliary_heading_requires_question_mark() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <h2>Can improve visibility</h2><p>This is an imperative heading.</p>
+        <h2>Can this improve visibility?</h2><p>Yes, with evidence.</p>
+        </main></body></html>""",
+        final_url="https://example.test/guide",
+        content_type="text/html",
+    )
+
+    assert [item["question"] for item in facts["question_answer_relationships"]] == [
+        "Can this improve visibility?"
+    ]
+
+
+def test_aria_accordion_requires_a_control_panel_relationship() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <button aria-controls="answer-one"
+                aria-expanded="false">What is CiteLadder?</button>
+        <section id="answer-one"><p>It measures AI visibility.</p></section>
+        <button aria-controls="missing" aria-expanded="false">How does it work?</button>
+        </main></body></html>""",
+        final_url="https://example.test/faq",
+        content_type="text/html",
+    )
+
+    assert facts["question_answer_relationships"] == [
+        {
+            "question": "What is CiteLadder?",
+            "answer": "It measures AI visibility.",
+            "source": "aria_controls",
+            "answer_state": "available",
+            "reason": "",
+        },
+        {
+            "question": "How does it work?",
+            "answer": "",
+            "source": "aria_controls",
+            "answer_state": "unavailable",
+            "reason": "answer_panel_missing",
+        },
+    ]
+
+
+def test_aria_accordion_abstains_from_duplicate_panel_ids() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <button aria-controls="answer"
+                aria-expanded="false">What is CiteLadder?</button>
+        <section id="answer"><p>First answer.</p></section>
+        <section id="answer"><p>Second answer.</p></section>
+        </main></body></html>""",
+        final_url="https://example.test/faq",
+        content_type="text/html",
+    )
+
+    assert facts["question_answer_relationships"] == [
+        {
+            "question": "What is CiteLadder?",
+            "answer": "",
+            "source": "aria_controls",
+            "answer_state": "unavailable",
+            "reason": "answer_panel_ambiguous",
+        }
+    ]
+
+
+def test_details_answer_does_not_borrow_a_nested_question_answer() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <details><summary>What is CiteLadder?</summary>
+          <details><summary>How does it work?</summary><p>Nested answer.</p></details>
+        </details>
+        </main></body></html>""",
+        final_url="https://example.test/faq",
+        content_type="text/html",
+    )
+
+    assert facts["question_answer_relationships"][0] == {
+        "question": "What is CiteLadder?",
+        "answer": "",
+        "source": "details",
+        "answer_state": "missing",
+        "reason": "answer_content_missing",
+    }
+
+
+def test_hidden_aria_answer_remains_unavailable() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <button aria-controls="answer" aria-expanded="false">How does it work?</button>
+        <div id="answer" hidden><p>Fetched only after interaction.</p></div>
+        </main></body></html>""",
+        final_url="https://example.test/faq",
+        content_type="text/html",
+    )
+
+    assert facts["question_answer_relationships"][0]["answer_state"] == "unavailable"
+    assert facts["question_answer_relationships"][0]["reason"] == (
+        "answer_panel_unavailable"
+    )
+
+
+def test_heading_answer_search_skips_the_heading_subtree() -> None:
+    facts = extract_page_facts(
+        b"""<html><body><main>
+        <div><h2>What is <span>CiteLadder?</span></h2></div>
+        <p>CiteLadder measures AI visibility.</p>
+        </main></body></html>""",
+        final_url="https://example.test/faq",
+        content_type="text/html",
+    )
+
+    assert facts["question_answer_relationships"][0]["answer"] == (
+        "CiteLadder measures AI visibility."
+    )
+
+
+def test_heading_relationships_respect_the_persisted_pair_limit() -> None:
+    pairs = "".join(
+        f"<h2>What is item {index}?</h2><p>Answer {index}.</p>"
+        for index in range(config.PAGE_OWNED_MAX_QUESTION_ANSWER_PAIRS + 5)
+    )
+    facts = extract_page_facts(
+        f"<html><body><main>{pairs}</main></body></html>".encode(),
+        final_url="https://example.test/faq",
+        content_type="text/html",
+    )
+
+    assert len(facts["question_answer_relationships"]) == (
+        config.PAGE_OWNED_MAX_QUESTION_ANSWER_PAIRS
+    )
 
 
 @pytest.mark.parametrize(

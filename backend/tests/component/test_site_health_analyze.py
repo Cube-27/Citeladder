@@ -1031,7 +1031,7 @@ async def test_analyze_injects_site_facts_on_root_analysis_only(
             "author",
             "dates",
             "landmarks",
-            "question_heading_ratio",
+            "question_answer_relationships",
             "hreflang_alternates",
             "inline_script_chars",
         ):

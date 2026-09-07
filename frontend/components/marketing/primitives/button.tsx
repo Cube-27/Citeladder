@@ -13,7 +13,7 @@ const sharedVariant = (variant: Variant) =>
   variant === 'ghost' ? 'ghost' : variant === 'primary' ? 'primary' : 'secondary';
 
 const marketingSecondary =
-  'border-border-strong bg-panel hover:border-border-bold hover:bg-background-alt';
+  'border-border-strong bg-panel hover:border-border-bold hover:bg-background-alt active:scale-[var(--interaction-press-scale)]';
 
 export function ButtonLink({
   href,
@@ -30,8 +30,8 @@ export function ButtonLink({
       asChild
       variant={sharedVariant(variant)}
       className={cn(
-        'rounded-[var(--radius-control)] min-h-[2.75rem] px-5 text-sm font-medium tracking-tight transition-all duration-200',
-        '[&_svg]:size-4 [&_svg]:shrink-0',
+        'rounded-[var(--radius-control)] min-h-[2.75rem] px-5 text-sm font-medium tracking-tight transition-all duration-200 ease-out active:scale-[var(--interaction-press-scale)]',
+        variant === 'primary' && 'hover:-translate-y-0.5 hover:shadow-card active:translate-y-0',
         (variant === 'dark' || variant === 'nav') && marketingSecondary,
         className,
       )}
@@ -153,7 +153,8 @@ export function IconButtonLink({
       asChild
       variant={variant === 'default' ? 'primary' : 'secondary'}
       className={cn(
-        'rounded-full min-h-[2.75rem] px-5 text-sm font-medium tracking-tight transition-all duration-200',
+        'rounded-full min-h-[2.75rem] px-5 text-sm font-medium tracking-tight transition-all duration-200 ease-out active:scale-[var(--interaction-press-scale)]',
+        variant === 'default' && 'hover:-translate-y-0.5 hover:shadow-card active:translate-y-0',
         variant !== 'default' && marketingSecondary,
         className,
       )}

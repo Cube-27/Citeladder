@@ -31,7 +31,7 @@ import app.api.prompts as prompts_api
 from app.connectors.agent.client import AgentNotConfiguredError, DefaultAgentClient
 from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.audits import AUDIT_TRIGGER_MANUAL
-from app.core.config.entitlements import KEY_PROMPT_SLOTS
+from app.core.config.entitlements import KEY_PROJECT_SLOTS, KEY_PROMPT_SLOTS
 from app.domain.audits.creation import create_audit
 from app.domain.audits.errors import AuditValidationError
 from app.domain.audits.reads import list_tasks
@@ -39,7 +39,10 @@ from app.domain.entitlements.types import GrantSpec
 from app.models.prompt import Prompt
 from tests.component.audit_helpers import seed_audit_fixtures
 from tests.component.auth_helpers import register_and_login as _register
-from tests.component.occupancy_helpers import seed_occupancy_grants
+from tests.component.occupancy_helpers import (
+    revoke_signup_baseline_grants,
+    seed_occupancy_grants,
+)
 from tests.fixtures.archetype_text import (
     satisfies_slot,
     slot_text,
@@ -740,10 +743,19 @@ def _agent_response_with_n_prompts(
 
 @pytest.mark.asyncio
 async def test_generate_activates_validated_requested_count(
-    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """The requested, validated portfolio becomes active without measuring it."""
-    _, prompt_set_id = await _make_project_and_set(client, "pool1@example.com")
+    project, prompt_set_id = await _make_project_and_set(client, "pool1@example.com")
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(project["workspace_id"]),
+            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=20),),
+        )
+        await session.commit()
     agent = FakeAgent(response=_agent_response_with_n_prompts(25))
     monkeypatch.setattr(prompts_api, "create_model_gateway", lambda: agent)
 
@@ -765,10 +777,21 @@ async def test_generate_activates_validated_requested_count(
 
 @pytest.mark.asyncio
 async def test_generate_comparison_cohort_is_active_and_branded(
-    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """Validated comparison prompts retain their cohort signal and are active."""
-    _, prompt_set_id = await _make_project_and_set(client, "brandcap@example.com")
+    project, prompt_set_id = await _make_project_and_set(client, "brandcap@example.com")
+    async with session_factory() as session:
+        # The ten pre-existing prompts consume the free baseline; the generated
+        # comparison pair needs its own explicit allowance.
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(project["workspace_id"]),
+            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=2),),
+        )
+        await session.commit()
     # Ten existing core prompts plus ten named comparisons settle at 12 active:
     # 10 core + 2 comparison, because int(12 * 0.2) == 2.
     for i in range(10):
@@ -947,6 +970,14 @@ async def test_concurrent_generation_keeps_all_validated_rows_active(
         proj = await session.get(Project, uuid.UUID(project["id"]))
         assert proj is not None
         workspace_id = proj.workspace_id
+        # The free baseline allows ten prompts; this concurrency test needs two
+        # fifteen-row portfolios, so grant only the additional twenty slots.
+        await seed_occupancy_grants(
+            session,
+            workspace_id=workspace_id,
+            grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=20),),
+        )
+        await session.commit()
 
     class _CountingAgent:
         model = "fake-model"
@@ -1255,9 +1286,17 @@ async def test_create_prompt_accepts_topic_id(client: httpx.AsyncClient) -> None
 @pytest.mark.asyncio
 async def test_create_prompt_rejects_foreign_topic_id(
     client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """A topic from another project is a 404, not a cross-scope FK write."""
     project_a, set_a = await _make_project_and_set(client, "ptopic2@example.com")
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(project_a["workspace_id"]),
+            grants=(GrantSpec(key=KEY_PROJECT_SLOTS, value=1),),
+        )
+        await session.commit()
     other = await client.post(
         "/api/v1/projects",
         json={
@@ -1372,6 +1411,7 @@ async def test_prompt_topic_assignment_same_project_succeeds(
 @pytest.mark.asyncio
 async def test_prompt_topic_assignment_cross_project_rejected(
     client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """A topic from a sibling project (same workspace) can't be attached."""
     await _register(client, "tscope2@example.com")
@@ -1384,6 +1424,13 @@ async def test_prompt_topic_assignment_cross_project_rejected(
             json={"project_id": project_a["id"], "name": "SetA"},
         )
     ).json()["id"]
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(project_a["workspace_id"]),
+            grants=(GrantSpec(key=KEY_PROJECT_SLOTS, value=1),),
+        )
+        await session.commit()
     project_b = (
         await client.post(
             "/api/v1/projects",
@@ -1616,12 +1663,14 @@ async def test_generate_over_occupancy_returns_coded_403(
     project, prompt_set_id = await _make_project_and_set(
         client, "occ-gen-403@example.com"
     )
-    # A zero-slot grant provisions the capability with no headroom: every
+    # Make the registered account bare, then provision a zero-slot grant: every
     # generated row that could actually insert is over the allowance.
     async with session_factory() as session:
+        workspace_id = uuid.UUID(project["workspace_id"])
+        await revoke_signup_baseline_grants(session, workspace_id=workspace_id)
         await seed_occupancy_grants(
             session,
-            workspace_id=uuid.UUID(project["workspace_id"]),
+            workspace_id=workspace_id,
             grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=0),),
         )
         await session.commit()
@@ -1651,9 +1700,11 @@ async def test_import_over_occupancy_returns_coded_403(
         client, "occ-import-403@example.com"
     )
     async with session_factory() as session:
+        workspace_id = uuid.UUID(project["workspace_id"])
+        await revoke_signup_baseline_grants(session, workspace_id=workspace_id)
         await seed_occupancy_grants(
             session,
-            workspace_id=uuid.UUID(project["workspace_id"]),
+            workspace_id=workspace_id,
             grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=2),),
         )
         await session.commit()

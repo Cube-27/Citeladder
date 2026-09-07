@@ -91,7 +91,7 @@ def test_webhook_signature_uses_exact_raw_body(
 
 
 @pytest.mark.asyncio
-async def test_login_skips_billing_repair_when_bootstrap_is_complete(
+async def test_login_rechecks_billing_bootstrap_idempotently(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     user = SimpleNamespace(
@@ -107,11 +107,6 @@ async def test_login_skips_billing_repair_when_bootstrap_is_complete(
     monkeypatch.setattr(
         auth_service, "ensure_personal_workspace", AsyncMock(return_value=None)
     )
-    monkeypatch.setattr(
-        auth_service,
-        "user_billing_bootstrap_complete",
-        AsyncMock(return_value=True),
-    )
     monkeypatch.setattr(auth_service, "ensure_user_billing", repair)
     monkeypatch.setattr(
         auth_service,
@@ -124,8 +119,8 @@ async def test_login_skips_billing_repair_when_bootstrap_is_complete(
     )
 
     assert result == ("token-0", user)
-    repair.assert_not_awaited()
-    session.commit.assert_not_awaited()
+    repair.assert_awaited_once_with(session, user, workspace_ids=None)
+    session.commit.assert_awaited_once()
 
 
 def _metadata() -> ProviderMetadata:

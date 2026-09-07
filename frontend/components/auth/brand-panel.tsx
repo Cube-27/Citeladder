@@ -1,23 +1,30 @@
 import Link from 'next/link';
 
-import { LogoMark } from '@/components/ui/logo-mark';
+import { LogoMark, type BrandLogoVariant } from '@/components/ui/logo-mark';
 
 /**
  * The wordmark in the auth/onboarding flow bar.
  *
- * The bar carries the MARKETING nav's rung exactly: the two bars are seen back
- * to back when a visitor clicks "Log in", and a logo that shrinks on the way
- * reads as a different, lesser page. There used to be a `compact` flag choosing
- * between two rungs, but the larger one never had a call site.
+ * The bar carries the MARKETING nav's canonical brand rung identically:
+ * both bars share the same source of truth in LogoMark, ensuring complete
+ * symmetry when navigating between marketing, auth, and onboarding flows.
  */
-export function AuthWordmark({ size }: Readonly<{ size?: number }>) {
+export function AuthWordmark({
+  size,
+  variant,
+  priority = true,
+}: Readonly<{
+  size?: number;
+  variant?: BrandLogoVariant;
+  priority?: boolean;
+}>) {
   return (
     <Link
       href="/"
       aria-label="CiteLadder home"
       className="group inline-flex items-center no-underline transition-opacity hover:opacity-90"
     >
-      <LogoMark size={size ?? 26} />
+      <LogoMark size={size} variant={variant} priority={priority} />
     </Link>
   );
 }

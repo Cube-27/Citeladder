@@ -31,6 +31,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config.entitlements import KEY_PROJECT_SLOTS
 from app.core.config.integrations_contracts import (
     GRANT_STATUS_CONNECTED,
     GRANT_STATUS_NEEDS_REAUTH,
@@ -47,12 +48,14 @@ from app.core.config.integrations_transport import (
     INTEGRATION_TRANSPORT_GOOGLE,
     INTEGRATION_TRANSPORT_MICROSOFT,
 )
+from app.domain.entitlements.types import GrantSpec
 from app.models.integrations import (
     IntegrationConnection,
     IntegrationOAuthGrant,
     IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
+from tests.component.occupancy_helpers import seed_occupancy_grants
 
 _SYNC_ENQUEUE_KEYS = {"sync_run_id", "connection_id", "status"}
 
@@ -78,6 +81,19 @@ async def _create_project(client: httpx.AsyncClient) -> tuple[str, str]:
     assert resp.status_code == 201
     body = resp.json()
     return body["id"], body["workspace_id"]
+
+
+async def _grant_second_project_slot(
+    session_factory: async_sessionmaker[AsyncSession], workspace_id: str
+) -> None:
+    """Keep setup independent of the signup baseline's one project slot."""
+    async with session_factory() as session:
+        await seed_occupancy_grants(
+            session,
+            workspace_id=uuid.UUID(workspace_id),
+            grants=(GrantSpec(key=KEY_PROJECT_SLOTS, value=1),),
+        )
+        await session.commit()
 
 
 async def _seed_grant(
@@ -263,6 +279,7 @@ async def test_sync_skips_ineligible_connections(
     """
     await _register(client, "traffic-sync-eligible@example.com")
     project_id, workspace_id = await _create_project(client)
+    await _grant_second_project_slot(session_factory, workspace_id)
     other_project_resp = await client.post(
         "/api/v1/projects", json={"name": "Other Project"}
     )

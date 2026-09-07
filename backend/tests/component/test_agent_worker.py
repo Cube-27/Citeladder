@@ -23,11 +23,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.agent import default_agent_settings
+from app.core.config.entitlements import KEY_GROWTH_AGENT
+from app.domain.entitlements.types import GrantSpec
 from app.models.agent import AgentTaskRun
+from app.models.project import Project
 from app.workers import agent_worker as worker_module
 from app.workers.agent_worker import AgentWorker
 
 from .auth_helpers import register_and_login
+from .occupancy_helpers import seed_occupancy_grants
 
 
 @pytest.fixture(autouse=True)
@@ -68,6 +72,20 @@ async def _project(client: httpx.AsyncClient, name: str) -> str:
     return response.json()["id"]
 
 
+async def _authorize_growth_agent(
+    session_factory: async_sessionmaker[AsyncSession], project_id: str
+) -> None:
+    async with session_factory() as session:
+        project = await session.get(Project, project_id)
+        assert project is not None
+        await seed_occupancy_grants(
+            session,
+            workspace_id=project.workspace_id,
+            grants=(GrantSpec(key=KEY_GROWTH_AGENT, value=1),),
+        )
+        await session.commit()
+
+
 async def _queue_task(
     client: httpx.AsyncClient, project_id: str, *, idempotency_key: str
 ) -> str:
@@ -100,6 +118,7 @@ async def test_run_once_claims_executes_and_terminalizes_a_queued_task(
 ) -> None:
     await register_and_login(client, "agent-worker-claim@example.com")
     project_id = await _project(client, "Agent Worker Claim")
+    await _authorize_growth_agent(session_factory, project_id)
     task_id = await _queue_task(client, project_id, idempotency_key="claim-1")
     _use_test_sessions(monkeypatch, session_factory)
 
@@ -149,6 +168,7 @@ async def test_two_workers_on_one_task_execute_it_exactly_once(
 ) -> None:
     await register_and_login(client, "agent-worker-once@example.com")
     project_id = await _project(client, "Agent Worker Once")
+    await _authorize_growth_agent(session_factory, project_id)
     task_id = await _queue_task(client, project_id, idempotency_key="once-1")
     _use_test_sessions(monkeypatch, session_factory)
 
@@ -172,6 +192,7 @@ async def test_a_live_lease_held_by_another_owner_is_not_stolen(
 ) -> None:
     await register_and_login(client, "agent-worker-lease@example.com")
     project_id = await _project(client, "Agent Worker Lease")
+    await _authorize_growth_agent(session_factory, project_id)
     task_id = await _queue_task(client, project_id, idempotency_key="lease-1")
     now = datetime.now(UTC)
     async with session_factory() as session:
@@ -201,6 +222,7 @@ async def test_an_expired_lease_is_reclaimed_and_the_attempt_is_counted(
 ) -> None:
     await register_and_login(client, "agent-worker-expired@example.com")
     project_id = await _project(client, "Agent Worker Expired")
+    await _authorize_growth_agent(session_factory, project_id)
     task_id = await _queue_task(client, project_id, idempotency_key="expired-1")
     now = datetime.now(UTC)
     async with session_factory() as session:
@@ -233,6 +255,7 @@ async def test_a_task_past_its_attempt_budget_fails_closed_without_executing(
 ) -> None:
     await register_and_login(client, "agent-worker-budget@example.com")
     project_id = await _project(client, "Agent Worker Budget")
+    await _authorize_growth_agent(session_factory, project_id)
     task_id = await _queue_task(client, project_id, idempotency_key="budget-1")
     async with session_factory() as session:
         run = await session.get(AgentTaskRun, task_id)
@@ -261,6 +284,7 @@ async def test_the_persisted_lease_window_matches_the_configured_budget(
 ) -> None:
     await register_and_login(client, "agent-worker-window@example.com")
     project_id = await _project(client, "Agent Worker Window")
+    await _authorize_growth_agent(session_factory, project_id)
     task_id = await _queue_task(client, project_id, idempotency_key="window-1")
     _use_test_sessions(monkeypatch, session_factory)
     observed: list[timedelta] = []

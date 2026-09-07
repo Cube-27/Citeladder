@@ -338,12 +338,10 @@ async def apply_subscription_state(
 
 
 async def owned_account(session: AsyncSession, user: User) -> BillingAccount:
-    account = await session.scalar(
-        select(BillingAccount).where(BillingAccount.owner_user_id == user.id)
-    )
-    if account is None:
-        account = await ensure_user_billing(session, user)
-        await session.commit()
+    # Also idempotently applies the current public/dev baseline so an account
+    # created before the policy shipped is repaired on its next entitlement read.
+    account = await ensure_user_billing(session, user)
+    await session.commit()
     return account
 
 

@@ -73,3 +73,12 @@ export function useEntitlement() {
   if (!context) throw new Error('useEntitlement must be used within EntitlementProvider');
   return context;
 }
+
+export function capabilityLimit(
+  entitlement: BillingEntitlement | null,
+  key: string,
+): number | null | undefined {
+  if (!entitlement || entitlement.status !== 'resolved') return undefined;
+  const value = entitlement.capabilities.find((capability) => capability.key === key)?.value;
+  return typeof value === 'number' ? value : null;
+}

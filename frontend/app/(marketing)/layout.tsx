@@ -16,7 +16,7 @@ import { organizationJsonLd, softwareApplicationJsonLd, websiteJsonLd } from '@/
  * The paper canvas uses the public editorial type ladder. `MarketingMotion`
  * supplies the tree's explanatory animation features — it is what makes `m`
  * components animate at all, and it defers GSAP off the server bundle. Fonts
- * come from the root layout: Instrument Serif → `--font-display`, Geist →
+ * come from the root layout: Barlow → `--font-display`, Geist →
  * `--font-sans`.
  */
 export default function MarketingLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -32,7 +32,7 @@ export default function MarketingLayout({ children }: Readonly<{ children: React
       {softwareApp ? <JsonLd id="software-app-json-ld" data={softwareApp} /> : null}
       <MarketingMotion>
         <MarketingNav />
-        <div className="relative z-1 pt-16">{children}</div>
+        <div className="relative z-1 pt-[var(--marketing-nav-offset)]">{children}</div>
         <div className="relative z-1">
           <MarketingFooter />
         </div>

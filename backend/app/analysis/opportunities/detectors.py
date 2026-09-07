@@ -28,6 +28,7 @@ from app.analysis.opportunities.source_patterns import (
 from app.core.config.opportunities import (
     OPPORTUNITY_RULES_BY_ID,
     SITE_GAP_FACTOR,
+    SITE_ISSUE_ATOM_PRESENTATION,
     SITE_ISSUE_TO_OPPORTUNITY_RULE_ID,
     SITE_VALUE_FACTOR,
     OpportunityRule,
@@ -133,6 +134,8 @@ class DetectorHit:
     source_metric_ids: tuple[str, ...]
     value_factor: float
     gap_factor: float
+    title_override: str | None = None
+    remediation_override: str | None = None
 
 
 # =========================================================================
@@ -334,6 +337,22 @@ def _site_opportunity_rule_id(issue_rule_id: str) -> str | None:
     return SITE_ISSUE_TO_OPPORTUNITY_RULE_ID.get(issue_rule_id)
 
 
+def _site_issue_presentation(issue: SiteIssueEvidence) -> tuple[str | None, str | None]:
+    """Select bounded remediation copy from persisted failing composite atoms."""
+    policy = SITE_ISSUE_ATOM_PRESENTATION.get(issue.rule_id)
+    evidence = issue.evidence if isinstance(issue.evidence, dict) else {}
+    atoms = evidence.get("atoms")
+    if not policy or not isinstance(atoms, list):
+        return None, None
+    missing = sorted(
+        str(atom.get("name") or "")
+        for atom in atoms
+        if isinstance(atom, dict) and atom.get("outcome") == "missing"
+    )
+    selected = policy.get(tuple(missing))
+    return selected if selected is not None else (None, None)
+
+
 def detect_site_issue_opportunities(evidence: SiteEvidence) -> list[DetectorHit]:
     """Project each mapped ``SiteIssue`` into a site-type opportunity hit.
 
@@ -355,6 +374,7 @@ def detect_site_issue_opportunities(evidence: SiteEvidence) -> list[DetectorHit]
         normalized_url = urls.get(issue.site_url_id)
         if not normalized_url:
             continue
+        title_override, remediation_override = _site_issue_presentation(issue)
         hits.append(
             DetectorHit(
                 rule_id=rule.rule_id,
@@ -380,6 +400,8 @@ def detect_site_issue_opportunities(evidence: SiteEvidence) -> list[DetectorHit]
                 source_metric_ids=(),
                 value_factor=SITE_VALUE_FACTOR,
                 gap_factor=SITE_GAP_FACTOR,
+                title_override=title_override,
+                remediation_override=remediation_override,
             )
         )
     hits.sort(key=lambda hit: (hit.rule_id, hit.target_key, hit.source_issue_ids))

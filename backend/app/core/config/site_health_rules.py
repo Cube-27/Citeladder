@@ -44,7 +44,6 @@ from app.core.config.site_health_taxonomy import (
     PAGE_KIND_COMPARISON,
     PAGE_KIND_DOCS,
     PAGE_KIND_FAQ,
-    PAGE_KIND_FAQ_QUESTION_RATIO,
     PAGE_KIND_GUIDE,
     PAGE_KIND_SCHEMA_ANALYSIS_KINDS,
     _page_kinds,
@@ -485,19 +484,18 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         category=CATEGORY_CONTENT,
         severity=SEVERITY_LOW,
         weight=1.0,
-        # Question-form headings are the SHAPE of an answer page. A homepage,
-        # product or category page is not written as questions and should not
-        # be scored as though it failed to be.
-        #
-        # Narrowed further to FAQ alone. An FAQ whose sections are not
-        # questions genuinely is not an FAQ, so the finding survives there as a
-        # defect. A guide, a reference page or an essay has no such obligation:
-        # API reference documentation has no subheadings at all, and demanding
-        # question headings of it was inventing a fault.
+        # FAQ questions need programmatically recoverable answers. A homepage,
+        # product, category, guide, reference page, or essay has no obligation
+        # to use an FAQ structure.
         applicability_key=_page_kinds(PAGE_KIND_FAQ),
-        description="Page uses question-form h2/h3 headings.",
-        remediation="Phrase section headings as the questions users ask.",
-        display_label="No question-form headings",
+        description=(
+            "Each page-owned FAQ question has an associated server-rendered answer."
+        ),
+        remediation=(
+            "Associate every visible FAQ question with its answer using native "
+            "details, headings, or valid accordion controls."
+        ),
+        display_label="FAQ question-answer structure is incomplete",
         score_roles=(SCORE_ROLE_AEO,),
         content_addressable=True,
     ),
@@ -636,8 +634,6 @@ INLINE_SCRIPT_JAVASCRIPT_TYPES: Final[frozenset[str]] = frozenset(
         "text/jscript",
     }
 )
-
-QUESTION_HEADINGS_MIN_RATIO: Final = PAGE_KIND_FAQ_QUESTION_RATIO
 
 
 TRACKING_QUERY_PARAMS: Final[frozenset[str]] = frozenset(

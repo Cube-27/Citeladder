@@ -19,6 +19,10 @@ vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeProject: { id: '11111111-1111-4111-8111-111111111111' } }),
 }));
 
+vi.mock('@/lib/billing/entitlement-context', () => ({
+  useEntitlement: () => ({ hasCapability: (key: string) => key === 'content_creation' }),
+}));
+
 let pathname = '/site';
 let searchParams = new URLSearchParams();
 

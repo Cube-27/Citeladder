@@ -102,6 +102,13 @@ const commandCenter = {
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
+vi.mock('@/lib/billing/entitlement-context', () => ({
+  useEntitlement: () => ({
+    entitlement: { status: 'resolved', capabilities: [{ key: 'project_slots', value: 1 }] },
+  }),
+  capabilityLimit: () => 1,
+}));
+
 // This file mocks useQuery wholesale to return the command-center fixture, so
 // TopInsights would receive that shape instead of an opportunities page. It is
 // a separate unit with its own tests (components/intelligence); stub it out
@@ -176,6 +183,18 @@ describe('DashboardScreen', () => {
       nextAction.compareDocumentPosition(state) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(state.compareDocumentPosition(movement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('does not expose additional project creation before billing is live', async () => {
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: /manage project/i }));
+    expect(screen.queryByText('Add project')).not.toBeInTheDocument();
   });
 
   it('downloads the authenticated executive PDF', async () => {

@@ -113,6 +113,31 @@ def test_company_proof_reads_only_primary_content() -> None:
     assert normalized["durable_first_party_proof"] == ""
 
 
+def test_unrelated_organization_schema_does_not_supply_company_identity() -> None:
+    normalized = extract_company_entity_facts(
+        {
+            "primary_content_text": (
+                "Workflow software helps operations teams plan work."
+            ),
+            "entity_proposition": {
+                "provider": "",
+                "named_capability": "workflow software",
+            },
+            "structured_data": {
+                "blocks": [
+                    {
+                        "type": "Organization",
+                        "name": "Unrelated Vendor",
+                        "url": "https://vendor.example/",
+                    }
+                ]
+            },
+        }
+    )
+
+    assert normalized["company_identity"] == ""
+
+
 @pytest.mark.parametrize(
     ("url", "title", "expected"),
     [

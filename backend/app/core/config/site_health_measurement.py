@@ -210,6 +210,8 @@ UNAVAILABLE_REASONS: Final[frozenset[str]] = frozenset(
 UNKNOWN_REASONS: Final[frozenset[str]] = frozenset(
     {
         "insufficient_evidence",
+        "question_answers_unavailable",
+        "question_relationships_unavailable",
         "robots_not_fetched",
         "unknown_applicability",
     }

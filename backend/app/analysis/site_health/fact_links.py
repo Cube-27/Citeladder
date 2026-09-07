@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 
 from app.analysis.site_health.dom import DOM_ERRORS, dom_failure
 from app.analysis.site_health.dom import node_text as _text
-from app.analysis.site_health.fact_regions import element_region
+from app.analysis.site_health.fact_regions import element_region, node_is_rendered
 from app.core.config import site_health_acquisition as config
 
 # These are immutable normalized-fact labels, not task kinds. They remain
@@ -36,6 +36,8 @@ def _anchor_assets(
         for anchor in root.iter("a"):
             if len(anchors) >= max_links:
                 break
+            if not node_is_rendered(anchor):
+                continue
             href = (anchor.get("href") or "").strip()
             if not href or href.startswith(("#", "javascript:", "mailto:", "tel:")):
                 continue

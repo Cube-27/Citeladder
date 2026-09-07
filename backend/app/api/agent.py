@@ -16,6 +16,7 @@ from app.core.config.agent import (
     AGENT_LIST_DEFAULT_LIMIT,
     AGENT_LIST_MAX_LIMIT,
 )
+from app.core.config.entitlements import KEY_GROWTH_AGENT
 from app.core.errors import ApiException
 from app.domain.agent.schemas import (
     AgentTaskRunDetail,
@@ -31,6 +32,10 @@ from app.domain.agent.service import (
     list_task_runs,
     submit_task,
     task_run_projection,
+)
+from app.domain.entitlements.enforcement import (
+    CapabilityNotGrantedError,
+    require_workspace_capability,
 )
 
 router = APIRouter(prefix="/agent", tags=["agent"])
@@ -59,6 +64,14 @@ async def submit_task_endpoint(
         Header(alias="Idempotency-Key", max_length=AGENT_IDEMPOTENCY_KEY_MAX_CHARS),
     ] = None,
 ) -> AgentTaskRunDetail:
+    try:
+        await require_workspace_capability(
+            session, workspace_id=ctx.workspace_id, key=KEY_GROWTH_AGENT
+        )
+    except CapabilityNotGrantedError as exc:
+        raise ApiException.coded(
+            status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
+        ) from exc
     await enforce_workspace_request(
         session,
         workspace_id=ctx.workspace_id,

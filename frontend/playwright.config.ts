@@ -11,6 +11,8 @@ export default defineConfig({
   // navigation aborts and hydration races caused by six concurrent compiles.
   workers: 1,
   retries: 1,
+  reporter: [['html', { outputFolder: 'playwright-report', open: 'never' }]],
+  outputDir: 'test-results',
   use: {
     baseURL: `http://127.0.0.1:${e2ePort}`,
     trace: 'on-first-retry',

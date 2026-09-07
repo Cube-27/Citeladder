@@ -4,10 +4,12 @@ import type { Page } from '@playwright/test';
  * Authed-shell network fixture for e2e + visual specs.
  *
  * The app authenticates by cookie session: `SessionGuard` calls
- * `GET /api/v1/auth/me` and `ProjectProvider` calls `GET /api/v1/projects`,
- * so stubbing those two endpoints is the whole "logged in with one project"
- * arrangement — no token needs seeding. The ids are the canonical ones the
- * existing specs already use (shell.spec.ts, content.spec.ts, …).
+ * `GET /api/v1/auth/me`, `ProjectProvider` calls `GET /api/v1/projects`, and
+ * `EntitlementProvider` calls `GET /api/v1/billing/entitlement`. Stubbing
+ * those three endpoints is the whole "logged in with one project" arrangement
+ * — no token needs seeding. Feature-permitted shell fixtures also provide a
+ * schema-valid resolved billing entitlement; negative access states
+ * belong in specs that explicitly exercise denied or unresolved behavior.
  */
 const FIXTURE_USER = {
   id: '22222222-2222-4222-8222-222222222222',
@@ -16,6 +18,84 @@ const FIXTURE_USER = {
   is_active: true,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+} as const;
+
+const PROJECT_SLOTS_GRANT_ID = '33333333-3333-4333-8333-333333333333';
+const CONTENT_CREATION_GRANT_ID = '55555555-5555-4555-8555-555555555555';
+const GROWTH_AGENT_GRANT_ID = '66666666-6666-4666-8666-666666666666';
+const ENTITLEMENT_PERIOD_END = '2030-02-01T00:00:00Z';
+
+/** A bounded, resolved account state for feature-permitted shell flows. */
+export const PERMITTED_ENTITLEMENT = {
+  billing_account_id: '44444444-4444-4444-8444-444444444444',
+  status: 'resolved',
+  errors: [],
+  registry_revision: 'entitlements-v1',
+  entitlement_lifecycle_version: 1,
+  resolved_at: '2030-01-01T00:00:00Z',
+  valid_until: ENTITLEMENT_PERIOD_END,
+  subscription: {
+    catalog_key: 'tier_2',
+    status: 'active',
+    current_period_end: ENTITLEMENT_PERIOD_END,
+    cancel_at_period_end: false,
+  },
+  trial_grant: null,
+  capabilities: [
+    {
+      key: 'project_slots',
+      capability_type: 'counter.occupancy',
+      value: 1,
+      contributing_grant_ids: [PROJECT_SLOTS_GRANT_ID],
+      ordered_draw_grant_ids: [],
+    },
+    {
+      key: 'content_creation',
+      capability_type: 'flag',
+      value: true,
+      contributing_grant_ids: [CONTENT_CREATION_GRANT_ID],
+      ordered_draw_grant_ids: [],
+    },
+    {
+      key: 'growth_agent',
+      capability_type: 'flag',
+      value: true,
+      contributing_grant_ids: [GROWTH_AGENT_GRANT_ID],
+      ordered_draw_grant_ids: [],
+    },
+  ],
+  grants: [
+    {
+      grant_id: PROJECT_SLOTS_GRANT_ID,
+      source_kind: 'plan',
+      key: 'project_slots',
+      value: 1,
+      valid_from: '2030-01-01T00:00:00Z',
+      effective_valid_until: ENTITLEMENT_PERIOD_END,
+      revoked_at: null,
+      catalog_revision: 'catalog-2030-01',
+    },
+    {
+      grant_id: CONTENT_CREATION_GRANT_ID,
+      source_kind: 'plan',
+      key: 'content_creation',
+      value: 1,
+      valid_from: '2030-01-01T00:00:00Z',
+      effective_valid_until: ENTITLEMENT_PERIOD_END,
+      revoked_at: null,
+      catalog_revision: 'catalog-2030-01',
+    },
+    {
+      grant_id: GROWTH_AGENT_GRANT_ID,
+      source_kind: 'plan',
+      key: 'growth_agent',
+      value: 1,
+      valid_from: '2030-01-01T00:00:00Z',
+      effective_valid_until: ENTITLEMENT_PERIOD_END,
+      revoked_at: null,
+      catalog_revision: 'catalog-2030-01',
+    },
+  ],
 } as const;
 
 export const FIXTURE_PROJECT = {
@@ -47,7 +127,7 @@ export const FIXTURE_PROJECT = {
  * settles into its empty/error state in ONE attempt instead of flapping
  * between skeleton and error across the two-retry window. It is also what
  * keeps an unstubbed downstream call (GettingStartedCard's audits query, the
- * shell EntitlementProvider's entitlements query) from falling through to a
+ * shell EntitlementProvider's entitlement query) from falling through to a
  * live backend, 401-ing, and tripping the session guard's "any 401 → logout"
  * path — which is how a spec that only stubs auth/me + projects ends up
  * bounced to /login.
@@ -59,6 +139,7 @@ export const FIXTURE_PROJECT = {
 export async function stubAuthedShell(
   page: Page,
   stubs: ReadonlyArray<readonly [string | RegExp, unknown]> = [],
+  projects: ReadonlyArray<typeof FIXTURE_PROJECT> = [FIXTURE_PROJECT],
 ): Promise<void> {
   await page.route('**/api/v1/**', (route) =>
     route.fulfill({
@@ -67,9 +148,12 @@ export async function stubAuthedShell(
       body: JSON.stringify({ detail: 'e2e fixture: endpoint not stubbed' }),
     }),
   );
+  await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user: FIXTURE_USER } }));
+  await page.route('**/api/v1/projects', (route) => route.fulfill({ json: projects }));
+  await page.route('**/api/v1/billing/entitlement', (route) =>
+    route.fulfill({ json: PERMITTED_ENTITLEMENT }),
+  );
   for (const [pattern, body] of stubs) {
     await page.route(pattern, (route) => route.fulfill({ json: body }));
   }
-  await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user: FIXTURE_USER } }));
-  await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [FIXTURE_PROJECT] }));
 }

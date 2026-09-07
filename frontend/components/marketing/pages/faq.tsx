@@ -67,7 +67,7 @@ export function FaqGroups() {
         <div className="grid gap-12">
           {FAQ_GROUPS.map((group) => (
             <section key={group.heading} id={groupAnchor(group)} aria-label={group.heading}>
-              <div className="border-border-subtle mb-3 flex items-baseline justify-between gap-5 border-b pb-5">
+              <div className="border-border-subtle mb-3 flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1 border-b pb-5">
                 <h2 className="website-section-heading text-foreground">{group.heading}</h2>
                 <Meta>{group.items.length} answers</Meta>
               </div>
@@ -75,16 +75,16 @@ export function FaqGroups() {
                 <details
                   key={item.q}
                   name="citeladder-faq"
-                  className="border-border-subtle group border-b"
+                  className="border-border-subtle group open:bg-panel/40 -mx-3 rounded-[var(--radius-control)] border-b px-3 transition-colors duration-200"
                 >
                   <summary className="text-foreground hover:text-accent-text flex cursor-pointer list-none items-center justify-between gap-8 py-5 text-base font-medium transition-colors [&::-webkit-details-marker]:hidden">
-                    {item.q}
+                    <span className="text-balance">{item.q}</span>
                     <Plus
                       aria-hidden
                       className="text-muted size-4 shrink-0 transition-transform duration-300 group-open:rotate-45"
                     />
                   </summary>
-                  <p className="website-body-lg text-muted max-w-[75ch] pb-8">
+                  <p className="website-body text-muted max-w-[64ch] pb-6">
                     <Linkify text={item.a} />
                   </p>
                 </details>

@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CiteLadder — Public pricing (catalog-driven, checkout disabled, no-card early access)</title>
+<meta name="description" content="Mockup of the public /pricing page rendered from the billing catalog: Tier 1 to Tier 3 plus Enterprise, a BYOK credential switch, an illustrative catalog-driven offer, paid checkout disabled while Razorpay activation is pending, and an operative no-card 7-day early-access claim on Tier 1 shown for an eligible server response." />
+<style>
+  :root {
+    --background: #f7f6fd; --panel: #ffffff; --well: #f4f4f1; --shell: #f1f4f1;
+    --background-alt: #f4f4f1; --active: #efefeb;
+    --foreground: #172554; --secondary: #24356b; --muted: #3d4f8c; --subtle: #55639a; --disabled: #9a9aa0;
+    --border: #d1d0dc; --border-subtle: #e3e2ec; --border-strong: #a2a0b0;
+    --accent: #395afa; --accent-hover: #2947e3; --accent-active: #203cc9; --accent-fg: #ffffff;
+    --accent-soft: #f4f7ff; --accent-subtle: #edf2ff; --accent-border: #b8ccfd; --accent-text: #2643df;
+    --success-bg: #f4f8ec; --success-border: #e6f0d1; --success-text: #3f6212; --success-solid: #9acd32;
+    --warning-bg: #fffbeb; --warning-border: #fde68a; --warning-text: #b45309; --warning-solid: #f59e0b;
+    --band-indigo: #131028; --violet-soft: #c9b4fa;
+    --radius-card: 12px; --radius-control: 8px; --radius-full: 9999px; --radius-xs: 4px;
+    --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 8px 24px -4px rgb(17 28 69 / 0.06), 0 2px 6px -1px rgb(17 28 69 / 0.03);
+    --font-display: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-body: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-body); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  header.site { border-bottom: 1px solid var(--border-subtle); background: var(--shell); }
+  .site .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .logo { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
+  .logo svg { width: 20px; height: 20px; color: var(--foreground); }
+  nav.site-nav { display: flex; gap: 26px; font-size: 14px; color: var(--muted); }
+  nav.site-nav a { color: inherit; text-decoration: none; }
+  nav.site-nav a[aria-current] { color: var(--foreground); font-weight: 500; }
+  .header-cta { display: flex; gap: 12px; align-items: center; }
+
+  .hero { text-align: center; padding: 64px 0 8px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; font-weight: 600; color: var(--accent-text); }
+  .hero h1 { font-family: var(--font-display); font-weight: 500; font-size: 48px; line-height: 1.05; letter-spacing: -0.02em; margin: 14px auto 0; max-width: 18ch; }
+  .hero h1 .accent { color: var(--accent); }
+  .hero p.lead { color: var(--muted); max-width: 68ch; margin: 18px auto 0; font-size: 17px; }
+  .trust { display: flex; gap: 22px; justify-content: center; margin-top: 26px; color: var(--subtle); font-size: 13px; flex-wrap: wrap; }
+  .trust span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .avail-strip { margin: 26px 0 8px; }
+  .avail-card { display: flex; gap: 20px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;
+    border: 1px solid var(--warning-border); background: var(--warning-bg); border-radius: var(--radius-card); padding: 16px 18px; }
+  .avail-card .txt { max-width: 74ch; }
+  .avail-card .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--warning-solid); color: #3a2606;
+    border-radius: var(--radius-full); padding: 2px 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
+  .avail-card h2 { font-size: 15px; margin: 0; }
+  .avail-card .headline-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .avail-card p { margin: 8px 0 0; color: var(--warning-text); font-size: 14px; }
+
+  section.plans { padding: 40px 0 8px; }
+  .mode-bar { display: flex; gap: 20px; align-items: center; border: 1px solid var(--border-subtle); background: var(--background-alt);
+    border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: 30px; flex-wrap: wrap; }
+  .switch { display: inline-flex; align-items: center; gap: 10px; }
+  .toggle { width: 40px; height: 22px; border-radius: var(--radius-full); background: var(--accent); position: relative; flex: none; }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 20px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+  .switch strong { font-size: 14px; font-weight: 500; }
+  .mode-bar .disclosure { color: var(--muted); font-size: 13px; border-left: 1px solid var(--border); padding-left: 20px; max-width: 64ch; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  @media (max-width: 1000px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } .mode-bar .disclosure { border-left: 0; padding-left: 0; } }
+
+  .card { display: flex; flex-direction: column; border: 1px solid var(--border-subtle); background: var(--panel);
+    border-radius: var(--radius-card); padding: 24px; box-shadow: var(--shadow-card); position: relative; }
+  .card.featured { background: var(--band-indigo); border: 0; box-shadow: 0 20px 50px -12px rgb(17 28 69 / 0.35); }
+  .card.featured, .card.featured * { color: #eef1ff; }
+  .card .top { display: flex; align-items: center; justify-content: space-between; min-height: 28px; gap: 10px; }
+  .card h3 { font-family: var(--font-display); font-weight: 500; font-size: 21px; margin: 0; }
+  .badge { font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; border-radius: var(--radius-full); padding: 3px 9px; }
+  .badge.rec { background: var(--accent-subtle); color: var(--accent-text); }
+  .card.featured .badge.rec { background: rgba(201,180,250,0.18); color: var(--violet-soft); }
+  .card .blurb { color: var(--muted); font-size: 14px; margin: 12px 0 0; min-height: 44px; max-width: 32ch; }
+  .card.featured .blurb { color: #c8ccec; }
+  .price { display: flex; align-items: baseline; gap: 8px; margin-top: 22px; min-height: 46px; }
+  .price .amt { font-family: var(--font-display); font-weight: 600; font-size: 38px; letter-spacing: -0.02em; }
+  .price .per { color: var(--muted); font-size: 14px; }
+  .card.featured .price .per { color: #b7bce0; }
+  .price .strike { color: var(--subtle); text-decoration: line-through; font-size: 20px; font-weight: 500; }
+  .offer-note { font-size: 12px; color: var(--success-text); margin: 6px 0 0; }
+  .card.featured .offer-note { color: var(--violet-soft); }
+  ul.caps { list-style: none; margin: 22px 0 0; padding: 16px 0 0; border-top: 1px solid var(--border-subtle); display: grid; gap: 4px; flex: 1; }
+  .card.featured ul.caps { border-top-color: rgba(255,255,255,0.12); }
+  ul.caps li { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--secondary); min-height: 34px; }
+  .card.featured ul.caps li { color: #d6d9f2; }
+  ul.caps .lab { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+  ul.caps .check { width: 16px; height: 16px; color: var(--accent); flex: none; }
+  .card.featured ul.caps .check { color: var(--violet-soft); }
+  ul.caps .val { font-weight: 500; font-variant-numeric: tabular-nums; color: var(--foreground); }
+  .card.featured ul.caps .val { color: #fff; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; padding: 0 18px;
+    border-radius: var(--radius-control); font-size: 14px; font-weight: 600; border: 1px solid transparent; cursor: pointer; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: var(--panel); color: var(--foreground); border-color: var(--border); }
+  .btn-ghost { background: transparent; color: var(--foreground); border-color: var(--border); }
+  .btn-offer { background: var(--success-bg); color: var(--success-text); border-color: var(--success-border); }
+  .btn.small { height: 34px; padding: 0 14px; }
+  .btn:disabled, .btn[aria-disabled="true"] { background: var(--well); color: var(--disabled); border-color: var(--border-subtle); cursor: not-allowed; }
+  .card.featured .btn:disabled { background: rgba(255,255,255,0.08); color: #8f93bb; border-color: rgba(255,255,255,0.12); }
+  .card .cta { margin-top: 22px; }
+  .cta-reason { font-size: 12px; color: var(--subtle); margin: 8px 0 0; text-align: center; }
+  .card.featured .cta-reason { color: #a9adce; }
+
+  section.compare { padding: 40px 0; }
+  .compare-head { text-align: center; margin-bottom: 26px; }
+  .compare-head h2 { font-family: var(--font-display); font-weight: 500; font-size: 32px; margin: 8px 0 0; letter-spacing: -0.02em; }
+  .compare-head p { color: var(--muted); margin: 8px 0 0; }
+  table.cmp { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); overflow: hidden; }
+  table.cmp th, table.cmp td { text-align: left; padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--border-subtle); }
+  table.cmp thead th { background: var(--well); font-weight: 600; }
+  table.cmp td.val { text-align: center; font-variant-numeric: tabular-nums; color: var(--secondary); }
+  table.cmp tr:last-child td { border-bottom: 0; }
+
+  .note-block { margin: 8px 0 40px; border: 1px dashed var(--border); border-radius: var(--radius-card); padding: 16px 18px; color: var(--muted); font-size: 13px; background: var(--panel); }
+  .note-block strong { color: var(--foreground); }
+  .note-block + .note-block { margin-top: -24px; }
+  .note-block.pending { border-color: var(--warning-border); background: var(--warning-bg); color: var(--warning-text); }
+  .note-block.pending strong { color: var(--warning-text); }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="wrap">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20V8l6-4 6 4v12" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 20v-5h4v5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 11h5M15 15h5M15 19h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      CiteLadder
+    </div>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="#">Product</a>
+      <a href="#">Evidence</a>
+      <a href="#" aria-current="page">Pricing</a>
+      <a href="#">FAQ</a>
+    </nav>
+    <div class="header-cta">
+      <a class="btn btn-ghost small" href="#">Sign in</a>
+      <a class="btn btn-primary small" href="#">Request early access</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap">
+    <div class="hero">
+      <p class="eyebrow">Pricing</p>
+      <h1>Pay for the intelligence. <span class="accent">Not the API markup.</span></h1>
+      <p class="lead">Model calls run on your own provider keys and bill straight to your accounts at provider rates. CiteLadder charges for the workspace, the intelligence, and the evidence behind every recommendation.</p>
+      <div class="trust">
+        <span>Evidence-led audits</span>
+        <span>No API markup</span>
+        <span>Cancel at period end</span>
+      </div>
+    </div>
+
+    <div class="avail-strip">
+      <div class="avail-card" data-component-id="checkout-availability-banner">
+        <div class="txt">
+          <div class="headline-row">
+            <span class="pill">Payments disabled</span>
+            <h2>Paid checkout is not live yet — no-card early access is open</h2>
+          </div>
+          <p>Prices below are resolved from the live catalog for your region. Automated card checkout turns on once our Razorpay account is fully activated; until then, plan checkout buttons stay disabled and no payment request leaves your browser. While payments are off, eligible visitors can claim a temporary no-card 7-day early access to Tier 1 — an explicit grant with no card and no charge.</p>
+        </div>
+        <a class="btn btn-secondary" href="#" data-component-id="request-early-access">Talk to our team</a>
+      </div>
+    </div>
+  </div>
+
+  <section class="plans">
+    <div class="wrap">
+      <div class="mode-bar">
+        <label class="switch" data-component-id="byok-mode-switch">
+          <span class="toggle" role="switch" aria-checked="true" aria-label="Use your own API keys"></span>
+          <strong>Use your own API keys</strong>
+        </label>
+        <p class="disclosure">Provider usage is billed directly to your accounts with no CiteLadder markup. Run speed depends on your providers’ rate limits. Funded (CiteLadder-billed) prices are set ($99 / $149 / $299) but unavailable until allowances and provider readiness are verified.</p>
+      </div>
+
+      <div class="grid">
+        <!-- Tier 1 + no-card early access -->
+        <div class="card" data-tier="tier_1" data-component-id="plan-card-tier_1">
+          <div class="top"><h3>Tier 1</h3></div>
+          <p class="blurb">Crawl, classify, and improve your owned pages.</p>
+          <div class="price"><span class="amt">$49</span><span class="per">per month</span></div>
+          <ul class="caps">
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Projects</span><span class="val">1</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Prompts</span><span class="val">25</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Manual runs / day</span><span class="val">5</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>No-card 7-day early access</span></li>
+          </ul>
+          <div class="cta">
+            <button class="btn btn-primary" style="width:100%" disabled data-component-id="choose-tier_1">Choose Tier 1</button>
+            <button class="btn btn-offer" style="width:100%;margin-top:8px" data-component-id="claim-early-access-tier_1">Claim 7-day early access</button>
+            <p class="cta-reason">Paid checkout unavailable until Razorpay activation. Early access is a no-card grant shown for an eligible response.</p>
+          </div>
+        </div>
+
+        <!-- Tier 2 featured + illustrative offer -->
+        <div class="card featured" data-tier="tier_2" data-highlighted="true" data-component-id="plan-card-tier_2">
+          <div class="top"><h3>Tier 2</h3><span class="badge rec">Recommended</span></div>
+          <p class="blurb">Site, Content, and Demand Intelligence in one workspace.</p>
+          <div class="price"><span class="strike">$99</span><span class="amt">$89</span><span class="per">per month</span></div>
+          <p class="offer-note">Illustrative catalog offer: 10% off the first billing cycle. Real offer terms are catalog-driven.</p>
+          <ul class="caps">
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Projects</span><span class="val">5</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Prompts</span><span class="val">150</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Shared AI credits</span><span class="val">Metered</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Growth Agent</span></li>
+          </ul>
+          <div class="cta">
+            <button class="btn btn-primary" style="width:100%" disabled data-component-id="choose-tier_2">Choose Tier 2</button>
+            <p class="cta-reason">Checkout unavailable until Razorpay activation.</p>
+          </div>
+        </div>
+
+        <!-- Tier 3 -->
+        <div class="card" data-tier="tier_3" data-component-id="plan-card-tier_3">
+          <div class="top"><h3>Tier 3</h3></div>
+          <p class="blurb">Higher limits for growing sites and teams.</p>
+          <div class="price"><span class="amt">$149</span><span class="per">per month</span></div>
+          <ul class="caps">
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Projects</span><span class="val">20</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Prompts</span><span class="val">500</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Shared AI credits</span><span class="val">Metered</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Growth Agent</span></li>
+          </ul>
+          <div class="cta">
+            <button class="btn btn-primary" style="width:100%" disabled data-component-id="choose-tier_3">Choose Tier 3</button>
+            <p class="cta-reason">Checkout unavailable until Razorpay activation.</p>
+          </div>
+        </div>
+
+        <!-- Enterprise contact-only -->
+        <div class="card" data-tier="enterprise" data-component-id="plan-card-enterprise">
+          <div class="top"><h3>Enterprise</h3></div>
+          <p class="blurb">Custom scale, security, and evidence-workflow support.</p>
+          <div class="price"><span class="amt" style="font-size:26px">Contact us</span></div>
+          <ul class="caps">
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Custom projects & prompts</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Unlimited manual runs</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>SSO & security review</span></li>
+            <li><span class="lab"><svg class="check" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Priority evidence support</span></li>
+          </ul>
+          <div class="cta">
+            <a class="btn btn-secondary" style="width:100%" href="#" data-component-id="contact-sales-enterprise">Contact sales</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="note-block">
+        <strong>Implementation intent:</strong> Every price, limit, offer, and availability shown here comes from <code>GET /billing/catalog</code> via <code>frontend/lib/billing/catalog.ts</code>. BYOK prices are $49 / $99 / $149; funded prices ($99 / $149 / $299) are set but stay unavailable until allowances and provider readiness are verified. Paid checkout buttons are disabled from the per-plan <code>checkout_available</code> field, not a global payment-off gate, so a single tier can open once its Razorpay route is live. The Tier 2 offer amount is illustrative of catalog-driven offers/discount codes, not a hardcoded price. Content and the Growth Agent are Tier 2/Tier 3 capabilities that draw from one <strong>shared AI-credit pool, weighted by observed tokens</strong>; shown here only as "Metered", not a fabricated quantity. Customers may instead configure true BYOK (their own model / API key / base URL) in Provider settings, in which case no platform credit is consumed. All commercial terms shown are provisional policy placeholders pending plan approval.
+      </div>
+      <div class="note-block pending">
+        <strong>No-card early access — pending confirmation:</strong> The "Claim 7-day early access" action is a temporary promotional grant while payments are disabled: explicit, no card, no charge, and no renewal. It is distinct from the future 7-day Tier 1 card-mandate trial, which remains unavailable. The eligibility rules that gate this claim are still being confirmed; the operative button shown here reflects an assumed "eligible" server response and should not be read as a finalized eligibility policy.
+      </div>
+    </div>
+  </section>
+
+  <section class="compare">
+    <div class="wrap">
+      <div class="compare-head">
+        <p class="eyebrow">Compare</p>
+        <h2>Side by side.</h2>
+        <p>Every cell is a limit the platform enforces, drawn from the catalog’s published capabilities.</p>
+      </div>
+      <table class="cmp" data-component-id="plan-comparison">
+        <thead>
+          <tr><th>Capability</th><th style="text-align:center">Tier 1</th><th style="text-align:center">Tier 2</th><th style="text-align:center">Tier 3</th><th style="text-align:center">Enterprise</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Projects</td><td class="val">1</td><td class="val">5</td><td class="val">20</td><td class="val">Custom</td></tr>
+          <tr><td>Prompts</td><td class="val">25</td><td class="val">150</td><td class="val">500</td><td class="val">Custom</td></tr>
+          <tr><td>Manual runs / day</td><td class="val">5</td><td class="val">25</td><td class="val">100</td><td class="val">Unlimited</td></tr>
+          <tr><td>Shared AI credits (Content + Growth Agent)</td><td class="val">—</td><td class="val">Metered</td><td class="val">Metered</td><td class="val">Custom</td></tr>
+          <tr><td>Growth Agent</td><td class="val">—</td><td class="val">✓</td><td class="val">✓</td><td class="val">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>

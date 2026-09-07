@@ -73,9 +73,10 @@ def _facts(
     title: str = "",
     entity: dict | None = None,
     authorship: dict[str, str] | None = None,
+    question_answer_relationships: list[dict[str, str]] | None = None,
 ) -> dict:
     """A bounded parser-facts-shaped dict with only what classify() reads."""
-    return {
+    facts = {
         "title": title,
         "headings": {"h2_texts": h2_texts or [], "h1_texts": []},
         "body": {"text": body_text, "word_count": len(body_text.split())},
@@ -83,6 +84,9 @@ def _facts(
         "entity": entity or {},
         "authorship": authorship or {},
     }
+    if question_answer_relationships is not None:
+        facts["question_answer_relationships"] = question_answer_relationships
+    return facts
 
 
 def _buy_box() -> dict:
@@ -136,11 +140,18 @@ def _single_location() -> dict:
     }
 
 
-def _question_h2s(count: int, *, total: int | None = None) -> list[str]:
-    """``total`` h2 texts of which ``count`` are question-form."""
-    total = total if total is not None else count
-    return [f"What is topic {i}?" for i in range(count)] + [
-        f"Statement heading {i}" for i in range(total - count)
+def _question_relationships(
+    count: int, *, answered: bool = True
+) -> list[dict[str, str]]:
+    return [
+        {
+            "question": f"What is topic {index}?",
+            "answer": f"Topic {index} is explained here." if answered else "",
+            "source": "heading",
+            "answer_state": "available" if answered else "missing",
+            "reason": "" if answered else "answer_content_missing",
+        }
+        for index in range(count)
     ]
 
 
@@ -366,31 +377,33 @@ def test_product_schema_alone_cannot_override_category_path() -> None:
     assert assessment.classified_by == PAGE_KIND_SIGNAL_PATH_PATTERN
 
 
-# --- Signal 3: content/heading heuristics -----------------------------------
+# --- Signal 3: content heuristics -------------------------------------------
 
 
-def test_question_heading_ratio_classifies_faq() -> None:
-    facts = _facts(h2_texts=_question_h2s(4, total=5))
+def test_answered_question_relationships_classify_faq() -> None:
+    facts = _facts(question_answer_relationships=_question_relationships(4))
     assessment = classify("https://example.com/answers", facts)
     assert assessment.page_kind == "faq"
     assert assessment.classified_by == PAGE_KIND_SIGNAL_CONTENT_HEURISTIC
 
 
-def test_faq_requires_minimum_heading_count() -> None:
-    # 2/2 question headings is a perfect ratio but below the minimum count.
-    facts = _facts(h2_texts=_question_h2s(2, total=2))
+def test_faq_requires_minimum_relationship_count() -> None:
+    facts = _facts(question_answer_relationships=_question_relationships(2))
     assert classify("https://example.com/answers", facts).page_kind == "other"
 
 
-def test_faq_requires_question_ratio() -> None:
-    # 1 question of 4 headings is below the config ratio.
-    facts = _facts(h2_texts=_question_h2s(1, total=4))
-    assert classify("https://example.com/answers", facts).page_kind == "other"
-
-
-def test_question_word_prefix_counts_as_question_form() -> None:
-    facts = _facts(h2_texts=["How it works", "Why choose us", "What you get"])
+def test_faq_with_missing_answers_remains_in_faq_evaluation() -> None:
+    facts = _facts(
+        question_answer_relationships=_question_relationships(4, answered=False)
+    )
     assert classify("https://example.com/answers", facts).page_kind == "faq"
+
+
+def test_duplicate_question_relationships_do_not_classify_faq() -> None:
+    relationship = _question_relationships(1)[0]
+    facts = _facts(question_answer_relationships=[relationship] * 3)
+
+    assert classify("https://example.com/answers", facts).page_kind == "other"
 
 
 def test_body_text_price_and_cart_marker_alone_do_not_classify_product() -> None:
@@ -453,14 +466,16 @@ def test_byline_without_date_does_not_classify_article() -> None:
 
 
 def test_content_heuristics_have_fixed_sub_order() -> None:
-    # FAQ outranks product within signal 3 when both match.
-    facts = _facts(h2_texts=_question_h2s(3), body_text=_PRODUCT_TEXT)
+    facts = _facts(
+        question_answer_relationships=_question_relationships(3),
+        body_text=_PRODUCT_TEXT,
+    )
     assert classify("https://example.com/x", facts).page_kind == "faq"
 
 
 def test_conflicting_semantic_evidence_uses_priority_and_records_conflict() -> None:
     facts = _facts(
-        h2_texts=_question_h2s(3),
+        question_answer_relationships=_question_relationships(3),
         title="Shipping policy questions and answers",
     )
     assessment = classify("https://example.com/x", facts)
@@ -473,11 +488,41 @@ def test_conflicting_semantic_evidence_uses_priority_and_records_conflict() -> N
 
 
 def test_content_heuristic_outranks_schema_on_conflict() -> None:
-    facts = _facts(h2_texts=_question_h2s(3), schema_types=["Article"])
+    facts = _facts(
+        question_answer_relationships=_question_relationships(3),
+        schema_types=["Article"],
+    )
     assessment = classify("https://example.com/item", facts)
     assert assessment.page_kind == "faq"
     assert assessment.classified_by == PAGE_KIND_SIGNAL_CONTENT_HEURISTIC
     assert assessment.schema_suggested_type == "article"
+
+
+def test_native_question_answer_relationships_classify_faq_without_headings() -> None:
+    assessment = classify(
+        "https://example.com/questions",
+        _facts(
+            question_answer_relationships=[
+                {
+                    "question": "What is Acme?",
+                    "answer": "Acme is a widget.",
+                    "answer_state": "available",
+                },
+                {
+                    "question": "How does Acme work?",
+                    "answer": "It has a workflow.",
+                    "answer_state": "available",
+                },
+                {
+                    "question": "Can Acme export?",
+                    "answer": "Yes, it can export.",
+                    "answer_state": "available",
+                },
+            ]
+        ),
+    )
+
+    assert assessment.page_kind == "faq"
 
 
 def test_article_with_related_item_list_stays_article() -> None:
@@ -647,7 +692,7 @@ def test_evidence_is_bounded_and_explainable() -> None:
 
 def test_classification_is_deterministic() -> None:
     facts = _facts(
-        h2_texts=_question_h2s(3),
+        question_answer_relationships=_question_relationships(3),
         body_text=_PRODUCT_TEXT,
         authorship=_ARTICLE_AUTHORSHIP,
         schema_types=["Product"],
@@ -669,6 +714,23 @@ def test_malformed_inputs_never_raise() -> None:
     assert classify("https://example.com/blog/x", {}).page_kind == "article"
     assessment = classify("https://example.com/blog/x", None)  # type: ignore[arg-type]
     assert assessment.page_kind == "article"
+
+
+def test_exact_comparison_hub_with_linked_children_is_a_category() -> None:
+    facts = _facts(entity=_listing_grid(size=4))
+
+    assessment = classify("https://example.com/compare", facts)
+
+    assert assessment.page_kind == "category"
+    assert assessment.classified_by == PAGE_KIND_SIGNAL_PRIMARY_LISTING
+
+
+def test_comparison_detail_with_related_children_stays_a_comparison() -> None:
+    facts = _facts(entity=_listing_grid(size=4))
+
+    assessment = classify("https://example.com/compare/vendor", facts)
+
+    assert assessment.page_kind == "comparison"
 
 
 def test_classifier_version_stamped_from_config() -> None:

@@ -33,10 +33,13 @@ export function Trust() {
         {trust.guarantees.map((guarantee) => {
           const Icon = LANDING_ICONS[guarantee.icon];
           return (
-            <StaggerItem key={guarantee.title} className="flex items-start gap-4">
+            <StaggerItem
+              key={guarantee.title}
+              className="hover:border-border-subtle/80 hover:bg-background-alt/50 -m-3 flex items-start gap-4 rounded-[var(--radius-card)] border border-transparent p-3.5 transition-all duration-200"
+            >
               <span
                 className={cn(
-                  'flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-card)]',
+                  'shadow-xs flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-card)]',
                   LANDING_TILES[guarantee.tile],
                 )}
               >

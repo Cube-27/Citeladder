@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { CompareIndex } from '@/components/marketing/pages/compare';
 
 const DESCRIPTION =
-  'Side-by-side notes on CiteLadder versus Profound, Otterly AI, Scrunch AI, and Peec AI. Scoring, evidence, and keys. Last reviewed 3 Sep 2026.';
+  'Side-by-side notes on CiteLadder versus Profound, Otterly AI, Scrunch AI, and Peec AI. Scoring, evidence, and keys.';
 
 // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {

@@ -716,11 +716,11 @@ export function productContractViolations(root) {
       'app/layout.tsx: Geist must declare the shared product UI/body font with its real source and weight range',
     );
   }
-  const instrumentDeclaration =
-    /const\s+instrumentSerif\s*=\s*localFont\(\{\s*src:\s*'\.\.\/public\/fonts\/InstrumentSerif-Regular\.woff2',\s*variable:\s*'--font-instrument-serif',\s*display:\s*'swap',\s*\}\);/s;
-  if (!instrumentDeclaration.test(layout)) {
+  const barlowDeclaration =
+    /const\s+barlow\s*=\s*localFont\(\{\s*src:\s*\[[\s\S]*?'\.\.\/public\/fonts\/Barlow-Medium\.woff2'[\s\S]*?\],\s*variable:\s*'--font-barlow',\s*display:\s*'swap',\s*\}\);/s;
+  if (!barlowDeclaration.test(layout)) {
     violations.push(
-      'app/layout.tsx: Instrument Serif must declare the public and focused-flow display font source',
+      'app/layout.tsx: Barlow must declare the public and focused-flow display font source',
     );
   }
 

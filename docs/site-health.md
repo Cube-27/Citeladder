@@ -113,7 +113,9 @@ repair lifecycle state, or call a model.
 ## Crawl controls, limits, and progressive UI
 
 The production path is one standard crawl: its default is **50** and paid-plan
-allowances remain entitlement-owned. The technical/development requested-page
+  allowances remain entitlement-owned. Public signups receive 20 monitored
+  URLs; the configured development login uses `DEV_LOGIN_COUNTER_ALLOWANCE`.
+  The technical/development requested-page
 ceiling is **500**; using it requires the existing audited operator override on
 the dev/demo workspace. Advanced input, seed, and page-kind controls are
 development-only; their separate discovery and analysis safety ceilings remain
@@ -575,10 +577,15 @@ only from page-owned structural evidence or an independently observed trait.
 | `category` | A real collection/listing; crawlable detail-page links; persistent linked pagination when needed; explicit empty state where empty | Category description, breadcrumbs, `CollectionPage`/`ItemList`. Filter/facet crawl policy is cluster-scoped. |
 | `pricing` | Named plans/offers; each commercial option exposes price, currency, and billing basis or an explicit free/custom/contact-sales state; features/limits associate with the correct plan; usable next action | `Service`/`Product`/`Offer` only when semantically true. There is no universal Google PricingPage feature contract. |
 | `docs` | Explicit reference/task topic; accessible technical content and docs hierarchy; procedural trait adds prerequisites/context and executable ordered steps; version scope when the document is version-specific | `TechArticle`, `APIReference`, author/date/version navigation. HowTo rich-result absence is not a defect. |
-| `faq` | At least one visible question with its associated visible answer; relationships are programmatically recoverable; answers do not require client fetching | `FAQPage` may describe real content, but its absence is not an opportunity. |
+| `faq` | Every observed page-owned question has an associated visible answer; native `details`/`summary` pairs and heading-plus-answer structures are recovered from server HTML; answers do not require client fetching | `FAQPage` may describe real content, but its absence is not an opportunity. |
 | `about_contact` | Trait-split: `about_intent` requires entity identity and what it does; `company_profile_intent` activates only on a canonical About/Our Company/Who We Are/Our Story profile and requires company plus offering, audience/use case, concrete value, and durable first-party proof with unequal internal credit; `contact_intent` requires a usable contact path and programmatically labelled form controls | Specialized contact, history, team, careers, ownership, sustainability, sourcing, and responsibility pages do not activate `company_profile_intent` completeness. Structured data may supply evidence but cannot establish applicability. `AboutPage`, `ContactPage`, `Organization`, and `ProfilePage` remain advisory representations. |
 | `service` | Service identity, provider, what is delivered and for whom, and a usable enquiry/booking/purchase next step where acquisition is offered; location/area only when geographically bounded | `Service`/`Offer`, price, audience, area served, evidence. Price is not universally required. |
 | `local` | Location/business identity; address or explicit service area; usable contact/direction method; hours only when the business model makes them applicable; visible and marked-up facts agree | Most-specific `LocalBusiness`, geo, Business Profile. Legal existence and off-page consistency require external evidence. |
+
+Exact blog, news, and comparison hub routes resolve as `category` only when
+page-owned repeated links corroborate a real child collection. Comparison and
+article detail routes retain their detail kind when they merely contain related
+cards.
 | `guide` | Goal/topic; `procedural` trait requires ordered actionable steps, required inputs/prerequisites, and identifiable outcome; non-procedural guides require organized explanatory sections instead | `HowTo`/`Article`, author/date, tools/media, summary. Do not manufacture a step requirement for a non-procedural guide. |
 | `comparison` | At least two named alternatives; common criteria correctly associated with them; evidence/basis for factual comparisons; conclusion or decision guidance | Table, methodology, measurements, alternatives, Article/ItemList vocabulary. Comparative truth remains unknown without verification. |
 | `case_study_review` | Trait-split: case study requires subject/context, problem, intervention/action, and observed result; review requires reviewed item, evaluator, evaluation basis, benefits/drawbacks, and verdict | Article/Review markup, quantitative evidence, firsthand media. Result truth and review authenticity are unknown. |
@@ -936,9 +943,12 @@ cannot produce it.
 - Freshness applies only under independent current-state, version, release,
   news, report, or explicit year/version context. Date presence or absence does
   not decide applicability.
-- Question-heading requirements apply to the `faq` page kind under its resolved
-  family profile. An expected FAQ with no eligible subheadings is `missing`,
-  never N/A.
+- Question-and-answer requirements apply to the `faq` page kind under its
+  resolved family profile. Native `details`/`summary` pairs and eligible
+  heading-plus-answer structures share the same persisted relationship facts;
+  each fact records whether its answer is available, missing, or unavailable.
+  An unanswered observed question is `missing`, never N/A; client-only answer
+  uncertainty remains `unknown`.
 - A canonical declaration pointing away from a page is not itself a conflict;
   only deterministically broken or contradictory target evidence fails.
 - Architecture absence claims that require complete coverage become `unknown`

@@ -38,11 +38,11 @@ import { createAppQueryClient } from '@/lib/api/query-client';
 
 import { UserMenu } from './user-menu';
 
-function renderMenu() {
+function renderMenu(compact = false) {
   return render(
     <QueryClientProvider client={createAppQueryClient()}>
       <TooltipProvider>
-        <UserMenu />
+        <UserMenu compact={compact} />
       </TooltipProvider>
     </QueryClientProvider>,
   );
@@ -79,6 +79,16 @@ describe('UserMenu', () => {
     expect(items[settingsIndex]).toHaveAttribute('href', '/settings');
     expect(items[mcpIndex]).toHaveAttribute('href', '/docs/mcp');
     expect(items[mcpIndex]).toHaveAttribute('target', '_blank');
+  });
+
+  it('keeps settings and sign out reachable from the compact mobile trigger', async () => {
+    const user = userEvent.setup();
+    renderMenu(true);
+
+    await user.click(screen.getByRole('button', { name: /account menu/i }));
+
+    expect(await screen.findByRole('menuitem', { name: /settings/i })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeVisible();
   });
 
   it('clears the client session only after the server confirms logout', async () => {

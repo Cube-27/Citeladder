@@ -56,6 +56,8 @@ ALL_CAPABILITY_KEYS = (
     "provider.copilot",
     "exports",
     "manual_runs_per_day",
+    "content_creation",
+    "growth_agent",
 )
 
 

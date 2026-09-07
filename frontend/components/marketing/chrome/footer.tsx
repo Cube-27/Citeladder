@@ -139,7 +139,7 @@ export async function MarketingFooter() {
         >
           <div className="col-span-2 space-y-5 sm:col-span-3 lg:col-span-1">
             <Link href="/" aria-label="CiteLadder home" className="inline-block">
-              <LogoMark size={26} />
+              <LogoMark />
             </Link>
 
             <p className="website-body text-muted max-w-[28ch]">

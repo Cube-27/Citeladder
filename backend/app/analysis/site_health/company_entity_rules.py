@@ -46,13 +46,6 @@ def _organization_name(facts: dict[str, Any], text: str) -> str:
     provider = _bounded(proposition.get("provider"))
     if provider and provider.casefold() not in {"about", "about us", "our story"}:
         return provider
-    structured = _mapping(facts.get("structured_data"))
-    for block in structured.get("blocks") or ():
-        candidate = _mapping(block)
-        if candidate.get("type") in {"Organization", "LocalBusiness"}:
-            name = _bounded(candidate.get("name"))
-            if name:
-                return name
     match = re.search(COMPANY_IDENTITY_PATTERN, text)
     return _bounded(match.group("value")) if match is not None else ""
 

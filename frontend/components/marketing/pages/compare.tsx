@@ -23,7 +23,7 @@ export function CompareIndex() {
         eyebrow="Comparisons"
         title="How CiteLadder"
         accent="compares."
-        lead="Side-by-side notes on engines, scoring, evidence and keys. Last reviewed 3 Sep 2026 from each vendor’s public site."
+        lead="Side-by-side notes on engines, scoring, evidence and keys. Each comparison records its own review date and first-party sources."
       />
 
       <Section tone="paper" rhythm="tight" aria-label="Competitors">

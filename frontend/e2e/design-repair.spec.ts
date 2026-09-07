@@ -101,11 +101,15 @@ const readyDiscovery = {
 test('onboarding advances through a prompt-free review with sequential progress', async ({
   page,
 }) => {
-  await stubAuthedShell(page, [
-    ['**/api/v1/brand-discovery-catalog', catalog],
-    ['**/api/v1/brand-discoveries', readyDiscovery],
-    [`**/api/v1/brand-discoveries/${DISCOVERY_ID}`, readyDiscovery],
-  ]);
+  await stubAuthedShell(
+    page,
+    [
+      ['**/api/v1/brand-discovery-catalog', catalog],
+      ['**/api/v1/brand-discoveries', readyDiscovery],
+      [`**/api/v1/brand-discoveries/${DISCOVERY_ID}`, readyDiscovery],
+    ],
+    [],
+  );
 
   await page.goto('/onboarding');
   await expect(page.locator('[data-brand-canvas]')).toHaveCount(0);
