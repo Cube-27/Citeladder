@@ -25,11 +25,12 @@ import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
  */
 export function ProjectSwitcher({ className }: Readonly<{ className?: string }>) {
   const router = useRouter();
-  const { projects, activeProject, activeProjectId, setActiveProjectId, isLoading } =
+  const { projects, activeProject, activeProjectId, setActiveProjectId, isLoading, isError } =
     useProjectContext();
   const { usage } = useEntitlement();
   const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
-  const canAddProject = remainingProjectSlots !== undefined && remainingProjectSlots > 0;
+  const canAddProject =
+    !isError && remainingProjectSlots !== undefined && remainingProjectSlots > 0;
 
   const label = activeProject?.brand_name ?? activeProject?.name ?? 'No project';
 

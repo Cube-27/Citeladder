@@ -50,10 +50,8 @@ def _has_explicit_cta_marker(node: Any) -> bool:
 
 def _is_metadata_copy(text: str) -> bool:
     normalized = text.casefold()
-    if normalized.startswith("by "):
-        byline = re.match(authorship_config.BYLINE_PATTERN, text)
-        if byline is None:
-            return False
+    byline = re.match(authorship_config.BYLINE_PATTERN, text)
+    if byline is not None:
         suffix = text[byline.end() :].strip()
         return not suffix or bool(
             re.fullmatch(

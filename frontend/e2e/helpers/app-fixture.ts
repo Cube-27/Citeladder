@@ -5,8 +5,8 @@ import type { Page } from '@playwright/test';
  *
  * The app authenticates by cookie session: `SessionGuard` calls
  * `GET /api/v1/auth/me`, `ProjectProvider` calls `GET /api/v1/projects`, and
- * `EntitlementProvider` calls `GET /api/v1/billing/entitlement`. Stubbing
- * those three endpoints is the whole "logged in with one project" arrangement
+ * `EntitlementProvider` calls the billing entitlement and usage endpoints.
+ * Stubbing those four endpoints is the whole "logged in with one project" arrangement
  * — no token needs seeding. Feature-permitted shell fixtures also provide a
  * schema-valid resolved billing entitlement; negative access states
  * belong in specs that explicitly exercise denied or unresolved behavior.
@@ -98,6 +98,30 @@ export const PERMITTED_ENTITLEMENT = {
   ],
 } as const;
 
+function permittedUsage(projectCount: number) {
+  return {
+    billing_account_id: PERMITTED_ENTITLEMENT.billing_account_id,
+    entitlement_lifecycle_version: 1,
+    status: 'resolved',
+    items: [
+      {
+        key: 'project_slots',
+        capability_type: 'counter.occupancy',
+        unit: 'project',
+        limit_state: 'finite',
+        allowance: 1,
+        consumed: projectCount,
+        reserved: 0,
+        remaining: Math.max(0, 1 - projectCount),
+        window_started_at: null,
+        resets_at: null,
+        earliest_expiry: ENTITLEMENT_PERIOD_END,
+        grants: [],
+      },
+    ],
+  } as const;
+}
+
 export const FIXTURE_PROJECT = {
   id: '11111111-1111-4111-8111-111111111111',
   workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -152,6 +176,9 @@ export async function stubAuthedShell(
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: projects }));
   await page.route('**/api/v1/billing/entitlement', (route) =>
     route.fulfill({ json: PERMITTED_ENTITLEMENT }),
+  );
+  await page.route('**/api/v1/billing/usage', (route) =>
+    route.fulfill({ json: permittedUsage(projects.length) }),
   );
   for (const [pattern, body] of stubs) {
     await page.route(pattern, (route) => route.fulfill({ json: body }));

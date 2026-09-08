@@ -812,6 +812,15 @@ def test_visible_byline_link_matches_after_leading_by_prefix() -> None:
     assert facts["authorship"]["visible_profile_url"] == "/authors/jane-doe"
 
 
+def test_profile_link_matches_when_link_contains_byline_prefix() -> None:
+    facts = _facts(
+        b"<html><body><article><p><a href='/authors/jane-doe'>"
+        b"Written by Jane Doe</a></p></article></body></html>"
+    )
+
+    assert facts["authorship"]["visible_profile_url"] == "/authors/jane-doe"
+
+
 def test_visible_byline_does_not_claim_a_longer_unrelated_profile_link() -> None:
     facts = _facts(
         b"<html><body><article><a href='/authors/ashley-lee'>"
@@ -838,6 +847,19 @@ def test_unmarked_dated_byline_is_excluded_from_answer_copy() -> None:
     facts = _facts(
         b"<html><body><main><h2>Who maintains this guide?</h2>"
         b"<p>By Ruth Ellery, 14 March 2026</p>"
+        b"<p>The editorial research team maintains this guide.</p>"
+        b"</main></body></html>"
+    )
+
+    assert facts["question_answer_relationships"][0]["answer"] == (
+        "The editorial research team maintains this guide."
+    )
+
+
+def test_written_by_byline_is_excluded_from_answer_copy() -> None:
+    facts = _facts(
+        b"<html><body><main><h2>Who maintains this guide?</h2>"
+        b"<p>Written by Ruth Ellery</p>"
         b"<p>The editorial research team maintains this guide.</p>"
         b"</main></body></html>"
     )
