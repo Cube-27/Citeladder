@@ -1,4 +1,4 @@
-"""Idempotently provision the one allowed demo account."""
+"""Idempotently provision the configured deployment login."""
 
 from __future__ import annotations
 
@@ -11,11 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, settings, validate_production_security
 from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.database import SessionLocal, dispose_engine
-from app.core.security import hash_password
-from app.domain.auth.service import register_user
+from app.core.security import hash_password, verify_password
+from app.domain.auth.service import get_user_by_email, register_user
 from app.domain.billing.bootstrap import ensure_user_billing
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
+from app.domain.workspaces.service import ensure_personal_workspace
 from app.models.user import User
 
 
@@ -73,9 +74,54 @@ async def ensure_demo_account(
     await session.commit()
 
 
+async def ensure_configured_dev_account(
+    session: AsyncSession,
+    candidate: Settings = settings,
+) -> None:
+    """Provision and rotate the configured dev login in a public deployment."""
+    if candidate.demo_mode:
+        raise RuntimeError("Public dev-account bootstrap requires DEMO_MODE=false")
+    issues = validate_production_security(candidate)
+    if issues:
+        raise RuntimeError("Unsafe production configuration: " + "; ".join(issues))
+
+    email = candidate.dev_login_email.strip().lower()
+    user = await get_user_by_email(session, email)
+    if user is None:
+        user = await register_user(
+            session,
+            email,
+            candidate.dev_login_password,
+            role="admin",
+        )
+        if user is None:
+            user = await get_user_by_email(session, email)
+        if user is None:
+            raise RuntimeError("Configured dev-account registration did not persist")
+        return
+
+    if user.hashed_password is None or not verify_password(
+        candidate.dev_login_password, user.hashed_password
+    ):
+        user.hashed_password = hash_password(candidate.dev_login_password)
+        user.session_version += 1
+    user.is_active = True
+    user.role = "admin"
+    workspace = await ensure_personal_workspace(session, user)
+    await ensure_user_billing(
+        session,
+        user,
+        workspace_ids=(workspace.id,) if workspace is not None else None,
+    )
+    await session.commit()
+
+
 async def bootstrap_demo_account() -> None:
     async with SessionLocal() as session:
-        await ensure_demo_account(session)
+        if settings.demo_mode:
+            await ensure_demo_account(session)
+        else:
+            await ensure_configured_dev_account(session)
 
 
 async def _main() -> None:

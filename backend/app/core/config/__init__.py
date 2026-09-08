@@ -321,6 +321,16 @@ def _secret_is_weak(value: str) -> bool:
     )
 
 
+def _login_password_is_invalid(value: str) -> bool:
+    """Match the public credentials contract without imposing key-size rules."""
+    normalized = value.strip().casefold()
+    return (
+        not 8 <= len(value) <= 128
+        or len(set(value)) < 4
+        or normalized in {"password", "citeladder", "changeme"}
+    )
+
+
 # Environment names where deployment-security hard-fails do not apply (local
 # dev + test). One vocabulary, shared by the startup check and the dev-gate
 # policy below (invariant 2).
@@ -402,14 +412,14 @@ def demo_access_expired(
     return current >= expires_at.astimezone(UTC)
 
 
-def _demo_problems(candidate: Settings) -> list[str]:
-    if not candidate.demo_mode:
-        return []
+def _configured_login_problems(candidate: Settings) -> list[str]:
     issues: list[str] = []
-    if candidate.demo_expires_at is None or candidate.demo_expires_at.tzinfo is None:
+    if candidate.demo_mode and (
+        candidate.demo_expires_at is None or candidate.demo_expires_at.tzinfo is None
+    ):
         issues.append("demo_expires_at must be a timezone-aware timestamp in demo mode")
-    if _secret_is_weak(candidate.dev_login_password):
-        issues.append("dev_login_password does not meet the production strength policy")
+    if _login_password_is_invalid(candidate.dev_login_password):
+        issues.append("dev_login_password does not meet the login password policy")
     core_values = {getattr(candidate, name) for name in _SECRET_FIELDS}
     if candidate.dev_login_password in core_values:
         issues.append("dev_login_password must be independent of application secrets")
@@ -438,7 +448,7 @@ def validate_production_security(candidate: Settings) -> list[str]:
         issues.append("db_ssl_mode must be require in production")
     issues.extend(_trusted_proxy_problems(candidate.trusted_proxy_cidrs))
     issues.extend(_dev_gate_problems(candidate))
-    issues.extend(_demo_problems(candidate))
+    issues.extend(_configured_login_problems(candidate))
     return issues
 
 

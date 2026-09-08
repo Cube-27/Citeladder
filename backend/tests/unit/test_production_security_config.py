@@ -21,6 +21,7 @@ def _production_settings(**updates: object) -> Settings:
         ),
         "db_ssl_mode": "require",
         "trusted_proxy_cidrs": "10.0.0.0/16",
+        "dev_login_password": "Shared-Gh9!",
     }
     values.update(updates)
     return settings.model_copy(update=values)
@@ -28,6 +29,19 @@ def _production_settings(**updates: object) -> Settings:
 
 def test_valid_independent_production_secrets_pass() -> None:
     assert validate_production_security(_production_settings()) == []
+
+
+def test_dev_login_password_uses_the_normal_login_length_policy() -> None:
+    assert (
+        validate_production_security(
+            _production_settings(dev_login_password="Same-Gh9!")
+        )
+        == []
+    )
+    issues = validate_production_security(
+        _production_settings(dev_login_password="short")
+    )
+    assert "dev_login_password does not meet the login password policy" in issues
 
 
 @pytest.mark.parametrize("weak", ["", "x", "password", "a" * 64])

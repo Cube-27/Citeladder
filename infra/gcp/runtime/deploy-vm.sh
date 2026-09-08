@@ -88,9 +88,11 @@ google_client_secret="$(secret citeladder-google-oauth-client-secret)"
 bing_client_id="$(secret citeladder-bing-oauth-client-id 2>/dev/null || true)"
 bing_client_secret="$(secret citeladder-bing-oauth-client-secret 2>/dev/null || true)"
 
-for value in "$db_password" "$jwt_secret" "$encryption_key" "$referral_salt" "$demo_password"; do
+for value in "$db_password" "$jwt_secret" "$encryption_key" "$referral_salt"; do
   test "${#value}" -ge 32
 done
+test "${#demo_password}" -ge 8
+test "${#demo_password}" -le 128
 for value in "$google_client_id" "$google_client_secret"; do
   test -n "$value"
 done
