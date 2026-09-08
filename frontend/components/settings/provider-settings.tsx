@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AppModelCard } from '@/components/providers/app-model-card';
 import { DiscoveryModelCard } from '@/components/providers/discovery-model-card';
 import { EngineCard } from '@/components/providers/engine-card';
 import { providersApi } from '@/lib/api/providers';
@@ -79,6 +80,7 @@ export function ProviderSettings() {
         </div>
       )}
 
+      <AppModelCard connections={connections} />
       <DiscoveryModelCard catalog={catalogQuery.data} />
     </div>
   );

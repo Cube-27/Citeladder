@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from app.core.database import Base
 from app.models.abuse import QueueWorkspaceTurn, UsageWindow
-from app.models.agent import AgentTaskRun, AgentToolAttempt
+from app.models.agent import AgentModelAttempt, AgentTaskRun, AgentToolAttempt
 from app.models.analysis import (
     BrandMention,
     Citation,
@@ -37,6 +37,7 @@ from app.models.audit_schedule import AuditSchedule
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
+    BillingCatalogRevision,
     BillingCustomer,
     BillingSubscription,
     BillingWebhookEvent,
@@ -46,6 +47,8 @@ from app.models.billing import (
     PendingActivation,
     WorkspaceBillingLink,
 )
+from app.models.billing_journeys import IntroductoryClaim, IntroductoryOperatorCode
+from app.models.billing_payment import BillingPayment as BillingPayment
 from app.models.brand import (
     Brand,
     BrandAlias,
@@ -110,6 +113,7 @@ from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet, Topic
 from app.models.provider import (
     DiscoveryModelConfig,
+    ProviderAppRoute,
     ProviderConnection,
     ProviderConnectionTest,
     ProviderRoute,
@@ -144,6 +148,7 @@ from app.models.workspace import Workspace, WorkspaceMember
 
 __all__ = [
     "AccountGrant",
+    "AgentModelAttempt",
     "AgentTaskRun",
     "AgentToolAttempt",
     "AiReferralsSnapshot",
@@ -156,7 +161,9 @@ __all__ = [
     "AuditTask",
     "Base",
     "BillingAccount",
+    "BillingCatalogRevision",
     "BillingCustomer",
+    "BillingPayment",
     "BillingSubscription",
     "BillingWebhookEvent",
     "Brand",
@@ -198,6 +205,8 @@ __all__ = [
     "IntegrationOAuthState",
     "IntegrationPropertyMapping",
     "IntegrationSyncRun",
+    "IntroductoryClaim",
+    "IntroductoryOperatorCode",
     "McpAuthorizationCode",
     "McpAuthorizationRequest",
     "McpOAuthClient",
@@ -219,6 +228,7 @@ __all__ = [
     "Prompt",
     "PromptMetricSnapshot",
     "PromptSet",
+    "ProviderAppRoute",
     "ProviderAttempt",
     "ProviderConnection",
     "ProviderConnectionTest",

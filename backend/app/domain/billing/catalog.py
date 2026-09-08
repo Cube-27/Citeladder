@@ -3,13 +3,14 @@
 
 from __future__ import annotations
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.config.billing_catalog import (
     AddonCatalogEntry,
     CatalogPrice,
     CommercialCatalog,
     PlanCatalogEntry,
     TopupCatalogEntry,
-    commercial_catalog,
     plan_checkout_availability,
     resolve_region,
 )
@@ -29,6 +30,10 @@ from app.core.config.entitlements import (
 from app.core.config.provider_catalog import (
     ProviderCatalogEntry,
     public_provider_routes,
+)
+from app.domain.billing.catalog_revisions import (
+    commercial_catalog_from_row,
+    published_revision,
 )
 from app.domain.billing.schemas import (
     BillingCatalogResponse,
@@ -165,11 +170,15 @@ def _provider_response(provider: ProviderCatalogEntry) -> CatalogProviderRespons
     )
 
 
-def public_catalog(country_code: str | None) -> BillingCatalogResponse:
+async def public_catalog(
+    session: AsyncSession, country_code: str | None
+) -> BillingCatalogResponse:
     normalized = (country_code or "").strip().upper() or None
     region = resolve_region(normalized)
     currency = REGION_CURRENCIES[region]
-    catalog: CommercialCatalog = commercial_catalog()
+    catalog: CommercialCatalog = commercial_catalog_from_row(
+        await published_revision(session)
+    )
     return BillingCatalogResponse(
         catalog_revision=catalog.revision,
         country_code=normalized,

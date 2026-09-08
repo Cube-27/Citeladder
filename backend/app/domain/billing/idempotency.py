@@ -280,7 +280,9 @@ async def replay_intent(
     fingerprint = request_fingerprint(
         operation=operation,
         account_id=account.id,
-        catalog_revision=billing_settings.catalog_version,
+        # Publication is resolved after replay/state checks. The persisted
+        # PendingActivation freezes the exact revision for fresh operations.
+        catalog_revision="persisted-catalog",
         catalog_key=catalog_key,
         quantity=quantity,
         credential_mode=credential_mode,
@@ -496,7 +498,7 @@ async def execute_intent(
     fingerprint = request_fingerprint(
         operation=operation,
         account_id=account.id,
-        catalog_revision=intent.quote.catalog_revision,
+        catalog_revision="persisted-catalog",
         catalog_key=intent.catalog_key,
         quantity=intent.quantity,
         credential_mode=intent.credential_mode,

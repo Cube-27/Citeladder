@@ -36,11 +36,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import ProviderPayment, ProviderSubscription
-from app.core.config.billing_catalog import (
-    plan_period_grant_specs,
-    scale_grant_specs,
-    topup_grant_specs,
-)
+from app.core.config.billing_catalog import scale_grant_specs, topup_grant_specs
 from app.core.config.billing_contracts import (
     ACTIVATION_ACTIVATED,
     ACTIVATION_KIND_BASE,
@@ -59,6 +55,8 @@ from app.core.config.billing_settings import (
     billing_settings,
 )
 from app.core.config.entitlements import GRANT_SOURCE_TOPUP
+from app.domain.billing.catalog_revisions import catalog_revision, grant_specs_from_row
+from app.domain.billing.payments import record_payment_receipt
 from app.domain.billing.schemas import ActivationResponse
 from app.domain.billing.service import (
     apply_subscription_state,
@@ -118,7 +116,8 @@ def _verify_identity(pending: PendingActivation, record: ProviderRecord) -> None
         raise ActivationRejectedError("intent_id_mismatch")
     if record.account_ref and record.account_ref != str(pending.billing_account_id):
         raise ActivationRejectedError("account_ref_mismatch")
-    if pending.catalog_revision != billing_settings.catalog_version:
+    quote_revision = (pending.quote or {}).get("catalog_revision")
+    if quote_revision != pending.catalog_revision:
         raise ActivationRejectedError("catalog_revision_mismatch")
 
 
@@ -196,14 +195,28 @@ async def _upsert_subscription(
     )
     if subscription is None:
         quote = pending.quote or {}
+        revision_row = await catalog_revision(session, pending.catalog_revision)
+        frozen_specs = grant_specs_from_row(revision_row, pending.catalog_key)
+        if not frozen_specs:
+            raise ActivationRejectedError("subscription_grant_unconfigured")
         subscription = BillingSubscription(
             billing_account_id=pending.billing_account_id,
             provider=pending.provider,
             external_subscription_id=record.external_subscription_id,
             external_price_id=pending.external_price_id or "",
+            catalog_revision=pending.catalog_revision,
             catalog_key=pending.catalog_key,
             subscription_kind=kind,
             cadence=CADENCE_MONTHLY,
+            credential_mode=pending.credential_mode,
+            frozen_terms={
+                "catalog_revision": pending.catalog_revision,
+                "catalog_key": pending.catalog_key,
+                "credential_mode": pending.credential_mode,
+                "quantity": pending.quantity,
+                "quote": quote,
+                "grant_specs": [list(spec) for spec in frozen_specs],
+            },
             quantity=pending.quantity,
             currency=(quote.get("total_price") or {}).get("currency", ""),
         )
@@ -242,7 +255,8 @@ async def _issue_subscription_bundle(
     record: ProviderSubscription,
 ) -> int:
     """Project the provider state, which issues the period bundle exactly once."""
-    specs = plan_period_grant_specs(pending.catalog_key, pending.catalog_revision)
+    revision_row = await catalog_revision(session, pending.catalog_revision)
+    specs = grant_specs_from_row(revision_row, pending.catalog_key)
     await apply_subscription_state(
         session,
         subscription,
@@ -343,6 +357,7 @@ async def _settle(
         if not isinstance(provider_record, ProviderPayment):
             raise ActivationRejectedError("provider_record_kind_mismatch")
         paid_at = _verify_payment(pending, provider_record)
+        await record_payment_receipt(session, pending=pending, payment=provider_record)
         return await _issue_topup_bundle(session, pending, paid_at)
     if not isinstance(provider_record, ProviderSubscription):
         raise ActivationRejectedError("provider_record_kind_mismatch")

@@ -225,9 +225,92 @@ async def test_arbitrary_endpoint_is_rejected_and_change_requires_fresh_key(
 
     rotated = await client.patch(
         f"/api/v1/provider-connections/{conn_id}",
-        json={"base_url": operator_gateway, "api_key": "fresh-key"},
+        json={
+            "base_url": operator_gateway,
+            "api_key": "fresh-key",
+            "confirm_destination_change": True,
+        },
     )
     assert rotated.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_one_connection_serves_content_and_growth_without_key_echo(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "prov-app-routes@example.com")
+    response = await client.post(
+        "/api/v1/provider-connections",
+        json=_connection_payload(
+            app_routes=[
+                {
+                    "feature": "content",
+                    "model": "customer-model-a",
+                    "api_base_url": "https://models.example.com/v1",
+                },
+                {
+                    "feature": "growth_agent",
+                    "model": "customer-model-b",
+                    "api_base_url": "https://models.example.com/v1",
+                },
+            ]
+        ),
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert {item["feature"] for item in body["app_routes"]} == {
+        "content",
+        "growth_agent",
+    }
+    assert all(item["verified"] is False for item in body["app_routes"])
+    _assert_no_secret(body)
+
+
+@pytest.mark.asyncio
+async def test_app_route_destination_change_requires_key_and_confirmation(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "prov-app-destination@example.com")
+    created = await client.post(
+        "/api/v1/provider-connections",
+        json=_connection_payload(
+            app_routes=[
+                {
+                    "feature": "content",
+                    "model": "customer-model",
+                    "api_base_url": "https://models.example.com/v1",
+                }
+            ]
+        ),
+    )
+    connection_id = created.json()["id"]
+    changed_route = [
+        {
+            "feature": "content",
+            "model": "customer-model",
+            "api_base_url": "https://other.example.com/v1",
+        }
+    ]
+    missing_key = await client.patch(
+        f"/api/v1/provider-connections/{connection_id}",
+        json={"app_routes": changed_route, "confirm_destination_change": True},
+    )
+    assert missing_key.status_code == 400
+    missing_confirmation = await client.patch(
+        f"/api/v1/provider-connections/{connection_id}",
+        json={"app_routes": changed_route, "api_key": "fresh-key"},
+    )
+    assert missing_confirmation.status_code == 400
+    changed = await client.patch(
+        f"/api/v1/provider-connections/{connection_id}",
+        json={
+            "app_routes": changed_route,
+            "api_key": "fresh-key",
+            "confirm_destination_change": True,
+        },
+    )
+    assert changed.status_code == 200
+    assert changed.json()["app_routes"][0]["verified"] is False
 
 
 @pytest.mark.asyncio

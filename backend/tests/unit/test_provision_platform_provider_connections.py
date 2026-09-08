@@ -1,35 +1,22 @@
-"""Provisioning CLI internals (T11 stage D): platform connections (real Postgres).
-
-Pins the operator provisioning contract: the ONE system workspace is
-created/loaded and platform connections/routes converge per transport;
-re-runs are idempotent and rotations replace the ciphertext (and clear an
-auth-failure pause); a missing/default Fernet key fails CLOSED before any
-write; ``dry_run`` writes nothing; the database stores ciphertext only; and
-the report + ``provider.platform.provisioned`` telemetry carry transport/row
-ids/status — never secret material.
-"""
+"""Platform provisioning persists only non-secret route metadata."""
 
 from __future__ import annotations
 
 import uuid
 
 import pytest
-from pydantic import SecretStr
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config import settings
 from app.core.config.provider_catalog import (
     CREDENTIAL_SOURCE_PLATFORM,
     ENGINE_CLAUDE,
     ENGINE_GEMINI,
     MEASUREMENT_ROUTES,
-    TELEMETRY_PLATFORM_PROVISIONED,
     TRANSPORT_ANTHROPIC,
     TRANSPORT_GOOGLE,
     TRANSPORT_OPENAI,
 )
-from app.core.security import decrypt_secret
 from app.models.provider import ProviderConnection, ProviderRoute
 from app.models.workspace import Workspace
 from scripts.provision_platform_provider_connections import (
@@ -37,28 +24,18 @@ from scripts.provision_platform_provider_connections import (
     PlatformProvisioningError,
     provision_platform_connections,
 )
-from tests.component.log_capture import capture_log_messages
 
-_VALID_ENCRYPTION_KEY = "provision-test-encryption-key-0123456789abcdef"
-_OPENAI_KEY = "test-openai-platform-key-9f8e7d6c"
-_ANTHROPIC_KEY = "test-anthropic-platform-key-1a2b3c4d"
-_GOOGLE_KEY = "test-google-platform-key-5e6f7a8b"
-_ROTATED_OPENAI_KEY = "test-openai-platform-key-ROTATED-0z9y8x"
-
-_ALL_KEYS = (_OPENAI_KEY, _ANTHROPIC_KEY, _GOOGLE_KEY, _ROTATED_OPENAI_KEY)
+_OPENAI_REF = "vault://citeladder/platform/openai"
+_ANTHROPIC_REF = "vault://citeladder/platform/anthropic"
+_GOOGLE_REF = "vault://citeladder/platform/google"
+_ROTATED_OPENAI_REF = "vault://citeladder/platform/openai-v2"
 
 
-@pytest.fixture(autouse=True)
-def _configured_encryption_key(monkeypatch: pytest.MonkeyPatch):
-    """A really-configured Fernet key (the placeholder default fails closed)."""
-    monkeypatch.setattr(settings, "encryption_key", _VALID_ENCRYPTION_KEY)
-
-
-def _credentials(openai: str = _OPENAI_KEY) -> dict[str, SecretStr]:
+def _references(openai: str = _OPENAI_REF) -> dict[str, str]:
     return {
-        TRANSPORT_OPENAI: SecretStr(openai),
-        TRANSPORT_ANTHROPIC: SecretStr(_ANTHROPIC_KEY),
-        TRANSPORT_GOOGLE: SecretStr(_GOOGLE_KEY),
+        TRANSPORT_OPENAI: openai,
+        TRANSPORT_ANTHROPIC: _ANTHROPIC_REF,
+        TRANSPORT_GOOGLE: _GOOGLE_REF,
     }
 
 
@@ -77,44 +54,34 @@ async def test_provision_creates_system_workspace_connections_and_routes(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        with capture_log_messages("app.providers") as events:
-            reports = await provision_platform_connections(
-                session, credentials=_credentials()
-            )
-
-        assert {r.transport_provider for r in reports} == {
+        reports = await provision_platform_connections(
+            session, credential_references=_references()
+        )
+        assert {report.transport_provider for report in reports} == {
             TRANSPORT_OPENAI,
             TRANSPORT_ANTHROPIC,
             TRANSPORT_GOOGLE,
         }
-        assert all(r.status == "created" for r in reports)
-        assert all(r.connection_id is not None for r in reports)
-
+        assert all(report.status == "created" for report in reports)
         system = await session.scalar(
             select(Workspace).where(Workspace.is_system.is_(True))
         )
         assert system is not None
         connections = await _platform_connections(session)
         assert len(connections) == 3
-        assert all(c.workspace_id == system.id for c in connections)
-        assert all(c.active for c in connections)
-        assert {r.connection_id for r in reports} == {c.id for c in connections}
+        assert all(connection.workspace_id == system.id for connection in connections)
+        assert {
+            connection.platform_credential_ref for connection in connections
+        } == set(_references().values())
+        assert all(connection.api_key_encrypted == "" for connection in connections)
 
-        # One catalog-default route per engine on the matching transport.
         routes = (await session.execute(select(ProviderRoute))).scalars().all()
         for engine, approved in MEASUREMENT_ROUTES.items():
-            route = next(r for r in routes if r.logical_engine == engine)
+            route = next(item for item in routes if item.logical_engine == engine)
             assert route.transport_provider == approved.transport_provider
             assert route.transport_model == approved.transport_model
             assert route.is_default is True
             assert route.workspace_id == system.id
-
-    # Telemetry carries transport/row ids/status only — never secret material.
-    provisioned = [m for m in events if TELEMETRY_PLATFORM_PROVISIONED in m]
-    assert len(provisioned) == 3
-    rendered = "\n".join(events)
-    for secret in _ALL_KEYS:
-        assert secret not in rendered
 
 
 async def test_provision_is_idempotent(
@@ -122,16 +89,16 @@ async def test_provision_is_idempotent(
 ) -> None:
     async with session_factory() as session:
         first = await provision_platform_connections(
-            session, credentials=_credentials()
+            session, credential_references=_references()
         )
     async with session_factory() as session:
         second = await provision_platform_connections(
-            session, credentials=_credentials()
+            session, credential_references=_references()
         )
-        assert [r.connection_id for r in second] == [r.connection_id for r in first]
-        assert all(r.status == "unchanged" for r in second)
-
-        # Converged: exactly one system workspace + one row per transport.
+        assert [report.connection_id for report in second] == [
+            report.connection_id for report in first
+        ]
+        assert all(report.status == "updated" for report in second)
         systems = await session.scalar(
             select(func.count()).select_from(Workspace).where(Workspace.is_system)
         )
@@ -139,77 +106,52 @@ async def test_provision_is_idempotent(
         assert len(await _platform_connections(session)) == 3
 
 
-async def test_rotation_replaces_ciphertext_and_clears_pause(
+async def test_reference_rotation_updates_metadata_without_storing_a_key(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    from datetime import UTC, datetime
-
     async with session_factory() as session:
         first = await provision_platform_connections(
-            session, credentials=_credentials()
+            session, credential_references=_references()
         )
         connection_id = next(
-            r for r in first if r.transport_provider == TRANSPORT_OPENAI
-        ).connection_id
-
-    async with session_factory() as session:
-        connection = await session.get(ProviderConnection, connection_id)
-        assert connection is not None
-        assert connection.transport_provider == TRANSPORT_OPENAI
-        old_ciphertext = connection.api_key_encrypted
-        # Simulate the worker's auth-failure pause (T11 stage D).
-        connection.paused_at = datetime.now(UTC)
-        connection.pause_reason = "auth_failure"
-        connection.pause_until = datetime.now(UTC)
-        await session.commit()
-
-    async with session_factory() as session:
-        rotated = await provision_platform_connections(
-            session, credentials=_credentials(openai=_ROTATED_OPENAI_KEY)
+            report.connection_id
+            for report in first
+            if report.transport_provider == TRANSPORT_OPENAI
         )
-        report = next(r for r in rotated if r.transport_provider == TRANSPORT_OPENAI)
-        assert report.status == "rotated"
+    async with session_factory() as session:
+        reports = await provision_platform_connections(
+            session,
+            credential_references=_references(openai=_ROTATED_OPENAI_REF),
+        )
+        report = next(
+            item for item in reports if item.transport_provider == TRANSPORT_OPENAI
+        )
         assert report.connection_id == connection_id
-
+        assert report.status == "updated"
         connection = await session.get(ProviderConnection, connection_id)
         assert connection is not None
-        assert connection.api_key_encrypted != old_ciphertext
-        assert decrypt_secret(connection.api_key_encrypted) == _ROTATED_OPENAI_KEY
-        # The rotation fixes the auth failure, so the grace pause is cleared.
-        assert connection.paused_at is None
-        assert connection.pause_reason == ""
-        assert connection.pause_until is None
+        assert connection.platform_credential_ref == _ROTATED_OPENAI_REF
+        assert connection.api_key_encrypted == ""
 
 
-async def test_missing_fernet_key_is_rejected_before_any_write(
+@pytest.mark.parametrize(
+    "reference",
+    ("", "sk-live-value", "production-secret", "password-value"),
+)
+async def test_secret_shaped_or_empty_reference_is_rejected_without_writes(
     session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
+    reference: str,
 ) -> None:
-    monkeypatch.setattr(
-        settings, "encryption_key", "replace-with-32-byte-minimum-secret"
-    )
     async with session_factory() as session:
         with pytest.raises(PlatformProvisioningError):
-            await provision_platform_connections(session, credentials=_credentials())
+            await provision_platform_connections(
+                session,
+                credential_references={TRANSPORT_OPENAI: reference},
+            )
         await session.rollback()
-
     async with session_factory() as session:
-        assert (
-            await session.scalar(select(Workspace).where(Workspace.is_system.is_(True)))
-            is None
-        )
         assert await _platform_connections(session) == []
-
-
-async def test_empty_encryption_key_is_rejected(
-    session_factory: async_sessionmaker[AsyncSession],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(settings, "encryption_key", "")
-    async with session_factory() as session:
-        with pytest.raises(PlatformProvisioningError):
-            await provision_platform_connections(session, credentials=_credentials())
-        await session.rollback()
+        assert await session.scalar(select(func.count()).select_from(Workspace)) == 0
 
 
 async def test_dry_run_writes_nothing(
@@ -217,58 +159,43 @@ async def test_dry_run_writes_nothing(
 ) -> None:
     async with session_factory() as session:
         reports = await provision_platform_connections(
-            session, credentials=_credentials(), dry_run=True
+            session,
+            credential_references=_references(),
+            dry_run=True,
         )
-        assert all(r.status == "created" for r in reports)
-        assert all(r.connection_id is not None for r in reports)
-
+        assert all(report.status == "created" for report in reports)
     async with session_factory() as session:
-        assert (
-            await session.scalar(select(Workspace).where(Workspace.is_system.is_(True)))
-            is None
-        )
         assert await _platform_connections(session) == []
-        assert (await session.execute(select(ProviderRoute))).scalars().all() == []
+        assert await session.scalar(select(func.count()).select_from(Workspace)) == 0
+        assert (
+            await session.scalar(select(func.count()).select_from(ProviderRoute)) == 0
+        )
 
 
-async def test_database_stores_ciphertext_only(
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    async with session_factory() as session:
-        await provision_platform_connections(session, credentials=_credentials())
-        connections = await _platform_connections(session)
-        assert connections
-        for connection in connections:
-            stored = connection.api_key_encrypted
-            for secret in _ALL_KEYS:
-                assert secret not in stored
-            assert decrypt_secret(stored) in _ALL_KEYS
-
-
-async def test_report_carries_ids_and_status_only(
+async def test_report_exposes_only_transport_id_and_status(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
         reports = await provision_platform_connections(
-            session, credentials=_credentials()
+            session, credential_references=_references()
         )
     for report in reports:
         assert isinstance(report, PlatformConnectionReport)
         assert isinstance(report.connection_id, uuid.UUID)
-        assert report.status in {"created", "rotated", "unchanged"}
+        assert report.status in {"created", "updated"}
         rendered = str(report)
-        for secret in _ALL_KEYS:
-            assert secret not in rendered
+        assert "vault://" not in rendered
+        assert "api_key" not in rendered
 
 
 async def test_unknown_transport_is_rejected(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        with pytest.raises(PlatformProvisioningError):
+        with pytest.raises(PlatformProvisioningError, match="unknown transport"):
             await provision_platform_connections(
                 session,
-                credentials={**_credentials(), "mistral": SecretStr("nope")},
+                credential_references={**_references(), "mistral": "vault://mistral"},
             )
         await session.rollback()
 
@@ -278,13 +205,14 @@ async def test_single_transport_provisions_independently(
 ) -> None:
     async with session_factory() as session:
         reports = await provision_platform_connections(
-            session, credentials={TRANSPORT_ANTHROPIC: SecretStr(_ANTHROPIC_KEY)}
+            session,
+            credential_references={TRANSPORT_ANTHROPIC: _ANTHROPIC_REF},
         )
         assert len(reports) == 1
-        assert reports[0].transport_provider == TRANSPORT_ANTHROPIC
         connection = await session.get(ProviderConnection, reports[0].connection_id)
         assert connection is not None
-        assert connection.transport_provider == TRANSPORT_ANTHROPIC
+        assert connection.platform_credential_ref == _ANTHROPIC_REF
+        assert connection.api_key_encrypted == ""
         routes = (await session.execute(select(ProviderRoute))).scalars().all()
-        assert {r.logical_engine for r in routes} == {ENGINE_CLAUDE}
-        assert ENGINE_GEMINI not in {r.logical_engine for r in routes}
+        assert {route.logical_engine for route in routes} == {ENGINE_CLAUDE}
+        assert ENGINE_GEMINI not in {route.logical_engine for route in routes}

@@ -33,6 +33,9 @@ _TOPUP_UNAVAILABLE = datetime.min.replace(tzinfo=UTC)
 # Grants with no expiry draw after every expiring grant.
 _NO_EXPIRY = datetime.max.replace(tzinfo=UTC)
 _SOURCE_WEIGHT = {kind: i for i, kind in enumerate(CONSUMABLE_DRAW_SOURCE_ORDER)}
+_PRIMARY_ROLE = "primary"
+_SUPPLEMENT_ROLE = "supplement"
+_ALLOWED_BUNDLE_ROLES = frozenset({_PRIMARY_ROLE, _SUPPLEMENT_ROLE})
 
 
 class ResolverInputError(ValueError):
@@ -129,6 +132,10 @@ def _validate_grant(grant: GrantInput, registry: CapabilityRegistry) -> None:
             raise ResolverInputError(f"level grant ordinal out of range: {grant.key!r}")
     elif grant.value < 0:
         raise ResolverInputError(f"counter grant value negative: {grant.key!r}")
+    if grant.bundle_role not in _ALLOWED_BUNDLE_ROLES:
+        raise ResolverInputError(f"unknown grant bundle role: {grant.bundle_role!r}")
+    if grant.bundle_role == _PRIMARY_ROLE and not grant.bundle_id:
+        raise ResolverInputError("primary grant is missing bundle identity")
 
 
 def _earliest_revocations(
@@ -224,6 +231,34 @@ def _entitlement_valid_until(
     return min(candidates) if candidates else None
 
 
+def _select_active_grants(
+    grants: tuple[GrantInput, ...],
+    revoked_at: dict[uuid.UUID, datetime],
+    subscription_end: datetime | None,
+    at: datetime,
+) -> tuple[GrantInput, ...]:
+    """Select one primary bundle plus every deliberate supplement.
+
+    Primary selection is bundle-wide, not per capability, so a paid/trial
+    profile cannot accidentally stack with the free fallback. Priority is
+    explicit persisted policy; deterministic bundle identity breaks ties.
+    """
+    active = tuple(
+        grant for grant in grants if _is_active(grant, revoked_at, subscription_end, at)
+    )
+    primary = [grant for grant in active if grant.bundle_role == _PRIMARY_ROLE]
+    if not primary:
+        return tuple(grant for grant in active if grant.bundle_role == _SUPPLEMENT_ROLE)
+    selected_bundle = max(
+        {(grant.profile_priority, grant.bundle_id) for grant in primary}
+    )[1]
+    return tuple(
+        grant
+        for grant in active
+        if grant.bundle_role == _SUPPLEMENT_ROLE or grant.bundle_id == selected_bundle
+    )
+
+
 def fold_entitlement(
     *,
     account_id: uuid.UUID,
@@ -246,9 +281,8 @@ def fold_entitlement(
         _validate_grant(grant, registry)
     revoked_at = _earliest_revocations(revocations)
     active_by_key: dict[str, list[GrantInput]] = {}
-    for grant in grants:
-        if _is_active(grant, revoked_at, subscription_end, at):
-            active_by_key.setdefault(grant.key, []).append(grant)
+    for grant in _select_active_grants(grants, revoked_at, subscription_end, at):
+        active_by_key.setdefault(grant.key, []).append(grant)
     capabilities = tuple(
         _resolve_capability(
             registry.require(key),

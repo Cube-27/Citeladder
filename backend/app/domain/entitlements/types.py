@@ -32,6 +32,12 @@ class GrantInput:
     source_kind: str  # plan | addon | topup | trial | override
     valid_from: datetime
     valid_until: datetime | None
+    # Exactly one active primary profile contributes at a time. Supplements
+    # are deliberately additive (add-ons/top-ups/explicit overrides).
+    bundle_role: str = "supplement"
+    profile_key: str = ""
+    profile_priority: int = 0
+    bundle_id: str = ""
     period_start: datetime | None = None
     period_end: datetime | None = None
 

@@ -2,8 +2,7 @@
  * Commercial-surface configuration (invariant 1: no component-owned prices,
  * thresholds, or cadences).
  *
- * Checkout prices, limits, and availability come from `GET /billing/catalog`.
- * The temporary public price presentation below does not authorize checkout.
+ * Checkout prices, limits, and availability come only from `GET /billing/catalog`.
  */
 
 /**
@@ -22,18 +21,6 @@ export const PROJECT_DELETION_CAPABILITY = 'project_deletion';
 
 /** Duration of the numeric price tween. Only real number-to-number changes animate. */
 export const PRICING_PRICE_TWEEN_MS = 275;
-
-/** Approved public monthly plan presentation, in USD minor units. */
-export const PLAN_MONTHLY_PRICE_USD_MINOR = {
-  tier_1: { byok: 4_900, funded: 9_900 },
-  tier_2: { byok: 9_900, funded: 14_900 },
-  tier_3: { byok: 14_900, funded: 29_900 },
-} as const;
-
-export function planMonthlyPriceUsdMinor(key: string, mode: 'byok' | 'funded'): number | null {
-  if (!Object.hasOwn(PLAN_MONTHLY_PRICE_USD_MINOR, key)) return null;
-  return PLAN_MONTHLY_PRICE_USD_MINOR[key as keyof typeof PLAN_MONTHLY_PRICE_USD_MINOR][mode];
-}
 
 /** The query parameter that mirrors BYOK selection into the URL. */
 export const PRICING_BYOK_QUERY_PARAM = 'byok';

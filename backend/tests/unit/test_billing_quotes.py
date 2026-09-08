@@ -8,6 +8,7 @@ from decimal import Decimal
 import pytest
 
 from app.core.config.billing_catalog import (
+    commercial_catalog,
     scale_grant_specs,
     topup_grant_specs,
 )
@@ -29,6 +30,19 @@ from app.domain.billing.service import (
 from scripts.provision_razorpay_plans import _verify, catalog_refs
 
 
+class _CatalogSession:
+    async def scalar(self, _statement):
+        return None
+
+
+@pytest.fixture(autouse=True)
+def _published_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def load(_session):
+        return commercial_catalog()
+
+    monkeypatch.setattr("app.domain.billing.service.published_commercial_catalog", load)
+
+
 def _enable_checkout(monkeypatch, refs) -> None:
     for name, value in (
         ("checkout_enabled", True),
@@ -39,12 +53,18 @@ def _enable_checkout(monkeypatch, refs) -> None:
         monkeypatch.setattr(billing_settings, name, value)
 
 
-def test_base_quote_separates_byok_and_funded_prices(monkeypatch) -> None:
+async def test_base_quote_separates_byok_and_funded_prices(monkeypatch) -> None:
     refs = {f"tier_1:{REGION_INTERNATIONAL}:base": "ref_private"}
     _enable_checkout(monkeypatch, refs)
     now = datetime.now(UTC)
-    quote = resolve_base_intent(
-        catalog_key="tier_1", credential_mode="byok", country_code=" us ", at=now
+    quote = (
+        await resolve_base_intent(
+            _CatalogSession(),
+            catalog_key="tier_1",
+            credential_mode="byok",
+            country_code=" us ",
+            at=now,
+        )
     ).quote
     assert (
         quote.catalog_key,
@@ -65,8 +85,14 @@ def test_base_quote_separates_byok_and_funded_prices(monkeypatch) -> None:
         "provider_price_refs",
         {**refs, f"tier_1:{REGION_INTERNATIONAL}:credit": "ref_credit"},
     )
-    funded = resolve_base_intent(
-        catalog_key="tier_1", credential_mode="funded", country_code="US", at=now
+    funded = (
+        await resolve_base_intent(
+            _CatalogSession(),
+            catalog_key="tier_1",
+            credential_mode="funded",
+            country_code="US",
+            at=now,
+        )
     ).quote
     assert (
         funded.credit_price.amount_minor,
@@ -75,7 +101,7 @@ def test_base_quote_separates_byok_and_funded_prices(monkeypatch) -> None:
     ) == (60_000, 9_900, 69_900)
 
 
-def test_base_quote_refuses_unknown_or_unavailable_checkout(monkeypatch) -> None:
+async def test_base_quote_refuses_unknown_or_unavailable_checkout(monkeypatch) -> None:
     _enable_checkout(
         monkeypatch, {f"tier_1:{REGION_INTERNATIONAL}:base": "ref_private"}
     )
@@ -88,22 +114,31 @@ def test_base_quote_refuses_unknown_or_unavailable_checkout(monkeypatch) -> None
         ),
     ):
         with pytest.raises(BillingConflictError, match=error):
-            resolve_base_intent(**kwargs, country_code="US", at=now)
+            await resolve_base_intent(
+                _CatalogSession(), **kwargs, country_code="US", at=now
+            )
     monkeypatch.setattr(billing_settings, "checkout_enabled", False)
     with pytest.raises(BillingConflictError, match="checkout_unavailable"):
-        resolve_base_intent(
-            catalog_key="tier_1", credential_mode="byok", country_code="US", at=now
+        await resolve_base_intent(
+            _CatalogSession(),
+            catalog_key="tier_1",
+            credential_mode="byok",
+            country_code="US",
+            at=now,
         )
 
 
-def test_india_quote_applies_configured_gst(monkeypatch) -> None:
+async def test_india_quote_applies_configured_gst(monkeypatch) -> None:
     _enable_checkout(monkeypatch, {f"tier_1:{REGION_INDIA}:base": "ref_private_in"})
     monkeypatch.setattr(billing_settings, "usd_inr_rate", Decimal("83"))
-    quote = resolve_base_intent(
-        catalog_key="tier_1",
-        credential_mode="byok",
-        country_code="IN",
-        at=datetime.now(UTC),
+    quote = (
+        await resolve_base_intent(
+            _CatalogSession(),
+            catalog_key="tier_1",
+            credential_mode="byok",
+            country_code="IN",
+            at=datetime.now(UTC),
+        )
     ).quote
     assert (quote.region, quote.base_price.currency, quote.base_price.amount_minor) == (
         REGION_INDIA,
@@ -117,7 +152,7 @@ def test_india_quote_applies_configured_gst(monkeypatch) -> None:
     )
 
 
-def test_addon_quote_bounds_quantity_and_availability(monkeypatch) -> None:
+async def test_addon_quote_bounds_quantity_and_availability(monkeypatch) -> None:
     _enable_checkout(
         monkeypatch,
         {f"{ADDON_EXTRA_PROJECT}:{REGION_INTERNATIONAL}:base": "ref_private"},
@@ -128,16 +163,30 @@ def test_addon_quote_bounds_quantity_and_availability(monkeypatch) -> None:
         ("nope", 1, "catalog_key_unknown"),
     ):
         with pytest.raises(BillingConflictError, match=error):
-            resolve_addon_intent(
-                catalog_key=key, quantity=quantity, country_code="US", at=now
+            await resolve_addon_intent(
+                _CatalogSession(),
+                catalog_key=key,
+                quantity=quantity,
+                country_code="US",
+                at=now,
             )
     monkeypatch.setattr(billing_settings, "addon_extra_project_usd_minor", 1_900)
     with pytest.raises(BillingConflictError, match="quantity_out_of_bounds"):
-        resolve_addon_intent(
-            catalog_key=ADDON_EXTRA_PROJECT, quantity=21, country_code="US", at=now
+        await resolve_addon_intent(
+            _CatalogSession(),
+            catalog_key=ADDON_EXTRA_PROJECT,
+            quantity=21,
+            country_code="US",
+            at=now,
         )
-    quote = resolve_addon_intent(
-        catalog_key=ADDON_EXTRA_PROJECT, quantity=3, country_code="US", at=now
+    quote = (
+        await resolve_addon_intent(
+            _CatalogSession(),
+            catalog_key=ADDON_EXTRA_PROJECT,
+            quantity=3,
+            country_code="US",
+            at=now,
+        )
     ).quote
     assert (quote.total_price.amount_minor, quote.credential_mode) == (
         3 * 1_900,

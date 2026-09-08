@@ -13,7 +13,10 @@ from datetime import datetime
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.connectors.app_model_transport import normalize_app_model_url
+from app.core.config.app_models import APP_FEATURES, APP_PROTOCOL_OPENAI_CHAT
 
 # Loopback hosts allowed over plain http (local self-hosted proxy in dev). Every
 # other host must use https so a stored base_url cannot downgrade a
@@ -56,6 +59,29 @@ class ProviderRouteInput(BaseModel):
     is_default: bool = False
 
 
+class ProviderAppRouteInput(BaseModel):
+    feature: Literal["content", "growth_agent"]
+    model: str = Field(min_length=1, max_length=255)
+    api_base_url: str = Field(min_length=1, max_length=1024)
+    protocol: Literal["openai_chat"] = APP_PROTOCOL_OPENAI_CHAT
+    active: bool = True
+
+    _check_app_url = field_validator("api_base_url")(normalize_app_model_url)
+
+
+class ProviderAppRouteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    feature: str
+    protocol: str
+    model: str
+    api_base_url: str
+    active: bool
+    verified: bool
+    probed_at: datetime | None
+
+
 class ProviderRouteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -76,6 +102,16 @@ class ProviderConnectionCreate(BaseModel):
     base_url: str = Field(default="", max_length=1024)
     active: bool = True
     routes: list[ProviderRouteInput] = Field(default_factory=list)
+    app_routes: list[ProviderAppRouteInput] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def unique_app_features(self) -> ProviderConnectionCreate:
+        features = [route.feature for route in self.app_routes]
+        if len(features) != len(set(features)) or not set(features).issubset(
+            APP_FEATURES
+        ):
+            raise ValueError("App model features must be unique")
+        return self
 
     _check_base_url = field_validator("base_url")(_validate_base_url)
 
@@ -87,6 +123,15 @@ class ProviderConnectionUpdate(BaseModel):
     base_url: str | None = Field(default=None, max_length=1024)
     active: bool | None = None
     routes: list[ProviderRouteInput] | None = None
+    app_routes: list[ProviderAppRouteInput] | None = None
+    confirm_destination_change: bool = False
+
+    @model_validator(mode="after")
+    def unique_app_features(self) -> ProviderConnectionUpdate:
+        features = [route.feature for route in self.app_routes or []]
+        if len(features) != len(set(features)):
+            raise ValueError("App model features must be unique")
+        return self
 
     _check_base_url = field_validator("base_url")(_validate_base_url)
 
@@ -105,6 +150,7 @@ class ProviderConnectionResponse(BaseModel):
     last_tested_at: datetime | None
     last_test_status: str
     routes: list[ProviderRouteResponse] = Field(default_factory=list)
+    app_routes: list[ProviderAppRouteResponse] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 

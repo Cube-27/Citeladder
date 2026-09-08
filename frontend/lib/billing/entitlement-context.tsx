@@ -3,11 +3,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
-import { billingApi, type BillingEntitlement, type BillingUsage } from '@/lib/api/billing';
+import { billingApi, type BillingUsage, type WorkspaceEntitlement } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
+import { useActiveProject } from '@/lib/project/project-context';
 
 type EntitlementContextValue = {
-  entitlement: BillingEntitlement | null;
+  entitlement: WorkspaceEntitlement | null;
   usage: BillingUsage | null;
   isLoading: boolean;
   usageIsLoading: boolean;
@@ -41,9 +42,12 @@ const EntitlementContext = createContext<EntitlementContextValue | null>(null);
  * failure, and it must not read as "allowed".
  */
 export function EntitlementProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const activeProject = useActiveProject();
+  const workspaceId = activeProject?.workspace_id ?? null;
   const entitlementQuery = useQuery({
-    queryKey: queryKeys.billing.entitlement(),
-    queryFn: ({ signal }) => billingApi.entitlement({ signal }),
+    queryKey: queryKeys.billing.workspaceEntitlement(workspaceId),
+    queryFn: ({ signal }) => billingApi.workspaceEntitlement(workspaceId!, { signal }),
+    enabled: workspaceId !== null,
   });
   const usageQuery = useQuery({
     queryKey: queryKeys.billing.usage(),
@@ -60,13 +64,19 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
         usageIsError: usageQuery.isError,
       };
     }
-    const granted = new Map(data.capabilities.map((c) => [c.key, c.value]));
+    const granted = new Map(data.capabilities.map((capability) => [capability.key, capability]));
     const hasCapability = (key: string) => {
-      const value = granted.get(key);
-      if (value === undefined || value === null) return false;
-      if (typeof value === 'boolean') return value;
-      if (typeof value === 'number') return value > 0;
-      return value !== '';
+      const capability = granted.get(key);
+      if (!capability || capability.value === null) return false;
+      if (capability.type === 'flag') return capability.value === true;
+      if (capability.type === 'level') {
+        return (
+          typeof capability.value === 'string' &&
+          capability.value !== '' &&
+          capability.value !== 'unset'
+        );
+      }
+      return typeof capability.value === 'number' && capability.value > 0;
     };
     return {
       entitlement: data,
@@ -75,11 +85,16 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
       usageIsLoading: usageQuery.isLoading,
       usageIsError: usageQuery.isError,
       hasCapability,
-      // A live base subscription is what funds paid work. `grants` proves it
-      // was actually issued; a pending checkout grants nothing.
-      canStartPaidWork: data.grants.some(
-        (grant) => grant.source_kind === 'plan' && grant.revoked_at === null,
-      ),
+      // Product controls follow effective capability authority, not a plan name
+      // or historical grant kind. Backend admission remains authoritative.
+      canStartPaidWork: data.capabilities.some((capability) => {
+        if (capability.value === null) return false;
+        if (capability.type === 'flag') return capability.value === true;
+        if (capability.type === 'level') {
+          return typeof capability.value === 'string' && capability.value !== 'unset';
+        }
+        return typeof capability.value === 'number' && capability.value > 0;
+      }),
     };
   }, [
     entitlementQuery.data,

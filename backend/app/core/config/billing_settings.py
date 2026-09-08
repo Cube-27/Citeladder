@@ -20,10 +20,11 @@ class BillingSettings(BaseSettings):
         extra="ignore",
     )
 
-    # The v9 commercial catalog revision. Stamped on every quote, activation,
-    # and grant bundle; bump it whenever a price, key, or grant template
-    # changes so old rows keep their frozen terms.
-    catalog_version: str = "commercial-v9"
+    # Legacy builder compatibility only; runtime billing reads never consult
+    # this value and fail closed on a missing persisted published revision.
+    catalog_version: str = "legacy-config-catalog"
+    # Operational emergency switch only. Commercial prices, grants, campaign
+    # policy and catalog revisions are persisted in BillingCatalogRevision.
     checkout_enabled: bool = False
     razorpay_live_ready: bool = False
     razorpay_international_ready: bool = False
@@ -76,6 +77,9 @@ class BillingSettings(BaseSettings):
     razorpay_key_id: str = ""
     razorpay_key_secret: SecretStr = SecretStr("")
     razorpay_webhook_secret: SecretStr = SecretStr("")
+    # Previous secret remains accepted only during a bounded operator-managed
+    # rotation window. Empty means there is no active overlap.
+    razorpay_webhook_previous_secret: SecretStr = SecretStr("")
     razorpay_api_base_url: str = "https://api.razorpay.com/v1"
     razorpay_checkout_hosts: str = "rzp.io,razorpay.com"
     request_timeout_seconds: float = 15.0
@@ -97,6 +101,11 @@ class BillingSettings(BaseSettings):
     reconciliation_abandon_after_seconds: int = 86_400
     reconciliation_list_count: int = 100
     reconciliation_lookback_seconds: int = 86_400
+    reconciliation_lease_seconds: int = 120
+    reconciliation_max_attempts: int = 8
+    reconciliation_backoff_base_seconds: int = 60
+    webhook_lease_seconds: int = 120
+    webhook_max_attempts: int = 8
     subscription_total_cycles: int = 1200
     past_due_grace_days: int = 3
     max_webhook_body_bytes: int = 262_144

@@ -110,6 +110,7 @@ class _Claim:
     """The safe fields a claimed row contributes to the provider read."""
 
     pending_id: uuid.UUID
+    lease_token: uuid.UUID
     activation_kind: str
     external_reference: str
     created_at: datetime
@@ -126,6 +127,12 @@ async def _claim_batch(
                 .where(
                     PendingActivation.status == ACTIVATION_PENDING,
                     PendingActivation.created_at <= now - stale_after,
+                    (PendingActivation.reconciliation_next_at.is_(None))
+                    | (PendingActivation.reconciliation_next_at <= now),
+                    (PendingActivation.reconciliation_lease_expires_at.is_(None))
+                    | (PendingActivation.reconciliation_lease_expires_at <= now),
+                    PendingActivation.reconciliation_attempts
+                    < billing_settings.reconciliation_max_attempts,
                 )
                 .order_by(PendingActivation.created_at)
                 .limit(batch_size)
@@ -135,15 +142,28 @@ async def _claim_batch(
         .scalars()
         .all()
     )
-    claims = tuple(
-        _Claim(
-            pending_id=row.id,
-            activation_kind=row.activation_kind,
-            external_reference=row.external_reference or "",
-            created_at=row.created_at,
+    claims_list: list[_Claim] = []
+    for row in rows:
+        token = uuid.uuid4()
+        row.reconciliation_attempts += 1
+        row.reconciliation_lease_token = token
+        row.reconciliation_lease_expires_at = now + timedelta(
+            seconds=billing_settings.reconciliation_lease_seconds
         )
-        for row in rows
-    )
+        row.reconciliation_next_at = now + timedelta(
+            seconds=billing_settings.reconciliation_backoff_base_seconds
+            * 2 ** min(row.reconciliation_attempts - 1, 10)
+        )
+        claims_list.append(
+            _Claim(
+                pending_id=row.id,
+                lease_token=token,
+                activation_kind=row.activation_kind,
+                external_reference=row.external_reference or "",
+                created_at=row.created_at,
+            )
+        )
+    claims = tuple(claims_list)
     # Never hold a transaction across provider I/O (invariant 8).
     await session.commit()
     return claims
@@ -210,6 +230,14 @@ async def _settle_claim(
     abandon_after: timedelta,
 ) -> ReconciliationSummary:
     """Settle ONE claimed row from the provider's authoritative record."""
+    owned = await session.scalar(
+        select(PendingActivation.id).where(
+            PendingActivation.id == claim.pending_id,
+            PendingActivation.reconciliation_lease_token == claim.lease_token,
+        )
+    )
+    if owned is None:
+        return ReconciliationSummary(claimed=1, still_pending=1)
     try:
         record = await _fetch_provider_record(provider, claim)
     except BillingProviderError as exc:

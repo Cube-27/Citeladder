@@ -47,6 +47,7 @@ ALL_CAPABILITY_KEYS = (
     "history_window",
     "support_tier",
     "audit_credits",
+    "ai_credits",
     "project_slots",
     "prompt_slots",
     "monitored_urls",

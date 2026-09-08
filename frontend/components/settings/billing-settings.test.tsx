@@ -124,6 +124,8 @@ const USAGE = {
 };
 
 const catalogHandler = () => http.get('/api/v1/billing/catalog', () => HttpResponse.json(CATALOG));
+const entitlementHandler = () =>
+  http.get('/api/v1/billing/entitlement', () => HttpResponse.json(entitlementValue as never));
 const usageHandler = () => http.get('/api/v1/billing/usage', () => HttpResponse.json(USAGE));
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
@@ -141,7 +143,7 @@ describe('BillingSettings', () => {
       current_period_end: '2026-09-01T00:00:00Z',
       cancel_at_period_end: false,
     });
-    mswServer.use(catalogHandler(), usageHandler());
+    mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
     renderWithProviders(<BillingSettings />);
 
@@ -153,7 +155,7 @@ describe('BillingSettings', () => {
 
   it('fails closed when the entitlement cannot resolve', async () => {
     entitlementValue = null;
-    mswServer.use(catalogHandler(), usageHandler());
+    mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
     renderWithProviders(<BillingSettings />);
 
@@ -162,7 +164,7 @@ describe('BillingSettings', () => {
 
   it('shows the BYOK base price and blocks checkout until a country is supplied', async () => {
     entitlementValue = resolvedEntitlement();
-    mswServer.use(catalogHandler(), usageHandler());
+    mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
     renderWithProviders(<BillingSettings />);
 
@@ -181,6 +183,7 @@ describe('BillingSettings', () => {
     const bodies: unknown[] = [];
     mswServer.use(
       catalogHandler(),
+      entitlementHandler(),
       usageHandler(),
       http.post('/api/v1/billing/subscriptions', async ({ request }) => {
         bodies.push(await request.json());
@@ -226,7 +229,7 @@ describe('BillingSettings', () => {
 
   it('renders Enterprise as contact-only, with no checkout and no trial CTA', async () => {
     entitlementValue = resolvedEntitlement();
-    mswServer.use(catalogHandler(), usageHandler());
+    mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
     renderWithProviders(<BillingSettings />);
     await screen.findByText('$49 / month');
@@ -240,7 +243,7 @@ describe('BillingSettings', () => {
 
   it('distinguishes an unknown usage allowance from zero', async () => {
     entitlementValue = resolvedEntitlement();
-    mswServer.use(catalogHandler(), usageHandler());
+    mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
 
     renderWithProviders(<BillingSettings />);
 
@@ -261,6 +264,7 @@ describe('BillingSettings', () => {
     let deleted = 0;
     mswServer.use(
       catalogHandler(),
+      entitlementHandler(),
       usageHandler(),
       http.delete('/api/v1/billing/subscription', () => {
         deleted += 1;
@@ -290,6 +294,7 @@ describe('BillingSettings', () => {
       http.get('/api/v1/billing/catalog', () =>
         HttpResponse.json({ detail: 'catalog unavailable' }, { status: 400 }),
       ),
+      entitlementHandler(),
       usageHandler(),
     );
 

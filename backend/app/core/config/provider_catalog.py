@@ -489,14 +489,9 @@ TELEMETRY_FUNDED_ADMISSION_DENIED: Final = "funded.execution.admission_denied"
 # The reserved system workspace holds the operator's platform-funded rows
 # (exactly one, enforced by the partial unique index on Workspace.is_system).
 SYSTEM_WORKSPACE_NAME: Final = "CiteLadder Platform (system)"
-# Environment variables the provisioning CLI reads platform keys from, keyed
-# by transport. The VALUES are secret material and are only ever accepted as
-# SecretStr, Fernet-encrypted before flush, and never printed or logged.
-PLATFORM_CREDENTIAL_ENV_VARS: Final[dict[str, str]] = {
-    TRANSPORT_OPENAI: "CITELADDER_PLATFORM_OPENAI_API_KEY",
-    TRANSPORT_ANTHROPIC: "CITELADDER_PLATFORM_ANTHROPIC_API_KEY",
-    TRANSPORT_GOOGLE: "CITELADDER_PLATFORM_GOOGLE_API_KEY",
-}
+# Platform keys live only in the deployment secret manager. Persisted platform
+# connections store an opaque non-secret reference supplied by the operator;
+# no config-owned environment-variable map or ciphertext fallback exists.
 
 
 # --- Retry / error classification tokens (recorded on tests + attempts) ---

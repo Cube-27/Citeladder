@@ -34,18 +34,47 @@ from app.core.config.entitlements import (
     GRANT_SOURCE_PLAN,
     KEY_MONITORED_URLS,
 )
+from app.domain.billing.catalog_revisions import (
+    approved_phase1_payload,
+    payload_digest,
+    validate_payload,
+)
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
+    BillingCatalogRevision,
     BillingSubscription,
     BillingWebhookEvent,
     GrantRevocation,
 )
 from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
+from app.models.user import User
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import revoke_signup_baseline_grants
 
 _SECRET = "component-webhook-secret"
+
+
+@pytest.fixture(autouse=True)
+async def _published_catalog(db_session: AsyncSession) -> None:
+    payload = approved_phase1_payload()
+    parsed = validate_payload(payload)
+    actor = User(
+        email=f"catalog-{uuid.uuid4()}@example.com", role="admin", is_active=True
+    )
+    db_session.add(actor)
+    await db_session.flush()
+    db_session.add(
+        BillingCatalogRevision(
+            revision=billing_settings.catalog_version,
+            payload=payload,
+            payload_sha256=payload_digest(parsed),
+            publication_state="published",
+            created_by_user_id=actor.id,
+            created_reason="component fixture",
+        )
+    )
+    await db_session.commit()
 
 
 def _sign(raw: bytes) -> str:
@@ -110,6 +139,8 @@ async def _seed_subscription(
         external_price_id="plan_test",
         catalog_key=catalog_key,
         currency="USD",
+        catalog_revision=billing_settings.catalog_version,
+        frozen_terms={"grant_specs": [[KEY_MONITORED_URLS, 50]]},
         provider_state_version=provider_state_version,
     )
     db_session.add(subscription)
@@ -120,8 +151,8 @@ async def _seed_subscription(
 def _patch_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
     """Bind the catalog seam to a one-key monitored_urls bundle."""
     monkeypatch.setattr(
-        "app.domain.billing.service.plan_period_grant_specs",
-        lambda catalog_key, catalog_revision: ((KEY_MONITORED_URLS, 50),),
+        "app.domain.billing.periods._frozen_grant_specs",
+        lambda subscription: ((KEY_MONITORED_URLS, 50),),
     )
 
 
@@ -251,8 +282,9 @@ async def test_activation_issues_one_period_bundle_and_projects_runtime(
     assert grant.source_kind == GRANT_SOURCE_PLAN
     assert grant.source_ref == f"subscription:{subscription_id}"
     period_start_iso = datetime.fromtimestamp(start, tz=UTC).isoformat()
+    period_end_iso = datetime.fromtimestamp(end, tz=UTC).isoformat()
     assert grant.idempotency_key == (
-        f"sub:{subscription_id}:{period_start_iso}:{billing_settings.catalog_version}"
+        f"sub:{subscription_id}:{period_start_iso}:{period_end_iso}:base"
     )
     assert grant.period_end is not None
 
@@ -505,6 +537,8 @@ async def test_cancel_marks_cancel_at_period_end(
         status="active",
         current_period_start=now,
         current_period_end=now + timedelta(days=30),
+        catalog_revision=billing_settings.catalog_version,
+        frozen_terms={"grant_specs": [[KEY_MONITORED_URLS, 50]]},
     )
     db_session.add(subscription)
     await db_session.commit()
@@ -605,10 +639,10 @@ async def test_public_catalog_resolves_india_region_server_side(
     assert body["country_code"] == "IN"
     assert body["region"] == "india"
     assert body["currency"] == "INR"
-    # No operator FX rate configured, so the INR amount is 0 (never guessed)
-    # and checkout is unavailable.
+    # The persisted approved revision contains USD-only commercial terms. It
+    # never guesses an INR conversion, so the regional price is absent.
     tier_1 = body["plans"][0]
-    assert tier_1["base_price"] == {"currency": "INR", "amount_minor": 0}
+    assert tier_1["base_price"] is None
     assert tier_1["checkout_available"] is False
     assert tier_1["unavailable_reason"] == "checkout_unavailable"
 
@@ -622,12 +656,15 @@ async def test_public_catalog_plan_rows_separate_base_and_credit_prices(
     assert [
         plans[key]["base_price"]["amount_minor"]
         for key in ("tier_1", "tier_2", "tier_3")
-    ] == [9_900, 19_900, 29_900]
+    ] == [4_900, 9_900, 14_900]
+    assert [
+        plans[key]["funded_total_price"]["amount_minor"]
+        for key in ("tier_1", "tier_2", "tier_3")
+    ] == [9_900, 14_900, 29_900]
     for key in ("tier_1", "tier_2", "tier_3"):
         plan = plans[key]
-        # Funded margin unset: no credit price and therefore no funded total.
-        assert plan["credit_price"] is None
-        assert plan["funded_total_price"] is None
+        # The persisted revision freezes distinct BYOK and funded totals.
+        assert plan["credit_price"] is not None
         assert plan["trial_availability"] == "unavailable"
         assert plan["trial_unavailable_reason"] == "trial_unavailable"
         assert plan["trial_days"] == billing_settings.trial_days
@@ -639,7 +676,7 @@ async def test_public_catalog_plan_rows_separate_base_and_credit_prices(
     assert enterprise["credit_price"] is None
     assert enterprise["checkout_available"] is False
     assert enterprise["unavailable_reason"] == "contact_only"
-    assert enterprise["contact_url"] == billing_settings.contact_sales_url
+    assert enterprise["contact_url"] == "https://www.cube27.com/contact/"
     # Upper tiers show the coming-soon provider rows with no granted value.
     tier_2_rows = {row["key"]: row for row in plans["tier_2"]["capabilities"]}
     for key in ("provider.grok", "provider.perplexity", "provider.copilot"):
@@ -655,19 +692,10 @@ async def test_public_catalog_reports_unset_addons_and_topups_as_unavailable(
     client: httpx.AsyncClient,
 ) -> None:
     body = (await client.get("/api/v1/billing/catalog")).json()
-    for addon in body["addons"]:
-        assert addon["availability"] == "unavailable"
-        assert addon["unavailable_reason"] == "checkout_unavailable"
-        assert addon["cadence"] == "monthly"
-        assert addon["quantity_min"] == 1
-        assert addon["quantity_max"] >= addon["quantity_min"]
-    topup = body["topups"][0]
-    assert topup["availability"] == "unavailable"
-    assert topup["unavailable_reason"] == "checkout_unavailable"
-    assert topup["grant_key"] == "audit_credits"
-    # Pack size unset: credits_per_unit is null, expiry copy is still present.
-    assert topup["credits_per_unit"] is None
-    assert topup["expiry_days"] == billing_settings.topup_credit_valid_days
+    # Phase 1 persisted terms intentionally publish no add-ons or top-ups;
+    # absence is the unavailable contract rather than config-derived placeholders.
+    assert body["addons"] == []
+    assert body["topups"] == []
 
 
 @pytest.mark.asyncio

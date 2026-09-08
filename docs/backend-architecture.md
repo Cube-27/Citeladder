@@ -267,6 +267,48 @@ granted only to that configured development account; the public baseline is
 denied by the domain mutation guard. Password and OAuth sign-in both repair
 older accounts onto the current baseline.
 
+## Billing, entitlements, and commercial evidence
+
+`BillingCatalogRevision` is the runtime commercial authority. Validated payloads
+are immutable; exactly one revision may be `published`, and publication retires
+the former revision. Accepted subscriptions and periods freeze catalog revision,
+credential mode, price/bundle terms, quantity, and authoritative period identity,
+so later catalog publication cannot rewrite historical access. Recovery from a
+bad catalog is a reviewed forward-publication of a new revision, never an
+in-place rollback.
+
+The access resolver chooses one active primary profile (falling back to the free
+baseline) and then applies deliberate supplements. Grants and revocations are
+append-only. Consumable accounting is an immutable typed ledger over audit,
+Content, and Agent subjects: reservation, release, debit, and refund rows retain
+allocation order, fingerprints, dispatch identity, and real parent foreign keys.
+Authorization reads current PostgreSQL state rather than a process cache. The
+member-safe workspace endpoint exposes effective capability/provenance without
+owner-private billing or provider identifiers.
+
+Provider-funded admission commits the hold and durable attempt/dispatch evidence
+before model I/O. Settlement releases unused allocation and debits only from an
+explicit persisted finite AI-credit policy; unknown usage is bounded by that
+policy. Content and Growth customer BYOK calls consume zero platform credits and
+never silently fall back. Their shared custom OpenAI-compatible route accepts
+only bounded authenticated JSON POST over public-only pinned HTTPS, freezes
+route/key revisions, and requires a matching successful probe.
+
+Commercial intent is not entitlement. `PendingActivation` commits before
+provider I/O; redirect and Payment Link evidence grant nothing. Webhook and
+bounded reconciliation converge through the same activation transaction.
+Normalized `BillingPayment` payment/refund receipts, frozen subscription periods,
+webhook digests/leases, and stable recurring grant identities preserve replay and
+conflict evidence. Duplicate event IDs with a different digest quarantine rather
+than mutate access; cumulative refunds cannot exceed the normalized payment.
+
+The no-card Tier 1 offer is catalog-governed, atomic, explicitly consented,
+idempotent, and once per billing account across introductory variants. Its seeded
+state remains draft/disabled. Card-trial quote is an explicit unavailable
+contract. Checkout is also disabled by default and requires separate operational
+and provider-readiness gates. See
+[`operations/billing-operator-guide.md`](operations/billing-operator-guide.md).
+
 ### Remote MCP authorization
 
 The hosted MCP endpoint is `/mcp` using stateless Streamable HTTP. Its OAuth
@@ -523,9 +565,11 @@ page-specific issues, and bounded crawl fragments selected internally by
 The selected skill body lives in one `SKILL.md`; message building keeps the
 user's exact instruction separate from untrusted reference material.
 `ContentGeneration` freezes context, numeric skill version, message digest,
-provider provenance, and queue state before provider I/O. Terminal generations
-may be deleted with their owned attempts; clearing project history preserves
-active work, and implementation declarations retain a nullable link.
+provider provenance, route/key revisions, funding mode, and queue state before
+provider I/O. Each dispatch has durable attempt and usage/settlement evidence.
+Customer-visible deletion and history clearing archive/redact generations rather
+than deleting financial attempts or typed ledger provenance; active work remains
+protected, and implementation declarations retain a nullable link.
 
 ## Demand, Traffic, and visibility
 
@@ -609,7 +653,11 @@ contract and model instructions.
 ## Growth Agent
 
 Agent runs resolve a config-owned task policy, freeze a bounded context package,
-execute registered typed tools, and persist progress/results. Result contracts
+execute registered typed tools, and persist progress/results. Every narration
+call also has a durable `AgentModelAttempt` with dispatch, route/funding, hold,
+normalized usage, completeness, deadline, outcome, late-receipt, and settlement
+evidence. The worker rechecks capability, sponsor, cancellation, lease, and exact
+BYOK route/key revisions before I/O. Result contracts
 contain plain-language summary/observations, source availability, limitations,
 artifact references, and deterministic Opportunity-ordered roadmap items.
 Compact history and full run-detail routes have separate response shapes so

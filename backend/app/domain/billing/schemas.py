@@ -362,6 +362,43 @@ class ActivationResponse(_StrictResponse):
     failure_code: str | None
 
 
+class NoCardOfferResponse(_StrictResponse):
+    campaign_id: uuid.UUID
+    status: Literal["available", "unavailable", "already_claimed", "ineligible"]
+    tier_key: Literal["tier_1"]
+    duration_days: int = Field(gt=0)
+    eligibility_policy: Literal["new_account", "oauth_verified_work_email"]
+    operator_code_allowed: bool
+    unavailable_reason: str | None
+
+
+class NoCardClaimRequest(_StrictRequest):
+    campaign_id: uuid.UUID
+    operator_code: str | None = Field(default=None, min_length=16, max_length=255)
+    terms_consent: bool
+    data_sharing_consent: bool
+
+
+class NoCardClaimResponse(_StrictResponse):
+    campaign_id: uuid.UUID
+    grant_id: uuid.UUID
+    tier_key: Literal["tier_1"] = "tier_1"
+    starts_at: datetime
+    expires_at: datetime
+    charged: Literal[False] = False
+    renews: Literal[False] = False
+
+
+class IntroductoryEndResponse(_StrictResponse):
+    status: Literal["ended"] = "ended"
+    ended_at: datetime
+
+
+class CardTrialUnavailableResponse(_StrictResponse):
+    status: Literal["unavailable"] = "unavailable"
+    reason: Literal["provider_evidence_required"] = "provider_evidence_required"
+
+
 class SubscriptionChangeResponse(_StrictResponse):
     """A scheduled cancellation. Deliberately NOT ``ActivationResponse``: it has
     no pending/activated/failed/abandoned vocabulary.

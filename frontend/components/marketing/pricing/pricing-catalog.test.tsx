@@ -144,6 +144,18 @@ const activation = (kind: string, catalog_key: string) => ({
 });
 
 const catalogHandler = () => http.get('/api/v1/billing/catalog', () => HttpResponse.json(CATALOG));
+const noOfferHandler = () =>
+  http.get('/api/v1/billing/early-access', () =>
+    HttpResponse.json({
+      campaign_id: ACCOUNT,
+      status: 'unavailable',
+      tier_key: 'tier_1',
+      duration_days: 7,
+      eligibility_policy: 'new_account',
+      operator_code_allowed: true,
+      unavailable_reason: 'campaign_disabled',
+    }),
+  );
 const anonymous = () =>
   http.get('/api/v1/auth/me', () =>
     HttpResponse.json({ detail: 'unauthenticated' }, { status: 401 }),
@@ -165,7 +177,7 @@ afterAll(() => mswServer.close());
 
 describe('PricingCatalog', () => {
   it('renders four tiers from the catalog without a free plan', async () => {
-    mswServer.use(catalogHandler(), anonymous());
+    mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Starter' }, { timeout: 3_000 });
@@ -180,8 +192,8 @@ describe('PricingCatalog', () => {
     );
   });
 
-  it('defaults to BYOK and shows the approved public tier prices', async () => {
-    mswServer.use(catalogHandler(), anonymous());
+  it('defaults to BYOK and shows only prices supplied by the catalog', async () => {
+    mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Starter' });
@@ -192,19 +204,19 @@ describe('PricingCatalog', () => {
     const prices = [...document.querySelectorAll('[data-price]')].map((n) => n.textContent);
     expect(prices).toContain('$49');
     expect(prices).toContain('$99');
-    expect(prices).toContain('$149');
+    expect(prices).toContain('$199');
   });
 
   it('uses the single customer-facing audit frequency label', async () => {
-    mswServer.use(catalogHandler(), anonymous());
+    mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Starter' });
     screen.getAllByText('Audit frequency');
   });
 
-  it('shows the approved managed prices without an unavailable warning', async () => {
-    mswServer.use(catalogHandler(), anonymous());
+  it('shows funded pricing as unavailable when the catalog has no funded amount', async () => {
+    mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Starter' });
@@ -212,19 +224,18 @@ describe('PricingCatalog', () => {
 
     await waitFor(() => {
       const prices = [...document.querySelectorAll('[data-price]')].map((n) => n.textContent);
-      expect(prices).toContain('$99');
-      expect(prices).toContain('$149');
-      expect(prices).toContain('$299');
+      expect(prices).not.toContain('$99');
+      expect(prices).not.toContain('$149');
+      expect(prices).not.toContain('$299');
     });
-    expect(screen.queryByText(/managed credits are not yet priced/i)).not.toBeInTheDocument();
-    // Presentation prices do not override the deployed catalog's checkout gate.
-    expect(screen.getByRole('button', { name: 'Starter — coming soon' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: /Choose Starter/ })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Choose Starter — checkout unavailable' }),
+    ).toBeDisabled();
   });
 
   it('mirrors the switch into ?byok= while preserving other parameters', async () => {
     window.history.replaceState(null, '', '/pricing?utm=ads#plans');
-    mswServer.use(catalogHandler(), anonymous());
+    mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Starter' });
@@ -233,23 +244,6 @@ describe('PricingCatalog', () => {
     await waitFor(() => expect(window.location.search).toContain('byok=0'));
     expect(window.location.search).toContain('utm=ads');
     expect(window.location.hash).toBe('#plans');
-  });
-
-  it('tweens between the two approved numeric price sets', async () => {
-    const raf = vi.spyOn(window, 'requestAnimationFrame');
-    mswServer.use(catalogHandler(), anonymous());
-    renderWithProviders(<PricingCatalog />);
-
-    await screen.findByRole('heading', { name: 'Starter' });
-    raf.mockClear();
-
-    await userEvent.click(screen.getByRole('switch', { name: /use your own api keys/i }));
-    await waitFor(() =>
-      expect(
-        [...document.querySelectorAll('[data-price]')].some((n) => n.textContent === '$299'),
-      ).toBe(true),
-    );
-    expect(raf).toHaveBeenCalled();
   });
 
   it('captures an anonymous click as an intent and issues no billing POST', async () => {
@@ -287,6 +281,7 @@ describe('PricingCatalog', () => {
     mswServer.use(
       catalogHandler(),
       authenticated(),
+      noOfferHandler(),
       http.post('/api/v1/billing/subscriptions', async ({ request }) => {
         bodies.push(await request.json());
         keys.push(request.headers.get('Idempotency-Key') ?? '');
@@ -331,6 +326,7 @@ describe('PricingCatalog', () => {
     mswServer.use(
       catalogHandler(),
       authenticated(),
+      noOfferHandler(),
       http.post('/api/v1/billing/subscriptions', () => {
         posted += 1;
         return HttpResponse.json(activation('base', 'tier_1'));
@@ -362,7 +358,7 @@ describe('PricingCatalog', () => {
   });
 
   it('renders add-ons and top-ups generically, with unpriced entries unavailable', async () => {
-    mswServer.use(catalogHandler(), anonymous());
+    mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Add-ons' });
@@ -395,7 +391,7 @@ describe('PricingCatalog', () => {
   });
 
   it('renders no trial CTA anywhere', async () => {
-    mswServer.use(catalogHandler(), anonymous());
+    mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Starter' });

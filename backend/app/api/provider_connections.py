@@ -54,6 +54,15 @@ _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 _NOT_FOUND = "Provider connection not found"
+_CREDENTIAL_MANAGER_ROLES = frozenset({"owner", "admin"})
+
+
+def _require_credential_manager(ctx: WorkspaceContext) -> None:
+    if ctx.member.role not in _CREDENTIAL_MANAGER_ROLES:
+        raise_api_error(
+            status.HTTP_403_FORBIDDEN,
+            "Workspace owner or admin access is required",
+        )
 
 
 @router.get("", response_model=list[ProviderConnectionResponse])
@@ -86,6 +95,7 @@ async def create_connection_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
 ) -> ProviderConnectionResponse:
+    _require_credential_manager(ctx)
     try:
         connection = await create_connection(
             session, workspace_id=ctx.workspace_id, payload=payload
@@ -102,6 +112,7 @@ async def update_connection_endpoint(
     ctx: _WorkspaceDep,
     session: _SessionDep,
 ) -> ProviderConnectionResponse:
+    _require_credential_manager(ctx)
     try:
         connection = await update_connection(
             session,
@@ -122,6 +133,7 @@ async def update_connection_endpoint(
 async def delete_connection_endpoint(
     connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> None:
+    _require_credential_manager(ctx)
     try:
         await delete_connection(
             session,
@@ -140,6 +152,7 @@ async def test_connection_endpoint(
     connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> ProviderConnectionTestResponse:
     """Live-ish connectivity check through the adapter (mirrors llm.py)."""
+    _require_credential_manager(ctx)
     try:
         # Ensure the connection exists in this workspace before probing.
         await get_connection(

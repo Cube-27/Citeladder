@@ -13,6 +13,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UsageMeters } from '@/components/billing/usage-meters';
+import { CardTrialPanel } from '@/components/settings/card-trial-panel';
 import {
   billingApi,
   createIdempotencyKey,
@@ -56,7 +57,13 @@ function useBillingState(): BillingState {
 /** Account plan orchestration. Usage rendering lives in `UsageMeters`. */
 export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean }>) {
   const queryClient = useQueryClient();
-  const { entitlement, isLoading: entitlementLoading } = useEntitlement();
+  const { isLoading: entitlementLoading } = useEntitlement();
+  const entitlementQuery = useQuery({
+    queryKey: queryKeys.billing.entitlement(),
+    queryFn: ({ signal }) => billingApi.entitlement({ signal }),
+    enabled,
+  });
+  const entitlement = entitlementQuery.data ?? null;
   const state = useBillingState();
   const catalogQuery = useQuery({
     queryKey: queryKeys.billing.catalog(state.country || undefined),
@@ -164,9 +171,19 @@ function BillingContent({
           <UsageMeters enabled={enabled} />
         </div>
       </div>
+      <CardTrialPanel />
       <CancelDialog cancellation={cancellation} state={state} />
     </div>
   );
+}
+
+function accessLabel(entitlement: BillingEntitlement | null): string {
+  if (!entitlement) return 'Unresolved';
+  const active = entitlement.grants.filter((grant) => grant.revoked_at === null);
+  if (entitlement.trial_grant) return 'Early access';
+  if (active.some((grant) => grant.source_kind === 'override')) return 'Operator override';
+  if (active.some((grant) => grant.source_kind === 'plan')) return 'Paid plan';
+  return 'Free access';
 }
 
 function CurrentPlan({
@@ -193,8 +210,8 @@ function CurrentPlan({
             <p className={textRole('objectTitle')}>
               {currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
             </p>
-            <Badge variant="status" value={subscription ? 'success' : 'info'}>
-              {subscription ? 'Active' : 'None'}
+            <Badge variant="status" value={entitlement ? 'success' : 'info'}>
+              {accessLabel(entitlement)}
             </Badge>
           </div>
           <SubscriptionDetail subscription={subscription} periodEnd={periodEnd} />
@@ -205,6 +222,24 @@ function CurrentPlan({
           </Button>
         ) : null}
       </div>
+      {entitlement?.grants.some(
+        (grant) => grant.source_kind === 'override' && grant.revoked_at === null,
+      ) ? (
+        <Alert tone="info">
+          Operator override applied. It is read-only here and expires according to the grant shown
+          by the server; it does not imply a paid subscription or funded AI credits.
+        </Alert>
+      ) : null}
+      {entitlement?.trial_grant ? (
+        <Alert tone="info">
+          Temporary access ends{' '}
+          {new Date(entitlement.trial_grant.deadline).toLocaleDateString('en-US', {
+            dateStyle: 'medium',
+            timeZone: 'UTC',
+          })}
+          . No card is on file, nothing renews, and access returns to free at expiry.
+        </Alert>
+      ) : null}
       {entitlement === null ? (
         <div className="">
           <Alert tone="warning">
@@ -385,7 +420,11 @@ function PlanRow({
             onClick={() => selection.ok && onCheckout(selection.catalog_key)}
           >
             <CreditCard className="size-3.5" aria-hidden />
-            {pending ? 'Opening checkout…' : `Choose ${plan.name}`}
+            {pending
+              ? 'Opening checkout…'
+              : selection.ok
+                ? `Choose ${plan.name}`
+                : `Choose ${plan.name} — checkout unavailable`}
           </Button>
         )}
       </div>
@@ -406,7 +445,7 @@ function planCheckoutState(
       ? `${formatMoney(price.money, currencyMinorUnits)} / month`
       : price.kind === 'contact'
         ? 'Contact us'
-        : 'Not yet priced';
+        : price.reason || 'Unavailable';
   return { priceLabel, selection, canCheckout: selection.ok && country.length === 2 && !pending };
 }
 

@@ -57,6 +57,7 @@ KEY_AUDIT_CADENCE: Final = "audit_cadence"
 KEY_HISTORY_WINDOW: Final = "history_window"
 KEY_SUPPORT_TIER: Final = "support_tier"
 KEY_AUDIT_CREDITS: Final = "audit_credits"
+KEY_AI_CREDITS: Final = "ai_credits"
 KEY_PROJECT_SLOTS: Final = "project_slots"
 KEY_PROMPT_SLOTS: Final = "prompt_slots"
 KEY_MONITORED_URLS: Final = "monitored_urls"
@@ -224,6 +225,11 @@ def _build_registry() -> CapabilityRegistry:
                 resolution_rule=ResolutionRule.SUM,
             ),
             CapabilityDefinition(
+                key=KEY_AI_CREDITS,
+                capability_type=CapabilityType.COUNTER_CONSUMABLE,
+                resolution_rule=ResolutionRule.SUM,
+            ),
+            CapabilityDefinition(
                 key=KEY_PROJECT_SLOTS,
                 capability_type=CapabilityType.COUNTER_OCCUPANCY,
                 resolution_rule=ResolutionRule.SUM,
@@ -300,7 +306,7 @@ ENTITLEMENT_CACHE_MAX_ENTRIES: Final = 1024
 ENTITLEMENT_CACHE_MAX_TTL_SECONDS: Final = 300
 
 # One config-owned registry revision for the whole v8 entitlement layer.
-CAPABILITY_REGISTRY_REVISION: Final = "entitlements-v1"
+CAPABILITY_REGISTRY_REVISION: Final = "entitlements-v2"
 
 CAPABILITY_REGISTRY: Final = _build_registry()
 

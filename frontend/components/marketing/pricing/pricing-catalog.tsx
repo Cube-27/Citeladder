@@ -27,6 +27,7 @@ import { BYOK_DISCLOSURE, BYOK_SWITCH_LABEL } from '@/lib/marketing-content/pric
 
 import { Section, SectionHeader } from '../primitives/section';
 import { CatalogPurchases } from './catalog-purchases';
+import { EarlyAccessDialog } from './early-access-dialog';
 import { PricingComparison } from './pricing-comparison';
 import { PricingTierCard } from './pricing-tier-card';
 import { useByokPricing } from './use-byok-pricing';
@@ -75,6 +76,7 @@ export function PricingCatalog() {
   const mode = byok ? 'byok' : 'funded';
   const [notice, setNotice] = useState<string | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [earlyAccessOpen, setEarlyAccessOpen] = useState(false);
 
   /**
    * Is anyone signed in? This is a PUBLIC page, so there is no SessionGuard
@@ -96,6 +98,12 @@ export function PricingCatalog() {
     queryFn: ({ signal }) => billingApi.catalog(undefined, { signal }),
   });
   const catalog = catalogQuery.data ?? null;
+  const offerQuery = useQuery({
+    queryKey: [...queryKeys.billing.all, 'early-access'],
+    queryFn: ({ signal }) => billingApi.noCardOffer({ signal }),
+    enabled: isAuthenticated,
+    retry: false,
+  });
 
   const activation = useMutation({
     onMutate: (intent: PendingPricingIntentV1) => setPendingKey(intent.catalog_key),
@@ -212,37 +220,18 @@ export function PricingCatalog() {
           </p>
         </div>
 
-        {notice && <output className="website-body text-warning-text mb-8 block">{notice}</output>}
-        {activation.isError && (
-          <output className="website-body text-warning-text mb-8 block">
-            {activation.error instanceof Error
-              ? activation.error.message
-              : 'That purchase could not be started. Please try again.'}
-          </output>
-        )}
-
-        {catalogQuery.isError ? (
-          <CatalogError onRetry={() => void catalogQuery.refetch()} />
-        ) : !catalog ? (
-          <LoadingCards />
-        ) : (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {catalog.plans.map((plan) => (
-              <PricingTierCard
-                key={plan.key}
-                plan={plan}
-                catalog={catalog}
-                mode={mode}
-                pending={pendingKey === plan.key}
-                onCheckout={(selected: CatalogPlan) => {
-                  const selection = checkoutSelection(selected, mode);
-                  if (!selection.ok) return;
-                  runOrCapture(intentFor('checkout', selection.catalog_key, 1, byok));
-                }}
-              />
-            ))}
-          </div>
-        )}
+        <PricingFeedback notice={notice} error={activation.error} />
+        <PlansGrid
+          catalog={catalog}
+          failed={catalogQuery.isError}
+          retry={() => void catalogQuery.refetch()}
+          mode={mode}
+          byok={byok}
+          pendingKey={pendingKey}
+          earlyAccessAvailable={offerQuery.data?.status === 'available'}
+          runOrCapture={runOrCapture}
+          openEarlyAccess={() => setEarlyAccessOpen(true)}
+        />
       </Section>
 
       <Section tone="sunken" rhythm="tight" aria-label="Plan comparison">
@@ -254,6 +243,14 @@ export function PricingCatalog() {
         />
         {catalog ? <PricingComparison catalog={catalog} /> : <LoadingShell />}
       </Section>
+
+      {offerQuery.data ? (
+        <EarlyAccessDialog
+          offer={offerQuery.data}
+          open={earlyAccessOpen}
+          onOpenChange={setEarlyAccessOpen}
+        />
+      ) : null}
 
       {catalog && (catalog.addons.length > 0 || catalog.topups.length > 0) && (
         <Section tone="paper" rhythm="tight" aria-label="Add-ons and top-ups">
@@ -297,6 +294,73 @@ function isStillValid(
   if (!entry) return false;
   if (!isPurchasable(entry)) return false;
   return intent.quantity >= entry.quantity_min && intent.quantity <= entry.quantity_max;
+}
+
+type Catalog = Awaited<ReturnType<typeof billingApi.catalog>>;
+type CredentialMode = 'byok' | 'funded';
+
+function PricingFeedback({ notice, error }: Readonly<{ notice: string | null; error: unknown }>) {
+  if (notice)
+    return <output className="website-body text-warning-text mb-8 block">{notice}</output>;
+  if (!error) return null;
+  return (
+    <output className="website-body text-warning-text mb-8 block">
+      {error instanceof Error
+        ? error.message
+        : 'That purchase could not be started. Please try again.'}
+    </output>
+  );
+}
+
+function checkoutIntent(plan: CatalogPlan, mode: CredentialMode, byok: boolean) {
+  const selection = checkoutSelection(plan, mode);
+  if (!selection.ok) return null;
+  return intentFor('checkout', selection.catalog_key, 1, byok);
+}
+
+function PlansGrid({
+  catalog,
+  failed,
+  retry,
+  mode,
+  byok,
+  pendingKey,
+  earlyAccessAvailable,
+  runOrCapture,
+  openEarlyAccess,
+}: Readonly<{
+  catalog: Catalog | null;
+  failed: boolean;
+  retry: () => void;
+  mode: CredentialMode;
+  byok: boolean;
+  pendingKey: string | null;
+  earlyAccessAvailable: boolean;
+  runOrCapture: (intent: PendingPricingIntentV1) => void;
+  openEarlyAccess: () => void;
+}>) {
+  if (failed) return <CatalogError onRetry={retry} />;
+  if (!catalog) return <LoadingCards />;
+  return (
+    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      {catalog.plans.map((plan) => (
+        <PricingTierCard
+          key={plan.key}
+          plan={plan}
+          catalog={catalog}
+          mode={mode}
+          pending={pendingKey === plan.key}
+          onCheckout={(selected) => {
+            const intent = checkoutIntent(selected, mode, byok);
+            if (intent) runOrCapture(intent);
+          }}
+          onEarlyAccess={
+            plan.key === 'tier_1' && earlyAccessAvailable ? openEarlyAccess : undefined
+          }
+        />
+      ))}
+    </div>
+  );
 }
 
 function LoadingCards() {

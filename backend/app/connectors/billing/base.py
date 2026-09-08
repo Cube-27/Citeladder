@@ -80,6 +80,21 @@ class ProviderPayment:
     paid_at: int | None = None
     intent_id: str = ""
     account_ref: str = ""
+    # A Payment Link is an intent/container, not the captured transaction.
+    # Settlement identity always uses external_payment_id.
+    external_payment_link_id: str = ""
+    external_invoice_id: str = ""
+    provider_mode: str = "test"
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderRefund:
+    external_refund_id: str
+    external_payment_id: str
+    status: str
+    amount_minor: int
+    currency: str
+    updated_at: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,6 +163,14 @@ class BillingProvider(Protocol):
 
     async def fetch_payment(self, external_payment_id: str) -> ProviderPayment: ...
 
+    async def refund_payment(
+        self,
+        external_payment_id: str,
+        *,
+        amount_minor: int,
+        idempotency_key: str,
+    ) -> ProviderRefund: ...
+
 
 __all__ = [
     "BillingProvider",
@@ -156,5 +179,6 @@ __all__ = [
     "HostedSubscription",
     "ProviderMetadata",
     "ProviderPayment",
+    "ProviderRefund",
     "ProviderSubscription",
 ]
