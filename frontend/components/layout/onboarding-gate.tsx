@@ -45,7 +45,7 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
     }
   }, [needsOnboarding, router]);
 
-  if (isError) {
+  if (isError && projects.length === 0) {
     return (
       <main
         id="main"

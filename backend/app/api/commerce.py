@@ -51,6 +51,7 @@ from app.domain.commerce.service import (
     import_catalog,
 )
 from app.domain.commerce.shelf_metrics import get_shelf
+from app.domain.entitlements.enforcement import OccupancyError
 
 router = APIRouter(prefix="/projects", tags=["commerce"])
 
@@ -237,6 +238,10 @@ async def buyer_prompts_generate_endpoint(
         )
     except CommerceNotFoundError as exc:
         raise _map_error(exc) from exc
+    except OccupancyError as exc:
+        raise ApiException.coded(
+            status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
+        ) from exc
     except BuyerPromptGenerationUnavailable as exc:
         raise ApiException.coded(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -264,6 +269,10 @@ async def buyer_prompt_manual_endpoint(
             target=payload.target,
             text=payload.text,
         )
+    except OccupancyError as exc:
+        raise ApiException.coded(
+            status.HTTP_403_FORBIDDEN, exc.code, str(exc), details=exc.details
+        ) from exc
     except CommerceNotFoundError as exc:
         raise _map_error(exc) from exc
 

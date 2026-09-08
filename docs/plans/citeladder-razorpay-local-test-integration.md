@@ -45,6 +45,18 @@ Live rebuild completed successfully with the installed image, including baseline
 migration, configured dev account, a clean `alembic check`, and application health.
 The follow-up deployment installs occupancy/routing fixes and initializes pricing.
 
+Follow-up UI recovery fixes keep the pricing CTA inside its card, interpret
+numeric effective flag grants (`1`) correctly so the dev account sees Content
+and Growth Agent, and make shared dropdown menus non-modal to avoid scrollbar
+compensation shifting the document. Cached projects remain usable after a failed
+background refresh. Commerce prompt inserts now enforce account prompt capacity
+in the insert transaction, after all generation calls finish. The GCP reset
+attempts one forward recovery on failure, checks schema validity before starting
+services, and preserves a failing exit status for operator visibility. This is
+not data rollback: the owner explicitly authorized a destructive reset without
+backup preservation. No further local test suites are run at the owner's request;
+CI remains the merge gate.
+
 ## 1. Execution boundary and agreed scope
 
 **When “Implement plan” is clicked: save this complete plan to `docs/plans/citeladder-razorpay-local-test-integration.md`, verify that file, and stop.** Do not implement code, change environment files, start services, configure Razorpay, create plans, or make payments during that save-only turn. Preserve existing unrelated changes and deleted documents.

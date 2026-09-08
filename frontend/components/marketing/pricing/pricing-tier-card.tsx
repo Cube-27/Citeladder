@@ -183,13 +183,14 @@ function PlanCta({
       disabled={disabled}
       variant="primary"
       onClick={() => onCheckout(plan)}
-      className="w-full"
+      className="w-full min-w-0 whitespace-normal"
+      aria-label={unavailable ? `Choose ${plan.name} — checkout unavailable` : undefined}
     >
       {pending
         ? 'Starting checkout…'
         : !unavailable
           ? `Choose ${plan.name}`
-          : `Choose ${plan.name} — checkout unavailable`}
+          : 'Checkout unavailable'}
     </Button>
   );
 }

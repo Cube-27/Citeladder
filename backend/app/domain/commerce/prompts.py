@@ -19,6 +19,7 @@ from app.core.config.commerce_catalog import (
     COMMERCE_PROMPT_TEMPLATE_VERSION,
     commerce_buyer_prompt_system,
 )
+from app.core.config.entitlements import KEY_PROMPT_SLOTS
 from app.core.config.visibility_prompts import (
     BUYER_STAGE_CONSIDERATION,
     PROMPT_INTENT_RECOMMEND,
@@ -29,6 +30,10 @@ from app.domain.commerce.schemas import (
     CommerceTarget,
 )
 from app.domain.commerce.service import CommerceNotFoundError, require_project
+from app.domain.entitlements.enforcement import (
+    enforce_occupancy,
+    lock_workspace_capacity,
+)
 from app.domain.prompts.topical_binding import binding_tokens
 from app.models.brand import Brand
 from app.models.commerce import (
@@ -266,7 +271,7 @@ async def generate_buyer_prompts(
     project = await _project_with_brand(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    generated: list[BuyerPromptResponse] = []
+    batches: list[tuple[CommerceTarget, dict, list[str]]] = []
     for target in targets:
         context = await _target_context(
             session,
@@ -307,6 +312,13 @@ async def generate_buyer_prompts(
                 "Buyer prompts were unavailable because identity leakage or "
                 "style validation left too few usable prompts"
             )
+        batches.append((target, context, texts))
+    # Finish all provider calls before taking the transaction-scoped account lock.
+    await _reserve_prompt_capacity(
+        session, workspace_id, sum(len(b[2]) for b in batches)
+    )
+    generated: list[BuyerPromptResponse] = []
+    for target, context, texts in batches:
         prompt_set, topic = await _prompt_owner(
             session, project_id=project_id, target=target
         )
@@ -369,6 +381,7 @@ async def add_manual_buyer_prompt(
         target=target,
         project=project,
     )
+    await _reserve_prompt_capacity(session, workspace_id, 1)
     prompt_set, topic = await _prompt_owner(
         session, project_id=project_id, target=target
     )
@@ -396,6 +409,19 @@ async def add_manual_buyer_prompt(
     session.add(relation)
     await session.commit()
     return _prompt_response(prompt, relation)
+
+
+async def _reserve_prompt_capacity(
+    session: AsyncSession, workspace_id: uuid.UUID, count: int
+) -> None:
+    account_id = await lock_workspace_capacity(session, workspace_id)
+    await enforce_occupancy(
+        session,
+        account_id=account_id,
+        key=KEY_PROMPT_SLOTS,
+        requested_delta=count,
+        at=datetime.now(UTC),
+    )
 
 
 async def list_buyer_prompts(

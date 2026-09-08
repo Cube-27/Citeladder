@@ -13,7 +13,14 @@ import { cn } from '@/lib/utils';
  * shadow-elevated, and the shared menu radius.
  * Re-exports the Radix parts with token-styled Content / Item defaults.
  */
-export const Dropdown = DropdownPrimitive.Root;
+// Navigation/action menus keep the document scrollable. Modal dialogs own
+// scroll locking; applying it here double-compensates the stable scrollbar gutter.
+export function Dropdown({
+  modal = false,
+  ...props
+}: Readonly<ComponentPropsWithoutRef<typeof DropdownPrimitive.Root>>) {
+  return <DropdownPrimitive.Root modal={modal} {...props} />;
+}
 export const DropdownTrigger = DropdownPrimitive.Trigger;
 
 /**

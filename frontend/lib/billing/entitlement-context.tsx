@@ -76,8 +76,9 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
     const hasCapability = (key: string) => {
       const capability = granted.get(key);
       if (!capability || capability.value === null) return false;
-      if (capability.type === 'flag') return capability.value === true;
+      if (capability.type === 'flag') return capability.value === true || capability.value === 1;
       if (capability.type === 'level') {
+        if (typeof capability.value === 'number') return capability.value > 0;
         return (
           typeof capability.value === 'string' &&
           capability.value !== '' &&
@@ -95,19 +96,7 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
       hasCapability,
       // Product controls follow effective capability authority, not a plan name
       // or historical grant kind. Backend admission remains authoritative.
-      canStartPaidWork: data.capabilities.some((capability) => {
-        if (!PAID_WORK_CAPABILITIES.has(capability.key)) return false;
-        if (capability.value === null) return false;
-        if (capability.type === 'flag') return capability.value === true;
-        if (capability.type === 'level') {
-          return (
-            typeof capability.value === 'string' &&
-            capability.value !== '' &&
-            capability.value !== 'unset'
-          );
-        }
-        return typeof capability.value === 'number' && capability.value > 0;
-      }),
+      canStartPaidWork: [...PAID_WORK_CAPABILITIES].some(hasCapability),
     };
   }, [
     entitlementQuery.data,
