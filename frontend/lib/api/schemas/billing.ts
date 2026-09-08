@@ -326,3 +326,12 @@ export const providerConnectionStatesSchema = responseObject({
   workspace_id: uuid(),
   providers: z.array(providerConnectionStateEntrySchema),
 });
+
+export const subscriptionCheckoutSchema = responseObject({
+  activation_id: uuid(),
+  provider_mode: z.enum(['test', 'live']),
+  key_id: z.string(),
+  subscription_id: z.string(),
+  expires_at: z.string(),
+  quote: resolvedQuoteSchema,
+});

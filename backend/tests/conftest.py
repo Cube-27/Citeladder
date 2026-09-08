@@ -98,7 +98,11 @@ _DEFAULT_AGENT_VARIABLES = (
 for _name in [
     name
     for name in os.environ
-    if name.isupper() and name.endswith(_PROVIDER_CREDENTIAL_SUFFIXES)
+    if name.isupper()
+    and (
+        name.endswith(_PROVIDER_CREDENTIAL_SUFFIXES)
+        or name.startswith(("BILLING_", "RAZORPAY_"))
+    )
 ] + list(_DEFAULT_AGENT_VARIABLES):
     os.environ.pop(_name, None)
 

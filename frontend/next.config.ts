@@ -136,6 +136,27 @@ const nextConfig: NextConfig = {
   // `/blog/what-is-png` and would freeze an HTML page in the cache.
   async headers() {
     return [
+      ...['/pricing', '/settings', '/billing'].map((source) => ({
+        source,
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com" +
+                (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''),
+              "style-src 'self' 'unsafe-inline'",
+              'frame-src https://api.razorpay.com https://checkout.razorpay.com',
+              "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com",
+              "img-src 'self' data: blob: https://img.logo.dev https://cdn.razorpay.com",
+              "font-src 'self'",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "frame-ancestors 'none'",
+            ].join('; '),
+          },
+        ],
+      })),
       {
         // Self-hosted font files are content-stable: a new cut ships under a
         // new filename, so a year of immutable caching can never go stale.

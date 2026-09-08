@@ -738,3 +738,18 @@ alone — telemetry never fails an import, a test run, or a process start.
 Use focused unit/component tests and Ruff for changed owners. Schema changes
 are folded into `migrations/versions/0001_initial.py`, then verified from an
 empty disposable database with `alembic upgrade head` and `alembic check`.
+
+
+## Razorpay subscription checkout
+
+The existing billing subscription-creation endpoint resolves persisted regional
+catalog terms. Owner-scoped checkout initialization exposes only its public key
+and subscription ID; callback verification binds HMAC to the stored subscription
+and schedules bounded reconciliation. Persisted activation reads do no provider
+I/O. Explicit provider mode is carried by intents, subscriptions, webhook evidence
+and normalized receipts. Captured invoice/payment parity and paid-period evidence
+are required before issuing paid grants. Durable webhook receipt precedes
+asynchronous reconciliation; billing owners recover pending activations, missed
+recurring evidence and interrupted webhook dispatch. The checkout kill switch
+does not disable recovery. Public login receives the free baseline; development
+access requires explicit UUID-bound bootstrap.

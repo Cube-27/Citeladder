@@ -3,7 +3,7 @@
 import { Check } from 'lucide-react';
 
 import type { BillingCatalog, CatalogPlan, CredentialMode } from '@/lib/api/billing';
-import { formatMoney, headlinePrice, majorUnits } from '@/lib/billing/catalog';
+import { checkoutSelection, formatMoney, headlinePrice, majorUnits } from '@/lib/billing/catalog';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
 import {
   CONTACT_LABEL,
@@ -137,7 +137,7 @@ export function PricingTierCard({
         <PlanCta
           plan={plan}
           priceKind={price.kind}
-          checkoutAvailable={plan.checkout_available}
+          checkoutAvailable={checkoutSelection(plan, mode).ok}
           onCheckout={onCheckout}
           pending={pending}
         />

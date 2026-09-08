@@ -1,0 +1,301 @@
+{
+  "schema_version": 1,
+  "plans": [
+    {
+      "key": "tier_1",
+      "name": "Tier 1",
+      "description": "Approved Tier 1 monthly terms.",
+      "cadence": "monthly",
+      "self_serve": true,
+      "contact_only": false,
+      "byok_price": {
+        "currency": "USD",
+        "amount_minor": 4900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "funded_price": {
+        "currency": "USD",
+        "amount_minor": 9900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "grants": [
+        {
+          "key": "audit_cadence",
+          "value": 1
+        },
+        {
+          "key": "project_slots",
+          "value": 1
+        },
+        {
+          "key": "prompt_slots",
+          "value": 10
+        },
+        {
+          "key": "monitored_urls",
+          "value": 50
+        },
+        {
+          "key": "history_window",
+          "value": 1
+        },
+        {
+          "key": "manual_runs_per_day",
+          "value": 3
+        },
+        {
+          "key": "exports",
+          "value": 1
+        }
+      ],
+      "regional_byok_prices": {
+        "india": {
+          "currency": "INR",
+          "amount_minor": 416500,
+          "tax_behavior": "exclusive",
+          "tax_minor": 74970,
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "provider_plan_name": "CiteLadder Tier 1 BYOK INR Sandbox",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "85.00",
+          "tax_rate": "0.18",
+          "metadata": "sandbox-fixture-not-for-production",
+          "tax_verified": false
+        },
+        "international": {
+          "currency": "USD",
+          "amount_minor": 4900,
+          "tax_behavior": "inclusive",
+          "tax_minor": 0,
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "provider_plan_name": "CiteLadder Tier 1 BYOK USD Sandbox",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "85.00",
+          "tax_rate": "0",
+          "metadata": "sandbox-fixture-not-for-production",
+          "tax_verified": false
+        }
+      }
+    },
+    {
+      "key": "tier_2",
+      "name": "Tier 2",
+      "description": "Approved Tier 2 monthly terms.",
+      "cadence": "monthly",
+      "self_serve": true,
+      "contact_only": false,
+      "byok_price": {
+        "currency": "USD",
+        "amount_minor": 9900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "funded_price": {
+        "currency": "USD",
+        "amount_minor": 14900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "grants": [
+        {
+          "key": "audit_cadence",
+          "value": 2
+        },
+        {
+          "key": "project_slots",
+          "value": 3
+        },
+        {
+          "key": "prompt_slots",
+          "value": 30
+        },
+        {
+          "key": "monitored_urls",
+          "value": 150
+        },
+        {
+          "key": "history_window",
+          "value": 2
+        },
+        {
+          "key": "manual_runs_per_day",
+          "value": 6
+        },
+        {
+          "key": "exports",
+          "value": 1
+        },
+        {
+          "key": "fanout",
+          "value": 1
+        },
+        {
+          "key": "content_creation",
+          "value": 1
+        },
+        {
+          "key": "growth_agent",
+          "value": 1
+        }
+      ],
+      "regional_byok_prices": {
+        "india": {
+          "currency": "INR",
+          "amount_minor": 841500,
+          "tax_behavior": "exclusive",
+          "tax_minor": 151470,
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "provider_plan_name": "CiteLadder Tier 2 BYOK INR Sandbox",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "85.00",
+          "tax_rate": "0.18",
+          "metadata": "sandbox-fixture-not-for-production",
+          "tax_verified": false
+        },
+        "international": {
+          "currency": "USD",
+          "amount_minor": 9900,
+          "tax_behavior": "inclusive",
+          "tax_minor": 0,
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "provider_plan_name": "CiteLadder Tier 2 BYOK USD Sandbox",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "85.00",
+          "tax_rate": "0",
+          "metadata": "sandbox-fixture-not-for-production",
+          "tax_verified": false
+        }
+      }
+    },
+    {
+      "key": "tier_3",
+      "name": "Tier 3",
+      "description": "Approved Tier 3 monthly terms.",
+      "cadence": "monthly",
+      "self_serve": true,
+      "contact_only": false,
+      "byok_price": {
+        "currency": "USD",
+        "amount_minor": 14900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "funded_price": {
+        "currency": "USD",
+        "amount_minor": 29900,
+        "tax_behavior": "inclusive",
+        "provider_price_ref": ""
+      },
+      "grants": [
+        {
+          "key": "audit_cadence",
+          "value": 2
+        },
+        {
+          "key": "project_slots",
+          "value": 10
+        },
+        {
+          "key": "prompt_slots",
+          "value": 60
+        },
+        {
+          "key": "monitored_urls",
+          "value": 400
+        },
+        {
+          "key": "history_window",
+          "value": 3
+        },
+        {
+          "key": "manual_runs_per_day",
+          "value": 12
+        },
+        {
+          "key": "exports",
+          "value": 1
+        },
+        {
+          "key": "fanout",
+          "value": 1
+        },
+        {
+          "key": "content_creation",
+          "value": 1
+        },
+        {
+          "key": "growth_agent",
+          "value": 1
+        }
+      ],
+      "regional_byok_prices": {
+        "india": {
+          "currency": "INR",
+          "amount_minor": 1266500,
+          "tax_behavior": "exclusive",
+          "tax_minor": 227970,
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "provider_plan_name": "CiteLadder Tier 3 BYOK INR Sandbox",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "85.00",
+          "tax_rate": "0.18",
+          "metadata": "sandbox-fixture-not-for-production",
+          "tax_verified": false
+        },
+        "international": {
+          "currency": "USD",
+          "amount_minor": 14900,
+          "tax_behavior": "inclusive",
+          "tax_minor": 0,
+          "provider_price_ref": "",
+          "provider_mode": "test",
+          "provider_plan_name": "CiteLadder Tier 3 BYOK USD Sandbox",
+          "interval": 1,
+          "period": "monthly",
+          "fx_inr_per_usd": "85.00",
+          "tax_rate": "0",
+          "metadata": "sandbox-fixture-not-for-production",
+          "tax_verified": false
+        }
+      }
+    },
+    {
+      "key": "enterprise",
+      "name": "Enterprise",
+      "description": "Custom volume, security review, and deployment options.",
+      "cadence": "custom",
+      "self_serve": false,
+      "contact_only": true,
+      "byok_price": null,
+      "funded_price": null,
+      "grants": []
+    }
+  ],
+  "campaign": {
+    "key": "no_card_tier_1_intro",
+    "state": "draft",
+    "enabled": false,
+    "duration_days": 7,
+    "plan_key": "tier_1",
+    "claim_available": false,
+    "cohort_started_at": null,
+    "ends_at": null,
+    "eligibility_policy": "new_account",
+    "operator_code_allowed": true
+  },
+  "contact_sales_url": "https://www.cube27.com/contact/",
+  "platform_routes": [],
+  "ai_credit_policy": null
+}

@@ -46,6 +46,7 @@ from fastapi import (
 from fastapi import Path as PathParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.billing_checkout import router as checkout_router
 from app.api.deps import (
     WorkspaceContext,
     get_current_user,
@@ -138,6 +139,7 @@ from app.models.billing import BillingAccount, PendingActivation
 from app.models.user import User
 
 router = APIRouter(tags=["billing"])
+router.include_router(checkout_router)
 
 
 def _idempotency_key(

@@ -28,7 +28,7 @@ def test_phase1_seed_has_approved_terms_and_disabled_campaign() -> None:
         plans["tier_3"].byok_price.amount_minor,
         plans["tier_3"].funded_price.amount_minor,
     ) == (14_900, 29_900)
-    assert payload.checkout_enabled is False
+    assert "checkout_enabled" not in payload.model_dump()
     assert payload.campaign.state == "draft"
     assert payload.campaign.enabled is False
     assert payload.campaign.claim_available is False

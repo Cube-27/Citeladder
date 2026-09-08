@@ -1,170 +1,110 @@
-"""Operator CLI: propose/verify the v8 commercial catalog's provider price refs.
+"""Read an explicit persisted catalog revision; propose or verify Razorpay plans.
 
-The catalog is CONFIG-OWNED (invariant 1): every plan/add-on/top-up price and
-its PRIVATE provider reference live in ``app/core/config/billing_catalog.py`` and reach
-this script only through ``commercial_catalog()``. The script therefore never
-invents a key, an amount, or a reference — it reports what the current settings
-resolve to so an operator can see exactly which items are unavailable because a
-private ref is absent.
-
-Operations:
-
-- ``propose`` prints the catalog items that still need a provider price ref,
-  with the exact ``"{catalog_key}:{region}:{purpose}"`` settings key to fill;
-- ``verify`` exits nonzero when any purchasable item is missing its ref.
-
-``create`` is deliberately NOT implemented: creating a live provider plan is a
-money-moving side effect that belongs to a reviewed operator runbook, not to a
-script that could be run by accident. It exits nonzero with a safe message.
-
-No secret is ever accepted on argv or printed: the script reads normal settings
-and prints only safe catalog identity (keys, regions, purposes, amounts).
+Creation remains an explicit operator Dashboard/API action.
 """
 
 from __future__ import annotations
 
 import argparse
-import sys
-from dataclasses import dataclass
+import asyncio
+import json
+from collections.abc import Sequence
 
-from app.core.config.billing_catalog import (
-    PRICE_PURPOSE_BASE,
-    PRICE_PURPOSE_CREDIT,
-    CatalogPrice,
-    commercial_catalog,
-)
-from app.core.config.billing_contracts import REGIONS
+import httpx
+
+from app.connectors.billing.razorpay import RazorpayBillingProvider
 from app.core.config.billing_settings import billing_settings
-
-_OPERATION_CREATE = "create"
-_OPERATION_PROPOSE = "propose"
-_OPERATION_VERIFY = "verify"
-
-
-@dataclass(frozen=True, slots=True)
-class CatalogRef:
-    """One catalog item's regional price and the settings key that names it."""
-
-    catalog_key: str
-    region: str
-    purpose: str
-    currency: str
-    amount_minor: int
-    configured: bool
-
-    @property
-    def settings_key(self) -> str:
-        return f"{self.catalog_key}:{self.region}:{self.purpose}"
+from app.core.database import SessionLocal, dispose_engine
+from app.domain.billing.catalog_revisions import catalog_revision, validate_payload
 
 
 def _validate_environment(environment: str) -> None:
-    key_id = billing_settings.razorpay_key_id.strip()
-    expected_prefix = f"rzp_{environment}_"
-    if not key_id.startswith(expected_prefix):
-        raise RuntimeError(
-            f"configured Razorpay key does not match --environment {environment}"
-        )
+    if billing_settings.require_provider_mode() != environment:
+        raise RuntimeError("Configured provider mode does not match --environment")
 
 
-def _ref(
-    catalog_key: str, region: str, purpose: str, price: CatalogPrice | None
-) -> CatalogRef | None:
-    """Project one configured price into a safe operator row (never the ref)."""
-    if price is None or price.amount_minor <= 0:
-        # An unpriced region is not a missing reference: config owns whether the
-        # item is offered there at all.
-        return None
-    return CatalogRef(
-        catalog_key=catalog_key,
-        region=region,
-        purpose=purpose,
-        currency=price.currency,
-        amount_minor=price.amount_minor,
-        configured=bool(price.provider_price_ref),
-    )
+def verify_plan(actual: dict, price: dict) -> None:
+    item = actual.get("item", {})
+    expected = {
+        "name": price["provider_plan_name"],
+        "amount": price["amount_minor"],
+        "currency": price["currency"],
+    }
+    if any(item.get(key) != value for key, value in expected.items()):
+        raise ValueError("Provider plan item differs from frozen catalog terms")
+    if (
+        actual.get("period") != price["period"]
+        or actual.get("interval") != price["interval"]
+    ):
+        raise ValueError("Provider plan cadence differs from frozen catalog terms")
+    if price["tax_minor"] and (
+        not price["tax_verified"]
+        or item.get("tax_amount") != price["tax_minor"]
+        or item.get("tax_inclusive") is not False
+    ):
+        raise ValueError("Separate GST line and exact total remain unverified")
 
 
-def catalog_refs() -> tuple[CatalogRef, ...]:
-    """Every priced catalog item/region that needs a provider price ref."""
-    catalog = commercial_catalog()
-    rows: list[CatalogRef | None] = []
-    for region in REGIONS:
-        for plan in catalog.plans:
-            rows.append(
-                _ref(plan.key, region, PRICE_PURPOSE_BASE, plan.base_price(region))
+async def _run(operation: str, revision: str, environment: str) -> None:
+    async with SessionLocal() as session:
+        row = await catalog_revision(session, revision)
+        payload = validate_payload(row.payload)
+        prices = [
+            (plan.key, region, price.model_dump())
+            for plan in payload.plans
+            for region, price in plan.regional_byok_prices.items()
+        ]
+        await session.commit()
+    if not prices:
+        raise ValueError("Empty provider verification set")
+    if any(price["provider_mode"] != environment for _, _, price in prices):
+        raise ValueError("Catalog provider environment mismatch")
+    if operation == "propose":
+        for key, region, price in prices:
+            spec = {k: v for k, v in price.items() if k != "provider_price_ref"}
+            print(
+                json.dumps(
+                    {"revision": revision, "plan": key, "region": region, "spec": spec}
+                )
             )
-            rows.append(
-                _ref(plan.key, region, PRICE_PURPOSE_CREDIT, plan.credit_price(region))
-            )
-        for addon in catalog.addons:
-            rows.append(
-                _ref(addon.key, region, PRICE_PURPOSE_BASE, addon.price(region))
-            )
-        for topup in catalog.topups:
-            rows.append(
-                _ref(topup.key, region, PRICE_PURPOSE_BASE, topup.price(region))
-            )
-    return tuple(row for row in rows if row is not None)
+        return
+    await _verify_prices(prices, revision, environment)
 
 
-def _describe(row: CatalogRef) -> str:
-    state = "configured" if row.configured else "MISSING"
-    return f"{row.settings_key}\t{row.currency} {row.amount_minor} minor\t{state}"
-
-
-def _propose(rows: tuple[CatalogRef, ...]) -> int:
-    catalog = commercial_catalog()
-    print(f"catalog revision: {catalog.revision}")
-    missing = [row for row in rows if not row.configured]
-    for row in rows:
-        print(_describe(row))
-    if missing:
-        print(
-            f"\n{len(missing)} priced item(s) have no provider price ref and are "
-            "therefore UNAVAILABLE. Set BILLING_PROVIDER_PRICE_REFS entries for "
-            "the keys marked MISSING above.",
-            file=sys.stderr,
-        )
-    return 0
-
-
-def _verify(rows: tuple[CatalogRef, ...]) -> int:
-    missing = [row.settings_key for row in rows if not row.configured]
-    if missing:
-        print(
-            "missing provider price refs: " + ", ".join(sorted(missing)),
-            file=sys.stderr,
-        )
-        return 1
-    print(f"all {len(rows)} priced catalog item(s) have a provider price ref")
-    return 0
+async def _verify_prices(
+    prices: Sequence[tuple[str, str, dict]], revision: str, environment: str
+) -> None:
+    _validate_environment(environment)
+    async with httpx.AsyncClient(follow_redirects=False) as client:
+        provider = RazorpayBillingProvider(client=client)
+        for key, region, price in prices:
+            reference = price["provider_price_ref"]
+            if (
+                not reference
+                or not reference.startswith("plan_")
+                or not reference[5:].isalnum()
+            ):
+                raise ValueError("Missing or malformed provider plan reference")
+            verify_plan(await provider.fetch_plan(reference), price)
+            print(f"verified {revision} {key} {region}")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "operation", choices=(_OPERATION_PROPOSE, _OPERATION_VERIFY, _OPERATION_CREATE)
-    )
+    parser.add_argument("operation", choices=("propose", "verify"))
+    parser.add_argument("--revision", required=True)
     parser.add_argument("--environment", required=True, choices=("test", "live"))
-    parser.add_argument("--confirm-live", default="")
     args = parser.parse_args()
-    try:
-        _validate_environment(args.environment)
-    except RuntimeError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-    if args.operation == _OPERATION_CREATE:
-        print(
-            "creating a provider plan is a money-moving side effect and is not "
-            "automated: follow the operator runbook, then run `verify`.",
-            file=sys.stderr,
-        )
-        return 1
-    rows = catalog_refs()
-    if args.operation == _OPERATION_PROPOSE:
-        return _propose(rows)
-    return _verify(rows)
+
+    async def run() -> None:
+        try:
+            await _run(args.operation, args.revision, args.environment)
+        finally:
+            await dispose_engine()
+
+    asyncio.run(run())
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

@@ -46,11 +46,22 @@ from app.models.billing import (
     BillingSubscription,
     BillingWebhookEvent,
     GrantRevocation,
+    PendingActivation,
 )
 from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
 from app.models.user import User
 from tests.component.auth_helpers import register_and_login as _register
+from tests.component.billing_provider_helpers import (
+    configure_test_provider,
+    drain_webhook,
+)
 from tests.component.occupancy_helpers import revoke_signup_baseline_grants
+
+
+@pytest.fixture(autouse=True)
+def _provider_environment(monkeypatch):
+    configure_test_provider(monkeypatch)
+
 
 _SECRET = "component-webhook-secret"
 
@@ -114,7 +125,7 @@ def _webhook_payload(
 async def _post_webhook(
     client: httpx.AsyncClient, raw: bytes, *, event_id: str
 ) -> httpx.Response:
-    return await client.post(
+    response = await client.post(
         "/api/v1/billing/webhooks/razorpay",
         content=raw,
         headers={
@@ -123,6 +134,10 @@ async def _post_webhook(
             "Content-Type": "application/json",
         },
     )
+
+    if response.status_code == 204:
+        await drain_webhook(json.loads(raw))
+    return response
 
 
 async def _seed_subscription(
@@ -136,6 +151,7 @@ async def _seed_subscription(
     subscription = BillingSubscription(
         billing_account_id=account.id,
         external_subscription_id=external_id,
+        provider_mode="test",
         external_price_id="plan_test",
         catalog_key=catalog_key,
         currency="USD",
@@ -144,6 +160,29 @@ async def _seed_subscription(
         provider_state_version=provider_state_version,
     )
     db_session.add(subscription)
+    now = datetime.now(UTC)
+    db_session.add(
+        PendingActivation(
+            billing_account_id=account.id,
+            activation_kind="base",
+            catalog_key=catalog_key,
+            quantity=1,
+            catalog_revision=billing_settings.catalog_version,
+            credential_mode="byok",
+            status="activated",
+            provider_mode="test",
+            external_reference=external_id,
+            external_price_id="plan_test",
+            quote={
+                "catalog_revision": billing_settings.catalog_version,
+                "total_price": {"currency": "USD", "amount_minor": 4900},
+                "tax": {"currency": "USD", "amount_minor": 0},
+            },
+            idempotency_key=f"fixture:{external_id}",
+            request_fingerprint="f" * 64,
+            expires_at=now + timedelta(hours=1),
+        )
+    )
     await db_session.commit()
     return subscription
 
@@ -354,7 +393,7 @@ async def test_stale_event_is_rejected_without_a_version_bump(
 
 
 @pytest.mark.asyncio
-async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
+async def test_cancellation_without_period_preserves_verified_paid_time_on_replay(
     client: httpx.AsyncClient,
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
@@ -363,8 +402,8 @@ async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
     _patch_catalog(monkeypatch)
     await _register(client, "billing-terminal@example.com")
     workspace = (await client.get("/api/v1/workspaces")).json()[0]
-    # Terminal-loss projection is exact-zero only on a bare account; retaining
-    # the free baseline would mask whether the paid grant was fully revoked.
+    # Isolate the paid bundle so the runtime assertion cannot pass because
+    # of a free baseline allowance.
     await revoke_signup_baseline_grants(
         db_session, workspace_id=uuid.UUID(workspace["id"])
     )
@@ -388,7 +427,7 @@ async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
     response = await _post_webhook(client, activate, event_id="evt_term_act")
     assert response.status_code == 204
 
-    # Cancelled with NO future period end: immediate terminal loss.
+    # Missing provider period fields cannot erase the verified paid period.
     cancelled_at = start + 100
     cancel = _webhook_payload(
         external_id="sub_terminal",
@@ -399,13 +438,13 @@ async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
     assert response.status_code == 204
 
     db_session.expire_all()
-    # Activation (2) + terminal event bump (+1) + revocation write bump (+1).
-    assert await _account_version(db_session) == baseline_version + 4
+    # Activation (2) + cancellation projection (1), with no revocation.
+    assert await _account_version(db_session) == baseline_version + 3
     persisted_sub = await db_session.get(BillingSubscription, subscription_id)
     assert persisted_sub is not None
     assert persisted_sub.status == "cancelled"
-    assert persisted_sub.is_current is False
-    assert persisted_sub.ended_at is not None
+    assert persisted_sub.is_current is True
+    assert persisted_sub.ended_at is None
     revocations = (
         await db_session.scalars(
             select(GrantRevocation).where(
@@ -414,21 +453,22 @@ async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
             )
         )
     ).all()
-    assert len(revocations) == 1
-    assert revocations[0].reason == "subscription_ended"
+    assert not revocations
+    assert int(persisted_sub.current_period_end.timestamp()) == int(
+        (now + timedelta(days=30)).timestamp()
+    )
 
-    # The lost allowance re-projected the workspace runtime row to zero.
+    # Verified paid access remains projected until its natural expiry.
     assert (
         await db_session.scalar(
             select(func.count(WorkspaceSiteHealthRuntime.id)).where(
-                WorkspaceSiteHealthRuntime.monitored_url_limit == 0
+                WorkspaceSiteHealthRuntime.monitored_url_limit == 50
             )
         )
         == 1
     )
 
-    # A redelivered terminal webhook (same logical event, new event id) hits
-    # the deterministic idempotency key: no second revocation row.
+    # A redelivered cancellation cannot revoke or duplicate paid access.
     replay = await _post_webhook(client, cancel, event_id="evt_term_cxl_2")
     assert replay.status_code == 204
     db_session.expire_all()
@@ -439,7 +479,7 @@ async def test_immediate_terminal_loss_revokes_with_deterministic_idempotency(
                 == f"sub:{subscription_id}:terminal:{cancelled_at}"
             )
         )
-        == 1
+        == 0
     )
     assert await _commercial_grant_count(db_session) == 1
 
@@ -579,10 +619,9 @@ async def test_cancel_marks_cancel_at_period_end(
     persisted_sub = await db_session.get(BillingSubscription, subscription_id)
     assert persisted_sub is not None
     assert persisted_sub.cancel_at_period_end is True
-    # Two bumps: the accepted lifecycle projection, plus the tier_1 period
-    # bundle the config-owned catalog now issues on a cancel-scheduled event.
-    # Cancel-at-period-end still never revokes.
-    assert await _account_version(db_session) == baseline_version + 2
+    # Cancellation without captured-payment evidence projects lifecycle only.
+    assert await _account_version(db_session) == baseline_version + 1
+    assert await _commercial_grant_count(db_session) == 0
     assert await db_session.scalar(select(func.count(GrantRevocation.id))) == 0
 
     # Cancelling again reports already_scheduled with NO second provider call.

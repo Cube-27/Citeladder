@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import {
   billingApi,
   createIdempotencyKey,
@@ -30,6 +31,8 @@ import { CatalogPurchases } from './catalog-purchases';
 import { EarlyAccessDialog } from './early-access-dialog';
 import { PricingComparison } from './pricing-comparison';
 import { PricingTierCard } from './pricing-tier-card';
+import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
+import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { useByokPricing } from './use-byok-pricing';
 
 const STALE_INTENT_MESSAGE = 'That pricing option is no longer available. Please choose again.';
@@ -75,6 +78,7 @@ export function PricingCatalog() {
   const { byok, setByok } = useByokPricing();
   const mode = byok ? 'byok' : 'funded';
   const [notice, setNotice] = useState<string | null>(null);
+  const [country, setCountry] = useState('');
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [earlyAccessOpen, setEarlyAccessOpen] = useState(false);
 
@@ -94,8 +98,9 @@ export function PricingCatalog() {
   const isAuthenticated = Boolean(sessionQuery.data);
 
   const catalogQuery = useQuery({
-    queryKey: queryKeys.billing.catalog(),
-    queryFn: ({ signal }) => billingApi.catalog(undefined, { signal }),
+    queryKey: queryKeys.billing.catalog(country.length === 2 ? country : undefined),
+    queryFn: ({ signal }) =>
+      billingApi.catalog(country.length === 2 ? country : undefined, { signal }),
   });
   const catalog = catalogQuery.data ?? null;
   const offerQuery = useQuery({
@@ -105,6 +110,7 @@ export function PricingCatalog() {
     retry: false,
   });
 
+  const checkout = useSubscriptionCheckout();
   const activation = useMutation({
     onMutate: (intent: PendingPricingIntentV1) => setPendingKey(intent.catalog_key),
     mutationFn: async (intent: PendingPricingIntentV1) => {
@@ -125,21 +131,20 @@ export function PricingCatalog() {
       if (!isSelfServeKey(intent.catalog_key)) {
         throw new Error(STALE_INTENT_MESSAGE);
       }
-      return billingApi.createSubscription(
-        {
+      return checkout.start({
+        input: {
           catalog_key: intent.catalog_key,
           credential_mode: intent.byok ? 'byok' : 'funded',
-          country_code: intent.country_code ?? '',
+          country_code: intent.country_code ?? country,
         },
-        intent.idempotency_key,
-      );
+        key: intent.idempotency_key,
+      });
     },
     onSuccess: (result) => {
-      // Accepted (pending or activated) and terminal failures both settle the
-      // intent — only an auth/network failure is worth retaining.
-      clearPendingIntent();
+      // Retain pending intent identity for dismissal and uncertain-result
+      // recovery; terminal outcomes allow a fresh selection.
       setPendingKey(null);
-      if (result.checkout_url) hardNavigate(result.checkout_url);
+      if (result.status !== 'pending') clearPendingIntent();
     },
     onError: () => setPendingKey(null),
   });
@@ -149,11 +154,16 @@ export function PricingCatalog() {
     // An anonymous visitor never issues a billing POST. The breadcrumb is
     // written first so a full-page navigation to auth cannot lose it.
     if (!isAuthenticated) {
-      writePendingIntent(intent);
+      writePendingIntent({ ...intent, country_code: country || intent.country_code });
       hardNavigate('/login');
       return;
     }
-    activation.mutate(intent);
+    const countryCode = intent.country_code ?? country;
+    if (intent.kind === 'checkout' && !/^[A-Z]{2}$/.test(countryCode)) {
+      setNotice('Enter your two-letter billing country before checkout.');
+      return;
+    }
+    activation.mutate({ ...intent, country_code: countryCode });
   };
 
   /**
@@ -220,6 +230,18 @@ export function PricingCatalog() {
           </p>
         </div>
 
+        <label htmlFor="pricing-billing-country" className="grid gap-2">
+          Billing country (two-letter code)
+          <Input
+            id="pricing-billing-country"
+            value={country}
+            maxLength={2}
+            autoComplete="country"
+            placeholder="US"
+            onChange={(event) => setCountry(event.target.value.toUpperCase())}
+          />
+        </label>
+        <CheckoutStatus checkout={checkout} />
         <PricingFeedback notice={notice} error={activation.error} />
         <PlansGrid
           catalog={catalog}

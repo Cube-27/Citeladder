@@ -142,7 +142,7 @@ def _verify_subscription(
     normalized = RAZORPAY_STATUS_MAP.get(record.status)
     if normalized not in _ACTIVE_SUBSCRIPTION_STATUSES:
         raise ActivationRejectedError("subscription_not_active")
-    if record.price_ref and pending.external_price_id != record.price_ref:
+    if pending.external_price_id != record.price_ref:
         raise ActivationRejectedError("price_ref_mismatch")
 
 
@@ -202,6 +202,7 @@ async def _upsert_subscription(
         subscription = BillingSubscription(
             billing_account_id=pending.billing_account_id,
             provider=pending.provider,
+            provider_mode=pending.provider_mode,
             external_subscription_id=record.external_subscription_id,
             external_price_id=pending.external_price_id or "",
             catalog_revision=pending.catalog_revision,
@@ -362,7 +363,24 @@ async def _settle(
     if not isinstance(provider_record, ProviderSubscription):
         raise ActivationRejectedError("provider_record_kind_mismatch")
     _verify_subscription(pending, provider_record)
+    payment = provider_record.payment
+    if payment is None:
+        raise ActivationRejectedError("subscription_payment_missing")
+    if (
+        provider_record.provider_mode != pending.provider_mode
+        or provider_record.provider_mode not in {"test", "live"}
+        or provider_record.catalog_revision != pending.catalog_revision
+        or provider_record.intent_id != str(pending.id)
+        or provider_record.account_ref != str(pending.billing_account_id)
+    ):
+        raise ActivationRejectedError("subscription_identity_mismatch")
+    _verify_payment(pending, payment)
     subscription = await _upsert_subscription(session, pending, provider_record)
+    from app.domain.billing.subscription_payments import record_subscription_payment
+
+    await record_subscription_payment(
+        session, pending=pending, subscription=subscription, record=provider_record
+    )
     return await _issue_subscription_bundle(
         session, pending, subscription, provider_record
     )

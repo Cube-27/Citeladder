@@ -505,3 +505,12 @@ pnpm test -- <file>
 pnpm lint
 pnpm build
 ```
+
+
+Pricing and billing settings share the subscription checkout controller. It lazily
+loads the fixed Checkout.js URL, uses server-provided subscription identity and
+signed-in email, retains account-bound retry keys, and polls persisted activation
+status for at most one minute. Only server-confirmed activation invalidates
+billing/entitlement caches. Pricing remains accessible before creating a project.
+Checkout routes restrict script/frame/connect origins; inline Next.js hydration
+remains supported under the cached-page rendering model.

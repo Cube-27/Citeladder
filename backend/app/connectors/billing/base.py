@@ -51,6 +51,9 @@ class ProviderSubscription:
     updated_at: int
     cancel_at_period_end: bool
     price_ref: str = ""
+    provider_mode: str = "disabled"
+    catalog_revision: str = ""
+    payment: ProviderPayment | None = None
     # Opaque intent/account refs echoed back from the metadata we sent, used to
     # verify provider identity before any activation.
     intent_id: str = ""
@@ -83,8 +86,12 @@ class ProviderPayment:
     # A Payment Link is an intent/container, not the captured transaction.
     # Settlement identity always uses external_payment_id.
     external_payment_link_id: str = ""
+    tax_minor: int | None = None
     external_invoice_id: str = ""
-    provider_mode: str = "test"
+    external_subscription_id: str = ""
+    period_start: int | None = None
+    period_end: int | None = None
+    provider_mode: str = "disabled"
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,6 +157,10 @@ class BillingProvider(Protocol):
     async def fetch_subscription(
         self, external_subscription_id: str
     ) -> ProviderSubscription: ...
+
+    async def find_subscription(
+        self, intent_id: str, account_ref: str
+    ) -> ProviderSubscription | None: ...
 
     async def create_one_time_payment(
         self,

@@ -105,6 +105,7 @@ export const CONTRACT_SCHEMA_MAP = {
   billingEntitlementSchema: 'BillingEntitlementResponse',
   billingUsageSchema: 'BillingUsageResponse',
   activationSchema: 'ActivationResponse',
+  subscriptionCheckoutSchema: 'CheckoutResponse',
   subscriptionChangeSchema: 'SubscriptionChangeResponse',
   resolvedQuoteSchema: 'ResolvedQuoteResponse',
   moneySchema: 'MoneyResponse',
@@ -403,6 +404,18 @@ function codegenSpecAttempt(root: string, timeoutMs?: number): AcquisitionAttemp
   try {
     const stdout = execFileSync(python, ['-c', GENERATE_OPENAPI_PY], {
       cwd: backendDir,
+      env: {
+        ...Object.fromEntries(
+          Object.entries(process.env).filter(([key]) =>
+            ['path', 'systemroot', 'windir', 'temp', 'tmp', 'home', 'userprofile'].includes(
+              key.toLowerCase(),
+            ),
+          ),
+        ),
+        NODE_ENV: 'test',
+        CITELADDER_DISABLE_DOTENV: '1',
+        APP_ENV: 'development',
+      },
       timeout: timeoutMs ?? CONTRACT_CODEGEN_TIMEOUT_MS,
       maxBuffer: 64 * 1024 * 1024,
       stdio: ['ignore', 'pipe', 'pipe'],

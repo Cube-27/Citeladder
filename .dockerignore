@@ -31,4 +31,5 @@ frontend/e2e
 frontend/**/*.test.ts
 frontend/**/*.test.tsx
 backend/tests
-backend/scripts
+backend/scripts/*
+!backend/scripts/reconcile_billing.py

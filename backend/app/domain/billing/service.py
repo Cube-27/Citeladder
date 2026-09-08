@@ -20,7 +20,7 @@ import json
 import logging
 import uuid
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -71,7 +71,11 @@ from app.core.config.entitlements import (
 )
 from app.domain.billing.bootstrap import ensure_user_billing
 from app.domain.billing.catalog_revisions import published_commercial_catalog
-from app.domain.billing.periods import PeriodEvidenceError, issue_period_bundle
+from app.domain.billing.periods import (
+    PeriodEvidenceError,
+    issue_period_bundle,
+    verified_paid_end,
+)
 from app.domain.billing.schemas import (
     MoneyResponse,
     ResolvedQuoteResponse,
@@ -130,6 +134,14 @@ def accept_subscription_event(
     invalidator). Same-status events with a newer provider version are
     accepted and projected.
     """
+    if subscription.status in _TERMINAL_STATUSES:
+        return _expired_terminal_event(subscription, updated_at)
+    if (
+        current_start
+        and subscription.current_period_start
+        and current_start < int(subscription.current_period_start.timestamp())
+    ):
+        return None
     if updated_at and updated_at < subscription.provider_state_version:
         return None
     normalized = RAZORPAY_STATUS_MAP.get(provider_status)
@@ -149,6 +161,22 @@ def accept_subscription_event(
         period_start=subscription.current_period_start,
         period_end=subscription.current_period_end,
         updated_at=updated_at,
+    )
+
+
+def _expired_terminal_event(
+    subscription: BillingSubscription, updated_at: int
+) -> SubscriptionEvent | None:
+    end = subscription.current_period_end
+    if not subscription.is_current or end is None or end > datetime.now(UTC):
+        return None
+    # Release the paid-time slot at expiry, without accepting a stale active
+    # provider projection that could resurrect a terminal subscription.
+    return SubscriptionEvent(
+        status=subscription.status,
+        period_start=subscription.current_period_start,
+        period_end=end,
+        updated_at=max(subscription.provider_state_version, updated_at),
     )
 
 
@@ -257,6 +285,11 @@ async def apply_subscription_state(
     if event is None:
         return False
     now = datetime.now(UTC)
+    if event.status in _TERMINAL_STATUSES:
+        paid_end = await verified_paid_end(session, subscription, at=now)
+        if paid_end is not None:
+            subscription.current_period_end = paid_end
+            event = replace(event, period_end=paid_end)
     terminal = _apply_terminal_state(subscription, event, now)
     await _bump_account_entitlement_version(session, subscription.billing_account_id)
     try:
@@ -330,8 +363,11 @@ class ResolvedIntent:
 
 def _quote_secret() -> bytes:
     secret = billing_settings.quote_signing_secret.get_secret_value()
-    if not secret:
-        secret = billing_settings.razorpay_webhook_secret.get_secret_value()
+    if not secret or secret in {
+        billing_settings.razorpay_webhook_secret.get_secret_value(),
+        billing_settings.razorpay_key_secret.get_secret_value(),
+    }:
+        raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
     return secret.encode()
 
 
@@ -418,6 +454,8 @@ async def resolve_base_intent(
     at: datetime,
 ) -> ResolvedIntent:
     """Validate a base-plan purchase and resolve its quote server-side."""
+    if credential_mode != CREDENTIAL_MODE_BYOK:
+        raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
     region = resolve_region(country_code)
     catalog = await published_commercial_catalog(session)
     plan = catalog.plan(catalog_key)

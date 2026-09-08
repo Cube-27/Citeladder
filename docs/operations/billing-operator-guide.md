@@ -1,5 +1,13 @@
 # Billing operator guide
 
+## Isolated local Razorpay test
+
+Follow the [manual PowerShell testing runbook](razorpay-local-testing.md) for
+isolated startup, operator setup, INR catalog provisioning, webhook configuration,
+payment scenarios, recovery, evidence collection and cleanup. Local INR approval
+is owner-confirmed; international approval is pending. Actual recurring payment
+and separate GST acceptance remain unverified until the owner runs those checks.
+
 > **Audience:** trusted CiteLadder operators with a persisted active `admin` user.
 > **Scope:** catalog publication, introductory-offer controls, grant correction,
 > evidence inspection, reconciliation, webhook-secret rotation, and incident

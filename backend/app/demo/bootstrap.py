@@ -18,7 +18,11 @@ from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.database import SessionLocal, dispose_engine
 from app.core.security import hash_password, verify_password
 from app.domain.auth.service import get_user_by_email, register_user
-from app.domain.billing.bootstrap import ensure_initial_catalog, ensure_user_billing
+from app.domain.billing.bootstrap import (
+    ensure_initial_catalog,
+    ensure_user_billing,
+    provision_development_access,
+)
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.workspaces.service import ensure_personal_workspace
@@ -116,10 +120,16 @@ async def ensure_configured_dev_account(
     user.is_active = True
     user.role = "admin"
     workspace = await ensure_personal_workspace(session, user)
-    await ensure_user_billing(
+    account = await ensure_user_billing(
         session,
         user,
         workspace_ids=(workspace.id,) if workspace is not None else None,
+    )
+    await provision_development_access(
+        session,
+        user=user,
+        account=account,
+        allowance=candidate.dev_login_counter_allowance,
     )
     await ensure_initial_catalog(session, operator=user)
     await session.commit()

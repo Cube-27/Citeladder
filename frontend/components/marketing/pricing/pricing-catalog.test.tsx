@@ -282,6 +282,9 @@ describe('PricingCatalog', () => {
       catalogHandler(),
       authenticated(),
       noOfferHandler(),
+      http.get(`/api/v1/billing/activations/${ACCOUNT}`, () =>
+        HttpResponse.json({ ...activation('base', 'tier_1'), status: 'activated' }),
+      ),
       http.post('/api/v1/billing/subscriptions', async ({ request }) => {
         bodies.push(await request.json());
         keys.push(request.headers.get('Idempotency-Key') ?? '');
@@ -296,7 +299,7 @@ describe('PricingCatalog', () => {
         catalog_key: 'tier_1',
         quantity: 1,
         byok: true,
-        country_code: null,
+        country_code: 'US',
         idempotency_key: 'resume-key',
         return_path: '/pricing',
         created_at_ms: Date.now(),
@@ -310,7 +313,7 @@ describe('PricingCatalog', () => {
     expect(bodies[0]).toEqual({
       catalog_key: 'tier_1',
       credential_mode: 'byok',
-      country_code: '',
+      country_code: 'US',
       trial_requested: false,
     });
     // The stored key is REUSED so a first attempt that did reach the backend

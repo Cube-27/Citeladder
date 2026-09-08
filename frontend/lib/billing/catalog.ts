@@ -76,7 +76,7 @@ export function checkoutSelection(plan: CatalogPlan, mode: CredentialMode): Chec
   if (!plan.checkout_available) {
     return { ok: false, reason: plan.unavailable_reason };
   }
-  if (mode === 'funded' && plan.credit_price === null) {
+  if (mode === 'funded') {
     return { ok: false, reason: plan.unavailable_reason };
   }
   return { ok: true, catalog_key: plan.key, credential_mode: mode };
