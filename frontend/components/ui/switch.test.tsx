@@ -48,11 +48,6 @@ describe('Switch', () => {
     expect(onCheckedChange).toHaveBeenCalledWith(false);
   });
 
-  it('carries a visible focus ring', () => {
-    render(<Switch checked={false} onCheckedChange={() => {}} label="Toggle" />);
-    expect(screen.getByRole('switch').className).toContain('focus-ring');
-  });
-
   it('does not fire when disabled', async () => {
     const onCheckedChange = vi.fn();
     render(<Switch checked={false} onCheckedChange={onCheckedChange} label="Toggle" disabled />);

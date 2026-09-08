@@ -17,6 +17,7 @@ let currentSearchParams = new URLSearchParams();
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ runId: AUDIT_ID }),
+  usePathname: () => `/runs/${AUDIT_ID}`,
   useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => currentSearchParams,
 }));

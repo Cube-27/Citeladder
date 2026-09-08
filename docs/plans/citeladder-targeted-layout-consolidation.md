@@ -1,23 +1,42 @@
 # CiteLadder Targeted Layout Consolidation
 
-> **Status:** approved visual direction; implementation has not started.
-> **Hard precondition:** do not implement this plan on the current
-> `vorflux/billing-consolidation-implementation` worktree. Begin only after that branch is merged,
-> local `main` is synchronized with its upstream, and `git status --short` is empty. Re-read all
-> named owners after synchronization because the current branch changes frontend billing and
-> entitlement contracts.
-> **Prototype:** `C:\Users\abhij\Downloads\citeladder-prototype.html` was requested and the
-> available approved artifact is `C:\Users\abhij\Downloads\preview.html`. It is a visual and
-> interaction specification, not an implementation or source of product copy, fixture data,
-> routes, permissions, or business behavior.
+> **Revision:** 2026-09-08 / V2 — frozen visuals, preserved product behavior.
+> **Status:** the owner has approved the refined HTML's visual design. Phase 0 is complete, and
+> the Phase 1–4 implementation and deletion work is present on
+> `feat/targeted-layout-consolidation`, based on the clean merged billing baseline recorded in
+> the task evidence. Final runtime/browser checks and both repository gates passed;
+> visual-fixture limits are recorded in the evidence document.
+> **Hard precondition retained from the supplied plan:** do not implement on the
+> `vorflux/billing-consolidation-implementation` worktree. Verify that the branch has merged,
+> local `main` is synchronized with its upstream, and `git status --short` is empty. Re-read the
+> named owners because the supplied plan identifies billing/entitlement changes on that branch.
+> Do not assume its current status from this document. Do not merge, reset, clean, stash, discard
+> user changes, or delete saved design artifacts merely to satisfy this precondition. When it is
+> unmet, report the exact blocker and finish only the read-only reconciliation.
+> **Approved visual reference:** the refined HTML already saved in the project, delivered as
+> `docs/plans/citeladder-refined.html` (the identical packaged file is
+> `citeladder-reference.html` when present). Its title is
+> `CiteLadder — Stripe-informed UI Reference 1.0`; canonical styles are in
+> `<style id="citeladder-styles">`, with the companion `DESIGN_CONTRACT` in the same file.
+> Old Downloads paths and the original `preview.html` are NOT the current visual authority.
+> **Prototype authority is VISUAL ONLY.** Its working demo buttons, modals, drawers, routes,
+> workflows, validation, datasets, labels and lifecycle simulations are not implementation
+> requirements. Section 2 explicitly separates approved presentation changes from protected behavior.
 > **Companion authorities:** [`design.md`](../design.md),
 > [`frontend-architecture.md`](../frontend-architecture.md),
 > [`ui-component-system.md`](../ui-component-system.md),
 > [`architecture.md`](../architecture.md), and [`invariants.md`](../invariants.md).
-> Those documents describe the currently shipped interface. This approved cutover deliberately
-> supersedes their desktop-topbar, Growth Agent placement, public display-font, and mobile
-> navigation language; each contradiction must be updated in the same implementation slice that
-> changes the corresponding owner.
+> This plan supersedes older visual values and shell-placement language only for the explicit
+> changes below. It does not supersede production behavior, security, data or entitlement contracts.
+> Update affected documentation in the owning implementation slice. Any older handoff instruction
+> to copy prototype interactions, reorder these phases, or seek fresh visual approval is superseded:
+> design approval is already given, but runtime parity and visual verification are still required.
+
+**Revision basis:** the supplied consolidation plan and the already approved refined HTML/handoff.
+The owner map below is carried forward from that plan, not newly verified repository evidence.
+The added safeguards are implementation requirements, not claims about current live behavior.
+Replace the existing plan with this revision at its current repository path; do not maintain two
+competing active plans. Leave the approved HTML unchanged.
 
 ## 1. Outcome
 
@@ -40,9 +59,104 @@ routing rewrite, permission change, API change, or new component framework.
 
 ## 2. Locked boundaries
 
+### 2A. Two authorities, with a narrow approved exception list
+
+**Implement the approved look on the existing product. Do not implement the demo product.**
+
+| Decision | Authority | Required result |
+|---|---|---|
+| Existing features, business copy, data, routes, permissions, state transitions, query/mutation behavior and user workflows | Re-baselined production owners plus their established contracts and behavior tests | Preserve. A same-looking control must retain its existing outcome, not merely the same API endpoint. |
+| Exact typography, color, spacing, dimensions, control appearance, surface treatment and responsive visual recipes | Frozen refined HTML's canonical CSS and rendered reference; Section 5 summarizes it | Match in the existing production design-system owners. Do not redesign or browse Stripe again. |
+| Deliberate shell, header, action-placement and presentation changes | Only the explicit allowlist in Section 2B and its bounded phase instructions | Apply the named presentation delta while preserving the downstream workflow. |
+| Prototype-only interactions, extra controls, mock labels and missing real-product states | No authority | Exclude demo-only functionality; preserve real production functionality even when absent from the HTML. |
+| Engineering sequence, code ownership, deletion and gates | This revised plan and applicable repository policy | Preserve the bounded consolidation approach; do not port the HTML architecture. |
+
+A conflict between the prototype and established product behavior is resolved in favor of behavior.
+A conflict about appearance is resolved against the frozen refined HTML, not the old plan's palette.
+If source, tests and invariant documentation disagree about a real behavior, record that discrepancy;
+do not invent an intended behavior or use this visual migration to repair an unrelated product bug.
+
+**The distinction includes frontend behavior.** Preserve whether an action changes the current
+route/mode, opens a dialog/drawer, opens an external browsing context, downloads a file, or submits
+a form. Also preserve its selected project/entity, URL parameters, browser history, back/forward
+behavior, defaults, draft state, filters, sorting, pagination, keyboard behavior, cancellation,
+confirmation, loading/disabled conditions and user-visible result. Unchanged APIs alone do not prove
+unchanged functionality. UI relocation must not reset or duplicate mounted stateful controllers.
+
+### 2B. Explicitly approved presentation changes
+
+These are the exceptions to preserving the old presentation. They do not authorize new product
+features, action destinations, forms, state machines or information architecture.
+
+| ID | Approved change | Boundary |
+|---|---|---|
+| V1 | Apply the exact approved palette, Geist type roles, density, spacing, radii, control states, table/metric/chart styling and surface hierarchy. | Preserve factual strings, metric definitions/units, data series, columns, form fields and states. No new behavior-bearing component from the demo. |
+| V2 | Remove the desktop global topbar; use one in-pane page header; place desktop Search and Agent launchers below the project switcher in the sidebar. | Keep the current Command Palette and Agent controllers, capabilities, context and outcomes. Do not mount them inside an ephemeral navigation drawer or replace their implementations. |
+| V3 | Use the approved compact topbar and off-canvas navigation at <=980px, replacing the existing fixed primary/secondary mobile navigation. | Preserve every current authorized destination and account access. Only the navigation presentation/open-close mechanics change; downstream routes and workflows do not. |
+| V4 | Relocate existing page actions into the in-pane header and primary route tabs into their specified visual position. | Reuse the same handler/link, form association, query state and permissions. No new action, menu step, drawer, dialog or route. Do not move secondary dataset tabs away from the region they control. No new global action portal/context. |
+| V5 | Replace redundant visual wrappers with the reference's open sections, related metric bands and meaningful containment; restyle the four archetypes. | Do not hide information, collapse currently exposed sections, remove controls, merge workflows, reorder product steps or substitute a diagram/mock chart for real evidence. Existing disclosure defaults stay unchanged. |
+| V6 | Apply the specified Issues list/detail responsive presentation, retaining complete detail and evidence. | Selection, URLs, filters, cursors and data ownership remain unchanged. This is not permission to convert other production detail routes into prototype drawers. |
+| V7 | Remove demonstrably duplicate presentation paths in their owning phase; remove Overview's duplicate project selector only after shell parity is proven. | Preserve unique destinations/actions and their authorization. Duplicate result actions are not automatically redundant: Content's current header/footer actions remain. Zero references alone are insufficient without migrated-consumer and behavioral proof. |
+| V8 | Apply the existing plan's focused-flow/public visual cleanup, decorative-icon removal and semantic heading corrections. | Preserve auth/onboarding steps, labels, validation, payloads, marketing copy/order/URLs, real brand assets and product preview. Markdown heading demotion affects rendered headings only, never copied/exported Markdown. |
+
+Do not interpret "make it match the HTML" as approval for any exception beyond this table. Sections
+3–6 implement these deltas; they do not add independent permission to redesign a workflow. The
+approved shell/header improvements should be implemented, not rejected because the old placement
+was different.
+
+### 2C. Mandatory production-to-reference behavior mapping
+
+Before changing a feature, trace its current actionable controls through the production owner to
+the actual outcome. Record this in one compact behavior-parity record in the existing task evidence
+location (or one task-local Markdown file if none exists). Do not create a new framework or registry.
+Use columns: **surface/action | production owner and current contract | reference appearance |
+approved delta ID or excluded demo behavior | before/after test evidence**.
+
+Every changed actionable control must be covered. Reused controls can share a row when both owner
+and behavior are identical; do not create repetitive inventories for unchanged controls. Record
+source path/symbol and a reproducible test/scenario, not "same as before". Expand phase-local rows
+just before that phase rather than exhaustively documenting every internal hook in advance.
+
+Minimum high-risk mappings:
+
+| Surface/action | Required mapping and protection |
+|---|---|
+| **Manage prompts / prompt management modes** | Trace the current production handler, route or manage/read-mode transition, editor, gates and save/cancel behavior. Keep that exact workflow. The prototype's `managePrompts` modal is explicitly excluded. No new modal, drawer, browser tab/window, route or editor is authorized by the reference. |
+| Page, run, prompt and evidence detail entry points | Preserve each existing route, drawer or dialog and its deep-link/back behavior. Do not replace a production entity page with a prototype detail drawer. |
+| Export, report, copy and download | Preserve the current direct action or chooser, format, payload/content and permissions. Do not add the prototype's generic export chooser or replace a report with print/sample CSV. |
+| Launch audit, Run/Stop crawl and scheduling | Preserve configuration steps, defaults, confirmations, async status, cancel/retry and entitlement rules; no simulated completion or prototype scheduling options. |
+| Content generation, History and context handoffs | Preserve target alternatives, skills, validation, authorized context, draft continuity, polling, cancel/retry, result actions, provenance and history/deletion semantics. |
+| Project/account, billing, providers and integrations | Preserve existing editors/menus, authorized actions and real connection state. Do not add a customer-facing payment integration or plan action because a mock Settings panel contains it. |
+| Search and Agent launchers | V2/V3 may move triggers; shortcuts, results, selection, authorization, project/route/date/filter context and the single persistent controller remain. |
+| Auth/onboarding and public CTAs | Preserve the actual route/step sequence, validation, fields, handoffs, redirects and destinations; never copy demo sign-in or workspace creation. |
+
+**Specific Manage prompts regression:** establish its real production interaction before editing;
+add or retain a behavior test for that outcome. After restyling, exercise the same entry points on
+desktop and compact widths, verify the same destination/mode, permissions and editor actions, and
+assert that the newly proposed prototype management overlay/browsing context was not introduced.
+Do not ban unrelated existing confirmation dialogs. This plan intentionally does not guess whether
+the real editor is inline, routed or otherwise: Codex must resolve that from the repository.
+
+### 2D. Handling prototype differences without slowing the whole migration
+
+A demo-only feature is excluded; it does not require a new approval request. A real feature missing
+from the HTML is retained and styled with the approved existing primitives. Record any necessary
+local geometry difference caused by preserved fields, copy, evidence or workflow; do not use it as
+permission to relax typography, palette, density or the rest of the page.
+
+When exact prototype structure would change behavior, preserve the current interaction surface and
+apply its visual treatment there. Make the smallest necessary exception, document the concrete
+reason/owner, and continue unaffected work. Do not substitute the demo, silently weaken the contract,
+or redesign an entire route because one interaction differs. An unresolved behavior or environment
+blocker must be reported honestly, not marked as passed. Broader product improvements remain out
+of scope and require a separate task.
+
 ### Preserve exactly
 
 - Current routes, deep links, browser-history behavior, and same-origin API use.
+- Current interaction surfaces and action outcomes, except for the explicitly approved navigation
+  presentation changes in Section 2B. Keep current prompt management modes/editor and every
+  existing route/dialog/drawer distinction; no prototype interaction is implicitly approved.
 - Project and workspace authorization; capability and entitlement gates.
 - Project switching, add/edit project flows, account access, Settings, and sign-out behavior.
 - Command Palette behavior: pointer launch, Ctrl/Cmd+K, filtering, keyboard selection, navigation,
@@ -75,6 +189,11 @@ routing rewrite, permission change, API change, or new component framework.
 - No compatibility wrapper, alias, deprecated path, duplicated controller, or second navigation
   registry.
 - No backend, schema, API-contract, provider, queue, billing, scheduling, or permission changes.
+- No new modal, drawer, window/tab, route, extra click, confirmation step, filter option, field,
+  command or feature inferred from a working demo button. Do not remove a production action or
+  state because the HTML does not demonstrate it.
+- No changing tests, fixtures, expected destinations or validation to make an unintended workflow
+  change look approved. Do not overwrite the frozen visual reference or its export values.
 - No copy rewrite. Existing explanatory text may move into a page header, but its factual wording
   must not change in this visual cutover.
 - No indiscriminate flattening. Cards, hairline bands, ledgers, tables, wells, drawers, and
@@ -82,9 +201,13 @@ routing rewrite, permission change, API change, or new component framework.
 
 ## 3. Evidence map
 
+This is the **supplied audit map**, retained for Phase 0 verification. Reconcile every affected
+path and claim with the current clean baseline before implementing or deleting it. The reference
+controls presentation only; interpret every row under the Section 2B allowlist.
+
 | Surface | Current owner | Demonstrated structural debt | Approved decision |
 |---|---|---|---|
-| Authenticated shell | `components/layout/app-shell.tsx` | Desktop sidebar and global topbar split primary shell actions; mobile has separate primary and secondary nav renderers | Remove desktop topbar. Put Search and Agent between project switcher and nav in the sidebar. Use a 56px mobile topbar and the same sidebar/navigation content in an off-canvas drawer below 980px. |
+| Authenticated shell | `components/layout/app-shell.tsx` | Desktop sidebar and global topbar split primary shell actions; mobile has separate primary and secondary nav renderers | Remove desktop topbar. Put Search and Agent between project switcher and nav in the sidebar. Use a 56px mobile topbar and the same sidebar/navigation content in an off-canvas drawer at 980px and below. |
 | Page title | `components/layout/page-header.tsx`, `page-titles.ts` | The shell owns a detached title while route actions and tabs live inside the page | Make `PageHeader` an explicit in-pane route composition with title, optional existing description, and optional route-owned actions. Migrate every authenticated route atomically so exactly one H1 remains. |
 | Search | `components/ui/command-palette.tsx` | One mature controller is coupled to its topbar trigger; Settings routes are duplicated outside the shared nav model | Keep one dialog/controller. Render its desktop trigger in the sidebar and open that owner from a lightweight mobile launcher event. Derive route commands from the shared navigation source with the same capability filtering as visible navigation. |
 | Growth Agent | `components/layout/agent-sheet.tsx` | One mature controller is coupled to topbar placement | Keep one drawer/controller and the existing contextual event contract. Render its main desktop trigger in the sidebar and add only a compact mobile launcher for the same owner. Do not mount two `AgentSheet` instances. |
@@ -129,69 +252,189 @@ semantics require it:
 9. **URL detail keeps the entity as the sole H1.** Omit the generic route `PageHeader` heading on
    that screen; the compact mobile shell title remains non-heading text.
 
+10. **Working demo interactions are not approved workflows.** Keep the production Manage prompts
+    workflow, detail destinations, export behavior, confirmation and form flows. A reference dialog
+    or drawer is a styling specimen only unless that interaction already exists in production.
+11. **The real feature set is not reduced to the demo.** Preserve every existing tab, column, field,
+    choice, action, state and factual label. Conversely, do not add demo-only actions, mock billing
+    integrations, generated outlines or settings options that the product does not already have.
+12. **Disclosures and data remain truthful.** Do not move existing content behind a new collapsed
+    disclosure to imitate the sparse demo. Keep chart series, units, comparison logic, definitions,
+    defaults and evidence access. Restyle their owners rather than replacing their contents.
+13. **Real brand assets remain authoritative.** Do not replace the existing approved logo or platform
+    marks with the HTML's illustrative SVGs. This cutover changes layout and UI typography, not brand
+    asset design.
+
 ## 5. Approved visual foundation
 
-Implement these values by rebinding existing semantic tokens, then verify contrast and all status
-states. Do not paste prototype class names into route files.
+**This section replaces the older prototype values, not the approved design.** The approved refined
+HTML is immutable during implementation. The source plan's `#78869b` subtle text, negative body
+tracking, old radii/spacing ladder and old drawer width are superseded, not alternatives to choose.
 
-### Color and type
+### Frozen reference identity and use
 
-- Product/public/flow family: Geist variable.
-- Product baseline: 14px/1.45 with `letter-spacing: -0.01em`.
-- Primary ink: `#172338`; strong ink: `#111c30`; muted: `#536178`; subtle:
-  `#78869b`.
-- Accent: `#175cd3`; hover: `#164aab`; soft: `#eaf2ff`; line: `#b9d2fa`.
-- Canvas: `#f3f6fb`; paper: white; quiet surface: `#f7f9fc`; stronger quiet surface:
-  `#edf1f7`.
-- Hairline: `#e2e7ef`; strong hairline: `#cbd4e1`.
-- Status roles remain separate: success, warning, error, and informational states must not be
-  collapsed into brand blue or inferred from color alone.
-- Page title: 26px desktop and 24px compact, strong ink, balanced wrapping, tight tracking.
-- Section title: 16px; body/control: 14px; supporting: 13px; metadata: 12px; eyebrow:
-  approximately 11.5px uppercase. Use named roles rather than route-local size/weight strings.
-- Weights may use the Geist variable axis where hierarchy requires it, but each semantic role owns
-  the weight. Callers must not add `font-bold`, `font-medium`, tracking, or leading to restate it.
+- Delivered file: `citeladder-refined.html`; identical archive alias: `citeladder-reference.html`.
+- Delivered file SHA-256: `eb766454cb5c4fe87d1b753bbfac6825f37a62144a09706f146b8a46968b6b3a`.
+- Actual repository-relative reference path: `docs/plans/citeladder-refined.html` (recorded in
+  [`citeladder-layout-consolidation-evidence.md`](citeladder-layout-consolidation-evidence.md)).
+- Canonical stylesheet: the HTML's `#citeladder-styles`; optional exports in the existing handoff
+  are `citeladder-reference.css`, `citeladder-tokens.css` and `citeladder-design-system.json`.
+- The single HTML is sufficient. Exports are derivative references, not production dependencies.
+  Never ship its Design system route, export/copy-handoff actions, manifest UI, fixtures or scripts.
 
-### Geometry
+Resolve by content, not by whichever file was modified most recently. A rename does not change the
+reference; line-ending-only edits may change the byte hash. Reconcile those against the embedded
+stylesheet and contract before accepting a different hash. A genuinely different design is not
+silently approved. Do not change the HTML to make implementation screenshots pass. Its embedded
+"proposed" approval note is historical; the owner's approval is recorded in this revision.
 
-- Desktop sidebar: 232px; 210px between 981px and 1200px.
-- Mobile navigation breakpoint: 980px, matching the approved shell rather than Tailwind's generic
-  `md` boundary.
-- Mobile topbar: 56px.
-- Workspace content cap: 1392px.
-- Workspace gutters: 28px desktop, 22px through short-laptop widths, 16px compact.
-- Desktop workspace: white, minimum 100dvh, 12px left-side radius; compact workspace: square and
-  edge-to-edge below the mobile-shell breakpoint.
-- Spacing ladder remains 4/8/12/16/20/28/40px through existing variables.
-- Controls remain compact on desktop but retain at least 44px touch targets on compact touch
-  surfaces where the existing design contract requires them.
-- Shadows remain for floating overlays and the off-canvas drawer, not ordinary page containment.
+For appearance, use the frozen HTML/rendered components and canonical CSS, then their verified
+exports, then explanatory prose. If the summary below and canonical CSS disagree, use the frozen
+CSS for presentation and correct the summary; do not invent a third value. Section 2 remains the
+higher authority for behavior in every case. No fresh Stripe crawl or creative redesign is needed.
 
-### Composition rules
+Map recipes into existing semantic production variables and primitive owners. Map spacing by role,
+not by coincidentally matching variable suffixes: the old `--space-6` and refined `--space-6`, for
+example, need not mean the same value. Inspect all consumers before rebinding a shared token.
+Do not import this CSS wholesale, append an override theme, copy prototype class names into route
+files, add a new namespace, or make a second component system.
 
-- One page H1, optional factual description, and existing page actions form the in-pane header.
-- Tabs immediately follow the page header and use a hairline with a blue active indicator.
-- Metrics form shared hairline bands rather than collections of individual cards.
-- Page architecture comes from whitespace, section headings, rules, ledgers, and tables.
-- Cards are reserved for semantic objects or bounded interaction/state.
-- Accent blue indicates action, selection, focus, links, and primary chart emphasis. Status colors
-  indicate only their status.
-- Icons remain for navigation concepts, controls, providers/platforms, status, and compact
-  wayfinding. Decorative repeated icon tiles are removed.
+### Typography
+
+Geist is the only interface family. The working baseline is **14px**, with normal tracking. Do not make the product dense by shrinking navigation, controls, labels or table data.
+
+| Role | Size / line height | Weight | Tracking |
+| --- | --- | --- | --- |
+| Page title | 26 / 32px | 600 | −0.65px |
+| Compact page title, at ≤700px | 24 / 30px | 600 | −0.65px |
+| Section title | 16 / 24px | 600 | −0.2px |
+| Detail title | 18 / 26px | 600 | −0.35px |
+| Working body / table data | 14 / 20px | 400 | 0 |
+| Explanatory body | 14 / 22px | 400 | 0 |
+| Button | 14 / 20px | 550 | 0 |
+| Form label / emphasized row title | 14 / 20px | 500 | 0 |
+| Supporting copy | 13 / 18px | 400 | 0 |
+| Metadata / badge | 12 / 16px | 500 | 0 |
+| Main metric | 28 / 36px | 600 | −0.65px |
+| Compact metric, at ≤700px | 26 / 34px | 600 | −0.65px |
+| Focused-flow title | 30 / 36px | 600 | −0.65px |
+| Compact focused-flow title | 28 / 34px | 600 | −0.65px |
+
+The overview trend's secondary inline value is intentionally smaller, at 22/28px. Main metrics are tabular, not monospace. Use 12px metadata only for genuinely peripheral information. Remove automatic uppercase treatment from routine section/category labels. Preserve actual proper nouns and factual copy.
+
+Keep public display typography separate from product roles even though both use Geist. The reference marketing hero uses `clamp(46px, 4.6vw, 64px)` with 1.06 leading; it becomes `clamp(38px, 10vw, 52px)` below 700px. These display values must not leak into application headings.
+
+### Palette and meaning
+
+| Role | Exact value |
+| --- | --- |
+| Strong text | `#1a1f36` |
+| Body text | `#30313d` |
+| Secondary text | `#596579` |
+| Subtle readable text | `#667085` |
+| Main workspace | `#ffffff` |
+| Outer canvas / sidebar | `#f6f8fa` |
+| Quiet surface | `#f7f9fc` |
+| Stronger quiet surface | `#eef1f5` |
+| Hairline | `#e4e7ec` |
+| Secondary-control boundary | `#cbd2dc` |
+| Input boundary | `#8793a3` |
+| Primary action | `#175cd3` |
+| Primary hover / pressed | `#134dab` / `#10419d` |
+| Selection fill / line | `#edf4ff` / `#c4d7f5` |
+| Recommendation background | `#f7faff` |
+| Success text / fill | `#166534` / `#edf7ed` |
+| Warning text / fill | `#8a4600` / `#fff5db` |
+| Error text / fill | `#b42332` / `#fff0f1` |
+| Comparison chart series | `#6975b8` plus a dashed stroke |
+
+Blue signals interaction, selection, focus or the primary chart series. Only explicitly designated main visibility metrics use blue. Never apply blue to a metric just because it is the first child of a group. All status colors retain text labels; color alone is not the status.
+
+The manifest records nine contrast checks, including subtle text on the outer canvas and the input boundary on white. Passing those pairs is not a claim that the whole application has passed an accessibility audit.
+
+### Geometry and density
+
+Use 2/4/8/12/16/20/24/32/40/48px content increments. The existing 28px desktop gutter is a deliberate geometry value, not a general section-spacing alternative.
+
+Desktop sidebar: 232px above 1200px, 210px from 981–1200px. At 980px and below, replace desktop navigation with a 272px off-canvas drawer and a 56px mobile topbar. Retain sidebar Search and Agent on desktop; do not restore a second desktop header.
+
+The white workspace has a 1392px content cap and 28px gutters, becoming 22px at ≤1200px and 16px at ≤700px. Desktop left corners are 12px; the mobile workspace is square. Main content scrolls normally. Never conceal document overflow with `overflow-x:hidden` to make a test pass.
+
+Page header: 24px top, 20px bottom, 20px gap between heading and actions. At ≤700px it stacks with a 12px gap, 20px top and 16px bottom. Main sections are separated by 24px; section headers have 12px before their content; toolbars have 16px before results.
+
+Widths: composer 840px, article 740px, settings form 680px, sign-in 440px, onboarding 720px. Desktop settings require a note column at least 200px wide and a 32px gap; let the form shrink first. Stack at ≤980px. This prevents the note from overflowing just above the shell breakpoint.
+
+### Component specifications
+
+**Buttons:** 34px default, 30px compact, 40px large. Their horizontal padding is 12px, 10px and 16px respectively; radius 6px. Normal working labels remain 14px even in compact buttons. Primary, secondary, quiet, selected and destructive are the only illustrated treatments. Directional arrows follow the label; object/action icons precede it. At ≤700px or with a coarse pointer, primary control targets are at least 44px.
+
+**Fields:** 36px desktop and 44px compact. Horizontal padding 10px, radius 6px, boundary 1px `#8793a3`. Label gap 8px. Error/help copy stays adjacent. Textareas use 14/22px, have a 112px minimum, and use a 144px minimum in the composer. Do not infer validation behavior from the prototype.
+
+**Focus:** General 2px blue outline with 3px offset. Fields have a 2px blue outline inset by 1px and the exact 3px/16% halo. Keep existing robust keyboard behavior and accessible names.
+
+**Tabs:** 40px desktop, 44px compact; gap 24px desktop, 20px compact; 2px blue active underline. Hover must not look identical to selection. Keep production URL-backed state and browser-history behavior.
+
+**Segmented controls:** 2px container padding; 28px segments on desktop and 38px on touch. A white active segment with a neutral keyline sits on a quiet neutral container. It is not another large blue button.
+
+**Badges:** 12/16px, weight 500, 22px minimum height, 2px vertical/6px horizontal padding, 4px radius. Quiet semantic fills replace long rounded pills. Do not add colored icons merely to decorate every badge.
+
+**Tables:** 14/20px data; 13/18px, weight 500 headers. Headers are at least 36px; rows at least 44px and grow for sublines/evidence. Cell padding is 10px 12px; header padding 8px 12px. Neutral header background, hairline row boundaries, no zebra striping. Hover is neutral; real selection has a pale blue fill. Numeric columns align right and use tabular figures. Horizontal overflow stays inside the table; no lost evidence columns.
+
+**Metrics:** Labels 14/20px, weight 500; values 28/36px; detail 13/18px. Group padding is 14px top/16px bottom; 20px between column content and separators. Group only genuinely related measurements. At ≤700px, use two columns with appropriate row separators. Preserve unavailable, unknown, not applicable and zero as different facts.
+
+**Charts:** Label text stays 12 CSS pixels as the chart changes width. Use a 2px blue main series, a 2px dashed comparison series, and neutral gridlines. Do not invent observations or add decorative smoothing/gradient area fills. Retain the production
+chart type, data transformations, axis units/ranges, series, tooltip content and legend interaction;
+apply the reference's presentation without changing analytical meaning. In this compact reference, recent movement is 96px, referrals 145px, and full performance/visibility charts 220px. Reuse production chart owners and their correct semantic units. The sample performance chart's existing two scales are now explicitly labeled; do not copy those fixture-specific scale limits into production.
+
+**Surfaces:** 8px module/menu radius, 10px dialog/form radius, 12px outer workspace radius. No ordinary card shadows. The tiny control shadow is `0 1px 2px rgba(26,31,54,.06)`; menus/dialogs/drawers use the exported `--shadow-menu`. Recommendations have content-led height. Meaningful master/detail boundaries and workflow/result regions remain bounded.
+
+**Overlays (only for existing production overlays):** Dialog maximum 480px or wide 680px; 20px viewport inset and internally scrolling content. Drawer maximum 520px, full viewport height. Header/body/footer horizontal padding 24px desktop and 16px compact. Menu width 290px, 4px outer padding, 8px 10px item padding. Preserve focus trapping, Escape and return focus through the existing production controllers. Do not copy the simplified prototype controller implementation.
+
+
+### Composition and adaptation rules
+
+One truthful in-pane page H1, optional existing factual description, and current page actions form
+the approved header. Primary route tabs use the reference's header-adjacent treatment where shown;
+secondary dataset tabs stay associated with their existing controlled region. The URL entity page
+retains its entity H1, not an extra hidden generic H1.
+
+Use related metric bands, open sections, rules and the semantic cards/wells retained in this plan.
+Match the approved treatment without deleting fields/evidence, adding collapsed sections, changing
+empty-state actions or making all pages the same template. Dialog/drawer recipes style only the
+production overlays identified by the behavior map. Apply the same fields/tables/controls to an
+existing inline editor or routed page instead of creating the HTML's substitute overlay.
+
+Preserve every approved shell/header change, every production workflow and every real data state.
+Unrepresented production content may require a longer page, additional rows or a retained panel;
+that is not permission for arbitrary new colors, typography, wrappers or component variants.
+
+**Font verification:** use the repository's existing Geist loading mechanism. The earlier handoff's
+screenshots were explicitly fallback-font layout checks. They are not typography goldens. Render
+the frozen reference and actual app with Geist genuinely loaded, using the same browser/viewport
+and comparable state. If the font or a required environment is unavailable, record that check as
+blocked, not passed; do not substitute a different font as an approved design decision.
 
 ## 6. Delivery sequence
 
 Each phase begins from the result of the preceding phase and ends with its own actual-surface
-smoke plus focused lint, type, and affected behavior tests. Repository-wide `check.ps1` and
-`test.ps1` run once after the full planned implementation, in the required order. Do not begin a
-later phase with a known failure or open parallel implementations of the same shared owner.
+smoke plus focused lint, type, and affected behavior tests. Extend the phase's behavior map before
+editing its owners. Prove both exact visual treatment and preserved workflows; one is not a
+substitute for the other. Repository-wide `check.ps1` and `test.ps1` run after the full planned
+implementation, in the required order, with prescribed retries after fixes. Do not begin a later
+phase with a known failure or open parallel implementations of the same shared owner. Follow
+Phase 1A -> 1B -> 1C below rather than a conflicting older handoff sequence.
 
 ### Phase 0 — clean-main re-baseline
 
 **Precondition, not optional implementation work**
 
-1. Confirm the current branch is merged.
-2. Synchronize local `main` with its upstream and confirm the working tree is empty.
+1. Verify the retained branch precondition against current repository state. Do not infer that the
+   named branch is still active or already merged. Do not perform an unrequested merge or discard
+   work to force readiness.
+2. Verify synchronized local `main` and an empty working tree; preserve all user changes and saved
+   reference files. Record the baseline commit SHA. Follow repository policy for the implementation
+   branch/worktree after the precondition is satisfied. If readiness is blocked, report it without
+   modifying application code.
 3. Re-read the named shell, entitlement, billing/settings, route, CSS, test, and documentation
    owners. The current unmerged branch changes billing/entitlement frontend files, so this plan's
    file map must be reconciled rather than applied blindly.
@@ -201,11 +444,25 @@ later phase with a known failure or open parallel implementations of the same sh
 5. Launch the clean-main product with deterministic fixtures and capture before images at
    1440x900, 1280x720, 768x1024, 767x1024, and 390x844. Record horizontal overflow, shell mode,
    scroll owner, one-H1 count, and reachable actions.
-6. If clean main has materially changed an owner or contract, update this plan before editing.
-   Preserve the decisions and boundaries above; do not resurrect the old branch implementation.
+6. Locate the approved refined HTML in the repository by its title, canonical stylesheet and
+   Section 5 identity. Record the actual path/hash and baseline commit. Keep the reference intact;
+   verify optional CSS/JSON exports agree. The old `preview.html` is not a fallback authority.
+7. Create the concise Section 2C behavior-parity record. Establish the shell and high-risk workflows,
+   especially Manage prompts, detail destinations, export, and auth/billing paths, from current
+   production code/tests and safe browser scenarios. Add missing high-value characterization tests
+   before modifying those behaviors' presentation. Record any pre-existing discrepancy separately.
+8. Map reference type/token/control roles to existing production owners. Identify prototype-only
+   actions to exclude, real features the HTML omits, and any unavoidable presentation exceptions.
+   Do not turn this into a new design proposal or rewrite of the plan.
+9. If clean main has materially changed an owner or contract, reconcile this plan's path/evidence
+   details before editing. Preserve the approved visual decisions and Section 2 boundaries; do not
+   silently re-approve product changes or resurrect the old branch implementation.
 
-**Exit:** synchronized clean `main`, current owner/deletion inventory, and reproducible before
-surfaces.
+**Exit:** synchronized clean baseline with commit identity, frozen reference path/hash, current
+owner/deletion inventory, reproducible before surfaces, and behavior evidence for the first slice.
+Unknown workflows are not considered verified. Extend route-level mapping before each later slice.
+Use existing test fixtures or an isolated test account for mutations; do not run paid/live audits,
+alter billing, delete live data or invoke external writes merely to obtain migration evidence.
 
 ### Phase 1 — shared contracts, atomic shell cutover, and visual foundation
 
@@ -235,9 +492,12 @@ surfaces.
 1. Create one shared destination/capability resolver consumed by sidebar navigation, compact
    navigation, and Command Palette results. Preserve every current destination and capability
    gate, then delete the Command Palette's parallel Settings list and duplicated filtering.
-2. Extract a trigger-only presentation from each interactive controller. Keep one mounted
-   Command Palette dialog and one mounted Agent drawer; sidebar and compact launchers open those
-   owners through explicit events while preserving focus restoration and contextual Agent events.
+2. Reuse existing trigger/controller seams where they exist; extract a small trigger-only presenter
+   only where needed. Keep one stably mounted Command Palette dialog and one Agent drawer under the
+   authenticated shell, independent of compact navigation mount/open/close. Sidebar and compact
+   launchers open those same owners through the existing contract (or the minimal explicit launch
+   seam needed for relocation), preserving actual-trigger focus restoration and contextual Agent
+   events. Do not introduce a general event bus or recreate their state machines.
 3. Split `UserMenu` into one menu/logout controller and explicit desktop-sidebar and
    compact-topbar trigger presenters. The compact drawer must exclude the sidebar account block
    because account remains in the mobile topbar. Do not mount a second logout mutation.
@@ -256,10 +516,13 @@ surfaces.
 3. Remove the desktop topbar. Build the compact sidebar in this order: brand,
    `ProjectSwitcher`, Search, Agent, grouped navigation, Settings/supporting access, and desktop
    account at the bottom.
-4. Below 980px, render a 56px sticky topbar with menu, compact non-heading title, Search, Agent,
+4. At 980px and below, render a 56px sticky topbar with menu, compact non-heading title, Search, Agent,
    and the sole compact account trigger. The menu opens the existing sidebar brand/project/tools/nav
-   content as a focus-managed off-canvas drawer with a scrim; route selection and Escape close it
-   and restore focus.
+   content in the approved 272px focus-managed off-canvas drawer with a scrim. On Escape/dismissal,
+   return focus to the actual visible opener; on route selection, preserve the application's
+   destination-focus convention rather than focusing a removed element. Launching Search/Agent
+   from the navigation drawer must not leave competing focus traps or stale body scroll locks.
+   Follow existing overlay ownership and preserve the launched feature's state and context.
 5. In the same cutover, delete the old desktop topbar, fixed mobile primary navigation, mobile
    secondary strip, stale topbar-height geometry, and obsolete safe-bottom reservation. Do not
    carry hidden duplicate trees into later phases.
@@ -283,6 +546,11 @@ surfaces.
    the Growth Agent placement sentence in `docs/architecture.md` with the shipped owners and
    values.
 
+**Slice-wide behavior gate:** run the previously recorded shell action scenarios against the
+new presentation. Check that moved actions still have their original handler/destination/form
+association, capability/disabled conditions and outcome. Confirm the shell cutover does not change
+Manage prompts, exports, detail destinations or other downstream workflows on untouched pages.
+
 **Acceptance**
 
 - Every authenticated route has exactly one truthful H1.
@@ -293,11 +561,14 @@ surfaces.
   state, capability filtering, route context, and focus restoration still work.
 - A document-width check passes at all target widths and final content is not hidden behind fixed
   chrome or safe-area padding.
+- Shared rendered controls and shell match the frozen reference; their real interaction outcomes
+  match the baseline. All changed launchers have behavior-map evidence. No demo-only control or
+  alternative feature workflow enters production.
 
 **Focused checks after each Phase 1 slice**
 
 - Exercise the affected shell behavior in actual Chromium. For the completed shell cutover,
-  include 980/981 and 767/768 boundary checks.
+  include 1200/1201, 980/981, 700/701 and existing 767/768 boundary checks.
 - Run `pnpm --dir frontend lint` and `pnpm --dir frontend exec tsc --noEmit`.
 - Run the affected shell, PageHeader, Command Palette, Agent, and UserMenu Vitest files; run the
   focused shell Playwright scenario after Slice 1B. These are iteration checks, not substitutes
@@ -306,7 +577,9 @@ surfaces.
 ### Phase 2 — four representative product archetypes
 
 Apply the shared foundation to one representative of each recurring page pattern. Do not migrate
-remaining routes until these four are visually and behaviorally proven.
+remaining route bodies until these four match the approved reference and pass their recorded
+production behavior scenarios. The visual direction is already approved; do not ask the agent to
+invent or propose another design. Preserve existing interactions where the demo differs.
 
 #### 2A. Overview — `/projects`
 
@@ -376,16 +649,26 @@ result/state, target/skill, and history owners, plus `frontend/lib/content/markd
 
 **Acceptance for Phase 2**
 
-- The four routes visibly share page-header, type, spacing, button, tab, metric, rule, and table
-  language without becoming the same screen.
+- The four routes match the approved page-header, type, spacing, button, tab, metric, rule, and table
+  recipes without becoming the same screen. Inspect side-by-side browser captures of frozen
+  reference and production at matching viewports with Geist loaded; compare equivalent regions
+  and states, not fixture-specific text, scores or row counts. Verify control dimensions, typography,
+  gutters, alignment, containment and responsive changes. Record necessary behavior-preserving
+  differences explicitly. "Looks consistent" or a whole-page similarity score alone is insufficient.
 - No route changes a query key, mutation, payload, URL-state rule, capability check, or factual
   label.
 - All four retain loading, empty, populated, error, unavailable, and compact-width paths.
 - No route adds a second component hierarchy or local stylesheet.
+- Every migrated action retains its recorded production workflow, including its destination or
+  interaction surface, state continuity and result. Controls/states missing from the HTML are not
+  deleted; demo-only controls and dialogs are not added. Re-run the Manage prompts guard where
+  shared-owner edits affect it.
 
 **Focused checks**
 
-- Browser-check all four routes at 1440x900, 1280x720, 768x1024, and 390x844.
+- Browser-check all four routes at 1440x900, 1280x720, 768x1024, and 390x844 with actual production
+  states. Compare the frozen reference at those same dimensions and spot-check 700/701 and
+  980/981 mode boundaries; retain established feature breakpoints unless this plan names a change.
 - Exercise Website tabs/crawl actions/table, Issues filters/selection/evidence/pagination, Content
   target/skill/generate/cancel/history/output actions, and Overview project/report/facts actions.
 - Confirm exactly one H1 even when generated Content begins with `#`, no document-level horizontal
@@ -473,15 +756,17 @@ already guarantees one H1 and current navigation for these routes.
 | Pattern | Routes | Application rule |
 |---|---|---|
 | Analytical workspace | `/demand`, `/performance`, `/products`, `/visibility`, `/ai-referrals` | Reuse page header, tabs/toolbars, open sections, metrics, and existing table/record primitives. Preserve date/filter/query semantics and presentation-specific charts. |
-| Collection/detail | `/opportunities`, `/runs`, `/runs/[runId]`, `/prompts` manage/read modes | Reuse the proven list/detail or ledger/detail rhythm only where the current screen has that semantics. Preserve URL state, drawers, evidence, schedules, pagination, and mode gates. |
+| Collection/detail | `/opportunities`, `/runs`, `/runs/[runId]`, `/prompts` manage/read modes | Reuse the proven rhythm only where the current screen has that semantics. Preserve exact production route/mode/drawer behavior, URLs, evidence, schedules, pagination and gates. Prompt management retains its current editor and entry/exit behavior: do not implement the reference's Manage prompts modal. |
 | Focused settings | `/settings` and its current tabs | Use the compact page header, fields, sections, and responsive stack. Preserve provider/integration/billing behavior from clean main and do not absorb settings into a generic auth form. |
 | Entity detail | `/site/crawls/[crawlId]/pages/[siteUrlId]` | Omit the generic route heading so the entity heading is the sole H1. Preserve evidence, drawers, and back/deep-link behavior; apply only shared type, spacing, rule, and action treatment. |
-| Shell states | `(app)/loading`, error, and not-found surfaces | Keep truthful status/error semantics and fix stale canonical links; use the same page geometry without pretending these are full analytical workspaces. |
+| Shell states | `(app)/loading`, error, and not-found surfaces | Keep truthful status/error semantics and current destinations; use the same page geometry without pretending these are full analytical workspaces. Only update a stale presentation reference caused by this cutover. Record unrelated wrong destinations as separate product defects, not silent behavior fixes. |
 
 For each owner:
 
-1. Classify its existing regions against the four proven patterns.
-2. Move existing actions into the in-pane header where state ownership permits.
+1. Re-read the owner and extend its Section 2C behavior mapping before edits. Classify existing
+   regions against the four proven patterns without changing the workflow's interaction surface.
+2. Move existing actions into the in-pane header where state ownership permits, retaining the same
+   handler/destination, form association, state, visibility, disabled conditions and outcome.
 3. Replace only demonstrated duplicate wrapper/spacing composition.
 4. Retain domain-specific control and presenter owners.
 5. Remove route-level `TooltipProvider` and no-op one-child layout wrappers only when shell/screen
@@ -494,7 +779,8 @@ For each owner:
 - Every authenticated route uses the approved shell, one page header, compact role ladder, and
   sanctioned composition primitives.
 - Filters, tables, drawers, scheduling, page actions, URL/deep-link state, and API behavior are
-  unchanged.
+  unchanged. Manage prompts still enters its recorded production workflow; production page/run
+  details do not become prototype drawers; exports do not become the demo's generic chooser.
 - No route has a local fork of shell, header, toolbar, metric, button, or token behavior.
 
 **Focused checks**
@@ -518,9 +804,10 @@ unplanned zero-reference leftovers exposed by the completed cutovers.
 
 **Full runtime proof before final cleanup**
 
-- Use real Chromium against the actual application, not static source assertions.
+- Use real Chromium against the actual application, not static source assertions. Keep visual
+  reference comparisons separate from behavior comparisons against the pre-migration baseline.
 - Verify 1440x900 desktop, 1280x720 short laptop, 768x1024 tablet, 767x1024 breakpoint edge,
-  390x844 mobile, and 980/981 shell boundary spot checks.
+  390x844 mobile, plus 360px mobile and 1200/1201, 980/981, 700/701 boundary spot checks.
 - Traverse Overview → Website → Issues → Content → remaining routes through navigation and browser
   history while confirming the shell remains mounted.
 - Exercise Search/Ctrl+K, Agent/context launch, project switch, account/Settings, form validation,
@@ -530,6 +817,31 @@ unplanned zero-reference leftovers exposed by the completed cutovers.
 - Use keyboard-only passes for menus, Command Palette, tabs, radio/choice controls, dialogs,
   drawers, and Escape/focus return. Check reduced-motion and forced-color modes on the shared shell
   and one focused flow.
+
+**Behavior-parity and visual evidence review**
+
+- Replay each migrated unique workflow in the Section 2C record. Compare the same preconditions,
+  relevant URL/history or mode transition, selected project/entity, gate, result and error/cancel
+  behavior. For affected mutations/downloads, use existing test instrumentation to verify the
+  relevant method, payload/content and outcome; do not require a new network-audit framework or
+  compare incidental request timing/order where the production contract does not.
+- Explicitly verify Manage prompts from every migrated entry point and the absence of the new demo
+  management overlay/window, while retaining any pre-existing editor confirmations. Verify detail
+  destinations, direct/chooser exports, audit/crawl/schedule lifecycles, Content history/output,
+  auth/onboarding and billing/integration paths identified in the record.
+- Audit the full diff for changed routes/hrefs/targets, click handlers, form submission ownership,
+  validation/defaults, state initialization/reset, effect lifecycle, query keys, mutation calls,
+  gating and new/removed controls. These are review targets, not regex-based proof. Each intentional
+  behavior-adjacent edit must trace to V1–V8 and retained tests. Pure presentation must not silently
+  reinitialize a feature, submit twice or change native link behavior.
+- Compare approved and implemented visual regions at matching dimensions with real Geist. Retain
+  screenshots/evidence in the existing task-artifact location. Do not fabricate fixtures in the
+  product, alter factual copy, remove rows/fields or hide overflow to force a pixel match.
+- Record each unavoidable prototype difference with its production owner, preserved behavior and
+  narrow visual consequence. Do not label arbitrary visual deviation as a behavior exception.
+- List untested/blocked states separately. Earlier prototype QA numbers are not proof that the live
+  app or this implementation passed. No broad claim of unchanged functionality without the actual
+  app's behavior evidence.
 
 **Cutover deletion record and final cleanup**
 
@@ -546,9 +858,10 @@ Confirm the known deletions already happened in their owning phases:
 - Phase 4: remaining authenticated route provider/no-op wrappers and legacy typography aliases
   after their final callers migrate.
 
-After runtime proof, search again and delete any additional truly unused primitive, stale comment,
-or incorrect canonical link exposed by the cutover, but only with zero-reference proof and no
-active documentation contract. Do not delete domain coordinators, Website tab panels, evidence
+After runtime proof, search again and delete any additional truly unused primitive or stale comment
+exposed by the cutover, but only with zero-reference proof, migrated-consumer proof and no active
+documentation contract. Change a link only to preserve its recorded destination after this cutover;
+record unrelated incorrect canonical destinations as separate defects, not an implied scope expansion. Do not delete domain coordinators, Website tab panels, evidence
 presenters, Content history/result owners, project edit/facts owners, query hooks, or behavior
 tests merely because their visual wrappers changed.
 
@@ -571,11 +884,28 @@ tests merely because their visual wrappers changed.
    validation mapping, type, or test policy. Re-run `test.ps1 -ChangedFiles ...` only after an
    earlier failing `test.ps1` in this task and include the complete retry delta.
 
-**Done means** all requested behavior is visually proven on the real application, both root gates
-pass, all active docs describe the shipped shell/type system, all superseded paths in the deletion
-ledger are gone, and no mock/prototype implementation has entered production.
+**Done means** the real application matches the approved visual reference in the intended regions;
+its migrated workflows retain the pre-migration contracts except for V1–V8 presentation deltas;
+Manage prompts retains its real editor/entry flow; both root gates pass; active docs describe the
+shipped shell/type system; superseded paths in the deletion ledger are gone; and no mock/prototype
+feature or workflow has entered production. Provide the frozen reference path/hash, baseline commit,
+completed phase summary, action-parity evidence, visual captures, deletion summary and exact test
+results. State any blocked checks or unresolved differences instead of declaring full completion.
 
 ## 7. Test strategy
+
+### Characterize before editing; do not bless drift afterwards
+
+Reuse current behavior tests. Where a changed high-risk workflow lacks coverage, capture its
+production behavior before replacing its presentation. A changed button's styling, location or DOM
+structure may require a locator update; its expected route/mode, interaction surface, permission,
+validation, confirmation and result must not change to fit the demo. Keep behavior assertions
+independent of exact layout, while covering approved responsive navigation with focused browser
+checks. Do not add snapshots of fixture HTML as product behavior tests.
+
+Visual verification uses the rendered frozen reference and computed style/geometry where useful,
+not class-string assertions in component tests. Test only meaningful contracts and affected states;
+this plan does not ask for thousands of new tests or full suites after every small edit.
 
 ### Keep and update behavior tests
 
@@ -594,6 +924,11 @@ ledger are gone, and no mock/prototype implementation has entered production.
 - Content: authorized handoffs, target alternatives, skills, empty instruction, lifecycle,
   cancel/retry/regenerate, rendered heading demotion with one page H1, byte-for-byte raw Markdown
   copy/export, truncation, feedback, History, and active-row deletion protection.
+- Prompts: Manage prompts entry/exit and manage/read modes, current editor surface, existing
+  fields/actions, capability gates, validation/save/cancel behavior and preserved draft/selection
+  rules. Verify that the reference's new management modal/window is not introduced.
+- Detail/export parity: current page/run/prompt/evidence destinations and browser history;
+  existing report/export/copy/download interaction and exact relevant output semantics.
 - Auth/onboarding: provider/email paths, validation/API errors, handoffs, redirects, stage gates,
   discovery, confirmation, caps, payload, capacity, and completion.
 - Landing/public: one H1, exact section order/anchors, factual claim guards, anonymous content,
@@ -628,6 +963,11 @@ regression discovered during implementation.
 | Global token/type changes regress public or focused routes | Named role migration, explicit public-route sweep, and validation mappings for both CSS owners. |
 | All-Geist cutover leaves dead font payload or mixed roles | Zero-reference search before deleting Barlow; final search for `--font-barlow`, Barlow files, and call-site role overrides. |
 | Icon reduction removes meaning | Delete only decorative repeated tiles; retain action, status, provider, platform, selection, and compact workflow wayfinding icons. |
+| Agent treats a working prototype control as a feature requirement | Visual-only authority, V1–V8 allowlist, production-to-reference action mapping and explicit Manage prompts exclusion. |
+| New layout looks correct but changes routes, modal/mode transitions, defaults or form behavior | Characterize before editing; replay behavior tests and inspect behavior-adjacent diff separately from visual comparisons. |
+| Old `preview.html` or Section 5 values override the approved refinement | Freeze actual repository reference path/hash; this revision replaces Section 5 with the refined specification. |
+| Sparse demo removes real features or adds mock Settings/billing actions | Preserve production controls/states and exclude demo-only functionality; record narrow layout differences without weakening visual tokens. |
+| Agent changes reference/screenshots/tests to declare success | Keep approved HTML immutable; keep behavioral expectations; distinguish reference visual evidence from pre-migration behavior evidence. |
 | Visual consolidation mutates product behavior | Keep coordinators/hooks/contracts intact; tests assert consumer-observable behavior, not new markup. |
 | The change grows a generic wrapper hierarchy | Require two semantically identical production consumers; otherwise keep composition in the existing feature owner. |
 
@@ -636,7 +976,9 @@ regression discovered during implementation.
 The intended first implementation session, after the clean-main precondition, is deliberately
 narrow:
 
-1. Re-baseline clean main and record the final owner/deletion inventory.
+1. Re-baseline clean main, record its commit and owner/deletion inventory, freeze the refined HTML
+   path/hash, and establish Section 2C behavior evidence, including Manage prompts. Do not replan
+   the visual design or substitute the old preview.
 2. Implement Phase 1A only: unify destinations/capabilities and extract trigger presenters for the
    single Command Palette, Agent, and account controllers under the existing shell.
 3. Prove 1A with focused shell interaction, lint, type, and affected behavior tests; delete its
@@ -649,9 +991,44 @@ narrow:
    locally first; promote it only after the second real consumer is known.
 7. Implement Phase 2 in the fixed order Overview → Website → Issues → Content, with behavior and
    responsive proof after each route and one consolidated focused-check pass.
-8. Continue to flows/landing and remaining routes only after the four archetypes are coherent.
+8. Continue to flows/landing and remaining routes only after the four archetypes match the frozen
+   reference and pass behavioral parity. Extend the same concise record before each new route;
+   preserve current Prompts management and all other production interaction surfaces.
 9. Run the final zero-reference cleanup and reviewer pass only after the migrated actual product is
    proven, then run the repository-wide gates once in their required order.
 
 This order keeps the highest-leverage owners first, makes the four representative pages the design
 proof instead of inventing abstractions in advance, and leaves product functionality untouched.
+
+## 10. Revision record and source provenance
+
+This revision keeps the supplied plan's numbered structure, named owners, route coverage, Phase 1
+slices, representative-page order, focused checks and final `check.ps1` -> `test.ps1` gates. It adds
+no production functionality and makes no new repository findings. Its changes are limited to:
+
+- Freezing the already approved refined HTML and replacing stale Section 5 visual values.
+- Making demo interactions non-authoritative and enumerating approved presentation deltas.
+- Adding production-behavior mapping, the explicit Manage prompts guard, two-track verification
+  and narrow behavior-preserving exceptions.
+- Removing ambiguous permission for unrelated route/link bug fixes during visual cleanup, and
+  making branch/ref artifact handling safe.
+
+Inputs reviewed:
+
+| Input | Use |
+|---|---|
+| `citeladder-targeted-layout-consolidation.md` supplied with the request | Original scope, invariants, owner map, phase sequence, checks and deletion policy. |
+| `citeladder-refined.html` / identical `citeladder-reference.html` | Owner-approved appearance and exact CSS; demo interactions deliberately excluded. |
+| `citeladder-implementation.md` / package `IMPLEMENTATION.md` | Extracted visual-role specifications and existing font-loading caveat, reconciled with this plan's delivery sequence. |
+| Owner's current instruction | Exact approved design, no functionality/feature changes; preserve production Manage prompts while adopting shell/header improvements. |
+
+Input plan SHA-256: `46c95eba3ec81914a33598de8f173200735426eb8772a6dbadab235ed1a972ad`.
+Phase 0 repository reconciliation is recorded in
+[`citeladder-layout-consolidation-evidence.md`](citeladder-layout-consolidation-evidence.md): the
+clean merged baseline and approved reference identity are established, and the Phase 1–4
+implementation/deletion work is present on `feat/targeted-layout-consolidation`. Final
+`check.ps1` and `test.ps1` passed (42 backend, 1,344 frontend and 37 browser tests).
+The evidence record contains final responsive captures, preserved-workflow proof, deletions
+and the precise visual-fixture limits. `docs/design.md` owns the final visual recipes;
+tests enforce consistency and product correctness rather than cosmetic values. The saved
+project HTML remains unchanged.

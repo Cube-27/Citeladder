@@ -263,7 +263,12 @@ function TrendCard({ data }: Readonly<{ data: SiteHealthOverview['trend'] }>) {
         <CardDescription>Comparable terminal crawl snapshots only.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2 pt-0">
-        <TrendChart data={data.series} label="AEO Readiness trend" className="h-auto w-full" />
+        <TrendChart
+          data={data.series}
+          label="AEO Readiness trend"
+          height={96}
+          className="h-auto w-full"
+        />
         {data.state === 'unavailable' ? (
           <p className="text-muted text-xs">Run a second comparable crawl to establish a trend.</p>
         ) : null}

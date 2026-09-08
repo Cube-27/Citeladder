@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 
+import { CONTENT_CREATION_CAPABILITY } from '@/lib/config/billing';
 import { ICONS } from '@/lib/icons';
 
 export type NavItem = {
@@ -8,6 +9,7 @@ export type NavItem = {
   icon: LucideIcon;
   count?: number;
   queryMatch?: { key: string; values: readonly string[]; defaultValue?: string };
+  requiredCapability?: string;
 };
 
 export type NavGroup = {
@@ -47,7 +49,12 @@ export const NAV_GROUPS = [
     icon: ICONS.opportunities,
     items: [
       { label: 'Opportunities', href: '/opportunities', icon: ICONS.opportunities },
-      { label: 'Content', href: '/content', icon: ICONS.content },
+      {
+        label: 'Content',
+        href: '/content',
+        icon: ICONS.content,
+        requiredCapability: CONTENT_CREATION_CAPABILITY,
+      },
     ],
   },
   {
@@ -68,11 +75,39 @@ export const NAV_GROUPS = [
   },
 ] as const satisfies readonly NavGroup[];
 
-export const MOBILE_NAV_ITEMS = NAV_GROUPS.map(({ title, href, icon }) => ({
-  label: title,
-  href,
-  icon,
-}));
+const SUPPORT_NAV_ITEMS = [
+  { label: 'Integrations', href: '/settings?tab=integrations', icon: ICONS.setup },
+  { label: 'Providers', href: '/settings?tab=providers', icon: ICONS.settings },
+  { label: 'Settings', href: '/settings', icon: ICONS.settings },
+] as const satisfies readonly NavItem[];
+
+export type CapabilityResolver = (capability: string) => boolean;
+
+export function resolveNavigationItems(
+  items: readonly NavItem[],
+  hasCapability: CapabilityResolver,
+): readonly NavItem[] {
+  return items.filter((item) => !item.requiredCapability || hasCapability(item.requiredCapability));
+}
+
+/**
+ * The visible sidebar, compact navigation, and command palette all resolve
+ * destinations through this one capability gate.  The registry remains static
+ * so active-state and route-prefetch helpers keep their stable route data.
+ */
+export function resolveNavigationGroups(hasCapability: CapabilityResolver): readonly NavGroup[] {
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: resolveNavigationItems(group.items, hasCapability),
+  }));
+}
+
+export function resolveCommandGroups(hasCapability: CapabilityResolver) {
+  return [
+    ...resolveNavigationGroups(hasCapability),
+    { title: 'Settings', items: SUPPORT_NAV_ITEMS },
+  ] as const;
+}
 
 export function isNavItemActive(
   pathname: string,
@@ -85,12 +120,4 @@ export function isNavItemActive(
   if (!item.queryMatch) return true;
   const current = searchParams.get(item.queryMatch.key) ?? item.queryMatch.defaultValue ?? '';
   return item.queryMatch.values.includes(current);
-}
-
-export function activeStation(pathname: string, searchParams: URLSearchParams): NavGroup {
-  return (
-    NAV_GROUPS.find((group) =>
-      group.items.some((item) => isNavItemActive(pathname, searchParams, item)),
-    ) ?? NAV_GROUPS[0]
-  );
 }

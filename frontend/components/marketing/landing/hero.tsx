@@ -10,7 +10,7 @@ import { RotatingEngineLogos } from './rotating-engine-logos';
 
 /**
  * The hook — a light editorial opener on the reference system's model
- * (docs/design.md §Marketing): serif display in the navy ink, centred over the
+ * (docs/design.md): Geist display in the primary ink, centred over the
  * brand's pastel atmosphere, with one primary action and the rotating engine
  * roster on the first screen itself. No product UI here — the hero is the
  * value proposition, the CTA, and the engines tracked; the page's evidence

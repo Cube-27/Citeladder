@@ -9,7 +9,6 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { BillingSettings } from '@/components/settings/billing-settings';
@@ -24,6 +23,7 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { emailInitials } from '@/lib/utils';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
+import { EditorialSectionHeader } from '@/components/ui/workspace';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -104,51 +104,47 @@ function ProjectDeletionControls() {
   if (!hasCapability(PROJECT_DELETION_CAPABILITY)) return null;
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Danger zone</CardTitle>
-          <CardDescription>
-            Permanently delete the active project and everything inside it.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          {activeProject ? (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <BrandLogo
-                    name={activeProject.brand_name}
-                    logoUrl={activeProject.brand?.logo_url}
-                    websiteUrl={activeProject.website_url}
-                    size="md"
-                  />
-                  <div className="grid min-w-0 gap-0.5">
-                    <div className={textRole('bodyStrong', 'truncate')}>{activeProject.name}</div>
-                    <p className="text-muted text-xs">Brand: {activeProject.brand_name}</p>
-                  </div>
+      <section className="border-border-subtle grid gap-4 border-t pt-4">
+        <EditorialSectionHeader
+          title="Danger zone"
+          description="Permanently delete the active project and everything inside it."
+        />
+        {activeProject ? (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <BrandLogo
+                  name={activeProject.brand_name}
+                  logoUrl={activeProject.brand?.logo_url}
+                  websiteUrl={activeProject.website_url}
+                  size="md"
+                />
+                <div className="grid min-w-0 gap-0.5">
+                  <div className={textRole('bodyStrong', 'truncate')}>{activeProject.name}</div>
+                  <p className="text-muted text-xs">Brand: {activeProject.brand_name}</p>
                 </div>
-                <Button
-                  variant="destructive"
-                  onClick={() => setConfirmOpen(true)}
-                  disabled={deleteMutation.isPending}
-                >
-                  <Trash2 className="size-4 shrink-0" aria-hidden />
-                  Delete project
-                </Button>
               </div>
-              <Alert tone="danger">
-                Deleting a project removes all of its prompts, topics, audits, visibility history,
-                and generated content. This cannot be undone.
-              </Alert>
-              {deleteMutation.isError ? (
-                <Alert tone="danger">{errorMessage(deleteMutation.error)}</Alert>
-              ) : null}
-            </>
-          ) : (
-            <p className="text-muted text-sm">No project selected.</p>
-          )}
-        </CardContent>
-      </Card>
+              <Button
+                variant="destructive"
+                onClick={() => setConfirmOpen(true)}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className="size-4 shrink-0" aria-hidden />
+                Delete project
+              </Button>
+            </div>
+            <Alert tone="danger">
+              Deleting a project removes all of its prompts, topics, audits, visibility history, and
+              generated content. This cannot be undone.
+            </Alert>
+            {deleteMutation.isError ? (
+              <Alert tone="danger">{errorMessage(deleteMutation.error)}</Alert>
+            ) : null}
+          </>
+        ) : (
+          <p className="text-muted text-sm">No project selected.</p>
+        )}
+      </section>
       <Dialog
         open={confirmOpen}
         onOpenChange={(open) => {
@@ -233,53 +229,51 @@ export function SettingsScreen() {
             short, so a max-w-2xl column left most of a wide screen empty and
             pushed everything below the fold for no reason. */}
           <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-            <Card>
-              <CardHeader>
-                <CardTitle>Account</CardTitle>
-                <CardDescription>Read-only — shown for reference.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <span
-                    aria-hidden
-                    className={textRole(
-                      'bodyStrong',
-                      'bg-accent-soft text-accent-text flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
-                    )}
-                  >
-                    {emailInitials(user.email)}
-                  </span>
-                  <div className="grid min-w-0 flex-1 gap-0.5">
-                    <div className={textRole('bodyStrong', 'truncate')}>{user.email}</div>
-                    <div className="text-muted text-sm capitalize">{user.role}</div>
-                  </div>
-                  <Badge variant="status" value={user.is_active ? 'success' : 'danger'}>
-                    {user.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
+            <section className="grid gap-4">
+              <EditorialSectionHeader
+                title="Account"
+                description="Read-only — shown for reference."
+              />
+              <div className="flex items-center gap-4">
+                <span
+                  aria-hidden
+                  className={textRole(
+                    'bodyStrong',
+                    'bg-accent-soft text-accent-text flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
+                  )}
+                >
+                  {emailInitials(user.email)}
+                </span>
+                <div className="grid min-w-0 flex-1 gap-0.5">
+                  <div className={textRole('bodyStrong', 'truncate')}>{user.email}</div>
+                  <div className="text-muted text-sm capitalize">{user.role}</div>
                 </div>
+                <Badge variant="status" value={user.is_active ? 'success' : 'danger'}>
+                  {user.is_active ? 'Active' : 'Inactive'}
+                </Badge>
+              </div>
 
-                {/* Only what the header above does NOT already state. Email, role
+              {/* Only what the header above does NOT already state. Email, role
                   and status were each rendered twice — once in the identity row
                   and again as a detail row. */}
-                <dl className="border-border-subtle mt-[var(--card-padding-large)] border-t">
-                  {createdLabel ? (
-                    <DetailRow label="Account created" mono>
-                      {createdLabel}
-                    </DetailRow>
-                  ) : null}
-                  {updatedLabel ? (
-                    <DetailRow label="Last updated" mono>
-                      {updatedLabel}
-                    </DetailRow>
-                  ) : null}
-                  {user.id ? (
-                    <DetailRow label="User ID" mono>
-                      {user.id}
-                    </DetailRow>
-                  ) : null}
-                </dl>
-              </CardContent>
-            </Card>
+              <dl className="border-border-subtle mt-[var(--card-padding-large)] border-t">
+                {createdLabel ? (
+                  <DetailRow label="Account created" mono>
+                    {createdLabel}
+                  </DetailRow>
+                ) : null}
+                {updatedLabel ? (
+                  <DetailRow label="Last updated" mono>
+                    {updatedLabel}
+                  </DetailRow>
+                ) : null}
+                {user.id ? (
+                  <DetailRow label="User ID" mono>
+                    {user.id}
+                  </DetailRow>
+                ) : null}
+              </dl>
+            </section>
           </div>
 
           <ProjectDeletionControls />

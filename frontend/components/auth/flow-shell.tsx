@@ -35,7 +35,7 @@ export function FlowShell({
   return (
     <div
       data-flow-surface
-      className="bg-shell band-grain grain-soft text-foreground relative grid h-dvh min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden antialiased"
+      className="bg-shell text-foreground relative grid h-dvh min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden antialiased"
     >
       <FlowBar steps={steps} currentStep={currentStep} exitHref={exitHref} />
       <main id="main" aria-label={mainLabel} className="flow-main" data-flow-align={align}>
@@ -136,7 +136,6 @@ export function FlowGroup({
   help,
   meta,
   action,
-  icon,
   className,
   children,
 }: Readonly<{
@@ -144,7 +143,6 @@ export function FlowGroup({
   help?: ReactNode;
   meta?: ReactNode;
   action?: ReactNode;
-  icon?: ReactNode;
   className?: string;
   children: ReactNode;
 }>) {
@@ -153,18 +151,11 @@ export function FlowGroup({
   return (
     <section aria-labelledby={headingId} className={cn('flow-group', className)}>
       <div className="flow-group-heading">
-        <div className={cn('flex gap-3', help ? 'items-start' : 'items-center')}>
-          {icon ? (
-            <div className="bg-accent-soft text-accent-text flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
-              {icon}
-            </div>
-          ) : null}
-          <div className="flow-group-copy">
-            <h2 id={headingId} className="flow-group-title">
-              {title}
-            </h2>
-            {help ? <p className="flow-help">{help}</p> : null}
-          </div>
+        <div className="flow-group-copy">
+          <h2 id={headingId} className="flow-group-title">
+            {title}
+          </h2>
+          {help ? <p className="flow-help">{help}</p> : null}
         </div>
         {meta || action ? (
           <div className="flow-group-aside">

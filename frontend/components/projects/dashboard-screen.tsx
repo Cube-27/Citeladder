@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { TopInsights } from '@/components/intelligence/top-insights';
+import { PageHeader } from '@/components/layout/page-header';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { projectsApi } from '@/lib/api/projects';
@@ -11,7 +12,12 @@ import type { CommandCenter, Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { CommandCenterSkeleton } from './dashboard-primitives';
-import { ActionsAndProof, DashboardHeader, SummarySections } from './dashboard-sections';
+import {
+  ActionsAndProof,
+  DashboardActions,
+  DashboardHeader,
+  SummarySections,
+} from './dashboard-sections';
 import { useCommandCenterActions } from './use-command-center-actions';
 
 export function DashboardScreen({
@@ -25,20 +31,27 @@ export function DashboardScreen({
   });
 
   if (context.isLoading || (context.activeProject && commandCenter.isLoading)) {
-    return <CommandCenterSkeleton />;
+    return (
+      <div className="grid gap-[var(--workspace-gap)]">
+        <PageHeader />
+        <CommandCenterSkeleton />
+      </div>
+    );
   }
-  if (!context.activeProject) return null;
+  if (!context.activeProject) return <PageHeader />;
   if (commandCenter.isError || !commandCenter.data)
-    return <LoadError onRetry={commandCenter.refetch} />;
+    return (
+      <div className="grid gap-[var(--workspace-gap)]">
+        <PageHeader />
+        <LoadError onRetry={commandCenter.refetch} />
+      </div>
+    );
 
   return (
     <DashboardData
       key={`${context.activeProject.id}:${commandCenter.data.action_order_version}`}
       data={commandCenter.data}
       activeProject={context.activeProject}
-      projects={context.projects}
-      activeProjectId={context.activeProjectId}
-      setActiveProjectId={context.setActiveProjectId}
       onEditProject={onEditProject}
     />
   );
@@ -58,32 +71,28 @@ function LoadError({ onRetry }: Readonly<{ onRetry: () => void }>) {
 function DashboardData({
   data,
   activeProject,
-  projects,
-  activeProjectId,
-  setActiveProjectId,
   onEditProject,
 }: Readonly<{
   data: CommandCenter;
   activeProject: Project;
-  projects: Project[];
-  activeProjectId: string | null;
-  setActiveProjectId: (projectId: string) => void;
   onEditProject?: (project: Project) => void;
 }>) {
   const actions = useCommandCenterActions(data, activeProject);
   return (
     <div className="flex flex-col gap-[var(--page-section-gap)]">
       <div className="grid gap-[var(--workspace-gap)]" data-tour="command-center">
-        <DashboardHeader
-          data={data}
-          projects={projects}
-          activeProject={activeProject}
-          activeProjectId={activeProjectId}
-          setActiveProjectId={setActiveProjectId}
-          onEditProject={onEditProject}
-          downloading={actions.downloading}
-          onDownload={actions.download}
+        <PageHeader
+          actions={
+            <DashboardActions
+              data={data}
+              activeProject={activeProject}
+              onEditProject={onEditProject}
+              downloading={actions.downloading}
+              onDownload={actions.download}
+            />
+          }
         />
+        <DashboardHeader data={data} activeProject={activeProject} />
         {actions.downloadError ? (
           <Alert tone="danger">The report could not be downloaded. Try again.</Alert>
         ) : null}
@@ -103,8 +112,6 @@ function DashboardData({
           actions={actions.actions}
           pending={actions.reorderPending}
           onMove={actions.move}
-          downloading={actions.downloading}
-          onDownload={actions.download}
         />
       </div>
       <TopInsights projectId={activeProject.id} />

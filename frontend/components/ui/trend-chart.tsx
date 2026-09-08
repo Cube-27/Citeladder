@@ -18,7 +18,7 @@ const valueText = (value: number | null) => (value === null ? 'unavailable' : `$
 export function TrendChart({
   data,
   width = 320,
-  height = 120,
+  height = 96,
   label,
   className,
   domainMax = 100,
@@ -100,6 +100,7 @@ export function TrendChart({
           d={toLinePath(segment)}
           fill="none"
           strokeWidth={2}
+          vectorEffect="non-scaling-stroke"
           strokeLinecap="round"
           strokeLinejoin="round"
           className="stroke-accent"

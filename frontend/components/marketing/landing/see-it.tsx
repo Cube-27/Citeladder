@@ -46,9 +46,7 @@ export function SeeIt() {
       </div>
 
       <Reveal>
-        <p className="website-label text-muted mb-2 tracking-wider uppercase">
-          {canvas.contextLabel}
-        </p>
+        <p className="website-label mb-2">{canvas.contextLabel}</p>
         {/* The ambient ground blooms in the brand's own pastel washes — the
             same atmosphere family as the hero — over a soft→white→soft
             gradient, and the white pane floats on it. Tokens only, never an

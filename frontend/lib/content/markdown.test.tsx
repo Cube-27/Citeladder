@@ -36,9 +36,23 @@ describe('ContentMarkdown', () => {
     render(
       <ContentMarkdown markdown={'# Title\n\n- one\n- two\n\n| A | B |\n| - | - |\n| 1 | 2 |'} />,
     );
-    expect(screen.getByRole('heading', { level: 1, name: 'Title' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Title' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
     expect(screen.getByText('one')).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('demotes every generated heading below the route-owned h1', () => {
+    render(
+      <ContentMarkdown markdown={'# One\n## Two\n### Three\n#### Four\n##### Five\n###### Six'} />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'One', level: 2 })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Two', level: 3 })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Three', level: 4 })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Four', level: 5 })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Five', level: 6 })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Six', level: 6 })).toBeVisible();
   });
 
   it('preserves leading indentation in the original Markdown', () => {

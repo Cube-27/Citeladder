@@ -4,7 +4,6 @@ import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { ContentScreen } from '@/components/content/content-screen';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { DEMAND_SIGNAL_PARAM } from '@/lib/demand/content-link';
 import type { SiteHealthReferenceInput } from '@/lib/api/content';
 
@@ -50,11 +49,8 @@ function ContentSurface() {
 
 export default function ContentPage() {
   return (
-    // The skill picker explains each format through tooltips.
-    <TooltipProvider>
-      <Suspense fallback={null}>
-        <ContentSurface />
-      </Suspense>
-    </TooltipProvider>
+    <Suspense fallback={null}>
+      <ContentSurface />
+    </Suspense>
   );
 }

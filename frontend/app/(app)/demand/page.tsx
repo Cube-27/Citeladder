@@ -1,10 +1,11 @@
 import { DemandProjection } from '@/components/demand/demand-projection';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { PageHeader } from '@/components/layout/page-header';
 
 export default function DemandPage() {
   return (
-    <TooltipProvider>
+    <>
+      <PageHeader />
       <DemandProjection />
-    </TooltipProvider>
+    </>
   );
 }

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { displayHeadingLgClasses } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 
 /**
  * EmptyState — the one empty-state pattern for the whole app.
@@ -31,6 +31,7 @@ export function EmptyState({
   action,
   footnote,
   className,
+  headingLevel = 2,
 }: Readonly<{
   icon: LucideIcon;
   heading: string;
@@ -40,12 +41,17 @@ export function EmptyState({
   /** Small muted line below the action (e.g. a support correlation reference). */
   footnote?: ReactNode;
   className?: string;
+  /** Route boundaries use their one truthful screen heading. */
+  headingLevel?: 1 | 2 | 3;
 }>) {
+  const Heading = headingLevel === 1 ? 'h1' : headingLevel === 2 ? 'h2' : 'h3';
   return (
     <div className={cn('grid gap-3 py-[var(--empty-state-padding)]', className)}>
       <div className="flex items-center gap-2">
         <Icon className="text-subtle size-4 shrink-0" aria-hidden />
-        <h2 className={displayHeadingLgClasses}>{heading}</h2>
+        <Heading className={textRole(headingLevel === 1 ? 'pageTitle' : 'sectionTitle')}>
+          {heading}
+        </Heading>
       </div>
       {description ? <p className="text-secondary max-w-[52ch] text-sm">{description}</p> : null}
       {action ? <div className="flex items-center gap-2">{action}</div> : null}

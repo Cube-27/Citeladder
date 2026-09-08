@@ -8,11 +8,8 @@ import { Section } from '../primitives/section';
 import { Reveal } from '../primitives/reveal';
 
 /**
- * The close. One headline and a single primary action on the deep-teal band —
- * the resolving chord of the three-canvas system (docs/design.md §Marketing).
- * The teal rebind (`data-citeladder-section='teal'`) flips every token beneath
- * it, so the button inverts to the white canvas with a teal label without any
- * call-site colour. Named as a landmark region so the CTA is reachable
+ * The close uses the shared sunken section and primary action. Named as a
+ * landmark region so the CTA is reachable
  * directly from a screen-reader landmark list rather than only by scrolling
  * the page.
  */

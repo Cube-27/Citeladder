@@ -5,63 +5,42 @@ import { cva } from 'class-variance-authority';
  * tokens only (no raw hex). Sizes use the control-height tokens via bridged
  * `h-*` utilities defined in globals.css (--control-height*).
  *
- * Buttons use the semantic control radius, not pills. Focused-flow fields may
- * opt into their documented 12px auth-control role; action behaviour and
- * semantics remain shared here.
- * Primary uses the solid accent (brand green) role. The `accent` variant is
- * the public-website CTA treatment: a light accent fill with an accent border
- * and label that fills solid on hover. Secondary/neutral/ghost stay quiet so
- * a screen has one obvious action.
+ * Buttons use the shared 6px control radius. Primary is solid action;
+ * secondary is the white outlined control; quiet variants preserve hierarchy
+ * without introducing another component family.
  *
  * Hover moves the fill one step along the action ramp rather than fading
  * opacity, so the label keeps its verified AA contrast in every state.
  *
- * Quiet variants walk the semantic alpha-neutral ladder
- * (bg-alt 6% → bg-well 14% → bg-active 31%) instead of swapping between two
- * opaque greys. Because the fills are alpha, `neutral` and `ghost` look
- * correct on a white card, on the sunken canvas, and inside a tinted panel —
- * an opaque grey only ever matched one of the three. `secondary` is the quiet
- * tonal alternate action; public website and auth surfaces opt into their
- * approved outlined treatment at those scoped call sites.
+ * Variants only name semantic roles; surfaces never introduce local color or
+ * spacing overrides.
  */
 export const buttonVariants = cva(
-  'focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] border font-sans font-medium no-underline transition-[transform,background-color,color,border-color,box-shadow] duration-[160ms] ease-out active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
+  'focus-ring shadow-xs inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] border font-sans font-[550] no-underline transition-[transform,background-color,color,border-color,box-shadow] duration-[120ms] ease-out active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
   {
     variants: {
       variant: {
         primary:
-          'border-transparent bg-action text-action-fg hover:bg-action-hover active:bg-action-active',
-        // The public-website CTA treatment: a light accent fill with an accent
-        // border and accent label at rest, filling solid accent on hover and
-        // stepping one rung deeper on press. The marketing button primitives
-        // map their `primary` here; authenticated flows keep the solid fill.
+          'border-action bg-action text-action-fg hover:bg-action-hover active:bg-action-active',
         accent:
-          'border-accent bg-accent-soft text-accent-text hover:bg-accent hover:text-accent-fg active:bg-accent-hover',
-        // Secondary is the quiet tonal alternate action in authenticated flows.
+          'border-accent bg-accent-soft text-accent-text shadow-none hover:bg-accent hover:text-accent-fg active:bg-accent-hover',
         secondary:
-          'border-border-subtle bg-well text-foreground hover:border-border hover:bg-active active:bg-active',
+          'border-border bg-panel text-foreground hover:border-border-strong hover:bg-background-alt active:bg-well',
         tonal:
-          'border-accent-border bg-accent-subtle text-accent-text hover:border-accent hover:bg-accent-border active:bg-accent-border',
+          'border-accent-border bg-accent-subtle text-accent-text shadow-none hover:border-accent hover:bg-accent-border active:bg-accent-border',
         neutral:
-          'border-transparent bg-background-alt text-foreground hover:bg-well active:bg-active',
+          'border-transparent bg-background-alt text-foreground shadow-none hover:bg-well active:bg-active',
         ghost:
-          'border-transparent bg-transparent text-secondary hover:bg-background-alt hover:text-foreground active:bg-well',
-        // Destructive paints on its OWN fill token, not on `--danger`, which is
-        // also the sentiment-negative solid and the score-low ring.
-        // `--danger-solid` / `-hover` are the shared destructive pair, which
-        // clear AA against their foreground —
-        // no hand-deepening, unlike the previous system. Hover walks the ramp
-        // instead of fading opacity, which used to wash the label out along with
-        // the fill. globals.test.ts gates both `danger-fg` ↔ fill pairs.
+          'border-transparent bg-transparent text-secondary shadow-none hover:bg-background-alt hover:text-foreground active:bg-well',
         destructive:
-          'border-transparent bg-danger-solid text-danger-fg hover:bg-danger-solid-hover active:bg-danger-solid-hover',
+          'border-transparent bg-danger-solid text-danger-fg shadow-none hover:bg-danger-solid-hover active:bg-danger-solid-hover',
         destructiveGhost:
-          'border-transparent bg-transparent text-danger-text hover:bg-danger-bg active:bg-danger-bg',
+          'border-transparent bg-transparent text-danger-text shadow-none hover:bg-danger-bg active:bg-danger-bg',
       },
       size: {
-        sm: 'h-[var(--control-height-sm)] px-2.5 text-sm font-medium',
-        md: 'h-[var(--control-height)] px-3.5 text-sm font-medium',
-        lg: 'h-[var(--control-height-lg)] px-[var(--card-padding-large)] text-sm font-medium',
+        sm: 'h-[var(--control-height-sm)] px-2.5 text-sm',
+        md: 'h-[var(--control-height)] px-3 text-sm',
+        lg: 'h-[var(--control-height-lg)] px-4 text-sm',
         icon: 'size-[var(--control-height)] px-0',
       },
     },

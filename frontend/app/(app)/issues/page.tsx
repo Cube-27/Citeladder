@@ -1,4 +1,5 @@
 import { IssuesScreen } from '@/components/site-health/issues-screen';
+import { PageHeader } from '@/components/layout/page-header';
 
 /**
  * Issues catalog (Slice 8, mockup 710).
@@ -10,5 +11,10 @@ import { IssuesScreen } from '@/components/site-health/issues-screen';
  * "mark reviewed/resolved" persistence.
  */
 export default function IssuesPage() {
-  return <IssuesScreen />;
+  return (
+    <>
+      <PageHeader />
+      <IssuesScreen />
+    </>
+  );
 }

@@ -30,12 +30,25 @@ vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => projectContext,
 }));
 
-import { CommandPalette } from './command-palette';
+vi.mock('@/lib/billing/entitlement-context', () => ({
+  useEntitlement: () => ({ hasCapability: () => true }),
+}));
+
+import { CommandPalette, CommandPaletteTrigger } from './command-palette';
+
+function Palette() {
+  return (
+    <>
+      <CommandPaletteTrigger />
+      <CommandPalette />
+    </>
+  );
+}
 
 /** Opens via the sidebar trigger and returns the user-event instance. */
 async function open() {
   const user = userEvent.setup();
-  render(<CommandPalette />);
+  render(<Palette />);
   await user.click(screen.getByRole('button', { name: /search or jump to/i }));
   await screen.findByRole('listbox');
   return user;
@@ -48,7 +61,7 @@ describe('CommandPalette', () => {
   });
 
   it('renders the trigger closed, advertising its shortcut', () => {
-    render(<CommandPalette />);
+    render(<Palette />);
     const trigger = screen.getByRole('button', { name: /search or jump to/i });
     expect(trigger).toHaveAttribute('aria-keyshortcuts', 'Meta+K Control+K');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
@@ -56,7 +69,7 @@ describe('CommandPalette', () => {
 
   it('opens on Ctrl+K and closes on a second press', async () => {
     const user = userEvent.setup();
-    render(<CommandPalette />);
+    render(<Palette />);
 
     await user.keyboard('{Control>}k{/Control}');
     expect(await screen.findByRole('listbox')).toBeInTheDocument();

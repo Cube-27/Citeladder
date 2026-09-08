@@ -1,19 +1,18 @@
 'use client';
 
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { ProductsScreen } from '@/components/products/products-screen';
+import { PageHeader } from '@/components/layout/page-header';
 
 /**
  * Commerce workspace: Catalog, Competitors, Buyer Prompts, and AI Shelf.
- * The active tab is mirrored in `?tab=`. The page title renders in the top
- * bar (F5), so there is no in-page header block.
+ * The active tab is mirrored in `?tab=`. The route owns one in-pane page
+ * header beneath the shared shell chrome.
  */
 export default function ProductsPage() {
   return (
-    <TooltipProvider>
-      <div className="grid gap-[var(--workspace-gap)]">
-        <ProductsScreen />
-      </div>
-    </TooltipProvider>
+    <div className="grid gap-[var(--workspace-gap)]">
+      <PageHeader />
+      <ProductsScreen />
+    </div>
   );
 }

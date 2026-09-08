@@ -6,10 +6,7 @@ import { QueryProvider } from '@/lib/providers/query-provider';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, siteOrigin } from '@/lib/seo/site';
 import './globals.css';
 
-// Geist is the sole product face and carries body, UI, data, and product
-// headings. Barlow is reserved for public and focused-flow display
-// roles (docs/design.md §Typography). Declaring Geist's full wght axis keeps
-// every sanctioned UI weight within the supplied variable font.
+// Geist is the sole product face across product, public, and focused flows.
 const geist = localFont({
   src: '../public/fonts/Geist-Variable.woff2',
   variable: '--font-geist',
@@ -17,36 +14,9 @@ const geist = localFont({
   display: 'swap',
 });
 
-const barlow = localFont({
-  src: [
-    {
-      path: '../public/fonts/Barlow-Regular.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '../public/fonts/Barlow-Medium.woff2',
-      weight: '500',
-      style: 'normal',
-    },
-    {
-      path: '../public/fonts/Barlow-SemiBold.woff2',
-      weight: '600',
-      style: 'normal',
-    },
-    {
-      path: '../public/fonts/Barlow-Bold.woff2',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-barlow',
-  display: 'swap',
-});
-
 const DIRECTION_CONTRACT = `<!--
 THESIS: Prism Evidence is one calm editorial system from first visit through the operating workspace.
-OWN-WORLD: paper ground and dark navy ink, brand-blue primary actions, blue for selection, focus and links, hairline rules and negative space carrying hierarchy, Geist throughout the product and Barlow for public/flow display, and shadows reserved for floating UI.
+OWN-WORLD: paper ground and dark navy ink, brand-blue primary actions, blue for selection, focus and links, hairline rules and negative space carrying hierarchy, Geist throughout, and shadows reserved for floating UI.
 STORY: Understand the evidence loop, evaluate the product, enter the essential site facts, confirm exactly what will be tracked, then operate from persisted evidence.
 FIRST VIEWPORT: Public pages use generous editorial rhythm and faithful product scenes; focused flows use a compact wordmark bar, centred task column, and persistent action bar.
 FORM: shared semantic tokens, flat ruled ledgers rather than nested boxes, with a roomier public/focused-flow type ladder over the same visual world.
@@ -73,7 +43,7 @@ const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${barlow.variable}`}>
+    <html lang="en" className={geist.variable}>
       <body>
         {GA_MEASUREMENT_ID ? (
           <>

@@ -12,9 +12,6 @@ type VisualProps = Readonly<{ variant?: Variant; className?: string }>;
 const sharedVariant = (variant: Variant) =>
   variant === 'ghost' ? 'ghost' : variant === 'primary' ? 'primary' : 'secondary';
 
-const marketingSecondary =
-  'border-border-strong bg-panel hover:border-border-bold hover:bg-background-alt active:scale-[var(--interaction-press-scale)]';
-
 export function ButtonLink({
   href,
   variant = 'primary',
@@ -29,13 +26,8 @@ export function ButtonLink({
     <SharedButton
       asChild
       variant={sharedVariant(variant)}
-      className={cn(
-        'rounded-[var(--radius-control)] min-h-[2.75rem] px-5 text-sm font-medium tracking-tight transition-all duration-200 ease-out active:scale-[var(--interaction-press-scale)]',
-        '[&_svg]:size-4 [&_svg]:shrink-0',
-        variant === 'primary' && 'hover:-translate-y-0.5 hover:shadow-card active:translate-y-0',
-        (variant === 'dark' || variant === 'nav') && marketingSecondary,
-        className,
-      )}
+      size="lg"
+      className={cn('[&_svg]:size-4 [&_svg]:shrink-0', className)}
     >
       <Link href={href} {...rest}>
         {children}
@@ -158,12 +150,8 @@ export function IconButtonLink({
     <SharedButton
       asChild
       variant={variant === 'default' ? 'primary' : 'secondary'}
-      className={cn(
-        'rounded-full min-h-[2.75rem] px-5 text-sm font-medium tracking-tight transition-all duration-200 ease-out active:scale-[var(--interaction-press-scale)]',
-        variant === 'default' && 'hover:-translate-y-0.5 hover:shadow-card active:translate-y-0',
-        variant !== 'default' && marketingSecondary,
-        className,
-      )}
+      size="lg"
+      className={className}
     >
       <Link href={href} {...targetProps} {...rest}>
         {side === 'left' ? arrow : null}

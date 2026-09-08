@@ -5,7 +5,7 @@ import { Suspense, useState } from 'react';
 
 import { PromptLibrary } from '@/components/prompts/prompt-library';
 import { YourPrompts } from '@/components/prompts/your-prompts';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { PageHeader } from '@/components/layout/page-header';
 
 /**
  * Prompts screen (design.md §9.4, sidebar "Prompts") — the single prompts
@@ -19,8 +19,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
  * page. The mode follows the canonical `?mode=manage` deep link; the read
  * view's manage controls are plain links to that URL. In-page toggle buttons
  * set a local override so no navigation is
- * needed. The page title renders in the top bar (F5), so there is no in-page
- * header.
+ * needed. Both modes retain the route's one in-pane page header.
  */
 function PromptsScreen() {
   const modeParam = useSearchParams().get('mode');
@@ -40,14 +39,16 @@ function PromptsScreen() {
 
   if (managing) {
     return (
-      <TooltipProvider>
+      <div className="grid gap-[var(--workspace-gap)]">
+        <PageHeader />
         <PromptLibrary onDoneManaging={exitManage} />
-      </TooltipProvider>
+      </div>
     );
   }
 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
+      <PageHeader />
       <YourPrompts />
     </div>
   );

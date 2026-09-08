@@ -181,7 +181,7 @@ describe('ContentScreen clean composer', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'History' }));
     const drawer = await screen.findByRole('dialog', { name: 'Generation history' });
     await userEvent.click(within(drawer).getByText('Write a landing page'));
-    expect(await screen.findByRole('heading', { level: 1, name: 'About Acme' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'About Acme' })).toBeVisible();
   });
 
   it('disables Generate for an empty instruction and names canonical context', async () => {
@@ -305,7 +305,7 @@ describe('ContentScreen generation lifecycle', () => {
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeVisible();
     expect(screen.getByRole('textbox', { name: 'Your instruction' })).toBeDisabled();
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'About Acme' }, { timeout: 5000 }),
+      await screen.findByRole('heading', { name: 'About Acme' }, { timeout: 5000 }),
     ).toBeVisible();
     expect(screen.getByText(/website crawl · 3 pages/i)).toBeVisible();
   });

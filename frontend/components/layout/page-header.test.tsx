@@ -55,12 +55,6 @@ describe('PageHeader', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Website' })).toBeInTheDocument();
   });
 
-  it('keeps an accessible level-one title when visual display is disabled', () => {
-    pathname.value = '/site';
-    render(<PageHeader showTitle={false} />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Website' })).toBeInTheDocument();
-  });
-
   it('keeps the page-detail route title accessible', () => {
     pathname.value = '/site/crawls/crawl-id/pages/page-id';
     render(<PageHeader />);

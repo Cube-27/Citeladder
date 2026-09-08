@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IssuesCatalog } from '@/components/site-health/issues-catalog';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
-import { displayHeadingLgClasses } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -34,7 +34,7 @@ export function IssuesScreen() {
   const loading = projectLoading || (Boolean(projectId) && dashboardQuery.isLoading);
 
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 gap-4">
       {!projectLoading && !projectId ? (
         <Alert tone="info">Select or create a project to view its Site Health issues.</Alert>
       ) : loading ? (
@@ -48,7 +48,7 @@ export function IssuesScreen() {
         <Card>
           <CardContent className="grid gap-3 py-[var(--empty-state-padding)]">
             <AccentEyebrow>Issues</AccentEyebrow>
-            <h2 className={displayHeadingLgClasses}>No Site Health crawl yet</h2>
+            <h2 className={textRole('sectionTitle')}>No Site Health crawl yet</h2>
             <p className="text-secondary max-w-md text-sm">
               Run Site Health to discover and analyze this project&apos;s pages — grouped issues
               will appear here once a crawl finishes.

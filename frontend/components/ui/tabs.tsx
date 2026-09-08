@@ -46,7 +46,7 @@ export function Tabs<T extends string>({
         <TabsPrimitive.List
           aria-label={ariaLabel}
           className={cn(
-            'border-border relative flex w-full max-w-full flex-nowrap gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            'border-border relative flex w-full max-w-full flex-nowrap gap-[var(--tab-gap)] overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
             // Filled tabs must not scroll: sharing the width is the point.
             fill && 'gap-0 overflow-x-visible',
             className,
@@ -60,8 +60,8 @@ export function Tabs<T extends string>({
               onMouseEnter={() => onIntent?.(item.value)}
               onFocus={() => onIntent?.(item.value)}
               className={cn(
-                'focus-ring text-secondary hover:text-foreground data-[state=active]:text-accent-text relative inline-flex h-10 items-center px-3 text-sm font-medium whitespace-nowrap transition-colors disabled:opacity-50',
-                fill ? 'flex-1 basis-0 justify-center' : 'shrink-0',
+                'focus-ring text-secondary hover:text-foreground data-[state=active]:text-accent-text relative inline-flex h-[var(--tab-height)] items-center px-0 text-sm font-medium whitespace-nowrap transition-colors disabled:opacity-50',
+                fill ? 'flex-1 basis-0 justify-center px-3' : 'shrink-0',
               )}
             >
               {item.label}

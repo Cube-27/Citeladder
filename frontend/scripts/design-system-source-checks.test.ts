@@ -55,30 +55,8 @@ function websiteRoot(mutate: (css: string) => string = (css) => css) {
   ).join('\n');
   fs.mkdirSync(path.join(directory, 'app'), { recursive: true });
   fs.writeFileSync(path.join(directory, 'app', 'website-type.css'), mutate(css));
-  for (const [label] of JSX_FIXTURES) {
-    const file = path.join(directory, ...label.split('/'));
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSX_FIXTURES.get(label) as string);
-  }
   return directory;
 }
-
-const JSX_FIXTURES = new Map([
-  ['components/marketing/landing/hero.tsx', '<h1 className="website-hero-display">t</h1>;'],
-  ['components/marketing/primitives/page-hero.tsx', '<h1 className="website-page-title">t</h1>;'],
-  [
-    'components/marketing/primitives/section.tsx',
-    '<><h2 className="website-section-heading">a</h2><h3 className="website-feature-heading">b</h3></>;',
-  ],
-  [
-    'components/auth/auth-form.tsx',
-    '<><h1 className="flow-title">a</h1><p className="website-body">b</p></>;',
-  ],
-  [
-    'components/auth/flow-shell.tsx',
-    '<><h2 className="flow-group-title">a</h2><p className="flow-help">b</p><p className="flow-meta">c</p></>;',
-  ],
-]);
 
 describe('standalonePlaceholderViolations', () => {
   it('rejects quoted and JSX em-dash placeholders in product UI', () => {
@@ -157,12 +135,10 @@ describe('productUiSourceViolations', () => {
     expect(productUiSourceViolations(source, 'components/example.tsx', true)).toEqual([]);
   });
 
-  it('rejects retired product typography, palette utilities, and feature elevation', () => {
+  it('rejects feature-owned typography, palette utilities, and elevation', () => {
     const source =
       '<div className="text-2xs font-semibold bg-indigo-500 shadow-card">Example</div>';
-    // Retired size, retired weight, raw palette, feature elevation — and the
-    // weight is also a call-site weight decision, which is its own violation.
-    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(4);
+    expect(productUiSourceViolations(source, 'components/example.tsx', true)).toHaveLength(3);
   });
 
   it('rejects a font weight chosen at a call site', () => {
@@ -322,11 +298,11 @@ describe('styleAssertionViolations', () => {
     expect(styleAssertionViolations(source, 'components/example.test.tsx')).toHaveLength(1);
   });
 
-  it('allows semantic roles and the sanctioned visual contract suite', () => {
+  it('allows semantic roles but rejects frozen recipes even in shared UI tests', () => {
     const semantic = `expect(node).${classMatcher}('${semanticRole}', 'focus-ring')`;
     expect(styleAssertionViolations(semantic, 'components/example.test.tsx')).toEqual([]);
     const contract = `expect(node).${classMatcher}('${rawUtility}')`;
-    expect(styleAssertionViolations(contract, 'components/ui/primitives.test.tsx')).toEqual([]);
+    expect(styleAssertionViolations(contract, 'components/ui/primitives.test.tsx')).toHaveLength(1);
   });
 });
 

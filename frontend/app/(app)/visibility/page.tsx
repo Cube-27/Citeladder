@@ -1,7 +1,7 @@
 'use client';
 
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { VisibilityDashboard } from '@/components/visibility/visibility-dashboard';
+import { PageHeader } from '@/components/layout/page-header';
 
 /**
  * Visibility workspace screen (three-tab IA).
@@ -24,10 +24,9 @@ import { VisibilityDashboard } from '@/components/visibility/visibility-dashboar
  */
 export default function VisibilityPage() {
   return (
-    <TooltipProvider>
-      <div className="grid gap-[var(--workspace-gap)]">
-        <VisibilityDashboard />
-      </div>
-    </TooltipProvider>
+    <div className="grid gap-[var(--workspace-gap)]">
+      <PageHeader />
+      <VisibilityDashboard />
+    </div>
   );
 }

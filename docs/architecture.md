@@ -71,10 +71,12 @@ not select a transport model or retrieval policy.
 
 ### Growth Agent
 
-The Growth Agent is a top-bar orchestrator over persisted Site Health, Content,
-and Demand projections, not a navigation station or a second copy of system
-data. It cannot publish content, activate prompts, or mutate an external system
-without an explicit user decision.
+The Growth Agent is a shell-owned drawer orchestrating persisted Site Health,
+Content, and Demand projections, not a navigation station or a second copy of
+system data. Its desktop sidebar and compact topbar triggers open the one
+persistent controller with typed route context. It cannot publish content,
+activate prompts, or mutate an external system without an explicit user
+decision.
 
 The hosted MCP server is a second read interface over those same persisted
 owners. An OAuth grant is bound to one CiteLadder account, while each product

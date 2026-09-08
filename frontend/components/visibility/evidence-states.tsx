@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IconChip } from '@/components/ui/icon-chip';
-import { displayHeadingLgClasses, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 
 /**
@@ -63,7 +63,7 @@ export function EvidenceError({
           <IconChip className="bg-danger-bg text-danger-text">
             <ICONS.warning className="size-5" aria-hidden />
           </IconChip>
-          <h3 className={displayHeadingLgClasses}>Couldn&apos;t load this evidence</h3>
+          <h3 className={textRole('sectionTitle')}>Couldn&apos;t load this evidence</h3>
           <p className="text-secondary max-w-xs text-sm">
             The request failed or timed out. Your filters are unchanged.
           </p>
@@ -90,7 +90,7 @@ export function EvidenceEmpty({
           <IconChip className="bg-neutral-bg text-muted">
             <Inbox className="size-5" aria-hidden />
           </IconChip>
-          <h3 className={displayHeadingLgClasses}>{heading}</h3>
+          <h3 className={textRole('sectionTitle')}>{heading}</h3>
           <p className="text-secondary max-w-sm text-sm">{body}</p>
           <Button asChild variant="ghost" size="sm">
             <Link href="/runs">View Runs</Link>
@@ -114,7 +114,7 @@ export function EvidenceFilteredEmpty({
           <IconChip className="bg-neutral-bg text-muted">
             <SearchX className="size-5" aria-hidden />
           </IconChip>
-          <h3 className={displayHeadingLgClasses}>No results match these filters</h3>
+          <h3 className={textRole('sectionTitle')}>No results match these filters</h3>
           <p className="text-secondary max-w-sm text-sm">{body}</p>
           {onClear ? (
             <Button variant="ghost" size="sm" onClick={onClear}>

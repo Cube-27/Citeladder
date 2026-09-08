@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { History } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   type ContentContextPreviewInput,
@@ -99,19 +102,22 @@ export function ContentScreen({
 
 function NoProjectState() {
   return (
-    <Card>
-      <CardContent className="flex flex-col items-start gap-3 py-[var(--empty-state-padding)]">
-        <p className="text-secondary text-sm">
-          Create a project first — content generation needs a project and its website.
-        </p>
-        <Link
-          href="/projects"
-          className={textRole('bodyStrong', 'text-accent-text underline underline-offset-4')}
-        >
-          Go to Projects
-        </Link>
-      </CardContent>
-    </Card>
+    <div className="grid gap-[var(--workspace-gap)]">
+      <PageHeader />
+      <Card>
+        <CardContent className="flex flex-col items-start gap-3 py-[var(--empty-state-padding)]">
+          <p className="text-secondary text-sm">
+            Create a project first — content generation needs a project and its website.
+          </p>
+          <Link
+            href="/projects"
+            className={textRole('bodyStrong', 'text-accent-text underline underline-offset-4')}
+          >
+            Go to Projects
+          </Link>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -284,6 +290,14 @@ function ContentWorkspace({
   }
   return (
     <div className="flex min-w-0 flex-col gap-[var(--workspace-gap)]">
+      <PageHeader
+        actions={
+          <Button variant="secondary" size="md" onClick={() => setHistoryOpen(true)}>
+            <History className="size-4" aria-hidden />
+            History
+          </Button>
+        }
+      />
       {siteHealthAlert}
       <ContentComposer
         instruction={instruction}
@@ -305,7 +319,6 @@ function ContentWorkspace({
         onInstructionChange={setInstruction}
         onSkillChange={setChosenSkillId}
         onGenerate={onGenerate}
-        onHistoryOpen={() => setHistoryOpen(true)}
       />
       <GenerationStatePanels
         generating={generating}

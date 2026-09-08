@@ -1,12 +1,12 @@
 /**
  * Badge token maps (§8). Each family maps a value → the colour of the badge's
- * status dot, plus the label's ink. No raw hex; all classes resolve to the
- * semantic Tailwind declarations in globals.css.
+ * status dot, the label ink, and (where the design contract calls for it) a
+ * quiet semantic fill. No raw hex; all classes resolve to the semantic
+ * Tailwind declarations in globals.css.
  *
- * One signal, one encoding. A badge used to carry a fill, a border, a dot and a
- * label — four ways of saying the same thing, and on a paper canvas that reads
- * as clutter. The dot now carries the family colour and the label carries the
- * meaning, so a dense table of badges stays quiet enough to scan.
+ * Colour never carries the state alone: the dot provides the quick visual cue
+ * and the label names the meaning. Status and sentiment families may add the
+ * documented quiet fill while classification and run-state rows stay lighter.
  *
  * The dot class is a separate field rather than a `[&>span]:bg-*` variant on the
  * wrapper: a child selector matches ANY direct span, and several call sites wrap
@@ -24,16 +24,25 @@
 export type BadgeTone = { label: string; dot: string };
 
 export const statusBadge = {
-  success: { label: 'text-secondary', dot: 'bg-success' },
-  warning: { label: 'text-secondary', dot: 'bg-warning' },
-  danger: { label: 'text-danger-text', dot: 'bg-danger' },
-  info: { label: 'text-secondary', dot: 'bg-info' },
+  success: { label: 'bg-success-bg text-success-text', dot: 'bg-success' },
+  warning: { label: 'bg-warning-bg text-warning-text', dot: 'bg-warning' },
+  danger: { label: 'bg-danger-bg text-danger-text', dot: 'bg-danger' },
+  info: { label: 'bg-info-bg text-info-text', dot: 'bg-info' },
 } as const satisfies Record<string, BadgeTone>;
 
 export const sentimentBadge = {
-  positive: { label: 'text-secondary', dot: 'bg-sentiment-positive' },
-  neutral: { label: 'text-secondary', dot: 'bg-sentiment-neutral' },
-  negative: { label: 'text-danger-text', dot: 'bg-sentiment-negative' },
+  positive: {
+    label: 'bg-sentiment-positive-bg text-sentiment-positive-text',
+    dot: 'bg-sentiment-positive',
+  },
+  neutral: {
+    label: 'bg-sentiment-neutral-bg text-sentiment-neutral-text',
+    dot: 'bg-sentiment-neutral',
+  },
+  negative: {
+    label: 'bg-sentiment-negative-bg text-sentiment-negative-text',
+    dot: 'bg-sentiment-negative',
+  },
 } as const satisfies Record<string, BadgeTone>;
 
 export const classificationBadge = {
@@ -54,7 +63,7 @@ export const runStatusBadge = {
   cancelled: { label: 'text-muted', dot: 'bg-run-cancelled' },
 } as const satisfies Record<string, BadgeTone>;
 
-export const neutralBadge = { label: 'text-muted', dot: 'bg-border-strong' } as const;
+export const neutralBadge = { label: 'bg-neutral-bg text-muted', dot: 'bg-border-strong' } as const;
 
 export type StatusValue = keyof typeof statusBadge;
 export type SentimentValue = keyof typeof sentimentBadge;
@@ -62,8 +71,8 @@ export type ClassificationValue = keyof typeof classificationBadge;
 export type RunStatusValue = keyof typeof runStatusBadge;
 
 /**
- * Shared shape/typography for every badge family — an unboxed dot-and-label
- * pair, not a chip. Casing comes from the call site so product nouns keep their
- * capitalization.
+ * Shared compact shape/typography for every badge family. Casing comes from the
+ * call site so product nouns keep their capitalization.
  */
-export const badgeBase = 'inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium';
+export const badgeBase =
+  'inline-flex min-h-[22px] items-center gap-1.5 rounded-[var(--radius-xs)] border border-transparent px-1.5 py-0.5 whitespace-nowrap text-xs font-medium';

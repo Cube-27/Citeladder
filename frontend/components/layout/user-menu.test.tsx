@@ -36,13 +36,30 @@ import userEvent from '@testing-library/user-event';
 
 import { createAppQueryClient } from '@/lib/api/query-client';
 
-import { UserMenu } from './user-menu';
+import { UserMenuController, UserMenuTrigger } from './user-menu';
 
 function renderMenu(compact = false) {
   return render(
     <QueryClientProvider client={createAppQueryClient()}>
       <TooltipProvider>
-        <UserMenu compact={compact} />
+        <UserMenuController>
+          <UserMenuTrigger presenter={compact ? 'compact' : 'sidebar'} />
+        </UserMenuController>
+      </TooltipProvider>
+    </QueryClientProvider>,
+  );
+}
+
+function renderSplitMenu() {
+  return render(
+    <QueryClientProvider client={createAppQueryClient()}>
+      <TooltipProvider>
+        <UserMenuController>
+          <>
+            <UserMenuTrigger presenter="sidebar" />
+            <UserMenuTrigger presenter="compact" />
+          </>
+        </UserMenuController>
       </TooltipProvider>
     </QueryClientProvider>,
   );
@@ -89,6 +106,24 @@ describe('UserMenu', () => {
 
     expect(await screen.findByRole('menuitem', { name: /settings/i })).toBeVisible();
     expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeVisible();
+  });
+
+  it('shares one logout controller and restores focus to the actual split trigger', async () => {
+    const user = userEvent.setup();
+    renderSplitMenu();
+
+    const triggers = screen.getAllByRole('button');
+    expect(triggers).toHaveLength(2);
+    const [desktopTrigger, compactTrigger] = triggers;
+
+    await user.click(compactTrigger);
+    expect(await screen.findByRole('menu')).toBeVisible();
+    await user.keyboard('{Escape}');
+    await vi.waitFor(() => expect(compactTrigger).toHaveFocus());
+
+    await user.click(desktopTrigger);
+    await user.click(await screen.findByRole('menuitem', { name: /sign out/i }));
+    expect(logoutMock).toHaveBeenCalledOnce();
   });
 
   it('clears the client session only after the server confirms logout', async () => {

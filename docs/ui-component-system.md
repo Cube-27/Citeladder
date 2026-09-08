@@ -71,6 +71,24 @@ alignment, hierarchy, state contrast, focus, and micro-transitions. HeroUI is
 not installed, its component interfaces are not copied, and it is not an
 architectural owner.
 
+## Authenticated shell composition
+
+`frontend/components/layout/app-shell.tsx` is the single authenticated shell
+owner. The desktop sidebar contains the brand, `ProjectSwitcher`, Search,
+Agent, the four station groups, supporting Settings access, and the desktop
+account trigger. At widths up to 980px, one 56px topbar opens the same
+navigation content in the focus-managed drawer and keeps Search, Agent, and
+the compact account trigger visible. There is no desktop global topbar or
+fixed bottom navigation.
+
+`CommandPalette` and `AgentSheet` each have one persistent controller mounted
+under the shell. Their desktop and compact launchers are trigger presenters;
+they do not mount controllers in the navigation drawer. `UserMenuController`
+owns one logout mutation and its desktop and compact `UserMenuTrigger`
+presenters. `resolveNavigationGroups` and `resolveCommandGroups` in
+`components/layout/nav-items.ts` are the shared route and capability
+resolvers for visible navigation and Command Palette results.
+
 ## State ownership
 
 - TanStack Query owns server state. Query records are never copied into local

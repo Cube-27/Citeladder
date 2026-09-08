@@ -22,6 +22,7 @@ vi.mock('@/lib/project/project-context', () => ({
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
+  usePathname: () => '/runs',
 }));
 
 function audit(overrides: Record<string, unknown> = {}) {

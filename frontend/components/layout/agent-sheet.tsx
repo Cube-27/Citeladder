@@ -15,6 +15,7 @@ import type { AgentTaskType } from '@/lib/api/agent';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { GROWTH_AGENT_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext } from '@/lib/project/project-context';
+import { cn } from '@/lib/utils';
 
 const OPEN_AGENT_EVENT = 'citeladder:open-agent';
 const DATE_KEYS = new Set(['start', 'end', 'start_date', 'end_date', 'date_from', 'date_to']);
@@ -52,6 +53,8 @@ export function AgentLauncher({
   children: ReactNode;
   className?: string;
 }>) {
+  const { hasCapability, isLoading } = useEntitlement();
+  if (isLoading || !hasCapability(GROWTH_AGENT_CAPABILITY)) return null;
   return (
     <Pressable
       className={className}
@@ -63,6 +66,34 @@ export function AgentLauncher({
     >
       {children}
     </Pressable>
+  );
+}
+
+/** A trigger-only presenter for the persistent shell-owned Agent drawer. */
+export function AgentSheetTrigger({
+  className,
+  onOpen,
+}: Readonly<{
+  className?: string;
+  /** Lets a transient presenter close before the persistent drawer opens. */
+  onOpen?: () => void;
+}>) {
+  const { hasCapability, isLoading } = useEntitlement();
+  if (isLoading || !hasCapability(GROWTH_AGENT_CAPABILITY)) return null;
+  return (
+    <Button
+      variant="ghost"
+      size="md"
+      onClick={() => {
+        if (onOpen) onOpen();
+        else window.dispatchEvent(new Event(OPEN_AGENT_EVENT));
+      }}
+      aria-label="Open Growth Agent"
+      className={cn('min-w-0 gap-1.5', className)}
+    >
+      <Bot className="text-accent size-3.5" aria-hidden />
+      <span className="hidden sm:inline">Agent</span>
+    </Button>
   );
 }
 
@@ -78,7 +109,7 @@ export function AgentSheet() {
   useEffect(() => {
     const listener = (event: Event) => {
       const detail = (event as CustomEvent<AgentLaunch>).detail;
-      setLaunch(detail);
+      if (detail) setLaunch(detail);
       setOpen(true);
     };
     window.addEventListener(OPEN_AGENT_EVENT, listener);
@@ -108,34 +139,22 @@ export function AgentSheet() {
   if (isLoading || !hasCapability(GROWTH_AGENT_CAPABILITY)) return null;
 
   return (
-    <>
-      <Button
-        variant="tonal"
-        size="sm"
-        onClick={() => setOpen(true)}
-        aria-label="Open Growth Agent"
-        className="gap-1.5"
-      >
-        <Bot className="text-accent size-3.5" aria-hidden />
-        <span className="hidden sm:inline">Agent</span>
-      </Button>
-      <Drawer
-        open={open}
-        onOpenChange={setOpen}
-        title="Growth Agent"
-        description="Explain saved evidence or prioritize the next action."
-        closeLabel="Close Growth Agent"
-        /* The workspace owns its own scrolling body + pinned composer, so the
-           drawer must not add a second scroll container around it. */
-        bodyClassName="overflow-hidden p-0"
-      >
-        <GrowthAgentWorkspace
-          key={`${activeProject?.id ?? 'none'}:${launch.taskType}:${launch.objective}`}
-          initialTask={launch.taskType}
-          initialObjective={launch.objective}
-          routeContext={routeContext}
-        />
-      </Drawer>
-    </>
+    <Drawer
+      open={open}
+      onOpenChange={setOpen}
+      title="Growth Agent"
+      description="Explain saved evidence or prioritize the next action."
+      closeLabel="Close Growth Agent"
+      /* The workspace owns its own scrolling body + pinned composer, so the
+         drawer must not add a second scroll container around it. */
+      bodyClassName="overflow-hidden p-0"
+    >
+      <GrowthAgentWorkspace
+        key={`${activeProject?.id ?? 'none'}:${launch.taskType}:${launch.objective}`}
+        initialTask={launch.taskType}
+        initialObjective={launch.objective}
+        routeContext={routeContext}
+      />
+    </Drawer>
   );
 }
