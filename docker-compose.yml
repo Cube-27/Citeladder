@@ -51,7 +51,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["alembic", "upgrade", "head"]
+    command: ["/bin/sh", "-c", "alembic upgrade head && python -m app.demo.bootstrap"]
 
   web:
     build:

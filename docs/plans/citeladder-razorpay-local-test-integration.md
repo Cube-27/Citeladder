@@ -9,7 +9,8 @@ zero projects, and zero subscriptions; failed bootstrap was missing
 `billing_accounts.registration_cohort_at`. The installed image baseline hash
 matched the repository baseline. The owner approved replacing the dev account
 UUID/sessions and reprovisioning its existing configured credentials; backup
-preservation is not required. Payment integration and checkout enabling are not
+preservation is not required. Pricing visibility and initial catalog provisioning are included in recovery.
+Payment integration and checkout enabling are not
 part of this recovery. Sections 2B onward remain a separate implementation.
 
 Use `python infra/gcp/reset-db.py --project <PROJECT_ID>` to preview the installed
@@ -21,16 +22,28 @@ code, save backups, or change configured credentials. Run the normal deploy
 workflow to install a newer revision afterward. Record rollout and integrated
 login verification results here after recovery completes.
 
-Local configuration also used unrecognized `GOOGLE_OAUTH_CLIENT_*` names;
-these were corrected to `INTEGRATION_GOOGLE_CLIENT_ID` and
-`INTEGRATION_GOOGLE_CLIENT_SECRET`, preserving values in the ignored `.env`.
+Local configuration used `GOOGLE_OAUTH_CLIENT_*` names. The configuration owner
+now accepts these aliases for the shared Google client; canonical
+`INTEGRATION_GOOGLE_CLIENT_ID` / `_SECRET` take precedence. Local Compose now
+runs explicit dev bootstrap after migrations when credentials are configured,
+and both deployment bootstrap and the local reset provisioning command publish
+the approved initial catalog if none exists. This fixes an empty recreated
+database containing neither the dev login nor visible pricing; ordinary
+registration/login and pricing reads do not publish catalog state.
 Literal dollar signs in local connection settings are single-quoted to prevent
 Compose interpolation. `.env.example` uses the canonical configuration names.
 
 Validation: the full `scripts/check.ps1` passed. The initial `scripts/test.ps1`
 passed 267 backend tests and found one stale frontend redirect expectation;
 the required retry-delta run passed 164 frontend tests and all 10 mapped browser
-tests. Local backend and frontend production images built successfully.
+tests. Local backend and frontend production images built successfully. The owner then
+reported missing local login/pricing after recreating the database; the follow-up
+bootstrap and Google-alias regression tests are included for CI validation,
+without repeating the completed local suites.
+
+Live rebuild completed successfully with the installed image, including baseline
+migration, configured dev account, a clean `alembic check`, and application health.
+The follow-up deployment installs occupancy/routing fixes and initializes pricing.
 
 ## 1. Execution boundary and agreed scope
 

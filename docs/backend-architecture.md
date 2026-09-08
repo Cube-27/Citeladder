@@ -274,6 +274,14 @@ zero reservations, and remaining capacity clamped at zero. Missing authority and
 counter families owned elsewhere stay unknown. Reads do not acquire admission
 locks or repair provisioning; creation retains its locked capacity check.
 
+Explicit deployment/dev bootstrap creates the configured administrator and
+publishes the approved initial pricing catalog only when no published catalog
+exists. Local Compose runs that bootstrap after migrations when a dev password
+is configured; a credential-free development stack skips it. Public login and
+catalog reads never publish or repair a catalog. Checkout remains disabled.
+The shared Google client accepts `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` aliases;
+canonical `INTEGRATION_GOOGLE_CLIENT_ID` / `_SECRET` take precedence.
+
 ## Billing, entitlements, and commercial evidence
 
 `BillingCatalogRevision` is the runtime commercial authority. Validated payloads

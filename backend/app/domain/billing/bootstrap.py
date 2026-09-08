@@ -35,6 +35,7 @@ from app.domain.entitlements.types import GrantSpec
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
+    BillingCatalogRevision,
     GrantRevocation,
     WorkspaceBillingLink,
 )
@@ -238,3 +239,26 @@ async def user_billing_bootstrap_complete(session: AsyncSession, user: User) -> 
         ).all()
     )
     return owner_workspace_ids == linked_workspace_ids
+
+
+async def ensure_initial_catalog(session: AsyncSession, *, operator: User) -> None:
+    """Explicit environment bootstrap; never called by public auth or reads."""
+    from app.domain.billing.admin import OperatorContext, publish_catalog, seed_catalog
+
+    if not operator.is_active or operator.role != "admin":
+        raise PermissionError("active_admin_required")
+    existing = await session.scalar(
+        select(BillingCatalogRevision.id).where(
+            BillingCatalogRevision.publication_state == "published"
+        )
+    )
+    if existing is not None:
+        return
+    context = OperatorContext(
+        actor=operator,
+        reason="initialize approved pricing for a provisioned environment",
+        idempotency_key="environment-initial-catalog",
+        dry_run=False,
+    )
+    draft = await seed_catalog(session, context=context)
+    await publish_catalog(session, revision=draft.revision, context=context)

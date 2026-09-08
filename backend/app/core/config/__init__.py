@@ -136,13 +136,17 @@ class Settings(BaseSettings):
     integration_google_client_id: str = Field(
         default="",
         validation_alias=AliasChoices(
-            "INTEGRATION_GOOGLE_CLIENT_ID", "integration_google_client_id"
+            "INTEGRATION_GOOGLE_CLIENT_ID",
+            "GOOGLE_OAUTH_CLIENT_ID",
+            "integration_google_client_id",
         ),
     )
     integration_google_client_secret: str = Field(
         default="",
         validation_alias=AliasChoices(
-            "INTEGRATION_GOOGLE_CLIENT_SECRET", "integration_google_client_secret"
+            "INTEGRATION_GOOGLE_CLIENT_SECRET",
+            "GOOGLE_OAUTH_CLIENT_SECRET",
+            "integration_google_client_secret",
         ),
     )
     integration_microsoft_client_id: str = Field(

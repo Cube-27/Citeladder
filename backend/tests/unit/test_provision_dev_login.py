@@ -44,6 +44,7 @@ def _arrange_existing_login(monkeypatch: pytest.MonkeyPatch):
         provision_dev_login, "ensure_user_billing", AsyncMock(return_value=account)
     )
     monkeypatch.setattr(provision_dev_login, "issue_override_bundle", AsyncMock())
+    monkeypatch.setattr(provision_dev_login, "ensure_initial_catalog", AsyncMock())
     dispose_engine = AsyncMock()
     monkeypatch.setattr(provision_dev_login, "dispose_engine", dispose_engine)
     return user, session, dispose_engine
