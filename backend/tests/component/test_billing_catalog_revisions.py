@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.billing_tax import BillingIdentity
 from app.domain.billing.catalog_revisions import (
     approved_phase1_payload,
     create_draft,
@@ -136,11 +137,31 @@ async def test_purchase_intent_reads_the_persisted_catalog_revision(
     monkeypatch.setattr(
         billing_settings, "quote_signing_secret", SecretStr("synthetic-quote")
     )
+    for name, value in (
+        ("seller_legal_name", "CiteLadder Private Limited"),
+        ("seller_legal_address", "1 Seller Street, Mumbai"),
+        ("seller_email", "billing@example.test"),
+        ("seller_gstin", "27ABCDE1234F1Z5"),
+        ("seller_gst_state_code", "27"),
+        ("seller_gst_state_name", "Maharashtra"),
+        ("seller_sac", "998313"),
+        ("seller_lut_reference", "LUT/2026/001"),
+    ):
+        monkeypatch.setattr(billing_settings, name, value)
     intent = await resolve_base_intent(
         db_session,
         catalog_key="tier_1",
         credential_mode="byok",
         country_code="US",
+        billing_identity=BillingIdentity(
+            name="Persisted Buyer",
+            address_line1="1 Test Road",
+            city="New York",
+            state_code=None,
+            postal_code="10001",
+            customer_gstin=None,
+            export_eligibility_attested=True,
+        ),
         at=datetime(2026, 9, 8, tzinfo=UTC),
     )
 

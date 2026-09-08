@@ -164,21 +164,31 @@ class RazorpayBillingProvider:
             raise BillingProviderError("provider_invalid_response")
         if status not in RAZORPAY_PAYMENT_STATUS_MAP:
             raise BillingProviderError("provider_invalid_response")
+        normalized_status = RAZORPAY_PAYMENT_STATUS_MAP[status]
+        created_at = _optional_int(data.get("created_at"))
         # Read once and narrow the result: calling ``get`` twice gives the type
         # checker no way to tie the isinstance check to the value being used.
         raw_notes = data.get("notes")
         notes = raw_notes if isinstance(raw_notes, dict) else {}
         return ProviderPayment(
             external_payment_id=external_id,
-            status=RAZORPAY_PAYMENT_STATUS_MAP[status],
+            status=normalized_status,
             amount_minor=amount,
             currency=currency.upper(),
-            updated_at=_optional_int(data.get("updated_at")) or 0,
-            paid_at=_optional_int(data.get("paid_at")),
+            updated_at=_optional_int(data.get("updated_at")) or created_at or 0,
+            # The Payment entity guarantees created_at, not paid_at. Once its
+            # authoritative status is captured/paid, creation is the only
+            # provider timestamp available for the receipt's paid date.
+            paid_at=(
+                _optional_int(data.get("paid_at")) or created_at
+                if normalized_status == "paid"
+                else None
+            ),
             provider_mode=self.settings.require_provider_mode(),
             external_invoice_id=_optional_str(data.get("invoice_id")),
             intent_id=_optional_str(notes.get(_NOTE_INTENT)),
             account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
+            payment_method=_optional_str(data.get("method")),
         )
 
     # --- protocol ---------------------------------------------------------

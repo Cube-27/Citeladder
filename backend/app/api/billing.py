@@ -5,12 +5,14 @@ Routes, in the frozen order of the work order:
 1. ``GET  /billing/catalog``        public preview catalog (no auth);
 2. ``GET  /billing/entitlement``    authenticated account read;
 3. ``GET  /billing/usage``          authenticated account read;
-4. ``POST /billing/subscriptions``  the ONE base purchase route (202 pending);
-5. ``DELETE /billing/subscription`` schedule base cancellation;
-6. ``POST /billing/addons``         add-on activation;
-7. ``POST /billing/topups``         top-up purchase;
-8. ``DELETE /billing/addons/{key}`` schedule add-on cancellation;
-9. ``POST /billing/webhooks/razorpay`` signed ingress, 204 with no body.
+4. ``GET  /billing/invoices``       persisted paid-receipt history;
+5. ``GET  /billing/invoices/{id}/pdf`` authorized receipt download;
+6. ``POST /billing/subscriptions``  the ONE base purchase route (202 pending);
+7. ``DELETE /billing/subscription`` schedule base cancellation;
+8. ``POST /billing/addons``         add-on activation;
+9. ``POST /billing/topups``         top-up purchase;
+10. ``DELETE /billing/addons/{key}`` schedule add-on cancellation;
+11. ``POST /billing/webhooks/razorpay`` signed ingress, 204 with no body.
 
 The v6 ``/billing/me``, ``/billing/profile``, ``/billing/checkout``,
 ``/billing/cancel``, and ``/billing/manage`` routes are DELETED without
@@ -22,8 +24,9 @@ BILLING OWNER (``BillingAccount.owner_user_id``) via ``owned_account``; the
 public catalog is the single deliberate exception because it reads no account,
 workspace, connection, or probe. Invariant 6: no route accepts or returns an
 amount, a currency, a region, a provider reference, or an external provider id
-— the browser submits only a catalog key, a quantity, a credential mode, and an
-ISO country, and the SERVER-resolved quote drives every provider argument.
+— the browser submits catalog/customer billing facts but never a commercial
+amount or provider reference, and the SERVER-resolved quote drives every
+provider argument.
 """
 
 from __future__ import annotations
@@ -47,6 +50,7 @@ from fastapi import Path as PathParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.billing_checkout import router as checkout_router
+from app.api.billing_invoices import router as invoices_router
 from app.api.deps import (
     WorkspaceContext,
     get_current_user,
@@ -75,6 +79,7 @@ from app.core.config.billing_contracts import (
 from app.core.config.billing_settings import (
     billing_settings,
 )
+from app.core.config.billing_tax import BillingIdentity, TaxPolicyError
 from app.core.http_errors import raise_api_error
 from app.domain.billing.catalog import public_catalog
 from app.domain.billing.catalog_revisions import CatalogUnavailableError
@@ -121,7 +126,7 @@ from app.domain.billing.service import (
     owned_account,
     pending_addon_activation,
     pending_base_activation,
-    persist_billing_country,
+    persist_billing_profile,
     resolve_addon_intent,
     resolve_base_intent,
     resolve_topup_intent,
@@ -140,6 +145,7 @@ from app.models.user import User
 
 router = APIRouter(tags=["billing"])
 router.include_router(checkout_router)
+router.include_router(invoices_router)
 
 
 def _idempotency_key(
@@ -171,6 +177,7 @@ def _safe_commercial_errors() -> Iterator[None]:
         IdempotencyConflictError,
         BillingConflictError,
         IntroductoryAccessError,
+        TaxPolicyError,
     ) as exc:
         raise_api_error(409, str(exc), cause=exc)
     except BillingProviderError as exc:
@@ -201,6 +208,7 @@ async def _replayed_activation(
     credential_mode: str,
     idempotency_key: str,
     response: Response,
+    billing_context: dict[str, object],
 ) -> ActivationResponse | None:
     """Step 4 BEFORE step 5: the stored response for an already-seen key.
 
@@ -218,6 +226,7 @@ async def _replayed_activation(
         quantity=quantity,
         credential_mode=credential_mode,
         idempotency_key=idempotency_key,
+        billing_context=billing_context,
     )
     if replayed is None:
         return None
@@ -413,6 +422,15 @@ async def post_subscription(
     with _safe_commercial_errors():
         reject_deferred_trial(payload.trial_requested)
         account = await owned_account(session, user)
+        identity = BillingIdentity(
+            name=payload.billing_name,
+            address_line1=payload.billing_address_line1,
+            city=payload.billing_city,
+            state_code=payload.billing_state_code,
+            postal_code=payload.billing_postal_code,
+            customer_gstin=payload.customer_gstin,
+            export_eligibility_attested=payload.export_eligibility_attested,
+        )
         replayed = await _replayed_activation(
             session,
             account=account,
@@ -422,6 +440,10 @@ async def post_subscription(
             credential_mode=payload.credential_mode,
             idempotency_key=idempotency_key,
             response=response,
+            billing_context={
+                "country_code": payload.country_code,
+                "customer": identity.snapshot(),
+            },
         )
         if replayed is not None:
             return replayed
@@ -431,9 +453,10 @@ async def post_subscription(
             catalog_key=payload.catalog_key,
             credential_mode=payload.credential_mode,
             country_code=payload.country_code,
+            billing_identity=identity,
             at=datetime.now(UTC),
         )
-        persist_billing_country(account, payload.country_code)
+        persist_billing_profile(account, payload.country_code, identity)
         return await _run_intent(
             session,
             account=account,
@@ -463,6 +486,7 @@ async def post_addon(
     provider = get_billing_provider()
     with _safe_commercial_errors():
         account = await owned_account(session, user)
+        identity = _purchase_identity(account)
         replayed = await _replayed_activation(
             session,
             account=account,
@@ -472,6 +496,10 @@ async def post_addon(
             credential_mode=CREDENTIAL_MODE_BYOK,
             idempotency_key=idempotency_key,
             response=response,
+            billing_context={
+                "country_code": _purchase_country(account),
+                "customer": identity.snapshot(),
+            },
         )
         if replayed is not None:
             return replayed
@@ -481,6 +509,7 @@ async def post_addon(
             catalog_key=payload.catalog_key,
             quantity=payload.quantity,
             country_code=_purchase_country(account),
+            billing_identity=identity,
             at=datetime.now(UTC),
         )
         return await _run_intent(
@@ -514,6 +543,7 @@ async def post_topup(
     provider = get_billing_provider()
     with _safe_commercial_errors():
         account = await owned_account(session, user)
+        identity = _purchase_identity(account)
         replayed = await _replayed_activation(
             session,
             account=account,
@@ -523,6 +553,10 @@ async def post_topup(
             credential_mode=CREDENTIAL_MODE_BYOK,
             idempotency_key=idempotency_key,
             response=response,
+            billing_context={
+                "country_code": _purchase_country(account),
+                "customer": identity.snapshot(),
+            },
         )
         if replayed is not None:
             return replayed
@@ -532,6 +566,7 @@ async def post_topup(
             catalog_key=payload.catalog_key,
             quantity=payload.quantity,
             country_code=_purchase_country(account),
+            billing_identity=identity,
             at=datetime.now(UTC),
         )
         return await _run_intent(
@@ -636,6 +671,16 @@ def _purchase_country(account: BillingAccount) -> str:
     that locked value server-side.
     """
     return account.billing_country
+
+
+def _purchase_identity(account: BillingAccount) -> BillingIdentity:
+    """Restore normalized facts for later add-on/top-up tax decisions."""
+    if account.billing_profile is None:
+        raise BillingConflictError("checkout_unavailable")
+    try:
+        return BillingIdentity.from_snapshot(account.billing_profile)
+    except TaxPolicyError as exc:
+        raise BillingConflictError("checkout_unavailable") from exc
 
 
 async def _reject_live_base(session: AsyncSession, account: BillingAccount) -> None:

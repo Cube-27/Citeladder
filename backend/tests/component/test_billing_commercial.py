@@ -45,6 +45,7 @@ from app.core.config.billing_contracts import (
 from app.core.config.billing_settings import (
     billing_settings,
 )
+from app.core.config.billing_tax import BillingIdentity
 from app.domain.billing import idempotency as idempotency_module
 from app.domain.billing.activations import activate_pending
 from app.domain.billing.catalog_revisions import (
@@ -82,6 +83,63 @@ _SECRET = "commercial-webhook-secret"
 _PLAN_REF = "plan_test_private"
 _TOPUP_REF = "plink_test_private"
 _TOPUP_KEY = "topup_audit_credits"
+_US_BILLING_IDENTITY = {
+    "billing_name": "Fixture Buyer",
+    "billing_address_line1": "1 Test Road",
+    "billing_city": "New York",
+    "billing_postal_code": "10001",
+    "export_eligibility_attested": True,
+}
+
+
+def _billing_identity() -> BillingIdentity:
+    return BillingIdentity(
+        name="Fixture Buyer",
+        address_line1="1 Test Road",
+        city="New York",
+        state_code=None,
+        postal_code="10001",
+        customer_gstin=None,
+        export_eligibility_attested=True,
+    )
+
+
+def _tax_snapshot(total_minor: int) -> dict[str, object]:
+    return {
+        "customer": {
+            "name": "Fixture Buyer",
+            "address_line1": "1 Test Road",
+            "city": "New York",
+            "state_code": None,
+            "postal_code": "10001",
+            "customer_gstin": None,
+            "export_eligibility_attested": True,
+        },
+        "seller": {
+            "legal_name": "CiteLadder Private Limited",
+            "address": "1 Seller Street, Mumbai",
+            "email": "billing@citeladder.test",
+            "gstin": "27ABCDE1234F1Z5",
+            "state_code": "27",
+            "state_name": "Maharashtra",
+            "sac": "998313",
+            "lut_reference": "LUT/2026/001",
+            "invoice_prefix": "CL",
+        },
+        "tax": {
+            "subtotal_minor": total_minor,
+            "discount_minor": 0,
+            "taxable_minor": total_minor,
+            "treatment": "EXPORT_ZERO_RATED",
+            "tax_rate": "0",
+            "cgst_minor": 0,
+            "sgst_minor": 0,
+            "igst_minor": 0,
+            "tax_minor": 0,
+            "total_minor": total_minor,
+            "policy_version": 1,
+        },
+    }
 
 
 # --- helpers -----------------------------------------------------------------
@@ -156,6 +214,20 @@ def _enable_checkout(monkeypatch: pytest.MonkeyPatch, refs: dict[str, str]) -> N
     monkeypatch.setattr(billing_settings, "razorpay_international_ready", True)
     monkeypatch.setattr(billing_settings, "provider_price_refs", refs)
     monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    for name, value in {
+        "seller_legal_name": "CiteLadder Private Limited",
+        "seller_legal_address": "1 Seller Street, Mumbai",
+        "seller_email": "billing@citeladder.test",
+        "seller_gstin": "27ABCDE1234F1Z5",
+        "seller_gst_state_code": "27",
+        "seller_gst_state_name": "Maharashtra",
+        "seller_sac": "998313",
+        "seller_lut_reference": "LUT/2026/001",
+    }.items():
+        monkeypatch.setattr(billing_settings, name, value)
+    monkeypatch.setattr(
+        billing_api, "_purchase_identity", lambda _account: _billing_identity()
+    )
 
 
 def _subscription_activation_payload(
@@ -344,6 +416,15 @@ def _quote_dict(*, catalog_key: str, total_minor: int) -> dict[str, object]:
         "base_price": {"currency": "USD", "amount_minor": total_minor},
         "credit_price": None,
         "tax": {"currency": "USD", "amount_minor": 0},
+        "subtotal_price": {"currency": "USD", "amount_minor": total_minor},
+        "discount": {"currency": "USD", "amount_minor": 0},
+        "taxable_value": {"currency": "USD", "amount_minor": total_minor},
+        "tax_treatment": "EXPORT_ZERO_RATED",
+        "tax_rate": "0",
+        "cgst": {"currency": "USD", "amount_minor": 0},
+        "sgst": {"currency": "USD", "amount_minor": 0},
+        "igst": {"currency": "USD", "amount_minor": 0},
+        "tax_policy_version": 1,
         "total_price": {"currency": "USD", "amount_minor": total_minor},
         "expires_at": (now + timedelta(hours=1)).isoformat(),
     }
@@ -373,6 +454,7 @@ async def _seed_pending(
         external_reference=external_reference,
         external_price_id=_TOPUP_REF,
         quote=_quote_dict(catalog_key=catalog_key, total_minor=total_minor),
+        tax_snapshot=_tax_snapshot(total_minor),
         idempotency_key=f"seeded-{uuid.uuid4().hex[:16]}",
         request_fingerprint=uuid.uuid4().hex * 2,
         expires_at=now + timedelta(hours=1),
@@ -403,6 +485,7 @@ async def test_base_purchase_is_202_pending_and_grants_nothing(
             "catalog_key": "tier_1",
             "credential_mode": "byok",
             "country_code": "us",
+            **_US_BILLING_IDENTITY,
         },
         headers={"Idempotency-Key": "purchase-key-0001"},
     )
@@ -456,6 +539,7 @@ async def test_base_purchase_rejects_a_deferred_trial_before_any_write(
             "credential_mode": "byok",
             "country_code": "US",
             "trial_requested": True,
+            **_US_BILLING_IDENTITY,
         },
         headers={"Idempotency-Key": "trial-key-00001"},
     )
@@ -479,6 +563,8 @@ async def test_mutation_rejects_missing_malformed_key_and_browser_smuggling(
         "catalog_key": "tier_1",
         "credential_mode": "byok",
         "country_code": "US",
+        **_US_BILLING_IDENTITY,
+        **_US_BILLING_IDENTITY,
     }
     # Missing key.
     missing = await client.post("/api/v1/billing/subscriptions", json=payload)
@@ -523,6 +609,7 @@ async def test_idempotency_replays_same_body_and_rejects_a_different_one(
         "catalog_key": "tier_1",
         "credential_mode": "byok",
         "country_code": "US",
+        **_US_BILLING_IDENTITY,
     }
     headers = {"Idempotency-Key": "replay-key-0001"}
     first = await client.post(
@@ -577,6 +664,7 @@ async def test_uncertain_provider_error_returns_202_pending_then_replays(
         "catalog_key": "tier_1",
         "credential_mode": "byok",
         "country_code": "US",
+        **_US_BILLING_IDENTITY,
     }
     headers = {"Idempotency-Key": "uncertain-key-01"}
 
@@ -627,6 +715,7 @@ async def test_concurrent_same_key_requests_never_500_or_double_call(
         "catalog_key": "tier_1",
         "credential_mode": "byok",
         "country_code": "US",
+        **_US_BILLING_IDENTITY,
     }
     headers = {"Idempotency-Key": "race-key-api-0001"}
 
@@ -663,6 +752,7 @@ async def test_insert_race_loser_replays_the_winner(
         catalog_key="tier_1",
         credential_mode="byok",
         country_code="US",
+        billing_identity=_billing_identity(),
         at=datetime.now(UTC),
     )
 
@@ -738,6 +828,7 @@ async def test_insert_race_different_keys_loser_conflicts(
         catalog_key="tier_1",
         credential_mode="byok",
         country_code="US",
+        billing_identity=_billing_identity(),
         at=datetime.now(UTC),
     )
 
@@ -816,6 +907,7 @@ async def test_concurrent_different_key_base_posts_one_winner_one_conflict(
         "catalog_key": "tier_1",
         "credential_mode": "byok",
         "country_code": "US",
+        **_US_BILLING_IDENTITY,
     }
 
     async def _post(key: str) -> httpx.Response:
@@ -855,6 +947,7 @@ async def test_same_key_replay_while_pending_still_replays(
         "catalog_key": "tier_1",
         "credential_mode": "byok",
         "country_code": "US",
+        **_US_BILLING_IDENTITY,
     }
     headers = {"Idempotency-Key": "replay-pending-1"}
 
@@ -892,6 +985,7 @@ async def test_failed_pending_frees_the_base_slot(
         "catalog_key": "tier_1",
         "credential_mode": "byok",
         "country_code": "US",
+        **_US_BILLING_IDENTITY,
     }
 
     first = await client.post(
@@ -1064,6 +1158,7 @@ async def test_subscription_webhook_activates_once_and_a_duplicate_grants_nothin
             "catalog_key": "tier_1",
             "credential_mode": "byok",
             "country_code": "US",
+            **_US_BILLING_IDENTITY,
         },
         headers={"Idempotency-Key": "activate-key-001"},
     )
@@ -1139,6 +1234,7 @@ async def test_webhook_reconciliation_race_settles_exactly_once(
             "catalog_key": "tier_1",
             "credential_mode": "byok",
             "country_code": "US",
+            **_US_BILLING_IDENTITY,
         },
         headers={"Idempotency-Key": "race-key-000001"},
     )

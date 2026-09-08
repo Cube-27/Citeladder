@@ -257,6 +257,7 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("billing_country", sa.String(length=2), nullable=False),
         sa.Column("country_verification", sa.String(length=16), nullable=False),
+        sa.Column("billing_profile", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column(
             "entitlement_lifecycle_version",
             sa.Integer(),
@@ -4464,6 +4465,7 @@ def upgrade() -> None:
         sa.Column("external_price_id", sa.String(length=255), nullable=True),
         sa.Column("checkout_url", sa.Text(), nullable=True),
         sa.Column("quote", postgresql.JSONB(astext_type=Text()), nullable=True),
+        sa.Column("tax_snapshot", postgresql.JSONB(astext_type=Text()), nullable=True),
         sa.Column("country_code", sa.String(length=2), nullable=False),
         sa.Column("region", sa.String(length=16), nullable=False),
         sa.Column("settled_by", sa.String(length=24), nullable=True),
@@ -4546,6 +4548,7 @@ def upgrade() -> None:
         sa.Column("amount_minor", sa.Integer(), nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
         sa.Column("provider_mode", sa.String(length=8), nullable=False),
+        sa.Column("payment_method", sa.String(length=24), nullable=False),
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("paid_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("period_start", sa.DateTime(timezone=True), nullable=True),
@@ -4563,6 +4566,62 @@ def upgrade() -> None:
     op.create_index("ix_billing_payment_account_paid", "billing_payments", ["billing_account_id", "paid_at"], unique=False)
     op.create_index("uq_billing_payment_external", "billing_payments", ["provider", "external_payment_id"], unique=True, postgresql_where=sa.text("receipt_kind = 'payment'"))
     op.create_index("uq_billing_refund_external", "billing_payments", ["provider", "external_refund_id"], unique=True, postgresql_where=sa.text("external_refund_id IS NOT NULL"))
+    op.create_table(
+        "billing_invoice_counters",
+        sa.Column("financial_year", sa.String(length=7), nullable=False),
+        sa.Column("next_value", sa.Integer(), nullable=False),
+        sa.CheckConstraint(
+            "next_value > 0", name="ck_billing_invoice_counter_positive"
+        ),
+        sa.PrimaryKeyConstraint("financial_year"),
+    )
+    op.create_table(
+        "billing_invoices",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("billing_account_id", sa.UUID(), nullable=False),
+        sa.Column("payment_id", sa.UUID(), nullable=False),
+        sa.Column("invoice_number", sa.String(length=32), nullable=False),
+        sa.Column("receipt_number", sa.String(length=36), nullable=False),
+        sa.Column("financial_year", sa.String(length=7), nullable=False),
+        sa.Column("document_kind", sa.String(length=24), nullable=False),
+        sa.Column("invoice_date", sa.Date(), nullable=False),
+        sa.Column("paid_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("currency", sa.String(length=3), nullable=False),
+        sa.Column("total_amount_minor", sa.Integer(), nullable=False),
+        sa.Column("tax_treatment", sa.String(length=24), nullable=False),
+        sa.Column("tax_policy_version", sa.Integer(), nullable=False),
+        sa.Column("payload", postgresql.JSONB(astext_type=Text()), nullable=False),
+        sa.Column("payload_sha256", sa.String(length=64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint(
+            "tax_policy_version = 1", name="ck_billing_invoice_policy_v1"
+        ),
+        sa.CheckConstraint(
+            "total_amount_minor >= 0", name="ck_billing_invoice_total_nonneg"
+        ),
+        sa.ForeignKeyConstraint(
+            ["billing_account_id"], ["billing_accounts.id"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["payment_id"], ["billing_payments.id"], ondelete="RESTRICT"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("invoice_number"),
+        sa.UniqueConstraint("payment_id"),
+        sa.UniqueConstraint("receipt_number"),
+    )
+    op.create_index(
+        op.f("ix_billing_invoices_billing_account_id"),
+        "billing_invoices",
+        ["billing_account_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_billing_invoice_account_date",
+        "billing_invoices",
+        ["billing_account_id", "invoice_date"],
+        unique=False,
+    )
     op.create_table(
         "consumable_ledger",
         sa.Column("id", sa.UUID(), nullable=False),
@@ -6003,6 +6062,8 @@ def downgrade() -> None:
         "provider_connection_tests",
         "provider_capacity_buckets",
         "prompt_sets",
+        "billing_invoices",
+        "billing_invoice_counters",
         "billing_payments",
         "pending_activations",
         "owned_domains",

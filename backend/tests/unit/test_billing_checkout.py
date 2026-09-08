@@ -84,6 +84,31 @@ async def test_redirect_never_forwards_credentials() -> None:
     assert len(requests) == 1 and requests[0].url.host == "api.razorpay.com"
 
 
+@pytest.mark.asyncio
+async def test_captured_payment_uses_provider_created_at_and_method() -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda _request: httpx.Response(
+                200,
+                json={
+                    "id": "pay_fixture",
+                    "status": "captured",
+                    "amount": 118_000,
+                    "currency": "INR",
+                    "created_at": 1_788_865_200,
+                    "method": "upi",
+                },
+            )
+        )
+    ) as client:
+        payment = await RazorpayBillingProvider(
+            client=client, settings=configured()
+        ).fetch_payment("pay_fixture")
+    assert payment.status == "paid"
+    assert payment.paid_at == 1_788_865_200
+    assert payment.payment_method == "upi"
+
+
 def test_previous_webhook_secret_has_bounded_expiry(monkeypatch) -> None:
     now = datetime.now(UTC)
     monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr("new"))
@@ -139,6 +164,15 @@ def pending() -> SimpleNamespace:
             "region": "international",
             "base_price": money,
             "credit_price": None,
+            "subtotal_price": money,
+            "discount": {"currency": "USD", "amount_minor": 0},
+            "taxable_value": money,
+            "tax_treatment": "EXPORT_ZERO_RATED",
+            "tax_rate": "0",
+            "cgst": {"currency": "USD", "amount_minor": 0},
+            "sgst": {"currency": "USD", "amount_minor": 0},
+            "igst": {"currency": "USD", "amount_minor": 0},
+            "tax_policy_version": 1,
             "tax": {"currency": "USD", "amount_minor": 0},
             "total_price": money,
             "expires_at": expires,
@@ -193,6 +227,7 @@ def test_provider_plan_verification_checks_terms_and_tax() -> None:
         "period": "monthly",
         "interval": 1,
         "tax_minor": 0,
+        "tax_verified": True,
     }
     actual = {
         "item": {"name": "Tier 1", "amount": 4900, "currency": "USD"},
@@ -200,14 +235,18 @@ def test_provider_plan_verification_checks_terms_and_tax() -> None:
         "interval": 1,
     }
     verify_plan(actual, price)
-    with pytest.raises(ValueError, match="tax differs"):
-        verify_plan({**actual, "item": {**actual["item"], "tax_amount": 100}}, price)
+    # Provider tax metadata is irrelevant; CiteLadder owns the allocation.
+    verify_plan({**actual, "item": {**actual["item"], "tax_amount": 100}}, price)
     with pytest.raises(ValueError):
         verify_plan({**actual, "interval": 2}, price)
     with pytest.raises(ValueError):
         verify_plan(actual, {**price, "amount_minor": 4901})
     with pytest.raises(ValueError):
         verify_plan(actual, {**price, "tax_minor": 100, "tax_verified": False})
+    verify_plan(
+        {**actual, "item": {**actual["item"], "amount": 5000}},
+        {**price, "tax_minor": 100, "tax_verified": True},
+    )
 
 
 @pytest.mark.asyncio

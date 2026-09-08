@@ -73,7 +73,7 @@ from app.domain.billing.schemas import (
     SubscriptionCreateRequest,
     UsageItemResponse,
 )
-from app.domain.billing.webhooks import verify_razorpay_signature
+from app.domain.billing.webhooks import parse_payment_event, verify_razorpay_signature
 from scripts.provision_razorpay_plans import (
     _validate_environment,
 )
@@ -88,6 +88,35 @@ def test_webhook_signature_uses_exact_raw_body(
     signature = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
     assert verify_razorpay_signature(raw, signature)
     assert not verify_razorpay_signature(raw + b"\n", signature)
+
+
+def test_payment_webhook_discards_oversized_optional_method(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
+    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_fixture")
+    monkeypatch.setattr(
+        billing_settings, "razorpay_key_secret", SecretStr("synthetic-api-secret")
+    )
+    payment = parse_payment_event(
+        {
+            "created_at": 1_788_865_200,
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_fixture",
+                        "status": "captured",
+                        "amount": 118_000,
+                        "currency": "INR",
+                        "created_at": 1_788_865_200,
+                        "method": "x" * 25,
+                        "notes": {},
+                    }
+                }
+            },
+        }
+    )
+    assert payment.payment_method == ""
 
 
 @pytest.mark.asyncio
@@ -688,18 +717,40 @@ def test_entitlement_response_has_no_funded_execution_flag() -> None:
 
 
 def test_subscription_create_request_normalizes_and_bounds_the_country() -> None:
+    customer = {
+        "billing_name": "Fixture Buyer",
+        "billing_address_line1": "1 Test Road",
+        "billing_city": "Bhopal",
+        "billing_state_code": "23",
+        "billing_postal_code": "462001",
+    }
     request = SubscriptionCreateRequest(
-        catalog_key="tier_1", credential_mode="byok", country_code=" in "
+        catalog_key="tier_1",
+        credential_mode="byok",
+        country_code=" in ",
+        **customer,
     )
     assert request.country_code == "IN"
     assert request.trial_requested is False
+    international = SubscriptionCreateRequest(
+        catalog_key="tier_1",
+        credential_mode="byok",
+        country_code="US",
+        export_eligibility_attested=True,
+        **{**customer, "billing_state_code": ""},
+    )
+    assert international.billing_state_code is None
     with pytest.raises(ValidationError):
         SubscriptionCreateRequest(
-            catalog_key="tier_1", credential_mode="byok", country_code="IND"
+            catalog_key="tier_1", credential_mode="byok", country_code="IND", **customer
         )
     with pytest.raises(ValidationError):
         SubscriptionCreateRequest(
-            catalog_key="enterprise", credential_mode="byok", country_code="US"
+            catalog_key="enterprise",
+            credential_mode="byok",
+            country_code="US",
+            export_eligibility_attested=True,
+            **{**customer, "billing_state_code": None},
         )
     # A browser cannot submit an amount, a currency, or a provider reference.
     with pytest.raises(ValidationError):
@@ -707,6 +758,8 @@ def test_subscription_create_request_normalizes_and_bounds_the_country() -> None
             catalog_key="tier_1",
             credential_mode="byok",
             country_code="US",
+            export_eligibility_attested=True,
+            **{**customer, "billing_state_code": None},
             amount_minor=1,
         )
 

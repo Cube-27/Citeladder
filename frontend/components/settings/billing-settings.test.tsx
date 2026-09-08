@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
@@ -20,6 +20,17 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
 }));
 
 import { BillingSettings } from './billing-settings';
+
+function fillExportBillingDetails() {
+  fireEvent.change(screen.getByLabelText(/Billing country/i), { target: { value: 'US' } });
+  fireEvent.change(screen.getByLabelText('Billing name'), {
+    target: { value: 'CiteLadder' },
+  });
+  fireEvent.change(screen.getByLabelText('Address'), { target: { value: '1 Main Street' } });
+  fireEvent.change(screen.getByLabelText('City'), { target: { value: 'New York' } });
+  fireEvent.change(screen.getByLabelText('Postal code'), { target: { value: '10001' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: /qualifies as an export/i }));
+}
 
 function resolvedEntitlement(subscription: unknown = null) {
   return {
@@ -127,8 +138,11 @@ const catalogHandler = () => http.get('/api/v1/billing/catalog', () => HttpRespo
 const entitlementHandler = () =>
   http.get('/api/v1/billing/entitlement', () => HttpResponse.json(entitlementValue as never));
 const usageHandler = () => http.get('/api/v1/billing/usage', () => HttpResponse.json(USAGE));
+const invoicesHandler = () =>
+  http.get('/api/v1/billing/invoices', () => HttpResponse.json({ invoices: [] }));
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => mswServer.use(invoicesHandler()));
 afterEach(() => {
   mswServer.resetHandlers();
   entitlementValue = null;
@@ -172,7 +186,7 @@ describe('BillingSettings', () => {
     expect(await screen.findByText('$49 / month')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Choose Starter/ })).toBeDisabled();
 
-    await userEvent.type(screen.getByLabelText(/Billing country/i), 'US');
+    fillExportBillingDetails();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /Choose Starter/ })).toBeEnabled(),
     );
@@ -195,8 +209,17 @@ describe('BillingSettings', () => {
         country_code: 'US',
         region: 'international',
         base_price: { currency: 'USD', amount_minor: 4900 },
+        subtotal_price: { currency: 'USD', amount_minor: 4900 },
+        discount: { currency: 'USD', amount_minor: 0 },
+        taxable_value: { currency: 'USD', amount_minor: 4900 },
         credit_price: null,
         tax: { currency: 'USD', amount_minor: 0 },
+        tax_treatment: 'EXPORT_ZERO_RATED',
+        tax_rate: '0',
+        cgst: { currency: 'USD', amount_minor: 0 },
+        sgst: { currency: 'USD', amount_minor: 0 },
+        igst: { currency: 'USD', amount_minor: 0 },
+        tax_policy_version: 1,
         total_price: { currency: 'USD', amount_minor: 4900 },
         expires_at: '2026-08-01T12:00:00Z',
       },
@@ -231,7 +254,7 @@ describe('BillingSettings', () => {
 
     renderWithProviders(<BillingSettings />);
     await screen.findByText('$49 / month');
-    await userEvent.type(screen.getByLabelText(/Billing country/i), 'US');
+    fillExportBillingDetails();
     await userEvent.click(screen.getByRole('button', { name: /Choose Starter/ }));
 
     await waitFor(() => expect(bodies).toHaveLength(1));
@@ -239,6 +262,13 @@ describe('BillingSettings', () => {
       catalog_key: 'tier_1',
       credential_mode: 'byok',
       country_code: 'US',
+      billing_name: 'CiteLadder',
+      billing_address_line1: '1 Main Street',
+      billing_city: 'New York',
+      billing_state_code: null,
+      billing_postal_code: '10001',
+      customer_gstin: null,
+      export_eligibility_attested: true,
       trial_requested: false,
     });
   });
@@ -320,5 +350,55 @@ describe('BillingSettings', () => {
     expect(screen.queryByRole('button', { name: /Choose/ })).toBeNull();
     // No component-owned fallback price may appear when the catalog is gone.
     expect(document.body.textContent).not.toMatch(/\$\d/);
+  });
+
+  it('shows only paid receipts and downloads the server-issued PDF', async () => {
+    entitlementValue = resolvedEntitlement();
+    const invoice = {
+      invoice_id: ACCOUNT,
+      invoice_number: 'INV-1001',
+      receipt_number: 'RCT-1001',
+      status: 'paid',
+      paid_at: '2026-09-08T12:00:00Z',
+      amount_paid: { currency: 'INR', amount_minor: 1062000 },
+      subtotal_price: { currency: 'INR', amount_minor: 900000 },
+      discount: { currency: 'INR', amount_minor: 100000 },
+      taxable_value: { currency: 'INR', amount_minor: 900000 },
+      tax_treatment: 'CGST_SGST',
+      tax_rate: '18',
+      cgst: { currency: 'INR', amount_minor: 81000 },
+      sgst: { currency: 'INR', amount_minor: 81000 },
+      igst: { currency: 'INR', amount_minor: 0 },
+      payment_id: 'pay_1',
+    };
+    const createObjectURL = vi.fn(() => 'blob:test');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, configurable: true });
+    Object.defineProperty(URL, 'revokeObjectURL', { value: revokeObjectURL, configurable: true });
+    mswServer.use(
+      catalogHandler(),
+      entitlementHandler(),
+      usageHandler(),
+      http.get('/api/v1/billing/invoices', () => HttpResponse.json({ invoices: [invoice] })),
+      http.get(`/api/v1/billing/invoices/${ACCOUNT}/pdf`, () =>
+        HttpResponse.text('pdf', { headers: { 'Content-Type': 'application/pdf' } }),
+      ),
+    );
+
+    renderWithProviders(<BillingSettings />);
+
+    expect(await screen.findByText(/Invoice INV-1001/)).toBeInTheDocument();
+    expect(screen.getByText(/Receipt RCT-1001/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Download receipt' }));
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalled());
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:test');
+
+    mswServer.use(
+      http.get(`/api/v1/billing/invoices/${ACCOUNT}/pdf`, () =>
+        HttpResponse.json({ detail: 'unavailable' }, { status: 503 }),
+      ),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Download receipt' }));
+    expect(await screen.findByText('Receipt download failed. Please retry.')).toBeInTheDocument();
   });
 });

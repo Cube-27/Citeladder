@@ -4,7 +4,7 @@ const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(s
 const uuid = () => z.uuid();
 
 // ---------------------------------------------------------------------------
-// Billing (provider ids, plan ids, secrets, and billing PII never cross wire)
+// Billing responses never expose provider ids, provider plan ids, or secrets.
 // ---------------------------------------------------------------------------
 
 // Plan keys are LOCKED to the four the backend publishes. A retired `free`/
@@ -12,6 +12,7 @@ const uuid = () => z.uuid();
 export const planCatalogKeySchema = z.enum(['tier_1', 'tier_2', 'tier_3', 'enterprise']);
 export const credentialModeSchema = z.enum(['byok', 'funded']);
 export const billingRegionSchema = z.enum(['india', 'international']);
+export const taxTreatmentSchema = z.enum(['CGST_SGST', 'IGST', 'EXPORT_ZERO_RATED']);
 export const catalogAvailabilitySchema = z.enum(['available', 'unavailable']);
 export const grantSourceKindSchema = z.enum(['plan', 'addon', 'topup', 'trial', 'override']);
 export const entitlementStatusSchema = z.enum(['resolved', 'entitlement_unresolved']);
@@ -55,8 +56,17 @@ export const resolvedQuoteSchema = responseObject({
   country_code: z.string(),
   region: billingRegionSchema,
   base_price: moneySchema,
+  subtotal_price: moneySchema,
+  discount: moneySchema,
+  taxable_value: moneySchema,
   credit_price: moneySchema.nullable(),
   tax: moneySchema,
+  tax_treatment: taxTreatmentSchema,
+  tax_rate: z.string(),
+  cgst: moneySchema,
+  sgst: moneySchema,
+  igst: moneySchema,
+  tax_policy_version: z.number().int().nonnegative(),
   total_price: moneySchema,
   expires_at: z.string(),
 });
@@ -335,3 +345,26 @@ export const subscriptionCheckoutSchema = responseObject({
   expires_at: z.string(),
   quote: resolvedQuoteSchema,
 });
+
+export const billingInvoiceSchema = responseObject({
+  invoice_id: z.string(),
+  invoice_number: z.string(),
+  receipt_number: z.string(),
+  status: z.literal('paid'),
+  paid_at: z.string(),
+  amount_paid: moneySchema,
+  subtotal_price: moneySchema,
+  discount: moneySchema,
+  taxable_value: moneySchema,
+  tax_treatment: taxTreatmentSchema,
+  tax_rate: z.string(),
+  cgst: moneySchema,
+  sgst: moneySchema,
+  igst: moneySchema,
+  payment_id: z.string().nullable(),
+});
+
+export const billingInvoicesSchema = z.union([
+  z.array(billingInvoiceSchema),
+  responseObject({ invoices: z.array(billingInvoiceSchema) }).transform((value) => value.invoices),
+]);

@@ -1,6 +1,19 @@
-import { expect, test, type Request } from '@playwright/test';
+import { expect, test, type Page, type Request } from '@playwright/test';
 
 const ACCOUNT = '11111111-1111-4111-8111-111111111111';
+
+async function fillExportBillingDetails(page: Page) {
+  await page.getByLabel('Billing country (two-letter code)').fill('US');
+  await page.getByLabel('Billing name').fill('CiteLadder Test');
+  await page.getByLabel('Address').fill('1 Main Street');
+  await page.getByLabel('City').fill('New York');
+  await page.getByLabel('Postal code').fill('10001');
+  await page
+    .getByRole('checkbox', {
+      name: 'I confirm this purchase qualifies as an export of service.',
+    })
+    .click();
+}
 
 for (const width of [1280, 390]) {
   test(`billing: subscription modal verifies server activation at ${width}px`, async ({ page }) => {
@@ -14,8 +27,17 @@ for (const width of [1280, 390]) {
       country_code: 'US',
       region: 'international',
       base_price: money,
+      subtotal_price: money,
+      discount: { currency: 'USD', amount_minor: 0 },
+      taxable_value: money,
       credit_price: null,
       tax: { currency: 'USD', amount_minor: 0 },
+      tax_treatment: 'EXPORT_ZERO_RATED',
+      tax_rate: '0',
+      cgst: { currency: 'USD', amount_minor: 0 },
+      sgst: { currency: 'USD', amount_minor: 0 },
+      igst: { currency: 'USD', amount_minor: 0 },
+      tax_policy_version: 1,
       total_price: money,
       expires_at: '2099-01-01T00:00:00Z',
     };
@@ -115,7 +137,7 @@ for (const width of [1280, 390]) {
       }),
     );
     await page.goto('/pricing');
-    await page.getByLabel('Billing country (two-letter code)').fill('US');
+    await fillExportBillingDetails(page);
     await page.getByRole('button', { name: 'Choose Tier 1', exact: true }).click();
     await page.getByRole('button', { name: 'Dismiss test payment' }).click();
     await expect(

@@ -425,12 +425,14 @@
         "backend/app/connectors/billing/**",
         "backend/app/api/billing.py",
         "backend/app/api/billing_checkout.py",
+        "backend/app/api/billing_invoices.py",
         "backend/scripts/provision_razorpay_plans.py",
         "backend/scripts/reconcile_billing.py",
         "backend/app/api/usage_limits.py",
         "backend/app/models/billing.py",
         "backend/app/models/billing_journeys.py",
         "backend/app/models/billing_payment.py",
+        "backend/app/models/billing_invoice.py",
         "backend/scripts/billing_admin.py"
       ],
       "backendTests": [

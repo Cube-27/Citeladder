@@ -21,6 +21,7 @@ function intent(overrides: Partial<PendingPricingIntentV1> = {}): PendingPricing
     quantity: 1,
     byok: true,
     country_code: null,
+    billing_details: null,
     idempotency_key: 'idem-1',
     return_path: '/pricing',
     created_at_ms: NOW,
@@ -89,6 +90,7 @@ describe('pending pricing intent', () => {
       expect(raw).not.toContain(forbidden);
     }
     expect(Object.keys(JSON.parse(raw)).sort()).toEqual([
+      'billing_details',
       'byok',
       'catalog_key',
       'country_code',

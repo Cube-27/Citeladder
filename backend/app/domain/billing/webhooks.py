@@ -174,6 +174,8 @@ def parse_payment_event(payload: dict[str, Any]) -> ProviderPayment:
         intent_id=_optional_str(notes.get(_NOTE_INTENT)),
         account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
         provider_mode=billing_settings.require_provider_mode(),
+        payment_method=_optional_bounded_str(entity.get("method"), 24),
+        external_invoice_id=_optional_str(entity.get("invoice_id")),
     )
 
 
@@ -393,6 +395,13 @@ def _bounded_int(value: object) -> int | None:
 
 def _optional_str(value: object) -> str:
     return value if isinstance(value, str) else ""
+
+
+def _optional_bounded_str(value: object, maximum: int) -> str:
+    if not isinstance(value, str):
+        return ""
+    normalized = value.strip()
+    return normalized if len(normalized) <= maximum else ""
 
 
 def _provider_bool(value: object) -> bool:

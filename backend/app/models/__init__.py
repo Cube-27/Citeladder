@@ -47,6 +47,12 @@ from app.models.billing import (
     PendingActivation,
     WorkspaceBillingLink,
 )
+from app.models.billing_invoice import (
+    BillingInvoice as BillingInvoice,
+)
+from app.models.billing_invoice import (
+    BillingInvoiceCounter as BillingInvoiceCounter,
+)
 from app.models.billing_journeys import IntroductoryClaim, IntroductoryOperatorCode
 from app.models.billing_payment import BillingPayment as BillingPayment
 from app.models.brand import (
@@ -163,6 +169,8 @@ __all__ = [
     "BillingAccount",
     "BillingCatalogRevision",
     "BillingCustomer",
+    "BillingInvoice",
+    "BillingInvoiceCounter",
     "BillingPayment",
     "BillingSubscription",
     "BillingWebhookEvent",

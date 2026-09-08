@@ -14,8 +14,10 @@ displayed terms without exposing any provider identity.
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import (
@@ -87,6 +89,15 @@ class ResolvedQuoteResponse(_StrictResponse):
     region: BillingRegion
     base_price: MoneyResponse
     credit_price: MoneyResponse | None
+    subtotal_price: MoneyResponse
+    discount: MoneyResponse
+    taxable_value: MoneyResponse
+    tax_treatment: Literal["CGST_SGST", "IGST", "EXPORT_ZERO_RATED"]
+    tax_rate: Decimal
+    cgst: MoneyResponse
+    sgst: MoneyResponse
+    igst: MoneyResponse
+    tax_policy_version: Literal[1]
     tax: MoneyResponse
     total_price: MoneyResponse
     expires_at: datetime
@@ -342,16 +353,86 @@ def _normalized_country(value: str) -> str:
     return country
 
 
+_GSTIN_PATTERN = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$")
+
+
+def _bounded_text(value: str, field: str, maximum: int) -> str:
+    normalized = value.strip()
+    if not normalized or len(normalized) > maximum:
+        raise ValueError(f"{field} must be between 1 and {maximum} characters")
+    return normalized
+
+
 class SubscriptionCreateRequest(_StrictRequest):
     catalog_key: SelfServePlanCatalogKey
     credential_mode: CredentialMode
     country_code: str
+    billing_name: str
+    billing_address_line1: str
+    billing_city: str
+    billing_state_code: str | None = None
+    billing_postal_code: str
+    customer_gstin: str | None = None
+    export_eligibility_attested: bool = False
     trial_requested: bool = False
 
     @field_validator("country_code")
     @classmethod
     def _normalize_country(cls, value: str) -> str:
         return _normalized_country(value)
+
+    @field_validator("billing_name")
+    @classmethod
+    def _normalize_name(cls, value: str) -> str:
+        return _bounded_text(value, "billing_name", 160)
+
+    @field_validator("billing_address_line1")
+    @classmethod
+    def _normalize_address(cls, value: str) -> str:
+        return _bounded_text(value, "billing_address_line1", 240)
+
+    @field_validator("billing_city")
+    @classmethod
+    def _normalize_city(cls, value: str) -> str:
+        return _bounded_text(value, "billing_city", 100)
+
+    @field_validator("billing_postal_code")
+    @classmethod
+    def _normalize_postal_code(cls, value: str) -> str:
+        return _bounded_text(value, "billing_postal_code", 24).upper()
+
+    @field_validator("billing_state_code")
+    @classmethod
+    def _normalize_state(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        state = value.strip()
+        if not re.fullmatch(r"(?:0[1-9]|[12][0-9]|3[0-8]|97|99)", state):
+            raise ValueError("billing_state_code must be a valid GST state code")
+        return state
+
+    @field_validator("customer_gstin")
+    @classmethod
+    def _normalize_gstin(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        gstin = value.strip().upper()
+        if not _GSTIN_PATTERN.fullmatch(gstin):
+            raise ValueError("customer_gstin must be a valid GSTIN shape")
+        return gstin
+
+    @model_validator(mode="after")
+    def _validate_billing_identity(self) -> SubscriptionCreateRequest:
+        if self.country_code == "IN" and not self.billing_state_code:
+            raise ValueError("billing_state_code is required for India")
+        if self.country_code != "IN" and self.customer_gstin:
+            raise ValueError("customer_gstin is only valid for Indian billing")
+        if self.customer_gstin and self.billing_state_code:
+            if self.customer_gstin[:2] != self.billing_state_code:
+                raise ValueError(
+                    "customer_gstin state prefix must match billing_state_code"
+                )
+        return self
 
 
 class AddonActivateRequest(_StrictRequest):

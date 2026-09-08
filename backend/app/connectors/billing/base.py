@@ -92,6 +92,9 @@ class ProviderPayment:
     period_start: int | None = None
     period_end: int | None = None
     provider_mode: str = "disabled"
+    # Coarse provider method only (for example card, netbanking, upi). No
+    # instrument number, token, or other sensitive payment data is retained.
+    payment_method: str = ""
 
 
 @dataclass(frozen=True, slots=True)

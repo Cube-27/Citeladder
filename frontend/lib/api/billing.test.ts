@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { billingApi } from './billing';
+import { billingApi, billingDetailsError, emptyBillingCustomerDetails } from './billing';
 
 const QUOTE = {
   quote_id: 'q_opaque',
@@ -10,8 +10,17 @@ const QUOTE = {
   country_code: 'IN',
   region: 'india',
   base_price: { currency: 'INR', amount_minor: 499900 },
+  subtotal_price: { currency: 'INR', amount_minor: 499900 },
+  discount: { currency: 'INR', amount_minor: 0 },
+  taxable_value: { currency: 'INR', amount_minor: 499900 },
   credit_price: null,
   tax: { currency: 'INR', amount_minor: 89982 },
+  tax_treatment: 'CGST_SGST',
+  tax_rate: '18',
+  cgst: { currency: 'INR', amount_minor: 44991 },
+  sgst: { currency: 'INR', amount_minor: 44991 },
+  igst: { currency: 'INR', amount_minor: 0 },
+  tax_policy_version: 1,
   total_price: { currency: 'INR', amount_minor: 589882 },
   expires_at: '2026-08-01T12:00:00Z',
 };
@@ -48,7 +57,18 @@ describe('billing API contract', () => {
     const fetchMock = stubFetch(ACTIVATION);
 
     await billingApi.createSubscription(
-      { catalog_key: 'tier_2', credential_mode: 'byok', country_code: 'IN' },
+      {
+        catalog_key: 'tier_2',
+        credential_mode: 'byok',
+        country_code: 'IN',
+        billing_name: 'CiteLadder Pvt Ltd',
+        billing_address_line1: '1 Main Street',
+        billing_city: 'Bengaluru',
+        billing_state_code: '29',
+        billing_postal_code: '560001',
+        customer_gstin: '',
+        export_eligibility_attested: false,
+      },
       'checkout-idempotency-key',
     );
 
@@ -60,6 +80,13 @@ describe('billing API contract', () => {
       catalog_key: 'tier_2',
       credential_mode: 'byok',
       country_code: 'IN',
+      billing_name: 'CiteLadder Pvt Ltd',
+      billing_address_line1: '1 Main Street',
+      billing_city: 'Bengaluru',
+      billing_state_code: '29',
+      billing_postal_code: '560001',
+      customer_gstin: '',
+      export_eligibility_attested: false,
       trial_requested: false,
     });
     expect(new Headers(init.headers).get('Idempotency-Key')).toBe('checkout-idempotency-key');
@@ -68,11 +95,39 @@ describe('billing API contract', () => {
   it('sends trial_requested:false — the backend answers trial_unavailable otherwise', async () => {
     const fetchMock = stubFetch(ACTIVATION);
     await billingApi.createSubscription(
-      { catalog_key: 'tier_1', credential_mode: 'byok', country_code: 'US' },
+      {
+        catalog_key: 'tier_1',
+        credential_mode: 'byok',
+        country_code: 'US',
+        billing_name: 'CiteLadder',
+        billing_address_line1: '1 Main Street',
+        billing_city: 'New York',
+        billing_state_code: '29',
+        billing_postal_code: '10001',
+        customer_gstin: '29ABCDE1234F1Z5',
+        export_eligibility_attested: true,
+      },
       'key-1',
     );
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(JSON.parse(String(init.body)).trial_requested).toBe(false);
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      country_code: 'US',
+      billing_state_code: null,
+      customer_gstin: null,
+      export_eligibility_attested: true,
+      trial_requested: false,
+    });
+  });
+
+  it('requires the full address for Indian tax determination as well', () => {
+    const details = emptyBillingCustomerDetails();
+    details.billing_state_code = '29';
+    expect(billingDetailsError('IN', details)).toBe('Enter the billing name.');
+    details.billing_name = 'CiteLadder Pvt Ltd';
+    details.billing_address_line1 = '1 Main Street';
+    details.billing_city = 'Bengaluru';
+    details.billing_postal_code = '560001';
+    expect(billingDetailsError('IN', details)).toBeNull();
   });
 
   it('carries an Idempotency-Key on every commercial POST', async () => {

@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
@@ -8,6 +8,17 @@ import { renderWithProviders } from '@/test/render';
 import { CONTACT_SALES_HREF, PENDING_PRICING_INTENT_KEY } from '@/lib/config/billing';
 
 import { PricingCatalog } from './pricing-catalog';
+
+function fillExportBillingDetails() {
+  fireEvent.change(screen.getByLabelText(/Billing country/i), { target: { value: 'US' } });
+  fireEvent.change(screen.getByLabelText('Billing name'), {
+    target: { value: 'CiteLadder' },
+  });
+  fireEvent.change(screen.getByLabelText('Address'), { target: { value: '1 Main Street' } });
+  fireEvent.change(screen.getByLabelText('City'), { target: { value: 'New York' } });
+  fireEvent.change(screen.getByLabelText('Postal code'), { target: { value: '10001' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: /qualifies as an export/i }));
+}
 
 const ACCOUNT = '11111111-1111-4111-8111-111111111111';
 const USER = {
@@ -133,8 +144,17 @@ const activation = (kind: string, catalog_key: string) => ({
     country_code: 'US',
     region: 'international',
     base_price: money(4900),
+    subtotal_price: money(4900),
+    discount: money(0),
+    taxable_value: money(4900),
     credit_price: null,
     tax: money(0),
+    tax_treatment: 'EXPORT_ZERO_RATED',
+    tax_rate: '0',
+    cgst: money(0),
+    sgst: money(0),
+    igst: money(0),
+    tax_policy_version: 1,
     total_price: money(4900),
     expires_at: '2026-08-01T12:00:00Z',
   },
@@ -259,7 +279,8 @@ describe('PricingCatalog', () => {
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Starter' });
-    await userEvent.click(screen.getByRole('button', { name: /Choose Starter/ }));
+    fillExportBillingDetails();
+    await userEvent.click(await screen.findByRole('button', { name: /Choose Starter/ }));
 
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/login'));
     expect(posted).toBe(0);
@@ -300,6 +321,15 @@ describe('PricingCatalog', () => {
         quantity: 1,
         byok: true,
         country_code: 'US',
+        billing_details: {
+          billing_name: 'CiteLadder',
+          billing_address_line1: '1 Main Street',
+          billing_city: 'New York',
+          billing_state_code: '',
+          billing_postal_code: '10001',
+          customer_gstin: '',
+          export_eligibility_attested: true,
+        },
         idempotency_key: 'resume-key',
         return_path: '/pricing',
         created_at_ms: Date.now(),
@@ -314,6 +344,13 @@ describe('PricingCatalog', () => {
       catalog_key: 'tier_1',
       credential_mode: 'byok',
       country_code: 'US',
+      billing_name: 'CiteLadder',
+      billing_address_line1: '1 Main Street',
+      billing_city: 'New York',
+      billing_state_code: null,
+      billing_postal_code: '10001',
+      customer_gstin: null,
+      export_eligibility_attested: true,
       trial_requested: false,
     });
     // The stored key is REUSED so a first attempt that did reach the backend

@@ -29,7 +29,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -112,6 +112,7 @@ def request_fingerprint(
     catalog_key: str,
     quantity: int,
     credential_mode: str,
+    billing_context: Mapping[str, object] | None = None,
 ) -> str:
     """SHA-256 over the canonical server-side request identity.
 
@@ -126,6 +127,7 @@ def request_fingerprint(
             "catalog_key": catalog_key,
             "quantity": quantity,
             "credential_mode": credential_mode,
+            "billing_context": billing_context or {},
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -198,6 +200,7 @@ async def _insert_intent(
         provider_mode=billing_settings.require_provider_mode(),
         external_price_id=intent.price_ref,
         quote=intent.quote.model_dump(mode="json"),
+        tax_snapshot=intent.tax_snapshot,
         country_code=intent.country_code,
         region=intent.region,
         idempotency_key=idempotency_key,
@@ -269,6 +272,7 @@ async def replay_intent(
     quantity: int,
     credential_mode: str,
     idempotency_key: str,
+    billing_context: Mapping[str, object] | None = None,
 ) -> IntentResult | None:
     """Step 4 BEFORE step 5's state validation: replay or reject a reused key.
 
@@ -289,6 +293,7 @@ async def replay_intent(
         catalog_key=catalog_key,
         quantity=quantity,
         credential_mode=credential_mode,
+        billing_context=billing_context,
     )
     record = await _locked_record(
         session, account_id=account.id, idempotency_key=idempotency_key
@@ -371,6 +376,10 @@ async def _replay_insert_race_winner(
         quantity=intent.quantity,
         credential_mode=intent.credential_mode,
         idempotency_key=idempotency_key,
+        billing_context={
+            "country_code": intent.country_code,
+            "customer": intent.tax_snapshot.get("customer", {}),
+        },
     )
     if replayed is None:  # pragma: no cover - the winner committed first
         raise RuntimeError("insert-race loser found no winning idempotency record")
@@ -505,6 +514,10 @@ async def execute_intent(
         catalog_key=intent.catalog_key,
         quantity=intent.quantity,
         credential_mode=intent.credential_mode,
+        billing_context={
+            "country_code": intent.country_code,
+            "customer": intent.tax_snapshot.get("customer", {}),
+        },
     )
     replayed = await replay_intent(
         session,
@@ -514,6 +527,10 @@ async def execute_intent(
         quantity=intent.quantity,
         credential_mode=intent.credential_mode,
         idempotency_key=idempotency_key,
+        billing_context={
+            "country_code": intent.country_code,
+            "customer": intent.tax_snapshot.get("customer", {}),
+        },
     )
     if replayed is not None:
         return replayed

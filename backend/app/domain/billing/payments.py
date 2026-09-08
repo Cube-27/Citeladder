@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import ProviderPayment, ProviderRefund
+from app.domain.billing.invoices import issue_paid_invoice
 from app.models.billing import BillingSubscription, PendingActivation
 from app.models.billing_payment import BillingPayment
 
@@ -45,6 +46,7 @@ def _payment_payload(
         "currency": payment.currency,
         "paid_at": payment.paid_at,
         "mode": payment.provider_mode,
+        "method": payment.payment_method,
     }
 
 
@@ -70,6 +72,7 @@ async def record_payment_receipt(
     if existing is not None:
         if existing.receipt_sha256 != digest:
             raise PaymentReceiptConflictError("payment_receipt_conflict")
+        await issue_paid_invoice(session, pending=pending, payment=existing)
         return existing
     receipt = BillingPayment(
         billing_account_id=pending.billing_account_id,
@@ -90,6 +93,7 @@ async def record_payment_receipt(
         amount_minor=payment.amount_minor,
         currency=payment.currency,
         provider_mode=payment.provider_mode,
+        payment_method=payment.payment_method,
         status=payment.status,
         paid_at=(
             datetime.fromtimestamp(payment.paid_at, tz=UTC)
@@ -100,6 +104,7 @@ async def record_payment_receipt(
     )
     session.add(receipt)
     await session.flush()
+    await issue_paid_invoice(session, pending=pending, payment=receipt)
     return receipt
 
 
@@ -160,6 +165,7 @@ async def record_refund_receipt(
         amount_minor=refund.amount_minor,
         currency=refund.currency,
         provider_mode=payment.provider_mode,
+        payment_method=payment.payment_method,
         status=refund.status,
         receipt_sha256=digest,
     )

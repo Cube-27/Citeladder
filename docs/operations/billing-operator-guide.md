@@ -5,8 +5,9 @@
 Follow the [manual PowerShell testing runbook](razorpay-local-testing.md) for
 isolated startup, operator setup, INR catalog provisioning, webhook configuration,
 payment scenarios, recovery, evidence collection and cleanup. Local INR approval
-is owner-confirmed; international approval is pending. Actual recurring payment
-and separate GST acceptance remain unverified until the owner runs those checks.
+and international approval are owner-confirmed. INR/USD plan setup, actual
+recurring payments, webhook delivery, and transaction-level GST acceptance
+remain unverified until the owner runs those checks.
 
 > **Audience:** trusted CiteLadder operators with a persisted active `admin` user.
 > **Scope:** catalog publication, introductory-offer controls, grant correction,
@@ -225,6 +226,13 @@ match the Content, Agent, or audit parent evidence. Payment/refund receipts are
 normalized and digest-bound; cumulative refunds may not exceed the payment.
 Never infer entitlement merely from a redirect, Payment Link, receipt, or
 provider dashboard—the accepted activation and resulting grants are authority.
+
+After a captured payment is accepted, CiteLadder issues one immutable paid tax
+receipt from the frozen quote, customer billing facts, supplier GST settings,
+and normalized payment evidence. Customers download it from Billing. Razorpay's
+invoice tax fields are not used to decide or allocate GST. Same-state Indian
+receipts show 9% CGST plus 9% SGST; interstate receipts show 18% IGST; eligible
+exports show zero-rated treatment and the frozen LUT reference.
 
 For model-funded work also inspect `content_generation_attempts` or
 `agent_model_attempts` for frozen route/key revisions, dispatch identity, usage

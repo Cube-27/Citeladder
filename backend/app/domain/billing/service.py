@@ -14,48 +14,27 @@ no grant row changes.
 
 from __future__ import annotations
 
-import hashlib
-import hmac
-import json
 import logging
 import uuid
-from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import BillingProvider
-from app.core.config.billing_catalog import (
-    AddonCatalogEntry,
-    CatalogPrice,
-    QuantityBounds,
-    TopupCatalogEntry,
-    item_checkout_availability,
-    plan_checkout_availability,
-    price_tax_minor,
-    resolve_region,
-)
+from app.core.config.billing_catalog import plan_checkout_availability
 from app.core.config.billing_contracts import (
     ACTIVATION_KIND_ADDON,
     ACTIVATION_KIND_BASE,
-    ACTIVATION_KIND_TOPUP,
     ACTIVATION_PENDING,
     CANCELLATION_ALREADY_SCHEDULED,
     CANCELLATION_SCHEDULED,
-    COMING_SOON_ADDON_KEYS,
     COUNTRY_VERIFICATION_DECLARED,
-    CREDENTIAL_MODE_BYOK,
-    CREDENTIAL_MODE_FUNDED,
     LIVE_SUBSCRIPTION_STATUSES,
     RAZORPAY_STATUS_MAP,
     REASON_BASE_SUBSCRIPTION_REQUIRED,
-    REASON_CATALOG_KEY_UNKNOWN,
-    REASON_CHECKOUT_UNAVAILABLE,
     REASON_NO_CURRENT_SUBSCRIPTION,
-    REASON_PROVIDER_UNAVAILABLE,
-    REASON_QUANTITY_OUT_OF_BOUNDS,
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCEL_SCHEDULED,
     SUBSCRIPTION_CANCELLED,
@@ -63,12 +42,11 @@ from app.core.config.billing_contracts import (
     SUBSCRIPTION_KIND_ADDON,
     SUBSCRIPTION_KIND_BASE,
 )
-from app.core.config.billing_settings import (
-    billing_settings,
-)
+from app.core.config.billing_tax import BillingIdentity
 from app.core.config.entitlements import (
     CapabilityType,
 )
+from app.domain.billing import quotes as _quotes
 from app.domain.billing.bootstrap import ensure_user_billing
 from app.domain.billing.catalog_revisions import published_commercial_catalog
 from app.domain.billing.periods import (
@@ -76,9 +54,10 @@ from app.domain.billing.periods import (
     issue_period_bundle,
     verified_paid_end,
 )
-from app.domain.billing.schemas import (
-    MoneyResponse,
-    ResolvedQuoteResponse,
+from app.domain.billing.quotes import (
+    BillingConflictError,
+    ResolvedIntent,
+    resolve_quote,
 )
 from app.domain.entitlements.grants import revoke_grants
 from app.domain.entitlements.service import (
@@ -102,10 +81,6 @@ _COUNTER_TYPES = frozenset(
         CapabilityType.COUNTER_RATE,
     }
 )
-
-
-class BillingConflictError(ValueError):
-    pass
 
 
 @dataclass(frozen=True, slots=True)
@@ -326,230 +301,25 @@ def _timestamp(value: int | None) -> datetime | None:
     return datetime.fromtimestamp(value, tz=UTC) if value is not None else None
 
 
-# ---------------------------------------------------------------------------
-# Server-resolved quote (the SINGLE owner of a commercial charge)
-# ---------------------------------------------------------------------------
-# Region resolution, currency, and GST stay SERVER-SIDE: the browser submits
-# only a catalog key, a quantity, a credential mode, and an ISO country.
-# ``base_price`` and ``credit_price`` stay SEPARATE (funded total = base +
-# credit; base is never derived from credit) and provider cost is never
-# exposed. ``quote_id`` is an opaque HMAC over the safe resolved inputs PLUS
-# the PRIVATE provider price ref, so it binds the displayed terms to the exact
-# provider price without leaking any provider identity (invariant 6).
-# ``quote_id`` is CLIENT-FACING tamper-evidence ONLY: nothing server-side ever
-# verifies it — execution re-resolves catalog, region, price, and provider
-# refs from the live catalog — so do NOT build a server-side quote_id check
-# here; it would be security theater, not a control.
-
-
-@dataclass(frozen=True, slots=True)
-class ResolvedIntent:
-    """One validated commercial intent plus its server-resolved quote.
-
-    ``price_ref``/``credit_price_ref`` are PRIVATE (never a DTO field): they
-    are what the provider call is allowed to name.
-    """
-
-    kind: str
-    catalog_key: str
-    quantity: int
-    credential_mode: str
-    country_code: str
-    region: str
-    price_ref: str
-    credit_price_ref: str
-    quote: ResolvedQuoteResponse
-
-
-def _quote_secret() -> bytes:
-    secret = billing_settings.quote_signing_secret.get_secret_value()
-    if not secret or secret in {
-        billing_settings.razorpay_webhook_secret.get_secret_value(),
-        billing_settings.razorpay_key_secret.get_secret_value(),
-    }:
-        raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
-    return secret.encode()
-
-
-def _quote_digest(payload: Mapping[str, object]) -> str:
-    """Deterministic HMAC over the canonical quote payload."""
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
-    return hmac.new(_quote_secret(), canonical, hashlib.sha256).hexdigest()
-
-
-def resolve_quote(
-    *,
-    kind: str,
-    catalog_key: str,
-    quantity: int,
-    credential_mode: str,
-    country_code: str,
-    region: str,
-    base: CatalogPrice,
-    credit: CatalogPrice | None,
-    catalog_revision: str,
-    at: datetime,
-) -> ResolvedQuoteResponse:
-    """Produce the signed quote for one intent (pure, no I/O).
-
-    The total is ``(base + credit) * quantity`` plus the region tax the config
-    owns; ``total_price`` is the provider charge INCLUDING tax.
-    """
-    base_total = base.amount_minor * quantity
-    credit_total = credit.amount_minor * quantity if credit is not None else None
-    funded_minor = base_total + (credit_total or 0)
-    tax_minor = price_tax_minor(base) * quantity + (
-        price_tax_minor(credit) * quantity if credit is not None else 0
-    )
-    expires_at = at + timedelta(minutes=billing_settings.quote_validity_minutes)
-    revision = catalog_revision
-    quote_id = _quote_digest(
-        {
-            "kind": kind,
-            "catalog_key": catalog_key,
-            "catalog_revision": revision,
-            "quantity": quantity,
-            "credential_mode": credential_mode,
-            "country_code": country_code,
-            "region": region,
-            "currency": base.currency,
-            "base_minor": base_total,
-            "credit_minor": credit_total,
-            "tax_minor": tax_minor,
-            "total_minor": funded_minor + tax_minor,
-            "expires_at": expires_at.isoformat(),
-            # The PRIVATE provider refs bind the quote to the exact provider
-            # price. They are hashed, never returned.
-            "price_ref": base.provider_price_ref,
-            "credit_price_ref": credit.provider_price_ref if credit else "",
-        }
-    )
-    return ResolvedQuoteResponse(
-        quote_id=quote_id,
-        catalog_revision=revision,
-        catalog_key=catalog_key,
-        credential_mode=credential_mode,
-        country_code=country_code,
-        region=region,
-        base_price=MoneyResponse(currency=base.currency, amount_minor=base_total),
-        credit_price=(
-            MoneyResponse(currency=base.currency, amount_minor=credit_total)
-            if credit_total is not None
-            else None
-        ),
-        tax=MoneyResponse(currency=base.currency, amount_minor=tax_minor),
-        total_price=MoneyResponse(
-            currency=base.currency, amount_minor=funded_minor + tax_minor
-        ),
-        expires_at=expires_at,
-    )
-
-
 async def resolve_base_intent(
     session: AsyncSession,
     *,
     catalog_key: str,
     credential_mode: str,
     country_code: str,
+    billing_identity: BillingIdentity,
     at: datetime,
 ) -> ResolvedIntent:
-    """Validate a base-plan purchase and resolve its quote server-side."""
-    if credential_mode != CREDENTIAL_MODE_BYOK:
-        raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
-    region = resolve_region(country_code)
-    catalog = await published_commercial_catalog(session)
-    plan = catalog.plan(catalog_key)
-    if plan is None:
-        raise BillingConflictError(REASON_CATALOG_KEY_UNKNOWN)
-    available, reason = plan_checkout_availability(plan, region)
-    if not available:
-        raise BillingConflictError(reason or REASON_CHECKOUT_UNAVAILABLE)
-    base = plan.base_price(region)
-    if base is None:  # pragma: no cover - availability already refused
-        raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
-    credit = (
-        plan.credit_price(region) if credential_mode == CREDENTIAL_MODE_FUNDED else None
-    )
-    if credential_mode == CREDENTIAL_MODE_FUNDED and (
-        credit is None or not credit.purchasable
-    ):
-        # Funded checkout stays unavailable until the margin is configured.
-        raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
-    return ResolvedIntent(
-        kind=ACTIVATION_KIND_BASE,
+    """Compatibility seam retaining the historical service import path."""
+    return await _quotes.resolve_base_intent(
+        session,
         catalog_key=catalog_key,
-        quantity=1,
         credential_mode=credential_mode,
         country_code=country_code,
-        region=region,
-        price_ref=base.provider_price_ref,
-        credit_price_ref=credit.provider_price_ref if credit is not None else "",
-        quote=resolve_quote(
-            kind=ACTIVATION_KIND_BASE,
-            catalog_key=catalog_key,
-            quantity=1,
-            credential_mode=credential_mode,
-            country_code=country_code,
-            region=region,
-            base=base,
-            credit=credit,
-            catalog_revision=catalog.revision,
-            at=at,
-        ),
-    )
-
-
-def _bounded_quantity(quantity: int, bounds: QuantityBounds) -> int:
-    if not bounds.minimum <= quantity <= bounds.maximum:
-        raise BillingConflictError(REASON_QUANTITY_OUT_OF_BOUNDS)
-    return quantity
-
-
-def _resolve_pack_intent(
-    *,
-    kind: str,
-    item: AddonCatalogEntry | TopupCatalogEntry,
-    quantity: int,
-    country_code: str,
-    region: str,
-    catalog_revision: str,
-    at: datetime,
-) -> ResolvedIntent:
-    """Validate a quantity-bounded pack purchase and resolve its quote.
-
-    The ONE owner of the add-on/top-up intent shape (invariant 2): bounded
-    quantity, region price, availability gate, BYOK credential mode, no
-    credit line. The kind-specific guards (coming-soon, live base) stay with
-    the callers.
-    """
-    _bounded_quantity(quantity, item.quantity_bounds)
-    price = item.price(region)
-    available, reason = item_checkout_availability(
-        availability=item.availability, price=price, region=region
-    )
-    if not available or price is None:
-        raise BillingConflictError(reason or REASON_CHECKOUT_UNAVAILABLE)
-    return ResolvedIntent(
-        kind=kind,
-        catalog_key=item.key,
-        quantity=quantity,
-        credential_mode=CREDENTIAL_MODE_BYOK,
-        country_code=country_code,
-        region=region,
-        price_ref=price.provider_price_ref,
-        credit_price_ref="",
-        quote=resolve_quote(
-            kind=kind,
-            catalog_key=item.key,
-            quantity=quantity,
-            credential_mode=CREDENTIAL_MODE_BYOK,
-            country_code=country_code,
-            region=region,
-            base=price,
-            credit=None,
-            catalog_revision=catalog_revision,
-            at=at,
-        ),
+        billing_identity=billing_identity,
+        at=at,
+        _catalog_loader=published_commercial_catalog,
+        _checkout_availability=plan_checkout_availability,
     )
 
 
@@ -560,23 +330,17 @@ async def resolve_addon_intent(
     quantity: int,
     country_code: str,
     at: datetime,
+    billing_identity: BillingIdentity | None = None,
 ) -> ResolvedIntent:
-    """Resolve an add-on intent; coming-soon items fail before provider I/O."""
-    if catalog_key in COMING_SOON_ADDON_KEYS:
-        raise BillingConflictError(REASON_PROVIDER_UNAVAILABLE)
-    region = resolve_region(country_code)
-    catalog = await published_commercial_catalog(session)
-    addon = catalog.addon(catalog_key)
-    if addon is None:
-        raise BillingConflictError(REASON_CATALOG_KEY_UNKNOWN)
-    return _resolve_pack_intent(
-        kind=ACTIVATION_KIND_ADDON,
-        item=addon,
+    """Compatibility seam retaining the historical service import path."""
+    return await _quotes.resolve_addon_intent(
+        session,
+        catalog_key=catalog_key,
         quantity=quantity,
         country_code=country_code,
-        region=region,
-        catalog_revision=catalog.revision,
         at=at,
+        billing_identity=billing_identity,
+        _catalog_loader=published_commercial_catalog,
     )
 
 
@@ -587,21 +351,17 @@ async def resolve_topup_intent(
     quantity: int,
     country_code: str,
     at: datetime,
+    billing_identity: BillingIdentity | None = None,
 ) -> ResolvedIntent:
-    """Validate a top-up purchase and resolve its quote server-side."""
-    region = resolve_region(country_code)
-    catalog = await published_commercial_catalog(session)
-    topup = catalog.topup(catalog_key)
-    if topup is None:
-        raise BillingConflictError(REASON_CATALOG_KEY_UNKNOWN)
-    return _resolve_pack_intent(
-        kind=ACTIVATION_KIND_TOPUP,
-        item=topup,
+    """Compatibility seam retaining the historical service import path."""
+    return await _quotes.resolve_topup_intent(
+        session,
+        catalog_key=catalog_key,
         quantity=quantity,
         country_code=country_code,
-        region=region,
-        catalog_revision=catalog.revision,
         at=at,
+        billing_identity=billing_identity,
+        _catalog_loader=published_commercial_catalog,
     )
 
 
@@ -687,6 +447,14 @@ def persist_billing_country(account: BillingAccount, country_code: str) -> None:
     account.country_verification = COUNTRY_VERIFICATION_DECLARED
 
 
+def persist_billing_profile(
+    account: BillingAccount, country_code: str, identity: BillingIdentity
+) -> None:
+    """Persist normalized current facts while every intent keeps its snapshot."""
+    persist_billing_country(account, country_code)
+    account.billing_profile = identity.snapshot()
+
+
 async def _schedule_cancellation(
     session: AsyncSession,
     provider: BillingProvider,
@@ -758,6 +526,7 @@ __all__ = [
     "live_base_subscription",
     "owned_account",
     "persist_billing_country",
+    "persist_billing_profile",
     "resolve_addon_intent",
     "resolve_base_intent",
     "resolve_quote",
