@@ -14,7 +14,8 @@ Routes, in the frozen order of the work order:
 
 The v6 ``/billing/me``, ``/billing/profile``, ``/billing/checkout``,
 ``/billing/cancel``, and ``/billing/manage`` routes are DELETED without
-aliases, as is ``GET /workspaces/{id}/entitlements``.
+aliases. ``GET /workspaces/{id}/entitlements`` is the member-safe effective
+capability projection; private account billing remains on the owner routes.
 
 Invariant 5: every mutation and every account read authorizes through the
 BILLING OWNER (``BillingAccount.owner_user_id``) via ``owned_account``; the
@@ -31,7 +32,7 @@ import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import (
     APIRouter,
@@ -75,6 +76,7 @@ from app.core.config.billing_settings import (
 )
 from app.core.http_errors import raise_api_error
 from app.domain.billing.catalog import public_catalog
+from app.domain.billing.catalog_revisions import CatalogUnavailableError
 from app.domain.billing.commercial_journeys import (
     IntroductoryAccessError,
     claim_introductory_access,
@@ -106,6 +108,8 @@ from app.domain.billing.schemas import (
     SubscriptionChangeResponse,
     SubscriptionCreateRequest,
     TopupPurchaseRequest,
+    WorkspaceCapabilityResponse,
+    WorkspaceEntitlementResponse,
 )
 from app.domain.billing.service import (
     BillingConflictError,
@@ -169,6 +173,13 @@ def _safe_commercial_errors() -> Iterator[None]:
         raise_api_error(409, str(exc), cause=exc)
     except BillingProviderError as exc:
         raise_api_error(502, exc.code, cause=exc)
+    except CatalogUnavailableError as exc:
+        raise_api_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Commercial catalog unavailable",
+            code=str(exc),
+            cause=exc,
+        )
 
 
 def _activation_status_code(activation: ActivationResponse) -> int:
@@ -250,40 +261,44 @@ async def get_catalog(
     config-owned international preview region, and a purchase must still submit
     its own ISO country.
     """
-    return await public_catalog(session, country)
+    with _safe_commercial_errors():
+        return await public_catalog(session, country)
 
 
-@router.get("/workspaces/{workspace_id}/entitlements")
+@router.get(
+    "/workspaces/{workspace_id}/entitlements",
+    response_model=WorkspaceEntitlementResponse,
+)
 async def get_workspace_entitlements(
     workspace_id: Annotated[uuid.UUID, PathParam()],
     ctx: Annotated[WorkspaceContext, Depends(require_workspace_member)],
     session: Session,
-) -> dict[str, Any]:
+) -> WorkspaceEntitlementResponse:
     """Member-safe effective capability boundary with safe provenance only."""
     if ctx.workspace_id != workspace_id:
         raise_api_error(403, "Workspace access denied")
     entitlement = await resolve_workspace_entitlement(
         session, workspace_id=ctx.workspace_id, at=datetime.now(UTC)
     )
-    return {
-        "workspace_id": str(ctx.workspace_id),
-        "status": entitlement.status,
-        "registry_revision": entitlement.registry_revision,
-        "entitlement_lifecycle_version": entitlement.entitlement_lifecycle_version,
-        "valid_until": entitlement.valid_until,
-        "capabilities": [
-            {
-                "key": capability.key,
-                "type": capability.capability_type.value,
-                "value": capability.value,
-                "valid_until": capability.next_change_at,
-                "provenance": "effective_grant",
-            }
+    return WorkspaceEntitlementResponse(
+        workspace_id=ctx.workspace_id,
+        status=entitlement.status,
+        registry_revision=entitlement.registry_revision,
+        entitlement_lifecycle_version=entitlement.entitlement_lifecycle_version,
+        valid_until=entitlement.valid_until,
+        capabilities=[
+            WorkspaceCapabilityResponse(
+                key=capability.key,
+                type=capability.capability_type.value,
+                value=capability.value,
+                valid_until=capability.next_change_at,
+                provenance="effective_grant",
+            )
             for capability in entitlement.capabilities
         ]
         if entitlement.status == STATUS_RESOLVED
         else [],
-    }
+    )
 
 
 @router.get("/billing/entitlement", response_model=BillingEntitlementResponse)

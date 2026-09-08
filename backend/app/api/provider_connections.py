@@ -36,6 +36,7 @@ from app.domain.providers.schemas import (
 from app.domain.providers.service import (
     InvalidProviderEndpointError,
     InvalidRouteError,
+    ProviderConnectionInUseError,
     ProviderConnectionNotFoundError,
     RetiredConnectionReadOnlyError,
     connection_to_response,
@@ -142,6 +143,8 @@ async def delete_connection_endpoint(
         )
     except ProviderConnectionNotFoundError as exc:
         raise_api_error(status.HTTP_404_NOT_FOUND, _NOT_FOUND, cause=exc)
+    except ProviderConnectionInUseError as exc:
+        raise_api_error(status.HTTP_409_CONFLICT, str(exc), cause=exc)
 
 
 @router.post(

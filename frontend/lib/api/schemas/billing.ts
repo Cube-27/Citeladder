@@ -141,7 +141,7 @@ export const catalogTopupSchema = responseObject({
 
 export const workspaceEntitlementSchema = responseObject({
   workspace_id: uuid(),
-  status: z.enum(['resolved', 'unresolved']),
+  status: entitlementStatusSchema,
   registry_revision: z.string(),
   entitlement_lifecycle_version: z.number().int().nonnegative(),
   valid_until: z.string().nullable(),

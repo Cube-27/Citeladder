@@ -98,7 +98,7 @@ async def test_provision_is_idempotent(
         assert [report.connection_id for report in second] == [
             report.connection_id for report in first
         ]
-        assert all(report.status == "updated" for report in second)
+        assert all(report.status == "unchanged" for report in second)
         systems = await session.scalar(
             select(func.count()).select_from(Workspace).where(Workspace.is_system)
         )
@@ -182,7 +182,7 @@ async def test_report_exposes_only_transport_id_and_status(
     for report in reports:
         assert isinstance(report, PlatformConnectionReport)
         assert isinstance(report.connection_id, uuid.UUID)
-        assert report.status in {"created", "updated"}
+        assert report.status in {"created", "updated", "unchanged"}
         rendered = str(report)
         assert "vault://" not in rendered
         assert "api_key" not in rendered

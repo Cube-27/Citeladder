@@ -68,6 +68,10 @@ def verify_razorpay_signature(raw_body: bytes, signature: str) -> bool:
     if not signature or len(signature) > 256:
         return False
     supplied = signature.strip()
+    if len(supplied) != 64 or any(
+        character not in "0123456789abcdefABCDEF" for character in supplied
+    ):
+        return False
     secrets = (
         billing_settings.razorpay_webhook_secret.get_secret_value(),
         billing_settings.razorpay_webhook_previous_secret.get_secret_value(),

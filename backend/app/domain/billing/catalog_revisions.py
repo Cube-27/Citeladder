@@ -251,6 +251,11 @@ def _validate_platform_routes(routes: tuple[dict[str, str], ...]) -> None:
             raise ValueError("platform route metadata has an invalid shape")
         if any(token in key.lower() for key in route for token in secret_tokens):
             raise ValueError("platform route metadata cannot contain secret fields")
+        reference = route["credential_ref"].strip().lower()
+        if not reference or any(
+            token in reference for token in ("sk-", "secret", "password")
+        ):
+            raise ValueError("platform route credential reference is invalid")
 
 
 class CatalogPayload(BaseModel):
@@ -269,6 +274,8 @@ class CatalogPayload(BaseModel):
         _validate_approved_plan_terms(by_key)
         _validate_agent_capabilities(by_key)
         _validate_platform_routes(self.platform_routes)
+        if self.campaign.enabled and not by_key[self.campaign.plan_key].grants:
+            raise ValueError("enabled campaign plan requires a grant bundle")
         return self
 
 
@@ -539,6 +546,17 @@ async def published_ai_credit_policy(
     if policy is None or not policy.rates:
         raise CatalogUnavailableError("ai_credit_policy_unavailable")
     return row.revision, policy
+
+
+async def ai_credit_policy_for_revision(
+    session: AsyncSession, revision: str
+) -> AiCreditPolicyPayload:
+    """Load the immutable policy frozen when paid work was admitted."""
+    row = await catalog_revision(session, revision)
+    policy = validate_payload(row.payload).ai_credit_policy
+    if policy is None or not policy.rates:
+        raise CatalogUnavailableError("ai_credit_policy_unavailable")
+    return policy
 
 
 async def published_commercial_catalog(

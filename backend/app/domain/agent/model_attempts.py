@@ -18,13 +18,19 @@ from app.core.config.app_models import APP_FEATURE_GROWTH_AGENT
 from app.core.config.entitlements import KEY_AI_CREDITS, KEY_GROWTH_AGENT
 from app.domain.billing.catalog_revisions import (
     CatalogUnavailableError,
+    ai_credit_policy_for_revision,
     published_ai_credit_policy,
 )
 from app.domain.entitlements.enforcement import (
     CapabilityNotGrantedError,
     require_workspace_capability,
 )
-from app.domain.entitlements.metered import MeteredSubject, reserve_metered_usage
+from app.domain.entitlements.ledger import release_unused_reservation
+from app.domain.entitlements.metered import (
+    MeteredSubject,
+    reserve_metered_usage,
+    settle_metered_usage,
+)
 from app.models.agent import AgentModelAttempt, AgentTaskRun
 from app.models.billing import WorkspaceBillingLink
 from app.models.provider import ProviderAppRoute, ProviderConnection
@@ -300,6 +306,55 @@ def _normalized_usage(usage: dict[str, int]) -> dict[str, int | None]:
     }
 
 
+async def _settle_platform_attempt(
+    session: AsyncSession,
+    *,
+    attempt: AgentModelAttempt,
+    usage: dict[str, int | None] | None,
+    at: datetime,
+) -> None:
+    if attempt.funding_source != "platform" or attempt.reservation_id is None:
+        attempt.settlement_status = "zero_debit"
+        return
+    try:
+        policy = await ai_credit_policy_for_revision(session, attempt.pricing_revision)
+    except CatalogUnavailableError:
+        await release_unused_reservation(
+            session,
+            reservation_id=attempt.reservation_id,
+            idempotency_key=f"agent:{attempt.dispatch_id}:policy-unavailable",
+            at=at,
+        )
+        attempt.settlement_status = "policy_unavailable"
+        return
+    rate = policy.rate(feature=APP_FEATURE_GROWTH_AGENT, model=attempt.requested_model)
+    if rate is None:
+        await release_unused_reservation(
+            session,
+            reservation_id=attempt.reservation_id,
+            idempotency_key=f"agent:{attempt.dispatch_id}:rate-unavailable",
+            at=at,
+        )
+        attempt.settlement_status = "policy_unavailable"
+        return
+    complete_usage = {
+        key: value for key, value in (usage or {}).items() if isinstance(value, int)
+    }
+    charged_units = rate.charge(complete_usage) if attempt.usage_complete else None
+    settlement = await settle_metered_usage(
+        session,
+        reservation_id=attempt.reservation_id,
+        dispatch_key=str(attempt.dispatch_id),
+        attempt=attempt.run_attempt,
+        charged_units=charged_units,
+        unknown_usage_charge=rate.unknown_usage_charge,
+        idempotency_key=f"agent:{attempt.id}:settle",
+        at=at,
+    )
+    attempt.debited_credits = settlement.charged_units
+    attempt.settlement_status = "settled"
+
+
 async def record_model_receipt(
     session: AsyncSession, *, attempt_id: uuid.UUID, response: ModelResult
 ) -> None:
@@ -324,8 +379,9 @@ async def record_model_receipt(
     attempt.outcome = "completed"
     attempt.settled_at = _utcnow()
     attempt.late_receipt = attempt.settled_at > attempt.deadline_at
-    if attempt.funding_source == "customer_byok":
-        attempt.settlement_status = "zero_debit"
+    await _settle_platform_attempt(
+        session, attempt=attempt, usage=usage, at=attempt.settled_at
+    )
     await session.commit()
 
 
@@ -346,6 +402,7 @@ async def record_model_failure(
     attempt.outcome = "failed"
     attempt.settled_at = _utcnow()
     attempt.late_receipt = attempt.settled_at > attempt.deadline_at
-    if attempt.funding_source == "customer_byok":
-        attempt.settlement_status = "zero_debit"
+    await _settle_platform_attempt(
+        session, attempt=attempt, usage=None, at=attempt.settled_at
+    )
     await session.commit()

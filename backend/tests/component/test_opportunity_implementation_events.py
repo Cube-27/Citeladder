@@ -233,7 +233,11 @@ async def test_declaration_accepts_only_a_successful_generation_for_the_opportun
             OpportunityImplementationEvent, uuid.UUID(accepted.json()["id"])
         )
         assert declaration is not None
-        assert declaration.generation_id is None
+        assert declaration.generation_id == generation_ids[0]
+        generation = await session.get(ContentGeneration, generation_ids[0])
+        assert generation is not None
+        assert generation.archived_at is not None
+        assert generation.output_text is None
 
 
 async def test_terminal_crawl_appends_all_persisted_projection_states(

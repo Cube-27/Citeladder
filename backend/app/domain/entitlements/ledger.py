@@ -37,6 +37,7 @@ from app.core.config.billing_contracts import (
 from app.core.config.entitlements import (
     CODE_FUNDED_CREDITS_EXHAUSTED,
     LEDGER_ENTRY_DEBIT,
+    LEDGER_ENTRY_REFUND,
     LEDGER_ENTRY_RELEASE,
     LEDGER_ENTRY_RESERVATION,
 )
@@ -191,6 +192,7 @@ async def _grant_balances(
             - kind_sums.get(LEDGER_ENTRY_RESERVATION, 0)
             + kind_sums.get(LEDGER_ENTRY_RELEASE, 0)
             - kind_sums.get(LEDGER_ENTRY_DEBIT, 0)
+            + kind_sums.get(LEDGER_ENTRY_REFUND, 0)
         )
     return balances
 
@@ -201,10 +203,12 @@ async def _reservation_entries(
     return list(
         (
             await session.scalars(
-                select(ConsumableLedger).where(
+                select(ConsumableLedger)
+                .where(
                     ConsumableLedger.reservation_id == reservation_id,
                     ConsumableLedger.entry_kind == LEDGER_ENTRY_RESERVATION,
                 )
+                .with_for_update()
             )
         ).all()
     )
@@ -426,7 +430,9 @@ async def record_billable_attempt(
         if billed.request_fingerprint != settlement_fingerprint:
             raise LedgerError("idempotency_key_reused")
         return
-    ordered_grants = await _ordered_outstanding_grants(session, outstanding)
+    ordered_grants = await _ordered_outstanding_grants(
+        session, reservation_id=reservation_id, outstanding=outstanding
+    )
     remaining = units
     settlement: list[tuple[uuid.UUID, int]] = []
     for grant_id in ordered_grants:
@@ -481,7 +487,10 @@ async def record_billable_attempt(
 
 
 async def _ordered_outstanding_grants(
-    session: AsyncSession, outstanding: dict[uuid.UUID, int]
+    session: AsyncSession,
+    *,
+    reservation_id: uuid.UUID,
+    outstanding: dict[uuid.UUID, int],
 ) -> tuple[uuid.UUID, ...]:
     """Outstanding grants in the reservation's frozen allocation order.
 
@@ -516,6 +525,7 @@ async def _ordered_outstanding_grants(
                 func.min(ConsumableLedger.allocation_order),
             )
             .where(
+                ConsumableLedger.reservation_id == reservation_id,
                 ConsumableLedger.grant_id.in_(candidates),
                 ConsumableLedger.entry_kind == LEDGER_ENTRY_RESERVATION,
             )
@@ -630,7 +640,7 @@ async def consumable_usage(
         session, account_id=account_id, capability_key=capability_key
     )
     reserved = sums.get(LEDGER_ENTRY_RESERVATION, 0) - sums.get(LEDGER_ENTRY_RELEASE, 0)
-    debited = sums.get(LEDGER_ENTRY_DEBIT, 0) - sums.get("refund", 0)
+    debited = sums.get(LEDGER_ENTRY_DEBIT, 0) - sums.get(LEDGER_ENTRY_REFUND, 0)
     # Historical ledger rows from expired/revoked grants do not reduce the
     # newly active allowance. Derive active usage from the same contributing
     # grant set the resolver returned.
@@ -655,7 +665,9 @@ async def consumable_usage(
         reserved = active_sums.get(LEDGER_ENTRY_RESERVATION, 0) - active_sums.get(
             LEDGER_ENTRY_RELEASE, 0
         )
-        debited = active_sums.get(LEDGER_ENTRY_DEBIT, 0) - active_sums.get("refund", 0)
+        debited = active_sums.get(LEDGER_ENTRY_DEBIT, 0) - active_sums.get(
+            LEDGER_ENTRY_REFUND, 0
+        )
     else:
         reserved = 0
         debited = 0

@@ -9,6 +9,7 @@ status vocabulary, or tax rule is decided here — config owns all of it.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
@@ -267,6 +268,20 @@ class RazorpayBillingProvider:
         )
 
     async def fetch_payment(self, external_payment_id: str) -> ProviderPayment:
+        if external_payment_id.startswith("plink_"):
+            link = await self._request("GET", f"/payment_links/{external_payment_id}")
+            payments = link.get("payments")
+            if not isinstance(payments, list) or len(payments) != 1:
+                raise BillingProviderError("provider_payment_unavailable")
+            raw_payment = payments[0]
+            if not isinstance(raw_payment, dict):
+                raise BillingProviderError("provider_invalid_response")
+            if "notes" not in raw_payment:
+                raw_payment = {**raw_payment, "notes": link.get("notes")}
+            return replace(
+                self._payment(raw_payment),
+                external_payment_link_id=external_payment_id,
+            )
         return self._payment(
             await self._request("GET", f"/payments/{external_payment_id}")
         )
@@ -299,6 +314,7 @@ class RazorpayBillingProvider:
             or not isinstance(currency, str)
             or not currency
             or amount is None
+            or amount != amount_minor
         ):
             raise BillingProviderError("provider_invalid_response")
         return ProviderRefund(

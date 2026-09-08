@@ -22,7 +22,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import pytest
 from pydantic import SecretStr
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import billing as billing_api
@@ -595,6 +595,19 @@ async def test_cancel_marks_cancel_at_period_end(
 
 
 # --- Public catalog route --------------------------------------------------
+@pytest.mark.asyncio
+async def test_public_catalog_returns_503_when_no_revision_is_published(
+    client: httpx.AsyncClient, db_session: AsyncSession
+) -> None:
+    await db_session.execute(delete(BillingCatalogRevision))
+    await db_session.commit()
+
+    response = await client.get("/api/v1/billing/catalog")
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "catalog_unavailable"
+
+
 @pytest.mark.asyncio
 async def test_public_catalog_needs_no_auth_and_previews_without_a_country(
     client: httpx.AsyncClient,

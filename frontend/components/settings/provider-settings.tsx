@@ -80,7 +80,17 @@ export function ProviderSettings() {
         </div>
       )}
 
-      <AppModelCard connections={connections} />
+      {connectionsQuery.isLoading ? (
+        <Skeleton className="h-72 w-full" />
+      ) : (
+        <AppModelCard
+          key={
+            connections.find((connection) => (connection.app_routes?.length ?? 0) > 0)?.id ??
+            'new-app-model'
+          }
+          connections={connections}
+        />
+      )}
       <DiscoveryModelCard catalog={catalogQuery.data} />
     </div>
   );

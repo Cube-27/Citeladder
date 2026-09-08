@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -22,16 +23,7 @@ from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.answer_engines.factory import build_adapter
 from app.connectors.app_model_transport import (
     AppModelJsonTransport,
-    AppModelTransportError,
     CurlAppModelJsonTransport,
-    chat_completions_url,
-    resolve_app_model_target,
-)
-from app.core.config.app_models import (
-    APP_MODEL_PROBE_MAX_OUTPUT_TOKENS,
-    APP_MODEL_PROBE_PROMPT,
-    APP_MODEL_PROBE_TIMEOUT_SECONDS,
-    APP_MODEL_SUCCESS_DETAIL,
 )
 from app.core.config.provider_catalog import (
     CREDENTIAL_SOURCE_BYOK,
@@ -59,10 +51,12 @@ from app.domain.billing.schemas import (
     ProviderConnectionStatesResponse,
     ProviderProbeResponse,
 )
+from app.domain.providers.app_route_probes import probe_app_routes
 from app.domain.providers.connection_updates import (
     InvalidAppModelDestinationError,
     apply_scalar_updates,
     build_app_routes,
+    ensure_app_features_available,
     replace_app_routes,
 )
 from app.domain.providers.credentials import connection_paused
@@ -76,7 +70,6 @@ from app.domain.providers.schemas import (
 )
 from app.models.audit import ProviderCapacityBucket
 from app.models.provider import (
-    ProviderAppRoute,
     ProviderConnection,
     ProviderConnectionTest,
     ProviderRoute,
@@ -86,6 +79,10 @@ from app.models.workspace import Workspace
 
 class ProviderConnectionNotFoundError(LookupError):
     """Raised when a connection is missing or not in the caller's workspace."""
+
+
+class ProviderConnectionInUseError(RuntimeError):
+    """Raised when immutable provenance still references a connection."""
 
 
 class InvalidRouteError(ValueError):
@@ -240,6 +237,9 @@ async def create_connection(
         transport_provider=payload.transport_provider,
         items=payload.routes,
     )
+    await ensure_app_features_available(
+        session, workspace_id=workspace_id, items=payload.app_routes
+    )
     connection = ProviderConnection(
         workspace_id=workspace_id,
         label=payload.label,
@@ -351,7 +351,13 @@ async def delete_connection(
         )
     )
     await session.delete(connection)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise ProviderConnectionInUseError(
+            "Connection is referenced by immutable execution evidence"
+        ) from exc
 
 
 async def run_connection_test(
@@ -385,12 +391,13 @@ async def run_connection_test(
             "read-only; create a new direct connection instead."
         )
     if connection.app_routes:
-        return await _run_app_route_probe(
+        app_result = await probe_app_routes(
             session,
             connection=connection,
-            route=connection.app_routes[0],
             app_transport=app_transport or CurlAppModelJsonTransport(),
         )
+        if app_result is not None:
+            return app_result
     _require_approved_endpoint(transport, connection.base_url)
     # Connectivity probes use the exact approved route.
     logical_engine = default_probe_engine(transport)
@@ -471,87 +478,6 @@ async def run_connection_test(
         logical_engine=logical_engine,
         transport_provider=transport,
         transport_model=resolved_model,
-        tested_at=tested_at,
-    )
-
-
-async def _run_app_route_probe(
-    session: AsyncSession,
-    *,
-    connection: ProviderConnection,
-    route: ProviderAppRoute,
-    app_transport: AppModelJsonTransport,
-) -> ProviderConnectionTestResponse:
-    """Probe one exact app route after the create/update transaction committed."""
-    tested_route_revision = route.revision
-    tested_credential_revision = connection.credential_revision
-    started = time.monotonic()
-    status = TEST_STATUS_OK
-    error_code = ""
-    detail = APP_MODEL_SUCCESS_DETAIL
-    latency_ms: int | None = None
-    try:
-        target = await resolve_app_model_target(
-            chat_completions_url(route.api_base_url)
-        )
-        response = await app_transport.post(
-            target=target,
-            api_key=decrypt_secret(connection.api_key_encrypted),
-            payload={
-                "model": route.model,
-                "messages": [{"role": "user", "content": APP_MODEL_PROBE_PROMPT}],
-                "max_tokens": APP_MODEL_PROBE_MAX_OUTPUT_TOKENS,
-                "stream": False,
-            },
-            timeout_seconds=APP_MODEL_PROBE_TIMEOUT_SECONDS,
-            max_response_bytes=16_384,
-        )
-        latency_ms = response.latency_ms
-    except AppModelTransportError as exc:
-        status = TEST_STATUS_FAILED
-        error_code = exc.code[:32]
-        detail = str(exc)
-        latency_ms = int((time.monotonic() - started) * 1000)
-    tested_at = datetime.now(UTC)
-    # Concurrent rotation/update cannot make an older successful probe current.
-    await session.refresh(connection)
-    await session.refresh(route)
-    if (
-        status == TEST_STATUS_OK
-        and route.revision == tested_route_revision
-        and connection.credential_revision == tested_credential_revision
-    ):
-        route.probed_revision = tested_route_revision
-        route.probed_credential_revision = tested_credential_revision
-        route.probed_at = tested_at
-        connection.last_test_status = TEST_STATUS_OK
-        connection.last_tested_at = tested_at
-    elif status == TEST_STATUS_OK:
-        status = TEST_STATUS_FAILED
-        error_code = "revision_changed"
-        detail = "Connection changed during probe"
-    test_row = ProviderConnectionTest(
-        workspace_id=connection.workspace_id,
-        connection_id=connection.id,
-        status=status,
-        error_code=error_code,
-        detail=detail[:1024],
-        latency_ms=latency_ms,
-        logical_engine=route.feature,
-        transport_provider=route.protocol,
-        transport_model=route.model,
-    )
-    session.add(test_row)
-    await session.commit()
-    return ProviderConnectionTestResponse(
-        connection_id=connection.id,
-        status=status,
-        error_code=error_code,
-        detail=detail,
-        latency_ms=latency_ms,
-        logical_engine=route.feature,
-        transport_provider=route.protocol,
-        transport_model=route.model,
         tested_at=tested_at,
     )
 

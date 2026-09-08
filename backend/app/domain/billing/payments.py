@@ -102,20 +102,6 @@ async def record_refund_receipt(
         raise PaymentReceiptConflictError("refund_payment_mismatch")
     if payment.currency != refund.currency or refund.amount_minor <= 0:
         raise PaymentReceiptConflictError("refund_amount_mismatch")
-    refunded = await session.scalar(
-        select(func.coalesce(func.sum(BillingPayment.amount_minor), 0)).where(
-            BillingPayment.parent_payment_id == payment.id,
-            BillingPayment.receipt_kind == "refund",
-        )
-    )
-    if int(refunded or 0) + refund.amount_minor > payment.amount_minor:
-        raise PaymentReceiptConflictError("refund_cap_exceeded")
-    existing = await session.scalar(
-        select(BillingPayment).where(
-            BillingPayment.provider == payment.provider,
-            BillingPayment.external_refund_id == refund.external_refund_id,
-        )
-    )
     digest = _digest(
         {
             "payment": refund.external_payment_id,
@@ -125,10 +111,24 @@ async def record_refund_receipt(
             "status": refund.status,
         }
     )
+    existing = await session.scalar(
+        select(BillingPayment).where(
+            BillingPayment.provider == payment.provider,
+            BillingPayment.external_refund_id == refund.external_refund_id,
+        )
+    )
     if existing is not None:
         if existing.receipt_sha256 != digest:
             raise PaymentReceiptConflictError("refund_receipt_conflict")
         return existing
+    refunded = await session.scalar(
+        select(func.coalesce(func.sum(BillingPayment.amount_minor), 0)).where(
+            BillingPayment.parent_payment_id == payment.id,
+            BillingPayment.receipt_kind == "refund",
+        )
+    )
+    if int(refunded or 0) + refund.amount_minor > payment.amount_minor:
+        raise PaymentReceiptConflictError("refund_cap_exceeded")
     receipt = BillingPayment(
         billing_account_id=payment.billing_account_id,
         pending_activation_id=payment.pending_activation_id,

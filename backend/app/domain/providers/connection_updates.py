@@ -10,10 +10,36 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import encrypt_secret
 from app.models.provider import ProviderAppRoute, ProviderConnection
+from app.models.workspace import Workspace
 
 
 class InvalidAppModelDestinationError(ValueError):
     """An app-model destination change lacks fresh confirmed custody."""
+
+
+async def ensure_app_features_available(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    items: list[Any],
+    connection_id: uuid.UUID | None = None,
+) -> None:
+    """Serialize and reject a feature already owned by another connection."""
+    await session.get(Workspace, workspace_id, with_for_update=True)
+    features = {item.feature for item in items}
+    if not features:
+        return
+    query = select(ProviderAppRoute.feature).where(
+        ProviderAppRoute.workspace_id == workspace_id,
+        ProviderAppRoute.feature.in_(features),
+    )
+    if connection_id is not None:
+        query = query.where(ProviderAppRoute.connection_id != connection_id)
+    conflict = await session.scalar(query.limit(1))
+    if conflict is not None:
+        raise InvalidAppModelDestinationError(
+            f"App model feature {conflict!r} already belongs to another connection"
+        )
 
 
 def build_app_routes(
@@ -83,6 +109,12 @@ async def replace_app_routes(
     fresh_key: bool,
     confirmed: bool,
 ) -> None:
+    await ensure_app_features_available(
+        session,
+        workspace_id=connection.workspace_id,
+        items=items,
+        connection_id=connection.id,
+    )
     locked_routes = list(
         (
             await session.scalars(

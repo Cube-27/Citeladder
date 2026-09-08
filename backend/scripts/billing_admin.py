@@ -116,6 +116,13 @@ async def _run(args: argparse.Namespace) -> dict[str, object]:
         return {"dry_run": not args.apply, **redact(result)}
 
 
+async def _run_and_dispose(args: argparse.Namespace) -> dict[str, object]:
+    try:
+        return await _run(args)
+    finally:
+        await dispose_engine()
+
+
 def _mutation_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--actor", required=True, help="Persisted active admin UUID or email"
@@ -154,14 +161,12 @@ def main(argv: list[str] | None = None) -> int:
     revoke.add_argument("--grant-id", required=True)
     _mutation_options(revoke)
     try:
-        output = asyncio.run(_run(parser.parse_args(argv)))
+        output = asyncio.run(_run_and_dispose(parser.parse_args(argv)))
         print(json.dumps(output, sort_keys=True))
         return 0
     except Exception as exc:  # noqa: BLE001 - safe CLI boundary
         print(type(exc).__name__, file=sys.stderr)
         return 1
-    finally:
-        asyncio.run(dispose_engine())
 
 
 if __name__ == "__main__":

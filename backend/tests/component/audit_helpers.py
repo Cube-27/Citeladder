@@ -11,6 +11,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.provider_catalog import (
@@ -23,6 +24,7 @@ from app.core.config.provider_catalog import (
     TRANSPORT_GOOGLE,
     TRANSPORT_OPENAI,
     measurement_route,
+    provider_catalog_settings,
 )
 from app.core.security import encrypt_secret
 from app.models.brand import Brand, BrandAlias, Competitor, OwnedDomain
@@ -213,12 +215,24 @@ async def seed_platform_connection(
         await session.flush()
     for engine in engines:
         transport = _transport_for(engine)
+        reference = f"test://platform/{transport}"
+        setattr(
+            provider_catalog_settings,
+            f"platform_{transport}_credential_ref",
+            reference,
+        )
+        setattr(
+            provider_catalog_settings,
+            f"platform_{transport}_api_key",
+            SecretStr("platform-secret-test-key"),
+        )
         connection = ProviderConnection(
             workspace_id=system.id,
             label=f"platform {engine} key",
             transport_provider=transport,
             credential_source=CREDENTIAL_SOURCE_PLATFORM,
-            api_key_encrypted=encrypt_secret("platform-secret-test-key"),
+            api_key_encrypted="",
+            platform_credential_ref=reference,
             active=True,
         )
         session.add(connection)

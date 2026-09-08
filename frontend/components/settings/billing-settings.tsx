@@ -62,6 +62,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
     queryKey: queryKeys.billing.entitlement(),
     queryFn: ({ signal }) => billingApi.entitlement({ signal }),
     enabled,
+    retry: false,
   });
   const entitlement = entitlementQuery.data ?? null;
   const state = useBillingState();
@@ -91,7 +92,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
     },
   });
 
-  if (!enabled || entitlementLoading) return <BillingSkeleton />;
+  if (!enabled || entitlementLoading || entitlementQuery.isLoading) return <BillingSkeleton />;
 
   return (
     <BillingContent

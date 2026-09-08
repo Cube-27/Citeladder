@@ -383,14 +383,15 @@ async def test_concurrent_same_trigger_release_hits_the_designed_guard(
                     at=datetime.now(UTC),
                 )
                 await session.commit()
-                outcomes.append("unexpected-second-release")
+                outcomes.append("idempotent")
             except IntegrityError:
                 await session.rollback()
                 outcomes.append("guarded")
 
     await asyncio.gather(_winner(), _loser())
-    # Exactly one winner commits; the loser hits the designed guard.
-    assert sorted(outcomes) == ["guarded", "ok"]
+    # Reservation-row locking serializes both writers; the replay sees no
+    # outstanding units and succeeds as an idempotent no-op.
+    assert sorted(outcomes) == ["idempotent", "ok"]
 
     async with session_factory() as session:
         released = await _ledger_rows(

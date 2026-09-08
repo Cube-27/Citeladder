@@ -61,6 +61,7 @@ from app.domain.content.website_context import select_crawl_fragments
 from app.domain.entitlements.metered import MeteredSubject, reserve_metered_usage
 from app.domain.providers.app_routes import (
     AppModelRouteUnavailableError,
+    has_configured_app_model_route,
     resolve_app_model_route,
 )
 from app.models.content import ContentGeneration
@@ -249,7 +250,13 @@ async def _admitted_customer_route(session: AsyncSession, *, workspace_id: uuid.
             feature=APP_FEATURE_CONTENT,
             at=datetime.now(UTC),
         )
-    except AppModelRouteUnavailableError:
+    except AppModelRouteUnavailableError as exc:
+        if await has_configured_app_model_route(
+            session, workspace_id=workspace_id, feature=APP_FEATURE_CONTENT
+        ):
+            raise ProviderNotConfiguredError(
+                "The configured customer Content model route is unavailable"
+            ) from exc
         return None
 
 

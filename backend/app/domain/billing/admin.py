@@ -28,7 +28,7 @@ from app.models.billing import (
 )
 from app.models.user import User
 
-_SECRET_FIELD = re.compile(r"(?:secret|password|api[_-]?key|credential|code)", re.I)
+_SECRET_FIELD = re.compile(r"(?:secret|password|api[_-]?key|credential|token)", re.I)
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +87,7 @@ async def seed_catalog(
     require_operator(context)
     row = await seed_phase1_draft(session, actor=context.actor, reason=context.reason)
     if context.dry_run:
+        session.expunge(row)
         await session.rollback()
     return row
 
@@ -107,6 +108,7 @@ async def import_catalog(
         reason=context.reason,
     )
     if context.dry_run:
+        session.expunge(row)
         await session.rollback()
     return row
 
@@ -119,6 +121,7 @@ async def publish_catalog(
         session, revision=revision, actor=context.actor, reason=context.reason
     )
     if context.dry_run:
+        session.expunge(row)
         await session.rollback()
     return row
 

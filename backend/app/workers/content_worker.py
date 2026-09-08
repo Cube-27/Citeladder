@@ -50,7 +50,7 @@ from app.core.database import SessionLocal
 from app.core.telemetry import configure_logging, instrument_worker
 from app.domain.billing.catalog_revisions import (
     CatalogUnavailableError,
-    published_ai_credit_policy,
+    ai_credit_policy_for_revision,
 )
 from app.domain.content.context_builder import ContentContext
 from app.domain.content.message_builder import build_messages
@@ -58,6 +58,7 @@ from app.domain.entitlements.enforcement import (
     CapabilityNotGrantedError,
     require_workspace_capability,
 )
+from app.domain.entitlements.ledger import release_unused_reservation
 from app.domain.entitlements.metered import settle_metered_usage
 from app.domain.providers.app_routes import (
     AppModelRouteUnavailableError,
@@ -116,19 +117,35 @@ async def _settle_platform_attempt(
     if row.funding_source != "platform" or row.reservation_id is None:
         attempt.settlement_status = "zero_debit"
         return
+    if not row.policy_revision:
+        await release_unused_reservation(
+            session,
+            reservation_id=row.reservation_id,
+            idempotency_key=f"content:{row.id}:policy-unavailable",
+            at=now,
+        )
+        attempt.settlement_status = "policy_unavailable"
+        return
     try:
-        revision, policy = await published_ai_credit_policy(session)
+        policy = await ai_credit_policy_for_revision(session, row.policy_revision)
     except CatalogUnavailableError:
         attempt.settlement_status = "policy_unavailable"
         return
     rate = policy.rate(feature=APP_FEATURE_CONTENT, model=row.requested_model)
-    if rate is None or revision != row.policy_revision:
+    if rate is None:
+        await release_unused_reservation(
+            session,
+            reservation_id=row.reservation_id,
+            idempotency_key=f"content:{row.id}:rate-unavailable",
+            at=now,
+        )
         attempt.settlement_status = "policy_unavailable"
         return
     settlement = await settle_metered_usage(
         session,
         reservation_id=row.reservation_id,
         dispatch_key=str(attempt.dispatch_id),
+        attempt=attempt.attempt_number,
         charged_units=rate.charge(_usage_for_outcome(outcome) or {}),
         unknown_usage_charge=rate.unknown_usage_charge,
         idempotency_key=f"content:{row.id}:settle",
@@ -152,7 +169,12 @@ def _apply_attempt_outcome(
     attempt.error_code = error.error_code if error is not None else ""
     attempt.error_detail = str(error)[:2000] if error is not None else ""
     attempt.usage = usage
-    attempt.usage_completeness = USAGE_COMPLETE if usage else USAGE_UNKNOWN
+    usage_complete = bool(
+        usage
+        and isinstance(usage.get("input_tokens", usage.get("prompt_tokens")), int)
+        and isinstance(usage.get("output_tokens", usage.get("completion_tokens")), int)
+    )
+    attempt.usage_completeness = USAGE_COMPLETE if usage_complete else USAGE_UNKNOWN
     attempt.latency_ms = response.latency_ms if response is not None else None
     attempt.completed_at = now
     attempt.settlement_status = "not_applicable"
@@ -278,7 +300,7 @@ class ContentWorker(DrainableWorkerMixin):
 
     async def _route_client(self, claimed: ContentGeneration):
         if claimed.funding_source == "platform":
-            return build_discovery_client()
+            return build_discovery_client(transport=self._transport)
         async with self._session_factory() as session:
             await require_workspace_capability(
                 session, workspace_id=claimed.workspace_id, key="content_creation"

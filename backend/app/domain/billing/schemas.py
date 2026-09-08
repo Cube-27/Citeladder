@@ -308,6 +308,27 @@ class BillingUsageResponse(_StrictResponse):
     items: list[UsageItemResponse]
 
 
+class WorkspaceCapabilityResponse(_StrictResponse):
+    """One member-safe effective capability with bounded provenance."""
+
+    key: str
+    type: CapabilityTypeName
+    value: bool | int | str | None
+    valid_until: datetime | None
+    provenance: Literal["effective_grant"]
+
+
+class WorkspaceEntitlementResponse(_StrictResponse):
+    """Workspace-effective capability projection without private billing data."""
+
+    workspace_id: uuid.UUID
+    status: EntitlementStatus
+    registry_revision: str
+    entitlement_lifecycle_version: int
+    valid_until: datetime | None
+    capabilities: list[WorkspaceCapabilityResponse]
+
+
 # --- Commercial mutations -------------------------------------------------
 def _normalized_country(value: str) -> str:
     """Normalize and validate an ISO alpha-2 country code.

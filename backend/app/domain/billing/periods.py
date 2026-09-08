@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.billing_catalog import scale_grant_specs
@@ -68,7 +68,10 @@ async def issue_period_bundle(
             AccountGrant.period_end.is_not(None),
             AccountGrant.period_start < end,
             AccountGrant.period_end > start,
-            AccountGrant.period_start != start,
+            or_(
+                AccountGrant.period_start != start,
+                AccountGrant.period_end != end,
+            ),
         )
         .limit(1)
     )

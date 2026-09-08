@@ -13,6 +13,7 @@ from app.domain.billing.catalog_revisions import (
     publish_revision,
     seed_phase1_draft,
 )
+from app.domain.billing.service import resolve_base_intent
 from app.models.billing import AccountGrant, BillingCatalogRevision
 from app.models.user import User
 
@@ -97,3 +98,44 @@ async def test_database_allows_only_one_published_revision(
     second.publication_state = "published"
     with pytest.raises(IntegrityError):
         await db_session.flush()
+
+
+@pytest.mark.asyncio
+async def test_purchase_intent_reads_the_persisted_catalog_revision(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    actor = await _admin(db_session, "persisted-intent@example.com")
+    payload = approved_phase1_payload()
+    plans = payload["plans"]
+    assert isinstance(plans, list)
+    tier_1 = plans[0]
+    assert isinstance(tier_1, dict)
+    byok_price = tier_1["byok_price"]
+    assert isinstance(byok_price, dict)
+    byok_price["provider_price_ref"] = "plan_persisted_revision"
+    row = await create_draft(
+        db_session,
+        revision="persisted-commercial-v1",
+        payload=payload,
+        actor=actor,
+        reason="prove runtime ownership",
+    )
+    await publish_revision(
+        db_session, revision=row.revision, actor=actor, reason="approved"
+    )
+    await db_session.commit()
+    monkeypatch.setattr(
+        "app.domain.billing.service.plan_checkout_availability",
+        lambda _plan, _region: (True, None),
+    )
+
+    intent = await resolve_base_intent(
+        db_session,
+        catalog_key="tier_1",
+        credential_mode="byok",
+        country_code="US",
+        at=datetime(2026, 9, 8, tzinfo=UTC),
+    )
+
+    assert intent.quote.catalog_revision == "persisted-commercial-v1"
+    assert intent.price_ref == "plan_persisted_revision"

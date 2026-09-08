@@ -57,7 +57,7 @@ class AppModelJsonTransport(Protocol):
 def _parse_app_model_url(value: str):
     try:
         parts = urlsplit(value.strip())
-        port = parts.port or 443
+        port = 443 if parts.port is None else parts.port
     except ValueError as exc:
         raise ValueError("App model URL is invalid") from exc
     return parts, port

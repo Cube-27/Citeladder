@@ -165,7 +165,9 @@ class ExecutionContext:
     attempt_number: int
     connection_id: uuid.UUID | None
     connection_active: bool
+    credential_source: str
     api_key_encrypted: str
+    platform_credential_ref: str
     funding: FrozenFunding | None
 
 

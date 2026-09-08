@@ -19,6 +19,20 @@ class AppModelRouteUnavailableError(RuntimeError):
     """No exact, active, probed customer route exists; never fallback."""
 
 
+async def has_configured_app_model_route(
+    session: AsyncSession, *, workspace_id: uuid.UUID, feature: str
+) -> bool:
+    route_id = await session.scalar(
+        select(ProviderAppRoute.id)
+        .where(
+            ProviderAppRoute.workspace_id == workspace_id,
+            ProviderAppRoute.feature == feature,
+        )
+        .limit(1)
+    )
+    return route_id is not None
+
+
 async def resolve_app_model_route(
     session: AsyncSession,
     *,

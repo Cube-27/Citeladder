@@ -31,6 +31,7 @@ from app.models.workspace import Workspace
 
 _STATUS_CREATED: Final = "created"
 _STATUS_UPDATED: Final = "updated"
+_STATUS_UNCHANGED: Final = "unchanged"
 
 
 class PlatformProvisioningError(RuntimeError):
@@ -55,6 +56,103 @@ async def _system_workspace(session: AsyncSession) -> Workspace:
     return workspace
 
 
+def _validate_reference(reference: str) -> None:
+    if not reference or any(
+        token in reference.lower() for token in ("sk-", "secret", "password")
+    ):
+        raise PlatformProvisioningError(
+            "credential reference must be a non-secret opaque name"
+        )
+
+
+async def _connection(
+    session: AsyncSession,
+    *,
+    workspace: Workspace,
+    transport: str,
+    reference: str,
+) -> tuple[ProviderConnection, str]:
+    connection = await session.scalar(
+        select(ProviderConnection).where(
+            ProviderConnection.workspace_id == workspace.id,
+            ProviderConnection.credential_source == CREDENTIAL_SOURCE_PLATFORM,
+            ProviderConnection.transport_provider == transport,
+        )
+    )
+    if connection is None:
+        connection = ProviderConnection(
+            workspace_id=workspace.id,
+            label=f"platform {transport} metadata",
+            transport_provider=transport,
+            credential_source=CREDENTIAL_SOURCE_PLATFORM,
+            api_key_encrypted="",
+            platform_credential_ref=reference,
+            active=True,
+            last_test_status="",
+        )
+        session.add(connection)
+        await session.flush()
+        return connection, _STATUS_CREATED
+    changed = _update_connection(connection, reference=reference)
+    return connection, _STATUS_UPDATED if changed else _STATUS_UNCHANGED
+
+
+def _update_connection(connection: ProviderConnection, *, reference: str) -> bool:
+    changed = not connection.active
+    connection.api_key_encrypted = ""
+    connection.active = True
+    if connection.platform_credential_ref == reference:
+        return changed
+    connection.platform_credential_ref = reference
+    connection.credential_revision = uuid.uuid4()
+    connection.paused_at = None
+    connection.pause_reason = ""
+    connection.pause_until = None
+    connection.last_test_status = ""
+    connection.last_tested_at = None
+    return True
+
+
+async def _ensure_routes(
+    session: AsyncSession,
+    *,
+    workspace: Workspace,
+    connection: ProviderConnection,
+    transport: str,
+) -> bool:
+    changed = False
+    for engine in engines_for_transport(transport):
+        route = await session.scalar(
+            select(ProviderRoute).where(
+                ProviderRoute.connection_id == connection.id,
+                ProviderRoute.logical_engine == engine,
+            )
+        )
+        approved = measurement_route(engine)
+        if route is None:
+            session.add(
+                ProviderRoute(
+                    workspace_id=workspace.id,
+                    connection_id=connection.id,
+                    logical_engine=engine,
+                    transport_provider=transport,
+                    transport_model=approved.transport_model,
+                    is_default=True,
+                )
+            )
+            changed = True
+            continue
+        changed |= (
+            route.transport_model != approved.transport_model
+            or not route.active
+            or not route.is_default
+        )
+        route.transport_model = approved.transport_model
+        route.active = True
+        route.is_default = True
+    return changed
+
+
 async def provision_platform_connections(
     session: AsyncSession,
     *,
@@ -68,61 +166,21 @@ async def provision_platform_connections(
     reports: list[PlatformConnectionReport] = []
     for transport in sorted(credential_references):
         reference = credential_references[transport].strip()
-        if not reference or any(
-            token in reference.lower() for token in ("sk-", "secret", "password")
-        ):
-            raise PlatformProvisioningError(
-                "credential reference must be a non-secret opaque name"
-            )
-        connection = await session.scalar(
-            select(ProviderConnection).where(
-                ProviderConnection.workspace_id == workspace.id,
-                ProviderConnection.credential_source == CREDENTIAL_SOURCE_PLATFORM,
-                ProviderConnection.transport_provider == transport,
-            )
+        _validate_reference(reference)
+        connection, status = await _connection(
+            session,
+            workspace=workspace,
+            transport=transport,
+            reference=reference,
         )
-        status = _STATUS_UPDATED
-        if connection is None:
-            connection = ProviderConnection(
-                workspace_id=workspace.id,
-                label=f"platform {transport} metadata",
-                transport_provider=transport,
-                credential_source=CREDENTIAL_SOURCE_PLATFORM,
-                api_key_encrypted="",
-                platform_credential_ref=reference,
-                active=True,
-                last_test_status="",
-            )
-            session.add(connection)
-            await session.flush()
-            status = _STATUS_CREATED
-        else:
-            connection.api_key_encrypted = ""
-            connection.platform_credential_ref = reference
-            connection.active = True
-        for engine in engines_for_transport(transport):
-            route = await session.scalar(
-                select(ProviderRoute).where(
-                    ProviderRoute.connection_id == connection.id,
-                    ProviderRoute.logical_engine == engine,
-                )
-            )
-            approved = measurement_route(engine)
-            if route is None:
-                session.add(
-                    ProviderRoute(
-                        workspace_id=workspace.id,
-                        connection_id=connection.id,
-                        logical_engine=engine,
-                        transport_provider=transport,
-                        transport_model=approved.transport_model,
-                        is_default=True,
-                    )
-                )
-            else:
-                route.transport_model = approved.transport_model
-                route.active = True
-                route.is_default = True
+        routes_changed = await _ensure_routes(
+            session,
+            workspace=workspace,
+            connection=connection,
+            transport=transport,
+        )
+        if routes_changed and status == _STATUS_UNCHANGED:
+            status = _STATUS_UPDATED
         reports.append(
             PlatformConnectionReport(
                 transport_provider=transport, connection_id=connection.id, status=status

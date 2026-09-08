@@ -360,8 +360,14 @@ ACTOR_KINDS: Final[frozenset[str]] = frozenset(
 LEDGER_ENTRY_RESERVATION: Final = "reservation"
 LEDGER_ENTRY_DEBIT: Final = "debit"
 LEDGER_ENTRY_RELEASE: Final = "release"
+LEDGER_ENTRY_REFUND: Final = "refund"
 LEDGER_ENTRY_KINDS: Final[frozenset[str]] = frozenset(
-    {LEDGER_ENTRY_RESERVATION, LEDGER_ENTRY_DEBIT, LEDGER_ENTRY_RELEASE}
+    {
+        LEDGER_ENTRY_RESERVATION,
+        LEDGER_ENTRY_DEBIT,
+        LEDGER_ENTRY_RELEASE,
+        LEDGER_ENTRY_REFUND,
+    }
 )
 
 # Consumable draw-order tiebreak across source kinds (after effective expiry

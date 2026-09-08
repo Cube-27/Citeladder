@@ -79,7 +79,7 @@
 
 ## Current verification evidence
 
-The implementation is uncommitted on the current local branch. Focused evidence
+The implementation is committed and under review in PR #39. Focused evidence
 reported by the phase owners includes:
 
 - clean empty-database migration upgrade/check (`test_brand_logo_migration`: 1 passed);

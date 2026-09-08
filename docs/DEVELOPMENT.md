@@ -277,6 +277,12 @@ uv run python -m scripts.provision_platform_provider_connections --help
 uv run python -m scripts.provision_razorpay_plans --help
 ```
 
+Platform provider provisioning stores only each non-secret opaque reference.
+At execution, that reference must exactly match the corresponding
+`PROVIDER_PLATFORM_<TRANSPORT>_CREDENTIAL_REF`; the deployment secret manager
+injects the key into `PROVIDER_PLATFORM_<TRANSPORT>_API_KEY`. Never pass a raw
+provider key to the provisioning command.
+
 `billing_admin` mutations are dry-run by default and require an explicit target,
 active admin actor, reason, and idempotency key; repeat the reviewed command with
 `--apply` to commit. Use the

@@ -366,7 +366,10 @@ async def execute_claimed_task(
                 },
             },
         )
-        narrative = _parse_narrative(receipt.content)
+        try:
+            narrative = _parse_narrative(receipt.content)
+        except ValueError as exc:
+            raise NarrationUnavailableError(reason="provider", cause=exc) from exc
     except NarrationUnavailableError as exc:
         if exc.reason == "funding":
             await _complete_claimed_run(

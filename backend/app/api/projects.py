@@ -73,6 +73,7 @@ from app.domain.projects.schemas import (
     ProjectUpdate,
 )
 from app.domain.projects.service import (
+    ProjectInUseError,
     ProjectNotFoundError,
     create_project,
     delete_project,
@@ -574,3 +575,5 @@ async def delete_project_endpoint(
         )
     except ProjectNotFoundError as exc:
         raise_not_found(_RES_PROJECT, cause=exc)
+    except ProjectInUseError as exc:
+        raise_api_error(status.HTTP_409_CONFLICT, str(exc), cause=exc)

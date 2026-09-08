@@ -24,7 +24,7 @@ import uuid
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -114,6 +114,7 @@ class _Claim:
     activation_kind: str
     external_reference: str
     created_at: datetime
+    attempt: int
 
 
 async def _claim_batch(
@@ -161,6 +162,7 @@ async def _claim_batch(
                 activation_kind=row.activation_kind,
                 external_reference=row.external_reference or "",
                 created_at=row.created_at,
+                attempt=row.reconciliation_attempts,
             )
         )
     claims = tuple(claims_list)
@@ -178,6 +180,20 @@ async def _fetch_provider_record(
     if claim.activation_kind == ACTIVATION_KIND_TOPUP:
         return await provider.fetch_payment(claim.external_reference)
     return await provider.fetch_subscription(claim.external_reference)
+
+
+async def _lock_owned_claim(session: AsyncSession, claim: _Claim) -> bool:
+    owned = await session.scalar(
+        select(PendingActivation.id)
+        .where(
+            PendingActivation.id == claim.pending_id,
+            PendingActivation.status == ACTIVATION_PENDING,
+            PendingActivation.reconciliation_lease_token == claim.lease_token,
+            PendingActivation.reconciliation_lease_expires_at > datetime.now(UTC),
+        )
+        .with_for_update()
+    )
+    return owned is not None
 
 
 def _authoritative_status(record: ProviderRecord) -> str:
@@ -230,20 +246,28 @@ async def _settle_claim(
     abandon_after: timedelta,
 ) -> ReconciliationSummary:
     """Settle ONE claimed row from the provider's authoritative record."""
-    owned = await session.scalar(
-        select(PendingActivation.id).where(
-            PendingActivation.id == claim.pending_id,
-            PendingActivation.reconciliation_lease_token == claim.lease_token,
-        )
-    )
-    if owned is None:
-        return ReconciliationSummary(claimed=1, still_pending=1)
     try:
         record = await _fetch_provider_record(provider, claim)
     except BillingProviderError as exc:
         if exc.retryable:
+            if not await _lock_owned_claim(session, claim):
+                await session.rollback()
+                return ReconciliationSummary(claimed=1, still_pending=1)
+            if claim.attempt >= billing_settings.reconciliation_max_attempts:
+                await _mark_terminal(
+                    session,
+                    claim.pending_id,
+                    status=ACTIVATION_ABANDONED,
+                    failure_code="reconciliation_attempts_exhausted",
+                    now=now,
+                )
+                return ReconciliationSummary(claimed=1, abandoned=1)
+            await session.rollback()
             return ReconciliationSummary(claimed=1, still_pending=1)
         record = None
+    if not await _lock_owned_claim(session, claim):
+        await session.rollback()
+        return ReconciliationSummary(claimed=1, still_pending=1)
     if record is None:
         if claim.created_at <= now - abandon_after:
             await _mark_terminal(
