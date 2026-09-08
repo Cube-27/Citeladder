@@ -1,12 +1,12 @@
 /**
  * Badge token maps (§8). Each family maps a value → the colour of the badge's
- * status dot, plus the label's ink. No raw hex; all classes resolve to the
- * semantic Tailwind declarations in globals.css.
+ * status dot, the label ink, and (where the design contract calls for it) a
+ * quiet semantic fill. No raw hex; all classes resolve to the semantic
+ * Tailwind declarations in globals.css.
  *
- * One signal, one encoding. A badge used to carry a fill, a border, a dot and a
- * label — four ways of saying the same thing, and on a paper canvas that reads
- * as clutter. The dot now carries the family colour and the label carries the
- * meaning, so a dense table of badges stays quiet enough to scan.
+ * Colour never carries the state alone: the dot provides the quick visual cue
+ * and the label names the meaning. Status and sentiment families may add the
+ * documented quiet fill while classification and run-state rows stay lighter.
  *
  * The dot class is a separate field rather than a `[&>span]:bg-*` variant on the
  * wrapper: a child selector matches ANY direct span, and several call sites wrap
@@ -71,9 +71,8 @@ export type ClassificationValue = keyof typeof classificationBadge;
 export type RunStatusValue = keyof typeof runStatusBadge;
 
 /**
- * Shared shape/typography for every badge family — an unboxed dot-and-label
- * pair, not a chip. Casing comes from the call site so product nouns keep their
- * capitalization.
+ * Shared compact shape/typography for every badge family. Casing comes from the
+ * call site so product nouns keep their capitalization.
  */
 export const badgeBase =
   'inline-flex min-h-[22px] items-center gap-1.5 rounded-[var(--radius-xs)] border border-transparent px-1.5 py-0.5 whitespace-nowrap text-xs font-medium';

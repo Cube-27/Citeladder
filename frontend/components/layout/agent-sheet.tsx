@@ -53,6 +53,8 @@ export function AgentLauncher({
   children: ReactNode;
   className?: string;
 }>) {
+  const { hasCapability, isLoading } = useEntitlement();
+  if (isLoading || !hasCapability(GROWTH_AGENT_CAPABILITY)) return null;
   return (
     <Pressable
       className={className}

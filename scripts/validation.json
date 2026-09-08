@@ -5,6 +5,16 @@
   "frontendExtensions": [".ts", ".tsx", ".js", ".jsx", ".mjs"],
   "rules": [
     {
+      "sources": ["frontend/app/globals.css", "frontend/app/website-type.css"],
+      "frontendTests": ["scripts/design-system-source-checks.test.ts", "components/ui/primitives.test.tsx"],
+      "frontendE2E": ["e2e/shell.spec.ts", "e2e/marketing-pages.spec.ts", "e2e/design-repair.spec.ts", "e2e/site-intelligence.spec.ts", "e2e/content.spec.ts"]
+    },
+    {
+      "sources": ["frontend/components/ui/command-palette.tsx"],
+      "frontendTests": ["components/ui/command-palette.test.tsx"],
+      "frontendE2E": ["e2e/shell.spec.ts"]
+    },
+    {
       "sources": ["infra/gcp/**", ".github/workflows/gcp-demo-*.yml"],
       "backendTests": ["tests/unit/test_gcp_demo_infrastructure.py"]
     },

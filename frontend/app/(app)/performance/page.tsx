@@ -10,8 +10,8 @@ import { PageHeader } from '@/components/layout/page-header';
  * (queries, pages, countries, devices, search appearance, days).
  *
  * Everything renders persisted projections resolved server-side, so the dates
- * shown are always the dates actually covered. The page title renders in the
- * top bar, so there is no in-page header block.
+ * shown are always the dates actually covered. The route owns one in-pane
+ * page header beneath the shared shell chrome.
  */
 export default function PerformancePage() {
   return (

@@ -75,7 +75,7 @@ function SiteHealthContent({
     <div className="grid min-w-0 gap-[var(--workspace-gap)]">
       <PageHeader actions={blockingState ? undefined : headerActions} />
       {!blockingState ? <SiteHealthNotices screen={screen} /> : null}
-      <AnalysisTabs tab={tab} setTab={selectTab} onIntent={prefetchTab} />
+      {!blockingState ? <AnalysisTabs tab={tab} setTab={selectTab} onIntent={prefetchTab} /> : null}
       {blockingState ?? (
         <AnalysisPanel
           tab={tab}

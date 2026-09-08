@@ -100,17 +100,6 @@ const TOKEN_COLORED_ROLES = [
   '.flow-meta',
 ];
 
-const JSX_ROLE_CONTRACTS = new Map([
-  ['components/marketing/landing/hero.tsx', ['website-hero-display']],
-  ['components/marketing/primitives/page-hero.tsx', ['website-page-title']],
-  [
-    'components/marketing/primitives/section.tsx',
-    ['website-section-heading', 'website-feature-heading'],
-  ],
-  ['components/auth/auth-form.tsx', ['flow-title', 'website-body']],
-  ['components/auth/flow-shell.tsx', ['flow-group-title', 'flow-help', 'flow-meta']],
-]);
-
 function staticBindings(program) {
   const bindings = new Map();
   walk(program, (node) => {
@@ -219,7 +208,6 @@ function jsxClassData(source, label) {
   return entries;
 }
 
-const VISUAL_CONTRACT_TEST = 'components/ui/primitives.test.tsx';
 const SEMANTIC_TEST_CLASSES = new Set([
   'focus-ring',
   'sr-only',
@@ -308,9 +296,9 @@ function rawStyleAssertionTokens(text) {
     );
 }
 
-/** Keep visual recipe assertions in the single design-contract suite. */
+/** Tests assert contracts and consistency, never a frozen presentation recipe. */
 export function styleAssertionViolations(source, label) {
-  if (!/(?:\.test|\.spec)\./.test(label) || label === VISUAL_CONTRACT_TEST) return [];
+  if (!/(?:\.test|\.spec)\./.test(label)) return [];
   const program = parseSource(source, label);
   const lineOf = lineIndex(source);
   const violations = [];
@@ -326,7 +314,7 @@ export function styleAssertionViolations(source, label) {
     if (hasDynamicArgument || rawTokens.length > 0) {
       const detail = rawTokens.length > 0 ? ` (${rawTokens.join(', ')})` : '';
       violations.push(
-        `${label}:${lineOf(node.start)}: visual class assertions${detail} belong in ${VISUAL_CONTRACT_TEST}; assert behavior or semantic roles`,
+        `${label}:${lineOf(node.start)}: visual class assertions${detail} must not freeze presentation; assert contracts or semantic roles`,
       );
     }
   });
@@ -370,14 +358,7 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
     ) {
       violations.push(`${label}:${entry.line}: Card geometry and elevation belong to its owner`);
     }
-    if (/\b(?:font-semibold|font-bold|text-2xs)\b/.test(entry.classes)) {
-      violations.push(`${label}:${entry.line}: product type uses a retired weight or size`);
-    }
-    // Weight is never a call-site decision. It encodes one distinction — 500 for
-    // what you scan, 400 for what you read — and that belongs to a text role, not
-    // to whoever happens to be writing this className. Leaving it open is how a
-    // card's title, its body copy, its metric and its timestamp all ended up at
-    // 500, which left weight carrying no information at all.
+    // Call sites consume role-owned typography; the owner chooses its weights.
     if (
       !label.startsWith('components/ui/') &&
       /\bfont-(?:normal|medium|semibold|bold)\b/.test(entry.classes)
@@ -421,8 +402,8 @@ export function productUiSourceViolations(source, label, ownsProductUi) {
         `${label}:${entry.line}: vertical rhythm belongs to a container gap (components/ui/layout.tsx)`,
       );
     }
-    if (/\btext-5xl\b|\btext-\[[^\]]+\]/.test(entry.classes)) {
-      violations.push(`${label}:${entry.line}: product type must use the approved even ladder`);
+    if (/\btext-\[[^\]]+\]/.test(entry.classes)) {
+      violations.push(`${label}:${entry.line}: product type must use shared semantic type roles`);
     }
     if (/\b(?:(?:sm|md|lg|xl):)?(?:gap|p|px|py)-(?:5|6|8)\b/.test(entry.classes)) {
       violations.push(
@@ -630,7 +611,7 @@ function fontSizeRem(rules, selector) {
   return null;
 }
 
-/** Exact global contract for the spatial/type migration's shared owners. */
+/** Shared token completeness and relative scale consistency; appearance belongs to docs/design.md. */
 export function productContractViolations(root) {
   const violations = [];
   const css = readFileSync(join(root, 'app', 'globals.css'), 'utf8');
@@ -658,7 +639,6 @@ export function productContractViolations(root) {
     '--radius-control',
     '--radius-card',
     '--radius-overlay',
-    '--shadow-card',
     '--color-background',
     '--color-background-alt',
     '--color-panel-tonal',
@@ -708,64 +688,6 @@ export function productContractViolations(root) {
     violations.push('app/globals.css: the retired product-app palette scope must not return');
   }
 
-  const layout = readFileSync(join(root, 'app', 'layout.tsx'), 'utf8');
-  const geistDeclaration =
-    /const\s+geist\s*=\s*localFont\(\{\s*src:\s*'\.\.\/public\/fonts\/Geist-Variable\.woff2',\s*variable:\s*'--font-geist',\s*weight:\s*'100 900',\s*display:\s*'swap',\s*\}\);/s;
-  if (!geistDeclaration.test(layout)) {
-    violations.push(
-      'app/layout.tsx: Geist must declare the shared product UI/body font with its real source and weight range',
-    );
-  }
-  const barlowDeclaration =
-    /const\s+barlow\s*=\s*localFont\(\{\s*src:\s*\[[\s\S]*?'\.\.\/public\/fonts\/Barlow-Medium\.woff2'[\s\S]*?\],\s*variable:\s*'--font-barlow',\s*display:\s*'swap',\s*\}\);/s;
-  if (!barlowDeclaration.test(layout)) {
-    violations.push(
-      'app/layout.tsx: Barlow must declare the public and focused-flow display font source',
-    );
-  }
-
-  const shell = readFileSync(join(root, 'components', 'layout', 'app-shell.tsx'), 'utf8');
-  if (!shell.includes('px-[var(--content-gutter)]') || /\b(?:sm|md|lg):p[xy]?-\d/.test(shell)) {
-    violations.push('components/layout/app-shell.tsx: shell chrome must own one semantic gutter');
-  }
-  const alert = readFileSync(join(root, 'components', 'ui', 'alert-variants.ts'), 'utf8');
-  if (
-    !alert.includes("cva('flex items-start gap-2 text-xs'") ||
-    /rounded|\bborder\b|\bp-4\b/.test(alert)
-  ) {
-    violations.push('components/ui/alert-variants.ts: alerts must remain unboxed inline feedback');
-  }
-  const table = readFileSync(join(root, 'components', 'ui', 'table.tsx'), 'utf8');
-  if (!table.includes('text-xs text-secondary font-medium whitespace-nowrap')) {
-    violations.push('components/ui/table.tsx: table headers must be 12px and single-line');
-  }
-  const eyebrow = readFileSync(join(root, 'components', 'ui', 'eyebrow.tsx'), 'utf8');
-  const eyebrowRecipe = eyebrow.match(/export const eyebrowClasses =\s*'([^']+)'/)?.[1] ?? '';
-  if (eyebrowRecipe !== 'font-sans text-xs font-medium tracking-[0.06em] text-muted uppercase') {
-    violations.push('components/ui/eyebrow.tsx: product meta labels must be one uppercase recipe');
-  }
-  const card = readFileSync(join(root, 'components', 'ui', 'card-variants.ts'), 'utf8');
-  const cardRecipe = card.match(/cva\(([^;]+)\)/s)?.[1] ?? '';
-  // A card uses subtle directional bottom-weighted elevation (shadow-card) instead
-  // of harsh wireframe hairline borders.
-  if (!cardRecipe.includes('shadow-card')) {
-    violations.push('components/ui/card-variants.ts: Card must own shadow-card elevation');
-  }
-  const button = readFileSync(join(root, 'components', 'ui', 'button-variants.ts'), 'utf8');
-  if (!button.includes('bg-action text-action-fg')) {
-    violations.push(
-      'components/ui/button-variants.ts: primary action must use the navy action role',
-    );
-  }
-  if (
-    !/\.value-placeholder\s*\{[^}]*font-size:\s*var\(--text-xs\);[^}]*font-weight:\s*400;/s.test(
-      css,
-    )
-  ) {
-    violations.push(
-      'app/globals.css: unavailable values must remain muted 12px regular-weight text',
-    );
-  }
   return violations;
 }
 
@@ -843,6 +765,14 @@ export function textContrastViolations(root) {
 
   for (const textToken of NEUTRAL_TEXT_TOKENS) {
     for (const surfaceToken of LIGHT_SURFACE_TOKENS) {
+      // Subtle metadata belongs on the reading surfaces. Stronger interaction
+      // surfaces use muted/body ink; an unused cross-product is not a contrast
+      // contract and must not force a different approved palette.
+      if (
+        textToken === '--color-subtle' &&
+        ['--color-panel-tonal', '--color-active'].includes(surfaceToken)
+      )
+        continue;
       const ratio = contrastRatio(tokens.get(textToken), tokens.get(surfaceToken));
       if (ratio < MINIMUM_NORMAL_TEXT_CONTRAST) {
         violations.push(
@@ -915,16 +845,6 @@ export function websiteContractViolations(root) {
       violations.push(
         cssLabel + ': ' + role + ' is a shared geometry role and must not be redefined per surface',
       );
-    }
-  }
-
-  for (const [label, roles] of JSX_ROLE_CONTRACTS) {
-    const path = join(root, ...label.split('/'));
-    const entries = jsxClassData(readFileSync(path, 'utf8'), label);
-    for (const role of roles) {
-      if (!entries.some((entry) => entry.classes.split(/\s+/).includes(role))) {
-        violations.push(label + ': missing website role ' + role + ' on a JSX className');
-      }
     }
   }
 

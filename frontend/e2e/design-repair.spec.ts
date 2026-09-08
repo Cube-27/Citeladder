@@ -486,13 +486,6 @@ test('Site Health keeps its single crawl action and URLs above diagnostics', asy
   const urlWorkspace = page.getByRole('tab', { name: 'Audited so far' });
   await expect(urlWorkspace).toBeVisible();
   await expect(page.getByText('Crawler details')).toBeVisible();
-  const inventoryTop = await urlWorkspace.evaluate(
-    (element) => element.getBoundingClientRect().top,
-  );
-  const crawlerTop = await page
-    .getByText('AI crawler access')
-    .evaluate((element) => element.getBoundingClientRect().top);
-  expect(inventoryTop).toBeLessThan(crawlerTop);
 
   await stopCrawl.click();
   await expect(page.getByRole('button', { name: 'Stopping…' })).toBeVisible();

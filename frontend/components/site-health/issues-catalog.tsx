@@ -376,7 +376,7 @@ function IssueDetailRail({
             Copy fix prompt
           </CopyButton>
         </header>
-        <div className="content-scroll grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)] lg:flex-1 lg:overflow-y-auto">
+        <div className="content-scroll grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)] min-[701px]:flex-1 min-[701px]:overflow-y-auto">
           {issue.description ? (
             <p className="text-secondary text-sm whitespace-pre-line">{issue.description}</p>
           ) : null}

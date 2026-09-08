@@ -85,6 +85,7 @@ describe('SiteHealthScreen — loading failures', () => {
     renderScreen();
 
     expect(await screen.findByText('Could not load Site Health. Please refresh.')).toBeVisible();
+    expect(screen.queryByRole('tablist', { name: 'Website analysis' })).not.toBeInTheDocument();
   });
 
   it('shows a recoverable warning when entitlement resolution fails closed', async () => {
@@ -98,6 +99,7 @@ describe('SiteHealthScreen — loading failures', () => {
     renderScreen();
 
     expect(await screen.findByText(/Site Health access could not be resolved/)).toBeVisible();
+    expect(screen.queryByRole('tablist', { name: 'Website analysis' })).not.toBeInTheDocument();
   });
 });
 

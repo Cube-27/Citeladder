@@ -9,7 +9,7 @@ own scoring, page classification, lifecycle truth, or authorization.
 
 ## Locked rebuild route contract
 
-Navigation is organized into five loop stations. This is the shipped contract;
+Navigation is organized into four loop stations. This is the shipped contract;
 a replacement is complete only after every caller is migrated and the
 superseded path is deleted.
 
@@ -20,18 +20,19 @@ superseded path is deleted.
 | Analyze | Issues / Search Demand / Performance | `/issues`, `/demand`, `/performance` |
 | Analyze | Commerce Suite | `/products` |
 | Act | Opportunities / Content | `/opportunities`, `/content` |
-| Track | AI Visibility | `/visibility?tab=trends` (default), `mentions-citations`, `query-fanout` |
+| Track | Prompts / AI Visibility | `/prompts`, `/visibility?tab=trends` (default), `mentions-citations`, `query-fanout` |
 | Track | Runs / AI Referrals | `/runs`, `/runs/[runId]`, `/ai-referrals` |
-| Connect | Integrations / Providers | `/settings?tab=integrations`, `/settings?tab=providers` |
-| Connect | Prompts / Settings | `/prompts`, `/settings` |
+| Support | Integrations / Providers / Settings | `/settings`, `/settings?tab=integrations`, `/settings?tab=providers` |
 
-The mobile bar has exactly Overview, Analyze, Act, Track, and Connect. One
-shared station-navigation owner exposes secondary destinations and resolves
-active state from pathname plus recognized `tab`/`mode` values. The Growth
-Agent moves to an accessible top-bar sheet with typed persisted route context;
+The desktop sidebar has the four loop stations plus supporting Settings access.
+At compact widths one 56px topbar opens the same full navigation in a
+focus-managed off-canvas drawer. The shared navigation resolver applies the
+same capability filtering to sidebar, compact navigation, and Command Palette,
+and active state uses pathname plus recognized `tab`/`mode` values. The Growth
+Agent has one persistent shell-owned drawer, with desktop and compact triggers;
 it is not a sidebar destination. Retired internal routes receive no redirects.
-The compact account menu also remains in the mobile top bar, keeping Settings
-and Sign out reachable without the desktop sidebar.
+The compact account trigger remains in the mobile topbar, keeping Settings and
+Sign out reachable without the desktop sidebar.
 
 Desktop and mobile now consume that shared station owner. Commerce Suite is an
 Analyze destination for every project. Providers and Integrations are Settings
@@ -68,7 +69,7 @@ topics before generating prompts.
 - Server data uses TanStack Query and shared Zod response schemas.
 - Next.js Cache Components and Partial Prefetching produce one reusable App
   Shell per route. The authenticated layout is instant-navigation validated;
-  its sidebar, top bar, query client, and project context remain mounted while
+  its sidebar, compact topbar/drawer, query client, and project context remain mounted while
   route-owned client content resolves. The `(app)` segment has no loading
   boundary: each screen keeps its toolbar, filters, and tablist mounted and
   limits loading placeholders to the data region whose geometry they match. A

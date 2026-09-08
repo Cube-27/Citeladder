@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentLauncher, AgentSheet, AgentSheetTrigger } from './agent-sheet';
 
@@ -17,6 +17,7 @@ let activeProject = {
   id: '11111111-1111-4111-8111-111111111111',
   workspace_id: '22222222-2222-4222-8222-222222222222',
 };
+let agentEntitled = true;
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/site',
@@ -26,13 +27,21 @@ vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeProject }),
 }));
 vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({ hasCapability: () => true, isLoading: false }),
+  useEntitlement: () => ({ hasCapability: () => agentEntitled, isLoading: false }),
 }));
 vi.mock('@/components/agent/growth-agent-workspace', () => ({
   GrowthAgentWorkspace: (props: unknown) => <pre>{JSON.stringify(props)}</pre>,
 }));
 
 describe('AgentSheet', () => {
+  beforeEach(() => {
+    activeProject = {
+      id: '11111111-1111-4111-8111-111111111111',
+      workspace_id: '22222222-2222-4222-8222-222222222222',
+    };
+    agentEntitled = true;
+  });
+
   it('opens from the top bar with bounded typed route context and returns focus', async () => {
     const user = userEvent.setup();
     render(<Agent />);
@@ -61,6 +70,16 @@ describe('AgentSheet', () => {
     await user.click(screen.getByRole('button', { name: 'Build roadmap' }));
     expect(screen.getByText(/"initialTask":"build_roadmap"/)).toBeVisible();
     expect(screen.getByText(/"initialObjective":"Prioritize Website evidence"/)).toBeVisible();
+  });
+
+  it('hides contextual launchers when Growth Agent is unavailable', () => {
+    agentEntitled = false;
+    render(
+      <AgentLauncher taskType="build_roadmap" objective="Prioritize Website evidence">
+        Build roadmap
+      </AgentLauncher>,
+    );
+    expect(screen.queryByRole('button', { name: 'Build roadmap' })).not.toBeInTheDocument();
   });
 
   it('reopens the default trigger with the last contextual task and objective', async () => {

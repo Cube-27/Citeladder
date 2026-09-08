@@ -3,10 +3,17 @@
 > Canonical visual and interaction contract for marketing, authentication, and
 > the authenticated application. This is the only design-system document.
 
+This document owns the final visual specification. The approved
+[`refined HTML`](plans/citeladder-refined.html) is the frozen visual reference.
+Tests verify shared ownership, accessibility and product correctness; they do
+not become a second visual authority through exact class, font, pixel, or CSS
+recipe assertions. Production workflows remain governed by their existing
+owners and behavior contracts.
+
 ## Direction and identity
 
 CiteLadder is a light-only, evidence-led enterprise system. The authenticated
-application uses the **Prism Evidence Workspace**: one grained ground carrying the chrome and white paper carrying the work,
+application uses the **Prism Evidence Workspace**: one neutral ground carrying the chrome and white paper carrying the work,
 dark navy ink, a brand-blue primary action, semantic evidence
 washes, useful density, and deliberate negative space. It is an operating
 workspace, not a wall of equal-weight KPI cards.
@@ -23,15 +30,13 @@ workspace, not a wall of equal-weight KPI cards.
   iconography with the same black silhouette across its frames.
 - **Voice:** direct, confident, specific. One idea per sentence. Prefer evidence
   and outcomes over generic AI language.
-- **Typography:** two scoped treatments from one `next/font/local` owner. The
-  authenticated product uses **Geist Variable** exclusively for UI, body, data,
-  and headings. The public and focused-flow surfaces render **Barlow** as the display face — a
-  clean, modern typeface rendered with natural weights (500 default across headings) and a 48px
-  landing page hero — over **Geist Variable** (the full 100–900
-  wght axis) for body, UI, and data; the flow ladder shares that pairing.
-  Website and flow surfaces use a 15px reading baseline. Size,
-  leading, weight, tracking, and
-  colour are one role contract, never independent page-level choices.
+- **Typography:** one **Geist Variable** family, loaded by the existing
+  `next/font/local` owner, serves the authenticated product, public site,
+  authentication, onboarding, UI, data, and headings. The full 100–900 wght
+  axis is available, with semantic roles selecting the approved weight and
+  scale. The working product baseline is 14px. Size, leading, weight,
+  tracking, and colour are one role contract, never independent page-level
+  choices.
 - **Iconography:** lucide only, imported by concept from `frontend/lib/icons.ts`
   where a concept exists. A call site sets the size class and nothing else:
   `size-3`/`size-3.5` for dense tables, toolbars, and inline chips, `size-4` for
@@ -40,11 +45,11 @@ workspace, not a wall of equal-weight KPI cards.
   ladder in `app/globals.css` derives it from the size class so every glyph
   lands near a 1.3px stem instead of growing heavier with the icon. Colour stays
   `currentColor` so `text-muted` and `text-accent-text` keep painting the glyph.
-- **Action and selection:** primary accent (`#395AFA`) owns primary actions on
+- **Action and selection:** primary accent (`#175CD3`) owns primary actions on
   every surface — product, authentication, onboarding, and the public marketing site
   (the shared solid `primary` button). Analytical selection, links, active navigation, and focus
-  consume the semantic accent ladder (`#395AFA` with `#2947E3` for hover and `#203CC9` for press
-  depth). A single definition in `@theme` in `globals.css` propagates token-driven primary color
+  consume the semantic accent ladder (`#175CD3`, `#134DAB` hover, and `#10419D` pressed).
+  A single definition in `@theme` in `globals.css` propagates token-driven primary color
   to all surfaces without arbitrary per-surface overrides. Cyan, coral, lime,
   and amber are evidence/status families, never route decoration.
 - **Composition:** state before features. Product pages prioritise current state,
@@ -61,12 +66,12 @@ brand rail.
 
 ## Source of truth and implementation rules
 
-`frontend/app/globals.css` is the sole owner of global tokens, the font binding,
-cross-surface geometry, and global interaction rules. Its imported
-`frontend/app/website-type.css` owns the named public/auth/onboarding type roles
-and flow-specific geometry; it does not own a second palette or elevation
-system. Editorial and auth hierarchy use the named roles, while product UI
-consumes semantic Tailwind utilities and CSS custom properties.
+`frontend/app/globals.css` is the sole owner of global tokens, the Geist font
+binding, cross-surface geometry, and global interaction rules. Its imported
+`frontend/app/website-type.css` owns named public/auth/onboarding type roles
+and flow-specific geometry; all roles use the same Geist family and semantic
+palette. Editorial, auth, and product UI consume semantic utilities and CSS
+custom properties.
 
 - Do not add `@theme`, a raw hex colour, a shared control recipe, or an
   unregistered animation outside `globals.css`.
@@ -86,111 +91,79 @@ Tokens are semantic; components use the role, not a colour value.
 
 | Role | Token family | Use |
 | --- | --- | --- |
-| Ground | `shell` (`#F1F4F1`), `shell-alt` (`#ECF1EC`) | The single grained sheet every chrome region stands on: the app sidebar and top bar and the focused flow's bar and action bar |
-| Canvas and structure | `background` (`#F7F6FD`), `well` / `background-alt` / `panel-tonal` (`#F4F4F1`), `active` (`#EFEFEB`) | The neutral inset ladder used *inside* paper — wells, tonal panels, hover and selected state |
-| Raised surfaces | `panel`, `input`, `elevated` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
-| Text | `foreground` (`#172554`), `secondary` (`#24356B`), `muted` (`#3D4F8C`), `subtle` (`#55639A`), disabled (`#9A9AA0`) | Editorial ink roles — a dark navy family, five distinct steps; grey survives only for the disabled state |
-| Borders | `border-subtle` (`#E3E2EC`), `border` (`#D1D0DC`), `border-strong` (`#A2A0B0`), `border-bold` (`#747282`) | Ledger rules and control roles. A rule separates sections; a box around them does not |
-| Marketing canvases | `band-indigo` (`#131028`), `band-teal` (`#0C2626`), `canvas-soft` (`#F8FAFC`), `violet-soft` (`#C9B4FA`), `atmosphere-blue`, `atmosphere-green`, `hairline-warm` (`#E2E8F0`) | The public surface's editorial system — see the marketing arc below. Decorative; never state |
-| Primary action | `action-*` (`#395AFA`) | Brand-blue primary actions on every surface, public site included |
-| Selection and focus | `accent-*` (`#395AFA`) | Blue for selection, links, tabs, active navigation, and focus; violet (`#C9B4FA`) inside the indigo band, near-white inside the teal band |
-| Status and evidence | cyan, coral, lime, amber, `citation-*`, `run-*`, `score-*`, `chart-*` | Persisted evidence and status, always paired with a label or icon |
+| Ground | `canvas` (`#F6F8FA`) | The neutral ground beneath the authenticated shell and public surfaces |
+| Canvas and structure | `surface` (`#F7F9FC`), `surface-2` (`#EEF1F5`) | The neutral inset ladder for wells, tonal panels, hover and selected state |
+| Raised surfaces | `white` (`#FFFFFF`) | Inputs, overlays, and meaningful semantic objects |
+| Text | `ink` (`#30313D`), `ink-strong` (`#1A1F36`), `muted` (`#596579`), `subtle` (`#667085`) | Four distinct neutral ink roles for headings, body, labels, and peripheral context |
+| Borders | `line` (`#E4E7EC`), `line-strong` (`#CBD2DC`), `field-line` (`#8793A3`) | Hairline structure and tactile field boundaries |
+| Primary action and selection | `accent` (`#175CD3`), hover (`#134DAB`), pressed (`#10419D`), soft (`#EDF4FF`), line (`#C4D7F5`) | Interaction, links, active navigation, focus, and the primary chart series |
+| Status and evidence | success, warning, error, info, `chart-secondary`, `chart-grid` | Persisted evidence and status, always paired with a label or icon |
 
-The ground is paper and the ink is dark navy. Colour appears on under five
-percent of the surface: `action` `#395AFA` owns solid primary buttons on
-product, authentication, and onboarding (hover steps one rung deeper along the
-accent ramp, `#2947E3`; press settles at `#203CC9`), and blue
-`#395AFA` owns selection, links,
-tabs, active navigation, focus, and the first chart series. The model is
-**one ground, two papers**. Chrome — the app sidebar and top bar, the focused
-flow's bar and action bar — is one grained sheet in `shell` (`#F1F4F1`), and
-content sits on white paper inset in it via the `.app-pane` recipe. The tonal
-step between those two planes plus the pane's overlay radius **is** the
-separation: the hairline rules that used to divide sidebar from content and
-flow bar from flow made the chrome read as boxes bolted together. Inside paper
-the neutral ladder still applies — `#F4F4F1` wells and tonal panels, `#EFEFEB`
-hover and selected state. The ground's hue is green at very low chroma: enough
-to read as a material rather than as grey, far too little to compete with the
-accent that owns actions. Both rungs clear AA for all four neutral inks. Raised
-objects, inputs, and overlays remain white. Product, authentication, and
-onboarding consume these shared tokens without route-scoped palette overrides;
-the public surface renders its own canvas system below.
+The product uses a neutral ground and white work surfaces. The blue accent
+`#175CD3` owns primary actions, selection, links, tabs, active navigation,
+focus, and the first chart series; `#134DAB` and `#10419D` are its hover and
+pressed states. Semantic success, warning, error, and info families remain
+independent from interaction blue. The authenticated shell has one compact
+sidebar and an inset work pane; at compact widths it uses one 56px topbar and
+an off-canvas navigation drawer. Hairlines, spacing, and surface tone carry
+hierarchy. Raised objects, inputs, and overlays remain white, with elevation
+reserved for floating UI. Product, authentication, onboarding, and public
+surfaces consume these shared semantic tokens without route-local palette
+overrides.
 
-Text hierarchy is semantic rather than route-specific: `foreground` owns headings,
-primary values, and actions; `secondary` owns body copy and row values; `muted`
-owns labels, captions, and supporting metadata; `subtle` is reserved for tertiary
-metadata, placeholders, and unavailable-value marks. These are four visibly
-different inks — when `muted` and `subtle` held the same value the ladder
-collapsed and dense screens lost their hierarchy. The design-system policy
-requires all four neutral text roles to meet WCAG 2.1 AA normal-text contrast
-(`4.5:1`) on every shared light surface, including `active`.
+Text hierarchy is semantic rather than route-specific: `ink-strong` owns
+headings and primary values; `ink` owns body copy and row values; `muted` owns
+labels, captions, and supporting metadata; `subtle` is reserved for tertiary
+metadata, placeholders, and unavailable-value marks. Reading text uses a role
+with WCAG 2.1 AA normal-text contrast (`4.5:1`); `subtle` metadata is used on
+reading surfaces, while active and tonal surfaces use `muted` or `ink` for the
+same contrast requirement.
 
-Marketing renders the **light editorial system**: a white page that opens on a
-centred Barlow hero over the pastel atmosphere washes, alternates white body
-bands with the cool `sunken` off-white (`canvas-soft` `#F8FAFC`), and
-closes on the deep-teal band (`band-teal` `#0C2626`) that resolves every
-marketing page. The public surface rebinds the text inks to a deeper dark
+Marketing renders the **light editorial system**: a white root and centred
+Geist hero, with quiet `surface` bands separating selected body sections. The
+public surface rebinds the text inks to a deeper dark
 navy family (`[data-public-surface]` in `globals.css` — `#0F172A`
 foreground through `#64748B` subtle) and steps the hairlines up a rung, so the
 site prints with more contrast than the product. The public surface inherits
-the shared blue action/accent ramp rather than declaring a route-local cut.
-The indigo canvas (`band-indigo` `#131028`) survives as a
-depth accent, not a page ground: the featured pricing
-tier inverts onto it, and its one-place token rebind
-(`[data-citeladder-section='indigo']`) steps that card's accent and action up
-to the pale violet so the inverted CTA stays legible. The teal band rebinds the
-same way (`='teal'`): components inside keep naming roles, the primary action
-inverts to the white canvas with a teal label, and no dark hex is ever named at
-a call site. On paper a tonal band is a whisper, so a public section
-separates with a hairline (`divided`) unless the fill edge is doing real work.
+the shared blue action/accent ramp rather than declaring a route-local cut. On
+paper a tonal band is a whisper, so a public section separates with a hairline
+(`divided`) unless the quiet fill edge is doing real work.
 Functional evidence families remain inside product data and faithful preview
 scenes because those states must stay legible at a glance. Functional colour
-never carries meaning alone. Grain is the material the ground is made of, not
-an effect: `.band-grain` lays a fractal-noise tile over a plane at
-`--grain-opacity`, which a band overrides — `.grain-soft` (1%) for app and flow
-chrome, 1.5% on paper and tinted bands, and 9% on the teal
-canvas, because noise all but disappears into a dark ground and reads as dirt
-at product density. The same noise blends into the blog photography at 16%
-with an overlay blend (`.photo-grain`), so a shot reads as a printed plate
-rather than a flat digital crop. The sanctioned decorative families on the public surface
-are the pastel atmosphere washes (`atmosphere-blue`, `atmosphere-green` — the
-hero's backdrop, echoed around the product window) and
-the pastel icon tiles (`tile-blue`, `tile-indigo`, `tile-purple`, `tile-green`)
-for section iconography, the workflow's full step panels, and the per-segment
-hue accents on `/solutions`, never used for state.
+never carries meaning alone. The frozen reference does not authorize
+atmosphere washes, dark teal or indigo bands, grain overlays, or decorative
+icon-tile families on the public surface.
 
 ## Typography
 
-Two self-hosted faces, both owned by `next/font/local` declarations in
-`app/layout.tsx`. The authenticated product uses **Geist Variable** (`100–900`)
-exclusively for UI, body, data, and headings. The public and focused-flow
-surfaces pair **Barlow** (`400`, `500`, `600`, and `700`) as the display face
-with **Geist Variable** (`100–900`) for body, UI, and data. All swap display.
-Metrics, dates, ranks,
-and percentages use tabular numerals, never a monospace face.
+One self-hosted face, **Geist Variable** (`100–900`), is owned by the
+`next/font/local` declaration in `app/layout.tsx` and is used on every
+product, public, authentication, and onboarding surface. All weights swap
+display. Metrics, dates, ranks, and percentages use tabular numerals, never a
+monospace face.
 
 ### Website and focused-flow ladder
 
-The website scale is role-based and starts from a 15px reading baseline. A role
+The website scale is role-based and starts from a 14px working baseline. A role
 owns its size, leading, weight, tracking, and colour as one unit. Public and auth
 components consume these roles instead of assembling arbitrary size, leading,
 tracking, weight, and colour combinations.
 
-The ladder is mobile-first: the base value applies below 768px and the arrows
-mark the 768px and 1024px step-ups. Barlow carries display hierarchy through
-size, its natural 500 weight, tight tracking, and dark navy ink.
+The ladder is mobile-first: the base value applies below 700px and the arrows
+mark the 700px and 981px step-ups. Geist carries display hierarchy through
+size, semantic weight, tracking, and neutral ink.
 | Role                    | Family           |      Size / line height |  Weight |                       Tracking | Colour                                      |
 | ----------------------- | ---------------- | ----------------------: | ------: | -----------------------------: | ------------------------------------------- |
-| Flow group title        | Geist            |                 17/24px |     500 |                        -0.01em | foreground                                  |
-| Flow help               | Geist            |                 15/22px |     400 |                              0 | muted                                       |
-| Flow metadata           | Geist            |                 14/20px |     500 |                              0 | muted; tabular numerals                     |
-| Lead                    | Geist            |         17/26 → 19/28px |     400 |                              0 | secondary                                   |
-| Large body              | Geist            |                 16/26px |     400 |                              0 | secondary                                   |
-| Body baseline           | Geist            |                 15/24px |     400 |                              0 | secondary                                   |
-| Navigation and actions  | Geist            |                 14/20px | 500–600 |                              0 | foreground or inverse                       |
-| Label, caption, eyebrow | Geist            |                 13/18px |     600 | 0; +0.06em only when uppercase | muted or subtle                             |
+| Flow group title         | Geist            | 16/24px | 600 | -0.2px | ink-strong |
+| Flow help                | Geist            | 14/20px | 400 | 0 | muted |
+| Flow metadata            | Geist            | 12/16px | 500 | 0 | muted; tabular numerals |
+| Lead                     | Geist            | 18/26px | 400 | 0 | ink |
+| Large body               | Geist            | 16/22px | 400 | 0 | ink |
+| Body baseline            | Geist            | 14/20px | 400 | 0 | ink |
+| Navigation and actions   | Geist            | 14/20px | 500–550 | 0 | ink or inverse |
+| Label, caption, eyebrow  | Geist            | 13/18px | 400–500 | 0 | muted or subtle |
 
-Ordinary website paragraphs never render below the 15px body rung. Thirteen
+Ordinary website paragraphs never render below the 14px body rung. Thirteen
 pixels is reserved for short labels, metadata, captions, and legal support.
 Prose stays within a 45–75 character measure. The accent never carries a
 long paragraph. Large text uses calm leading; body text stays at
@@ -214,33 +187,31 @@ The roles live in `components/ui/typography.tsx` and are reached through
 
 | Role | Job | Size / line height | Weight | Ink |
 | :--- | :--- | ---: | ---: | :--- |
-| `pageTitle` | the top-bar `h1` | 18/24px | 500 | `foreground` |
-| `sectionTitle` | a screen section `h2` | 18/24px | 500 | `foreground` |
-| `objectTitle` | a card or object `h3` | 16/22px | 500 | `foreground` |
-| `bodyStrong` | copy that leads its block | 14/20px | 500 | `foreground` |
-| `body` | reading copy, descriptions, cell text | 14/20px | **400** | `secondary` |
-| `label` | a field or column label | 12/16px | 500 | `secondary` |
-| `meta` | timestamps, counts, help, footnotes | 12/16px | **400** | `muted` |
-| `eyebrow` | uppercase micro-label | 12/16px | 500 | `muted`, 0.06em |
-| `emphasis` | a value or name at the ambient size | inherited | 500 | `foreground` |
-| `metric` | a primary numeral | 28/36px | 500 | `foreground`, tabular |
-| `metricSm` | a numeral in a dense row | 16/22px | 500 | `foreground`, tabular |
-| `delta` | a change indicator | 12/16px | 400 | caller's tone, tabular |
+| `pageTitle` | the in-pane route `h1` | 26/32px | 600 | `ink-strong` |
+| `sectionTitle` | a screen section `h2` | 16/24px | 600 | `ink-strong` |
+| `objectTitle` | an entity heading | 18/26px | 600 | `ink-strong` |
+| `bodyStrong` | copy that leads its block | 14/20px | 500 | `ink` |
+| `body` | reading copy, descriptions, cell text | 14/20px | **400** | `ink` |
+| `label` | a field or column label | 14/20px | 500 | `muted` |
+| `meta` | timestamps, counts, help, footnotes | 12/16px | **500** | `subtle` |
+| `eyebrow` | short metadata label | 12/16px | 500 | `muted` |
+| `emphasis` | a value or name at the ambient size | inherited | 500 | `ink-strong` |
+| `metric` | a primary numeral | 28/36px | 600 | `ink-strong`, tabular |
+| `metricSm` | a numeral in a dense row | 16/22px | 500 | `ink`, tabular |
+| `delta` | a change indicator | 12/16px | 500 | caller's tone, tabular |
 
-**Weight encodes exactly one distinction**: 500 for what you *scan* — headings,
-labels, numeric values — and 400 for what you *read*. Hierarchy is carried by
-size and ink (`foreground` → `secondary` → `muted`), never by weight. This is
-not a preference: the app previously ran 377 `font-medium` against 16
-`font-normal`, so a card's title, its body copy, its metric and its timestamp
-all rendered at 500 and weight told the reader nothing.
+Weight is semantic: 400 for body copy, 500 for labels and navigation, 550 for
+actions, and 600 for headings and metrics. Hierarchy is carried by the role's
+size, leading, tracking, and ink (`ink-strong` → `ink` → `muted` → `subtle`),
+never by route-local overrides.
 
 `font-*` utilities are rejected by `check:policy` outside `components/ui/`.
 `<strong>`, `<b>` and `<th>` take their one step up from a base rule in
 `globals.css`, so no call site restates it.
 
 Fourteen pixels is the product baseline. Twelve pixels is reserved for short
-labels, provenance, badges, and table headers. `text-2xs`, 10px and 11px product
-text, `font-semibold`, and `font-bold` are retired from authenticated UI.
+metadata, provenance, badges, and table headers. Product call sites name a
+closed `textRole`; they do not write arbitrary weights or sizes.
 
 Availability labels such as **Not measured**, **Unavailable**, and **Unknown**
 never inherit metric typography. They use the shared `UnavailableValue`
@@ -265,8 +236,8 @@ and crisp semantic hairlines to maintain clear structure without visual clutter:
   Twenty-seven of these were hand-rolled, each with its own fill, border colour,
   radius and padding, which is why the same evidence box looked different in six
   screens. `Card` cannot absorb them: a `Card` may not nest inside a `Card`.
-- **Radius is one ladder, everywhere**: `--radius-control` (8px),
-  `--radius-card` (12px), `--radius-overlay` (16px), with `rounded-xs` (4px) for
+- **Radius is one ladder, everywhere**: `--radius-control` (6px),
+  `--radius-card` (8px), `--radius-overlay` (10px), with `rounded-xs` (4px) for
   micro geometry — chart bars, skeletons, inline code — and `rounded-full` for
   pills. Tailwind's default radius scale is cleared in `@theme` so a size name
   cannot be reached for, and `check:policy` rejects `rounded-sm|md|lg|xl` on
@@ -294,19 +265,19 @@ and crisp semantic hairlines to maintain clear structure without visual clutter:
 
 ## Data and geometry
 
-| Context                  |     Desktop |     Touch / compact |
-| ------------------------ | ----------: | ------------------: |
-| Top bar                  |        52px |                52px |
-| Sidebar rail             |       220px |       mobile drawer |
-| Content gutter           |        24px |                16px |
-| Navigation / control row |        36px | 44px minimum target |
-| Primary CTA              | 32–36px height | 44px minimum target |
-| Table row                |        40px |     labelled record |
+| Context                  | Desktop | Laptop / compact |
+| ------------------------ | ------: | ---------------: |
+| Authenticated desktop sidebar | 232px | 210px |
+| Compact topbar            | — | 56px |
+| Content gutter            | 28px | 22px / 16px |
+| Navigation row           | 32px | 44px minimum target |
+| Control                  | 30–40px | 44px minimum target |
+| Table row                | 44px | labelled record |
 
-The content area caps at 1360px. Internal groups use 16–24px and major sections
-separate by 32px. Compact gutters remain 16px; dialogs and drawers use 20px.
+The content area caps at 1392px. Internal groups use 16–24px and major sections
+separate by 24px. Compact gutters remain 16px; dialogs and drawers use 20px.
 Cross-surface geometry is role-driven and there is exactly one ladder: controls
-and fields use 8px corners, semantic objects use 12px, and overlays use 16px,
+and fields use 6px corners, semantic objects use 8px, and overlays use 10px,
 with 4px for micro geometry and full rounding for chips, badges, status dots,
 count pills, and filter toggles. **No surface — app, login, onboarding or
 marketing — redefines a role.** Components consume the semantic geometry role;
@@ -315,16 +286,14 @@ size-named radius and any per-surface redeclaration of a role.
 
 `shadow-elevated` owns floating menus and popovers; `shadow-modal-value` owns
 drawers and dialogs. No authenticated feature owns a shadow recipe.
-Marketing sections breathe on a generous rhythm (`--section-y-*`, 120px desktop).
+Marketing sections use the shared responsive rhythm (`--section-y`: 56px base,
+80px from 981px, and 96px from 1280px).
 
 Authentication and onboarding share the `[data-flow-surface]` geometry owned by
-`website-type.css`: a 64px bar (56px below 640px), 720px content measure, 880px
-review measure, 24px gutters growing to 32px, 40px from title block to first
-group, 32px between groups, 16px from help to controls, and 8px within a title
-stack. Flow controls take the shared 8px control role, the same as the app; the
-surface re-scales type, never geometry. Selection chips are 36px high on desktop
-and 44px on touch. The shell owns the scrolling main region and bottom action
-bar so content height never creates a dead band above the primary action.
+`website-type.css`: a compact 56px bar, centred task measure, 16px mobile
+gutter, and the same 6px control role as the app. The surface uses Geist and
+the same semantic palette. Selection chips are 36px high on desktop and 44px
+on touch. The flow shell owns its scrolling main region and action bar.
 
 ### Availability vocabulary
 
@@ -342,11 +311,12 @@ series retain visual gaps for unavailable points and explain those gaps accessib
 - Use sections, ledgers, tables, and split workspaces as page architecture. Cards
   support a section; they do not replace one. Avoid nested decorative cards.
 - The shell is a ground with an inset pane, not a bordered sidebar beside a
-  bordered header. The sidebar and top bar paint nothing and rule nothing; the
-  content pane owns the scroll, so its top edge stays put while the workspace
-  moves. The pane fills the shell — it meets the sidebar on the left and the
-  viewport on the right and bottom, so the work gets the room and the top edge
-  alone carries the seam. Only its top corners are therefore rounded
+  bordered header. The desktop sidebar paints nothing; document scrolling
+  remains normal, and workspace/content overflow is unset. At
+  compact widths a single 56px topbar opens the same sidebar content in a
+  focus-managed off-canvas drawer. The pane fills the shell — it meets the
+  sidebar on the left and the viewport on the right and bottom, so the work
+  gets the room and the top edge alone carries the seam. Only its top corners are therefore rounded
   (`.app-pane-workspace`); rounding an edge with nothing behind it cuts a notch
   rather than softening anything. Below 768px the pane runs edge to edge and
   gives up its radius and its lift — a 16px corner against the viewport edge
@@ -422,7 +392,7 @@ to look on every page in the app.
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
-│ Route title                         Search · Ctrl K   Agent   │
+│ Brand / project / Search / Agent │ Route title and actions   │
 ├────────────┬─────────────────────────────────────────────────┤
 │            │                                                 │
 │ Overview   │  Supporting context                  Actions    │
@@ -442,27 +412,29 @@ Fixed responsibilities per region:
 
 | Region             | Owns                                                                                                        | Never                                             |
 | ------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| Top bar            | Visible route title, global search / command entry, and Agent entry | Route metrics or a second navigation level |
-| Sidebar            | Five loop stations: Overview, Analyze, Act, Track, and Connect; station subnavigation owns its destinations | A third navigation level or disabled future items |
-| Page header        | The top bar's visible route title; entity detail routes retain an accessible-only route label while their entity heading stays visible | Metrics |
+| Desktop sidebar    | Brand, project switcher, Search, Agent, four station groups, supporting Settings access, and account | A second navigation registry or hidden duplicate tree |
+| Compact topbar     | Menu opener, compact route title, Search, Agent, and account trigger | A fixed bottom navigation bar |
+| Page header        | One explicit in-pane route title, existing description, and route-owned actions; entity detail routes use the entity heading as the sole H1 | Metrics or a duplicate route H1 |
 | Metric row         | Three to five headline numbers, each with coverage                                                          | More than five, or a metric without provenance    |
 | Analytical surface | The one chart, table, or comparison this page exists for                                                    | Competing equal-weight surfaces                   |
 | Insight list       | Ranked insight objects (below)                                                                              | Ad-hoc card shapes                                |
 
-Date range and comparison live in the top bar because they apply to the whole
-context, not to one chart. A page that needs its own time control is a page whose
-scope is wrong.
+Date range and comparison remain in the owning page region because they apply
+to that route's persisted context, not to a global shell action.
 
-Desktop navigation groups destinations under Overview, Analyze, Act, Track,
-and Connect. The five-slot mobile bar uses those exact stations; one shared
-accessible secondary-navigation component exposes each station's destinations.
+Desktop and compact navigation use the current four station groups — Overview,
+Analyze, Act, and Track — from `frontend/components/layout/nav-items.ts`.
+The compact drawer exposes the same destinations and capability resolver as the
+desktop sidebar; it does not create a second mobile bar or registry.
 Commerce is a conditional Analyze destination backed by persisted capability
 evidence; hidden navigation never changes direct-route authorization.
 Its catalog remains the one target selector. Catalog-wide secondary actions are
 grouped behind one disclosure, bulk actions appear only after a selection, and
 the selected target keeps one aligned correction control beside its heading.
-The Agent is a top-bar button opening a right-side sheet, not a destination.
-Escape closes it, focus returns to the trigger, and its context is limited to
+Search and Agent are desktop sidebar actions and compact topbar launchers. The
+single persistent Command Palette and Agent controller remain mounted with the
+authenticated shell; they are not mounted inside the navigation drawer.
+Escape closes each overlay, focus returns to the visible trigger, and Agent context is limited to
 typed workspace, project, canonical route, date range, and route filters.
 The shipped sheet reuses the bounded explain/roadmap workspace and clears its
 route preset when the active project changes; no DOM text or unpersisted page
@@ -506,7 +478,8 @@ a route-local display scale by styling the label and value as one oversized sent
 
 AI Visibility uses three tabs—Trends, Mentions & Citations, and Query Fanout—with
 Trends as the default and no parallel Overview surface. It carries no project
-switcher of its own; the top bar owns project context.
+switcher of its own; the authenticated shell's ProjectSwitcher owns project
+context.
 
 - The Trends metric row is **exactly the five computed metrics** (Visibility
   Score, SOV mention, SOV response, brand mentions, owned citations). Sentiment
@@ -578,12 +551,10 @@ Rules:
 ### Marketing and auth
 
 Marketing is editorial rather than dense, and renders the light editorial
-system: a page opens on a centred Barlow hero standing on the pastel atmosphere
-washes with the rotating engine roster on the first screen itself (or, on
-subpages, a white opener above a warm hairline), the body
-alternates white with the barely warm `sunken` off-white, and every marketing
-page closes on the deep-teal band — one closing headline
-and a single primary CTA there; the footer resolves back to white paper. The
+system: a page opens on a white centred Geist hero with the rotating engine
+roster on the first screen itself (or, on subpages, a white opener above a
+hairline), and selected body sections use the quiet `surface` band. The footer
+resolves back to white paper. The
 product UI is part of the story: the landing page keeps the real workspace
 canvas as its product beat, so the page shows the actual instrument rather
 than a rebuilt fake. A page
@@ -598,11 +569,10 @@ on the page already categorises it, so most sections need no label.
   over a wall of feature cards. The product UI is the "photography": a real
   workspace canvas carries the visual weight, never a
   rebuilt fake screenshot. The hero itself stays text-only: value proposition
-  and one action. The operating loop renders its four stages as full pastel
-  step panels — one product hue per stage, the way the reference system tints
-  its numbered lifecycle — with the stage label naming the step.
+  and one action. The operating loop uses open numbered stages separated by
+  quiet structure, with the stage label naming the step.
 - Keep body copy around 60–70 characters wide and use one H1 per page.
-- The topbar keeps a Log in link at every width and the Book a demo CTA from
+- The marketing navigation keeps a Log in link at every width and the Book a demo CTA from
   `sm` up; on phones the demo CTA moves into the full-screen menu sheet,
   pinned with the account links.
 - Auth uses the website type ladder and shared focus treatment; the form remains
@@ -622,10 +592,10 @@ on the page already categorises it, so most sections need no label.
 
 ### Controls
 
-Buttons use the 8px control-radius role with no decorative inset border in the
-authenticated application; app button sizes remain compact (32px/36px on desktop,
-44px on touch).
-Website and marketing primary buttons use the shared 8px control radius
+Buttons use the 6px control-radius role with no decorative inset border in the
+authenticated application; app button sizes are 30px compact, 34px default,
+and 40px large on desktop, with 44px targets on touch.
+Website and marketing primary buttons use the shared 6px control radius
 (`min-h-[2.75rem]`, 44px touch target) filled solid with the brand blue —
 the same `primary` action role the app uses, walking one rung deeper on hover.
 Secondary, neutral, ghost,
@@ -663,7 +633,7 @@ without translation or a leading rail.
 Menus and custom listboxes use `shadow-elevated`, the semantic overlay-radius role, the shared
 menu panel/item recipes, and a short system-curve entrance. Single-select filters use
 radio menu items so the current value is visible without relying on colour.
-Tooltips use the elevated rung and the 16px overlay-radius role; dialogs and drawers use
+Tooltips use the elevated rung and the 10px overlay-radius role; dialogs and drawers use
 `shadow-modal-value` with the same overlay-radius role. Drawers are right-side modal contextual
 sheets owned by `components/ui/drawer.tsx`. Their scrim dims and locks the page;
 outside click, Escape, or the close control dismisses them, and focus returns to
@@ -718,22 +688,21 @@ forced-colours and print remain usable.
 Before merging a visual change, verify:
 
 - It uses semantic global tokens and an existing primitive where one applies.
-- Website and focused-flow type use documented content roles with a 15px body
-  baseline; authenticated-app type uses Geist at weights 400 and 500 only.
-- Marketing renders the light editorial system: centred Barlow hero on the
-  pastel atmosphere, white body over `canvas-soft` alternates with dark navy
-  inks, deep-teal close, light footer, and the real product canvas kept as the
-  landing's product beat. One primary CTA per
-  band; brand blue owns primary actions on every surface; decorative washes
-  and the pastel tiles never carry state; functional colour appears only in the
-  app and inside faithful product previews.
-- Chrome stands on the `shell` ground and content on `.app-pane` paper, on every
+- Website and focused-flow type use documented content roles with a 14px body
+  baseline; every surface uses the Geist family and semantic role weights.
+- Marketing renders the light editorial system: a white root and hero, quiet
+  `surface` bands, a light footer, and the real product canvas kept as the
+  landing's product beat. One primary CTA per band; brand blue owns primary
+  actions on every surface; no atmosphere wash, dark teal/indigo band, grain,
+  or decorative icon-tile family is introduced; functional colour appears only
+  in the app and inside faithful product previews.
+- Chrome stands on the `canvas` ground and content on `.app-pane` paper, on every
   one of product, authentication, and onboarding. Inside paper the neutral ladder
-  holds: `#F4F4F1` structure/well/tonal panel, `#EFEFEB` hover and
-  selected state. Sections separate with a hairline rule and space, not with a
+  holds: `surface` (`#F7F9FC`) for structure/wells and `surface-2` (`#EEF1F5`)
+  for hover and selected state. Sections separate with a hairline rule and space, not with a
   box around their contents; the ground/paper seam separates with tone and
   radius, never a rule.
-- Controls use 8px, semantic objects use 12px, and overlays use 16px — one
+- Controls use 6px, semantic objects use 8px, and overlays use 10px — one
   ladder on every surface, with no per-surface redeclaration of a role.
 - Text names a role from `textRole`; no call site writes a font weight.
 - Vertical rhythm comes from a `Stack` or a container `gap`, never a child `mt-*`.

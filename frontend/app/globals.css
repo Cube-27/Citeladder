@@ -783,7 +783,7 @@ input:-webkit-autofill:focus {
    corners have ground behind them. Rounding an edge with nothing behind it cuts
    a notch instead of softening anything. */
 .app-pane-workspace {
-  border-radius: var(--radius-workspace) 0 0 var(--radius-workspace);
+  border-radius: var(--radius-workspace) 0 0;
 }
 
 /* A 16px corner against the viewport edge reads as a rendering artefact rather

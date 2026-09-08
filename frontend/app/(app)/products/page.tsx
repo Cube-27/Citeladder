@@ -5,8 +5,8 @@ import { PageHeader } from '@/components/layout/page-header';
 
 /**
  * Commerce workspace: Catalog, Competitors, Buyer Prompts, and AI Shelf.
- * The active tab is mirrored in `?tab=`. The page title renders in the top
- * bar (F5), so there is no in-page header block.
+ * The active tab is mirrored in `?tab=`. The route owns one in-pane page
+ * header beneath the shared shell chrome.
  */
 export default function ProductsPage() {
   return (

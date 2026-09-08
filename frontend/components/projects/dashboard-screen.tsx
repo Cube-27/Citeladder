@@ -112,8 +112,6 @@ function DashboardData({
           actions={actions.actions}
           pending={actions.reorderPending}
           onMove={actions.move}
-          downloading={actions.downloading}
-          onDownload={actions.download}
         />
       </div>
       <TopInsights projectId={activeProject.id} />

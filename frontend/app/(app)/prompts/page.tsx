@@ -19,8 +19,7 @@ import { PageHeader } from '@/components/layout/page-header';
  * page. The mode follows the canonical `?mode=manage` deep link; the read
  * view's manage controls are plain links to that URL. In-page toggle buttons
  * set a local override so no navigation is
- * needed. The page title renders in the top bar (F5), so there is no in-page
- * header.
+ * needed. Both modes retain the route's one in-pane page header.
  */
 function PromptsScreen() {
   const modeParam = useSearchParams().get('mode');

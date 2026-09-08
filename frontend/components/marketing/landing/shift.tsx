@@ -18,9 +18,7 @@ export function Shift() {
               <h3 className="website-small-heading">{question.title}</h3>
               <p className="website-body max-w-[44ch]">{question.body}</p>
               {index === 0 ? (
-                <p className="website-label" aria-hidden>
-                  Tracking ChatGPT · Gemini · Claude · Perplexity
-                </p>
+                <p className="website-label">Tracking ChatGPT · Gemini · Claude · Perplexity</p>
               ) : null}
             </article>
           </StaggerItem>

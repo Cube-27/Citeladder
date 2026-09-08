@@ -304,15 +304,11 @@ export function ActionsAndProof({
   actions,
   pending,
   onMove,
-  downloading,
-  onDownload,
 }: Readonly<{
   data: CommandCenter;
   actions: CommandCenter['actions'];
   pending: boolean;
   onMove: (from: number, to: number) => void;
-  downloading: boolean;
-  onDownload: () => void;
 }>) {
   return (
     <div className="grid gap-[var(--workspace-gap)]">
@@ -362,18 +358,6 @@ export function ActionsAndProof({
             movement is shown alongside completion without claiming causation.
           </p>
         </div>
-        {data.report_available ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onDownload}
-            pending={downloading}
-            pendingLabel="Preparing…"
-            className="shrink-0 gap-1.5"
-          >
-            <Download className="size-4" aria-hidden /> Download PDF
-          </Button>
-        ) : null}
       </section>
     </div>
   );
