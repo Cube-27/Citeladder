@@ -177,7 +177,10 @@ def region_node_is_visible(node: Any) -> bool:
         except DOM_ERRORS as exc:
             dom_failure("region_node_is_visible", exc)
             return False
-    return True
+    # Reaching the configured bound without reaching the root leaves ancestor
+    # visibility unknown, so fail closed instead of accepting deeply nested
+    # content that may still sit below a hidden or excluded container.
+    return current is None
 
 
 def _region_node_state(node: Any) -> tuple[Any, str, bool] | None:

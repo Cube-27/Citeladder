@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from itertools import islice
 from typing import Any
 
@@ -16,7 +17,10 @@ from app.core.config import site_health_acquisition as acquisition_config
 from app.core.config import site_health_taxonomy as taxonomy
 from app.core.config.site_health_rules import ANSWER_FIRST_MAX_HOPS
 
-_QUESTION_BOUNDARY_TAGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6", "dt"})
+_QUESTION_BOUNDARY_TAGS = frozenset(
+    {"article", "section", "h1", "h2", "h3", "h4", "h5", "h6", "dt"}
+)
+_ANSWER_SCOPE_TAGS = frozenset({"article", "section"})
 _ANSWER_TAGS = frozenset({"p", "dd", "div", "span", "li"})
 _QUESTION_FORM_RE = re.compile(
     r"^(?:(?:what|why|how|where|when|who|which)\s+"
@@ -331,31 +335,59 @@ def _associated_answer(region: Any, heading: Any, container_ids: set[int]) -> st
 def _answer_from_document_order(
     region: Any, heading: Any, container_ids: set[int]
 ) -> str:
-    try:
-        walker = region.iter()
-    except DOM_ERRORS as exc:
-        dom_failure("_answer_from_document_order", exc)
-        return ""
-    seen_heading = False
     hops = 0
-    for node in walker:
-        if node is heading:
-            seen_heading = True
-            continue
-        if not seen_heading:
-            continue
-        try:
-            if heading in node.iterancestors():
-                continue
-        except DOM_ERRORS as exc:
-            dom_failure("_answer_from_document_order", exc)
-            return ""
+    for node in _document_order_candidates(region, heading):
         hops += 1
         if hops > ANSWER_FIRST_MAX_HOPS or _is_answer_boundary(node):
             break
         if answer := _answer_candidate(node, region, container_ids):
             return answer
     return ""
+
+
+def _document_order_candidates(region: Any, heading: Any) -> Iterator[Any]:
+    try:
+        walker = region.iter()
+        answer_scope = next(
+            (
+                ancestor
+                for ancestor in heading.iterancestors()
+                if str(getattr(ancestor, "tag", "") or "").casefold()
+                in _ANSWER_SCOPE_TAGS
+            ),
+            region,
+        )
+    except DOM_ERRORS as exc:
+        dom_failure("_answer_from_document_order", exc)
+        return
+    seen_heading = False
+    for node in walker:
+        if node is heading:
+            seen_heading = True
+            continue
+        if not seen_heading:
+            continue
+        position = _document_order_position(node, heading, answer_scope, region)
+        if position == "heading_subtree":
+            continue
+        if position != "candidate":
+            return
+        yield node
+
+
+def _document_order_position(
+    node: Any, heading: Any, answer_scope: Any, region: Any
+) -> str:
+    try:
+        ancestors = tuple(node.iterancestors())
+    except DOM_ERRORS as exc:
+        dom_failure("_answer_from_document_order", exc)
+        return "error"
+    if heading in ancestors:
+        return "heading_subtree"
+    if answer_scope is not region and answer_scope not in ancestors:
+        return "outside_scope"
+    return "candidate"
 
 
 def _answer_candidate(node: Any, region: Any, container_ids: set[int]) -> str:
@@ -400,10 +432,11 @@ def _append_relationship(
 ) -> None:
     normalized_question = " ".join(str(question or "").split())
     normalized_answer = " ".join(str(answer or "").split())
+    bounded_question = _bounded_question(normalized_question)
     identity = normalized_question.casefold()
     if (
         len(relationships) >= taxonomy.PAGE_OWNED_MAX_QUESTION_ANSWER_PAIRS
-        or not is_answer_heading(normalized_question)
+        or not is_answer_heading(bounded_question)
         or identity in seen_questions
     ):
         return
@@ -411,9 +444,7 @@ def _append_relationship(
     state = answer_state or ("available" if normalized_answer else "missing")
     relationships.append(
         {
-            "question": normalized_question[
-                : acquisition_config.SITE_HEALTH_MAX_HEADING_CHARS
-            ],
+            "question": bounded_question,
             "answer": normalized_answer[
                 : acquisition_config.SITE_HEALTH_MAX_FIRST_ANSWER_CHARS
             ],
@@ -422,3 +453,12 @@ def _append_relationship(
             "reason": reason or ("" if normalized_answer else "answer_content_missing"),
         }
     )
+
+
+def _bounded_question(question: str) -> str:
+    limit = acquisition_config.SITE_HEALTH_MAX_HEADING_CHARS
+    if len(question) <= limit:
+        return question
+    if question.endswith("?"):
+        return f"{question[: limit - 1].rstrip()}?"
+    return question[:limit].rstrip()

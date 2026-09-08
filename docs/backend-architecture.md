@@ -262,8 +262,10 @@ monitored Site Health URLs; Content creation and Growth Agent submission require
 explicit boolean capabilities and therefore fail closed for that baseline. The
 configured `DEV_LOGIN_EMAIL` receives every issuable capability with practical
 unbounded counters, while its monitored-URL allowance is synchronized exactly
-to `DEV_LOGIN_COUNTER_ALLOWANCE`. Password and OAuth sign-in both repair older
-accounts onto the current baseline.
+to `DEV_LOGIN_COUNTER_ALLOWANCE`. Project deletion is a private capability
+granted only to that configured development account; the public baseline is
+denied by the domain mutation guard. Password and OAuth sign-in both repair
+older accounts onto the current baseline.
 
 ### Remote MCP authorization
 

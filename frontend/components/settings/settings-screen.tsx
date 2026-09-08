@@ -1,15 +1,34 @@
 'use client';
 
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
+
+import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { BrandLogo } from '@/components/ui/brand-logo';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { BillingSettings } from '@/components/settings/billing-settings';
 import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
+import { projectsApi } from '@/lib/api/projects';
+import { queryKeys } from '@/lib/api/query-keys';
 import { useSessionUser } from '@/lib/auth/session-guard';
+import { useEntitlement } from '@/lib/billing/entitlement-context';
+import { PROJECT_DELETION_CAPABILITY } from '@/lib/config/billing';
+import { useProjectContext } from '@/lib/project/project-context';
 import { emailInitials } from '@/lib/utils';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  return 'Something went wrong. Please try again.';
+}
 
 /** Human-readable label for a timestamp (falls back to the raw value).
  * Explicit locale + UTC keep server and client output identical, so the
@@ -58,6 +77,113 @@ const SETTINGS_TAB_CODEC = stringUrlCodec(
   'account' as SettingsTab,
 );
 
+function ProjectDeletionControls() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { activeProject, setActiveProjectId } = useProjectContext();
+  const { hasCapability } = useEntitlement();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const deleteMutation = useMutation({
+    mutationFn: (projectId: string) => projectsApi.deleteProject(projectId),
+    onSuccess: async (_data, deletedId) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      const refreshedProjects = await queryClient.fetchQuery({
+        queryKey: queryKeys.projects.list(),
+        queryFn: () => projectsApi.listProjects(),
+      });
+      const next = refreshedProjects.find((project) => project.id !== deletedId) ?? null;
+      if (next) {
+        setActiveProjectId(next.id);
+        setConfirmOpen(false);
+      } else {
+        router.replace('/onboarding');
+      }
+    },
+  });
+
+  if (!hasCapability(PROJECT_DELETION_CAPABILITY)) return null;
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Danger zone</CardTitle>
+          <CardDescription>
+            Permanently delete the active project and everything inside it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          {activeProject ? (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <BrandLogo
+                    name={activeProject.brand_name}
+                    logoUrl={activeProject.brand?.logo_url}
+                    websiteUrl={activeProject.website_url}
+                    size="md"
+                  />
+                  <div className="grid min-w-0 gap-0.5">
+                    <div className={textRole('bodyStrong', 'truncate')}>{activeProject.name}</div>
+                    <p className="text-muted text-xs">Brand: {activeProject.brand_name}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="size-4 shrink-0" aria-hidden />
+                  Delete project
+                </Button>
+              </div>
+              <Alert tone="danger">
+                Deleting a project removes all of its prompts, topics, audits, visibility history,
+                and generated content. This cannot be undone.
+              </Alert>
+              {deleteMutation.isError ? (
+                <Alert tone="danger">{errorMessage(deleteMutation.error)}</Alert>
+              ) : null}
+            </>
+          ) : (
+            <p className="text-muted text-sm">No project selected.</p>
+          )}
+        </CardContent>
+      </Card>
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!deleteMutation.isPending) setConfirmOpen(open);
+        }}
+        title="Delete project"
+        description={activeProject ? `Delete "${activeProject.name}"?` : undefined}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmOpen(false)}
+              disabled={deleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => activeProject && deleteMutation.mutate(activeProject.id)}
+              disabled={deleteMutation.isPending || !activeProject}
+            >
+              {deleteMutation.isPending ? 'Deleting…' : 'Delete project'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-secondary text-sm">
+          This permanently deletes the project and all of its prompts, topics, audits, visibility
+          history, and generated content. This cannot be undone.
+        </p>
+      </Dialog>
+    </>
+  );
+}
+
 /**
  * SettingsScreen — tabbed settings (Account / Billing / Providers / Integrations),
  * following the WAI-ARIA tabs idiom used by the Visibility
@@ -98,7 +224,11 @@ export function SettingsScreen() {
           <BillingSettings enabled={activeTab === 'billing'} />
         </TabPanel>
 
-        <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
+        <TabPanel
+          value="account"
+          forceMount
+          className="focus-ring grid gap-4 data-[state=inactive]:hidden"
+        >
           {/* Two columns from lg, not a narrow centred rail. These cards are
             short, so a max-w-2xl column left most of a wide screen empty and
             pushed everything below the fold for no reason. */}
@@ -151,6 +281,8 @@ export function SettingsScreen() {
               </CardContent>
             </Card>
           </div>
+
+          <ProjectDeletionControls />
         </TabPanel>
 
         <TabPanel value="providers" forceMount className="focus-ring data-[state=inactive]:hidden">

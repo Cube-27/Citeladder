@@ -567,8 +567,10 @@ async def delete_project_endpoint(
     project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
 ) -> None:
     try:
-        await delete_project(
-            session, workspace_id=ctx.workspace_id, project_id=project_id
+        await _map_occupancy(
+            lambda: delete_project(
+                session, workspace_id=ctx.workspace_id, project_id=project_id
+            )
         )
     except ProjectNotFoundError as exc:
         raise_not_found(_RES_PROJECT, cause=exc)

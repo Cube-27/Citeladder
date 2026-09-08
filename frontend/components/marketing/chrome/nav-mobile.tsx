@@ -93,7 +93,7 @@ export function MobileNavigation({
           !sessionPending && (
             // The demo CTA leaves the topbar on phones; the sheet is where it
             // lives, pinned with the account links it accompanies.
-            <DemoButtonLink variant="primary" className="w-full" />
+            <DemoButtonLink variant="primary" className="w-full" onClick={closeMenu} />
           )}
         {sessionPending ? (
           // Same rule as the header actions: a returning visitor waits rather

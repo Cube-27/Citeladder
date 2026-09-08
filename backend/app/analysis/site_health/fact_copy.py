@@ -7,6 +7,7 @@ from typing import Any, Final
 
 from app.analysis.site_health.dom import DOM_ERRORS, dom_failure, node_text
 from app.core.config import site_health_acquisition as config
+from app.core.config import site_health_authorship as authorship_config
 
 NEXT_ACTION_RE: Final = re.compile(
     r"\b(?:apply|book|buy|contact|get started|join|register|request|"
@@ -49,10 +50,15 @@ def _has_explicit_cta_marker(node: Any) -> bool:
 
 def _is_metadata_copy(text: str) -> bool:
     normalized = text.casefold()
-    if normalized.startswith("by "):
-        name = text[3:].strip()
-        return 2 <= len(name) <= 60 and not any(
-            character.isdigit() or character in ".,;" for character in name
+    byline = re.match(authorship_config.BYLINE_PATTERN, text)
+    if byline is not None:
+        suffix = text[byline.end() :].strip()
+        return not suffix or bool(
+            re.fullmatch(
+                authorship_config.BYLINE_METADATA_SUFFIX_PATTERN,
+                suffix,
+                flags=re.IGNORECASE,
+            )
         )
     if normalized.startswith(("published ", "updated ")):
         return True

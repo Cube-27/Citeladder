@@ -22,7 +22,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
 import type { Project } from '@/lib/api/types';
 import { textRole } from '@/components/ui/typography';
-import { capabilityLimit, useEntitlement } from '@/lib/billing/entitlement-context';
+import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 
 export function ProjectControls({
@@ -39,10 +39,9 @@ export function ProjectControls({
   onEditProject?: (project: Project) => void;
 }>) {
   const router = useRouter();
-  const { entitlement } = useEntitlement();
-  const projectLimit = capabilityLimit(entitlement, PROJECT_SLOTS_CAPABILITY);
-  const canAddProject =
-    projectLimit !== undefined && (projectLimit === null || projects.length < projectLimit);
+  const { usage } = useEntitlement();
+  const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
+  const canAddProject = remainingProjectSlots !== undefined && remainingProjectSlots > 0;
   return (
     <Dropdown>
       <DropdownTrigger asChild>

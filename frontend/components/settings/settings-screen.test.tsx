@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,7 +8,10 @@ import type { Project, SessionUser } from '@/lib/api/types';
 
 // Stub imperative navigation used by the delete-project flow. Shallow tab
 // state uses the browser History API, matching production.
-const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
+const { replace, entitlementState } = vi.hoisted(() => ({
+  replace: vi.fn(),
+  entitlementState: { canDeleteProject: false },
+}));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace, prefetch: vi.fn() }),
   usePathname: () => '/settings',
@@ -26,6 +29,11 @@ const user: SessionUser = {
 vi.mock('@/lib/auth/session-guard', () => ({
   useSessionUser: () => user,
 }));
+vi.mock('@/lib/billing/entitlement-context', () => ({
+  useEntitlement: () => ({
+    hasCapability: () => entitlementState.canDeleteProject,
+  }),
+}));
 
 // Active project context — the danger zone deletes the active project.
 const activeProject = {
@@ -33,6 +41,11 @@ const activeProject = {
   workspace_id: '00000000-0000-4000-8000-0000000000w1',
   name: 'Acme Storage',
   brand_name: 'Acme',
+} as unknown as Project;
+const nextProject = {
+  ...activeProject,
+  id: '00000000-0000-4000-8000-0000000000p2',
+  name: 'Beta Storage',
 } as unknown as Project;
 const setActiveProjectId = vi.fn();
 vi.mock('@/lib/project/project-context', () => ({
@@ -46,8 +59,12 @@ vi.mock('@/lib/project/project-context', () => ({
 }));
 
 const deleteProject = vi.fn().mockResolvedValue(undefined);
+const listProjects = vi.fn().mockResolvedValue([]);
 vi.mock('@/lib/api/projects', () => ({
-  projectsApi: { deleteProject: (id: string) => deleteProject(id) },
+  projectsApi: {
+    deleteProject: (id: string) => deleteProject(id),
+    listProjects: () => listProjects(),
+  },
 }));
 
 // The Provider Settings tab fetches the catalog/connections; stub the panel so
@@ -80,8 +97,11 @@ function renderScreen() {
 describe('SettingsScreen', () => {
   beforeEach(() => {
     deleteProject.mockClear();
+    listProjects.mockReset();
+    listProjects.mockResolvedValue([]);
     replace.mockClear();
     setActiveProjectId.mockClear();
+    entitlementState.canDeleteProject = false;
     window.history.replaceState(null, '', '/settings');
   });
 
@@ -214,5 +234,31 @@ describe('SettingsScreen', () => {
     expect(screen.queryByRole('tab', { name: 'Danger zone' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /delete project/i })).not.toBeInTheDocument();
     expect(deleteProject).not.toHaveBeenCalled();
+  });
+
+  it('lets an explicitly entitled development account delete its active project', async () => {
+    entitlementState.canDeleteProject = true;
+    const ue = userEvent.setup();
+    renderScreen();
+
+    await ue.click(screen.getByRole('button', { name: /delete project/i }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete project' });
+    await ue.click(within(dialog).getByRole('button', { name: 'Delete project' }));
+
+    expect(deleteProject).toHaveBeenCalledWith(activeProject.id);
+  });
+
+  it('selects a project from the refreshed list after deletion', async () => {
+    entitlementState.canDeleteProject = true;
+    listProjects.mockResolvedValue([nextProject]);
+    const ue = userEvent.setup();
+    renderScreen();
+
+    await ue.click(screen.getByRole('button', { name: /delete project/i }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete project' });
+    await ue.click(within(dialog).getByRole('button', { name: 'Delete project' }));
+
+    await waitFor(() => expect(setActiveProjectId).toHaveBeenCalledWith(nextProject.id));
+    expect(replace).not.toHaveBeenCalled();
   });
 });

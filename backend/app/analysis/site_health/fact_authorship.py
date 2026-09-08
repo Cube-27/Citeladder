@@ -156,8 +156,18 @@ def _visible_profile_url(node: Any, *, author: str) -> str:
 
 def _link_names_author(link: Any, normalized_author: str) -> bool:
     link_text = " ".join(_visible_node_text(link).casefold().split())
-    return bool(link_text) and (
-        normalized_author in link_text or link_text in normalized_author
+    comparable_author = _without_attribution_prefix(normalized_author)
+    comparable_link = _without_attribution_prefix(link_text)
+    comparable_author = re.sub(r"^(?i:the)\s+", "", comparable_author)
+    comparable_link = re.sub(r"^(?i:the)\s+", "", comparable_link)
+    return bool(comparable_link) and comparable_link == comparable_author
+
+
+def _without_attribution_prefix(value: str) -> str:
+    return re.sub(
+        authorship_config.PROFILE_LINK_ATTRIBUTION_PREFIX_PATTERN,
+        "",
+        value,
     )
 
 

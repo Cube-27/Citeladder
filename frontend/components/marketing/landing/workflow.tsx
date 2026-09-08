@@ -17,6 +17,7 @@ function StepPreview({ index, tileInk }: Readonly<{ index: number; tileInk: stri
     return (
       <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs backdrop-blur-xs">
         <div aria-hidden className="preview-grid pointer-events-none absolute inset-0" />
+        <IllustrativeLabel />
         <div className="border-border-subtle/80 bg-background/90 relative z-1 flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs shadow-2xs">
           <Search className={cn('size-3 shrink-0', tileInk)} aria-hidden />
           <span className="text-preview-caption text-muted truncate font-mono">
@@ -38,6 +39,7 @@ function StepPreview({ index, tileInk }: Readonly<{ index: number; tileInk: stri
     return (
       <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs backdrop-blur-xs">
         <div aria-hidden className="preview-grid pointer-events-none absolute inset-0" />
+        <IllustrativeLabel />
         <div className="relative z-1">
           <div className="text-preview-caption mb-1.5 flex items-center justify-between">
             <span className="text-muted font-medium">Citation share</span>
@@ -61,6 +63,7 @@ function StepPreview({ index, tileInk }: Readonly<{ index: number; tileInk: stri
     return (
       <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs backdrop-blur-xs">
         <div aria-hidden className="preview-grid pointer-events-none absolute inset-0" />
+        <IllustrativeLabel />
         <div className="text-preview-caption relative z-1 flex items-center justify-between">
           <span className="text-muted font-mono text-xs font-medium">brief_update.md</span>
           <span className="text-preview-status text-preview-success font-semibold uppercase">
@@ -80,6 +83,7 @@ function StepPreview({ index, tileInk }: Readonly<{ index: number; tileInk: stri
   return (
     <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs backdrop-blur-xs">
       <div aria-hidden className="preview-grid pointer-events-none absolute inset-0" />
+      <IllustrativeLabel />
       <div className="text-preview-caption relative z-1 flex items-center justify-between">
         <span className="text-muted font-medium">Audit accuracy</span>
         <span className="text-preview-success flex items-center gap-1 font-semibold">
@@ -95,6 +99,14 @@ function StepPreview({ index, tileInk }: Readonly<{ index: number; tileInk: stri
         </span>
       </div>
     </div>
+  );
+}
+
+function IllustrativeLabel() {
+  return (
+    <span className="text-preview-caption text-muted relative z-1 font-medium">
+      Illustrative example
+    </span>
   );
 }
 

@@ -803,6 +803,82 @@ def test_visible_byline_and_date_are_read_when_no_markup_declares_them():
     }
 
 
+def test_visible_byline_link_matches_after_leading_by_prefix() -> None:
+    facts = _facts(
+        b"<html><body><article><p>By <a href='/authors/jane-doe'>Jane Doe</a></p>"
+        b"</article></body></html>"
+    )
+
+    assert facts["authorship"]["visible_profile_url"] == "/authors/jane-doe"
+
+
+def test_profile_link_matches_when_link_contains_byline_prefix() -> None:
+    facts = _facts(
+        b"<html><body><article><p><a href='/authors/jane-doe'>"
+        b"Written by Jane Doe</a></p></article></body></html>"
+    )
+
+    assert facts["authorship"]["visible_profile_url"] == "/authors/jane-doe"
+
+
+def test_visible_byline_does_not_claim_a_longer_unrelated_profile_link() -> None:
+    facts = _facts(
+        b"<html><body><article><a href='/authors/ashley-lee'>"
+        b"<p>By Sam Lee</p><span>Ashley Lee</span></a></article></body></html>"
+    )
+
+    assert facts["authorship"]["visible_byline"] == "By Sam Lee"
+    assert facts["authorship"]["visible_profile_url"] == ""
+
+
+def test_by_design_prose_is_not_discarded_as_a_byline() -> None:
+    facts = _facts(
+        b"<html><body><main><h2>How does it stay bounded?</h2>"
+        b"<p>By design the analysis reads a limited evidence set.</p>"
+        b"</main></body></html>"
+    )
+
+    assert facts["direct_answer"] == (
+        "By design the analysis reads a limited evidence set."
+    )
+
+
+def test_unmarked_dated_byline_is_excluded_from_answer_copy() -> None:
+    facts = _facts(
+        b"<html><body><main><h2>Who maintains this guide?</h2>"
+        b"<p>By Ruth Ellery, 14 March 2026</p>"
+        b"<p>The editorial research team maintains this guide.</p>"
+        b"</main></body></html>"
+    )
+
+    assert facts["question_answer_relationships"][0]["answer"] == (
+        "The editorial research team maintains this guide."
+    )
+
+
+def test_written_by_byline_is_excluded_from_answer_copy() -> None:
+    facts = _facts(
+        b"<html><body><main><h2>Who maintains this guide?</h2>"
+        b"<p>Written by Ruth Ellery</p>"
+        b"<p>The editorial research team maintains this guide.</p>"
+        b"</main></body></html>"
+    )
+
+    assert facts["question_answer_relationships"][0]["answer"] == (
+        "The editorial research team maintains this guide."
+    )
+
+
+def test_generic_provider_subject_is_not_entity_identity() -> None:
+    facts = _facts(
+        b"<html><body><main><h1>Services</h1>"
+        b"<p>Our Team provides analytics for growing companies.</p>"
+        b"</main></body></html>"
+    )
+
+    assert facts["entity_proposition"]["provider"] == ""
+
+
 def test_visible_responsible_publisher_is_read_from_ordinary_copy():
     facts = _facts(
         b"<html><body><main><p>Maintained by <a href='https://www.cube27.com/'>"

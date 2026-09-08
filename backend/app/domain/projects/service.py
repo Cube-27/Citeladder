@@ -20,11 +20,12 @@ from app.core.config.brand_profile import (
     BRAND_PROFILE_REVIEW_UNREVIEWED,
     BRAND_PROFILE_SOURCE_MANUAL,
 )
-from app.core.config.entitlements import KEY_PROJECT_SLOTS
+from app.core.config.entitlements import KEY_PROJECT_DELETION, KEY_PROJECT_SLOTS
 from app.core.config.projects import MAX_PROJECT_COMPETITORS
 from app.domain.entitlements.enforcement import (
     enforce_occupancy,
     lock_workspace_capacity,
+    require_workspace_capability,
 )
 from app.domain.projects.normalization import (
     clean_profile_products,
@@ -384,6 +385,9 @@ def _apply_project_updates(project: Project, payload: Any, data: dict) -> None:
 async def delete_project(
     session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
 ) -> None:
+    await require_workspace_capability(
+        session, workspace_id=workspace_id, key=KEY_PROJECT_DELETION
+    )
     project = await get_project(
         session, workspace_id=workspace_id, project_id=project_id
     )

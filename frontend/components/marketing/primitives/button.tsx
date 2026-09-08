@@ -31,6 +31,7 @@ export function ButtonLink({
       variant={sharedVariant(variant)}
       className={cn(
         'rounded-[var(--radius-control)] min-h-[2.75rem] px-5 text-sm font-medium tracking-tight transition-all duration-200 ease-out active:scale-[var(--interaction-press-scale)]',
+        '[&_svg]:size-4 [&_svg]:shrink-0',
         variant === 'primary' && 'hover:-translate-y-0.5 hover:shadow-card active:translate-y-0',
         (variant === 'dark' || variant === 'nav') && marketingSecondary,
         className,
@@ -55,13 +56,18 @@ export function DemoButtonLink({
   variant = 'primary',
   className,
   children,
-}: VisualProps & { children?: ReactNode }) {
+  ...rest
+}: VisualProps & { children?: ReactNode } & Omit<
+    ComponentPropsWithoutRef<'a'>,
+    'href' | 'className' | 'children' | 'target' | 'rel'
+  >) {
   return (
     <ButtonLink
       href={DEMO_HREF}
       variant={variant}
       className={className}
       {...(DEMO_EXTERNAL ? { target: '_blank', rel: 'noreferrer' } : {})}
+      {...rest}
     >
       {children ?? DEMO_CTA}
     </ButtonLink>

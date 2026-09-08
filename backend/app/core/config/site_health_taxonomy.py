@@ -245,7 +245,7 @@ CONTENT_RECOMMENDATION_TOKENS: Final[frozenset[str]] = frozenset(
 RICH_TEXT_CONTAINER_TOKENS: Final[frozenset[str]] = frozenset(
     {"article-body", "article-content", "prose", "rich-text", "rte"}
 )
-RICH_TEXT_CONTAINER_TAGS: Final[frozenset[str]] = frozenset({"article"})
+RICH_TEXT_CONTAINER_TAGS: Final[frozenset[str]] = frozenset({"article", "p"})
 
 # A listing PAGE needs a substantially larger grid than an incidental carousel.
 LISTING_MIN_CARD_ITEMS: Final = 6

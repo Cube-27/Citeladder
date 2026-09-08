@@ -1,20 +1,17 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { replace, projectState, entitlementState } = vi.hoisted(() => ({
-  replace: vi.fn(),
-  projectState: { projects: [{ id: 'existing-project' }], isLoading: false },
+const { projectState, entitlementState } = vi.hoisted(() => ({
+  projectState: { projects: [{ id: 'existing-project' }], isLoading: false, isError: false },
   entitlementState: {
-    entitlement: {
+    usage: {
       status: 'resolved',
-      capabilities: [{ key: 'project_slots', value: 1 }],
+      items: [{ key: 'project_slots', remaining: 0 }],
     },
     isLoading: false,
+    usageIsLoading: false,
+    usageIsError: false,
   },
-}));
-
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace }),
 }));
 
 vi.mock('@/lib/billing/entitlement-context', async (importOriginal) => ({
@@ -34,27 +31,33 @@ import { OnboardingPageClient } from './onboarding-page-client';
 
 describe('OnboardingPageClient', () => {
   beforeEach(() => {
-    replace.mockClear();
     projectState.projects = [{ id: 'existing-project' }];
     projectState.isLoading = false;
-    entitlementState.entitlement.capabilities = [{ key: 'project_slots', value: 1 }];
+    projectState.isError = false;
+    entitlementState.usage.items = [{ key: 'project_slots', remaining: 0 }];
     entitlementState.isLoading = false;
+    entitlementState.usageIsLoading = false;
+    entitlementState.usageIsError = false;
   });
 
-  it('redirects direct onboarding navigation when the project allowance is full', async () => {
+  it('blocks direct onboarding navigation when the project allowance is full', () => {
     render(<OnboardingPageClient />);
 
     expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/projects'));
+    expect(screen.getByRole('heading', { name: 'Project limit reached' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to projects' })).toHaveAttribute(
+      'href',
+      '/projects',
+    );
   });
 
   it('keeps first-project onboarding available for an empty workspace', () => {
     projectState.projects = [];
+    entitlementState.usage.items = [{ key: 'project_slots', remaining: 1 }];
 
     render(<OnboardingPageClient />);
 
     expect(screen.getByText('Onboarding flow')).toBeInTheDocument();
-    expect(replace).not.toHaveBeenCalled();
   });
 
   it('does not mount onboarding before the project gate resolves', () => {
@@ -63,15 +66,41 @@ describe('OnboardingPageClient', () => {
     render(<OnboardingPageClient />);
 
     expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
-    expect(replace).not.toHaveBeenCalled();
   });
 
-  it('keeps additional-project onboarding available without a project cap', () => {
-    entitlementState.entitlement.capabilities = [];
+  it('fails closed when existing project ownership cannot be resolved', () => {
+    projectState.projects = [];
+    projectState.isError = true;
+
+    render(<OnboardingPageClient />);
+
+    expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Project access unavailable' })).toBeInTheDocument();
+  });
+
+  it('fails closed when the project capability is missing', () => {
+    entitlementState.usage.items = [];
+
+    render(<OnboardingPageClient />);
+
+    expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Project access unavailable' })).toBeInTheDocument();
+  });
+
+  it('blocks an empty workspace when another workspace consumed the account allowance', () => {
+    projectState.projects = [];
+
+    render(<OnboardingPageClient />);
+
+    expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Project limit reached' })).toBeInTheDocument();
+  });
+
+  it('keeps additional-project onboarding available for a development allowance', () => {
+    entitlementState.usage.items = [{ key: 'project_slots', remaining: 49_999 }];
 
     render(<OnboardingPageClient />);
 
     expect(screen.getByText('Onboarding flow')).toBeInTheDocument();
-    expect(replace).not.toHaveBeenCalled();
   });
 });

@@ -58,6 +58,7 @@ ALL_CAPABILITY_KEYS = (
     "manual_runs_per_day",
     "content_creation",
     "growth_agent",
+    "project_deletion",
 )
 
 
