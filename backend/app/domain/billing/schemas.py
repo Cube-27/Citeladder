@@ -404,7 +404,7 @@ class SubscriptionCreateRequest(_StrictRequest):
     @field_validator("billing_state_code")
     @classmethod
     def _normalize_state(cls, value: str | None) -> str | None:
-        if value is None:
+        if value is None or not value.strip():
             return None
         state = value.strip()
         if not re.fullmatch(r"(?:0[1-9]|[12][0-9]|3[0-8]|97|99)", state):

@@ -22,8 +22,10 @@ export function InvoiceHistory({
   error: boolean;
 }>) {
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState(false);
   const download = async (invoice: BillingInvoice) => {
     setDownloading(invoice.invoice_id);
+    setDownloadError(false);
     try {
       const blob = await billingApi.invoicePdf(invoice.invoice_id);
       const url = URL.createObjectURL(blob);
@@ -32,6 +34,8 @@ export function InvoiceHistory({
       anchor.download = `${invoice.invoice_number || invoice.receipt_number}.pdf`;
       anchor.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setDownloadError(true);
     } finally {
       setDownloading(null);
     }
@@ -44,6 +48,7 @@ export function InvoiceHistory({
         <h2 className={textRole('bodyStrong', 'tracking-tight')}>Paid receipts</h2>
       </div>
       {error ? <Alert tone="danger">Receipts could not be loaded.</Alert> : null}
+      {downloadError ? <Alert tone="danger">Receipt download failed. Please retry.</Alert> : null}
       {loading ? <Skeleton className="h-16 w-full" /> : null}
       {!loading && !error && invoices.length === 0 ? (
         <p className={textRole('meta')}>No paid receipts have been issued.</p>

@@ -102,15 +102,21 @@ describe('billing API contract', () => {
         billing_name: 'CiteLadder',
         billing_address_line1: '1 Main Street',
         billing_city: 'New York',
-        billing_state_code: '',
+        billing_state_code: '29',
         billing_postal_code: '10001',
-        customer_gstin: '',
+        customer_gstin: '29ABCDE1234F1Z5',
         export_eligibility_attested: true,
       },
       'key-1',
     );
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(JSON.parse(String(init.body)).trial_requested).toBe(false);
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      country_code: 'US',
+      billing_state_code: null,
+      customer_gstin: null,
+      export_eligibility_attested: true,
+      trial_requested: false,
+    });
   });
 
   it('requires the full address for Indian tax determination as well', () => {

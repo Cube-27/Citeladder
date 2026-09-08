@@ -265,9 +265,9 @@ describe('BillingSettings', () => {
       billing_name: 'CiteLadder',
       billing_address_line1: '1 Main Street',
       billing_city: 'New York',
-      billing_state_code: '',
+      billing_state_code: null,
       billing_postal_code: '10001',
-      customer_gstin: '',
+      customer_gstin: null,
       export_eligibility_attested: true,
       trial_requested: false,
     });
@@ -392,5 +392,13 @@ describe('BillingSettings', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Download receipt' }));
     await waitFor(() => expect(createObjectURL).toHaveBeenCalled());
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:test');
+
+    mswServer.use(
+      http.get(`/api/v1/billing/invoices/${ACCOUNT}/pdf`, () =>
+        HttpResponse.json({ detail: 'unavailable' }, { status: 503 }),
+      ),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Download receipt' }));
+    expect(await screen.findByText('Receipt download failed. Please retry.')).toBeInTheDocument();
   });
 });

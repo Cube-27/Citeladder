@@ -199,9 +199,18 @@ export const billingApi = {
     idempotencyKey: string,
     options?: ApiRequestOptions,
   ) => {
+    const countryCode = input.country_code.trim().toUpperCase();
+    const indianBilling = countryCode === 'IN';
     const response = await apiClient.post<unknown>(
       '/billing/subscriptions',
-      { ...input, trial_requested: false },
+      {
+        ...input,
+        country_code: countryCode,
+        billing_state_code: indianBilling ? input.billing_state_code.trim() : null,
+        customer_gstin: indianBilling ? input.customer_gstin.trim() : null,
+        export_eligibility_attested: indianBilling ? false : input.export_eligibility_attested,
+        trial_requested: false,
+      },
       { ...options, idempotencyKey },
     );
     return strictValidate(activationSchema, response, 'billing.createSubscription');
