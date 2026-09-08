@@ -63,6 +63,7 @@ afterEach(() => {
   mswServer.resetHandlers();
   navigate.mockReset();
   window.localStorage.clear();
+  globalThis.sessionStorage.clear();
   setActiveWorkspaceId(null);
 });
 afterAll(() => mswServer.close());
@@ -167,6 +168,7 @@ describe('useAuthMutation', () => {
         quantity: 1,
         byok: true,
         country_code: null,
+        billing_details: null,
         idempotency_key: 'idem-1',
         return_path: '/pricing',
         created_at_ms: Date.now(),

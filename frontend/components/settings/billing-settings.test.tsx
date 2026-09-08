@@ -380,9 +380,8 @@ describe('BillingSettings', () => {
       entitlementHandler(),
       usageHandler(),
       http.get('/api/v1/billing/invoices', () => HttpResponse.json({ invoices: [invoice] })),
-      http.get(
-        `/api/v1/billing/invoices/${ACCOUNT}/pdf`,
-        () => new HttpResponse(new Blob(['pdf'])),
+      http.get(`/api/v1/billing/invoices/${ACCOUNT}/pdf`, () =>
+        HttpResponse.text('pdf', { headers: { 'Content-Type': 'application/pdf' } }),
       ),
     );
 
