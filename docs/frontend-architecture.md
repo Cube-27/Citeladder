@@ -352,6 +352,30 @@ only categories with projected children render a disclosure control. Category
 bulk selection includes every child product without changing the target
 currently open in the detail pane.
 
+## Billing and provider UX
+
+Public pricing renders only the published catalog response; it has no hardcoded
+commercial fallback. Each self-serve plan shows BYOK and funded prices when
+present, Enterprise remains contact-only, and checkout controls truthfully stay
+disabled while backend checkout is unavailable. The future card-trial panel
+shows an unavailable state and contains no card fields.
+
+The no-card early-access journey is separate from checkout. Offer state comes
+from the backend's stable campaign identity and eligibility result. Claiming
+requires an explicit confirmation dialog, both consent checkboxes, and a fresh
+idempotency key; an optional operator code is write-only request input. The UI
+never implies eligibility or activation from registration alone, and the seeded
+campaign remains disabled by default.
+
+Settings deliberately separates owner-private billing from member-safe
+workspace-effective access. Billing account/grant/override/expiry/AI-credit
+state is owner-scoped; capability gating uses
+`GET /api/v1/workspaces/{workspace_id}/entitlements` and refreshes on workspace
+switch. Content and Growth Agent provider cards configure distinct feature
+routes over shared encrypted credential custody. Base URL, model, route status,
+funding mode, and no-fallback behavior are visible; API keys are write-only and
+are never echoed into query state, form defaults, or logs.
+
 ## Authentication flow
 
 Registration consumes only the generic `RegistrationResponse` acknowledgement

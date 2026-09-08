@@ -4,13 +4,13 @@ import uuid
 
 import httpx
 import pytest
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.gateway import FakeModelGateway
 from app.core.config import settings
 from app.domain.agent.service import _public_result, claim_task, execute_claimed_task
-from app.models.agent import AgentTaskRun
+from app.models.agent import AgentModelAttempt, AgentTaskRun
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
@@ -255,27 +255,15 @@ async def test_worker_persists_canonical_attempts_and_minimal_result(
     assert detail.status_code == 200
     payload = detail.json()
     assert payload["status"] == "completed"
-    assert set(payload["result"]) == {
-        "summary",
-        "observations",
-        "roadmap_items",
-        "sources",
-        "limitations",
-        "artifact_refs",
-    }
-    assert payload["result"]["summary"] == "No persisted evidence is available yet."
-    assert payload["result"]["observations"] == [
-        "Site Health has not produced a snapshot."
-    ]
-    assert payload["result"]["roadmap_items"] == []
-    assert {source["key"] for source in payload["result"]["sources"]} == {
-        "site_health",
-        "search_demand",
-        "opportunities",
-        "ai_visibility",
-    }
-    assert payload["result"]["artifact_refs"] == []
-    assert "attempts" not in payload
+    assert gateway.calls == []
+    assert payload["result"]["summary"]
+    async with session_factory() as session:
+        attempt = await session.scalar(
+            select(AgentModelAttempt).where(
+                AgentModelAttempt.task_run_id == uuid.UUID(run_id)
+            )
+        )
+    assert attempt is None
 
 
 @pytest.mark.asyncio

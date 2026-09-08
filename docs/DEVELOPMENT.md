@@ -271,10 +271,27 @@ Measurement and billing/operator utilities:
 ```bash
 uv run python -m scripts.measure_answer_engine_matrix --help
 uv run python -m scripts.reprice_execution_costs --help
+uv run python -m scripts.billing_admin --help
 uv run python -m scripts.reconcile_billing --help
 uv run python -m scripts.provision_platform_provider_connections --help
 uv run python -m scripts.provision_razorpay_plans --help
 ```
+
+Platform provider provisioning stores only each non-secret opaque reference.
+At execution, that reference must exactly match the corresponding
+`PROVIDER_PLATFORM_<TRANSPORT>_CREDENTIAL_REF`; the deployment secret manager
+injects the key into `PROVIDER_PLATFORM_<TRANSPORT>_API_KEY`. Never pass a raw
+provider key to the provisioning command.
+
+`billing_admin` mutations are dry-run by default and require an explicit target,
+active admin actor, reason, and idempotency key; repeat the reviewed command with
+`--apply` to commit. Use the
+[billing operator guide](operations/billing-operator-guide.md) for exact catalog
+publication/forward-recovery, campaign controls, grant correction, evidence
+inspection, reconciliation, webhook rotation, and incident switches. Local
+fixtures are not production-provider evidence, and the default development
+posture keeps checkout and the no-card campaign disabled with card trial
+unavailable.
 
 From the repository root, reset and recreate the database named by
 `DATABASE_URL` (**never against shared, staging, or production data**):

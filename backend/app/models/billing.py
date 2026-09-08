@@ -34,6 +34,49 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+class BillingCatalogRevision(Base):
+    """One immutable validated commercial catalog payload.
+
+    Draft rows may be inspected and validated but runtime reads select only the
+    single published row. Publication metadata is append-only: a published row
+    is never edited back into a draft.
+    """
+
+    __tablename__ = "billing_catalog_revisions"
+    __table_args__ = (
+        Index(
+            "uq_billing_catalog_revision_published",
+            "publication_state",
+            unique=True,
+            postgresql_where=text("publication_state = 'published'"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    revision: Mapped[str] = mapped_column(String(64), unique=True)
+    payload: Mapped[dict] = mapped_column(JSONB)
+    payload_sha256: Mapped[str] = mapped_column(String(64), unique=True)
+    publication_state: Mapped[str] = mapped_column(String(16), default="draft")
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    created_reason: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    published_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    published_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
 class BillingAccount(Base):
     __tablename__ = "billing_accounts"
 
@@ -58,6 +101,11 @@ class BillingAccount(Base):
     # subscriptions).
     entitlement_lifecycle_version: Mapped[int] = mapped_column(
         Integer, default=0, server_default="0"
+    )
+    # Frozen from User.created_at when the account is first provisioned. Login
+    # repair and additional workspace creation never move the campaign cohort.
+    registration_cohort_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -166,6 +214,8 @@ class BillingSubscription(Base):
     provider: Mapped[str] = mapped_column(String(24), default=PROVIDER_RAZORPAY)
     external_subscription_id: Mapped[str] = mapped_column(String(255))
     external_price_id: Mapped[str] = mapped_column(String(255))
+    # Immutable commercial terms used for this subscription.
+    catalog_revision: Mapped[str] = mapped_column(String(64), default="")
     # v8 commercial catalog key (tier_1 | tier_2 | tier_3 | addon/top-up key);
     # resolved against the config-owned catalog, never a provider display name.
     catalog_key: Mapped[str] = mapped_column(String(64), default="")
@@ -175,6 +225,10 @@ class BillingSubscription(Base):
         String(16), default=SUBSCRIPTION_KIND_BASE
     )
     cadence: Mapped[str] = mapped_column(String(24), default=CADENCE_MONTHLY)
+    credential_mode: Mapped[str] = mapped_column(String(16), default="byok")
+    # Complete immutable purchased bundle/price evidence. Renewals never read
+    # the current catalog: they replay this accepted subscription evidence.
+    frozen_terms: Mapped[dict] = mapped_column(JSONB, default=dict)
     # Purchased units for an add-on subscription (always 1 for a base plan).
     # The period grant bundle scales the per-unit template by this quantity.
     quantity: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
@@ -224,6 +278,17 @@ class BillingWebhookEvent(Base):
     )
     result_code: Mapped[str] = mapped_column(String(64), default="")
     error_code: Mapped[str] = mapped_column(String(64), default="")
+    processing_state: Mapped[str] = mapped_column(String(16), default="pending")
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    next_attempt_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    lease_token: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class AccountGrant(Base):
@@ -244,6 +309,14 @@ class AccountGrant(Base):
             name="uq_account_grant_bundle_key",
         ),
         CheckConstraint("value >= 0", name="ck_account_grant_value_nonneg"),
+        CheckConstraint(
+            "bundle_role IN ('primary', 'supplement')",
+            name="ck_account_grant_bundle_role",
+        ),
+        CheckConstraint(
+            "bundle_role <> 'primary' OR bundle_id <> ''",
+            name="ck_account_grant_primary_bundle_identity",
+        ),
         CheckConstraint(
             "period_start IS NULL OR period_end IS NULL OR period_start < period_end",
             name="ck_account_grant_period_ordered",
@@ -273,6 +346,16 @@ class AccountGrant(Base):
     source_kind: Mapped[str] = mapped_column(String(16))
     # Internal subscription/payment/override reference, never a raw provider body.
     source_ref: Mapped[str] = mapped_column(String(255))
+    # primary profiles are mutually exclusive at resolution; supplements are
+    # deliberately additive. bundle_id is shared by every row in one profile.
+    bundle_role: Mapped[str] = mapped_column(
+        String(16), default="supplement", server_default="supplement"
+    )
+    profile_key: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    profile_priority: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0"
+    )
+    bundle_id: Mapped[str] = mapped_column(String(255), default="", server_default="")
     key: Mapped[str] = mapped_column(String(64))
     value: Mapped[int] = mapped_column(Integer)
     period_start: Mapped[datetime | None] = mapped_column(
@@ -350,14 +433,42 @@ class ConsumableLedger(Base):
         ),
         CheckConstraint("units > 0", name="ck_consumable_ledger_units_positive"),
         CheckConstraint(
-            "(entry_kind = 'debit' AND attempt IS NOT NULL AND attempt > 0) "
-            "OR (entry_kind <> 'debit' AND attempt IS NULL)",
+            "(entry_kind IN ('debit', 'refund') AND attempt IS NOT NULL "
+            "AND attempt > 0) "
+            "OR (entry_kind NOT IN ('debit', 'refund') AND attempt IS NULL)",
             name="ck_consumable_ledger_attempt_shape",
+        ),
+        CheckConstraint(
+            "entry_kind IN ('reservation', 'debit', 'release', 'refund')",
+            name="ck_consumable_ledger_entry_kind",
+        ),
+        CheckConstraint(
+            "(subject_kind = 'audit' AND audit_id IS NOT NULL AND task_id IS NOT NULL "
+            "AND content_generation_id IS NULL AND agent_task_run_id IS NULL) OR "
+            "(subject_kind = 'content' AND audit_id IS NULL AND task_id IS NULL "
+            "AND content_generation_id IS NOT NULL AND agent_task_run_id IS NULL) OR "
+            "(subject_kind = 'agent' AND audit_id IS NULL AND task_id IS NULL "
+            "AND content_generation_id IS NULL AND agent_task_run_id IS NOT NULL)",
+            name="ck_consumable_ledger_typed_subject",
+        ),
+        CheckConstraint(
+            "(entry_kind = 'refund') = (refund_of_id IS NOT NULL)",
+            name="ck_consumable_ledger_refund_shape",
         ),
         Index(
             "uq_consumable_ledger_task_attempt",
             "task_id",
             "attempt",
+            "grant_id",
+            unique=True,
+            postgresql_where=text("entry_kind = 'debit'"),
+        ),
+        Index(
+            "uq_consumable_ledger_subject_dispatch_allocation_debit",
+            "subject_kind",
+            "subject_id",
+            "dispatch_key",
+            "grant_id",
             unique=True,
             postgresql_where=text("entry_kind = 'debit'"),
         ),
@@ -387,13 +498,41 @@ class ConsumableLedger(Base):
     entry_kind: Mapped[str] = mapped_column(String(16))
     # Shared by all allocations for one task reservation.
     reservation_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True))
-    audit_id: Mapped[uuid.UUID] = mapped_column(
+    # Strict typed subject union. Audit reservations retain their audit/task
+    # pair; Content and Agent use real RESTRICT parent FKs. subject_kind/id are
+    # frozen redundant identity used by replay fingerprints and uniqueness.
+    subject_kind: Mapped[str] = mapped_column(String(16), default="audit")
+    subject_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True))
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="RESTRICT")
+    )
+    audit_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("audits.id", ondelete="RESTRICT"),
+        nullable=True,
     )
-    task_id: Mapped[uuid.UUID] = mapped_column(
+    task_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("audit_tasks.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    content_generation_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("content_generations.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    agent_task_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("agent_task_runs.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    dispatch_key: Mapped[str] = mapped_column(String(128), default="")
+    request_fingerprint: Mapped[str] = mapped_column(String(64), default="")
+    allocation_order: Mapped[int] = mapped_column(Integer, default=0)
+    refund_of_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("consumable_ledger.id", ondelete="RESTRICT"),
+        nullable=True,
     )
     # 1-based provider attempt; set and positive only for debit rows.
     attempt: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -534,6 +673,18 @@ class PendingActivation(Base):
         DateTime(timezone=True), nullable=True
     )
     failure_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reconciliation_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0"
+    )
+    reconciliation_next_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    reconciliation_lease_token: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    reconciliation_lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

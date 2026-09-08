@@ -2,9 +2,9 @@
 
 The pure fold lives in ``resolver.py``; this module is the only DB boundary:
 it loads grants, revocations, the current base subscription end, and the
-persisted ``BillingAccount.entitlement_lifecycle_version`` (on EVERY lookup,
-so the versioned cache key stays replica-safe), then invokes the fold at the
-caller's ``at``. Every failure fails closed: corrupt input, a missing
+persisted ``BillingAccount.entitlement_lifecycle_version`` on every lookup,
+then invokes the fold at the caller's ``at``. No process-local cache
+participates in authorization. Every failure fails closed: corrupt input, a missing
 account/link, or an incomplete fold yields ``entitlement_unresolved`` with
 empty capabilities — never a partial fold and never a default profile.
 
@@ -29,7 +29,6 @@ from app.core.config.entitlements import CAPABILITY_REGISTRY, KEY_MONITORED_URLS
 from app.core.config.site_health_runtime import (
     runtime_policy_for_allowance,
 )
-from app.domain.entitlements.cache import get_cached, put_cached
 from app.domain.entitlements.resolver import ResolverInputError, fold_entitlement
 from app.domain.entitlements.types import (
     STATUS_RESOLVED,
@@ -116,6 +115,10 @@ async def _load_fold_inputs(
             source_kind=row.source_kind,
             valid_from=row.valid_from,
             valid_until=row.valid_until,
+            bundle_role=row.bundle_role,
+            profile_key=row.profile_key,
+            profile_priority=row.profile_priority,
+            bundle_id=row.bundle_id,
             period_start=row.period_start,
             period_end=row.period_end,
         )
@@ -145,9 +148,9 @@ async def resolve_account_entitlement(
 ) -> ResolvedEntitlement:
     """Resolve one billing account's entitlement at ``at`` (cache-backed).
 
-    Reads the persisted account version first and includes it in the cache
-    key; a cache failure falls through to DB resolution and a fold failure
-    fails closed. Reads commit nothing.
+    Reads authoritative rows on every call. Entitlements intentionally have
+    no process-local cache: transaction visibility, arbitrary caller-supplied
+    times, and rollback safety are part of the authorization boundary.
     """
     account = await session.get(BillingAccount, account_id)
     if account is None:
@@ -157,14 +160,6 @@ async def resolve_account_entitlement(
             at=at,
             error="billing_account_missing",
         )
-    cached = get_cached(
-        account_id=account_id,
-        registry_revision=CAPABILITY_REGISTRY.revision,
-        entitlement_lifecycle_version=account.entitlement_lifecycle_version,
-        at=at,
-    )
-    if cached is not None:
-        return cached
     grants, revocations, subscription_end = await _load_fold_inputs(session, account_id)
     try:
         entitlement = fold_entitlement(
@@ -183,7 +178,6 @@ async def resolve_account_entitlement(
             at=at,
             error=str(exc),
         )
-    put_cached(entitlement)
     return entitlement
 
 

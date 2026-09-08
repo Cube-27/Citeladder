@@ -150,7 +150,31 @@ Workers claim with `FOR UPDATE SKIP LOCKED`, commit before network I/O,
 heartbeat leases, and terminalize atomically and idempotently. Do not add Redis
 without measured need.
 
-## 16. The migration baseline remains singular
+## 16. Billing authority and evidence are append-only
+
+A published persisted catalog is the only commercial runtime authority. Catalog
+recovery is forward-publication of a new immutable revision; accepted
+subscription/period terms never follow the current catalog retroactively.
+Checkout, the no-card campaign, and card trial are separate controls and must
+never imply one another. Checkout and the seeded no-card campaign default to
+disabled; card trial remains unavailable until a separately implemented and
+verified provider flow exists.
+
+Entitlement resolution selects one primary profile and deliberate supplements.
+Grants, revocations, consumable reservations/releases/debits/refunds, normalized
+payment/refund receipts, model attempts, and introductory claims are immutable
+evidence. Redirects, Payment Links, receipts, webhook delivery, or provider
+Dashboard state alone never grant access; webhook and reconciliation must settle
+through the same idempotent activation owner. Customer BYOK consumes zero
+platform credits and never silently falls back. Platform-funded model work is
+unavailable without an explicit persisted finite rate/cap policy and allowance.
+
+Every trusted billing mutation is explicit-target, active-admin authorized,
+reasoned, idempotent, dry-run reviewed, and redacted. Operators correct by
+append-only grant/revocation/refund evidence or catalog forward-publication,
+never ad-hoc mutation of historical rows.
+
+## 17. The migration baseline remains singular
 
 Before launch, schema changes are folded into
 `migrations/versions/0001_initial.py`. Verify from an empty disposable database

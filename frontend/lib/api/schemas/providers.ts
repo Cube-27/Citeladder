@@ -25,6 +25,17 @@ export const providerRouteSchema = responseObject({
 
 // Strict: an unexpected key (e.g. a leaked `api_key`/`secret`) is a contract
 // violation and must fail loud — the secret is never present on the wire.
+export const providerAppRouteSchema = responseObject({
+  id: uuid(),
+  feature: z.enum(['content', 'growth_agent']),
+  protocol: z.literal('openai_chat'),
+  model: z.string(),
+  api_base_url: z.url(),
+  active: z.boolean(),
+  verified: z.boolean(),
+  probed_at: z.string().nullable(),
+});
+
 export const providerConnectionSchema = responseObject({
   id: uuid(),
   workspace_id: uuid(),
@@ -40,6 +51,7 @@ export const providerConnectionSchema = responseObject({
   // Backend defaults to '' (untested); accept any short status string.
   last_test_status: z.string().optional(),
   routes: z.array(providerRouteSchema).optional(),
+  app_routes: z.array(providerAppRouteSchema).optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });

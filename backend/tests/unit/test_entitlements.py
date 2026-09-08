@@ -1,13 +1,9 @@
-"""Unit tests for the pure entitlement fold and the bounded resolver cache.
+"""Unit tests for the pure entitlement fold and no-cache authorization boundary.
 
 The fold (``app.domain.entitlements.resolver``) is a pure function over frozen
-value types at a caller-supplied ``at`` — no clock, no DB, no provider. These
-tests pin the resolution algebra (flags OR / counters SUM / levels MAX), the
-boundary exclusions, the total consumable draw order, top-up expiry coupling
-to the base subscription end, input-validation failures, and the cache's
-version/revision/TTL semantics. DB-backed resolution (version bumps, runtime
-refresh, same-transaction revocation visibility) lives in
-``tests/component/test_entitlements.py``.
+value types at a caller-supplied ``at`` — no clock, no DB, no provider. DB-backed
+resolution and same-transaction visibility live in component tests; these tests
+also pin that process-local state can never answer an authorization read.
 """
 
 from __future__ import annotations
@@ -19,7 +15,6 @@ import pytest
 
 from app.core.config.entitlements import (
     CAPABILITY_REGISTRY,
-    ENTITLEMENT_CACHE_MAX_TTL_SECONDS,
     GRANT_SOURCE_ADDON,
     GRANT_SOURCE_OVERRIDE,
     GRANT_SOURCE_PLAN,
@@ -366,115 +361,21 @@ def test_fold_is_deterministic_and_clock_free(
 
 
 # =========================================================================
-# Bounded resolver cache
+# Authorization deliberately bypasses process-local entitlement state
 # =========================================================================
-@pytest.fixture(autouse=True)
-def _clear_entitlement_cache():
-    entitlement_cache.clear_cache()
-    yield
-    entitlement_cache.clear_cache()
-
-
-def _resolved(
-    version: int,
-    *,
-    resolved_at: datetime = _AT,
-    account_id: uuid.UUID = _ACCOUNT,
-    valid_until: datetime | None = None,
-) -> ResolvedEntitlement:
-    return ResolvedEntitlement(
-        account_id=account_id,
+def test_process_cache_never_serves_stale_authorization_state() -> None:
+    stale = ResolvedEntitlement(
+        account_id=_ACCOUNT,
         registry_revision=CAPABILITY_REGISTRY.revision,
-        entitlement_lifecycle_version=version,
-        resolved_at=resolved_at,
-        valid_until=valid_until,
+        entitlement_lifecycle_version=1,
+        resolved_at=_AT,
+        valid_until=None,
         status=STATUS_RESOLVED,
         capabilities=(),
         errors=(),
     )
+    entitlement_cache.put_cached(stale)
 
-
-def test_cache_hit_then_version_miss_then_revision_miss() -> None:
-    entitlement_cache.put_cached(_resolved(version=1))
-    hit = entitlement_cache.get_cached(
-        account_id=_ACCOUNT,
-        registry_revision=CAPABILITY_REGISTRY.revision,
-        entitlement_lifecycle_version=1,
-        at=_AT,
-    )
-    assert hit is not None
-    # A grant/revocation/lifecycle write bumps the version: natural miss.
-    assert (
-        entitlement_cache.get_cached(
-            account_id=_ACCOUNT,
-            registry_revision=CAPABILITY_REGISTRY.revision,
-            entitlement_lifecycle_version=2,
-            at=_AT,
-        )
-        is None
-    )
-    # A registry revision change also misses naturally.
-    assert (
-        entitlement_cache.get_cached(
-            account_id=_ACCOUNT,
-            registry_revision="entitlements-v2",
-            entitlement_lifecycle_version=1,
-            at=_AT,
-        )
-        is None
-    )
-
-
-def test_cache_entry_older_than_the_max_ttl_is_not_served() -> None:
-    old = _resolved(version=1, resolved_at=_AT)
-    entitlement_cache.put_cached(old)
-    later = _AT + timedelta(seconds=ENTITLEMENT_CACHE_MAX_TTL_SECONDS)
-    assert (
-        entitlement_cache.get_cached(
-            account_id=_ACCOUNT,
-            registry_revision=CAPABILITY_REGISTRY.revision,
-            entitlement_lifecycle_version=1,
-            at=later,
-        )
-        is None
-    )
-    just_inside = _AT + timedelta(seconds=ENTITLEMENT_CACHE_MAX_TTL_SECONDS - 1)
-    entitlement_cache.put_cached(old)
-    assert (
-        entitlement_cache.get_cached(
-            account_id=_ACCOUNT,
-            registry_revision=CAPABILITY_REGISTRY.revision,
-            entitlement_lifecycle_version=1,
-            at=just_inside,
-        )
-        is not None
-    )
-
-
-def test_cache_entry_past_its_valid_until_is_not_served() -> None:
-    boundary = _AT + timedelta(minutes=5)
-    entry = _resolved(version=1, valid_until=boundary)
-    entitlement_cache.put_cached(entry)
-    assert (
-        entitlement_cache.get_cached(
-            account_id=_ACCOUNT,
-            registry_revision=CAPABILITY_REGISTRY.revision,
-            entitlement_lifecycle_version=1,
-            at=boundary,
-        )
-        is None
-    )
-
-
-def test_cache_lru_eviction_bounds_entries(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(entitlement_cache, "ENTITLEMENT_CACHE_MAX_ENTRIES", 2)
-    other_account = uuid.uuid4()
-    entitlement_cache.put_cached(_resolved(version=1))
-    entitlement_cache.put_cached(_resolved(version=1, account_id=other_account))
-    entitlement_cache.put_cached(_resolved(version=2))
-    # The first account's v1 entry was evicted (LRU), the newer two remain.
     assert (
         entitlement_cache.get_cached(
             account_id=_ACCOUNT,
@@ -486,33 +387,8 @@ def test_cache_lru_eviction_bounds_entries(
     )
     assert (
         entitlement_cache.get_cached(
-            account_id=other_account,
-            registry_revision=CAPABILITY_REGISTRY.revision,
-            entitlement_lifecycle_version=1,
-            at=_AT,
-        )
-        is not None
-    )
-
-
-def test_invalidate_account_and_registry() -> None:
-    entitlement_cache.put_cached(_resolved(version=1))
-    entitlement_cache.invalidate_account(_ACCOUNT)
-    assert (
-        entitlement_cache.get_cached(
             account_id=_ACCOUNT,
-            registry_revision=CAPABILITY_REGISTRY.revision,
-            entitlement_lifecycle_version=1,
-            at=_AT,
-        )
-        is None
-    )
-    entitlement_cache.put_cached(_resolved(version=1))
-    entitlement_cache.invalidate_registry(CAPABILITY_REGISTRY.revision)
-    assert (
-        entitlement_cache.get_cached(
-            account_id=_ACCOUNT,
-            registry_revision=CAPABILITY_REGISTRY.revision,
+            registry_revision="requested-but-not-persisted-revision",
             entitlement_lifecycle_version=1,
             at=_AT,
         )

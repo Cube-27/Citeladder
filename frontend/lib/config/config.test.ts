@@ -6,11 +6,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   PENDING_PRICING_INTENT_MAX_AGE_MS,
-  PLAN_MONTHLY_PRICE_USD_MINOR,
   PRICING_BYOK_DEFAULT_ON,
   USAGE_METER_CRITICAL_RATIO,
   USAGE_METER_WARNING_RATIO,
-  planMonthlyPriceUsdMinor,
 } from './billing';
 import { getLogoDevPublishable, getSiteUrl } from './env';
 import {
@@ -47,46 +45,6 @@ afterEach(() => {
 });
 
 describe('billing config', () => {
-  it('prices every plan tier in both modes', () => {
-    for (const [key, prices] of Object.entries(PLAN_MONTHLY_PRICE_USD_MINOR)) {
-      expect(prices.byok, `${key}.byok`).toBeGreaterThan(0);
-      expect(prices.funded, `${key}.funded`).toBeGreaterThan(0);
-      // BYOK is the customer's own key, so it must never cost more than the
-      // funded equivalent — an inverted pair would advertise a worse deal for
-      // bringing your own credentials.
-      expect(prices.byok, `${key}`).toBeLessThanOrEqual(prices.funded);
-    }
-  });
-
-  it('prices rise monotonically across tiers in both modes', () => {
-    const { tier_1, tier_2, tier_3 } = PLAN_MONTHLY_PRICE_USD_MINOR;
-    expect(tier_1.byok).toBeLessThan(tier_2.byok);
-    expect(tier_2.byok).toBeLessThan(tier_3.byok);
-    expect(tier_1.funded).toBeLessThan(tier_2.funded);
-    expect(tier_2.funded).toBeLessThan(tier_3.funded);
-  });
-
-  it('resolves a known plan key in each mode', () => {
-    expect(planMonthlyPriceUsdMinor('tier_1', 'byok')).toBe(
-      PLAN_MONTHLY_PRICE_USD_MINOR.tier_1.byok,
-    );
-    expect(planMonthlyPriceUsdMinor('tier_3', 'funded')).toBe(
-      PLAN_MONTHLY_PRICE_USD_MINOR.tier_3.funded,
-    );
-  });
-
-  it('returns null for an unknown plan key rather than throwing', () => {
-    // The key can arrive from a server catalog, so an unrecognised one is a
-    // missing price, not a crash.
-    expect(planMonthlyPriceUsdMinor('tier_99', 'byok')).toBeNull();
-    expect(planMonthlyPriceUsdMinor('', 'funded')).toBeNull();
-  });
-
-  it('does not resolve inherited Object properties as plan keys', () => {
-    expect(planMonthlyPriceUsdMinor('toString', 'byok')).toBeNull();
-    expect(planMonthlyPriceUsdMinor('constructor', 'byok')).toBeNull();
-  });
-
   it('orders the usage-meter bands below one', () => {
     expect(USAGE_METER_WARNING_RATIO).toBeLessThan(USAGE_METER_CRITICAL_RATIO);
     expect(USAGE_METER_CRITICAL_RATIO).toBeLessThan(1);

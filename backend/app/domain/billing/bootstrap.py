@@ -57,7 +57,7 @@ async def ensure_user_billing(
     """
     await session.execute(
         pg_insert(BillingAccount)
-        .values(owner_user_id=user.id)
+        .values(owner_user_id=user.id, registration_cohort_at=user.created_at)
         .on_conflict_do_nothing(index_elements=["owner_user_id"])
     )
     account = await session.scalar(
@@ -138,6 +138,9 @@ async def _ensure_baseline_access(
         idempotency_key=f"{BASELINE_GRANT_REVISION}:{source_ref}",
         valid_from=datetime.now(UTC),
         valid_until=None,
+        bundle_role="primary",
+        profile_key="development" if dev_login else "free",
+        profile_priority=100 if dev_login else 0,
     )
     if dev_login:
         await issue_grant_bundle(

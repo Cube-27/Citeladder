@@ -18,7 +18,10 @@ import {
   billingCatalogSchema,
   billingEntitlementSchema,
   billingUsageSchema,
+  noCardClaimSchema,
+  noCardOfferSchema,
   strictValidate,
+  workspaceEntitlementSchema,
   subscriptionChangeSchema,
 } from './schemas';
 
@@ -29,6 +32,8 @@ export type CatalogTopup = BillingCatalog['topups'][number];
 export type CatalogProvider = BillingCatalog['providers'][number];
 export type BillingEntitlement = z.infer<typeof billingEntitlementSchema>;
 export type BillingUsage = z.infer<typeof billingUsageSchema>;
+export type WorkspaceEntitlement = z.infer<typeof workspaceEntitlementSchema>;
+export type NoCardOffer = z.infer<typeof noCardOfferSchema>;
 export type UsageItem = BillingUsage['items'][number];
 export type CredentialMode = 'byok' | 'funded';
 export type SelfServePlanKey = 'tier_1' | 'tier_2' | 'tier_3';
@@ -62,6 +67,14 @@ export const billingApi = {
     return strictValidate(billingCatalogSchema, response, 'billing.catalog');
   },
 
+  workspaceEntitlement: async (workspaceId: string, options?: ApiRequestOptions) => {
+    const response = await apiClient.get<unknown>(
+      `/workspaces/${workspaceId}/entitlements`,
+      options,
+    );
+    return strictValidate(workspaceEntitlementSchema, response, 'billing.workspaceEntitlement');
+  },
+
   entitlement: async (options?: ApiRequestOptions) => {
     const response = await apiClient.get<unknown>('/billing/entitlement', options);
     return strictValidate(billingEntitlementSchema, response, 'billing.entitlement');
@@ -70,6 +83,28 @@ export const billingApi = {
   usage: async (options?: ApiRequestOptions) => {
     const response = await apiClient.get<unknown>('/billing/usage', options);
     return strictValidate(billingUsageSchema, response, 'billing.usage');
+  },
+
+  noCardOffer: async (options?: ApiRequestOptions) => {
+    const response = await apiClient.get<unknown>('/billing/early-access', options);
+    return strictValidate(noCardOfferSchema, response, 'billing.noCardOffer');
+  },
+
+  claimNoCardOffer: async (
+    input: {
+      campaign_id: string;
+      operator_code?: string;
+      terms_consent: boolean;
+      data_sharing_consent: boolean;
+    },
+    idempotencyKey: string,
+    options?: ApiRequestOptions,
+  ) => {
+    const response = await apiClient.post<unknown>('/billing/early-access/claim', input, {
+      ...options,
+      idempotencyKey,
+    });
+    return strictValidate(noCardClaimSchema, response, 'billing.claimNoCardOffer');
   },
 
   /**

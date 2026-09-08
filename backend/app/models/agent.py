@@ -6,6 +6,8 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -91,6 +93,92 @@ class AgentTaskRun(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
+class AgentModelAttempt(Base):
+    """Durable evidence for one optional narration call."""
+
+    __tablename__ = "agent_model_attempts"
+    __table_args__ = (
+        UniqueConstraint("dispatch_id", name="uq_agent_model_attempt_dispatch"),
+        UniqueConstraint(
+            "task_run_id",
+            "run_attempt",
+            "ordinal",
+            name="uq_agent_model_attempt_slot",
+        ),
+        Index("ix_agent_model_attempts_run_created", "task_run_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("workspaces.id", ondelete="RESTRICT"),
+        index=True,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("projects.id", ondelete="RESTRICT"), index=True
+    )
+    task_run_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("agent_task_runs.id", ondelete="RESTRICT"),
+        index=True,
+    )
+    dispatch_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True))
+    run_attempt: Mapped[int] = mapped_column(Integer)
+    ordinal: Mapped[int] = mapped_column(Integer, default=1)
+    funding_source: Mapped[str] = mapped_column(String(24))
+    provider_connection_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("provider_connections.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    provider_route_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("provider_app_routes.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    credential_revision: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    route_revision: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    provider_adapter: Mapped[str] = mapped_column(String(64))
+    endpoint_host: Mapped[str] = mapped_column(String(255))
+    requested_model: Mapped[str] = mapped_column(String(255))
+    returned_model: Mapped[str] = mapped_column(String(255), default="")
+    pricing_revision: Mapped[str] = mapped_column(String(64), default="")
+    reservation_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    reserved_credits: Mapped[int] = mapped_column(BigInteger, default=0)
+    debited_credits: Mapped[int] = mapped_column(BigInteger, default=0)
+    input_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    cached_input_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    reasoning_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    total_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    usage_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    settlement_status: Mapped[str] = mapped_column(String(24), default="not_applicable")
+    provider_request_id: Mapped[str] = mapped_column(String(255), default="")
+    request_hash: Mapped[str] = mapped_column(String(64))
+    output_hash: Mapped[str] = mapped_column(String(64), default="")
+    outcome: Mapped[str] = mapped_column(String(24), default="dispatched")
+    finish_status: Mapped[str] = mapped_column(String(64), default="")
+    error_code: Mapped[str] = mapped_column(String(64), default="")
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dispatched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    deadline_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    settled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    late_receipt: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
     )
 
 

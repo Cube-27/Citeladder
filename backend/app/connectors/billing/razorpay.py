@@ -9,6 +9,7 @@ status vocabulary, or tax rule is decided here — config owns all of it.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlsplit
@@ -21,6 +22,7 @@ from app.connectors.billing.base import (
     HostedSubscription,
     ProviderMetadata,
     ProviderPayment,
+    ProviderRefund,
     ProviderSubscription,
 )
 from app.core.config.billing_contracts import (
@@ -56,12 +58,25 @@ class RazorpayBillingProvider:
     async def _request(
         self, method: str, path: str, *, payload: dict[str, Any] | None = None
     ) -> dict[str, Any]:
+        return await self._request_with_headers(
+            method, path, payload=payload, headers=None
+        )
+
+    async def _request_with_headers(
+        self,
+        method: str,
+        path: str,
+        *,
+        payload: dict[str, Any] | None,
+        headers: dict[str, str] | None,
+    ) -> dict[str, Any]:
         try:
             response = await self._client.request(
                 method,
                 f"{self.settings.razorpay_api_base_url.rstrip('/')}{path}",
                 auth=self._auth(),
                 json=payload,
+                headers=headers,
                 timeout=self.settings.request_timeout_seconds,
             )
         except httpx.TransportError as exc:
@@ -253,8 +268,62 @@ class RazorpayBillingProvider:
         )
 
     async def fetch_payment(self, external_payment_id: str) -> ProviderPayment:
+        if external_payment_id.startswith("plink_"):
+            link = await self._request("GET", f"/payment_links/{external_payment_id}")
+            payments = link.get("payments")
+            if not isinstance(payments, list) or len(payments) != 1:
+                raise BillingProviderError("provider_payment_unavailable")
+            raw_payment = payments[0]
+            if not isinstance(raw_payment, dict):
+                raise BillingProviderError("provider_invalid_response")
+            if "notes" not in raw_payment:
+                raw_payment = {**raw_payment, "notes": link.get("notes")}
+            return replace(
+                self._payment(raw_payment),
+                external_payment_link_id=external_payment_id,
+            )
         return self._payment(
-            await self._request("GET", f"/payment_links/{external_payment_id}")
+            await self._request("GET", f"/payments/{external_payment_id}")
+        )
+
+    async def refund_payment(
+        self,
+        external_payment_id: str,
+        *,
+        amount_minor: int,
+        idempotency_key: str,
+    ) -> ProviderRefund:
+        data = await self._request_with_headers(
+            "POST",
+            f"/payments/{external_payment_id}/refund",
+            payload={"amount": amount_minor},
+            headers={"X-Refund-Idempotency": idempotency_key},
+        )
+        refund_id = data.get("id")
+        payment_id = data.get("payment_id")
+        status = data.get("status")
+        amount = _optional_int(data.get("amount"))
+        currency = data.get("currency")
+        if (
+            not isinstance(refund_id, str)
+            or not refund_id
+            or not isinstance(payment_id, str)
+            or not payment_id
+            or not isinstance(status, str)
+            or not status
+            or not isinstance(currency, str)
+            or not currency
+            or amount is None
+            or amount != amount_minor
+        ):
+            raise BillingProviderError("provider_invalid_response")
+        return ProviderRefund(
+            external_refund_id=refund_id,
+            external_payment_id=payment_id,
+            status=status,
+            amount_minor=amount,
+            currency=currency.upper(),
+            updated_at=_optional_int(data.get("created_at")) or 0,
         )
 
 

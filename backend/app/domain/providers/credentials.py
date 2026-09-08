@@ -169,7 +169,11 @@ def _route_candidates(
             ProviderConnection.workspace_id == workspace_id,
             ProviderConnection.credential_source == credential_source,
             ProviderConnection.active.is_(True),
-            ProviderConnection.api_key_encrypted != "",
+            (
+                (ProviderConnection.credential_source == CREDENTIAL_SOURCE_PLATFORM)
+                & (ProviderConnection.platform_credential_ref != "")
+                | (ProviderConnection.api_key_encrypted != "")
+            ),
             # "Successfully probed" is the denormalized LATEST probe outcome:
             # a connection whose latest probe failed is not healthy.
             ProviderConnection.last_test_status == TEST_STATUS_OK,

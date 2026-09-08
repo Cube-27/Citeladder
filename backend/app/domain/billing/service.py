@@ -32,13 +32,10 @@ from app.core.config.billing_catalog import (
     CatalogPrice,
     QuantityBounds,
     TopupCatalogEntry,
-    commercial_catalog,
     item_checkout_availability,
     plan_checkout_availability,
-    plan_period_grant_specs,
     price_tax_minor,
     resolve_region,
-    scale_grant_specs,
 )
 from app.core.config.billing_contracts import (
     ACTIVATION_KIND_ADDON,
@@ -70,20 +67,19 @@ from app.core.config.billing_settings import (
     billing_settings,
 )
 from app.core.config.entitlements import (
-    GRANT_SOURCE_ADDON,
-    GRANT_SOURCE_PLAN,
     CapabilityType,
 )
 from app.domain.billing.bootstrap import ensure_user_billing
+from app.domain.billing.catalog_revisions import published_commercial_catalog
+from app.domain.billing.periods import PeriodEvidenceError, issue_period_bundle
 from app.domain.billing.schemas import (
     MoneyResponse,
     ResolvedQuoteResponse,
 )
-from app.domain.entitlements.grants import issue_grant_bundle, revoke_grants
+from app.domain.entitlements.grants import revoke_grants
 from app.domain.entitlements.service import (
     refresh_site_health_runtime_for_account,
 )
-from app.domain.entitlements.types import GrantSpec
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
@@ -93,12 +89,6 @@ from app.models.billing import (
 from app.models.user import User
 
 logger = logging.getLogger("app.billing")
-
-# Provider-authoritative states that fund the current period's grant bundle.
-# ``trialing`` is deliberately NOT grant authority in PR1.
-_GRANT_AUTHORITY_STATUSES = frozenset(
-    {SUBSCRIPTION_ACTIVE, SUBSCRIPTION_CANCEL_SCHEDULED}
-)
 _TERMINAL_STATUSES = frozenset({SUBSCRIPTION_CANCELLED, SUBSCRIPTION_EXPIRED})
 # Counter capability types the usage read projects.
 _COUNTER_TYPES = frozenset(
@@ -189,61 +179,6 @@ async def _bump_account_entitlement_version(
     account.entitlement_lifecycle_version += 1
 
 
-async def _issue_period_bundle(
-    session: AsyncSession,
-    subscription: BillingSubscription,
-    event: SubscriptionEvent,
-) -> None:
-    """Issue the period's plan/add-on bundle once (idempotent, append-only).
-
-    Only provider-authoritative active/charged states issue; old period
-    grants are never rewritten (a replayed event resolves to the same
-    deterministic idempotency key and is safely suppressed).
-    """
-    if event.status not in _GRANT_AUTHORITY_STATUSES:
-        return
-    if event.period_start is None:
-        return
-    templates = plan_period_grant_specs(
-        subscription.catalog_key, billing_settings.catalog_version
-    )
-    if not templates:
-        # A key the LIVE catalog no longer resolves (e.g. a removed plan key)
-        # would otherwise silently issue NOTHING while the provider keeps
-        # charging the subscription. Safe fields only: catalog key/revision,
-        # never account identifiers (invariant 6).
-        logger.warning(
-            "subscription renewal resolved no grant specs",
-            extra={
-                "catalog_key": subscription.catalog_key,
-                "catalog_revision": billing_settings.catalog_version,
-            },
-        )
-        return
-    templates = scale_grant_specs(templates, max(subscription.quantity, 1))
-    period_start_key = event.period_start.isoformat()
-    await issue_grant_bundle(
-        session,
-        account_id=subscription.billing_account_id,
-        source_kind=(
-            GRANT_SOURCE_ADDON
-            if subscription.subscription_kind == SUBSCRIPTION_KIND_ADDON
-            else GRANT_SOURCE_PLAN
-        ),
-        source_ref=f"subscription:{subscription.id}",
-        grants=tuple(GrantSpec(key=key, value=value) for key, value in templates),
-        catalog_revision=billing_settings.catalog_version,
-        idempotency_key=(
-            f"sub:{subscription.id}:{period_start_key}:"
-            f"{billing_settings.catalog_version}"
-        ),
-        valid_from=event.period_start,
-        valid_until=event.period_end,
-        period_start=event.period_start,
-        period_end=event.period_end,
-    )
-
-
 async def _write_terminal_revocations(
     session: AsyncSession,
     subscription: BillingSubscription,
@@ -324,7 +259,16 @@ async def apply_subscription_state(
     now = datetime.now(UTC)
     terminal = _apply_terminal_state(subscription, event, now)
     await _bump_account_entitlement_version(session, subscription.billing_account_id)
-    await _issue_period_bundle(session, subscription, event)
+    try:
+        await issue_period_bundle(
+            session,
+            subscription=subscription,
+            status=event.status,
+            period_start=event.period_start,
+            period_end=event.period_end,
+        )
+    except PeriodEvidenceError as exc:
+        raise BillingConflictError(str(exc)) from exc
     if terminal:
         await _write_terminal_revocations(session, subscription, event, now)
     # Synchronous Site Health re-projection on every accepted lifecycle event
@@ -407,6 +351,7 @@ def resolve_quote(
     region: str,
     base: CatalogPrice,
     credit: CatalogPrice | None,
+    catalog_revision: str,
     at: datetime,
 ) -> ResolvedQuoteResponse:
     """Produce the signed quote for one intent (pure, no I/O).
@@ -421,7 +366,7 @@ def resolve_quote(
         price_tax_minor(credit) * quantity if credit is not None else 0
     )
     expires_at = at + timedelta(minutes=billing_settings.quote_validity_minutes)
-    revision = billing_settings.catalog_version
+    revision = catalog_revision
     quote_id = _quote_digest(
         {
             "kind": kind,
@@ -464,12 +409,17 @@ def resolve_quote(
     )
 
 
-def resolve_base_intent(
-    *, catalog_key: str, credential_mode: str, country_code: str, at: datetime
+async def resolve_base_intent(
+    session: AsyncSession,
+    *,
+    catalog_key: str,
+    credential_mode: str,
+    country_code: str,
+    at: datetime,
 ) -> ResolvedIntent:
     """Validate a base-plan purchase and resolve its quote server-side."""
     region = resolve_region(country_code)
-    catalog = commercial_catalog()
+    catalog = await published_commercial_catalog(session)
     plan = catalog.plan(catalog_key)
     if plan is None:
         raise BillingConflictError(REASON_CATALOG_KEY_UNKNOWN)
@@ -505,6 +455,7 @@ def resolve_base_intent(
             region=region,
             base=base,
             credit=credit,
+            catalog_revision=catalog.revision,
             at=at,
         ),
     )
@@ -523,6 +474,7 @@ def _resolve_pack_intent(
     quantity: int,
     country_code: str,
     region: str,
+    catalog_revision: str,
     at: datetime,
 ) -> ResolvedIntent:
     """Validate a quantity-bounded pack purchase and resolve its quote.
@@ -557,23 +509,26 @@ def _resolve_pack_intent(
             region=region,
             base=price,
             credit=None,
+            catalog_revision=catalog_revision,
             at=at,
         ),
     )
 
 
-def resolve_addon_intent(
-    *, catalog_key: str, quantity: int, country_code: str, at: datetime
+async def resolve_addon_intent(
+    session: AsyncSession,
+    *,
+    catalog_key: str,
+    quantity: int,
+    country_code: str,
+    at: datetime,
 ) -> ResolvedIntent:
-    """Validate an add-on activation and resolve its quote server-side.
-
-    A coming-soon add-on ALWAYS refuses with ``provider_unavailable`` here —
-    before any provider I/O and before any grant issuance.
-    """
+    """Resolve an add-on intent; coming-soon items fail before provider I/O."""
     if catalog_key in COMING_SOON_ADDON_KEYS:
         raise BillingConflictError(REASON_PROVIDER_UNAVAILABLE)
     region = resolve_region(country_code)
-    addon = commercial_catalog().addon(catalog_key)
+    catalog = await published_commercial_catalog(session)
+    addon = catalog.addon(catalog_key)
     if addon is None:
         raise BillingConflictError(REASON_CATALOG_KEY_UNKNOWN)
     return _resolve_pack_intent(
@@ -582,16 +537,23 @@ def resolve_addon_intent(
         quantity=quantity,
         country_code=country_code,
         region=region,
+        catalog_revision=catalog.revision,
         at=at,
     )
 
 
-def resolve_topup_intent(
-    *, catalog_key: str, quantity: int, country_code: str, at: datetime
+async def resolve_topup_intent(
+    session: AsyncSession,
+    *,
+    catalog_key: str,
+    quantity: int,
+    country_code: str,
+    at: datetime,
 ) -> ResolvedIntent:
     """Validate a top-up purchase and resolve its quote server-side."""
     region = resolve_region(country_code)
-    topup = commercial_catalog().topup(catalog_key)
+    catalog = await published_commercial_catalog(session)
+    topup = catalog.topup(catalog_key)
     if topup is None:
         raise BillingConflictError(REASON_CATALOG_KEY_UNKNOWN)
     return _resolve_pack_intent(
@@ -600,6 +562,7 @@ def resolve_topup_intent(
         quantity=quantity,
         country_code=country_code,
         region=region,
+        catalog_revision=catalog.revision,
         at=at,
     )
 

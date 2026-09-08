@@ -13,7 +13,15 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -68,8 +76,12 @@ class ProviderConnection(Base):
     transport_provider: Mapped[str] = mapped_column(String(32))
     # Optional endpoint override (self-hosted gateway / proxy); "" = catalog URL.
     base_url: Mapped[str] = mapped_column(String(1024), default="")
-    # Fernet ciphertext of the BYOK secret. NEVER returned in a DTO.
+    # Fernet ciphertext exists only for tenant BYOK rows. Platform rows MUST
+    # keep this empty and carry a non-secret external credential reference.
     api_key_encrypted: Mapped[str] = mapped_column(Text, default="")
+    platform_credential_ref: Mapped[str] = mapped_column(
+        String(255), default="", server_default=""
+    )
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     # Non-empty marker naming why an inactive connection was retired; empty for
     # connections that have never been auto-deactivated.
@@ -105,6 +117,11 @@ class ProviderConnection(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
+    # Monotonic opaque revision. Rotating the key or changing its destination
+    # invalidates app-model probe success without exposing key material.
+    credential_revision: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), default=uuid.uuid4
+    )
 
     routes: Mapped[list[ProviderRoute]] = relationship(
         "ProviderRoute",
@@ -119,6 +136,13 @@ class ProviderConnection(Base):
         cascade=CASCADE_ALL_DELETE_ORPHAN,
         passive_deletes=True,
         order_by="ProviderConnectionTest.created_at",
+    )
+    app_routes: Mapped[list[ProviderAppRoute]] = relationship(
+        "ProviderAppRoute",
+        back_populates="connection",
+        cascade=CASCADE_ALL_DELETE_ORPHAN,
+        passive_deletes=True,
+        order_by="ProviderAppRoute.created_at",
     )
 
 
@@ -170,6 +194,58 @@ class ProviderRoute(Base):
 
     connection: Mapped[ProviderConnection] = relationship(
         "ProviderConnection", back_populates="routes"
+    )
+
+
+class ProviderAppRoute(Base):
+    """Explicit Content/Growth model route sharing a connection credential."""
+
+    __tablename__ = "provider_app_routes"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "feature", name="uq_provider_app_route_feature"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        index=True,
+    )
+    connection_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("provider_connections.id", ondelete="CASCADE"),
+        index=True,
+    )
+    feature: Mapped[str] = mapped_column(String(32))
+    protocol: Mapped[str] = mapped_column(String(32), default="openai_chat")
+    model: Mapped[str] = mapped_column(String(255))
+    api_base_url: Mapped[str] = mapped_column(String(1024))
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    revision: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), default=uuid.uuid4
+    )
+    probed_revision: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    probed_credential_revision: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    probed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    connection: Mapped[ProviderConnection] = relationship(
+        "ProviderConnection", back_populates="app_routes"
     )
 
 

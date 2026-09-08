@@ -122,6 +122,23 @@ function permittedUsage(projectCount: number) {
   } as const;
 }
 
+export function permittedWorkspaceEntitlement(workspaceId: string) {
+  return {
+    workspace_id: workspaceId,
+    status: 'resolved',
+    registry_revision: PERMITTED_ENTITLEMENT.registry_revision,
+    entitlement_lifecycle_version: PERMITTED_ENTITLEMENT.entitlement_lifecycle_version,
+    valid_until: PERMITTED_ENTITLEMENT.valid_until,
+    capabilities: PERMITTED_ENTITLEMENT.capabilities.map((capability) => ({
+      key: capability.key,
+      type: capability.capability_type,
+      value: capability.value,
+      valid_until: PERMITTED_ENTITLEMENT.valid_until,
+      provenance: 'effective_grant',
+    })),
+  } as const;
+}
+
 export const FIXTURE_PROJECT = {
   id: '11111111-1111-4111-8111-111111111111',
   workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -177,6 +194,11 @@ export async function stubAuthedShell(
   await page.route('**/api/v1/billing/entitlement', (route) =>
     route.fulfill({ json: PERMITTED_ENTITLEMENT }),
   );
+  for (const workspaceId of new Set(projects.map((project) => project.workspace_id))) {
+    await page.route(`**/api/v1/workspaces/${workspaceId}/entitlements`, (route) =>
+      route.fulfill({ json: permittedWorkspaceEntitlement(workspaceId) }),
+    );
+  }
   await page.route('**/api/v1/billing/usage', (route) =>
     route.fulfill({ json: permittedUsage(projects.length) }),
   );

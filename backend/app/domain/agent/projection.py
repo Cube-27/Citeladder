@@ -35,6 +35,26 @@ def _legacy_artifact_refs(result: dict[str, Any]) -> list[dict[str, str]]:
     return refs
 
 
+def run_values(run: object) -> dict[str, Any]:
+    return {
+        key: getattr(run, key)
+        for key in (
+            "id",
+            "project_id",
+            "task_type",
+            "objective",
+            "status",
+            "error_code",
+            "error_detail",
+            "attempt_count",
+            "completed_at",
+            "cancelled_at",
+            "created_at",
+            "updated_at",
+        )
+    }
+
+
 def public_result(result: object) -> dict[str, Any] | None:
     """Normalize current and pre-v3 persisted results without a repair read."""
     if not isinstance(result, dict):

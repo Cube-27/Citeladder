@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import UTC, datetime
 
 import httpx
 import pytest
@@ -12,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
+from app.core.config.app_models import APP_FEATURE_CONTENT
 from app.core.config.content import (
     CONTENT_GENERATOR_VERSION,
     CONTENT_SKILL_REGISTRY,
@@ -22,8 +24,10 @@ from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
     TASK_STATUS_SUCCEEDED,
 )
+from app.core.security import encrypt_secret
 from app.models.content import ContentGeneration, ContentGenerationAttempt
 from app.models.project import Project
+from app.models.provider import ProviderAppRoute, ProviderConnection
 from app.workers.content_worker import ContentWorker
 
 _CANARY_SECRET = "never-a-real-provider-secret"
@@ -100,12 +104,50 @@ async def _create_project(
     return response.json()["id"]
 
 
+async def _verified_content_route(
+    session: AsyncSession, project: Project
+) -> ProviderAppRoute:
+    existing = await session.scalar(
+        select(ProviderAppRoute).where(
+            ProviderAppRoute.workspace_id == project.workspace_id,
+            ProviderAppRoute.feature == APP_FEATURE_CONTENT,
+        )
+    )
+    if existing is not None:
+        return existing
+    connection = ProviderConnection(
+        workspace_id=project.workspace_id,
+        label="Content fixture",
+        transport_provider="openai",
+        base_url="https://provider.invalid/v1/chat/completions",
+        api_key_encrypted=encrypt_secret(_CANARY_SECRET),
+        active=True,
+    )
+    session.add(connection)
+    await session.flush()
+    route = ProviderAppRoute(
+        workspace_id=project.workspace_id,
+        connection_id=connection.id,
+        feature=APP_FEATURE_CONTENT,
+        model=_FIXTURE_MODEL,
+        api_base_url=connection.base_url,
+        active=True,
+    )
+    session.add(route)
+    await session.flush()
+    route.probed_revision = route.revision
+    route.probed_credential_revision = connection.credential_revision
+    route.probed_at = datetime.now(UTC)
+    return route
+
+
 async def _seed_generation(
     session_factory: async_sessionmaker[AsyncSession], project_id: str
 ) -> str:
     async with session_factory() as session:
         project = await session.get(Project, uuid.UUID(project_id))
         assert project is not None
+        route = await _verified_content_route(session, project)
         row = ContentGeneration(
             workspace_id=project.workspace_id,
             project_id=project.id,
@@ -116,8 +158,13 @@ async def _seed_generation(
             context_snapshot=_CONTEXT,
             request_fingerprint="a" * 64,
             idempotency_key=str(uuid.uuid4()),
-            provider="mistral",
-            requested_model=content_settings.resolved_model,
+            provider="customer_byok",
+            requested_model=route.model,
+            funding_source="customer_byok",
+            route_id=route.id,
+            connection_id=route.connection_id,
+            route_revision=route.revision,
+            credential_revision=route.probed_credential_revision,
             generator_version="content-v3",
         )
         session.add(row)
@@ -189,11 +236,17 @@ def _transport(
 
 async def test_enqueue_without_a_crawl_still_grounds_on_brand_context(
     client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """A project with no crawl is not an error state: the brand context it
     already has is enough to generate, and the summary says so plainly."""
     await _register(client, "content-context@example.com")
     project_id = await _create_project(client)
+    async with session_factory() as session:
+        project = await session.get(Project, uuid.UUID(project_id))
+        assert project is not None
+        await _verified_content_route(session, project)
+        await session.commit()
     response = await client.post(
         "/api/v1/content/generations",
         json={"project_id": project_id, "user_instruction": "Write a page."},
@@ -357,6 +410,7 @@ async def test_read_actions_and_workspace_isolation(
 
 async def test_skill_catalog_is_served_and_drives_enqueue_validation(
     client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     # The catalog is the frontend's only source of skill ids, so it must be
     # readable, ordered, and consistent with what enqueue will accept.
@@ -379,6 +433,11 @@ async def test_skill_catalog_is_served_and_drives_enqueue_validation(
         assert "body" not in skill
 
     project_id = await _create_project(client)
+    async with session_factory() as session:
+        project = await session.get(Project, uuid.UUID(project_id))
+        assert project is not None
+        await _verified_content_route(session, project)
+        await session.commit()
     accepted = await client.post(
         "/api/v1/content/generations",
         json={
@@ -404,7 +463,7 @@ async def test_skill_catalog_is_served_and_drives_enqueue_validation(
     assert rejected.status_code == 422
 
 
-async def test_delete_terminal_generation_cascades_attempts_and_rejects_active_work(
+async def test_delete_terminal_generation_archives_and_retains_attempt_provenance(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -435,16 +494,22 @@ async def test_delete_terminal_generation_cascades_attempts_and_rejects_active_w
         await client.get(f"/api/v1/content/generations/{terminal_id}")
     ).status_code == 404
     async with session_factory() as session:
-        assert await session.get(ContentGeneration, terminal_id) is None
+        archived = await session.get(ContentGeneration, terminal_id)
+        assert archived is not None
+        assert archived.archived_at is not None
+        assert archived.user_instruction == "[redacted]"
+        assert archived.output_text is None
         attempts = await session.scalars(
             select(ContentGenerationAttempt).where(
                 ContentGenerationAttempt.content_generation_id == terminal_id
             )
         )
-        assert attempts.all() == []
+        retained = attempts.all()
+        assert len(retained) == 1
+        assert retained[0].status == "succeeded"
 
 
-async def test_clear_history_removes_only_terminal_rows_for_the_authorized_project(
+async def test_clear_history_archives_only_terminal_rows_for_authorized_project(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -489,11 +554,16 @@ async def test_clear_history_removes_only_terminal_rows_for_the_authorized_proje
     ]
     async with session_factory() as session:
         for generation_id in terminal_ids:
-            assert await session.get(ContentGeneration, generation_id) is None
-        assert await session.get(ContentGeneration, active_id) is not None
-        assert (
-            await session.get(ContentGeneration, other_project_terminal_id)
-        ) is not None
+            archived = await session.get(ContentGeneration, generation_id)
+            assert archived is not None
+            assert archived.archived_at is not None
+            assert archived.user_instruction == "[redacted]"
+        active = await session.get(ContentGeneration, active_id)
+        assert active is not None
+        assert active.archived_at is None
+        other = await session.get(ContentGeneration, other_project_terminal_id)
+        assert other is not None
+        assert other.archived_at is None
 
 
 @pytest.mark.asyncio

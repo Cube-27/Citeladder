@@ -15,11 +15,12 @@ import json
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.abuse import abuse_settings
+from app.core.config.app_models import APP_FEATURE_CONTENT
 from app.core.config.content import (
     CONTENT_DEFAULT_SKILL,
     CONTENT_FEEDBACK_REASONS,
@@ -27,9 +28,9 @@ from app.core.config.content import (
     CONTENT_LIST_MAX_LIMIT,
     FEEDBACK_ACCEPTED,
     FEEDBACK_REJECTED,
-    content_settings,
     skill_version,
 )
+from app.core.config.entitlements import KEY_AI_CREDITS
 from app.core.config.task_queue import (
     TASK_ACTIVE_STATUSES,
     TASK_STATUS_CANCELLED,
@@ -37,6 +38,10 @@ from app.core.config.task_queue import (
     TASK_TERMINAL_STATUSES,
 )
 from app.domain.abuse.service import reserve_workspace_capacity
+from app.domain.billing.catalog_revisions import (
+    CatalogUnavailableError,
+    published_ai_credit_policy,
+)
 from app.domain.content.context_builder import (
     ContentContext,
     ContentContextConflictError,
@@ -53,6 +58,12 @@ from app.domain.content.schemas import (
     instruction_preview,
 )
 from app.domain.content.website_context import select_crawl_fragments
+from app.domain.entitlements.metered import MeteredSubject, reserve_metered_usage
+from app.domain.providers.app_routes import (
+    AppModelRouteUnavailableError,
+    has_configured_app_model_route,
+    resolve_app_model_route,
+)
 from app.models.content import ContentGeneration
 from app.models.project import Project
 
@@ -216,15 +227,83 @@ def _insert_generation(
     return row
 
 
-def _require_provider_configured() -> None:
-    # The transport is provider-neutral, so readiness is just: a provider name
-    # and a key. Model/endpoint swaps are pure ``.env`` changes.
-    if not content_settings.provider:
-        raise ProviderNotConfiguredError("content provider is not configured")
-    if not content_settings.resolved_api_key:
-        raise ProviderNotConfiguredError(
-            "content provider is not configured (missing API key)"
+async def _billing_account_id(
+    session: AsyncSession, *, workspace_id: uuid.UUID
+) -> uuid.UUID:
+    from app.models.billing import WorkspaceBillingLink
+
+    account_id = await session.scalar(
+        select(WorkspaceBillingLink.billing_account_id).where(
+            WorkspaceBillingLink.workspace_id == workspace_id
         )
+    )
+    if account_id is None:
+        raise ProviderNotConfiguredError("workspace funding sponsor is unavailable")
+    return account_id
+
+
+async def _admitted_customer_route(session: AsyncSession, *, workspace_id: uuid.UUID):
+    try:
+        return await resolve_app_model_route(
+            session,
+            workspace_id=workspace_id,
+            feature=APP_FEATURE_CONTENT,
+            at=datetime.now(UTC),
+        )
+    except AppModelRouteUnavailableError as exc:
+        if await has_configured_app_model_route(
+            session, workspace_id=workspace_id, feature=APP_FEATURE_CONTENT
+        ):
+            raise ProviderNotConfiguredError(
+                "The configured customer Content model route is unavailable"
+            ) from exc
+        return None
+
+
+async def _apply_funding(
+    session: AsyncSession, *, row: ContentGeneration, route
+) -> None:
+    if route is not None:
+        row.provider = "customer_byok"
+        row.requested_model = route.model
+        row.funding_source = "customer_byok"
+        row.route_id = route.route_id
+        row.connection_id = route.connection_id
+        row.route_revision = route.route_revision
+        row.credential_revision = route.credential_revision
+        return
+    try:
+        revision, policy = await published_ai_credit_policy(session)
+    except CatalogUnavailableError as exc:
+        raise ProviderNotConfiguredError(
+            "platform AI-credit policy is unavailable"
+        ) from exc
+    from app.core.config.content import content_settings
+
+    rate = policy.rate(
+        feature=APP_FEATURE_CONTENT, model=content_settings.resolved_model
+    )
+    if rate is None:
+        raise ProviderNotConfiguredError(
+            "platform model has no published AI-credit rate"
+        )
+    reservation = await reserve_metered_usage(
+        session,
+        account_id=await _billing_account_id(session, workspace_id=row.workspace_id),
+        capability_key=KEY_AI_CREDITS,
+        subject=MeteredSubject(
+            kind="content", subject_id=row.id, workspace_id=row.workspace_id
+        ),
+        hold_units=rate.call_credit_cap,
+        idempotency_key=f"content:{row.id}:hold",
+        at=datetime.now(UTC),
+    )
+    row.provider = "platform"
+    row.requested_model = content_settings.resolved_model
+    row.funding_source = "platform"
+    row.policy_revision = revision
+    row.reservation_id = reservation.reservation_id
+    row.customer_charge_cap = rate.call_credit_cap
 
 
 async def enqueue_generation(
@@ -299,7 +378,7 @@ async def enqueue_generation(
     except ContentContextConflictError as exc:
         raise ContentGenerationConflictError(str(exc)) from exc
 
-    _require_provider_configured()
+    app_route = await _admitted_customer_route(session, workspace_id=workspace_id)
     await _reserve_content_capacity(session, workspace_id=workspace_id)
 
     row = _insert_generation(
@@ -321,12 +400,13 @@ async def enqueue_generation(
             # generator version move independently: a reworded directive
             # changes what was asked for even when the generator is untouched,
             # so provenance records both.
-            provider=content_settings.provider,
-            requested_model=content_settings.resolved_model,
+            provider="pending",
+            requested_model="pending",
             generator_version=CONTENT_GENERATOR_VERSION,
         ),
         context=context,
     )
+    await _apply_funding(session, row=row, route=app_route)
     winner = await _commit_generation(
         session, workspace_id=workspace_id, key=key, fingerprint=fingerprint
     )
@@ -394,6 +474,7 @@ async def list_generations(
         .where(
             ContentGeneration.workspace_id == workspace_id,
             ContentGeneration.project_id == project_id,
+            ContentGeneration.archived_at.is_(None),
         )
         .order_by(
             ContentGeneration.created_at.desc(),
@@ -480,6 +561,7 @@ async def get_generation(
         select(ContentGeneration).where(
             ContentGeneration.id == generation_id,
             ContentGeneration.workspace_id == workspace_id,
+            ContentGeneration.archived_at.is_(None),
         )
     )
     if row is None:
@@ -532,12 +614,7 @@ async def delete_generation(
     workspace_id: uuid.UUID,
     generation_id: uuid.UUID,
 ) -> None:
-    """Permanently remove one terminal generation owned by this workspace.
-
-    Attempt rows are owned by the generation and are removed by the database
-    cascade. References from implementation declarations are retained with a
-    null ``generation_id`` by their foreign-key policy.
-    """
+    """Archive/redact one terminal generation while retaining provenance."""
     locked = await session.scalar(
         select(ContentGeneration)
         .where(
@@ -554,8 +631,18 @@ async def delete_generation(
         raise DeleteNotAllowedError(
             f"cannot delete an active {active_status} generation"
         )
-    await session.delete(locked)
+    _archive_generation(locked)
     await session.commit()
+
+
+def _archive_generation(row: ContentGeneration) -> None:
+    row.archived_at = datetime.now(UTC)
+    row.user_instruction = "[redacted]"
+    row.context_snapshot = {}
+    row.message_snapshot = None
+    row.output_text = None
+    row.request_snapshot = None
+    row.error_detail = ""
 
 
 async def clear_terminal_generations(
@@ -564,17 +651,22 @@ async def clear_terminal_generations(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
 ) -> None:
-    """Delete terminal history for one authorized project, retaining active work."""
+    """Archive terminal history for one project, retaining financial identity."""
     await _project_in_workspace(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    await session.execute(
-        delete(ContentGeneration).where(
+    rows = await session.scalars(
+        select(ContentGeneration)
+        .where(
             ContentGeneration.workspace_id == workspace_id,
             ContentGeneration.project_id == project_id,
             ContentGeneration.status.in_(TASK_TERMINAL_STATUSES),
+            ContentGeneration.archived_at.is_(None),
         )
+        .with_for_update()
     )
+    for row in rows:
+        _archive_generation(row)
     await session.commit()
 
 
@@ -619,7 +711,7 @@ async def try_again(
     source = await get_generation(
         session, workspace_id=workspace_id, generation_id=generation_id
     )
-    _require_provider_configured()
+    app_route = await _admitted_customer_route(session, workspace_id=workspace_id)
     await _reserve_content_capacity(session, workspace_id=workspace_id)
     frozen = ContentContext.from_snapshot(source.context_snapshot or {})
     fingerprint = request_fingerprint(
@@ -649,12 +741,13 @@ async def try_again(
             # NOT copied from `source`: the retry is rendered from whatever
             # pack is deployed now, so `_insert_generation` stamps the version
             # that actually produced it.
-            provider=content_settings.provider,
-            requested_model=content_settings.resolved_model,
+            provider="pending",
+            requested_model="pending",
             generator_version=CONTENT_GENERATOR_VERSION,
         ),
         context=frozen,
     )
+    await _apply_funding(session, row=row, route=app_route)
     await session.commit()
     await session.refresh(row)
     return row

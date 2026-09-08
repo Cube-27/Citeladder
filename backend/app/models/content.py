@@ -30,7 +30,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.config.content import CONTENT_DEFAULT_SKILL, CONTENT_MAX_ATTEMPTS
 from app.core.config.task_queue import TASK_STATUS_QUEUED
 from app.core.database import Base
-from app.models.constants import CASCADE_ALL_DELETE_ORPHAN
 
 _WORKSPACE_FK = "workspaces.id"
 _PROJECT_FK = "projects.id"
@@ -140,9 +139,25 @@ class ContentGeneration(Base):
 
     # --- Result (single-writer = claiming worker, invariant 3) ------------
     output_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Provider + requested model are frozen from config at enqueue — always
+    # Financial/dispatch authority frozen at admission. Customer BYOK never
+    # carries a platform-credit reservation; funded routes require an explicit
+    # persisted catalog policy before these fields can name one.
+    funding_source: Mapped[str] = mapped_column(String(24), default="customer_byok")
+    route_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("provider_app_routes.id", ondelete="RESTRICT")
+    )
+    connection_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("provider_connections.id", ondelete="RESTRICT")
+    )
+    route_revision: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    credential_revision: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    policy_revision: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reservation_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    customer_charge_cap: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Provider + requested model are frozen from the admitted route.
     # known up front, so both are required (no empty-string/NULL sentinel).
-    provider: Mapped[str] = mapped_column(String(32))
+    provider: Mapped[str] = mapped_column(String(64))
     requested_model: Mapped[str] = mapped_column(String(255))
     returned_model: Mapped[str | None] = mapped_column(String(255), nullable=True)
     finish_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
@@ -169,8 +184,6 @@ class ContentGeneration(Base):
     attempts: Mapped[list[ContentGenerationAttempt]] = relationship(
         "ContentGenerationAttempt",
         back_populates="generation",
-        cascade=CASCADE_ALL_DELETE_ORPHAN,
-        passive_deletes=True,
         order_by="ContentGenerationAttempt.attempt_number",
     )
 
@@ -189,6 +202,7 @@ class ContentGenerationAttempt(Base):
             "attempt_number",
             name="uq_content_generation_attempt_number",
         ),
+        UniqueConstraint("dispatch_id", name="uq_content_generation_attempt_dispatch"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -196,18 +210,47 @@ class ContentGenerationAttempt(Base):
     )
     content_generation_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey(_CONTENT_GENERATION_FK, ondelete="CASCADE"),
+        ForeignKey(_CONTENT_GENERATION_FK, ondelete="RESTRICT"),
         index=True,
     )
     attempt_number: Mapped[int] = mapped_column(Integer)
+    dispatch_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), default=uuid.uuid4
+    )
     status: Mapped[str] = mapped_column(String(16))
+    funding_source: Mapped[str] = mapped_column(String(24), default="customer_byok")
+    route_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("provider_app_routes.id", ondelete="RESTRICT")
+    )
+    connection_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("provider_connections.id", ondelete="RESTRICT")
+    )
+    route_revision: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    credential_revision: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    reservation_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    hold_units: Mapped[int] = mapped_column(Integer, default=0)
+    policy_revision: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    rate_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    customer_charge_cap: Mapped[int | None] = mapped_column(Integer, nullable=True)
     requested_model: Mapped[str] = mapped_column(String(255), default="")
     returned_model: Mapped[str | None] = mapped_column(String(255), nullable=True)
     finish_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
     error_code: Mapped[str] = mapped_column(String(32), default="")
     error_detail: Mapped[str] = mapped_column(Text, default="")
     usage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    usage_completeness: Mapped[str] = mapped_column(String(16), default="unknown")
+    settled_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    absorbed_units: Mapped[int] = mapped_column(Integer, default=0)
+    settlement_status: Mapped[str] = mapped_column(String(24), default="not_applicable")
+    provider_request_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dispatched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    usage_hold_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

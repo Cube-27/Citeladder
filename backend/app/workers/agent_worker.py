@@ -6,12 +6,20 @@ import asyncio
 import logging
 import signal
 import uuid
+from datetime import UTC, datetime
 
 from app.connectors.agent.factory import create_model_gateway
+from app.connectors.agent.gateway import ModelGateway
 from app.core.config.agent import default_agent_settings
+from app.core.config.app_models import APP_FEATURE_GROWTH_AGENT
 from app.core.database import SessionLocal, dispose_engine
 from app.core.telemetry import configure_logging, instrument_worker
 from app.domain.agent.service import claim_task, execute_claimed_task
+from app.domain.providers.app_routes import (
+    AppModelRouteUnavailableError,
+    has_configured_app_model_route,
+    resolve_app_model_route,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +41,45 @@ class AgentWorker:
             )
             if run is None:
                 return 0
-            gateway = (
-                create_model_gateway() if default_agent_settings.configured else None
-            )
-            await execute_claimed_task(
-                session, run=run, owner=self._owner, gateway=gateway
-            )
+            route = None
+            gateway: ModelGateway | None
+            if hasattr(run, "workspace_id"):
+                try:
+                    route = await resolve_app_model_route(
+                        session,
+                        workspace_id=run.workspace_id,
+                        feature=APP_FEATURE_GROWTH_AGENT,
+                        at=datetime.now(UTC),
+                    )
+                    gateway = create_model_gateway(app_route=route)
+                except AppModelRouteUnavailableError:
+                    customer_route_configured = await has_configured_app_model_route(
+                        session,
+                        workspace_id=run.workspace_id,
+                        feature=APP_FEATURE_GROWTH_AGENT,
+                    )
+                    gateway = (
+                        None
+                        if customer_route_configured
+                        or not default_agent_settings.configured
+                        else create_model_gateway()
+                    )
+            elif default_agent_settings.configured:
+                gateway = create_model_gateway()
+            else:
+                gateway = None
+            if route is None:
+                await execute_claimed_task(
+                    session, run=run, owner=self._owner, gateway=gateway
+                )
+            else:
+                await execute_claimed_task(
+                    session,
+                    run=run,
+                    owner=self._owner,
+                    gateway=gateway,
+                    app_route=route,
+                )
             return 1
 
     async def run_forever(self) -> None:

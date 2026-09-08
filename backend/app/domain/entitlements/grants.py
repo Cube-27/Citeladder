@@ -225,6 +225,10 @@ async def issue_grant_bundle(
     valid_until: datetime | None,
     period_start: datetime | None = None,
     period_end: datetime | None = None,
+    bundle_role: str = "supplement",
+    profile_key: str = "",
+    profile_priority: int = 0,
+    bundle_id: str | None = None,
 ) -> tuple[AccountGrant, ...]:
     """Persist one immutable grant bundle (append-only, idempotent).
 
@@ -232,6 +236,11 @@ async def issue_grant_bundle(
     Never updates existing rows: a replay returns the persisted bundle, and a
     same-key different-shape replay raises ``grant_bundle_conflict``.
     """
+    if bundle_role not in {"primary", "supplement"}:
+        raise GrantWriteError("invalid bundle_role")
+    resolved_bundle_id = bundle_id or idempotency_key
+    if bundle_role == "primary" and not profile_key:
+        raise GrantWriteError("primary profile_key is required")
     _validate_bundle_inputs(
         source_kind=source_kind,
         source_ref=source_ref,
@@ -252,6 +261,10 @@ async def issue_grant_bundle(
             billing_account_id=account_id,
             source_kind=source_kind,
             source_ref=source_ref,
+            bundle_role=bundle_role,
+            profile_key=profile_key,
+            profile_priority=profile_priority,
+            bundle_id=resolved_bundle_id,
             key=spec.key,
             value=spec.value,
             period_start=period_start,

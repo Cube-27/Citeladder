@@ -49,15 +49,15 @@
 |---|---|---|
 | Plan checkpoint | **Complete** | `e16604b14c507f4551e557a9c7a387f4ba54aae1` pushed and verified on PR #35 |
 | 0: proven CI repairs | **Complete locally; CI pending on `abf4f521`** | Commit `abf4f521` pushed. Focused evidence: 16 backend repairs, 308 Site Health checks, 1 opportunities component check, 4 E2E failures now pass. Full selector initially 1764 passed / 5 failed; repaired all 5, then retry delta selected 171 backend checks and passed. `scripts/check.ps1 -CheckOnly` passed. Do not treat old full-selector run as final green; CI still must verify the pushed SHA |
-| 1: catalog/schema/operator | **Ready to start** | Baseline pushed at `abf4f521`; draft/disabled campaign only. No live activation |
-| 2A: access/ledger | Not started | Exclusive base, real PostgreSQL races, canonical refund/expiry |
-| 2B: custom BYOK | Not started | Existing provider owner, secure authenticated POST boundary |
-| 2C: Content metering | Not started | Native dispatch evidence, bounded reservations and settlement |
-| 2D: Growth metering | Not started | Native narration evidence; no absent orchestration framework |
-| 3: settlement/recovery | Not started | Canonical recurring period, replayable events and reconciliation |
-| 4: commercial journeys | Not started | No-card claim gates before campaign enablement |
-| 5: customer UI | Not started | Five approved final-state mockups; not Phase 1 availability |
-| 6: quality/runbook | Not started | Review/simplify, actual operator commands, full CI owners |
+| 1: catalog/schema/operator | **Implemented locally** | Immutable persisted catalog, approved disabled seed, trusted `scripts.billing_admin`, redacted dry-run/apply contract, publication race/validation tests. No live activation |
+| 2A: access/ledger | **Implemented locally** | Exclusive primary plus supplements, authoritative current resolution, typed immutable multi-grant ledger/refunds, safe workspace-entitlement read, PostgreSQL ledger tests |
+| 2B: custom BYOK | **Implemented locally** | Shared Content/Growth routes, write-only encrypted key custody, pinned public-only HTTPS transport, revision-bound probes, no silent fallback; 19 provider component tests passed |
+| 2C: Content metering | **Implemented locally** | Durable pre-I/O attempt/dispatch evidence, BYOK zero debit, optional persisted finite AI-credit policy, bounded settlement and retained provenance; mapped Content component suite 11 passed |
+| 2D: Growth metering | **Implemented locally** | Native model-attempt evidence and worker rechecks use the shared metered boundary; BYOK is zero debit and funded execution requires explicit published policy/allowance |
+| 3: settlement/recovery | **Implemented locally** | Normalized payment/refund receipts, frozen recurring terms, webhook replay/conflict handling, dual-secret verification and bounded reconciliation; billing unit 39 and mapped PostgreSQL commercial/API tests passed |
+| 4: commercial journeys | **Implemented locally; campaign remains disabled** | Atomic once-per-account no-card claim, consent/idempotency/cohort/operator exception, expiry/end-early-access, unavailable card-trial contract; Phase 4 PostgreSQL/catalog/auth/OAuth 41 passed |
+| 5: customer UI | **Implemented locally** | Catalog-driven pricing, honest disabled checkout, early-access confirmation, owner-private billing plus workspace-effective access, custom BYOK routes, unavailable card trial; typecheck and focused frontend tests passed |
+| 6: quality/runbook | **Documentation complete locally; final CI pending** | Active architecture/invariants/owner requirements updated and [`billing-operator-guide.md`](../operations/billing-operator-guide.md) added with tested commands, inspection, reconciliation, rotation and incident controls. No production-provider evidence |
 
 ## Validation evidence and setup
 
@@ -77,12 +77,36 @@
   every retry delta. No full backend suite locally. Full final suites belong in
   GitHub CI on the final SHA; skipped owners remain unverified.
 
+## Current verification evidence
+
+The implementation is committed and under review in PR #39. Focused evidence
+reported by the phase owners includes:
+
+- clean empty-database migration upgrade/check (`test_brand_logo_migration`: 1 passed);
+- funded ledger PostgreSQL tests: 9 passed; catalog/ledger PostgreSQL tests: 17 passed;
+- provider component tests: 19 passed; Content mapped component tests: 11 passed;
+- billing unit tests: 39 passed; billing commercial/API PostgreSQL tests: 24 and
+  12 passed after persisted-catalog expectations were aligned;
+- Phase 4 PostgreSQL/catalog/auth/OAuth checks: 41 passed; frontend contract,
+  pricing, and Settings checks: 29 passed;
+- frontend Phase 5 typecheck and focused tests passed; complexity/static checks
+  were brought back to policy for the implemented owners.
+
+These are deterministic fixture and local PostgreSQL results, not production
+provider proof. Checkout remains disabled by default, the no-card campaign is
+still draft/disabled, card trial remains unavailable, and no live Razorpay plan,
+payment, invoice, settlement, refund, webhook rotation, or campaign activation
+has been exercised.
+
 ## Immediate next bounded work
 
-1. Verify the documentation checkpoint push to the existing PR.
-2. Provision pinned tools and disposable PostgreSQL while independent Phase 0
-   backend and E2E/fixture owners address only evidence-backed failures.
-3. Finish Phase 0 before advancing dependent schema/catalog work. Record any
-   repair that requires Phase 2 rather than declaring a false green baseline.
-4. Append actual commands/results and checkpoint SHAs here at each boundary.
-   Never mark an unrun test or a mock-tested provider capability as verified.
+1. Run the repository documentation/diff checks, then the mapped final static and
+   test selectors on the unchanged implementation tree.
+2. Have GitHub CI verify the final SHA; record every selected owner and retry
+   delta rather than treating focused local evidence as a full green run.
+3. Keep checkout and the no-card campaign disabled until the separate owner
+   checklist, sandbox evidence, and explicit go/no-go approvals are complete.
+4. Use the [billing operator guide](../operations/billing-operator-guide.md) for
+   reviewed catalog forward-publication, corrections, reconciliation, secret
+   rotation, and incidents. Never mark mocked provider behavior as production
+   evidence.

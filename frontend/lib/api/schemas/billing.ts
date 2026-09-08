@@ -139,6 +139,43 @@ export const catalogTopupSchema = responseObject({
   expiry_days: z.number().int(),
 });
 
+export const workspaceEntitlementSchema = responseObject({
+  workspace_id: uuid(),
+  status: entitlementStatusSchema,
+  registry_revision: z.string(),
+  entitlement_lifecycle_version: z.number().int().nonnegative(),
+  valid_until: z.string().nullable(),
+  capabilities: z.array(
+    responseObject({
+      key: z.string(),
+      type: capabilityTypeSchema,
+      value: z.union([z.boolean(), z.number(), z.string()]).nullable(),
+      valid_until: z.string().nullable(),
+      provenance: z.literal('effective_grant'),
+    }),
+  ),
+});
+
+export const noCardOfferSchema = responseObject({
+  campaign_id: uuid(),
+  status: z.enum(['available', 'unavailable', 'already_claimed', 'ineligible']),
+  tier_key: z.literal('tier_1'),
+  duration_days: z.number().int().positive(),
+  eligibility_policy: z.enum(['new_account', 'oauth_verified_work_email']),
+  operator_code_allowed: z.boolean(),
+  unavailable_reason: z.string().nullable(),
+});
+
+export const noCardClaimSchema = responseObject({
+  campaign_id: uuid(),
+  grant_id: uuid(),
+  tier_key: z.literal('tier_1'),
+  starts_at: z.string(),
+  expires_at: z.string(),
+  charged: z.literal(false),
+  renews: z.literal(false),
+});
+
 export const billingCatalogSchema = responseObject({
   catalog_revision: z.string(),
   country_code: z.string().nullable(),

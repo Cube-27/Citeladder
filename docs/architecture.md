@@ -158,3 +158,20 @@ turn unsupported output into a verified fact.
 
 See [`plans/citeladder-aeo-product-rebuild.md`](plans/citeladder-aeo-product-rebuild.md)
 for the active cross-system delivery view.
+
+## Combined transaction lock DAG
+
+Billing and entitlement changes preserve each domain's established prefix and
+then converge on one acyclic order:
+
+`project -> prompt-set -> domain row (runtime/audit/task) -> account-capacity advisory lock -> billing account -> grants (UUID lock order) -> receipt/intent -> ledger`.
+
+Site Health's existing prefixes remain `project -> runtime -> profile` and
+`runtime -> membership -> crawl -> task`. Cancellation remains `audit -> task
+mutation -> reservation release`. A transaction that has acquired the account
+capacity or any billing row must not acquire project, prompt, runtime, audit, or
+task locks afterward. Candidate grants are locked in UUID order; commercial
+earliest-expiry draw order is computed separately and frozen on reservation
+allocations. Provider/network I/O never occurs while a database transaction or
+lock is held. Projection refreshes that require domain locks run after the
+billing mutation commits, in a new transaction following the domain prefix.

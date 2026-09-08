@@ -22,6 +22,7 @@ from app.core.config.audits import (
     AUDIT_STATUS_CANCELLED,
     AUDIT_TERMINAL_STATUSES,
     CAPACITY_OUTCOME_FAILED,
+    ERROR_NO_CONNECTION,
     EVENT_TASK_CAPACITY_WAIT,
     audit_settings,
     measurement_policy_from_configuration,
@@ -33,7 +34,10 @@ from app.core.config.costs import (
     route_pricing_for,
 )
 from app.core.config.provider_catalog import (
+    CREDENTIAL_SOURCE_PLATFORM,
     ERROR_PARSE,
+    PlatformCredentialUnavailableError,
+    resolve_platform_credential,
 )
 from app.core.config.task_queue import TASK_STATUS_LEASED, TASK_STATUS_RUNNING
 from app.core.security import decrypt_secret
@@ -100,6 +104,19 @@ logger = logging.getLogger("app.workers.audit_worker")
 # terminal-rejection / adapter-failure / capacity-park paths must accept it;
 # `running` stays accepted because a retry re-enters those paths.
 TASK_PRE_CALL_STATUSES = frozenset({TASK_STATUS_LEASED, TASK_STATUS_RUNNING})
+
+
+def _connection_values(
+    connection: ProviderConnection | None,
+) -> tuple[bool, str, str, str]:
+    if connection is None:
+        return False, "", "", ""
+    return (
+        bool(connection.active),
+        connection.credential_source,
+        connection.api_key_encrypted,
+        connection.platform_credential_ref,
+    )
 
 
 class AuditExecutionMixin:
@@ -212,6 +229,9 @@ class AuditExecutionMixin:
             if connection_id is not None:
                 connection = await session.get(ProviderConnection, connection_id)
             configuration = dict(audit.configuration or {})
+            connection_active, credential_source, ciphertext, platform_ref = (
+                _connection_values(connection)
+            )
             return _ExecutionContext(
                 task_id=task_id,
                 audit_id=audit_id,
@@ -225,12 +245,10 @@ class AuditExecutionMixin:
                 base_url=str(route_snapshot.get("base_url") or ""),
                 attempt_number=task.attempt_count + 1,
                 connection_id=connection_id,
-                connection_active=(
-                    bool(connection.active) if connection is not None else False
-                ),
-                api_key_encrypted=(
-                    connection.api_key_encrypted if connection is not None else ""
-                ),
+                connection_active=connection_active,
+                credential_source=credential_source,
+                api_key_encrypted=ciphertext,
+                platform_credential_ref=platform_ref,
                 funding=_frozen_funding_from(task.provider_route_snapshot),
             )
 
@@ -243,8 +261,14 @@ class AuditExecutionMixin:
         or placed in a snapshot (invariant 6). A build failure is a terminal
         misconfiguration, not a retryable provider error.
         """
-        api_key = decrypt_secret(context.api_key_encrypted)
         try:
+            api_key = (
+                resolve_platform_credential(
+                    context.transport_provider, context.platform_credential_ref
+                )
+                if context.credential_source == CREDENTIAL_SOURCE_PLATFORM
+                else decrypt_secret(context.api_key_encrypted)
+            )
             return build_adapter(
                 logical_engine=context.logical_engine,
                 transport_provider=context.transport_provider,
@@ -261,6 +285,18 @@ class AuditExecutionMixin:
                 transport_model=context.transport_model,
                 error_code=exc.error_code,
                 error_detail=str(exc),
+                request_snapshot=request_snapshot,
+            )
+            return None
+        except PlatformCredentialUnavailableError:
+            await self._fail_terminal(
+                task_id=context.task_id,
+                audit_id=context.audit_id,
+                logical_engine=context.logical_engine,
+                transport_provider=context.transport_provider,
+                transport_model=context.transport_model,
+                error_code=ERROR_NO_CONNECTION,
+                error_detail="platform credential is unavailable",
                 request_snapshot=request_snapshot,
             )
             return None

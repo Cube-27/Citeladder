@@ -33,6 +33,9 @@ _TOPUP_UNAVAILABLE = datetime.min.replace(tzinfo=UTC)
 # Grants with no expiry draw after every expiring grant.
 _NO_EXPIRY = datetime.max.replace(tzinfo=UTC)
 _SOURCE_WEIGHT = {kind: i for i, kind in enumerate(CONSUMABLE_DRAW_SOURCE_ORDER)}
+_PRIMARY_ROLE = "primary"
+_SUPPLEMENT_ROLE = "supplement"
+_ALLOWED_BUNDLE_ROLES = frozenset({_PRIMARY_ROLE, _SUPPLEMENT_ROLE})
 
 
 class ResolverInputError(ValueError):
@@ -129,6 +132,10 @@ def _validate_grant(grant: GrantInput, registry: CapabilityRegistry) -> None:
             raise ResolverInputError(f"level grant ordinal out of range: {grant.key!r}")
     elif grant.value < 0:
         raise ResolverInputError(f"counter grant value negative: {grant.key!r}")
+    if grant.bundle_role not in _ALLOWED_BUNDLE_ROLES:
+        raise ResolverInputError(f"unknown grant bundle role: {grant.bundle_role!r}")
+    if grant.bundle_role == _PRIMARY_ROLE and not grant.bundle_id:
+        raise ResolverInputError("primary grant is missing bundle identity")
 
 
 def _earliest_revocations(
@@ -202,26 +209,69 @@ def _resolve_capability(
     )
 
 
-def _entitlement_valid_until(
+def _grant_change_candidates(
     grants: tuple[GrantInput, ...],
-    revocations: tuple[RevocationInput, ...],
+    selected_ids: set[uuid.UUID],
     subscription_end: datetime | None,
     at: datetime,
-) -> datetime | None:
-    """Earliest future grant start/end, revocation, or period boundary."""
+) -> list[datetime]:
     candidates: list[datetime] = []
     for grant in grants:
         if grant.valid_from > at:
             candidates.append(grant.valid_from)
-        expiry = effective_grant_expiry(grant, subscription_end)
-        if expiry is not None and expiry > at:
-            candidates.append(expiry)
-    for revocation in revocations:
-        if revocation.effective_from > at:
-            candidates.append(revocation.effective_from)
+        if grant.id in selected_ids:
+            expiry = effective_grant_expiry(grant, subscription_end)
+            if expiry is not None and expiry > at:
+                candidates.append(expiry)
+    return candidates
+
+
+def _entitlement_valid_until(
+    grants: tuple[GrantInput, ...],
+    selected_grants: tuple[GrantInput, ...],
+    revocations: tuple[RevocationInput, ...],
+    subscription_end: datetime | None,
+    at: datetime,
+) -> datetime | None:
+    """Earliest future change to the selected entitlement projection."""
+    selected_ids = {grant.id for grant in selected_grants}
+    candidates = _grant_change_candidates(grants, selected_ids, subscription_end, at)
+    candidates.extend(
+        revocation.effective_from
+        for revocation in revocations
+        if revocation.grant_id in selected_ids and revocation.effective_from > at
+    )
     if subscription_end is not None and subscription_end > at:
         candidates.append(subscription_end)
     return min(candidates) if candidates else None
+
+
+def _select_active_grants(
+    grants: tuple[GrantInput, ...],
+    revoked_at: dict[uuid.UUID, datetime],
+    subscription_end: datetime | None,
+    at: datetime,
+) -> tuple[GrantInput, ...]:
+    """Select one primary bundle plus every deliberate supplement.
+
+    Primary selection is bundle-wide, not per capability, so a paid/trial
+    profile cannot accidentally stack with the free fallback. Priority is
+    explicit persisted policy; deterministic bundle identity breaks ties.
+    """
+    active = tuple(
+        grant for grant in grants if _is_active(grant, revoked_at, subscription_end, at)
+    )
+    primary = [grant for grant in active if grant.bundle_role == _PRIMARY_ROLE]
+    if not primary:
+        return tuple(grant for grant in active if grant.bundle_role == _SUPPLEMENT_ROLE)
+    selected_bundle = max(
+        {(grant.profile_priority, grant.bundle_id) for grant in primary}
+    )[1]
+    return tuple(
+        grant
+        for grant in active
+        if grant.bundle_role == _SUPPLEMENT_ROLE or grant.bundle_id == selected_bundle
+    )
 
 
 def fold_entitlement(
@@ -245,10 +295,10 @@ def fold_entitlement(
     for grant in grants:
         _validate_grant(grant, registry)
     revoked_at = _earliest_revocations(revocations)
+    selected_grants = _select_active_grants(grants, revoked_at, subscription_end, at)
     active_by_key: dict[str, list[GrantInput]] = {}
-    for grant in grants:
-        if _is_active(grant, revoked_at, subscription_end, at):
-            active_by_key.setdefault(grant.key, []).append(grant)
+    for grant in selected_grants:
+        active_by_key.setdefault(grant.key, []).append(grant)
     capabilities = tuple(
         _resolve_capability(
             registry.require(key),
@@ -264,7 +314,9 @@ def fold_entitlement(
         registry_revision=registry.revision,
         entitlement_lifecycle_version=entitlement_lifecycle_version,
         resolved_at=at,
-        valid_until=_entitlement_valid_until(grants, revocations, subscription_end, at),
+        valid_until=_entitlement_valid_until(
+            grants, selected_grants, revocations, subscription_end, at
+        ),
         status=STATUS_RESOLVED,
         capabilities=capabilities,
         errors=(),

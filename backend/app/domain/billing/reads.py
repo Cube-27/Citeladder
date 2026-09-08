@@ -206,8 +206,7 @@ async def _consumable_balances(
             values.get(LEDGER_ENTRY_DEBIT, 0),
             max(
                 values.get(LEDGER_ENTRY_RESERVATION, 0)
-                - values.get(LEDGER_ENTRY_RELEASE, 0)
-                - values.get(LEDGER_ENTRY_DEBIT, 0),
+                - values.get(LEDGER_ENTRY_RELEASE, 0),
                 0,
             ),
         )
@@ -302,7 +301,7 @@ async def account_usage(
     entitlement = await resolve_account_entitlement(
         session, account_id=account.id, at=at
     )
-    grants, _ = await _grant_rows(session, account.id)
+    grants, revoked_at = await _grant_rows(session, account.id)
     from app.domain.billing.service import current_base_subscription
 
     subscription = await current_base_subscription(session, account.id)
@@ -310,10 +309,23 @@ async def account_usage(
         subscription.current_period_end if subscription is not None else None
     )
     balances = await _consumable_balances(session, account.id)
+    active_grant_ids = {
+        grant_id
+        for capability in entitlement.capabilities
+        for grant_id in capability.contributing_grant_ids
+    }
+    active_grants = tuple(
+        grant
+        for grant in grants
+        if grant.id in active_grant_ids
+        and not (revoked_at.get(grant.id) is not None and revoked_at[grant.id] <= at)
+    )
     items = [
         _usage_item(
             definition,
-            _usage_grant_rows(grants, definition.key, balances, subscription_end),
+            _usage_grant_rows(
+                active_grants, definition.key, balances, subscription_end
+            ),
             at,
         )
         for definition in CAPABILITY_REGISTRY.public_entries()

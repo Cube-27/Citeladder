@@ -14,7 +14,8 @@ Routes, in the frozen order of the work order:
 
 The v6 ``/billing/me``, ``/billing/profile``, ``/billing/checkout``,
 ``/billing/cancel``, and ``/billing/manage`` routes are DELETED without
-aliases, as is ``GET /workspaces/{id}/entitlements``.
+aliases. ``GET /workspaces/{id}/entitlements`` is the member-safe effective
+capability projection; private account billing remains on the owner routes.
 
 Invariant 5: every mutation and every account read authorizes through the
 BILLING OWNER (``BillingAccount.owner_user_id``) via ``owned_account``; the
@@ -27,6 +28,7 @@ ISO country, and the SERVER-resolved quote drives every provider argument.
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -44,7 +46,12 @@ from fastapi import (
 from fastapi import Path as PathParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import (
+    WorkspaceContext,
+    get_current_user,
+    get_db,
+    require_workspace_member,
+)
 from app.connectors.billing.base import (
     BillingProvider,
     BillingProviderError,
@@ -69,6 +76,13 @@ from app.core.config.billing_settings import (
 )
 from app.core.http_errors import raise_api_error
 from app.domain.billing.catalog import public_catalog
+from app.domain.billing.catalog_revisions import CatalogUnavailableError
+from app.domain.billing.commercial_journeys import (
+    IntroductoryAccessError,
+    claim_introductory_access,
+    end_introductory_access,
+    offer_state,
+)
 from app.domain.billing.idempotency import (
     IdempotencyConflictError,
     ProviderCall,
@@ -86,9 +100,16 @@ from app.domain.billing.schemas import (
     BillingCatalogResponse,
     BillingEntitlementResponse,
     BillingUsageResponse,
+    CardTrialUnavailableResponse,
+    IntroductoryEndResponse,
+    NoCardClaimRequest,
+    NoCardClaimResponse,
+    NoCardOfferResponse,
     SubscriptionChangeResponse,
     SubscriptionCreateRequest,
     TopupPurchaseRequest,
+    WorkspaceCapabilityResponse,
+    WorkspaceEntitlementResponse,
 )
 from app.domain.billing.service import (
     BillingConflictError,
@@ -111,6 +132,8 @@ from app.domain.billing.webhooks import (
     process_razorpay_webhook,
     verify_razorpay_signature,
 )
+from app.domain.entitlements.service import resolve_workspace_entitlement
+from app.domain.entitlements.types import STATUS_RESOLVED
 from app.models.billing import BillingAccount, PendingActivation
 from app.models.user import User
 
@@ -145,10 +168,18 @@ def _safe_commercial_errors() -> Iterator[None]:
         TrialUnavailableError,
         IdempotencyConflictError,
         BillingConflictError,
+        IntroductoryAccessError,
     ) as exc:
         raise_api_error(409, str(exc), cause=exc)
     except BillingProviderError as exc:
         raise_api_error(502, exc.code, cause=exc)
+    except CatalogUnavailableError as exc:
+        raise_api_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Commercial catalog unavailable",
+            code=str(exc),
+            cause=exc,
+        )
 
 
 def _activation_status_code(activation: ActivationResponse) -> int:
@@ -218,6 +249,7 @@ async def _run_intent(
 
 @router.get("/billing/catalog", response_model=BillingCatalogResponse)
 async def get_catalog(
+    session: Session,
     country: Annotated[str | None, Query(max_length=2)] = None,
 ) -> BillingCatalogResponse:
     """The PUBLIC commercial catalog (invariant 5 exception by design).
@@ -229,7 +261,44 @@ async def get_catalog(
     config-owned international preview region, and a purchase must still submit
     its own ISO country.
     """
-    return public_catalog(country)
+    with _safe_commercial_errors():
+        return await public_catalog(session, country)
+
+
+@router.get(
+    "/workspaces/{workspace_id}/entitlements",
+    response_model=WorkspaceEntitlementResponse,
+)
+async def get_workspace_entitlements(
+    workspace_id: Annotated[uuid.UUID, PathParam()],
+    ctx: Annotated[WorkspaceContext, Depends(require_workspace_member)],
+    session: Session,
+) -> WorkspaceEntitlementResponse:
+    """Member-safe effective capability boundary with safe provenance only."""
+    if ctx.workspace_id != workspace_id:
+        raise_api_error(403, "Workspace access denied")
+    entitlement = await resolve_workspace_entitlement(
+        session, workspace_id=ctx.workspace_id, at=datetime.now(UTC)
+    )
+    return WorkspaceEntitlementResponse(
+        workspace_id=ctx.workspace_id,
+        status=entitlement.status,
+        registry_revision=entitlement.registry_revision,
+        entitlement_lifecycle_version=entitlement.entitlement_lifecycle_version,
+        valid_until=entitlement.valid_until,
+        capabilities=[
+            WorkspaceCapabilityResponse(
+                key=capability.key,
+                type=capability.capability_type.value,
+                value=capability.value,
+                valid_until=capability.next_change_at,
+                provenance="effective_grant",
+            )
+            for capability in entitlement.capabilities
+        ]
+        if entitlement.status == STATUS_RESOLVED
+        else [],
+    )
 
 
 @router.get("/billing/entitlement", response_model=BillingEntitlementResponse)
@@ -251,6 +320,71 @@ async def get_usage(user: CurrentUser, session: Session) -> BillingUsageResponse
     """
     account = await owned_account(session, user)
     return await account_usage(session, account=account, at=datetime.now(UTC))
+
+
+@router.get("/billing/early-access", response_model=NoCardOfferResponse)
+async def get_early_access(user: CurrentUser, session: Session) -> NoCardOfferResponse:
+    account = await owned_account(session, user)
+    state = await offer_state(
+        session, account=account, user=user, now=datetime.now(UTC)
+    )
+    return NoCardOfferResponse(
+        campaign_id=state.campaign_id,
+        status=state.status,
+        tier_key=state.tier_key,
+        duration_days=state.duration_days,
+        eligibility_policy=state.eligibility_policy,
+        operator_code_allowed=state.operator_code_allowed,
+        unavailable_reason=state.unavailable_reason,
+    )
+
+
+@router.post("/billing/early-access/claim", response_model=NoCardClaimResponse)
+async def post_early_access_claim(
+    payload: NoCardClaimRequest,
+    user: CurrentUser,
+    session: Session,
+    idempotency_key: IdempotencyKey,
+) -> NoCardClaimResponse:
+    with _safe_commercial_errors():
+        account = await owned_account(session, user)
+        result = await claim_introductory_access(
+            session,
+            account=account,
+            user=user,
+            campaign_id=payload.campaign_id,
+            idempotency_key=idempotency_key,
+            terms_consent=payload.terms_consent,
+            data_sharing_consent=payload.data_sharing_consent,
+            operator_code=payload.operator_code,
+        )
+        return NoCardClaimResponse(
+            campaign_id=result.campaign_id,
+            grant_id=result.grant_id,
+            starts_at=result.starts_at,
+            expires_at=result.expires_at,
+        )
+
+
+@router.delete("/billing/early-access", response_model=IntroductoryEndResponse)
+async def delete_early_access(
+    user: CurrentUser, session: Session, idempotency_key: IdempotencyKey
+) -> IntroductoryEndResponse:
+    with _safe_commercial_errors():
+        account = await owned_account(session, user)
+        ended_at = await end_introductory_access(
+            session,
+            account=account,
+            user=user,
+            idempotency_key=idempotency_key,
+        )
+        return IntroductoryEndResponse(ended_at=ended_at)
+
+
+@router.get("/billing/card-trial/quote", response_model=CardTrialUnavailableResponse)
+async def get_card_trial_quote(user: CurrentUser) -> CardTrialUnavailableResponse:
+    del user
+    return CardTrialUnavailableResponse()
 
 
 @router.post(
@@ -290,7 +424,8 @@ async def post_subscription(
         if replayed is not None:
             return replayed
         await _reject_existing_base(session, account)
-        intent = resolve_base_intent(
+        intent = await resolve_base_intent(
+            session,
             catalog_key=payload.catalog_key,
             credential_mode=payload.credential_mode,
             country_code=payload.country_code,
@@ -339,7 +474,8 @@ async def post_addon(
         if replayed is not None:
             return replayed
         await _reject_existing_addon(session, account, payload.catalog_key)
-        intent = resolve_addon_intent(
+        intent = await resolve_addon_intent(
+            session,
             catalog_key=payload.catalog_key,
             quantity=payload.quantity,
             country_code=_purchase_country(account),
@@ -389,7 +525,8 @@ async def post_topup(
         if replayed is not None:
             return replayed
         await _require_live_base(session, account)
-        intent = resolve_topup_intent(
+        intent = await resolve_topup_intent(
+            session,
             catalog_key=payload.catalog_key,
             quantity=payload.quantity,
             country_code=_purchase_country(account),

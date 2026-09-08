@@ -14,12 +14,17 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.connectors.answer_engines.contracts import AnswerEngineRequest
 from app.connectors.answer_engines.errors import ProviderError
 from app.connectors.answer_engines.factory import build_adapter
+from app.connectors.app_model_transport import (
+    AppModelJsonTransport,
+    CurlAppModelJsonTransport,
+)
 from app.core.config.provider_catalog import (
     CREDENTIAL_SOURCE_BYOK,
     ERROR_PARSE,
@@ -46,8 +51,17 @@ from app.domain.billing.schemas import (
     ProviderConnectionStatesResponse,
     ProviderProbeResponse,
 )
+from app.domain.providers.app_route_probes import probe_app_routes
+from app.domain.providers.connection_updates import (
+    InvalidAppModelDestinationError,
+    apply_scalar_updates,
+    build_app_routes,
+    ensure_app_features_available,
+    replace_app_routes,
+)
 from app.domain.providers.credentials import connection_paused
 from app.domain.providers.schemas import (
+    ProviderAppRouteResponse,
     ProviderConnectionCreate,
     ProviderConnectionResponse,
     ProviderConnectionTestResponse,
@@ -65,6 +79,10 @@ from app.models.workspace import Workspace
 
 class ProviderConnectionNotFoundError(LookupError):
     """Raised when a connection is missing or not in the caller's workspace."""
+
+
+class ProviderConnectionInUseError(RuntimeError):
+    """Raised when immutable provenance still references a connection."""
 
 
 class InvalidRouteError(ValueError):
@@ -95,7 +113,10 @@ def _connection_query():
     """
     return (
         select(ProviderConnection)
-        .options(selectinload(ProviderConnection.routes))
+        .options(
+            selectinload(ProviderConnection.routes),
+            selectinload(ProviderConnection.app_routes),
+        )
         .join(Workspace, Workspace.id == ProviderConnection.workspace_id)
         .where(
             ProviderConnection.credential_source == CREDENTIAL_SOURCE_BYOK,
@@ -120,6 +141,23 @@ def connection_to_response(
         last_test_status=connection.last_test_status,
         routes=[
             ProviderRouteResponse.model_validate(route) for route in connection.routes
+        ],
+        app_routes=[
+            ProviderAppRouteResponse(
+                id=route.id,
+                feature=route.feature,
+                protocol=route.protocol,
+                model=route.model,
+                api_base_url=route.api_base_url,
+                active=route.active,
+                verified=(
+                    route.probed_revision == route.revision
+                    and route.probed_credential_revision
+                    == connection.credential_revision
+                ),
+                probed_at=route.probed_at,
+            )
+            for route in connection.app_routes
         ],
         created_at=connection.created_at,
         updated_at=connection.updated_at,
@@ -187,11 +225,20 @@ async def create_connection(
     workspace_id: uuid.UUID,
     payload: ProviderConnectionCreate,
 ) -> ProviderConnection:
+    workspace = await session.get(Workspace, workspace_id)
+    if workspace is not None and workspace.is_system:
+        raise InvalidProviderEndpointError(
+            "Platform metadata cannot be created through the customer "
+            "credential service"
+        )
     _require_approved_endpoint(payload.transport_provider, payload.base_url)
     routes = _build_routes(
         workspace_id=workspace_id,
         transport_provider=payload.transport_provider,
         items=payload.routes,
+    )
+    await ensure_app_features_available(
+        session, workspace_id=workspace_id, items=payload.app_routes
     )
     connection = ProviderConnection(
         workspace_id=workspace_id,
@@ -201,6 +248,9 @@ async def create_connection(
         api_key_encrypted=encrypt_secret(payload.api_key.strip()),
         active=payload.active,
         routes=routes,
+        app_routes=build_app_routes(
+            workspace_id=workspace_id, items=payload.app_routes
+        ),
     )
     session.add(connection)
     await session.commit()
@@ -222,29 +272,39 @@ def _apply_endpoint_update(
         connection.transport_provider
     )
     has_fresh_key = bool(payload.api_key and payload.api_key.strip())
-    if new_destination != old_destination and not has_fresh_key:
+    if new_destination != old_destination and (
+        not has_fresh_key or not payload.confirm_destination_change
+    ):
         raise InvalidProviderEndpointError(
-            "Changing a provider endpoint requires a fresh API key"
+            "Changing a provider endpoint requires a fresh API key and confirmation"
         )
     connection.base_url = payload.base_url
 
 
-def _apply_connection_update(
-    connection: ProviderConnection, payload: ProviderConnectionUpdate
+async def _apply_connection_update(
+    session: AsyncSession,
+    connection: ProviderConnection,
+    payload: ProviderConnectionUpdate,
 ) -> None:
-    if payload.label is not None:
-        connection.label = payload.label
     _apply_endpoint_update(connection, payload)
-    if payload.active is not None:
-        connection.active = payload.active
-    if payload.api_key is not None and payload.api_key.strip():
-        connection.api_key_encrypted = encrypt_secret(payload.api_key.strip())
+    apply_scalar_updates(connection, payload)
     if payload.routes is not None:
         connection.routes = _build_routes(
             workspace_id=connection.workspace_id,
             transport_provider=connection.transport_provider,
             items=payload.routes,
         )
+    if payload.app_routes is not None:
+        try:
+            await replace_app_routes(
+                session,
+                connection=connection,
+                items=payload.app_routes,
+                fresh_key=bool(payload.api_key and payload.api_key.strip()),
+                confirmed=payload.confirm_destination_change,
+            )
+        except InvalidAppModelDestinationError as exc:
+            raise InvalidProviderEndpointError(str(exc)) from exc
 
 
 async def update_connection(
@@ -263,7 +323,7 @@ async def update_connection(
             "This connection uses a retired transport and is historical and "
             "read-only; create a new direct connection instead."
         )
-    _apply_connection_update(connection, payload)
+    await _apply_connection_update(session, connection, payload)
     await session.commit()
     return await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id
@@ -291,7 +351,13 @@ async def delete_connection(
         )
     )
     await session.delete(connection)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise ProviderConnectionInUseError(
+            "Connection is referenced by immutable execution evidence"
+        ) from exc
 
 
 async def run_connection_test(
@@ -299,6 +365,7 @@ async def run_connection_test(
     *,
     workspace_id: uuid.UUID,
     connection_id: uuid.UUID,
+    app_transport: AppModelJsonTransport | None = None,
 ) -> ProviderConnectionTestResponse:
     """Perform a live-ish connectivity probe through the adapter.
 
@@ -323,6 +390,14 @@ async def run_connection_test(
             "This connection uses a retired transport and is historical and "
             "read-only; create a new direct connection instead."
         )
+    if connection.app_routes:
+        app_result = await probe_app_routes(
+            session,
+            connection=connection,
+            app_transport=app_transport or CurlAppModelJsonTransport(),
+        )
+        if app_result is not None:
+            return app_result
     _require_approved_endpoint(transport, connection.base_url)
     # Connectivity probes use the exact approved route.
     logical_engine = default_probe_engine(transport)

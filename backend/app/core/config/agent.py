@@ -46,6 +46,9 @@ AGENT_LIST_DEFAULT_LIMIT: Final = 25
 AGENT_LIST_MAX_LIMIT: Final = 100
 AGENT_OBJECTIVE_MAX_CHARS: Final = 2_000
 AGENT_IDEMPOTENCY_KEY_MAX_CHARS: Final = 128
+# Narration is one bounded leaf call. Evidence beyond this limit is withheld
+# rather than allowing queue payload growth to become unbounded model spend.
+AGENT_NARRATION_INPUT_MAX_CHARS: Final = 48_000
 
 
 @dataclass(frozen=True, slots=True)

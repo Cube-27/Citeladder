@@ -31,6 +31,14 @@ type ProviderRouteInput = {
   is_default?: boolean;
 };
 
+export type ProviderAppRouteInput = {
+  feature: 'content' | 'growth_agent';
+  model: string;
+  api_base_url: string;
+  protocol?: 'openai_chat';
+  active?: boolean;
+};
+
 type ProviderConnectionInput = {
   transport_provider: TransportProvider;
   api_key: string;
@@ -38,6 +46,8 @@ type ProviderConnectionInput = {
   label?: string;
   active?: boolean;
   routes?: ProviderRouteInput[];
+  app_routes?: ProviderAppRouteInput[];
+  confirm_destination_change?: boolean;
 };
 
 export const providersApi = {

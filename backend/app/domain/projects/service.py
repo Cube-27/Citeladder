@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -51,6 +52,10 @@ from app.models.prompt import PromptSet
 
 class ProjectNotFoundError(LookupError):
     """Raised when a project is missing or not in the caller's workspace."""
+
+
+class ProjectInUseError(RuntimeError):
+    """Raised when immutable evidence prevents hard-deleting a project."""
 
 
 def brand_logo_url(project_id: uuid.UUID) -> str:
@@ -392,4 +397,10 @@ async def delete_project(
         session, workspace_id=workspace_id, project_id=project_id
     )
     await session.delete(project)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise ProjectInUseError(
+            "Project is referenced by immutable execution evidence"
+        ) from exc

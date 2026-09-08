@@ -65,11 +65,24 @@ class InvalidWebhookError(ValueError):
 
 
 def verify_razorpay_signature(raw_body: bytes, signature: str) -> bool:
-    secret = billing_settings.razorpay_webhook_secret.get_secret_value()
-    if not secret or not signature or len(signature) > 256:
+    if not signature or len(signature) > 256:
         return False
-    expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, signature.strip())
+    supplied = signature.strip()
+    if len(supplied) != 64 or any(
+        character not in "0123456789abcdefABCDEF" for character in supplied
+    ):
+        return False
+    secrets = (
+        billing_settings.razorpay_webhook_secret.get_secret_value(),
+        billing_settings.razorpay_webhook_previous_secret.get_secret_value(),
+    )
+    return any(
+        secret
+        and hmac.compare_digest(
+            hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest(), supplied
+        )
+        for secret in secrets
+    )
 
 
 def _parse_payload(raw_body: bytes) -> tuple[dict[str, Any], str]:
@@ -194,6 +207,18 @@ async def _record_event(
     )
     if inserted_id is None:
         await session.rollback()
+        existing = await session.scalar(
+            select(BillingWebhookEvent).where(
+                BillingWebhookEvent.provider == PROVIDER_RAZORPAY,
+                BillingWebhookEvent.external_event_id == event_id,
+            )
+        )
+        digest = hashlib.sha256(raw_body).hexdigest()
+        if existing is not None and existing.payload_sha256 != digest:
+            existing.processing_state = "quarantined"
+            existing.error_code = "event_id_digest_conflict"
+            await session.commit()
+            raise InvalidWebhookError("event_id_digest_conflict")
         return None
     event = await session.get(BillingWebhookEvent, inserted_id)
     if event is None:  # pragma: no cover
@@ -205,6 +230,7 @@ async def _finish(
     session: AsyncSession, event: BillingWebhookEvent, result_code: str
 ) -> str:
     event.result_code = result_code
+    event.processing_state = "completed"
     event.processed_at = datetime.now(UTC)
     await session.commit()
     return result_code

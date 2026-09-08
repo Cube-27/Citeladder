@@ -33,6 +33,7 @@ from app.connectors.discovery_models.contracts import (
     DiscoveryResponse,
 )
 from app.connectors.discovery_models.factory import build_discovery_client
+from app.core.config.app_models import APP_FEATURE_CONTENT
 from app.core.config.content import (
     CONTENT_QUEUE_SPEC,
     content_settings,
@@ -47,8 +48,22 @@ from app.core.config.task_queue import (
 )
 from app.core.database import SessionLocal
 from app.core.telemetry import configure_logging, instrument_worker
+from app.domain.billing.catalog_revisions import (
+    CatalogUnavailableError,
+    ai_credit_policy_for_revision,
+)
 from app.domain.content.context_builder import ContentContext
 from app.domain.content.message_builder import build_messages
+from app.domain.entitlements.enforcement import (
+    CapabilityNotGrantedError,
+    require_workspace_capability,
+)
+from app.domain.entitlements.ledger import release_unused_reservation
+from app.domain.entitlements.metered import settle_metered_usage
+from app.domain.providers.app_routes import (
+    AppModelRouteUnavailableError,
+    resolve_app_model_route,
+)
 from app.models.content import ContentGeneration, ContentGenerationAttempt
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.drain import DrainableWorkerMixin
@@ -56,8 +71,11 @@ from app.workers.drain import DrainableWorkerMixin
 logger = logging.getLogger("app.workers.content_worker")
 
 # Attempt-row statuses (what happened on ONE actual HTTP call).
+ATTEMPT_STATUS_DISPATCHED = "dispatched"
 ATTEMPT_STATUS_SUCCEEDED = "succeeded"
 ATTEMPT_STATUS_FAILED = "failed"
+USAGE_COMPLETE = "complete"
+USAGE_UNKNOWN = "unknown"
 
 # OpenAI-compatible truncation finish reason: output hit ``max_tokens``.
 FINISH_REASON_LENGTH = "length"
@@ -73,30 +91,93 @@ class AttemptOutcome:
 
     response: DiscoveryResponse | None
     error: ProviderError | None
+    observed_usage: dict | None = None
 
     @property
     def succeeded(self) -> bool:
         return self.response is not None
 
 
-def _attempt_record(
-    row: ContentGeneration, *, attempt_number: int, outcome: AttemptOutcome
-) -> ContentGenerationAttempt:
-    response, error = outcome.response, outcome.error
-    return ContentGenerationAttempt(
-        content_generation_id=row.id,
-        attempt_number=attempt_number,
-        status=(
-            ATTEMPT_STATUS_SUCCEEDED if outcome.succeeded else ATTEMPT_STATUS_FAILED
-        ),
-        requested_model=row.requested_model,
-        returned_model=response.returned_model if response is not None else None,
-        finish_reason=response.finish_reason if response is not None else None,
-        error_code=error.error_code if error is not None else "",
-        error_detail=str(error)[:2000] if error is not None else "",
-        usage=dict(response.usage) if response is not None else None,
-        latency_ms=response.latency_ms if response is not None else None,
+def _usage_for_outcome(outcome: AttemptOutcome) -> dict | None:
+    if outcome.observed_usage is not None:
+        return dict(outcome.observed_usage)
+    if outcome.response is not None:
+        return dict(outcome.response.usage)
+    return None
+
+
+async def _settle_platform_attempt(
+    session,
+    *,
+    row: ContentGeneration,
+    attempt: ContentGenerationAttempt,
+    outcome: AttemptOutcome,
+    now: datetime,
+) -> None:
+    if row.funding_source != "platform" or row.reservation_id is None:
+        attempt.settlement_status = "zero_debit"
+        return
+    if not row.policy_revision:
+        await release_unused_reservation(
+            session,
+            reservation_id=row.reservation_id,
+            idempotency_key=f"content:{row.id}:policy-unavailable",
+            at=now,
+        )
+        attempt.settlement_status = "policy_unavailable"
+        return
+    try:
+        policy = await ai_credit_policy_for_revision(session, row.policy_revision)
+    except CatalogUnavailableError:
+        attempt.settlement_status = "policy_unavailable"
+        return
+    rate = policy.rate(feature=APP_FEATURE_CONTENT, model=row.requested_model)
+    if rate is None:
+        await release_unused_reservation(
+            session,
+            reservation_id=row.reservation_id,
+            idempotency_key=f"content:{row.id}:rate-unavailable",
+            at=now,
+        )
+        attempt.settlement_status = "policy_unavailable"
+        return
+    settlement = await settle_metered_usage(
+        session,
+        reservation_id=row.reservation_id,
+        dispatch_key=str(attempt.dispatch_id),
+        attempt=attempt.attempt_number,
+        charged_units=rate.charge(_usage_for_outcome(outcome) or {}),
+        unknown_usage_charge=rate.unknown_usage_charge,
+        idempotency_key=f"content:{row.id}:settle",
+        at=now,
     )
+    attempt.settled_units = settlement.charged_units
+    attempt.absorbed_units = settlement.absorbed_units
+    attempt.settlement_status = "settled"
+
+
+def _apply_attempt_outcome(
+    attempt: ContentGenerationAttempt, outcome: AttemptOutcome, *, now: datetime
+) -> None:
+    response, error = outcome.response, outcome.error
+    usage = _usage_for_outcome(outcome)
+    attempt.status = (
+        ATTEMPT_STATUS_SUCCEEDED if outcome.succeeded else ATTEMPT_STATUS_FAILED
+    )
+    attempt.returned_model = response.returned_model if response is not None else None
+    attempt.finish_reason = response.finish_reason if response is not None else None
+    attempt.error_code = error.error_code if error is not None else ""
+    attempt.error_detail = str(error)[:2000] if error is not None else ""
+    attempt.usage = usage
+    usage_complete = bool(
+        usage
+        and isinstance(usage.get("input_tokens", usage.get("prompt_tokens")), int)
+        and isinstance(usage.get("output_tokens", usage.get("completion_tokens")), int)
+    )
+    attempt.usage_completeness = USAGE_COMPLETE if usage_complete else USAGE_UNKNOWN
+    attempt.latency_ms = response.latency_ms if response is not None else None
+    attempt.completed_at = now
+    attempt.settlement_status = "not_applicable"
 
 
 def _apply_success(
@@ -217,7 +298,65 @@ class ContentWorker(DrainableWorkerMixin):
                     ),
                 )
 
+    async def _route_client(self, claimed: ContentGeneration):
+        if claimed.funding_source == "platform":
+            return build_discovery_client(transport=self._transport)
+        async with self._session_factory() as session:
+            await require_workspace_capability(
+                session, workspace_id=claimed.workspace_id, key="content_creation"
+            )
+            route = await resolve_app_model_route(
+                session,
+                workspace_id=claimed.workspace_id,
+                feature=APP_FEATURE_CONTENT,
+                at=_utcnow(),
+            )
+        frozen = (
+            route.route_id,
+            route.connection_id,
+            route.route_revision,
+            route.credential_revision,
+            route.model,
+        )
+        expected = (
+            claimed.route_id,
+            claimed.connection_id,
+            claimed.route_revision,
+            claimed.credential_revision,
+            claimed.requested_model,
+        )
+        if frozen != expected:
+            raise AppModelRouteUnavailableError(
+                "The admitted app model route changed before dispatch"
+            )
+        if self._transport is not None:
+            # Deterministic test seam after the same exact route/key recheck.
+            return build_discovery_client(transport=self._transport)
+        return build_discovery_client(app_route=route)
+
+    async def _route_failure(
+        self, claimed: ContentGeneration, dispatch_id: uuid.UUID, exc: Exception
+    ) -> None:
+        error = (
+            exc
+            if isinstance(exc, ProviderError)
+            else ProviderError(
+                str(exc),
+                error_code="credentials_unavailable",
+                retryable=False,
+            )
+        )
+        await self.finalize_attempt(
+            generation_id=claimed.id,
+            dispatch_id=dispatch_id,
+            owner=self.owner,
+            outcome=AttemptOutcome(response=None, error=error),
+        )
+
     async def _run_provider_call(self, claimed: ContentGeneration) -> None:
+        dispatch_id = await self._start_dispatch(claimed.id)
+        if dispatch_id is None:
+            return
         # Rebuild the exact frozen messages from the immutable inputs (the
         # snapshot was truncated for provenance; the digest pins the content).
         context = ContentContext.from_snapshot(claimed.context_snapshot or {})
@@ -233,16 +372,16 @@ class ContentWorker(DrainableWorkerMixin):
             max_output_tokens=content_settings.max_output_tokens,
         )
 
-        # Fresh client per attempt; the SecretStr key resolves inside the
-        # factory at call time and never touches this row (invariant 6).
+        # Resolve the exact workspace customer route at dispatch. Missing,
+        # replaced, revoked, or unprobed routes refuse; never use env keys.
         try:
-            client = build_discovery_client(transport=self._transport)
-        except ProviderError as exc:
-            # No HTTP call happened — a construction failure is pure
-            # misconfiguration, so it must not consume the retry budget or
-            # append an attempt row (finalize_attempt is reserved for actual
-            # provider calls).
-            await self._fail_without_attempt(generation_id=claimed.id, error=exc)
+            client = await self._route_client(claimed)
+        except (
+            AppModelRouteUnavailableError,
+            CapabilityNotGrantedError,
+            ProviderError,
+        ) as exc:
+            await self._route_failure(claimed, dispatch_id, exc)
             return
 
         heartbeat = asyncio.create_task(self._heartbeat_loop(claimed.id))
@@ -269,9 +408,13 @@ class ContentWorker(DrainableWorkerMixin):
                     error_code=ERROR_PARSE,
                     retryable=True,
                 ),
+                observed_usage=dict(ok_response.usage),
             )
         await self.finalize_attempt(
-            generation_id=claimed.id, owner=self.owner, outcome=outcome
+            generation_id=claimed.id,
+            dispatch_id=dispatch_id,
+            owner=self.owner,
+            outcome=outcome,
         )
 
     async def _heartbeat_loop(
@@ -294,6 +437,44 @@ class ContentWorker(DrainableWorkerMixin):
                 )
 
     # --- Atomic attempt + terminal accounting -----------------------------
+
+    async def _start_dispatch(self, generation_id: uuid.UUID) -> uuid.UUID | None:
+        """Persist the immutable dispatch receipt before provider I/O."""
+        async with self._session_factory() as session:
+            row = await session.get(
+                ContentGeneration, generation_id, with_for_update=True
+            )
+            if (
+                row is None
+                or row.lease_owner != self.owner
+                or row.status in TASK_TERMINAL_STATUSES
+                or row.funding_source not in {"customer_byok", "platform"}
+            ):
+                await session.commit()
+                return None
+            attempt_number = row.attempt_count + 1
+            attempt = ContentGenerationAttempt(
+                content_generation_id=row.id,
+                attempt_number=attempt_number,
+                status=ATTEMPT_STATUS_DISPATCHED,
+                funding_source=row.funding_source,
+                route_id=row.route_id,
+                connection_id=row.connection_id,
+                route_revision=row.route_revision,
+                credential_revision=row.credential_revision,
+                reservation_id=row.reservation_id,
+                hold_units=row.customer_charge_cap or 0,
+                policy_revision=row.policy_revision,
+                customer_charge_cap=row.customer_charge_cap,
+                requested_model=row.requested_model,
+                usage_completeness=USAGE_UNKNOWN,
+                settlement_status="not_applicable",
+                dispatched_at=_utcnow(),
+            )
+            row.attempt_count = attempt_number
+            session.add(attempt)
+            await session.commit()
+            return attempt.id
 
     async def _fail_without_attempt(
         self, *, generation_id: uuid.UUID, error: ProviderError
@@ -330,6 +511,7 @@ class ContentWorker(DrainableWorkerMixin):
         generation_id: uuid.UUID,
         owner: str,
         outcome: AttemptOutcome,
+        dispatch_id: uuid.UUID | None = None,
     ) -> bool:
         """ONE locked transaction per actual HTTP call (the only writer).
 
@@ -358,10 +540,33 @@ class ContentWorker(DrainableWorkerMixin):
                 await session.commit()
                 return False
 
-            attempt_number = row.attempt_count + 1
-            row.attempt_count = attempt_number
-            session.add(
-                _attempt_record(row, attempt_number=attempt_number, outcome=outcome)
+            attempt = (
+                await session.get(
+                    ContentGenerationAttempt, dispatch_id, with_for_update=True
+                )
+                if dispatch_id is not None
+                else None
+            )
+            if attempt is None:
+                attempt_number = row.attempt_count + 1
+                row.attempt_count = attempt_number
+                attempt = ContentGenerationAttempt(
+                    content_generation_id=row.id,
+                    attempt_number=attempt_number,
+                    status=ATTEMPT_STATUS_DISPATCHED,
+                    funding_source=row.funding_source,
+                    route_id=row.route_id,
+                    connection_id=row.connection_id,
+                    route_revision=row.route_revision,
+                    credential_revision=row.credential_revision,
+                    requested_model=row.requested_model,
+                )
+                session.add(attempt)
+            else:
+                attempt_number = attempt.attempt_number
+            _apply_attempt_outcome(attempt, outcome, now=now)
+            await _settle_platform_attempt(
+                session, row=row, attempt=attempt, outcome=outcome, now=now
             )
 
             if cancelled:

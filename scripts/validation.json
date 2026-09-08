@@ -23,7 +23,10 @@
         ".github/workflows/ci.yml",
         ".github/workflows/compose-smoke.yml"
       ],
-      "backendTests": ["tests/unit/test_static_analysis_tools.py", "tests/unit/test_check_complexity.py"],
+      "backendTests": [
+        "tests/unit/test_static_analysis_tools.py",
+        "tests/unit/test_check_complexity.py"
+      ],
       "frontendTests": ["scripts/check-frontend-complexity.test.ts", "scripts/check-jscpd.test.ts"]
     },
     {
@@ -79,7 +82,10 @@
     },
     {
       "sources": ["migrations/**", "backend/alembic.ini"],
-      "backendTests": ["tests/unit/test_migration_revision_baseline.py", "tests/component/test_health.py"]
+      "backendTests": [
+        "tests/unit/test_migration_revision_baseline.py",
+        "tests/component/test_health.py"
+      ]
     },
     {
       "sources": [
@@ -113,7 +119,11 @@
       "frontendTests": ["scripts/check-frontend-complexity.test.ts"]
     },
     {
-      "sources": ["frontend/scripts/check-jscpd.mjs", "frontend/scripts/jscpd-baseline.json", "jscpd.json"],
+      "sources": [
+        "frontend/scripts/check-jscpd.mjs",
+        "frontend/scripts/jscpd-baseline.json",
+        "jscpd.json"
+      ],
       "frontendTests": ["scripts/check-jscpd.test.ts"]
     },
     {
@@ -134,9 +144,12 @@
         "e2e/site-intelligence.spec.ts"
       ]
     },
-
     {
-      "sources": ["backend/app/main.py", "backend/app/api/deps.py", "backend/app/api/request_bodies.py"],
+      "sources": [
+        "backend/app/main.py",
+        "backend/app/api/deps.py",
+        "backend/app/api/request_bodies.py"
+      ],
       "backendTests": [
         "tests/component/test_health.py",
         "tests/component/test_error_envelope_api.py",
@@ -296,10 +309,7 @@
         "backend/app/core/config/commerce_catalog.py",
         "backend/evaluations/commerce_catalog.py"
       ],
-      "backendTests": [
-        "tests/unit/test_commerce_*.py",
-        "tests/component/test_commerce_*.py"
-      ]
+      "backendTests": ["tests/unit/test_commerce_*.py", "tests/component/test_commerce_*.py"]
     },
     {
       "sources": [
@@ -405,7 +415,10 @@
         "backend/app/connectors/billing/**",
         "backend/app/api/billing.py",
         "backend/app/api/usage_limits.py",
-        "backend/app/models/billing.py"
+        "backend/app/models/billing.py",
+        "backend/app/models/billing_journeys.py",
+        "backend/app/models/billing_payment.py",
+        "backend/scripts/billing_admin.py"
       ],
       "backendTests": [
         "tests/unit/test_billing*.py",
@@ -416,7 +429,9 @@
         "tests/component/test_agent_worker.py",
         "tests/component/test_projects_prompts_api.py",
         "tests/component/test_prompt_generation_api.py",
-        "tests/component/test_traffic_sync_api.py"
+        "tests/component/test_traffic_sync_api.py",
+        "tests/component/test_billing_catalog_revisions.py",
+        "tests/component/test_billing_phase4_journeys.py"
       ]
     },
     {
@@ -496,21 +511,35 @@
         "backend/app/connectors/answer_engines/**",
         "backend/app/connectors/__init__.py",
         "backend/app/api/provider_connections.py",
-        "backend/app/models/provider.py"
+        "backend/app/models/provider.py",
+        "backend/app/connectors/app_model.py",
+        "backend/app/connectors/app_model_config.py",
+        "backend/app/connectors/app_model_transport.py",
+        "backend/scripts/provision_platform_provider_connections.py"
       ],
       "backendTests": [
         "tests/unit/test_answer_engine_*.py",
         "tests/unit/test_provider_*.py",
         "tests/unit/test_model_registry.py",
         "tests/component/test_provider_*.py",
-        "tests/component/test_brand_discovery_completion.py"
+        "tests/component/test_brand_discovery_completion.py",
+        "tests/unit/test_app_model_transport.py",
+        "tests/unit/test_provision_platform_provider_connections.py",
+        "tests/component/test_content_api.py",
+        "tests/component/test_growth_agent_api.py",
+        "tests/component/test_agent_worker.py"
       ]
     },
     {
-      "sources": ["backend/app/__init__.py", "backend/app/api/__init__.py", "backend/app/core/__init__.py", "backend/app/domain/__init__.py", "backend/app/workers/__init__.py"],
+      "sources": [
+        "backend/app/__init__.py",
+        "backend/app/api/__init__.py",
+        "backend/app/core/__init__.py",
+        "backend/app/domain/__init__.py",
+        "backend/app/workers/__init__.py"
+      ],
       "backendTests": ["tests/component/test_health.py"]
     },
-
     {
       "sources": [
         "frontend/app/(marketing)/**",
@@ -608,7 +637,12 @@
       "frontendE2E": ["e2e/visibility.spec.ts"]
     },
     {
-      "sources": ["frontend/app/(app)/runs/**", "frontend/components/runs/**", "frontend/lib/runs/**", "frontend/lib/sse/**"],
+      "sources": [
+        "frontend/app/(app)/runs/**",
+        "frontend/components/runs/**",
+        "frontend/lib/runs/**",
+        "frontend/lib/sse/**"
+      ],
       "frontendTests": [
         "app/(app)/runs/**/*.test.tsx",
         "components/runs/*.test.tsx",
@@ -619,7 +653,12 @@
       "frontendE2E": ["e2e/runs.spec.ts"]
     },
     {
-      "sources": ["frontend/app/(app)/prompts/**", "frontend/components/prompts/**", "frontend/lib/prompts/**", "frontend/lib/csv/**"],
+      "sources": [
+        "frontend/app/(app)/prompts/**",
+        "frontend/components/prompts/**",
+        "frontend/lib/prompts/**",
+        "frontend/lib/csv/**"
+      ],
       "frontendTests": [
         "app/(app)/prompts/*.test.tsx",
         "components/prompts/*.test.ts",
@@ -637,7 +676,11 @@
         "frontend/lib/api/schemas/commerce-suite.ts",
         "frontend/lib/api/query-keys/commerce.ts"
       ],
-      "frontendTests": ["components/products/*.test.tsx", "lib/products/*.test.ts", "lib/api/commerce.test.ts"]
+      "frontendTests": [
+        "components/products/*.test.tsx",
+        "lib/products/*.test.ts",
+        "lib/api/commerce.test.ts"
+      ]
     },
     {
       "sources": [
@@ -655,12 +698,20 @@
       "frontendE2E": ["e2e/opportunity-loop.spec.ts"]
     },
     {
-      "sources": ["frontend/app/(app)/content/**", "frontend/components/content/**", "frontend/lib/content/**"],
+      "sources": [
+        "frontend/app/(app)/content/**",
+        "frontend/components/content/**",
+        "frontend/lib/content/**"
+      ],
       "frontendTests": ["components/content/*.test.tsx", "lib/content/*.test.tsx"],
       "frontendE2E": ["e2e/content.spec.ts"]
     },
     {
-      "sources": ["frontend/app/(app)/demand/**", "frontend/components/demand/**", "frontend/lib/demand/**"],
+      "sources": [
+        "frontend/app/(app)/demand/**",
+        "frontend/components/demand/**",
+        "frontend/lib/demand/**"
+      ],
       "frontendTests": ["components/demand/*.test.tsx", "lib/demand/*.test.ts"]
     },
     {
@@ -681,7 +732,11 @@
       ]
     },
     {
-      "sources": ["frontend/app/(app)/ai-referrals/**", "frontend/components/ai-referrals/**", "frontend/lib/ai-referrals/**"],
+      "sources": [
+        "frontend/app/(app)/ai-referrals/**",
+        "frontend/components/ai-referrals/**",
+        "frontend/lib/ai-referrals/**"
+      ],
       "frontendTests": ["components/ai-referrals/*.test.tsx"]
     },
     {
@@ -711,7 +766,14 @@
         "components/billing/*.test.tsx",
         "lib/billing/*.test.ts"
       ],
-      "frontendE2E": ["e2e/content.spec.ts", "e2e/design-repair.spec.ts", "e2e/shell.spec.ts"]
+      "frontendE2E": [
+        "e2e/billing.spec.ts",
+        "e2e/content.spec.ts",
+        "e2e/design-repair.spec.ts",
+        "e2e/marketing-pages.spec.ts",
+        "e2e/providers.spec.ts",
+        "e2e/shell.spec.ts"
+      ]
     },
     {
       "sources": ["frontend/components/agent/**"],
@@ -720,7 +782,7 @@
     {
       "sources": ["frontend/components/providers/**", "frontend/lib/providers/**"],
       "frontendTests": ["components/providers/*.test.tsx", "lib/providers/*.test.ts"],
-      "frontendE2E": ["e2e/providers.spec.ts"]
+      "frontendE2E": ["e2e/billing.spec.ts", "e2e/providers.spec.ts"]
     },
     {
       "sources": ["frontend/lib/api/**", "frontend/lib/integrations/**"],

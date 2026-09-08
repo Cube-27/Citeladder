@@ -47,6 +47,7 @@ ALL_CAPABILITY_KEYS = (
     "history_window",
     "support_tier",
     "audit_credits",
+    "ai_credits",
     "project_slots",
     "prompt_slots",
     "monitored_urls",
@@ -240,7 +241,9 @@ class TestVocabulary:
         ):
             assert isinstance(vocabulary, frozenset)
             assert vocabulary
-        assert LEDGER_ENTRY_KINDS == frozenset({"reservation", "debit", "release"})
+        assert LEDGER_ENTRY_KINDS == frozenset(
+            {"reservation", "debit", "release", "refund"}
+        )
         assert CREDENTIAL_MODES == frozenset({"byok", "funded"})
 
 

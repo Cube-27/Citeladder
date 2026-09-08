@@ -24,7 +24,7 @@ import uuid
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -110,9 +110,11 @@ class _Claim:
     """The safe fields a claimed row contributes to the provider read."""
 
     pending_id: uuid.UUID
+    lease_token: uuid.UUID
     activation_kind: str
     external_reference: str
     created_at: datetime
+    attempt: int
 
 
 async def _claim_batch(
@@ -126,6 +128,12 @@ async def _claim_batch(
                 .where(
                     PendingActivation.status == ACTIVATION_PENDING,
                     PendingActivation.created_at <= now - stale_after,
+                    (PendingActivation.reconciliation_next_at.is_(None))
+                    | (PendingActivation.reconciliation_next_at <= now),
+                    (PendingActivation.reconciliation_lease_expires_at.is_(None))
+                    | (PendingActivation.reconciliation_lease_expires_at <= now),
+                    PendingActivation.reconciliation_attempts
+                    < billing_settings.reconciliation_max_attempts,
                 )
                 .order_by(PendingActivation.created_at)
                 .limit(batch_size)
@@ -135,15 +143,29 @@ async def _claim_batch(
         .scalars()
         .all()
     )
-    claims = tuple(
-        _Claim(
-            pending_id=row.id,
-            activation_kind=row.activation_kind,
-            external_reference=row.external_reference or "",
-            created_at=row.created_at,
+    claims_list: list[_Claim] = []
+    for row in rows:
+        token = uuid.uuid4()
+        row.reconciliation_attempts += 1
+        row.reconciliation_lease_token = token
+        row.reconciliation_lease_expires_at = now + timedelta(
+            seconds=billing_settings.reconciliation_lease_seconds
         )
-        for row in rows
-    )
+        row.reconciliation_next_at = now + timedelta(
+            seconds=billing_settings.reconciliation_backoff_base_seconds
+            * 2 ** min(row.reconciliation_attempts - 1, 10)
+        )
+        claims_list.append(
+            _Claim(
+                pending_id=row.id,
+                lease_token=token,
+                activation_kind=row.activation_kind,
+                external_reference=row.external_reference or "",
+                created_at=row.created_at,
+                attempt=row.reconciliation_attempts,
+            )
+        )
+    claims = tuple(claims_list)
     # Never hold a transaction across provider I/O (invariant 8).
     await session.commit()
     return claims
@@ -158,6 +180,20 @@ async def _fetch_provider_record(
     if claim.activation_kind == ACTIVATION_KIND_TOPUP:
         return await provider.fetch_payment(claim.external_reference)
     return await provider.fetch_subscription(claim.external_reference)
+
+
+async def _lock_owned_claim(session: AsyncSession, claim: _Claim) -> bool:
+    owned = await session.scalar(
+        select(PendingActivation.id)
+        .where(
+            PendingActivation.id == claim.pending_id,
+            PendingActivation.status == ACTIVATION_PENDING,
+            PendingActivation.reconciliation_lease_token == claim.lease_token,
+            PendingActivation.reconciliation_lease_expires_at > datetime.now(UTC),
+        )
+        .with_for_update()
+    )
+    return owned is not None
 
 
 def _authoritative_status(record: ProviderRecord) -> str:
@@ -214,8 +250,24 @@ async def _settle_claim(
         record = await _fetch_provider_record(provider, claim)
     except BillingProviderError as exc:
         if exc.retryable:
+            if not await _lock_owned_claim(session, claim):
+                await session.rollback()
+                return ReconciliationSummary(claimed=1, still_pending=1)
+            if claim.attempt >= billing_settings.reconciliation_max_attempts:
+                await _mark_terminal(
+                    session,
+                    claim.pending_id,
+                    status=ACTIVATION_ABANDONED,
+                    failure_code="reconciliation_attempts_exhausted",
+                    now=now,
+                )
+                return ReconciliationSummary(claimed=1, abandoned=1)
+            await session.rollback()
             return ReconciliationSummary(claimed=1, still_pending=1)
         record = None
+    if not await _lock_owned_claim(session, claim):
+        await session.rollback()
+        return ReconciliationSummary(claimed=1, still_pending=1)
     if record is None:
         if claim.created_at <= now - abandon_after:
             await _mark_terminal(

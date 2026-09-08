@@ -5,11 +5,16 @@
 > Store secrets directly in the deployment secret manager and mark only the
 > non-secret completion status here.
 
-Runtime authority is `backend/app/core/config/billing_catalog.py` and
-`billing_settings.py`, the billing domain and
-connector code, and `backend/scripts/provision_razorpay_plans.py`. Earlier V6/V8
-plans are archived historical context and do not override the shipped catalog or
-API contracts.
+Runtime commercial authority is the single published
+`BillingCatalogRevision`, validated by
+`backend/app/domain/billing/catalog_revisions.py`; emergency/provider readiness
+switches remain in `billing_settings.py`. The billing domain, connector code,
+`backend/scripts/billing_admin.py`, and
+`backend/scripts/provision_razorpay_plans.py` own their respective operations.
+Earlier V6/V8 plans and legacy config catalog builders are historical or
+provisioning compatibility context and do not override the published catalog or
+API contracts. Follow the tested command and incident procedures in
+[`billing-operator-guide.md`](billing-operator-guide.md).
 
 ## 1. Blocking commercial decisions
 
@@ -117,6 +122,7 @@ Secret values — install directly in the deployment secret manager:
 ```text
 BILLING_RAZORPAY_KEY_SECRET
 BILLING_RAZORPAY_WEBHOOK_SECRET
+BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET # only during the bounded rotation overlap
 ```
 
 Non-secret but environment-specific values:
@@ -335,7 +341,12 @@ General India launch approval/date:
 ```
 
 If any required approval, live lifecycle, webhook monitoring, or rollback control
-is missing, the correct state is `BILLING_CHECKOUT_ENABLED=false`. The signed
+is missing, the correct state is `BILLING_CHECKOUT_ENABLED=false`. That switch
+blocks new checkout but must not disable webhook ingestion or bounded
+reconciliation for already-created intents. A no-card campaign incident requires
+an independent reviewed catalog forward-publication with the campaign
+ended/disabled; the checkout switch does not control it. There is no in-place
+catalog rollback. The signed
 India launch record must show `BILLING_RAZORPAY_LIVE_READY=true` before checkout
 is set true. USD checkout additionally requires
 `BILLING_RAZORPAY_INTERNATIONAL_READY=true`; do not require that international

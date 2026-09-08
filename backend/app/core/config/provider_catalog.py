@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.entitlements import (
@@ -489,14 +490,9 @@ TELEMETRY_FUNDED_ADMISSION_DENIED: Final = "funded.execution.admission_denied"
 # The reserved system workspace holds the operator's platform-funded rows
 # (exactly one, enforced by the partial unique index on Workspace.is_system).
 SYSTEM_WORKSPACE_NAME: Final = "CiteLadder Platform (system)"
-# Environment variables the provisioning CLI reads platform keys from, keyed
-# by transport. The VALUES are secret material and are only ever accepted as
-# SecretStr, Fernet-encrypted before flush, and never printed or logged.
-PLATFORM_CREDENTIAL_ENV_VARS: Final[dict[str, str]] = {
-    TRANSPORT_OPENAI: "CITELADDER_PLATFORM_OPENAI_API_KEY",
-    TRANSPORT_ANTHROPIC: "CITELADDER_PLATFORM_ANTHROPIC_API_KEY",
-    TRANSPORT_GOOGLE: "CITELADDER_PLATFORM_GOOGLE_API_KEY",
-}
+# Platform keys live only in the deployment secret manager. Persisted platform
+# connections store an opaque non-secret reference supplied by the operator;
+# no config-owned environment-variable map or ciphertext fallback exists.
 
 
 # --- Retry / error classification tokens (recorded on tests + attempts) ---
@@ -539,6 +535,12 @@ class ProviderCatalogSettings(BaseSettings):
         "https://generativelanguage.googleapis.com/v1beta/interactions"
     )
     anthropic_messages_url: str = "https://api.anthropic.com/v1/messages"
+    platform_openai_credential_ref: str = ""
+    platform_openai_api_key: SecretStr = SecretStr("")
+    platform_anthropic_credential_ref: str = ""
+    platform_anthropic_api_key: SecretStr = SecretStr("")
+    platform_google_credential_ref: str = ""
+    platform_google_api_key: SecretStr = SecretStr("")
     anthropic_version: str = "2023-06-01"
     # Caps server-side web_search invocations per Anthropic request.
     anthropic_max_uses: int = 3
@@ -567,3 +569,32 @@ class ProviderCatalogSettings(BaseSettings):
 
 
 provider_catalog_settings = ProviderCatalogSettings()
+
+
+class PlatformCredentialUnavailableError(RuntimeError):
+    """An opaque platform reference has no matching deployment secret."""
+
+
+def resolve_platform_credential(transport_provider: str, reference: str) -> str:
+    """Resolve an opaque DB reference through deployment-owned secret config."""
+    configured = {
+        TRANSPORT_OPENAI: (
+            provider_catalog_settings.platform_openai_credential_ref,
+            provider_catalog_settings.platform_openai_api_key,
+        ),
+        TRANSPORT_ANTHROPIC: (
+            provider_catalog_settings.platform_anthropic_credential_ref,
+            provider_catalog_settings.platform_anthropic_api_key,
+        ),
+        TRANSPORT_GOOGLE: (
+            provider_catalog_settings.platform_google_credential_ref,
+            provider_catalog_settings.platform_google_api_key,
+        ),
+    }.get(transport_provider)
+    if configured is None:
+        raise PlatformCredentialUnavailableError("platform credential is unavailable")
+    configured_reference, secret = configured
+    value = secret.get_secret_value()
+    if not reference or reference != configured_reference.strip() or not value:
+        raise PlatformCredentialUnavailableError("platform credential is unavailable")
+    return value

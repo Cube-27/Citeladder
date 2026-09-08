@@ -27,6 +27,7 @@ from app.connectors.web_evidence.contracts import (
     FetchRequest,
     ResolvedTarget,
 )
+from app.core.config.provider_catalog import CREDENTIAL_SOURCE_BYOK
 from app.core.config.site_health_acquisition import FETCH_PURPOSE_ANALYZE
 from app.core.security import encrypt_secret
 from app.workers.audit import execution as audit_execution
@@ -53,7 +54,9 @@ def _context() -> types.SimpleNamespace:
     return types.SimpleNamespace(
         logical_engine="chatgpt",
         transport_provider="openai",
+        credential_source=CREDENTIAL_SOURCE_BYOK,
         api_key_encrypted=encrypt_secret("dev-fake-key-for-chatgpt"),
+        platform_credential_ref="",
         configuration={"country_code": "US"},
         base_url="",
     )

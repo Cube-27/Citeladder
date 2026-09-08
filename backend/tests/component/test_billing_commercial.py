@@ -33,6 +33,7 @@ from app.connectors.billing.base import (
     ProviderPayment,
     ProviderSubscription,
 )
+from app.core.config.billing_catalog import commercial_catalog
 from app.core.config.billing_contracts import (
     ACTIVATION_AUTHORITY_RECONCILIATION,
     ACTIVATION_AUTHORITY_WEBHOOK,
@@ -45,17 +46,24 @@ from app.core.config.billing_settings import (
 )
 from app.domain.billing import idempotency as idempotency_module
 from app.domain.billing.activations import activate_pending
+from app.domain.billing.catalog_revisions import (
+    approved_phase1_payload,
+    payload_digest,
+    validate_payload,
+)
 from app.domain.billing.idempotency import IntentResult, execute_intent
 from app.domain.billing.reconciliation import reconcile_pending_activations
 from app.domain.billing.service import BillingConflictError, resolve_base_intent
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
+    BillingCatalogRevision,
     BillingSubscription,
     BillingWebhookEvent,
     IdempotencyRecord,
     PendingActivation,
 )
+from app.models.user import User
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.log_capture import capture_log_messages
 
@@ -66,6 +74,36 @@ _TOPUP_KEY = "topup_audit_credits"
 
 
 # --- helpers -----------------------------------------------------------------
+@pytest.fixture(autouse=True)
+async def _published_catalog(db_session: AsyncSession) -> None:
+    payload = approved_phase1_payload()
+    parsed = validate_payload(payload)
+    actor = User(
+        email=f"catalog-{uuid.uuid4()}@example.com", role="admin", is_active=True
+    )
+    db_session.add(actor)
+    await db_session.flush()
+    db_session.add(
+        BillingCatalogRevision(
+            revision=billing_settings.catalog_version,
+            payload=payload,
+            payload_sha256=payload_digest(parsed),
+            publication_state="published",
+            created_by_user_id=actor.id,
+            created_reason="component fixture",
+        )
+    )
+    await db_session.commit()
+
+
+@pytest.fixture(autouse=True)
+def _runtime_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def load(_session):
+        return commercial_catalog()
+
+    monkeypatch.setattr("app.domain.billing.service.published_commercial_catalog", load)
+
+
 def _sign(raw: bytes) -> str:
     return hmac.new(_SECRET.encode(), raw, hashlib.sha256).hexdigest()
 
@@ -591,7 +629,8 @@ async def test_insert_race_loser_replays_the_winner(
     _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
     await _register(client, "race-domain@example.com")
     account_id = (await _account(db_session)).id
-    intent = resolve_base_intent(
+    intent = await resolve_base_intent(
+        db_session,
         catalog_key="tier_1",
         credential_mode="byok",
         country_code="US",
@@ -665,7 +704,8 @@ async def test_insert_race_different_keys_loser_conflicts(
     _enable_checkout(monkeypatch, {"tier_1:international:base": _PLAN_REF})
     await _register(client, "race-slot@example.com")
     account_id = (await _account(db_session)).id
-    intent = resolve_base_intent(
+    intent = await resolve_base_intent(
+        db_session,
         catalog_key="tier_1",
         credential_mode="byok",
         country_code="US",
@@ -956,7 +996,7 @@ async def test_renewal_with_a_removed_catalog_key_logs_and_issues_nothing(
             client, raw, event_id=f"evt_{uuid.uuid4().hex[:12]}"
         )
     assert response.status_code == 204
-    assert any("no grant specs" in message for message in messages)
+    assert any("no frozen grant specs" in message for message in messages)
     # Nothing was issued for the unresolvable key.
     assert await _commercial_grant_count(db_session) == 0
     assert await _total_grant_count(db_session) == baseline_grants
