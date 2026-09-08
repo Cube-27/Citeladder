@@ -67,7 +67,7 @@ Add these environment variables:
 
 Add these environment secrets:
 
-- `DEMO_LOGIN_PASSWORD`: a unique password of at least 32 characters;
+- `DEMO_LOGIN_PASSWORD`: the configured dev-login password (8–128 characters);
 - `CLOUDFLARE_ORIGIN_CERT`: the complete PEM Origin CA certificate;
 - `CLOUDFLARE_ORIGIN_KEY`: the complete PEM private key;
 - `DEFAULT_AGENT_API_KEY`: required with `DEFAULT_AGENT_BASE_URL` and
@@ -80,12 +80,20 @@ Add these environment secrets:
   configuration; do not use a Logo.dev secret key here.
 - `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`: required. One Google
   OAuth client serves both sign-in and the Search Console / Analytics connect.
-- `BING_OAUTH_CLIENT_ID` / `BING_OAUTH_CLIENT_SECRET`: required. Issued by Bing
-  Webmaster Tools -> Settings -> API Access, not by an Azure app registration.
+- `BING_OAUTH_CLIENT_ID` / `BING_OAUTH_CLIENT_SECRET`: optional. They are issued
+  by Bing Webmaster Tools -> Settings -> API Access, not by an Azure app
+  registration.
 
-The deploy fails before touching the VM if any of the four OAuth values has no
-Secret Manager version, because a missing pair leaves sign-in and every connect
-button returning 503 to visitors.
+Every deployment reconciles these GitHub environment secrets into Secret
+Manager before rendering `runtime.env`. Changed values create a new secret
+version; clearing an optional secret disables its enabled versions. GitHub
+environment variables are rendered on every deployment as well, so changing a
+provider URL, model, mode, limit, or other runtime variable takes effect on the
+next successful rollout.
+
+The deploy fails before touching the VM if either Google OAuth value is absent,
+because a missing pair leaves sign-in and every Google connect button returning
+503 to visitors.
 
 ### Provider-side setup
 

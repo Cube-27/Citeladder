@@ -106,8 +106,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # The bootstrap rejects any database that is not the single-account demo.
-    command: ["/bin/sh", "-c", "alembic upgrade head && if [ \"$$DEMO_MODE\" = \"true\" ]; then python -m app.demo.bootstrap; fi"]
+    # Demo mode enforces one account; public mode provisions/rotates only the
+    # configured development account and leaves public accounts untouched.
+    command: ["/bin/sh", "-c", "alembic upgrade head && python -m app.demo.bootstrap"]
 
   web:
     <<: *backend

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.config.entitlements import GRANT_SOURCE_OVERRIDE, KEY_MONITORED_URLS
 from app.core.security import verify_password
-from app.demo.bootstrap import ensure_demo_account
+from app.demo.bootstrap import ensure_configured_dev_account, ensure_demo_account
 from app.domain.auth.service import register_user
 from app.models.billing import AccountGrant
 from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
@@ -68,3 +68,30 @@ async def test_demo_bootstrap_rejects_unexpected_account(
     await register_user(db_session, "other@example.com", "password123")
     with pytest.raises(RuntimeError, match="only the configured account"):
         await ensure_demo_account(db_session, _demo_settings())
+
+
+@pytest.mark.asyncio
+async def test_public_bootstrap_rotates_only_the_configured_dev_account(
+    db_session: AsyncSession,
+) -> None:
+    await register_user(db_session, "other@example.com", "password123")
+    dev_user = await register_user(
+        db_session,
+        "dev@citeladder.com",
+        "old-development-password-with-thirty-two-characters",
+    )
+    assert dev_user is not None
+    original_version = dev_user.session_version
+    candidate = _demo_settings().model_copy(update={"demo_mode": False})
+
+    await ensure_configured_dev_account(db_session, candidate)
+
+    users = list((await db_session.scalars(select(User))).all())
+    assert {user.email for user in users} == {
+        "dev@citeladder.com",
+        "other@example.com",
+    }
+    refreshed = next(user for user in users if user.email == "dev@citeladder.com")
+    assert verify_password(candidate.dev_login_password, refreshed.hashed_password)
+    assert refreshed.session_version == original_version + 1
+    assert refreshed.role == "admin"

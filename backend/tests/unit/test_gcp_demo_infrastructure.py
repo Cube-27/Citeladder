@@ -113,7 +113,7 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
     for variable, secret_id in expected_secret_mappings.items():
         assert f"secrets.{variable}" in workflow
         assert f'"{secret_id}"' in locals_tf
-        assert f"add_value_once {secret_id}" in workflow
+        assert f"sync_optional_value {secret_id}" in workflow
         assert f"write_env {variable}" in deploy
     assert "secrets.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE" in workflow
     assert "--build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=" in workflow
@@ -145,14 +145,14 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
     for variable, (secret_id, runtime_var) in required_oauth_mappings.items():
         assert f"secrets.{variable}" in workflow
         assert f'"{secret_id}"' in locals_tf
-        assert f"add_value_once {secret_id}" in workflow
+        assert f"sync_value {secret_id}" in workflow
         # Read without a ``|| true`` fallback: a missing secret stops the deploy.
         assert f'secret {secret_id})"' in deploy
         assert f"write_env {runtime_var}" in deploy
     for variable, (secret_id, runtime_var) in optional_oauth_mappings.items():
         assert f"secrets.{variable}" in workflow
         assert f'"{secret_id}"' in locals_tf
-        assert f"add_value_once {secret_id}" in workflow
+        assert f"sync_optional_value {secret_id}" in workflow
         # Read behind ``|| true``: a missing secret must not stop the deploy.
         assert f'secret {secret_id} 2>/dev/null || true)"' in deploy
         assert f"write_env {runtime_var}" in deploy
@@ -186,12 +186,26 @@ def test_public_access_is_the_default_and_demo_mode_stays_switchable() -> None:
     assert "write_env DEMO_MODE" in deploy
     assert "vars.DEMO_MODE || 'false'" in workflow
     assert '--build-arg NEXT_PUBLIC_DEMO_MODE="$DEMO_MODE"' in workflow
-    # The bootstrap rejects a database holding anyone but the demo account.
-    assert (
-        'if [ \\"$$DEMO_MODE\\" = \\"true\\" ]; then python -m app.demo.bootstrap; fi'
-        in compose
-    )
+    # The bootstrap owns the single demo account or the configured public dev
+    # account, depending on the explicit mode.
+    assert "alembic upgrade head && python -m app.demo.bootstrap" in compose
     assert 'write_env MCP_ALLOWED_ACCOUNT_EMAIL ""' in deploy
+
+
+def test_deploy_rotates_configured_secrets_and_verifies_dev_login() -> None:
+    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
+    assert "sync_value()" in workflow
+    assert "gcloud secrets versions access latest" in workflow
+    assert 'test "${#DEMO_LOGIN_PASSWORD}" -ge 8' in workflow
+    assert 'test "${#DEMO_LOGIN_PASSWORD}" -le 128' in workflow
+    assert 'sync_value citeladder-demo-password "$DEMO_LOGIN_PASSWORD"' in workflow
+    assert (
+        'sync_optional_value citeladder-default-agent-api-key "$DEFAULT_AGENT_API_KEY"'
+        in workflow
+    )
+    assert "gcloud secrets versions disable" in workflow
+    assert '"https://$DOMAIN_NAME/api/v1/auth/login"' in workflow
+    assert "Configured live dev login returned HTTP" in workflow
 
 
 def test_deploy_validates_the_latest_commit_as_a_full_diff() -> None:

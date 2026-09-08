@@ -161,7 +161,7 @@ jobs:
           mv /tmp/tfvars demo.auto.tfvars.json
           echo "backend=$backend" >> "$GITHUB_OUTPUT"
           echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
-      - name: Install or verify runtime secret versions
+      - name: Synchronize runtime secret versions
         shell: bash
         env:
           DEMO_LOGIN_PASSWORD: ${{ secrets.DEMO_LOGIN_PASSWORD }}
@@ -184,26 +184,47 @@ jobs:
           add_generated() {
             has_version "$1" || openssl rand -hex 32 | gcloud secrets versions add "$1" --project "$PROJECT_ID" --data-file=- >/dev/null
           }
-          add_value_once() {
+          sync_value() {
             local name="$1" value="$2"
-            has_version "$name" || { test -n "$value"; printf '%s' "$value" | gcloud secrets versions add "$name" --project "$PROJECT_ID" --data-file=- >/dev/null; }
+            local current_hash incoming_hash
+            test -n "$value"
+            if has_version "$name"; then
+              current_hash="$(gcloud secrets versions access latest --secret "$name" --project "$PROJECT_ID" | sha256sum | cut -d' ' -f1)"
+              incoming_hash="$(printf '%s' "$value" | sha256sum | cut -d' ' -f1)"
+              test "$current_hash" != "$incoming_hash" || return 0
+            fi
+            printf '%s' "$value" | gcloud secrets versions add "$name" --project "$PROJECT_ID" --data-file=- >/dev/null
+          }
+          sync_optional_value() {
+            local name="$1" value="$2"
+            if test -n "$value"; then
+              sync_value "$name" "$value"
+              return
+            fi
+            gcloud secrets versions list "$name" --project "$PROJECT_ID" \
+              --filter='state=ENABLED' --format='value(name)' \
+              | while read -r version; do
+                  test -z "$version" || gcloud secrets versions disable "$version" \
+                    --secret "$name" --project "$PROJECT_ID" --quiet >/dev/null
+                done
           }
           add_generated citeladder-db-password
           add_generated citeladder-jwt-secret
           add_generated citeladder-encryption-key
           add_generated citeladder-referral-salt
-          test "${#DEMO_LOGIN_PASSWORD}" -ge 32
-          add_value_once citeladder-demo-password "$DEMO_LOGIN_PASSWORD"
-          add_value_once citeladder-cloudflare-origin-cert "$CLOUDFLARE_ORIGIN_CERT"
-          add_value_once citeladder-cloudflare-origin-key "$CLOUDFLARE_ORIGIN_KEY"
-          test -z "$CONTENT_API_KEY" || add_value_once citeladder-content-api-key "$CONTENT_API_KEY"
-          test -z "$DEFAULT_AGENT_API_KEY" || add_value_once citeladder-default-agent-api-key "$DEFAULT_AGENT_API_KEY"
-          test -z "$KEENABLE_API_KEY" || add_value_once citeladder-keenable-api-key "$KEENABLE_API_KEY"
-          test -z "$TAVILY_API_KEY" || add_value_once citeladder-tavily-api-key "$TAVILY_API_KEY"
-          test -z "$GOOGLE_OAUTH_CLIENT_ID" || add_value_once citeladder-google-oauth-client-id "$GOOGLE_OAUTH_CLIENT_ID"
-          test -z "$GOOGLE_OAUTH_CLIENT_SECRET" || add_value_once citeladder-google-oauth-client-secret "$GOOGLE_OAUTH_CLIENT_SECRET"
-          test -z "$BING_OAUTH_CLIENT_ID" || add_value_once citeladder-bing-oauth-client-id "$BING_OAUTH_CLIENT_ID"
-          test -z "$BING_OAUTH_CLIENT_SECRET" || add_value_once citeladder-bing-oauth-client-secret "$BING_OAUTH_CLIENT_SECRET"
+          test "${#DEMO_LOGIN_PASSWORD}" -ge 8
+          test "${#DEMO_LOGIN_PASSWORD}" -le 128
+          sync_value citeladder-demo-password "$DEMO_LOGIN_PASSWORD"
+          sync_value citeladder-cloudflare-origin-cert "$CLOUDFLARE_ORIGIN_CERT"
+          sync_value citeladder-cloudflare-origin-key "$CLOUDFLARE_ORIGIN_KEY"
+          sync_optional_value citeladder-content-api-key "$CONTENT_API_KEY"
+          sync_optional_value citeladder-default-agent-api-key "$DEFAULT_AGENT_API_KEY"
+          sync_optional_value citeladder-keenable-api-key "$KEENABLE_API_KEY"
+          sync_optional_value citeladder-tavily-api-key "$TAVILY_API_KEY"
+          sync_value citeladder-google-oauth-client-id "$GOOGLE_OAUTH_CLIENT_ID"
+          sync_value citeladder-google-oauth-client-secret "$GOOGLE_OAUTH_CLIENT_SECRET"
+          sync_optional_value citeladder-bing-oauth-client-id "$BING_OAUTH_CLIENT_ID"
+          sync_optional_value citeladder-bing-oauth-client-secret "$BING_OAUTH_CLIENT_SECRET"
           # Without a client pair the provider reports "not configured" and the
           # connect button 503s, so refuse the deploy rather than ship that.
           # Google is the demo's primary connector and stays blocking.
@@ -288,9 +309,18 @@ jobs:
           BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
           FRONTEND_IMAGE: ${{ steps.images.outputs.frontend }}
           STATIC_IP: ${{ steps.terraform.outputs.static_ip }}
+          DEMO_LOGIN_PASSWORD: ${{ secrets.DEMO_LOGIN_PASSWORD }}
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --retry 12 --retry-delay 5 "https://$DOMAIN_NAME/health" >/dev/null
+          login_payload="$(jq -nc --arg email "${DEMO_LOGIN_EMAIL:-dev@citeladder.com}" --arg password "$DEMO_LOGIN_PASSWORD" '{email:$email,password:$password}')"
+          login_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            -X POST -H 'content-type: application/json' --data "$login_payload" \
+            "https://$DOMAIN_NAME/api/v1/auth/login")"
+          if test "$login_status" != 200; then
+            echo "::error::Configured live dev login returned HTTP $login_status"
+            exit 1
+          fi
           # A dead "Continue with Google" is a 503 behind a button, not a failed
           # deploy, so assert the catalog reports Google usable.
           curl --fail --silent --show-error "https://$DOMAIN_NAME/api/v1/auth/oauth/providers" \
