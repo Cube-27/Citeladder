@@ -515,6 +515,16 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* Radix scroll locks add a scrollbar-width margin. The root's stable gutter
+   already reserves that space, so suppress the second compensation for menus,
+   selects, date pickers, and dialogs while retaining their scroll/focus lock. */
+@supports (scrollbar-gutter: stable) {
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
+    --removed-body-scroll-bar-size: 0px;
+  }
+}
+
 body {
   margin: 0;
   min-height: 100dvh;
