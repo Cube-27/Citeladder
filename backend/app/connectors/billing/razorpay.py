@@ -236,8 +236,7 @@ class RazorpayBillingProvider:
             await self._request("GET", f"/subscriptions/{external_subscription_id}")
         )
         invoices = await self._request(
-            "GET",
-            f"/invoices?subscription_id={external_subscription_id}&count={self.settings.reconciliation_list_count}",
+            "GET", f"/invoices?subscription_id={external_subscription_id}"
         )
         from app.connectors.billing.subscription_evidence import (
             invoice_payment,
@@ -255,9 +254,7 @@ class RazorpayBillingProvider:
     async def find_subscription(
         self, intent_id: str, account_ref: str
     ) -> ProviderSubscription | None:
-        data = await self._request(
-            "GET", f"/subscriptions?count={self.settings.reconciliation_list_count}"
-        )
+        data = await self._collection("/subscriptions")
         items = data.get("items")
         if not isinstance(items, list):
             raise BillingProviderError("provider_invalid_response")
@@ -275,6 +272,25 @@ class RazorpayBillingProvider:
             if matches
             else None
         )
+
+    async def _collection(self, path: str) -> dict[str, Any]:
+        """Read bounded pages; a truncated search is not proof of absence."""
+        items: list[dict[str, Any]] = []
+        count = self.settings.reconciliation_list_count
+        separator = "&" if "?" in path else "?"
+        for page in range(self.settings.reconciliation_max_pages):
+            data = await self._request(
+                "GET", f"{path}{separator}count={count}&skip={page * count}"
+            )
+            batch = data.get("items")
+            if not isinstance(batch, list) or any(
+                not isinstance(item, dict) for item in batch
+            ):
+                raise BillingProviderError("provider_invalid_response")
+            items.extend(batch)
+            if len(batch) < count:
+                return {"items": items}
+        raise BillingProviderError("provider_collection_incomplete", retryable=True)
 
     async def fetch_plan(self, reference: str) -> dict[str, Any]:
         return await self._request("GET", f"/plans/{reference}")

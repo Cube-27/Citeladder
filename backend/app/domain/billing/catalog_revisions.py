@@ -79,6 +79,12 @@ class RegionalPricePayload(BaseModel):
     metadata: str
     tax_verified: bool = False
 
+    @model_validator(mode="after")
+    def consistent_tax(self) -> RegionalPricePayload:
+        if self.tax_behavior == "inclusive" and self.tax_minor:
+            raise ValueError("Inclusive prices cannot add a separate tax amount")
+        return self
+
 
 def _validate_sandbox_price(
     price: RegionalPricePayload, region: str, base: int

@@ -57,8 +57,10 @@ the recovery worker remain running. The ordinary local stack uses other ports
 and must remain untouched.
 
 Sign in as the ordinary payment customer `dev@citeladder.com`. Its generated
-local password is stored privately in `.runtime/billing-test-customer.json`.
-If using a new database, register normally at `/register`. Confirm free access
+local password was stored privately in `.runtime/billing-test-customer.json`.
+If that scratch file was removed, use your saved credentials or a fresh ordinary
+customer; do not assume the password is recoverable from the database. If using
+a new database, register normally at `/register`. Confirm free access
 and no paid/development grants before paying. The existing local customer has
 role `user` and three free-baseline grants. Baseline grants may have source kind
 `override`; inspect their profile and values, not just that field.
@@ -252,6 +254,20 @@ Razorpay provides test subsequent-charge controls such as **Charge this now**.
 Schedule card renewal checks within its documented three-day test token window;
 record unsupported lifecycle simulations explicitly.
 [Subscription testing](https://razorpay.com/docs/payments/subscriptions/test/?preferred-country=IN)
+
+The recovery worker is installed by `infra/compose.billing-test.yml`. The ordinary
+Compose/GCP stack does not enable this sandbox worker or authorize checkout;
+any future billing deployment must explicitly install and monitor reconciliation
+before accepting asynchronous webhooks. Keep `BILLING_RAZORPAY_MODE=test` while
+using the checkout kill switch; `disabled` intentionally prohibits provider I/O.
+Legacy catalogs without explicit provider mode remain display-only until replaced
+by a verified regional revision.
+
+Subscription discovery reads bounded provider pages and reports an incomplete
+search as an error, never as proof that no subscription exists. Invoice retrieval
+uses the provider's complete subscription-invoice endpoint without an artificial
+count limit. See [subscription pagination](https://razorpay.com/docs/api/payments/subscriptions/fetch-subscriptions/?preferred-country=IN)
+and [subscription invoices](https://razorpay.com/docs/api/payments/subscriptions/fetch-invoices/?preferred-country=IN).
 
 For a one-shot recovery pass (the Compose worker also runs bounded sweeps):
 

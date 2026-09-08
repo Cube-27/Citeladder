@@ -37,6 +37,8 @@ def verify_plan(actual: dict, price: dict) -> None:
         or actual.get("interval") != price["interval"]
     ):
         raise ValueError("Provider plan cadence differs from frozen catalog terms")
+    if item.get("tax_amount", 0) != price["tax_minor"]:
+        raise ValueError("Provider plan tax differs from frozen catalog terms")
     if price["tax_minor"] and (
         not price["tax_verified"]
         or item.get("tax_amount") != price["tax_minor"]

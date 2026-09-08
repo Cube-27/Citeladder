@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from app.domain.billing.admin import OperatorContext, redact, require_operator
 from app.domain.billing.catalog_revisions import (
+    RegionalPricePayload,
     approved_phase1_payload,
     validate_payload,
 )
@@ -115,3 +116,18 @@ def test_operator_authorization_and_redaction() -> None:
         "nested": {"credential": "[REDACTED]"},
         "account_id": "safe",
     }
+
+
+def test_inclusive_regional_price_rejects_additional_tax() -> None:
+    with pytest.raises(ValidationError, match="Inclusive prices"):
+        RegionalPricePayload(
+            currency="USD",
+            amount_minor=4900,
+            tax_behavior="inclusive",
+            tax_minor=100,
+            provider_mode="test",
+            provider_plan_name="Tier 1",
+            fx_inr_per_usd="85",
+            tax_rate="0",
+            metadata="reviewed",
+        )

@@ -295,11 +295,14 @@ async def _process_subscription_event(
     event_id: str,
 ) -> str:
     subscription = await session.scalar(
-        select(BillingSubscription).where(
+        select(BillingSubscription)
+        .where(
             BillingSubscription.provider == PROVIDER_RAZORPAY,
             BillingSubscription.external_subscription_id
             == record.external_subscription_id,
         )
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     if subscription is None:
         return await _activate_from_event(

@@ -75,6 +75,7 @@ async def _recover(
                 BillingSubscription.reconciliation_lease_expires_at > datetime.now(UTC),
             )
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         if subscription is None:
             return

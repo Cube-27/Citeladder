@@ -592,10 +592,10 @@ def price_tax_minor(price: CatalogPrice) -> int:
     GST, an ``inclusive`` price is already final. Domain code never embeds a
     tax rate or a rounding rule.
     """
-    if price.frozen_tax_minor is not None:
-        return price.frozen_tax_minor
     if price.tax_behavior != TAX_BEHAVIOR_EXCLUSIVE:
         return 0
+    if price.frozen_tax_minor is not None:
+        return price.frozen_tax_minor
     return _minor_units(Decimal(price.amount_minor) * billing_settings.india_gst_rate)
 
 

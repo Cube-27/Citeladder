@@ -102,11 +102,14 @@ for (const width of [1280, 390]) {
         on() {}
         open() {
           if (this.options.prefill.email !== 'payer@example.com' || this.options.subscription_id !== 'sub_fixture' || 'amount' in this.options) throw new Error('Invalid checkout binding');
+          const dialog = document.createElement('dialog');
           const button = document.createElement('button'); button.textContent = 'Complete test payment';
           const dismiss = document.createElement('button'); dismiss.textContent = 'Dismiss test payment';
-          dismiss.onclick = () => { this.options.modal.ondismiss(); button.remove(); dismiss.remove(); };
-          button.onclick = () => { this.options.handler({ razorpay_payment_id: 'pay_fixture', razorpay_subscription_id: 'sub_fixture', razorpay_signature: '0'.repeat(64) }); button.remove(); dismiss.remove(); };
-          document.body.append(button, dismiss);
+          dismiss.onclick = () => { this.options.modal.ondismiss(); dialog.close(); dialog.remove(); };
+          button.onclick = () => { this.options.handler({ razorpay_payment_id: 'pay_fixture', razorpay_subscription_id: 'sub_fixture', razorpay_signature: '0'.repeat(64) }); dialog.close(); dialog.remove(); };
+          dialog.append(button, dismiss);
+          document.body.append(dialog);
+          dialog.showModal();
         }
       }`,
       }),

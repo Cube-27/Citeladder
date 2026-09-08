@@ -200,9 +200,36 @@ def test_provider_plan_verification_checks_terms_and_tax() -> None:
         "interval": 1,
     }
     verify_plan(actual, price)
+    with pytest.raises(ValueError, match="tax differs"):
+        verify_plan({**actual, "item": {**actual["item"], "tax_amount": 100}}, price)
     with pytest.raises(ValueError):
         verify_plan({**actual, "interval": 2}, price)
     with pytest.raises(ValueError):
         verify_plan(actual, {**price, "amount_minor": 4901})
     with pytest.raises(ValueError):
         verify_plan(actual, {**price, "tax_minor": 100, "tax_verified": False})
+
+
+@pytest.mark.asyncio
+async def test_subscription_lookup_pages_and_rejects_truncated_search() -> None:
+    offsets = []
+
+    def respond(request):
+        skip = int(request.url.params.get("skip", 0))
+        offsets.append(skip)
+        return httpx.Response(
+            200, json={"items": [{"id": "sub_other"}] if skip == 0 else []}
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        provider = RazorpayBillingProvider(
+            client=client, settings=configured(reconciliation_list_count=1)
+        )
+        assert await provider.find_subscription("intent", "account") is None
+        assert offsets == [0, 1]
+        provider.settings.reconciliation_max_pages = 1
+        with pytest.raises(
+            BillingProviderError, match="collection_incomplete"
+        ) as failure:
+            await provider.find_subscription("intent", "account")
+        assert failure.value.retryable

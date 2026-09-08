@@ -109,7 +109,8 @@ class BillingSettings(BaseSettings):
     reconciliation_stale_after_seconds: int = 300
     # After this long with no provider record, a pending row is abandoned.
     reconciliation_abandon_after_seconds: int = 86_400
-    reconciliation_list_count: int = 100
+    reconciliation_list_count: int = Field(default=100, ge=1, le=100)
+    reconciliation_max_pages: int = Field(default=5, ge=1, le=20)
     reconciliation_lookback_seconds: int = 86_400
     reconciliation_lease_seconds: int = 120
     reconciliation_max_attempts: int = 8
