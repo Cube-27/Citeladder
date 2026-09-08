@@ -259,6 +259,40 @@ def _leaks_owned_identity(text: str, context: dict) -> bool:
     return any(value and value in normalized for value in protected)
 
 
+async def _generate_target_texts(
+    context: dict, *, count: int, gateway: ModelGateway
+) -> list[str]:
+    """Generate and validate one target batch without persistence or capacity locks."""
+    try:
+        raw = await gateway.complete_structured_json(
+            system=commerce_buyer_prompt_system(
+                str(context.get("business_model") or "")
+            ),
+            user=json.dumps({"count": count, "context": context}, default=str),
+            schema_name="commerce_buyer_prompts",
+            schema=_GeneratedBatch.model_json_schema(),
+        )
+        batch = _GeneratedBatch.model_validate_json(raw)
+    except (ValidationError, ValueError, TypeError) as exc:
+        raise BuyerPromptGenerationUnavailable(
+            "The configured model returned unusable buyer prompts"
+        ) from exc
+    # Style admission BEFORE the identity gate: a survey question that also
+    # happens to avoid the brand name is still not a buyer prompt, and the
+    # count check below must count only prompts that survived both.
+    texts, _rejected = admitted_buyer_prompts(
+        [item.text for item in batch.prompts],
+        vocabulary=_target_vocabulary(context),
+    )
+    texts = [text for text in texts if not _leaks_owned_identity(text, context)][:count]
+    if len(texts) != count:
+        raise BuyerPromptGenerationUnavailable(
+            "Buyer prompts were unavailable because identity leakage or "
+            "style validation left too few usable prompts"
+        )
+    return texts
+
+
 async def generate_buyer_prompts(
     session: AsyncSession,
     *,
@@ -283,35 +317,7 @@ async def generate_buyer_prompts(
         context["locale"] = "-".join(
             value for value in (project.language_code, project.country_code) if value
         )
-        try:
-            raw = await gateway.complete_structured_json(
-                system=commerce_buyer_prompt_system(
-                    str(context.get("business_model") or "")
-                ),
-                user=json.dumps({"count": count, "context": context}, default=str),
-                schema_name="commerce_buyer_prompts",
-                schema=_GeneratedBatch.model_json_schema(),
-            )
-            batch = _GeneratedBatch.model_validate_json(raw)
-        except (ValidationError, ValueError, TypeError) as exc:
-            raise BuyerPromptGenerationUnavailable(
-                "The configured model returned unusable buyer prompts"
-            ) from exc
-        # Style admission BEFORE the identity gate: a survey question that also
-        # happens to avoid the brand name is still not a buyer prompt, and the
-        # count check below must count only prompts that survived both.
-        texts, _rejected = admitted_buyer_prompts(
-            [item.text for item in batch.prompts],
-            vocabulary=_target_vocabulary(context),
-        )
-        texts = [text for text in texts if not _leaks_owned_identity(text, context)][
-            :count
-        ]
-        if len(texts) != count:
-            raise BuyerPromptGenerationUnavailable(
-                "Buyer prompts were unavailable because identity leakage or "
-                "style validation left too few usable prompts"
-            )
+        texts = await _generate_target_texts(context, count=count, gateway=gateway)
         batches.append((target, context, texts))
     # Finish all provider calls before taking the transaction-scoped account lock.
     await _reserve_prompt_capacity(
