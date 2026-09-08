@@ -34,9 +34,10 @@ from app.domain.billing.schemas import (
     UsageGrantBalanceResponse,
     UsageItemResponse,
 )
+from app.domain.entitlements.occupancy import OCCUPANCY_COUNTERS
 from app.domain.entitlements.resolver import effective_grant_expiry
 from app.domain.entitlements.service import resolve_account_entitlement
-from app.domain.entitlements.types import GrantInput
+from app.domain.entitlements.types import GrantInput, ResolvedEntitlement
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
@@ -331,9 +332,32 @@ async def account_usage(
         for definition in CAPABILITY_REGISTRY.public_entries()
         if definition.capability_type in _COUNTER_TYPES
     ]
+    await _project_occupancy_usage(session, account.id, entitlement, items)
     return BillingUsageResponse(
         billing_account_id=account.id,
         entitlement_lifecycle_version=entitlement.entitlement_lifecycle_version,
         status=entitlement.status,
         items=items,
     )
+
+
+async def _project_occupancy_usage(
+    session: AsyncSession,
+    account_id: uuid.UUID,
+    entitlement: ResolvedEntitlement,
+    items: list[UsageItemResponse],
+) -> None:
+    """Project only resolved occupancy counters; other families keep their owners."""
+    if entitlement.status != "resolved":
+        return
+    for item in items:
+        counter = OCCUPANCY_COUNTERS.get(item.key)
+        capability = entitlement.capability(item.key)
+        if counter is None or capability is None:
+            continue
+        consumed = await counter(session, account_id)
+        item.allowance = capability.value
+        item.consumed = consumed
+        item.reserved = 0
+        item.remaining = max(capability.value - consumed, 0)
+        item.limit_state = LIMIT_STATE_FINITE

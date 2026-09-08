@@ -176,11 +176,19 @@ restore_previous_deployment() {
 }
 trap restore_previous_deployment ERR
 
+docker compose --env-file runtime.env -f compose.gcp.yml pull
 if $had_previous; then
+  # A folded pre-launch baseline cannot upgrade an already-stamped database.
+  # Detect drift with the candidate image before stopping the serving revision.
+  if ! docker compose --env-file runtime.env -f compose.gcp.yml run --rm --no-deps migrate alembic check; then
+    echo 'Database schema differs from this revision; review an explicit backed-up development database rebuild before deployment.' >&2
+    cp runtime.env.previous runtime.env
+    trap - ERR
+    exit 1
+  fi
   docker compose --env-file runtime.env -f compose.gcp.yml stop "${stopped_services[@]}"
   ./backup.sh predeploy
 fi
-docker compose --env-file runtime.env -f compose.gcp.yml pull
 docker compose --env-file runtime.env -f compose.gcp.yml up -d --force-recreate
 
 cat > /etc/systemd/system/citeladder-backup.service <<'UNIT'

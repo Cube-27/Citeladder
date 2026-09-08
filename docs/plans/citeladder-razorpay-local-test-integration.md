@@ -1,5 +1,37 @@
 # Razorpay local test integration, onboarding fix, and owner runbooks
 
+## Prerequisite recovery - 2026-09-08
+
+The owner authorized separate login/deployment recovery before Razorpay work:
+section 2A occupancy and routing fixes, deployment schema preflight, and explicit
+rebuild of the live disposable database. Live inspection found one account,
+zero projects, and zero subscriptions; failed bootstrap was missing
+`billing_accounts.registration_cohort_at`. The installed image baseline hash
+matched the repository baseline. The owner approved replacing the dev account
+UUID/sessions and reprovisioning its existing configured credentials; backup
+preservation is not required. Payment integration and checkout enabling are not
+part of this recovery. Sections 2B onward remain a separate implementation.
+
+Use `python infra/gcp/reset-db.py --project <PROJECT_ID>` to preview the installed
+GCP target; add `--reset-project <PROJECT_ID>` to explicitly destroy/rebuild its
+`citeladder` database, apply the installed baseline, reprovision the configured
+dev login, check schema drift, and restart the application. Optional `--instance`
+and `--zone` select the VM. This uses installed images and does not deploy new
+code, save backups, or change configured credentials. Run the normal deploy
+workflow to install a newer revision afterward. Record rollout and integrated
+login verification results here after recovery completes.
+
+Local configuration also used unrecognized `GOOGLE_OAUTH_CLIENT_*` names;
+these were corrected to `INTEGRATION_GOOGLE_CLIENT_ID` and
+`INTEGRATION_GOOGLE_CLIENT_SECRET`, preserving values in the ignored `.env`.
+Literal dollar signs in local connection settings are single-quoted to prevent
+Compose interpolation. `.env.example` uses the canonical configuration names.
+
+Validation: the full `scripts/check.ps1` passed. The initial `scripts/test.ps1`
+passed 267 backend tests and found one stale frontend redirect expectation;
+the required retry-delta run passed 164 frontend tests and all 10 mapped browser
+tests. Local backend and frontend production images built successfully.
+
 ## 1. Execution boundary and agreed scope
 
 **When “Implement plan” is clicked: save this complete plan to `docs/plans/citeladder-razorpay-local-test-integration.md`, verify that file, and stop.** Do not implement code, change environment files, start services, configure Razorpay, create plans, or make payments during that save-only turn. Preserve existing unrelated changes and deleted documents.

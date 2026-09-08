@@ -184,3 +184,18 @@ describe('LoginPage', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 });
+
+it('preserves login when projects fail and routes to recoverable projects', async () => {
+  const user = userEvent.setup();
+  mswServer.use(
+    http.post('/api/v1/auth/login', () => HttpResponse.json({ user: sessionUser })),
+    http.get('/api/v1/projects', () =>
+      HttpResponse.json({ detail: 'Unavailable' }, { status: 403 }),
+    ),
+  );
+  renderWithProviders(<LoginPage />);
+  await user.type(screen.getByLabelText(/email address/i), 'user@example.com');
+  await user.type(screen.getByLabelText(/password/i, { selector: 'input' }), 'sup3rsecret');
+  await user.click(screen.getByRole('button', { name: /^continue$/i }));
+  await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
+});

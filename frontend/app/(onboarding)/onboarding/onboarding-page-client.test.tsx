@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { renderWithProviders as render } from '@/test/render';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { projectState, entitlementState } = vi.hoisted(() => ({
@@ -75,7 +76,9 @@ describe('OnboardingPageClient', () => {
     render(<OnboardingPageClient />);
 
     expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Project access unavailable' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Projects could not be loaded' }),
+    ).toBeInTheDocument();
   });
 
   it('fails closed when the project capability is missing', () => {
@@ -102,5 +105,16 @@ describe('OnboardingPageClient', () => {
     render(<OnboardingPageClient />);
 
     expect(screen.getByText('Onboarding flow')).toBeInTheDocument();
+  });
+
+  it('distinguishes usage failure and retries both account queries', () => {
+    entitlementState.usageIsError = true;
+    const { queryClient } = render(<OnboardingPageClient />);
+    const retry = vi.spyOn(queryClient, 'refetchQueries');
+    expect(
+      screen.getByRole('heading', { name: 'Project allowance could not be loaded' }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledTimes(2);
   });
 });

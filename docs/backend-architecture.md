@@ -267,6 +267,13 @@ granted only to that configured development account; the public baseline is
 denied by the domain mutation guard. Password and OAuth sign-in both repair
 older accounts onto the current baseline.
 
+Account usage reads project and prompt occupancy across every workspace linked
+to the billing account through the same read-only counting owner as capacity
+admission. Resolved allowances report finite allowance, persisted consumed count,
+zero reservations, and remaining capacity clamped at zero. Missing authority and
+counter families owned elsewhere stay unknown. Reads do not acquire admission
+locks or repair provisioning; creation retains its locked capacity check.
+
 ## Billing, entitlements, and commercial evidence
 
 `BillingCatalogRevision` is the runtime commercial authority. Validated payloads

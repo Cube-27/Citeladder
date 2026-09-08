@@ -32,7 +32,6 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -51,12 +50,11 @@ from app.core.config.entitlements import (
     EVENT_OCCUPANCY_LIMIT_EXCEEDED,
     EVENT_OCCUPANCY_UNRESOLVED,
     KEY_MANUAL_RUNS_PER_DAY,
-    KEY_PROJECT_SLOTS,
-    KEY_PROMPT_SLOTS,
     MANUAL_RUNS_ROLLING_WINDOW_SECONDS,
     OCCUPANCY_LOCK_NAMESPACE,
     CapabilityType,
 )
+from app.domain.entitlements.occupancy import OCCUPANCY_COUNTERS
 from app.domain.entitlements.service import resolve_account_entitlement
 from app.domain.entitlements.types import (
     STATUS_ENTITLEMENT_UNRESOLVED,
@@ -64,8 +62,6 @@ from app.domain.entitlements.types import (
 )
 from app.models.audit import Audit
 from app.models.billing import WorkspaceBillingLink
-from app.models.project import Project
-from app.models.prompt import Prompt, PromptSet
 
 logger = logging.getLogger("app.billing")
 
@@ -217,54 +213,6 @@ async def lock_workspace_capacity(
     return account_id
 
 
-async def _count_project_slots(session: AsyncSession, account_id: uuid.UUID) -> int:
-    """Every Project in every workspace linked to the account."""
-    return int(
-        (
-            await session.execute(
-                select(func.count())
-                .select_from(Project)
-                .join(
-                    WorkspaceBillingLink,
-                    WorkspaceBillingLink.workspace_id == Project.workspace_id,
-                )
-                .where(WorkspaceBillingLink.billing_account_id == account_id)
-            )
-        ).scalar_one()
-    )
-
-
-async def _count_prompt_slots(session: AsyncSession, account_id: uuid.UUID) -> int:
-    """Every persisted Prompt reachable through set/project/workspace links.
-
-    Proposed, active, archived, manual, imported, and generated rows all
-    count; only deletion frees a slot.
-    """
-    return int(
-        (
-            await session.execute(
-                select(func.count())
-                .select_from(Prompt)
-                .join(PromptSet, PromptSet.id == Prompt.prompt_set_id)
-                .join(Project, Project.id == PromptSet.project_id)
-                .join(
-                    WorkspaceBillingLink,
-                    WorkspaceBillingLink.workspace_id == Project.workspace_id,
-                )
-                .where(WorkspaceBillingLink.billing_account_id == account_id)
-            )
-        ).scalar_one()
-    )
-
-
-# Key-specific aggregate queries. ``monitored_urls`` is intentionally absent:
-# site_health's ``replace_monitored_set()`` stays its enforcement owner.
-_OCCUPANCY_COUNTERS: dict[str, Callable[[AsyncSession, uuid.UUID], Awaitable[int]]] = {
-    KEY_PROJECT_SLOTS: _count_project_slots,
-    KEY_PROMPT_SLOTS: _count_prompt_slots,
-}
-
-
 async def enforce_occupancy(
     session: AsyncSession,
     *,
@@ -282,7 +230,7 @@ async def enforce_occupancy(
     Raises ``OccupancyLimitExceededError`` when the rows that would actually
     insert do not fit; returns the snapshot otherwise.
     """
-    counter = _OCCUPANCY_COUNTERS.get(key)
+    counter = OCCUPANCY_COUNTERS.get(key)
     if counter is None:
         # A key with no counter here has another owner (monitored_urls) or
         # is a programming error — never a silent pass.

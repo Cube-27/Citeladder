@@ -69,3 +69,22 @@ test('compact navigation hands focus to persistent tools and returns it on Escap
     await expect(menu).toBeFocused();
   }
 });
+
+test('project lookup failure retries in place and only confirmed empty projects enter onboarding', async ({
+  page,
+}) => {
+  await stubAuthedShell(page, [], []);
+  let failed = true;
+  await page.route('**/api/v1/projects', (route) =>
+    failed
+      ? route.fulfill({ status: 403, json: { detail: 'Project lookup unavailable' } })
+      : route.fulfill({ json: [] }),
+  );
+  await page.goto('/projects');
+  await expect(page.getByRole('heading', { name: 'Projects could not be loaded' })).toBeVisible();
+  await expect(page).toHaveURL(/\/projects$/);
+  failed = false;
+  await page.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page.getByRole('heading', { name: "Let's get started" })).toBeVisible();
+});

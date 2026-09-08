@@ -18,7 +18,7 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
  * known: no projects yet → `/onboarding`, otherwise `/projects`. The confirmed
  * identity boundary uses a full-page navigation so the protected layout reads
  * the new cookie and session state from a clean document instead of reusing a
- * prefetched anonymous shell. A failed lookup falls back to `/onboarding`.
+ * prefetched anonymous shell. A failed lookup falls back to the recoverable `/projects` state.
  */
 export function useAuthMutation<TValues>(
   mutationFn: (values: TValues) => Promise<SessionUser>,
@@ -50,15 +50,15 @@ export function useAuthMutation<TValues>(
         return;
       }
 
-      let destination = '/onboarding';
+      let destination = '/projects';
       try {
         const projects = await queryClient.fetchQuery({
           queryKey: queryKeys.projects.list(),
           queryFn: ({ signal }) => projectsApi.listProjects({ signal }),
         });
-        if (projects.length > 0) destination = '/projects';
+        if (projects.length === 0) destination = '/onboarding';
       } catch {
-        // Projects lookup failed — `/onboarding` is the safe default.
+        // Preserve the session; the projects gate offers recovery.
       }
       hardNavigate(destination);
     },

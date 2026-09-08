@@ -242,3 +242,37 @@ values, and provider keys.
   every worker are verified.
 - **Budget alert:** stop the VM, inspect Billing and active resources, and
   destroy the project if it is no longer needed.
+
+
+## Pre-launch baseline drift recovery
+
+The deployment checks the candidate image with `alembic check` before stopping
+an existing revision. A stamped `0001_initial` database does not receive later
+edits folded into that baseline. Schema drift therefore blocks rollout and
+requires an explicit, backed-up rebuild of the disposable pre-launch database;
+never add a second migration or silently reset a database during deployment.
+
+The 2026-09-08 failed rollout reached dev-account bootstrap with a missing
+`billing_accounts.registration_cohort_at` column. Rollback encountered the same
+schema mismatch. Before recovery, confirm the exact database and account/project/
+subscription counts, run `backup.sh login-recovery`, obtain approval for replacing
+the account/session identities, then rebuild from the current baseline and run
+the configured dev bootstrap. Verify `alembic check`, the serving source commit,
+public health, password login, Google sign-in configuration, and numeric
+`project_slots.remaining` through the integrated API. Never expose credentials
+in terminal output or bypass Google consent to claim a completed Google login.
+
+
+Reusable operator command (authenticated `gcloud` with IAP/SSH access):
+
+```powershell
+python infra/gcp/reset-db.py --project project-setup-20260711
+python infra/gcp/reset-db.py --project project-setup-20260711 --reset-project project-setup-20260711
+```
+
+The first command previews counts and installed source revision. The second
+irreversibly replaces the fixed `citeladder` database, including users and
+sessions, using the installed image baseline; it does not back up data or deploy
+new images. It refuses a mismatched project or single-account demo mode. Existing
+configured credentials provision the new dev account. Optional `--instance` and
+`--zone` default to `citeladder-demo` and `asia-south1-a`.
