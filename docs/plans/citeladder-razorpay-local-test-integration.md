@@ -47,8 +47,8 @@ The follow-up deployment installs occupancy/routing fixes and initializes pricin
 
 Follow-up UI recovery fixes keep the pricing CTA inside its card, interpret
 numeric effective flag grants (`1`) correctly so the dev account sees Content
-and Growth Agent, and make shared dropdown menus non-modal to avoid scrollbar
-compensation shifting the document. Cached projects remain usable after a failed
+and Growth Agent, and suppress duplicate scrollbar compensation in shared document styles for
+menus, selects, date pickers, and dialogs. Their focus and scroll locks remain intact. Cached projects remain usable after a failed
 background refresh. Commerce prompt inserts now enforce account prompt capacity
 in the insert transaction, after all generation calls finish. The GCP reset
 attempts one forward recovery on failure, checks schema validity before starting
