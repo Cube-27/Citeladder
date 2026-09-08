@@ -18,6 +18,8 @@ export function Drawer({
   className,
   bodyClassName,
   closeLabel = 'Close drawer',
+  side = 'right',
+  onAfterClose,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -28,6 +30,9 @@ export function Drawer({
   className?: string;
   bodyClassName?: string;
   closeLabel?: string;
+  side?: 'left' | 'right';
+  /** Runs after Radix restores focus to the drawer's original opener. */
+  onAfterClose?: () => void;
 }>) {
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
@@ -53,23 +58,29 @@ export function Drawer({
         <DialogPrimitive.Content
           onCloseAutoFocus={(event) => {
             const returnTarget = returnFocusRef.current;
-            if (!returnTarget?.isConnected) return;
-            event.preventDefault();
-            returnTarget.focus();
+            if (returnTarget?.isConnected) {
+              event.preventDefault();
+              returnTarget.focus();
+            }
             returnFocusRef.current = null;
+            onAfterClose?.();
           }}
+          data-side={side}
           className={cn(
-            'drawer-panel border-border-subtle bg-elevated shadow-modal-value z-modal fixed inset-y-0 right-0 flex w-full max-w-180 flex-col rounded-l-[var(--radius-overlay)] border-l focus:outline-none',
+            'drawer-panel border-border-subtle bg-elevated shadow-modal-value z-modal fixed inset-y-0 flex w-full max-w-[32.5rem] flex-col focus:outline-none',
+            side === 'left'
+              ? 'left-0 rounded-r-[var(--radius-overlay)] border-r'
+              : 'right-0 rounded-l-[var(--radius-overlay)] border-l',
             className,
           )}
         >
           <header className="border-border-subtle flex items-start justify-between gap-3 border-b p-[var(--modal-padding)]">
             <div className="min-w-0">
-              <DialogPrimitive.Title className="text-foreground truncate text-xl font-medium tracking-tight">
+              <DialogPrimitive.Title className="text-foreground truncate text-lg font-semibold tracking-[-0.35px]">
                 {title}
               </DialogPrimitive.Title>
               {description ? (
-                <DialogPrimitive.Description className="text-secondary mt-1 text-sm leading-relaxed">
+                <DialogPrimitive.Description className="text-secondary mt-1 text-sm leading-[22px]">
                   {description}
                 </DialogPrimitive.Description>
               ) : null}

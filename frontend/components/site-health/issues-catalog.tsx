@@ -12,7 +12,6 @@ import {
 import { PageKindSelect } from '@/components/site-health/page-kind-select';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Pressable } from '@/components/ui/pressable';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -96,36 +95,43 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
   };
 
   return (
-    <div className="grid gap-[var(--page-section-gap)]">
+    <div className="grid min-w-0 gap-[var(--page-section-gap)]">
       {summary ? <IssueSummary summary={summary} findingView={findingView} /> : null}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <IssueSearch
           key={filters.query}
           query={filters.query}
           onApply={(query) => updateFilters({ query })}
         />
-        <PageKindSelect
-          value={filters.page_kind}
-          onChange={(page_kind) => updateFilters({ page_kind })}
-        />
-        <FindingClassFilter
-          value={findingView}
-          summary={summary}
-          onChange={(finding_class) =>
-            updateFilters({ finding_class, severity: '', dimension: '' })
-          }
-        />
-        <SegmentedControl
-          value={selectedFilter(filters)}
-          onChange={(value) => updateFilters(filterChange(value))}
-          ariaLabel="Issue filters"
-          options={FILTERS.filter(
-            (item) => findingView === 'defect' || !['high', 'medium', 'low'].includes(item.key),
-          ).map((item) => ({
-            value: item.key,
-            label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
-          }))}
-        />
+        <div className="min-w-0 max-[700px]:w-full [&>button]:max-[700px]:w-full">
+          <PageKindSelect
+            value={filters.page_kind}
+            onChange={(page_kind) => updateFilters({ page_kind })}
+          />
+        </div>
+        <div className="max-w-full min-w-0 overflow-x-auto pb-0.5 max-[700px]:w-full">
+          <FindingClassFilter
+            value={findingView}
+            summary={summary}
+            onChange={(finding_class) =>
+              updateFilters({ finding_class, severity: '', dimension: '' })
+            }
+          />
+        </div>
+        <div className="max-w-full min-w-0 overflow-x-auto pb-0.5 max-[700px]:w-full">
+          <SegmentedControl
+            className="w-max"
+            value={selectedFilter(filters)}
+            onChange={(value) => updateFilters(filterChange(value))}
+            ariaLabel="Issue filters"
+            options={FILTERS.filter(
+              (item) => findingView === 'defect' || !['high', 'medium', 'low'].includes(item.key),
+            ).map((item) => ({
+              value: item.key,
+              label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
+            }))}
+          />
+        </div>
       </div>
 
       {issuesQuery.isError ? (
@@ -141,7 +147,7 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
         </p>
       ) : (
         <div
-          className="grid items-start gap-4 lg:grid-cols-[minmax(18rem,0.85fr)_minmax(0,1.65fr)]"
+          className="border-border-subtle grid min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
           aria-busy={issuesQuery.isFetching}
         >
           <IssueGroupList rows={rows} selectedGroupId={selected?.group_id} onSelect={chooseGroup} />
@@ -271,7 +277,7 @@ function IssueGroupList({
   onSelect: (groupId: string) => void;
 }>) {
   return (
-    <div className={ledgerClasses('boxed')}>
+    <div className="border-border-subtle divide-border-subtle flex min-w-0 divide-x overflow-x-auto border-b min-[701px]:grid min-[701px]:divide-x-0 min-[701px]:divide-y min-[701px]:overflow-visible min-[701px]:border-r min-[701px]:border-b-0">
       {rows.map((issue) => {
         const selected = issue.group_id === selectedGroupId;
         return (
@@ -281,8 +287,10 @@ function IssueGroupList({
             onClick={() => onSelect(issue.group_id)}
             aria-pressed={selected}
             className={cn(
-              'focus-ring grid w-full gap-2 px-4 py-3 text-left transition-colors',
-              selected ? 'bg-accent-subtle' : 'hover:bg-active',
+              'focus-ring grid w-[272px] shrink-0 gap-2 px-4 py-3 text-left transition-colors min-[701px]:w-full',
+              selected
+                ? 'bg-accent-subtle shadow-[inset_0_2px_0_var(--color-accent)] min-[701px]:shadow-[inset_2px_0_0_var(--color-accent)]'
+                : 'hover:bg-active',
             )}
           >
             <span className="flex items-center justify-between gap-3">
@@ -322,19 +330,19 @@ function IssueDetailRail({
 }>) {
   const detail = detailQuery.data;
   return (
-    <Card
-      className="lg:sticky lg:top-[var(--workspace-gap)] lg:max-h-[calc(100dvh-var(--topbar-height)-2*var(--workspace-gap))] lg:overflow-hidden"
+    <section
+      className="min-w-0 min-[701px]:sticky min-[701px]:top-[var(--workspace-gap)] min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))] min-[701px]:overflow-hidden"
       aria-busy={detailQuery.isFetching}
     >
-      <CardContent className="flex flex-col p-0 lg:max-h-[calc(100dvh-var(--topbar-height)-2*var(--workspace-gap))]">
+      <div className="flex flex-col min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))]">
         {detailQuery.isFetching && !detailQuery.isLoading ? (
           <progress
             className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent h-0.5 w-full shrink-0 appearance-none border-0"
             aria-label="Updating issue evidence"
           />
         ) : null}
-        <header className="border-border-subtle grid shrink-0 gap-3 border-b p-[var(--card-padding)]">
-          <div className="flex items-start justify-between gap-[var(--workspace-gap)]">
+        <header className="border-border-subtle grid min-w-0 shrink-0 gap-3 border-b p-[var(--card-padding)]">
+          <div className="flex min-w-0 items-start justify-between gap-[var(--workspace-gap)] max-[700px]:flex-col">
             <div className="grid min-w-0 gap-2">
               <h2 className={textRole('sectionTitle', 'tracking-[-0.02em]')}>
                 {issueTitle(issue)}
@@ -342,7 +350,10 @@ function IssueDetailRail({
               <IssueMetadata issue={issue} />
             </div>
             <div
-              className={textRole('body', 'border-border-subtle grid shrink-0 gap-1 border-l pl-4')}
+              className={textRole(
+                'body',
+                'border-border-subtle grid shrink-0 gap-1 border-l pl-4 max-[700px]:w-full max-[700px]:border-t max-[700px]:border-l-0 max-[700px]:pt-3 max-[700px]:pl-0',
+              )}
             >
               <span className="text-secondary whitespace-nowrap tabular-nums">
                 {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}{' '}
@@ -392,8 +403,8 @@ function IssueDetailRail({
             </Button>
           </footer>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 

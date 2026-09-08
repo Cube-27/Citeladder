@@ -1,4 +1,4 @@
-import { Check, Circle, History, RefreshCw, Sparkles, X } from 'lucide-react';
+import { Check, Circle, RefreshCw, Sparkles, X } from 'lucide-react';
 import { type RefObject } from 'react';
 
 import { SkillPicker } from '@/components/content/skill-picker';
@@ -42,7 +42,6 @@ export function ContentComposer({
   onInstructionChange,
   onSkillChange,
   onGenerate,
-  onHistoryOpen,
 }: Readonly<{
   instruction: string;
   instructionRef: RefObject<HTMLTextAreaElement | null>;
@@ -63,11 +62,10 @@ export function ContentComposer({
   onInstructionChange: (value: string) => void;
   onSkillChange: (value: string) => void;
   onGenerate: () => void;
-  onHistoryOpen: () => void;
 }>) {
   return (
-    <Card data-component-id="content-composer" className="p-[var(--card-padding-large)]">
-      <CardContent className="flex flex-col gap-[var(--workspace-gap)] p-0">
+    <section data-component-id="content-composer" className="max-w-[840px] min-w-0">
+      <div className="flex flex-col gap-[var(--workspace-gap)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-1">
             <span className={eyebrowClasses}>New generation</span>
@@ -75,10 +73,6 @@ export function ContentComposer({
               What can I help you create?
             </h2>
           </div>
-          <Button variant="secondary" size="sm" onClick={onHistoryOpen} className="gap-2">
-            <History className="size-4" aria-hidden />
-            History
-          </Button>
         </div>
         {opportunity ? <OpportunityContext opportunity={opportunity} /> : null}
         <TargetPageSelect
@@ -128,8 +122,8 @@ export function ContentComposer({
             <Sparkles className="size-4" aria-hidden /> Generate
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 

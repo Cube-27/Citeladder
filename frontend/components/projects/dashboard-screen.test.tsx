@@ -1,7 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 const { project, downloadExecutiveReport, queryResult } = vi.hoisted(() => ({
   project: {
     id: '00000000-0000-4000-8000-000000000001',
@@ -21,7 +20,6 @@ const { project, downloadExecutiveReport, queryResult } = vi.hoisted(() => ({
     refetch: vi.fn(),
   },
 }));
-
 const commandCenter = {
   project,
   facts: {
@@ -99,16 +97,16 @@ const commandCenter = {
   report_available: true,
   stale: false,
 };
-
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
-
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => '/projects',
+}));
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({
     usage: { status: 'resolved', items: [{ key: 'project_slots', remaining: 0 }] },
   }),
   capabilityRemaining: () => 0,
 }));
-
 // This file mocks useQuery wholesale to return the command-center fixture, so
 // TopInsights would receive that shape instead of an opportunities page. It is
 // a separate unit with its own tests (components/intelligence); stub it out
@@ -116,13 +114,11 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
 vi.mock('@/components/intelligence/top-insights', () => ({
   TopInsights: () => null,
 }));
-
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => queryResult,
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
-
 vi.mock('@/lib/project/project-context', () => ({
   useActiveProject: () => project,
   useProjectContext: () => ({
@@ -133,19 +129,14 @@ vi.mock('@/lib/project/project-context', () => ({
     isLoading: false,
   }),
 }));
-
 vi.mock('@/lib/api/projects', () => ({
   projectsApi: { getCommandCenter: vi.fn(), downloadExecutiveReport },
 }));
-
 vi.mock('@/lib/api/opportunities', () => ({
   opportunitiesApi: { updateOrder: vi.fn() },
 }));
-
 import { TooltipProvider } from '@/components/ui/tooltip';
-
 import { DashboardScreen } from './dashboard-screen';
-
 describe('DashboardScreen', () => {
   beforeEach(() => {
     queryResult.data = commandCenter;
@@ -154,14 +145,12 @@ describe('DashboardScreen', () => {
     queryResult.isError = false;
     queryResult.refetch.mockReset();
   });
-
   it('renders state, comparable movement, actions, and report proof', () => {
     render(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
     );
-
     expect(screen.getByRole('heading', { name: 'Acme' })).toBeInTheDocument();
     expect(screen.getByText('72.5')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Project state' })).toBeInTheDocument();
@@ -171,33 +160,20 @@ describe('DashboardScreen', () => {
     expect(screen.getByText('Evidence-first analytics')).toBeVisible();
     expect(screen.getByText('Growth leaders')).toBeVisible();
     expect(screen.getByText('Analytics')).toBeVisible();
-
-    const facts = screen.getByRole('heading', { name: 'Company facts' });
-    const nextAction = screen.getByText('Monitor — no required action');
-    const state = screen.getByRole('heading', { name: 'Project state' });
-    const movement = screen.getByRole('heading', { name: 'Movement' });
-    expect(
-      facts.compareDocumentPosition(nextAction) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      nextAction.compareDocumentPosition(state) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(state.compareDocumentPosition(movement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
+    expect(screen.getByText('Monitor — no required action')).toBeVisible();
   });
-
   it('does not expose additional project creation before billing is live', async () => {
     const user = userEvent.setup();
     render(
       <TooltipProvider>
-        <DashboardScreen />
+        <DashboardScreen onEditProject={vi.fn()} />
       </TooltipProvider>,
     );
-
     await user.click(screen.getByRole('button', { name: /manage project/i }));
-    expect(screen.getByText('Workspace brands')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Edit active project' })).toBeVisible();
     expect(screen.queryByText('Add project')).not.toBeInTheDocument();
   });
-
   it('downloads the authenticated executive PDF', async () => {
     const user = userEvent.setup();
     const createObjectURL = vi.fn(() => 'blob:report');
@@ -206,14 +182,12 @@ describe('DashboardScreen', () => {
     const click = vi
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
-
     render(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
     );
     await user.click(screen.getByRole('button', { name: /executive pdf/i }));
-
     expect(downloadExecutiveReport).toHaveBeenCalledWith(project.id);
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(click).toHaveBeenCalledOnce();
@@ -221,7 +195,6 @@ describe('DashboardScreen', () => {
     click.mockRestore();
     vi.unstubAllGlobals();
   });
-
   it('shows a recoverable error when report download fails', async () => {
     downloadExecutiveReport.mockRejectedValueOnce(new Error('download failed'));
     vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:report'), revokeObjectURL: vi.fn() });
@@ -229,7 +202,6 @@ describe('DashboardScreen', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
     const user = userEvent.setup();
-
     render(
       <TooltipProvider>
         <DashboardScreen />
@@ -237,7 +209,6 @@ describe('DashboardScreen', () => {
     );
     await user.click(screen.getByRole('button', { name: /executive pdf/i }));
     expect(await screen.findByText('The report could not be downloaded. Try again.')).toBeVisible();
-
     await user.click(screen.getByRole('button', { name: /executive pdf/i }));
     await waitFor(() =>
       expect(
@@ -247,7 +218,6 @@ describe('DashboardScreen', () => {
     click.mockRestore();
     vi.unstubAllGlobals();
   });
-
   it('renders facts and a real next action before the first audit', () => {
     queryResult.data = {
       ...commandCenter,
@@ -276,13 +246,11 @@ describe('DashboardScreen', () => {
         opportunity_id: null,
       },
     };
-
     render(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
     );
-
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
     // The Product loop strip was removed from Overview; loop evidence still
     // arrives on the projection but no longer has a station-tile surface.
@@ -293,7 +261,6 @@ describe('DashboardScreen', () => {
     ).toBeVisible();
     expect(screen.queryByRole('button', { name: /executive pdf/i })).not.toBeInTheDocument();
   });
-
   it('labels a null citation share from an observed run as unavailable', () => {
     queryResult.data = {
       ...commandCenter,
@@ -303,18 +270,15 @@ describe('DashboardScreen', () => {
         limitations: ['The completed audit did not produce a citation-share value.'],
       },
     };
-
     render(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
     );
-
     expect(
       within(screen.getByRole('region', { name: 'Citation share' })).getByText('Unavailable'),
     ).toBeVisible();
   });
-
   it('keeps observed zero distinct from an unavailable value', () => {
     queryResult.data = {
       ...commandCenter,
@@ -323,13 +287,11 @@ describe('DashboardScreen', () => {
         citation_share: { value: 0, delta: 0 },
       },
     };
-
     render(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
     );
-
     expect(screen.getByText('0%')).toBeVisible();
     expect(screen.queryByText('Not measured')).not.toBeInTheDocument();
   });

@@ -10,13 +10,11 @@ import { cn } from '@/lib/utils';
 import { prefetchRoute } from '@/lib/navigation/route-prefetch';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
-import { CONTENT_CREATION_CAPABILITY } from '@/lib/config/billing';
 
 import {
-  MOBILE_NAV_ITEMS,
-  NAV_GROUPS,
-  activeStation,
   isNavItemActive,
+  resolveNavigationGroups,
+  resolveNavigationItems,
   type NavGroup,
   type NavItem,
 } from './nav-items';
@@ -26,7 +24,13 @@ function NavLink({
   item,
   active,
   onIntent,
-}: Readonly<{ item: NavItem; active: boolean; onIntent: (href: string) => void }>) {
+  onNavigate,
+}: Readonly<{
+  item: NavItem;
+  active: boolean;
+  onIntent: (href: string) => void;
+  onNavigate?: () => void;
+}>) {
   const Icon = item.icon;
   return (
     <Link
@@ -37,12 +41,13 @@ function NavLink({
       onFocus={() => {
         if (!active) onIntent(item.href);
       }}
+      onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] border px-2.5 text-sm transition-colors duration-150',
         active
-          ? textRole('emphasis', 'border-border-subtle bg-panel')
-          : 'border-transparent text-secondary hover:bg-panel/70 hover:text-foreground',
+          ? textRole('emphasis', 'border-transparent bg-accent-soft text-accent-text')
+          : 'border-transparent text-secondary hover:bg-well hover:text-foreground',
       )}
     >
       <Icon className={cn('size-4 shrink-0', active ? 'text-accent' : 'text-subtle')} aria-hidden />
@@ -53,51 +58,13 @@ function NavLink({
 
 function StationLinks({
   group,
-  compact = false,
-}: Readonly<{ group: NavGroup; compact?: boolean }>) {
+  onNavigate,
+}: Readonly<{ group: NavGroup; onNavigate?: () => void }>) {
   const pathname = usePathname() ?? '';
   const searchParams = useSearchParams();
   const onIntent = useRouteIntent();
   const { hasCapability } = useEntitlement();
-  const items = group.items.filter(
-    (item) => item.href !== '/content' || hasCapability(CONTENT_CREATION_CAPABILITY),
-  );
-  if (compact) {
-    return (
-      <nav aria-label={`${group.title} destinations`} className="overflow-x-auto md:hidden">
-        <ul className="flex min-w-max gap-1 px-[var(--content-gutter)] py-2">
-          {items.map((item) => {
-            const active = isNavItemActive(pathname, searchParams, item);
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onMouseEnter={() => {
-                    if (!active) onIntent(item.href);
-                  }}
-                  onFocus={() => {
-                    if (!active) onIntent(item.href);
-                  }}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    textRole(
-                      'bodyStrong',
-                      'focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3',
-                    ),
-                    active
-                      ? textRole('emphasis', 'border-border-subtle bg-panel')
-                      : 'border-transparent text-muted hover:bg-panel/70 hover:text-foreground',
-                  )}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-    );
-  }
+  const items = resolveNavigationItems(group.items, hasCapability);
   return (
     <ul className="flex flex-col gap-[var(--sidebar-item-gap)]">
       {items.map((item) => (
@@ -106,6 +73,7 @@ function StationLinks({
             item={item}
             active={isNavItemActive(pathname, searchParams, item)}
             onIntent={onIntent}
+            onNavigate={onNavigate}
           />
         </li>
       ))}
@@ -113,13 +81,18 @@ function StationLinks({
   );
 }
 
-export function SidebarNav({ className }: Readonly<{ className?: string }>) {
+export function SidebarNav({
+  className,
+  onNavigate,
+}: Readonly<{ className?: string; onNavigate?: () => void }>) {
+  const { hasCapability } = useEntitlement();
+  const groups = resolveNavigationGroups(hasCapability);
   return (
     <nav
       aria-label="Primary"
       className={cn('flex flex-col gap-[var(--sidebar-group-gap)]', className)}
     >
-      {NAV_GROUPS.map((group) => {
+      {groups.map((group) => {
         const showHeading = group.title !== 'Overview';
         return (
           <div key={group.title} className="flex flex-col gap-0">
@@ -128,53 +101,8 @@ export function SidebarNav({ className }: Readonly<{ className?: string }>) {
                 {group.title}
               </p>
             ) : null}
-            <StationLinks group={group} />
+            <StationLinks group={group} onNavigate={onNavigate} />
           </div>
-        );
-      })}
-    </nav>
-  );
-}
-
-export function MobileStationNavigation() {
-  const pathname = usePathname() ?? '';
-  const searchParams = useSearchParams();
-  const group = activeStation(pathname, searchParams);
-  return <StationLinks group={group} compact />;
-}
-
-export function MobilePrimaryNavigation() {
-  const pathname = usePathname() ?? '';
-  const searchParams = useSearchParams();
-  const current = activeStation(pathname, searchParams);
-  const onIntent = useRouteIntent();
-  return (
-    <nav
-      className="border-border bg-panel safe-bottom fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-4 border-t md:hidden"
-      aria-label="Primary mobile navigation"
-    >
-      {MOBILE_NAV_ITEMS.map((item) => {
-        const Icon = item.icon;
-        const active = item.label === current.title;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onMouseEnter={() => {
-              if (!active) onIntent(item.href);
-            }}
-            onFocus={() => {
-              if (!active) onIntent(item.href);
-            }}
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              textRole('label', 'flex min-w-0 flex-col items-center justify-center gap-1'),
-              active ? 'text-accent-text' : 'text-muted hover:text-accent-text',
-            )}
-          >
-            <Icon className="size-4" aria-hidden />
-            <span className="truncate">{item.label}</span>
-          </Link>
         );
       })}
     </nav>

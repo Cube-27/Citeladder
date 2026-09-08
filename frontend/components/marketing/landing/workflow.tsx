@@ -1,25 +1,38 @@
-import { CheckCircle2, LineChart, Search, Sparkles } from 'lucide-react';
+import {
+  BarChart3,
+  CheckCircle2,
+  CircleCheck,
+  FileText,
+  LineChart,
+  Pencil,
+  Search,
+  Sparkles,
+} from 'lucide-react';
 
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
-import { cn } from '@/lib/utils';
 
 import { StaggerGroup, StaggerItem } from '../primitives/reveal';
 import { Section, SectionHeader } from '../primitives/section';
-import { LANDING_ICONS, LANDING_TILE_INKS, LANDING_TILES } from './landing-icons';
+const STAGE_ICONS = {
+  Collect: FileText,
+  Prioritize: BarChart3,
+  Improve: Pencil,
+  Verify: CircleCheck,
+} as const;
 
 /**
  * Visual graphic viewports inside each workflow stage card.
  * Modeled after high-end AI product cards (Jasper, Linear, Raycast) with
  * technical grid backdrops, real evidence mockups, and vibrant thematic accents.
  */
-function StepPreview({ index, tileInk }: Readonly<{ index: number; tileInk: string }>) {
+function StepPreview({ index }: Readonly<{ index: number }>) {
   if (index === 0) {
     return (
       <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs backdrop-blur-xs">
         <div aria-hidden className="preview-grid pointer-events-none absolute inset-0" />
         <IllustrativeLabel />
         <div className="border-border-subtle/80 bg-background/90 relative z-1 flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs shadow-2xs">
-          <Search className={cn('size-3 shrink-0', tileInk)} aria-hidden />
+          <Search className="text-accent size-3 shrink-0" aria-hidden />
           <span className="text-preview-caption text-muted truncate font-mono">
             &quot;Who leads enterprise AEO?&quot;
           </span>
@@ -110,11 +123,7 @@ function IllustrativeLabel() {
   );
 }
 
-/**
- * The operating loop — four steps as full vibrant editorial panels.
- * Features large display headings, interactive blueprint graphics, and
- * rich luminous backgrounds that pop off a clean white ground.
- */
+/** Four workflow stages retain their existing illustrative product previews. */
 export function Workflow() {
   const { workflow } = LANDING_CONTENT;
   return (
@@ -122,40 +131,22 @@ export function Workflow() {
       <SectionHeader title={workflow.title} lead={workflow.lead} headingId="workflow-title" />
       <StaggerGroup className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         {workflow.steps.map((step, index) => {
-          const Icon = LANDING_ICONS[step.icon];
-          const stepNumber = String(index + 1).padStart(2, '0');
-          const tileInk = LANDING_TILE_INKS[step.tile];
+          const Icon = STAGE_ICONS[step.stage];
           return (
             <StaggerItem key={step.stage} className="h-full">
-              <article
-                className={cn(
-                  'border-border-subtle/80 relative flex h-full flex-col justify-between rounded-[var(--radius-card)] border p-6 sm:p-7 shadow-xs transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-card',
-                  LANDING_TILES[step.tile],
-                )}
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="bg-panel flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] shadow-xs">
-                      <Icon className={cn('size-4.5', tileInk)} aria-hidden />
-                    </span>
-                    <span className="text-preview-caption border-border-subtle/80 bg-panel/80 text-muted rounded-full border px-2.5 py-0.5 font-mono font-semibold tabular-nums shadow-2xs">
-                      {stepNumber}
-                    </span>
-                  </div>
-                  <span className="website-label text-muted mt-4 block tracking-wider uppercase">
-                    {step.stage}
+              <article className="border-border-subtle flex h-full flex-col gap-3 border-t pt-4">
+                <div className="website-label flex items-center gap-2">
+                  <Icon className="text-accent size-4" aria-hidden />
+                  <span>{step.stage}</span>
+                  <span className="ms-auto" aria-hidden>
+                    {String(index + 1).padStart(2, '0')}
                   </span>
-                  <h3 className="website-feature-heading text-foreground mt-1.5 font-bold tracking-tight text-balance">
-                    {step.label}
-                  </h3>
-
-                  {/* Visual graphic preview frame on grid */}
-                  <StepPreview index={index} tileInk={tileInk} />
-
-                  <p className="website-body text-secondary max-w-[42ch] leading-relaxed">
-                    {step.desc}
-                  </p>
                 </div>
+                <h3 className="website-feature-heading">{step.label}</h3>
+                <div className="app-type-scale">
+                  <StepPreview index={index} />
+                </div>
+                <p className="website-body max-w-[42ch]">{step.desc}</p>
               </article>
             </StaggerItem>
           );

@@ -12,7 +12,6 @@ import { Pressable } from '@/components/ui/pressable';
 import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/errors';
 import { assignLocation } from '@/lib/navigate';
-import { textRole } from '@/components/ui/typography';
 
 type InputProps = ComponentProps<typeof Input>;
 
@@ -166,7 +165,7 @@ export function AuthFormShell({
     <div className="grid w-full gap-6">
       <div className="grid gap-1 text-center">
         <h1 className="flow-title">{title}</h1>
-        <p className="website-body text-muted">{description}</p>
+        <p className="flow-help">{description}</p>
       </div>
 
       <div className="space-y-4">
@@ -175,10 +174,7 @@ export function AuthFormShell({
             <Button
               variant="secondary"
               size="lg"
-              className={textRole(
-                'bodyStrong',
-                'border-border-strong bg-panel hover:border-border-bold hover:bg-background-alt w-full gap-2',
-              )}
+              className="w-full gap-2"
               disabled={oauthPending}
               onClick={() => void handleGoogleSignIn()}
             >
@@ -190,7 +186,7 @@ export function AuthFormShell({
 
             <div className="my-4 flex items-center gap-3">
               <span className="bg-border h-px flex-1" aria-hidden="true" />
-              <span className={textRole('meta')}>or</span>
+              <span className="flow-meta">or</span>
               <span className="bg-border h-px flex-1" aria-hidden="true" />
             </div>
           </>
@@ -209,15 +205,9 @@ export function AuthFormShell({
         ) : null}
 
         {showFooter ? (
-          <p className="website-body text-muted pt-1 text-center">
+          <p className="flow-help pt-1 text-center">
             {footerPrompt}{' '}
-            <Link
-              href={footerHref}
-              className={textRole(
-                'emphasis',
-                'text-accent-text hover:text-accent-hover transition-colors',
-              )}
-            >
+            <Link href={footerHref} className="flow-exit">
               {footerLabel}
             </Link>
           </p>

@@ -24,16 +24,25 @@
 export type BadgeTone = { label: string; dot: string };
 
 export const statusBadge = {
-  success: { label: 'text-secondary', dot: 'bg-success' },
-  warning: { label: 'text-secondary', dot: 'bg-warning' },
-  danger: { label: 'text-danger-text', dot: 'bg-danger' },
-  info: { label: 'text-secondary', dot: 'bg-info' },
+  success: { label: 'bg-success-bg text-success-text', dot: 'bg-success' },
+  warning: { label: 'bg-warning-bg text-warning-text', dot: 'bg-warning' },
+  danger: { label: 'bg-danger-bg text-danger-text', dot: 'bg-danger' },
+  info: { label: 'bg-info-bg text-info-text', dot: 'bg-info' },
 } as const satisfies Record<string, BadgeTone>;
 
 export const sentimentBadge = {
-  positive: { label: 'text-secondary', dot: 'bg-sentiment-positive' },
-  neutral: { label: 'text-secondary', dot: 'bg-sentiment-neutral' },
-  negative: { label: 'text-danger-text', dot: 'bg-sentiment-negative' },
+  positive: {
+    label: 'bg-sentiment-positive-bg text-sentiment-positive-text',
+    dot: 'bg-sentiment-positive',
+  },
+  neutral: {
+    label: 'bg-sentiment-neutral-bg text-sentiment-neutral-text',
+    dot: 'bg-sentiment-neutral',
+  },
+  negative: {
+    label: 'bg-sentiment-negative-bg text-sentiment-negative-text',
+    dot: 'bg-sentiment-negative',
+  },
 } as const satisfies Record<string, BadgeTone>;
 
 export const classificationBadge = {
@@ -54,7 +63,7 @@ export const runStatusBadge = {
   cancelled: { label: 'text-muted', dot: 'bg-run-cancelled' },
 } as const satisfies Record<string, BadgeTone>;
 
-export const neutralBadge = { label: 'text-muted', dot: 'bg-border-strong' } as const;
+export const neutralBadge = { label: 'bg-neutral-bg text-muted', dot: 'bg-border-strong' } as const;
 
 export type StatusValue = keyof typeof statusBadge;
 export type SentimentValue = keyof typeof sentimentBadge;
@@ -66,4 +75,5 @@ export type RunStatusValue = keyof typeof runStatusBadge;
  * pair, not a chip. Casing comes from the call site so product nouns keep their
  * capitalization.
  */
-export const badgeBase = 'inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium';
+export const badgeBase =
+  'inline-flex min-h-[22px] items-center gap-1.5 rounded-[var(--radius-xs)] border border-transparent px-1.5 py-0.5 whitespace-nowrap text-xs font-medium';

@@ -1,12 +1,13 @@
 'use client';
 
-import { type ReactNode, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Tabs } from '@/components/ui/tabs';
+import { PageHeader } from '@/components/layout/page-header';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
 import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
@@ -72,13 +73,9 @@ function SiteHealthContent({
   const prefetchTab = useSiteHealthTabPrefetch(projectId, crawl?.id);
   return (
     <div className="grid min-w-0 gap-[var(--workspace-gap)]">
+      <PageHeader actions={blockingState ? undefined : headerActions} />
       {!blockingState ? <SiteHealthNotices screen={screen} /> : null}
-      <AnalysisTabs
-        tab={tab}
-        setTab={selectTab}
-        actions={blockingState ? undefined : headerActions}
-        onIntent={prefetchTab}
-      />
+      <AnalysisTabs tab={tab} setTab={selectTab} onIntent={prefetchTab} />
       {blockingState ?? (
         <AnalysisPanel
           tab={tab}
@@ -167,19 +164,17 @@ const ANALYSIS_TABS: ReadonlyArray<{ value: AnalysisTab; label: string }> = [
 function AnalysisTabs({
   tab,
   setTab,
-  actions,
   onIntent,
 }: Readonly<{
   tab: string;
   setTab: (tab: AnalysisTab) => void;
-  actions?: ReactNode;
   onIntent: (tab: AnalysisTab) => void;
 }>) {
   // Page actions share the tablist row: the tablist's own block-end rule is
   // suppressed so the row wrapper can carry it across the full width, keeping
   // the selected tab's underline flush with the rule under the buttons.
   return (
-    <div className="border-border relative z-10 flex min-h-10 items-center gap-3 border-b">
+    <div className="border-border relative z-10 min-h-10 min-w-0 border-b">
       <Tabs
         value={tab as AnalysisTab}
         onValueChange={setTab}
@@ -189,7 +184,6 @@ function AnalysisTabs({
         className="border-b-0"
         onIntent={onIntent}
       />
-      {actions ? <div className="ml-auto flex shrink-0 items-center">{actions}</div> : null}
     </div>
   );
 }
@@ -284,15 +278,15 @@ function CrawlActions({
 }>) {
   return (
     <div className="flex items-center gap-2">
-      <Button variant="secondary" size="sm" onClick={onExport} disabled={exporting}>
+      <Button variant="secondary" size="md" onClick={onExport} disabled={exporting}>
         {exporting ? 'Exporting…' : 'Export'}
       </Button>
       {active ? (
-        <Button variant="destructive" size="sm" onClick={onCancel} disabled={cancelPending}>
+        <Button variant="destructive" size="md" onClick={onCancel} disabled={cancelPending}>
           {cancelPending ? 'Stopping…' : 'Stop crawl'}
         </Button>
       ) : (
-        <Button size="sm" onClick={() => onStart()} disabled={startPending}>
+        <Button size="md" onClick={() => onStart()} disabled={startPending}>
           {startPending ? 'Starting…' : 'Run new crawl'}
         </Button>
       )}

@@ -22,6 +22,7 @@ export default function AppNotFound() {
   return (
     <EmptyState
       icon={SearchX}
+      headingLevel={1}
       heading="Page not found"
       description="The page you are looking for does not exist or may have moved."
       action={

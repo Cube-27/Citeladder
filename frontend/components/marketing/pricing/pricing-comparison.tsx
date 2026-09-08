@@ -31,7 +31,7 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
             <tr className="border-border-subtle bg-background-alt border-b">
               <th
                 scope="col"
-                className="text-muted bg-background-alt sticky left-0 z-1 px-4 py-3 text-xs font-medium tracking-wide uppercase"
+                className="text-muted bg-background-alt text-support sticky left-0 z-1 px-4 py-3 font-medium"
               >
                 Capability
               </th>

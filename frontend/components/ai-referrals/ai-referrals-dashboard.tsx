@@ -81,9 +81,9 @@ function TrendCard({
               label={title}
               data={points}
               width={680}
-              height={180}
+              height={145}
               domainMax={domainMax}
-              className="h-45 w-full"
+              className="h-[145px] w-full"
             />
             {points.length > 1 ? (
               <div className="text-muted flex justify-between text-xs tabular-nums" aria-hidden>

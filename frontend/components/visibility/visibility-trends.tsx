@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendChart } from '@/components/ui/trend-chart';
-import { displayHeadingLgClasses, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import { NO_RANKINGS_MESSAGE, RankingRowsTable } from '@/components/visibility/ranking-rows';
@@ -160,7 +160,7 @@ function TrendEmptyState({
   if (isFiltered)
     return (
       <div className="grid justify-items-center gap-2 py-[var(--empty-state-padding)] text-center">
-        <h2 className={displayHeadingLgClasses}>No runs match these filters</h2>
+        <h2 className={textRole('sectionTitle')}>No runs match these filters</h2>
         <p className="text-secondary max-w-md text-sm">
           No completed audits fall inside the selected engine and date range. Widen the range or
           clear the engine filter to see more history.
@@ -170,7 +170,7 @@ function TrendEmptyState({
   return (
     <div className="grid justify-items-center gap-4 py-[var(--empty-state-padding)] text-center">
       <div className="grid gap-1">
-        <h2 className={displayHeadingLgClasses}>No trend history yet</h2>
+        <h2 className={textRole('sectionTitle')}>No trend history yet</h2>
         <p className="text-secondary max-w-md text-sm">
           {hasRuns
             ? 'No snapshots to plot yet — history appears here as audits complete.'
@@ -254,8 +254,8 @@ function TrendCard({
               label={title}
               data={chartPoints}
               width={680}
-              height={180}
-              className="h-45 w-full"
+              height={96}
+              className="h-24 w-full"
             />
             {chartPoints.length > 1 ? (
               <div className="text-muted flex justify-between font-mono text-xs" aria-hidden>

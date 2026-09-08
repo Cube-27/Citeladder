@@ -38,6 +38,14 @@ export function ContentMarkdown({
         remarkPlugins={[remarkGfm]}
         urlTransform={safeUrlTransform}
         components={{
+          // Generated headings begin below the route-owned page title. The raw
+          // Markdown remains untouched for copy and export.
+          h1: ({ node: _node, children, ...props }) => <h2 {...props}>{children}</h2>,
+          h2: ({ node: _node, children, ...props }) => <h3 {...props}>{children}</h3>,
+          h3: ({ node: _node, children, ...props }) => <h4 {...props}>{children}</h4>,
+          h4: ({ node: _node, children, ...props }) => <h5 {...props}>{children}</h5>,
+          h5: ({ node: _node, children, ...props }) => <h6 {...props}>{children}</h6>,
+          h6: ({ node: _node, children, ...props }) => <h6 {...props}>{children}</h6>,
           // Untrusted output: never render images (remote-fetch beacon risk).
           img: () => null,
           // Forward the remaining DOM props (id, aria-describedby,

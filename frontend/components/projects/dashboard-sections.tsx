@@ -1,5 +1,10 @@
 import { ArrowRight, Download, ExternalLink, LoaderCircle } from 'lucide-react';
-import { hairlineBandClasses, hairlineBandItemClasses } from '@/components/ui/workspace';
+import {
+  EditorialSectionHeader,
+  hairlineBandClasses,
+  hairlineBandItemClasses,
+  ledgerClasses,
+} from '@/components/ui/workspace';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
@@ -26,27 +31,15 @@ import { Tooltip } from '@/components/ui/tooltip';
 
 export function DashboardHeader({
   data,
-  projects,
   activeProject,
-  activeProjectId,
-  setActiveProjectId,
-  onEditProject,
-  downloading,
-  onDownload,
 }: Readonly<{
   data: CommandCenter;
-  projects: Project[];
   activeProject: Project;
-  activeProjectId?: string | null;
-  setActiveProjectId: (id: string) => void;
-  onEditProject?: (project: Project) => void;
-  downloading: boolean;
-  onDownload: () => void;
 }>) {
   const website = data.project.website_url;
   const facts = data.facts;
   return (
-    <Card className="grid gap-[var(--workspace-gap)] p-[var(--card-padding-large)]">
+    <section className="grid gap-[var(--workspace-gap)]">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
           <BrandLogo
@@ -86,21 +79,8 @@ export function DashboardHeader({
             ) : null}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <ProjectControls
-            projects={projects}
-            activeProject={activeProject}
-            activeProjectId={activeProjectId}
-            setActiveProjectId={setActiveProjectId}
-            onEditProject={onEditProject}
-          />
-          <FactsDrawer projectId={activeProject.id} competitors={activeProject.competitors ?? []} />
-          {data.report_available ? (
-            <PdfButton downloading={downloading} onDownload={onDownload} />
-          ) : null}
-        </div>
       </div>
-      <div className="border-border-subtle grid gap-3 border-t pt-4">
+      <div className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
           <SectionTitle id="company-facts">Company facts</SectionTitle>
           <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
@@ -123,7 +103,31 @@ export function DashboardHeader({
           />
         </div>
       </div>
-    </Card>
+    </section>
+  );
+}
+
+export function DashboardActions({
+  data,
+  activeProject,
+  onEditProject,
+  downloading,
+  onDownload,
+}: Readonly<{
+  data: CommandCenter;
+  activeProject: Project;
+  onEditProject?: (project: Project) => void;
+  downloading: boolean;
+  onDownload: () => void;
+}>) {
+  return (
+    <div className="flex flex-wrap items-center gap-2.5">
+      <ProjectControls activeProject={activeProject} onEditProject={onEditProject} />
+      <FactsDrawer projectId={activeProject.id} competitors={activeProject.competitors ?? []} />
+      {data.report_available ? (
+        <PdfButton downloading={downloading} onDownload={onDownload} />
+      ) : null}
+    </div>
   );
 }
 
@@ -162,7 +166,7 @@ function PdfButton({
   return (
     <Button
       variant="secondary"
-      size="sm"
+      size="md"
       onClick={onDownload}
       pending={downloading}
       pendingLabel="Preparing…"
@@ -185,7 +189,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
         <NextAction data={data} />
         <Track data={data} />
       </div>
-      <Card aria-labelledby="project-state" className="grid gap-3 p-[var(--card-padding-large)]">
+      <section aria-labelledby="project-state" className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
           <SectionTitle id="project-state">Project state</SectionTitle>
           <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
@@ -195,7 +199,7 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
           <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
           <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
         </div>
-      </Card>
+      </section>
       <Movement data={data} />
     </>
   );
@@ -203,7 +207,10 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
 
 function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card className="text-foreground flex flex-col justify-between gap-4 p-[var(--card-padding-large)]">
+    <Card
+      tone="recommendation"
+      className="text-foreground flex flex-col justify-between gap-4 p-[var(--card-padding-large)]"
+    >
       <Stack gap="compact">
         <div className="flex items-center justify-between">
           <AccentEyebrow>
@@ -280,18 +287,15 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
 
 function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card
-      aria-labelledby="movement"
-      className="flex flex-col justify-between gap-4 p-[var(--card-padding-large)]"
-    >
-      <div className="grid gap-3">
-        <div className="grid gap-0.5">
-          <SectionTitle id="movement">Movement</SectionTitle>
-          <p className="text-muted text-xs">Only comparable persisted measurements are shown.</p>
-        </div>
-        <MovementChart movements={data.movements} />
-      </div>
-    </Card>
+    <section aria-labelledby="movement" className="grid gap-3">
+      <EditorialSectionHeader
+        title="Movement"
+        headingId="movement"
+        description="Only comparable persisted measurements are shown."
+        ruled
+      />
+      <MovementChart movements={data.movements} />
+    </section>
   );
 }
 
@@ -312,20 +316,22 @@ export function ActionsAndProof({
 }>) {
   return (
     <div className="grid gap-[var(--workspace-gap)]">
-      <Card aria-labelledby="ranked-actions" className="p-[var(--card-padding-large)]">
-        <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-t border-b pt-3 pb-3">
-          <div className="grid gap-0.5">
-            <SectionTitle id="ranked-actions">Ranked actions</SectionTitle>
-            <p className="text-muted text-xs">Shared order · drag or use the arrow controls.</p>
-          </div>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/opportunities">
-              View all <ArrowRight className="ms-1 size-3.5" aria-hidden />
-            </Link>
-          </Button>
-        </div>
+      <section aria-labelledby="ranked-actions" className="grid gap-3">
+        <EditorialSectionHeader
+          title="Ranked actions"
+          headingId="ranked-actions"
+          description="Shared order · drag or use the arrow controls."
+          ruled
+          actions={
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/opportunities">
+                View all <ArrowRight className="ms-1 size-3.5" aria-hidden />
+              </Link>
+            </Button>
+          }
+        />
         {actions.length ? (
-          <ol>
+          <ol className={ledgerClasses('ruled')}>
             {actions.map((action, index) => (
               <ActionRow
                 key={action.id}
@@ -344,10 +350,10 @@ export function ActionsAndProof({
             <p className="text-muted text-xs">Run another audit to look for new opportunities.</p>
           </div>
         )}
-      </Card>
-      <Card
+      </section>
+      <section
         aria-labelledby="progress-proof"
-        className="flex flex-col justify-between gap-4 p-[var(--card-padding-large)] sm:flex-row sm:items-center"
+        className="border-border-subtle flex flex-col justify-between gap-4 border-y py-4 sm:flex-row sm:items-center"
       >
         <div className="grid gap-1">
           <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>
@@ -368,7 +374,7 @@ export function ActionsAndProof({
             <Download className="size-4" aria-hidden /> Download PDF
           </Button>
         ) : null}
-      </Card>
+      </section>
     </div>
   );
 }

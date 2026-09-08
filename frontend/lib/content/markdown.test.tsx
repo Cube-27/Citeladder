@@ -36,7 +36,8 @@ describe('ContentMarkdown', () => {
     render(
       <ContentMarkdown markdown={'# Title\n\n- one\n- two\n\n| A | B |\n| - | - |\n| 1 | 2 |'} />,
     );
-    expect(screen.getByRole('heading', { level: 1, name: 'Title' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Title' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
     expect(screen.getByText('one')).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
   });

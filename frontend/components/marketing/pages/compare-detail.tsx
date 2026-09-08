@@ -48,20 +48,14 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
                 <tr className="border-border-subtle bg-background-alt border-b">
                   <th
                     scope="col"
-                    className="text-muted bg-background-alt sticky left-0 z-1 px-4 py-3 text-xs font-medium tracking-wide uppercase"
+                    className="text-muted bg-background-alt text-support sticky left-0 z-1 px-4 py-3 font-medium"
                   >
                     Dimension
                   </th>
-                  <th
-                    scope="col"
-                    className="text-accent-text px-4 py-3 text-xs font-medium tracking-wide uppercase"
-                  >
+                  <th scope="col" className="text-accent-text text-support px-4 py-3 font-medium">
                     CiteLadder
                   </th>
-                  <th
-                    scope="col"
-                    className="text-muted px-4 py-3 text-xs font-medium tracking-wide uppercase"
-                  >
+                  <th scope="col" className="text-muted text-support px-4 py-3 font-medium">
                     {competitor.name}
                   </th>
                 </tr>

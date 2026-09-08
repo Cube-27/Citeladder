@@ -13,7 +13,7 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Input } from '@/components/ui/input';
 import { scoreBand, scoreBandText } from '@/components/ui/score-band';
 import { Skeleton } from '@/components/ui/skeleton';
-import { displayHeadingLgClasses, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { Pressable } from '@/components/ui/pressable';
 import {
@@ -197,7 +197,7 @@ export function YourPrompts() {
       {activePrompts.length === 0 ? (
         <div className="grid gap-3 py-[var(--empty-state-padding)]">
           <p className={eyebrowClasses}>Your prompts</p>
-          <h2 className={displayHeadingLgClasses}>No active prompts yet</h2>
+          <h2 className={textRole('sectionTitle')}>No active prompts yet</h2>
           <p className="text-secondary max-w-md text-sm leading-relaxed">
             Switch to manage mode to add prompts manually, import a CSV, or generate prompts and
             topics with AI.

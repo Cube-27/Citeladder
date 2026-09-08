@@ -173,7 +173,7 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
         <Card className="min-w-0 lg:sticky lg:top-[var(--workspace-gap)]">
           <CardContent
             flush
-            className="max-h-[calc(100dvh-var(--topbar-height)-2*var(--workspace-gap))] overflow-y-auto"
+            className="max-h-[calc(100dvh-var(--sticky-header-offset)-2*var(--workspace-gap))] overflow-y-auto"
           >
             <CatalogList
               query={queries.catalog}

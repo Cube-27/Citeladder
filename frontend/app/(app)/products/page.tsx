@@ -1,7 +1,7 @@
 'use client';
 
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { ProductsScreen } from '@/components/products/products-screen';
+import { PageHeader } from '@/components/layout/page-header';
 
 /**
  * Commerce workspace: Catalog, Competitors, Buyer Prompts, and AI Shelf.
@@ -10,10 +10,9 @@ import { ProductsScreen } from '@/components/products/products-screen';
  */
 export default function ProductsPage() {
   return (
-    <TooltipProvider>
-      <div className="grid gap-[var(--workspace-gap)]">
-        <ProductsScreen />
-      </div>
-    </TooltipProvider>
+    <div className="grid gap-[var(--workspace-gap)]">
+      <PageHeader />
+      <ProductsScreen />
+    </div>
   );
 }

@@ -5,7 +5,7 @@ import { Suspense, useState } from 'react';
 
 import { PromptLibrary } from '@/components/prompts/prompt-library';
 import { YourPrompts } from '@/components/prompts/your-prompts';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { PageHeader } from '@/components/layout/page-header';
 
 /**
  * Prompts screen (design.md §9.4, sidebar "Prompts") — the single prompts
@@ -40,14 +40,16 @@ function PromptsScreen() {
 
   if (managing) {
     return (
-      <TooltipProvider>
+      <div className="grid gap-[var(--workspace-gap)]">
+        <PageHeader />
         <PromptLibrary onDoneManaging={exitManage} />
-      </TooltipProvider>
+      </div>
     );
   }
 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
+      <PageHeader />
       <YourPrompts />
     </div>
   );

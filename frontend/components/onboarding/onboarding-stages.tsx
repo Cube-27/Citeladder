@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
 import { ActivityProgress } from '@/components/ui/activity-progress';
@@ -15,6 +15,15 @@ import { ReviewStep } from './review-step';
 
 const MARKET_OPTIONS = [{ value: 'GLOBAL', label: 'Global' }, ...COUNTRY_OPTIONS];
 
+function StageHeader({ title, children }: Readonly<{ title: ReactNode; children: ReactNode }>) {
+  return (
+    <div className="flow-header">
+      <h1 className="flow-title">{title}</h1>
+      <p className="flow-help">{children}</p>
+    </div>
+  );
+}
+
 export function BrandStage({
   form,
   isAdditional,
@@ -26,12 +35,9 @@ export function BrandStage({
 }>) {
   return (
     <form id="onboarding-brand-form" noValidate onSubmit={onSubmit}>
-      <div className="flow-header">
-        <h1 className="flow-title">{isAdditional ? 'Add a project' : "Let's get started"}</h1>
-        <p className="website-body">
-          We&apos;ll review your website, suggest comparable brands, and prepare balanced questions.
-        </p>
-      </div>
+      <StageHeader title={isAdditional ? 'Add a project' : "Let's get started"}>
+        We&apos;ll review your website, suggest comparable brands, and prepare balanced questions.
+      </StageHeader>
       <div className="grid items-start gap-x-5 gap-y-4 sm:grid-cols-2">
         <Field label="Brand name" required error={form.formState.errors.brand_name?.message}>
           {(props) => (
@@ -110,12 +116,9 @@ export function DiscoveryStage({
   const found = discoveryResults(discovery.discovery);
   return (
     <div>
-      <div className="flow-header">
-        <h1 className="flow-title">Finding what to track</h1>
-        <p className="website-body">
-          We&apos;re reading {brandName || 'your website'} and learning what you offer.
-        </p>
-      </div>
+      <StageHeader title="Finding what to track">
+        We&apos;re reading {brandName || 'your website'} and learning what you offer.
+      </StageHeader>
       <ActivityProgress
         label="Discovering your brand"
         steps={discoveryActivity(discovery.discovery)}
@@ -196,12 +199,9 @@ export function ReviewStage({
   } = flow;
   return (
     <div>
-      <div className="flow-header">
-        <h1 className="flow-title">Does this look right?</h1>
-        <p className="website-body">
-          Everything below was found automatically. Deselect anything you don&apos;t want to track.
-        </p>
-      </div>
+      <StageHeader title="Does this look right?">
+        Everything below was found automatically. Deselect anything you don&apos;t want to track.
+      </StageHeader>
       <div className="flow-groups">
         <ReviewStep
           domains={domains}

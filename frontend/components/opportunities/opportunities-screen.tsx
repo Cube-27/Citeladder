@@ -4,12 +4,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Download, RefreshCw } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { PageHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
-import { displayHeadingLgClasses, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import { OpportunitiesCatalog } from '@/components/opportunities/opportunities-catalog';
 import { opportunitySummaryPollingInterval } from '@/components/opportunities/opportunity-summary-polling';
 import {
@@ -66,6 +67,13 @@ function OpportunitiesContent({
   );
   return (
     <div className="grid gap-[var(--page-section-gap)]">
+      <PageHeader
+        actions={
+          projectId && summary?.computed ? (
+            <SummaryActions projectId={projectId} summary={summary} />
+          ) : undefined
+        }
+      />
       <OpportunitiesScreenBody state={screen} projectId={projectId} summary={summary} />
     </div>
   );
@@ -99,7 +107,7 @@ function OpportunitiesScreenBody({
     return <PreparingRecommendations projectId={projectId} summary={summary} />;
   return (
     <>
-      <SummaryStrip projectId={projectId} summary={summary} />
+      <SummaryStrip summary={summary} />
       <OpportunitiesCatalog key={projectId} projectId={projectId} />
     </>
   );
@@ -154,7 +162,7 @@ function PreparingRecommendations({
   return (
     <div className="grid gap-3 py-[var(--empty-state-padding)]">
       <AccentEyebrow>Recommendations</AccentEyebrow>
-      <h2 className={displayHeadingLgClasses}>
+      <h2 className={textRole('sectionTitle')}>
         {delayed ? 'Recommendations need another try' : 'Preparing recommendations'}
       </h2>
       <p className="text-secondary max-w-md text-sm">
@@ -165,10 +173,7 @@ function PreparingRecommendations({
   );
 }
 
-function SummaryStrip({
-  projectId,
-  summary,
-}: Readonly<{ projectId: string; summary: OpportunitySummary }>) {
+function SummaryStrip({ summary }: Readonly<{ summary: OpportunitySummary }>) {
   const openCount = summary.counts_by_status.open ?? 0;
   const inProgressCount = summary.counts_by_status.in_progress ?? 0;
   const highImpactCount =
@@ -200,30 +205,38 @@ function SummaryStrip({
           <p className="text-warning text-xs">{summary.limitations.join(' ')}</p>
         ) : null}
       </div>
-      <div className="flex items-center gap-2">
-        <Dropdown>
-          <DropdownTrigger asChild>
-            <Button variant="secondary" size="sm">
-              <Download className="size-4" aria-hidden />
-              Export
-              <ChevronDown className="size-4" aria-hidden />
-            </Button>
-          </DropdownTrigger>
-          <DropdownContent align="end">
-            <DropdownItem asChild>
-              <a href={opportunitiesApi.exportUrl(projectId, 'csv')} download>
-                Download CSV
-              </a>
-            </DropdownItem>
-            <DropdownItem asChild>
-              <a href={opportunitiesApi.exportUrl(projectId, 'md')} download>
-                Download Markdown
-              </a>
-            </DropdownItem>
-          </DropdownContent>
-        </Dropdown>
-        {summary.activation_state === 'delayed' ? <RetryButton projectId={projectId} /> : null}
-      </div>
+    </div>
+  );
+}
+
+function SummaryActions({
+  projectId,
+  summary,
+}: Readonly<{ projectId: string; summary: OpportunitySummary }>) {
+  return (
+    <div className="flex items-center gap-2">
+      <Dropdown>
+        <DropdownTrigger asChild>
+          <Button variant="secondary" size="sm">
+            <Download className="size-4" aria-hidden />
+            Export
+            <ChevronDown className="size-4" aria-hidden />
+          </Button>
+        </DropdownTrigger>
+        <DropdownContent align="end">
+          <DropdownItem asChild>
+            <a href={opportunitiesApi.exportUrl(projectId, 'csv')} download>
+              Download CSV
+            </a>
+          </DropdownItem>
+          <DropdownItem asChild>
+            <a href={opportunitiesApi.exportUrl(projectId, 'md')} download>
+              Download Markdown
+            </a>
+          </DropdownItem>
+        </DropdownContent>
+      </Dropdown>
+      {summary.activation_state === 'delayed' ? <RetryButton projectId={projectId} /> : null}
     </div>
   );
 }

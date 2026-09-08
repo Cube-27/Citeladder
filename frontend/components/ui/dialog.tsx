@@ -59,17 +59,17 @@ export function Dialog({
             returnFocusRef.current = null;
           }}
           className={cn(
-            'dialog-panel border-border-subtle bg-elevated shadow-modal-value z-modal fixed top-1/2 left-1/2 flex max-h-5/6 w-[42rem] max-w-[calc(100vw-2rem)] min-w-0 -translate-x-1/2 -translate-y-1/2 flex-col box-border rounded-[var(--radius-overlay)] border focus:outline-none',
+            'dialog-panel border-border-subtle bg-elevated shadow-modal-value z-modal fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2.5rem)] w-[30rem] max-w-[calc(100vw-2.5rem)] min-w-0 -translate-x-1/2 -translate-y-1/2 flex-col box-border rounded-[var(--radius-overlay)] border focus:outline-none',
             className,
           )}
         >
           <header className="border-border-subtle flex items-start justify-between gap-4 border-b px-[var(--modal-padding)] pt-[var(--modal-padding)] pb-4">
             <div className="grid min-w-0 gap-1">
-              <DialogPrimitive.Title className="text-foreground text-xl font-medium tracking-tight">
+              <DialogPrimitive.Title className="text-foreground text-lg font-semibold tracking-[-0.35px]">
                 {title}
               </DialogPrimitive.Title>
               {description ? (
-                <DialogPrimitive.Description className="text-secondary text-sm leading-relaxed">
+                <DialogPrimitive.Description className="text-secondary text-sm leading-[22px]">
                   {description}
                 </DialogPrimitive.Description>
               ) : null}

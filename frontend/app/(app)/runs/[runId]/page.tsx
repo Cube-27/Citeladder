@@ -9,6 +9,7 @@ import { useState } from 'react';
 
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
 import { RunDetailView } from '@/components/runs/run-detail-view';
+import { PageHeader } from '@/components/layout/page-header';
 import { queryKeys } from '@/lib/api/query-keys';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
@@ -87,6 +88,7 @@ export default function RunDetailPage() {
 
   return (
     <>
+      <PageHeader title="Run details" />
       <RunDetailView
         audit={auditQuery.data}
         auditLoading={auditQuery.isLoading}

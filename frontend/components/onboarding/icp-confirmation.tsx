@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Building2, Compass, Sparkles } from 'lucide-react';
 
 import { FlowGroup } from '@/components/auth/flow-shell';
 import { Input } from '@/components/ui/input';
@@ -86,7 +85,6 @@ export function IcpConfirmation({
   return (
     <div className="flow-groups">
       <FlowGroup
-        icon={<Sparkles className="size-4" aria-hidden />}
         title="What you sell"
         help="Your competitors and tracked questions are built from this."
       >
@@ -128,7 +126,7 @@ export function IcpConfirmation({
       </FlowGroup>
 
       <div className="flow-pair">
-        <FlowGroup icon={<Building2 className="size-4" aria-hidden />} title="Who buys it">
+        <FlowGroup title="Who buys it">
           <RadioGroup
             variant="chip"
             ariaLabel="Who buys it"
@@ -138,7 +136,7 @@ export function IcpConfirmation({
           />
         </FlowGroup>
 
-        <FlowGroup icon={<Compass className="size-4" aria-hidden />} title="Where they buy it">
+        <FlowGroup title="Where they buy it">
           <RadioGroup
             variant="chip"
             ariaLabel="Where they buy it"

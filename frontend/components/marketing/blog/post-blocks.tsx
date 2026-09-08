@@ -278,9 +278,7 @@ function DiagramTaxonomy({
   return (
     <div>
       <div className="border-accent-border/60 bg-accent-soft/30 mb-4 rounded-[var(--radius-control)] border p-3 text-center">
-        <span className="website-label text-accent-text text-xs font-bold tracking-wider uppercase">
-          Category Anchor
-        </span>
+        <span className="website-label text-accent-text">Category Anchor</span>
         <h4 className="website-body text-foreground mt-0.5 font-semibold">{data.root}</h4>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">

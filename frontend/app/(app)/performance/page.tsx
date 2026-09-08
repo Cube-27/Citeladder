@@ -1,7 +1,7 @@
 'use client';
 
 import { PerformanceScreen } from '@/components/performance/performance-screen';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { PageHeader } from '@/components/layout/page-header';
 
 /**
  * Performance — the Search Console-aligned view of organic search: the four
@@ -15,10 +15,9 @@ import { TooltipProvider } from '@/components/ui/tooltip';
  */
 export default function PerformancePage() {
   return (
-    <TooltipProvider>
-      <div className="grid gap-[var(--workspace-gap)]">
-        <PerformanceScreen />
-      </div>
-    </TooltipProvider>
+    <div className="grid gap-[var(--workspace-gap)]">
+      <PageHeader />
+      <PerformanceScreen />
+    </div>
   );
 }

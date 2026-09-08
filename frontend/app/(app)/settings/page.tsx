@@ -2,8 +2,8 @@
 
 import { Suspense } from 'react';
 
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { SettingsScreen } from '@/components/settings/settings-screen';
+import { PageHeader } from '@/components/layout/page-header';
 
 /**
  * Settings page — tabbed settings reachable from the sidebar user dropdown:
@@ -16,10 +16,9 @@ import { SettingsScreen } from '@/components/settings/settings-screen';
  */
 export default function SettingsPage() {
   return (
-    <TooltipProvider>
-      <Suspense>
-        <SettingsScreen />
-      </Suspense>
-    </TooltipProvider>
+    <Suspense>
+      <PageHeader />
+      <SettingsScreen />
+    </Suspense>
   );
 }

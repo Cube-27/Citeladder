@@ -20,6 +20,7 @@ import { shouldPollAudit } from '@/lib/runs/status';
 import { useActiveProject } from '@/lib/project/project-context';
 import { Stack } from '@/components/ui/layout';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/layout/page-header';
 
 /** Poll interval (ms) for the runs list while any run is active. */
 const POLL_INTERVAL_MS = 3_000;
@@ -77,6 +78,13 @@ export default function RunsPage() {
 
   return (
     <Stack gap="section">
+      <PageHeader
+        actions={
+          <Button onClick={() => setLaunchOpen(true)} disabled={!projectId}>
+            Launch audit
+          </Button>
+        }
+      />
       <div className="flex flex-wrap items-center gap-2">
         <fieldset className="flex flex-wrap items-center gap-2" aria-label="Filter by status">
           {STATUS_FILTERS.map((filter) => (
@@ -90,9 +98,6 @@ export default function RunsPage() {
             </FilterChip>
           ))}
         </fieldset>
-        <Button className="ml-auto" onClick={() => setLaunchOpen(true)} disabled={!projectId}>
-          Launch audit
-        </Button>
       </div>
 
       {!projectId ? (

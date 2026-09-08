@@ -31,8 +31,8 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParams,
 }));
 
-import { MobilePrimaryNavigation, MobileStationNavigation, SidebarNav } from './sidebar-nav';
-import { NAV_GROUPS } from './nav-items';
+import { SidebarNav } from './sidebar-nav';
+import { NAV_GROUPS, resolveCommandGroups, resolveNavigationGroups } from './nav-items';
 
 describe('station navigation', () => {
   beforeEach(() => {
@@ -59,6 +59,20 @@ describe('station navigation', () => {
     expect(screen.queryByRole('link', { name: 'Growth Agent' })).not.toBeInTheDocument();
   });
 
+  it('uses the same capability result for sidebar and command destinations', () => {
+    const canUse = (capability: string) => capability !== 'content_creation';
+    const sidebarLabels = resolveNavigationGroups(canUse)
+      .flatMap((group) => group.items)
+      .map((item) => item.label);
+    const commandLabels = resolveCommandGroups(canUse)
+      .flatMap((group) => group.items)
+      .map((item) => item.label);
+
+    expect(sidebarLabels).not.toContain('Content');
+    expect(commandLabels).not.toContain('Content');
+    expect(commandLabels).toEqual([...sidebarLabels, 'Integrations', 'Providers', 'Settings']);
+  });
+
   it('uses query-aware active state for station destinations', () => {
     pathname = '/site';
     searchParams = new URLSearchParams('tab=pages');
@@ -67,20 +81,11 @@ describe('station navigation', () => {
     expect(activeLink).toHaveAttribute('aria-current', 'page');
   });
 
-  it('renders exact mobile stations and shared secondary destinations', () => {
-    pathname = '/visibility';
-    searchParams = new URLSearchParams('tab=trends');
-    render(
-      <>
-        <MobilePrimaryNavigation />
-        <MobileStationNavigation />
-      </>,
-    );
-    const primary = screen.getByRole('navigation', { name: 'Primary mobile navigation' });
-    expect(primary).toHaveTextContent('OverviewAnalyzeActTrack');
-    expect(screen.getByRole('link', { name: 'Track' })).toHaveAttribute('aria-current', 'page');
-    const secondary = screen.getByRole('navigation', { name: 'Track destinations' });
-    expect(secondary).toHaveTextContent('PromptsAI VisibilityRunsAI Referrals');
+  it('calls the compact drawer close owner after choosing a destination', () => {
+    const onNavigate = vi.fn();
+    render(<SidebarNav onNavigate={onNavigate} />);
+    fireEvent.click(screen.getByRole('link', { name: 'Website' }));
+    expect(onNavigate).toHaveBeenCalledOnce();
   });
 
   it('omits section heading for Overview but renders headings for other stations', () => {

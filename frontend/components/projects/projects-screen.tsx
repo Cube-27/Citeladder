@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageHeader } from '@/components/layout/page-header';
 import type { Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -47,9 +48,12 @@ export function ProjectsScreen() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-2" aria-hidden>
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-full" />
+      <div className="grid gap-[var(--workspace-gap)]">
+        <PageHeader />
+        <div className="grid gap-2" aria-hidden>
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
       </div>
     );
   }
@@ -58,6 +62,7 @@ export function ProjectsScreen() {
     return (
       <EmptyState
         icon={FolderOpen}
+        headingLevel={1}
         heading="No projects yet"
         description="Add a brand to start tracking how AI answers describe it."
         action={

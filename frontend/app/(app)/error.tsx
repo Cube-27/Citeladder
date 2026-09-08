@@ -43,6 +43,7 @@ export default function AppError({
   return (
     <EmptyState
       icon={CircleAlert}
+      headingLevel={1}
       heading="Something went wrong"
       description="This screen hit an unexpected error — retrying usually fixes it."
       action={<Button onClick={reset}>Try again</Button>}

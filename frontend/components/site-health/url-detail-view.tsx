@@ -5,7 +5,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label, displayHeadingXlClasses, textRole } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { Pressable } from '@/components/ui/pressable';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
@@ -95,7 +95,7 @@ function HeaderCard({
       <CardContent className="grid gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid min-w-0 gap-1">
-            <h1 className={cn(displayHeadingXlClasses, 'break-all')}>
+            <h1 className={textRole('pageTitle', 'break-all')}>
               {pageDisplayTitle(detail.title, detail.display_url)}
             </h1>
           </div>

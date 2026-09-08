@@ -5,11 +5,11 @@ import { CornerDownLeft, Search, type LucideIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
-import { NAV_GROUPS } from '@/components/layout/nav-items';
+import { resolveCommandGroups } from '@/components/layout/nav-items';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
-import { ICONS } from '@/lib/icons';
+import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 
@@ -44,6 +44,50 @@ type Command = {
 /** Chrome shared by the empty state and each row, so heights never drift. */
 const ROW =
   'flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-3 text-left text-sm h-9';
+const OPEN_COMMAND_PALETTE_EVENT = 'citeladder:open-command-palette';
+
+type CommandPaletteLaunch = { trigger: HTMLElement };
+
+export function CommandPaletteTrigger({
+  className,
+  onOpen,
+}: Readonly<{
+  className?: string;
+  /** Lets a transient presenter close before the persistent palette opens. */
+  onOpen?: (trigger: HTMLElement) => void;
+}>) {
+  return (
+    <Button
+      variant="secondary"
+      size="md"
+      onClick={(event) => {
+        const trigger = event.currentTarget;
+        if (onOpen) onOpen(trigger);
+        else {
+          window.dispatchEvent(
+            new CustomEvent<CommandPaletteLaunch>(OPEN_COMMAND_PALETTE_EVENT, {
+              detail: { trigger },
+            }),
+          );
+        }
+      }}
+      aria-label="Search or jump to"
+      aria-keyshortcuts="Meta+K Control+K"
+      className={cn(
+        'text-muted min-w-0 w-full justify-start text-left max-sm:size-[var(--control-height)] max-sm:px-0 [&>span]:w-full',
+        className,
+      )}
+    >
+      <Search className="text-muted size-4 shrink-0" aria-hidden />
+      <span className="min-w-0 truncate text-sm font-normal max-sm:sr-only">
+        Search or jump to…
+      </span>
+      <kbd className="bg-background-alt border-border/60 text-muted ms-auto hidden shrink-0 rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs font-medium sm:inline">
+        Ctrl K
+      </kbd>
+    </Button>
+  );
+}
 
 /**
  * Results keep ONE flat order for the keyboard cursor, but render grouped.
@@ -70,6 +114,7 @@ export function CommandPalette() {
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const { hasCapability } = useEntitlement();
 
   // Where focus goes when the palette closes. Radix restores focus to its own
   // Trigger, but the ⌘K path has no trigger, so without this the caller loses
@@ -93,6 +138,23 @@ export function CommandPalette() {
       setActive(0);
     }
   }, []);
+
+  const openFromTrigger = useCallback(
+    (trigger: HTMLElement) => {
+      returnFocusTo.current = trigger;
+      setOpenState(true);
+    },
+    [setOpenState],
+  );
+
+  useEffect(() => {
+    const listener = (event: Event) => {
+      const detail = (event as CustomEvent<CommandPaletteLaunch>).detail;
+      if (detail?.trigger) openFromTrigger(detail.trigger);
+    };
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
+    return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
+  }, [openFromTrigger]);
 
   // ⌘K / Ctrl+K toggles from anywhere. Bound on keydown so it beats the
   // browser's own find-in-page on the platforms that map ⌘K.
@@ -122,7 +184,7 @@ export function CommandPalette() {
   }, [open]);
 
   const commands = useMemo<Command[]>(() => {
-    const navigation = NAV_GROUPS.flatMap((group) =>
+    const navigation = resolveCommandGroups(hasCapability).flatMap((group) =>
       group.items.map((item) => ({
         id: `nav:${item.href}`,
         label: item.label,
@@ -131,30 +193,6 @@ export function CommandPalette() {
         run: () => router.push(item.href),
       })),
     );
-
-    const settingsCommands: Command[] = [
-      {
-        id: 'nav:/settings?tab=integrations',
-        label: 'Integrations',
-        group: 'Settings',
-        icon: ICONS.setup,
-        run: () => router.push('/settings?tab=integrations'),
-      },
-      {
-        id: 'nav:/settings?tab=providers',
-        label: 'Providers',
-        group: 'Settings',
-        icon: ICONS.settings,
-        run: () => router.push('/settings?tab=providers'),
-      },
-      {
-        id: 'nav:/settings',
-        label: 'Settings',
-        group: 'Settings',
-        icon: ICONS.settings,
-        run: () => router.push('/settings'),
-      },
-    ];
 
     // Switching project re-scopes the API client's workspace header, so this
     // is a genuine action rather than a link.
@@ -169,8 +207,8 @@ export function CommandPalette() {
       run: () => setActiveProjectId(project.id),
     }));
 
-    return [...navigation, ...settingsCommands, ...projectCommands];
-  }, [router, projects, activeProjectId, setActiveProjectId]);
+    return [...navigation, ...projectCommands];
+  }, [router, projects, activeProjectId, setActiveProjectId, hasCapability]);
 
   const results = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -220,29 +258,6 @@ export function CommandPalette() {
 
   return (
     <>
-      {/* The top bar's pointer affordance for the same palette. It records
-          itself as the focus target for the same reason the ⌘K path does —
-          this button is not a Radix Trigger, so nothing else would. */}
-      <Button
-        variant="secondary"
-        size="lg"
-        onClick={(event) => {
-          returnFocusTo.current = event.currentTarget;
-          setOpenState(true);
-        }}
-        aria-label="Search or jump to"
-        aria-keyshortcuts="Meta+K Control+K"
-        className="text-muted w-full justify-start text-left max-sm:size-[var(--control-height)] max-sm:px-0 [&>span]:w-full"
-      >
-        <Search className="text-muted size-4 shrink-0" aria-hidden />
-        <span className="min-w-0 truncate text-sm font-normal max-sm:sr-only">
-          Search or jump to…
-        </span>
-        <kbd className="bg-background-alt border-border/60 text-muted ms-auto hidden shrink-0 rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs font-medium sm:inline">
-          Ctrl K
-        </kbd>
-      </Button>
-
       <DialogPrimitive.Root open={open} onOpenChange={setOpenState}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="bg-overlay-scrim z-overlay fixed inset-0" />

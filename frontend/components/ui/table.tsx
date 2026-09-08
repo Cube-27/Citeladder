@@ -8,8 +8,7 @@ import { cn } from '@/lib/utils';
  *    full-strength under-rule; no vertical column-separator hairlines, which
  *    made the tables read as spreadsheets rather than designed surfaces
  *  - --table-row-height rows, --text-sm cells, subtle ROW hairlines only
- *  - everything left-aligned (including numeric columns — the mock aligns the
- *    column edge, not the digits); `numeric` still applies tabular numerals
+ *  - numeric columns are right-aligned and tabular so values compare by digit
  *  - hover tints the row with `active`; `highlight` marks the user's own row
  *    with the same tint permanently
  * The wrapper is scroll-capable so the sticky header pins on vertical scroll.
@@ -19,7 +18,7 @@ import { cn } from '@/lib/utils';
  * (12/16, medium, text-secondary, sentence case), and keeping the strings separate
  * stops a future eyebrow change from silently restyling every table.
  */
-const tableHeadClasses = 'text-xs text-secondary font-medium whitespace-nowrap';
+const tableHeadClasses = 'text-support text-secondary font-medium whitespace-nowrap';
 export function Table({
   children,
   className,
@@ -97,7 +96,7 @@ export function TableHead({
       className={cn(
         tableHeadClasses,
         'border-border bg-panel sticky top-0 z-10 h-[var(--table-header-height)] border-b px-[var(--table-cell-padding-x)] text-left align-middle',
-        numeric && 'tabular-nums',
+        numeric && 'text-right tabular-nums',
         className,
       )}
     >
@@ -119,7 +118,7 @@ export function TableCell({
         'text-foreground border-border-subtle px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle text-sm',
         // Row rule, dropped on the last row.
         'border-b [tr:last-child>&]:border-b-0',
-        numeric && 'tabular-nums',
+        numeric && 'text-right tabular-nums',
         className,
       )}
     >

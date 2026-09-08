@@ -1,6 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /** Shared editorial structures for authenticated analytical workspaces. */
@@ -35,7 +36,7 @@ export const hairlineBandItemClasses = 'min-w-0 py-3 sm:px-4 sm:first:ps-0 sm:la
 const LEDGER_SHELL = {
   open: '',
   ruled: 'border-border-subtle border-y',
-  boxed: 'bg-panel shadow-card overflow-hidden rounded-[var(--radius-card)]',
+  boxed: 'bg-panel overflow-hidden rounded-[var(--radius-card)]',
 } as const;
 
 export type LedgerShell = keyof typeof LEDGER_SHELL;
@@ -89,9 +90,7 @@ export function MetricItem({
         <span className="truncate">{label}</span>
         {marker}
       </dt>
-      <dd className="text-foreground mt-2 text-3xl font-medium tracking-[-0.02em] tabular-nums">
-        {value}
-      </dd>
+      <dd className={cn(textRole('metric'), 'mt-2')}>{value}</dd>
       {detail ? <dd className="text-muted mt-1 text-xs">{detail}</dd> : null}
     </div>
   );
@@ -138,33 +137,5 @@ export function EditorialSectionHeader({
       </div>
       {actions}
     </header>
-  );
-}
-
-export function WorkspacePane({
-  children,
-  selected = false,
-  surface = 'open',
-  className,
-  ...props
-}: Readonly<
-  ComponentPropsWithoutRef<'section'> & {
-    selected?: boolean;
-    surface?: 'open' | 'tonal' | 'object';
-  }
->) {
-  return (
-    <section
-      {...props}
-      className={cn(
-        'min-w-0',
-        surface === 'tonal' && 'bg-well rounded-[var(--radius-card)]',
-        surface === 'object' && 'bg-panel rounded-[var(--radius-card)]',
-        selected && 'bg-accent-soft ring-accent-border rounded-[var(--radius-card)] ring-1',
-        className,
-      )}
-    >
-      {children}
-    </section>
   );
 }

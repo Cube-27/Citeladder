@@ -1,9 +1,11 @@
 # CiteLadder Targeted Layout Consolidation
 
 > **Revision:** 2026-09-08 / V2 — frozen visuals, preserved product behavior.
-> **Status:** the owner has approved the refined HTML's visual design. Implementation status must
-> be verified in the repository; no production implementation or repository audit was performed
-> while preparing this revision.
+> **Status:** the owner has approved the refined HTML's visual design. Phase 0 is complete, and
+> the Phase 1–4 implementation and deletion work is present on
+> `feat/targeted-layout-consolidation`, based on the clean merged billing baseline recorded in
+> the task evidence. Final runtime/browser checks and both repository gates passed;
+> visual-fixture limits are recorded in the evidence document.
 > **Hard precondition retained from the supplied plan:** do not implement on the
 > `vorflux/billing-consolidation-implementation` worktree. Verify that the branch has merged,
 > local `main` is synchronized with its upstream, and `git status --short` is empty. Re-read the
@@ -12,8 +14,8 @@
 > user changes, or delete saved design artifacts merely to satisfy this precondition. When it is
 > unmet, report the exact blocker and finish only the read-only reconciliation.
 > **Approved visual reference:** the refined HTML already saved in the project, delivered as
-> `citeladder-refined.html` (the identical packaged file is `citeladder-reference.html`). Locate
-> and record its actual repository-relative path in Phase 0. Its title is
+> `docs/plans/citeladder-refined.html` (the identical packaged file is
+> `citeladder-reference.html` when present). Its title is
 > `CiteLadder — Stripe-informed UI Reference 1.0`; canonical styles are in
 > `<style id="citeladder-styles">`, with the companion `DESIGN_CONTRACT` in the same file.
 > Old Downloads paths and the original `preview.html` are NOT the current visual authority.
@@ -273,7 +275,8 @@ tracking, old radii/spacing ladder and old drawer width are superseded, not alte
 
 - Delivered file: `citeladder-refined.html`; identical archive alias: `citeladder-reference.html`.
 - Delivered file SHA-256: `eb766454cb5c4fe87d1b753bbfac6825f37a62144a09706f146b8a46968b6b3a`.
-- Actual repository-relative reference path: **record in Phase 0; not known from the attachment**.
+- Actual repository-relative reference path: `docs/plans/citeladder-refined.html` (recorded in
+  [`citeladder-layout-consolidation-evidence.md`](citeladder-layout-consolidation-evidence.md)).
 - Canonical stylesheet: the HTML's `#citeladder-styles`; optional exports in the existing handoff
   are `citeladder-reference.css`, `citeladder-tokens.css` and `citeladder-design-system.json`.
 - The single HTML is sufficient. Exports are derivative references, not production dependencies.
@@ -1020,6 +1023,12 @@ Inputs reviewed:
 | Owner's current instruction | Exact approved design, no functionality/feature changes; preserve production Manage prompts while adopting shell/header improvements. |
 
 Input plan SHA-256: `46c95eba3ec81914a33598de8f173200735426eb8772a6dbadab235ed1a972ad`.
-The production repository was not inspected in this revision. Current implementation details,
-including the exact prompt-management interaction and branch status, remain Phase 0 verification
-items. The saved project HTML's actual location is deliberately not guessed.
+Phase 0 repository reconciliation is recorded in
+[`citeladder-layout-consolidation-evidence.md`](citeladder-layout-consolidation-evidence.md): the
+clean merged baseline and approved reference identity are established, and the Phase 1–4
+implementation/deletion work is present on `feat/targeted-layout-consolidation`. Final
+`check.ps1` and `test.ps1` passed (42 backend, 1,344 frontend and 37 browser tests).
+The evidence record contains final responsive captures, preserved-workflow proof, deletions
+and the precise visual-fixture limits. `docs/design.md` owns the final visual recipes;
+tests enforce consistency and product correctness rather than cosmetic values. The saved
+project HTML remains unchanged.

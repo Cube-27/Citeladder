@@ -1,50 +1,57 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { pageHeadingClasses } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 
 import { resolveTitle } from './page-titles';
 
 /**
- * PageHeader — the page's accessible label. The app shell places this owner in
- * the top bar, and it is the only call site.
+ * PageHeader — the route-owned in-pane label. Entity detail keeps its own
+ * truthful heading rather than receiving a duplicate shell title.
  *
- * Route titles stay visible so every workspace has a stable orientation point.
- * Summary copy and action rows belong to the screen's own ruled section header,
- * so titling happens once, at one scale.
+ * Each route composes its own summary and action controls here, alongside the
+ * stateful owner that already governs them. The shell never supplies actions.
  */
 export function PageHeader({
   title,
-  showTitle,
+  description,
+  actions,
   className,
 }: Readonly<{
   /** Overrides the route-derived title (rare — prefer the table above). */
   title?: string;
-  /** Allows an entity-owned screen to keep only its own visible title. */
-  showTitle?: boolean;
+  /** Route-owned supporting copy, kept with its heading at every data state. */
+  description?: ReactNode;
+  /** Route-owned controls; their state and outcomes remain in the route owner. */
+  actions?: ReactNode;
   className?: string;
 }>) {
   const pathname = usePathname() ?? '';
   const resolved = title ?? resolveTitle(pathname);
-  const paintTitle = showTitle ?? !/^\/site\/crawls\/[^/]+\/pages\/[^/]+/.test(pathname);
-
-  const heading = (
-    <h1
+  return (
+    <header
       className={cn(
-        paintTitle
-          ? cn(pageHeadingClasses, 'min-w-0 flex-1 [overflow-wrap:break-word]')
-          : 'sr-only',
+        'flex min-w-0 flex-col gap-[var(--page-header-gap)] pt-[var(--page-header-padding-top)] pb-[var(--page-header-padding-bottom)] min-[701px]:flex-row min-[701px]:items-start min-[701px]:justify-between',
+        className,
       )}
     >
-      {resolved}
-    </h1>
+      <div className="min-w-0 flex-1">
+        <h1 className={textRole('pageTitle', 'min-w-0 [overflow-wrap:break-word]')}>{resolved}</h1>
+        {description ? (
+          <div className="text-secondary mt-[var(--page-header-heading-gap)] max-w-[700px] text-sm leading-[22px]">
+            {description}
+          </div>
+        ) : null}
+      </div>
+      {actions ? (
+        <div className="flex min-h-[var(--control-height)] shrink-0 flex-wrap items-center gap-2">
+          {actions}
+        </div>
+      ) : null}
+    </header>
   );
-
-  // Explicitly hidden titles still retain the accessible page landmark.
-  if (!paintTitle) return heading;
-
-  return <div className={cn('flex min-w-0 flex-col', className)}>{heading}</div>;
 }

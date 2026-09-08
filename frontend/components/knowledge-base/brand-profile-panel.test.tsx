@@ -118,9 +118,7 @@ describe('BrandProfilePanel', () => {
       />,
     );
 
-    const save = screen.getByRole('button', { name: /save brand knowledge/i });
     const factsTab = screen.getByRole('tab', { name: 'Facts & Positioning' });
-    expect(save.compareDocumentPosition(factsTab) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(factsTab).toHaveAttribute('aria-selected', 'true');
     await user.type(screen.getByLabelText('Description'), 'Draft description');
 

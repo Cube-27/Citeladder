@@ -1,37 +1,4 @@
-/**
- * Landing-page copy for the public marketing surface.
- *
- * Structure and copy follow the governed product loop. Durable Site, Content,
- * Demand, and Agent capabilities sit behind user-facing loop
- * stations. Sections carry icons and tiles; only the hero tagline, the product
- * visual, and the type scale/weight are ours.
- *
- * Icons and tiles are named here as string keys and resolved to lucide
- * components and token classes in the section files (keeps this a pure data
- * module).
- */
-
-export type IconKey =
-  | 'collect'
-  | 'analyze'
-  | 'improve'
-  | 'verify'
-  | 'named'
-  | 'cited'
-  | 'prove'
-  | 'compliance'
-  | 'sso'
-  | 'audit'
-  | 'support'
-  | 'education'
-  | 'commerce'
-  | 'services'
-  | 'saas'
-  | 'media'
-  | 'finance';
-
-/** The pastel icon-tile families (globals.css `--color-tile-*`). */
-export type TileKey = 'blue' | 'indigo' | 'purple' | 'green';
+/** Public landing copy. Presentation belongs to the section and shared role owners. */
 
 export const LANDING_CONTENT = {
   hook: {
@@ -54,20 +21,14 @@ export const LANDING_CONTENT = {
     lead: 'CiteLadder separates the facts that AI visibility tools often blur together.',
     questions: [
       {
-        icon: 'named' as IconKey,
-        tile: 'blue' as TileKey,
         title: 'Are you named?',
         body: 'Measure whether ChatGPT, Gemini, Claude, and Perplexity mention or recommend your brand when buyers ask about your category.',
       },
       {
-        icon: 'cited' as IconKey,
-        tile: 'indigo' as TileKey,
         title: 'What gets cited?',
         body: 'Open the sources behind every answer — your pages, a competitor, editorial coverage, or nothing at all.',
       },
       {
-        icon: 'prove' as IconKey,
-        tile: 'green' as TileKey,
         title: 'Can your site prove it?',
         body: 'Compare what AI says with what your own pages support, then move the highest-confidence gap into work.',
       },
@@ -138,29 +99,21 @@ export const LANDING_CONTENT = {
     steps: [
       {
         stage: 'Collect',
-        icon: 'collect' as IconKey,
-        tile: 'blue' as TileKey,
         label: 'Track AI answers',
         desc: 'Capture what AI says about your brand, competitors, and category — across all major platforms.',
       },
       {
         stage: 'Prioritize',
-        icon: 'analyze' as IconKey,
-        tile: 'indigo' as TileKey,
         label: 'Find the opportunities',
         desc: 'Surface gaps, mixed messages, and high-value topics where your brand can win.',
       },
       {
         stage: 'Improve',
-        icon: 'improve' as IconKey,
-        tile: 'purple' as TileKey,
         label: 'Take action',
         desc: 'Create and update content, sharpen positioning, and influence what AI cites.',
       },
       {
         stage: 'Verify',
-        icon: 'verify' as IconKey,
-        tile: 'green' as TileKey,
         label: 'Measure progress',
         desc: 'Track changes over time and validate that your brand shows up more often — and more accurately.',
       },
@@ -173,32 +126,26 @@ export const LANDING_CONTENT = {
     lead: 'Buyers research differently across sectors. CiteLadder shows where AI recommends you, where rivals take the lead, and whether your site backs the claim.',
     items: [
       {
-        icon: 'education' as IconKey,
         name: 'Education',
         benefit: 'Programs, admissions, and tuition facts, quoted accurately.',
       },
       {
-        icon: 'commerce' as IconKey,
         name: 'Commerce',
         benefit: 'Product recommendations, prices, and availability in AI answers.',
       },
       {
-        icon: 'services' as IconKey,
         name: 'Professional services',
         benefit: 'How AI positions your practice areas and expertise.',
       },
       {
-        icon: 'saas' as IconKey,
         name: 'Enterprise SaaS',
         benefit: 'Your share of AI-generated buyer shortlists.',
       },
       {
-        icon: 'media' as IconKey,
         name: 'Media & publishing',
         benefit: 'Attribution for original reporting and research.',
       },
       {
-        icon: 'finance' as IconKey,
         name: 'Financial services',
         benefit: 'Product, rate, and compliance explanations that hold up.',
       },
@@ -211,26 +158,18 @@ export const LANDING_CONTENT = {
     who: 'Leading companies use CiteLadder to make AI visibility a repeatable, measurable part of their go-to-market motion — from brand and product to demand and communications.',
     guarantees: [
       {
-        icon: 'compliance' as IconKey,
-        tile: 'blue' as TileKey,
         title: 'Security & compliance ready',
         description: 'Workspace isolation, encrypted provider secrets, and scoped project access.',
       },
       {
-        icon: 'sso' as IconKey,
-        tile: 'indigo' as TileKey,
         title: 'Advanced permissions and SSO',
         description: 'Roles and project-scoped access across your workspace.',
       },
       {
-        icon: 'audit' as IconKey,
-        tile: 'purple' as TileKey,
         title: 'Audit trail and exportable reports',
         description: 'Every run, answer, and change is persisted and inspectable.',
       },
       {
-        icon: 'support' as IconKey,
-        tile: 'green' as TileKey,
         title: 'Dedicated support and success',
         description: 'Onboarding, prompt-portfolio reviews, and health checks, scoped by contract.',
       },

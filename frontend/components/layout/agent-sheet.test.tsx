@@ -2,7 +2,16 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { AgentLauncher, AgentSheet } from './agent-sheet';
+import { AgentLauncher, AgentSheet, AgentSheetTrigger } from './agent-sheet';
+
+function Agent() {
+  return (
+    <>
+      <AgentSheetTrigger />
+      <AgentSheet />
+    </>
+  );
+}
 
 let activeProject = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -26,7 +35,7 @@ vi.mock('@/components/agent/growth-agent-workspace', () => ({
 describe('AgentSheet', () => {
   it('opens from the top bar with bounded typed route context and returns focus', async () => {
     const user = userEvent.setup();
-    render(<AgentSheet />);
+    render(<Agent />);
     const trigger = screen.getByRole('button', { name: 'Open Growth Agent' });
     await user.click(trigger);
     expect(screen.getByRole('dialog', { name: 'Growth Agent' })).toBeVisible();
@@ -54,16 +63,35 @@ describe('AgentSheet', () => {
     expect(screen.getByText(/"initialObjective":"Prioritize Website evidence"/)).toBeVisible();
   });
 
+  it('reopens the default trigger with the last contextual task and objective', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Agent />
+        <AgentLauncher taskType="build_roadmap" objective="Keep this objective">
+          Contextual launch
+        </AgentLauncher>
+      </>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Contextual launch' }));
+    expect(screen.getByText(/"initialObjective":"Keep this objective"/)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Close Growth Agent' }));
+    await user.click(screen.getByRole('button', { name: 'Open Growth Agent' }));
+    expect(screen.getByText(/"initialTask":"build_roadmap"/)).toBeVisible();
+    expect(screen.getByText(/"initialObjective":"Keep this objective"/)).toBeVisible();
+  });
+
   it('closes and clears route context when the active project changes', async () => {
     const user = userEvent.setup();
-    const view = render(<AgentSheet />);
+    const view = render(<Agent />);
     await user.click(screen.getByRole('button', { name: 'Open Growth Agent' }));
     expect(screen.getByRole('dialog', { name: 'Growth Agent' })).toBeVisible();
     activeProject = {
       id: '33333333-3333-4333-8333-333333333333',
       workspace_id: '44444444-4444-4444-8444-444444444444',
     };
-    view.rerender(<AgentSheet />);
+    view.rerender(<Agent />);
     expect(screen.queryByRole('dialog', { name: 'Growth Agent' })).not.toBeInTheDocument();
   });
 });

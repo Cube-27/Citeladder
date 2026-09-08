@@ -46,6 +46,7 @@ export function IssueSearch({
   const [draft, setDraft] = useState(query);
   return (
     <form
+      className="min-w-0 max-[700px]:w-full"
       onSubmit={(event) => {
         event.preventDefault();
         onApply(draft);
@@ -56,7 +57,7 @@ export function IssueSearch({
         onValueChange={setDraft}
         placeholder="Search issues…"
         aria-label="Search issues"
-        className="max-w-xs"
+        className="w-full max-w-xs max-[700px]:max-w-none"
       />
     </form>
   );
