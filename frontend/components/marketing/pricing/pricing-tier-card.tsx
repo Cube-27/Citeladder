@@ -33,6 +33,7 @@ export function PricingTierCard({
   mode,
   onCheckout,
   pending,
+  checkoutReady = true,
   onEarlyAccess,
 }: Readonly<{
   plan: CatalogPlan;
@@ -41,20 +42,12 @@ export function PricingTierCard({
   /** Runs the checkout (or captures an intent when anonymous). */
   onCheckout: (plan: CatalogPlan) => void;
   pending: boolean;
+  checkoutReady?: boolean;
   onEarlyAccess?: () => void;
 }>) {
   const presentation = PLAN_PRESENTATION[plan.key as PlanKey];
   const price = headlinePrice(plan, mode);
   const highlighted = presentation?.highlighted ?? false;
-
-  const numeric =
-    price.kind === 'price' ? majorUnits(price.money, catalog.currency_minor_units) : null;
-  const settled =
-    price.kind === 'price'
-      ? formatMoney(price.money, catalog.currency_minor_units)
-      : price.kind === 'contact'
-        ? CONTACT_LABEL
-        : FUNDED_UNAVAILABLE_LABEL;
 
   return (
     <div
@@ -87,57 +80,20 @@ export function PricingTierCard({
       {/* The price rides the website's own display rung, not the app's
           `text-hero`: an app token on this surface drifts with the dashboard
           ladder rather than the site's. */}
-      <p className="website-data-display text-foreground mt-6 flex min-h-[2.875rem] items-baseline gap-2">
-        <AnimatedPrice
-          value={numeric}
-          format={(value) =>
-            formatMoney(
-              {
-                currency: catalog.currency,
-                amount_minor: value * 10 ** catalog.currency_minor_units,
-              },
-              catalog.currency_minor_units,
-            )
-          }
-          announce={settled}
-        />
-        {price.kind === 'price' && (
-          <span className="text-muted text-sm font-normal">per month</span>
-        )}
-      </p>
+      <PriceDisplay price={price} catalog={catalog} />
 
       {/* Labels and values occupy separate edges so every limit scans as a
           compact row instead of wrapping around punctuation. Absent
           capabilities are dropped before the five-row cap because the check
           glyph communicates inclusion. */}
-      <ul className="border-border-subtle mt-6 grid flex-1 content-start gap-1 border-t pt-4">
-        {plan.capabilities
-          .filter((capability) => isIncluded(capability.value))
-          .slice(0, 5)
-          .map((capability) => {
-            const value = renderValue(capability.value);
-            return (
-              <li
-                key={capability.key}
-                className="text-secondary flex min-h-9 items-center justify-between gap-3 text-sm"
-              >
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <Check aria-hidden className="text-accent size-4 shrink-0" />
-                  <span>{capabilityLabel(capability.key)}</span>
-                </span>
-                {value !== 'Included' && (
-                  <span className="text-foreground shrink-0 font-medium tabular-nums">{value}</span>
-                )}
-              </li>
-            );
-          })}
-      </ul>
+      <CapabilityList plan={plan} />
 
       <div className="mt-auto grid gap-2 pt-6">
         <PlanCta
           plan={plan}
           priceKind={price.kind}
           checkoutAvailable={checkoutSelection(plan, mode).ok}
+          checkoutReady={checkoutReady}
           onCheckout={onCheckout}
           pending={pending}
         />
@@ -151,16 +107,81 @@ export function PricingTierCard({
   );
 }
 
+function PriceDisplay({
+  price,
+  catalog,
+}: Readonly<{ price: ReturnType<typeof headlinePrice>; catalog: BillingCatalog }>) {
+  const numeric =
+    price.kind === 'price' ? majorUnits(price.money, catalog.currency_minor_units) : null;
+  const settled =
+    price.kind === 'price'
+      ? formatMoney(price.money, catalog.currency_minor_units)
+      : price.kind === 'contact'
+        ? CONTACT_LABEL
+        : FUNDED_UNAVAILABLE_LABEL;
+  const paidPrice = price.kind === 'price';
+  return (
+    <p className="website-data-display text-foreground mt-6 flex min-h-[2.875rem] items-baseline gap-2">
+      <AnimatedPrice
+        value={numeric}
+        format={(value) =>
+          formatMoney(
+            {
+              currency: catalog.currency,
+              amount_minor: value * 10 ** catalog.currency_minor_units,
+            },
+            catalog.currency_minor_units,
+          )
+        }
+        announce={settled}
+      />
+      {paidPrice ? <span className="text-muted text-sm font-normal">per month</span> : null}
+      {paidPrice && catalog.currency === 'INR' ? (
+        <span className="text-muted text-sm font-normal">+ applicable GST</span>
+      ) : null}
+    </p>
+  );
+}
+
+function CapabilityList({ plan }: Readonly<{ plan: CatalogPlan }>) {
+  const capabilities = plan.capabilities
+    .filter((capability) => isIncluded(capability.value))
+    .slice(0, 5);
+  return (
+    <ul className="border-border-subtle mt-6 grid flex-1 content-start gap-1 border-t pt-4">
+      {capabilities.map((capability) => {
+        const value = renderValue(capability.value);
+        return (
+          <li
+            key={capability.key}
+            className="text-secondary flex min-h-9 items-center justify-between gap-3 text-sm"
+          >
+            <span className="flex min-w-0 items-center gap-2.5">
+              <Check aria-hidden className="text-accent size-4 shrink-0" />
+              <span>{capabilityLabel(capability.key)}</span>
+            </span>
+            {value !== 'Included' ? (
+              <span className="text-foreground shrink-0 font-medium tabular-nums">{value}</span>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function PlanCta({
   plan,
   priceKind,
   checkoutAvailable,
+  checkoutReady,
   onCheckout,
   pending,
 }: Readonly<{
   plan: CatalogPlan;
   priceKind: 'price' | 'contact' | 'unavailable';
   checkoutAvailable: boolean;
+  checkoutReady: boolean;
   onCheckout: (plan: CatalogPlan) => void;
   pending: boolean;
 }>) {
@@ -176,7 +197,7 @@ function PlanCta({
   // Funded mode is unpurchasable while `credit_price` is null: the button is
   // present but disabled, so the state is visible rather than the CTA
   // vanishing and the card silently losing its call to action.
-  const unavailable = !checkoutAvailable || priceKind !== 'price';
+  const unavailable = !checkoutAvailable || priceKind !== 'price' || !checkoutReady;
   const disabled = unavailable || pending;
   return (
     <Button

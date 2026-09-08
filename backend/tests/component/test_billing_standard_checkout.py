@@ -32,6 +32,14 @@ from tests.component.auth_helpers import register_and_login
 
 pytestmark = pytest.mark.asyncio
 
+_US_BILLING_IDENTITY = {
+    "billing_name": "Fixture Buyer",
+    "billing_address_line1": "1 Test Road",
+    "billing_city": "New York",
+    "billing_postal_code": "10001",
+    "export_eligibility_attested": True,
+}
+
 
 def _sandbox_payload():
     return json.loads(
@@ -52,6 +60,14 @@ async def checkout(client, db_session, monkeypatch):
         "checkout_enabled": True,
         "razorpay_test_ready": True,
         "razorpay_test_international_ready": True,
+        "seller_legal_name": "CiteLadder Private Limited",
+        "seller_legal_address": "1 Seller Street, Mumbai",
+        "seller_email": "billing@citeladder.test",
+        "seller_gstin": "27ABCDE1234F1Z5",
+        "seller_gst_state_code": "27",
+        "seller_gst_state_name": "Maharashtra",
+        "seller_sac": "998313",
+        "seller_lut_reference": "LUT/2026/001",
     }.items():
         monkeypatch.setattr(billing_settings, name, value)
     payload = _sandbox_payload()
@@ -88,7 +104,12 @@ async def checkout(client, db_session, monkeypatch):
     await register_and_login(client, "payer@example.com")
     response = await client.post(
         "/api/v1/billing/subscriptions",
-        json={"catalog_key": "tier_1", "credential_mode": "byok", "country_code": "US"},
+        json={
+            "catalog_key": "tier_1",
+            "credential_mode": "byok",
+            "country_code": "US",
+            **_US_BILLING_IDENTITY,
+        },
         headers={"Idempotency-Key": "checkout-fixture"},
     )
     assert response.status_code == 202, response.text

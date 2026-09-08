@@ -27,7 +27,9 @@ def verify_plan(actual: dict, price: dict) -> None:
     item = actual.get("item", {})
     expected = {
         "name": price["provider_plan_name"],
-        "amount": price["amount_minor"],
+        # Razorpay plans carry the recurring amount, not CiteLadder's tax
+        # allocation. Provision the exact gross amount that checkout quotes.
+        "amount": price["amount_minor"] + price["tax_minor"],
         "currency": price["currency"],
     }
     if any(item.get(key) != value for key, value in expected.items()):
@@ -37,14 +39,8 @@ def verify_plan(actual: dict, price: dict) -> None:
         or actual.get("interval") != price["interval"]
     ):
         raise ValueError("Provider plan cadence differs from frozen catalog terms")
-    if item.get("tax_amount", 0) != price["tax_minor"]:
-        raise ValueError("Provider plan tax differs from frozen catalog terms")
-    if price["tax_minor"] and (
-        not price["tax_verified"]
-        or item.get("tax_amount") != price["tax_minor"]
-        or item.get("tax_inclusive") is not False
-    ):
-        raise ValueError("Separate GST line and exact total remain unverified")
+    if price["tax_minor"] and not price["tax_verified"]:
+        raise ValueError("CiteLadder GST policy remains operator-unverified")
 
 
 async def _run(operation: str, revision: str, environment: str) -> None:

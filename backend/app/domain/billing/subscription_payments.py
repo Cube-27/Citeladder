@@ -51,8 +51,10 @@ async def record_subscription_payment(
         payment.period_start,
         payment.period_end,
     )
-    expected_tax = (pending.quote or {}).get("tax", {}).get("amount_minor")
-    if observed != expected or payment.tax_minor != expected_tax:
+    # Razorpay's invoice tax fields are not CiteLadder's GST authority. The
+    # provider must prove the final paid amount; the frozen intent snapshot
+    # supplies the customer receipt's tax allocation.
+    if observed != expected:
         raise PaymentReceiptConflictError("subscription_payment_mismatch")
     if not payment.external_invoice_id or payment.paid_at is None:
         raise PaymentReceiptConflictError("subscription_invoice_missing")

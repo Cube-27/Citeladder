@@ -1,15 +1,17 @@
 /**
  * A pricing selection captured before the visitor authenticated.
  *
- * This record is untrusted navigation state. It carries only enough to locate
- * a current catalog entry after authentication; price and availability are
- * always read from the live catalog before a server request is made.
+ * This record is untrusted navigation state. It carries enough to locate a
+ * current catalog entry and resume the bounded billing-evidence form after
+ * authentication; price and availability are always read from the live
+ * catalog before a server request is made.
  */
 import {
   PENDING_PRICING_INTENT_KEY,
   PENDING_PRICING_INTENT_MAX_AGE_MS,
   PRICING_RETURN_PATH,
 } from '@/lib/config/billing';
+import type { BillingCustomerDetails } from '@/lib/api/billing';
 
 export type PendingIntentKind = 'checkout' | 'addon' | 'topup';
 
@@ -20,6 +22,7 @@ export type PendingPricingIntentV1 = {
   quantity: number;
   byok: boolean;
   country_code: string | null;
+  billing_details: BillingCustomerDetails | null;
   idempotency_key: string;
   return_path: typeof PRICING_RETURN_PATH;
   created_at_ms: number;
@@ -45,6 +48,21 @@ function validQuantity(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1;
 }
 
+function validBillingDetails(value: unknown): value is BillingCustomerDetails | null {
+  if (value === null) return true;
+  const record = recordFrom(value);
+  return (
+    record !== null &&
+    typeof record.billing_name === 'string' &&
+    typeof record.billing_address_line1 === 'string' &&
+    typeof record.billing_city === 'string' &&
+    typeof record.billing_state_code === 'string' &&
+    typeof record.billing_postal_code === 'string' &&
+    typeof record.customer_gstin === 'string' &&
+    typeof record.export_eligibility_attested === 'boolean'
+  );
+}
+
 function validFields(value: Record<string, unknown>): value is Record<keyof IntentFields, unknown> {
   return (
     validKind(value.kind) &&
@@ -52,6 +70,7 @@ function validFields(value: Record<string, unknown>): value is Record<keyof Inte
     validQuantity(value.quantity) &&
     typeof value.byok === 'boolean' &&
     (value.country_code === null || typeof value.country_code === 'string') &&
+    validBillingDetails(value.billing_details) &&
     isNonEmptyString(value.idempotency_key) &&
     typeof value.created_at_ms === 'number' &&
     Number.isFinite(value.created_at_ms)
@@ -85,6 +104,7 @@ export function parsePendingIntent(
     quantity: value.quantity as number,
     byok: value.byok as boolean,
     country_code: value.country_code as string | null,
+    billing_details: value.billing_details as BillingCustomerDetails | null,
     idempotency_key: value.idempotency_key as string,
     return_path: PRICING_RETURN_PATH,
     created_at_ms: value.created_at_ms as number,

@@ -174,6 +174,8 @@ def parse_payment_event(payload: dict[str, Any]) -> ProviderPayment:
         intent_id=_optional_str(notes.get(_NOTE_INTENT)),
         account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
         provider_mode=billing_settings.require_provider_mode(),
+        payment_method=_optional_str(entity.get("method")),
+        external_invoice_id=_optional_str(entity.get("invoice_id")),
     )
 
 

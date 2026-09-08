@@ -82,6 +82,7 @@ class BillingPayment(Base):
     amount_minor: Mapped[int] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(3))
     provider_mode: Mapped[str] = mapped_column(String(8))
+    payment_method: Mapped[str] = mapped_column(String(24), default="")
     status: Mapped[str] = mapped_column(String(24))
     paid_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

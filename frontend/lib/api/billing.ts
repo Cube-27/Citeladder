@@ -2,8 +2,9 @@
  * Billing domain endpoints (v8 commercial surface).
  *
  * The server owns every amount. A request from here carries a catalog key, a
- * quantity, a credential mode and an ISO country — never a price, a currency,
- * a margin, or an external provider/plan id (invariant 6). The activation
+ * quantity, a credential mode, ISO country and bounded billing evidence —
+ * never a price, a currency, a margin, or an external provider/plan id
+ * (invariant 6). The activation
  * response's `quote` is what proves the terms the user was shown.
  *
  * Every commercial POST is idempotent: the caller supplies an
@@ -24,6 +25,9 @@ import {
   strictValidate,
   workspaceEntitlementSchema,
   subscriptionChangeSchema,
+  resolvedQuoteSchema,
+  billingInvoiceSchema,
+  billingInvoicesSchema,
 } from './schemas';
 
 export type BillingCatalog = z.infer<typeof billingCatalogSchema>;
@@ -33,11 +37,56 @@ export type CatalogTopup = BillingCatalog['topups'][number];
 export type CatalogProvider = BillingCatalog['providers'][number];
 export type BillingEntitlement = z.infer<typeof billingEntitlementSchema>;
 export type BillingUsage = z.infer<typeof billingUsageSchema>;
+export type BillingQuote = z.infer<typeof resolvedQuoteSchema>;
+export type BillingInvoice = z.infer<typeof billingInvoiceSchema>;
 export type WorkspaceEntitlement = z.infer<typeof workspaceEntitlementSchema>;
 export type NoCardOffer = z.infer<typeof noCardOfferSchema>;
 export type UsageItem = BillingUsage['items'][number];
 export type CredentialMode = 'byok' | 'funded';
 export type SelfServePlanKey = 'tier_1' | 'tier_2' | 'tier_3';
+
+/** Customer evidence required to let the server determine GST/export status. */
+export type BillingCustomerDetails = {
+  billing_name: string;
+  billing_address_line1: string;
+  billing_city: string;
+  billing_state_code: string;
+  billing_postal_code: string;
+  customer_gstin: string;
+  export_eligibility_attested: boolean;
+};
+
+export function emptyBillingCustomerDetails(): BillingCustomerDetails {
+  return {
+    billing_name: '',
+    billing_address_line1: '',
+    billing_city: '',
+    billing_state_code: '',
+    billing_postal_code: '',
+    customer_gstin: '',
+    export_eligibility_attested: false,
+  };
+}
+
+/** Validation only gates the form; tax and treatment remain server decisions. */
+export function billingDetailsError(
+  countryCode: string,
+  details: BillingCustomerDetails,
+): string | null {
+  const country = countryCode.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(country)) return 'Enter your two-letter billing country.';
+  if (!details.billing_name.trim()) return 'Enter the billing name.';
+  if (!details.billing_address_line1.trim()) return 'Enter the billing address.';
+  if (!details.billing_city.trim()) return 'Enter the billing city.';
+  if (!details.billing_postal_code.trim()) return 'Enter the billing postal code.';
+  if (country === 'IN') {
+    return details.billing_state_code.trim() ? null : 'Enter your Indian billing state code.';
+  }
+  if (!details.export_eligibility_attested) {
+    return 'Confirm that this purchase qualifies as an export of service.';
+  }
+  return null;
+}
 
 /**
  * A fresh idempotency key for one commercial intent.
@@ -59,7 +108,7 @@ export type SubscriptionCheckoutInput = {
   catalog_key: SelfServePlanKey;
   credential_mode: CredentialMode;
   country_code: string;
-};
+} & BillingCustomerDetails;
 
 export type CheckoutCallback = {
   razorpay_payment_id: string;
@@ -109,6 +158,14 @@ export const billingApi = {
     const response = await apiClient.get<unknown>('/billing/usage', options);
     return strictValidate(billingUsageSchema, response, 'billing.usage');
   },
+
+  invoices: async (options?: ApiRequestOptions) => {
+    const response = await apiClient.get<unknown>('/billing/invoices', options);
+    return strictValidate(billingInvoicesSchema, response, 'billing.invoices');
+  },
+
+  invoicePdf: (invoiceId: string, options?: ApiRequestOptions) =>
+    apiClient.getBlob(`/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`, options),
 
   noCardOffer: async (options?: ApiRequestOptions) => {
     const response = await apiClient.get<unknown>('/billing/early-access', options);

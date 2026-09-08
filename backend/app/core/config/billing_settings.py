@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -42,6 +43,17 @@ class BillingSettings(BaseSettings):
     # guessed rate.
     usd_inr_rate: Decimal = Decimal("0")
     india_gst_rate: Decimal = Decimal("0.18")
+    # Seller identity is configuration, while the applicable tax treatment is
+    # determined per transaction in ``billing_tax``.
+    seller_legal_name: str = ""
+    seller_legal_address: str = ""
+    seller_email: str = ""
+    seller_gstin: str = ""
+    seller_gst_state_code: str = ""
+    seller_gst_state_name: str = ""
+    seller_sac: str = ""
+    seller_lut_reference: str = ""
+    invoice_prefix: str = "CL"
 
     # --- Commercial catalog (open config) --------------------------------
     # PRIVATE provider price/plan references, keyed
@@ -140,6 +152,24 @@ class BillingSettings(BaseSettings):
     def optional_rotation_timestamp(cls, value: object) -> object:
         # Empty optional entries in a copied environment template disable overlap.
         return None if value == "" else value
+
+    @field_validator("seller_email")
+    @classmethod
+    def validate_seller_email(cls, value: str) -> str:
+        normalized = value.strip()
+        if normalized and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", normalized):
+            raise ValueError("seller_email must be an email address")
+        return normalized
+
+    @field_validator("invoice_prefix")
+    @classmethod
+    def validate_invoice_prefix(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not re.fullmatch(r"[A-Z0-9-]{1,16}", normalized):
+            raise ValueError(
+                "invoice_prefix must be 1-16 uppercase letters, digits, or hyphens"
+            )
+        return normalized
 
     @model_validator(mode="after")
     def resolve_test_credentials(self) -> BillingSettings:

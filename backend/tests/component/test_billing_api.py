@@ -66,6 +66,44 @@ def _provider_environment(monkeypatch):
 _SECRET = "component-webhook-secret"
 
 
+def _tax_snapshot(total_minor: int) -> dict[str, object]:
+    return {
+        "customer": {
+            "name": "Fixture Buyer",
+            "address_line1": "1 Test Road",
+            "city": "New York",
+            "state_code": None,
+            "postal_code": "10001",
+            "customer_gstin": None,
+            "export_eligibility_attested": True,
+        },
+        "seller": {
+            "legal_name": "CiteLadder Private Limited",
+            "address": "1 Seller Street, Mumbai",
+            "email": "billing@citeladder.test",
+            "gstin": "27ABCDE1234F1Z5",
+            "state_code": "27",
+            "state_name": "Maharashtra",
+            "sac": "998313",
+            "lut_reference": "LUT/2026/001",
+            "invoice_prefix": "CL",
+        },
+        "tax": {
+            "subtotal_minor": total_minor,
+            "discount_minor": 0,
+            "taxable_minor": total_minor,
+            "treatment": "EXPORT_ZERO_RATED",
+            "tax_rate": "0",
+            "cgst_minor": 0,
+            "sgst_minor": 0,
+            "igst_minor": 0,
+            "tax_minor": 0,
+            "total_minor": total_minor,
+            "policy_version": 1,
+        },
+    }
+
+
 @pytest.fixture(autouse=True)
 async def _published_catalog(db_session: AsyncSession) -> None:
     payload = approved_phase1_payload()
@@ -178,6 +216,7 @@ async def _seed_subscription(
                 "total_price": {"currency": "USD", "amount_minor": 4900},
                 "tax": {"currency": "USD", "amount_minor": 0},
             },
+            tax_snapshot=_tax_snapshot(4900),
             idempotency_key=f"fixture:{external_id}",
             request_fingerprint="f" * 64,
             expires_at=now + timedelta(hours=1),

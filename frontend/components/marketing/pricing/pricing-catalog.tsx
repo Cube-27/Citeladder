@@ -8,9 +8,12 @@ import { Input } from '@/components/ui/input';
 import {
   billingApi,
   createIdempotencyKey,
+  billingDetailsError,
+  emptyBillingCustomerDetails,
   type CatalogAddon,
   type CatalogPlan,
   type CatalogTopup,
+  type BillingCustomerDetails,
 } from '@/lib/api/billing';
 import { authApi } from '@/lib/api/auth';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -27,6 +30,8 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { BYOK_DISCLOSURE, BYOK_SWITCH_LABEL } from '@/lib/marketing-content/pricing';
 
 import { Section, SectionHeader } from '../primitives/section';
+import { BillingDetailsForm } from '@/components/billing/billing-details-form';
+import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { CatalogPurchases } from './catalog-purchases';
 import { EarlyAccessDialog } from './early-access-dialog';
 import { PricingComparison } from './pricing-comparison';
@@ -47,6 +52,7 @@ function intentFor(
   catalogKey: string,
   quantity: number,
   byok: boolean,
+  billingDetails: BillingCustomerDetails | null = null,
 ): PendingPricingIntentV1 {
   return {
     version: 1,
@@ -55,6 +61,7 @@ function intentFor(
     quantity,
     byok,
     country_code: null,
+    billing_details: billingDetails,
     idempotency_key: createIdempotencyKey(),
     return_path: PRICING_RETURN_PATH,
     created_at_ms: Date.now(),
@@ -79,6 +86,7 @@ export function PricingCatalog() {
   const mode = byok ? 'byok' : 'funded';
   const [notice, setNotice] = useState<string | null>(null);
   const [country, setCountry] = useState('');
+  const [billingDetails, setBillingDetails] = useState(emptyBillingCustomerDetails);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [earlyAccessOpen, setEarlyAccessOpen] = useState(false);
 
@@ -103,6 +111,7 @@ export function PricingCatalog() {
       billingApi.catalog(country.length === 2 ? country : undefined, { signal }),
   });
   const catalog = catalogQuery.data ?? null;
+  const checkoutReady = billingDetailsError(country, billingDetails) === null;
   const offerQuery = useQuery({
     queryKey: [...queryKeys.billing.all, 'early-access'],
     queryFn: ({ signal }) => billingApi.noCardOffer({ signal }),
@@ -136,6 +145,7 @@ export function PricingCatalog() {
           catalog_key: intent.catalog_key,
           credential_mode: intent.byok ? 'byok' : 'funded',
           country_code: intent.country_code ?? country,
+          ...(intent.billing_details ?? billingDetails),
         },
         key: intent.idempotency_key,
       });
@@ -159,11 +169,19 @@ export function PricingCatalog() {
       return;
     }
     const countryCode = intent.country_code ?? country;
+    const details = intent.billing_details ?? billingDetails;
+    if (intent.kind === 'checkout') {
+      const error = billingDetailsError(countryCode, details);
+      if (error) {
+        setNotice(error);
+        return;
+      }
+    }
     if (intent.kind === 'checkout' && !/^[A-Z]{2}$/.test(countryCode)) {
       setNotice('Enter your two-letter billing country before checkout.');
       return;
     }
-    activation.mutate({ ...intent, country_code: countryCode });
+    activation.mutate({ ...intent, country_code: countryCode, billing_details: details });
   };
 
   /**
@@ -241,6 +259,18 @@ export function PricingCatalog() {
             onChange={(event) => setCountry(event.target.value.toUpperCase())}
           />
         </label>
+        <BillingDetailsForm
+          country={country}
+          details={billingDetails}
+          setDetails={setBillingDetails}
+          idPrefix="pricing"
+        />
+        {checkout.data?.quote ? (
+          <BillingQuoteSummary
+            quote={checkout.data.quote}
+            currencyMinorUnits={catalog?.currency_minor_units}
+          />
+        ) : null}
         <CheckoutStatus checkout={checkout} />
         <PricingFeedback notice={notice} error={activation.error} />
         <PlansGrid
@@ -253,6 +283,8 @@ export function PricingCatalog() {
           earlyAccessAvailable={offerQuery.data?.status === 'available'}
           runOrCapture={runOrCapture}
           openEarlyAccess={() => setEarlyAccessOpen(true)}
+          billingDetails={billingDetails}
+          checkoutReady={checkoutReady}
         />
       </Section>
 
@@ -309,7 +341,13 @@ function isStillValid(
     const plan = catalog.plans.find((entry) => entry.key === intent.catalog_key);
     if (!plan) return false;
     const mode = intent.byok ? 'byok' : 'funded';
-    return checkoutSelection(plan, mode).ok && intent.quantity === 1;
+    return (
+      checkoutSelection(plan, mode).ok &&
+      intent.quantity === 1 &&
+      intent.country_code !== null &&
+      intent.billing_details !== null &&
+      billingDetailsError(intent.country_code, intent.billing_details) === null
+    );
   }
   const pool = intent.kind === 'addon' ? catalog.addons : catalog.topups;
   const entry = pool.find((candidate) => candidate.key === intent.catalog_key);
@@ -334,10 +372,15 @@ function PricingFeedback({ notice, error }: Readonly<{ notice: string | null; er
   );
 }
 
-function checkoutIntent(plan: CatalogPlan, mode: CredentialMode, byok: boolean) {
+function checkoutIntent(
+  plan: CatalogPlan,
+  mode: CredentialMode,
+  byok: boolean,
+  billingDetails: BillingCustomerDetails,
+) {
   const selection = checkoutSelection(plan, mode);
   if (!selection.ok) return null;
-  return intentFor('checkout', selection.catalog_key, 1, byok);
+  return intentFor('checkout', selection.catalog_key, 1, byok, billingDetails);
 }
 
 function PlansGrid({
@@ -350,6 +393,8 @@ function PlansGrid({
   earlyAccessAvailable,
   runOrCapture,
   openEarlyAccess,
+  billingDetails,
+  checkoutReady,
 }: Readonly<{
   catalog: Catalog | null;
   failed: boolean;
@@ -360,6 +405,8 @@ function PlansGrid({
   earlyAccessAvailable: boolean;
   runOrCapture: (intent: PendingPricingIntentV1) => void;
   openEarlyAccess: () => void;
+  billingDetails: BillingCustomerDetails;
+  checkoutReady: boolean;
 }>) {
   if (failed) return <CatalogError onRetry={retry} />;
   if (!catalog) return <LoadingCards />;
@@ -372,8 +419,9 @@ function PlansGrid({
           catalog={catalog}
           mode={mode}
           pending={pendingKey === plan.key}
+          checkoutReady={checkoutReady}
           onCheckout={(selected) => {
-            const intent = checkoutIntent(selected, mode, byok);
+            const intent = checkoutIntent(selected, mode, byok, billingDetails);
             if (intent) runOrCapture(intent);
           }}
           onEarlyAccess={

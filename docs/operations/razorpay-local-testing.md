@@ -5,10 +5,11 @@ only the isolated `citeladder-billing-test` Compose project and the ignored
 `billing-test.env`. It does not deploy to GCP. The owner will perform real sandbox
 acceptance; mocked checks are not payment evidence.
 
-On 2026-09-08 the owner confirmed local INR approval and reported international
-approval still pending. Keep international and live readiness false. Each
-recurring method and the separate GST treatment still need verification below.
-Funded checkout remains disabled under the approved BYOK-only scope.
+On 2026-09-08 the owner confirmed local INR and international approval. Keep
+international and live readiness false until the matching USD plans, webhook
+delivery, recurring methods, sandbox payments, and transaction-level tax
+treatment are verified below. Funded checkout remains disabled under the
+approved BYOK-only scope.
 
 ## 1. Start the isolated environment
 
@@ -37,6 +38,15 @@ BILLING_RAZORPAY_TEST_INTERNATIONAL_READY=false
 BILLING_RAZORPAY_LIVE_READY=false
 BILLING_RAZORPAY_INTERNATIONAL_READY=false
 BILLING_SUBSCRIPTION_TOTAL_CYCLES=3
+BILLING_SELLER_LEGAL_NAME=<registered supplier name>
+BILLING_SELLER_LEGAL_ADDRESS=<registered supplier address>
+BILLING_SELLER_EMAIL=<billing contact email>
+BILLING_SELLER_GSTIN=<supplier GSTIN>
+BILLING_SELLER_GST_STATE_CODE=<two-digit GST state code>
+BILLING_SELLER_GST_STATE_NAME=<registered state name>
+BILLING_SELLER_SAC=<approved service accounting code>
+BILLING_SELLER_LUT_REFERENCE=<current LUT reference for zero-rated exports>
+BILLING_INVOICE_PREFIX=CL
 ```
 
 Use `BILLING_RAZORPAY_KEY_ID` and `BILLING_RAZORPAY_KEY_SECRET` for the test
@@ -45,6 +55,10 @@ separate `BILLING_RAZORPAY_WEBHOOK_SECRET`. Quote secret values in dotenv files.
 Leave platform provider keys and credential references empty. Generic
 `RAZORPAY_KEY_*` names are not application settings. Do not print the environment
 or expanded Compose configuration.
+
+These supplier values must come from the registration/LUT records; do not infer
+them from a Razorpay profile. A missing field keeps checkout unavailable so a
+captured payment can never outrun CiteLadder's receipt evidence.
 
 ```powershell
 .\scripts\billing-test.ps1 -Action up
@@ -87,22 +101,23 @@ docker exec citeladder-billing-test-db-1 psql -U postgres -d citeladder_billing_
 Require one returned row. Record its UUID and this local administrative action.
 Admin identity does not replace payment entitlement verification.
 
-## 3. Prepare and import an INR-only draft
+## 3. Prepare and import an INR/USD draft
 
-The committed fixture contains INR and USD proposals. Since international is
-pending, create a private INR-only copy. Its remaining references will all be
-verified; do not weaken verification to skip missing plans.
+The committed fixture contains INR and USD proposals. International approval is
+confirmed, but approval alone is not checkout readiness: all six provider plan
+references and the transaction-level tax treatment must still be verified. Use
+a private copy for provider references; do not edit the committed fixture with
+merchant-specific identifiers.
 
 ```powershell
 New-Item -ItemType Directory -Force .runtime | Out-Null
 $catalog = Get-Content docs/operations/razorpay-sandbox-catalog.json -Raw | ConvertFrom-Json -AsHashtable
-foreach ($plan in $catalog.plans) { $plan.regional_byok_prices.Remove('international') | Out-Null }
-$catalogFile = Join-Path (Resolve-Path .runtime).Path 'razorpay-inr-catalog.json'
+$catalogFile = Join-Path (Resolve-Path .runtime).Path 'razorpay-inr-usd-catalog.json'
 $catalog | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $catalogFile -Encoding utf8NoBOM
-$revision = 'sandbox-inr-2026-09-08-r1'
+$revision = 'sandbox-global-2026-09-08-r1'
 $actor = 'billing-operator@example.com'
 .\scripts\billing-test.ps1 -Action admin -CommandArgs @('catalog-validate','--file',$catalogFile)
-$importArgs = @('catalog-import','--revision',$revision,'--file',$catalogFile,'--actor',$actor,'--reason','Prepare local INR sandbox','--idempotency-key',"import-$revision")
+$importArgs = @('catalog-import','--revision',$revision,'--file',$catalogFile,'--actor',$actor,'--reason','Prepare local INR and USD sandbox','--idempotency-key',"import-$revision")
 .\scripts\billing-test.ps1 -Action admin -CommandArgs $importArgs
 ```
 
@@ -124,23 +139,23 @@ Select **Test mode** in the Razorpay Dashboard. Confirm Subscriptions and the
 INR recurring methods you intend to exercise. Create three monthly plans with
 interval 1, using the exact names and terms printed by `propose`.
 
-| Tier | Base, paise | Separate GST, paise | Total, paise |
+| Tier | Taxable base, paise | CiteLadder GST, paise | Razorpay plan amount, paise |
 |---|---:|---:|---:|
 | Tier 1 | 416500 | 74970 | 491470 |
 | Tier 2 | 841500 | 151470 | 992970 |
 | Tier 3 | 1266500 | 227970 | 1494470 |
 
 The fixture freezes synthetic FX 85.00 and tax rate 0.18, rounding the base then
-tax with decimal HALF_UP. Gateway approval does not establish invoice tax parity.
-The verifier requires provider plan `item.amount` to equal the base,
-`item.tax_amount` to equal the separate GST, and `item.tax_inclusive` to be false.
-If Razorpay cannot represent these terms, stop here, record the provider
-limitation, and keep India readiness false. Do not mark tax verified or replace
-the total with a base-only charge to make checkout work.
+tax with decimal HALF_UP. Create each Razorpay plan with the **final total** in
+the last column. Razorpay's plan/invoice tax fields are not tax authority and
+are not verified. CiteLadder freezes the taxable value and transaction-level
+CGST/SGST or IGST split before provider I/O, then issues the paid GST receipt
+after captured-payment evidence matches that final total.
 
 Edit the private catalog's `regional_byok_prices.india.provider_price_ref` values
 with the three actual `plan_...` IDs. Set each `tax_verified` true only after
-checking the actual provider fields. Keep all other frozen terms unchanged.
+the seller GST settings, transaction policy, and resulting CiteLadder receipt
+totals are reviewed. Keep all other frozen terms unchanged.
 Import a **new** immutable revision by setting `$revision` to
 `sandbox-inr-2026-09-08-r2`, reconstructing `$importArgs` as above, reviewing its
 dry-run, then applying it. Never overwrite a persisted revision.
@@ -248,7 +263,7 @@ for all tiers and each merchant-enabled INR method.
 | Set checkout enabled false and restart | New checkout blocked; existing recovery continues. |
 | Reopen existing project evidence after expiry | Historical evidence remains readable under workspace authorization. |
 | Sign in as an invited workspace member | Only the correct workspace sponsor's access applies. |
-| Select international while approval is pending | Purchase unavailable; no USD subscription created. |
+| Select international before USD plans, webhook delivery and sandbox acceptance are verified | Purchase unavailable; no USD subscription created. |
 
 Razorpay provides test subsequent-charge controls such as **Charge this now**.
 Schedule card renewal checks within its documented three-day test token window;
@@ -326,5 +341,6 @@ The launcher deliberately has no destructive reset. Never reset the ordinary
 local or GCP database as part of this runbook.
 
 For enterprise operations and audited grant corrections, see the
-[billing operator guide](billing-operator-guide.md). Live enablement and
-international acceptance are separate outstanding owner decisions.
+[billing operator guide](billing-operator-guide.md). Live enablement remains a
+separate outstanding owner decision. International approval is confirmed;
+international readiness evidence remains outstanding.

@@ -688,18 +688,32 @@ def test_entitlement_response_has_no_funded_execution_flag() -> None:
 
 
 def test_subscription_create_request_normalizes_and_bounds_the_country() -> None:
+    customer = {
+        "billing_name": "Fixture Buyer",
+        "billing_address_line1": "1 Test Road",
+        "billing_city": "Bhopal",
+        "billing_state_code": "23",
+        "billing_postal_code": "462001",
+    }
     request = SubscriptionCreateRequest(
-        catalog_key="tier_1", credential_mode="byok", country_code=" in "
+        catalog_key="tier_1",
+        credential_mode="byok",
+        country_code=" in ",
+        **customer,
     )
     assert request.country_code == "IN"
     assert request.trial_requested is False
     with pytest.raises(ValidationError):
         SubscriptionCreateRequest(
-            catalog_key="tier_1", credential_mode="byok", country_code="IND"
+            catalog_key="tier_1", credential_mode="byok", country_code="IND", **customer
         )
     with pytest.raises(ValidationError):
         SubscriptionCreateRequest(
-            catalog_key="enterprise", credential_mode="byok", country_code="US"
+            catalog_key="enterprise",
+            credential_mode="byok",
+            country_code="US",
+            export_eligibility_attested=True,
+            **{**customer, "billing_state_code": None},
         )
     # A browser cannot submit an amount, a currency, or a provider reference.
     with pytest.raises(ValidationError):
@@ -707,6 +721,8 @@ def test_subscription_create_request_normalizes_and_bounds_the_country() -> None
             catalog_key="tier_1",
             credential_mode="byok",
             country_code="US",
+            export_eligibility_attested=True,
+            **{**customer, "billing_state_code": None},
             amount_minor=1,
         )
 

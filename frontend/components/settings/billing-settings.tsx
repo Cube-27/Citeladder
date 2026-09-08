@@ -2,56 +2,66 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
-import Link from 'next/link';
-import { CreditCard, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UsageMeters } from '@/components/billing/usage-meters';
+import { BillingDetailsForm } from '@/components/billing/billing-details-form';
+import {
+  BillingCountryInput,
+  SubscriptionDetail,
+} from '@/components/billing/billing-account-details';
+import { BillingQuoteSummary } from '@/components/billing/quote-summary';
+import { InvoiceHistory } from '@/components/billing/invoice-history';
 import { CardTrialPanel } from '@/components/settings/card-trial-panel';
 import {
   billingApi,
+  emptyBillingCustomerDetails,
+  type BillingCustomerDetails,
   type BillingEntitlement,
+  type BillingQuote,
   type CatalogPlan,
   type SelfServePlanKey,
 } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
-import {
-  catalogPlanByKey,
-  checkoutSelection,
-  formatMoney,
-  headlinePrice,
-} from '@/lib/billing/catalog';
-import { CONTACT_SALES_HREF } from '@/lib/config/billing';
+import { catalogPlanByKey } from '@/lib/billing/catalog';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { PlanRow } from '@/components/billing/plan-row';
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
 }
 
-type BillingCheckout = { pending: boolean; error: unknown; start: (key: SelfServePlanKey) => void };
+type BillingCheckout = {
+  pending: boolean;
+  error: unknown;
+  quote: BillingQuote | null;
+  start: (key: SelfServePlanKey, details: BillingCustomerDetails) => void;
+};
 type BillingCancellation = { pending: boolean; error: unknown; confirm: () => void };
 
 type BillingState = {
   country: string;
+  billingDetails: BillingCustomerDetails;
   cancelOpen: boolean;
   setCountry: (country: string) => void;
+  setBillingDetails: (details: BillingCustomerDetails) => void;
   setCancelOpen: (open: boolean) => void;
 };
 
 function useBillingState(): BillingState {
   const [country, setCountry] = useState('');
+  const [billingDetails, setBillingDetails] = useState(emptyBillingCustomerDetails);
   const [cancelOpen, setCancelOpen] = useState(false);
-  return { country, cancelOpen, setCountry, setCancelOpen };
+  return { country, billingDetails, cancelOpen, setCountry, setBillingDetails, setCancelOpen };
 }
 
 /** Account plan orchestration. Usage rendering lives in `UsageMeters`. */
@@ -71,6 +81,12 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
     queryFn: ({ signal }) => billingApi.catalog(state.country || undefined, { signal }),
     enabled,
     placeholderData: keepPreviousData,
+  });
+  const invoiceQuery = useQuery({
+    queryKey: [...queryKeys.billing.all, 'invoices'],
+    queryFn: ({ signal }) => billingApi.invoices({ signal }),
+    enabled,
+    retry: false,
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
   const checkoutMutation = useSubscriptionCheckout();
@@ -97,10 +113,16 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
         checkout={{
           pending: checkoutMutation.isPending,
           error: checkoutMutation.isError ? checkoutMutation.error : null,
-          start: (key) =>
+          quote: checkoutMutation.data?.quote ?? null,
+          start: (key, details) =>
             void checkoutMutation
               .start({
-                input: { catalog_key: key, credential_mode: 'byok', country_code: state.country },
+                input: {
+                  catalog_key: key,
+                  credential_mode: 'byok',
+                  country_code: state.country,
+                  ...details,
+                },
               })
               .catch(() => undefined),
         }}
@@ -109,6 +131,9 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
           error: cancelMutation.isError ? cancelMutation.error : null,
           confirm: () => cancelMutation.mutate(),
         }}
+        invoices={invoiceQuery.data ?? []}
+        invoicesLoading={invoiceQuery.isLoading}
+        invoicesError={invoiceQuery.isError}
       />
     </>
   );
@@ -132,6 +157,9 @@ function BillingContent({
   state,
   checkout,
   cancellation,
+  invoices,
+  invoicesLoading,
+  invoicesError,
 }: Readonly<{
   enabled: boolean;
   entitlement: BillingEntitlement | null;
@@ -141,6 +169,9 @@ function BillingContent({
   state: BillingState;
   checkout: BillingCheckout;
   cancellation: BillingCancellation;
+  invoices: Awaited<ReturnType<typeof billingApi.invoices>>;
+  invoicesLoading: boolean;
+  invoicesError: boolean;
 }>) {
   const subscription = entitlement?.subscription ?? null;
   const currentPlan =
@@ -162,6 +193,8 @@ function BillingContent({
           error={catalogError}
           country={state.country}
           setCountry={state.setCountry}
+          billingDetails={state.billingDetails}
+          setBillingDetails={state.setBillingDetails}
           pending={checkout.pending}
           checkoutError={checkout.error}
           onCheckout={checkout.start}
@@ -170,6 +203,14 @@ function BillingContent({
           <UsageMeters enabled={enabled} />
         </div>
       </div>
+      <InvoiceHistory invoices={invoices} loading={invoicesLoading} error={invoicesError} />
+      {checkout.quote && catalog ? (
+        <BillingQuoteSummary
+          variant="settings"
+          quote={checkout.quote}
+          currencyMinorUnits={catalog.currency_minor_units}
+        />
+      ) : null}
       <CardTrialPanel />
       <CancelDialog cancellation={cancellation} state={state} />
     </div>
@@ -261,6 +302,8 @@ function PlanCatalog({
   error,
   country,
   setCountry,
+  billingDetails,
+  setBillingDetails,
   pending,
   checkoutError,
   onCheckout,
@@ -270,9 +313,11 @@ function PlanCatalog({
   error: boolean;
   country: string;
   setCountry: (country: string) => void;
+  billingDetails: BillingCustomerDetails;
+  setBillingDetails: (details: BillingCustomerDetails) => void;
   pending: boolean;
   checkoutError: unknown;
-  onCheckout: (key: SelfServePlanKey) => void;
+  onCheckout: (key: SelfServePlanKey, details: BillingCustomerDetails) => void;
 }>) {
   return (
     <div className={panelClasses({}, 'grid gap-4 lg:col-span-7')}>
@@ -291,7 +336,13 @@ function PlanCatalog({
         <Skeleton className="h-24 w-full" />
       ) : (
         <div className="grid gap-3">
-          <CountryInput country={country} setCountry={setCountry} />
+          <BillingCountryInput country={country} setCountry={setCountry} />
+          <BillingDetailsForm
+            country={country}
+            details={billingDetails}
+            setDetails={setBillingDetails}
+            idPrefix="settings"
+          />
           <div className="grid gap-2.5">
             {catalog.plans.map((plan) => (
               <PlanRow
@@ -299,6 +350,7 @@ function PlanCatalog({
                 plan={plan}
                 currencyMinorUnits={catalog.currency_minor_units}
                 country={country}
+                billingDetails={billingDetails}
                 pending={pending}
                 onCheckout={onCheckout}
               />
@@ -309,143 +361,6 @@ function PlanCatalog({
       )}
     </div>
   );
-}
-
-function CountryInput({
-  country,
-  setCountry,
-}: Readonly<{ country: string; setCountry: (country: string) => void }>) {
-  return (
-    <div
-      className={panelClasses(
-        { tone: 'tonal', pad: 'compact' },
-        'flex flex-col justify-between gap-2.5 sm:flex-row sm:items-center',
-      )}
-    >
-      <div className="min-w-0">
-        <label htmlFor="billing-country-input" className={textRole('label', 'block')}>
-          Billing country
-        </label>
-        <span id="billing-country-help" className="text-muted block text-xs">
-          Two-letter ISO code. The server resolves currency, tax and the exact amount from it.
-        </span>
-      </div>
-      <Input
-        id="billing-country-input"
-        value={country}
-        onChange={(event) => setCountry(event.target.value.toUpperCase().slice(0, 2))}
-        placeholder="US"
-        aria-describedby="billing-country-help"
-        className={textRole('label', 'h-8 w-20 text-center font-mono uppercase')}
-      />
-    </div>
-  );
-}
-
-function SubscriptionDetail({
-  subscription,
-  periodEnd,
-}: Readonly<{
-  subscription: BillingEntitlement['subscription'] | null;
-  periodEnd: string | null | undefined;
-}>) {
-  if (!subscription) return <p className={textRole('meta')}>No active subscription</p>;
-  return (
-    <p className={textRole('meta')}>
-      Subscription: {subscription.status.replaceAll('_', ' ')}
-      {periodEnd ? (
-        <>
-          {' · '}
-          {subscription.cancel_at_period_end ? 'Access scheduled to end ' : 'Current period ends '}
-          {new Date(periodEnd).toLocaleDateString('en-US', {
-            dateStyle: 'medium',
-            timeZone: 'UTC',
-          })}
-          .
-        </>
-      ) : null}
-    </p>
-  );
-}
-
-function PlanRow({
-  plan,
-  currencyMinorUnits,
-  country,
-  pending,
-  onCheckout,
-}: Readonly<{
-  plan: CatalogPlan;
-  currencyMinorUnits: number;
-  country: string;
-  pending: boolean;
-  onCheckout: (key: SelfServePlanKey) => void;
-}>) {
-  const { priceLabel, selection, canCheckout } = planCheckoutState(
-    plan,
-    currencyMinorUnits,
-    country,
-    pending,
-  );
-  return (
-    <div
-      className={panelClasses(
-        { tone: 'tonal', pad: 'compact' },
-        'flex flex-col justify-between gap-3 sm:flex-row sm:items-center',
-      )}
-      data-tier={plan.key}
-    >
-      <div className="grid min-w-0 gap-0.5">
-        <div className="flex items-center gap-2">
-          <span className={textRole('bodyStrong')}>{plan.name}</span>
-          <span className={textRole('label', 'font-mono')}>{priceLabel}</span>
-        </div>
-        {plan.description ? <p className="text-muted text-xs">{plan.description}</p> : null}
-        {!selection.ok && !plan.contact_only && selection.reason ? (
-          <p className="text-muted text-xs">{selection.reason}</p>
-        ) : null}
-      </div>
-      <div className="shrink-0">
-        {plan.contact_only ? (
-          <Button asChild variant="secondary" size="sm">
-            <Link href={plan.contact_url ?? CONTACT_SALES_HREF} target="_blank" rel="noreferrer">
-              Contact sales <ExternalLink className="size-3.5" aria-hidden />
-            </Link>
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            disabled={!canCheckout}
-            onClick={() => selection.ok && onCheckout(selection.catalog_key)}
-          >
-            <CreditCard className="size-3.5" aria-hidden />
-            {pending
-              ? 'Opening checkout…'
-              : selection.ok
-                ? `Choose ${plan.name}`
-                : `Choose ${plan.name} — checkout unavailable`}
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function planCheckoutState(
-  plan: CatalogPlan,
-  currencyMinorUnits: number,
-  country: string,
-  pending: boolean,
-) {
-  const price = headlinePrice(plan, 'byok');
-  const selection = checkoutSelection(plan, 'byok');
-  const priceLabel =
-    price.kind === 'price'
-      ? `${formatMoney(price.money, currencyMinorUnits)} / month`
-      : price.kind === 'contact'
-        ? 'Contact us'
-        : price.reason || 'Unavailable';
-  return { priceLabel, selection, canCheckout: selection.ok && country.length === 2 && !pending };
 }
 
 function CancelDialog({

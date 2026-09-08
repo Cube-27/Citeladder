@@ -27,7 +27,7 @@ Effective date:
 Enabled self-serve catalog plan keys/display names:
 Per-plan monthly USD base amounts verified against the shipped catalog:
 USD/INR provisioning rate and source/date:
-Per-plan derived monthly INR GST-exclusive base amounts (minor units):
+Per-plan derived monthly INR GST-exclusive base amounts and gross provider amounts:
 GST is displayed as a separate invoice tax line for India: yes (approved direction)
 GST rate/treatment approved by, approval date, and tax metadata/version:
 Trial enabled? yes/no; if yes, exact duration and first-charge behavior:
@@ -42,15 +42,16 @@ Customer communications handled by Razorpay? yes/no:
 
 Why this is a live-plan gate: Razorpay requires a concrete amount and currency.
 For each enabled catalog item, CiteLadder derives the India price once from the
-operator-supplied USD/INR rate and freezes the **GST-exclusive** base amount into
+operator-supplied USD/INR rate and freezes the **GST-inclusive final charge** into
 the Razorpay plan. It will
 not reprice an active recurring mandate from a live exchange rate. Calculate in
 this order using decimal arithmetic: convert the approved USD base amount to INR,
 round the plan base once to paise with `ROUND_HALF_UP`; calculate GST from that
 rounded base and the approved rate, then round GST once to paise with
 `ROUND_HALF_UP`; for quantity greater than one, multiply the rounded base and GST
-minor-unit values separately, then add them for the invoice total.
-Do not also embed GST in the plan amount. Non-India launch checkout is USD; a
+minor-unit values separately, then add them for the provider plan total.
+Razorpay collects that final total but does not determine the tax allocation.
+Non-India launch checkout is USD; a
 cardholder's issuer may convert that charge into the card account currency.
 
 ## 2. Legal, tax, invoice, and policy inputs
@@ -63,8 +64,9 @@ Obtain India-qualified accounting/legal review and provide the approved outcome:
 - [ ] Bank account in the legal entity's name and settlement details.
 - [ ] Whether consumer-facing prices include GST and the exact invoice wording.
 - [ ] Domestic SaaS invoicing treatment.
-- [ ] Export-of-services/LUT/IGST/FIRC or equivalent evidence policy if
-      international sales will later be enabled.
+- [x] International payments approved; zero-rated export treatment still
+      requires the transaction conditions, current LUT reference, and payment
+      evidence to be satisfied and frozen per receipt.
 - [ ] Public Terms of Service URL.
 - [ ] Public Privacy Policy URL.
 - [ ] Public Refund and Cancellation Policy URL.
@@ -75,12 +77,13 @@ Obtain India-qualified accounting/legal review and provide the approved outcome:
 This document is an engineering checklist, not tax or legal advice.
 
 The legal entity, PAN/GSTIN, settlement bank, registered address, and merchant
-support details belong in Razorpay's merchant onboarding/Dashboard and the
-approved legal documents. They are intentionally not hard-coded into CiteLadder
-or collected in its checkout API. The application currently stores only the
-customer account's two-letter billing country. Provider-confirmed country/tax
-reconciliation remains a live-launch gate: until sandbox evidence proves that
-the selected INR/USD route matches Razorpay payment/invoice evidence, keep
+support details belong in Razorpay onboarding and the approved legal documents;
+the exact supplier invoice fields are also deployment configuration frozen into
+each CiteLadder receipt. Checkout collects normalized customer name, address,
+country, Indian GST state, optional GSTIN, and export attestation. CiteLadder
+determines tax before calling Razorpay and owns the GST/export receipt. Provider
+payment reconciliation remains a live-launch gate: until sandbox evidence proves
+that the selected INR/USD route charges the exact application total, keep
 `BILLING_RAZORPAY_LIVE_READY=false` and `BILLING_CHECKOUT_ENABLED=false`.
 
 ## 3. Razorpay account readiness
@@ -134,6 +137,15 @@ BILLING_RAZORPAY_MODE=disabled
 BILLING_CATALOG_VERSION
 BILLING_USD_INR_RATE
 BILLING_INDIA_GST_RATE=<approved-decimal-rate> # required; no live default/example approval
+BILLING_SELLER_LEGAL_NAME=<registered supplier name>
+BILLING_SELLER_LEGAL_ADDRESS=<registered supplier address>
+BILLING_SELLER_EMAIL=<billing contact>
+BILLING_SELLER_GSTIN=<supplier GSTIN>
+BILLING_SELLER_GST_STATE_CODE=<two-digit code>
+BILLING_SELLER_GST_STATE_NAME=<registered state>
+BILLING_SELLER_SAC=<approved service accounting code>
+BILLING_SELLER_LUT_REFERENCE=<current LUT reference>
+BILLING_INVOICE_PREFIX=<approved serial prefix>
 BILLING_CHECKOUT_ENABLED=false        # stays false until go-live sign-off
 BILLING_RAZORPAY_LIVE_READY=false     # stays false until live lifecycle passes
 BILLING_RAZORPAY_INTERNATIONAL_READY=false # required only before USD checkout
@@ -215,7 +227,7 @@ duplicate/reordered events, reconciliation drift, and webhook deactivation.
 Use the isolated local procedure in [billing operator guide](billing-operator-guide.md#isolated-local-razorpay-test).
 The provisioning CLI requires --revision and --environment. Proposal reads that
 persisted revision without provider I/O; verification fetches provider plans and
-compares item name, amount, currency, cadence, interval and tax terms. Create plans
+compares item name, gross amount, currency, cadence and interval. Create plans
 explicitly in the Dashboard/API. Import their private references in a reviewed
 immutable regional catalog payload, verify, then publish with the audited CLI.
 Empty verification sets and mismatched terms fail closed. The legacy environment
@@ -269,9 +281,9 @@ Launch behavior:
 Attach or record non-secret evidence for:
 
 - [ ] Provisioned test plan verified against the approved catalog, including
-      evidence comparing its GST-exclusive base amount, the invoice GST line,
-      and the final invoice total to the application quote after the documented
-      minor-unit rounding order.
+      evidence that its gross recurring amount equals the application quote's
+      final charge and the CiteLadder receipt reconstructs the taxable value and
+      CGST/SGST or IGST allocation after the documented minor-unit rounding.
 - [ ] The selected billing period, interval, and total cycles pass the 100-year
       maximum calculation before subscription creation (including separate
       monthly and annual fixtures when both are offered).

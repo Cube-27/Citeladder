@@ -92,6 +92,9 @@ class BillingAccount(Base):
     status: Mapped[str] = mapped_column(String(24), default="active")
     billing_country: Mapped[str] = mapped_column(String(2), default="")
     country_verification: Mapped[str] = mapped_column(String(16), default="provisional")
+    # Current normalized customer billing facts. Historical receipts never read
+    # this value: each commercial intent freezes its own private tax snapshot.
+    billing_profile: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # The one persistent account-level monotonic entitlement version. Bumped
     # transactionally under a ``BillingAccount FOR UPDATE`` lock once per
     # logical grant-bundle write, once per logical revocation write, and once
@@ -667,6 +670,10 @@ class PendingActivation(Base):
     # The server-resolved quote (safe DTO fields only, invariant 6) frozen at
     # intent time and replayed byte-equivalently on every read of this row.
     quote: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Private customer/seller/tax evidence bound into quote_id. This is never
+    # projected through an activation DTO and becomes the immutable receipt
+    # source after captured-payment evidence is accepted.
+    tax_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # ISO alpha-2 country and resolved region this intent was priced for; the
     # purchase re-resolves and LOCKS the submitted country server-side.
     country_code: Mapped[str] = mapped_column(String(2), default="")

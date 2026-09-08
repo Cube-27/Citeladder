@@ -178,7 +178,9 @@ Replace that behavior:
 
 - Require an explicit persisted catalog revision and provider environment.
 - `propose` reads that revision and emits redacted plan specifications without provider I/O.
-- `verify` fetches each referenced provider plan and compares name, amount, currency, period, interval, and relevant tax configuration.
+- `verify` fetches each referenced provider plan and compares name, final gross
+  amount, currency, period, and interval. CiteLadder—not provider invoice tax
+  metadata—owns the taxable value and tax-component allocation.
 - Fail on an empty verification set, missing references, mismatched environment, wrong revision, or any differing provider term.
 - Keep provider creation an explicit Dashboard/API operator step; do not introduce an unattended provisioning loop.
 - Store plan references in the reviewed immutable catalog payload, then import/publish using the existing audited CLI.
@@ -370,8 +372,9 @@ The subscription Checkout, callback verification, receipt-gated activation and
 renewal recovery, persisted regional catalog, isolated stack and operator tools
 are implemented in the current change. The [manual testing runbook](../operations/razorpay-local-testing.md)
 provides the owner-run acceptance sequence and expected evidence. Local INR
-approval is owner-confirmed; international remains pending and disabled. Real
-sandbox captures, recurring-method acceptance and GST parity have not been
-performed and are not marked complete. Funded checkout remains disabled as
-specified in section 1. Per the owner's instruction, further suites run in CI,
-not locally; PR completion remains contingent on green CI and review fixes.
+and international approval are owner-confirmed; international setup/readiness
+remains unverified and disabled. Real sandbox captures, recurring-method
+acceptance and GST parity have not been performed and are not marked complete.
+Funded checkout remains disabled as specified in section 1. Per the owner's
+instruction, further suites run in CI, not locally; PR completion remains
+contingent on green CI and review fixes.
