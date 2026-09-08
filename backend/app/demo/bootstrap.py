@@ -86,7 +86,11 @@ async def ensure_configured_dev_account(
     """Provision and rotate the configured dev login in a public deployment."""
     if candidate.demo_mode:
         raise RuntimeError("Public dev-account bootstrap requires DEMO_MODE=false")
-    issues = validate_production_security(candidate)
+    issues = (
+        []
+        if candidate.app_env.strip().lower() in DEVELOPMENT_ENV_NAMES
+        else validate_production_security(candidate)
+    )
     if issues:
         raise RuntimeError("Unsafe production configuration: " + "; ".join(issues))
 

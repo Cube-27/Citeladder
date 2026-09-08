@@ -117,3 +117,24 @@ async def test_empty_public_bootstrap_creates_login_and_published_pricing_once(
     catalogs = list((await db_session.scalars(select(BillingCatalogRevision))).all())
     assert len(catalogs) == 1
     assert catalogs[0].published_at == original_publication
+
+
+@pytest.mark.asyncio
+async def test_local_bootstrap_uses_development_transport_policy(
+    db_session: AsyncSession,
+) -> None:
+    candidate = Settings(
+        APP_ENV="development",
+        DEV_LOGIN_EMAIL="local-dev@example.com",
+        DEV_LOGIN_PASSWORD="local-password-123",
+        DB_SSL_MODE="disable",
+        TRUSTED_PROXY_CIDRS="",
+    )
+    await ensure_configured_dev_account(db_session, candidate)
+    user = await db_session.scalar(
+        select(User).where(User.email == candidate.dev_login_email)
+    )
+    assert user is not None and verify_password(
+        candidate.dev_login_password, user.hashed_password
+    )
+    assert await db_session.scalar(select(BillingCatalogRevision.id)) is not None
