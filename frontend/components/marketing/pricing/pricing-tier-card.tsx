@@ -177,7 +177,8 @@ function PlanCta({
   // Funded mode is unpurchasable while `credit_price` is null: the button is
   // present but disabled, so the state is visible rather than the CTA
   // vanishing and the card silently losing its call to action.
-  const disabled = !checkoutAvailable || priceKind !== 'price' || pending;
+  const unavailable = !checkoutAvailable || priceKind !== 'price';
+  const disabled = unavailable || pending;
   return (
     <Button
       disabled={disabled}
@@ -187,9 +188,9 @@ function PlanCta({
     >
       {pending
         ? 'Starting checkout…'
-        : checkoutAvailable
+        : !unavailable
           ? `Choose ${plan.name}`
-          : `Choose ${plan.name} — coming soon`}
+          : `${plan.name} — coming soon`}
     </Button>
   );
 }

@@ -51,7 +51,17 @@ def _has_explicit_cta_marker(node: Any) -> bool:
 def _is_metadata_copy(text: str) -> bool:
     normalized = text.casefold()
     if normalized.startswith("by "):
-        return re.fullmatch(authorship_config.BYLINE_PATTERN, text) is not None
+        byline = re.match(authorship_config.BYLINE_PATTERN, text)
+        if byline is None:
+            return False
+        suffix = text[byline.end() :].strip()
+        return not suffix or bool(
+            re.fullmatch(
+                authorship_config.BYLINE_METADATA_SUFFIX_PATTERN,
+                suffix,
+                flags=re.IGNORECASE,
+            )
+        )
     if normalized.startswith(("published ", "updated ")):
         return True
     return re.fullmatch(r"\w+\s+\d{1,2},\s+\d{4}", text) is not None

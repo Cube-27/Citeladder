@@ -218,7 +218,8 @@ describe('PricingCatalog', () => {
     });
     expect(screen.queryByText(/managed credits are not yet priced/i)).not.toBeInTheDocument();
     // Presentation prices do not override the deployed catalog's checkout gate.
-    expect(screen.getByRole('button', { name: /Choose Starter/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Starter — coming soon' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Choose Starter/ })).not.toBeInTheDocument();
   });
 
   it('mirrors the switch into ?byok= while preserving other parameters', async () => {

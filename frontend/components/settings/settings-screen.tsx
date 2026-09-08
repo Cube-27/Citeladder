@@ -80,14 +80,18 @@ const SETTINGS_TAB_CODEC = stringUrlCodec(
 function ProjectDeletionControls() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { activeProject, projects, setActiveProjectId } = useProjectContext();
+  const { activeProject, setActiveProjectId } = useProjectContext();
   const { hasCapability } = useEntitlement();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const deleteMutation = useMutation({
     mutationFn: (projectId: string) => projectsApi.deleteProject(projectId),
     onSuccess: async (_data, deletedId) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
-      const next = projects.find((project) => project.id !== deletedId) ?? null;
+      const refreshedProjects = await queryClient.fetchQuery({
+        queryKey: queryKeys.projects.list(),
+        queryFn: () => projectsApi.listProjects(),
+      });
+      const next = refreshedProjects.find((project) => project.id !== deletedId) ?? null;
       if (next) {
         setActiveProjectId(next.id);
         setConfirmOpen(false);

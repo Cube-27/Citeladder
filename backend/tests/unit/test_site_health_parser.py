@@ -812,6 +812,16 @@ def test_visible_byline_link_matches_after_leading_by_prefix() -> None:
     assert facts["authorship"]["visible_profile_url"] == "/authors/jane-doe"
 
 
+def test_visible_byline_does_not_claim_a_longer_unrelated_profile_link() -> None:
+    facts = _facts(
+        b"<html><body><article><a href='/authors/ashley-lee'>"
+        b"<p>By Sam Lee</p><span>Ashley Lee</span></a></article></body></html>"
+    )
+
+    assert facts["authorship"]["visible_byline"] == "By Sam Lee"
+    assert facts["authorship"]["visible_profile_url"] == ""
+
+
 def test_by_design_prose_is_not_discarded_as_a_byline() -> None:
     facts = _facts(
         b"<html><body><main><h2>How does it stay bounded?</h2>"
@@ -821,6 +831,19 @@ def test_by_design_prose_is_not_discarded_as_a_byline() -> None:
 
     assert facts["direct_answer"] == (
         "By design the analysis reads a limited evidence set."
+    )
+
+
+def test_unmarked_dated_byline_is_excluded_from_answer_copy() -> None:
+    facts = _facts(
+        b"<html><body><main><h2>Who maintains this guide?</h2>"
+        b"<p>By Ruth Ellery, 14 March 2026</p>"
+        b"<p>The editorial research team maintains this guide.</p>"
+        b"</main></body></html>"
+    )
+
+    assert facts["question_answer_relationships"][0]["answer"] == (
+        "The editorial research team maintains this guide."
     )
 
 

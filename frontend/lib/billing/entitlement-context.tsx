@@ -3,12 +3,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
-import { billingApi, type BillingEntitlement } from '@/lib/api/billing';
+import { billingApi, type BillingEntitlement, type BillingUsage } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 
 type EntitlementContextValue = {
   entitlement: BillingEntitlement | null;
+  usage: BillingUsage | null;
   isLoading: boolean;
+  usageIsLoading: boolean;
+  usageIsError: boolean;
   /**
    * Whether one capability is granted. Derived from the resolved capability
    * fold — NEVER from a tier name. A tier is a purchase, a capability is what
@@ -20,6 +23,9 @@ type EntitlementContextValue = {
 
 const FAIL_CLOSED: Omit<EntitlementContextValue, 'isLoading'> = {
   entitlement: null,
+  usage: null,
+  usageIsLoading: false,
+  usageIsError: false,
   hasCapability: () => false,
   canStartPaidWork: false,
 };
@@ -35,15 +41,24 @@ const EntitlementContext = createContext<EntitlementContextValue | null>(null);
  * failure, and it must not read as "allowed".
  */
 export function EntitlementProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const query = useQuery({
+  const entitlementQuery = useQuery({
     queryKey: queryKeys.billing.entitlement(),
     queryFn: ({ signal }) => billingApi.entitlement({ signal }),
   });
+  const usageQuery = useQuery({
+    queryKey: queryKeys.billing.usage(),
+    queryFn: ({ signal }) => billingApi.usage({ signal }),
+  });
 
   const value = useMemo<EntitlementContextValue>(() => {
-    const data = query.data;
+    const data = entitlementQuery.data;
     if (!data || data.status !== 'resolved') {
-      return { ...FAIL_CLOSED, isLoading: query.isLoading };
+      return {
+        ...FAIL_CLOSED,
+        isLoading: entitlementQuery.isLoading,
+        usageIsLoading: usageQuery.isLoading,
+        usageIsError: usageQuery.isError,
+      };
     }
     const granted = new Map(data.capabilities.map((c) => [c.key, c.value]));
     const hasCapability = (key: string) => {
@@ -55,7 +70,10 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
     };
     return {
       entitlement: data,
-      isLoading: query.isLoading,
+      usage: usageQuery.data?.status === 'resolved' ? usageQuery.data : null,
+      isLoading: entitlementQuery.isLoading,
+      usageIsLoading: usageQuery.isLoading,
+      usageIsError: usageQuery.isError,
       hasCapability,
       // A live base subscription is what funds paid work. `grants` proves it
       // was actually issued; a pending checkout grants nothing.
@@ -63,7 +81,13 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
         (grant) => grant.source_kind === 'plan' && grant.revoked_at === null,
       ),
     };
-  }, [query.data, query.isLoading]);
+  }, [
+    entitlementQuery.data,
+    entitlementQuery.isLoading,
+    usageQuery.data,
+    usageQuery.isError,
+    usageQuery.isLoading,
+  ]);
 
   return <EntitlementContext.Provider value={value}>{children}</EntitlementContext.Provider>;
 }
@@ -74,13 +98,8 @@ export function useEntitlement() {
   return context;
 }
 
-export function capabilityLimit(
-  entitlement: BillingEntitlement | null,
-  key: string,
-): number | undefined {
-  if (!entitlement || entitlement.status !== 'resolved') return undefined;
-  const capability = entitlement.capabilities.find((item) => item.key === key);
-  if (!capability) return undefined;
-  const value = capability.value;
-  return typeof value === 'number' ? value : undefined;
+export function capabilityRemaining(usage: BillingUsage | null, key: string): number | undefined {
+  if (!usage || usage.status !== 'resolved') return undefined;
+  const item = usage.items.find((candidate) => candidate.key === key);
+  return typeof item?.remaining === 'number' ? item.remaining : undefined;
 }

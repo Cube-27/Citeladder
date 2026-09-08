@@ -433,7 +433,7 @@ def _append_relationship(
     normalized_question = " ".join(str(question or "").split())
     normalized_answer = " ".join(str(answer or "").split())
     bounded_question = _bounded_question(normalized_question)
-    identity = bounded_question.casefold()
+    identity = normalized_question.casefold()
     if (
         len(relationships) >= taxonomy.PAGE_OWNED_MAX_QUESTION_ANSWER_PAIRS
         or not is_answer_heading(bounded_question)

@@ -4,11 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { projectState, entitlementState } = vi.hoisted(() => ({
   projectState: { projects: [{ id: 'existing-project' }], isLoading: false, isError: false },
   entitlementState: {
-    entitlement: {
+    usage: {
       status: 'resolved',
-      capabilities: [{ key: 'project_slots', value: 1 }],
+      items: [{ key: 'project_slots', remaining: 0 }],
     },
     isLoading: false,
+    usageIsLoading: false,
+    usageIsError: false,
   },
 }));
 
@@ -32,8 +34,10 @@ describe('OnboardingPageClient', () => {
     projectState.projects = [{ id: 'existing-project' }];
     projectState.isLoading = false;
     projectState.isError = false;
-    entitlementState.entitlement.capabilities = [{ key: 'project_slots', value: 1 }];
+    entitlementState.usage.items = [{ key: 'project_slots', remaining: 0 }];
     entitlementState.isLoading = false;
+    entitlementState.usageIsLoading = false;
+    entitlementState.usageIsError = false;
   });
 
   it('blocks direct onboarding navigation when the project allowance is full', () => {
@@ -49,6 +53,7 @@ describe('OnboardingPageClient', () => {
 
   it('keeps first-project onboarding available for an empty workspace', () => {
     projectState.projects = [];
+    entitlementState.usage.items = [{ key: 'project_slots', remaining: 1 }];
 
     render(<OnboardingPageClient />);
 
@@ -74,7 +79,16 @@ describe('OnboardingPageClient', () => {
   });
 
   it('fails closed when the project capability is missing', () => {
-    entitlementState.entitlement.capabilities = [];
+    entitlementState.usage.items = [];
+
+    render(<OnboardingPageClient />);
+
+    expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Project access unavailable' })).toBeInTheDocument();
+  });
+
+  it('blocks an empty workspace when another workspace consumed the account allowance', () => {
+    projectState.projects = [];
 
     render(<OnboardingPageClient />);
 
@@ -83,7 +97,7 @@ describe('OnboardingPageClient', () => {
   });
 
   it('keeps additional-project onboarding available for a development allowance', () => {
-    entitlementState.entitlement.capabilities = [{ key: 'project_slots', value: 50_000 }];
+    entitlementState.usage.items = [{ key: 'project_slots', remaining: 49_999 }];
 
     render(<OnboardingPageClient />);
 

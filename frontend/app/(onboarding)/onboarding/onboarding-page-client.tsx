@@ -6,7 +6,7 @@ import { Suspense, type ReactNode } from 'react';
 import { OnboardingScreen } from '@/components/onboarding/onboarding-screen';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { capabilityLimit, useEntitlement } from '@/lib/billing/entitlement-context';
+import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -19,17 +19,14 @@ export function OnboardingPageClient() {
 }
 
 function OnboardingGate() {
-  const { projects, isLoading, isError: projectsError } = useProjectContext();
-  const { entitlement, isLoading: entitlementLoading } = useEntitlement();
-  const projectLimit = capabilityLimit(entitlement, PROJECT_SLOTS_CAPABILITY);
-  const loading = isLoading || entitlementLoading;
-  const additionalProjectBlocked =
-    !loading &&
-    projects.length > 0 &&
-    (projectLimit === undefined || projects.length >= projectLimit);
+  const { isLoading, isError: projectsError } = useProjectContext();
+  const { usage, isLoading: entitlementLoading, usageIsLoading, usageIsError } = useEntitlement();
+  const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
+  const loading = isLoading || entitlementLoading || usageIsLoading;
+  const additionalProjectBlocked = !loading && remainingProjectSlots === 0;
 
   if (loading) return null;
-  if (projectsError) {
+  if (projectsError || usageIsError || remainingProjectSlots === undefined) {
     return (
       <ProjectSetupBlocked title="Project access unavailable">
         We could not verify your existing projects. Return to your projects and try again.

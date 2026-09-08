@@ -411,6 +411,25 @@ def test_heading_relationships_respect_the_persisted_pair_limit() -> None:
     )
 
 
+def test_long_questions_with_the_same_bounded_prefix_remain_distinct() -> None:
+    shared = "What " + ("shared " * 90)
+    facts = extract_page_facts(
+        (
+            "<html><body><main>"
+            f"<h2>{shared}alpha?</h2><p>Alpha answer.</p>"
+            f"<h2>{shared}beta?</h2><p>Beta answer.</p>"
+            "</main></body></html>"
+        ).encode(),
+        final_url="https://example.test/faq",
+        content_type="text/html",
+    )
+
+    assert [
+        relationship["answer"]
+        for relationship in facts["question_answer_relationships"]
+    ] == ["Alpha answer.", "Beta answer."]
+
+
 @pytest.mark.parametrize(
     ("href", "expected"),
     [

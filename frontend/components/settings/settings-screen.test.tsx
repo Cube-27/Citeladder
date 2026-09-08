@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -42,6 +42,11 @@ const activeProject = {
   name: 'Acme Storage',
   brand_name: 'Acme',
 } as unknown as Project;
+const nextProject = {
+  ...activeProject,
+  id: '00000000-0000-4000-8000-0000000000p2',
+  name: 'Beta Storage',
+} as unknown as Project;
 const setActiveProjectId = vi.fn();
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({
@@ -54,8 +59,12 @@ vi.mock('@/lib/project/project-context', () => ({
 }));
 
 const deleteProject = vi.fn().mockResolvedValue(undefined);
+const listProjects = vi.fn().mockResolvedValue([]);
 vi.mock('@/lib/api/projects', () => ({
-  projectsApi: { deleteProject: (id: string) => deleteProject(id) },
+  projectsApi: {
+    deleteProject: (id: string) => deleteProject(id),
+    listProjects: () => listProjects(),
+  },
 }));
 
 // The Provider Settings tab fetches the catalog/connections; stub the panel so
@@ -88,6 +97,8 @@ function renderScreen() {
 describe('SettingsScreen', () => {
   beforeEach(() => {
     deleteProject.mockClear();
+    listProjects.mockReset();
+    listProjects.mockResolvedValue([]);
     replace.mockClear();
     setActiveProjectId.mockClear();
     entitlementState.canDeleteProject = false;
@@ -235,5 +246,19 @@ describe('SettingsScreen', () => {
     await ue.click(within(dialog).getByRole('button', { name: 'Delete project' }));
 
     expect(deleteProject).toHaveBeenCalledWith(activeProject.id);
+  });
+
+  it('selects a project from the refreshed list after deletion', async () => {
+    entitlementState.canDeleteProject = true;
+    listProjects.mockResolvedValue([nextProject]);
+    const ue = userEvent.setup();
+    renderScreen();
+
+    await ue.click(screen.getByRole('button', { name: /delete project/i }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete project' });
+    await ue.click(within(dialog).getByRole('button', { name: 'Delete project' }));
+
+    await waitFor(() => expect(setActiveProjectId).toHaveBeenCalledWith(nextProject.id));
+    expect(replace).not.toHaveBeenCalled();
   });
 });

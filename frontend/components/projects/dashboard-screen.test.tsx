@@ -104,9 +104,9 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({
-    entitlement: { status: 'resolved', capabilities: [{ key: 'project_slots', value: 1 }] },
+    usage: { status: 'resolved', items: [{ key: 'project_slots', remaining: 0 }] },
   }),
-  capabilityLimit: () => 1,
+  capabilityRemaining: () => 0,
 }));
 
 // This file mocks useQuery wholesale to return the command-center fixture, so
