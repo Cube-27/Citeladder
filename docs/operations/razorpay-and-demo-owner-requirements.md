@@ -121,6 +121,7 @@ Secret values — install directly in the deployment secret manager:
 
 ```text
 BILLING_RAZORPAY_KEY_SECRET
+BILLING_QUOTE_SIGNING_SECRET # independent signing secret
 BILLING_RAZORPAY_WEBHOOK_SECRET
 BILLING_RAZORPAY_WEBHOOK_PREVIOUS_SECRET # only during the bounded rotation overlap
 ```
@@ -129,7 +130,7 @@ Non-secret but environment-specific values:
 
 ```text
 BILLING_RAZORPAY_KEY_ID
-BILLING_PROVIDER_PRICE_REFS=<approved-catalog-key-to-provider-reference-map>
+BILLING_RAZORPAY_MODE=disabled
 BILLING_CATALOG_VERSION
 BILLING_USD_INR_RATE
 BILLING_INDIA_GST_RATE=<approved-decimal-rate> # required; no live default/example approval
@@ -211,45 +212,14 @@ duplicate/reordered events, reconciliation drift, and webhook deactivation.
 
 ## 6. Razorpay plan creation procedure
 
-Run these commands from `backend/`:
-
-```text
-BILLING_CATALOG_VERSION=<operator-selected-approved-revision>
-uv run python -m scripts.provision_razorpay_plans propose --environment test
-uv run python -m scripts.provision_razorpay_plans verify --environment test
-uv run python -m scripts.provision_razorpay_plans propose --environment live
-uv run python -m scripts.provision_razorpay_plans verify --environment live
-```
-
-The shipped CLI deliberately refuses `create`; provider-side plan creation is an
-approval-gated manual/API bootstrap action. `verify` rejects credentials whose
-Razorpay key prefix does not match the selected environment (`rzp_test_…` for
-test, `rzp_live_…` for live), and `propose` performs no provider I/O. Before any
-provider-side creation, compare the `catalog revision:` printed by `propose` to
-`BILLING_CATALOG_VERSION` and stop unless they are byte-for-byte equal. Record
-that comparison in the approval evidence; never substitute a hardcoded revision.
-
-1. Install test credentials in staging.
-2. Run catalog validation and a redacted dry-run.
-3. After the catalog-version equality check and approval, create each enabled
-   test self-serve plan once through the reviewed provider bootstrap path.
-4. Install each returned test plan ID in `BILLING_PROVIDER_PRICE_REFS` for staging.
-5. Run `verify` and confirm period, interval, currency, GST-exclusive base
-   amount, and item name.
-6. complete the full sandbox lifecycle and webhook replay suite.
-7. complete KYC, policy, payment-method, settlement, and live webhook gates.
-8. install live credentials with checkout/live-ready flags still false.
-9. run the redacted live dry-run and obtain a second-person review.
-10. Re-run the catalog-version equality check, then create each enabled live plan
-    through the same reviewed provider bootstrap path.
-11. Install and verify each live plan ID in `BILLING_PROVIDER_PRICE_REFS`.
-12. execute one real low-risk authorized lifecycle and reconcile Dashboard,
-    database, invoice, settlement, and cancellation behavior.
-13. After go-live sign-off set `BILLING_RAZORPAY_LIVE_READY=true`, then set
-    `BILLING_CHECKOUT_ENABLED=true` for the India allow-list. Before enabling USD
-    checkout, separately complete the international-route evidence and set
-    `BILLING_RAZORPAY_INTERNATIONAL_READY=true`; that flag is not required for
-    India/INR checkout.
+Use the isolated local procedure in [billing operator guide](billing-operator-guide.md#isolated-local-razorpay-test).
+The provisioning CLI requires --revision and --environment. Proposal reads that
+persisted revision without provider I/O; verification fetches provider plans and
+compares item name, amount, currency, cadence, interval and tax terms. Create plans
+explicitly in the Dashboard/API. Import their private references in a reviewed
+immutable regional catalog payload, verify, then publish with the audited CLI.
+Empty verification sets and mismatched terms fail closed. The legacy environment
+catalog and provider-reference map are not persisted runtime authority.
 
 Razorpay plans cannot be edited or deleted after creation. If a value changes or
 a plan was created outside this process, create or duplicate a new plan, record

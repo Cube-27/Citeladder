@@ -81,7 +81,7 @@ class BillingPayment(Base):
     external_refund_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     amount_minor: Mapped[int] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(3))
-    provider_mode: Mapped[str] = mapped_column(String(8), default="test")
+    provider_mode: Mapped[str] = mapped_column(String(8))
     status: Mapped[str] = mapped_column(String(24))
     paid_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

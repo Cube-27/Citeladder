@@ -212,6 +212,7 @@ class BillingSubscription(Base):
         nullable=True,
     )
     provider: Mapped[str] = mapped_column(String(24), default=PROVIDER_RAZORPAY)
+    provider_mode: Mapped[str] = mapped_column(String(8), default="disabled")
     external_subscription_id: Mapped[str] = mapped_column(String(255))
     external_price_id: Mapped[str] = mapped_column(String(255))
     # Immutable commercial terms used for this subscription.
@@ -246,6 +247,15 @@ class BillingSubscription(Base):
     )
     provider_state_version: Mapped[int] = mapped_column(Integer, default=0)
     is_current: Mapped[bool] = mapped_column(Boolean, default=True)
+    reconciliation_next_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    reconciliation_lease_token: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True
+    )
+    reconciliation_lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
@@ -266,6 +276,7 @@ class BillingWebhookEvent(Base):
         PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     provider: Mapped[str] = mapped_column(String(24), default=PROVIDER_RAZORPAY)
+    provider_mode: Mapped[str] = mapped_column(String(8), default="disabled")
     external_event_id: Mapped[str] = mapped_column(String(255))
     event_type: Mapped[str] = mapped_column(String(128))
     payload_sha256: Mapped[str] = mapped_column(String(64))
@@ -649,6 +660,7 @@ class PendingActivation(Base):
     # pending | activated | failed | abandoned (config-owned vocabulary).
     status: Mapped[str] = mapped_column(String(16), default="pending")
     provider: Mapped[str] = mapped_column(String(24), default=PROVIDER_RAZORPAY)
+    provider_mode: Mapped[str] = mapped_column(String(8), default="disabled")
     external_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     external_price_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     checkout_url: Mapped[str | None] = mapped_column(Text, nullable=True)

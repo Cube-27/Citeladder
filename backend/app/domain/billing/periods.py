@@ -18,6 +18,7 @@ from app.core.config.entitlements import GRANT_SOURCE_ADDON, GRANT_SOURCE_PLAN
 from app.domain.entitlements.grants import issue_grant_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.models.billing import AccountGrant, BillingSubscription
+from app.models.billing_payment import BillingPayment
 
 logger = logging.getLogger("app.billing")
 _GRANT_AUTHORITY_STATUSES = frozenset(
@@ -60,6 +61,21 @@ async def issue_period_bundle(
     if status not in _GRANT_AUTHORITY_STATUSES:
         return
     start, end = _period_bounds(period_start, period_end)
+    receipt = await session.scalar(
+        select(BillingPayment.id)
+        .where(
+            BillingPayment.subscription_id == subscription.id,
+            BillingPayment.billing_account_id == subscription.billing_account_id,
+            BillingPayment.provider_mode == subscription.provider_mode,
+            BillingPayment.receipt_kind == "payment",
+            BillingPayment.status == "paid",
+            BillingPayment.period_start == start,
+            BillingPayment.period_end == end,
+        )
+        .limit(1)
+    )
+    if receipt is None:
+        return
     conflicting = await session.scalar(
         select(AccountGrant.id)
         .where(
@@ -106,4 +122,24 @@ async def issue_period_bundle(
         bundle_role="supplement" if is_addon else "primary",
         profile_key="" if is_addon else subscription.catalog_key,
         profile_priority=0 if is_addon else 200,
+    )
+
+
+async def verified_paid_end(
+    session: AsyncSession, subscription: BillingSubscription, *, at: datetime
+) -> datetime | None:
+    """Cancellation cannot erase time already backed by an immutable receipt."""
+    return await session.scalar(
+        select(BillingPayment.period_end)
+        .where(
+            BillingPayment.subscription_id == subscription.id,
+            BillingPayment.billing_account_id == subscription.billing_account_id,
+            BillingPayment.provider_mode == subscription.provider_mode,
+            BillingPayment.receipt_kind == "payment",
+            BillingPayment.status == "paid",
+            BillingPayment.period_start <= at,
+            BillingPayment.period_end > at,
+        )
+        .order_by(BillingPayment.period_end.desc())
+        .limit(1)
     )

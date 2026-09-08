@@ -181,35 +181,51 @@ describe('BillingSettings', () => {
   it('submits only the catalog key, BYOK mode and country — never an amount', async () => {
     entitlementValue = resolvedEntitlement();
     const bodies: unknown[] = [];
+    const response = {
+      activation_id: ACCOUNT,
+      kind: 'base',
+      catalog_key: 'tier_1',
+      quantity: 1,
+      status: 'pending',
+      quote: {
+        quote_id: 'q1',
+        catalog_revision: 'commercial-v9',
+        catalog_key: 'tier_1',
+        credential_mode: 'byok',
+        country_code: 'US',
+        region: 'international',
+        base_price: { currency: 'USD', amount_minor: 4900 },
+        credit_price: null,
+        tax: { currency: 'USD', amount_minor: 0 },
+        total_price: { currency: 'USD', amount_minor: 4900 },
+        expires_at: '2026-08-01T12:00:00Z',
+      },
+      checkout_url: null,
+      expires_at: '2026-08-01T12:00:00Z',
+      failure_code: null,
+    };
     mswServer.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({
+          user: {
+            id: ACCOUNT,
+            email: 'payer@example.com',
+            role: 'owner',
+            is_active: true,
+            created_at: '2026-09-08T00:00:00Z',
+            updated_at: '2026-09-08T00:00:00Z',
+          },
+        }),
+      ),
+      http.get(`/api/v1/billing/activations/${ACCOUNT}`, () =>
+        HttpResponse.json({ ...response, status: 'failed' }),
+      ),
       catalogHandler(),
       entitlementHandler(),
       usageHandler(),
       http.post('/api/v1/billing/subscriptions', async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({
-          activation_id: ACCOUNT,
-          kind: 'base',
-          catalog_key: 'tier_1',
-          quantity: 1,
-          status: 'pending',
-          quote: {
-            quote_id: 'q1',
-            catalog_revision: 'commercial-v9',
-            catalog_key: 'tier_1',
-            credential_mode: 'byok',
-            country_code: 'US',
-            region: 'international',
-            base_price: { currency: 'USD', amount_minor: 4900 },
-            credit_price: null,
-            tax: { currency: 'USD', amount_minor: 0 },
-            total_price: { currency: 'USD', amount_minor: 4900 },
-            expires_at: '2026-08-01T12:00:00Z',
-          },
-          checkout_url: null,
-          expires_at: '2026-08-01T12:00:00Z',
-          failure_code: null,
-        });
+        return HttpResponse.json(response);
       }),
     );
 

@@ -63,6 +63,55 @@ class PricePayload(BaseModel):
     provider_price_ref: str = ""
 
 
+class RegionalPricePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    currency: Literal["USD", "INR"]
+    amount_minor: int = Field(ge=100)
+    tax_behavior: Literal["inclusive", "exclusive"]
+    tax_minor: int = Field(ge=0)
+    provider_price_ref: str = ""
+    provider_mode: Literal["test", "live"]
+    provider_plan_name: str = Field(min_length=1, max_length=255)
+    interval: Literal[1] = 1
+    period: Literal["monthly"] = "monthly"
+    fx_inr_per_usd: str
+    tax_rate: str
+    metadata: str
+    tax_verified: bool = False
+
+    @model_validator(mode="after")
+    def consistent_tax(self) -> RegionalPricePayload:
+        if self.tax_behavior == "inclusive" and self.tax_minor:
+            raise ValueError("Inclusive prices cannot add a separate tax amount")
+        return self
+
+
+def _validate_sandbox_price(
+    price: RegionalPricePayload, region: str, base: int
+) -> None:
+    from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+
+    if price.provider_mode != "test":
+        raise ValueError("Synthetic prices cannot be live")
+    expected, tax = base, 0
+    if region == "india":
+        try:
+            expected = int(
+                (Decimal(base) * Decimal(price.fx_inr_per_usd)).quantize(
+                    Decimal("1"), rounding=ROUND_HALF_UP
+                )
+            )
+            tax = int(
+                (Decimal(expected) * Decimal(price.tax_rate)).quantize(
+                    Decimal("1"), rounding=ROUND_HALF_UP
+                )
+            )
+        except (InvalidOperation, ValueError, OverflowError) as exc:
+            raise ValueError("Invalid sandbox FX or tax rate") from exc
+    if (price.amount_minor, price.tax_minor) != (expected, tax):
+        raise ValueError("Sandbox price rounding mismatch")
+
+
 class GrantPayload(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     key: str
@@ -89,7 +138,21 @@ class PlanPayload(BaseModel):
     contact_only: bool
     byok_price: PricePayload | None
     funded_price: PricePayload | None
+    regional_byok_prices: dict[str, RegionalPricePayload] = Field(default_factory=dict)
     grants: tuple[GrantPayload, ...]
+
+    @model_validator(mode="after")
+    def regional_terms(self) -> PlanPayload:
+        for region, price in self.regional_byok_prices.items():
+            if region not in {"india", "international"}:
+                raise ValueError("Unknown billing region")
+            if price.currency != ("INR" if region == "india" else "USD"):
+                raise ValueError("Regional currency mismatch")
+            if self.contact_only or self.byok_price is None:
+                raise ValueError("Contact-only plans cannot have regional prices")
+            if price.metadata == "sandbox-fixture-not-for-production":
+                _validate_sandbox_price(price, region, self.byok_price.amount_minor)
+        return self
 
     @model_validator(mode="after")
     def valid_shape(self) -> PlanPayload:
@@ -263,7 +326,6 @@ class CatalogPayload(BaseModel):
     schema_version: Literal[1]
     plans: tuple[PlanPayload, ...]
     campaign: CampaignPayload
-    checkout_enabled: Literal[False]
     contact_sales_url: str
     platform_routes: tuple[dict[str, str], ...]
     ai_credit_policy: AiCreditPolicyPayload | None = None
@@ -392,7 +454,6 @@ def approved_phase1_payload() -> dict[str, object]:
             "eligibility_policy": "new_account",
             "operator_code_allowed": True,
         },
-        "checkout_enabled": False,
         "contact_sales_url": "https://www.cube27.com/contact/",
         "platform_routes": [],
         "ai_credit_policy": None,
@@ -575,6 +636,17 @@ def commercial_catalog_from_row(row: BillingCatalogRevision) -> CommercialCatalo
         base_prices = (
             {"international": CatalogPrice(**base.model_dump())} if base else {}
         )
+        for region, price in item.regional_byok_prices.items():
+            base_prices[region] = CatalogPrice(
+                currency=price.currency,
+                amount_minor=price.amount_minor,
+                tax_behavior=price.tax_behavior,
+                provider_price_ref=price.provider_price_ref,
+                frozen_tax_minor=price.tax_minor,
+                provider_mode=price.provider_mode,
+                synthetic=price.metadata == "sandbox-fixture-not-for-production",
+                tax_verified=price.tax_verified,
+            )
         credit_prices = {}
         if base and funded:
             credit = funded.amount_minor - base.amount_minor

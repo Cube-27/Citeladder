@@ -58,6 +58,7 @@ from app.domain.billing.activations import (
     ProviderRecord,
     activate_pending,
 )
+from app.domain.billing.payments import PaymentReceiptConflictError
 from app.models.billing import PendingActivation
 
 logger = logging.getLogger("app.billing")
@@ -110,6 +111,7 @@ class _Claim:
     """The safe fields a claimed row contributes to the provider read."""
 
     pending_id: uuid.UUID
+    account_id: uuid.UUID
     lease_token: uuid.UUID
     activation_kind: str
     external_reference: str
@@ -127,7 +129,10 @@ async def _claim_batch(
                 select(PendingActivation)
                 .where(
                     PendingActivation.status == ACTIVATION_PENDING,
-                    PendingActivation.created_at <= now - stale_after,
+                    PendingActivation.provider_mode
+                    == billing_settings.require_provider_mode(),
+                    (PendingActivation.created_at <= now - stale_after)
+                    | (PendingActivation.reconciliation_next_at <= now),
                     (PendingActivation.reconciliation_next_at.is_(None))
                     | (PendingActivation.reconciliation_next_at <= now),
                     (PendingActivation.reconciliation_lease_expires_at.is_(None))
@@ -158,6 +163,7 @@ async def _claim_batch(
         claims_list.append(
             _Claim(
                 pending_id=row.id,
+                account_id=row.billing_account_id,
                 lease_token=token,
                 activation_kind=row.activation_kind,
                 external_reference=row.external_reference or "",
@@ -176,7 +182,11 @@ async def _fetch_provider_record(
 ) -> ProviderRecord | None:
     """The provider's authoritative record, or None when it has none."""
     if not claim.external_reference:
-        return None
+        if claim.activation_kind == ACTIVATION_KIND_TOPUP:
+            return None
+        return await provider.find_subscription(
+            str(claim.pending_id), str(claim.account_id)
+        )
     if claim.activation_kind == ACTIVATION_KIND_TOPUP:
         return await provider.fetch_payment(claim.external_reference)
     return await provider.fetch_subscription(claim.external_reference)
@@ -237,6 +247,55 @@ async def _mark_terminal(
     await session.commit()
 
 
+async def _bind_creation_outcome(
+    session: AsyncSession, claim: _Claim, record: ProviderRecord
+) -> bool:
+    """Bind an ambiguous creation only after its exact frozen identity matches."""
+    if claim.external_reference or isinstance(record, ProviderPayment):
+        return True
+    pending = await session.get(PendingActivation, claim.pending_id)
+    if pending is None:
+        return False
+    if (
+        record.intent_id,
+        record.account_ref,
+        record.catalog_revision,
+        record.price_ref,
+        record.provider_mode,
+    ) != (
+        str(pending.id),
+        str(pending.billing_account_id),
+        pending.catalog_revision,
+        pending.external_price_id,
+        pending.provider_mode,
+    ):
+        return False
+    pending.external_reference = record.external_subscription_id
+    return True
+
+
+async def _provider_failure(
+    session: AsyncSession, claim: _Claim, error: BillingProviderError, now: datetime
+) -> ReconciliationSummary | None:
+    """Apply the lease-bound retry/exhaustion policy for a failed provider read."""
+    if not error.retryable:
+        return None
+    if not await _lock_owned_claim(session, claim):
+        await session.rollback()
+        return ReconciliationSummary(claimed=1, still_pending=1)
+    if claim.attempt >= billing_settings.reconciliation_max_attempts:
+        await _mark_terminal(
+            session,
+            claim.pending_id,
+            status=ACTIVATION_ABANDONED,
+            failure_code="reconciliation_attempts_exhausted",
+            now=now,
+        )
+        return ReconciliationSummary(claimed=1, abandoned=1)
+    await session.rollback()
+    return ReconciliationSummary(claimed=1, still_pending=1)
+
+
 async def _settle_claim(
     session: AsyncSession,
     provider: BillingProvider,
@@ -249,21 +308,9 @@ async def _settle_claim(
     try:
         record = await _fetch_provider_record(provider, claim)
     except BillingProviderError as exc:
-        if exc.retryable:
-            if not await _lock_owned_claim(session, claim):
-                await session.rollback()
-                return ReconciliationSummary(claimed=1, still_pending=1)
-            if claim.attempt >= billing_settings.reconciliation_max_attempts:
-                await _mark_terminal(
-                    session,
-                    claim.pending_id,
-                    status=ACTIVATION_ABANDONED,
-                    failure_code="reconciliation_attempts_exhausted",
-                    now=now,
-                )
-                return ReconciliationSummary(claimed=1, abandoned=1)
-            await session.rollback()
-            return ReconciliationSummary(claimed=1, still_pending=1)
+        failure = await _provider_failure(session, claim, exc, now)
+        if failure is not None:
+            return failure
         record = None
     if not await _lock_owned_claim(session, claim):
         await session.rollback()
@@ -279,6 +326,8 @@ async def _settle_claim(
             )
             return ReconciliationSummary(claimed=1, abandoned=1)
         return ReconciliationSummary(claimed=1, still_pending=1)
+    if not await _bind_creation_outcome(session, claim, record):
+        return ReconciliationSummary(claimed=1, errors=1)
     status = _authoritative_status(record)
     if status == ACTIVATION_FAILED:
         await _mark_terminal(
@@ -300,7 +349,7 @@ async def _settle_claim(
             authority_id=str(claim.pending_id),
             at=now,
         )
-    except ActivationRejectedError as exc:
+    except (ActivationRejectedError, PaymentReceiptConflictError) as exc:
         await session.rollback()
         logger.info(
             "billing.reconciliation_rejected activation_id=%s reason=%s",
@@ -346,6 +395,9 @@ async def reconcile_pending_activations(
                     session, provider, claim, now=now, abandon_after=abandon
                 )
             )
+            # Persist an identified but not-yet-paid subscription so Checkout
+            # can reopen it; close the transaction before the next provider I/O.
+            await session.commit()
     return summary
 
 

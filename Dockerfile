@@ -44,6 +44,7 @@ RUN groupadd --gid 10001 appuser \
 COPY --from=dependencies --chown=0:0 /app/backend/.venv ./.venv
 
 COPY --chown=0:0 backend/app ./app
+COPY --chown=0:0 backend/scripts/reconcile_billing.py ./scripts/reconcile_billing.py
 COPY --chown=0:0 backend/alembic.ini ./alembic.ini
 COPY --chown=0:0 migrations /app/migrations
 

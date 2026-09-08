@@ -1,19 +1,9 @@
-"""One-shot manual reconciliation of pending billing activations.
+"""Recover durable webhook receipts, current subscriptions and pending intents.
 
-Ships in PR1 and must be runnable on day one: without it a single missed
-webhook leaves a paying customer with no grants and no recovery path.
-
-It is a BOUNDED, IDEMPOTENT one-shot: it claims at most one batch, settles from
-the provider's own authoritative record through the SAME activation transaction
-the webhook uses (so a late webhook racing this sweep still creates exactly one
-grant bundle), prints safe counts, and exits. All logic lives in the testable
-``app.domain.billing.reconciliation`` service.
-
-It accepts NO secrets on argv — Razorpay credentials and every window come from
-normal settings (invariant 1). Exit status is nonzero only for a RUN-LEVEL
-failure; a per-row provider problem is reported as a count and leaves the row
-pending for the next run. Deliberately not a scheduler and not a worker loop;
-cron invocation is deferred.
+The default runs one bounded sweep; --watch repeats sweeps at the configured
+interval for the isolated billing stack. Provider I/O follows committed claims
+and settlement shares the webhook owners. Credentials come only from settings.
+Run-level failures exit nonzero so the staging service can restart.
 """
 
 from __future__ import annotations
@@ -29,10 +19,19 @@ from app.connectors.billing.http_client import aclose_shared_billing_clients
 from app.core.config.billing_settings import billing_settings
 from app.core.database import SessionLocal
 from app.domain.billing.reconciliation import reconcile_pending_activations
+from app.domain.billing.subscription_recovery import reconcile_current_subscriptions
+from app.domain.billing.webhook_recovery import recover_webhook_receipts
 
 
 async def _run(batch_size: int) -> dict[str, int]:
     try:
+        async with SessionLocal() as session:
+            webhook_count = await recover_webhook_receipts(
+                session, get_billing_provider()
+            )
+            subscription_count = await reconcile_current_subscriptions(
+                session, get_billing_provider()
+            )
         summary = await reconcile_pending_activations(
             SessionLocal,
             get_billing_provider(),
@@ -41,7 +40,17 @@ async def _run(batch_size: int) -> dict[str, int]:
         )
     finally:
         await aclose_shared_billing_clients()
-    return summary.as_counts()
+    return {
+        **summary.as_counts(),
+        "webhooks_claimed": webhook_count,
+        "subscriptions_claimed": subscription_count,
+    }
+
+
+async def _watch(batch_size: int) -> None:
+    while True:
+        print(json.dumps(await _run(batch_size), sort_keys=True), flush=True)
+        await asyncio.sleep(billing_settings.reconciliation_poll_seconds)
 
 
 def main() -> int:
@@ -52,11 +61,15 @@ def main() -> int:
         default=billing_settings.reconciliation_batch_size,
         help="Maximum pending activations claimed in this one-shot run.",
     )
+    parser.add_argument("--watch", action="store_true")
     args = parser.parse_args()
     if args.batch_size < 1:
         print("--batch-size must be >= 1", file=sys.stderr)
         return 2
     try:
+        if args.watch:
+            asyncio.run(_watch(args.batch_size))
+            return 0
         counts = asyncio.run(_run(args.batch_size))
     except Exception as exc:  # noqa: BLE001 - run-level failure only
         print(f"reconciliation run failed: {type(exc).__name__}", file=sys.stderr)

@@ -150,7 +150,7 @@ async def test_public_signup_receives_the_free_account_limits(
 
 
 @pytest.mark.asyncio
-async def test_configured_dev_login_receives_full_access_with_env_crawl_limit(
+async def test_configured_dev_email_receives_only_public_access(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     email = "configured-dev@example.com"
@@ -164,12 +164,12 @@ async def test_configured_dev_login_receives_full_access_with_env_crawl_limit(
     capabilities = {
         item["key"]: item["value"] for item in response.json()["capabilities"]
     }
-    assert capabilities[KEY_MONITORED_URLS] == 200
-    assert capabilities[KEY_PROJECT_SLOTS] > 1_000_000
-    assert capabilities[KEY_PROMPT_SLOTS] > 1_000_000
-    assert capabilities[KEY_CONTENT_CREATION] is True
-    assert capabilities[KEY_GROWTH_AGENT] is True
-    assert capabilities[KEY_PROJECT_DELETION] is True
+    assert capabilities[KEY_MONITORED_URLS] == FREE_MONITORED_URLS
+    assert capabilities[KEY_PROJECT_SLOTS] == FREE_PROJECT_SLOTS
+    assert capabilities[KEY_PROMPT_SLOTS] == FREE_PROMPT_SLOTS
+    assert KEY_CONTENT_CREATION not in capabilities
+    assert KEY_GROWTH_AGENT not in capabilities
+    assert KEY_PROJECT_DELETION not in capabilities
 
 
 @pytest.mark.asyncio

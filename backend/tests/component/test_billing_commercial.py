@@ -17,6 +17,7 @@ import hashlib
 import hmac
 import json
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -65,7 +66,17 @@ from app.models.billing import (
 )
 from app.models.user import User
 from tests.component.auth_helpers import register_and_login as _register
+from tests.component.billing_provider_helpers import (
+    configure_test_provider,
+    drain_webhook,
+)
 from tests.component.log_capture import capture_log_messages
+
+
+@pytest.fixture(autouse=True)
+def _provider_environment(monkeypatch):
+    configure_test_provider(monkeypatch)
+
 
 _SECRET = "commercial-webhook-secret"
 _PLAN_REF = "plan_test_private"
@@ -99,7 +110,20 @@ async def _published_catalog(db_session: AsyncSession) -> None:
 @pytest.fixture(autouse=True)
 def _runtime_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
     async def load(_session):
-        return commercial_catalog()
+        catalog = commercial_catalog()
+        return replace(
+            catalog,
+            plans=tuple(
+                replace(
+                    plan,
+                    base_prices={
+                        region: replace(price, provider_mode="test", tax_verified=True)
+                        for region, price in plan.base_prices.items()
+                    },
+                )
+                for plan in catalog.plans
+            ),
+        )
 
     monkeypatch.setattr("app.domain.billing.service.published_commercial_catalog", load)
 
@@ -111,7 +135,7 @@ def _sign(raw: bytes) -> str:
 async def _post_webhook(
     client: httpx.AsyncClient, raw: bytes, *, event_id: str
 ) -> httpx.Response:
-    return await client.post(
+    response = await client.post(
         "/api/v1/billing/webhooks/razorpay",
         content=raw,
         headers={
@@ -120,6 +144,10 @@ async def _post_webhook(
             "Content-Type": "application/json",
         },
     )
+
+    if response.status_code == 204:
+        await drain_webhook(json.loads(raw))
+    return response
 
 
 def _enable_checkout(monkeypatch: pytest.MonkeyPatch, refs: dict[str, str]) -> None:
@@ -336,6 +364,7 @@ async def _seed_pending(
     pending = PendingActivation(
         billing_account_id=account.id,
         activation_kind=kind,
+        provider_mode="test",
         catalog_key=catalog_key,
         quantity=quantity,
         catalog_revision=billing_settings.catalog_version,
@@ -382,7 +411,7 @@ async def test_base_purchase_is_202_pending_and_grants_nothing(
     assert body["kind"] == "base"
     assert body["catalog_key"] == "tier_1"
     assert body["status"] == "pending"
-    assert body["checkout_url"] == "https://rzp.io/i/sub_fake"
+    assert body["checkout_url"] is None
     assert body["failure_code"] is None
     # The SERVER quote controls the charge and agrees with catalog pricing.
     quote = body["quote"]
@@ -980,12 +1009,24 @@ async def test_renewal_with_a_removed_catalog_key_logs_and_issues_nothing(
     account = await _account(db_session)
     subscription = await _seed_live_base(db_session, account)
     subscription.catalog_key = "tier_removed"
+    subscription.catalog_revision = billing_settings.catalog_version
+    subscription.provider_mode = "test"
+    pending = await _seed_pending(
+        db_session,
+        account,
+        kind="base",
+        catalog_key="tier_removed",
+        total_minor=4900,
+        external_reference="sub_live_base",
+    )
+    pending.external_price_id = _PLAN_REF
+    pending.status = "activated"
     await db_session.commit()
 
     now = datetime.now(UTC)
     raw = _subscription_activation_payload(
         external_id="sub_live_base",
-        intent_id=str(uuid.uuid4()),
+        intent_id=str(pending.id),
         account_ref=str(account.id),
         updated_at=int(now.timestamp()),
         current_start=int(now.timestamp()),
@@ -1115,6 +1156,14 @@ async def test_webhook_reconciliation_race_settles_exactly_once(
         price_ref=_PLAN_REF,
         intent_id=str(pending_id),
         account_ref=str(account.id),
+    )
+    from tests.component.billing_provider_helpers import captured_payment
+
+    record = replace(
+        record,
+        provider_mode="test",
+        catalog_revision=billing_settings.catalog_version,
+        payment=captured_payment(record, 9900),
     )
     webhook_result = await activate_pending(
         db_session,

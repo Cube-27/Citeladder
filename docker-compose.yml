@@ -43,7 +43,7 @@ services:
       dockerfile: Dockerfile
     restart: "no"
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: &backend_env
       APP_ENV: ${APP_ENV:-development}
       # skipcq: SCT-A000 - password comes from environment, not hardcoded.
@@ -59,7 +59,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:
@@ -111,7 +111,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:
@@ -133,7 +133,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:
@@ -152,7 +152,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:
@@ -171,7 +171,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:
@@ -190,7 +190,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:
@@ -209,7 +209,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:
@@ -228,7 +228,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:
@@ -250,7 +250,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:
@@ -270,7 +270,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:
@@ -290,7 +290,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ${CITELADDER_ENV_FILE:-.env}
     environment: *backend_env
     depends_on:
       db:

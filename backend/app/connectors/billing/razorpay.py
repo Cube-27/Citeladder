@@ -49,6 +49,10 @@ class RazorpayBillingProvider:
         self._client = client
 
     def _auth(self) -> httpx.BasicAuth:
+        try:
+            self.settings.require_provider_mode()
+        except ValueError as exc:
+            raise BillingProviderError("provider_not_configured") from exc
         key_id = self.settings.razorpay_key_id.strip()
         secret = self.settings.razorpay_key_secret.get_secret_value()
         if not key_id or not secret:
@@ -78,9 +82,12 @@ class RazorpayBillingProvider:
                 json=payload,
                 headers=headers,
                 timeout=self.settings.request_timeout_seconds,
+                follow_redirects=False,
             )
         except httpx.TransportError as exc:
             raise BillingProviderError("provider_unavailable", retryable=True) from exc
+        if 300 <= response.status_code < 400:
+            raise BillingProviderError("provider_redirect_rejected")
         if response.status_code >= 400:
             code = (
                 "provider_rejected"
@@ -113,6 +120,8 @@ class RazorpayBillingProvider:
             price_ref=_optional_str(data.get("plan_id")),
             intent_id=_optional_str(notes.get(_NOTE_INTENT)),
             account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
+            provider_mode=self.settings.require_provider_mode(),
+            catalog_revision=_optional_str(notes.get("citeladder_catalog_revision")),
         )
 
     def _validated_checkout_url(self, value: object) -> str:
@@ -136,7 +145,7 @@ class RazorpayBillingProvider:
         _require_price_ref(subscription, expected_price_ref)
         return HostedSubscription(
             external_subscription_id=subscription.external_subscription_id,
-            checkout_url=self._validated_checkout_url(data.get("short_url")),
+            checkout_url="",
             status=subscription.status,
             price_ref=subscription.price_ref,
         )
@@ -166,6 +175,8 @@ class RazorpayBillingProvider:
             currency=currency.upper(),
             updated_at=_optional_int(data.get("updated_at")) or 0,
             paid_at=_optional_int(data.get("paid_at")),
+            provider_mode=self.settings.require_provider_mode(),
+            external_invoice_id=_optional_str(data.get("invoice_id")),
             intent_id=_optional_str(notes.get(_NOTE_INTENT)),
             account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
         )
@@ -221,9 +232,68 @@ class RazorpayBillingProvider:
     async def fetch_subscription(
         self, external_subscription_id: str
     ) -> ProviderSubscription:
-        return self._subscription(
+        subscription = self._subscription(
             await self._request("GET", f"/subscriptions/{external_subscription_id}")
         )
+        invoices = await self._request(
+            "GET", f"/invoices?subscription_id={external_subscription_id}"
+        )
+        from app.connectors.billing.subscription_evidence import (
+            invoice_payment,
+            matching_invoice,
+        )
+
+        invoice = matching_invoice(invoices, subscription)
+        if invoice is None:
+            return subscription
+        payment = await self.fetch_payment(str(invoice["payment_id"]))
+        return replace(
+            subscription, payment=invoice_payment(invoice, payment, subscription)
+        )
+
+    async def find_subscription(
+        self, intent_id: str, account_ref: str
+    ) -> ProviderSubscription | None:
+        data = await self._collection("/subscriptions")
+        items = data.get("items")
+        if not isinstance(items, list):
+            raise BillingProviderError("provider_invalid_response")
+        matches = [
+            self._subscription(item)
+            for item in items
+            if isinstance(item, dict)
+            and _notes_map(item.get("notes")).get(_NOTE_INTENT) == intent_id
+            and _notes_map(item.get("notes")).get(_NOTE_ACCOUNT) == account_ref
+        ]
+        if len(matches) > 1:
+            raise BillingProviderError("provider_subscription_ambiguous")
+        return (
+            await self.fetch_subscription(matches[0].external_subscription_id)
+            if matches
+            else None
+        )
+
+    async def _collection(self, path: str) -> dict[str, Any]:
+        """Read bounded pages; a truncated search is not proof of absence."""
+        items: list[dict[str, Any]] = []
+        count = self.settings.reconciliation_list_count
+        separator = "&" if "?" in path else "?"
+        for page in range(self.settings.reconciliation_max_pages):
+            data = await self._request(
+                "GET", f"{path}{separator}count={count}&skip={page * count}"
+            )
+            batch = data.get("items")
+            if not isinstance(batch, list) or any(
+                not isinstance(item, dict) for item in batch
+            ):
+                raise BillingProviderError("provider_invalid_response")
+            items.extend(batch)
+            if len(batch) < count:
+                return {"items": items}
+        raise BillingProviderError("provider_collection_incomplete", retryable=True)
+
+    async def fetch_plan(self, reference: str) -> dict[str, Any]:
+        return await self._request("GET", f"/plans/{reference}")
 
     async def cancel_subscription(
         self, external_subscription_id: str, *, at_cycle_end: bool = True

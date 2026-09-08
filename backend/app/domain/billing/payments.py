@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import ProviderPayment, ProviderRefund
-from app.models.billing import PendingActivation
+from app.models.billing import BillingSubscription, PendingActivation
 from app.models.billing_payment import BillingPayment
 
 
@@ -25,11 +25,35 @@ def _digest(payload: dict[str, object]) -> str:
     ).hexdigest()
 
 
+def _payment_payload(
+    pending: PendingActivation,
+    payment: ProviderPayment,
+    subscription: BillingSubscription | None,
+) -> dict[str, object]:
+    return {
+        "account": str(pending.billing_account_id),
+        "intent": str(pending.id),
+        "payment": payment.external_payment_id,
+        "payment_link": payment.external_payment_link_id
+        or (pending.external_reference if subscription is None else ""),
+        "invoice": payment.external_invoice_id,
+        "subscription": str(subscription.id) if subscription else None,
+        "period_start": payment.period_start,
+        "period_end": payment.period_end,
+        "amount": payment.amount_minor,
+        "tax": payment.tax_minor,
+        "currency": payment.currency,
+        "paid_at": payment.paid_at,
+        "mode": payment.provider_mode,
+    }
+
+
 async def record_payment_receipt(
     session: AsyncSession,
     *,
     pending: PendingActivation,
     payment: ProviderPayment,
+    subscription: BillingSubscription | None = None,
 ) -> BillingPayment:
     """Normalize one captured transaction independently of its Payment Link."""
     existing = await session.scalar(
@@ -41,19 +65,7 @@ async def record_payment_receipt(
         )
         .with_for_update()
     )
-    payload: dict[str, object] = {
-        "account": str(pending.billing_account_id),
-        "intent": str(pending.id),
-        "payment": payment.external_payment_id,
-        "payment_link": payment.external_payment_link_id
-        or pending.external_reference
-        or "",
-        "invoice": payment.external_invoice_id,
-        "amount": payment.amount_minor,
-        "currency": payment.currency,
-        "paid_at": payment.paid_at,
-        "mode": payment.provider_mode,
-    }
+    payload = _payment_payload(pending, payment, subscription)
     digest = _digest(payload)
     if existing is not None:
         if existing.receipt_sha256 != digest:
@@ -62,11 +74,18 @@ async def record_payment_receipt(
     receipt = BillingPayment(
         billing_account_id=pending.billing_account_id,
         pending_activation_id=pending.id,
+        subscription_id=subscription.id if subscription else None,
+        period_start=datetime.fromtimestamp(payment.period_start, tz=UTC)
+        if payment.period_start
+        else None,
+        period_end=datetime.fromtimestamp(payment.period_end, tz=UTC)
+        if payment.period_end
+        else None,
         provider=pending.provider,
         receipt_kind="payment",
         external_payment_id=payment.external_payment_id,
         external_payment_link_id=payment.external_payment_link_id
-        or pending.external_reference,
+        or (pending.external_reference if subscription is None else None),
         external_invoice_id=payment.external_invoice_id or None,
         amount_minor=payment.amount_minor,
         currency=payment.currency,

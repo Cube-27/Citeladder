@@ -15,6 +15,7 @@ import type { z } from 'zod';
 import { apiClient, type ApiRequestOptions } from './client';
 import {
   activationSchema,
+  subscriptionCheckoutSchema,
   billingCatalogSchema,
   billingEntitlementSchema,
   billingUsageSchema,
@@ -60,7 +61,31 @@ export type SubscriptionCheckoutInput = {
   country_code: string;
 };
 
+export type CheckoutCallback = {
+  razorpay_payment_id: string;
+  razorpay_subscription_id: string;
+  razorpay_signature: string;
+};
+
 export const billingApi = {
+  checkout: async (activationId: string) =>
+    strictValidate(
+      subscriptionCheckoutSchema,
+      await apiClient.get<unknown>(`/billing/subscriptions/${activationId}/checkout`),
+      'billing.checkout',
+    ),
+  activation: async (activationId: string, options?: ApiRequestOptions) =>
+    strictValidate(
+      activationSchema,
+      await apiClient.get<unknown>(`/billing/activations/${activationId}`, options),
+      'billing.activation',
+    ),
+  verifyCheckout: async (activationId: string, callback: CheckoutCallback) =>
+    strictValidate(
+      activationSchema,
+      await apiClient.post<unknown>(`/billing/subscriptions/${activationId}/verify`, callback),
+      'billing.verifyCheckout',
+    ),
   catalog: async (countryCode?: string, options?: ApiRequestOptions) => {
     const query = countryCode ? `?country=${encodeURIComponent(countryCode)}` : '';
     const response = await apiClient.get<unknown>(`/billing/catalog${query}`, options);

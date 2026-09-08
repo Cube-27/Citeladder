@@ -195,6 +195,7 @@ async def _insert_intent(
         credential_mode=intent.credential_mode,
         status=ACTIVATION_PENDING,
         provider=PROVIDER_RAZORPAY,
+        provider_mode=billing_settings.require_provider_mode(),
         external_price_id=intent.price_ref,
         quote=intent.quote.model_dump(mode="json"),
         country_code=intent.country_code,
@@ -254,7 +255,9 @@ def _apply_hosted_result(pending: PendingActivation, result: HostedResult) -> No
         pending.external_reference = result.external_subscription_id
     else:
         pending.external_reference = result.external_payment_id
-    pending.checkout_url = result.checkout_url
+    pending.checkout_url = (
+        result.checkout_url if isinstance(result, HostedPayment) else None
+    )
 
 
 async def replay_intent(

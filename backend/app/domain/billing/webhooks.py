@@ -41,6 +41,7 @@ from app.domain.billing.activations import (
     ProviderRecord,
     activate_pending,
 )
+from app.domain.billing.payments import PaymentReceiptConflictError
 from app.domain.billing.service import apply_subscription_state
 from app.models.billing import (
     BillingSubscription,
@@ -72,10 +73,7 @@ def verify_razorpay_signature(raw_body: bytes, signature: str) -> bool:
         character not in "0123456789abcdefABCDEF" for character in supplied
     ):
         return False
-    secrets = (
-        billing_settings.razorpay_webhook_secret.get_secret_value(),
-        billing_settings.razorpay_webhook_previous_secret.get_secret_value(),
-    )
+    secrets = billing_settings.webhook_secrets(datetime.now(UTC))
     return any(
         secret
         and hmac.compare_digest(
@@ -142,8 +140,10 @@ def parse_subscription_event(payload: dict[str, Any]) -> ProviderSubscription:
         ),
         cancel_at_period_end=_provider_bool(entity.get("cancel_at_cycle_end")),
         price_ref=_optional_str(entity.get("plan_id")),
+        catalog_revision=_optional_str(notes.get("citeladder_catalog_revision")),
         intent_id=_optional_str(notes.get(_NOTE_INTENT)),
         account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
+        provider_mode=billing_settings.require_provider_mode(),
     )
 
 
@@ -173,12 +173,14 @@ def parse_payment_event(payload: dict[str, Any]) -> ProviderPayment:
         paid_at=_bounded_int(entity.get("created_at")) or created_at or None,
         intent_id=_optional_str(notes.get(_NOTE_INTENT)),
         account_ref=_optional_str(notes.get(_NOTE_ACCOUNT)),
+        provider_mode=billing_settings.require_provider_mode(),
     )
 
 
 def _safe_summary(reference: str, status: str) -> dict[str, str]:
-    """Only a HASHED provider reference and the safe status are persisted."""
+    """Persist the raw provider reference, its digest and the safe status."""
     return {
+        "reference": reference,
         "reference_hash": hashlib.sha256(reference.encode()).hexdigest(),
         "status": status,
     }
@@ -197,6 +199,7 @@ async def _record_event(
         pg_insert(BillingWebhookEvent)
         .values(
             provider=PROVIDER_RAZORPAY,
+            provider_mode=billing_settings.require_provider_mode(),
             external_event_id=event_id,
             event_type=event_type,
             payload_sha256=hashlib.sha256(raw_body).hexdigest(),
@@ -271,7 +274,7 @@ async def _activate_from_event(
             authority_id=event_id,
             at=datetime.now(UTC),
         )
-    except ActivationRejectedError:
+    except (ActivationRejectedError, PaymentReceiptConflictError):
         # A valid but unverifiable event grants NOTHING and is recorded safely.
         await session.rollback()
         refreshed = await session.get(BillingWebhookEvent, event_row_id)
@@ -292,11 +295,14 @@ async def _process_subscription_event(
     event_id: str,
 ) -> str:
     subscription = await session.scalar(
-        select(BillingSubscription).where(
+        select(BillingSubscription)
+        .where(
             BillingSubscription.provider == PROVIDER_RAZORPAY,
             BillingSubscription.external_subscription_id
             == record.external_subscription_id,
         )
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     if subscription is None:
         return await _activate_from_event(
@@ -306,6 +312,22 @@ async def _process_subscription_event(
             reference=record.external_subscription_id,
             event_id=event_id,
         )
+    if subscription.provider_mode != record.provider_mode:
+        return await _finish(session, event, RESULT_REJECTED)
+    if record.payment is not None:
+        from app.domain.billing.subscription_payments import record_subscription_payment
+
+        pending = await session.scalar(
+            select(PendingActivation).where(
+                PendingActivation.external_reference == record.external_subscription_id,
+                PendingActivation.billing_account_id == subscription.billing_account_id,
+                PendingActivation.provider_mode == record.provider_mode,
+            )
+        )
+        if pending is not None:
+            await record_subscription_payment(
+                session, pending=pending, subscription=subscription, record=record
+            )
     applied = await apply_subscription_state(
         session,
         subscription,
@@ -356,22 +378,7 @@ async def process_razorpay_webhook(
     # activation rolls back its own side effects and must never take the
     # received-event row down with it.
     await session.commit()
-    if isinstance(record, ProviderPayment):
-        result = await _activate_from_event(
-            session,
-            event=event,
-            record=record,
-            reference=reference,
-            event_id=event_id,
-        )
-    else:
-        result = await _process_subscription_event(
-            session, event=event, record=record, event_id=event_id
-        )
-    if result == RESULT_UNMATCHED:
-        # Valid signature, no matching row: recorded safely, grants NOTHING.
-        return await _finish(session, event, RESULT_UNMATCHED)
-    return result
+    return "queued"
 
 
 def _bounded_int(value: object) -> int | None:

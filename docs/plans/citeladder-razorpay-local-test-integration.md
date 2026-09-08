@@ -59,9 +59,9 @@ CI remains the merge gate.
 
 ## 1. Execution boundary and agreed scope
 
-**When “Implement plan” is clicked: save this complete plan to `docs/plans/citeladder-razorpay-local-test-integration.md`, verify that file, and stop.** Do not implement code, change environment files, start services, configure Razorpay, create plans, or make payments during that save-only turn. Preserve existing unrelated changes and deleted documents.
+The owner explicitly requested implementation on 2026-09-08. The earlier save-only handoff is superseded. External sandbox acceptance remains evidence-gated.
 
-The following work is the subsequent implementation specification for Sol, requiring a separate implementation request.
+The following specification governs the implementation authorized in this session.
 
 Deliver:
 
@@ -362,4 +362,16 @@ Also prove:
 
 Implementation completion requires green repository gates and an honest sandbox evidence record. Unsupported or unverified methods remain disabled and explicitly outstanding. Sandbox success does not enable live checkout or establish real settlement, production tax compliance, or merchant approval.
 
-**Save-only handoff reminder:** the next “Implement plan” action saves this document and stops; all implementation and external setup above remain future work.
+The billing operator guide records sandbox acceptance requirements. Merchant capabilities, actual test payments and tax parity remain unverified until exercised.
+
+## Implementation handoff — 2026-09-08
+
+The subscription Checkout, callback verification, receipt-gated activation and
+renewal recovery, persisted regional catalog, isolated stack and operator tools
+are implemented in the current change. The [manual testing runbook](../operations/razorpay-local-testing.md)
+provides the owner-run acceptance sequence and expected evidence. Local INR
+approval is owner-confirmed; international remains pending and disabled. Real
+sandbox captures, recurring-method acceptance and GST parity have not been
+performed and are not marked complete. Funded checkout remains disabled as
+specified in section 1. Per the owner's instruction, further suites run in CI,
+not locally; PR completion remains contingent on green CI and review fixes.

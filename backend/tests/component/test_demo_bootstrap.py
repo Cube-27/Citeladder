@@ -109,7 +109,7 @@ async def test_empty_public_bootstrap_creates_login_and_published_pricing_once(
     catalog = await db_session.scalar(select(BillingCatalogRevision))
     assert catalog is not None and catalog.publication_state == "published"
     assert catalog.published_by_user_id == user.id
-    assert catalog.payload["checkout_enabled"] is False
+    assert "checkout_enabled" not in catalog.payload
     assert len(catalog.payload["plans"]) == 4
     assert catalog.payload["campaign"]["enabled"] is False
     original_publication = catalog.published_at

@@ -9,34 +9,27 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import exists, or_, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.config.entitlements import (
-    ACTOR_KIND_SYSTEM,
     BASELINE_GRANT_REVISION,
     CAPABILITY_REGISTRY,
-    DEV_LOGIN_UNBOUNDED_COUNTER_ALLOWANCE,
-    DEV_PROJECT_DELETION_GRANT_REVISION,
     FREE_MONITORED_URLS,
     FREE_PROJECT_SLOTS,
     FREE_PROMPT_SLOTS,
     GRANT_SOURCE_OVERRIDE,
     KEY_MONITORED_URLS,
-    KEY_PROJECT_DELETION,
     KEY_PROJECT_SLOTS,
     KEY_PROMPT_SLOTS,
     CapabilityType,
 )
-from app.domain.entitlements.grants import issue_grant_bundle, revoke_grants
+from app.domain.entitlements.grants import issue_grant_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.models.billing import (
-    AccountGrant,
     BillingAccount,
     BillingCatalogRevision,
-    GrantRevocation,
     WorkspaceBillingLink,
 )
 from app.models.user import User
@@ -92,122 +85,59 @@ async def ensure_user_billing(
     return account
 
 
-def _dev_login_grants() -> tuple[GrantSpec, ...]:
-    grants: list[GrantSpec] = []
-    for capability in CAPABILITY_REGISTRY.entries:
-        if not capability.issuable:
-            continue
-        if capability.key == KEY_MONITORED_URLS:
-            continue
-        # Existing dev accounts receive this separately below so adding the
-        # capability repairs them without replaying or duplicating every
-        # counter in the original baseline bundle.
-        if capability.key == KEY_PROJECT_DELETION:
-            continue
-        if capability.capability_type is CapabilityType.FLAG:
-            value = 1
-        elif capability.capability_type is CapabilityType.LEVEL:
-            value = len(capability.ordered_values) - 1
-        else:
-            value = DEV_LOGIN_UNBOUNDED_COUNTER_ALLOWANCE
-        grants.append(GrantSpec(key=capability.key, value=value))
-    return tuple(grants)
-
-
 async def _ensure_baseline_access(
     session: AsyncSession, *, user: User, account: BillingAccount
 ) -> None:
-    """Idempotently provision the configured dev login or public free tier."""
-    dev_login = user.email.casefold() == settings.dev_login_email.strip().casefold()
-    grants = (
-        _dev_login_grants()
-        if dev_login
-        else (
+    """Public authentication always provisions the ordinary free profile."""
+    await issue_grant_bundle(
+        session,
+        account_id=account.id,
+        source_kind=GRANT_SOURCE_OVERRIDE,
+        source_ref="system:public-signup",
+        grants=(
             GrantSpec(key=KEY_PROJECT_SLOTS, value=FREE_PROJECT_SLOTS),
             GrantSpec(key=KEY_PROMPT_SLOTS, value=FREE_PROMPT_SLOTS),
             GrantSpec(key=KEY_MONITORED_URLS, value=FREE_MONITORED_URLS),
-        )
-    )
-    source_ref = "system:dev-login" if dev_login else "system:public-signup"
-    await issue_grant_bundle(
-        session,
-        account_id=account.id,
-        source_kind=GRANT_SOURCE_OVERRIDE,
-        source_ref=source_ref,
-        grants=grants,
+        ),
         catalog_revision=CAPABILITY_REGISTRY.revision,
-        idempotency_key=f"{BASELINE_GRANT_REVISION}:{source_ref}",
+        idempotency_key=f"{BASELINE_GRANT_REVISION}:system:public-signup",
         valid_from=datetime.now(UTC),
         valid_until=None,
         bundle_role="primary",
-        profile_key="development" if dev_login else "free",
-        profile_priority=100 if dev_login else 0,
+        profile_key="free",
+        profile_priority=0,
     )
-    if dev_login:
-        await issue_grant_bundle(
-            session,
-            account_id=account.id,
-            source_kind=GRANT_SOURCE_OVERRIDE,
-            source_ref="system:dev-project-deletion",
-            grants=(GrantSpec(key=KEY_PROJECT_DELETION, value=1),),
-            catalog_revision=CAPABILITY_REGISTRY.revision,
-            idempotency_key=DEV_PROJECT_DELETION_GRANT_REVISION,
-            valid_from=datetime.now(UTC),
-            valid_until=None,
-        )
-        await _sync_dev_monitored_access(session, user=user, account=account)
 
 
-async def _sync_dev_monitored_access(
-    session: AsyncSession, *, user: User, account: BillingAccount
+async def provision_development_access(
+    session: AsyncSession, *, user: User, account: BillingAccount, allowance: int
 ) -> None:
-    """Make the configured dev crawl allowance exact, even over legacy grants."""
-    now = datetime.now(UTC)
-    allowance = settings.dev_login_counter_allowance
-    desired_ref = f"system:dev-login-monitored:{allowance}"
-    revoked = exists(
-        select(GrantRevocation.id).where(
-            GrantRevocation.grant_id == AccountGrant.id,
-            GrantRevocation.effective_from <= now,
+    """Explicit bootstrap only; the audited grant is bound to the persisted UUID."""
+    from app.domain.entitlements.grants import issue_override_bundle
+
+    grants = tuple(
+        GrantSpec(
+            key=capability.key,
+            value=(
+                1
+                if capability.capability_type is CapabilityType.FLAG
+                else len(capability.ordered_values) - 1
+                if capability.capability_type is CapabilityType.LEVEL
+                else allowance
+            ),
         )
+        for capability in CAPABILITY_REGISTRY.entries
+        if capability.issuable
     )
-    stale_ids = tuple(
-        (
-            await session.scalars(
-                select(AccountGrant.id).where(
-                    AccountGrant.billing_account_id == account.id,
-                    AccountGrant.key == KEY_MONITORED_URLS,
-                    AccountGrant.source_ref != desired_ref,
-                    AccountGrant.valid_from <= now,
-                    or_(
-                        AccountGrant.valid_until.is_(None),
-                        AccountGrant.valid_until > now,
-                    ),
-                    ~revoked,
-                )
-            )
-        ).all()
-    )
-    if stale_ids:
-        await revoke_grants(
-            session,
-            grant_ids=stale_ids,
-            effective_from=now,
-            reason="synchronize configured dev monitored URL allowance",
-            actor_kind=ACTOR_KIND_SYSTEM,
-            actor_user_id=user.id,
-            idempotency_key=f"dev-login-monitored-sync:{allowance}",
-        )
-    await issue_grant_bundle(
+    await issue_override_bundle(
         session,
+        operator_user=user,
         account_id=account.id,
-        source_kind=GRANT_SOURCE_OVERRIDE,
-        source_ref=desired_ref,
-        grants=(GrantSpec(key=KEY_MONITORED_URLS, value=allowance),),
-        catalog_revision=CAPABILITY_REGISTRY.revision,
-        idempotency_key=f"{BASELINE_GRANT_REVISION}:{desired_ref}",
-        valid_from=now,
+        grants=grants,
+        reason="explicit configured development bootstrap",
+        valid_from=datetime.now(UTC),
         valid_until=None,
+        idempotency_key=f"development-bootstrap:{user.id}:{allowance}",
     )
 
 

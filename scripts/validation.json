@@ -424,6 +424,9 @@
         "backend/app/domain/entitlements/**",
         "backend/app/connectors/billing/**",
         "backend/app/api/billing.py",
+        "backend/app/api/billing_checkout.py",
+        "backend/scripts/provision_razorpay_plans.py",
+        "backend/scripts/reconcile_billing.py",
         "backend/app/api/usage_limits.py",
         "backend/app/models/billing.py",
         "backend/app/models/billing_journeys.py",
@@ -824,6 +827,23 @@
         "frontend/app/(app)/page.tsx"
       ],
       "frontendTests": ["app/sitemap.test.ts"]
+    },
+    {
+      "sources": [
+        "frontend/lib/billing/*checkout*",
+        "frontend/components/billing/**",
+        "frontend/lib/api/billing.ts",
+        "frontend/components/marketing/pricing/**"
+      ],
+      "frontendTests": [
+        "lib/billing/*.test.ts",
+        "lib/api/billing.test.ts",
+        "components/settings/billing-settings.test.tsx",
+        "components/marketing/pricing/pricing-catalog.test.tsx"
+      ],
+      "frontendE2E": [
+        "e2e/billing.spec.ts"
+      ]
     }
   ]
 }

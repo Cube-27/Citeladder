@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
+from pydantic import SecretStr
 
 from app.core.config.billing_catalog import (
     commercial_catalog,
@@ -27,7 +29,6 @@ from app.domain.billing.service import (
     resolve_addon_intent,
     resolve_base_intent,
 )
-from scripts.provision_razorpay_plans import _verify, catalog_refs
 
 
 class _CatalogSession:
@@ -38,7 +39,20 @@ class _CatalogSession:
 @pytest.fixture(autouse=True)
 def _published_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
     async def load(_session):
-        return commercial_catalog()
+        catalog = commercial_catalog()
+        return replace(
+            catalog,
+            plans=tuple(
+                replace(
+                    plan,
+                    base_prices={
+                        region: replace(price, provider_mode="test", tax_verified=True)
+                        for region, price in plan.base_prices.items()
+                    },
+                )
+                for plan in catalog.plans
+            ),
+        )
 
     monkeypatch.setattr("app.domain.billing.service.published_commercial_catalog", load)
 
@@ -46,6 +60,13 @@ def _published_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
 def _enable_checkout(monkeypatch, refs) -> None:
     for name, value in (
         ("checkout_enabled", True),
+        ("razorpay_mode", "test"),
+        ("razorpay_key_id", "rzp_test_fixture"),
+        ("razorpay_key_secret", SecretStr("synthetic-api")),
+        ("quote_signing_secret", SecretStr("synthetic-quote")),
+        ("razorpay_test_ready", True),
+        ("razorpay_test_international_ready", True),
+        ("razorpay_test_india_ready", True),
         ("razorpay_live_ready", True),
         ("razorpay_international_ready", True),
         ("provider_price_refs", refs),
@@ -85,7 +106,7 @@ async def test_base_quote_separates_byok_and_funded_prices(monkeypatch) -> None:
         "provider_price_refs",
         {**refs, f"tier_1:{REGION_INTERNATIONAL}:credit": "ref_credit"},
     )
-    funded = (
+    with pytest.raises(BillingConflictError, match="checkout_unavailable"):
         await resolve_base_intent(
             _CatalogSession(),
             catalog_key="tier_1",
@@ -93,12 +114,6 @@ async def test_base_quote_separates_byok_and_funded_prices(monkeypatch) -> None:
             country_code="US",
             at=now,
         )
-    ).quote
-    assert (
-        funded.credit_price.amount_minor,
-        funded.base_price.amount_minor,
-        funded.total_price.amount_minor,
-    ) == (60_000, 9_900, 69_900)
 
 
 async def test_base_quote_refuses_unknown_or_unavailable_checkout(monkeypatch) -> None:
@@ -208,20 +223,3 @@ def test_topup_specs_and_provisioning_refs(monkeypatch) -> None:
         is topup_grant_specs("nope", version)
         is None
     )
-    rows = catalog_refs()
-    assert {row.settings_key for row in rows} == {
-        f"{key}:{REGION_INTERNATIONAL}:base" for key in ("tier_1", "tier_2", "tier_3")
-    }
-    assert all(not row.configured for row in rows) and _verify(rows) == 1
-    monkeypatch.setattr(
-        billing_settings,
-        "provider_price_refs",
-        {row.settings_key: "ref_private" for row in rows},
-    )
-    assert (
-        all(row.configured for row in catalog_refs()) and _verify(catalog_refs()) == 0
-    )
-    monkeypatch.setattr(billing_settings, "funded_margin_bps", 2_000)
-    assert f"tier_1:{REGION_INTERNATIONAL}:credit" in {
-        row.settings_key for row in catalog_refs()
-    }

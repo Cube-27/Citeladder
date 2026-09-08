@@ -16,7 +16,6 @@ import { UsageMeters } from '@/components/billing/usage-meters';
 import { CardTrialPanel } from '@/components/settings/card-trial-panel';
 import {
   billingApi,
-  createIdempotencyKey,
   type BillingEntitlement,
   type CatalogPlan,
   type SelfServePlanKey,
@@ -30,7 +29,8 @@ import {
   headlinePrice,
 } from '@/lib/billing/catalog';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
-import { hardNavigate } from '@/lib/navigation/hard-navigate';
+import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
+import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
 
@@ -73,17 +73,7 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
     placeholderData: keepPreviousData,
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
-  const checkoutMutation = useMutation({
-    mutationFn: (catalogKey: SelfServePlanKey) =>
-      billingApi.createSubscription(
-        { catalog_key: catalogKey, credential_mode: 'byok', country_code: state.country },
-        createIdempotencyKey(),
-      ),
-    onSuccess: async (activation) => {
-      if (activation.checkout_url) return hardNavigate(activation.checkout_url);
-      await refresh();
-    },
-  });
+  const checkoutMutation = useSubscriptionCheckout();
   const cancelMutation = useMutation({
     mutationFn: () => billingApi.cancelSubscription(),
     onSuccess: async () => {
@@ -95,24 +85,32 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
   if (!enabled || entitlementLoading || entitlementQuery.isLoading) return <BillingSkeleton />;
 
   return (
-    <BillingContent
-      enabled={enabled}
-      entitlement={entitlement}
-      catalog={catalogQuery.data ?? null}
-      catalogLoading={catalogQuery.isLoading}
-      catalogError={catalogQuery.isError}
-      state={state}
-      checkout={{
-        pending: checkoutMutation.isPending,
-        error: checkoutMutation.isError ? checkoutMutation.error : null,
-        start: (key) => checkoutMutation.mutate(key),
-      }}
-      cancellation={{
-        pending: cancelMutation.isPending,
-        error: cancelMutation.isError ? cancelMutation.error : null,
-        confirm: () => cancelMutation.mutate(),
-      }}
-    />
+    <>
+      <CheckoutStatus checkout={checkoutMutation} />
+      <BillingContent
+        enabled={enabled}
+        entitlement={entitlement}
+        catalog={catalogQuery.data ?? null}
+        catalogLoading={catalogQuery.isLoading}
+        catalogError={catalogQuery.isError}
+        state={state}
+        checkout={{
+          pending: checkoutMutation.isPending,
+          error: checkoutMutation.isError ? checkoutMutation.error : null,
+          start: (key) =>
+            void checkoutMutation
+              .start({
+                input: { catalog_key: key, credential_mode: 'byok', country_code: state.country },
+              })
+              .catch(() => undefined),
+        }}
+        cancellation={{
+          pending: cancelMutation.isPending,
+          error: cancelMutation.isError ? cancelMutation.error : null,
+          confirm: () => cancelMutation.mutate(),
+        }}
+      />
+    </>
   );
 }
 

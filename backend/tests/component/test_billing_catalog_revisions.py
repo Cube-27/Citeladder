@@ -129,6 +129,13 @@ async def test_purchase_intent_reads_the_persisted_catalog_revision(
         lambda _plan, _region: (True, None),
     )
 
+    from pydantic import SecretStr
+
+    from app.core.config.billing_settings import billing_settings
+
+    monkeypatch.setattr(
+        billing_settings, "quote_signing_secret", SecretStr("synthetic-quote")
+    )
     intent = await resolve_base_intent(
         db_session,
         catalog_key="tier_1",

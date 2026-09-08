@@ -12,7 +12,6 @@ from pydantic import SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config import settings
 from app.core.config.app_models import APP_FEATURE_CONTENT
 from app.core.config.content import (
     CONTENT_GENERATOR_VERSION,
@@ -67,22 +66,10 @@ def _configured_provider(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
-    previous = settings.dev_login_email
-    settings.dev_login_email = email
-    try:
-        assert (
-            await client.post(
-                "/api/v1/auth/register",
-                json={"email": email, "password": "password123"},
-            )
-        ).status_code == 202
-        assert (
-            await client.post(
-                "/api/v1/auth/login", json={"email": email, "password": "password123"}
-            )
-        ).status_code == 200
-    finally:
-        settings.dev_login_email = previous
+    from tests.component.auth_helpers import grant_test_capabilities, register_and_login
+
+    await register_and_login(client, email)
+    await grant_test_capabilities(email)
 
 
 async def _create_project(

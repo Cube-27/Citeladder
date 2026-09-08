@@ -8,27 +8,15 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.connectors.agent.gateway import FakeModelGateway
-from app.core.config import settings
 from app.domain.agent.service import _public_result, claim_task, execute_claimed_task
 from app.models.agent import AgentModelAttempt, AgentTaskRun
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
-    previous = settings.dev_login_email
-    settings.dev_login_email = email
-    try:
-        response = await client.post(
-            "/api/v1/auth/register",
-            json={"email": email, "password": "password123"},
-        )
-        assert response.status_code == 202
-        login = await client.post(
-            "/api/v1/auth/login",
-            json={"email": email, "password": "password123"},
-        )
-        assert login.status_code == 200
-    finally:
-        settings.dev_login_email = previous
+    from tests.component.auth_helpers import grant_test_capabilities, register_and_login
+
+    await register_and_login(client, email)
+    await grant_test_capabilities(email)
 
 
 async def _project(client: httpx.AsyncClient, name: str = "Agent Project") -> str:

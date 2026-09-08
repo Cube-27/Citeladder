@@ -2,7 +2,7 @@
 
 No command accepts credentials, merchant payloads, discount codes, or raw keys.
 Every mutation requires actor, reason, idempotency key, explicit target and
-``--dry-run`` (pass ``--apply`` only after reviewing dry-run output).
+a default dry-run (pass ``--apply`` only after reviewing its output).
 """
 
 from __future__ import annotations

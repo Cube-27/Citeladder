@@ -133,6 +133,7 @@ def _metadata() -> ProviderMetadata:
 async def test_razorpay_adapter_creates_hosted_subscription(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
     monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
     monkeypatch.setattr(
         billing_settings, "razorpay_key_secret", SecretStr("test-secret")
@@ -169,14 +170,15 @@ async def test_razorpay_adapter_creates_hosted_subscription(
             metadata=_metadata(),
         )
     assert hosted.external_subscription_id == "sub_test"
-    assert hosted.checkout_url == "https://rzp.io/i/hosted-test"
+    assert hosted.checkout_url == ""
     assert hosted.price_ref == "plan_test"
 
 
 @pytest.mark.asyncio
-async def test_razorpay_adapter_rejects_untrusted_checkout_host(
+async def test_subscription_does_not_use_provider_checkout_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
     monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
     monkeypatch.setattr(
         billing_settings, "razorpay_key_secret", SecretStr("test-secret")
@@ -196,20 +198,21 @@ async def test_razorpay_adapter_rejects_untrusted_checkout_host(
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         provider = RazorpayBillingProvider(client=client)
-        with pytest.raises(BillingProviderError, match="provider_invalid_checkout_url"):
-            await provider.create_base_subscription(
-                price_ref="plan_test",
-                intent_id="intent-1",
-                account_ref="account-1",
-                trial_days=None,
-                metadata=_metadata(),
-            )
+        hosted = await provider.create_base_subscription(
+            price_ref="plan_test",
+            intent_id="intent-1",
+            account_ref="account-1",
+            trial_days=None,
+            metadata=_metadata(),
+        )
+        assert hosted.checkout_url == ""
 
 
 @pytest.mark.asyncio
 async def test_razorpay_fetch_subscription_echoes_intent_identity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
     monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
     monkeypatch.setattr(
         billing_settings, "razorpay_key_secret", SecretStr("test-secret")
@@ -218,6 +221,8 @@ async def test_razorpay_fetch_subscription_echoes_intent_identity(
 
     async def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
+        if request.url.path == "/v1/invoices":
+            return httpx.Response(200, json={"items": []})
         return httpx.Response(
             200,
             json={
@@ -245,13 +250,14 @@ async def test_razorpay_fetch_subscription_echoes_intent_identity(
     assert record.intent_id == "intent-1"
     assert record.account_ref == "account-1"
     assert record.cancel_at_period_end is True
-    assert [request.method for request in requests] == ["GET"]
+    assert [request.method for request in requests] == ["GET", "GET"]
 
 
 @pytest.mark.asyncio
 async def test_razorpay_adapter_rejects_an_echoed_price_ref_mismatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
     monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
     monkeypatch.setattr(
         billing_settings, "razorpay_key_secret", SecretStr("test-secret")
@@ -284,6 +290,7 @@ async def test_razorpay_adapter_rejects_an_echoed_price_ref_mismatch(
 async def test_razorpay_one_time_payment_validates_the_echoed_amount(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
     monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
     monkeypatch.setattr(
         billing_settings, "razorpay_key_secret", SecretStr("test-secret")
@@ -333,6 +340,7 @@ async def test_razorpay_one_time_payment_validates_the_echoed_amount(
 async def test_razorpay_adapter_maps_all_transport_errors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
     monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
     monkeypatch.setattr(
         billing_settings, "razorpay_key_secret", SecretStr("test-secret")
@@ -369,11 +377,15 @@ def test_plan_provisioning_validates_credential_environment(
     key_id: str,
     valid: bool,
 ) -> None:
+    monkeypatch.setattr(billing_settings, "razorpay_mode", environment)
+    monkeypatch.setattr(
+        billing_settings, "razorpay_key_secret", SecretStr("synthetic-api")
+    )
     monkeypatch.setattr(billing_settings, "razorpay_key_id", key_id)
     if valid:
         _validate_environment(environment)
     else:
-        with pytest.raises(RuntimeError, match="does not match"):
+        with pytest.raises((RuntimeError, ValueError), match="does not match"):
             _validate_environment(environment)
 
 
@@ -517,7 +529,10 @@ def test_plan_checkout_requires_a_private_ref_and_enabled_region(
     )
     priced = commercial_catalog().plan("tier_1")
     assert priced is not None
-    assert plan_checkout_availability(priced, REGION_INTERNATIONAL) == (True, None)
+    assert plan_checkout_availability(priced, REGION_INTERNATIONAL) == (
+        False,
+        REASON_CHECKOUT_UNAVAILABLE,
+    )
 
 
 def test_region_and_currency_resolution_stays_server_side() -> None:
