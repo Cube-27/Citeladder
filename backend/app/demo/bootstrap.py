@@ -8,12 +8,17 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings, settings, validate_production_security
+from app.core.config import (
+    DEVELOPMENT_ENV_NAMES,
+    Settings,
+    settings,
+    validate_production_security,
+)
 from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.database import SessionLocal, dispose_engine
 from app.core.security import hash_password, verify_password
 from app.domain.auth.service import get_user_by_email, register_user
-from app.domain.billing.bootstrap import ensure_user_billing
+from app.domain.billing.bootstrap import ensure_initial_catalog, ensure_user_billing
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.workspaces.service import ensure_personal_workspace
@@ -81,7 +86,11 @@ async def ensure_configured_dev_account(
     """Provision and rotate the configured dev login in a public deployment."""
     if candidate.demo_mode:
         raise RuntimeError("Public dev-account bootstrap requires DEMO_MODE=false")
-    issues = validate_production_security(candidate)
+    issues = (
+        []
+        if candidate.app_env.strip().lower() in DEVELOPMENT_ENV_NAMES
+        else validate_production_security(candidate)
+    )
     if issues:
         raise RuntimeError("Unsafe production configuration: " + "; ".join(issues))
 
@@ -98,7 +107,6 @@ async def ensure_configured_dev_account(
             user = await get_user_by_email(session, email)
         if user is None:
             raise RuntimeError("Configured dev-account registration did not persist")
-        return
 
     if user.hashed_password is None or not verify_password(
         candidate.dev_login_password, user.hashed_password
@@ -113,10 +121,20 @@ async def ensure_configured_dev_account(
         user,
         workspace_ids=(workspace.id,) if workspace is not None else None,
     )
+    await ensure_initial_catalog(session, operator=user)
     await session.commit()
 
 
 async def bootstrap_demo_account() -> None:
+    if (
+        settings.app_env.strip().lower() in DEVELOPMENT_ENV_NAMES
+        and not settings.dev_login_password
+        and not settings.demo_mode
+    ):
+        print(
+            "Development login bootstrap skipped: DEV_LOGIN_PASSWORD is not configured."
+        )
+        return
     async with SessionLocal() as session:
         if settings.demo_mode:
             await ensure_demo_account(session)

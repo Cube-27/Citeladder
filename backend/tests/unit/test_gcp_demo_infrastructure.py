@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
 GCP = ROOT / "infra" / "gcp"
 RUNTIME = GCP / "runtime"
@@ -343,3 +345,51 @@ def test_backups_are_fixed_and_operational() -> None:
     assert "pg_dump" in backup
     assert "age = 10" in storage
     assert "gcloud artifacts docker images describe" in workflow
+
+
+def test_schema_preflight_precedes_service_shutdown() -> None:
+    deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
+    check = deploy.index("run --rm --no-deps migrate alembic check")
+    stop = deploy.index('stop "${stopped_services[@]}"')
+    assert check < stop
+    refusal = deploy[check:stop]
+    assert "development database rebuild" in refusal
+    assert "cp runtime.env.previous runtime.env" in refusal
+    assert "trap - ERR" in refusal
+    assert "exit 1" in refusal
+
+
+def test_gcp_reset_requires_matching_target_and_defaults_to_preview() -> None:
+    import argparse
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("gcp_reset", GCP / "reset-db.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    args = argparse.Namespace(
+        project="citeladder-test",
+        instance="citeladder-demo",
+        zone="asia-south1-a",
+        reset_project=None,
+    )
+    preview = module.commands(args)
+    assert preview[-1][-1].endswith("citeladder-test preview")
+    args.reset_project = "wrong-project"
+    with pytest.raises(ValueError, match="exactly match"):
+        module.commands(args)
+    args.reset_project = args.project
+    assert module.commands(args)[-1][-1].endswith("citeladder-test reset")
+    args.instance = "host; echo unsafe"
+    with pytest.raises(ValueError, match="Invalid instance"):
+        module.commands(args)
+
+
+def test_gcp_reset_checks_runtime_identity_before_fixed_database_reset() -> None:
+    reset = (RUNTIME / "reset-db.sh").read_text(encoding="utf-8")
+    drop = reset.index("DROP DATABASE citeladder WITH (FORCE)")
+    assert reset.index('test "$PROJECT_ID" = "$expected_project"') < drop
+    assert reset.index('test "$mode" = preview') < drop
+    assert reset.index("docker image inspect") < drop
+    assert "CREATE DATABASE citeladder OWNER citeladder" in reset
+    assert "run --rm --no-deps migrate alembic check" in reset

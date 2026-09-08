@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/api/query-keys';
 import { Suspense, type ReactNode } from 'react';
 
 import { OnboardingScreen } from '@/components/onboarding/onboarding-screen';
@@ -19,6 +21,13 @@ export function OnboardingPageClient() {
 }
 
 function OnboardingGate() {
+  const queryClient = useQueryClient();
+  const retry = () => {
+    void Promise.all([
+      queryClient.refetchQueries({ queryKey: queryKeys.projects.list() }),
+      queryClient.refetchQueries({ queryKey: queryKeys.billing.usage() }),
+    ]);
+  };
   const { isLoading, isError: projectsError } = useProjectContext();
   const { usage, isLoading: entitlementLoading, usageIsLoading, usageIsError } = useEntitlement();
   const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
@@ -26,10 +35,24 @@ function OnboardingGate() {
   const additionalProjectBlocked = !loading && remainingProjectSlots === 0;
 
   if (loading) return null;
-  if (projectsError || usageIsError || remainingProjectSlots === undefined) {
+  if (projectsError) {
     return (
-      <ProjectSetupBlocked title="Project access unavailable">
-        We could not verify your existing projects. Return to your projects and try again.
+      <ProjectSetupBlocked title="Projects could not be loaded" onRetry={retry}>
+        We could not load your existing projects. Retry to check them again.
+      </ProjectSetupBlocked>
+    );
+  }
+  if (usageIsError) {
+    return (
+      <ProjectSetupBlocked title="Project allowance could not be loaded" onRetry={retry}>
+        We could not load your account usage. Retry to check your project allowance.
+      </ProjectSetupBlocked>
+    );
+  }
+  if (remainingProjectSlots === undefined) {
+    return (
+      <ProjectSetupBlocked title="Project access unavailable" onRetry={retry}>
+        Your project allowance is unresolved. Retry to check for updated access.
       </ProjectSetupBlocked>
     );
   }
@@ -46,7 +69,8 @@ function OnboardingGate() {
 function ProjectSetupBlocked({
   title,
   children,
-}: Readonly<{ title: string; children: ReactNode }>) {
+  onRetry,
+}: Readonly<{ title: string; children: ReactNode; onRetry?: () => void }>) {
   return (
     <main
       id="main"
@@ -56,6 +80,11 @@ function ProjectSetupBlocked({
         <div className="grid gap-4">
           <h1 className="font-display text-lg font-semibold">{title}</h1>
           <p>{children}</p>
+          {onRetry && (
+            <Button onClick={onRetry} className="w-fit">
+              Retry
+            </Button>
+          )}
           <Button asChild variant="secondary" className="w-fit">
             <Link href="/projects">Back to projects</Link>
           </Button>

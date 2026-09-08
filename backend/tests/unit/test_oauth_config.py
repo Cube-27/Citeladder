@@ -184,3 +184,24 @@ def test_signin_transport_catalog_covers_only_implemented_providers() -> None:
 
 def test_oauth_provider_configured_unknown_provider() -> None:
     assert oauth_provider_configured("gitlab") is False
+
+
+@pytest.mark.parametrize("canonical", [False, True])
+def test_shared_google_credentials_accept_deployment_names(
+    monkeypatch: pytest.MonkeyPatch, canonical: bool
+) -> None:
+    from app.core.config import Settings
+
+    monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_ID", "alias-client-id")
+    monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_SECRET", "alias-client-secret")
+    for suffix in ("ID", "SECRET"):
+        monkeypatch.delenv(f"INTEGRATION_GOOGLE_CLIENT_{suffix}", raising=False)
+    if canonical:
+        monkeypatch.setenv("INTEGRATION_GOOGLE_CLIENT_ID", "canonical-client-id")
+        monkeypatch.setenv(
+            "INTEGRATION_GOOGLE_CLIENT_SECRET", "canonical-client-secret"
+        )
+    candidate = Settings()
+    expected = "canonical" if canonical else "alias"
+    assert candidate.integration_google_client_id == f"{expected}-client-id"
+    assert candidate.integration_google_client_secret == f"{expected}-client-secret"

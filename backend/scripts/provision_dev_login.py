@@ -25,7 +25,7 @@ from app.core.config import settings
 from app.core.config.entitlements import CAPABILITY_REGISTRY, CapabilityType
 from app.core.database import SessionLocal, dispose_engine
 from app.domain.auth.service import authenticate_user, get_user_by_email, register_user
-from app.domain.billing.bootstrap import ensure_user_billing
+from app.domain.billing.bootstrap import ensure_initial_catalog, ensure_user_billing
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.workspaces.service import ensure_personal_workspace
@@ -104,6 +104,7 @@ async def _run(email: str, password: str, counter_allowance: int) -> None:
                 valid_until=None,
                 idempotency_key=f"dev-full-access:{user.id}",
             )
+            await ensure_initial_catalog(session, operator=user)
             await session.commit()
             print(f"email={user.email}")
             print(f"workspace_id={workspace.id}")

@@ -524,3 +524,27 @@ async def test_a_second_google_account_cannot_take_over_a_linked_account(
         f"{_BASE}/google/callback", params={"code": "auth-code", "state": state}
     )
     assert _redirect_error(resp) == "oauth_signin_state_invalid"
+
+
+@pytest.mark.asyncio
+async def test_google_signup_reaches_finite_first_project_access(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    _fake_provider: list[httpx.Request],
+) -> None:
+    _configure_google(monkeypatch)
+    state = await _start_transaction(client)
+    callback = await client.get(
+        f"{_BASE}/google/callback", params={"code": "test-code", "state": state}
+    )
+    assert callback.status_code == 302
+    assert (await client.get("/api/v1/auth/me")).status_code == 200
+    assert (await client.get("/api/v1/projects")).json() == []
+    usage = await client.get("/api/v1/billing/usage")
+    assert usage.status_code == 200
+    slots = next(
+        item for item in usage.json()["items"] if item["key"] == "project_slots"
+    )
+    assert slots["limit_state"] == "finite"
+    assert slots["allowance"] == slots["remaining"] == 1
+    assert slots["consumed"] == slots["reserved"] == 0

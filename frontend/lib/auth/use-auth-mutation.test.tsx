@@ -198,7 +198,7 @@ describe('useAuthMutation', () => {
     globalThis.sessionStorage.clear();
   });
 
-  it('falls back to /onboarding when the projects lookup fails', async () => {
+  it('falls back to /projects when the projects lookup fails', async () => {
     // 4xx: the shared retry policy never retries it, so the fallback is
     // immediate.
     mswServer.use(
@@ -212,7 +212,7 @@ describe('useAuthMutation', () => {
       void result.current.submit({});
     });
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/onboarding'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
     expect(result.current.mutation.isError).toBe(false);
   });
 

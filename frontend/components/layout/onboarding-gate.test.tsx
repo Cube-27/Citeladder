@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { renderWithProviders as render } from '@/test/render';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Project } from '@/lib/api/types';
@@ -9,7 +10,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // The gate reads only projects + isLoading from context.
-let contextValue = { projects: [] as Project[], isLoading: false };
+let contextValue = { projects: [] as Project[], isError: false, isLoading: false };
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => contextValue,
 }));
@@ -22,7 +23,7 @@ beforeEach(() => {
 
 describe('OnboardingGate', () => {
   it('redirects to /onboarding when the workspace has no projects', async () => {
-    contextValue = { projects: [], isLoading: false };
+    contextValue = { projects: [], isError: false, isLoading: false };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -38,7 +39,7 @@ describe('OnboardingGate', () => {
     // Race (a): `projects` is [] during the fetch, which is indistinguishable
     // from "no projects" on length alone. Redirecting here would bounce an
     // existing user to onboarding for a frame.
-    contextValue = { projects: [], isLoading: true };
+    contextValue = { projects: [], isError: false, isLoading: true };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -52,6 +53,7 @@ describe('OnboardingGate', () => {
   it('renders the app once projects exist, without redirecting', () => {
     contextValue = {
       projects: [{ id: 'p1' } as Project],
+      isError: false,
       isLoading: false,
     };
     render(
@@ -63,4 +65,18 @@ describe('OnboardingGate', () => {
     expect(replace).not.toHaveBeenCalled();
     expect(screen.getByText('workspace')).toBeInTheDocument();
   });
+});
+
+it('keeps failed project lookup recoverable without redirecting to onboarding', async () => {
+  contextValue = { projects: [], isLoading: false, isError: true };
+  const { queryClient } = render(
+    <OnboardingGate>
+      <p>workspace</p>
+    </OnboardingGate>,
+  );
+  const retry = vi.spyOn(queryClient, 'refetchQueries');
+  expect(replace).not.toHaveBeenCalled();
+  expect(screen.getByRole('heading', { name: 'Projects could not be loaded' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  expect(retry).toHaveBeenCalledOnce();
 });

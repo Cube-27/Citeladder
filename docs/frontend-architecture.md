@@ -387,6 +387,12 @@ cache transition. After the destination is resolved, login crosses the identity
 boundary with a full-document navigation so the protected layout reads the new
 session cookie and cannot reuse a prefetched anonymous shell.
 
+Only a successful empty project lookup routes login to onboarding. Failed
+lookups go to `/projects`, where the application gate shows a retryable loading
+error before interpreting an empty list. Onboarding distinguishes project-fetch
+failure, usage-fetch failure, unresolved allowance, and exhausted capacity;
+Retry refetches projects and account usage without changing the session.
+
 An OAuth authorization handoff may supply a strictly validated internal
 `/mcp/oauth/consent?transaction=...` return path. Login preserves that one-time
 handoff through the same full-document navigation; arbitrary and external

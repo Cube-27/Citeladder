@@ -11,7 +11,7 @@ from app.core.config.entitlements import GRANT_SOURCE_OVERRIDE, KEY_MONITORED_UR
 from app.core.security import verify_password
 from app.demo.bootstrap import ensure_configured_dev_account, ensure_demo_account
 from app.domain.auth.service import register_user
-from app.models.billing import AccountGrant
+from app.models.billing import AccountGrant, BillingCatalogRevision
 from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
 from app.models.user import User
 
@@ -95,3 +95,46 @@ async def test_public_bootstrap_rotates_only_the_configured_dev_account(
     assert verify_password(candidate.dev_login_password, refreshed.hashed_password)
     assert refreshed.session_version == original_version + 1
     assert refreshed.role == "admin"
+
+
+@pytest.mark.asyncio
+async def test_empty_public_bootstrap_creates_login_and_published_pricing_once(
+    db_session: AsyncSession,
+) -> None:
+    candidate = _demo_settings().model_copy(update={"demo_mode": False})
+    await ensure_configured_dev_account(db_session, candidate)
+    user = await db_session.scalar(select(User))
+    assert user is not None and user.role == "admin"
+    assert verify_password(candidate.dev_login_password, user.hashed_password)
+    catalog = await db_session.scalar(select(BillingCatalogRevision))
+    assert catalog is not None and catalog.publication_state == "published"
+    assert catalog.published_by_user_id == user.id
+    assert catalog.payload["checkout_enabled"] is False
+    assert len(catalog.payload["plans"]) == 4
+    assert catalog.payload["campaign"]["enabled"] is False
+    original_publication = catalog.published_at
+    await ensure_configured_dev_account(db_session, candidate)
+    catalogs = list((await db_session.scalars(select(BillingCatalogRevision))).all())
+    assert len(catalogs) == 1
+    assert catalogs[0].published_at == original_publication
+
+
+@pytest.mark.asyncio
+async def test_local_bootstrap_uses_development_transport_policy(
+    db_session: AsyncSession,
+) -> None:
+    candidate = Settings(
+        APP_ENV="development",
+        DEV_LOGIN_EMAIL="local-dev@example.com",
+        DEV_LOGIN_PASSWORD="local-password-123",
+        DB_SSL_MODE="disable",
+        TRUSTED_PROXY_CIDRS="",
+    )
+    await ensure_configured_dev_account(db_session, candidate)
+    user = await db_session.scalar(
+        select(User).where(User.email == candidate.dev_login_email)
+    )
+    assert user is not None and verify_password(
+        candidate.dev_login_password, user.hashed_password
+    )
+    assert await db_session.scalar(select(BillingCatalogRevision.id)) is not None

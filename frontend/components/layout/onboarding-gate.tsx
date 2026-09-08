@@ -1,5 +1,10 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
+import { textRole } from '@/components/ui/typography';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { queryKeys } from '@/lib/api/query-keys';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
@@ -12,7 +17,10 @@ import { useProjectContext } from '@/lib/project/project-context';
  * Sits between ProjectProvider and AppShell so every `(app)` route is covered
  * by one redirect instead of each screen inventing its own empty state.
  *
- * Two race conditions, both explicit requirements (plan.md Task 11):
+ * Query failures remain on this route with Retry; an empty error result is
+ * never evidence that the account needs onboarding.
+ *
+ * Two project-loading races:
  *
  * (a) **No flash for users who have projects.** `projects` is `[]` while the
  *     query is still in flight, which is indistinguishable from "no projects"
@@ -26,8 +34,9 @@ import { useProjectContext } from '@/lib/project/project-context';
  */
 export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) {
   const router = useRouter();
-  const { projects, isLoading } = useProjectContext();
-  const needsOnboarding = !isLoading && projects.length === 0;
+  const queryClient = useQueryClient();
+  const { projects, isLoading, isError } = useProjectContext();
+  const needsOnboarding = !isLoading && !isError && projects.length === 0;
 
   useEffect(() => {
     if (needsOnboarding) {
@@ -35,6 +44,28 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
       router.replace('/onboarding');
     }
   }, [needsOnboarding, router]);
+
+  if (isError && projects.length === 0) {
+    return (
+      <main
+        id="main"
+        className="bg-shell grid min-h-dvh place-items-center p-[var(--page-section-gap)]"
+      >
+        <Alert tone="warning" className="max-w-lg">
+          <h1 className={textRole('sectionTitle')}>Projects could not be loaded</h1>
+          <p>Your session is active. Retry to load your projects.</p>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void queryClient.refetchQueries({ queryKey: queryKeys.projects.list() });
+            }}
+          >
+            Retry
+          </Button>
+        </Alert>
+      </main>
+    );
+  }
 
   if (isLoading || needsOnboarding) {
     return (

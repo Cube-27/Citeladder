@@ -1,5 +1,62 @@
 # Razorpay local test integration, onboarding fix, and owner runbooks
 
+## Prerequisite recovery - 2026-09-08
+
+The owner authorized separate login/deployment recovery before Razorpay work:
+section 2A occupancy and routing fixes, deployment schema preflight, and explicit
+rebuild of the live disposable database. Live inspection found one account,
+zero projects, and zero subscriptions; failed bootstrap was missing
+`billing_accounts.registration_cohort_at`. The installed image baseline hash
+matched the repository baseline. The owner approved replacing the dev account
+UUID/sessions and reprovisioning its existing configured credentials; backup
+preservation is not required. Pricing visibility and initial catalog provisioning are included in recovery.
+Payment integration and checkout enabling are not
+part of this recovery. Sections 2B onward remain a separate implementation.
+
+Use `python infra/gcp/reset-db.py --project <PROJECT_ID>` to preview the installed
+GCP target; add `--reset-project <PROJECT_ID>` to explicitly destroy/rebuild its
+`citeladder` database, apply the installed baseline, reprovision the configured
+dev login, check schema drift, and restart the application. Optional `--instance`
+and `--zone` select the VM. This uses installed images and does not deploy new
+code, save backups, or change configured credentials. Run the normal deploy
+workflow to install a newer revision afterward. Record rollout and integrated
+login verification results here after recovery completes.
+
+Local configuration used `GOOGLE_OAUTH_CLIENT_*` names. The configuration owner
+now accepts these aliases for the shared Google client; canonical
+`INTEGRATION_GOOGLE_CLIENT_ID` / `_SECRET` take precedence. Local Compose now
+runs explicit dev bootstrap after migrations when credentials are configured,
+and both deployment bootstrap and the local reset provisioning command publish
+the approved initial catalog if none exists. This fixes an empty recreated
+database containing neither the dev login nor visible pricing; ordinary
+registration/login and pricing reads do not publish catalog state.
+Literal dollar signs in local connection settings are single-quoted to prevent
+Compose interpolation. `.env.example` uses the canonical configuration names.
+
+Validation: the full `scripts/check.ps1` passed. The initial `scripts/test.ps1`
+passed 267 backend tests and found one stale frontend redirect expectation;
+the required retry-delta run passed 164 frontend tests and all 10 mapped browser
+tests. Local backend and frontend production images built successfully. The owner then
+reported missing local login/pricing after recreating the database; the follow-up
+bootstrap and Google-alias regression tests are included for CI validation,
+without repeating the completed local suites.
+
+Live rebuild completed successfully with the installed image, including baseline
+migration, configured dev account, a clean `alembic check`, and application health.
+The follow-up deployment installs occupancy/routing fixes and initializes pricing.
+
+Follow-up UI recovery fixes keep the pricing CTA inside its card, interpret
+numeric effective flag grants (`1`) correctly so the dev account sees Content
+and Growth Agent, and suppress duplicate scrollbar compensation in shared document styles for
+menus, selects, date pickers, and dialogs. Their focus and scroll locks remain intact. Cached projects remain usable after a failed
+background refresh. Commerce prompt inserts now enforce account prompt capacity
+in the insert transaction, after all generation calls finish. The GCP reset
+attempts one forward recovery on failure, checks schema validity before starting
+services, and preserves a failing exit status for operator visibility. This is
+not data rollback: the owner explicitly authorized a destructive reset without
+backup preservation. No further local test suites are run at the owner's request;
+CI remains the merge gate.
+
 ## 1. Execution boundary and agreed scope
 
 **When “Implement plan” is clicked: save this complete plan to `docs/plans/citeladder-razorpay-local-test-integration.md`, verify that file, and stop.** Do not implement code, change environment files, start services, configure Razorpay, create plans, or make payments during that save-only turn. Preserve existing unrelated changes and deleted documents.
