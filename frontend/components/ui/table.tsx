@@ -140,7 +140,7 @@ export function TableRecordMetricCell({
       numeric
       data-label={label}
       className={cn(
-        'grid grid-cols-[1fr_auto] gap-3 border-b-0 px-4 py-1 before:text-xs before:text-muted before:content-[attr(data-label)]',
+        'grid grid-cols-[1fr_auto] gap-3 border-b-0 px-4 py-1 before:text-left before:text-xs before:text-muted before:content-[attr(data-label)]',
         'md:table-cell md:border-b md:px-[var(--table-cell-padding-x)] md:py-[var(--table-cell-padding-y)] md:before:hidden',
         className,
       )}
