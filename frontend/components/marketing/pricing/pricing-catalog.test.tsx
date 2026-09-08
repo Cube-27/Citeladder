@@ -347,9 +347,9 @@ describe('PricingCatalog', () => {
       billing_name: 'CiteLadder',
       billing_address_line1: '1 Main Street',
       billing_city: 'New York',
-      billing_state_code: '',
+      billing_state_code: null,
       billing_postal_code: '10001',
-      customer_gstin: '',
+      customer_gstin: null,
       export_eligibility_attested: true,
       trial_requested: false,
     });
