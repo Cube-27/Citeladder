@@ -133,6 +133,13 @@ describe('TargetDetail', () => {
 
     await waitFor(() => expect(screen.getByRole('heading', { name: '90.0%' })).toBeInTheDocument());
     expect(screen.queryByRole('heading', { name: '50.0%' })).not.toBeInTheDocument();
+
+    // The held target is adjusted DURING render, which loops if the query
+    // result is not referentially stable across renders it did not cause.
+    // Re-rendering the same selection repeatedly is what proves it settles.
+    rerender(<ShelfHarness target={productB} label="Product B" />);
+    rerender(<ShelfHarness target={productB} label="Product B" />);
+    expect(screen.getByRole('heading', { name: '90.0%' })).toBeVisible();
     expect(screen.queryByLabelText('Updating target detail')).not.toBeInTheDocument();
   });
 });
