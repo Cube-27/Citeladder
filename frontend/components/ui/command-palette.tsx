@@ -73,15 +73,10 @@ export function CommandPaletteTrigger({
       }}
       aria-label="Search or jump to"
       aria-keyshortcuts="Meta+K Control+K"
-      className={cn(
-        'text-muted min-w-0 w-full justify-start text-left max-sm:size-[var(--control-height)] max-sm:px-0 [&>span]:w-full',
-        className,
-      )}
+      className={cn('text-muted min-w-0 w-full justify-start text-left [&>span]:w-full', className)}
     >
       <Search className="text-muted size-4 shrink-0" aria-hidden />
-      <span className="min-w-0 truncate text-sm font-normal max-sm:sr-only">
-        Search or jump to…
-      </span>
+      <span className="min-w-0 truncate text-sm font-normal">Search or jump to…</span>
       <kbd className="bg-background-alt border-border/60 text-muted ms-auto hidden shrink-0 rounded-[var(--radius-control)] border px-1.5 py-0.5 text-xs font-medium sm:inline">
         Ctrl K
       </kbd>

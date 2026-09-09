@@ -73,7 +73,7 @@ MEASUREMENT_ROUTES: Final[dict[str, MeasurementRoute]] = {
     ENGINE_CHATGPT: MeasurementRoute(
         logical_engine=ENGINE_CHATGPT,
         transport_provider=TRANSPORT_OPENAI,
-        transport_model="gpt-5.6-sol",
+        transport_model="gpt-5.5",
         retrieval_enabled=True,
         reasoning_effort=REASONING_EFFORT_OFF,
         reasoning_pinnable=True,

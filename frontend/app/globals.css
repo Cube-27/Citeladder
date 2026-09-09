@@ -825,8 +825,8 @@ input:-webkit-autofill:focus {
     --page-header-padding-top: 20px;
     --page-header-padding-bottom: 16px;
     --page-header-gap: 12px;
-    --text-page-title: 1.5rem;
-    --text-page-title--line-height: 1.875rem;
+    --text-page-title: 1.625rem;
+    --text-page-title--line-height: 2rem;
   }
 }
 

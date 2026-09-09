@@ -324,7 +324,7 @@ async def test_worker_persists_openai_provenance(
         assert task.status == "succeeded"
         assert task.logical_engine == ENGINE_CHATGPT
         assert task.transport_provider == TRANSPORT_OPENAI
-        assert task.transport_model == "gpt-5.6-sol"
+        assert task.transport_model == "gpt-5.5"
         assert task.result_artifact_id is not None
 
 

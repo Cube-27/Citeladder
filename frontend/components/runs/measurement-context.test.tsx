@@ -102,9 +102,9 @@ describe('MeasurementContext', () => {
   });
 
   it('prefers an explicit model over provenance on a singular surface', () => {
-    render(<MeasurementContext model="gpt-5.6-sol" provenance={[provenance('gemini-2.5-pro')]} />);
+    render(<MeasurementContext model="gpt-5.5" provenance={[provenance('gemini-2.5-pro')]} />);
 
-    expect(screen.getByText('gpt-5.6-sol')).toBeVisible();
+    expect(screen.getByText('gpt-5.5')).toBeVisible();
   });
 
   it.each([

@@ -192,7 +192,7 @@ def _pricing(
 # One unit-rate catalogue for the three approved citation-capable routes.
 _ROUTE_PRICING_CATALOGS: Final[dict[str, dict[RouteIdentity, RoutePricing]]] = {
     PRICING_CATALOG_VERSION: {
-        # GPT-5.6-sol pricing/search lines are intentionally unknown until the
+        # GPT-5.5 pricing/search lines are intentionally unknown until the
         # complete official card is available.
         ROUTE_CHATGPT: _unverified_pricing(PRICING_CATALOG_VERSION),
         ROUTE_CLAUDE: _pricing(3_000_000, 15_000_000, search_fee=10_000),

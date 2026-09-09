@@ -37,7 +37,7 @@ function connection(overrides: Record<string, unknown> = {}) {
         id: '33333333-3333-4333-8333-333333333333',
         logical_engine: 'chatgpt',
         transport_provider: 'openai',
-        transport_model: 'gpt-5.6-sol',
+        transport_model: 'gpt-5.5',
         is_default: false,
         active: true,
       },
@@ -73,7 +73,7 @@ function testHandler(status: 'ok' | 'failed', detail = 'Connection succeeded') {
       latency_ms: 42,
       logical_engine: 'chatgpt',
       transport_provider: 'openai',
-      transport_model: 'gpt-5.6-sol',
+      transport_model: 'gpt-5.5',
       tested_at: '2026-07-15T00:00:00Z',
     }),
   );

@@ -491,7 +491,7 @@ def test_aggregate_run_keeps_usage_when_current_route_pricing_is_unverified() ->
         {
             **BEST_AND_LESS_PROJECT,
             "provider": "chatgpt",
-            "model": "gpt-5.6-sol",
+            "model": "gpt-5.5",
         }
     )
     execution = _completed_with_usage(

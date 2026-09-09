@@ -44,13 +44,19 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] border px-2.5 text-sm transition-colors duration-150',
+        'group relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] border px-2.5 text-sm transition-colors duration-150',
         active
           ? textRole('emphasis', 'border-transparent bg-accent-soft text-accent-text')
-          : 'border-transparent text-secondary hover:bg-well hover:text-foreground',
+          : 'border-transparent text-secondary hover:bg-panel hover:text-foreground',
       )}
     >
-      <Icon className={cn('size-4 shrink-0', active ? 'text-accent' : 'text-subtle')} aria-hidden />
+      <Icon
+        className={cn(
+          'size-4 shrink-0 transition-colors duration-150',
+          active ? 'text-accent' : 'text-subtle group-hover:text-foreground',
+        )}
+        aria-hidden
+      />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
     </Link>
   );

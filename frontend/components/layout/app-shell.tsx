@@ -81,13 +81,12 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 <ProjectSwitcher />
               </div>
 
-              <div className="grid min-w-0 gap-2 px-[var(--sidebar-pad-x)] py-[var(--sidebar-pad-y)]">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-[var(--sidebar-pad-x)] py-[var(--sidebar-pad-y)]">
                 <CommandPaletteTrigger className="w-full" />
                 <AgentSheetTrigger className="w-full justify-start" />
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto px-[var(--sidebar-pad-x)] py-[var(--sidebar-pad-y)]">
-                <SidebarNav />
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <SidebarNav />
+                </div>
               </div>
 
               <div className="shrink-0 p-[var(--sidebar-pad-x)]">
@@ -96,7 +95,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             </aside>
 
             <div className="relative z-1 flex min-w-0 flex-1 flex-col">
-              <header className="bg-shell sticky top-0 z-20 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 px-[var(--content-gutter)] min-[981px]:hidden">
+              <header className="bg-shell sticky top-0 z-20 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-[var(--content-gutter)] min-[981px]:hidden">
                 <div className="flex items-center">
                   <Button
                     variant="ghost"
@@ -109,9 +108,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                   </Button>
                 </div>
                 <div className="text-secondary min-w-0 truncate text-sm">{compactTitle}</div>
-                <div className="w-auto justify-self-end">
-                  <CommandPaletteTrigger />
-                </div>
                 <div className="flex items-center justify-end gap-2.5 justify-self-end">
                   <AgentSheetTrigger />
                   <UserMenuTrigger presenter="compact" />
@@ -152,8 +148,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                       className="w-full justify-start"
                       onOpen={openAgentFromDrawer}
                     />
+                    <SidebarNav onNavigate={() => setNavigationOpen(false)} />
                   </div>
-                  <SidebarNav onNavigate={() => setNavigationOpen(false)} />
                 </div>
               </Drawer>
             </div>

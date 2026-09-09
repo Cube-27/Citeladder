@@ -37,7 +37,7 @@ def test_catalog_contains_only_three_exact_audit_routes() -> None:
     assert APPROVED_ROUTE_IDENTITIES == frozenset(
         {ROUTE_CHATGPT, ROUTE_CLAUDE, ROUTE_GEMINI}
     )
-    assert ROUTE_CHATGPT.transport_model == "gpt-5.6-sol"
+    assert ROUTE_CHATGPT.transport_model == "gpt-5.5"
     assert ROUTE_CLAUDE.transport_model == "claude-sonnet-5"
     assert ROUTE_GEMINI.transport_model == "gemini-3.6-flash"
 

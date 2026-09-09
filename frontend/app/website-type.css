@@ -619,6 +619,30 @@
     --control-height-sm: 2.75rem;
   }
 
+  /* Allocate the logo and exit their intrinsic space first. The former
+     symmetric columns could shrink beneath the logo width, allowing it to
+     paint over the current-step indicator on narrow phones. */
+  .flow-bar-content {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .flow-progress,
+  .flow-progress ol,
+  .flow-progress li,
+  .flow-step-label {
+    min-width: 0;
+  }
+
+  .flow-progress {
+    justify-self: end;
+  }
+
+  .flow-step-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .flow-progress li:not([aria-current='step']) {
     display: none;
   }

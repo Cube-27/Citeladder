@@ -6,7 +6,7 @@ export const providerCatalogFixture = {
       routes: [
         {
           transport_provider: 'openai',
-          transport_model: 'gpt-5.6-sol',
+          transport_model: 'gpt-5.5',
           retrieval_enabled: true,
           reasoning_effort: 'off',
         },

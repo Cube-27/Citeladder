@@ -244,13 +244,15 @@ export function ReviewStage({
   );
 }
 
-function discoveryResults(
+export function discoveryResults(
   discovery: ReturnType<
     typeof import('@/lib/onboarding/use-brand-discovery').useBrandDiscovery
   >['discovery'],
 ): string[] {
   if (!discovery) return [];
-  const website = String(discovery.input_data.website_url ?? '').replace(/^https?:\/\//, '');
+  const website = String(discovery.input_data.website_url ?? '')
+    .replace(/^https?:\/\//, '')
+    .replace(/\/+$/, '');
   return [website, ...discovery.competitors.map((competitor) => competitor.name)].filter(Boolean);
 }
 
