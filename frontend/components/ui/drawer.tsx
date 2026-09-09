@@ -19,6 +19,7 @@ export function Drawer({
   bodyClassName,
   closeLabel = 'Close drawer',
   side = 'right',
+  hideHeader = false,
   onAfterClose,
 }: Readonly<{
   open: boolean;
@@ -31,6 +32,8 @@ export function Drawer({
   bodyClassName?: string;
   closeLabel?: string;
   side?: 'left' | 'right';
+  /** Keeps the accessible title but removes duplicate visual drawer chrome. */
+  hideHeader?: boolean;
   /** Runs after Radix restores focus to the drawer's original opener. */
   onAfterClose?: () => void;
 }>) {
@@ -74,23 +77,44 @@ export function Drawer({
             className,
           )}
         >
-          <header className="border-border-subtle flex items-start justify-between gap-3 border-b p-[var(--modal-padding)]">
-            <div className="min-w-0">
-              <DialogPrimitive.Title className="text-foreground truncate text-lg font-semibold tracking-[-0.35px]">
-                {title}
-              </DialogPrimitive.Title>
+          {hideHeader ? (
+            <>
+              <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
               {description ? (
-                <DialogPrimitive.Description className="text-secondary mt-1 text-sm leading-[22px]">
+                <DialogPrimitive.Description className="sr-only">
                   {description}
                 </DialogPrimitive.Description>
               ) : null}
-            </div>
-            <DialogPrimitive.Close asChild>
-              <Button variant="ghost" size="icon" aria-label={closeLabel}>
-                <X className="size-4" aria-hidden />
-              </Button>
-            </DialogPrimitive.Close>
-          </header>
+              <DialogPrimitive.Close asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={closeLabel}
+                  className="absolute top-3 right-3 z-1"
+                >
+                  <X className="size-4" aria-hidden />
+                </Button>
+              </DialogPrimitive.Close>
+            </>
+          ) : (
+            <header className="border-border-subtle flex items-start justify-between gap-3 border-b p-[var(--modal-padding)]">
+              <div className="min-w-0">
+                <DialogPrimitive.Title className="text-foreground truncate text-lg font-semibold tracking-[-0.35px]">
+                  {title}
+                </DialogPrimitive.Title>
+                {description ? (
+                  <DialogPrimitive.Description className="text-secondary mt-1 text-sm leading-[22px]">
+                    {description}
+                  </DialogPrimitive.Description>
+                ) : null}
+              </div>
+              <DialogPrimitive.Close asChild>
+                <Button variant="ghost" size="icon" aria-label={closeLabel}>
+                  <X className="size-4" aria-hidden />
+                </Button>
+              </DialogPrimitive.Close>
+            </header>
+          )}
           <div
             className={cn(
               'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-[var(--modal-padding)] py-4',

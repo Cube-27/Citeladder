@@ -53,7 +53,7 @@ export function SeeIt() {
             action colour. */}
         <div
           aria-hidden
-          className="rounded-[var(--radius-overlay)] p-2 sm:p-4"
+          className="rounded-[var(--radius-overlay)] p-3 sm:p-4"
           style={{
             background:
               'radial-gradient(120% 90% at 88% 0%, var(--color-atmosphere-blue) 0%, transparent 60%), radial-gradient(90% 80% at 0% 100%, var(--color-atmosphere-green) 0%, transparent 55%), linear-gradient(135deg, var(--color-canvas-soft), var(--color-panel) 55%, var(--color-canvas-soft))',
@@ -65,7 +65,7 @@ export function SeeIt() {
           >
             {/* On phones the bar wraps so the tab strip gets a full second row
               below the lockup instead of slivering beside it. */}
-            <div className="border-border-subtle flex min-h-13 flex-wrap items-center gap-x-4 gap-y-1 border-b px-4 py-2 sm:h-13 sm:flex-nowrap sm:gap-y-0 sm:px-5 sm:py-0">
+            <div className="border-border-subtle flex min-h-13 flex-wrap items-center gap-x-4 gap-y-2 border-b px-5 py-3 sm:h-13 sm:flex-nowrap sm:gap-y-0 sm:px-5 sm:py-0">
               <LogoMark variant="compact" />
               <div className="order-last flex h-full min-w-0 basis-full scrollbar-none items-stretch gap-5 overflow-x-auto sm:order-none sm:flex-1 sm:basis-auto">
                 {canvas.tabs.map((tab) => (
@@ -85,7 +85,7 @@ export function SeeIt() {
               <span className="text-muted hidden shrink-0 text-xs lg:block">{canvas.range}</span>
             </div>
 
-            <div className="px-4 py-6 sm:px-6 sm:py-7">
+            <div className="px-5 py-6 sm:px-6 sm:py-7">
               {/* Metrics as one editorial bar — no KPI card row. */}
               <div aria-hidden>
                 <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1">
