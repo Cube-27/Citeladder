@@ -14,6 +14,35 @@ import { blockIdentity, headingId, PostBlock, withOccurrenceKeys } from './post-
  */
 
 describe('PostBlock', () => {
+  it('renders typed internal links and directly followable source citations', () => {
+    render(
+      <PostBlock
+        block={{
+          type: 'richParagraph',
+          content: [
+            'Read ',
+            { type: 'link', text: 'solutions', href: '/solutions' },
+            ' and the source ',
+            { type: 'citation', sourceId: 'official' },
+          ],
+        }}
+        sources={[
+          {
+            id: 'official',
+            title: 'Official guidance',
+            publisher: 'Publisher',
+            url: 'https://example.com/guidance',
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('link', { name: 'solutions' })).toHaveAttribute('href', '/solutions');
+    expect(screen.getByRole('link', { name: /Source 1: Official guidance/ })).toHaveAttribute(
+      'href',
+      'https://example.com/guidance',
+    );
+  });
+
   it('renders a table with column headers and its caption', () => {
     render(
       <PostBlock

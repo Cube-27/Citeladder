@@ -16,6 +16,7 @@ type RouteEntry = {
   path: string;
   changeFrequency: NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
   priority: number;
+  lastModified?: string;
 };
 
 const STATIC_ROUTES: readonly RouteEntry[] = [
@@ -29,11 +30,17 @@ const STATIC_ROUTES: readonly RouteEntry[] = [
   { path: '/docs/mcp', changeFrequency: 'monthly', priority: 0.6 },
 ];
 
-function entry({ path, changeFrequency, priority }: RouteEntry): MetadataRoute.Sitemap[number] {
+function entry({
+  path,
+  changeFrequency,
+  priority,
+  lastModified,
+}: RouteEntry): MetadataRoute.Sitemap[number] {
   return {
     url: absoluteUrl(path) ?? path,
     changeFrequency,
     priority,
+    ...(lastModified ? { lastModified } : {}),
   };
 }
 
@@ -45,6 +52,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         path: `/blog/${post.slug}`,
         changeFrequency: 'yearly',
         priority: 0.7,
+        lastModified: post.dateModified ?? post.date,
       }),
     ),
     ...COMPETITORS.map((competitor) =>

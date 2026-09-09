@@ -4,216 +4,129 @@ import { PRODUCT_HEAD } from '../people';
 export const POST_VERIFY: BlogPost = {
   slug: 'verify-improve-ai-search-visibility',
   title: 'The Scientific Method of AEO: How to Verify and Improve AI Search Performance',
+  seoTitle: 'How to Test AI Visibility Changes: A Repeatable AEO Experiment',
+  seoDescription:
+    'Use a repeatable AEO experiment protocol to compare AI visibility observations without confusing correlation, crawling, indexing, or causation.',
   excerpt:
-    'Shifting your content structure is only half the battle. Discover how to run systematic before-and-after observations, coordinate search engine re-crawls, and use data-driven combination strategies to continually improve your AI citation share.',
-  image: '/blog/blog-art-verify.webp',
+    'Use fixed prompts, repeated baselines, documented page changes, controls, raw responses, and explicit uncertainty to test AI visibility work.',
+  image: '/blog/editorial/article-verify.png',
   date: '2026-09-03',
+  dateModified: '2026-09-09',
   readTime: '7 min read',
   author: PRODUCT_HEAD.name,
   authorRole: PRODUCT_HEAD.role,
   authorUrl: PRODUCT_HEAD.linkedin,
   tags: ['Verification', 'AEO Testing', 'Performance Improvement'],
+  relatedSlugs: ['action-playbook-winning-ai-citations', 'tracking-brand-visibility-ai-search'],
+  sources: [
+    {
+      id: 'google-recrawl',
+      title: 'Ask Google to recrawl your URLs',
+      publisher: 'Google Search Central',
+      url: 'https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl',
+    },
+    {
+      id: 'bing-url-submission',
+      title: 'Bing URL Submission API',
+      publisher: 'Bing Webmaster Tools',
+      url: 'https://www.bing.com/webmasters/url-submission-api',
+    },
+    {
+      id: 'openai-publishers',
+      title: 'Publishers and developers FAQ',
+      publisher: 'OpenAI Help Center',
+      url: 'https://help.openai.com/en/articles/12627856-publishers-and-developers-faq',
+    },
+  ],
   body: [
+    { type: 'heading', text: 'Define the observation before the change' },
     {
       type: 'paragraph',
-      text: 'In search engine optimization, publishing an update often feels like a finished task. You draft the copy, optimize the headers, insert the schema, press "publish" in your CMS, and move on. Traditional search engines crawl, index, and eventually assign a relatively stable position on a page.',
+      text: 'AI answers vary. A single before-and-after screenshot cannot establish improvement, and a recrawl request cannot establish causality. Verification begins by specifying what will be observed, under which conditions, and what would count as an unavailable or failed run.',
     },
-    {
-      type: 'paragraph',
-      text: 'In the generative search ecosystem, this linear model is entirely obsolete. Large Language Models (LLMs) and real-time Retrieval-Augmented Generation (RAG) engines are highly probabilistic and dynamic. An AI search platform does not retrieve static pages to display; it dynamically breaks queries down, fetches various text fragments, and synthesizes a unique response on the fly. A citation that appears in ChatGPT or Perplexity today may disappear tomorrow due to a minor model adjustment, a shift in user question patterns, or a partner data refresh.',
-    },
-    {
-      type: 'paragraph',
-      text: 'Optimizing for this environment requires a continuous, closed-loop process. Shifting your content structure is only half the battle; the real work lies in the Improve / Verify phase.',
-    },
-    {
-      type: 'paragraph',
-      text: 'This guide explores how growth, SEO, and content teams can establish a rigorous post-publishing protocol to verify crawlability, run before-and-after observations, leverage proven content combination strategies, and drive systematic visibility improvements without relying on false causal assumptions.',
-    },
-    {
-      type: 'heading',
-      text: 'Causal Science vs. Observational Realities in AI Search',
-    },
-    {
-      type: 'paragraph',
-      text: 'The first rule of advanced Answer Engine Optimization (AEO) is a humbling one: Never claim that a single on-page edit directly caused a dynamic ranking change.',
-    },
-    {
-      type: 'paragraph',
-      text: 'Traditional SEO software often promises to isolate exact ranking factors, claiming "add three keywords to move up two spots." When dealing with neural networks and generative synthesis, these claims violate basic causal science. Microsoft\'s official documentation for Bing\'s AI Performance Report explicitly warns that citation trends represent aggregated activity only and "cannot be attributed to a specific cause or event." Changes in visibility are observational and "do not indicate the impact of any single update, model change, or content modification."',
-    },
-    {
-      type: 'table',
-      caption: 'Operational Ground Truth vs. Probabilistic Observations in AEO',
-      headers: [
-        'Operational Ground Truth (Verifiable)',
-        'Probabilistic Observations (Directional)',
-      ],
-      rows: [
-        [
-          'Server Log Bot Activity: Legitimate OAI-SearchBot or GPTBot IP hits on updated pages.',
-          'Universal Visibility Scores: Single, proprietary authority numbers that claim to represent total AI presence.',
-        ],
-        [
-          'robots.txt Access Status: Confirmed Allowed/Partial/Blocked status for 40+ named AI bots.',
-          'Prompt Search Volume: Modeled estimates of conversational search popularity.',
-        ],
-        [
-          'Visible Citation Presence: Exact URLs explicitly linked inside an AI-generated text response.',
-          'Direct Causal Impact: Attributing a +10% citation share lift solely to a specific header rewrite.',
-        ],
-      ],
-    },
-    {
-      type: 'paragraph',
-      text: 'At CiteLadder, our infrastructure is engineered to enforce this distinction. Our Track station measures observed citation share under comparable portfolio and engine conditions. We avoid universal, black-box scores and instead present raw, inspectable data points so teams can identify genuine trends rather than chasing statistical noise.',
-    },
-    {
-      type: 'heading',
-      text: 'The Post-Publishing Protocol: Re-crawling and Technical Verification',
-    },
-    {
-      type: 'paragraph',
-      text: 'Once you update a core editorial page or catalog specification table, the verification loop begins. If an AI search bot cannot access, parse, and verify your updated HTML, your optimizations remain completely invisible to the model. Growth teams must execute a three-step technical verification checklist within 48 hours of any content optimization campaign:',
-    },
-    {
-      type: 'diagram',
-      variant: 'flow',
-      title: 'Post-Publication Technical Verification Sequence',
-      data: {
-        steps: [
-          {
-            step: '01',
-            title: 'CMS Publication',
-            desc: 'Deploy updated copy, structured schema, and verifiable empirical references.',
-          },
-          {
-            step: '02',
-            title: 'URL Inspection',
-            desc: 'Verify server-rendered HTML payloads using Google and Bing inspection tools.',
-          },
-          {
-            step: '03',
-            title: 'Request Recrawl',
-            desc: 'Submit re-indexing signals to notify retrieval models of fresh evidence.',
-          },
-          {
-            step: '04',
-            title: 'Log File Verification',
-            desc: 'Confirm legitimate OAI-SearchBot or GPTBot hits in web server CDN logs.',
-          },
-        ],
-      },
-    },
-    {
-      type: 'subheading',
-      text: 'Step 1: Verify the Rendered HTML',
-    },
-    {
-      type: 'paragraph',
-      text: "AI engines do not read your database; they read the raw HTML code delivered to their user-agents. If your page relies heavily on client-side JavaScript rendering, real-time search crawlers may see a blank screen or a broken page. Use Google's URL Inspection tool or Bing Webmaster Tools to review the exact HTML code the bot received during its last crawl. Ensure that spec tables, FAQ content, and primary evidence blocks are present in text form within the server-rendered payload.",
-    },
-    {
-      type: 'subheading',
-      text: 'Step 2: Request an Explicit Re-crawl',
-    },
-    {
-      type: 'paragraph',
-      text: "Google and Bing do not index updated pages instantly. Crawling cycles can take anywhere from a few days to several months depending on your domain's natural update frequency. Submit a direct request for Google and Bing to re-crawl your updated URLs immediately after publishing. This signals to search models that fresh evidence is available for grounding.",
-    },
-    {
-      type: 'subheading',
-      text: 'Step 3: Monitor Live Crawler Traffic via CDN Logs',
-    },
-    {
-      type: 'paragraph',
-      text: "Do not assume that robots.txt configuration changes are working in isolation. You must verify bot activity within your live server traffic. Monitor your server logs or Content Delivery Network (CDN) log drains. Track the specific user-agent hits from search-enabling crawlers—such as OpenAI's real-time indexer OAI-SearchBot—to confirm they are successfully accessing your updated directories. Ensure your server's DDoS protection filters are not accidentally blocking these high-value spiders.",
-    },
-    {
-      type: 'heading',
-      text: 'The Power of Combinations: What Actually Moves the Needle?',
-    },
-    {
-      type: 'paragraph',
-      text: 'When content teams begin optimizing pages, they often treat different optimizations as isolated experiments—testing a "statistics update" on one page and a "fluency update" on another. Pioneering research published at the ACM SIGKDD \'24 conference reveals a massive opportunity: content optimization strategies are exponentially more powerful when used in tandem.',
-    },
-    {
-      type: 'table',
-      caption: "Empirical Citation Lift by Combination Strategy (KDD '24 GEO-bench Matrix)",
-      heatmap: true,
-      headers: [
-        'Optimization Combination',
-        'Fluency Opt.',
-        'Statistics Add.',
-        'Cite Sources',
-        'Quotes Add.',
-      ],
-      rows: [
-        ['Fluency Opt.', '—', '35.8%', '34.4%', '33.0%'],
-        ['Statistics Add.', '35.8%', '—', '30.3%', '35.4%'],
-        ['Cite Sources', '34.4%', '30.3%', '—', '20.1%'],
-        ['Quotes Add.', '33.0%', '35.4%', '20.1%', '—'],
-      ],
-    },
-    {
-      type: 'subheading',
-      text: '1. The Ultimate Synergy: Fluency + Statistics Addition (35.8% Relative Boost)',
-    },
-    {
-      type: 'paragraph',
-      text: "The single highest-performing combination discovered in the KDD '24 study was pairing Fluency Optimization (polishing text for natural-language flow and readability) with Statistics Addition (inserting quantitative data points). This combination outperformed the best individual optimization strategy by 5.5 percentage points. Intuitively, this pair feeds both criteria the LLM values: the statistics provide dense, verifiable facts for grounding, while the polished fluency makes the chunk cheap and token-efficient for the generator to summarize and reproduce.",
-    },
-    {
-      type: 'subheading',
-      text: '2. The Force-Multiplier: Cite Sources (31.4% Average Combined Lift)',
-    },
-    {
-      type: 'paragraph',
-      text: 'While adding explicit third-party citations (Cite Sources) showed modest performance when tested in isolation, it acted as a massive force multiplier when combined with other stylistic changes, driving an average relative improvement of 31.4% across all combined tests. For factual, legal, or government domains, grounding your claims with a clear reference tree is the single most effective way to help the model pass its grounding checks and cite your chunk with confidence.',
-    },
-    {
-      type: 'heading',
-      text: 'How CiteLadder Closes the Verification Loop',
-    },
-    {
-      type: 'paragraph',
-      text: 'CiteLadder eliminates guesswork by tracking exact source citations and mention share over time. When an issue is remediated, our engine re-crawls and verifies the fix before logging the delta in your audit history. Our platform stores immutable evidence snapshots for every audit pass, enabling teams to compare pre- and post-optimization states under identical model and prompt conditions.',
-    },
-    {
-      type: 'heading',
-      text: 'Frequently Asked Questions',
-    },
-    {
-      type: 'subheading',
-      text: 'Why does it take so long for my updated content to show up in ChatGPT or Gemini answers?',
-    },
-    {
-      type: 'paragraph',
-      text: "There is a fundamental difference between an AI model's training data cutoff and its live web retrieval index. While foundational weights are updated only during major retraining cycles, real-time search crawlers like OAI-SearchBot and Googlebot crawl the live web continuously. However, if your page has low crawl priority, it may take several weeks for the live retrieval index to refresh. Manually requesting a re-crawl through search consoles significantly accelerates this timeline.",
-    },
-    {
-      type: 'subheading',
-      text: 'What is the difference between page-source visibility and brand-name mentions?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Page-source visibility occurs when an AI engine links to your URL as a grounding citation at the bottom of an answer without explicitly writing your company name in the prose. Brand-name mentions occur when the AI explicitly names your company in its synthesis. High page-source visibility indicates strong technical factuality, while high brand mentions indicate strong category authority.',
-    },
-    {
-      type: 'heading',
-      text: 'Sources and Further Reading',
-    },
+    { type: 'heading', text: 'A repeatable experiment protocol' },
     {
       type: 'list',
       ordered: true,
       items: [
-        'Pranjal Aggarwal et al., "GEO: Generative Engine Optimization," Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD \'24), August 25–29, 2024, Barcelona, Spain.',
-        '"AI Performance - Webmaster Support," Microsoft Bing Webmaster Tools Documentation, March 2025.',
-        '"AEO Vs. SEO: Best Strategies For 2026," Yotpo Blog, May 2026.',
-        '"Generative AI performance report," Google Search Console Help, support.google.com/webmasters/answer/16984139.',
-        '"How to Track Perplexity Referrals in GA4 (Google Analytics 4)," Rankshift, January 26, 2026.',
-        '"GPTBot vs OAI-SearchBot: Key Differences," Am I Cited, January 3, 2026.',
-        '"The complete guide to Generative Engine Optimization (GEO)," Peec AI, August 27, 2025.',
+        'Freeze a prompt portfolio, model or surface, locale, account state where relevant, and collection procedure.',
+        'Run a repeated baseline and retain every raw response, including misses and valid zero-mention results.',
+        'Document one bounded page change, its source evidence, the exact URL, and the time it went live.',
+        'Keep unchanged prompts or pages as controls where practical.',
+        'Rerun under the same recorded conditions across enough observations to see variance.',
+        'Compare eligible completed observations and report failed or unavailable runs separately.',
+        'Label the result as an observation or association unless the design supports a causal claim.',
+      ],
+    },
+    {
+      type: 'callout',
+      title: 'Preserve raw evidence',
+      text: 'A derived mention or citation label should always lead back to the saved response and observation conditions. If the response cannot be inspected, the metric cannot be audited.',
+      tone: 'info',
+    },
+    { type: 'heading', text: 'Recrawling and AI eligibility are different controls' },
+    {
+      type: 'richParagraph',
+      content: [
+        'Google supports recrawl requests through URL Inspection for individual pages and sitemaps for larger sets, but requests do not guarantee immediate inclusion. ',
+        { type: 'citation', sourceId: 'google-recrawl' },
+      ],
+    },
+    {
+      type: 'richParagraph',
+      content: [
+        'Bing offers URL submission mechanisms for notifying Bing about changed URLs. That is a Bing discovery workflow, not a command to ChatGPT or another answer engine. ',
+        { type: 'citation', sourceId: 'bing-url-submission' },
+      ],
+    },
+    {
+      type: 'richParagraph',
+      content: [
+        'For OpenAI, OAI-SearchBot governs search discovery while GPTBot relates to training. Allowing OAI-SearchBot makes a page eligible to appear; it does not create an on-demand recrawl or guarantee a citation. ',
+        { type: 'citation', sourceId: 'openai-publishers' },
+      ],
+    },
+    { type: 'heading', text: 'Interpret movement carefully' },
+    {
+      type: 'table',
+      headers: ['Label', 'What it supports'],
+      rows: [
+        [
+          'Observed',
+          'A saved response contained—or did not contain—the defined mention or citation.',
+        ],
+        [
+          'Associated',
+          'The result changed after the page edit under comparable recorded conditions.',
+        ],
+        [
+          'Causal',
+          'Alternative explanations were controlled well enough to attribute the change. This is uncommon in ordinary content work.',
+        ],
+        [
+          'Unavailable',
+          'The run could not produce a comparable observation and is excluded from the eligible denominator.',
+        ],
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'CiteLadder can organize findings, explicit implementation declarations, and later observations. It does not automatically prove that an external engine recrawled a page or that one edit caused an answer change.',
+    },
+    {
+      type: 'richParagraph',
+      content: [
+        'Choose a bounded change with the ',
+        { type: 'link', text: 'AEO playbook', href: '/blog/action-playbook-winning-ai-citations' },
+        ', interpret channels with the ',
+        {
+          type: 'link',
+          text: 'measurement guide',
+          href: '/blog/tracking-brand-visibility-ai-search',
+        },
+        ', or review ',
+        { type: 'link', text: 'CiteLadder solutions', href: '/solutions' },
+        '.',
       ],
     },
   ],

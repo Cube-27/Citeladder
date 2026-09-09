@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BlogPostView } from '@/components/marketing/pages/blog';
@@ -7,6 +7,7 @@ import { BLOG_EMPTY_STATE, POSTS } from '@/lib/marketing-content/blog';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
 
 import BlogPage from './page';
+import { generateMetadata } from './[slug]/page';
 
 // The typed content module is mocked with a lazy POSTS getter so individual
 // tests can swap the posts array (empty state, multi-post grid) while the
@@ -30,7 +31,7 @@ beforeEach(() => {
 });
 
 describe('Blog index (public marketing `/blog`)', () => {
-  it('renders the launch post in the featured slot', () => {
+  it('server-renders every article link and the redesigned hero', () => {
     const { container } = render(<BlogPage />);
 
     // Exactly one h1; no h2–h6 may contain the product name. Post titles are
@@ -39,16 +40,16 @@ describe('Blog index (public marketing `/blog`)', () => {
     // post title is a heading to screen readers but not an h2–h6.
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
-    expect(h1s[0]).toHaveTextContent(/make AI visibility/i);
+    expect(h1s[0]).toHaveTextContent(/practical insights for AI visibility/i);
     for (const heading of container.querySelectorAll('h2, h3, h4, h5, h6')) {
       expect(heading).not.toHaveTextContent(/citeladder/i);
     }
 
-    const featured = screen.getByRole('region', { name: 'Featured post' });
-    expect(within(featured).getByRole('link', { name: POSTS[0].title })).toHaveAttribute(
-      'href',
-      `/blog/${POSTS[0].slug}`,
-    );
+    const articles = screen.getByRole('region', { name: 'Blog articles' });
+    for (const post of POSTS) {
+      expect(within(articles).getAllByRole('link', { name: post.title }).length).toBeGreaterThan(0);
+    }
+    expect(within(articles).queryByText(/UPDATED\s*:/)).not.toBeInTheDocument();
 
     // The empty state is gone now that a real post is live.
     expect(screen.queryByRole('heading', { name: BLOG_EMPTY_STATE.heading })).toBeNull();
@@ -61,29 +62,31 @@ describe('Blog index (public marketing `/blog`)', () => {
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
   });
 
-  it('maps posts beyond the featured one to the card grid', () => {
+  it('filters by primary tag and restores the full primary list', () => {
     const second: BlogPost = {
       slug: 'second-note',
       title: 'A second note on evidence.',
+      seoTitle: 'A second note on evidence',
+      seoDescription: 'A test post about evidence.',
       excerpt: 'Second excerpt.',
-      image: '/blog/blog-art-connect.webp',
-      date: 'Jul 20, 2026',
+      image: '/blog/editorial/article-connect.svg',
+      date: '2026-07-20',
       readTime: '3 min read',
       author: 'The team',
       tags: ['Field report'],
+      sources: [],
+      relatedSlugs: [],
       body: [],
     };
     blogState.posts = [...POSTS, second];
     render(<BlogPage />);
 
-    const grid = screen.getByRole('region', { name: 'All guides' });
-    // Grid carries the second post only — the featured post is not duplicated.
-    expect(within(grid).getByRole('link', { name: second.title })).toHaveAttribute(
-      'href',
-      '/blog/second-note',
-    );
-    expect(within(grid).queryByRole('link', { name: POSTS[0].title })).toBeNull();
-    expect(screen.getByText(/5\s+guides/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Field report' }));
+    expect(screen.getAllByRole('link', { name: second.title }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(POSTS[0].excerpt)).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'All posts' }));
+    expect(screen.getAllByText(POSTS[0].excerpt)).toHaveLength(2);
   });
 
   it('renders the empty state when the posts array is empty', () => {
@@ -94,8 +97,7 @@ describe('Blog index (public marketing `/blog`)', () => {
       screen.getByRole('heading', { level: 2, name: BLOG_EMPTY_STATE.heading }),
     ).toBeInTheDocument();
     expect(screen.getByText(BLOG_EMPTY_STATE.body)).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Featured post' })).toBeNull();
-    expect(screen.queryByRole('region', { name: 'All guides' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Blog articles' })).toBeNull();
 
     // The page hero (and its single h1) still renders above the empty state.
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
@@ -126,19 +128,11 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
       block.type === 'heading' ? [block.text] : [],
     );
     expect(headingTexts.length).toBeGreaterThan(0);
-    const renderedH2s = within(article).getAllByRole('heading', { level: 2 });
-    expect(renderedH2s).toHaveLength(headingTexts.length);
     for (const text of headingTexts) {
       expect(within(article).getByRole('heading', { level: 2, name: text })).toBeInTheDocument();
     }
-    const listCount = post.body.filter((block) => block.type === 'list').length;
-    const listItems = post.body.flatMap((block) => (block.type === 'list' ? block.items : []));
-    if (listCount === 0) {
-      expect(within(article).queryAllByRole('list')).toHaveLength(0);
-    } else {
-      expect(within(article).getAllByRole('list')).toHaveLength(listCount);
-      expect(within(article).getAllByRole('listitem')).toHaveLength(listItems.length);
-    }
+    expect(within(article).getByRole('heading', { name: 'Sources' })).toBeInTheDocument();
+    expect(within(article).getByRole('heading', { name: 'Related reading' })).toBeInTheDocument();
 
     // The byline is now populated (B5 filled), so the header carries the
     // author row rather than omitting it. No unfinished placeholder or
@@ -147,7 +141,8 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
     expect(header?.textContent).not.toMatch(/\bGUIDE\b/);
     if (post.author) {
       expect(header?.textContent).toContain(`BY : ${post.author}`);
-      expect(header?.textContent).toContain(`PUBLISHED : ${post.date}`);
+      expect(header?.textContent).toContain('PUBLISHED : Sep 3, 2026');
+      expect(header?.textContent).toContain('UPDATED : Sep 9, 2026');
       expect(header?.textContent).toContain(`READING TIME : ${post.readTime}`);
       expect(header?.querySelector('a[aria-label$="on LinkedIn"]')).toHaveAttribute(
         'href',
@@ -169,6 +164,8 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
 
   it('emits BlogPosting JSON-LD carrying the supplied byline', () => {
     const post = POSTS[0];
+    const originalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://citeladder.example';
     const { container } = render(<BlogPostView post={post} />);
 
     const script = container.querySelector('script[type="application/ld+json"]');
@@ -178,11 +175,47 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
     expect(data['@context']).toBe('https://schema.org');
     expect(data['@type']).toBe('BlogPosting');
     expect(data.headline).toBe(post.title);
-    expect(data.description).toBe(post.excerpt);
+    expect(data.description).toBe(post.seoDescription);
     // The byline fields are owner-supplied and now filled, so they must be
     // EMITTED and must match the post — a hardcoded or guessed date here
     // would be worse than the omission this used to assert.
     expect(data.datePublished).toBe(post.date);
+    expect(data.dateModified).toBe(post.dateModified);
+    expect(data.image).toContain(post.image);
+    expect(data.inLanguage).toBe('en');
+    expect(data.isPartOf).toMatchObject({ '@type': 'Blog' });
     expect(data.author).toMatchObject({ name: post.author });
+    if (originalSiteUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+    else process.env.NEXT_PUBLIC_SITE_URL = originalSiteUrl;
+  });
+});
+
+describe('blog post metadata', () => {
+  it('uses the SEO copy, article dates, author, tags, and large absolute image', async () => {
+    const originalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://citeladder.example';
+    try {
+      const post = POSTS[0];
+      const metadata = await generateMetadata({ params: Promise.resolve({ slug: post.slug }) });
+      expect(metadata.title).toBe(post.seoTitle);
+      expect(metadata.description).toBe(post.seoDescription);
+      expect(metadata.openGraph).toMatchObject({
+        type: 'article',
+        publishedTime: post.date,
+        modifiedTime: post.dateModified,
+        authors: [post.author],
+        tags: [...post.tags],
+      });
+      expect(metadata.openGraph?.images).toEqual([
+        expect.objectContaining({ url: `https://citeladder.example${post.image}` }),
+      ]);
+      expect(metadata.twitter).toMatchObject({
+        card: 'summary_large_image',
+        images: [`https://citeladder.example${post.image}`],
+      });
+    } finally {
+      if (originalSiteUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+      else process.env.NEXT_PUBLIC_SITE_URL = originalSiteUrl;
+    }
   });
 });

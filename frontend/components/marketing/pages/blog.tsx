@@ -2,7 +2,9 @@ import { ArrowLeft, ArrowRight, PenLine } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { BlogIndexExplorer } from '@/components/marketing/blog/blog-index-explorer';
 import { BLOG_EMPTY_STATE, POSTS, type BlogPost } from '@/lib/marketing-content/blog';
+import { formatBlogDate, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
 import { blogPostingJsonLd } from '@/lib/seo/json-ld';
 import { cn } from '@/lib/utils';
@@ -11,18 +13,12 @@ import { blockIdentity, headingId, PostBlock, withOccurrenceKeys } from '../blog
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { Meta } from '../primitives/label';
 import { LinkedInMark } from '../primitives/linkedin-mark';
-import { PageHero } from '../primitives/page-hero';
-import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
+import { Reveal } from '../primitives/reveal';
 import { Container, Section } from '../primitives/section';
 import { JsonLd } from '../seo/json-ld';
 
 /**
  * `/blog` and `/blog/[slug]`.
- *
- * Heading rule: index post titles render as paragraphs with role="heading" +
- * aria-level rather than literal h2/h3 — a title may contain "CiteLadder" and
- * no h2–h6 on the marketing surface may. Post view uses real h2s for body
- * headings (those are editorial, not product-name headings).
  */
 function TagRow({ tags, className }: Readonly<{ tags: readonly string[]; className?: string }>) {
   if (tags.length === 0) return null;
@@ -66,11 +62,13 @@ function PostByline({
   className,
 }: Readonly<{ post: BlogPost; linkedin?: boolean; className?: string }>) {
   if (!(post.author || post.date || post.readTime)) return null;
+  const updated = post.dateModified && post.dateModified !== post.date ? post.dateModified : null;
   const items = [
     post.author ? (
       <AuthorByline key="author" name={post.author} href={linkedin ? post.authorUrl : undefined} />
     ) : null,
-    post.date ? <span key="date">PUBLISHED : {post.date}</span> : null,
+    post.date ? <span key="date">PUBLISHED : {formatBlogDate(post.date)}</span> : null,
+    updated ? <span key="updated">UPDATED : {formatBlogDate(updated)}</span> : null,
     post.readTime ? <span key="read">READING TIME : {post.readTime}</span> : null,
   ].filter(Boolean);
   return (
@@ -118,101 +116,42 @@ function BlogCta({
 }
 
 export function BlogIndex() {
-  const [featured, ...rest] = POSTS;
+  const summaries = POSTS.map(toBlogPostSummary);
   return (
     <>
-      <PageHero
-        eyebrow="Resources"
-        title="Make AI visibility"
-        accent="understandable."
-        lead="Practical guides for answer-engine optimization, evidence-led measurement, and the work between a finding and the next audit."
-        centered
-      />
+      <header className="border-border-subtle border-b py-10 md:py-12">
+        <Container>
+          <Reveal className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_8rem] xl:grid-cols-[minmax(0,1fr)_14rem]">
+            <div>
+              <p className="website-eyebrow text-accent-text">Blog</p>
+              <h1 className="website-page-title text-foreground mt-4">
+                Practical insights for AI visibility
+              </h1>
+              <p className="website-body-lg text-muted mt-5 max-w-[56ch]">
+                Guides, frameworks and lessons from building for the AI search era.
+                <br className="hidden sm:block" /> Find content gaps, strengthen your sources and
+                measure progress.
+              </p>
+            </div>
+            <div className="relative hidden aspect-[12/7] lg:block">
+              <Image
+                src="/blog/editorial/hero-ai-visibility.svg"
+                alt=""
+                aria-hidden="true"
+                fill
+                priority
+                sizes="(max-width: 1279px) 128px, 224px"
+                className="object-contain"
+              />
+            </div>
+          </Reveal>
+        </Container>
+      </header>
 
-      {featured ? (
-        <>
-          <Section rhythm="tight" aria-label="Featured post">
-            <Reveal>
-              <Link
-                href={`/blog/${featured.slug}`}
-                aria-label={featured.title}
-                className="bg-panel border-border group hover:border-accent-border block overflow-hidden rounded-[var(--radius-card)] border transition-colors duration-200"
-              >
-                <div className="flex flex-col md:flex-row md:items-stretch">
-                  <div className="bg-panel-tonal photo-grain relative min-h-[200px] w-full shrink-0 overflow-hidden md:min-h-0 md:w-[22%] lg:w-[20%]">
-                    <Image
-                      src={featured.image}
-                      alt=""
-                      aria-hidden="true"
-                      fill
-                      priority
-                      sizes="(max-width: 768px) 100vw, 320px"
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  </div>
-                  <div className="flex flex-1 flex-col justify-center p-7 md:p-10">
-                    <TagRow tags={featured.tags} />
-                    <h2 className="website-section-heading text-foreground group-hover:text-accent-text max-w-[32ch] transition-colors duration-200">
-                      {featured.title}
-                    </h2>
-                    <p className="website-body-lg text-muted mt-4 max-w-[65ch]">
-                      {featured.excerpt}
-                    </p>
-                    <PostByline post={featured} />
-                    <span className="text-accent-text mt-5 inline-flex items-center gap-2 text-sm font-medium">
-                      Read guide
-                      <ArrowRight
-                        className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                        aria-hidden
-                      />
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            </Reveal>
-          </Section>
-
-          {rest.length > 0 && (
-            <Section tone="paper" rhythm="tight" aria-label="All guides">
-              <div className="mb-5 flex items-center justify-between gap-4">
-                <Meta as="p">All guides</Meta>
-                <Meta>
-                  {rest.length} {rest.length === 1 ? 'guide' : 'guides'}
-                </Meta>
-              </div>
-              <StaggerGroup className="divide-border-subtle bg-panel border-border-subtle divide-y overflow-hidden rounded-[var(--radius-card)] border">
-                {rest.map((post) => (
-                  <StaggerItem key={post.slug}>
-                    <Link
-                      href={`/blog/${post.slug}`}
-                      aria-label={post.title}
-                      className="hover:bg-accent-soft/40 group flex flex-col transition-colors duration-200 md:flex-row md:items-stretch"
-                    >
-                      <div className="bg-panel-tonal photo-grain relative min-h-[160px] w-full shrink-0 overflow-hidden md:min-h-0 md:w-[22%] lg:w-[20%]">
-                        <Image
-                          src={post.image}
-                          alt=""
-                          aria-hidden="true"
-                          fill
-                          sizes="(max-width: 768px) 100vw, 260px"
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </div>
-                      <div className="flex flex-1 flex-col justify-center px-6 py-6 md:px-8 md:py-7">
-                        <TagRow tags={post.tags} />
-                        <h3 className="website-feature-heading text-foreground group-hover:text-accent-text transition-colors duration-200">
-                          {post.title}
-                        </h3>
-                        <p className="website-body text-muted mt-2 max-w-[65ch]">{post.excerpt}</p>
-                        <PostByline post={post} />
-                      </div>
-                    </Link>
-                  </StaggerItem>
-                ))}
-              </StaggerGroup>
-            </Section>
-          )}
-        </>
+      {summaries.length ? (
+        <Section tone="paper" rhythm="tight" aria-label="Blog articles">
+          <BlogIndexExplorer posts={summaries} />
+        </Section>
       ) : (
         <Section tone="paper" rhythm="tight" aria-label="No posts yet">
           <Reveal className="border-border-subtle mx-auto max-w-xl rounded-[var(--radius-card)] border border-dashed p-10 text-center">
@@ -309,6 +248,90 @@ function PostAside({ post }: Readonly<{ post: BlogPost }>) {
   );
 }
 
+function ArticleLinks({ post }: Readonly<{ post: BlogPost }>) {
+  const postIndex = POSTS.findIndex((candidate) => candidate.slug === post.slug);
+  const previous = postIndex > 0 ? POSTS[postIndex - 1] : undefined;
+  const next = postIndex >= 0 ? POSTS[postIndex + 1] : undefined;
+  const related = post.relatedSlugs
+    .map((slug) => POSTS.find((candidate) => candidate.slug === slug))
+    .filter((candidate): candidate is BlogPost => Boolean(candidate));
+
+  return (
+    <div className="border-border-subtle mt-10 border-t pt-8">
+      {post.sources.length ? (
+        <section aria-labelledby="article-sources">
+          <h2 id="article-sources" className="website-feature-heading text-foreground">
+            Sources
+          </h2>
+          <ol className="website-body text-muted mt-4 grid list-decimal gap-3 pl-5">
+            {post.sources.map((source) => (
+              <li key={source.id}>
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent-text decoration-accent-border underline underline-offset-4 hover:decoration-current"
+                >
+                  {source.title}
+                </a>{' '}
+                — {source.publisher}
+                {source.publishedDate ? ` (${formatBlogDate(source.publishedDate)})` : null}
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
+      {related.length ? (
+        <section aria-labelledby="related-reading" className="mt-10">
+          <h2 id="related-reading" className="website-feature-heading text-foreground">
+            Related reading
+          </h2>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            {related.map((relatedPost) => (
+              <li key={relatedPost.slug}>
+                <Link
+                  href={`/blog/${relatedPost.slug}`}
+                  className="border-border-subtle bg-panel hover:border-accent-border text-foreground focus-ring block rounded-[var(--radius-control)] border p-4 text-sm font-medium transition-colors"
+                >
+                  {relatedPost.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {(previous || next) && (
+        <nav aria-label="Previous and next articles" className="mt-10 grid gap-4 sm:grid-cols-2">
+          {previous ? (
+            <Link
+              href={`/blog/${previous.slug}`}
+              className="border-border-subtle hover:border-accent-border focus-ring rounded-[var(--radius-control)] border p-4 transition-colors"
+            >
+              <span className="website-label text-muted">Previous</span>
+              <span className="text-foreground mt-1 block text-sm font-medium">
+                {previous.title}
+              </span>
+            </Link>
+          ) : (
+            <span />
+          )}
+          {next ? (
+            <Link
+              href={`/blog/${next.slug}`}
+              className="border-border-subtle hover:border-accent-border focus-ring rounded-[var(--radius-control)] border p-4 text-right transition-colors"
+            >
+              <span className="website-label text-muted">Next</span>
+              <span className="text-foreground mt-1 block text-sm font-medium">{next.title}</span>
+            </Link>
+          ) : null}
+        </nav>
+      )}
+    </div>
+  );
+}
+
 export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
   return (
     <>
@@ -350,8 +373,9 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
               {post.excerpt}
             </p>
             {withOccurrenceKeys(post.body, blockIdentity).map(({ key, value }) => (
-              <PostBlock key={key} block={value} />
+              <PostBlock key={key} block={value} sources={post.sources} />
             ))}
+            <ArticleLinks post={post} />
           </article>
         </div>
       </Container>

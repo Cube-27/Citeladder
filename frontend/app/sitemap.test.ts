@@ -59,9 +59,15 @@ describe('sitemap', () => {
     }
   });
 
-  it('does not manufacture last-modified churn for static content', () => {
-    for (const entry of sitemap()) {
-      expect(entry).not.toHaveProperty('lastModified');
+  it('uses editorial dates for posts without manufacturing static-route churn', () => {
+    const entries = sitemap();
+    for (const path of STATIC_PATHS) {
+      expect(entries.find((entry) => entry.url === path)).not.toHaveProperty('lastModified');
+    }
+    for (const post of POSTS) {
+      expect(entries.find((entry) => entry.url === `/blog/${post.slug}`)?.lastModified).toBe(
+        post.dateModified ?? post.date,
+      );
     }
   });
 });

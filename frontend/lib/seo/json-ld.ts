@@ -96,11 +96,18 @@ export function faqPageJsonLd(groups: readonly FaqGroup[]): JsonLdObject {
 export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
   const url = absoluteUrl(`/blog/${post.slug}`);
   const organizationUrl = absoluteUrl('/');
+  const image = absoluteUrl(post.image);
+  const blogUrl = absoluteUrl('/blog');
   return {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
-    description: post.excerpt,
+    description: post.seoDescription,
+    inLanguage: 'en',
+    ...(image ? { image } : {}),
+    ...(blogUrl
+      ? { isPartOf: { '@type': 'Blog', '@id': blogUrl, url: blogUrl, name: 'CiteLadder Blog' } }
+      : {}),
     ...(url ? { url, mainEntityOfPage: { '@type': 'WebPage', '@id': url } } : {}),
     ...(organizationUrl
       ? { publisher: { '@type': 'Organization', name: SITE_NAME, url: organizationUrl } }
