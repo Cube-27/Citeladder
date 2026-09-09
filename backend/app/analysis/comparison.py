@@ -103,6 +103,11 @@ def _valid_policy(policy, fields):
 
 
 def _valid_routes(routes):
+    # Provider and model only. `_route_identity` also reads `retrieval_enabled`
+    # from each route, but the frozen plan records that setting once on
+    # `measurement_policy` (which `_valid_policy` requires to be a bool) and
+    # never per route — so it hashes as `None` for every route of every run
+    # alike, and requiring it here would reject every real configuration.
     return all(
         route.get("transport_provider") and route.get("transport_model")
         for route in routes.values()

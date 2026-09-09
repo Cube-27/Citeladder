@@ -19,6 +19,7 @@ from app.core.config.prompts import (
     PROMPT_COHORT_CORE,
     REQUESTABLE_PROMPT_COHORTS,
 )
+from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
 from app.domain.analysis.evidence_selection import (
     EvidenceFilters,
@@ -276,13 +277,17 @@ def _evidence_statement(
             Audit.workspace_id == workspace_id,
             Audit.project_id == project_id,
             Audit.status.in_(_DASHBOARD_STATUSES),
-            # An answer that never completed is not evidence of anything. This
-            # belongs to the BASE scope, not to the optional filters: sitting
-            # in `EvidenceFilters.apply` it reached the rows but not the prompt
-            # options, coverage or source counts drawn from the same statement,
-            # so a prompt whose only tasks failed still offered itself as a
-            # filter that could return nothing.
-            AuditTask.status == "completed",
+            # An answer whose task never succeeded is not evidence of anything.
+            # This belongs to the BASE scope, not to the optional filters:
+            # sitting in `EvidenceFilters.apply` it reached the rows but not the
+            # prompt options, coverage or source counts drawn from the same
+            # statement, so a prompt whose only tasks failed still offered
+            # itself as a filter that could return nothing.
+            #
+            # `TASK_STATUS_SUCCEEDED`, not a "completed" literal: the queue-row
+            # vocabulary has no such status, so comparing against it matched
+            # NOTHING and emptied every one of those surfaces.
+            AuditTask.status == TASK_STATUS_SUCCEEDED,
         )
     )
     if audit_id is not None:

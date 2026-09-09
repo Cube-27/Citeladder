@@ -62,10 +62,7 @@ export function MentionsCitations({
   const items = query.data?.items ?? [];
   const truncated = query.data?.truncated ?? false;
 
-  // Only the executions that actually carry persisted mention/citation rows.
-  const withEvidence = items;
-
-  if (withEvidence.length === 0) {
+  if (items.length === 0) {
     return isFiltered ? (
       <EvidenceFilteredEmpty
         title={TITLE}
@@ -81,8 +78,8 @@ export function MentionsCitations({
     );
   }
 
-  const mentionCount = totalMentionCount(withEvidence);
-  const citationCount = totalCitationCount(withEvidence);
+  const mentionCount = totalMentionCount(items);
+  const citationCount = totalCitationCount(items);
 
   return (
     <Card className="relative" aria-busy={query.isFetching}>
@@ -101,7 +98,7 @@ export function MentionsCitations({
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
         <ul className={ledgerClasses()}>
-          {withEvidence.map((item) => (
+          {items.map((item) => (
             <ExecutionEvidenceRow key={item.analysis_id} item={item} />
           ))}
         </ul>

@@ -31,17 +31,22 @@ async def compare_selection(
     key = frozen_comparison_key(audit.configuration, engine=engine)
     if key is None:
         return VisibilityComparison(status="identity_unavailable")
-    # The loop below walks backwards from the selected run and stops at the
-    # first compatible baseline, so only the recent end of the history can be
-    # reached. Bounding the read keeps this off a project's whole snapshot
-    # table on every dashboard load; `skipped_runs` reports how far it looked.
+    # Walking backwards from the selected run, the search stops at the first
+    # compatible baseline, so only the recent end of the history is reachable
+    # and bounding the read keeps this off a project's whole snapshot table on
+    # every dashboard load; `skipped_runs` reports how far it looked.
+    #
+    # An EXPLICIT baseline is different: the reader named a run, and it may be
+    # older than the bound. Asking for one and being told there is no
+    # comparison because it fell outside a window they never chose would be a
+    # worse answer than the slower read.
     candidates = await _load_trend_rows(
         session,
         workspace_id=workspace_id,
         project_id=project_id,
         from_at=None,
         to_at=audit.completed_at,
-        newest=VISIBILITY_SELECTION_MAX_RUNS,
+        newest=None if baseline_id else VISIBILITY_SELECTION_MAX_RUNS,
     )
     skipped = 0
     for prior, previous in reversed(candidates):

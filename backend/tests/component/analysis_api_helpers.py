@@ -26,6 +26,7 @@ from app.core.config.provider_catalog import (
     TRANSPORT_GOOGLE,
     measurement_route,
 )
+from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.audits.creation import create_audit
 from app.models.analysis import (
     BrandMention,
@@ -397,7 +398,11 @@ async def _seed_evidence_execution(
     task = AuditTask(
         audit_id=audit.id,
         workspace_id=workspace_id,
-        status=AUDIT_STATUS_COMPLETED,
+        # A TASK's terminal success is `succeeded`; `completed` is the AUDIT
+        # vocabulary. Stamping the audit's constant here is what let a filter
+        # on a status no task can hold pass every test while returning nothing
+        # in production.
+        status=TASK_STATUS_SUCCEEDED,
         prompt_snapshot_id=snapshot.id,
         engine_snapshot_id=engine_snapshot.id,
         prompt_index=prompt_index,

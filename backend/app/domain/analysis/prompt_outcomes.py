@@ -7,6 +7,8 @@ from collections import Counter, defaultdict
 from sqlalchemy import select
 
 from app.analysis.comparison import frozen_comparison_key
+from app.core.config.prompts import ORGANIC_PROMPT_COHORTS, PROMPT_COHORT_CORE
+from app.core.config.task_queue import TASK_STATUS_FAILED, TASK_STATUS_SUCCEEDED
 from app.domain.analysis.matched_comparison import compare_cells, load_comparison_cells
 from app.domain.analysis.schemas import MeasurementCounts, PromptOutcome
 from app.models.analysis import ResponseAnalysis
@@ -27,14 +29,15 @@ async def enrich_prompt_outcomes(
             )
         ).all()
     }
-    current = await _responses(session, workspace_id, audit_id, engine)
+    cohort = rows[0].cohort if rows else PROMPT_COHORT_CORE
+    current = await _responses(session, workspace_id, audit_id, engine, cohort)
     previous = await _baseline(session, workspace_id, audit, baseline_id)
     cells = (
         await load_comparison_cells(
             session,
             audit=audit,
             previous=previous,
-            cohort=rows[0].cohort,
+            cohort=cohort,
             engine=engine,
         )
         if previous and rows
@@ -55,8 +58,15 @@ def _counts(responses, tasks):
         state="measured" if responses else "no_observations",
         responses=len(responses),
         expected=len(tasks),
-        failed=sum(task.status == "failed" for task in tasks),
-        not_run=sum(task.status not in {"completed", "failed"} for task in tasks),
+        failed=sum(task.status == TASK_STATUS_FAILED for task in tasks),
+        # Anything that neither succeeded nor failed has not run: queued,
+        # leased, running, waiting to retry, cancelled. Comparing against a
+        # "completed" literal the queue vocabulary does not contain counted
+        # every SUCCEEDED task as not-run.
+        not_run=sum(
+            task.status not in {TASK_STATUS_SUCCEEDED, TASK_STATUS_FAILED}
+            for task in tasks
+        ),
         brand_responses=sum(row.brand_mentioned for row in responses),
         owned_citation_responses=sum(row.owned_domain_cited for row in responses),
     )
@@ -84,10 +94,16 @@ def _outcome(key, responses, tasks):
     )
 
 
-async def _responses(session, workspace_id, audit_id, engine):
+async def _responses(session, workspace_id, audit_id, engine, cohort):
+    # Scoped to the COHORT these rows describe. Without it a comparison prompt's
+    # outcomes absorbed the core answers at the same prompt index, inflating its
+    # counts and every rate derived from them.
     query = select(ResponseAnalysis).where(
         ResponseAnalysis.workspace_id == workspace_id,
         ResponseAnalysis.audit_id == audit_id,
+        ResponseAnalysis.cohort.in_(
+            tuple(ORGANIC_PROMPT_COHORTS) if cohort == PROMPT_COHORT_CORE else (cohort,)
+        ),
     )
     if engine:
         query = query.where(ResponseAnalysis.logical_engine == engine)

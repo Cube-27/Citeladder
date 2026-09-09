@@ -58,10 +58,11 @@ desktop and mobile filter → gap → answer → return journey.
 
 Extend existing tests at the lowest meaningful boundaries, including workspace
 isolation, provenance, aggregation, URL restoration, comparisons and completeness.
-The original acceptance plan called for `scripts/check.ps1`, then
-`scripts/test.ps1`. The user's subsequent instruction on 9 September 2026
-stopped verification and waived further tests/completion gates for this handoff.
-The final working-tree changes are therefore unverified. Do not reset real data, deploy,
-call providers or silently rewrite history. Representative-data evaluation and
+Acceptance runs `scripts/check.ps1`, then `scripts/test.ps1`. Both passed for
+the shipped change on 10 September 2026: backend quality and the full pytest
+suite, frontend quality and the full vitest suite. An earlier revision of this
+document recorded the work as unverified after a handoff; that no longer
+describes it. Do not reset real data, deploy, call providers or silently
+rewrite history. Representative-data evaluation and
 profiling require actual retained evidence; do not claim production validation
 from synthetic fixtures.

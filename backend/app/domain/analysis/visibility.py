@@ -138,9 +138,10 @@ async def get_visibility(
         visibility_score=selected_score(snapshot, metrics, cohort, logical_engine),
         visibility_rate=observed_rate(metrics, "brand_mention_rate"),
         owned_citation_rate=observed_rate(metrics, "owned_citation_rate"),
-        prompt_performance_score=selected_score(
-            snapshot, metrics, cohort, logical_engine
-        ),
+        # The preserved prompt composite, which is a DIFFERENT measure from the
+        # selected score above. Deriving both from `selected_score` reported one
+        # of them twice — the separation this rework exists to make.
+        prompt_performance_score=prompt_performance(metrics),
         counts=measurement_counts(metrics),
         comparison_key=frozen_comparison_key(
             audit.configuration, engine=logical_engine

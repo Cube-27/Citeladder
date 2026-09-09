@@ -130,7 +130,7 @@ export function PromptMovement({
   });
   const [pageValue, setPage] = useUrlState('prompt_page', optionalStringUrlCodec);
   const data = promptQuery.data ?? [];
-  const page = Math.max(0, Number.parseInt(pageValue ?? '0', 10) || 0);
+  const requestedPage = Math.max(0, Number.parseInt(pageValue ?? '0', 10) || 0);
   const filtered = data.filter(
     (row) =>
       (!theme || (row.theme || 'Unclassified') === theme) &&
@@ -143,6 +143,11 @@ export function PromptMovement({
         (mode === 'drops' ? row.visibility_delta < 0 : row.visibility_delta > 0)
       : true,
   );
+  // `prompt_page` comes from the URL, so it can name a page that a filter or a
+  // narrower mode has since emptied. Clamping it shows the last real page
+  // instead of a blank table with a disabled Next button and no way back.
+  const lastPage = Math.max(0, Math.ceil(rows.length / PROMPT_ANALYSIS_PAGE_SIZE) - 1);
+  const page = Math.min(requestedPage, lastPage);
   rows.sort((a, b) => {
     const first = movement ? a.visibility_delta : a.visibility_rate;
     const second = movement ? b.visibility_delta : b.visibility_rate;
