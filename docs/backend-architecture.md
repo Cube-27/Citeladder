@@ -638,6 +638,29 @@ Prompt generation, scheduled audits, provider attempts, and answer-engine
 measurements use existing queue owners and immutable evidence. Visibility does
 not write business truth.
 
+Visibility projections distinguish `visibility_rate` (response presence) from
+`prompt_performance_score` (the existing versioned composite). The legacy
+`visibility_score` remains a composite alias. SOV pools tracked-entity presence
+counts; zero denominators are unavailable/no-observation states. Finalization
+freezes requested, measured, failed and not-run task counts, including cohort
+and engine slices. Readers never rescore or fill missing historical facts.
+
+`analysis/comparison.py` owns frozen configuration identity. Trend folding and
+comparison readers retain prompt panels, concrete model routes, retrieval,
+tracked entities, locale, scope and algorithm boundaries. Matching successful
+prompt/model/repetition cells may produce labelled subset deltas, with their
+own values and coverage. Period selection pools one compatible configuration;
+the preceding equal-duration period provides its compatible baseline.
+
+The existing Visibility domain owns full-selection Sources, prompt outcomes
+and observable query summaries. Evidence uses a filter-bound cursor and
+`as_of` boundary; total counts and prompt options are independent of the page.
+Citation source class/taxonomy version are nullable persisted analysis facts,
+classified by the existing source-pattern owner. Their initial-schema additions
+require disposable-database migration validation; no read-time historical
+reclassification or database reset is part of these projections. Recommendation
+accuracy still requires a labelled retained-answer corpus before promotion.
+
 Onboarding topic selection is the sole AI owner of the initial taxonomy. A
 deterministic harvest reads the offering list the site already publishes -- its
 departments, products, capabilities, specialties or courses -- from pages

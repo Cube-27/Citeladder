@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Table,
   TableBody,
@@ -7,111 +9,104 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { BrandLogo } from '@/components/ui/brand-logo';
-import { scoreBand, scoreBandText } from '@/components/ui/score-band';
-import { Sparkline } from '@/components/ui/sparkline';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Button } from '@/components/ui/button';
 import type { RankingRow } from '@/lib/api/types';
 import { formatRate } from '@/lib/visibility/dashboard';
 import { textRole } from '@/components/ui/typography';
 import { tagClasses } from '@/components/ui/filter-chip-variants';
 
-/** Shared empty state for a rankings table with no rows. */
-export const NO_RANKINGS_MESSAGE = 'No brand or competitor mentions were recorded for this run.';
-
-/**
- * Shared brand-vs-competitor rankings table (design.md §9.6), used by both the
- * selected-run Competitors card and the trend-mode ranking-history cards.
- *
- * Columns are `#`, Brand (logo + name + a "You" chip on the own brand),
- * Visibility% (mono + score-band colour), Share%, Sentiment and
- * Position — the last two render the explicit not-measured state
- * (decision B-2). The user's own row is `highlight`ed.
- *
- * `history` is optional real per-brand visibility series (see
- * `brandVisibilityHistory`). When supplied, a brand with at least two readable
- * points gets a sparkline; brands without one render an empty cell rather than
- * an invented flat line, and the column disappears entirely when no history is
- * available at all.
- */
 export function RankingRowsTable({
   rows,
-  history,
+  responses,
+  onSelect,
 }: Readonly<{
   rows: readonly RankingRow[];
-  history?: ReadonlyMap<string, number[]>;
+  responses?: number;
+  onSelect?: (name: string) => void;
 }>) {
-  const showTrend = Boolean(
-    history && rows.some((row) => (history.get(row.name)?.length ?? 0) > 1),
+  const ordered = [...rows].sort(
+    (a, b) => (b.mention_rate ?? -1) - (a.mention_rate ?? -1) || a.name.localeCompare(b.name),
   );
-
+  if (!ordered.length) return <p>No measured responses in this selection.</p>;
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-10">#</TableHead>
           <TableHead>Brand</TableHead>
           <TableHead numeric>Visibility</TableHead>
-          {showTrend ? <TableHead className="w-20">Trend</TableHead> : null}
-          <TableHead numeric>Share</TableHead>
-          <TableHead numeric>Sentiment</TableHead>
-          <TableHead numeric>Position</TableHead>
+          <TableHead numeric>Change</TableHead>
+          <TableHead numeric className="hidden md:table-cell">
+            SOV
+          </TableHead>
+          <TableHead numeric className="hidden md:table-cell">
+            Citation rate
+          </TableHead>
+          <TableHead>Evidence</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((row, index) => {
-          const visibilityPct =
-            row.mention_rate === null ? null : Math.round(row.mention_rate * 100);
-          const bandClass =
-            visibilityPct === null ? 'text-muted' : scoreBandText[scoreBand(visibilityPct)];
-          return (
-            <TableRow
-              key={`${row.is_brand ? 'brand' : 'competitor'}-${row.name}`}
-              highlight={row.is_brand}
-            >
-              <TableCell numeric className="text-muted">
-                {index + 1}
-              </TableCell>
-              <TableCell>
-                <span className="flex items-center gap-2">
-                  <BrandLogo
-                    name={row.name}
-                    logoUrl={row.logo_url}
-                    websiteUrl={row.website_url}
-                    size="sm"
-                  />
-                  <span className={textRole('emphasis')}>{row.name}</span>
-                  {row.is_brand ? (
-                    <span className={textRole('label', tagClasses())}>You</span>
-                  ) : null}
-                </span>
-              </TableCell>
-              <TableCell numeric className={bandClass}>
-                {formatRate(row.mention_rate)}
-              </TableCell>
-              {showTrend ? (
-                <TableCell>
-                  {(history?.get(row.name)?.length ?? 0) > 1 ? (
-                    <Sparkline
-                      values={history!.get(row.name)!}
-                      tone={row.is_brand ? 'brand' : 'muted'}
-                      label={`${row.name} visibility trend`}
-                    />
-                  ) : null}
-                </TableCell>
+        {ordered.map((row) => (
+          <TableRow key={`${row.is_brand}-${row.name}`} highlight={row.is_brand}>
+            <TableCell>
+              <span className="flex items-center gap-2">
+                <BrandLogo
+                  name={row.name}
+                  logoUrl={row.logo_url}
+                  websiteUrl={row.website_url}
+                  size="sm"
+                />
+                <span className={textRole('emphasis')}>{row.name}</span>
+                {row.is_brand ? <span className={textRole('label', tagClasses())}>You</span> : null}
+              </span>
+              <details className="md:hidden">
+                <summary className="focus-ring cursor-pointer">More measurements</summary>
+                <p>SOV: {formatRate(row.share_of_voice)}</p>
+                <p>Citation rate: {formatRate(row.citation_rate)}</p>
+              </details>
+            </TableCell>
+            <TableCell numeric>
+              {formatRate(row.mention_rate)}
+              <p className={textRole('meta', 'text-secondary')}>
+                {responses === undefined
+                  ? 'Sample unavailable'
+                  : `${row.mention_count} of ${responses} responses`}
+              </p>
+            </TableCell>
+            <TableCell numeric>
+              {row.matched_visibility_delta != null ? (
+                <details>
+                  <summary className="focus-ring cursor-pointer">Matched subset</summary>
+                  <p>{formatChange(row.matched_visibility_delta)}</p>
+                  <p>
+                    {formatRate(row.matched_visibility_rate ?? null)} · {row.matched_response_count}{' '}
+                    matched responses
+                  </p>
+                </details>
+              ) : (
+                formatChange(row.visibility_delta)
+              )}
+            </TableCell>
+            <TableCell numeric className="hidden md:table-cell">
+              {formatRate(row.share_of_voice)}
+            </TableCell>
+            <TableCell numeric className="hidden md:table-cell">
+              {formatRate(row.citation_rate)}
+            </TableCell>
+            <TableCell>
+              {!row.is_brand && onSelect ? (
+                <Button variant="ghost" size="sm" onClick={() => onSelect(row.name)}>
+                  {row.gap_count ?? 'View'} brand-absent answers
+                </Button>
               ) : null}
-              <TableCell numeric className="mono text-foreground">
-                {formatRate(row.share_of_voice)}
-              </TableCell>
-              <TableCell numeric className="mono text-muted">
-                <UnavailableValue state="not_measured" />
-              </TableCell>
-              <TableCell numeric className="mono text-muted">
-                <UnavailableValue state="not_measured" />
-              </TableCell>
-            </TableRow>
-          );
-        })}
+            </TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   );
+}
+
+export function formatChange(value: number | null | undefined): string {
+  if (value === null || value === undefined) return 'No comparable change';
+  return `${value > 0 ? '+' : ''}${value.toFixed(1)} pp`;
 }

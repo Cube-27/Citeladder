@@ -6,10 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   EvidenceEmpty,
+  EvidencePagination,
+  EvidenceBusyBar,
   EvidenceError,
   EvidenceFilteredEmpty,
   EvidenceSkeleton,
   ExecutionHeader,
+  ProvenanceDisclosure,
   TruncationNotice,
   type EvidenceTabProps,
 } from '@/components/visibility/evidence-states';
@@ -42,7 +45,13 @@ const TITLE = 'Query Fanout';
  * States: skeleton, retryable error, empty, filtered-empty, and a truncation
  * notice when the newest window overflowed.
  */
-export function FanoutEvidence({ query, isFiltered, onClearFilters, limit }: EvidenceTabProps) {
+export function FanoutEvidence({
+  query,
+  isFiltered,
+  onClearFilters,
+  limit,
+  onNextPage,
+}: EvidenceTabProps) {
   if (query.isLoading) {
     return <EvidenceSkeleton title={TITLE} />;
   }
@@ -72,14 +81,15 @@ export function FanoutEvidence({ query, isFiltered, onClearFilters, limit }: Evi
   const groups = groupByPrompt(items);
 
   return (
-    <Card>
+    <Card className="relative" aria-busy={query.isFetching}>
+      <EvidenceBusyBar active={query.isFetching} />
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div className="grid gap-1">
           <CardTitle>{TITLE}</CardTitle>
           <p className="text-secondary text-sm">Per-execution search queries grouped by prompt.</p>
         </div>
         <Badge variant="neutral">
-          {groups.length} {groups.length === 1 ? 'prompt' : 'prompts'}
+          {query.data?.total ?? 'Unknown'} matching answers · {groups.length} prompts on this page
         </Badge>
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
@@ -88,7 +98,15 @@ export function FanoutEvidence({ query, isFiltered, onClearFilters, limit }: Evi
             <PromptGroupBlock key={group.promptSnapshotId} group={group} />
           ))}
         </div>
-        {truncated ? <TruncationNotice limit={limit} /> : null}
+        {onNextPage ? (
+          <EvidencePagination
+            nextCursor={query.data?.next_cursor ?? null}
+            asOf={query.data?.as_of ?? null}
+            onPage={onNextPage}
+          />
+        ) : truncated ? (
+          <TruncationNotice limit={limit} />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -123,6 +141,7 @@ function ExecutionRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>)
         }
       />
       <QueryDetail item={item} />
+      <ProvenanceDisclosure item={item} />
     </li>
   );
 }

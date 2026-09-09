@@ -9,6 +9,7 @@ from hashlib import sha256
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.comparison import frozen_comparison_key
 from app.core.config.demand import DEMAND_SIGNAL_BRANDED_QUERY
 from app.models.analysis import MetricSnapshot
 from app.models.analytics import AiReferralsSnapshot
@@ -73,6 +74,7 @@ async def _audit_identity(session: AsyncSession, audit: Audit) -> str:
         )
     ).all()
     identity = {
+        "frozen_context": frozen_comparison_key(audit.configuration) or str(audit.id),
         "prompts": [tuple(row) for row in prompts],
         "engines": [tuple(row) for row in engines],
         "benchmark_mode": audit.benchmark_mode,
@@ -131,6 +133,13 @@ async def _visibility_leg(
         "baseline_analyzer": before.analyzer_version,
         "post_analyzer": after.analyzer_version,
     }
+    if (before.analyzer_version, before.scoring_rule_version) != (
+        after.analyzer_version,
+        after.scoring_rule_version,
+    ):
+        return _leg(
+            state="non_comparable", limitations=["Analysis or scoring version changed."]
+        )
     if before.visibility_score is None or after.visibility_score is None:
         return _leg(
             state="unavailable",

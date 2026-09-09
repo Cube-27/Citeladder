@@ -71,9 +71,15 @@ topics before generating prompts.
   Shell per route. The authenticated layout is instant-navigation validated;
   its sidebar, compact topbar/drawer, query client, and project context remain mounted while
   route-owned client content resolves. The `(app)` segment has no loading
-  boundary: each screen keeps its toolbar, filters, and tablist mounted and
-  limits loading placeholders to the data region whose geometry they match. A
-  focused Playwright `instant()` assertion protects primary navigation.
+  boundary. One `components/layout/page-loading.tsx` is the only first-load
+  state a screen shows, and `shell-fallback.tsx` covers the session, workspace
+  and entitlement waits ahead of the shell, so a cold entry shows one loader
+  and the chrome that follows it is already complete. A section refreshing
+  inside an already-drawn page keeps an in-place treatment instead — retained
+  data with a positioned progress bar, never a placeholder that collapses the
+  surface. The loader itself is held back briefly, so a wait short enough to
+  go unnoticed passes without one. A focused Playwright `instant()` assertion
+  protects primary navigation.
 - Desktop and mobile navigation prefetch each data-heavy destination's primary
   TanStack query on pointer hover or keyboard focus. Data tabs use the shared
   `Tabs.onIntent` hook for the same purpose; inexpensive visited panels may stay
@@ -298,7 +304,7 @@ screen from its internal presentation files.
 | Surface | Coordinator boundary | Focused owners |
 |---|---|---|
 | Growth Agent | `components/agent/growth-agent-workspace.tsx` owns workspace state and actions | `growth-agent-workspace-view.tsx` owns run detail, task form, and task history presentation |
-| AI Referrals | `components/ai-referrals/ai-referrals-screen.tsx` owns project/range queries and toolbar selection | content, dashboard, and skeleton owners render the query states and measurements |
+| AI Referrals | `components/ai-referrals/ai-referrals-screen.tsx` owns project/range queries and toolbar selection | content and dashboard owners render the query states and measurements |
 | Content | `components/content/content-screen.tsx` owns project transitions and generation orchestration | data hooks, generation history, and composer/result panels own their respective concerns |
 | Onboarding | `components/onboarding/onboarding-screen.tsx` selects the active stage and actions | `onboarding-flow.ts` owns transaction state, stage owners render domain UI, and `components/auth/flow-shell.tsx` owns shared auth/onboarding chrome |
 | Projects dashboard | `components/projects/dashboard-screen.tsx` owns query gates and project context | dashboard controls, primitives, sections, and command-center action hook own reusable UI and mutations |
@@ -484,13 +490,21 @@ Detector absence never becomes a fabricated zero or an intended-page mismatch
 placeholder.
 
 AI Visibility has exactly Trends, Mentions & Citations, and Query Fanout, with
-Trends as the default. Trends owns latest/start rankings, engine comparison, and
-prompt movement. Competitor suggestions live in Overview's Facts drawer, and no
-Visibility overview token, component, selected-run composition, or redirect is
-retained. The latest Trends and selected-run projection requests start as soon
-as the project is known with `audit_id` omitted; the server resolves latest, and
-only an explicit run choice adds that filter. The shared run list warms in the
-project provider instead of gating the first analytical request.
+Trends as the default. Trends owns the selected measurement, a single competitor
+comparison, timestamp-based history, and prompt/model outcomes. Competitor
+suggestions remain in Overview's Facts drawer. The typed URL-state owner retains
+run/period, engine, cohort, baseline, history, chart metric and evidence filters.
+The server resolves Latest; dependent prompt, source, fanout and answer requests
+reuse the concrete run or configuration-specific run set. Historical windows
+remain separate from the selected measurement. Invalid explicit runs never fall
+back to Latest. The shared run list continues to warm in the project provider.
+
+Mentions & Citations contains Sources and Answers modes. Source totals are
+server aggregates over the full selection; answer pages use a filter-bound
+cursor and snapshot boundary with independent prompt options. Original-answer
+links reuse `/runs/{runId}?execution={taskId}`. Browser history preserves the
+analytical context. Rates and comparison decisions belong to backend projections;
+frontend code sorts, selects and formats them without recomputing aggregate SOV.
 
 `/performance` is the Search Console-aligned surface; `/traffic` is deleted
 and not redirected. Day/Week/Month/Custom are RANGE options, not chart

@@ -5,6 +5,9 @@ export type TrendPoint = {
   /** Null is unavailable and renders as a gap, never as zero. */
   value: number | null;
   versionChange?: { note: string } | null;
+  timestamp?: number;
+  breakBefore?: boolean;
+  href?: string;
 };
 
 const toLinePath = (segment: { x: number; y: number }[]) =>
@@ -15,6 +18,70 @@ const toLinePath = (segment: { x: number; y: number }[]) =>
 const valueText = (value: number | null) => (value === null ? 'unavailable' : `${value}`);
 
 /** Token-only chart for cross-run visibility trends. */
+/**
+ * One plotted point, wrapped in a link only when it HAS somewhere to go.
+ *
+ * A point whose measurement carries no evidence route was still wrapped in an
+ * `<a>` carrying its label; an anchor with no `href` announces as a link that
+ * leads nowhere, which is worse than the plain mark it should have been.
+ */
+function TrendPointMark({ x, y, point }: Readonly<{ x: number; y: number; point: TrendPoint }>) {
+  const description = `${point.label}: ${point.value}`;
+  const mark = (
+    <circle cx={x} cy={y} r={2.5} className="fill-accent" aria-label={description}>
+      <title>{description}</title>
+    </circle>
+  );
+  if (!point.href) return mark;
+  return (
+    <a href={point.href} aria-label={description}>
+      {mark}
+    </a>
+  );
+}
+
+type PlottedPoint = { x: number; y: number | null; breakBefore?: boolean };
+
+/**
+ * The drawn runs of line, split wherever the series stops being continuous.
+ *
+ * A gap is either a point with no value or one explicitly marked as measured
+ * under different conditions — joining across either would draw a change that
+ * was never observed. A run of one point has no line to draw, only its mark.
+ */
+function lineSegmentsOf(points: readonly PlottedPoint[]): { x: number; y: number }[][] {
+  const segments: { x: number; y: number }[][] = [];
+  let current: { x: number; y: number }[] = [];
+  const close = () => {
+    if (current.length) segments.push(current);
+    current = [];
+  };
+  for (const point of points) {
+    if (point.breakBefore) close();
+    if (point.y === null) close();
+    else current.push({ x: point.x, y: point.y });
+  }
+  close();
+  return segments.filter((segment) => segment.length > 1);
+}
+
+/** What the chart says to a reader who cannot see it. */
+function chartDescription(data: readonly TrendPoint[], label?: string): string {
+  const last = data.at(-1);
+  let summary = 'No trend data';
+  if (data.length === 1) {
+    summary = `Single point ${data[0].label} (${valueText(data[0].value)})`;
+  } else if (data.length > 1) {
+    summary =
+      `Trend from ${data[0].label} (${valueText(data[0].value)}) ` +
+      `to ${last?.label} (${valueText(last?.value ?? null)})`;
+  }
+  const gapNote = data.some((entry) => entry.value === null)
+    ? ' Some points are unavailable and shown as gaps.'
+    : '';
+  return label ? `${label}: ${summary}${gapNote}` : `${summary}${gapNote}`;
+}
+
 export function TrendChart({
   data,
   width = 320,
@@ -36,6 +103,10 @@ export function TrendChart({
   const effectiveDomainMax = domainMax > 0 ? domainMax : 100;
   const clamp = (value: number) => Math.max(0, Math.min(effectiveDomainMax, value));
   const stepX = data.length > 1 ? innerWidth / (data.length - 1) : 0;
+  const timestamps = data.map((entry) => entry.timestamp);
+  const timeAxis = timestamps.every((value) => value !== undefined && Number.isFinite(value));
+  const firstTime = timeAxis ? Math.min(...(timestamps as number[])) : 0;
+  const timeSpan = timeAxis ? Math.max(...(timestamps as number[])) - firstTime : 0;
 
   // Labels are NOT identities: a series can hold several points that format to
   // the same label (two runs on the same day both render "1 Aug"), which made
@@ -53,40 +124,25 @@ export function TrendChart({
   });
 
   const points = data.map((entry, index) => ({
-    x: data.length > 1 ? padding + index * stepX : width / 2,
+    x:
+      timeAxis && timeSpan > 0
+        ? padding + ((entry.timestamp! - firstTime) / timeSpan) * innerWidth
+        : data.length > 1
+          ? padding + index * stepX
+          : width / 2,
+    breakBefore: entry.breakBefore,
     y:
       entry.value === null
         ? null
         : padding + innerHeight * (1 - clamp(entry.value) / effectiveDomainMax),
   }));
 
-  const segments: { x: number; y: number }[][] = [];
-  let current: { x: number; y: number }[] = [];
-  for (const point of points) {
-    if (point.y === null) {
-      if (current.length) segments.push(current);
-      current = [];
-    } else {
-      current.push({ x: point.x, y: point.y });
-    }
-  }
-  if (current.length) segments.push(current);
-  const lineSegments = segments.filter((segment) => segment.length > 1);
-
-  const summary = !data.length
-    ? 'No trend data'
-    : data.length === 1
-      ? `Single point ${data[0].label} (${valueText(data[0].value)})`
-      : `Trend from ${data[0].label} (${valueText(data[0].value)}) to ${data.at(-1)?.label} (${valueText(data.at(-1)?.value ?? null)})`;
-  const gapNote = data.some((entry) => entry.value === null)
-    ? ' Some points are unavailable and shown as gaps.'
-    : '';
-  const ariaLabel = label ? `${label}: ${summary}${gapNote}` : `${summary}${gapNote}`;
+  const lineSegments = lineSegmentsOf(points);
+  const ariaLabel = chartDescription(data, label);
 
   return (
     <svg
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SVG is the semantic image; an img cannot render this generated chart.
-      role="img"
+      role={data.some((entry) => entry.href) ? 'group' : 'img'}
       aria-label={ariaLabel}
       width={width}
       height={height}
@@ -127,15 +183,12 @@ export function TrendChart({
       )}
       {points.map((point, index) =>
         point.y === null ? null : (
-          <circle
+          <TrendPointMark
             key={`point-${pointKeys[index]}`}
-            cx={point.x}
-            cy={point.y}
-            r={2.5}
-            className="fill-accent"
-          >
-            <title>{`${data[index].label}: ${data[index].value}`}</title>
-          </circle>
+            x={point.x}
+            y={point.y}
+            point={data[index]}
+          />
         ),
       )}
     </svg>

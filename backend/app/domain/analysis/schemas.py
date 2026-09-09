@@ -33,6 +33,90 @@ class MetricsResponse(BaseModel):
     created_at: datetime
 
 
+class MeasurementCounts(BaseModel):
+    state: str = "unavailable"
+    responses: int = 0
+    brand_responses: int | None = None
+    owned_citation_responses: int | None = None
+    entity_presences: int | None = None
+    expected: int | None = None
+    failed: int | None = None
+    not_run: int | None = None
+
+    @property
+    def is_complete(self) -> bool:
+        """Every expected response was actually observed.
+
+        An unknown expectation is NOT complete. Coverage decides whether a
+        comparison may be stated without qualification, so the three places
+        that ask spell the same question one way — a fourth spelling of it
+        that drifted would be a movement claim over a partial measurement.
+        """
+        return self.expected is not None and self.responses == self.expected
+
+
+class SourceRow(BaseModel):
+    key: str
+    responses: int
+    prompts: int
+    annotations: int
+    urls: int
+    response_rate: float | None = None
+    prompt_coverage: float | None = None
+    ownership: list[str] = Field(default_factory=list)
+    categories: list[str] = Field(default_factory=list)
+    taxonomy_versions: list[str] = Field(default_factory=list)
+    category_unavailable: bool = False
+    response_delta: float | None = None
+
+
+class SourcesResponse(BaseModel):
+    items: list[SourceRow] = Field(default_factory=list)
+    total: int = 0
+    responses: int = 0
+    prompts: int = 0
+    next_offset: int | None = None
+    as_of: datetime
+    comparison_status: str = "no_baseline"
+
+
+class FanoutQueryRow(BaseModel):
+    query: str
+    event_count: int
+    prompt_count: int
+    engines: list[str]
+    response_count: int
+    brand_response_count: int
+
+
+class FanoutAnswer(BaseModel):
+    audit_id: uuid.UUID
+    task_id: uuid.UUID
+    prompt_text: str
+    logical_engine: str
+    brand_mentioned: bool
+    owned_domain_cited: bool
+
+
+class FanoutResponse(BaseModel):
+    event_count: int = 0
+    distinct_queries: int = 0
+    coverage: dict[str, int] = Field(default_factory=dict)
+    items: list[FanoutQueryRow] = Field(default_factory=list)
+    next_offset: int | None = None
+    answers: list[FanoutAnswer] = Field(default_factory=list)
+    total_answers: int = 0
+
+
+class PromptOutcome(BaseModel):
+    logical_engine: str
+    transport_model: str
+    counts: MeasurementCounts
+    visibility_rate: float | None = None
+    owned_citation_rate: float | None = None
+    gap_counts: dict[str, int] = Field(default_factory=dict)
+
+
 class PromptMetricItem(BaseModel):
     """Persisted prompt score and movement, ordered strongest-to-weakest."""
 
@@ -44,7 +128,9 @@ class PromptMetricItem(BaseModel):
     prompt_index: int
     prompt_text: str
     cohort: str
-    composite_score: float
+    prompt_snapshot_id: uuid.UUID | None = None
+    composite_score: float | None
+    source_audit_ids: list[uuid.UUID] = Field(default_factory=list)
     previous_score: float | None = None
     immediate_delta: float | None = None
     rolling_four: list[float] = Field(default_factory=list)
@@ -58,6 +144,15 @@ class PromptMetricItem(BaseModel):
     analyzer_version: str
     scoring_rule_version: str
     created_at: datetime
+    theme: str = ""
+    intent: str = ""
+    visibility_rate: float | None = None
+    owned_citation_rate: float | None = None
+    visibility_delta: float | None = None
+    comparison_status: str = "no_baseline"
+    counts: MeasurementCounts = Field(default_factory=MeasurementCounts)
+    outcomes: list[PromptOutcome] = Field(default_factory=list)
+    comparison: VisibilityComparison | None = None
 
 
 class RankingRow(BaseModel):
@@ -71,9 +166,32 @@ class RankingRow(BaseModel):
     citation_rate: float | None = None
     share_of_voice: float | None = None
     mention_count: int = 0
+    visibility_delta: float | None = None
+    gap_count: int | None = None
+    matched_visibility_rate: float | None = None
+    matched_visibility_delta: float | None = None
+    matched_response_count: int | None = None
     # Roadmap (B-2): present but null until an LLM stage is added.
     sentiment: str | None = None
     avg_position: float | None = None
+
+
+class VisibilityComparison(BaseModel):
+    status: str = "no_baseline"
+    baseline_audit_id: uuid.UUID | None = None
+    baseline_audit_ids: list[uuid.UUID] = Field(default_factory=list)
+    baseline_at: datetime | None = None
+    baseline_counts: MeasurementCounts | None = None
+    current_counts: MeasurementCounts | None = None
+    deltas: dict[str, float | None] = Field(default_factory=dict)
+    rankings: list[RankingRow] = Field(default_factory=list)
+    skipped_runs: int = 0
+    matched_cells: int = 0
+    current_cells: int = 0
+    baseline_cells: int = 0
+    current_values: dict[str, float | None] = Field(default_factory=dict)
+    baseline_values: dict[str, float | None] = Field(default_factory=dict)
+    current_rankings: list[RankingRow] = Field(default_factory=list)
 
 
 class EngineComparisonRow(BaseModel):
@@ -85,6 +203,7 @@ class EngineComparisonRow(BaseModel):
     owned_citation_rate: float | None = None
     search_use_rate: float | None = None
     visibility_score: float | None = None
+    counts: MeasurementCounts = Field(default_factory=MeasurementCounts)
 
 
 class VisibilityResponse(BaseModel):
@@ -102,10 +221,22 @@ class VisibilityResponse(BaseModel):
     analyzer_version: str
     scoring_rule_version: str
     cohort: str = "core"
-    coverage: dict[str, int | float] = Field(default_factory=dict)
+    coverage: dict[str, int | float | None] = Field(default_factory=dict)
     total_completed: int
     total_failed: int
-    visibility_score: float
+    # Historical composite alias; never a presence percentage.
+    visibility_score: float | None
+    visibility_rate: float | None = None
+    prompt_performance_score: float | None = None
+    owned_citation_rate: float | None = None
+    counts: MeasurementCounts = Field(default_factory=MeasurementCounts)
+    comparison_key: str | None = None
+    comparison: VisibilityComparison = Field(default_factory=VisibilityComparison)
+    selection_mode: str = "run"
+    source_audit_ids: list[uuid.UUID] = Field(default_factory=list)
+    configuration_groups: dict[str, int] = Field(default_factory=dict)
+    from_at: datetime | None = None
+    to_at: datetime | None = None
     # Frozen measurement provenance of the selected run (invariants 4/7): the
     # stable catalog-ordered route list
     # (aggregate surface — never a forced singular model across engines).
@@ -167,6 +298,12 @@ class VisibilityTrendPoint(BaseModel):
     completed_at: datetime
     logical_engine: str | None = None
     visibility_score: float | None = None
+    visibility_rate: float | None = None
+    prompt_performance_score: float | None = None
+    counts: MeasurementCounts = Field(default_factory=MeasurementCounts)
+    comparison_key: str | None = None
+    run_count: int = 1
+    source_audit_ids: list[uuid.UUID] = Field(default_factory=list)
     brand_mention_rate: float | None = None
     owned_citation_rate: float | None = None
     sov: VisibilityTrendSov = Field(default_factory=VisibilityTrendSov)
@@ -198,6 +335,8 @@ class CitationEvidence(BaseModel):
     title: str = ""
     domain: str = ""
     classification: str = "third_party"
+    source_class: str | None = None
+    source_taxonomy_version: str | None = None
     is_owned: bool = False
     is_unintended: bool = False
     matched_competitor: str | None = None
@@ -344,10 +483,19 @@ class VisibilityExecutionEvidence(BaseModel):
 class VisibilityEvidenceResponse(BaseModel):
     """The shared persisted evidence dataset for the two evidence tabs.
 
-    ``items`` is newest-first (by audit completion, prompt index, engine,
-    repetition); ``truncated`` is set when more than ``limit`` matches exist.
-    No offset/cursor/total (the endpoint returns a bounded newest window).
+    Items use descending analysis creation time and UUID for stable cursor
+    ordering. Totals and prompt options describe the complete selection.
+    The cursor is bound to all filters and the returned as_of boundary.
     """
 
     items: list[VisibilityExecutionEvidence] = Field(default_factory=list)
     truncated: bool = False
+    total: int = 0
+    next_cursor: str | None = None
+    as_of: datetime | None = None
+    prompt_options: list[EvidencePromptOption] = Field(default_factory=list)
+
+
+class EvidencePromptOption(BaseModel):
+    id: uuid.UUID
+    label: str

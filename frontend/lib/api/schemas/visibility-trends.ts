@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { modelProvenanceSchema } from './audits';
-import { rankingRowSchema } from './visibility';
+import { measurementCountsSchema, rankingRowSchema } from './visibility';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -36,6 +36,12 @@ export const visibilityTrendPointSchema = responseObject({
   completed_at: z.string(),
   logical_engine: z.string().nullable(),
   visibility_score: z.number().nullable(),
+  visibility_rate: z.number().nullable().optional(),
+  prompt_performance_score: z.number().nullable().optional(),
+  counts: measurementCountsSchema.optional(),
+  comparison_key: z.string().nullable().optional(),
+  run_count: z.number().int().optional(),
+  source_audit_ids: z.array(uuid()).optional(),
   brand_mention_rate: z.number().nullable(),
   owned_citation_rate: z.number().nullable(),
   sov: visibilityTrendSovSchema,

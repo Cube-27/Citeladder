@@ -1,21 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
-
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { RankingRow } from '@/lib/api/types';
-import { PLACEHOLDER } from '@/lib/visibility/dashboard';
-
 import { RankingRowsTable } from './ranking-rows';
 
-/**
- * The brand-vs-competitor rankings table is the surface where Track's measured
- * outcome is read, so its job is to distinguish four things a careless table
- * would collapse: a rate that is zero, a rate that is unknown, a metric that is
- * not yet computed, and a trend there is not enough data to draw.
- *
- * The last one matters most. A brand with one reading has no trend; drawing a
- * flat sparkline for it would invent a claim of stability the run cannot
- * support.
- */
 function row(overrides: Partial<RankingRow> = {}): RankingRow {
   return {
     name: 'Acme',
@@ -29,121 +16,74 @@ function row(overrides: Partial<RankingRow> = {}): RankingRow {
     sentiment: null,
     avg_position: null,
     ...overrides,
-  } as RankingRow;
+  };
 }
 
-const headers = () => screen.getAllByRole('columnheader').map((cell) => cell.textContent);
-
 describe('RankingRowsTable', () => {
-  it('ranks rows in the order supplied', () => {
-    render(
-      <RankingRowsTable
-        rows={[row({ name: 'Acme' }), row({ name: 'Globex' }), row({ name: 'Initech' })]}
-      />,
-    );
-
-    const bodyRows = screen.getAllByRole('row').slice(1);
-    expect(within(bodyRows[0]!).getByText('1')).toBeVisible();
-    expect(within(bodyRows[0]!).getByText('Acme')).toBeVisible();
-    expect(within(bodyRows[2]!).getByText('3')).toBeVisible();
-    expect(within(bodyRows[2]!).getByText('Initech')).toBeVisible();
-  });
-
-  it('marks the user’s own brand and only that row', () => {
-    render(
-      <RankingRowsTable rows={[row({ name: 'Acme', is_brand: true }), row({ name: 'Globex' })]} />,
-    );
-
-    expect(screen.getAllByText('You')).toHaveLength(1);
-    const acmeRow = screen.getByText('Acme').closest('tr');
-    expect(within(acmeRow!).getByText('You')).toBeVisible();
-  });
-
-  it('renders a zero rate as zero, not as unknown', () => {
-    render(<RankingRowsTable rows={[row({ mention_rate: 0, share_of_voice: 0 })]} />);
-
-    // "Never mentioned" is a real measurement and must not read as "we do not
-    // know" — they lead to opposite decisions.
-    expect(screen.queryAllByText(PLACEHOLDER)).toHaveLength(2); // sentiment + position only
-    expect(screen.getAllByText('0%').length).toBeGreaterThan(0);
-  });
-
-  it('renders an unknown rate as the placeholder', () => {
-    render(<RankingRowsTable rows={[row({ mention_rate: null, share_of_voice: null })]} />);
-
-    // Sentiment and position are always placeholders, plus these two.
-    expect(screen.getAllByText(PLACEHOLDER)).toHaveLength(4);
-  });
-
-  it('always places sentiment and position as not-yet-computed', () => {
-    render(<RankingRowsTable rows={[row({ sentiment: 'positive', avg_position: 2 })]} />);
-
-    // Decision B-2: these columns are declared but not computed, so the table
-    // must not present stale backend values as live metrics.
-    const bodyRow = screen.getAllByRole('row')[1]!;
-    const cells = within(bodyRow).getAllByRole('cell');
-    expect(cells.at(-1)).toHaveTextContent(PLACEHOLDER);
-    expect(cells.at(-2)).toHaveTextContent(PLACEHOLDER);
-  });
-
-  it('hides the trend column when no history is supplied at all', () => {
-    render(<RankingRowsTable rows={[row()]} />);
-
-    expect(headers()).not.toContain('Trend');
-  });
-
-  it('hides the trend column when every brand has only one reading', () => {
-    // One point is not a trend. An empty column would be dead chrome.
-    render(
-      <RankingRowsTable rows={[row({ name: 'Acme' })]} history={new Map([['Acme', [0.4]]])} />,
-    );
-
-    expect(headers()).not.toContain('Trend');
-  });
-
-  it('shows the trend column once any brand has two readings', () => {
-    render(
-      <RankingRowsTable rows={[row({ name: 'Acme' })]} history={new Map([['Acme', [0.4, 0.6]]])} />,
-    );
-
-    expect(headers()).toContain('Trend');
-    expect(screen.getByLabelText('Acme visibility trend')).toBeInTheDocument();
-  });
-
-  it('leaves a thin brand’s trend cell empty rather than drawing a flat line', () => {
-    render(
-      <RankingRowsTable
-        rows={[row({ name: 'Acme' }), row({ name: 'Globex' })]}
-        history={
-          new Map([
-            ['Acme', [0.4, 0.6]],
-            ['Globex', [0.5]],
-          ])
-        }
-      />,
-    );
-
-    // A single-point sparkline would assert "flat", which is a claim about a
-    // history that does not exist.
-    expect(screen.getByLabelText('Acme visibility trend')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Globex visibility trend')).not.toBeInTheDocument();
-  });
-
-  it('renders an empty table body when there are no rows', () => {
+  it('discloses an empty selection', () => {
     render(<RankingRowsTable rows={[]} />);
-
-    expect(screen.getAllByRole('row')).toHaveLength(1); // header only
+    expect(screen.getByText('No measured responses in this selection.')).toBeVisible();
   });
-
-  it('keeps a brand and a competitor of the same name as distinct rows', () => {
-    // The React key combines the name with brand/competitor for exactly this
-    // case; a name-only key would drop one of them.
+  it('sorts presence rates and breaks ties deterministically without inventing ranks', () => {
     render(
       <RankingRowsTable
-        rows={[row({ name: 'Acme', is_brand: true }), row({ name: 'Acme', is_brand: false })]}
+        rows={[
+          row({ name: 'Zulu' }),
+          row({ name: 'Acme' }),
+          row({ name: 'Leader', mention_rate: 1 }),
+        ]}
       />,
     );
-
-    expect(screen.getAllByText('Acme')).toHaveLength(2);
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(within(rows[0]).getByText('Leader')).toBeVisible();
+    expect(within(rows[1]).getByText('Acme')).toBeVisible();
+    expect(screen.queryByRole('columnheader', { name: /rank/i })).toBeNull();
+  });
+  it('identifies the brand and shows actual citation measurements', () => {
+    render(<RankingRowsTable rows={[row({ is_brand: true })]} responses={10} />);
+    expect(screen.getByText('You')).toBeVisible();
+    expect(screen.getByText('5 of 10 responses')).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: 'Citation rate' })).toBeVisible();
+    expect(screen.queryByRole('columnheader', { name: 'Sentiment' })).toBeNull();
+  });
+  it('distinguishes measured zero, unavailable rates, and incompatible changes', () => {
+    render(
+      <RankingRowsTable
+        rows={[row({ mention_rate: 0 }), row({ name: 'Unknown', mention_rate: null })]}
+      />,
+    );
+    expect(screen.getByText('0%')).toBeVisible();
+    const unknown = screen.getByText('Unknown').closest('tr')!;
+    expect(within(unknown).getByText('Not measured')).toBeVisible();
+    expect(within(unknown).getByText('No comparable change')).toBeVisible();
+  });
+  it('opens the exact same-response competitor gap', () => {
+    const onSelect = vi.fn();
+    render(
+      <RankingRowsTable
+        rows={[row({ name: 'Globex', gap_count: 3, visibility_delta: 0.3 })]}
+        onSelect={onSelect}
+      />,
+    );
+    expect(screen.getByText('+0.3 pp')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: '3 brand-absent answers' }));
+    expect(onSelect).toHaveBeenCalledWith('Globex');
+  });
+  it('keeps subset change separate from full-selection values', () => {
+    render(
+      <RankingRowsTable
+        rows={[
+          row({
+            matched_visibility_delta: 10,
+            matched_visibility_rate: 0.6,
+            matched_response_count: 4,
+          }),
+        ]}
+      />,
+    );
+    const detail = screen.getByText('Matched subset').closest('details')!;
+    fireEvent.click(screen.getByText('Matched subset'));
+    expect(within(detail).getByText('+10.0 pp')).toBeVisible();
+    expect(within(detail).getByText(/4 matched responses/)).toBeVisible();
   });
 });

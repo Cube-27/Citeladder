@@ -50,7 +50,6 @@ import type {
   promptMetricItemSchema,
   observedCompetitorSchema,
   visibilityTrendPointSchema,
-  visibilityTrendRankingRowSchema,
   workspaceSchema,
   productTourSchema,
   productTourStatusSchema,
@@ -195,7 +194,6 @@ export type ReadinessCheck = z.infer<typeof readinessCheckSchema>;
 export type ChangeSummary = z.infer<typeof changeSummarySchema>;
 export type ChangeObservation = z.infer<typeof changeObservationSchema>;
 export type ChangesPage = z.infer<typeof changesPageSchema>;
-export type VisibilityTrendRankingRow = z.infer<typeof visibilityTrendRankingRowSchema>;
 export type VisibilityTrendPoint = z.infer<typeof visibilityTrendPointSchema>;
 export type VisibilityExecutionEvidence = z.infer<typeof visibilityExecutionEvidenceSchema>;
 export type VisibilityEvidenceResponse = z.infer<typeof visibilityEvidenceResponseSchema>;

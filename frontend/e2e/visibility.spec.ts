@@ -87,6 +87,19 @@ function visibility(score: number) {
     total_completed: 6,
     total_failed: 0,
     visibility_score: score,
+    visibility_rate: 4 / 6,
+    owned_citation_rate: 2 / 6,
+    counts: {
+      state: 'measured',
+      responses: 6,
+      brand_responses: 4,
+      owned_citation_responses: 2,
+      entity_presences: 6,
+      expected: 6,
+      failed: 0,
+      not_run: 0,
+    },
+    model_provenance: [],
     rankings: [
       {
         name: 'Acme',
@@ -100,6 +113,7 @@ function visibility(score: number) {
       },
       {
         name: 'Globex',
+        gap_count: 2,
         is_brand: false,
         mention_rate: 0.3,
         citation_rate: 0.1,
@@ -156,7 +170,8 @@ function trendPoint(auditId: string, completedAt: string, score: number | null) 
     ],
     sentiment: null,
     avg_position: null,
-    source_snapshot_ids: [],
+    source_snapshot_ids: [auditId],
+    comparison_key: 'same-panel',
     analyzer_versions: ['v1'],
     scoring_rule_versions: ['v1'],
     spans_version_boundary: false,
@@ -299,7 +314,11 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
   // The visibility dashboard lists audits via the flat `/audits?project_id=` route.
-  await page.route('**/api/v1/audits**', (route) => route.fulfill({ json: [audit] }));
+  await page.route('**/api/v1/audits**', (route) =>
+    route.fulfill({
+      json: [audit, { ...audit, id: AUDIT_EARLIER, completed_at: '2026-07-08T00:00:00Z' }],
+    }),
+  );
 
   // Precise regexes so `/visibility`, `/visibility/trends`, and
   // `/visibility/evidence` (all carrying `?...` query strings) route distinctly.
@@ -307,7 +326,12 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
     route.fulfill(
       bodies.visibilityStatus
         ? { status: bodies.visibilityStatus, json: { detail: 'boom' } }
-        : { json: bodies.visibility ?? visibility(67) },
+        : {
+            json: bodies.visibility ?? {
+              ...visibility(67),
+              audit_id: new URL(route.request().url()).searchParams.get('audit_id') ?? AUDIT_LATEST,
+            },
+          },
     ),
   );
   await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/trends(\?.*)?$/, (route) =>
@@ -331,6 +355,35 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
     );
   });
 
+  await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/sources(\?.*)?$/, (route) =>
+    route.fulfill({
+      json: {
+        items: [],
+        total: 0,
+        responses: 6,
+        prompts: 2,
+        next_offset: null,
+        as_of: '2026-07-15T00:00:00Z',
+        comparison_status: 'no_baseline',
+      },
+    }),
+  );
+  await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/fanout(\?.*)?$/, (route) =>
+    route.fulfill({
+      json: {
+        items: [],
+        answers: [],
+        total_answers: 0,
+        event_count: 2,
+        distinct_queries: 2,
+        coverage: { queries_available: 1 },
+        next_offset: null,
+      },
+    }),
+  );
+  await page.route(/\/api\/v1\/projects\/[^/]+\/visibility\/prompts(\?.*)?$/, (route) =>
+    route.fulfill({ json: [] }),
+  );
   return { requests, evidenceUrls };
 }
 
@@ -348,18 +401,20 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   const { requests, evidenceUrls } = await setup(page, { evidence: fanoutStatesResponse() });
   await page.goto('/visibility');
 
-  await expect(page.getByTestId('trend-chart-visibility_score')).toBeVisible();
+  await expect(page.getByText('Measurement history', { exact: true })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
   // Mentions & Citations.
-  await page.getByRole('tab', { name: 'Mentions' }).click();
+  await page.getByRole('tab', { name: 'Mentions & Citations' }).click();
   await expect(page).toHaveURL(/[?&]tab=mentions-citations/);
+  await page.getByRole('button', { name: 'Mentions and citations mode' }).click();
+  await page.getByRole('menuitemradio', { name: 'Answers', exact: true }).click();
   await expect(page.getByText('Best affordable clothing stores in Australia?')).toBeVisible();
   await expect(page.getByText('Acme Blog')).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
   // Query Fanout — reuses the shared evidence cache.
-  await page.getByRole('tab', { name: 'Search queries' }).click();
+  await page.getByRole('tab', { name: 'Query Fanout' }).click();
   await expect(page).toHaveURL(/[?&]tab=query-fanout/);
   await expect(page.getByText('affordable family clothing Australia 2026')).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
@@ -377,30 +432,30 @@ test('keyboard navigation moves selection with focus transfer (WAI-ARIA)', async
   await trends.focus();
 
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'Mentions' })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Mentions & Citations' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
-  await expect(page.getByRole('tab', { name: 'Mentions' })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'Mentions & Citations' })).toBeFocused();
 
   await page.keyboard.press('End');
-  await expect(page.getByRole('tab', { name: 'Search queries' })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Query Fanout' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
-  await expect(page.getByRole('tab', { name: 'Search queries' })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'Query Fanout' })).toBeFocused();
 
   // Wraps forward from the last tab back to the first.
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
 
   await page.keyboard.press('End');
-  await expect(page.getByRole('tab', { name: 'Search queries' })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Query Fanout' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
   await page.keyboard.press('ArrowLeft');
-  await expect(page.getByRole('tab', { name: 'Mentions' })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Mentions & Citations' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
@@ -431,3 +486,27 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   await page.getByRole('menuitemradio', { name: 'Gemini' }).click();
   await expect(page.getByRole('button', { name: 'Filter by model' })).toContainText('Gemini');
 });
+
+for (const width of [1280, 375]) {
+  test(`older run and engine preserve context through gap evidence at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const { evidenceUrls } = await setup(page);
+    await page.goto(`/visibility?run=${AUDIT_EARLIER}&engine=gemini`);
+    await page.getByRole('button', { name: '2 brand-absent answers' }).click();
+    await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toBeVisible();
+    const evidenceUrl = evidenceUrls.at(-1)!;
+    expect(evidenceUrl.searchParams.get('audit_id')).toBe(AUDIT_EARLIER);
+    expect(evidenceUrl.searchParams.get('engine')).toBe('gemini');
+    expect(evidenceUrl.searchParams.get('outcome')).toBe('competitor_gap');
+    await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toHaveAttribute(
+      'href',
+      `/runs/${AUDIT_LATEST}?execution=${TASK_A}`,
+    );
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`run=${AUDIT_EARLIER}.*engine=gemini`));
+    await expect(page.getByRole('button', { name: '2 brand-absent answers' })).toBeVisible();
+    await page.screenshot({ path: `test-results/visibility-${width}.png`, fullPage: true });
+  });
+}

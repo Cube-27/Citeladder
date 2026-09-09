@@ -18,6 +18,7 @@ import {
 } from '@/test/fixtures/visibility';
 import { mswServer } from '@/test/msw-server';
 import { queryKeys } from '@/lib/api/query-keys';
+import { INITIAL_VISIBILITY_PARAMS } from '@/lib/api/visibility';
 
 let pushStateSpy: ReturnType<typeof vi.spyOn>;
 vi.mock('next/navigation', () => ({
@@ -48,7 +49,11 @@ describe('VisibilityPage — tablist', () => {
     const tablist = await screen.findByRole('tablist', { name: 'Visibility views' });
     const toolbar = screen.getByTestId('visibility-toolbar');
     const tabs = within(tablist).getAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['Trends', 'Mentions', 'Search queries']);
+    expect(tabs.map((t) => t.textContent)).toEqual([
+      'Trends',
+      'Mentions & Citations',
+      'Query Fanout',
+    ]);
     expect(
       tablist.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -71,7 +76,7 @@ describe('VisibilityPage — tablist', () => {
     expect(trendsTab).toHaveAttribute('aria-selected', 'true');
     // Exactly one panel is rendered.
     expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
-    expect(await screen.findByTestId('trend-chart-visibility_score')).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Measurement history' })).toBeVisible();
   });
 
   it('falls back to Trends for an invalid ?tab= value', async () => {
@@ -118,7 +123,7 @@ describe('VisibilityPage — tablist', () => {
     renderVisibilityPage();
 
     await screen.findByRole('tab', { name: 'Trends' });
-    await user.click(screen.getByRole('tab', { name: 'Mentions' }));
+    await user.click(screen.getByRole('tab', { name: 'Mentions & Citations' }));
 
     await waitFor(() =>
       expect(pushStateSpy).toHaveBeenCalledWith(
@@ -145,10 +150,13 @@ describe('VisibilityPage — tablist', () => {
     const trendsTab = await screen.findByRole('tab', { name: 'Trends' });
     trendsTab.focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Mentions' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Mentions & Citations' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
 
     await user.keyboard('{End}');
-    expect(screen.getByRole('tab', { name: 'Search queries' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Query Fanout' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -170,7 +178,7 @@ describe('VisibilityPage — tablist', () => {
     renderVisibilityPage();
 
     const tablist = await screen.findByRole('tablist', { name: 'Visibility views' });
-    for (const name of ['Trends', 'Mentions', 'Search queries']) {
+    for (const name of ['Trends', 'Mentions & Citations', 'Query Fanout']) {
       expect(within(tablist).getByRole('tab', { name })).toBeInTheDocument();
     }
   });
@@ -198,12 +206,15 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
     ]);
     renderVisibilityPage();
 
-    const rankings = (await screen.findByRole('heading', { name: 'Rankings (Latest)' })).closest(
-      'section',
-    )!;
+    // The paired Latest/Start-of-Range tables became one roster read against
+    // the resolved selection: share is stated among the tracked names, and the
+    // selection itself says which runs it covers.
+    const rankings = (
+      await screen.findByRole('heading', { name: 'Brand and competitors' })
+    ).closest('div')!;
     const bodyRows = within(rankings).getAllByRole('row').slice(1);
     expect(within(bodyRows[0]).getByText('Acme')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Rankings (Start of Range)' })).toBeVisible();
+    expect(screen.getByText(/Share is among the tracked roster/i)).toBeVisible();
   });
 
   it('changes the query when a different run is selected', async () => {
@@ -284,7 +295,15 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
       ),
     );
     const { queryClient } = renderVisibilityPage();
-    const latestProjectionKey = [...queryKeys.visibility.project(PROJECT_ID), 'core'] as const;
+    // The key the screen actually writes, built from the same landing
+    // selection navigation intent warms — spelling it out by hand is how this
+    // and the route prefetcher drifted apart from the dashboard in the first
+    // place.
+    const latestProjectionKey = queryKeys.visibility.project(
+      PROJECT_ID,
+      INITIAL_VISIBILITY_PARAMS.audit_id,
+      INITIAL_VISIBILITY_PARAMS,
+    );
 
     await waitFor(() =>
       expect(queryClient.getQueryData<{ audit_id: string }>(latestProjectionKey)?.audit_id).toBe(
@@ -443,12 +462,15 @@ describe('VisibilityPage — per-tab query enablement + cache reuse', () => {
     renderVisibilityPage();
 
     await screen.findByRole('tab', { name: 'Trends' });
-    await user.click(screen.getByRole('tab', { name: 'Mentions' }));
+    await user.click(screen.getByRole('tab', { name: 'Mentions & Citations' }));
+    // The tab opens on Sources; the executions themselves are the Answers mode.
+    await user.click(await screen.findByRole('button', { name: /Mentions and citations mode/i }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Answers' }));
     expect(
       await screen.findByText('Best affordable clothing stores in Australia?'),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('tab', { name: 'Search queries' }));
+    await user.click(screen.getByRole('tab', { name: 'Query Fanout' }));
     // The Query Fanout panel renders from the same cached response.
     expect(
       await screen.findByText('affordable family clothing Australia 2026'),
@@ -475,14 +497,12 @@ describe('VisibilityPage — Trends tab', () => {
     ]);
     renderVisibilityPage();
 
-    expect(await screen.findByTestId('trend-chart-visibility_score')).toBeInTheDocument();
-    expect(screen.getByTestId('trend-chart-sov')).toBeInTheDocument();
-    const latestRankings = screen
-      .getByRole('heading', { name: 'Rankings (Latest)' })
-      .closest('section')!;
-    expect(latestRankings.querySelector('img')?.getAttribute('src')).toContain(
-      'img.logo.dev/acme.com',
-    );
+    expect(await screen.findByRole('heading', { name: 'Measurement history' })).toBeInTheDocument();
+    // Every plotted metric is reachable from the one chart's selector.
+    expect(screen.getByRole('button', { name: /Plotted metric/i })).toBeInTheDocument();
+    // The tracked brand's row carries its own logo, resolved through logo.dev.
+    const brandRow = screen.getByText('Acme').closest('tr')!;
+    expect(brandRow.querySelector('img')?.getAttribute('src')).toContain('img.logo.dev/acme.com');
     // Default granularity=run and a bounded 90d `from` are sent.
     expect(params[0].searchParams.get('granularity')).toBe('run');
     expect(params[0].searchParams.get('from')).toBeTruthy();
@@ -497,7 +517,7 @@ describe('VisibilityPage — Trends tab', () => {
     ]);
     renderVisibilityPage();
 
-    expect(await screen.findByText(/only one completed run is in range/i)).toBeInTheDocument();
+    expect(await screen.findByText(/one measurement in this history window/i)).toBeInTheDocument();
   });
 
   it('renders a null trend metric as a chart gap, never a zero', async () => {
@@ -506,18 +526,24 @@ describe('VisibilityPage — Trends tab', () => {
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility/trends`, () =>
         HttpResponse.json([
           makeTrendPoint(AUDIT_OLDER, '2026-07-10T00:00:00Z', 55),
-          makeTrendPoint('11111111-1111-4111-8111-1111111111ab', '2026-07-12T00:00:00Z', null),
+          // The PLOTTED metric is what has to be absent: a run that produced
+          // no visibility measurement at all, which the chart must leave as a
+          // gap rather than draw at the axis.
+          {
+            ...makeTrendPoint('11111111-1111-4111-8111-1111111111ab', '2026-07-12T00:00:00Z', null),
+            brand_mention_rate: null,
+          },
           makeTrendPoint(AUDIT_LATEST, '2026-07-15T00:00:00Z', 67),
         ]),
       ),
     ]);
     renderVisibilityPage();
 
-    const scoreChart = await screen.findByTestId('trend-chart-visibility_score');
-    const svg = within(scoreChart).getByRole('img');
+    // An unavailable measurement is a GAP, never a zero: it draws no mark, and
+    // the chart says so to a reader who cannot see it.
+    const svg = await screen.findByLabelText(/Measurement history/i);
     expect(svg.getAttribute('aria-label')).toContain('unavailable and shown as gaps');
-    // The null point draws no dot: only the two available points do.
-    expect(scoreChart.querySelectorAll('circle.fill-accent')).toHaveLength(2);
+    expect(svg.querySelectorAll('circle.fill-accent')).toHaveLength(2);
   });
 
   it('renders the retryable error state', async () => {
@@ -529,7 +555,6 @@ describe('VisibilityPage — Trends tab', () => {
     ]);
     renderVisibilityPage();
 
-    expect(await screen.findByText(/could not load the visibility trend/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(await screen.findByText(/could not load history/i)).toBeInTheDocument();
   });
 });

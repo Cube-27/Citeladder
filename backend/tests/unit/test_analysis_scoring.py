@@ -292,8 +292,8 @@ def test_aggregate_run_rates_and_stability() -> None:
 
     summary = aggregate_run(executions, config)
     assert summary["total_completed"] == 6
-    assert summary["brand_mention_rate"] == pytest.approx(round(4 / 6, 4))
-    assert summary["owned_citation_rate"] == pytest.approx(round(2 / 6, 4))
+    assert summary["brand_mention_rate"] == pytest.approx(4 / 6)
+    assert summary["owned_citation_rate"] == pytest.approx(2 / 6)
     assert summary["mention_to_owned_citation_conversion"] == pytest.approx(
         round(2 / 4, 4)
     )
@@ -306,7 +306,7 @@ def test_aggregate_run_rates_and_stability() -> None:
 
     prompt1 = next(p for p in summary["per_prompt"] if p["prompt_index"] == 1)
     assert prompt1["brand_mentioned_count"] == 1
-    assert prompt1["mention_stability"] == pytest.approx(round(2 / 3, 4))
+    assert prompt1["mention_stability"] == pytest.approx(2 / 3)
 
 
 def test_prompt_composite_uses_versioned_weights_and_sorts_strongest_first() -> None:
@@ -568,7 +568,7 @@ def test_share_of_voice_and_roadmap_fields() -> None:
     assert sov["total_mentions"] == 3
     assert sov["mention_counts"]["Best&Less"] == 1
     assert sov["mention_counts"]["Kmart"] == 2
-    assert sov["share"]["Kmart"] == pytest.approx(round(2 / 3, 4))
+    assert sov["share"]["Kmart"] == pytest.approx(2 / 3)
     # Roadmap metrics present but null (decision B-2, invariant 9).
     assert summary["sentiment"] is None
     assert summary["avg_position"] is None

@@ -12,6 +12,10 @@ export const runKeys = {
 
 export const visibilityKeys = {
   all: ['visibility'] as const,
+  sources: (projectId: string, filters: ListFilters = {}) =>
+    ['visibility', 'sources', projectId, filters] as const,
+  fanout: (projectId: string, filters: ListFilters = {}) =>
+    ['visibility', 'fanout', projectId, filters] as const,
   project: (projectId: string, auditId?: string, filters: ListFilters = {}) =>
     ['visibility', 'project', projectId, auditId ?? 'latest', filters] as const,
   // Cross-run trend series: every filter (engine, from, to, granularity, cohort)

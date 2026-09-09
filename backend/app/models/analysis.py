@@ -224,6 +224,10 @@ class Citation(DerivedRowProvenanceMixin, Base):
     domain: Mapped[str] = mapped_column(String(255), default="")
     # Deterministic classification (owned/unintended/competitor/third_party).
     classification: Mapped[str] = mapped_column(String(24), default="third_party")
+    source_class: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    source_taxonomy_version: Mapped[str | None] = mapped_column(
+        String(32), nullable=True
+    )
     is_owned: Mapped[bool] = mapped_column(Boolean, default=False)
     is_unintended: Mapped[bool] = mapped_column(Boolean, default=False)
     matched_competitor: Mapped[str | None] = mapped_column(String(255), nullable=True)

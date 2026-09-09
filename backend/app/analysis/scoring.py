@@ -378,8 +378,8 @@ def _fanout_features(search_events):
     )
 
 
-def _rate(numerator: int, denominator: int) -> float:
-    return round(numerator / denominator, 4) if denominator else 0.0
+def _rate(numerator: int, denominator: int) -> float | None:
+    return numerator / denominator if denominator else None
 
 
 def aggregate_run(
@@ -462,10 +462,12 @@ def _headline_query_counts(scores):
         score for score in scores if score.get("prompt_class") == "non_branded"
     ]
     query_scores = [
-        score for score in non_branded if score.get("search_query_text_available", True)
+        score
+        for score in non_branded
+        if score.get("search_query_text_available") is True
     ]
     all_query_scores = [
-        score for score in scores if score.get("search_query_text_available", True)
+        score for score in scores if score.get("search_query_text_available") is True
     ]
     total_queries = sum(int(score.get("search_query_count") or 0) for score in scores)
     return query_scores, all_query_scores, total_queries
@@ -487,6 +489,9 @@ def _headline_aggregates(scores, total):
         total_queries,
     ) = _headline_counts(scores)
     return {
+        "brand_mention_count": mention,
+        "owned_citation_response_count": owned,
+        "observation_state": "measured" if total else "no_observations",
         "brand_mention_rate": _rate(mention, total),
         "owned_citation_rate": _rate(owned, total),
         "mention_to_owned_citation_conversion": _rate(both, mention),
@@ -498,9 +503,9 @@ def _headline_aggregates(scores, total):
         "competitor_fanout_injection_rate": _optional_rate(
             sum(
                 bool(score.get("competitors_injected_in_search"))
-                for score in all_query_scores
+                for score in query_scores
             ),
-            len(all_query_scores),
+            len(query_scores),
         ),
         "search_use_rate": _rate(
             sum(bool(score.get("search_used")) for score in scores), total
@@ -649,9 +654,15 @@ def _prompt_composite(group, config):
     competitor_mentions = sum(
         len(item["score"].get("competitors_mentioned") or []) for item in group
     )
-    visibility = _rate(mentioned, repetitions)
-    owned_rate = _rate(owned, repetitions)
-    competitive = _rate(mentioned, mentioned + competitor_mentions)
+    # Preserve the versioned composite's original component rounding and
+    # measured-absence treatment; analytical rate projections use exact counts.
+    visibility = round(mentioned / repetitions, 4) if repetitions else 0.0
+    owned_rate = round(owned / repetitions, 4) if repetitions else 0.0
+    competitive = (
+        round(mentioned / (mentioned + competitor_mentions), 4)
+        if mentioned + competitor_mentions
+        else 0.0
+    )
     components, weights = _prompt_score_parts(
         visibility, owned_rate, competitive, bool(config.competitors)
     )
@@ -704,7 +715,10 @@ def _cross_engine_consistency(engine_rates):
 
 
 def _stability(true_count: int, reps: int) -> float:
+    # Exact, like every other rate here. Rounding to four places left this one
+    # figure disagreeing in the fourth decimal with the rates on its own row,
+    # and a reader who opens the evidence has to be able to reconcile them.
     if reps <= 0:
         return 0.0
     false_count = reps - true_count
-    return round(max(true_count, false_count) / reps, 4)
+    return max(true_count, false_count) / reps

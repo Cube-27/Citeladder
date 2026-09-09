@@ -32,7 +32,7 @@ function setVisibilitySearch(search: string) {
 
 describe('VisibilityPage — Mentions & Citations tab', () => {
   it('renders persisted mentions, classified citations, and provenance', async () => {
-    setVisibilitySearch('tab=mentions-citations');
+    setVisibilitySearch('tab=mentions-citations&mode=answers');
     useBaseVisibilityHandlers([
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility/evidence`, () =>
         HttpResponse.json(makeEvidenceResponse()),
@@ -57,7 +57,7 @@ describe('VisibilityPage — Mentions & Citations tab', () => {
   });
 
   it('sends the audit/prompt/engine params and shows the truncation notice', async () => {
-    setVisibilitySearch('tab=mentions-citations');
+    setVisibilitySearch('tab=mentions-citations&mode=answers');
     let captured: URL | null = null;
     useBaseVisibilityHandlers([
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility/evidence`, ({ request }) => {
@@ -68,14 +68,19 @@ describe('VisibilityPage — Mentions & Citations tab', () => {
     renderVisibilityPage();
 
     await screen.findByText('Best affordable clothing stores in Australia?');
-    // The server resolves latest when audit_id is omitted; engine defaults to all too.
-    expect(captured!.searchParams.get('audit_id')).toBeNull();
+    // Evidence is scoped to the run the projection RESOLVED, not left for the
+    // server to resolve again: a run completing between the two requests would
+    // otherwise leave the headline figures and the evidence describing
+    // different runs, which is exactly what has to reconcile.
+    expect(captured!.searchParams.get('audit_id')).toBe(AUDIT_LATEST);
     expect(captured!.searchParams.get('limit')).toBe('100');
-    expect(screen.getByText(/Showing newest 100 executions/)).toBeInTheDocument();
+    // The cap-and-notify behaviour became real pagination, so the reader can
+    // reach past the first page rather than being told results were cut off.
+    expect(screen.getByRole('button', { name: 'Next answers' })).toBeInTheDocument();
   });
 
   it('renders the empty state when there is no persisted evidence and no narrowing filter', async () => {
-    setVisibilitySearch('tab=mentions-citations');
+    setVisibilitySearch('tab=mentions-citations&mode=answers');
     useBaseVisibilityHandlers([
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility/evidence`, () =>
         HttpResponse.json({ items: [], truncated: false }),
@@ -93,7 +98,11 @@ describe('VisibilityPage — Mentions & Citations tab', () => {
   });
 
   it('renders the filtered-empty state with a clear-filters action', async () => {
-    setVisibilitySearch('tab=mentions-citations');
+    // Evidence is scoped by RUN, not by the trend range, so an empty result is
+    // only filtered-empty once a filter that actually narrows it is set —
+    // otherwise it means the run produced nothing, which is a different thing
+    // and gets a different state.
+    setVisibilitySearch('tab=mentions-citations&mode=answers&outcome=brand_absent');
     useBaseVisibilityHandlers([
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility/evidence`, () =>
         HttpResponse.json({ items: [], truncated: false }),
@@ -101,13 +110,12 @@ describe('VisibilityPage — Mentions & Citations tab', () => {
     ]);
     renderVisibilityPage();
 
-    // Default range preset (90d) is a narrowing filter, so this is filtered-empty.
     expect(await screen.findByText('No results match these filters')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
   });
 
   it('renders the retryable error state', async () => {
-    setVisibilitySearch('tab=mentions-citations');
+    setVisibilitySearch('tab=mentions-citations&mode=answers');
     useBaseVisibilityHandlers([
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility/evidence`, () =>
         HttpResponse.json({ detail: 'boom' }, { status: 400 }),
@@ -189,7 +197,8 @@ describe('VisibilityPage — Query Fanout tab', () => {
     expect(
       await screen.findByRole('heading', { name: 'Best affordable clothing stores in Australia?' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('1 prompt')).toBeInTheDocument();
+    // The count is scoped to the page, never claimed as a project-wide total.
+    expect(screen.getByText(/1 prompts on this page/)).toBeInTheDocument();
   });
 });
 
@@ -214,8 +223,8 @@ describe('VisibilityPage — shared filter persistence', () => {
     await user.click(await screen.findByRole('menuitemradio', { name: 'Gemini' }));
 
     // Switch to an evidence tab; the engine filter carries over into the query.
-    await user.click(screen.getByRole('tab', { name: 'Mentions' }));
-    await screen.findByText('Best affordable clothing stores in Australia?');
+    await user.click(screen.getByRole('tab', { name: 'Mentions & Citations' }));
+    await screen.findByRole('button', { name: /Mentions and citations mode/i });
     await waitFor(() => expect(evidenceEngines).toContain('gemini'));
   });
 });

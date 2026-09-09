@@ -11,6 +11,21 @@ export type UrlHistory = 'push' | 'replace';
 
 const URL_STATE_EVENT = 'citeladder:url-state';
 
+/** Atomically change related URL-owned filters with one history entry. */
+export function setUrlParams(
+  values: Readonly<Record<string, string | null>>,
+  history: UrlHistory = 'push',
+) {
+  const current = new URL(window.location.href);
+  for (const [key, value] of Object.entries(values)) {
+    if (value === null) current.searchParams.delete(key);
+    else current.searchParams.set(key, value);
+  }
+  const href = `${current.pathname}${current.search}${current.hash}`;
+  window.history[history === 'push' ? 'pushState' : 'replaceState'](window.history.state, '', href);
+  window.dispatchEvent(new Event(URL_STATE_EVENT));
+}
+
 function subscribe(listener: () => void): () => void {
   window.addEventListener('popstate', listener);
   window.addEventListener(URL_STATE_EVENT, listener);
