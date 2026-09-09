@@ -60,6 +60,7 @@ describe('sitemap', () => {
   });
 
   it('uses editorial dates for posts without manufacturing static-route churn', () => {
+    delete process.env.NEXT_PUBLIC_SITE_URL;
     const entries = sitemap();
     for (const path of STATIC_PATHS) {
       expect(entries.find((entry) => entry.url === path)).not.toHaveProperty('lastModified');

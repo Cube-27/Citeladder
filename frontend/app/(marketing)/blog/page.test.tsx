@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BlogPostView } from '@/components/marketing/pages/blog';
 import type { BlogPost } from '@/lib/marketing-content/blog';
@@ -29,6 +29,8 @@ vi.mock('@/lib/marketing-content/blog', async (importOriginal) => {
 beforeEach(() => {
   blogState.posts = undefined;
 });
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe('Blog index (public marketing `/blog`)', () => {
   it('server-renders every article link and the redesigned hero', () => {
@@ -164,8 +166,7 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
 
   it('emits BlogPosting JSON-LD carrying the supplied byline', () => {
     const post = POSTS[0];
-    const originalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    process.env.NEXT_PUBLIC_SITE_URL = 'https://citeladder.example';
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://citeladder.example');
     const { container } = render(<BlogPostView post={post} />);
 
     const script = container.querySelector('script[type="application/ld+json"]');
@@ -185,8 +186,6 @@ describe('BlogPostView (`/blog/[slug]` sync view)', () => {
     expect(data.inLanguage).toBe('en');
     expect(data.isPartOf).toMatchObject({ '@type': 'Blog' });
     expect(data.author).toMatchObject({ name: post.author });
-    if (originalSiteUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
-    else process.env.NEXT_PUBLIC_SITE_URL = originalSiteUrl;
   });
 });
 
