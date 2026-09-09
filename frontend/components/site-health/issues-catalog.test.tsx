@@ -196,9 +196,11 @@ describe('IssuesCatalog', () => {
    * second issue re-keys the detail query, and `siteHealthQueries.issue`
    * retains the previous crawl-scoped occurrences across that change, so the
    * catalog stays on screen and the rail marks itself busy instead of the
-   * whole view dropping back to the loader.
+   * whole view dropping back to the loader. The rail keeps the previous issue
+   * AND its pages together until the new pair arrives — a new title over the
+   * old issue's URLs would be a caption for pages it does not describe.
    */
-  it('keeps the catalog drawn while a later selection loads', async () => {
+  it('keeps the catalog drawn, and the rail coherent, while a later selection loads', async () => {
     const user = userEvent.setup();
     const OTHER = 'bbbbbbbb-2222-4222-8222-222222222222';
     let holdSecond = false;
@@ -231,6 +233,9 @@ describe('IssuesCatalog', () => {
     await waitFor(() => expect(holdSecond).toBe(true));
     expect(screen.queryByTestId('page-loading')).toBeNull();
     expect(screen.getByRole('link', { name: /Homepage/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'WebSite schema is missing', level: 2 }),
+    ).toBeInTheDocument();
 
     act(() => releaseSecond());
     await waitFor(() =>

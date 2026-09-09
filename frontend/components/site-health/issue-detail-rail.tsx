@@ -106,7 +106,15 @@ export function IssueDetailRail({
             <Button variant="secondary" size="sm" onClick={onPrevious} disabled={!canPrevious}>
               Previous
             </Button>
-            <Button variant="secondary" size="sm" onClick={onNext} disabled={!detail.next_cursor}>
+            {/* The retained page keeps its `next_cursor` while the next one is
+                in flight, so a second click would push the SAME cursor onto
+                the stack and Previous would need two presses to undo one. */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onNext}
+              disabled={!detail.next_cursor || detailQuery.isFetching}
+            >
               Next
             </Button>
           </footer>

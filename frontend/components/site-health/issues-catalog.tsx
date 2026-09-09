@@ -82,14 +82,20 @@ function useIssuesCatalogQueries(
     }),
     enabled: selected !== null,
   });
-  return { issuesQuery, detailQuery, summary, rows, selected };
+  // The rail describes ONE issue, so its header and its occurrences must come
+  // from the same one. The detail lags the selection by a request and the
+  // previous page is retained meanwhile, so the rail keeps the pair it already
+  // has — and marks itself busy — rather than captioning one issue's title
+  // over another issue's pages. The list highlight moves on the click.
+  const shown = rows.find((issue) => issue.group_id === detailQuery.data?.group_id) ?? selected;
+  return { issuesQuery, detailQuery, summary, rows, selected, shown };
 }
 
 export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
   const { cursor, filters, selectedGroupId, navigate, selectIssue } = useIssuesCatalogUrlState();
   const [occurrenceCursors, setOccurrenceCursors] = useState<string[]>([]);
   const findingView: FindingView = filters.finding_class;
-  const { issuesQuery, detailQuery, summary, rows, selected } = useIssuesCatalogQueries(
+  const { issuesQuery, detailQuery, summary, rows, selected, shown } = useIssuesCatalogQueries(
     crawlId,
     filters,
     cursor,
@@ -167,9 +173,9 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
           aria-busy={issuesQuery.isFetching}
         >
           <IssueGroupList rows={rows} selectedGroupId={selected?.group_id} onSelect={chooseGroup} />
-          {selected ? (
+          {shown ? (
             <IssueDetailRail
-              issue={selected}
+              issue={shown}
               crawlId={crawlId}
               detailQuery={detailQuery}
               canPrevious={occurrenceCursors.length > 0}
