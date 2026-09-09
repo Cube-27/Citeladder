@@ -3,7 +3,7 @@ import { expect, test, type Page, type Request } from '@playwright/test';
 const ACCOUNT = '11111111-1111-4111-8111-111111111111';
 
 async function fillExportBillingDetails(page: Page) {
-  await page.getByLabel('Billing country (two-letter code)').fill('US');
+  await page.getByLabel('Billing country', { exact: true }).fill('US');
   await page.getByLabel('Billing name').fill('CiteLadder Test');
   await page.getByLabel('Address').fill('1 Main Street');
   await page.getByLabel('City').fill('New York');
@@ -135,14 +135,16 @@ test('billing: subscription modal verifies server activation', async ({ page }) 
     }),
   );
   await page.goto('/pricing');
-  await fillExportBillingDetails(page);
   await page.getByRole('button', { name: 'Choose Tier 1', exact: true }).click();
+  await fillExportBillingDetails(page);
+  await page.getByRole('button', { name: 'Continue to checkout' }).click();
   await page.getByRole('button', { name: 'Dismiss test payment' }).click();
   await expect(
     page.getByText('Checkout closed. Retry to reopen the same subscription.'),
   ).toBeVisible();
   expect(verified).toBe(false);
   await page.getByRole('button', { name: 'Choose Tier 1', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue to checkout' }).click();
   await page.getByRole('button', { name: 'Complete test payment' }).click();
   expect(attemptKeys).toHaveLength(2);
   expect(attemptKeys[0]).toBeTruthy();

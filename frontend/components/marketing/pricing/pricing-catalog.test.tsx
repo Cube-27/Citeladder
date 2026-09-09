@@ -202,6 +202,8 @@ describe('PricingCatalog', () => {
 
     await screen.findByRole('heading', { name: 'Starter' }, { timeout: 3_000 });
     expect(document.querySelectorAll('[data-tier]')).toHaveLength(4);
+    expect(screen.queryByLabelText(/Billing country/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Billing details' })).not.toBeInTheDocument();
     for (const name of ['Starter', 'Growth', 'Scale', 'Enterprise']) {
       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
     }
@@ -279,8 +281,15 @@ describe('PricingCatalog', () => {
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Starter' });
-    fillExportBillingDetails();
     await userEvent.click(await screen.findByRole('button', { name: /Choose Starter/ }));
+    expect(
+      screen.getByRole('dialog', { name: 'Complete your billing details' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue to checkout' })).toBeDisabled();
+    expect(posted).toBe(0);
+    expect(assign).not.toHaveBeenCalled();
+    fillExportBillingDetails();
+    await userEvent.click(screen.getByRole('button', { name: 'Continue to checkout' }));
 
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/login'));
     expect(posted).toBe(0);

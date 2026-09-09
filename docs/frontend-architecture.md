@@ -390,6 +390,9 @@ commercial fallback. Each self-serve plan shows BYOK and funded prices when
 present, Enterprise remains contact-only, and checkout controls truthfully stay
 disabled while backend checkout is unavailable. The future card-trial panel
 shows an unavailable state and contains no card fields.
+Billing country and invoice details are collected in a dialog after an available
+plan is selected, never as a standing form above the public pricing cards.
+Continuing requires valid billing details before checkout or anonymous intent capture.
 
 The no-card early-access journey is separate from checkout. Offer state comes
 from the backend's stable campaign identity and eligibility result. Claiming
