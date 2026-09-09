@@ -97,7 +97,7 @@ export function UrlDetail({
   }
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
+    <div className="grid min-w-0 gap-[var(--workspace-gap)]">
       <UrlDetailView
         detail={detailQuery.data}
         rerunPending={rerun.isPending}

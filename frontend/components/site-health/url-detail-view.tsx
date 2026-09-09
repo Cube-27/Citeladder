@@ -1,26 +1,15 @@
-import { useState } from 'react';
-import Link from 'next/link';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-
+import { PageHeader } from '@/components/layout/page-header';
+import { InternalLinksCard } from '@/components/site-health/internal-links-card';
+import { IssueEvidence } from '@/components/site-health/issue-evidence';
+import { PageKindBadge } from '@/components/site-health/page-kind-badge';
+import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { Pressable } from '@/components/ui/pressable';
-import { InternalLinksCard } from '@/components/site-health/internal-links-card';
-import { IssueEvidence } from '@/components/site-health/issue-evidence';
-import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
-import { PageKindBadge } from '@/components/site-health/page-kind-badge';
+import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
 import type { DeliveryFacts, IssueOccurrence, PageDetail } from '@/lib/api/types';
-import { ICONS } from '@/lib/icons';
-import {
-  pageKindConfidenceLabel,
-  pageKindLabel,
-  pageTraitLabel,
-  readPageKindEvidence,
-  type PageKindEvidenceView,
-} from '@/lib/site-health/page-kinds';
 import {
   dimensionLabel,
   severityBadgeValue,
@@ -35,8 +24,6 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
-import { panelClasses } from '@/components/ui/panel';
-import { ledgerClasses } from '@/components/ui/workspace';
 
 export function UrlDetailView({
   detail,
@@ -51,23 +38,15 @@ export function UrlDetailView({
 }>) {
   return (
     <>
-      <nav className="text-muted text-xs" aria-label="Breadcrumb">
-        <Link href="/site" className="hover:text-accent">
-          Website
-        </Link>
-        <span className="px-1.5" aria-hidden>
-          /
-        </span>
-        <span className="text-secondary break-all">
-          {pageDisplayTitle(detail.title, detail.display_url)}
-        </span>
-      </nav>
-      <HeaderCard
-        detail={detail}
-        rerunPending={rerunPending}
-        rerunQueued={rerunQueued}
-        onRerun={onRerun}
+      <PageHeader
+        title={pageDisplayTitle(detail.title, detail.display_url)}
+        actions={
+          <Button size="sm" onClick={onRerun} disabled={rerunPending}>
+            {rerunPending ? 'Re-auditing…' : rerunQueued ? 'Re-audit queued' : 'Re-audit this page'}
+          </Button>
+        }
       />
+      <PageMetadata detail={detail} />
       <UrlScoreSummary detail={detail} />
       <DeliveryMetrics delivery={detail.delivery} />
       <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
@@ -76,260 +55,48 @@ export function UrlDetailView({
   );
 }
 
-function HeaderCard({
-  detail,
-  rerunPending,
-  rerunQueued,
-  onRerun,
-}: Readonly<{
-  detail: PageDetail;
-  rerunPending: boolean;
-  rerunQueued: boolean;
-  onRerun: () => void;
-}>) {
-  const pageKindEvidence = readPageKindEvidence(detail.page_kind_evidence, detail.page_kind);
-  const [evidenceOpen, setEvidenceOpen] = useState(false);
-
+function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
   return (
-    <Card>
-      <CardContent className="grid gap-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid min-w-0 gap-1">
-            <h1 className={textRole('pageTitle', 'break-all')}>
-              {pageDisplayTitle(detail.title, detail.display_url)}
-            </h1>
-          </div>
-          <Button size="sm" onClick={onRerun} disabled={rerunPending}>
-            {rerunPending ? 'Re-auditing…' : rerunQueued ? 'Re-audit queued' : 'Re-audit this page'}
-          </Button>
-        </div>
-        <div className="text-secondary flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <Label>URL</Label>
-            <a
-              href={detail.display_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mono text-accent-text min-w-0 break-all hover:underline"
-            >
-              {detail.display_url}
-            </a>
-          </span>
-          <PageTraits traits={detail.page_traits} />
-          <span className="flex items-center gap-1.5">
-            <Label>Page Kind</Label>
-            <PageKindBadge pageKind={detail.page_kind} />
-            {pageKindEvidence ? (
-              <Pressable
-                type="button"
-                aria-expanded={evidenceOpen}
-                aria-controls="page-kind-evidence"
-                aria-label={
-                  pageKindEvidence.schemaConflict
-                    ? 'Why this page kind? Schema markup disagrees.'
-                    : 'Why this page kind?'
-                }
-                onClick={() => setEvidenceOpen((open) => !open)}
-                className={textRole('label', 'text-accent-text inline-flex items-center gap-1')}
-              >
-                {evidenceOpen ? (
-                  <ChevronDown className="size-3" aria-hidden />
-                ) : (
-                  <ChevronRight className="size-3" aria-hidden />
-                )}
-                Why this page kind?
-                {pageKindEvidence.schemaConflict ? (
-                  <span
-                    className="bg-warning ms-0.5 inline-block size-1.25 rounded-full"
-                    aria-hidden
-                  />
-                ) : null}
-              </Pressable>
-            ) : null}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Label>Last Audit</Label>
-            <span>{formatAudited(detail.last_audited)}</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Label>Status</Label>
-            <Badge variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
-              {statusLabel(detail.analysis_status)}
-            </Badge>
-          </span>
-        </div>
-        {pageKindEvidence && evidenceOpen ? (
-          <PageKindEvidencePanel evidence={pageKindEvidence} finalPageKind={detail.page_kind} />
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
-/**
- * Observed traits, shown beside the page kind.
- *
- * A kind is exclusive and answers "what is this page for". A trait is
- * additive and answers "what else is on it", so a product page carrying an
- * FAQ shows both rather than being filed as one or the other. Rendered only
- * when something was actually observed: an empty list is a real answer, not a
- * gap worth a placeholder row.
- */
-function PageTraits({ traits }: Readonly<{ traits: readonly string[] | null }>) {
-  if (traits === null || traits.length === 0) return null;
-  return (
-    <span className="flex flex-wrap items-center gap-1.5">
-      <Label>Also on this page</Label>
-      {traits.map((trait) => (
-        <Badge key={trait}>{pageTraitLabel(trait)}</Badge>
-      ))}
-    </span>
-  );
-}
-
-function PageKindEvidencePanel({
-  evidence,
-  finalPageKind,
-}: Readonly<{ evidence: PageKindEvidenceView; finalPageKind: string | null }>) {
-  const WarningIcon = ICONS.warning;
-  return (
-    <div id="page-kind-evidence">
-      <div className={panelClasses({ tone: 'tonal', pad: 'compact' }, 'grid gap-3')}>
-        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-          <EvidenceFact label="Classified by" value={evidence.classifiedBy} />
-          <EvidenceFact
-            label="Confidence"
-            value={pageKindConfidenceLabel(evidence.confidence, evidence.tier)}
-          />
-          <EvidenceFact
-            label="Schema suggests"
-            value={
-              evidence.schemaSuggestedType === null
-                ? PLACEHOLDER
-                : pageKindLabel(evidence.schemaSuggestedType)
-            }
-            warning={evidence.schemaConflict}
-          />
-          <EvidenceFact label="Signals matched" value={String(evidence.signals.length)} />
-        </div>
-        {evidence.otherReason !== null ? (
-          <div
-            role="note"
-            className="border-border-subtle text-secondary rounded-[var(--radius-control)] border px-3 py-2 text-sm"
+    <section className="border-border-subtle min-w-0 border-y py-4">
+      <dl className="grid min-w-0 gap-x-6 gap-y-4 min-[701px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+        <DetailFact label="URL" className="min-[701px]:col-span-2 xl:col-span-1">
+          <a
+            href={detail.display_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={textRole(
+              'bodyStrong',
+              'mono text-accent-text min-w-0 [overflow-wrap:anywhere] hover:underline',
+            )}
           >
-            {evidence.otherReason === 'schema_only'
-              ? 'Schema suggested a type, but no independent page evidence confirmed it, so the type was left unassigned.'
-              : evidence.otherReason === 'conflicting_top_tier_evidence'
-                ? 'Independent evidence disagreed at the same confidence tier, so the type was left unassigned.'
-                : 'No classification signals matched this page, so its type was left unassigned rather than guessed.'}
-          </div>
-        ) : null}
-        {evidence.alternatives.length > 0 ? (
-          <section className="grid gap-1">
-            <Label>Other candidates</Label>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {evidence.alternatives.map((candidate) => (
-                <span key={candidate.pageKind} className="flex items-center gap-1">
-                  <Badge>{pageKindLabel(candidate.pageKind)}</Badge>
-                  <span className="mono text-muted text-xs">{candidate.tier}</span>
-                </span>
-              ))}
-            </div>
-          </section>
-        ) : null}
-        {evidence.conflicts.length > 0 ? (
-          <section className="grid gap-1">
-            <Label>Disagreeing signals</Label>
-            {evidence.conflicts.map((conflict) => (
-              <span
-                key={`${conflict.signal}:${conflict.conflictingPageKind}`}
-                className="text-secondary text-sm"
-              >
-                <span className="mono">{conflict.signal}</span> suggested{' '}
-                <span className="mono">{pageKindLabel(conflict.conflictingPageKind)}</span>
-                {conflict.detail ? <span className="text-muted"> ({conflict.detail})</span> : null}
-              </span>
-            ))}
-          </section>
-        ) : null}
-        {evidence.schemaConflict && evidence.schemaSuggestedType !== null ? (
-          <div
-            role="note"
-            className="border-warning-border bg-warning-bg text-warning-text flex items-start gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm"
-          >
-            <WarningIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
-            <div>
-              Schema markup on this page declares{' '}
-              <span className="mono">{pageKindLabel(evidence.schemaSuggestedType)}</span>, which
-              disagrees with the chosen type. URL and content signals outrank schema, so the page is
-              treated as {finalPageKind === null ? PLACEHOLDER : pageKindLabel(finalPageKind)} —
-              check whether the markup belongs here.
-            </div>
-          </div>
-        ) : null}
-        {evidence.signals.length > 0 ? <EvidenceSignals evidence={evidence} /> : null}
-        <p className="text-muted text-xs">
-          Signals are evaluated in a fixed priority order; the highest-priority match sets the type.
-        </p>
-      </div>
-    </div>
+            {detail.display_url}
+          </a>
+        </DetailFact>
+        <DetailFact label="Page Kind">
+          <PageKindBadge pageKind={detail.page_kind} />
+        </DetailFact>
+        <DetailFact label="Last Audit">
+          <span className={textRole('bodyStrong')}>{formatAudited(detail.last_audited)}</span>
+        </DetailFact>
+        <DetailFact label="Status">
+          <Badge variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
+            {statusLabel(detail.analysis_status)}
+          </Badge>
+        </DetailFact>
+      </dl>
+    </section>
   );
 }
 
-function EvidenceFact({
+function DetailFact({
   label,
-  value,
-  warning = false,
-}: Readonly<{ label: string; value: string; warning?: boolean }>) {
+  children,
+  className,
+}: Readonly<{ label: string; children: React.ReactNode; className?: string }>) {
   return (
-    <span className="grid gap-0.5">
-      <Label>{label}</Label>
-      <span
-        className={cn(
-          textRole('bodyStrong', 'mono'),
-          warning ? 'text-warning-text' : 'text-foreground',
-        )}
-      >
-        {value}
-      </span>
-    </span>
-  );
-}
-
-function EvidenceSignals({ evidence }: Readonly<{ evidence: PageKindEvidenceView }>) {
-  return (
-    <div className="grid">
-      {evidence.signals.map((signal, index) => {
-        const chosen = signal.signal === evidence.classifiedBy;
-        return (
-          <div
-            key={signal.signal}
-            className="border-border-subtle flex flex-wrap items-center gap-x-3 gap-y-1 border-b py-1.5 last:border-b-0"
-          >
-            <span className="mono text-muted w-4.5 shrink-0 text-xs">{index + 1}</span>
-            <span className={cn('mono text-sm', chosen ? 'text-foreground' : 'text-secondary')}>
-              {signal.signal}
-              {chosen ? (
-                <span className={textRole('label', 'text-accent-text ms-1.5')}>chosen</span>
-              ) : null}
-            </span>
-            <Badge>{pageKindLabel(signal.pageKind)}</Badge>
-            <span
-              className={cn(
-                textRole('bodyStrong', 'mono'),
-                chosen ? 'text-foreground' : 'text-secondary',
-              )}
-            >
-              {signal.tier}
-            </span>
-            <span className="flex min-w-0 flex-1 items-center gap-3">
-              <span className="mono text-muted truncate text-xs" title={signal.detail}>
-                {signal.detail}
-              </span>
-            </span>
-          </div>
-        );
-      })}
+    <div className={cn('grid min-w-0 content-start gap-1', className)}>
+      <dt className={textRole('meta')}>{label}</dt>
+      <dd className="min-w-0">{children}</dd>
     </div>
   );
 }
@@ -355,28 +122,22 @@ function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
     { label: 'Wire Size', value: formatBytes(delivery.wire_bytes) },
   ];
   return (
-    <Card>
-      <CardContent className="grid gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className={textRole('objectTitle')}>Delivery Metrics</h2>
-          <span className="text-muted text-xs">Static HTTP-level measurements</span>
-        </div>
-        <dl className="grid gap-4 sm:grid-cols-4">
-          {items.map((item) => (
-            <div key={item.label} className="grid gap-0.5">
-              <Label>{item.label}</Label>
-              <dd className={textRole('bodyStrong', 'mono')}>
-                {item.value === PLACEHOLDER ? (
-                  <UnavailableValue state="not_measured" />
-                ) : (
-                  item.value
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </CardContent>
-    </Card>
+    <section className="border-border-subtle grid gap-4 border-y py-4">
+      <EditorialSectionHeader
+        title="Delivery Metrics"
+        description="Static HTTP-level measurements"
+      />
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+        {items.map((item) => (
+          <div key={item.label} className="grid gap-0.5">
+            <Label>{item.label}</Label>
+            <dd className={textRole('metricSm', 'mono')}>
+              {item.value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : item.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 

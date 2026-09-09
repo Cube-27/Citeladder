@@ -1,13 +1,14 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useContext, useLayoutEffect, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
 import { textRole } from '@/components/ui/typography';
 
 import { resolveTitle } from './page-titles';
+import { CompactPageTitleContext } from './compact-page-title-context';
 
 /**
  * PageHeader — the route-owned in-pane label. Entity detail keeps its own
@@ -32,14 +33,25 @@ export function PageHeader({
 }>) {
   const pathname = usePathname() ?? '';
   const resolved = title ?? resolveTitle(pathname);
+  const setCompactTitle = useContext(CompactPageTitleContext);
+
+  useLayoutEffect(() => {
+    if (!setCompactTitle || title === undefined) return;
+    setCompactTitle(title);
+    return () => {
+      setCompactTitle((current) => (current === title ? undefined : current));
+    };
+  }, [setCompactTitle, title]);
+
   return (
     <header
       className={cn(
         'flex min-w-0 flex-col gap-[var(--page-header-gap)] pt-[var(--page-header-padding-top)] pb-[var(--page-header-padding-bottom)] min-[701px]:flex-row min-[701px]:items-start min-[701px]:justify-between',
+        !description && !actions && 'max-[700px]:hidden',
         className,
       )}
     >
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 max-[700px]:sr-only">
         <h1 className={textRole('pageTitle', 'min-w-0 [overflow-wrap:break-word]')}>{resolved}</h1>
         {description ? (
           <div className="text-secondary mt-[var(--page-header-heading-gap)] max-w-[700px] text-sm leading-[22px]">

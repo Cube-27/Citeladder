@@ -1,12 +1,12 @@
-import { Card, CardContent } from '@/components/ui/card';
 import { ScoreRing } from '@/components/ui/score-ring';
 import { Label } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { hairlineBandClasses, hairlineBandItemClasses } from '@/components/ui/workspace';
 import type { PageDetail } from '@/lib/api/types';
 
 export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
+    <div className={`${hairlineBandClasses} sm:grid-cols-3`}>
       <ScoreTile
         label="Web Fundamentals"
         value={detail.web_fundamentals_score}
@@ -40,19 +40,19 @@ function ScoreTile({
   const coverageLabel =
     coverage === null ? 'Coverage unavailable' : `${Math.round(coverage * 100)}% measured`;
   return (
-    <Card>
-      <CardContent className="flex flex-col items-center gap-2 py-[var(--card-padding)]">
-        {value === null ? (
-          scoreUnavailableState(state)
-        ) : (
-          <ScoreRing value={value} size={64} label={`${label}: ${Math.round(value)}`} />
-        )}
+    <div className={`${hairlineBandItemClasses} flex min-h-20 items-center gap-3`}>
+      {value === null ? (
+        scoreUnavailableState(state)
+      ) : (
+        <ScoreRing value={value} size={56} label={`${label}: ${Math.round(value)}`} />
+      )}
+      <div className="grid min-w-0 gap-1">
         <Label>{label}</Label>
-        <span className="text-muted text-center text-xs">
+        <span className="text-muted text-xs">
           {coverageLabel} · {scoreConfidenceLabel(state)}
         </span>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

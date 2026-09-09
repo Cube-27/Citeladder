@@ -1,7 +1,16 @@
+import { FileSearch, Headphones, KeyRound, ShieldCheck } from 'lucide-react';
+
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 
 import { Reveal, StaggerGroup, StaggerItem } from '../primitives/reveal';
 import { Section } from '../primitives/section';
+
+const GUARANTEE_ICONS = {
+  'Security & compliance ready': ShieldCheck,
+  'Advanced permissions and SSO': KeyRound,
+  'Audit trail and exportable reports': FileSearch,
+  'Dedicated support and success': Headphones,
+} as const;
 
 export function Trust() {
   const { trust } = LANDING_CONTENT;
@@ -18,18 +27,19 @@ export function Trust() {
         </Reveal>
       </div>
       <StaggerGroup className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {trust.guarantees.map((guarantee, index) => (
-          <StaggerItem
-            key={guarantee.title}
-            className="border-border-subtle grid gap-3 border-t pt-4"
-          >
-            <span className="website-label" aria-hidden>
-              {String(index + 1).padStart(2, '0')}
-            </span>
-            <h3 className="website-small-heading">{guarantee.title}</h3>
-            <p className="website-body">{guarantee.description}</p>
-          </StaggerItem>
-        ))}
+        {trust.guarantees.map((guarantee) => {
+          const Icon = GUARANTEE_ICONS[guarantee.title];
+          return (
+            <StaggerItem
+              key={guarantee.title}
+              className="border-border-subtle grid gap-3 border-t pt-4"
+            >
+              <Icon className="text-accent size-5" aria-hidden />
+              <h3 className="website-small-heading">{guarantee.title}</h3>
+              <p className="website-body">{guarantee.description}</p>
+            </StaggerItem>
+          );
+        })}
       </StaggerGroup>
     </Section>
   );

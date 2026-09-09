@@ -13,6 +13,7 @@ import type { PageDetail } from '@/lib/api/types';
 const push = vi.fn();
 let searchParamsValue = new URLSearchParams();
 vi.mock('next/navigation', () => ({
+  usePathname: () => `/site/crawls/${CRAWL}/pages/${URL_ID}`,
   useRouter: () => ({ push, replace: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
   useSearchParams: () => searchParamsValue,
 }));
@@ -220,73 +221,18 @@ describe('UrlDetail', () => {
     expect(screen.getByText('Expected WebSite; found Organization.')).toBeInTheDocument();
   });
 
-  it('shows observed traits beside the page kind, so a hybrid page reads as both', async () => {
-    // page_kind is exclusive and answers "what is this page for". A trait is
-    // additive and answers "what else is on it", so a product page carrying an
-    // FAQ shows both rather than being filed as one or the other.
+  it('keeps the header to concise persisted page metadata', async () => {
     mswServer.use(...handlers(detail()));
     renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-    expect(await screen.findByText('Also on this page')).toBeInTheDocument();
-    expect(screen.getByText('Has an FAQ')).toBeInTheDocument();
-    expect(screen.getByText('Has variants')).toBeInTheDocument();
-  });
 
-  it('renders no traits row when nothing was observed', async () => {
-    // An empty list is a real answer, not a gap that wants a placeholder.
-    mswServer.use(...handlers(detail({ page_traits: [] })));
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-    expect(await screen.findByText('Page Kind')).toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+    expect(screen.getByText('Page Kind')).toBeInTheDocument();
+    expect(screen.getByText('Last Audit')).toBeInTheDocument();
+    expect(screen.getByText('Status')).toBeInTheDocument();
     expect(screen.queryByText('Also on this page')).not.toBeInTheDocument();
-  });
-
-  it('discloses the persisted classifier evidence via the "why this type?" toggle', async () => {
-    mswServer.use(...handlers(detail()));
-    const user = userEvent.setup();
-
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    // Collapsed by default: the toggle advertises the schema conflict, the
-    // panel is not rendered.
-    const toggle = screen.getByRole('button', {
-      name: 'Why this page kind? Schema markup disagrees.',
-    });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByText('Classified by')).not.toBeInTheDocument();
-
-    await user.click(toggle);
-
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    // Verdict facts: winning signal (shown as the verdict AND as the winning
-    // signal row), the confidence label, signals count.
-    expect(screen.getByText('Classified by')).toBeInTheDocument();
-    expect(screen.getAllByText('path_pattern')).toHaveLength(2);
-    expect(screen.getByText('Medium — URL pattern')).toBeInTheDocument();
-    expect(screen.getByText('Signals matched')).toBeInTheDocument();
-    // The schema conflict is highlighted, naming both types.
-    const note = screen.getByRole('note');
-    expect(note).toHaveTextContent('Schema markup on this page declares Article');
-    expect(note).toHaveTextContent('treated as Product');
-    // Ranked signals with their evidence tier; the winner carries "chosen".
-    expect(screen.getByText('structured_data')).toBeInTheDocument();
-    expect(screen.getAllByText('route')).not.toHaveLength(0);
-    expect(screen.getByText('chosen')).toBeInTheDocument();
-    expect(screen.queryByText('sh-classifier-1')).toBeNull();
-
-    // Collapsing hides the panel again.
-    await user.click(toggle);
-    expect(screen.queryByText('Classified by')).not.toBeInTheDocument();
-  });
-
-  it('hides the "why this type?" toggle when no classifier evidence was persisted', async () => {
-    mswServer.use(...handlers(detail({ page_kind_evidence: null })));
-
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
-
-    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    // The badge still renders; only the disclosure is withheld.
-    expect(screen.getByText('Product')).toBeInTheDocument();
+    expect(screen.queryByText('Has an FAQ')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /why this page kind/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Classified by')).not.toBeInTheDocument();
   });
 
   it('renders a persisted unresolved-purpose state simply as not measured', async () => {

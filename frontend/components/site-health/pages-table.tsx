@@ -116,7 +116,7 @@ export function PagesTable({
     router.push(`/site/crawls/${page?.crawl_id ?? crawlId}/pages/${siteUrlId}`);
   };
   return (
-    <Table>
+    <Table className="min-w-[72rem]">
       <TableHeader>
         <TableRow>
           <TableHead numeric className="w-10">

@@ -78,14 +78,14 @@ export default function RunsPage() {
 
   return (
     <Stack gap="section">
-      <PageHeader
-        actions={
-          <Button onClick={() => setLaunchOpen(true)} disabled={!projectId}>
-            Launch audit
-          </Button>
-        }
-      />
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid gap-[var(--workspace-gap)]">
+        <PageHeader
+          actions={
+            <Button onClick={() => setLaunchOpen(true)} disabled={!projectId}>
+              Launch audit
+            </Button>
+          }
+        />
         <fieldset className="flex flex-wrap items-center gap-2" aria-label="Filter by status">
           {STATUS_FILTERS.map((filter) => (
             <FilterChip

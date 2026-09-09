@@ -1,12 +1,11 @@
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Label, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { PageDetail } from '@/lib/api/types';
 import { PLACEHOLDER } from '@/lib/site-health/status';
-import { ledgerClasses } from '@/components/ui/workspace';
+import { EditorialSectionHeader, ledgerClasses } from '@/components/ui/workspace';
 
 /**
  * Internal links — the crawl's persisted link-graph projection for this page.
@@ -37,45 +36,40 @@ export function InternalLinksCard({
     },
   ];
   return (
-    <Card className="min-w-0 overflow-hidden">
-      <CardContent className="grid gap-4">
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-          <h2 className={textRole('objectTitle')}>Internal Links</h2>
-          <span className="text-muted shrink-0 text-xs">
-            Counted across {links.source_page_count} crawled page
-            {links.source_page_count === 1 ? '' : 's'}
-          </span>
-        </div>
-        <dl className="grid gap-4 sm:grid-cols-3">
-          {metrics.map((metric) => (
-            <div key={metric.label} className="grid gap-0.5">
-              <Label>{metric.label}</Label>
-              <dd className={textRole('bodyStrong', 'mono')}>
-                {metric.value === PLACEHOLDER ? (
-                  <UnavailableValue state="not_measured" />
-                ) : (
-                  metric.value
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-          <NeighbourList
-            heading="Top linking pages"
-            neighbours={links.top_inbound}
-            crawlId={crawlId}
-            emptyMessage="No crawled page links here."
-          />
-          <NeighbourList
-            heading="Top linked pages"
-            neighbours={links.top_outbound}
-            crawlId={crawlId}
-            emptyMessage="This page links to no other crawled page."
-          />
-        </div>
-      </CardContent>
-    </Card>
+    <section className="border-border-subtle grid min-w-0 gap-4 border-y py-4">
+      <EditorialSectionHeader
+        title="Internal Links"
+        description={`Counted across ${links.source_page_count} crawled page${links.source_page_count === 1 ? '' : 's'}`}
+      />
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="grid gap-0.5">
+            <Label>{metric.label}</Label>
+            <dd className={textRole('bodyStrong', 'mono')}>
+              {metric.value === PLACEHOLDER ? (
+                <UnavailableValue state="not_measured" />
+              ) : (
+                metric.value
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+        <NeighbourList
+          heading="Top linking pages"
+          neighbours={links.top_inbound}
+          crawlId={crawlId}
+          emptyMessage="No crawled page links here."
+        />
+        <NeighbourList
+          heading="Top linked pages"
+          neighbours={links.top_outbound}
+          crawlId={crawlId}
+          emptyMessage="This page links to no other crawled page."
+        />
+      </div>
+    </section>
   );
 }
 
@@ -107,14 +101,14 @@ function NeighbourList({
               {neighbour.site_url_id ? (
                 <Link
                   href={`/site/crawls/${crawlId}/pages/${neighbour.site_url_id}`}
-                  className="text-accent-text mono min-w-0 truncate text-xs hover:underline"
+                  className="text-accent-text mono min-w-0 text-xs leading-4 break-all hover:underline"
                   title={neighbour.url}
                 >
                   {neighbour.url}
                 </Link>
               ) : (
                 <span
-                  className="mono text-secondary min-w-0 truncate text-xs"
+                  className="mono text-secondary min-w-0 text-xs leading-4 break-all"
                   title={neighbour.url}
                 >
                   {neighbour.url}

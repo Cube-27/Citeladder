@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { useState, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 const { pathname } = vi.hoisted(() => ({ pathname: { value: '/visibility' } }));
@@ -8,6 +9,17 @@ vi.mock('next/navigation', () => ({
 }));
 
 import { PageHeader } from './page-header';
+import { CompactPageTitleContext } from './compact-page-title-context';
+
+function CompactTitleHarness({ children }: Readonly<{ children: ReactNode }>) {
+  const [title, setTitle] = useState<string>();
+  return (
+    <CompactPageTitleContext.Provider value={setTitle}>
+      <output data-testid="compact-title">{title}</output>
+      {children}
+    </CompactPageTitleContext.Provider>
+  );
+}
 
 function renderTitle(route: string) {
   pathname.value = route;
@@ -47,6 +59,16 @@ describe('PageHeader', () => {
     pathname.value = '/visibility';
     render(<PageHeader title="Custom" />);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Custom');
+  });
+
+  it('supplies an explicit title override to the compact shell', () => {
+    render(
+      <CompactTitleHarness>
+        <PageHeader title="Custom" />
+      </CompactTitleHarness>,
+    );
+
+    expect(screen.getByTestId('compact-title')).toHaveTextContent('Custom');
   });
 
   it('renders the route title as a level-one heading by default', () => {

@@ -33,7 +33,7 @@ export function Table({
   return (
     <div
       ref={wrapperRef}
-      className={cn('bg-panel relative w-full overflow-auto', wrapperClassName)}
+      className={cn('bg-panel relative w-full max-w-full min-w-0 overflow-auto', wrapperClassName)}
     >
       <table className={cn('w-full border-collapse text-sm', className)}>{children}</table>
     </div>

@@ -127,7 +127,7 @@ function IllustrativeLabel() {
 export function Workflow() {
   const { workflow } = LANDING_CONTENT;
   return (
-    <Section id="how-it-works" tone="paper" rhythm="base" aria-labelledby="workflow-title">
+    <Section id="how-it-works" tone="sunken" rhythm="base" aria-labelledby="workflow-title">
       <SectionHeader title={workflow.title} lead={workflow.lead} headingId="workflow-title" />
       <StaggerGroup className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         {workflow.steps.map((step, index) => {
