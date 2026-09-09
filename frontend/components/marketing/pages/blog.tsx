@@ -121,7 +121,7 @@ export function BlogIndex() {
     <>
       <header className="border-border-subtle border-b py-10 md:py-12">
         <Container>
-          <Reveal className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_8rem] xl:grid-cols-[minmax(0,1fr)_14rem]">
+          <Reveal className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
             <div>
               <p className="website-eyebrow text-accent-text">Blog</p>
               <h1 className="website-page-title text-foreground mt-4">
@@ -140,7 +140,7 @@ export function BlogIndex() {
                 aria-hidden="true"
                 fill
                 priority
-                sizes="(max-width: 1279px) 128px, 224px"
+                sizes="(max-width: 1279px) 288px, 384px"
                 className="object-contain"
               />
             </div>
