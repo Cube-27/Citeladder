@@ -98,23 +98,6 @@ function VisibilityWorkspace({
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
-      <VisibilityToolbar
-        activeTab={filters.activeTab}
-        runs={queries.runOptions}
-        selectedRunId={filters.selectedRunId}
-        onSelectRun={filters.setSelectedRunId}
-        engine={filters.engine}
-        onChangeEngine={filters.setEngine}
-        promptOptions={queries.promptOptions}
-        promptId={filters.promptId}
-        onChangePrompt={filters.setPromptId}
-        range={filters.range}
-        onChangeRange={filters.setRange}
-        granularity={filters.granularity}
-        onChangeGranularity={filters.setGranularity}
-        cohort={filters.cohort}
-        onChangeCohort={filters.setCohort}
-      />
       <Tabs
         value={filters.activeTab}
         onValueChange={filters.selectTab}
@@ -123,6 +106,23 @@ function VisibilityWorkspace({
         rootClassName="grid gap-[var(--workspace-gap)]"
         onIntent={queries.prefetchTab}
       >
+        <VisibilityToolbar
+          activeTab={filters.activeTab}
+          runs={queries.runOptions}
+          selectedRunId={filters.selectedRunId}
+          onSelectRun={filters.setSelectedRunId}
+          engine={filters.engine}
+          onChangeEngine={filters.setEngine}
+          promptOptions={queries.promptOptions}
+          promptId={filters.promptId}
+          onChangePrompt={filters.setPromptId}
+          range={filters.range}
+          onChangeRange={filters.setRange}
+          granularity={filters.granularity}
+          onChangeGranularity={filters.setGranularity}
+          cohort={filters.cohort}
+          onChangeCohort={filters.setCohort}
+        />
         <TabPanel value={filters.activeTab} className="focus-ring">
           {state ? (
             <DashboardState state={state} hasActiveRun={Boolean(queries.activeRun)} />

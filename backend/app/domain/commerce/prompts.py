@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -195,7 +195,11 @@ def _base_target_context(
 
 
 async def _prompt_owner(
-    session: AsyncSession, *, project_id: uuid.UUID, target: CommerceTarget
+    session: AsyncSession,
+    *,
+    project_id: uuid.UUID,
+    target: CommerceTarget,
+    target_name: str,
 ) -> tuple[PromptSet, Topic]:
     prompt_set = await session.scalar(
         select(PromptSet).where(
@@ -211,9 +215,16 @@ async def _prompt_owner(
         )
         session.add(prompt_set)
         await session.flush()
-    topic_name = f"Commerce {target.kind} {target.id}"
+    topic_name = " ".join(target_name.split())[:255].rstrip()
+    if not topic_name:
+        raise BuyerPromptGenerationUnavailable(
+            f"The Commerce {target.kind} has no display name"
+        )
     topic = await session.scalar(
-        select(Topic).where(Topic.project_id == project_id, Topic.name == topic_name)
+        select(Topic).where(
+            Topic.project_id == project_id,
+            func.lower(Topic.name) == topic_name.lower(),
+        )
     )
     if topic is None:
         topic = Topic(
@@ -326,7 +337,10 @@ async def generate_buyer_prompts(
     generated: list[BuyerPromptResponse] = []
     for target, context, texts in batches:
         prompt_set, topic = await _prompt_owner(
-            session, project_id=project_id, target=target
+            session,
+            project_id=project_id,
+            target=target,
+            target_name=str(context["name"]),
         )
         for text in texts:
             prompt = Prompt(
@@ -378,9 +392,9 @@ async def add_manual_buyer_prompt(
     project = await _project_with_brand(
         session, workspace_id=workspace_id, project_id=project_id
     )
-    # Called for its side effect: it 404s an unknown target before anything is
-    # written. It needs the brand-loaded project like every other caller.
-    await _target_context(
+    # This both 404s an unknown target before any write and supplies the
+    # user-facing name used by the shared topic rail.
+    context = await _target_context(
         session,
         workspace_id=workspace_id,
         project_id=project_id,
@@ -389,7 +403,10 @@ async def add_manual_buyer_prompt(
     )
     await _reserve_prompt_capacity(session, workspace_id, 1)
     prompt_set, topic = await _prompt_owner(
-        session, project_id=project_id, target=target
+        session,
+        project_id=project_id,
+        target=target,
+        target_name=str(context["name"]),
     )
     prompt = Prompt(
         prompt_set_id=prompt_set.id,

@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/layout/page-header';
 /**
  * Visibility workspace screen (three-tab IA).
  *
- * One workspace shell with a shared filter bar above an accessible tablist and
+ * One workspace shell with an accessible tablist above the shared filters and
  * exactly three focused panels:
  *   - **Trends** (default): cross-run Visibility Score, Share of Voice, ranking
  *     movement, latest model comparison, and prompt movement, from

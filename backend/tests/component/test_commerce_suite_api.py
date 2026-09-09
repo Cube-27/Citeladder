@@ -18,6 +18,7 @@ from app.domain.commerce.service import CommerceNotFoundError
 from app.domain.prompts.topical_binding import binding_tokens
 from app.models.commerce import CommerceCategory
 from app.models.project import Project
+from app.models.prompt import Prompt, Topic
 
 
 async def _register(client: httpx.AsyncClient, email: str) -> None:
@@ -299,10 +300,17 @@ async def test_a_manual_buyer_prompt_can_be_added_to_a_category(
             target=CommerceTarget(kind="category", id=category_id),
             text="  linen midi dress for a beach wedding  ",
         )
+        topic = await session.scalar(
+            select(Topic)
+            .join(Prompt, Prompt.topic_id == Topic.id)
+            .where(Prompt.id == created.id)
+        )
 
     assert created.text == "linen midi dress for a beach wedding"
     assert created.enabled is False
     assert created.target.id == category_id
+    assert topic is not None
+    assert topic.name == "DRESSES"
 
 
 @pytest.mark.asyncio

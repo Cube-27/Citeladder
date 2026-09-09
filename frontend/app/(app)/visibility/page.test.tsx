@@ -46,8 +46,12 @@ describe('VisibilityPage — tablist', () => {
     renderVisibilityPage();
 
     const tablist = await screen.findByRole('tablist', { name: 'Visibility views' });
+    const toolbar = screen.getByTestId('visibility-toolbar');
     const tabs = within(tablist).getAllByRole('tab');
     expect(tabs.map((t) => t.textContent)).toEqual(['Trends', 'Mentions', 'Search queries']);
+    expect(
+      tablist.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(within(tablist).queryByRole('tab', { name: 'Overview' })).toBeNull();
     // The forbidden tab labels are absent.
     expect(within(tablist).queryByRole('tab', { name: 'Sources' })).toBeNull();

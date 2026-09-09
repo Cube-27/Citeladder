@@ -216,7 +216,7 @@ describe('ConnectProviderDialog', () => {
 
     await user.click(within(dialog).getByRole('button', { name: /test connection/i }));
     expect(
-      await within(dialog).findByText(/connection succeeded \(gpt-5\.6-sol\)\./i),
+      await within(dialog).findByText(/connection succeeded \(gpt-5\.5\)\./i),
     ).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: /update key/i }));
