@@ -494,7 +494,16 @@ for (const width of [1280, 375]) {
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
-    const { evidenceUrls } = await setup(page);
+    // The evidence answers for the run this journey SELECTED. Left at the
+    // fixture's default the answer link would point at the latest run either
+    // way, so the assertion below would hold even if the selection were
+    // dropped — the exact context loss this test is named for.
+    const { evidenceUrls } = await setup(page, {
+      evidence: {
+        items: [evidenceItem({ audit_id: AUDIT_EARLIER })],
+        truncated: false,
+      },
+    });
     await page.goto(`/visibility?run=${AUDIT_EARLIER}&engine=gemini`);
     await page.getByRole('button', { name: '2 brand-absent answers' }).click();
     await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toBeVisible();
@@ -504,7 +513,7 @@ for (const width of [1280, 375]) {
     expect(evidenceUrl.searchParams.get('outcome')).toBe('competitor_gap');
     await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toHaveAttribute(
       'href',
-      `/runs/${AUDIT_LATEST}?execution=${TASK_A}`,
+      `/runs/${AUDIT_EARLIER}?execution=${TASK_A}`,
     );
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`run=${AUDIT_EARLIER}.*engine=gemini`));

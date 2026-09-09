@@ -392,26 +392,6 @@ def _accumulate_bucket_source(
         )
 
 
-def _folded_response_sov(brand_rate, ranking_rows) -> float | None:
-    """Response-level SOV for a folded bucket.
-
-    The same definition `_response_sov` applies to a raw point — the brand's
-    share of response PRESENCE against its competitors' — computed from the
-    folded rates rather than from counts. Both fields were previously the
-    mention-level figure, so a bucket reported one number under two names.
-    """
-    if brand_rate is None:
-        return None
-    total = float(brand_rate) + sum(
-        float(row.mention_rate)
-        for row in ranking_rows
-        if not row.is_brand and row.mention_rate is not None
-    )
-    if total <= 0:
-        return 0.0
-    return float(brand_rate) / total
-
-
 def _fold_bucket(key: datetime, bucket: list[_TrendSource]) -> VisibilityTrendPoint:
     logical_engine = bucket[0].logical_engine
     accumulators = _BucketAccumulators()
@@ -454,9 +434,11 @@ def _fold_bucket(key: datetime, bucket: list[_TrendSource]) -> VisibilityTrendPo
         brand_mention_rate=accumulators.brand_rate.value(),
         owned_citation_rate=accumulators.owned_rate.value(),
         sov=VisibilityTrendSov(
-            response=_folded_response_sov(
-                accumulators.brand_rate.value(), ranking_rows
-            ),
+            # Folded the way every other rate in this bucket is: each source's
+            # own response SOV, weighted by the completions behind it. Rebuilding
+            # it from the folded rates instead combines denominators that were
+            # never the same and can disagree with the sources it came from.
+            response=accumulators.response_sov.value(),
             mention=_mention_sov_of(accumulators.mention_counts, brand_keys),
         ),
         rankings=ranking_rows,
