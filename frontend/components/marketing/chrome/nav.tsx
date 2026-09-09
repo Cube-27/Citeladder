@@ -70,12 +70,15 @@ function useMarketingSession() {
   });
   const hasProject = (projects.data?.length ?? 0) > 0 || hasStoredProject;
 
-  // From here React decides what the actions row shows, so the pre-hydration
-  // mark (see `ReturningVisitorHint`) has done its job. Dropping it is what
-  // lets a stale trace fall back to the anonymous actions after a 401.
+  // Only once `me` has answered does React know what the actions row should
+  // show, and only then may the pre-hydration mark go. Dropping it on mount
+  // would hand the row back to CSS's anonymous default mid-flight — the exact
+  // flash the mark exists to prevent — and keeping it forever would hide
+  // "Log in" from a browser whose stored trace has outlived its session.
+  const sessionSettled = !me.isPending;
   useEffect(() => {
-    document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
-  }, []);
+    if (sessionSettled) document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
+  }, [sessionSettled]);
 
   return {
     // Until `me` has settled (success or 401) we know nothing for certain about
@@ -88,7 +91,7 @@ function useMarketingSession() {
     // when this browser carries a trace of a previous session — the stored
     // active project — which is where the swap would actually have happened.
     // Everyone else gets "Log in" and the demo CTA in the first paint.
-    sessionPending: me.isPending && hasStoredProject,
+    sessionPending: me.isPending,
     isAuthenticated: Boolean(me.data),
     dashboardHref: hasProject ? '/projects' : '/onboarding',
   };
@@ -376,6 +379,23 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
   );
 }
 
+/** Log in and the demo CTA: what a visitor with no session is offered. */
+function AnonymousActions() {
+  return (
+    <>
+      <Link
+        href="/login"
+        className="website-nav text-muted hover:text-foreground inline-flex px-4 transition-colors"
+      >
+        Log in
+      </Link>
+      <DemoButtonLink variant="primary" className="hidden min-h-10 px-4 sm:inline-flex">
+        {DEMO_CTA}
+      </DemoButtonLink>
+    </>
+  );
+}
+
 function NavActions({
   isAuthenticated,
   sessionPending,
@@ -392,20 +412,23 @@ function NavActions({
   return (
     <div className="flex shrink-0 items-center gap-3 justify-self-end">
       {sessionPending ? (
-        // A returning visitor whose session has not resolved yet: hold the
-        // Dashboard link's own footprint rather than flash the anonymous
-        // actions and swap them a moment later. It carries the SAME label and
-        // the same classes as the real link, hidden from view and from
-        // assistive tech, so the swap cannot change the row's width by a pixel.
-        <ButtonLink
-          href={dashboardHref}
-          variant="primary"
-          className="pointer-events-none min-h-10 px-4 opacity-0"
-          aria-hidden
-          tabIndex={-1}
-        >
-          Dashboard
-        </ButtonLink>
+        // `me` has not answered yet, and this render is also the STATIC HTML —
+        // so React cannot choose here without guessing. It emits both answers
+        // and lets CSS pick before paint: `ReturningVisitorHint` marks the
+        // document when this browser holds a stored project, and `globals.css`
+        // shows the matching branch. The anonymous majority get "Log in" in
+        // the first paint; someone returning gets Dashboard in the first
+        // paint, instead of an empty row that fills in a moment later.
+        <>
+          <span data-session-anon>
+            <AnonymousActions />
+          </span>
+          <span data-session-returning>
+            <ButtonLink href="/projects" variant="primary" className="min-h-10 px-4">
+              Dashboard
+            </ButtonLink>
+          </span>
+        </>
       ) : isAuthenticated ? (
         // The topbar CTA runs one step smaller than the page CTAs — chrome,
         // not a section action.
@@ -413,20 +436,7 @@ function NavActions({
           Dashboard
         </ButtonLink>
       ) : (
-        // `data-session-anon`: hidden before hydration for a returning
-        // visitor (see `ReturningVisitorHint`). `contents` keeps the row's
-        // flex layout as if the wrapper were not there.
-        <span data-session-anon className="contents">
-          <Link
-            href="/login"
-            className="website-nav text-muted hover:text-foreground inline-flex px-4 transition-colors"
-          >
-            Log in
-          </Link>
-          <DemoButtonLink variant="primary" className="hidden min-h-10 px-4 sm:inline-flex">
-            {DEMO_CTA}
-          </DemoButtonLink>
-        </span>
+        <AnonymousActions />
       )}
       <button
         type="button"

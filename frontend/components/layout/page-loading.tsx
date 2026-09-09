@@ -19,6 +19,11 @@ import { Spinner } from '@/components/ui/spinner';
  * This is for a SCREEN waiting on its first load. A section refreshing inside
  * an already-drawn page keeps its own in-place treatment — that surface's
  * boxes already exist and must not collapse.
+ *
+ * The spinner itself is held back for a moment (`loading-delayed`), so a wait
+ * short enough to go unnoticed passes without one. The reserved block is not:
+ * it holds its height from the first frame, so the content that lands into it
+ * lands in a box that was already there.
  */
 export function PageLoading({
   label = 'Loading…',
@@ -28,7 +33,7 @@ export function PageLoading({
 }>) {
   return (
     <div className="grid min-h-[60vh] place-items-center" data-testid="page-loading">
-      <Spinner size="lg" label={label} className="text-muted" />
+      <Spinner size="lg" label={label} className="loading-delayed text-muted" />
     </div>
   );
 }

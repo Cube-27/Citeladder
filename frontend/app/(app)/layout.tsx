@@ -30,6 +30,14 @@ export const instant = true;
  * pays one round trip before the shell rather than two in series. The guard
  * still owns what is rendered: nothing protected mounts until `me` settles,
  * and a 401 from either request clears the session and redirects once.
+ *
+ * The gate then sits outside the SHELL. Both waits — the session and the
+ * workspace — are covered by the same `ShellFallback` in the same place, so
+ * the reader sees one loader rather than a viewport loader replaced by a
+ * content-pane loader a moment later. What follows it is the finished shell:
+ * the switcher already knows its project and the entitlement-gated controls
+ * already know whether they exist, so nothing arrives afterwards to push the
+ * navigation around.
  */
 export default function AppLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -39,14 +47,9 @@ export default function AppLayout({ children }: Readonly<{ children: ReactNode }
           <ProductTourProvider>
             <EntitlementProvider>
               <ToastProvider>
-                {/* The shell wraps the gate, not the other way round. Mounted
-                    here it paints ONCE — the project wait, the onboarding
-                    redirect, and every screen's first load all resolve inside
-                    the content pane instead of each replacing the whole
-                    viewport with a placeholder of its own. */}
-                <AppShell>
-                  <OnboardingGate>{children}</OnboardingGate>
-                </AppShell>
+                <OnboardingGate>
+                  <AppShell>{children}</AppShell>
+                </OnboardingGate>
               </ToastProvider>
             </EntitlementProvider>
           </ProductTourProvider>

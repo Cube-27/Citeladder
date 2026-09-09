@@ -339,9 +339,13 @@ describe('MarketingNav', () => {
     try {
       renderWithProviders(<MarketingNav />);
 
-      const login = await screen.findByRole('link', { name: /log in/i });
-      expect(login).toHaveAttribute('href', '/login');
-      expect(document.documentElement.hasAttribute(RETURNING_VISITOR_ATTRIBUTE)).toBe(false);
+      // The mark survives until `me` answers — dropping it sooner would hand
+      // the row back to CSS's anonymous default mid-flight.
+      await waitFor(() =>
+        expect(document.documentElement.hasAttribute(RETURNING_VISITOR_ATTRIBUTE)).toBe(false),
+      );
+      expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
+      expect(screen.queryByRole('link', { name: /dashboard/i })).toBeNull();
     } finally {
       window.localStorage.removeItem(ACTIVE_PROJECT_STORAGE_KEY);
       document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
@@ -351,8 +355,39 @@ describe('MarketingNav', () => {
   it('does not treat a successful null session cache entry as authenticated', async () => {
     renderWithProviders(<NavWithAnonymousPricingSession />);
 
-    expect(await screen.findByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
-    expect(screen.queryByRole('link', { name: /dashboard/i })).toBeNull();
+    // Both answers are in the markup until `me` settles — CSS picks one before
+    // paint — so the assertion is about the SETTLED row.
+    await waitFor(() => expect(screen.queryByRole('link', { name: /dashboard/i })).toBeNull());
+    expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
+  });
+
+  /**
+   * The marketing HTML is static, so it is written before anyone knows who is
+   * asking. While `me` is unanswered both answers must be present for CSS to
+   * choose between before paint — emitting only the anonymous one is what left
+   * a returning visitor looking at an empty actions row until React caught up.
+   */
+  it('carries both session answers in the markup until me has answered', async () => {
+    let releaseMe!: () => void;
+    const meSettled = new Promise<void>((resolve) => {
+      releaseMe = resolve;
+    });
+    mswServer.use(
+      http.get('/api/v1/auth/me', async () => {
+        await meSettled;
+        return new HttpResponse(null, { status: 401 });
+      }),
+    );
+
+    const { container } = renderWithProviders(<MarketingNav />);
+
+    const returning = container.querySelector('[data-session-returning]');
+    expect(container.querySelector('[data-session-anon]')).not.toBeNull();
+    expect(returning?.querySelector('a')).toHaveAttribute('href', '/projects');
+
+    releaseMe();
+    await waitFor(() => expect(container.querySelector('[data-session-returning]')).toBeNull());
+    expect(screen.getByRole('link', { name: /log in/i })).toBeInTheDocument();
   });
 
   it('swaps the CTA for a dashboard link once the session resolves', async () => {

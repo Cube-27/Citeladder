@@ -6,7 +6,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { billingApi, type BillingUsage, type WorkspaceEntitlement } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { CONTENT_CREATION_CAPABILITY, GROWTH_AGENT_CAPABILITY } from '@/lib/config/billing';
-import { useActiveProject } from '@/lib/project/project-context';
+import { useProjectContext } from '@/lib/project/project-context';
 
 const PAID_WORK_CAPABILITIES = new Set([CONTENT_CREATION_CAPABILITY, GROWTH_AGENT_CAPABILITY]);
 
@@ -45,7 +45,7 @@ const EntitlementContext = createContext<EntitlementContextValue | null>(null);
  * failure, and it must not read as "allowed".
  */
 export function EntitlementProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const activeProject = useActiveProject();
+  const { activeProject, isLoading: projectsLoading } = useProjectContext();
   const workspaceId = activeProject?.workspace_id ?? null;
   const entitlementQuery = useQuery({
     queryKey: queryKeys.billing.workspaceEntitlement(workspaceId),
@@ -57,6 +57,17 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
     queryFn: ({ signal }) => billingApi.usage({ signal }),
   });
 
+  /**
+   * Not yet answerable, which is not the same as answered "no".
+   *
+   * The workspace comes from the active project, so until the project list
+   * lands the entitlement query has nothing to ask about and sits DISABLED —
+   * and a disabled query is not `isLoading`. Reading that alone reported a
+   * settled "no capabilities" during the busiest moment of a cold start, and
+   * the shell drew itself without the controls it was about to gain.
+   */
+  const unresolved = projectsLoading || entitlementQuery.isLoading;
+
   const value = useMemo<EntitlementContextValue>(() => {
     const data = entitlementQuery.data;
     const usage = usageQuery.data?.status === 'resolved' ? usageQuery.data : null;
@@ -67,7 +78,7 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
         // workspace but no active project yet, so the workspace entitlement
         // query is intentionally disabled during first-project onboarding.
         usage,
-        isLoading: entitlementQuery.isLoading,
+        isLoading: unresolved,
         usageIsLoading: usageQuery.isLoading,
         usageIsError: usageQuery.isError,
       };
@@ -90,7 +101,7 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
     return {
       entitlement: data,
       usage,
-      isLoading: entitlementQuery.isLoading,
+      isLoading: unresolved,
       usageIsLoading: usageQuery.isLoading,
       usageIsError: usageQuery.isError,
       hasCapability,
@@ -100,7 +111,7 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
     };
   }, [
     entitlementQuery.data,
-    entitlementQuery.isLoading,
+    unresolved,
     usageQuery.data,
     usageQuery.isError,
     usageQuery.isLoading,

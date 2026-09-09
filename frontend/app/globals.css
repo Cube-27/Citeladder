@@ -725,13 +725,48 @@ input:-webkit-autofill:focus {
   --color-band-teal-mid: #114747;
 }
 
-/* A returning visitor's first paint: the static HTML carries the anonymous
-   nav actions, and `ReturningVisitorHint` marks the document before they
-   paint. Hidden — not removed — so the row keeps its footprint until React
-   has hydrated and swapped in the session placeholder; the hook then drops
-   the mark so a stale trace can never hide "Log in" after a 401. */
+/* The marketing pages are static, so their HTML is written before anyone knows
+   who is asking. While `me` is unanswered the nav emits BOTH answers and this
+   picks one before paint: `ReturningVisitorHint` marks the document when the
+   browser holds a stored project, so someone coming back sees Dashboard in the
+   first paint and everyone else sees "Log in" in theirs. `display` rather than
+   `visibility`, so the row is never sized by the branch it is not showing.
+   React takes over once `me` answers and the hook drops the mark, which is
+   what lets a trace that has outlived its session fall back to "Log in". */
+/* A spinner is a promise that the wait is long enough to be worth explaining.
+   Most of these waits are not: a cached screen resolves in well under the time
+   it takes to read a spinner, so drawing one only to remove it is the churn
+   people describe as flicker. The loader is therefore held back — the reader
+   sees nothing for a moment, and either the content arrives and no loader ever
+   existed, or the wait is real and the loader appears once and stays.
+
+   Reduced motion collapses the fade to 1ms but leaves the delay alone: the
+   pause is not motion, it is a decision about when to speak. */
+@keyframes citeladder-loading-appear {
+  to {
+    opacity: 1;
+  }
+}
+
+.loading-delayed {
+  opacity: 0;
+  animation: citeladder-loading-appear 120ms ease-out 300ms forwards;
+}
+
+[data-session-anon] {
+  display: contents;
+}
+
+[data-session-returning] {
+  display: none;
+}
+
 html[data-returning-visitor] [data-session-anon] {
-  visibility: hidden;
+  display: none;
+}
+
+html[data-returning-visitor] [data-session-returning] {
+  display: contents;
 }
 
 /* Paper, not screen. A fractal-noise tile at a few percent over the marketing

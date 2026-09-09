@@ -8,7 +8,8 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
-import { PageLoading } from '@/components/layout/page-loading';
+import { ShellFallback } from '@/components/layout/shell-fallback';
+import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useProjectContext } from '@/lib/project/project-context';
 
 /**
@@ -36,6 +37,12 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   const router = useRouter();
   const queryClient = useQueryClient();
   const { projects, isLoading, isError } = useProjectContext();
+  // Entitlement decides which controls the shell HAS — the Growth Agent
+  // trigger, the capability-gated navigation rows — so waiting for it here is
+  // what lets the shell paint complete instead of growing a button and a link
+  // a round trip later. It resolves to a settled answer either way: a failed
+  // request stops loading and the shell draws with nothing granted.
+  const { isLoading: entitlementLoading } = useEntitlement();
   const needsOnboarding = !isLoading && !isError && projects.length === 0;
 
   useEffect(() => {
@@ -47,24 +54,32 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
 
   if (isError && projects.length === 0) {
     return (
-      <Alert tone="warning" className="max-w-lg">
-        <h1 className={textRole('sectionTitle')}>Projects could not be loaded</h1>
-        <p>Your session is active. Retry to load your projects.</p>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            void queryClient.refetchQueries({ queryKey: queryKeys.projects.list() });
-          }}
-        >
-          Retry
-        </Button>
-      </Alert>
+      <main
+        id="main"
+        className="bg-shell grid min-h-dvh place-items-center p-[var(--page-section-gap)]"
+      >
+        <Alert tone="warning" className="max-w-lg">
+          <h1 className={textRole('sectionTitle')}>Projects could not be loaded</h1>
+          <p>Your session is active. Retry to load your projects.</p>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void queryClient.refetchQueries({ queryKey: queryKeys.projects.list() });
+            }}
+          >
+            Retry
+          </Button>
+        </Alert>
+      </main>
     );
   }
 
-  // Inside the shell, so this is the ordinary content-pane loader every screen
-  // shows — the chrome around it is already drawn and does not move.
-  if (isLoading || needsOnboarding) return <PageLoading label="Loading your workspace…" />;
+  // Ahead of the shell, and deliberately the SAME loader the session wait
+  // showed: one uninterrupted state covers both round trips, and the chrome
+  // that follows it is already complete. `needsOnboarding` holds here too —
+  // the redirect is already in flight, and drawing a workspace the visitor is
+  // about to be taken out of would only be a flash of the wrong app.
+  if (isLoading || entitlementLoading || needsOnboarding) return <ShellFallback />;
 
   return <>{children}</>;
 }
