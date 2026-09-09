@@ -9,12 +9,7 @@
  * position stay the not-yet-computed placeholder (decision B-2 / invariant 9).
  */
 import type { TrendPoint } from '@/components/ui/trend-chart';
-import type {
-  LogicalEngine,
-  VisibilityTrendPoint,
-  VisibilityTrendRankingRow,
-} from '@/lib/api/types';
-import { availabilityLabel } from '@/lib/format';
+import type { LogicalEngine, VisibilityTrendPoint } from '@/lib/api/types';
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
@@ -61,7 +56,7 @@ export function rangeToFrom(range: TrendRange, now: Date = new Date()): string |
 }
 
 /** Which headline metric a chart plots. */
-export type TrendMetric = 'visibility_score' | 'sov' | 'brand_mention_rate' | 'owned_citation_rate';
+export type TrendMetric = 'sov' | 'brand_mention_rate' | 'owned_citation_rate';
 
 /** Short x-axis label for a point's completion timestamp. */
 function formatPointLabel(timestamp: string): string {
@@ -77,11 +72,47 @@ export function formatPointDate(timestamp: string): string {
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+export function historicalSelection(point: VisibilityTrendPoint, search: string): string {
+  const params = new URLSearchParams(search);
+  params.set('tab', 'trends');
+  for (const key of [
+    'cursor',
+    'as_of',
+    'source_offset',
+    'source_as_of',
+    'query_offset',
+    'prompt_page',
+    'baseline',
+  ])
+    params.delete(key);
+  if (point.audit_id) {
+    params.set('selection', 'run');
+    params.set('run', point.audit_id);
+    params.delete('configuration');
+  } else {
+    const start = new Date(point.completed_at);
+    const end = new Date(start);
+    if (params.get('granularity') === 'month') end.setUTCMonth(end.getUTCMonth() + 1);
+    else end.setUTCDate(end.getUTCDate() + 7);
+    params.set('selection', 'range');
+    params.delete('run');
+    params.set('from', start.toISOString());
+    params.set('to', new Date(end.getTime() - 1).toISOString());
+    params.set(
+      'configuration',
+      [
+        point.comparison_key ?? point.source_audit_ids?.[0],
+        point.analyzer_versions[0],
+        point.scoring_rule_versions[0],
+      ].join(':'),
+    );
+  }
+  return `/visibility?${params}`;
+}
+
 /** A metric's 0–100 value for a point (percentages scaled to whole percent). */
 function metricValue(point: VisibilityTrendPoint, metric: TrendMetric): number | null {
   switch (metric) {
-    case 'visibility_score':
-      return point.visibility_score;
     case 'sov':
       return point.sov.mention === null ? null : point.sov.mention * 100;
     case 'brand_mention_rate':
@@ -102,16 +133,23 @@ export function toChartPoints(
   metric: TrendMetric,
 ): TrendPoint[] {
   let prevVersions: string | null = null;
+  let previousIdentity: string | null | undefined = undefined;
   return points.map((point) => {
     const value = metricValue(point, metric);
     const versionKey = [...point.analyzer_versions, ...point.scoring_rule_versions].join('|');
     const changed = prevVersions !== null && versionKey !== prevVersions;
+    const identityChanged =
+      previousIdentity !== undefined &&
+      (!point.comparison_key || previousIdentity !== point.comparison_key);
+    previousIdentity = point.comparison_key;
     prevVersions = versionKey;
     return {
       // Preserve unavailable metrics as null — the chart renders a GAP and an
       // "unavailable" label rather than coercing to a misleading zero.
       label: formatPointLabel(point.completed_at),
-      value: value === null ? null : Math.round(value),
+      value,
+      timestamp: new Date(point.completed_at).getTime(),
+      breakBefore: changed || identityChanged || !point.comparison_key,
       versionChange:
         changed || point.spans_version_boundary ? { note: versionChangeNote(point) } : null,
     };
@@ -124,204 +162,4 @@ function versionChangeNote(point: VisibilityTrendPoint): string {
   return point.spans_version_boundary
     ? `Mixed scoring versions in this bucket (${scoring})`
     : `Scoring rule ${scoring} applied`;
-}
-
-/** A trailing note describing the first version boundary in the series, if any. */
-export function versionMarkerSummary(points: readonly VisibilityTrendPoint[]): string | null {
-  let prev: string | null = null;
-  for (const point of points) {
-    const key = [...point.analyzer_versions, ...point.scoring_rule_versions].join('|');
-    if (point.spans_version_boundary) {
-      return `${versionChangeNote(point)} from ${formatPointDate(point.completed_at)}`;
-    }
-    if (prev !== null && key !== prev) {
-      return `${versionChangeNote(point)} from ${formatPointDate(point.completed_at)}`;
-    }
-    prev = key;
-  }
-  return null;
-}
-
-/** The persisted brand-mention VOLUME (count) for a point, or null.
- *
- * Derived from the point's `is_brand` ranking row's persisted `mention_count`
- * (summed across the bucket by the backend). This is a raw count, not a rate,
- * so it is surfaced as a volume stat rather than plotted on the 0–100 charts.
- */
-function brandMentionCount(point: VisibilityTrendPoint): number | null {
-  const brand = point.rankings.find((row) => row.is_brand);
-  return brand ? brand.mention_count : null;
-}
-
-/** One headline stat: latest value + delta vs the prior point. */
-export type TrendStat = {
-  key: TrendMetric | 'response_sov' | 'brand_mention_count' | 'sentiment' | 'avg_position';
-  label: string;
-  /** Display value (already formatted), or the placeholder for null. */
-  value: string;
-  /** Signed delta text vs the prior point, or a "not computed" note. */
-  delta: string;
-  direction: 'up' | 'down' | 'flat';
-  /** Whether this is a not-yet-computed placeholder metric (B-2). */
-  placeholder: boolean;
-};
-
-function formatPct(value: number | null): string {
-  return value === null ? availabilityLabel('not_measured') : `${Math.round(value)}%`;
-}
-
-function formatScoreValue(value: number | null): string {
-  return value === null ? availabilityLabel('not_measured') : `${Math.round(value)}`;
-}
-
-/**
- * Signed delta of `latest` vs `prior` as display text + direction. `round`
- * whole-numbers both sides first (headline rates/scores) or compares raw counts
- * (brand-mention volume); `suffix` appends the unit (e.g. `%`).
- */
-function delta(
-  latest: number | null,
-  prior: number | null,
-  { round = false, suffix = '' }: { round?: boolean; suffix?: string } = {},
-): { text: string; direction: 'up' | 'down' | 'flat' } {
-  if (latest === null || prior === null) return { text: 'No prior run', direction: 'flat' };
-  const diff = round ? Math.round(latest) - Math.round(prior) : latest - prior;
-  if (diff === 0) return { text: 'No change vs. prior run', direction: 'flat' };
-  const sign = diff > 0 ? '+' : '';
-  return { text: `${sign}${diff}${suffix} vs. prior run`, direction: diff > 0 ? 'up' : 'down' };
-}
-
-function responseSov(point: VisibilityTrendPoint | null): number | null {
-  return point && point.sov.response !== null ? point.sov.response * 100 : null;
-}
-
-/**
- * Headline stat row (all values are persisted, no recomputation — invariant 7):
- * Visibility Score, mention-level Share of Voice, response-level Share of Voice,
- * Brand mentions (VOLUME — the persisted `is_brand` `mention_count`, not a
- * rate), and Owned Citations rate — each with a delta vs the prior point — plus
- * the null Sentiment / Avg Position placeholders (decision B-2 / invariant 9).
- * Deltas are a "no prior run" note when there is only one point (no fake slope).
- */
-export function trendStats(points: readonly VisibilityTrendPoint[]): TrendStat[] {
-  const latest = points.length ? points[points.length - 1] : null;
-  const prior = points.length > 1 ? points[points.length - 2] : null;
-
-  const vs = latest ? metricValue(latest, 'visibility_score') : null;
-  const vsPrior = prior ? metricValue(prior, 'visibility_score') : null;
-  const sov = latest ? metricValue(latest, 'sov') : null;
-  const sovPrior = prior ? metricValue(prior, 'sov') : null;
-  const rsov = responseSov(latest);
-  const rsovPrior = responseSov(prior);
-  const bmc = latest ? brandMentionCount(latest) : null;
-  const bmcPrior = prior ? brandMentionCount(prior) : null;
-  const oc = latest ? metricValue(latest, 'owned_citation_rate') : null;
-  const ocPrior = prior ? metricValue(prior, 'owned_citation_rate') : null;
-
-  const scoreDelta = delta(vs, vsPrior, { round: true });
-  const sovDelta = delta(sov, sovPrior, { round: true, suffix: '%' });
-  const rsovDelta = delta(rsov, rsovPrior, { round: true, suffix: '%' });
-  const bmcDelta = delta(bmc, bmcPrior);
-  const ocDelta = delta(oc, ocPrior, { round: true, suffix: '%' });
-
-  return [
-    {
-      key: 'visibility_score',
-      label: 'Visibility Score',
-      value: formatScoreValue(vs),
-      delta: scoreDelta.text,
-      direction: scoreDelta.direction,
-      placeholder: vs === null,
-    },
-    {
-      key: 'sov',
-      label: 'SOV (mention)',
-      value: formatPct(sov),
-      delta: sovDelta.text,
-      direction: sovDelta.direction,
-      placeholder: sov === null,
-    },
-    {
-      key: 'response_sov',
-      label: 'SOV (response)',
-      value: formatPct(rsov),
-      delta: rsovDelta.text,
-      direction: rsovDelta.direction,
-      placeholder: rsov === null,
-    },
-    {
-      key: 'brand_mention_count',
-      label: 'Brand mentions',
-      value: bmc === null ? availabilityLabel('not_measured') : `${bmc}`,
-      delta: bmcDelta.text,
-      direction: bmcDelta.direction,
-      placeholder: bmc === null,
-    },
-    {
-      key: 'owned_citation_rate',
-      label: 'Owned Citations',
-      value: formatPct(oc),
-      delta: ocDelta.text,
-      direction: ocDelta.direction,
-      placeholder: oc === null,
-    },
-  ];
-}
-// Sentiment and average position are NOT part of the metric row. They are never
-// computed (decision B-2), so as stat cards they were two permanently blank
-// tiles that pushed the row to seven and broke design.md's "three to five
-// headline numbers" rule. Their not-yet-computed state stays disclosed in their
-// own rankings-table columns, where it belongs.
-
-/** Ranking rows for a point, kept SOV-sorted (rows already arrive sorted). */
-export function sortedTrendRankings(
-  rows: readonly VisibilityTrendRankingRow[],
-): VisibilityTrendRankingRow[] {
-  return rows
-    .slice()
-    .sort(
-      (a, b) => (b.share_of_voice ?? 0) - (a.share_of_voice ?? 0) || a.name.localeCompare(b.name),
-    );
-}
-
-/** Latest + first-in-range points for the side-by-side ranking comparison. */
-export function rankingBookends(points: readonly VisibilityTrendPoint[]): {
-  latest: VisibilityTrendPoint | null;
-  first: VisibilityTrendPoint | null;
-} {
-  if (!points.length) return { latest: null, first: null };
-  return {
-    latest: points[points.length - 1],
-    first: points.length > 1 ? points[0] : null,
-  };
-}
-
-/**
- * Per-brand visibility history across the trend points, keyed by brand name.
- *
- * This is the series behind the Competitors sparklines. It is a projection of
- * real persisted snapshots — a brand with no `mention_rate` at a point is
- * skipped for that point rather than zero-filled, and a brand that never has
- * two readable points gets no series at all (the caller renders nothing, not a
- * flat invented line).
- *
- * Values are 0–100 percentages to match the column they sit beside.
- */
-export function brandVisibilityHistory(
-  points: readonly VisibilityTrendPoint[],
-): Map<string, number[]> {
-  const history = new Map<string, number[]>();
-  for (const point of points) {
-    for (const row of point.rankings) {
-      if (row.mention_rate === null || !Number.isFinite(row.mention_rate)) continue;
-      const series = history.get(row.name) ?? [];
-      series.push(Math.round(row.mention_rate * 100));
-      history.set(row.name, series);
-    }
-  }
-  // A single point is not a trend — drop it so no misleading flat line renders.
-  for (const [name, series] of history) {
-    if (series.length < 2) history.delete(name);
-  }
-  return history;
 }

@@ -37,6 +37,7 @@ from app.core.config.provider_catalog import (
     TRANSPORT_GOOGLE,
     measurement_route,
 )
+from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.audits.creation import create_audit
 from app.models.analysis import MetricSnapshot
 from app.models.audit import Audit
@@ -515,6 +516,10 @@ async def _seed_http_evidence(
         transport_model="gemini-flash-latest",
         prompt_text="best crm software",
         idempotency_key=f"{audit.id}:0:0:{ENGINE_GEMINI}",
+        # This task produced an answer and a raw artifact, so it SUCCEEDED —
+        # the queue-row vocabulary's terminal success status. Left at the
+        # queued default it is not evidence of anything.
+        status=TASK_STATUS_SUCCEEDED,
         answer_text="Acme Corp is great.",
         search_used=True,
         search_events=[],
@@ -686,7 +691,15 @@ async def test_evidence_endpoint_empty_for_valid_project(
         headers=headers,
     )
     assert resp.status_code == 200
-    assert resp.json() == {"items": [], "truncated": False}
+    body = resp.json()
+    # The projection gained the fields a reader needs in order to trust an
+    # empty answer: how many there were, where the page ends, and which
+    # prompts could have been asked about.
+    assert body["items"] == []
+    assert body["truncated"] is False
+    assert body["total"] == 0
+    assert body["next_cursor"] is None
+    assert body["prompt_options"] == []
 
 
 @pytest.mark.asyncio

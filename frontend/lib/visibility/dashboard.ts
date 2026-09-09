@@ -18,7 +18,6 @@ import type {
   RankingRow,
   Visibility,
   VisibilityEngine,
-  VisibilityExecutionEvidence,
 } from '@/lib/api/types';
 
 /** Audit statuses that carry a dashboard-ready metric snapshot (B6). */
@@ -37,8 +36,8 @@ export type VisibilityTab = 'trends' | 'mentions-citations' | 'query-fanout';
 export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [
   // NOTE: `id` is the persisted `?tab=` URL value — only labels are restyled.
   { id: 'trends', label: 'Trends' },
-  { id: 'mentions-citations', label: 'Mentions' },
-  { id: 'query-fanout', label: 'Search queries' },
+  { id: 'mentions-citations', label: 'Mentions & Citations' },
+  { id: 'query-fanout', label: 'Query Fanout' },
 ] as const;
 
 /** The two evidence tabs share one execution-evidence query + cache key. */
@@ -190,22 +189,6 @@ export type PromptOption = {
   /** The frozen prompt text (display label). */
   label: string;
 };
-
-/**
- * Derive the selectable prompt options from loaded evidence items: distinct
- * source `prompt_id`s (deleted prompts with a null id are excluded — they stay
- * under "All prompts"), labelled by their frozen prompt text, kept in a stable
- * (first-seen, newest-first) order.
- */
-export function toPromptOptions(items: readonly VisibilityExecutionEvidence[]): PromptOption[] {
-  const seen = new Map<string, string>();
-  for (const item of items) {
-    if (item.prompt_id && !seen.has(item.prompt_id)) {
-      seen.set(item.prompt_id, item.prompt_text || item.prompt_id);
-    }
-  }
-  return [...seen.entries()].map(([id, label]) => ({ id, label }));
-}
 
 /** Rankings already arrive sorted by SOV desc from B6; keep that order stable. */
 export function sortedRankings(rankings: readonly RankingRow[]): RankingRow[] {

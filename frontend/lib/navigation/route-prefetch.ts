@@ -11,7 +11,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { runsQueries } from '@/lib/api/runs';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import { performanceQueries } from '@/lib/api/performance';
-import { visibilityApi } from '@/lib/api/visibility';
+import { INITIAL_VISIBILITY_PARAMS, visibilityQueries } from '@/lib/api/visibility';
 import { INITIAL_DASHBOARD_PARAMS } from '@/lib/performance/performance';
 
 type RoutePrefetcher = (client: QueryClient, projectId: string) => void;
@@ -60,11 +60,10 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
   },
   '/visibility': (client, projectId) => {
     warmQuery(client, runsQueries.list(projectId));
-    warmQuery(client, {
-      queryKey: [...queryKeys.visibility.project(projectId), 'core'],
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        visibilityApi.getProjectVisibility(projectId, { cohort: 'core' }, { signal }),
-    });
+    // The landing selection, built from the screen's own defaults. A key
+    // spelled out here drifted from the one the screen reads and warmed an
+    // entry nothing consumed.
+    warmQuery(client, visibilityQueries.project(projectId, INITIAL_VISIBILITY_PARAMS));
   },
   '/runs': (client, projectId) => {
     warmQuery(client, runsQueries.list(projectId));

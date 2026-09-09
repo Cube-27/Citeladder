@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.analysis.comparison import frozen_comparison_key
 from app.core.config.analysis import (
     VISIBILITY_TREND_DEFAULT_GRANULARITY,
     VISIBILITY_TREND_GRANULARITIES,
@@ -182,12 +183,19 @@ async def _load_trend_rows(
     project_id: uuid.UUID,
     from_at: datetime | None,
     to_at: datetime | None,
+    newest: int | None = None,
 ) -> list[tuple[MetricSnapshot, Audit]]:
     """Load (snapshot, audit) pairs for the project's dashboard-ready audits.
 
     Workspace/project scoped (invariant 5), restricted to dashboard-ready
     statuses with a non-null ``completed_at`` and the requested inclusive UTC
     window, ordered chronologically.
+
+    ``newest`` bounds the read to that many most-recent audits, still returned
+    chronologically. A caller walking BACKWARDS for the nearest match wants the
+    recent end of the history, not all of it — reading every snapshot a project
+    has ever produced to use the last few grows with the project's age on a
+    request that is served on every dashboard load.
     """
     stmt = (
         select(MetricSnapshot, Audit)
@@ -207,6 +215,13 @@ async def _load_trend_rows(
         stmt = stmt.where(Audit.completed_at >= from_at)
     if to_at is not None:
         stmt = stmt.where(Audit.completed_at <= to_at)
+    if newest is not None:
+        stmt = stmt.order_by(Audit.completed_at.desc(), Audit.created_at.desc()).limit(
+            newest
+        )
+        rows = list((await session.execute(stmt)).tuples().all())
+        rows.reverse()
+        return rows
     stmt = stmt.order_by(Audit.completed_at.asc(), Audit.created_at.asc())
     result = await session.execute(stmt)
     return list(result.tuples().all())
@@ -226,6 +241,9 @@ def _trend_source(
     frozen audit fields: the frozen policy block (retrieval) and frozen engine
     snapshots (models) — never from live config.
     """
+    from app.domain.analysis.measurement import prompt_performance
+    from app.domain.analysis.visibility import selected_score
+
     stored_metrics = snapshot.metrics or {}
     metrics = (
         stored_metrics
@@ -238,18 +256,13 @@ def _trend_source(
         # defensive skip so a malformed row never emits a point.
         return None
     engine_metrics: dict | None
-    visibility_score: float | None
     if logical_engine is None:
         engine_metrics = metrics
-        rate = metrics.get("brand_mention_rate")
-        visibility_score = round(float(rate) * 100, 2) if rate is not None else None
     else:
         per_engine = metrics.get("per_engine") or {}
         engine_metrics = per_engine.get(logical_engine)
         if not engine_metrics:
             return None
-        rate = engine_metrics.get("brand_mention_rate")
-        visibility_score = round(float(rate) * 100, 2) if rate is not None else None
     transport_model, retrieval, provenance = _source_identity(audit, logical_engine)
     return _TrendSource(
         snapshot_id=snapshot.id,
@@ -262,8 +275,17 @@ def _trend_source(
         analyzer_version=snapshot.analyzer_version,
         scoring_rule_version=snapshot.scoring_rule_version,
         total_completed=int(engine_metrics.get("total_completed", 0) or 0),
-        visibility_score=visibility_score,
+        visibility_score=selected_score(
+            snapshot, engine_metrics, cohort, logical_engine
+        ),
         metrics=engine_metrics,
+        comparison_key=frozen_comparison_key(
+            audit.configuration, engine=logical_engine
+        ),
+        # The preserved prompt composite, which is a DIFFERENT measure from the
+        # selected score — separating the two is the point of this rework, and
+        # deriving both from `selected_score` reported one of them twice.
+        prompt_performance_score=prompt_performance(engine_metrics),
     )
 
 

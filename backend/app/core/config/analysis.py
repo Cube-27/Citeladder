@@ -52,6 +52,7 @@ VISIBILITY_TREND_DEFAULT_GRANULARITY: Final = "run"
 # Cap on the number of newest source snapshots a single request considers (the
 # final response is still returned in chronological order).
 VISIBILITY_TREND_MAX_POINTS: Final = 100
+VISIBILITY_SELECTION_MAX_RUNS: Final = 100
 # When True, a requested week/month bucket that would fold snapshots produced
 # under different analyzer/scoring versions is NOT emitted; the whole selected
 # range falls back to raw per-run points so no bucket ever mixes versions.

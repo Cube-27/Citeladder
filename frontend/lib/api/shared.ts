@@ -2,13 +2,14 @@
  * Small query-string helpers shared by the per-domain API modules (F2).
  * These own no transport — they only build relative paths.
  */
-type QueryParamValue = string | number | boolean | null | undefined;
+type QueryParamValue = string | number | boolean | readonly string[] | null | undefined;
 
 export function definedQuery<T extends Record<string, QueryParamValue>>(params?: T) {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined && value !== null) {
-      query.set(key, String(value));
+      if (Array.isArray(value)) for (const item of value) query.append(key, item);
+      else query.set(key, String(value));
     }
   }
   return query;

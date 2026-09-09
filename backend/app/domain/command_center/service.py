@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.analysis.comparison import frozen_comparison_key
 from app.core.config.audits import AUDIT_SCOPE_BRAND, AUDIT_STATUS_COMPLETED
 from app.domain.analysis.schemas import RankingRow, VisibilityResponse
 from app.domain.analysis.visibility import get_visibility
@@ -49,14 +50,20 @@ class ComparableAudits:
     previous: Audit | None
 
 
-def _audit_identity(audit: Audit) -> tuple[str, frozenset[str], frozenset[str]]:
+def _audit_identity(audit: Audit) -> tuple:
     prompts = frozenset(
         str(row.prompt_id) if row.prompt_id is not None else f"text:{row.text}"
         for row in audit.prompt_snapshots
         if row.cohort == "core"
     )
     engines = frozenset(row.logical_engine for row in audit.engine_snapshots)
-    return audit.benchmark_mode, engines, prompts
+    return (
+        frozen_comparison_key(audit.configuration) or str(audit.id),
+        audit.analyzer_version,
+        audit.benchmark_mode,
+        engines,
+        prompts,
+    )
 
 
 def _is_prior_comparable(
@@ -124,6 +131,19 @@ def _delta(current: float | int | None, previous: float | int | None):
     return round(float(current) - float(previous), 2)
 
 
+def _mention_percent(row) -> float | None:
+    """One engine's brand-mention rate as a percentage a reader can add up.
+
+    Rounded at the same boundary as every other percent this file emits, so the
+    three figures shown together reconcile: `_delta` already rounds, and raw
+    operands beside it showed a change that did not equal the difference
+    between the two numbers printed next to it.
+    """
+    if row is None or row.brand_mention_rate is None:
+        return None
+    return round(row.brand_mention_rate * 100, 2)
+
+
 def _movements(
     current: VisibilityResponse, previous: VisibilityResponse | None
 ) -> list[CommandCenterMovement]:
@@ -133,15 +153,17 @@ def _movements(
     movements: list[CommandCenterMovement] = []
     for row in current.per_engine:
         prior = previous_engines.get(row.logical_engine)
-        change = _delta(row.visibility_score, prior.visibility_score if prior else None)
+        current_rate = _mention_percent(row)
+        previous_rate = _mention_percent(prior)
+        change = _delta(current_rate, previous_rate)
         if change is None or change == 0:
             continue
         movements.append(
             CommandCenterMovement(
                 label=row.logical_engine,
                 direction="positive" if change > 0 else "negative",
-                current=row.visibility_score,
-                previous=prior.visibility_score if prior else None,
+                current=current_rate,
+                previous=previous_rate,
                 delta=change,
             )
         )

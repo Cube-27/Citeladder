@@ -4,14 +4,21 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.analysis.comparison import frozen_comparison_key
 from app.analysis.normalization import normalize_domain
 from app.core.config.audits import AUDIT_SCOPE_BRAND
 from app.core.config.prompts import REQUESTABLE_PROMPT_COHORTS
 from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
+from app.domain.analysis.measurement import (
+    competitor_rate,
+    measurement_counts,
+    observed_rate,
+    prompt_performance,
+)
 from app.domain.analysis.projection_common import (
     _AUDIT_NOT_FOUND,
     aggregate_provenance,
@@ -26,7 +33,7 @@ from app.domain.analysis.schemas import (
 from app.domain.analysis.trend_folding import _brand_name
 from app.domain.projects.logos import get_project_logo_urls
 from app.domain.projects.service import get_project
-from app.models.analysis import MetricSnapshot
+from app.models.analysis import CompetitorMention, MetricSnapshot, ResponseAnalysis
 from app.models.audit import Audit
 from app.models.project import Project
 
@@ -38,6 +45,12 @@ async def get_visibility(
     project_id: uuid.UUID,
     audit_id: uuid.UUID | None = None,
     cohort: str = "core",
+    logical_engine: str | None = None,
+    baseline_id: uuid.UUID | None = None,
+    selection_mode: str = "latest",
+    from_at=None,
+    to_at=None,
+    configuration_key: str | None = None,
 ) -> VisibilityResponse:
     """Serve the selected-run dashboard projection for a project.
 
@@ -45,6 +58,27 @@ async def get_visibility(
     ``audit_id`` is omitted. Computed server-side from the persisted snapshot;
     no provider call (invariant 7).
     """
+    from app.domain.analysis.trends import validate_engine_and_range
+
+    validate_engine_and_range(
+        logical_engine=logical_engine, from_at=from_at, to_at=to_at
+    )
+    resolved_mode = "run" if audit_id else "latest"
+    if selection_mode == "run" and audit_id is None:
+        raise TrendQueryError("A specific run selection requires audit_id")
+    if selection_mode == "range":
+        from app.domain.analysis.range_projection import get_range_visibility
+
+        return await get_range_visibility(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            engine=logical_engine,
+            cohort=cohort,
+            from_at=from_at,
+            to_at=to_at,
+            configuration_key=configuration_key,
+        )
     audit_id, audit = await _selected_audit(
         session,
         workspace_id=workspace_id,
@@ -55,33 +89,69 @@ async def get_visibility(
         session, workspace_id=workspace_id, audit_id=audit_id
     )
     metrics = _cohort_metrics(snapshot, cohort)
+    if logical_engine is not None:
+        metrics = dict((metrics.get("per_engine") or {}).get(logical_engine) or {})
     logo_urls, logo_identity_ids, website_urls = await _project_logo_context(
         session, workspace_id=workspace_id, project_id=project_id
     )
     model_provenance = aggregate_provenance(audit)
+    from app.domain.analysis.comparison_projection import compare_selection
+
+    comparison = await compare_selection(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        audit=audit,
+        snapshot=snapshot,
+        metrics=metrics,
+        cohort=cohort,
+        engine=logical_engine,
+        baseline_id=baseline_id,
+    )
+    rankings = _rankings(
+        metrics,
+        logo_urls=logo_urls,
+        logo_identity_ids=logo_identity_ids,
+        website_urls=website_urls,
+    )
+    gaps = await competitor_gaps(
+        session,
+        workspace_id=workspace_id,
+        audit_ids=[audit_id],
+        cohort=cohort,
+        logical_engine=logical_engine,
+    )
+    apply_ranking_comparison(rankings, comparison, gaps)
+    counts = measurement_counts(metrics)
     return VisibilityResponse(
         project_id=project_id,
         audit_id=audit_id,
         audit_status=audit.status,
+        selection_mode=resolved_mode,
+        source_audit_ids=[audit_id],
         analyzer_version=snapshot.analyzer_version,
         scoring_rule_version=snapshot.scoring_rule_version,
         cohort=cohort,
         coverage=dict(metrics.get("coverage") or {}),
-        total_completed=int(metrics.get("total_completed") or 0),
-        total_failed=max(
-            0,
-            int((metrics.get("coverage") or {}).get("requested") or 0)
-            - int(metrics.get("total_completed") or 0),
+        total_completed=counts.responses,
+        total_failed=counts.failed or 0,
+        visibility_score=selected_score(snapshot, metrics, cohort, logical_engine),
+        visibility_rate=observed_rate(metrics, "brand_mention_rate"),
+        owned_citation_rate=observed_rate(metrics, "owned_citation_rate"),
+        # The preserved prompt composite, which is a DIFFERENT measure from the
+        # selected score above. Deriving both from `selected_score` reported one
+        # of them twice — the separation this rework exists to make.
+        prompt_performance_score=prompt_performance(metrics),
+        counts=measurement_counts(metrics),
+        comparison_key=frozen_comparison_key(
+            audit.configuration, engine=logical_engine
         ),
-        visibility_score=_selected_visibility_score(snapshot, metrics, cohort),
+        comparison=comparison,
         model_provenance=model_provenance,
-        rankings=_rankings(
-            metrics,
-            logo_urls=logo_urls,
-            logo_identity_ids=logo_identity_ids,
-            website_urls=website_urls,
-        ),
-        per_engine=_engine_rows(metrics),
+        rankings=rankings,
+        per_engine=_engine_rows({"per_engine": {logical_engine: metrics}})
+        if logical_engine
+        else _engine_rows(metrics),
         sentiment=metrics.get("sentiment"),
         avg_position=metrics.get("avg_position"),
         created_at=snapshot.created_at,
@@ -124,14 +194,6 @@ def _cohort_metrics(snapshot: MetricSnapshot, cohort: str) -> dict:
         if cohort == "core"
         else dict(stored_metrics.get("comparison") or {})
     )
-
-
-def _selected_visibility_score(
-    snapshot: MetricSnapshot, metrics: dict, cohort: str
-) -> float:
-    if cohort == "core":
-        return snapshot.visibility_score
-    return round(float(metrics.get("brand_mention_rate") or 0.0) * 100, 2)
 
 
 async def _project_logo_context(
@@ -190,18 +252,21 @@ def _rankings(
     position are present but null (decision B-2).
     """
     sov = metrics.get("share_of_voice") or {}
-    share = sov.get("share") or {}
     counts = sov.get("mention_counts") or {}
+    total_presences = sum(counts.values())
+    share = {
+        name: count / total_presences if total_presences else None
+        for name, count in counts.items()
+    }
     brand_name = _brand_name(counts, metrics)
     competitor_mention = metrics.get("competitor_mention_rate") or {}
-    competitor_citation = metrics.get("competitor_citation_rate") or {}
 
     rows = [
         _ranking_row(
             name=brand_name,
             is_brand=True,
-            mention_rate=metrics.get("brand_mention_rate"),
-            citation_rate=metrics.get("owned_citation_rate"),
+            mention_rate=observed_rate(metrics, "brand_mention_rate"),
+            citation_rate=observed_rate(metrics, "owned_citation_rate"),
             share=share,
             counts=counts,
             logo_urls=logo_urls or {},
@@ -212,8 +277,10 @@ def _rankings(
             _ranking_row(
                 name=name,
                 is_brand=False,
-                mention_rate=competitor_mention.get(name),
-                citation_rate=competitor_citation.get(name),
+                mention_rate=competitor_rate(metrics, "competitor_mention_rate", name),
+                citation_rate=competitor_rate(
+                    metrics, "competitor_citation_rate", name
+                ),
                 share=share,
                 counts=counts,
                 logo_urls=logo_urls or {},
@@ -279,17 +346,16 @@ def _engine_rows(metrics: dict) -> list[EngineComparisonRow]:
     per_engine = metrics.get("per_engine") or {}
     rows: list[EngineComparisonRow] = []
     for engine, agg in sorted(per_engine.items()):
-        rate = agg.get("brand_mention_rate")
+        rate = observed_rate(agg, "brand_mention_rate")
         rows.append(
             EngineComparisonRow(
                 logical_engine=engine,
                 total_completed=int(agg.get("total_completed", 0) or 0),
                 brand_mention_rate=rate,
-                owned_citation_rate=agg.get("owned_citation_rate"),
+                owned_citation_rate=observed_rate(agg, "owned_citation_rate"),
+                counts=measurement_counts(agg),
                 search_use_rate=agg.get("search_use_rate"),
-                visibility_score=round(float(rate) * 100, 2)
-                if rate is not None
-                else None,
+                visibility_score=prompt_performance(agg),
             )
         )
     return rows
@@ -300,3 +366,76 @@ def _engine_rows(metrics: dict) -> list[EngineComparisonRow]:
 # Every helper below reads only the already-persisted ``MetricSnapshot.metrics``
 # dict (the same shape the single-run dashboard reads) and the owning ``Audit``
 # timestamp/status. None of them re-score, re-extract, or call a provider.
+
+
+async def competitor_gaps(session, *, workspace_id, audit_ids, cohort, logical_engine):
+    gap_query = (
+        select(
+            CompetitorMention.competitor_name,
+            func.count(func.distinct(ResponseAnalysis.id)),
+        )
+        .join(
+            ResponseAnalysis,
+            ResponseAnalysis.id == CompetitorMention.analysis_id,
+        )
+        .where(
+            ResponseAnalysis.workspace_id == workspace_id,
+            ResponseAnalysis.audit_id.in_(audit_ids),
+            ResponseAnalysis.brand_mentioned.is_(False),
+            ResponseAnalysis.cohort == cohort,
+        )
+    )
+    if logical_engine:
+        gap_query = gap_query.where(ResponseAnalysis.logical_engine == logical_engine)
+    gaps = {
+        name: count
+        for name, count in (
+            await session.execute(gap_query.group_by(CompetitorMention.competitor_name))
+        ).all()
+    }
+    return gaps
+
+
+def apply_ranking_comparison(rankings, comparison, gaps):
+    baseline_rows = {row.name: row for row in comparison.rankings}
+    matched_rows = {row.name: row for row in comparison.current_rankings}
+    for row in rankings:
+        row.gap_count = gaps.get(row.name, 0) if not row.is_brand else None
+        before = baseline_rows.get(row.name)
+        if (
+            comparison.status == "comparable"
+            and before
+            and before.mention_rate is not None
+            and row.mention_rate is not None
+        ):
+            row.visibility_delta = (row.mention_rate - before.mention_rate) * 100
+        if comparison.status == "matched_subset" and before:
+            _matched_ranking_change(
+                row, matched_rows.get(row.name), before, comparison.matched_cells
+            )
+
+
+def _matched_ranking_change(row, matched, before, count):
+    if matched and matched.mention_rate is not None and before.mention_rate is not None:
+        row.matched_visibility_rate = matched.mention_rate
+        row.matched_visibility_delta = (
+            matched.mention_rate - before.mention_rate
+        ) * 100
+        row.matched_response_count = count
+
+
+def selected_score(snapshot, metrics, cohort, engine):
+    """The persisted composite for this selection, or nothing.
+
+    Only the core cohort across every engine has one: that is the shape the
+    snapshot stores. A single engine's slice, or the comparison cohort, has no
+    persisted composite, and substituting the prompt composite there made this
+    field identical to `prompt_performance_score` — the two measures this
+    rework exists to keep apart. An absent composite is UNAVAILABLE, which is a
+    different statement from a measured one and belongs in its own field.
+    """
+    if not metrics.get("total_completed"):
+        return None
+    if cohort == "core" and engine is None:
+        return snapshot.visibility_score
+    return None

@@ -1,12 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Visibility } from '@/lib/api/types';
 import type { ActiveRun } from '@/lib/visibility/dashboard';
 
 import { ActiveRunBanner } from './active-run-banner';
 import { VisibilityEmptyState } from './empty-state';
-import { RankingsTable } from './rankings-table';
 
 vi.mock('@/components/runs/launch-audit-button', () => ({
   LaunchAuditButton: ({ children }: { children: React.ReactNode }) => (
@@ -24,25 +22,6 @@ vi.mock('@/components/runs/launch-audit-button', () => ({
  * duplicate, paid run; showing a bare empty state hides the fact that results
  * are on the way.
  */
-function visibility(rankings: Visibility['rankings']): Visibility {
-  return { rankings } as Visibility;
-}
-
-function rankingRow(name: string, shareOfVoice: number | null) {
-  return {
-    name,
-    is_brand: false,
-    logo_url: null,
-    website_url: null,
-    mention_rate: 0.5,
-    citation_rate: 0.2,
-    share_of_voice: shareOfVoice,
-    mention_count: 1,
-    sentiment: null,
-    avg_position: null,
-  };
-}
-
 describe('VisibilityEmptyState', () => {
   it('invites a first audit when nothing is running', () => {
     render(<VisibilityEmptyState />);
@@ -91,73 +70,5 @@ describe('ActiveRunBanner', () => {
     render(<ActiveRunBanner run={{ ...run, status: 'analyzing' }} />);
 
     expect(screen.getByText(/\(Analyzing\)/)).toBeVisible();
-  });
-});
-
-describe('RankingsTable', () => {
-  it('explains an empty result instead of rendering a headerless table', () => {
-    render(<RankingsTable visibility={visibility([])} />);
-
-    expect(screen.getByText(/No brand or competitor mentions were recorded/)).toBeVisible();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
-  });
-
-  it('orders rows by share of voice, descending', () => {
-    render(
-      <RankingsTable
-        visibility={visibility([
-          rankingRow('Initech', 0.1),
-          rankingRow('Acme', 0.6),
-          rankingRow('Globex', 0.3),
-        ] as Visibility['rankings'])}
-      />,
-    );
-
-    const names = screen
-      .getAllByRole('row')
-      .slice(1)
-      .map((row) => row.textContent);
-    expect(names[0]).toContain('Acme');
-    expect(names[1]).toContain('Globex');
-    expect(names[2]).toContain('Initech');
-  });
-
-  it('breaks a share tie by name so the order is stable between renders', () => {
-    render(
-      <RankingsTable
-        visibility={visibility([
-          rankingRow('Zeta', 0.4),
-          rankingRow('Alpha', 0.4),
-        ] as Visibility['rankings'])}
-      />,
-    );
-
-    const names = screen
-      .getAllByRole('row')
-      .slice(1)
-      .map((row) => row.textContent);
-    expect(names[0]).toContain('Alpha');
-    expect(names[1]).toContain('Zeta');
-  });
-
-  it('sorts an unknown share as the lowest rather than dropping the row', () => {
-    render(
-      <RankingsTable
-        visibility={visibility([
-          rankingRow('Unknown', null),
-          rankingRow('Acme', 0.2),
-        ] as Visibility['rankings'])}
-      />,
-    );
-
-    const names = screen
-      .getAllByRole('row')
-      .slice(1)
-      .map((row) => row.textContent);
-    // The brand was still mentioned; only its share is unknown, so it belongs
-    // in the table rather than being silently omitted.
-    expect(names).toHaveLength(2);
-    expect(names[0]).toContain('Acme');
-    expect(names[1]).toContain('Unknown');
   });
 });

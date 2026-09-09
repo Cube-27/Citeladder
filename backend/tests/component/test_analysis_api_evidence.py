@@ -35,6 +35,7 @@ from app.domain.analysis.evidence import (
     get_visibility_evidence,
 )
 from app.domain.analysis.schemas import VisibilityFanoutState
+from app.domain.analysis.source_projection import get_visibility_sources
 from app.models.analysis import (
     ResponseAnalysis,
 )
@@ -118,13 +119,65 @@ async def test_evidence_projects_mentions_citations_and_queries(
     assert item.task_id is not None
     assert item.artifact_id is not None
     assert item.prompt_snapshot_id is not None
-    # Frozen measurement provenance (inv. 4/7): the frozen mode column, and
-    # retrieval unrecorded when nothing froze it — never inferred from live
-    # config. Vocabulary lock: no ``mode`` alias.
     assert item.logical_engine == ENGINE_GEMINI
     assert item.transport_model == GEMINI_MODEL
     assert item.retrieval_enabled is None
     assert "mode" not in item.model_dump()
+
+
+async def test_source_counts_and_empty_answers_use_complete_selection(session_factory):
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+        audit, _, _, _ = await _seed_evidence_execution(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            completed_at=datetime(2026, 2, 1, tzinfo=UTC),
+            citations=[
+                ("https://example.com/a", "example.com", "third_party"),
+                ("https://example.com/a", "example.com", "third_party"),
+                ("https://example.com/b", "example.com", "third_party"),
+            ],
+        )
+        await _seed_evidence_execution(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            completed_at=datetime(2026, 2, 1, tzinfo=UTC),
+            audit=audit,
+            repetition=1,
+        )
+        await session.commit()
+        scope = dict(
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            audit_id=audit.id,
+        )
+        answers = await get_visibility_evidence(
+            session, **scope, limit=1, outcome="brand_absent"
+        )
+        assert answers.total == 2
+        sources = await get_visibility_sources(session, **scope, limit=1)
+        assert sources.responses == 2
+        assert sources.total == 1
+        domain = sources.items[0]
+        assert (domain.responses, domain.annotations, domain.urls) == (1, 3, 2)
+        assert domain.response_rate == 0.5
+        assert domain.category_unavailable
+        urls = await get_visibility_sources(
+            session, **scope, domain="example.com", limit=1
+        )
+        assert urls.total == 2
+        assert urls.next_offset == 1
+        all_urls = await get_visibility_sources(
+            session, **scope, domain="example.com", limit=100
+        )
+        assert all_urls.total == urls.total
+        assert all_urls.responses == urls.responses
+        foreign = await get_visibility_sources(
+            session, workspace_id=_uuid.uuid4(), project_id=seed.project_id
+        )
+        assert foreign.total == 0
 
 
 @pytest.mark.asyncio
@@ -362,9 +415,22 @@ async def test_evidence_limit_truncation_and_order(
         )
         assert limited.truncated is True
         assert len(limited.items) == 2
-        # Newest-first by completion.
-        assert limited.items[0].completed_at == datetime(2026, 2, 3, tzinfo=UTC)
-        assert limited.items[1].completed_at == datetime(2026, 2, 2, tzinfo=UTC)
+        assert limited.total == 3
+        assert limited.next_cursor is not None
+        next_page = await get_visibility_evidence(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            limit=2,
+            cursor=limited.next_cursor,
+            as_of=limited.as_of,
+        )
+        assert next_page.total == 3
+        assert next_page.prompt_options == limited.prompt_options
+        assert len(next_page.items) == 1
+        assert {item.analysis_id for item in limited.items}.isdisjoint(
+            item.analysis_id for item in next_page.items
+        )
 
         full = await get_visibility_evidence(
             session,
@@ -374,13 +440,16 @@ async def test_evidence_limit_truncation_and_order(
         )
         assert full.truncated is False
         assert len(full.items) == 3
+        assert [item.analysis_id for item in full.items] == [
+            item.analysis_id for item in [*limited.items, *next_page.items]
+        ]
 
 
 @pytest.mark.asyncio
 async def test_evidence_deterministic_order_within_audit(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Within one audit, order by prompt index, engine, repetition."""
+    """Evidence insertion time and UUID provide stable cursor ordering."""
     async with session_factory() as session:
         seed = await seed_audit_fixtures(session, prompt_count=2)
         audit = Audit(
@@ -427,8 +496,19 @@ async def test_evidence_deterministic_order_within_audit(
             workspace_id=seed.workspace_id,
             project_id=seed.project_id,
         )
+        repeated = await get_visibility_evidence(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            as_of=result.as_of,
+        )
+        assert [item.analysis_id for item in repeated.items] == [
+            item.analysis_id for item in result.items
+        ]
     order = [(i.prompt_index, i.repetition) for i in result.items]
-    assert order == [(0, 0), (0, 1), (1, 0)]
+    # Sorted, not a set: a set would pass on a duplicated cell, and one answer
+    # counted twice is exactly the failure this page has to rule out.
+    assert sorted(order) == [(0, 0), (0, 1), (1, 0)]
 
 
 @pytest.mark.asyncio

@@ -34,11 +34,12 @@ import {
 } from '@/lib/visibility/trends';
 import { textRole } from '@/components/ui/typography';
 
-export type EngineFilter = LogicalEngine | 'all';
+type EngineFilter = LogicalEngine | 'all';
 const METRICS_HELP_URL = '/faq';
 
 type ToolbarProps = Readonly<{
   activeTab: VisibilityTab;
+  selectionMode?: 'run' | 'range';
   runs: RunOption[];
   selectedRunId: string | null;
   onSelectRun: (runId: string | null) => void;
@@ -60,7 +61,7 @@ export function VisibilityToolbar(props: ToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="visibility-toolbar">
       <CohortFilter {...props} />
-      {props.activeTab === 'trends' || evidence ? <RunFilter {...props} /> : null}
+      {props.selectionMode !== 'range' ? <RunFilter {...props} /> : null}
       <EngineFilterControl {...props} />
       {props.activeTab === 'trends' || evidence ? <RangeFilter {...props} /> : null}
       {props.activeTab === 'trends' ? <GranularityFilter {...props} /> : null}
@@ -125,7 +126,9 @@ function RunFilter({ runs, selectedRunId, onSelectRun }: ToolbarProps) {
       <DropdownTrigger asChild>
         <FilterButton active={false} label="Select run">
           <ICONS.runs className="text-muted size-3" aria-hidden />
-          <span>{selected?.label ?? 'Latest'}</span>
+          <span>
+            {selected?.label ?? (selectedRunId ? 'Selected run unavailable' : 'Latest run')}
+          </span>
         </FilterButton>
       </DropdownTrigger>
       <DropdownContent>
@@ -171,7 +174,7 @@ function EngineFilterControl({ engine, onChangeEngine }: ToolbarProps) {
   );
 }
 
-function RangeFilter({ range, onChangeRange }: ToolbarProps) {
+function RangeFilter({ range, onChangeRange, selectionMode }: ToolbarProps) {
   return (
     <Dropdown>
       <DropdownTrigger asChild>
@@ -181,7 +184,9 @@ function RangeFilter({ range, onChangeRange }: ToolbarProps) {
         </FilterButton>
       </DropdownTrigger>
       <DropdownContent>
-        <DropdownLabel>Date range</DropdownLabel>
+        <DropdownLabel>
+          {selectionMode === 'range' ? 'Selected period' : 'History window'}
+        </DropdownLabel>
         <DropdownRadioGroup value={range}>
           {RANGE_OPTIONS.map((option) => (
             <DropdownRadioItem

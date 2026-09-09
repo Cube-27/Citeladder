@@ -144,6 +144,8 @@ export const citationSchema = responseObject({
   title: z.string(),
   domain: z.string(),
   classification: citationClassificationSchema,
+  source_class: z.string().nullable().optional(),
+  source_taxonomy_version: z.string().nullable().optional(),
   is_owned: z.boolean(),
   is_unintended: z.boolean(),
   matched_competitor: z.string().nullable(),

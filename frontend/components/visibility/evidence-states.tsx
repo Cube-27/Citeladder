@@ -30,7 +30,26 @@ export type EvidenceTabProps = Readonly<{
   isFiltered: boolean;
   onClearFilters?: () => void;
   limit: number;
+  onNextPage?: (cursor: string | null, asOf: string | null) => void;
 }>;
+
+/**
+ * A read in flight over a card that is ALREADY drawn.
+ *
+ * Positioned, not stacked: in the flow this 2px bar would push the rows below
+ * it down and back up on every filter and every page. The evidence itself
+ * stays on screen — retained until the next set arrives — so this is the only
+ * thing that changes while the panel catches up.
+ */
+export function EvidenceBusyBar({ active }: Readonly<{ active: boolean }>) {
+  if (!active) return null;
+  return (
+    <progress
+      className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent absolute inset-x-0 top-0 z-1 h-0.5 w-full appearance-none border-0"
+      aria-label="Updating evidence"
+    />
+  );
+}
 
 export function EvidenceSkeleton({ title }: Readonly<{ title: string }>) {
   return (
@@ -136,6 +155,32 @@ export function TruncationNotice({ limit }: Readonly<{ limit: number }>) {
   );
 }
 
+export function EvidencePagination({
+  nextCursor,
+  asOf,
+  onPage,
+}: Readonly<{
+  nextCursor: string | null;
+  asOf: string | null;
+  onPage: (cursor: string | null, asOf: string | null) => void;
+}>) {
+  return (
+    <div className="flex flex-wrap gap-2 p-[var(--card-padding)]">
+      <Button variant="secondary" size="sm" onClick={() => onPage(null, null)}>
+        First answers
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={!nextCursor}
+        onClick={() => onPage(nextCursor, asOf)}
+      >
+        Next answers
+      </Button>
+    </div>
+  );
+}
+
 /**
  * Shared per-execution header for both evidence tabs.
  *
@@ -162,6 +207,9 @@ export function ExecutionHeader({
         </span>
         <span>{item.transport_model}</span>
         {trailing}
+        <Button asChild variant="ghost" size="sm">
+          <Link href={`/runs/${item.audit_id}?execution=${item.task_id}`}>Open answer</Link>
+        </Button>
       </span>
     </div>
   );

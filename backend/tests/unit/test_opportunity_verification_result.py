@@ -85,10 +85,19 @@ async def test_visibility_leg_is_unavailable_when_either_score_is_missing(
     }
     metrics = [
         SimpleNamespace(
-            id=baseline_metric_id, visibility_score=None, analyzer_version="v1"
+            id=baseline_metric_id,
+            visibility_score=None,
+            analyzer_version="v1",
+            scoring_rule_version="s1",
         ),
         SimpleNamespace(
-            id=post_metric_id, visibility_score=42.0, analyzer_version="v1"
+            id=post_metric_id,
+            visibility_score=42.0,
+            analyzer_version="v1",
+            # Comparability now turns on the scoring rules as well as the
+            # analyzer: the same numbers computed under different rules are not
+            # a movement.
+            scoring_rule_version="s1",
         ),
     ]
     session = SimpleNamespace(

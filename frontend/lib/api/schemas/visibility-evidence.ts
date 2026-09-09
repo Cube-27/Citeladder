@@ -75,4 +75,61 @@ export const visibilityExecutionEvidenceSchema = responseObject({
 export const visibilityEvidenceResponseSchema = responseObject({
   items: z.array(visibilityExecutionEvidenceSchema),
   truncated: z.boolean(),
+  total: z.number().int().optional(),
+  next_cursor: z.string().nullable().optional(),
+  as_of: z.string().nullable().optional(),
+  prompt_options: z.array(responseObject({ id: uuid(), label: z.string() })).optional(),
+});
+
+export const visibilitySourcesSchema = responseObject({
+  total: z.number().int(),
+  responses: z.number().int(),
+  prompts: z.number().int(),
+  next_offset: z.number().int().nullable(),
+  as_of: z.string(),
+  comparison_status: z.string(),
+  items: z.array(
+    responseObject({
+      key: z.string(),
+      responses: z.number().int(),
+      prompts: z.number().int(),
+      annotations: z.number().int(),
+      urls: z.number().int(),
+      response_rate: z.number().nullable(),
+      prompt_coverage: z.number().nullable(),
+      ownership: z.array(z.string()),
+      categories: z.array(z.string()),
+      taxonomy_versions: z.array(z.string()),
+      category_unavailable: z.boolean(),
+      response_delta: z.number().nullable(),
+    }),
+  ),
+});
+
+export const visibilityFanoutSummarySchema = responseObject({
+  event_count: z.number().int(),
+  distinct_queries: z.number().int(),
+  coverage: z.record(z.string(), z.number().int()),
+  next_offset: z.number().int().nullable(),
+  total_answers: z.number().int(),
+  answers: z.array(
+    responseObject({
+      audit_id: uuid(),
+      task_id: uuid(),
+      prompt_text: z.string(),
+      logical_engine: z.string(),
+      brand_mentioned: z.boolean(),
+      owned_domain_cited: z.boolean(),
+    }),
+  ),
+  items: z.array(
+    responseObject({
+      query: z.string(),
+      event_count: z.number().int(),
+      prompt_count: z.number().int(),
+      engines: z.array(z.string()),
+      response_count: z.number().int(),
+      brand_response_count: z.number().int(),
+    }),
+  ),
 });

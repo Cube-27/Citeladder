@@ -26,6 +26,7 @@ from app.core.config.provider_catalog import (
     TRANSPORT_GOOGLE,
     measurement_route,
 )
+from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.audits.creation import create_audit
 from app.models.analysis import (
     BrandMention,
@@ -220,11 +221,36 @@ async def _seed_snapshot(
     transport_model: str | None = None,
     retrieval_enabled: bool | None = None,
 ):
-    configuration = None
-    if retrieval_enabled is not None:
-        configuration = {
-            MEASUREMENT_POLICY_KEY: {"retrieval_enabled": retrieval_enabled}
-        }
+    configuration = {
+        "brand_name": _BRAND,
+        "brand_aliases": [],
+        "owned_domains": ["acme.com"],
+        "competitors": [
+            {"name": _COMPETITOR, "aliases": [], "domains": ["globex.com"]}
+        ],
+        "country_code": "US",
+        "language_code": "en",
+        "benchmark_mode": "consumer_like",
+        "panel_hash": "frozen-panel",
+        "audit_scope": "brand",
+        "repetitions": 1,
+        "engine_routes": {
+            ENGINE_GEMINI: {
+                "transport_provider": TRANSPORT_GOOGLE,
+                "transport_model": transport_model or GEMINI_MODEL,
+                "retrieval_enabled": True
+                if retrieval_enabled is None
+                else retrieval_enabled,
+            }
+        },
+        MEASUREMENT_POLICY_KEY: {
+            "retrieval_enabled": True
+            if retrieval_enabled is None
+            else retrieval_enabled,
+            "max_output_tokens": 1000,
+            "answer_instruction": "Answer the question.",
+        },
+    }
     audit = Audit(
         workspace_id=workspace_id,
         project_id=project_id,
@@ -372,6 +398,11 @@ async def _seed_evidence_execution(
     task = AuditTask(
         audit_id=audit.id,
         workspace_id=workspace_id,
+        # A TASK's terminal success is `succeeded`; `completed` is the AUDIT
+        # vocabulary. Stamping the audit's constant here is what let a filter
+        # on a status no task can hold pass every test while returning nothing
+        # in production.
+        status=TASK_STATUS_SUCCEEDED,
         prompt_snapshot_id=snapshot.id,
         engine_snapshot_id=engine_snapshot.id,
         prompt_index=prompt_index,

@@ -10,9 +10,15 @@
  * `VisibilityTrendPoint`s over persisted `MetricSnapshot` rows, filtered by
  * engine/date and bucketed by run/week/month. Same-origin `/api/v1` only.
  */
+import { queryOptions } from '@tanstack/react-query';
 import { z } from 'zod';
+import {
+  visibilityFanoutSummarySchema,
+  visibilitySourcesSchema,
+} from './schemas/visibility-evidence';
 
 import { apiClient, type ApiRequestOptions } from './client';
+import { queryKeys } from './query-keys';
 import {
   competitorSchema,
   observedCompetitorSchema,
@@ -54,6 +60,13 @@ type VisibilityTrendParams = {
  * audit must fall inside the inclusive window). Same-origin only.
  */
 type VisibilityEvidenceParams = {
+  audit_ids?: string[];
+  cursor?: string;
+  as_of?: string;
+  outcome?: string;
+  competitor?: string;
+  domain?: string;
+  url?: string;
   cohort?: 'core' | 'comparison';
   /** Restrict to one audit in the authorized project. */
   audit_id?: string;
@@ -69,10 +82,70 @@ type VisibilityEvidenceParams = {
   limit?: number;
 };
 
+/** The selection one Visibility request resolves to. */
+export type ProjectVisibilityParams = {
+  audit_id?: string;
+  cohort?: 'core' | 'comparison';
+  engine?: string;
+  baseline_id?: string;
+  selection_mode?: string;
+  from?: string;
+  to?: string;
+  configuration_key?: string;
+};
+
+/**
+ * The landing selection: the latest run, the core cohort, no baseline and no
+ * frozen configuration pinned. Navigation intent warms exactly this, so a
+ * hovered link and the screen it opens share ONE cache entry.
+ */
+export const INITIAL_VISIBILITY_PARAMS: ProjectVisibilityParams = {
+  cohort: 'core',
+  selection_mode: 'latest',
+};
+
 export const visibilityApi = {
+  getFanoutSummary: async (
+    projectId: string,
+    params: {
+      audit_id?: string;
+      audit_ids?: string[];
+      engine?: string;
+      cohort?: string;
+      offset?: number;
+      query?: string;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/fanout`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(visibilityFanoutSummarySchema, result, 'visibility.getFanoutSummary');
+  },
+  getSources: async (
+    projectId: string,
+    params: {
+      audit_id?: string;
+      audit_ids?: string[];
+      baseline_audit_ids?: string[];
+      engine?: string;
+      cohort?: string;
+      domain?: string;
+      offset?: number;
+      as_of?: string;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/sources`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(visibilitySourcesSchema, result, 'visibility.getSources');
+  },
   getProjectVisibility: async (
     projectId: string,
-    params?: { audit_id?: string; cohort?: 'core' | 'comparison' },
+    params?: ProjectVisibilityParams,
     options?: ApiRequestOptions,
   ) => {
     const path = withQuery(`/projects/${projectId}/visibility`, definedQuery(params));
@@ -122,10 +195,17 @@ export const visibilityApi = {
     projectId: string,
     auditId?: string,
     options?: ApiRequestOptions,
+    filters?: {
+      engine?: string;
+      cohort?: string;
+      baseline_id?: string;
+      audit_ids?: string[];
+      baseline_audit_ids?: string[];
+    },
   ): Promise<PromptMetricItem[]> => {
     const path = withQuery(
       `/projects/${projectId}/visibility/prompts`,
-      definedQuery({ audit_id: auditId }),
+      definedQuery({ audit_id: auditId, ...filters }),
     );
     const res = await apiClient.get<PromptMetricItem[]>(path, options);
     return strictValidate(promptMetricListSchema, res, 'visibility.getPromptMetrics');
@@ -156,4 +236,17 @@ export const visibilityApi = {
     );
     return strictValidate(competitorSchema, res, 'visibility.acceptCompetitorSuggestion');
   },
+};
+
+/**
+ * Project projection read options, so the screen and navigation intent request
+ * the SAME key from one definition instead of each assembling its own.
+ */
+export const visibilityQueries = {
+  project: (projectId: string, params: ProjectVisibilityParams) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.project(projectId, params.audit_id, params),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        visibilityApi.getProjectVisibility(projectId, params, { signal }),
+    }),
 };

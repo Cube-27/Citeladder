@@ -27,6 +27,7 @@ from app.analysis.entity_assessment import assess_entities
 from app.analysis.observed_competitors import (
     persist_observed_competitors as _persist_observed_competitors,
 )
+from app.analysis.opportunities.source_patterns import classify_source_domain
 from app.analysis.scoring import (
     ScoringConfig,
     aggregate_run,
@@ -49,6 +50,7 @@ from app.core.config.audits import (
     EVENT_AUDIT_COMPLETED,
 )
 from app.core.config.prompts import ORGANIC_PROMPT_COHORTS
+from app.core.config.source_patterns import SOURCE_TAXONOMY_VERSION
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.audits.state_events import apply_transition, record_event
 from app.domain.prompts.normalization import prompt_text_hash
@@ -167,6 +169,12 @@ def _persist_analysis_rows(
                 title=str(citation.get("title") or ""),
                 domain=str(classified.get("domain") or ""),
                 classification=_classification(classified),
+                source_class=classify_source_domain(
+                    str(classified.get("domain") or ""),
+                    is_owned=bool(classified.get("is_owned")),
+                    matched_competitor=classified.get("matched_competitor"),
+                ),
+                source_taxonomy_version=SOURCE_TAXONOMY_VERSION,
                 is_owned=bool(classified.get("is_owned")),
                 is_unintended=bool(classified.get("is_unintended")),
                 matched_competitor=classified.get("matched_competitor"),
@@ -360,17 +368,46 @@ async def _previous_prompt_metrics(
     grouped: dict[tuple[str, str], list[PromptMetricSnapshot]] = {
         key: [] for key in identities
     }
+    from app.analysis.comparison import frozen_comparison_key
+
+    current_context = frozen_comparison_key(audit.configuration, include_panel=False)
+    candidate_audits = {
+        row.id: row
+        for row in (
+            await session.scalars(
+                select(Audit).where(
+                    Audit.workspace_id == audit.workspace_id,
+                    Audit.id.in_({item.audit_id for item in candidates}),
+                )
+            )
+        ).all()
+    }
     for item in candidates:
-        key = (item.prompt_identity, item.cohort)
-        current_engines = identities.get(key, set())
-        if (
-            key in grouped
-            and len(current_engines.intersection(item.per_engine_scores))
-            >= PROMPT_DECLINE_MIN_ENGINES
-            and len(grouped[key]) < PROMPT_DECLINE_WINDOW_MOVEMENTS
+        if not _same_measurement_context(
+            candidate_audits.get(item.audit_id), current_context
         ):
+            continue
+        key = (item.prompt_identity, item.cohort)
+        if key not in grouped or len(grouped[key]) >= PROMPT_DECLINE_WINDOW_MOVEMENTS:
+            continue
+        shared = identities.get(key, set()).intersection(item.per_engine_scores)
+        if len(shared) >= PROMPT_DECLINE_MIN_ENGINES:
             grouped[key].append(item)
     return grouped
+
+
+def _same_measurement_context(previous_audit, current_context) -> bool:
+    """Whether a prior run was measured the same way as the current one.
+
+    An unknown context on either side is not a match: a movement stated across
+    two different configurations would be a claim about the configuration.
+    """
+    from app.analysis.comparison import frozen_comparison_key
+
+    if current_context is None or previous_audit is None:
+        return False
+    key = frozen_comparison_key(previous_audit.configuration, include_panel=False)
+    return key == current_context
 
 
 async def _persist_prompt_metric_snapshots(
@@ -674,6 +711,9 @@ async def finalize_audit_analysis(
         config,
     )
 
+    from app.analysis.coverage import freeze_task_coverage
+
+    await freeze_task_coverage(session, audit, metrics)
     completed = len(all_dicts)
     total = int(audit.requested_count or len(all_dicts))
     failed = max(0, total - completed)

@@ -34,8 +34,25 @@ async def get_prompt_metrics(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     audit_id: uuid.UUID | None = None,
+    cohort: str = "core",
+    logical_engine: str | None = None,
+    baseline_id: uuid.UUID | None = None,
+    audit_ids: list[uuid.UUID] | None = None,
+    baseline_audit_ids: list[uuid.UUID] | None = None,
 ) -> list[PromptMetricItem]:
     """Return one persisted prompt projection, strongest-to-weakest."""
+    if audit_ids:
+        from app.domain.analysis.prompt_period import period_prompt_metrics
+
+        return await period_prompt_metrics(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            audit_ids=audit_ids,
+            baseline_ids=baseline_audit_ids,
+            cohort=cohort,
+            engine=logical_engine,
+        )
     if audit_id is None:
         audit_id = await latest_dashboard_audit_id(
             session, workspace_id=workspace_id, project_id=project_id
@@ -60,6 +77,7 @@ async def get_prompt_metrics(
                     PromptMetricSnapshot.workspace_id == workspace_id,
                     PromptMetricSnapshot.project_id == project_id,
                     PromptMetricSnapshot.audit_id == audit_id,
+                    PromptMetricSnapshot.cohort == cohort,
                 )
                 .order_by(
                     PromptMetricSnapshot.composite_score.desc(),
@@ -68,4 +86,13 @@ async def get_prompt_metrics(
             )
         ).all()
     )
-    return [PromptMetricItem.model_validate(row) for row in rows]
+    from app.domain.analysis.prompt_outcomes import enrich_prompt_outcomes
+
+    return await enrich_prompt_outcomes(
+        session,
+        rows=[PromptMetricItem.model_validate(row) for row in rows],
+        workspace_id=workspace_id,
+        audit_id=audit_id,
+        engine=logical_engine,
+        baseline_id=baseline_id,
+    )

@@ -32,6 +32,7 @@ from app.core.config.provider_catalog import (
 from app.domain.analysis import trend_folding as analysis_trend_folding
 from app.domain.analysis.errors import TrendQueryError
 from app.domain.analysis.trends import get_visibility_trends
+from app.domain.analysis.visibility import get_visibility
 from app.workers.audit import execution as audit_execution
 from tests.component.analysis_api_helpers import (
     _BRAND,
@@ -71,6 +72,80 @@ async def _seed_reference_snapshot(session: AsyncSession) -> Seed:
     )
     await session.commit()
     return seed
+
+
+async def test_range_uses_latest_configuration_and_pooled_coverage(session_factory):
+    async with session_factory() as session:
+        seed = await seed_audit_fixtures(session, prompt_count=1)
+        selected_ids = []
+        for day, model in [(1, "a"), (2, "b"), (3, "a")]:
+            metrics = _trend_metrics(
+                brand_rate=0.5,
+                owned_rate=0.5,
+                competitor_rate=0.5,
+                brand_count=1,
+                competitor_count=1,
+                total_completed=2,
+            )
+            metrics["coverage"] = {
+                "requested": 4,
+                "completed": 2,
+                "failed": 1,
+                "not_run": 1,
+            }
+            audit, _ = await _seed_snapshot(
+                session,
+                workspace_id=seed.workspace_id,
+                project_id=seed.project_id,
+                completed_at=datetime(2026, 2, day, tzinfo=UTC),
+                metrics=metrics,
+                visibility_score=73,
+                total_completed=2,
+                transport_model=model,
+                retrieval_enabled=True,
+            )
+            if model == "a":
+                selected_ids.append(audit.id)
+        await session.commit()
+        result = await get_visibility(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            selection_mode="range",
+            from_at=datetime(2026, 2, 1, tzinfo=UTC),
+            to_at=datetime(2026, 2, 5, tzinfo=UTC),
+        )
+        assert result.source_audit_ids == selected_ids
+        assert (
+            result.counts.responses,
+            result.counts.expected,
+            result.counts.failed,
+        ) == (4, 8, 2)
+        assert result.coverage["requested"] == 8
+        assert result.total_failed == 2
+        assert result.visibility_rate == 0.5
+
+
+async def test_unknown_frozen_identity_never_folds_or_compares(session_factory):
+    async with session_factory() as session:
+        seed = await _seed_reference_snapshot(session)
+        from sqlalchemy import select
+
+        from app.models.audit import Audit
+
+        audit = await session.scalar(
+            select(Audit).where(Audit.project_id == seed.project_id)
+        )
+        audit.configuration = {}
+        await session.commit()
+        result = await get_visibility(
+            session,
+            workspace_id=seed.workspace_id,
+            project_id=seed.project_id,
+            audit_id=audit.id,
+        )
+        assert result.comparison.status == "identity_unavailable"
+        assert result.comparison.deltas == {}
 
 
 async def test_trends_raw_points_chronological_with_provenance(
@@ -164,9 +239,9 @@ async def test_trends_response_and_mention_sov_and_rankings(
         )
     point = points[0]
     # Response-level SOV = brand_rate / (brand_rate + competitor_rate) = 1/1.5.
-    assert point.sov.response == pytest.approx(round(1.0 / 1.5, 4))
+    assert point.sov.response == pytest.approx(1.0 / 1.5)
     # Mention-level SOV = brand_count / total_mentions = 4/6.
-    assert point.sov.mention == pytest.approx(round(4 / 6, 4))
+    assert point.sov.mention == pytest.approx(4 / 6)
     # Rankings: brand row first (highest SOV), competitor present.
     brand_rows = [r for r in point.rankings if r.is_brand]
     assert len(brand_rows) == 1
@@ -322,14 +397,14 @@ async def test_trends_weekly_and_monthly_bucketing_math(
     assert bucket.audit_id is None
     assert len(bucket.source_snapshot_ids) == 2
     # Completion-weighted brand rate: (1.0*4 + 0.5*2) / 6 = 5/6.
-    assert bucket.brand_mention_rate == pytest.approx(round(5 / 6, 4))
+    assert bucket.brand_mention_rate == pytest.approx(5 / 6)
     # Owned-citation rate: (0.5*4 + 0.0*2) / 6 = 2/6.
-    assert bucket.owned_citation_rate == pytest.approx(round(2 / 6, 4))
+    assert bucket.owned_citation_rate == pytest.approx(2 / 6)
     # Mention counts SUM before division: Acme 4+1=5, Globex 2+1=3, total 8.
     brand_row = next(r for r in bucket.rankings if r.is_brand)
     assert brand_row.mention_count == 5
-    assert brand_row.share_of_voice == pytest.approx(round(5 / 8, 4))
-    assert bucket.sov.mention == pytest.approx(round(5 / 8, 4))
+    assert brand_row.share_of_voice == pytest.approx(5 / 8)
+    assert bucket.sov.mention == pytest.approx(5 / 8)
 
     assert len(monthly) == 1
     assert monthly[0].completed_at == datetime(2026, 1, 1, tzinfo=UTC)
@@ -389,7 +464,7 @@ async def test_trends_mixed_version_strict_fallback_and_non_strict_marking(
             granularity="week",
         )
         assert len(strict) == 2
-        assert all(p.audit_id is not None for p in strict)
+        assert all(p.audit_id is None for p in strict)
         assert all(len(p.source_snapshot_ids) == 1 for p in strict)
 
         # Non-strict: the mixed bucket is emitted + flagged with both versions.
@@ -404,10 +479,13 @@ async def test_trends_mixed_version_strict_fallback_and_non_strict_marking(
             project_id=seed.project_id,
             granularity="week",
         )
-    assert len(marked) == 1
-    assert marked[0].spans_version_boundary is True
-    assert marked[0].analyzer_versions == ["b6-analysis-1", "b6-analysis-2"]
-    assert len(marked[0].source_snapshot_ids) == 2
+    assert len(marked) == 2
+    assert all(not point.spans_version_boundary for point in marked)
+    assert {tuple(point.analyzer_versions) for point in marked} == {
+        ("b6-analysis-1",),
+        ("b6-analysis-2",),
+    }
+    assert all(len(point.source_snapshot_ids) == 1 for point in marked)
 
 
 @pytest.mark.asyncio
@@ -562,8 +640,8 @@ async def test_trends_partition_by_measurement_identity(
             # ...so the folded visibility is the partition's own average
             # (completion-weighted; 1 completion per run) and never blends in
             # another mode/model/retrieval run.
-            scores = [s.visibility_score for s in expected]
-            assert point.visibility_score == pytest.approx(sum(scores) / len(scores))
+            assert point.visibility_score is None
+            assert point.visibility_rate == pytest.approx(1.0)
             # Aggregate provenance: the partition's single frozen route.
             assert [p.transport_model for p in point.model_provenance] == [identity[0]]
             assert all(
@@ -600,7 +678,8 @@ async def test_trends_identity_slice_filters_before_folding(
         assert len(sliced) == 1
         point = sliced[0]
         assert _identity_of(point) == ("model-a", True)
-        assert point.visibility_score == pytest.approx(70.0)
+        assert point.visibility_score is None
+        assert point.visibility_rate == pytest.approx(1.0)
         assert {str(sid) for sid in point.source_snapshot_ids} == {
             str(s.id) for s in snapshots[("model-a", True)]
         }

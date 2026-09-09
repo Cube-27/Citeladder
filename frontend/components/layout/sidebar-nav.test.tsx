@@ -122,4 +122,22 @@ describe('station navigation', () => {
     expect(mocks.prefetchQuery).toHaveBeenCalledOnce();
     expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual(PERFORMANCE_LANDING_KEY);
   });
+
+  /**
+   * The same contract for AI Visibility: intent must warm the key the screen
+   * itself reads. A key spelled out in the prefetcher drifted from the
+   * selection the dashboard builds and warmed an entry nothing consumed.
+   */
+  it('warms the Visibility landing selection the screen actually reads', () => {
+    render(<SidebarNav />);
+    fireEvent.mouseEnter(screen.getByRole('link', { name: 'AI Visibility' }));
+    const keys = mocks.prefetchQuery.mock.calls.map((call) => call[0].queryKey);
+    expect(keys).toContainEqual([
+      'visibility',
+      'project',
+      '11111111-1111-4111-8111-111111111111',
+      'latest',
+      { cohort: 'core', selection_mode: 'latest' },
+    ]);
+  });
 });

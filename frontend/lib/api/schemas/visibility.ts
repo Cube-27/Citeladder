@@ -5,6 +5,17 @@ import { promptCohortSchema } from './project';
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
+export const measurementCountsSchema = responseObject({
+  state: z.string(),
+  responses: z.number().int(),
+  brand_responses: z.number().int().nullable(),
+  owned_citation_responses: z.number().int().nullable(),
+  entity_presences: z.number().int().nullable(),
+  expected: z.number().int().nullable(),
+  failed: z.number().int().nullable(),
+  not_run: z.number().int().nullable(),
+});
+
 // ---------------------------------------------------------------------------
 // Visibility dashboard (selected-run projection)
 // ---------------------------------------------------------------------------
@@ -17,6 +28,7 @@ export const visibilityEngineSchema = responseObject({
   owned_citation_rate: z.number().nullable(),
   search_use_rate: z.number().nullable(),
   visibility_score: z.number().nullable(),
+  counts: measurementCountsSchema.optional(),
 });
 
 // One brand-vs-competitor rankings-table row (B6 `RankingRow`). `website_url`
@@ -32,6 +44,11 @@ export const rankingRowSchema = responseObject({
   citation_rate: z.number().nullable(),
   share_of_voice: z.number().nullable(),
   mention_count: z.number().int(),
+  visibility_delta: z.number().nullable().optional(),
+  gap_count: z.number().int().nullable().optional(),
+  matched_visibility_rate: z.number().nullable().optional(),
+  matched_visibility_delta: z.number().nullable().optional(),
+  matched_response_count: z.number().int().nullable().optional(),
   sentiment: z.string().nullable(),
   avg_position: z.number().nullable(),
 });
@@ -40,6 +57,24 @@ export const rankingRowSchema = responseObject({
 // server-side from the persisted MetricSnapshot for the selected audit
 // (defaults to the latest completed audit). No cross-run trend in this payload
 // — the Trends tab reads /visibility/trends for that.
+export const visibilityComparisonSchema = responseObject({
+  status: z.string(),
+  baseline_audit_id: uuid().nullable(),
+  baseline_audit_ids: z.array(uuid()),
+  baseline_at: z.string().nullable(),
+  baseline_counts: measurementCountsSchema.nullable(),
+  current_counts: measurementCountsSchema.nullable(),
+  deltas: z.record(z.string(), z.number().nullable()),
+  rankings: z.array(rankingRowSchema),
+  skipped_runs: z.number().int(),
+  matched_cells: z.number().int(),
+  current_cells: z.number().int(),
+  baseline_cells: z.number().int(),
+  current_values: z.record(z.string(), z.number().nullable()),
+  baseline_values: z.record(z.string(), z.number().nullable()),
+  current_rankings: z.array(rankingRowSchema),
+});
+
 export const visibilitySchema = responseObject({
   project_id: uuid(),
   audit_id: uuid(),
@@ -47,10 +82,21 @@ export const visibilitySchema = responseObject({
   analyzer_version: z.string(),
   scoring_rule_version: z.string(),
   cohort: promptCohortSchema.default('core'),
-  coverage: z.record(z.string(), z.number()).default({}),
+  coverage: z.record(z.string(), z.number().nullable()).default({}),
   total_completed: z.number().int(),
   total_failed: z.number().int(),
-  visibility_score: z.number(),
+  visibility_score: z.number().nullable(),
+  visibility_rate: z.number().nullable().optional(),
+  owned_citation_rate: z.number().nullable().optional(),
+  prompt_performance_score: z.number().nullable().optional(),
+  counts: measurementCountsSchema.optional(),
+  comparison_key: z.string().nullable().optional(),
+  comparison: visibilityComparisonSchema.optional(),
+  selection_mode: z.enum(['run', 'range']).optional(),
+  source_audit_ids: z.array(uuid()).optional(),
+  configuration_groups: z.record(z.string(), z.number().int()).optional(),
+  from_at: z.string().nullable().optional(),
+  to_at: z.string().nullable().optional(),
   // Aggregate surface: never a forced singular model across engines.
   model_provenance: z.array(modelProvenanceSchema).default([]),
   rankings: z.array(rankingRowSchema),
@@ -66,8 +112,10 @@ export const promptMetricItemSchema = responseObject({
   prompt_id: uuid().nullable(),
   prompt_index: z.number().int(),
   prompt_text: z.string(),
+  prompt_snapshot_id: uuid().nullable().optional(),
   cohort: z.string(),
-  composite_score: z.number(),
+  composite_score: z.number().nullable(),
+  source_audit_ids: z.array(uuid()).optional(),
   previous_score: z.number().nullable(),
   immediate_delta: z.number().nullable(),
   rolling_four: z.array(z.number()),
@@ -81,6 +129,26 @@ export const promptMetricItemSchema = responseObject({
   analyzer_version: z.string(),
   scoring_rule_version: z.string(),
   created_at: z.string(),
+  theme: z.string().optional(),
+  intent: z.string().optional(),
+  visibility_rate: z.number().nullable().optional(),
+  owned_citation_rate: z.number().nullable().optional(),
+  visibility_delta: z.number().nullable().optional(),
+  comparison_status: z.string().optional(),
+  comparison: visibilityComparisonSchema.nullable().optional(),
+  counts: measurementCountsSchema.optional(),
+  outcomes: z
+    .array(
+      responseObject({
+        logical_engine: z.string(),
+        transport_model: z.string(),
+        counts: measurementCountsSchema,
+        visibility_rate: z.number().nullable(),
+        owned_citation_rate: z.number().nullable(),
+        gap_counts: z.record(z.string(), z.number().int()),
+      }),
+    )
+    .optional(),
 });
 
 export const observedCompetitorSchema = responseObject({

@@ -5,10 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import {
   EvidenceEmpty,
+  EvidencePagination,
+  EvidenceBusyBar,
   EvidenceError,
   EvidenceFilteredEmpty,
   EvidenceSkeleton,
   ExecutionHeader,
+  ProvenanceDisclosure,
   TruncationNotice,
   type EvidenceTabProps,
 } from '@/components/visibility/evidence-states';
@@ -42,7 +45,13 @@ function safeUrl(value?: string): string | null {
  * States: skeleton, retryable error, empty (no persisted evidence), filtered
  * empty, and a truncation notice when the newest window overflowed.
  */
-export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: EvidenceTabProps) {
+export function MentionsCitations({
+  query,
+  isFiltered,
+  onClearFilters,
+  limit,
+  onNextPage,
+}: EvidenceTabProps) {
   if (query.isLoading) {
     return <EvidenceSkeleton title={TITLE} />;
   }
@@ -53,12 +62,7 @@ export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: 
   const items = query.data?.items ?? [];
   const truncated = query.data?.truncated ?? false;
 
-  // Only the executions that actually carry persisted mention/citation rows.
-  const withEvidence = items.filter(
-    (item) => item.mentions.length > 0 || item.citations.length > 0,
-  );
-
-  if (withEvidence.length === 0) {
+  if (items.length === 0) {
     return isFiltered ? (
       <EvidenceFilteredEmpty
         title={TITLE}
@@ -74,11 +78,12 @@ export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: 
     );
   }
 
-  const mentionCount = totalMentionCount(withEvidence);
-  const citationCount = totalCitationCount(withEvidence);
+  const mentionCount = totalMentionCount(items);
+  const citationCount = totalCitationCount(items);
 
   return (
-    <Card>
+    <Card className="relative" aria-busy={query.isFetching}>
+      <EvidenceBusyBar active={query.isFetching} />
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div className="grid gap-1">
           <CardTitle>{TITLE}</CardTitle>
@@ -87,16 +92,25 @@ export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: 
           </p>
         </div>
         <Badge variant="neutral">
-          {mentionCount} mentions · {citationCount} citations
+          {query.data?.total ?? 'Unknown'} matching answers · this page: {mentionCount} mentions ·{' '}
+          {citationCount} citations
         </Badge>
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
         <ul className={ledgerClasses()}>
-          {withEvidence.map((item) => (
+          {items.map((item) => (
             <ExecutionEvidenceRow key={item.analysis_id} item={item} />
           ))}
         </ul>
-        {truncated ? <TruncationNotice limit={limit} /> : null}
+        {onNextPage ? (
+          <EvidencePagination
+            nextCursor={query.data?.next_cursor ?? null}
+            asOf={query.data?.as_of ?? null}
+            onPage={onNextPage}
+          />
+        ) : truncated ? (
+          <TruncationNotice limit={limit} />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -112,6 +126,10 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
         <ExecutionHeader item={item} />
       </div>
 
+      <ProvenanceDisclosure item={item} />
+      {!item.mentions.length && !item.citations.length ? (
+        <p>No tracked mentions or citations in this answer.</p>
+      ) : null}
       {item.mentions.length > 0 ? (
         <div className="grid gap-1.5">
           <p className={eyebrowClasses}>Mentions</p>

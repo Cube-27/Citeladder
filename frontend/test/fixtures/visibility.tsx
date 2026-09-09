@@ -96,6 +96,7 @@ export function makeVisibility(auditId: string, score: number): Visibility {
       {
         name: 'Acme',
         is_brand: true,
+        website_url: 'https://acme.com',
         mention_rate: score / 100,
         citation_rate: 0.3,
         share_of_voice: 0.6,

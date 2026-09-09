@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -19,10 +19,18 @@ from app.core.config.prompts import (
     PROMPT_COHORT_CORE,
     REQUESTABLE_PROMPT_COHORTS,
 )
+from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.analysis.errors import AnalysisNotFoundError, TrendQueryError
+from app.domain.analysis.evidence_selection import (
+    EvidenceFilters,
+    apply_cursor,
+    encode_cursor,
+    scope_digest,
+)
 from app.domain.analysis.projection_common import _AUDIT_NOT_FOUND, _DASHBOARD_STATUSES
 from app.domain.analysis.schemas import (
     CitationEvidence,
+    EvidencePromptOption,
     ExecutionEvidenceResponse,
     VisibilityEvidenceResponse,
     VisibilityEvidenceSearchEvent,
@@ -62,6 +70,13 @@ async def get_visibility_evidence(
     to_at: datetime | None = None,
     limit: int = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     cohort: str = "core",
+    cursor: str | None = None,
+    as_of: datetime | None = None,
+    outcome: str | None = None,
+    competitor: str | None = None,
+    domain: str | None = None,
+    url: str | None = None,
+    audit_ids: list[uuid.UUID] | None = None,
 ) -> VisibilityEvidenceResponse:
     """Project the workspace-scoped execution evidence dataset (invariant 7).
 
@@ -89,28 +104,102 @@ async def get_visibility_evidence(
         project_id=project_id,
         audit_id=audit_id,
     )
+    as_of = as_of or datetime.now(UTC)
+    from app.domain.analysis.selection import authorize_run_set
+
+    await authorize_run_set(
+        session, workspace_id=workspace_id, project_id=project_id, audit_ids=audit_ids
+    )
+    if as_of.tzinfo is None:
+        raise TrendQueryError("'as_of' must be timezone-aware")
+    base = _evidence_statement(
+        workspace_id=workspace_id,
+        project_id=project_id,
+        audit_id=audit_id,
+        prompt_id=None,
+        logical_engine=logical_engine,
+        from_at=from_at,
+        to_at=to_at,
+        limit=None,
+        cohort=cohort,
+    ).where(ResponseAnalysis.created_at <= as_of)
+    if audit_ids:
+        base = base.where(ResponseAnalysis.audit_id.in_(audit_ids))
+    options = (
+        await session.execute(
+            base.with_only_columns(
+                func.coalesce(AuditPromptSnapshot.prompt_id, AuditPromptSnapshot.id),
+                AuditPromptSnapshot.text,
+            )
+            .order_by(None)
+            .distinct()
+        )
+    ).all()
+    filters = EvidenceFilters(outcome, competitor, domain, url)
+    statement = filters.apply(base)
+    if prompt_id:
+        frozen_text = (
+            base.with_only_columns(AuditPromptSnapshot.text)
+            .order_by(None)
+            .where(
+                AuditPromptSnapshot.id == prompt_id,
+                AuditPromptSnapshot.prompt_id.is_(None),
+            )
+        )
+        statement = statement.where(
+            or_(
+                AuditPromptSnapshot.prompt_id == prompt_id,
+                AuditPromptSnapshot.id == prompt_id,
+                AuditPromptSnapshot.prompt_id.is_(None)
+                & AuditPromptSnapshot.text.in_(frozen_text),
+            )
+        )
+    total = await session.scalar(
+        select(func.count()).select_from(
+            statement.with_only_columns(ResponseAnalysis.id).order_by(None).subquery()
+        )
+    )
+    scope = scope_digest(
+        {
+            "workspace": workspace_id,
+            "project": project_id,
+            "audit": audit_id,
+            "prompt": prompt_id,
+            "engine": logical_engine,
+            "from": from_at,
+            "to": to_at,
+            "cohort": cohort,
+            "as_of": as_of,
+            "outcome": outcome,
+            "competitor": competitor,
+            "domain": domain,
+            "url": url,
+            "audit_ids": sorted(str(value) for value in audit_ids or []),
+        }
+    )
     rows = list(
         (
             await session.execute(
-                _evidence_statement(
-                    workspace_id=workspace_id,
-                    project_id=project_id,
-                    audit_id=audit_id,
-                    prompt_id=prompt_id,
-                    logical_engine=logical_engine,
-                    from_at=from_at,
-                    to_at=to_at,
-                    limit=limit,
-                    cohort=cohort,
-                )
+                apply_cursor(statement, cursor, scope).limit(limit + 1)
             )
         ).all()
     )
-    if not rows:
-        return VisibilityEvidenceResponse(items=[], truncated=False)
-    return await _evidence_response(
+    response = await _evidence_response(
         session, rows=cast(list[EvidenceRow], rows), limit=limit
     )
+    response.total = total or 0
+    response.as_of = as_of
+    response.prompt_options = [
+        EvidencePromptOption(id=identity, label=text)
+        for identity, text in sorted(
+            {identity: text for identity, text in options}.items(),
+            key=lambda item: item[1],
+        )
+    ]
+    if response.truncated:
+        last = rows[limit - 1][0]
+        response.next_cursor = encode_cursor(last.created_at, last.id, scope)
+    return response
 
 
 def _validated_evidence_request(
@@ -162,7 +251,7 @@ def _evidence_statement(
     logical_engine: str | None,
     from_at: datetime | None,
     to_at: datetime | None,
-    limit: int,
+    limit: int | None,
     cohort: str,
 ):
     stmt = (
@@ -188,6 +277,17 @@ def _evidence_statement(
             Audit.workspace_id == workspace_id,
             Audit.project_id == project_id,
             Audit.status.in_(_DASHBOARD_STATUSES),
+            # An answer whose task never succeeded is not evidence of anything.
+            # This belongs to the BASE scope, not to the optional filters:
+            # sitting in `EvidenceFilters.apply` it reached the rows but not the
+            # prompt options, coverage or source counts drawn from the same
+            # statement, so a prompt whose only tasks failed still offered
+            # itself as a filter that could return nothing.
+            #
+            # `TASK_STATUS_SUCCEEDED`, not a "completed" literal: the queue-row
+            # vocabulary has no such status, so comparing against it matched
+            # NOTHING and emptied every one of those surfaces.
+            AuditTask.status == TASK_STATUS_SUCCEEDED,
         )
     )
     if audit_id is not None:
@@ -209,13 +309,11 @@ def _evidence_statement(
     # repetition asc for a deterministic order (created_at + analysis id break
     # any remaining ties so the truncation window is stable).
     stmt = stmt.order_by(
-        Audit.completed_at.desc().nullslast(),
-        Audit.created_at.desc(),
-        ResponseAnalysis.prompt_index.asc(),
-        ResponseAnalysis.logical_engine.asc(),
-        ResponseAnalysis.repetition.asc(),
-        ResponseAnalysis.id.asc(),
-    ).limit(limit + 1)
+        ResponseAnalysis.created_at.desc(),
+        ResponseAnalysis.id.desc(),
+    )
+    if limit is not None:
+        stmt = stmt.limit(limit + 1)
 
     return stmt
 
