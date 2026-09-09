@@ -2,7 +2,8 @@
 
 > **Current role:** persisted first-party evidence and projections
 > **Target role:** source layer for Demand Intelligence
-> **Canonical plan:** [`plans/citeladder-aeo-product-rebuild.md`](plans/citeladder-aeo-product-rebuild.md)
+> **Runtime authority:** this document. Completed delivery history is retained
+> in the plans and evaluations index; it is not an active implementation gate.
 
 The existing subsystem owns OAuth connections, property mapping, queued syncs, immutable import
 artifacts, normalized metric rows, and current Traffic/Analytics snapshots. Demand Intelligence

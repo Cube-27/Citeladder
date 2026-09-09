@@ -1,5 +1,9 @@
 # Layout consolidation behavior parity
 
+> **Status:** historical visual and behavior evidence. This record preserves
+> baseline provenance and stated evidence limits; it is not an active design
+> authority or repository validation gate.
+
 This record separates the captured pre-cutover baseline from the current
 implementation. It records the preserved production contracts and the
 presentation/deletion work visible in the working tree. The final verification results and remaining evidence limits are recorded below.

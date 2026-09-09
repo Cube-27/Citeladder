@@ -266,13 +266,16 @@ in terminal output or bypass Google consent to claim a completed Google login.
 Reusable operator command (authenticated `gcloud` with IAP/SSH access):
 
 ```powershell
-python infra/gcp/reset-db.py --project project-setup-20260711
-python infra/gcp/reset-db.py --project project-setup-20260711 --reset-project project-setup-20260711
+.\reset-gcp-db.ps1
+.\reset-gcp-db.ps1 -Reset -ConfirmProject project-setup-20260711
 ```
 
-The first command previews counts and installed source revision. The second
+The root PowerShell script calls the Python IAP/SSH wrapper; the underlying
+`infra/gcp/runtime/reset-db.sh` runs on the Linux VM and is not a Windows
+PowerShell script. The first command previews counts and installed source revision. The second
 irreversibly replaces the fixed `citeladder` database, including users and
 sessions, using the installed image baseline; it does not back up data or deploy
 new images. It refuses a mismatched project or single-account demo mode. Existing
 configured credentials provision the new dev account. Optional `--instance` and
-`--zone` default to `citeladder-demo` and `asia-south1-a`.
+`--zone` default to `citeladder-demo` and `asia-south1-a`; pass them to the
+PowerShell script if your deployment differs.

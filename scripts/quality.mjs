@@ -3,7 +3,9 @@
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+
+import { classifyPaths } from './ci-changes.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const backendRoot = join(repositoryRoot, 'backend');
@@ -17,19 +19,51 @@ function option(name, fallback) {
   return inline?.slice(name.length + 1) ?? fallback;
 }
 
-const mode = option('--mode', 'fix');
+const mode = option('--mode', 'check');
 if (!['fix', 'check'].includes(mode)) throw new Error(`Unknown quality mode: ${mode}`);
 
-const requestedScopes = option('--scope', 'all')
+const requestedScopes = option('--scope', 'changed')
   .split(',')
   .map((scope) => scope.trim().toLowerCase());
-const validScopes = new Set(['all', 'backend', 'frontend', 'contract']);
+const validScopes = new Set(['all', 'changed', 'backend', 'frontend', 'contract']);
 for (const scope of requestedScopes) {
   if (!validScopes.has(scope)) throw new Error(`Unknown quality scope: ${scope}`);
 }
+
+function gitPaths(arguments_) {
+  const output = execFileSync('git', ['-C', repositoryRoot, ...arguments_], {
+    encoding: 'utf8',
+  });
+  return output.split(/\r?\n/u).filter(Boolean).map((path) => path.replaceAll('\\', '/'));
+}
+
+function workingDiffPaths() {
+  const mergeBase = gitPaths(['merge-base', 'origin/main', 'HEAD'])[0];
+  const pathSets = [
+    gitPaths(['diff', '--no-renames', '--name-only', '--diff-filter=ACMDT', `${mergeBase}..HEAD`]),
+    gitPaths(['diff', '--no-renames', '--name-only', '--diff-filter=ACMDT']),
+    gitPaths(['diff', '--cached', '--no-renames', '--name-only', '--diff-filter=ACMDT']),
+    gitPaths(['ls-files', '--others', '--exclude-standard']),
+  ];
+  return [...new Set(pathSets.flat())];
+}
+
+function changedScopes() {
+  const paths = workingDiffPaths();
+  const owners = classifyPaths(paths);
+  return new Set(['backend', 'frontend', 'contract'].filter((owner) => owners[owner]));
+}
+
 const scopes = requestedScopes.includes('all')
   ? new Set(['backend', 'frontend', 'contract'])
-  : new Set(requestedScopes);
+  : requestedScopes.includes('changed')
+    ? changedScopes()
+    : new Set(requestedScopes);
+
+if (scopes.size === 0) {
+  process.stdout.write('\nNo affected quality owners for the current working diff.\n');
+  process.exit(0);
+}
 
 function executable(candidates, missingMessage) {
   const path = candidates.find(existsSync);

@@ -1,40 +1,67 @@
 # CiteLadder documentation
 
-Start with [`../AGENTS.md`](../AGENTS.md), whose task map points to the current
-owner for each subsystem.
+This is the single active documentation index. Start with
+[`../AGENTS.md`](../AGENTS.md), then read only the owner required for the task.
+Code and current-runtime tests decide what is shipped.
 
-## Product authorities
+## Runtime authorities
 
-1. [`architecture.md`](architecture.md) — product and system architecture.
-2. [`invariants.md`](invariants.md) — review-blocking technical rules.
-3. The owning runtime reference:
-   - [`site-health.md`](site-health.md)
-   - [`backend-architecture.md`](backend-architecture.md)
-   - [`frontend-architecture.md`](frontend-architecture.md)
-   - [`integrations-traffic-analytics.md`](integrations-traffic-analytics.md)
-   - [`commerce-intelligence.md`](commerce-intelligence.md)
-   - [`api-error-contract.md`](api-error-contract.md)
-   - [`design.md`](design.md)
-4. The one active plan that owns approved future work.
+- [`architecture.md`](architecture.md) — product loop and system boundaries.
+- [`invariants.md`](invariants.md) — review-blocking safety and correctness rules.
+- [`site-health.md`](site-health.md) — acquisition, page kinds, rules, scoring,
+  lifecycle, issues, opportunities, and architecture projection.
+- [`backend-architecture.md`](backend-architecture.md) — backend layers and
+  ownership.
+- [`frontend-architecture.md`](frontend-architecture.md) — routes, state,
+  API integration, and composition.
+- [`design.md`](design.md) — the sole visual and interaction specification.
+- [`api-error-contract.md`](api-error-contract.md) — cross-stack error shapes.
+- [`visibility-prompt.md`](visibility-prompt.md) — prompts and Visibility
+  admission; [`integrations-traffic-analytics.md`](integrations-traffic-analytics.md)
+  — connected-data projections.
+- [`commerce-intelligence.md`](commerce-intelligence.md) — Commerce runtime.
+- Content generation is specified by the Content sections in
+  [`architecture.md`](architecture.md) and
+  [`backend-architecture.md`](backend-architecture.md).
+- Opportunity implementation and verification are specified by the Opportunity
+  sections in [`architecture.md`](architecture.md),
+  [`backend-architecture.md`](backend-architecture.md), and
+  [`frontend-architecture.md`](frontend-architecture.md).
 
-The former Site Intelligence and industry-pack plans are historical context, not
-implementation authority. The current authoritative replacement is
-[`site-health.md`](site-health.md).
+## Setup and operations
 
-## Delivery references
+- [`DEVELOPMENT.md`](DEVELOPMENT.md) owns local setup, test isolation, the
+  existing validation harness, and troubleshooting.
+- [`operations/`](operations/) owns deployment, billing, provider, and recovery
+  procedures.
+- [`release-checklist.md`](release-checklist.md) owns release-only acceptance;
+  it does not authorize publishing or deployment.
 
-- [`plans/billing-consolidation-summary.md`](plans/billing-consolidation-summary.md)
-  summarizes the approved billing, credits and BYOK consolidation;
-  [`plans/billing-consolidation.md`](plans/billing-consolidation.md) is the
-  execution authority and [`plans/billing-consolidation-progress.md`](plans/billing-consolidation-progress.md)
-  records verified progress and the next bounded task. This is future work, not shipped behavior.
-- [`DEVELOPMENT.md`](DEVELOPMENT.md) documents the local and clean-clone Compose workflows.
-- [`release-checklist.md`](release-checklist.md) defines pre-release verification; it does not
-  authorize tagging or publishing.
-- [`../CHANGELOG.md`](../CHANGELOG.md) records unreleased and published release notes.
+## Active work
 
-## Documentation policy
+These are the current bounded workstreams. Each plan declares its remaining
+scope and external acceptance limits; shipped behavior still belongs to runtime
+owners above.
 
-- Active docs describe shipped behavior or an explicitly approved plan.
-- Code and current tests decide what is shipped.
-- Superseded material moves to `archive/`; it is not silently reused.
+- [`plans/citeladder-billing-launch-readiness.md`](plans/citeladder-billing-launch-readiness.md)
+  — billing release and manual/provider readiness.
+- [`plans/citeladder-razorpay-local-test-integration.md`](plans/citeladder-razorpay-local-test-integration.md)
+  — isolated local/provider test integration and runbooks.
+- [`plans/citeladder-data-pipeline-rebuild.md`](plans/citeladder-data-pipeline-rebuild.md)
+  — deferred connected-data follow-up, currently Slice 6 only.
+- [`plans/commerce-suite-atomic-rebuild.md`](plans/commerce-suite-atomic-rebuild.md)
+  — remaining Commerce release gates.
+- [`plans/site-health-measurement-reliability-pr4.md`](plans/site-health-measurement-reliability-pr4.md)
+  — named live-crawl acceptance limits after implementation completion.
+
+## Historical evidence
+
+Retained audits, evaluations, visual baselines, and cutover records under
+[`plans/`](plans/), [`audits/`](audits/), [`evaluations/`](evaluations/), and
+[`archive/`](archive/) preserve useful provenance but are not implementation
+authority or mandatory per-edit gates. Completed duplicate plans and incident
+checklists are removed once their durable contract and unresolved acceptance
+live in the owners above; Git history remains their delivery record.
+
+Editorial material under [`blogs/`](blogs/) is product content, not engineering
+governance.

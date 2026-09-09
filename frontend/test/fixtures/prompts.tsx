@@ -1,6 +1,5 @@
 import { http, HttpResponse } from 'msw';
 import type { z } from 'zod';
-import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 import {
   projectSchema,
@@ -9,9 +8,9 @@ import {
   topicSchema,
 } from '@/lib/api/schemas/project';
 import { visibilityExecutionEvidenceSchema } from '@/lib/api/schemas/visibility-evidence';
-import { setActiveWorkspaceId } from '@/lib/api/client';
 import { ProjectProvider } from '@/lib/project/project-context';
 import PromptsPage from '@/app/(app)/prompts/page';
+import { setupMswPageTests } from '@/test/fixtures/msw-page-lifecycle';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -166,15 +165,5 @@ export function renderPromptsPage() {
 }
 
 export function setupPromptsPageTests(resetNavigation: () => void) {
-  beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
-  beforeEach(() => {
-    window.localStorage.clear();
-    setActiveWorkspaceId(null);
-    resetNavigation();
-  });
-  afterEach(() => {
-    mswServer.resetHandlers();
-    vi.restoreAllMocks();
-  });
-  afterAll(() => mswServer.close());
+  setupMswPageTests(resetNavigation);
 }

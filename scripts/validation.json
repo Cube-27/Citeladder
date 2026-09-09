@@ -7,7 +7,7 @@
     {
       "sources": ["frontend/app/globals.css", "frontend/app/website-type.css"],
       "frontendTests": ["scripts/design-system-source-checks.test.ts", "components/ui/primitives.test.tsx"],
-      "frontendE2E": ["e2e/shell.spec.ts", "e2e/marketing-pages.spec.ts", "e2e/design-repair.spec.ts", "e2e/site-intelligence.spec.ts", "e2e/content.spec.ts"]
+      "frontendE2E": ["e2e/shell.spec.ts", "e2e/marketing-pages.spec.ts"]
     },
     {
       "sources": ["frontend/components/ui/command-palette.tsx"],
@@ -103,10 +103,55 @@
         "frontend/pnpm-lock.yaml",
         "frontend/knip.jsonc",
         "frontend/vitest.config.ts",
-        "frontend/tsconfig.json",
-        "frontend/test/**"
+        "frontend/tsconfig.json"
       ],
-      "frontendTests": ["next.config.test.ts", "app/sitemap.test.ts"]
+      "frontendTests": ["**/*.test.ts", "**/*.test.tsx"]
+    },
+    {
+      "sources": ["frontend/test/setup.ts", "frontend/test/render.tsx", "frontend/test/msw-server.ts"],
+      "frontendTests": ["**/*.test.ts", "**/*.test.tsx"]
+    },
+    {
+      "sources": [
+        "frontend/test/fixtures/prompts.tsx",
+        "frontend/test/fixtures/msw-page-lifecycle.ts"
+      ],
+      "frontendTests": [
+        "app/(app)/prompts/page.test.tsx",
+        "app/(app)/prompts/page.manage.test.tsx",
+        "app/(app)/visibility/page.test.tsx",
+        "app/(app)/visibility/page.evidence.test.tsx",
+        "lib/runs/launch.test.ts"
+      ]
+    },
+    {
+      "sources": ["frontend/test/fixtures/visibility.tsx"],
+      "frontendTests": ["app/(app)/visibility/page.test.tsx", "app/(app)/visibility/page.evidence.test.tsx"]
+    },
+    {
+      "sources": ["frontend/test/site-health-fixtures.ts"],
+      "frontendTests": [
+        "components/site-health/overview-panel.test.tsx",
+        "components/site-health/status-strip.test.tsx",
+        "components/site-health/site-health-screen.test.tsx",
+        "components/site-health/site-health-screen-terminal-states.test.tsx",
+        "components/site-health/page-kind-scores.test.tsx"
+      ]
+    },
+    {
+      "sources": ["frontend/test/site-health-api-fixtures.ts"],
+      "frontendTests": [
+        "lib/api/site-health.test.ts",
+        "lib/api/site-health-measurement-contract.test.ts"
+      ]
+    },
+    {
+      "sources": ["frontend/test/provider-catalog-fixture.ts"],
+      "frontendTests": [
+        "components/providers/connect-provider-dialog.test.tsx",
+        "components/settings/provider-settings.test.tsx"
+      ],
+      "frontendE2E": ["e2e/providers.spec.ts"]
     },
     {
       "sources": ["frontend/next.config.ts"],
@@ -139,19 +184,25 @@
     {
       "sources": ["frontend/playwright.config.ts"],
       "frontendE2E": [
+        "e2e/billing.spec.ts",
         "e2e/content.spec.ts",
         "e2e/design-repair.spec.ts",
+        "e2e/landing-nav.spec.ts",
+        "e2e/marketing-pages.spec.ts",
+        "e2e/opportunity-loop.spec.ts",
+        "e2e/providers.spec.ts",
+        "e2e/runs.spec.ts",
         "e2e/shell.spec.ts",
-        "e2e/smoke.spec.ts"
+        "e2e/smoke.spec.ts",
+        "e2e/visibility.spec.ts"
       ]
     },
     {
-      "sources": ["frontend/e2e/helpers/**"],
+      "sources": ["frontend/e2e/helpers/app-fixture.ts"],
       "frontendE2E": [
         "e2e/content.spec.ts",
         "e2e/design-repair.spec.ts",
-        "e2e/shell.spec.ts",
-        "e2e/site-intelligence.spec.ts"
+        "e2e/shell.spec.ts"
       ]
     },
     {
@@ -615,7 +666,7 @@
         "lib/navigation/*.test.ts",
         "app/(app)/route-states.test.tsx"
       ],
-      "frontendE2E": ["e2e/content.spec.ts", "e2e/design-repair.spec.ts", "e2e/shell.spec.ts"]
+      "frontendE2E": ["e2e/shell.spec.ts"]
     },
     {
       "sources": [
@@ -632,8 +683,7 @@
         "lib/site-health/*.test.tsx",
         "lib/api/site-health.test.ts",
         "lib/api/site-health-measurement-contract.test.ts"
-      ],
-      "frontendE2E": ["e2e/site-intelligence.spec.ts"]
+      ]
     },
     {
       "sources": [
@@ -772,32 +822,22 @@
     {
       "sources": [
         "frontend/app/(app)/settings/**",
-        "frontend/components/settings/**",
-        "frontend/components/billing/**",
-        "frontend/lib/billing/**"
+        "frontend/components/settings/**"
       ],
-      "frontendTests": [
-        "components/settings/*.test.tsx",
-        "components/billing/*.test.tsx",
-        "lib/billing/*.test.ts"
-      ],
-      "frontendE2E": [
-        "e2e/billing.spec.ts",
-        "e2e/content.spec.ts",
-        "e2e/design-repair.spec.ts",
-        "e2e/marketing-pages.spec.ts",
-        "e2e/providers.spec.ts",
-        "e2e/shell.spec.ts"
-      ]
+      "frontendTests": ["components/settings/*.test.tsx"]
     },
     {
       "sources": ["frontend/components/agent/**"],
       "frontendTests": ["components/agent/*.test.tsx", "components/layout/agent-sheet.test.tsx"]
     },
     {
-      "sources": ["frontend/components/providers/**", "frontend/lib/providers/**"],
+      "sources": [
+        "frontend/components/providers/**",
+        "frontend/components/settings/provider-settings.tsx",
+        "frontend/lib/providers/**"
+      ],
       "frontendTests": ["components/providers/*.test.tsx", "lib/providers/*.test.ts"],
-      "frontendE2E": ["e2e/billing.spec.ts", "e2e/providers.spec.ts"]
+      "frontendE2E": ["e2e/providers.spec.ts"]
     },
     {
       "sources": ["frontend/lib/api/**", "frontend/lib/integrations/**"],
@@ -817,8 +857,7 @@
         "lib/config/*.test.ts",
         "lib/forms/*.test.ts",
         "components/layout/page-header.test.tsx"
-      ],
-      "frontendE2E": ["e2e/design-repair.spec.ts"]
+      ]
     },
     {
       "sources": [
@@ -832,8 +871,9 @@
     },
     {
       "sources": [
-        "frontend/lib/billing/*checkout*",
+        "frontend/lib/billing/**",
         "frontend/components/billing/**",
+        "frontend/components/settings/billing-settings.tsx",
         "frontend/lib/api/billing.ts",
         "frontend/components/marketing/pricing/**"
       ],

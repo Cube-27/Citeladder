@@ -1,15 +1,13 @@
 # CiteLadder billing consolidation and launch readiness
 
+**Status:** active release-readiness plan. It owns remaining manual, provider,
+and launch acceptance only; shipped runtime behavior belongs to the billing,
+entitlement, provider, and ledger owners.
+
 ## Outcome, authority, and working agreement
 
 Deliver the complete launch billing journey by extending the existing catalog, billing, entitlement, provider, and ledger owners. Preserve working functionality; remove superseded billing paths only when their replacements are verified.
 
-**Immediate next action after approval and leaving Plan mode:** save this detailed plan as `docs/plans/citeladder-billing-launch-readiness.md`, then stop. Implementation begins in a later session.
-
-- **Astra:** architecture, phase boundaries, findings adjudication, final review and simplification.
-- **Luna High:** read-only exploration, test execution, and evidence collection.
-- **Terra Medium:** bounded implementation assignments after approval.
-- Work sequentially where owners overlap. Recheck Sol’s merged code before assigning fixes.
 - No live checkout, provider mutations, deployment, or refund execution is authorized by this plan.
 
 ### Approved commercial decisions
@@ -172,7 +170,13 @@ Existing coverage is code-inspected, **not freshly executed**. Relevant suites i
 | P1 | Mode mismatch, synthetic live prices, missing tax/provider/rate evidence | Fail-closed checkout/execution; recovery remains available under checkout kill switch. |
 | P2 | Terminal retry exhaustion and operator replay | Persisted reason, alert, bounded backoff and idempotent recovery. Coverage missing. |
 
-After each completed implementation phase, follow repository completion gates: `.\scripts\check.ps1`, then `.\scripts\test.ps1`. Do not run gates after every edit. Luna executes the repository-selected scope; retry `-ChangedFiles` includes the complete fix delta. No local full-backend-suite substitution or weakened gates. Schema changes retain the single baseline and require an explicitly disposable database for migration/drift verification. CI remains authoritative.
+At a coherent phase boundary, use the repository validation policy in
+[`../DEVELOPMENT.md`](../DEVELOPMENT.md): focused feedback while working, then
+one read-only affected-owner check and mapped test selection. Retries include
+failed, pending, and newly invalidated owners. No local full-backend-suite
+substitution or weakened gates. Schema changes retain the single baseline and
+require an explicitly disposable database for migration/drift verification. CI
+remains authoritative.
 
 ## Launch, reconciliation, and rollback criteria
 

@@ -257,6 +257,36 @@ do not appear as passes or issues. Catalog selection uses `group_id`; affected
 rows and URL detail use `occurrence_id` and the occurrence's persisted
 `evaluation_id`. The frontend never associates evidence by `rule_id`.
 
+## Component capability and technical ownership
+
+Shared UI capabilities have one owner under `frontend/components/ui/`. Their
+technical contracts and state responsibilities live here; visual values and
+interaction recipes live only in [`design.md`](design.md).
+
+| Capability | Decision | Owner |
+|---|---|---|
+| Button, Card, Input, Textarea, Field | Deepen | `frontend/components/ui/` |
+| Dropdown Menu, Dialog, Drawer, Tooltip | Deepen | `frontend/components/ui/` Radix wrappers |
+| Table, Badge, Alert, Skeleton, progress, empty state, pagination, segmented control | Deepen | `frontend/components/ui/` |
+| Select, Search field, Tabs | Add | `frontend/components/ui/select.tsx`, `frontend/components/ui/search-field.tsx`, `frontend/components/ui/tabs.tsx` |
+| Checkbox and radio group | Deepen | `frontend/components/ui/checkbox.tsx`, `frontend/components/ui/radio-group.tsx` |
+| Toast, Pressable, Clipboard action | Add | `toast.tsx`, `pressable.tsx`, `copy-button.tsx` |
+| Text roles (`textRole`) | Add | `frontend/components/ui/typography.tsx` |
+| Stack | Add | `frontend/components/ui/layout.tsx` |
+| Panel (`panelClasses`) and flush card content | Add / deepen | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
+| Menu separator | Deepen | `frontend/components/ui/dropdown.tsx` |
+| Command palette, Market Select, CSV import | Specialized | Existing shared and feature owners |
+| Cursor/table pagination, resizable workspaces | Specialized | Existing feature owners |
+| Color controls, OTP, sliders, calendars/date pickers, avatars | Defer | No current product use |
+| Generic disclosure and donut | Removed | No production consumers |
+
+Shared primitives own geometry, accessibility, interaction states, and motion.
+Domain wrappers own business logic, factual copy, data translation, and
+conditional behavior. A new shared module needs two production consumers unless
+it replaces an existing owner. Feature call sites do not import Radix directly,
+choose size-named radius tokens, add child margins for shared rhythm, or replace
+semantic control states with cosmetic overrides.
+
 ## Frontend owner boundaries and shared mechanics
 
 A screen entry point coordinates route context, server-state hooks, mutations, and
@@ -418,8 +448,9 @@ Authenticated interaction state has three owners. TanStack Query owns server
 records and retains prior data during paginated or filtered background work.
 `lib/navigation/url-state.ts` owns typed, shareable tabs, filters, cursors, and
 selected record IDs with explicit push/replace history. Component-local state
-owns only ephemeral drafts and interaction state. The shared UI and motion map
-is [`ui-component-system.md`](ui-component-system.md).
+owns only ephemeral drafts and interaction state. Visual values and interaction
+rules live in [`design.md`](design.md); the component capability and technical
+ownership map is the Component capability section above.
 
 Opportunities renders the backend's persisted three-way source mix and coverage,
 plus server-filtered Owned and Earned paths. Detail renders a typed Content

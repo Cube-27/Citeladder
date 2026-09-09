@@ -1,6 +1,5 @@
 import { http, HttpResponse } from 'msw';
 import type { z } from 'zod';
-import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 import { auditSchema } from '@/lib/api/schemas/audits';
 import { projectSchema } from '@/lib/api/schemas/project';
@@ -10,9 +9,9 @@ import {
   visibilityExecutionEvidenceSchema,
 } from '@/lib/api/schemas/visibility-evidence';
 import { visibilityTrendPointSchema } from '@/lib/api/schemas/visibility-trends';
-import { setActiveWorkspaceId } from '@/lib/api/client';
 import { ProjectProvider } from '@/lib/project/project-context';
 import VisibilityPage from '@/app/(app)/visibility/page';
+import { setupMswPageTests } from '@/test/fixtures/msw-page-lifecycle';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -281,16 +280,5 @@ export function useBaseVisibilityHandlers(extra: Parameters<typeof mswServer.use
 }
 
 export function setupVisibilityPageTests(resetNavigation: () => void) {
-  beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
-  beforeEach(() => {
-    window.localStorage?.clear();
-    setActiveWorkspaceId(null);
-    resetNavigation();
-  });
-  afterEach(() => {
-    mswServer.resetHandlers();
-    vi.restoreAllMocks();
-    vi.unstubAllEnvs();
-  });
-  afterAll(() => mswServer.close());
+  setupMswPageTests(resetNavigation);
 }

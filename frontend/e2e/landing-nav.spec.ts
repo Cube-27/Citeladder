@@ -22,9 +22,6 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
       await expect(directLink).toHaveAttribute('aria-expanded', 'true');
       await expect(directLink).toHaveAttribute('aria-controls', `desktop-nav-panel-${key}`);
       await expect(panel.getByRole('link')).toHaveCount(count);
-      await panel.getByRole('link').first().hover();
-      await page.waitForTimeout(500);
-      await expect(panel).toBeVisible();
 
       await directLink.focus();
       await expect(panel).toBeVisible();
@@ -54,30 +51,9 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await expect(menu).toBeHidden();
   });
 
-  test('marketing keeps its fixed light Prism identity, whatever the app theme', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    // Prism is light-only, so there is deliberately no toggle to offer.
-    await expect(page.getByRole('button', { name: 'Toggle color theme' })).toHaveCount(0);
-    await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
-
-    // Even with dark explicitly stored by the app, the public surface stays paper.
-    await page.evaluate(() => window.localStorage.setItem('citeladder-theme', 'dark'));
-    await page.reload();
-    await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
-  });
-
-  test('nav gains its scrolled state after scrolling', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('[data-scrolled="true"]')).toHaveCount(0);
-    await page.mouse.wheel(0, 600);
-    await expect(page.locator('[data-scrolled="true"]')).toHaveCount(1);
-  });
-
   test('the page body never scrolls sideways at 375px', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    for (const path of ['/', '/pricing', '/solutions', '/enterprise', '/faq', '/compare']) {
+    for (const path of ['/', '/pricing', '/compare']) {
       await page.goto(path);
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

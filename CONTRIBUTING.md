@@ -8,7 +8,8 @@ change. `docs/archive/` is historical and is not an implementation authority.
 
 1. Search for the current owner of the model, route, schema, config, industry entry, queue,
    component, test, and documentation. One concept has one owner.
-2. Read only the current subsystem authority and the relevant gated plan slice.
+2. Read only the current subsystem authority and, when applicable, the active
+   release plan listed by the documentation index.
 3. Confirm whether the requested behavior is shipped, planned, or an evaluation requirement.
 4. Preserve workspace authorization, evidence immutability, provenance/versioning, unknown-state
    semantics, and approval boundaries in the design—not as cleanup after implementation.
@@ -21,12 +22,13 @@ change. `docs/archive/` is historical and is not an implementation authority.
    - backend: `api / core / models / schemas / domain / connectors / orchestration / analysis /
      workers`;
    - frontend: app shell/auth, API-contract layer, domain workspaces, shared primitives/tokens.
-3. Make the smallest complete gated change. Do not add parallel stores or hidden partial
-   architecture.
+3. Make the smallest complete change. Do not add parallel stores or hidden partial architecture.
 4. Add deterministic/unit, component/workspace-isolation, API/UI contract, and evaluation fixture
-   tests as applicable.
-5. Update the current owner documentation. Move superseded plans or design records into
-   `docs/archive/` instead of maintaining two authorities.
+   tests only when the changed behavior creates a credible regression path. A file edit alone does
+   not require a test.
+5. Update the current owner documentation when its contract changes. Mark
+   superseded plans as historical and repair inbound links instead of creating
+   a second authority.
 6. Open a pull request with a clear summary and exact `## Testing` evidence.
 
 ## Configuration and industry knowledge
@@ -76,7 +78,9 @@ origin.
 
 ## Verification
 
-Before review, the repository harness decides scope. From the repository root:
+After the complete intended executable diff is finished, the repository harness decides scope.
+Documentation edits, commits, sub-phases, handoffs, and intermediate milestones do not trigger
+these completion gates. From the repository root:
 
 ```powershell
 .\scripts\check.ps1
@@ -84,11 +88,16 @@ Before review, the repository harness decides scope. From the repository root:
 ```
 
 `scripts/quality.mjs` owns the shared local/CI gate list; `check.ps1` is its
-PowerShell compatibility shim and runs the mutating fix mode. `test.ps1`
-selects the affected backend, frontend, and mapped E2E tests from your diff against `origin/main`.
-A change is not ready for review until both pass. See
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for the variants and
-[`AGENTS.md`](AGENTS.md) for the rules on not weakening a gate to pass it.
+PowerShell compatibility shim and is read-only by default. `test.ps1` selects
+affected tests from the working diff against `origin/main`; `-PlanOnly`
+explains the selection and `-ChangedFiles` is reserved for a recorded retry.
+A change is not ready for review until the two completion commands pass. See
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for variants and
+[`AGENTS.md`](AGENTS.md) for the non-weakening rules.
+
+Documentation-only changes use cheap textual/reference checks. They do not invoke backend,
+frontend, browser, build, migration, or application test suites unless the documentation is
+executable or packaged input, such as a production Content skill.
 
 The commands below stay available for debugging one known failure while working:
 

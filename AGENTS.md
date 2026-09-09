@@ -1,250 +1,133 @@
 # Agents.md — CiteLadder
 
-> Mandatory session bootstrap for coding agents. Read this file first, then
-> follow the documentation map below. Archived plans are historical context
-> only and are never implementation authority.
+> Mandatory bootstrap for coding agents. Read this file, then the smallest
+> applicable owner document from [`docs/README.md`](docs/README.md).
 
-## What CiteLadder is
+## Product boundary
 
-CiteLadder is an evidence-grounded growth intelligence platform organized
-around one measurable loop: Connect → Analyze → Act → Improve / Verify →
-Track. Four durable capabilities sit behind those stations:
+CiteLadder connects owned-site, demand, and answer-engine evidence through one
+loop: Connect → Analyze → Act → Improve / Verify → Track. Site Health, Content
+Intelligence, Demand Intelligence, and the Growth Agent are the durable owners;
+AI Visibility is the Track capability. The measured outcome is observed
+mention/citation share under comparable audits, not causal proof.
 
-1. **Site Health** securely crawls the owned website, classifies each page by
-structural type, applies the correct deterministic checklist, and produces
-persisted scores, issues, graph/change snapshots, and opportunities.
-2. **Content Intelligence** turns site and demand evidence into strategies,
-   briefs, drafts, reviews, and post-publication verification.
-3. **Demand Intelligence** connects GSC, GA4, journeys, prompts, and AI
-   Visibility to show what audiences need and what should improve next.
-4. **Growth Agent** orchestrates typed tools from those systems. It owns no
-   second knowledge store and cannot publish or mutate external systems without
-   an explicit user action.
+The Growth Agent orchestrates typed tools over those owners. It owns no second
+knowledge store and cannot publish, activate prompts, or mutate external
+systems without an explicit user action.
 
-The measured outcome is increased observed mention/citation share across a
-versioned prompt portfolio under comparable audit conditions. AI Visibility is
-the Track capability; crawl health, demand coverage, and AEO readiness are
-leading indicators, never causal proof.
+## Authority and routing
 
-## Canonical documentation
+[`docs/README.md`](docs/README.md) is the documentation index. Use current
+code and tests for shipped behavior; archived material is historical only.
 
-Read only the documents required by the task.
-
-| Task | Required source |
+| Need | Owner |
 |---|---|
-| Product loop, hierarchy, and architecture | `docs/architecture.md` |
-| AEO rebuild delivery sequence | `docs/plans/citeladder-aeo-product-rebuild.md` |
-| Program sequence | `docs/plans/citeladder-aeo-product-rebuild.md` |
-| Site crawl, classification, rules, and runtime | `docs/site-health.md` |
-| Site Health measurement cutover PR1–PR3 | `docs/plans/site-health-measurement-cutover.md` |
-| Site Health measurement reliability PR4 | `docs/plans/site-health-measurement-reliability-pr4.md` |
-| Content workflows | `docs/plans/CITELADDER_CONTENT_GENERATION_SIMPLIFIED_PLAN.md` |
-| Demand, prompts, visibility, and Agent | `docs/plans/citeladder-aeo-product-rebuild.md` |
-| Connected-data pipeline (GSC/GA4/Bing) rebuild | `docs/plans/citeladder-data-pipeline-rebuild.md` |
-| Backend ownership and shipped runtime | `docs/backend-architecture.md` |
-| Frontend ownership and shipped runtime | `docs/frontend-architecture.md` |
-| Hard invariants | `docs/invariants.md` |
-| API errors | `docs/api-error-contract.md` |
-| UI tokens and interaction rules | `docs/design.md` |
-| Historical context | `docs/archive/` — only when explicitly reconciling old behavior |
+| Architecture and product loop | [`docs/architecture.md`](docs/architecture.md) |
+| Site Health crawl, classification, rules, and runtime | [`docs/site-health.md`](docs/site-health.md) |
+| Content generation contract | [`docs/architecture.md`](docs/architecture.md), [`docs/backend-architecture.md`](docs/backend-architecture.md) |
+| Opportunity and verification contract | [`docs/architecture.md`](docs/architecture.md), [`docs/backend-architecture.md`](docs/backend-architecture.md), [`docs/frontend-architecture.md`](docs/frontend-architecture.md) |
+| Demand, integrations, and Visibility | [`docs/visibility-prompt.md`](docs/visibility-prompt.md), [`docs/integrations-traffic-analytics.md`](docs/integrations-traffic-analytics.md) |
+| Backend ownership | [`docs/backend-architecture.md`](docs/backend-architecture.md) |
+| Frontend routes, state, and composition | [`docs/frontend-architecture.md`](docs/frontend-architecture.md) |
+| Visual and interaction rules | [`docs/design.md`](docs/design.md) |
+| Cross-stack errors | [`docs/api-error-contract.md`](docs/api-error-contract.md) |
+| Review-blocking invariants | [`docs/invariants.md`](docs/invariants.md) |
+| Setup and validation | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) |
+| Operations and release acceptance | [`docs/operations/`](docs/operations/), [`docs/release-checklist.md`](docs/release-checklist.md) |
+| Current approved release work | [`docs/README.md`](docs/README.md#active-work) |
 
-Code plus current-runtime tests describe what is shipped. Active plans describe
-approved future work. Archived plans have no authority.
+Completed rebuild and cutover plans are evidence, not task instructions. Do
+not resume a historical wave, fresh-chat protocol, or delivery checkpoint
+because a plan file mentions it.
 
-## Site Health architecture
+The Next.js-specific rules in [`frontend/AGENTS.md`](frontend/AGENTS.md) apply
+when editing the frontend; read the relevant installed Next guide before code
+changes there.
 
-The shipped Site Health product has three pages: **Site Health**, **Issues**,
-and **Opportunities**. Do not recreate the removed Site Intelligence workspace,
-industry-pack catalog, knowledge tables, corrections, or comparison system.
-The single persisted observed-architecture projection is part of Site Health,
-not a second workspace: it is the **Architecture** tab of the existing Website
-tablist. The read surface exposes observed page kinds and hierarchy only. It has
-no archetype correction endpoint, mutable archetype field, or advisory response
-block.
-
-Page analysis separates acquisition truth from structural classification:
-
-```text
-safe acquisition -> immutable artifact -> normalized facts
-  -> deterministic page_kind + evidence
-  -> page-kind-scoped rules and schema contract
-  -> persisted evaluations, scores, issues, snapshot, opportunities
-```
-
-`page_kind` is the stable, cross-industry structural purpose. Structured data
-is one classifier signal and one gap surface; it must never self-certify the
-type whose schema is being validated. Path, headings, visible content, forms,
-links, and delivery signals must still work when schema is absent.
-
-Unclassified pages use `other`. That is an abstention, not a `WebPage` verdict:
-page-kind-specific rules fail closed and remain out of scoring. A JS shell is
-also distinct from missing content; content-reading rules stay not-applicable
-while `aeo.server_rendered_content` owns the observable problem.
-
-During pre-launch development, databases are disposable and no historical
-analysis compatibility is preserved. Classifier, extractor, analyzer, rule,
-scoring, formula, coverage, architecture, and presentation version fields stay
-at `1`; semantic changes reset and rebuild the development database. Begin
-incrementing versions only after an explicit production-history policy change.
-
-## Repository invariants
+## Non-negotiable invariants
 
 - All IDs are UUIDs. Every project-owned query is workspace-authorized; never
   scope product data by `user_id` or trust an object ID alone.
-- API routes use `/api/v1`. Browser calls remain same-origin through the
-  frontend proxy.
-- Configuration, catalogs, thresholds, limits, templates, page profiles, and
-  schedules live in `backend/app/core/config/*` or frontend config owners—not
-  service code.
-- Raw evidence and provider attempts are immutable/append-only. Derived rows
-  carry exact source IDs and relevant extractor, analyzer, classifier, rule,
-  formula, template, or model versions.
-- Read APIs render persisted projections. They never crawl, sync, call a
-  model, or repair state.
-- PostgreSQL remains durable state and the task queue. Claim with
+- Browser APIs use same-origin `/api/v1` through the frontend proxy.
+- Tunable configuration, catalogs, thresholds, limits, schedules, templates,
+  and page profiles live in `backend/app/core/config/*` or the owning frontend
+  config—not service code.
+- Raw evidence and provider attempts are append-only. Derived rows retain exact
+  source IDs and relevant extractor, classifier, analyzer, rule, formula,
+  template, or model versions.
+- Reads render persisted projections. They never crawl, sync, call a provider
+  or model, or repair state.
+- PostgreSQL is durable state and the queue. Claim with
   `FOR UPDATE SKIP LOCKED`, commit before network I/O, and use leases and
   idempotency. Do not add Redis without measured need.
-- Extend existing subsystem owners before adding a table, queue, fetcher,
-  parser, recommendation store, content store, or memory system.
-- A model may explain, classify bounded ambiguity, plan, or generate. It never
-  becomes raw truth or changes a deterministic metric.
+- Models may explain, classify bounded ambiguity, plan, or generate. They never
+  become raw truth or change deterministic metrics.
 - Unknown, unavailable, zero, historical, conflicting, not-applicable, and
   excluded are distinct states.
-- Tests never read `.env`. The backend suite disables it and declares its own
-  configuration (`backend/app/core/config/dotenv.py`,
-  `backend/tests/conftest.py`); a real provider key must never reach a test
-  run. Point the suite at a database with `TEST_DATABASE_URL`.
-- No autonomous publishing, prompt activation, external mutation, or
-  unbounded agent loop.
+- Tests disable dotenv and use deterministic configuration. A real provider
+  key must never reach a test run.
+- No autonomous publishing, prompt activation, external mutation, or unbounded
+  agent loop.
 
-## Default implementation workflow
+## Implementation workflow
 
-1. Identify the active owner and search before adding.
-2. Inspect current code, tests, models, configuration, and API contracts.
-3. Implement one gated slice completely.
-4. Add deterministic fixtures plus workspace-isolation/provenance tests where
-   persistence is touched.
-5. Update active documentation when shipped authority changes.
-6. Move superseded material to `docs/archive/`; never leave contradictory
-   guidance beside active plans.
-7. Run the change-validation harness below and report exactly what was and was
-   not verified.
+1. Search for the current owner before adding a model, route, service, config,
+   queue, parser, component, test, or document.
+2. Inspect the target’s callers, tests, types, persistence, and API contract.
+3. Implement one coherent slice in the existing owner and preserve unrelated
+   work in a dirty tree.
+4. Add deterministic coverage at the lowest meaningful boundary. Persistence
+   changes require workspace-isolation and provenance coverage; concurrency
+   changes require the real PostgreSQL boundary.
+5. Update an owner document only when its shipped contract, setup command,
+   procedure, or approved decision changes. Put routine evidence in the PR/CI
+   record; do not create summary/progress/evidence sidecars for small tasks.
 
-## Package and migration rules
+## Validation
 
-- Frontend uses **pnpm only**, pinned by `frontend/package.json`. Never use npm
-  or yarn and never create `package-lock.json`.
-- CiteLadder is pre-launch and keeps one explicit
-  `migrations/versions/0001_initial.py`. Fold schema changes into it, reset a
-  disposable database, migrate from scratch, and check ORM drift. Do not add a
-  `0002+` migration or increment development semantic versions unless this
-  policy changes explicitly.
+Repository completion gates run once per task, after the complete intended
+executable diff is finished. Documentation edits, commits, sub-phases,
+handoffs, and intermediate milestones never trigger completion gates. During
+implementation, run only a directly targeted test or command when you are
+debugging executable behavior currently being changed; otherwise do not run a
+test merely to prove progress or establish intermediate evidence.
 
-## Change validation
-
-Apply this to every implementation or code change. Repository scripts decide
-test scope; agents never hand-pick a test set at completion.
-
-Do not run repository gates after each implementation step. Finish the planned
-implementation first. Before declaring implementation complete or pushing, run
-these once, in this order, from the repository root:
+Before handoff, from the repository root, run once in order:
 
 ```powershell
 .\scripts\check.ps1
 .\scripts\test.ps1
 ```
 
-`scripts/quality.mjs` is the cross-platform static-gate owner;
-`check.ps1` is its release-compatible PowerShell shim. The fix mode applies
-Ruff and Oxfmt fixes; check mode never writes. Both run mypy, backend
-complexity/dead-code/dependency policies, Oxlint, `tsc --noEmit`, frontend
-complexity/duplication/design/architecture/dead-code policies, the strict
-API-contract guard. `test.ps1` separately selects and runs the affected
-backend, frontend, and mapped E2E tests from the working diff against
-`origin/main`. Fix every failure. Review and include any formatter changes.
+`check.ps1` is read-only by default and checks affected quality owners. Use
+`-Scope All` only for an explicit cross-system/release check. Formatting is an
+intentional action with `-Fix`; `-CheckOnly` remains a compatibility spelling.
+`test.ps1 -PlanOnly` explains the comparison base, changed paths, matched
+mappings, broad selections, and resolved files without executing tests.
 
-Narrow scopes exist for iteration only: `.\scripts\check.ps1 -Scope Backend`
-and `-Scope Frontend`. The full run is what completion means.
+`-ChangedFiles` is a retry delta only after an earlier `test.ps1` run in the
+same task. The runner records failed/interrupted selections in `.git` and a
+retry must include previously failed, previously unexecuted, and newly
+invalidated owners. An uncertain record requires a fresh full invocation.
 
-If `test.ps1` fails, note every file edited while fixing that failure. Rerun the
-selector with only that retry delta:
+There is no test-by-default rule: changing a file does not itself require a
+test run or a new test. Select tests because the changed behavior creates a
+credible regression path, using the existing mapping and the lowest meaningful
+boundary. Documentation-only changes must never invoke backend, frontend,
+browser, build, migration, or application test suites unless the documentation
+is executable or packaged input, such as a production Content skill.
 
-```powershell
-.\scripts\test.ps1 -ChangedFiles backend/app/example.py,backend/tests/unit/test_example.py
-```
+Do not run the full backend suite locally as a substitute for the harness. CI
+runs full selected owner suites, contract/build/security checks, and the clean
+Compose validation required by the event. Never weaken a gate, add exclusions,
+skip/xfail a test, increase thresholds, or delete meaningful safety coverage to
+make validation green.
 
-Use `-ChangedFiles` only after an earlier `test.ps1` run in the same task, and
-include every file edited since that run. The first run always uses the full
-working diff. Agents choose changed files, never test files or test scope.
-Missing production mappings must be added to `scripts/validation.json`. Never
-replace a missing mapping with a broad or full-suite fallback.
+## Repository safety
 
-When debugging one known failure, running that exact test directly is allowed.
-Return to the repository script before considering the change complete.
-
-`.\scripts\check.ps1 -CheckOnly` never mutates files; use it for a pre-push or
-verification-only pass. GitHub CI remains authoritative. Pull-request CI uses
-the latest-push diff to rerun changed or previously failed owners; shared and
-API-contract paths invalidate both backend and frontend. Merge-queue validation
-and every push to `main` run full static, unit, component, frontend, build,
-security, and Compose validation. Do not run the full backend suite locally.
-
-A coding task is complete only when `.\scripts\check.ps1` and `.\scripts\test.ps1`
-pass.
-
-### Do not game gates
-
-Never make validation pass by raising the CC/LOC ceilings in
-`backend/scripts/complexity_policy.json` or
-`frontend/scripts/frontend_complexity_policy.json`; removing a root from either
-policy; adding complexity or duplication exceptions; weakening lint, type, or
-format configuration; narrowing `[tool.mypy] files`; adding a
-`[tool.coverage.report] fail_under` or any other coverage threshold (coverage is
-measured, never gated -- a ratio is a target that invites tests written to move
-it); dropping a rule family from `[tool.ruff.lint]
-select`; adding a `per-file-ignores` entry that covers application code;
-softening an `.importlinter` contract or adding an `ignore_imports` line;
-editing `scripts/validation.json` to avoid relevant tests; deleting, skipping,
-xfail-ing, disabling, trivializing, or over-mocking tests; mechanically
-splitting or hiding complexity; swallowing failures; using `--no-verify`; or
-substituting a smaller hand-picked test set at completion.
-
-A `# noqa` must name a rule this repository actually enables, must currently
-apply, and must carry its reason inline. `RUF100` fails the build on a
-directive that suppresses nothing, so a decorative suppression is a build
-error, not a style preference. `backend/tests/unit/test_static_analysis_tools.py`
-asserts the gate configuration itself, so weakening one of the above breaks a
-test rather than passing quietly.
-
-If a gate exposes a design problem, refactor the implementation. If a repository
-rule is obsolete, report it separately and change it only when the user asks or
-the task requires that policy change.
-
-### Test scope
-
-- Focused change: affected tests.
-- User-facing feature flow: affected tests plus mapped feature E2E.
-- Core, shared, or config change: the broader mapped set the rules select.
-- Pull request: GitHub CI selects changed and previously failed owners; its
-  single `CI / Required` result accepts intentional skips.
-- Merge queue and main: GitHub CI full suite and clean-clone Compose validation.
-
-Frontend tooling is **pnpm only**. Never use npm or yarn wrappers.
-
-## Focused verification
-
-For debugging a single known failure, or for gates the scripts do not own:
-
-```bash
-# Backend, from backend/
-uv run pytest tests/unit/test_<area>.py tests/component/test_<area>.py -q
-uv run alembic upgrade head
-uv run alembic check
-
-# Frontend, from frontend/
-pnpm exec vitest run <file>
-pnpm build
-```
-
-Preserve unrelated user-owned work. Do not use failures from another dirty
-workstream as justification to rewrite or delete it.
+- Frontend package operations use pnpm only; never create a root lockfile.
+- Pre-launch schema changes are folded into
+  `migrations/versions/0001_initial.py` and verified only on disposable data.
+- Never reset, deploy, call live providers, activate payments, or mutate
+  external systems unless the task explicitly authorizes that operation.
+- Use `apply_patch` for code/document edits and preserve user-owned changes.
