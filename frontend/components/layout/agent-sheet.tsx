@@ -79,7 +79,14 @@ export function AgentSheetTrigger({
   onOpen?: () => void;
 }>) {
   const { hasCapability, isLoading } = useEntitlement();
-  if (isLoading || !hasCapability(GROWTH_AGENT_CAPABILITY)) return null;
+  if (!isLoading && !hasCapability(GROWTH_AGENT_CAPABILITY)) return null;
+  // Entitlement is a network answer, and the sidebar paints before it lands.
+  // Returning nothing meanwhile left this row absent from the column, so the
+  // navigation below it sat higher and then dropped once the answer arrived —
+  // the Agent button "appearing late" and shoving the links down. The slot is
+  // held at its final size instead, hidden from view and from assistive tech
+  // and unable to be activated, so an unresolved entitlement grants nothing.
+  const reserved = isLoading;
   return (
     <Button
       variant="ghost"
@@ -89,7 +96,10 @@ export function AgentSheetTrigger({
         else window.dispatchEvent(new Event(OPEN_AGENT_EVENT));
       }}
       aria-label="Open Growth Agent"
-      className={cn('min-w-0 gap-1.5', className)}
+      aria-hidden={reserved || undefined}
+      tabIndex={reserved ? -1 : undefined}
+      disabled={reserved}
+      className={cn('min-w-0 gap-1.5', reserved && 'pointer-events-none opacity-0', className)}
     >
       <Bot className="text-accent size-3.5" aria-hidden />
       <span className="hidden sm:inline">Agent</span>

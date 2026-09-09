@@ -9,6 +9,7 @@ import { runsApi } from '@/lib/api/runs';
 import { getActiveWorkspaceId, setActiveWorkspaceId } from '@/lib/api/client';
 import { queryKeys } from '@/lib/api/query-keys';
 import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
+import { ProjectProvider } from '@/lib/project/project-context';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -216,6 +217,46 @@ describe('SessionGuard', () => {
       setTimeout(resolve, 50);
     });
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The authed layouts mount `ProjectProvider` OUTSIDE the guard so a cold
+   * entry loads the project list alongside `me` rather than after it. This
+   * pins both halves of that arrangement: the list request is already in
+   * flight while `me` is still pending, and the guard still withholds
+   * protected content until `me` settles.
+   */
+  it('lets the project list load alongside me without exposing protected content', async () => {
+    let projectsRequested = false;
+    let resolveMe!: () => void;
+    const meSettled = new Promise<void>((resolve) => {
+      resolveMe = resolve;
+    });
+    mswServer.use(
+      http.get('/api/v1/auth/me', async () => {
+        await meSettled;
+        return HttpResponse.json({ user: sessionUser });
+      }),
+      http.get('/api/v1/projects', () => {
+        projectsRequested = true;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderWithProviders(
+      <ProjectProvider>
+        <SessionGuard fallback={<div>loading</div>}>
+          <Protected />
+        </SessionGuard>
+      </ProjectProvider>,
+    );
+
+    await waitFor(() => expect(projectsRequested).toBe(true));
+    expect(screen.getByText('loading')).toBeInTheDocument();
+    expect(screen.queryByText(/signed in as/i)).not.toBeInTheDocument();
+
+    resolveMe();
+    expect(await screen.findByText(/signed in as guarded@example.com/i)).toBeInTheDocument();
   });
 });
 

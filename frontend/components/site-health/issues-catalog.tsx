@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 
+import { PageLoading } from '@/components/layout/page-loading';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import {
   IssueSearch,
@@ -15,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Pressable } from '@/components/ui/pressable';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Skeleton } from '@/components/ui/skeleton';
 import { siteHealthQueries, type IssuesParams } from '@/lib/api/site-health';
 import type { IssuesSummary, SiteIssue, SiteIssueDetail } from '@/lib/api/types';
 import { changeIssueFilters, toIssueParams, type IssueFilters } from '@/lib/site-health/filters';
@@ -94,6 +94,18 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
     setOccurrenceCursors([]);
   };
 
+  // Nothing at all until the list AND the auto-selected issue's occurrences
+  // have landed. Rendering the toolbar over a skeleton meant the summary band
+  // appeared LATER and shoved the whole view down — the toolbar cannot hold a
+  // place for a block that sits above it. Waiting for the detail too is what
+  // stops the right rail from drawing short and then growing under the
+  // reader's first click: `siteHealthQueries.issue` retains the previous
+  // occurrences within a crawl, so only this FIRST detail has nothing to show,
+  // and it is the only one that could have collapsed the panel.
+  // One loader, then the finished view, drawn once.
+  if ((issuesQuery.isPending && !issuesQuery.data) || detailQuery.isLoading)
+    return <PageLoading label="Loading issues…" />;
+
   return (
     <div className="grid min-w-0 gap-[var(--page-section-gap)]">
       {summary ? <IssueSummary summary={summary} findingView={findingView} /> : null}
@@ -136,11 +148,6 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
 
       {issuesQuery.isError ? (
         <Alert tone="danger">Could not load issues for this crawl. Please refresh.</Alert>
-      ) : issuesQuery.isLoading ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Skeleton className="h-80 w-full" />
-          <Skeleton className="h-80 w-full" />
-        </div>
       ) : rows.length === 0 ? (
         <p className="text-secondary py-[var(--empty-state-padding)] text-center text-sm">
           No issues match this view.
@@ -321,7 +328,6 @@ function IssueDetailRail({
   detailQuery: {
     data: SiteIssueDetail | undefined;
     isError: boolean;
-    isLoading: boolean;
     isFetching: boolean;
   };
   canPrevious: boolean;
@@ -334,10 +340,13 @@ function IssueDetailRail({
       className="min-w-0 min-[701px]:sticky min-[701px]:top-[var(--workspace-gap)] min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))] min-[701px]:overflow-hidden"
       aria-busy={detailQuery.isFetching}
     >
-      <div className="flex flex-col min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))]">
-        {detailQuery.isFetching && !detailQuery.isLoading ? (
+      <div className="relative flex flex-col min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))]">
+        {detailQuery.isFetching ? (
+          // Positioned, not stacked. In the flow this 2px bar appeared and
+          // vanished on every refetch, nudging the whole panel down and back
+          // up — the text visibly twitched each time you picked an issue.
           <progress
-            className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent h-0.5 w-full shrink-0 appearance-none border-0"
+            className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent absolute inset-x-0 top-0 z-1 h-0.5 w-full appearance-none border-0"
             aria-label="Updating issue evidence"
           />
         ) : null}
@@ -390,7 +399,6 @@ function IssueDetailRail({
             detail={detail}
             crawlId={crawlId}
             isError={detailQuery.isError}
-            isLoading={detailQuery.isLoading}
           />
         </div>
         {detail && (canPrevious || detail.next_cursor) ? (
@@ -412,21 +420,18 @@ function OccurrenceList({
   detail,
   crawlId,
   isError,
-  isLoading,
 }: Readonly<{
+  /**
+   * Always populated once the screen has painted — the first load is held
+   * behind `PageLoading`, and every selection after it keeps the previous
+   * crawl-scoped occurrences until the next set arrives. There is therefore
+   * no empty-and-loading state left for this list to draw.
+   */
   detail: SiteIssueDetail | undefined;
   crawlId: string;
   isError: boolean;
-  isLoading: boolean;
 }>) {
   if (isError) return <Alert tone="danger">Could not load affected URLs.</Alert>;
-  if (isLoading)
-    return (
-      <div className="grid gap-2">
-        <Skeleton className="h-6 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
   if (!detail || detail.occurrences.length === 0)
     return <p className="text-secondary text-sm">No affected URLs found.</p>;
   return (

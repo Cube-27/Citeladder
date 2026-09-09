@@ -725,6 +725,15 @@ input:-webkit-autofill:focus {
   --color-band-teal-mid: #114747;
 }
 
+/* A returning visitor's first paint: the static HTML carries the anonymous
+   nav actions, and `ReturningVisitorHint` marks the document before they
+   paint. Hidden — not removed — so the row keeps its footprint until React
+   has hydrated and swapped in the session placeholder; the hook then drops
+   the mark so a stale trace can never hide "Log in" after a 401. */
+html[data-returning-visitor] [data-session-anon] {
+  visibility: hidden;
+}
+
 /* Paper, not screen. A fractal-noise tile at a few percent over the marketing
    planes, so large light grounds don't read as flat voids (the reference
    system's grain). Sections are `relative` and their content sits above it. */

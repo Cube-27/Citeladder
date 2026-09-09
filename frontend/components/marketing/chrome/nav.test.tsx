@@ -6,10 +6,12 @@ import userEvent from '@testing-library/user-event';
 
 import { DEMO_HREF, NAV_DROPS } from '@/lib/marketing-content/nav';
 import { queryKeys } from '@/lib/api/query-keys';
+import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
 import { MarketingNav } from './nav';
+import { RETURNING_VISITOR_ATTRIBUTE } from './returning-visitor-hint';
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => mswServer.resetHandlers());
@@ -323,6 +325,27 @@ describe('MarketingNav', () => {
     expect(menuDemo).toHaveAttribute('target', '_blank');
     await user.click(menuDemo);
     await waitFor(() => expect(document.querySelector('#mobile-menu')).toBeNull());
+  });
+
+  /**
+   * A browser that still carries a stored project from a session that has
+   * since expired: the pre-hydration mark hid the anonymous actions, so once
+   * `me` says 401 the mark must be gone or "Log in" stays invisible forever.
+   */
+  it('releases the returning-visitor mark so a stale trace still ends at Log in', async () => {
+    stubAnonymous();
+    window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, 'stale-project');
+    document.documentElement.setAttribute(RETURNING_VISITOR_ATTRIBUTE, '');
+    try {
+      renderWithProviders(<MarketingNav />);
+
+      const login = await screen.findByRole('link', { name: /log in/i });
+      expect(login).toHaveAttribute('href', '/login');
+      expect(document.documentElement.hasAttribute(RETURNING_VISITOR_ATTRIBUTE)).toBe(false);
+    } finally {
+      window.localStorage.removeItem(ACTIVE_PROJECT_STORAGE_KEY);
+      document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
+    }
   });
 
   it('does not treat a successful null session cache entry as authenticated', async () => {

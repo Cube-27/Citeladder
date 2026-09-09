@@ -1,21 +1,10 @@
 'use client';
 
+import { PageLoading } from '@/components/layout/page-loading';
 import { Alert } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { CommerceWorkspace } from './commerce-workspace';
-
-function ProductsScreenSkeleton() {
-  return (
-    <Card aria-hidden>
-      <CardContent>
-        <Skeleton className="h-48 w-full" />
-      </CardContent>
-    </Card>
-  );
-}
 
 /**
  * Commerce is one screen, not four tabs.
@@ -30,7 +19,7 @@ function ProductsScreenSkeleton() {
 export function ProductsScreen() {
   const { activeProject, isLoading } = useProjectContext();
   const projectId = activeProject?.id ?? '';
-  if (isLoading) return <ProductsScreenSkeleton />;
+  if (isLoading) return <PageLoading label="Loading Commerce…" />;
   if (!projectId) return <Alert tone="info">Select or create a project to use Commerce.</Alert>;
   return <CommerceWorkspace projectId={projectId} />;
 }

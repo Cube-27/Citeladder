@@ -13,8 +13,9 @@ import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel'
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
 import { OverviewPanel } from '@/components/site-health/overview-panel';
-import { ScreenSkeleton } from '@/components/site-health/screen-states';
+import { PageLoading } from '@/components/layout/page-loading';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
@@ -94,7 +95,7 @@ function projectBlockingState(
   projectLoading: boolean,
   screen: ReturnType<typeof useSiteHealthScreen>,
 ) {
-  if (projectLoading) return <ScreenSkeleton label="Loading your Site Health project…" />;
+  if (projectLoading) return <PageLoading label="Loading your Site Health project…" />;
   if (!projectId)
     return <Alert tone="info">Select or create a project to analyze its site health.</Alert>;
   return screenBlockingState({
@@ -112,13 +113,13 @@ function useSiteHealthTabPrefetch(projectId: string | null, crawlId: string | un
   return (nextTab: AnalysisTab) => {
     if (!projectId) return;
     if (nextTab === 'overview') {
-      void queryClient.prefetchQuery(siteHealthQueries.overview(projectId, crawlId));
+      warmQuery(queryClient, siteHealthQueries.overview(projectId, crawlId));
     } else if (nextTab === 'architecture') {
-      void queryClient.prefetchQuery(siteHealthQueries.architecture(projectId, crawlId));
+      warmQuery(queryClient, siteHealthQueries.architecture(projectId, crawlId));
     } else if (nextTab === 'aeo-readiness') {
-      void queryClient.prefetchQuery(siteHealthQueries.aeoReadiness(projectId, crawlId));
+      warmQuery(queryClient, siteHealthQueries.aeoReadiness(projectId, crawlId));
     } else if (nextTab === 'changes') {
-      void queryClient.prefetchQuery(siteHealthQueries.changesSummary(projectId));
+      warmQuery(queryClient, siteHealthQueries.changesSummary(projectId));
     }
   };
 }
@@ -248,7 +249,7 @@ function screenBlockingState({
     );
   if (entitlementLoading || dashboardLoading || phase === 'resolving')
     return (
-      <ScreenSkeleton
+      <PageLoading
         label={
           entitlementLoading
             ? 'Checking Site Health access…'

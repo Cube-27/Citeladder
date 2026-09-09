@@ -8,7 +8,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
-import { Skeleton } from '@/components/ui/skeleton';
+import { PageLoading } from '@/components/layout/page-loading';
 import { useProjectContext } from '@/lib/project/project-context';
 
 /**
@@ -47,38 +47,24 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
 
   if (isError && projects.length === 0) {
     return (
-      <main
-        id="main"
-        className="bg-shell grid min-h-dvh place-items-center p-[var(--page-section-gap)]"
-      >
-        <Alert tone="warning" className="max-w-lg">
-          <h1 className={textRole('sectionTitle')}>Projects could not be loaded</h1>
-          <p>Your session is active. Retry to load your projects.</p>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              void queryClient.refetchQueries({ queryKey: queryKeys.projects.list() });
-            }}
-          >
-            Retry
-          </Button>
-        </Alert>
-      </main>
+      <Alert tone="warning" className="max-w-lg">
+        <h1 className={textRole('sectionTitle')}>Projects could not be loaded</h1>
+        <p>Your session is active. Retry to load your projects.</p>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            void queryClient.refetchQueries({ queryKey: queryKeys.projects.list() });
+          }}
+        >
+          Retry
+        </Button>
+      </Alert>
     );
   }
 
-  if (isLoading || needsOnboarding) {
-    return (
-      <div className="bg-shell flex min-h-dvh items-center justify-center p-[var(--card-padding)]">
-        <div className="grid w-full max-w-70 gap-3" aria-hidden>
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
-        </div>
-        <span className="sr-only">Loading your workspace…</span>
-      </div>
-    );
-  }
+  // Inside the shell, so this is the ordinary content-pane loader every screen
+  // shows — the chrome around it is already drawn and does not move.
+  if (isLoading || needsOnboarding) return <PageLoading label="Loading your workspace…" />;
 
   return <>{children}</>;
 }

@@ -220,7 +220,7 @@ describe('DemandProjection', () => {
     );
     renderProjection();
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading search demand');
+    expect(screen.getByRole('status')).toHaveAccessibleName('Loading search demand…');
   });
 
   it('distinguishes unavailable Search Console evidence', async () => {
@@ -300,7 +300,7 @@ describe('DemandProjection', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('status')).toHaveTextContent('Loading search demand');
+      expect(screen.getByRole('status')).toHaveAccessibleName('Loading search demand…');
     });
     expect(screen.queryByText('ai marketing tools')).not.toBeInTheDocument();
   });

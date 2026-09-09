@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
-import { Skeleton } from '@/components/ui/skeleton';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { PageLoading } from '@/components/layout/page-loading';
 import { DemandDetectorBar } from '@/components/demand/demand-detector-bar';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
 import { DemandSignalCard } from '@/components/demand/demand-signal-card';
@@ -37,49 +37,6 @@ const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
   'all' as FilterTab,
 );
-
-function DemandProjectionSkeleton() {
-  return (
-    <div className="grid gap-[var(--workspace-gap)]" aria-busy="true">
-      <output className="sr-only">Loading search demand</output>
-      {/* Header skeleton */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="grid gap-1">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-96 max-w-full" />
-        </div>
-        <Skeleton className="h-9 w-32" />
-      </div>
-
-      {/* Summary Cards Skeleton */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {Array.from({ length: 5 }, (_, i) => (
-          <Skeleton key={i} className="h-24 rounded-[var(--radius-control)]" />
-        ))}
-      </div>
-
-      {/* Detector Bar Skeleton */}
-      <Skeleton className="h-12 rounded-[var(--radius-control)]" />
-
-      {/* Filter Bar Skeleton */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {Array.from({ length: 5 }, (_, i) => (
-            <Skeleton key={i} className="h-7 w-24 rounded-full" />
-          ))}
-        </div>
-        <Skeleton className="h-8 w-64" />
-      </div>
-
-      {/* Signal Cards Skeleton */}
-      <div className="grid gap-3">
-        {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-40 rounded-[var(--radius-control)]" />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) {
   const { activeProject } = useProjectContext();
@@ -319,7 +276,7 @@ export function DemandProjection() {
   });
 
   if (projectLoading || latest.isLoading) {
-    return <DemandProjectionSkeleton />;
+    return <PageLoading label="Loading search demand…" />;
   }
   if (!activeProject) {
     return <Alert tone="info">Select a project to inspect search demand.</Alert>;

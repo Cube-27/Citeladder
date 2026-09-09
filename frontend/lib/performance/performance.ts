@@ -16,6 +16,7 @@
  */
 import type {
   PerformanceCompare,
+  PerformanceDashboardParams,
   PerformanceDimension,
   PerformanceGranularity,
   PerformanceRange,
@@ -84,6 +85,69 @@ export const COMPARE_OPTIONS: readonly {
   { value: 'year_over_year', label: 'Year over year' },
   { value: 'custom', label: 'Custom' },
 ] as const;
+
+// ---------------------------------------------------------------------------
+// The selection, its landing state, and the request it resolves to
+// ---------------------------------------------------------------------------
+
+/** Which window is drawn, and what it is measured against. */
+export type RangeSelection = {
+  range: PerformanceRange;
+  from: string;
+  to: string;
+  compare: PerformanceCompare;
+  compareFrom: string;
+  compareTo: string;
+};
+
+/**
+ * The landing selection: no preset, no comparison — the server then serves
+ * the newest, widest snapshot it holds. Lives with `RangeSelection` because
+ * it is that type's empty value.
+ */
+export const INITIAL_SELECTION: RangeSelection = {
+  range: 'last_synced',
+  from: '',
+  to: '',
+  compare: 'none',
+  compareFrom: '',
+  compareTo: '',
+};
+
+/** The bucket size the chart lands on. */
+export const INITIAL_GRANULARITY: PerformanceGranularity = 'day';
+
+/**
+ * The dashboard request one selection resolves to. Endpoints of a window are
+ * sent only when the reader actually chose them, so a preset never carries a
+ * stale custom pair.
+ */
+export function dashboardParams(
+  selection: RangeSelection,
+  granularity: PerformanceGranularity,
+): PerformanceDashboardParams {
+  return {
+    range: selection.range,
+    granularity,
+    from: selection.range === 'custom' && selection.from ? selection.from : undefined,
+    to: selection.range === 'custom' && selection.to ? selection.to : undefined,
+    compare: selection.compare,
+    compare_from:
+      selection.compare === 'custom' && selection.compareFrom ? selection.compareFrom : undefined,
+    compare_to:
+      selection.compare === 'custom' && selection.compareTo ? selection.compareTo : undefined,
+  };
+}
+
+/**
+ * The request the surface lands on.
+ *
+ * Navigation intent warms exactly this, so a hovered link and the screen it
+ * opens share ONE cache entry. Deriving it from the same defaults through the
+ * same function is what keeps them identical — a hand-written second params
+ * literal drifted from the screen's selection and warmed a key nothing read.
+ */
+export const INITIAL_DASHBOARD_PARAMS = dashboardParams(INITIAL_SELECTION, INITIAL_GRANULARITY);
 
 /** Year over year shifts back 52 whole weeks — mirrors the backend constant. */
 const YEAR_OVER_YEAR_SHIFT_DAYS = 364;

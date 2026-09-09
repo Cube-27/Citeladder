@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SectionTitle, textRole } from '@/components/ui/typography';
 import { ExecutionsTable } from '@/components/runs/executions-table';
 import { ProgressPanel } from '@/components/runs/progress-panel';
+import { PageLoading } from '@/components/layout/page-loading';
 import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice } from '@/lib/api/mutation-notice';
 import type { Audit, Execution } from '@/lib/api/types';
@@ -41,14 +42,7 @@ function AuditSection({
     return <Alert tone="danger">{humanizeApiError(auditError).message}</Alert>;
   }
   if (auditLoading || !audit) {
-    return (
-      <Card>
-        <CardContent className="grid gap-3">
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-16 w-full" />
-        </CardContent>
-      </Card>
-    );
+    return <PageLoading label="Loading run…" />;
   }
   return (
     <ProgressPanel

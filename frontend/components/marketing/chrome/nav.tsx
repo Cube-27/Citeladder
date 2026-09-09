@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
+import { RETURNING_VISITOR_ATTRIBUTE } from './returning-visitor-hint';
 
 /** What asked for a dropdown: a resting pointer, or an explicit focus move. */
 export type OpenSource = 'hover' | 'focus';
@@ -68,6 +69,13 @@ function useMarketingSession() {
     enabled: Boolean(me.data),
   });
   const hasProject = (projects.data?.length ?? 0) > 0 || hasStoredProject;
+
+  // From here React decides what the actions row shows, so the pre-hydration
+  // mark (see `ReturningVisitorHint`) has done its job. Dropping it is what
+  // lets a stale trace fall back to the anonymous actions after a 401.
+  useEffect(() => {
+    document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
+  }, []);
 
   return {
     // Until `me` has settled (success or 401) we know nothing for certain about
@@ -276,7 +284,15 @@ export function MarketingNav() {
       <nav
         ref={navRef}
         aria-label="Main navigation"
-        className="mx-auto flex h-16 w-full max-w-7xl items-center gap-5 px-[var(--site-gutter)]"
+        // Three tracks, not a flex row: the links sit in the middle track, so
+        // their position is a function of the viewport alone. As a flex row
+        // they were centred in whatever space the actions left over, and the
+        // actions change width twice on a returning visitor's refresh (the
+        // anonymous pair, then the pending placeholder, then Dashboard) — which
+        // slid the whole navigation sideways each time. The side tracks are
+        // `minmax(0,1fr)` so they stay exactly equal regardless of what either
+        // one holds.
+        className="mx-auto grid h-16 w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-5 px-[var(--site-gutter)]"
       >
         <HomeLogoLink onNavigate={closeMenu} />
 
@@ -374,15 +390,22 @@ function NavActions({
   onToggleMenu: () => void;
 }>) {
   return (
-    <div className="ml-auto flex shrink-0 items-center gap-3 lg:ml-0">
+    <div className="flex shrink-0 items-center gap-3 justify-self-end">
       {sessionPending ? (
         // A returning visitor whose session has not resolved yet: hold the
         // Dashboard link's own footprint rather than flash the anonymous
-        // actions and swap them a moment later.
-        <div
+        // actions and swap them a moment later. It carries the SAME label and
+        // the same classes as the real link, hidden from view and from
+        // assistive tech, so the swap cannot change the row's width by a pixel.
+        <ButtonLink
+          href={dashboardHref}
+          variant="primary"
+          className="pointer-events-none min-h-10 px-4 opacity-0"
           aria-hidden
-          className="bg-background-alt h-[var(--control-height)] w-20 animate-pulse rounded-[var(--radius-control)] sm:w-28"
-        />
+          tabIndex={-1}
+        >
+          Dashboard
+        </ButtonLink>
       ) : isAuthenticated ? (
         // The topbar CTA runs one step smaller than the page CTAs — chrome,
         // not a section action.
@@ -390,7 +413,10 @@ function NavActions({
           Dashboard
         </ButtonLink>
       ) : (
-        <>
+        // `data-session-anon`: hidden before hydration for a returning
+        // visitor (see `ReturningVisitorHint`). `contents` keeps the row's
+        // flex layout as if the wrapper were not there.
+        <span data-session-anon className="contents">
           <Link
             href="/login"
             className="website-nav text-muted hover:text-foreground inline-flex px-4 transition-colors"
@@ -400,7 +426,7 @@ function NavActions({
           <DemoButtonLink variant="primary" className="hidden min-h-10 px-4 sm:inline-flex">
             {DEMO_CTA}
           </DemoButtonLink>
-        </>
+        </span>
       )}
       <button
         type="button"

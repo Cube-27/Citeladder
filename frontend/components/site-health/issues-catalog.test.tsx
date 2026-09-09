@@ -159,6 +159,38 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('IssuesCatalog', () => {
+  /**
+   * The list and the auto-selected issue's occurrences are two requests, and
+   * the rail is the second one. Painting after the first left the rail short
+   * and then growing under the reader's first click, so both are held behind
+   * the one loader and the finished view is drawn once.
+   */
+  it('holds one loader until the list and the first issue detail have both landed', async () => {
+    let releaseDetail!: () => void;
+    const detailSettled = new Promise<void>((resolve) => {
+      releaseDetail = resolve;
+    });
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
+        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
+      ),
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, async () => {
+        await detailSettled;
+        return HttpResponse.json(issueDetail());
+      }),
+    );
+
+    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+
+    expect(await screen.findByTestId('page-loading')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'WebSite schema is missing' })).toBeNull();
+
+    act(() => releaseDetail());
+
+    expect(await screen.findByRole('link', { name: /Homepage/ })).toBeInTheDocument();
+    expect(screen.queryByTestId('page-loading')).toBeNull();
+  });
+
   it('shows no pagination when everything already fits on one page', async () => {
     // Both pagers used to key off "are there rows" and then disable themselves
     // when there was nowhere to go, so a five-issue crawl rendered two dead

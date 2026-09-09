@@ -20,6 +20,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { PageKindSelect } from '@/components/site-health/page-kind-select';
 import { PagesTable } from '@/components/site-health/pages-table';
 import { RootErrorsBlock } from '@/components/site-health/root-errors-block';
+import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries, type PagesParams, type PagesSort } from '@/lib/api/site-health';
 import type { PagesPage, SiteCrawl } from '@/lib/api/types';
 import { Tabs } from '@/components/ui/tabs';
@@ -307,7 +308,8 @@ function ScoredInventoryState({
     }),
   );
   const prefetchTab = (nextTab: (typeof TABS)[number]) => {
-    void queryClient.prefetchQuery(
+    warmQuery(
+      queryClient,
       siteHealthQueries.pages(crawl.id, {
         ...nextTab.params,
         page_kind: pageKind || undefined,

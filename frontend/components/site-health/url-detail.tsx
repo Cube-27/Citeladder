@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { UrlDetailView } from './url-detail-view';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
+import { PageLoading } from '@/components/layout/page-loading';
 
 const HISTORY_LIMIT = 25;
 const RERUN_SEARCH_PARAM = 'rerun';
@@ -91,7 +92,7 @@ export function UrlDetail({
     onError: (error) => setRerunError(rerunErrorMessage(error)),
   });
 
-  if (detailQuery.isLoading) return <DetailSkeleton />;
+  if (detailQuery.isLoading) return <PageLoading label="Loading page detail…" />;
   if (detailQuery.isError || !detailQuery.data) {
     return <Alert tone="danger">Could not load this page. It may not exist in this crawl.</Alert>;
   }
@@ -144,16 +145,6 @@ function rerunErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 403)
     return 'Re-auditing pages requires a Starter plan.';
   return 'Could not re-audit this page. Please try again.';
-}
-
-function DetailSkeleton() {
-  return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      <Skeleton className="h-24 w-full" />
-      <Skeleton className="h-32 w-full" />
-      <Skeleton className="h-64 w-full" />
-    </div>
-  );
 }
 
 function IssueHistory({ crawlId, siteUrlId }: Readonly<{ crawlId: string; siteUrlId: string }>) {

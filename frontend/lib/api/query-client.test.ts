@@ -1,7 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from './errors';
-import { createAppQueryClient, retainPreviousDataForScope, shouldRetryQuery } from './query-client';
+import {
+  createAppQueryClient,
+  retainPreviousDataForScope,
+  shouldRetryQuery,
+  warmQuery,
+} from './query-client';
 
 describe('shouldRetryQuery', () => {
   it('retries network / unknown errors up to the cap', () => {
@@ -83,5 +88,41 @@ describe('retainPreviousDataForScope', () => {
         queryKey: ['traffic', 'dashboard', 'project-a', { granularity: 'day' }],
       }),
     ).toBeUndefined();
+  });
+});
+
+describe('warmQuery', () => {
+  const KEY = ['visibility', 'trends', 'project-a'] as const;
+
+  it('warms a key nothing has fetched yet', async () => {
+    const queryFn = vi.fn(async () => ({ ok: true }));
+    const app = createAppQueryClient();
+
+    warmQuery(app, { queryKey: KEY, queryFn });
+
+    await vi.waitFor(() => expect(queryFn).toHaveBeenCalledTimes(1));
+  });
+
+  /**
+   * Tab and link intent fires on the ACTIVE target too. Re-driving a key that
+   * already failed resets `error` → `pending`, so the settled alert a panel is
+   * rendering would be replaced by its skeleton until the identical failure
+   * returns — hovering a tab visibly reloading its own content.
+   */
+  it('leaves an already-failed key untouched so a settled error cannot flicker', async () => {
+    const queryFn = vi.fn(async () => {
+      throw new ApiError('gone', 404, '');
+    });
+    const app = createAppQueryClient();
+    await app.fetchQuery({ queryKey: KEY, queryFn }).catch(() => undefined);
+    const query = app.getQueryCache().find({ queryKey: KEY });
+    expect(query?.state.status).toBe('error');
+    const callsAfterFailure = queryFn.mock.calls.length;
+
+    warmQuery(app, { queryKey: KEY, queryFn });
+    await Promise.resolve();
+
+    expect(queryFn.mock.calls.length).toBe(callsAfterFailure);
+    expect(query?.state.status).toBe('error');
   });
 });

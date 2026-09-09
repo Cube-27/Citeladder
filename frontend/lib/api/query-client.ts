@@ -15,6 +15,33 @@ import { QueryClient } from '@tanstack/react-query';
 
 import { ApiError, httpErrorStatus, isAbortError } from './errors';
 
+/**
+ * Warm a cache entry from INTENT — a hover, a focus, a route the reader has
+ * not committed to yet. Intent must never disturb what a screen is already
+ * rendering.
+ *
+ * An errored query is permanently stale, so `prefetchQuery` always refetches
+ * it, and TanStack resets `error` back to `pending` while that refetch is in
+ * flight. On a screen already showing the failure (Search Demand's "no
+ * snapshot exists yet" 404 alert, a tab whose panel settled on an error),
+ * that flips `isLoading` true and swaps the settled alert for a full-page
+ * skeleton until the identical failure returns — a hover on a sidebar link
+ * or on the ALREADY SELECTED tab visibly reloading the page.
+ *
+ * Warming a cache is strictly an optimisation, so a key that has already
+ * failed is left exactly as it is: the destination mounts and retries on its
+ * own terms, and explicit retry is unaffected.
+ */
+export function warmQuery<TOptions extends { queryKey: readonly unknown[] }>(
+  client: QueryClient,
+  options: TOptions,
+): void {
+  if (client.getQueryCache().find({ queryKey: options.queryKey })?.state.status === 'error') {
+    return;
+  }
+  void client.prefetchQuery(options as never);
+}
+
 export function shouldRetryQuery(failureCount: number, error: unknown) {
   if (failureCount >= 2 || isAbortError(error)) return false;
   if (error instanceof ApiError && typeof error.retryable === 'boolean') {

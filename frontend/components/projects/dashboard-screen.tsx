@@ -11,7 +11,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { CommandCenter, Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 
-import { CommandCenterSkeleton } from './dashboard-primitives';
+import { PageLoading } from '@/components/layout/page-loading';
 import {
   ActionsAndProof,
   DashboardActions,
@@ -34,7 +34,7 @@ export function DashboardScreen({
     return (
       <div className="grid gap-[var(--workspace-gap)]">
         <PageHeader />
-        <CommandCenterSkeleton />
+        <PageLoading label="Loading your command center…" />
       </div>
     );
   }

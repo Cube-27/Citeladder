@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
-import { DateRangeDialog, type RangeSelection } from './date-range-dialog';
+import { DateRangeDialog } from './date-range-dialog';
 import { GranularitySelect, PerformanceNotices, PerformanceToolbar } from './performance-chrome';
 import { Ga4SummaryRow, MetricCards } from './metric-cards';
 import { PerformanceBreakdowns } from './performance-breakdowns';
@@ -11,13 +11,13 @@ import { PerformanceChart, type ChartSeries } from './performance-chart';
 import { ReadinessLadder, useConnectedProviders } from './readiness-ladder';
 import { usePerformanceSelection } from './use-performance-selection';
 import { usePerformanceSync } from './use-performance-sync';
+import { PageLoading } from '@/components/layout/page-loading';
 import { Alert } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
 import { integrationsApi } from '@/lib/api/integrations';
 import {
   performanceApi,
+  performanceQueries,
   type PerformanceDashboard,
-  type PerformanceGranularity,
 } from '@/lib/api/performance';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
@@ -26,10 +26,12 @@ import {
   COMPARE_OPTIONS,
   METRIC_CARDS,
   canCompareYearOverYear,
+  dashboardParams,
   describeWindow,
   toChartPoints,
   windowLength,
   type PerformanceMetricKey,
+  type RangeSelection,
 } from '@/lib/performance/performance';
 
 /**
@@ -51,20 +53,6 @@ const METRIC_COLORS: Record<PerformanceMetricKey, string> = {
   ctr: 'var(--color-gsc-ctr)',
   position: 'var(--color-gsc-position)',
 };
-
-function dashboardParams(selection: RangeSelection, granularity: PerformanceGranularity) {
-  return {
-    range: selection.range,
-    granularity,
-    from: selection.range === 'custom' && selection.from ? selection.from : undefined,
-    to: selection.range === 'custom' && selection.to ? selection.to : undefined,
-    compare: selection.compare,
-    compare_from:
-      selection.compare === 'custom' && selection.compareFrom ? selection.compareFrom : undefined,
-    compare_to:
-      selection.compare === 'custom' && selection.compareTo ? selection.compareTo : undefined,
-  };
-}
 
 /** The drawn lines: one per selected metric, each with its comparison peer. */
 function chartSeries(
@@ -105,10 +93,8 @@ export function PerformanceScreen() {
     reset: resetFilters,
   } = usePerformanceSelection();
 
-  const params = dashboardParams(selection, granularity);
   const dashboard = useQuery({
-    queryKey: queryKeys.performance.dashboard(projectId ?? '', params),
-    queryFn: ({ signal }) => performanceApi.getDashboard(projectId ?? '', params, { signal }),
+    ...performanceQueries.dashboard(projectId ?? '', dashboardParams(selection, granularity)),
     enabled: Boolean(projectId),
     placeholderData: (previousData, previousQuery) =>
       retainPreviousDataForScope(projectId!, previousData, previousQuery),
@@ -126,11 +112,11 @@ export function PerformanceScreen() {
   // only the second is something to tell the reader about.
   if (!projectId)
     return isLoading ? (
-      <PerformanceSkeleton />
+      <PageLoading label="Loading performance…" />
     ) : (
       <Alert tone="info">Select or create a project to see its search performance.</Alert>
     );
-  if (dashboard.isLoading) return <PerformanceSkeleton />;
+  if (dashboard.isLoading) return <PageLoading label="Loading performance…" />;
   if (dashboard.isError)
     return (
       <Alert tone="danger">
@@ -139,10 +125,15 @@ export function PerformanceScreen() {
     );
 
   const data = dashboard.data as PerformanceDashboard;
-  // A read in flight, or a window whose projection is still being built. The
-  // value slots spin instead of claiming a figure is absent — and they keep
-  // their boxes, so nothing below them moves.
-  const refreshing = dashboard.isFetching || projection.projecting;
+  // The figures on screen belong to a DIFFERENT selection (retained while the
+  // new one loads), or the window's projection is still being built. The value
+  // slots spin instead of claiming a figure is absent — and they keep their
+  // boxes, so nothing below them moves.
+  //
+  // Not `isFetching`: a background revalidation of the same selection keeps
+  // figures that are still current, and swapping them for spinners only to
+  // put the identical numbers back was the return-to-Performance flicker.
+  const refreshing = dashboard.isPlaceholderData || projection.projecting;
   const selectedWindow = data.selected;
   const comparisonWindow = data.comparison;
   const selectedLabel = describeWindow(selectedWindow);
@@ -308,45 +299,4 @@ function missingWindow(data: PerformanceDashboard | undefined) {
     }
   }
   return null;
-}
-
-/**
- * The first paint, in the SAME boxes the loaded screen occupies.
- *
- * A skeleton whose shape differs from the content it stands in for does not
- * avoid a layout shift, it schedules one: the page re-flows the moment real
- * data lands. Every box below mirrors a real one — the card strip, the plot,
- * the GA4 row, the tabbed table — so the swap changes pixels inside the boxes
- * and never the boxes themselves.
- */
-function PerformanceSkeleton() {
-  return (
-    <div
-      className="grid gap-[var(--workspace-gap)]"
-      aria-busy="true"
-      data-testid="performance-skeleton"
-    >
-      <div className="flex min-h-9 items-center">
-        <Skeleton className="h-9 w-80" />
-      </div>
-      <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-panel)] border">
-        <div className="border-border-subtle grid grid-cols-1 border-b sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="grid min-h-[96px] content-start gap-2 p-3.5">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-7 w-20" />
-            </div>
-          ))}
-        </div>
-        <div className="p-3">
-          <Skeleton className="h-[220px]" />
-        </div>
-      </div>
-      <Skeleton className="h-[42px]" />
-      <div className="grid min-h-[560px] gap-3">
-        <Skeleton className="h-9" />
-        <Skeleton className="min-h-[520px] flex-1" />
-      </div>
-    </div>
-  );
 }

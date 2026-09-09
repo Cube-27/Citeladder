@@ -12,10 +12,10 @@ import { buttonVariants } from '@/components/ui/button-variants';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Input } from '@/components/ui/input';
 import { scoreBand, scoreBandText } from '@/components/ui/score-band';
-import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { Pressable } from '@/components/ui/pressable';
+import { PageLoading } from '@/components/layout/page-loading';
 import {
   Table,
   TableBody,
@@ -146,12 +146,7 @@ export function YourPrompts() {
   // Wait for topics too: rendering groups before topics arrive would flash
   // every prompt as "Ungrouped" for a moment.
   if (isLoading || topicsQuery.isLoading) {
-    return (
-      <div className="grid gap-3">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
+    return <PageLoading label="Loading prompts…" />;
   }
 
   return (

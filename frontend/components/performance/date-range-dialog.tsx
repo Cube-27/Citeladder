@@ -8,8 +8,11 @@ import { DateField } from '@/components/ui/date-field';
 import { Field } from '@/components/ui/field';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
-import type { PerformanceCompare, PerformanceRange } from '@/lib/api/performance';
-import { COMPARE_OPTIONS, DIALOG_RANGE_OPTIONS } from '@/lib/performance/performance';
+import {
+  COMPARE_OPTIONS,
+  DIALOG_RANGE_OPTIONS,
+  type RangeSelection,
+} from '@/lib/performance/performance';
 
 /**
  * The Search-Console-shaped date dialog: a **Filter** tab that chooses the
@@ -24,15 +27,6 @@ import { COMPARE_OPTIONS, DIALOG_RANGE_OPTIONS } from '@/lib/performance/perform
  * that reads like a collapse in traffic.
  */
 
-export type RangeSelection = {
-  range: PerformanceRange;
-  from: string;
-  to: string;
-  compare: PerformanceCompare;
-  compareFrom: string;
-  compareTo: string;
-};
-
 /**
  * A real Gregorian day in ISO form.
  *
@@ -40,20 +34,6 @@ export type RangeSelection = {
  * forward to March 3 — Apply would then request a window the user never
  * chose. The round trip is what rejects it.
  */
-/**
- * The landing selection: no preset, no comparison — the server then serves
- * the newest, widest snapshot it holds. Lives with `RangeSelection` because
- * it is that type's empty value, and both the screen and its chrome need it.
- */
-export const INITIAL_SELECTION: RangeSelection = {
-  range: 'last_synced',
-  from: '',
-  to: '',
-  compare: 'none',
-  compareFrom: '',
-  compareTo: '',
-};
-
 function isoDay(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return false;
