@@ -48,4 +48,11 @@ resource "google_compute_instance" "demo" {
     enable_vtpm                 = true
     enable_integrity_monitoring = true
   }
+
+  # The image family resolves to a newer image over time. That is appropriate
+  # for first creation, but must not replace the stateful single-VM demo during
+  # an ordinary application deployment.
+  lifecycle {
+    ignore_changes = [boot_disk[0].initialize_params[0].image]
+  }
 }

@@ -6,7 +6,7 @@ param(
     [string] $Instance = "citeladder-demo",
 
     [ValidatePattern("^[a-z]+-[a-z]+[0-9]-[a-z]$")]
-    [string] $Zone = "asia-south1-a",
+    [string] $Zone = "asia-south1-b",
 
     [switch] $Reset,
 

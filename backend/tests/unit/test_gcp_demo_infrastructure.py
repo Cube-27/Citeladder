@@ -15,7 +15,9 @@ def _read_tree(root: Path, pattern: str) -> str:
     return "\n".join(
         path.read_text(encoding="utf-8")
         for path in sorted(root.glob(pattern))
-        if path.is_file() and ".terraform" not in path.parts
+        if path.is_file()
+        and ".terraform" not in path.parts
+        and "__pycache__" not in path.parts
     )
 
 
@@ -35,11 +37,12 @@ def test_gcp_network_exposes_only_cloudflare_web_and_iap_ssh() -> None:
     assert 'source_ranges = ["::/0"]' not in terraform
 
 
-def test_vm_is_shielded_fixed_size_and_has_no_default_identity() -> None:
+def test_vm_is_shielded_fixed_size_and_avoids_incidental_replacement() -> None:
     compute = (GCP / "compute.tf").read_text(encoding="utf-8")
     variables = (GCP / "variables.tf").read_text(encoding="utf-8")
     assert 'default = "e2-standard-2"' in variables
-    assert 'condition     = var.zone == "asia-south1-a"' in variables
+    assert 'default = "asia-south1-b"' in variables
+    assert 'regex("^asia-south1-[a-z]$", var.zone)' in variables
     assert 'for label in split(".", var.domain_name)' in variables
     assert "size  = 30" in compute
     assert 'type  = "pd-balanced"' in compute
@@ -48,6 +51,7 @@ def test_vm_is_shielded_fixed_size_and_has_no_default_identity() -> None:
     assert "enable_secure_boot          = true" in compute
     assert "enable_vtpm                 = true" in compute
     assert "enable_integrity_monitoring = true" in compute
+    assert "ignore_changes = [boot_disk[0].initialize_params[0].image]" in compute
     assert "google_service_account.vm.email" in compute
     instance_only = re.sub(
         r'data "google_compute_image".*?\n}', "", compute, flags=re.S

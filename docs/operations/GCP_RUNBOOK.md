@@ -1,9 +1,10 @@
 # CiteLadder GCP Demo Runbook
 
 This is the operator procedure for the temporary CiteLadder demo. The reviewed
-design is fixed to `asia-south1` / `asia-south1-a`, one `e2-standard-2` VM,
-Cloudflare in front of Caddy, and the protected `gcp-demo` GitHub environment.
-Never place a long-lived Google service-account key in GitHub.
+design is fixed to `asia-south1`, defaults to `asia-south1-b`, and uses one
+`e2-standard-2` VM, Cloudflare in front of Caddy, and the protected `gcp-demo`
+GitHub environment. Never place a long-lived Google service-account key in
+GitHub.
 
 ## 1. Prerequisites and fixed values
 
@@ -51,7 +52,7 @@ Add these environment variables:
 | `GCP_PROJECT_ID` | Bootstrap project ID |
 | `GCP_PROJECT_NUMBER` | Bootstrap output |
 | `GCP_REGION` | `asia-south1` |
-| `GCP_ZONE` | `asia-south1-a` |
+| `GCP_ZONE` | `asia-south1-b` (or another `asia-south1` zone when capacity requires it) |
 | `GCP_WIF_PROVIDER` | Bootstrap output |
 | `GCP_DEPLOY_SERVICE_ACCOUNT` | Bootstrap output |
 | `GCP_TF_STATE_BUCKET` | Bootstrap state bucket |
@@ -164,7 +165,7 @@ For emergency read-only inspection:
 
 ```powershell
 gcloud compute ssh citeladder-demo --project '<PROJECT_ID>' `
-  --zone asia-south1-a --tunnel-through-iap
+  --zone '<GCP_ZONE>' --tunnel-through-iap
 ```
 
 On the VM:
@@ -235,6 +236,10 @@ values, and provider keys.
   bootstrap trust. Never substitute a downloaded service-account key.
 - **IAP SSH fails:** confirm the VM runs, OS Login is enabled, the caller has OS
   Admin Login and IAP tunnel access, and `35.235.240.0/20` can reach port 22.
+- **Zonal resource exhaustion:** set the protected environment's `GCP_ZONE` to
+  another `asia-south1` zone and rerun the deployment. A zone change replaces
+  an existing VM, so first confirm that Terraform state has no healthy VM or
+  take the documented pre-deploy backup before moving one deliberately.
 - **Cloudflare 522/525:** confirm the proxied A record, static IP, Full (strict),
   complete Origin CA PEM values, and successful Cloudflare CIDR retrieval.
 - **Deployment fails after backup:** inspect workflow logs and Compose status.
@@ -277,5 +282,5 @@ irreversibly replaces the fixed `citeladder` database, including users and
 sessions, using the installed image baseline; it does not back up data or deploy
 new images. It refuses a mismatched project or single-account demo mode. Existing
 configured credentials provision the new dev account. Optional `--instance` and
-`--zone` default to `citeladder-demo` and `asia-south1-a`; pass them to the
+`--zone` default to `citeladder-demo` and `asia-south1-b`; pass them to the
 PowerShell script if your deployment differs.

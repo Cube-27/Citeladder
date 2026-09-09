@@ -62,7 +62,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", required=True)
     parser.add_argument("--instance", default="citeladder-demo")
-    parser.add_argument("--zone", default="asia-south1-a")
+    parser.add_argument("--zone", default="asia-south1-b")
     parser.add_argument(
         "--reset-project", help="Destructive opt-in: repeat the exact project ID"
     )

@@ -21,7 +21,9 @@ Cloudflare → Caddy → Next.js → FastAPI
 
 - Repository: `Cube-27/Citeladder`, temporarily public for code review and made
   private immediately after the reviewed deployment.
-- GCP: dedicated disposable project in `asia-south1` (Mumbai).
+- GCP: dedicated disposable project in `asia-south1` (Mumbai), with the VM zone
+  selected by deployment configuration so capacity failures can use another
+  zone in the same region.
 - Runtime: one on-demand `e2-standard-2` VM, 2 vCPU/8 GiB, 30 GiB balanced disk.
 - URL: `https://citeladder.com`.
 - Lifetime: runs until torn down deliberately. Public sign-up is on by default; `DEMO_MODE=true` restores the one-account restriction.
