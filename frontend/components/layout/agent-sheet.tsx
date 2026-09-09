@@ -86,8 +86,7 @@ export function AgentSheetTrigger({
   // the Agent button "appearing late" and shoving the links down. The slot is
   // held at its final size instead, hidden from view and from assistive tech
   // and unable to be activated, so an unresolved entitlement grants nothing.
-  const reserved = isLoading;
-  return (
+  const trigger = (
     <Button
       variant="ghost"
       size="md"
@@ -96,15 +95,17 @@ export function AgentSheetTrigger({
         else window.dispatchEvent(new Event(OPEN_AGENT_EVENT));
       }}
       aria-label="Open Growth Agent"
-      aria-hidden={reserved || undefined}
-      tabIndex={reserved ? -1 : undefined}
-      disabled={reserved}
-      className={cn('min-w-0 gap-1.5', reserved && 'pointer-events-none opacity-0', className)}
+      aria-hidden={isLoading || undefined}
+      tabIndex={isLoading ? -1 : undefined}
+      disabled={isLoading}
+      className={cn('min-w-0 gap-1.5', className)}
     >
       <Bot className="text-accent size-3.5" aria-hidden />
       <span className="hidden sm:inline">Agent</span>
     </Button>
   );
+  if (!isLoading) return trigger;
+  return <span className="pointer-events-none block opacity-0">{trigger}</span>;
 }
 
 export function AgentSheet() {

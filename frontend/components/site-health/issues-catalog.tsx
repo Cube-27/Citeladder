@@ -1,11 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 
 import { PageLoading } from '@/components/layout/page-loading';
-import { IssueEvidence } from '@/components/site-health/issue-evidence';
+import { IssueDetailRail } from '@/components/site-health/issue-detail-rail';
+import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import {
   IssueSearch,
   useIssuesCatalogUrlState,
@@ -13,19 +13,14 @@ import {
 import { PageKindSelect } from '@/components/site-health/page-kind-select';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { CopyButton } from '@/components/ui/copy-button';
 import { Pressable } from '@/components/ui/pressable';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { siteHealthQueries, type IssuesParams } from '@/lib/api/site-health';
-import type { IssuesSummary, SiteIssue, SiteIssueDetail } from '@/lib/api/types';
+import type { IssuesSummary, SiteIssue } from '@/lib/api/types';
 import { changeIssueFilters, toIssueParams, type IssueFilters } from '@/lib/site-health/filters';
-import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
-import { pageKindLabel } from '@/lib/site-health/page-kinds';
-import { pageDisplayTitle } from '@/lib/site-health/status';
+import { issueTitle } from '@/lib/site-health/issues';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
-import { panelClasses } from '@/components/ui/panel';
-import { ledgerClasses } from '@/components/ui/workspace';
 
 const ISSUE_LIMIT = 25;
 const OCCURRENCE_LIMIT = 25;
@@ -67,10 +62,14 @@ function filterCount(filter: FilterKey, summary: IssuesSummary, view: FindingVie
   return view === 'defect' ? summary.defect_issue_type_count : summary.advisory_issue_type_count;
 }
 
-export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
-  const { cursor, filters, selectedGroupId, navigate, selectIssue } = useIssuesCatalogUrlState();
-  const [occurrenceCursors, setOccurrenceCursors] = useState<string[]>([]);
-  const findingView: FindingView = filters.finding_class;
+/** The issue page, then the occurrences of whichever issue the rail shows. */
+function useIssuesCatalogQueries(
+  crawlId: string,
+  filters: IssueFilters,
+  cursor: string | null,
+  selectedGroupId: string | null,
+  occurrenceCursor: string | undefined,
+) {
   const params = useMemo(() => toIssueParams(filters, cursor, ISSUE_LIMIT), [filters, cursor]);
   const issuesQuery = useQuery(siteHealthQueries.issues(crawlId, params));
   const summary = issuesQuery.data?.summary ?? null;
@@ -78,11 +77,25 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
   const selected = rows.find((issue) => issue.group_id === selectedGroupId) ?? rows[0] ?? null;
   const detailQuery = useQuery({
     ...siteHealthQueries.issue(crawlId, selected?.group_id ?? '', {
-      cursor: occurrenceCursors.at(-1),
+      cursor: occurrenceCursor,
       limit: OCCURRENCE_LIMIT,
     }),
     enabled: selected !== null,
   });
+  return { issuesQuery, detailQuery, summary, rows, selected };
+}
+
+export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
+  const { cursor, filters, selectedGroupId, navigate, selectIssue } = useIssuesCatalogUrlState();
+  const [occurrenceCursors, setOccurrenceCursors] = useState<string[]>([]);
+  const findingView: FindingView = filters.finding_class;
+  const { issuesQuery, detailQuery, summary, rows, selected } = useIssuesCatalogQueries(
+    crawlId,
+    filters,
+    cursor,
+    selectedGroupId,
+    occurrenceCursors.at(-1),
+  );
 
   const updateFilters = (change: Partial<IssueFilters>) => {
     const changed = changeIssueFilters(filters, change);
@@ -94,15 +107,11 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
     setOccurrenceCursors([]);
   };
 
-  // Nothing at all until the list AND the auto-selected issue's occurrences
-  // have landed. Rendering the toolbar over a skeleton meant the summary band
-  // appeared LATER and shoved the whole view down — the toolbar cannot hold a
-  // place for a block that sits above it. Waiting for the detail too is what
-  // stops the right rail from drawing short and then growing under the
-  // reader's first click: `siteHealthQueries.issue` retains the previous
-  // occurrences within a crawl, so only this FIRST detail has nothing to show,
-  // and it is the only one that could have collapsed the panel.
-  // One loader, then the finished view, drawn once.
+  // One loader, then the finished view, drawn once. Painting on the list alone
+  // shoved everything down when the summary band arrived, and left the rail
+  // short until the occurrences did — the panel growing under the first click.
+  // Only this FIRST detail can be empty: later selections keep the previous
+  // crawl-scoped occurrences while the next set loads.
   if ((issuesQuery.isPending && !issuesQuery.data) || detailQuery.isLoading)
     return <PageLoading label="Loading issues…" />;
 
@@ -313,184 +322,4 @@ function IssueGroupList({
       })}
     </div>
   );
-}
-
-function IssueDetailRail({
-  issue,
-  crawlId,
-  detailQuery,
-  canPrevious,
-  onPrevious,
-  onNext,
-}: Readonly<{
-  issue: SiteIssue;
-  crawlId: string;
-  detailQuery: {
-    data: SiteIssueDetail | undefined;
-    isError: boolean;
-    isFetching: boolean;
-  };
-  canPrevious: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
-}>) {
-  const detail = detailQuery.data;
-  return (
-    <section
-      className="min-w-0 min-[701px]:sticky min-[701px]:top-[var(--workspace-gap)] min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))] min-[701px]:overflow-hidden"
-      aria-busy={detailQuery.isFetching}
-    >
-      <div className="relative flex flex-col min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))]">
-        {detailQuery.isFetching ? (
-          // Positioned, not stacked. In the flow this 2px bar appeared and
-          // vanished on every refetch, nudging the whole panel down and back
-          // up — the text visibly twitched each time you picked an issue.
-          <progress
-            className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent absolute inset-x-0 top-0 z-1 h-0.5 w-full appearance-none border-0"
-            aria-label="Updating issue evidence"
-          />
-        ) : null}
-        <header className="border-border-subtle grid min-w-0 shrink-0 gap-3 border-b p-[var(--card-padding)]">
-          <div className="flex min-w-0 items-start justify-between gap-[var(--workspace-gap)] max-[700px]:flex-col">
-            <div className="grid min-w-0 gap-2">
-              <h2 className={textRole('sectionTitle', 'tracking-[-0.02em]')}>
-                {issueTitle(issue)}
-              </h2>
-              <IssueMetadata issue={issue} />
-            </div>
-            <div
-              className={textRole(
-                'body',
-                'border-border-subtle grid shrink-0 gap-1 border-l pl-4 max-[700px]:w-full max-[700px]:border-t max-[700px]:border-l-0 max-[700px]:pt-3 max-[700px]:pl-0',
-              )}
-            >
-              <span className="text-secondary whitespace-nowrap tabular-nums">
-                {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'}{' '}
-                affected
-              </span>
-              {issue.page_kinds.length > 0 ? (
-                <span className="text-muted flex max-w-56 flex-wrap items-center gap-1 text-xs">
-                  <span>Affects</span>
-                  {issue.page_kinds.map((kind, index) => (
-                    <span key={kind} className="contents">
-                      {index > 0 ? <span aria-hidden>·</span> : null}
-                      <span>{pageKindLabel(kind)}</span>
-                    </span>
-                  ))}
-                </span>
-              ) : null}
-            </div>
-          </div>
-          <CopyButton value={buildFixPrompt(issue)} size="sm" className="w-fit">
-            Copy fix prompt
-          </CopyButton>
-        </header>
-        <div className="content-scroll grid min-h-0 gap-[var(--workspace-gap)] p-[var(--card-padding)] min-[701px]:flex-1 min-[701px]:overflow-y-auto">
-          {issue.description ? (
-            <p className="text-secondary text-sm whitespace-pre-line">{issue.description}</p>
-          ) : null}
-          {issue.remediation ? (
-            <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1')}>
-              <span className={textRole('label')}>How to fix</span>
-              <p className="text-secondary text-sm whitespace-pre-line">{issue.remediation}</p>
-            </div>
-          ) : null}
-          <OccurrenceList
-            detail={detail}
-            crawlId={crawlId}
-            isError={detailQuery.isError}
-          />
-        </div>
-        {detail && (canPrevious || detail.next_cursor) ? (
-          <footer className="border-border-subtle bg-panel flex shrink-0 items-center justify-end gap-2 border-t p-3">
-            <Button variant="secondary" size="sm" onClick={onPrevious} disabled={!canPrevious}>
-              Previous
-            </Button>
-            <Button variant="secondary" size="sm" onClick={onNext} disabled={!detail.next_cursor}>
-              Next
-            </Button>
-          </footer>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
-function OccurrenceList({
-  detail,
-  crawlId,
-  isError,
-}: Readonly<{
-  /**
-   * Always populated once the screen has painted — the first load is held
-   * behind `PageLoading`, and every selection after it keeps the previous
-   * crawl-scoped occurrences until the next set arrives. There is therefore
-   * no empty-and-loading state left for this list to draw.
-   */
-  detail: SiteIssueDetail | undefined;
-  crawlId: string;
-  isError: boolean;
-}>) {
-  if (isError) return <Alert tone="danger">Could not load affected URLs.</Alert>;
-  if (!detail || detail.occurrences.length === 0)
-    return <p className="text-secondary text-sm">No affected URLs found.</p>;
-  return (
-    <ul className={ledgerClasses('ruled')}>
-      {detail.occurrences.map((occurrence) => (
-        <li key={occurrence.occurrence_id} className="grid gap-3 p-3">
-          <Link
-            href={`/site/crawls/${crawlId}/pages/${occurrence.site_url_id}`}
-            className="hover:text-accent flex min-w-0 flex-col gap-0.5"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className={textRole('bodyStrong', 'truncate')}>
-                {pageDisplayTitle(occurrence.title, occurrence.display_url)}
-              </span>
-              {occurrence.page_kind ? (
-                <span className="text-muted shrink-0 text-xs">
-                  {pageKindLabel(occurrence.page_kind)}
-                </span>
-              ) : null}
-            </span>
-            <span className="mono text-muted truncate text-xs" title={occurrence.display_url}>
-              {occurrence.display_url}
-            </span>
-          </Link>
-          <IssueEvidence occurrence={occurrence} />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function IssueMetadata({ issue }: Readonly<{ issue: SiteIssue }>) {
-  const tone = issueSeverityTone(issue.severity);
-  return (
-    <span className={textRole('label', 'flex flex-wrap items-center gap-1.5 uppercase')}>
-      <span className={issue.finding_class === 'defect' ? tone : 'text-secondary'}>
-        {issue.finding_class === 'defect' ? severityLabel(issue.severity) : 'Advisory'}
-      </span>
-      <span className="text-muted" aria-hidden>
-        ·
-      </span>
-      <span className={issue.dimension === 'aeo' ? 'text-accent-text' : 'text-info-text'}>
-        {dimensionLabel(issue.dimension)}
-      </span>
-    </span>
-  );
-}
-
-function issueSeverityTone(severity: SiteIssue['severity']): string {
-  if (severity === 'critical' || severity === 'high') return 'text-danger-text';
-  if (severity === 'medium') return 'text-warning-text';
-  return 'text-info-text';
-}
-
-function buildFixPrompt(issue: SiteIssue): string {
-  const lines = [
-    `Fix this Site Health issue on my website: "${issueTitle(issue)}" (${dimensionLabel(issue.dimension)}, ${severityLabel(issue.severity)} severity).`,
-  ];
-  if (issue.description) lines.push('', 'What is wrong:', issue.description);
-  if (issue.remediation) lines.push('', 'Recommended remediation:', issue.remediation);
-  return lines.join('\n');
 }
