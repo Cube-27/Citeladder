@@ -506,7 +506,9 @@ async def test_evidence_deterministic_order_within_audit(
             item.analysis_id for item in result.items
         ]
     order = [(i.prompt_index, i.repetition) for i in result.items]
-    assert set(order) == {(0, 0), (0, 1), (1, 0)}
+    # Sorted, not a set: a set would pass on a duplicated cell, and one answer
+    # counted twice is exactly the failure this page has to rule out.
+    assert sorted(order) == [(0, 0), (0, 1), (1, 0)]
 
 
 @pytest.mark.asyncio

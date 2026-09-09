@@ -134,10 +134,17 @@ def _source_identities(rows, engine, cohort):
 
 
 def _ordered_run_sets(rows, current_ids, baseline_ids):
+    # A run still in flight has no `completed_at`, and these audits are selected
+    # by id without filtering on it, so the dates can contain None — which
+    # `max`/`min` refuse to order at all. A set holding an unfinished run cannot
+    # be shown to precede another, which is the same answer an out-of-order set
+    # gets: not a valid baseline.
     current_dates = [audit.completed_at for audit, _ in rows if audit.id in current_ids]
     baseline_dates = [
         audit.completed_at for audit, _ in rows if audit.id in baseline_ids
     ]
-    return bool(
-        current_dates and baseline_dates and max(baseline_dates) < min(current_dates)
-    )
+    if not current_dates or not baseline_dates:
+        return False
+    if any(date is None for date in (*current_dates, *baseline_dates)):
+        return False
+    return max(baseline_dates) < min(current_dates)

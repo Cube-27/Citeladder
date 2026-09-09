@@ -71,7 +71,11 @@ export function useVisibilityFilters() {
     setUrlParams({
       range: value,
       from: rangeToFrom(value) ?? null,
-      to: new Date().toISOString(),
+      // No upper bound: a preset means "up to now", and pinning `to` to the
+      // moment the reader picked it froze the window there, so every run that
+      // completed afterwards stayed out of the series until they picked the
+      // same range again.
+      to: null,
       configuration: null,
       ...Object.fromEntries(pageKeys.map((key) => [key, null])),
     });

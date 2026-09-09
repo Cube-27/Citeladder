@@ -41,9 +41,11 @@ def observed_rate(metrics: dict, key: str) -> float | None:
 
 def prompt_performance(metrics: dict) -> float | None:
     """Project already-computed prompt composites without changing their formula."""
+    # `or []`, not a default: the key can be PRESENT and null in persisted
+    # JSONB, which `.get` hands back as None and the comprehension cannot walk.
     scores = [
         row["composite_score"]
-        for row in metrics.get("per_prompt", [])
+        for row in metrics.get("per_prompt") or []
         if row.get("composite_score") is not None
     ]
     return round(sum(scores) / len(scores), 2) if scores else None

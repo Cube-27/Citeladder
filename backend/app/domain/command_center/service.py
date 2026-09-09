@@ -131,6 +131,19 @@ def _delta(current: float | int | None, previous: float | int | None):
     return round(float(current) - float(previous), 2)
 
 
+def _mention_percent(row) -> float | None:
+    """One engine's brand-mention rate as a percentage a reader can add up.
+
+    Rounded at the same boundary as every other percent this file emits, so the
+    three figures shown together reconcile: `_delta` already rounds, and raw
+    operands beside it showed a change that did not equal the difference
+    between the two numbers printed next to it.
+    """
+    if row is None or row.brand_mention_rate is None:
+        return None
+    return round(row.brand_mention_rate * 100, 2)
+
+
 def _movements(
     current: VisibilityResponse, previous: VisibilityResponse | None
 ) -> list[CommandCenterMovement]:
@@ -140,14 +153,8 @@ def _movements(
     movements: list[CommandCenterMovement] = []
     for row in current.per_engine:
         prior = previous_engines.get(row.logical_engine)
-        current_rate = (
-            row.brand_mention_rate * 100 if row.brand_mention_rate is not None else None
-        )
-        previous_rate = (
-            prior.brand_mention_rate * 100
-            if prior and prior.brand_mention_rate is not None
-            else None
-        )
+        current_rate = _mention_percent(row)
+        previous_rate = _mention_percent(prior)
         change = _delta(current_rate, previous_rate)
         if change is None or change == 0:
             continue

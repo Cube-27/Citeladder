@@ -425,8 +425,17 @@ def _matched_ranking_change(row, matched, before, count):
 
 
 def selected_score(snapshot, metrics, cohort, engine):
+    """The persisted composite for this selection, or nothing.
+
+    Only the core cohort across every engine has one: that is the shape the
+    snapshot stores. A single engine's slice, or the comparison cohort, has no
+    persisted composite, and substituting the prompt composite there made this
+    field identical to `prompt_performance_score` — the two measures this
+    rework exists to keep apart. An absent composite is UNAVAILABLE, which is a
+    different statement from a measured one and belongs in its own field.
+    """
     if not metrics.get("total_completed"):
         return None
     if cohort == "core" and engine is None:
         return snapshot.visibility_score
-    return prompt_performance(metrics)
+    return None
