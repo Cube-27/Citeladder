@@ -3,14 +3,15 @@
 import { Check } from 'lucide-react';
 
 import type { BillingCatalog, CatalogPlan, CredentialMode } from '@/lib/api/billing';
-import { checkoutSelection, formatMoney, headlinePrice, majorUnits } from '@/lib/billing/catalog';
+import { checkoutSelection, formatMoney, majorUnits, type Money } from '@/lib/billing/catalog';
 import { CONTACT_SALES_HREF } from '@/lib/config/billing';
 import {
   CONTACT_LABEL,
   FUNDED_UNAVAILABLE_LABEL,
   PLAN_PRESENTATION,
   type PlanKey,
-  capabilityLabel,
+  launchPlanCardFeatures,
+  launchPlanPrice,
 } from '@/lib/marketing-content/pricing';
 import { cn } from '@/lib/utils';
 
@@ -19,9 +20,8 @@ import { Button } from '@/components/ui/button';
 import { AnimatedPrice } from './animated-price';
 
 /**
- * One plan card. Every enforceable value — name, price, capabilities — comes
- * from the catalog entry; only the blurb and the emphasis come from the
- * presentation module.
+ * One plan card. The approved launch presentation supplies public prices and
+ * features while checkout availability still comes from the live catalog.
  *
  * `data-tier` / `data-price` / `data-highlighted` are structural test hooks:
  * with utility CSS there is no meaningful class to query, and a plan name is
@@ -44,22 +44,26 @@ export function PricingTierCard({
   onEarlyAccess?: () => void;
 }>) {
   const presentation = PLAN_PRESENTATION[plan.key as PlanKey];
-  const price = headlinePrice(plan, mode);
+  const configuredPrice = launchPlanPrice(plan.key as PlanKey, catalog.currency, mode);
+  const price: { kind: 'price'; money: Money } | { kind: 'contact' } | { kind: 'unavailable' } =
+    plan.contact_only
+      ? { kind: 'contact' }
+      : configuredPrice === null
+        ? { kind: 'unavailable' }
+        : {
+            kind: 'price',
+            money: { currency: catalog.currency, amount_minor: configuredPrice },
+          };
   const highlighted = presentation?.highlighted ?? false;
 
   return (
     <div
       data-tier={plan.key}
       data-highlighted={highlighted ? 'true' : undefined}
-      // The featured tier inverts to the indigo canvas (docs/design.md
-      // §Marketing). The band rebind flips the card's tokens in place, so the
-      // label inks, hairlines, and CTA all step onto the dark surface without
-      // this component naming a dark colour.
-      data-citeladder-section={highlighted ? 'indigo' : undefined}
       className={cn(
         'flex h-full flex-col rounded-[var(--radius-card)] p-6 md:p-7 xl:p-6 shadow-card hover:shadow-card-hover transition-all duration-200 ease-out hover:-translate-y-1',
         highlighted
-          ? 'bg-band-indigo ring-1 ring-violet-soft/30 shadow-pricing-featured'
+          ? 'border-accent-border bg-panel ring-accent/15 border shadow-pricing-featured ring-2'
           : 'bg-panel border border-border-subtle/80',
       )}
     >
@@ -81,10 +85,8 @@ export function PricingTierCard({
       <PriceDisplay price={price} catalog={catalog} />
 
       {/* Labels and values occupy separate edges so every limit scans as a
-          compact row instead of wrapping around punctuation. Absent
-          capabilities are dropped before the five-row cap because the check
-          glyph communicates inclusion. */}
-      <CapabilityList plan={plan} />
+          compact row instead of wrapping around punctuation. */}
+      <CapabilityList planKey={plan.key as PlanKey} mode={mode} />
 
       <div className="mt-auto grid gap-2 pt-6">
         <PlanCta
@@ -107,7 +109,10 @@ export function PricingTierCard({
 function PriceDisplay({
   price,
   catalog,
-}: Readonly<{ price: ReturnType<typeof headlinePrice>; catalog: BillingCatalog }>) {
+}: Readonly<{
+  price: { kind: 'price'; money: Money } | { kind: 'contact' } | { kind: 'unavailable' };
+  catalog: BillingCatalog;
+}>) {
   const numeric =
     price.kind === 'price' ? majorUnits(price.money, catalog.currency_minor_units) : null;
   const settled =
@@ -118,44 +123,44 @@ function PriceDisplay({
         : FUNDED_UNAVAILABLE_LABEL;
   const paidPrice = price.kind === 'price';
   return (
-    <p className="website-data-display text-foreground mt-6 flex min-h-[2.875rem] items-baseline gap-2">
-      <AnimatedPrice
-        value={numeric}
-        format={(value) =>
-          formatMoney(
-            {
-              currency: catalog.currency,
-              amount_minor: value * 10 ** catalog.currency_minor_units,
-            },
-            catalog.currency_minor_units,
-          )
-        }
-        announce={settled}
-      />
-      {paidPrice ? <span className="text-muted text-sm font-normal">per month</span> : null}
-      {paidPrice && catalog.currency === 'INR' ? (
-        <span className="text-muted text-sm font-normal">+ applicable GST</span>
+    <div className="text-foreground mt-6 min-h-[3.75rem]">
+      <p className="website-data-display flex items-baseline gap-2 whitespace-nowrap">
+        <AnimatedPrice
+          value={numeric}
+          format={(value) =>
+            formatMoney(
+              {
+                currency: catalog.currency,
+                amount_minor: value * 10 ** catalog.currency_minor_units,
+              },
+              catalog.currency_minor_units,
+            )
+          }
+          announce={settled}
+        />
+        {paidPrice ? <span className="text-muted text-sm font-normal">per month</span> : null}
+      </p>
+      {paidPrice ? (
+        <span className="text-muted mt-1 block text-xs">Taxes calculated at checkout</span>
       ) : null}
-    </p>
+    </div>
   );
 }
 
-function CapabilityList({ plan }: Readonly<{ plan: CatalogPlan }>) {
-  const capabilities = plan.capabilities
-    .filter((capability) => isIncluded(capability.value))
-    .slice(0, 5);
+function CapabilityList({ planKey, mode }: Readonly<{ planKey: PlanKey; mode: CredentialMode }>) {
+  const capabilities = launchPlanCardFeatures(planKey, mode);
   return (
     <ul className="border-border-subtle mt-6 grid flex-1 content-start gap-1 border-t pt-4">
       {capabilities.map((capability) => {
-        const value = renderValue(capability.value);
+        const value = capability.value;
         return (
           <li
-            key={capability.key}
+            key={capability.label}
             className="text-secondary flex min-h-9 items-center justify-between gap-3 text-sm"
           >
             <span className="flex min-w-0 items-center gap-2.5">
               <Check aria-hidden className="text-accent size-4 shrink-0" />
-              <span>{capabilityLabel(capability.key)}</span>
+              <span>{capability.label}</span>
             </span>
             {value !== 'Included' ? (
               <span className="text-foreground shrink-0 font-medium tabular-nums">{value}</span>
@@ -209,18 +214,4 @@ function PlanCta({
           : 'Checkout unavailable'}
     </Button>
   );
-}
-
-/**
- * Whether the tier carries this capability at all. `null` (not applicable) and
- * `false` (explicitly absent) both mean it does not.
- */
-function isIncluded(value: boolean | number | string | null): boolean {
-  return value !== null && value !== false;
-}
-
-function renderValue(value: boolean | number | string | null): string {
-  if (value === null) return '—';
-  if (typeof value === 'boolean') return value ? 'Included' : '—';
-  return String(value);
 }

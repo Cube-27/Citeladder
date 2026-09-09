@@ -2,21 +2,23 @@
 
 import { Check } from 'lucide-react';
 
-import type { BillingCatalog } from '@/lib/api/billing';
-import { comparisonRows } from '@/lib/billing/catalog';
-import { capabilityLabel } from '@/lib/marketing-content/pricing';
+import type { BillingCatalog, CredentialMode } from '@/lib/api/billing';
+import { launchComparisonRows } from '@/lib/marketing-content/pricing';
 import { cn } from '@/lib/utils';
 
 /**
  * Compact plan comparison grid.
  *
- * Rows come from the union of capability keys the plans publish, so a new
- * backend capability appears here without a frontend change. Dense padding,
- * sticky capability column, and semantic check/dash cells keep the table
- * scannable without a wall of whitespace.
+ * Rows mirror the approved launch plan and switch the managed-answer allowance
+ * with the selected funding mode. Dense padding, a sticky capability column,
+ * and semantic check/dash cells keep the table scannable.
  */
-export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalog }>) {
-  const rows = comparisonRows(catalog);
+export function PricingComparison({
+  catalog,
+  mode,
+}: Readonly<{ catalog: BillingCatalog; mode: CredentialMode }>) {
+  const rows = launchComparisonRows(mode);
+  const comparedPlans = catalog.plans.filter((plan) => plan.key !== 'enterprise');
   if (rows.length === 0) return null;
 
   return (
@@ -35,7 +37,7 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
               >
                 Capability
               </th>
-              {catalog.plans.map((plan) => (
+              {comparedPlans.map((plan) => (
                 <th
                   key={plan.key}
                   scope="col"
@@ -49,7 +51,7 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
           <tbody>
             {rows.map((row, index) => (
               <tr
-                key={row.key}
+                key={row.label}
                 className={cn(
                   'border-border-subtle border-b last:border-b-0',
                   index % 2 === 1 && 'bg-background-alt/60',
@@ -62,11 +64,11 @@ export function PricingComparison({ catalog }: Readonly<{ catalog: BillingCatalo
                     index % 2 === 1 ? 'bg-background-alt' : 'bg-panel',
                   )}
                 >
-                  {capabilityLabel(row.key)}
+                  {row.label}
                 </th>
-                {catalog.plans.map((plan) => (
+                {comparedPlans.map((plan) => (
                   <td key={plan.key} className="text-muted px-4 py-2.5 text-sm whitespace-nowrap">
-                    {renderCell(row.values[plan.key]?.value)}
+                    {renderCell(row.values[plan.key as keyof typeof row.values])}
                   </td>
                 ))}
               </tr>
@@ -97,5 +99,6 @@ function renderCell(value: boolean | number | string | null | undefined) {
       <span className="text-subtle">—</span>
     );
   }
-  return <span className="text-foreground tabular-nums">{String(value)}</span>;
+  const display = typeof value === 'number' ? new Intl.NumberFormat('en-US').format(value) : value;
+  return <span className="text-foreground tabular-nums">{display}</span>;
 }

@@ -17,7 +17,7 @@ export const LANDING_CONTENT = {
 
   reveal: {
     kicker: 'What CiteLadder reveals',
-    title: 'One record. Three questions.',
+    title: 'See how AI sees your brand.',
     lead: 'CiteLadder separates the facts that AI visibility tools often blur together.',
     questions: [
       {

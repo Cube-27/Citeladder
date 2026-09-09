@@ -298,11 +298,10 @@ export function PricingCatalog() {
       <Section tone="sunken" rhythm="tight" aria-label="Plan comparison">
         <SectionHeader
           eyebrow="Compare"
-          title="Side by side."
-          lead="Every cell is a limit the platform enforces."
+          title="Choose based on what you actually need."
           headingId="pricing-compare-title"
         />
-        {catalog ? <PricingComparison catalog={catalog} /> : <LoadingShell />}
+        {catalog ? <PricingComparison catalog={catalog} mode={mode} /> : <LoadingShell />}
       </Section>
 
       {offerQuery.data ? (

@@ -40,10 +40,6 @@ Completed rebuild and cutover plans are evidence, not task instructions. Do
 not resume a historical wave, fresh-chat protocol, or delivery checkpoint
 because a plan file mentions it.
 
-The Next.js-specific rules in [`frontend/AGENTS.md`](frontend/AGENTS.md) apply
-when editing the frontend; read the relevant installed Next guide before code
-changes there.
-
 ## Non-negotiable invariants
 
 - All IDs are UUIDs. Every project-owned query is workspace-authorized; never

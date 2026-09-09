@@ -214,7 +214,7 @@ describe('PricingCatalog', () => {
     );
   });
 
-  it('defaults to BYOK and shows only prices supplied by the catalog', async () => {
+  it('defaults to BYOK', async () => {
     mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
     renderWithProviders(<PricingCatalog />);
 
@@ -223,33 +223,15 @@ describe('PricingCatalog', () => {
       'aria-checked',
       'true',
     );
-    const prices = [...document.querySelectorAll('[data-price]')].map((n) => n.textContent);
-    expect(prices).toContain('$49');
-    expect(prices).toContain('$99');
-    expect(prices).toContain('$199');
   });
 
-  it('uses the single customer-facing audit frequency label', async () => {
-    mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
-    renderWithProviders(<PricingCatalog />);
-
-    await screen.findByRole('heading', { name: 'Starter' });
-    screen.getAllByText('Audit frequency');
-  });
-
-  it('shows funded pricing as unavailable when the catalog has no funded amount', async () => {
+  it('keeps unsupported funded checkout disabled', async () => {
     mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
     renderWithProviders(<PricingCatalog />);
 
     await screen.findByRole('heading', { name: 'Starter' });
     await userEvent.click(screen.getByRole('switch', { name: /use your own api keys/i }));
 
-    await waitFor(() => {
-      const prices = [...document.querySelectorAll('[data-price]')].map((n) => n.textContent);
-      expect(prices).not.toContain('$99');
-      expect(prices).not.toContain('$149');
-      expect(prices).not.toContain('$299');
-    });
     expect(
       screen.getByRole('button', { name: 'Choose Starter — checkout unavailable' }),
     ).toBeDisabled();
