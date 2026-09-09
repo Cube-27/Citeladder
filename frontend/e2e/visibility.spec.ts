@@ -409,8 +409,10 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   await expect(page).toHaveURL(/[?&]tab=mentions-citations/);
   await page.getByRole('button', { name: 'Mentions and citations mode' }).click();
   await page.getByRole('menuitemradio', { name: 'Answers', exact: true }).click();
-  await expect(page.getByText('Best affordable clothing stores in Australia?')).toBeVisible();
-  await expect(page.getByText('Acme Blog')).toBeVisible();
+  // One row per execution, each captioned with the frozen prompt it answered —
+  // the fixture holds three answers to the same prompt.
+  await expect(page.getByText('Best affordable clothing stores in Australia?')).toHaveCount(3);
+  await expect(page.getByText('Acme Blog').first()).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
   // Query Fanout — reuses the shared evidence cache.
