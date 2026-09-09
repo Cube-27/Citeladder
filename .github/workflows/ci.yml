@@ -8,7 +8,7 @@ on:
 
 jobs:
   changes:
-    name: Classify latest push
+    name: Classify affected owners
     permissions:
       actions: read
       contents: read
@@ -18,6 +18,7 @@ jobs:
       frontend: ${{ steps.classify.outputs.frontend }}
       contract: ${{ steps.classify.outputs.contract }}
       e2e: ${{ steps.classify.outputs.e2e }}
+      e2e_args: ${{ steps.classify.outputs.e2e_args }}
       security: ${{ steps.classify.outputs.security }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -220,7 +221,11 @@ jobs:
       - name: Install Playwright browser
         run: ./node_modules/.bin/playwright install --with-deps chromium
       - name: Playwright
-        run: pnpm test:e2e
+        env:
+          E2E_FILES: ${{ needs.changes.outputs.e2e_args }}
+        run: |
+          read -r -a e2e_files <<< "$E2E_FILES"
+          pnpm exec playwright test --config playwright.config.ts "${e2e_files[@]}"
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -268,11 +273,18 @@ jobs:
         run: |
           test "${{ needs.changes.result }}" = "success"
           test "${{ needs.common.result }}" = "success"
-          for result in \
-            "${{ needs.backend.result }}" \
-            "${{ needs.frontend.result }}" \
-            "${{ needs.contract.result }}" \
-            "${{ needs.e2e.result }}" \
-            "${{ needs.security.result }}"; do
-            test "$result" = "success" || test "$result" = "skipped"
+          for owner in backend frontend contract e2e security; do
+            expected="${{ needs.changes.outputs.backend }}"
+            result="${{ needs.backend.result }}"
+            case "$owner" in
+              frontend) expected="${{ needs.changes.outputs.frontend }}"; result="${{ needs.frontend.result }}" ;;
+              contract) expected="${{ needs.changes.outputs.contract }}"; result="${{ needs.contract.result }}" ;;
+              e2e) expected="${{ needs.changes.outputs.e2e }}"; result="${{ needs.e2e.result }}" ;;
+              security) expected="${{ needs.changes.outputs.security }}"; result="${{ needs.security.result }}" ;;
+            esac
+            if [ "$expected" = "true" ]; then
+              test "$result" = "success"
+            else
+              test "$result" = "skipped"
+            fi
           done

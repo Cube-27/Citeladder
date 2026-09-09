@@ -9,6 +9,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 import httpx
 import pytest
@@ -85,6 +86,56 @@ from tests.component.site_health_worker_helpers import (
     _thin_html,
     _worker,
 )
+
+
+async def _persist_reusable_discovery_artifact(
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    crawl_id: UUID,
+    workspace_id: UUID,
+    site_url_id: UUID,
+    root: str,
+) -> None:
+    _canonical, url_hash = canonical_identity(root)
+    body = _rich_html()
+    facts = extract_page_facts(
+        body,
+        final_url=root,
+        content_type="text/html",
+        status_code=200,
+        wire_bytes=len(body),
+        decoded_bytes=len(body),
+    )
+    async with session_factory() as session:
+        discover_task = SiteCrawlTask(
+            crawl_id=crawl_id,
+            workspace_id=workspace_id,
+            site_url_id=site_url_id,
+            task_kind=TASK_KIND_DISCOVER,
+            requested_url=root,
+            url_hash=url_hash,
+            generation=0,
+            idempotency_key=f"{crawl_id}:discover:{url_hash}:0",
+            status=TASK_STATUS_SUCCEEDED,
+        )
+        session.add(discover_task)
+        await session.flush()
+        artifact = SiteFetchArtifact(
+            task_id=discover_task.id,
+            crawl_id=crawl_id,
+            workspace_id=workspace_id,
+            fetch_purpose=FETCH_PURPOSE_DISCOVER,
+            requested_url=root,
+            final_url=root,
+            status_code=200,
+            content_type="text/html",
+            extractor_version=EXTRACTOR_VERSION,
+            normalized_facts=facts,
+        )
+        session.add(artifact)
+        await session.flush()
+        discover_task.result_artifact_id = artifact.id
+        await session.commit()
 
 
 @pytest.mark.asyncio
@@ -219,46 +270,13 @@ async def test_same_crawl_rerun_gets_a_new_analysis_for_reused_artifact(
         session_factory,
         root=root,
     )
-    _canonical, url_hash = canonical_identity(root)
-    body = _rich_html()
-    facts = extract_page_facts(
-        body,
-        final_url=root,
-        content_type="text/html",
-        status_code=200,
-        wire_bytes=len(body),
-        decoded_bytes=len(body),
+    await _persist_reusable_discovery_artifact(
+        session_factory,
+        crawl_id=seed.crawl_id,
+        workspace_id=seed.workspace_id,
+        site_url_id=site_url_id,
+        root=root,
     )
-    async with session_factory() as session:
-        discover_task = SiteCrawlTask(
-            crawl_id=seed.crawl_id,
-            workspace_id=seed.workspace_id,
-            site_url_id=site_url_id,
-            task_kind=TASK_KIND_DISCOVER,
-            requested_url=root,
-            url_hash=url_hash,
-            generation=0,
-            idempotency_key=f"{seed.crawl_id}:discover:{url_hash}:0",
-            status=TASK_STATUS_SUCCEEDED,
-        )
-        session.add(discover_task)
-        await session.flush()
-        artifact = SiteFetchArtifact(
-            task_id=discover_task.id,
-            crawl_id=seed.crawl_id,
-            workspace_id=seed.workspace_id,
-            fetch_purpose=FETCH_PURPOSE_DISCOVER,
-            requested_url=root,
-            final_url=root,
-            status_code=200,
-            content_type="text/html",
-            extractor_version=EXTRACTOR_VERSION,
-            normalized_facts=facts,
-        )
-        session.add(artifact)
-        await session.flush()
-        discover_task.result_artifact_id = artifact.id
-        await session.commit()
     worker = _worker(
         session_factory,
         {"/rich": _rich_html()},
@@ -386,46 +404,13 @@ async def test_reused_html_marks_classification_expected_before_persistence_fail
 ) -> None:
     root = "https://example.com/reused-parser-output"
     seed, site_url_id, task_id = await _seed_analyze_ready(session_factory, root=root)
-    _canonical, url_hash = canonical_identity(root)
-    body = _rich_html()
-    facts = extract_page_facts(
-        body,
-        final_url=root,
-        content_type="text/html",
-        status_code=200,
-        wire_bytes=len(body),
-        decoded_bytes=len(body),
+    await _persist_reusable_discovery_artifact(
+        session_factory,
+        crawl_id=seed.crawl_id,
+        workspace_id=seed.workspace_id,
+        site_url_id=site_url_id,
+        root=root,
     )
-    async with session_factory() as session:
-        discover_task = SiteCrawlTask(
-            crawl_id=seed.crawl_id,
-            workspace_id=seed.workspace_id,
-            site_url_id=site_url_id,
-            task_kind=TASK_KIND_DISCOVER,
-            requested_url=root,
-            url_hash=url_hash,
-            generation=0,
-            idempotency_key=f"{seed.crawl_id}:discover:{url_hash}:0",
-            status=TASK_STATUS_SUCCEEDED,
-        )
-        session.add(discover_task)
-        await session.flush()
-        artifact = SiteFetchArtifact(
-            task_id=discover_task.id,
-            crawl_id=seed.crawl_id,
-            workspace_id=seed.workspace_id,
-            fetch_purpose=FETCH_PURPOSE_DISCOVER,
-            requested_url=root,
-            final_url=root,
-            status_code=200,
-            content_type="text/html",
-            extractor_version=EXTRACTOR_VERSION,
-            normalized_facts=facts,
-        )
-        session.add(artifact)
-        await session.flush()
-        discover_task.result_artifact_id = artifact.id
-        await session.commit()
 
     async def fail_after_reuse(*_args, **_kwargs) -> None:
         raise RuntimeError("analysis persistence failed after artifact reuse")

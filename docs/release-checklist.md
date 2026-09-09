@@ -49,9 +49,14 @@ curl -fsS http://localhost:8000/health
 
 ## 3. Run repository gates
 
-```bash
-(cd backend && uv sync --frozen --extra dev && uv run ruff check . && uv run mypy app)
-(cd frontend && pnpm install --frozen-lockfile && pnpm lint && pnpm exec tsc --noEmit && BACKEND_ORIGIN=https://backend.ci.invalid pnpm build)
+Use the canonical repository completion and CI owners from
+[`DEVELOPMENT.md`](DEVELOPMENT.md). For an explicit local release diagnostic,
+run the affected-owner harness with the full scope; do not maintain a second
+partial gate recipe here.
+
+```powershell
+.\scripts\check.ps1 -Scope All
+.\scripts\test.ps1
 ```
 
 - [ ] Required backend, frontend, security, migration, and end-to-end checks pass.

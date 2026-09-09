@@ -1,10 +1,11 @@
 # Site Health measurement reliability — PR4
 
-> **Status:** implementation and local acceptance complete. Repository gates,
-> disposable-database migration verification, deterministic calibration, and
-> browser acceptance have been observed. Live Searchable and Flourist crawls
-> remain an external release prerequisite because this repository contains no
-> runnable live-crawl recipe or provider data for those sites.
+> **Status:** implementation complete; remaining scope is release acceptance.
+> Repository gates, disposable-database migration verification, deterministic
+> calibration, and browser acceptance have been observed. Live Searchable and
+> Flourist crawls remain an external release prerequisite because this
+> repository contains no runnable live-crawl recipe or provider data for those
+> sites.
 >
 > **Dependency:** implemented after the PR1–PR3 cutover in
 > [`site-health-measurement-cutover.md`](site-health-measurement-cutover.md).

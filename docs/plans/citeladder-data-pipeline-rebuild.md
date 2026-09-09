@@ -1,7 +1,8 @@
 # Connected-data pipeline rebuild — GSC, GA4, and Bing
 
-**Status:** Slices 1-3 shipped 2026-09-04 across PRs #22 (Bing OAuth) and #23
-(the pipeline work) — together "PR 1" below. PR #24 followed with the AI
+**Status:** bounded active follow-up: Slice 6 only. Slices 1-3 shipped
+2026-09-04 across PRs #22 (Bing OAuth) and #23 (the pipeline work) — together
+"PR 1" below. PR #24 followed with the AI
 Referrals preset family, chart granularity, and the Performance UI
 remediation; it is NOT a slice from this plan, but the completion of defect 4
 plus defects reported against the deployed build.
@@ -10,13 +11,15 @@ plus defects reported against the deployed build.
 Bing's own panel (defect 5's display half), and the connected-data MCP tools
 (defect 7). **Slice 6 is unstarted and has no PR assigned**; it was deferred
 deliberately rather than blocked. Read the "what shipped" sections at the end
-of this document before starting it.
+deliberately rather than blocked. The shipped sections below are historical
+context; do not restart them when working on Slice 6.
 
-**Superseded in part by `gsc-performance-alignment.md`**, which shipped first.
-Read that document's "What shipped" section before starting any slice here:
-Traffic is now the Performance surface, defects 1–3 and 5's Traffic half are
-resolved differently than described below, and the sequencing notes at the end
-of each affected slice say what is left.
+The shipped Performance alignment now belongs to
+[`../integrations-traffic-analytics.md`](../integrations-traffic-analytics.md)
+and [`../frontend-architecture.md`](../frontend-architecture.md). Traffic is the
+Performance surface; defects 1–3 and 5's Traffic half are resolved differently
+than described below, and the sequencing notes at the end of each affected
+slice say what is left.
 
 **Problem.** Connecting Search Console, Analytics, or Bing today produces
 almost nothing a user can act on. The collection layer is sound — per-workspace

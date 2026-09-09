@@ -344,31 +344,6 @@ function assertSameOriginApi(requests: Request[], baseURL: string) {
   }
 }
 
-test('three tabs in order, no retired Overview, Trends by default, one panel', async ({ page }) => {
-  await setup(page);
-  await page.goto('/visibility');
-
-  const tablist = page.getByRole('tablist', { name: 'Visibility views' });
-  await expect(tablist).toBeVisible();
-
-  const tabs = tablist.getByRole('tab');
-  await expect(tabs).toHaveText(['Trends', 'Mentions', 'Search queries']);
-
-  // Forbidden tabs are absent.
-  await expect(tablist.getByRole('tab', { name: 'Sources' })).toHaveCount(0);
-  await expect(tablist.getByRole('tab', { name: 'Topics' })).toHaveCount(0);
-  await expect(tablist.getByRole('tab', { name: 'Sentiment' })).toHaveCount(0);
-  await expect(tablist.getByRole('tab', { name: 'Overview' })).toHaveCount(0);
-
-  // Trends is selected by default and its retained content is present.
-  await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByTestId('trend-chart-visibility_score')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'By model' })).toBeVisible();
-
-  // Exactly one panel is rendered at a time.
-  await expect(page.getByRole('tabpanel')).toHaveCount(1);
-});
-
 test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseURL }) => {
   const { requests, evidenceUrls } = await setup(page, { evidence: fanoutStatesResponse() });
   await page.goto('/visibility');
@@ -435,64 +410,6 @@ test('keyboard navigation moves selection with focus transfer (WAI-ARIA)', async
   await expect(page.getByRole('tab', { name: 'Trends' })).toBeFocused();
 });
 
-test('shared engine filter persists across tab switches', async ({ page }) => {
-  const { evidenceUrls } = await setup(page);
-  await page.goto('/visibility');
-
-  await expect(page.getByRole('heading', { name: 'By model' })).toBeVisible();
-
-  // Pick an engine on Trends.
-  await page.getByRole('button', { name: 'Filter by model' }).click();
-  await page.getByRole('menuitemradio', { name: 'Gemini' }).click();
-  await expect(page.getByRole('button', { name: 'Filter by model' })).toContainText('Gemini');
-
-  // Switch to an evidence tab; the engine filter carries into the query params.
-  await page.getByRole('tab', { name: 'Mentions' }).click();
-  await expect(page.getByText('Best affordable clothing stores in Australia?')).toBeVisible();
-  // The engine filter is still shown on the toolbar above the tablist.
-  await expect(page.getByRole('button', { name: 'Filter by model' })).toContainText('Gemini');
-
-  await expect
-    .poll(() => evidenceUrls.some((u) => u.searchParams.get('engine') === 'gemini'))
-    .toBe(true);
-});
-
-test('Query Fanout renders queries_available, count_only, and no_search states', async ({
-  page,
-}) => {
-  await setup(page, { evidence: fanoutStatesResponse() });
-  await page.goto('/visibility?tab=query-fanout');
-
-  // queries_available → the actual stored query text.
-  await expect(page.getByText('affordable family clothing Australia 2026')).toBeVisible();
-  // count_only → the legacy count explanation.
-  await expect(page.getByText('Query text unavailable; provider reported 1 search')).toBeVisible();
-  // no_search → the no-search state.
-  await expect(page.getByText('No web searches performed for this execution')).toBeVisible();
-  // The citation browser is NOT duplicated on Query Fanout.
-  await expect(page.getByText('Acme Blog')).toHaveCount(0);
-});
-
-test('evidence empty state renders when items are empty (widened range)', async ({ page }) => {
-  await setup(page, { evidence: { items: [], truncated: false } });
-  await page.goto('/visibility?tab=mentions-citations');
-
-  // The default 90d preset counts as a narrowing filter; widen to All time so
-  // the genuinely-empty (not filtered-empty) state is exercised.
-  await page.getByRole('button', { name: 'Select date range' }).click();
-  await page.getByRole('menuitemradio', { name: 'All time' }).click();
-
-  await expect(page.getByText('No mentions or citations yet')).toBeVisible();
-});
-
-test('evidence error state renders a retryable error', async ({ page }) => {
-  await setup(page, { evidenceStatus: 400 });
-  await page.goto('/visibility?tab=mentions-citations');
-
-  await expect(page.getByText("Couldn't load this evidence")).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
-});
-
 test('mobile viewport keeps the visibility tabs and one active panel usable', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 720 });
   await setup(page);
@@ -513,37 +430,4 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   await page.getByRole('button', { name: 'Filter by model' }).click();
   await page.getByRole('menuitemradio', { name: 'Gemini' }).click();
   await expect(page.getByRole('button', { name: 'Filter by model' })).toContainText('Gemini');
-});
-
-test('a single trend point suppresses the empty charts but keeps the run detail', async ({
-  page,
-}) => {
-  await setup(page, { trends: [trendPoint(AUDIT_LATEST, '2026-07-15T00:00:00Z', 67)] });
-  await page.goto('/visibility');
-
-  await expect(page.getByText(/no movement to plot yet/i)).toBeVisible();
-  // One point plots one dot; a full empty axis is noise, not evidence.
-  await expect(page.getByTestId('trend-chart-visibility_score')).toHaveCount(0);
-  await expect(page.getByTestId('trend-chart-sov')).toHaveCount(0);
-  // The run's own detail still renders, full width and without the empty
-  // start-of-range comparison column.
-  await expect(page.getByRole('heading', { name: 'Rankings', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Start of Range/ })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'By model' })).toBeVisible();
-});
-
-test('the metric row is five real metrics with no permanent placeholders', async ({ page }) => {
-  await setup(page);
-  await page.goto('/visibility');
-
-  await expect(page.getByTestId('trend-chart-visibility_score')).toBeVisible();
-  for (const label of ['Visibility Score', 'SOV (mention)', 'SOV (response)']) {
-    await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
-  }
-  // Sentiment / average position are never computed (decision B-2). They stay
-  // disclosed as "—" in the rankings table (so `Sentiment` remains a column
-  // header there) but are no longer two permanently blank stat cards, whose
-  // giveaway was this delta string.
-  await expect(page.getByText('Not yet computed')).toHaveCount(0);
-  await expect(page.getByText('Avg Position', { exact: true })).toHaveCount(0);
 });

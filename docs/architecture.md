@@ -149,7 +149,7 @@ Models may classify bounded ambiguity, explain evidence, plan, or generate.
 They may not overwrite raw truth, silently change deterministic metrics, or
 turn unsupported output into a verified fact.
 
-## Active implementation sequence
+## Current implementation direction
 
 1. Keep Site Health crawl lifecycle and page-kind/schema analysis truthful.
 2. Re-establish content fact grounding only from an approved evidence source.
@@ -158,8 +158,9 @@ turn unsupported output into a verified fact.
 5. Verify changes through recrawl or aligned later observations where the
    owning subsystem supports it.
 
-See [`plans/citeladder-aeo-product-rebuild.md`](plans/citeladder-aeo-product-rebuild.md)
-for the active cross-system delivery view.
+The completed cross-system rebuild is retained as historical evidence. Current
+bounded work and release gates are indexed in [`README.md`](README.md#active-work);
+runtime ownership remains in the documents above.
 
 ## Combined transaction lock DAG
 

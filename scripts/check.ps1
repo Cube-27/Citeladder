@@ -1,12 +1,14 @@
 param(
-    [ValidateSet("All", "Backend", "Frontend", "Contract")]
-    [string] $Scope = "All",
+    [ValidateSet("Changed", "All", "Backend", "Frontend", "Contract")]
+    [string] $Scope = "Changed",
+    [switch] $Fix,
     [switch] $CheckOnly
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$mode = if ($CheckOnly) { "check" } else { "fix" }
+if ($Fix -and $CheckOnly) { throw "-Fix and -CheckOnly cannot be combined." }
+$mode = if ($Fix) { "fix" } else { "check" }
 
 Push-Location $repoRoot
 try {

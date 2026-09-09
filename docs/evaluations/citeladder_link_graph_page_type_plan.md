@@ -1,4 +1,10 @@
 # CiteLadder — Internal Link Graph + Page Type Reliability Plan
+
+> **Status:** historical proposal/research record. Current Site Health page
+> understanding, link evidence, and scoring authority is [`../site-health.md`](../site-health.md)
+> and its shipped backend owner; this file is not an evaluation gate or active
+> implementation instruction.
+
 Generated: 2026-08-27
 
 ## Scope

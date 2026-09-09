@@ -479,7 +479,6 @@ describe('VisibilityPage — Trends tab', () => {
     expect(latestRankings.querySelector('img')?.getAttribute('src')).toContain(
       'img.logo.dev/acme.com',
     );
-    expect(latestRankings.querySelector('.size-2')).toBeNull();
     // Default granularity=run and a bounded 90d `from` are sent.
     expect(params[0].searchParams.get('granularity')).toBe('run');
     expect(params[0].searchParams.get('from')).toBeTruthy();

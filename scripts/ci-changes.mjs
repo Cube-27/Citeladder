@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
@@ -8,10 +8,13 @@ const TRUE = 'true';
 const FALSE = 'false';
 const GIT_EXECUTABLE =
   process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
+const VALIDATION = JSON.parse(readFileSync(new URL('./validation.json', import.meta.url), 'utf8'));
 const DOC_FILES = new Set([
+  'AGENTS.md',
   'CHANGELOG.md',
   'CONTRIBUTING.md',
   'LICENSE',
+  'PRODUCT.md',
   'README.md',
   'Review.md',
 ]);
@@ -26,6 +29,70 @@ function isBackend(path) {
 
 function isFrontend(path) {
   return path.startsWith('frontend/');
+}
+
+function globRegex(pattern) {
+  let source = '^';
+  for (let index = 0; index < pattern.length; ) {
+    if (pattern[index] === '*') {
+      if (pattern[index + 1] === '*') {
+        if (pattern[index + 2] === '/') {
+          source += '(?:.*/)?';
+          index += 3;
+        } else {
+          source += '.*';
+          index += 2;
+        }
+      } else {
+        source += '[^/]*';
+        index += 1;
+      }
+    } else if (pattern[index] === '?') {
+      source += '[^/]';
+      index += 1;
+    } else {
+      source += pattern[index].replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+      index += 1;
+    }
+  }
+  return new RegExp(`${source}$`, 'u');
+}
+
+function matchesAny(path, patterns) {
+  return patterns.some((pattern) => globRegex(pattern).test(path));
+}
+
+export function selectE2EFiles(paths) {
+  const selected = new Set();
+  const addTest = (test) => {
+    if (!/^e2e\/[A-Za-z0-9][A-Za-z0-9_./-]*\.spec\.ts$/u.test(test)) {
+      throw new Error(`Invalid E2E mapping: ${test}`);
+    }
+    selected.add(test);
+  };
+  for (const path of paths) {
+    if (
+      /^frontend\/e2e\/.+\.spec\.ts$/u.test(path) &&
+      path !== 'frontend/e2e/content-integration.spec.ts'
+    ) {
+      addTest(path.slice('frontend/'.length));
+    }
+    for (const rule of VALIDATION.rules) {
+      if (rule.frontendE2E && matchesAny(path, rule.sources)) {
+        for (const test of rule.frontendE2E) addTest(test);
+      }
+    }
+  }
+  return [...selected].sort();
+}
+
+function isNonBrowserTooling(path) {
+  return (
+    path.startsWith('.github/') ||
+    path.startsWith('scripts/') ||
+    path.startsWith('infra/') ||
+    /^reset-.+\.(py|ps1)$/u.test(path)
+  );
 }
 
 function isContract(path) {
@@ -51,6 +118,7 @@ function isSecuritySensitive(path) {
 
 function isComposeSensitive(path) {
   return (
+    path === '.github/workflows/compose-smoke.yml' ||
     path === '.dockerignore' ||
     path === '.env.example' ||
     path === 'Dockerfile' ||
@@ -77,9 +145,11 @@ export function classifyPaths(paths, { full = false, initial = false } = {}) {
   }
 
   const normalized = [...new Set(paths.map((path) => path.replaceAll('\\', '/')))];
-  const shared = normalized.some(
+  const unowned = normalized.filter(
     (path) => !isDocumentation(path) && !isBackend(path) && !isFrontend(path),
   );
+  const shared = unowned.length > 0;
+  const e2eFiles = selectE2EFiles(normalized);
   const contract = shared || normalized.some(isContract);
   const backend = shared || contract || normalized.some(isBackend);
   const frontend = shared || contract || normalized.some(isFrontend);
@@ -88,7 +158,7 @@ export function classifyPaths(paths, { full = false, initial = false } = {}) {
     backend,
     frontend,
     contract,
-    e2e: shared || normalized.some(isFrontend),
+    e2e: unowned.some((path) => !isNonBrowserTooling(path)) || e2eFiles.length > 0,
     security: shared || normalized.some(isSecuritySensitive),
     compose:
       normalized.some(isComposeSensitive) ||
@@ -96,11 +166,11 @@ export function classifyPaths(paths, { full = false, initial = false } = {}) {
   };
 }
 
-export function selectDiff({ eventName, action, beforeSha, baseSha, headSha }) {
+export function selectDiff({ eventName, action, beforeSha, baseSha, headSha, previousRunTrusted = true }) {
   if (eventName !== 'pull_request') return { full: true, initial: false, range: null };
 
   const usableBefore = beforeSha && !/^0+$/.test(beforeSha);
-  if (action === 'synchronize' && usableBefore) {
+  if (action === 'synchronize' && usableBefore && previousRunTrusted) {
     return { full: false, initial: false, range: `${beforeSha}..${headSha}` };
   }
   if (!baseSha) throw new Error('CI_BASE_SHA is required for the initial pull-request diff.');
@@ -117,34 +187,42 @@ function changedPaths(range) {
   return output.split(/\r?\n/u).filter(Boolean);
 }
 
-export function failedJobOwners(jobs, workflowFile) {
-  const owners = new Set();
-  const prefixes =
+export function hasTrustworthyJobEvidence(jobs, workflowFile) {
+  if (!Array.isArray(jobs)) return false;
+  const expectedNames =
     workflowFile === 'compose-smoke.yml'
-      ? [['Clean-clone Compose smoke', 'compose']]
+      ? ['Classify affected owners', 'Clean-clone Compose smoke', 'Required']
       : [
-          ['Backend (quality, pytest)', 'backend'],
-          ['Frontend (quality, coverage, build)', 'frontend'],
-          ['API contract (backend to frontend)', 'contract'],
-          ['E2E (playwright)', 'e2e'],
-          ['Security (pip-audit, detect-secrets)', 'security'],
+          'Classify affected owners',
+          'Common gates',
+          'Backend (quality, pytest)',
+          'Frontend (quality, coverage, build)',
+          'API contract (backend to frontend)',
+          'E2E (playwright)',
+          'Security (pip-audit, detect-secrets)',
+          'Required',
         ];
-
-  for (const job of jobs) {
-    const match = prefixes.find(([name]) => job.name === name);
-    if (match && !['success', 'skipped'].includes(job.conclusion)) owners.add(match[1]);
-  }
-  return owners;
+  const jobsByName = new Map(jobs.map((job) => [job.name, job]));
+  const required = jobsByName.get('Required');
+  return (
+    jobs.length === expectedNames.length &&
+    jobsByName.size === expectedNames.length &&
+    required?.conclusion === 'success' &&
+    expectedNames.every((name) => {
+      const job = jobsByName.get(name);
+      return job?.status === 'completed' && Boolean(job.conclusion);
+    })
+  );
 }
 
-async function previousFailedOwners(environment) {
+async function previousRunIsTrusted(environment) {
   if (environment.GITHUB_EVENT_ACTION !== 'synchronize' || !environment.CI_BEFORE_SHA) {
-    return new Set();
+    return true;
   }
   const token = environment.GITHUB_TOKEN;
   const repository = environment.GITHUB_REPOSITORY;
   const workflowFile = environment.CI_WORKFLOW_FILE;
-  if (!token || !repository || !workflowFile) return new Set();
+  if (!token || !repository || !workflowFile) return false;
 
   const headers = {
     Accept: 'application/vnd.github+json',
@@ -162,7 +240,7 @@ async function previousFailedOwners(environment) {
   if (!runsResponse.ok) throw new Error(`workflow-runs query returned ${runsResponse.status}`);
   const runs = await runsResponse.json();
   const previous = runs.workflow_runs.find((run) => run.head_sha === environment.CI_BEFORE_SHA);
-  if (!previous) return new Set();
+  if (!previous || previous.status !== 'completed') return false;
 
   const jobsResponse = await fetch(
     `https://api.github.com/repos/${repository}/actions/runs/${previous.id}/jobs?per_page=100`,
@@ -170,43 +248,51 @@ async function previousFailedOwners(environment) {
   );
   if (!jobsResponse.ok) throw new Error(`workflow-jobs query returned ${jobsResponse.status}`);
   const jobs = await jobsResponse.json();
-  return failedJobOwners(jobs.jobs, workflowFile);
+  if (
+    !Array.isArray(jobs.jobs) ||
+    (Number.isInteger(jobs.total_count) && jobs.total_count > jobs.jobs.length) ||
+    !hasTrustworthyJobEvidence(jobs.jobs, workflowFile)
+  ) {
+    return false;
+  }
+  return true;
 }
 
-export function applyFailedOwners(result, owners) {
-  for (const owner of owners) result[owner] = true;
-  if (result.contract) result.backend = true;
-}
-
-function writeOutputs(result, outputPath) {
+function writeOutputs(result, outputPath, e2eFiles) {
   const lines = Object.entries(result).map(([name, enabled]) => `${name}=${enabled ? TRUE : FALSE}`);
+  lines.push(`e2e_args=${e2eFiles.join(' ')}`);
   appendFileSync(outputPath, `${lines.join('\n')}\n`, 'utf8');
 }
 
 async function main(environment = process.env) {
+  let previousRunTrusted = true;
+  try {
+    previousRunTrusted = await previousRunIsTrusted(environment);
+  } catch (error) {
+    previousRunTrusted = false;
+    process.stderr.write(
+      `Unable to read the previous CI result; using the cumulative PR scope: ${error.message}\n`,
+    );
+  }
+
   const diff = selectDiff({
     eventName: environment.GITHUB_EVENT_NAME,
     action: environment.GITHUB_EVENT_ACTION,
     beforeSha: environment.CI_BEFORE_SHA,
     baseSha: environment.CI_BASE_SHA,
     headSha: environment.CI_HEAD_SHA,
+    previousRunTrusted,
   });
   const paths = changedPaths(diff.range);
   const result = classifyPaths(paths, diff);
-
-  try {
-    applyFailedOwners(result, await previousFailedOwners(environment));
-  } catch (error) {
-    process.stderr.write(`Unable to read the previous CI result; running every owner: ${error.message}\n`);
-    for (const owner of Object.keys(result)) result[owner] = true;
-  }
+  const e2eFiles = diff.full ? [] : selectE2EFiles(paths);
 
   process.stdout.write(
     `CI diff: ${diff.full ? 'full main validation' : diff.range}; ${paths.length} changed path(s)\n`,
   );
   process.stdout.write(`${JSON.stringify(result)}\n`);
   if (!environment.GITHUB_OUTPUT) throw new Error('GITHUB_OUTPUT is required.');
-  writeOutputs(result, environment.GITHUB_OUTPUT);
+  writeOutputs(result, environment.GITHUB_OUTPUT, e2eFiles);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

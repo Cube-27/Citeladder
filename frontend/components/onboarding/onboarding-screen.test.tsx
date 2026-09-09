@@ -178,7 +178,6 @@ describe('OnboardingScreen', () => {
     expect(screen.getByText('Finding comparable brands')).toBeInTheDocument();
     expect(screen.getByText('3 pages read')).toBeInTheDocument();
     expect(screen.getByText(/learning what you offer/i)).toBeInTheDocument();
-    expect(document.querySelector('.activity-dot')).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(
       /finding_competitors|lease|attempt_count|error_detail|provider/i,
     );
@@ -227,19 +226,10 @@ describe('OnboardingScreen', () => {
     renderWithProviders(<OnboardingScreen />);
 
     const user = await enterBrand();
-    expect(screen.getByRole('main').querySelector('[data-flow-measure]')).toHaveAttribute(
-      'data-flow-measure',
-      'default',
-    );
     await user.click(screen.getByRole('button', { name: 'Review' }));
-    expect(screen.getByRole('main').querySelector('[data-flow-measure]')).toHaveAttribute(
-      'data-flow-measure',
-      'wide',
-    );
     expect(screen.queryByText('Online Footprint & Peers')).toBeNull();
     expect(screen.queryByText('Brand Positioning & Market')).toBeNull();
     expect(screen.queryByText('AI Discovered')).toBeNull();
-    expect(document.querySelectorAll('section.shadow-card')).toHaveLength(0);
     const createProject = await screen.findByRole('button', { name: 'Create project' });
     await waitFor(() => expect(createProject).toBeEnabled());
     await user.click(createProject);

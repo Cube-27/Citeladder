@@ -4,7 +4,7 @@
 
 <strong>Connect evidence, improve what answer engines can understand, and track observed citation share.</strong>
 
-[Architecture](docs/architecture.md) · [Backend](docs/backend-architecture.md) · [Frontend](docs/frontend-architecture.md) · [Invariants](docs/invariants.md) · [MCP setup](https://citeladder.com/docs/mcp) · [Plans](docs/plans/) · [Development](docs/DEVELOPMENT.md)
+[Architecture](docs/architecture.md) · [Backend](docs/backend-architecture.md) · [Frontend](docs/frontend-architecture.md) · [Invariants](docs/invariants.md) · [MCP setup](https://citeladder.com/docs/mcp) · [Documentation index](docs/README.md) · [Development](docs/DEVELOPMENT.md)
 
 <p align="center">
   CiteLadder is an evidence-grounded growth intelligence platform for making a brand more likely to be recommended and cited by answer engines—without pretending leading indicators prove causality.
@@ -170,7 +170,7 @@ Commands, environment, entitlement, migration, and the clean-clone runbook:
 | [`AGENTS.md`](AGENTS.md) | Mandatory implementation rules and the task-specific document map |
 | [`docs/architecture.md`](docs/architecture.md) | Canonical target product architecture |
 | [`docs/invariants.md`](docs/invariants.md) | The review-blocking rules |
-| [`docs/plans/citeladder-aeo-product-rebuild.md`](docs/plans/citeladder-aeo-product-rebuild.md) | Product architecture and delivery order |
+| [`docs/README.md`](docs/README.md) | Runtime owners, active work, operations, and historical evidence |
 | [`docs/site-health.md`](docs/site-health.md) | Site crawl, page kinds, rules, issues, readiness, and crawl changes |
 | [`docs/design.md`](docs/design.md) | Design tokens, screen geometry, and the insight object |
 
@@ -184,18 +184,19 @@ frontend/                              Next.js application
 backend/app/                           FastAPI modular monolith and workers
 backend/app/core/config/site_health_*.py focused page-kind, crawl, rule, and runtime policy
 migrations/versions/0001_initial.py    pre-launch canonical database baseline
-docs/plans/                            active target implementation plans
+docs/README.md                         sole active documentation index
+docs/plans/                            bounded workstreams and historical records, routed by docs/README.md
 docs/evaluations/                      evaluation corpora, provenance, and labels
 ```
 
 <a id="full-validation"></a>
-## Full validation
+## Cross-system and CI validation
 
-The repository root carries a delegating `package.json` so install, build, test,
-lint, and type-check each have one command that works from a fresh clone without
-knowing which half of the monorepo owns them. It declares no dependencies of its
-own — `pnpm --dir frontend` and `uv --directory backend` still do the real work,
-and running the underlying command directly is equivalent.
+The repository root carries a delegating `package.json` for explicit
+cross-system, CI, and release diagnostics. It declares no dependencies of its
+own — `pnpm --dir frontend` and `uv --directory backend` still do the real work.
+Ordinary local completion uses the affected-owner harness below; these commands
+intentionally run broad suites and are not required after every edit.
 
 ```bash
 pnpm setup       # frozen installs: frontend (pnpm) + backend (uv)
@@ -210,7 +211,23 @@ mandatory `env -u POSTGRES_…` prefix (gotcha 1) that a shortcut script cannot
 express portably, so use the [Quick start](#quick-start) command verbatim.
 
 <a id="focused-validation"></a>
-## Focused validation
+## Local completion and focused validation
+
+From the repository root, after the coherent change is complete:
+
+```powershell
+.\scripts\check.ps1       # read-only affected-owner static checks
+.\scripts\test.ps1 -PlanOnly
+.\scripts\test.ps1       # mapped affected tests
+```
+
+These are end-of-task completion commands, not per-edit or per-documentation
+checks. Documentation-only changes use cheap textual/reference checks unless
+the documentation is executable or packaged input.
+
+Use `-Fix` only for an intentional formatting/lint pass. Use
+`-ChangedFiles` only for a retry after an earlier `test.ps1` run; the runner
+retains failed and pending owner selections in `.git`.
 
 ```bash
 # Backend, from backend/

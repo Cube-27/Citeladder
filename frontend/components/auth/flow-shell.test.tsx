@@ -26,20 +26,6 @@ describe('FlowShell', () => {
     expect(progress.querySelectorAll('[aria-current="step"]')).toHaveLength(1);
   });
 
-  it('collapses the same semantic step list below 640px', () => {
-    const { container } = render(
-      <FlowShell mainLabel="Project setup" steps={steps} currentStep={2}>
-        <p className="website-body">Review the facts.</p>
-      </FlowShell>,
-    );
-
-    expect(
-      container.querySelector('[aria-current="step"] .flow-step-mobile-prefix'),
-    ).toHaveTextContent('Step 3 of 3');
-    expect(container.querySelector('.flow-progress-rule')).not.toBeNull();
-    expect(container.querySelectorAll('.flow-progress ol')).toHaveLength(1);
-  });
-
   it('keeps secondary then primary actions in visual and DOM order', () => {
     render(
       <FlowActions

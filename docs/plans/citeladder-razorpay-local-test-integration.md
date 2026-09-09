@@ -1,5 +1,10 @@
 # Razorpay local test integration, onboarding fix, and owner runbooks
 
+> **Status:** active local/sandbox delivery plan. The prerequisite recovery
+> section below is historical and must not be rerun; current work begins with
+> the isolated local test integration sections. No live reset, deployment,
+> checkout, or provider mutation is authorized by this plan.
+
 ## Prerequisite recovery - 2026-09-08
 
 The owner authorized separate login/deployment recovery before Razorpay work:
@@ -13,8 +18,9 @@ preservation is not required. Pricing visibility and initial catalog provisionin
 Payment integration and checkout enabling are not
 part of this recovery. Sections 2B onward remain a separate implementation.
 
-Use `python infra/gcp/reset-db.py --project <PROJECT_ID>` to preview the installed
-GCP target; add `--reset-project <PROJECT_ID>` to explicitly destroy/rebuild its
+The historical recovery used `python infra/gcp/reset-db.py --project <PROJECT_ID>`
+to preview the installed GCP target; its `--reset-project <PROJECT_ID>` option
+explicitly destroyed/rebuilt its
 `citeladder` database, apply the installed baseline, reprovision the configured
 dev login, check schema drift, and restart the application. Optional `--instance`
 and `--zone` select the VM. This uses installed images and does not deploy new

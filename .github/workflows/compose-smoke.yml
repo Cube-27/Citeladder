@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   changes:
-    name: Classify latest push
+    name: Classify affected owners
     permissions:
       actions: read
       contents: read
@@ -140,3 +140,20 @@ jobs:
 
           "${compose[@]}" down --volumes --remove-orphans
           trap - EXIT
+
+  required:
+    name: Required
+    needs: [changes, compose-smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require selected Compose validation
+        run: |
+          test "${{ needs.changes.result }}" = "success"
+          expected="${{ needs.changes.outputs.compose }}"
+          result="${{ needs.compose-smoke.result }}"
+          if [ "$expected" = "true" ]; then
+            test "$result" = "success"
+          else
+            test "$result" = "skipped"
+          fi

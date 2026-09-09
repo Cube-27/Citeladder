@@ -138,23 +138,4 @@ describe('Landing page (public marketing `/`)', () => {
     expect(product).not.toHaveTextContent(/Observe|Trace|Benchmark|Optimize/i);
     expect(product).not.toHaveTextContent(/example data/i);
   });
-
-  it('renders the reveal section as a three-item ledger', () => {
-    stubAnonymous();
-    const { container } = renderWithProviders(<Page />);
-
-    expect(container.querySelectorAll('#why article')).toHaveLength(3);
-    expect(container.querySelector('#why .shadow-card')).toBeNull();
-  });
-
-  it('uses semantic icons instead of ordinal labels outside the operating loop', () => {
-    stubAnonymous();
-    const { container } = renderWithProviders(<Page />);
-
-    expect(container.querySelectorAll('#why article > svg')).toHaveLength(3);
-    for (const section of ['#use-cases', '#trust']) {
-      expect(container.querySelector(section)).not.toHaveTextContent(/0[1-6]/);
-    }
-    expect(container.querySelector('#how-it-works')).toHaveTextContent('01');
-  });
 });

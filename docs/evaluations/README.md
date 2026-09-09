@@ -19,9 +19,16 @@ Each evaluation therefore separates:
 5. expected content briefs and validation;
 6. expected before/after verification.
 
-## Activation rule
+## Historical activation convention
 
-An industry profile cannot move from `foundation` to `validated_candidate` until it has:
+The following convention belongs to the retired industry-profile research
+model. It is retained to explain older evaluation fixtures, not to activate a
+product feature or gate current Site Health work. Current product behavior does
+not expose an industry-profile catalog; `page_kind` classification and its
+deterministic evidence remain the shipped Site Health contract.
+
+An historical industry profile could not move from `foundation` to
+`validated_candidate` until it had:
 
 - representative labelled HTML and document fixtures;
 - expected page kinds and industry roles;

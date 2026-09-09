@@ -1,5 +1,9 @@
 # CiteLadder Site Health — High-Value Improvements from MarketingSkills
 
+> **Status:** historical research suggestions. They are not current product
+> requirements, site-type activation rules, or a validation gate. Shipped Site
+> Health behavior is owned by [`../site-health.md`](../site-health.md).
+
 ## Purpose
 
 The strongest idea in the MarketingSkills framework is not a larger checklist of SEO rules. It is the **site-modeling layer that comes before the audit**:

@@ -141,30 +141,40 @@ pnpm build            # next build
 pnpm test:e2e         # Playwright (needs a browser + a running stack)
 ```
 
+The default Playwright suite uses the existing mocked browser fixtures and its
+Next development server. The real-stack Content integration has a separate
+configuration and lifecycle: run it explicitly with
+`pnpm exec playwright test --config e2e/content-integration.config.ts`.
+Neither mode is evidence of live provider acceptance; those checks remain
+explicit release work.
+
 ### Repository validation harness
 
 `scripts/quality.mjs` owns the static sequence used by both local development
 and CI. `check.ps1` remains the PowerShell compatibility shim. Run the two
-completion commands from the repository root, in this order, once the planned
-implementation is finished — not after every step.
+completion commands from the repository root, in this order, once per task
+after the complete intended executable diff is finished. Documentation edits,
+commits, sub-phases, handoffs, and intermediate milestones never trigger these
+completion gates.
 
 ```powershell
-.\scripts\check.ps1     # static + fix gate: ruff, mypy, complexity,
-                        # import-linter, vulture, deptry, oxfmt, oxlint,
-                        # tsc, Knip, frontend policies, contract, docs index
-.\scripts\test.ps1      # affected backend, frontend, and mapped E2E tests
+.\scripts\check.ps1     # read-only affected-owner static checks
+.\scripts\test.ps1      # affected tooling, backend, frontend, and mapped E2E tests
 ```
 
 Useful variants:
 
 ```powershell
-.\scripts\check.ps1 -CheckOnly              # never mutates files
-.\scripts\check.ps1 -Scope Backend          # or Frontend
-.\scripts\test.ps1 -ChangedFiles a.py,b.py  # retry delta after a failed run
+.\scripts\check.ps1 -Fix                   # intentional formatter/lint fixes
+.\scripts\check.ps1 -CheckOnly             # compatibility spelling
+.\scripts\check.ps1 -Scope All              # explicit cross-system check
+.\scripts\test.ps1 -PlanOnly               # explain selection, do not execute
+.\scripts\test.ps1 -ChangedFiles a.py,b.py # retry after a failed/interrupted run
 ```
 
-The direct cross-platform entry points are available from `frontend/` as
-`pnpm quality:fix` and the non-mutating `pnpm quality:check`.
+The direct cross-platform entry points are `pnpm quality:fix` and the
+non-mutating `pnpm quality:check`; like the root shim, they use affected-owner
+scope unless an explicit `--scope` is supplied.
 
 `test.ps1` compares the working tree against `origin/main`, maps every changed
 production file through `scripts/validation.json`, and fails if a changed file
@@ -172,22 +182,26 @@ under `backend/app` or `frontend/{app,components,lib}` has no mapping. Add the
 missing mapping; never substitute a broad or full-suite fallback.
 
 GitHub CI has one cheap classifier before the implementation jobs. On an
-initial pull-request run it classifies the complete PR diff. On a subsequent
-push it classifies only the range from the previous PR head to the new head and
-also reruns any owner that failed on that previous head. Backend-only and
-frontend-only pushes therefore do not repeat the other successful suite.
-Changes to shared tooling or configuration select both sides; backend API/schema
-and frontend API-client paths also select both sides and the strict contract
-job. Documentation-only changes run the common classifier and documentation
-gates. The clean-clone Compose smoke runs on initial application PR validation,
-Compose-sensitive follow-up changes, a previously failed smoke owner, merge
-queue validation, and every push to `main`. Merge queue and `main` events select
-every CI owner as the final safety net.
+initial pull-request run it classifies the complete PR diff. A later push uses
+the previous-head range only when the previous owner results are attributable
+and complete; missing, ambiguous, cancelled, or incomplete evidence falls back
+to the cumulative PR diff, which includes every failed or unexecuted owner from
+the PR. Backend-only and frontend-only pushes do not repeat unrelated
+successful suites, and ordinary frontend edits do not automatically launch
+browser E2E. Browser-sensitive paths run only the specs mapped in
+`scripts/validation.json`; the complete default Playwright suite is reserved
+for `main`, merge-queue validation, unknown shared paths, and changes to
+Playwright's global configuration. Shared, configuration, and
+contract paths retain their broader owners. The clean-clone Compose smoke runs
+on application/Compose-sensitive PR
+changes, merge queue validation, and every push to `main`.
 
-Only `CI / Required` needs to be a required status for the main workflow. It
-requires common gates and every selected owner while accepting jobs that the
-classifier intentionally skipped. Do not add workflow-level `paths` filters to
-required workflows; a skipped workflow can leave a required status pending.
+Only the main workflow’s `CI / Required` and the Compose workflow’s
+`Compose smoke / Required` should be required statuses. Each requires every
+owner selected by the classifier to succeed; an owner may be skipped only when
+the classifier explicitly left it unselected. Do not add workflow-level `paths`
+filters to required workflows; a skipped workflow can leave a required status
+pending.
 
 Static-analysis commands, pinned by the frozen locks:
 
@@ -227,8 +241,9 @@ behaviour.
 What must be tested is decided by `scripts/validation.json`, which maps every
 production file to the tests that have to run for it, and `test.ps1` fails when
 a changed file under `backend/app` has no mapping. That mapping is reviewable in
-a way a percentage is not. `scripts/` and `migrations/` have no suite; they are
-held by ruff, mypy, vulture, import-linter and the complexity policy instead.
+a way a percentage is not. Changed root tooling tests run directly through Node;
+production scripts and migrations remain held by ruff, mypy, vulture,
+import-linter and the complexity policy.
 
 ### Architecture policy
 
