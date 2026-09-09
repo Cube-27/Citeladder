@@ -18,6 +18,7 @@ let activeProject = {
   workspace_id: '22222222-2222-4222-8222-222222222222',
 };
 let agentEntitled = true;
+let entitlementLoading = false;
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/site',
@@ -27,7 +28,7 @@ vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeProject }),
 }));
 vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({ hasCapability: () => agentEntitled, isLoading: false }),
+  useEntitlement: () => ({ hasCapability: () => agentEntitled, isLoading: entitlementLoading }),
 }));
 vi.mock('@/components/agent/growth-agent-workspace', () => ({
   GrowthAgentWorkspace: (props: unknown) => <pre>{JSON.stringify(props)}</pre>,
@@ -40,6 +41,23 @@ describe('AgentSheet', () => {
       workspace_id: '22222222-2222-4222-8222-222222222222',
     };
     agentEntitled = true;
+    entitlementLoading = false;
+  });
+
+  /**
+   * Entitlement is a network answer and the sidebar paints before it lands.
+   * The trigger holds its slot meanwhile — otherwise the navigation below it
+   * sits higher and drops once the answer arrives — but it must not be
+   * reachable, because an unresolved entitlement grants nothing.
+   */
+  it('holds the trigger’s slot while entitlement is unresolved, inert', () => {
+    entitlementLoading = true;
+    render(<AgentSheetTrigger />);
+    // Present in the layout, absent from the accessibility tree and inert.
+    const reserved = document.querySelector('[aria-label="Open Growth Agent"]');
+    expect(reserved).toBeDisabled();
+    expect(reserved).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByRole('button', { name: 'Open Growth Agent' })).not.toBeInTheDocument();
   });
 
   it('opens from the top bar with bounded typed route context and returns focus', async () => {

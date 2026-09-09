@@ -2,7 +2,7 @@ import { Suspense, type ReactNode } from 'react';
 
 import { AppShell } from '@/components/layout/app-shell';
 import { OnboardingGate } from '@/components/layout/onboarding-gate';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ShellFallback } from '@/components/layout/shell-fallback';
 import { SessionGuard } from '@/lib/auth/session-guard';
 import { EntitlementProvider } from '@/lib/billing/entitlement-context';
 import { ProjectProvider } from '@/lib/project/project-context';
@@ -15,19 +15,34 @@ export const instant = true;
 /**
  * Authed-area layout (F5).
  *
- * Wraps every `(app)` route in F4's `<SessionGuard>` (bounces unauthenticated
- * visitors to `/login` and installs the 401 watchdog), then the F5
- * `<ProjectProvider>` (active-project context + `X-Workspace-Id` header wiring),
- * then `<OnboardingGate>` (first-run users have no project yet, so they go to
- * `/onboarding` rather than into an empty workspace), then the `<AppShell>`
- * chrome (sidebar + top bar). `/` is now the public marketing page (see
- * `app/(marketing)/`); its LandingSessionRedirect island forwards signed-in
- * visitors here (`/projects`, or `/onboarding` pre-project).
+ * Wraps every `(app)` route in the F5 `<ProjectProvider>` (active-project
+ * context + `X-Workspace-Id` header wiring), then F4's `<SessionGuard>`
+ * (bounces unauthenticated visitors to `/login` and installs the 401
+ * watchdog), then `<OnboardingGate>` (first-run users have no project yet, so
+ * they go to `/onboarding` rather than into an empty workspace), then the
+ * `<AppShell>` chrome (sidebar + top bar). `/` is now the public marketing
+ * page (see `app/(marketing)/`); its LandingSessionRedirect island forwards
+ * signed-in visitors here (`/projects`, or `/onboarding` pre-project).
+ *
+ * The provider sits OUTSIDE the guard on purpose. Its project list needs only
+ * the session cookie — the workspace header is derived from its own result —
+ * so it can load alongside `me` instead of waiting for it, and a cold entry
+ * pays one round trip before the shell rather than two in series. The guard
+ * still owns what is rendered: nothing protected mounts until `me` settles,
+ * and a 401 from either request clears the session and redirects once.
+ *
+ * The gate then sits outside the SHELL. Both waits — the session and the
+ * workspace — are covered by the same `ShellFallback` in the same place, so
+ * the reader sees one loader rather than a viewport loader replaced by a
+ * content-pane loader a moment later. What follows it is the finished shell:
+ * the switcher already knows its project and the entitlement-gated controls
+ * already know whether they exist, so nothing arrives afterwards to push the
+ * navigation around.
  */
 export default function AppLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <SessionGuard fallback={<ShellFallback />}>
-      <ProjectProvider>
+    <ProjectProvider>
+      <SessionGuard fallback={<ShellFallback />}>
         <Suspense fallback={<ShellFallback />}>
           <ProductTourProvider>
             <EntitlementProvider>
@@ -39,20 +54,7 @@ export default function AppLayout({ children }: Readonly<{ children: ReactNode }
             </EntitlementProvider>
           </ProductTourProvider>
         </Suspense>
-      </ProjectProvider>
-    </SessionGuard>
-  );
-}
-
-function ShellFallback() {
-  return (
-    <div className="bg-shell flex min-h-dvh items-center justify-center p-[var(--card-padding)]">
-      <div className="grid w-full max-w-72 gap-4" aria-hidden>
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-2/3" />
-      </div>
-      <span className="sr-only">Loading your workspace…</span>
-    </div>
+      </SessionGuard>
+    </ProjectProvider>
   );
 }

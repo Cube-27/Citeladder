@@ -5,7 +5,6 @@ import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import type { CommandCenter, Opportunity } from '@/lib/api/types';
@@ -23,21 +22,6 @@ export function deltaLabel(delta: number | null, inverse = false) {
   if (delta === null) return 'No comparable run';
   const display = inverse ? -delta : delta;
   return `${display > 0 ? '+' : ''}${display.toFixed(1)} vs previous`;
-}
-
-export function CommandCenterSkeleton() {
-  return (
-    <div className="grid gap-4" aria-hidden>
-      <Skeleton className="h-16 w-full" />
-      <div className="grid gap-3 md:grid-cols-3">
-        <Skeleton className="h-28 w-full" />
-        <Skeleton className="h-28 w-full" />
-        <Skeleton className="h-28 w-full" />
-      </div>
-      <Skeleton className="h-52 w-full" />
-      <Skeleton className="h-72 w-full" />
-    </div>
-  );
 }
 
 export function StateMetric({

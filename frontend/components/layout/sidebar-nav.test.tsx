@@ -13,6 +13,9 @@ vi.mock('@tanstack/react-query', () => ({
     prefetchQuery: mocks.prefetchQuery,
     getQueryCache: () => ({ find: mocks.find }),
   }),
+  // Query-options factories are typed identity at runtime; the route
+  // prefetchers call them to build the key asserted below.
+  queryOptions: <T,>(options: T) => options,
 }));
 
 vi.mock('@/lib/project/project-context', () => ({
@@ -33,6 +36,15 @@ vi.mock('next/navigation', () => ({
 
 import { SidebarNav } from './sidebar-nav';
 import { NAV_GROUPS, resolveCommandGroups, resolveNavigationGroups } from './nav-items';
+
+// The key the Performance screen's own landing selection reads, so a hover
+// warms exactly the entry the destination consumes.
+const PERFORMANCE_LANDING_KEY = [
+  'performance',
+  'dashboard',
+  '11111111-1111-4111-8111-111111111111',
+  { range: 'last_synced', granularity: 'day', compare: 'none' },
+];
 
 describe('station navigation', () => {
   beforeEach(() => {
@@ -102,22 +114,12 @@ describe('station navigation', () => {
     const performance = screen.getByRole('link', { name: 'Performance' });
     fireEvent.mouseEnter(performance);
     expect(mocks.prefetchQuery).toHaveBeenCalled();
-    expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual([
-      'performance',
-      'dashboard',
-      '11111111-1111-4111-8111-111111111111',
-      { range: 'custom', compare: 'none' },
-    ]);
+    expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual(PERFORMANCE_LANDING_KEY);
 
     mocks.prefetchQuery.mockClear();
     mocks.find.mockClear();
     fireEvent.focus(performance);
     expect(mocks.prefetchQuery).toHaveBeenCalledOnce();
-    expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual([
-      'performance',
-      'dashboard',
-      '11111111-1111-4111-8111-111111111111',
-      { range: 'custom', compare: 'none' },
-    ]);
+    expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual(PERFORMANCE_LANDING_KEY);
   });
 });

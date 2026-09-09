@@ -159,6 +159,90 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('IssuesCatalog', () => {
+  /**
+   * The list and the auto-selected issue's occurrences are two requests, and
+   * the rail is the second one. Painting after the first left the rail short
+   * and then growing under the reader's first click, so both are held behind
+   * the one loader and the finished view is drawn once.
+   */
+  it('holds one loader until the list and the first issue detail have both landed', async () => {
+    let releaseDetail!: () => void;
+    const detailSettled = new Promise<void>((resolve) => {
+      releaseDetail = resolve;
+    });
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
+        HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
+      ),
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, async () => {
+        await detailSettled;
+        return HttpResponse.json(issueDetail());
+      }),
+    );
+
+    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+
+    expect(await screen.findByTestId('page-loading')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'WebSite schema is missing' })).toBeNull();
+
+    act(() => releaseDetail());
+
+    expect(await screen.findByRole('link', { name: /Homepage/ })).toBeInTheDocument();
+    expect(screen.queryByTestId('page-loading')).toBeNull();
+  });
+
+  /**
+   * The counterpart to the gate above: it must close only ONCE. Selecting a
+   * second issue re-keys the detail query, and `siteHealthQueries.issue`
+   * retains the previous crawl-scoped occurrences across that change, so the
+   * catalog stays on screen and the rail marks itself busy instead of the
+   * whole view dropping back to the loader. The rail keeps the previous issue
+   * AND its pages together until the new pair arrives — a new title over the
+   * old issue's URLs would be a caption for pages it does not describe.
+   */
+  it('keeps the catalog drawn, and the rail coherent, while a later selection loads', async () => {
+    const user = userEvent.setup();
+    const OTHER = 'bbbbbbbb-2222-4222-8222-222222222222';
+    let holdSecond = false;
+    let releaseSecond!: () => void;
+    const secondSettled = new Promise<void>((resolve) => {
+      releaseSecond = resolve;
+    });
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
+        HttpResponse.json({
+          items: [issue(), issue({ group_id: OTHER, title: 'Canonical tag is missing' })],
+          next_cursor: null,
+          summary,
+        }),
+      ),
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${OTHER}`, async () => {
+        holdSecond = true;
+        await secondSettled;
+        return HttpResponse.json(
+          issueDetail({ group_id: OTHER, title: 'Canonical tag is missing' }),
+        );
+      }),
+    );
+
+    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    await screen.findByRole('link', { name: /Homepage/ });
+
+    await user.click(screen.getByRole('button', { name: /Canonical tag is missing/ }));
+
+    await waitFor(() => expect(holdSecond).toBe(true));
+    expect(screen.queryByTestId('page-loading')).toBeNull();
+    expect(screen.getByRole('link', { name: /Homepage/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'WebSite schema is missing', level: 2 }),
+    ).toBeInTheDocument();
+
+    act(() => releaseSecond());
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Canonical tag is missing' })).toBeInTheDocument(),
+    );
+  });
+
   it('shows no pagination when everything already fits on one page', async () => {
     // Both pagers used to key off "are there rows" and then disable themselves
     // when there was nowhere to go, so a five-issue crawl rendered two dead

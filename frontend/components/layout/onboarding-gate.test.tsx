@@ -15,10 +15,16 @@ vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => contextValue,
 }));
 
+let entitlementLoading = false;
+vi.mock('@/lib/billing/entitlement-context', () => ({
+  useEntitlement: () => ({ isLoading: entitlementLoading }),
+}));
+
 import { OnboardingGate } from './onboarding-gate';
 
 beforeEach(() => {
   replace.mockClear();
+  entitlementLoading = false;
 });
 
 describe('OnboardingGate', () => {
@@ -48,6 +54,23 @@ describe('OnboardingGate', () => {
 
     expect(replace).not.toHaveBeenCalled();
     expect(screen.queryByText('workspace')).toBeNull();
+  });
+
+  /**
+   * Entitlement decides which controls the shell has, so drawing before it
+   * answers means growing a button and a navigation row a round trip later.
+   */
+  it('holds the shell until entitlement has answered', () => {
+    contextValue = { projects: [{ id: 'p1' } as Project], isError: false, isLoading: false };
+    entitlementLoading = true;
+    render(
+      <OnboardingGate>
+        <p>app</p>
+      </OnboardingGate>,
+    );
+
+    expect(screen.queryByText('app')).toBeNull();
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it('renders the app once projects exist, without redirecting', () => {

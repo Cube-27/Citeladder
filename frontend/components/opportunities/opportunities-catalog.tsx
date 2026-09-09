@@ -276,10 +276,15 @@ function useFeaturedRecommendation(
   cursor: string | undefined,
 ) {
   const featuredId = statusFilter === 'active' && !cursor ? (rows[0]?.id ?? null) : null;
-  return useQuery({
+  const query = useQuery({
     ...opportunitiesQueries.detail(featuredId ?? ''),
     enabled: featuredId !== null,
   });
+  // A DISABLED query stays `pending` forever, so "is anything still coming?"
+  // cannot be read off the query alone. A project with no recommendations yet
+  // — the common first run — has nothing to feature, and the section used to
+  // hold a placeholder for it that could never resolve.
+  return { detail: query.data ?? null, isLoading: featuredId !== null && query.isPending };
 }
 
 function FeaturedSection({
@@ -289,10 +294,10 @@ function FeaturedSection({
   featured: ReturnType<typeof useFeaturedRecommendation>;
   onOpen: (id: string) => void;
 }>) {
-  if (featured.isPending && !featured.data) return <Skeleton className="h-44 w-full" />;
-  return featured.data ? (
-    <FeaturedRecommendation detail={featured.data} onOpen={() => onOpen(featured.data.id)} />
-  ) : null;
+  const { detail, isLoading } = featured;
+  if (isLoading) return <Skeleton className="h-44 w-full" />;
+  if (!detail) return null;
+  return <FeaturedRecommendation detail={detail} onOpen={() => onOpen(detail.id)} />;
 }
 
 function RecommendationsSection({

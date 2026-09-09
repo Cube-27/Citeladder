@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { CookieBanner } from '@/components/marketing/chrome/cookie-banner';
 import { MarketingFooter } from '@/components/marketing/chrome/footer';
 import { MarketingNav } from '@/components/marketing/chrome/nav';
+import { ReturningVisitorHint } from '@/components/marketing/chrome/returning-visitor-hint';
 import { MarketingMotion } from '@/components/marketing/primitives/marketing-motion';
 import { JsonLd } from '@/components/marketing/seo/json-ld';
 import { organizationJsonLd, softwareApplicationJsonLd, websiteJsonLd } from '@/lib/seo/json-ld';
@@ -29,6 +30,8 @@ export default function MarketingLayout({ children }: Readonly<{ children: React
       {organization ? <JsonLd id="organization-json-ld" data={organization} /> : null}
       {website ? <JsonLd id="website-json-ld" data={website} /> : null}
       {softwareApp ? <JsonLd id="software-app-json-ld" data={softwareApp} /> : null}
+      {/* Before the nav in document order: it must run before the nav paints. */}
+      <ReturningVisitorHint />
       <MarketingMotion>
         <MarketingNav />
         <div className="relative z-1 pt-[var(--marketing-nav-offset)]">{children}</div>

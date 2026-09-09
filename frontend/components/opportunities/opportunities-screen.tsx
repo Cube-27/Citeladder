@@ -5,11 +5,11 @@ import { ChevronDown, Download, RefreshCw } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
-import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { OpportunitiesCatalog } from '@/components/opportunities/opportunities-catalog';
 import { opportunitySummaryPollingInterval } from '@/components/opportunities/opportunity-summary-polling';
@@ -99,10 +99,18 @@ function OpportunitiesScreenBody({
 }: Readonly<{ state: string; projectId: string | null; summary: OpportunitySummary | null }>) {
   if (state === 'missing-project')
     return <Alert tone="info">Select or create a project to view its opportunities.</Alert>;
-  if (state === 'loading') return <LoadingSkeleton />;
+  if (state === 'loading') return <PageLoading label="Loading opportunities…" />;
   if (state === 'error')
     return <Alert tone="danger">Could not load opportunities. Please refresh.</Alert>;
-  if (!projectId || !summary) return null;
+  // Settled with nothing to show. This branch used to `return null`, which left
+  // the reader on a blank pane while the summary poll kept running — a screen
+  // that looks like it is still loading and never finishes. Say so instead.
+  if (!projectId || !summary)
+    return (
+      <Alert tone="info">
+        No recommendations yet. Run a visibility or website review and they will appear here.
+      </Alert>
+    );
   if (state === 'preparing')
     return <PreparingRecommendations projectId={projectId} summary={summary} />;
   return (
@@ -110,15 +118,6 @@ function OpportunitiesScreenBody({
       <SummaryStrip summary={summary} />
       <OpportunitiesCatalog key={projectId} projectId={projectId} />
     </>
-  );
-}
-
-function LoadingSkeleton() {
-  return (
-    <div className="grid gap-4">
-      <Skeleton className="h-20 w-full" />
-      <Skeleton className="h-40 w-full" />
-    </div>
   );
 }
 

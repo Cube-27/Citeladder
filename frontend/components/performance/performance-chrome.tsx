@@ -2,7 +2,7 @@
 
 import { ChevronDown, LoaderCircle, RefreshCw, RotateCcw } from 'lucide-react';
 
-import { INITIAL_SELECTION, type RangeSelection } from './date-range-dialog';
+import { INITIAL_SELECTION, type RangeSelection } from '@/lib/performance/performance';
 import type { usePerformanceSync } from './use-performance-sync';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';

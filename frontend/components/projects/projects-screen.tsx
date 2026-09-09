@@ -7,8 +7,6 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
-import { PageHeader } from '@/components/layout/page-header';
 import type { Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -29,7 +27,7 @@ import { DashboardScreen } from './dashboard-screen';
  * just as much as the first did.
  */
 export function ProjectsScreen() {
-  const { projects, isLoading, setActiveProjectId } = useProjectContext();
+  const { projects, setActiveProjectId } = useProjectContext();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [editing, setEditing] = useState<Project | null>(null);
@@ -46,18 +44,9 @@ export function ProjectsScreen() {
     router.replace(query ? `/projects?${query}` : '/projects', { scroll: false });
   }, [router, searchParams, setActiveProjectId]);
 
-  if (isLoading) {
-    return (
-      <div className="grid gap-[var(--workspace-gap)]">
-        <PageHeader />
-        <div className="grid gap-2" aria-hidden>
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
-      </div>
-    );
-  }
-
+  // OnboardingGate (the layout wrapper) already gates on this exact
+  // useProjectContext().isLoading and shows PageLoading, so by the time this
+  // screen mounts the project list has settled.
   if (projects.length === 0) {
     return (
       <EmptyState

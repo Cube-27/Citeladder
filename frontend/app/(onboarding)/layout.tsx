@@ -13,11 +13,13 @@ import { ProjectProvider } from '@/lib/project/project-context';
  */
 export default function OnboardingLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <SessionGuard fallback={<OnboardingFallback />}>
-      <ProjectProvider>
+    // Provider outside the guard so the project list loads alongside `me`
+    // rather than after it — see `app/(app)/layout.tsx`.
+    <ProjectProvider>
+      <SessionGuard fallback={<OnboardingFallback />}>
         <EntitlementProvider>{children}</EntitlementProvider>
-      </ProjectProvider>
-    </SessionGuard>
+      </SessionGuard>
+    </ProjectProvider>
   );
 }
 

@@ -8,7 +8,8 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
-import { Skeleton } from '@/components/ui/skeleton';
+import { ShellFallback } from '@/components/layout/shell-fallback';
+import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useProjectContext } from '@/lib/project/project-context';
 
 /**
@@ -36,6 +37,12 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   const router = useRouter();
   const queryClient = useQueryClient();
   const { projects, isLoading, isError } = useProjectContext();
+  // Entitlement decides which controls the shell HAS — the Growth Agent
+  // trigger, the capability-gated navigation rows — so waiting for it here is
+  // what lets the shell paint complete instead of growing a button and a link
+  // a round trip later. It resolves to a settled answer either way: a failed
+  // request stops loading and the shell draws with nothing granted.
+  const { isLoading: entitlementLoading } = useEntitlement();
   const needsOnboarding = !isLoading && !isError && projects.length === 0;
 
   useEffect(() => {
@@ -67,18 +74,12 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
     );
   }
 
-  if (isLoading || needsOnboarding) {
-    return (
-      <div className="bg-shell flex min-h-dvh items-center justify-center p-[var(--card-padding)]">
-        <div className="grid w-full max-w-70 gap-3" aria-hidden>
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
-        </div>
-        <span className="sr-only">Loading your workspace…</span>
-      </div>
-    );
-  }
+  // Ahead of the shell, and deliberately the SAME loader the session wait
+  // showed: one uninterrupted state covers both round trips, and the chrome
+  // that follows it is already complete. `needsOnboarding` holds here too —
+  // the redirect is already in flight, and drawing a workspace the visitor is
+  // about to be taken out of would only be a flash of the wrong app.
+  if (isLoading || entitlementLoading || needsOnboarding) return <ShellFallback />;
 
   return <>{children}</>;
 }

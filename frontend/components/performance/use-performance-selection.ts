@@ -2,9 +2,14 @@
 
 import { useState } from 'react';
 
-import { INITIAL_SELECTION, type RangeSelection } from './date-range-dialog';
 import type { PerformanceGranularity } from '@/lib/api/performance';
-import type { PerformanceMetricKey, SearchConsoleDimension } from '@/lib/performance/performance';
+import {
+  INITIAL_GRANULARITY,
+  INITIAL_SELECTION,
+  type PerformanceMetricKey,
+  type RangeSelection,
+  type SearchConsoleDimension,
+} from '@/lib/performance/performance';
 
 /**
  * Everything the reader has CHOSEN on the Performance surface: the range and
@@ -35,7 +40,7 @@ export type PerformanceSelection = {
 export function usePerformanceSelection(): PerformanceSelection {
   const [selection, setSelection] = useState<RangeSelection>(INITIAL_SELECTION);
   const [dimension, setDimension] = useState<SearchConsoleDimension>('query');
-  const [granularity, setGranularity] = useState<PerformanceGranularity>('day');
+  const [granularity, setGranularity] = useState<PerformanceGranularity>(INITIAL_GRANULARITY);
   const [activeMetrics, setActiveMetrics] = useState<ReadonlySet<PerformanceMetricKey>>(
     () => new Set<PerformanceMetricKey>(DEFAULT_METRICS),
   );
@@ -60,7 +65,7 @@ export function usePerformanceSelection(): PerformanceSelection {
   // state it exists to clear.
   const reset = () => {
     setSelection(INITIAL_SELECTION);
-    setGranularity('day');
+    setGranularity(INITIAL_GRANULARITY);
     setDimension('query');
     setActiveMetrics(new Set<PerformanceMetricKey>(DEFAULT_METRICS));
   };

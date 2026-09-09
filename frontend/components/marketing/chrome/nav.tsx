@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
+import { RETURNING_VISITOR_ATTRIBUTE } from './returning-visitor-hint';
 
 /** What asked for a dropdown: a resting pointer, or an explicit focus move. */
 export type OpenSource = 'hover' | 'focus';
@@ -69,6 +70,16 @@ function useMarketingSession() {
   });
   const hasProject = (projects.data?.length ?? 0) > 0 || hasStoredProject;
 
+  // Only once `me` has answered does React know what the actions row should
+  // show, and only then may the pre-hydration mark go. Dropping it on mount
+  // would hand the row back to CSS's anonymous default mid-flight — the exact
+  // flash the mark exists to prevent — and keeping it forever would hide
+  // "Log in" from a browser whose stored trace has outlived its session.
+  const sessionSettled = !me.isPending;
+  useEffect(() => {
+    if (sessionSettled) document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
+  }, [sessionSettled]);
+
   return {
     // Until `me` has settled (success or 401) we know nothing for certain about
     // the visitor, and rendering the anonymous actions during that window only
@@ -80,7 +91,7 @@ function useMarketingSession() {
     // when this browser carries a trace of a previous session — the stored
     // active project — which is where the swap would actually have happened.
     // Everyone else gets "Log in" and the demo CTA in the first paint.
-    sessionPending: me.isPending && hasStoredProject,
+    sessionPending: me.isPending,
     isAuthenticated: Boolean(me.data),
     dashboardHref: hasProject ? '/projects' : '/onboarding',
   };
@@ -276,7 +287,15 @@ export function MarketingNav() {
       <nav
         ref={navRef}
         aria-label="Main navigation"
-        className="mx-auto flex h-16 w-full max-w-7xl items-center gap-5 px-[var(--site-gutter)]"
+        // Three tracks, not a flex row: the links sit in the middle track, so
+        // their position is a function of the viewport alone. As a flex row
+        // they were centred in whatever space the actions left over, and the
+        // actions change width twice on a returning visitor's refresh (the
+        // anonymous pair, then the pending placeholder, then Dashboard) — which
+        // slid the whole navigation sideways each time. The side tracks are
+        // `minmax(0,1fr)` so they stay exactly equal regardless of what either
+        // one holds.
+        className="mx-auto grid h-16 w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-5 px-[var(--site-gutter)]"
       >
         <HomeLogoLink onNavigate={closeMenu} />
 
@@ -360,6 +379,23 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
   );
 }
 
+/** Log in and the demo CTA: what a visitor with no session is offered. */
+function AnonymousActions() {
+  return (
+    <>
+      <Link
+        href="/login"
+        className="website-nav text-muted hover:text-foreground inline-flex px-4 transition-colors"
+      >
+        Log in
+      </Link>
+      <DemoButtonLink variant="primary" className="hidden min-h-10 px-4 sm:inline-flex">
+        {DEMO_CTA}
+      </DemoButtonLink>
+    </>
+  );
+}
+
 function NavActions({
   isAuthenticated,
   sessionPending,
@@ -374,15 +410,25 @@ function NavActions({
   onToggleMenu: () => void;
 }>) {
   return (
-    <div className="ml-auto flex shrink-0 items-center gap-3 lg:ml-0">
+    <div className="flex shrink-0 items-center gap-3 justify-self-end">
       {sessionPending ? (
-        // A returning visitor whose session has not resolved yet: hold the
-        // Dashboard link's own footprint rather than flash the anonymous
-        // actions and swap them a moment later.
-        <div
-          aria-hidden
-          className="bg-background-alt h-[var(--control-height)] w-20 animate-pulse rounded-[var(--radius-control)] sm:w-28"
-        />
+        // `me` has not answered yet, and this render is also the STATIC HTML —
+        // so React cannot choose here without guessing. It emits both answers
+        // and lets CSS pick before paint: `ReturningVisitorHint` marks the
+        // document when this browser holds a stored project, and `globals.css`
+        // shows the matching branch. The anonymous majority get "Log in" in
+        // the first paint; someone returning gets Dashboard in the first
+        // paint, instead of an empty row that fills in a moment later.
+        <>
+          <span data-session-anon>
+            <AnonymousActions />
+          </span>
+          <span data-session-returning>
+            <ButtonLink href="/projects" variant="primary" className="min-h-10 px-4">
+              Dashboard
+            </ButtonLink>
+          </span>
+        </>
       ) : isAuthenticated ? (
         // The topbar CTA runs one step smaller than the page CTAs — chrome,
         // not a section action.
@@ -390,17 +436,7 @@ function NavActions({
           Dashboard
         </ButtonLink>
       ) : (
-        <>
-          <Link
-            href="/login"
-            className="website-nav text-muted hover:text-foreground inline-flex px-4 transition-colors"
-          >
-            Log in
-          </Link>
-          <DemoButtonLink variant="primary" className="hidden min-h-10 px-4 sm:inline-flex">
-            {DEMO_CTA}
-          </DemoButtonLink>
-        </>
+        <AnonymousActions />
       )}
       <button
         type="button"

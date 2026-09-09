@@ -8,7 +8,7 @@ import { isAiReferralsEmpty } from '@/lib/ai-referrals/series';
 import type { AiReferrals } from '@/lib/api/ai-referrals';
 
 import { AiReferralsDashboard } from './ai-referrals-dashboard';
-import { AiReferralsSkeleton } from './ai-referrals-skeleton';
+import { PageLoading } from '@/components/layout/page-loading';
 
 export function AiReferralsContent({
   projectId,
@@ -42,7 +42,8 @@ function AiReferralsDataRegion({
   range,
   query,
 }: Omit<React.ComponentProps<typeof AiReferralsContent>, 'toolbar'>) {
-  if (projectLoading || (Boolean(projectId) && query.isLoading)) return <AiReferralsSkeleton />;
+  if (projectLoading || (Boolean(projectId) && query.isLoading))
+    return <PageLoading label="Loading AI referrals…" />;
   if (!projectId) return <Alert tone="info">Select or create a project to see AI referrals.</Alert>;
   if (query.isError) return <AiReferralsError onRetry={() => query.refetch()} />;
 

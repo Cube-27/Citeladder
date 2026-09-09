@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { PageLoading } from '@/components/layout/page-loading';
 import { IssuesCatalog } from '@/components/site-health/issues-catalog';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { textRole } from '@/components/ui/typography';
@@ -38,10 +38,7 @@ export function IssuesScreen() {
       {!projectLoading && !projectId ? (
         <Alert tone="info">Select or create a project to view its Site Health issues.</Alert>
       ) : loading ? (
-        <div className="grid gap-4">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-40 w-full" />
-        </div>
+        <PageLoading label="Loading issues…" />
       ) : dashboardQuery.isError ? (
         <Alert tone="danger">Could not load Site Health. Please refresh.</Alert>
       ) : !crawl ? (

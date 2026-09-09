@@ -11,9 +11,11 @@
  * Every JSON response passes through `strictValidate` (fail loud on any
  * drift). All paths are relative `/api/v1` (same-origin proxy, invariant 12).
  */
+import { queryOptions } from '@tanstack/react-query';
 import type { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
+import { queryKeys } from './query-keys';
 import {
   performanceDashboardSchema,
   performanceRangeTaskSchema,
@@ -138,4 +140,16 @@ export const performanceApi = {
     );
     return strictValidate(performanceSyncEnqueueResponseSchema, res, 'performance.syncNow');
   },
+};
+
+/**
+ * Dashboard read options, so the screen and navigation intent request the
+ * SAME key from one definition instead of each assembling its own.
+ */
+export const performanceQueries = {
+  dashboard: (projectId: string, params: PerformanceDashboardParams) =>
+    queryOptions({
+      queryKey: queryKeys.performance.dashboard(projectId, params),
+      queryFn: ({ signal }) => performanceApi.getDashboard(projectId, params, { signal }),
+    }),
 };
