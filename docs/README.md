@@ -63,5 +63,6 @@ authority or mandatory per-edit gates. Completed duplicate plans and incident
 checklists are removed once their durable contract and unresolved acceptance
 live in the owners above; Git history remains their delivery record.
 
-Editorial material under [`blogs/`](blogs/) is product content, not engineering
-governance.
+Published blog content is owned by the typed modules under
+[`frontend/lib/marketing-content/blog-posts/`](../frontend/lib/marketing-content/blog-posts/);
+there is no parallel documentation draft.

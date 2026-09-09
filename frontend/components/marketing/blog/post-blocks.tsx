@@ -1,6 +1,7 @@
 import { AlertTriangle, ArrowDown, Check, CheckCircle2, Info } from 'lucide-react';
+import Link from 'next/link';
 
-import type { BlogBlock, BlogDiagram } from '@/lib/marketing-content/blog';
+import type { BlogBlock, BlogDiagram, BlogSource } from '@/lib/marketing-content/blog';
 import { cn } from '@/lib/utils';
 
 /**
@@ -41,6 +42,14 @@ export function withOccurrenceKeys<T>(
 export function blockIdentity(block: BlogBlock): string {
   if ('text' in block) {
     return `${block.type}:${block.text.slice(0, 40)}`;
+  }
+  if (block.type === 'richParagraph') {
+    return `rich:${block.content
+      .map((part) =>
+        typeof part === 'string' ? part : part.type === 'link' ? part.text : part.sourceId,
+      )
+      .join('')
+      .slice(0, 40)}`;
   }
   if (block.type === 'list') {
     return `list:${block.items.length}:${block.items[0] ?? ''}`;
@@ -356,7 +365,52 @@ function PostCallout({
   );
 }
 
-export function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
+function RichParagraph({
+  content,
+  sources,
+}: Readonly<{
+  content: Extract<BlogBlock, { type: 'richParagraph' }>['content'];
+  sources: readonly BlogSource[];
+}>) {
+  return (
+    <p className="website-body text-muted my-4 leading-relaxed">
+      {content.map((part, index) => {
+        if (typeof part === 'string') return <span key={`${part}:${index}`}>{part}</span>;
+        if (part.type === 'link') {
+          return (
+            <Link
+              key={`${part.href}:${index}`}
+              href={part.href}
+              className="text-accent-text decoration-accent-border underline underline-offset-4 hover:decoration-current"
+            >
+              {part.text}
+            </Link>
+          );
+        }
+        const sourceIndex = sources.findIndex((source) => source.id === part.sourceId);
+        const source = sources[sourceIndex];
+        if (!source) return null;
+        return (
+          <a
+            key={`${part.sourceId}:${index}`}
+            href={source.url}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Source ${sourceIndex + 1}: ${source.title}`}
+            className="text-accent-text ml-1 align-super text-xs font-semibold hover:underline"
+          >
+            {part.label ?? `[${sourceIndex + 1}]`}
+          </a>
+        );
+      })}
+    </p>
+  );
+}
+
+export function PostBlock({
+  block,
+  sources = [],
+}: Readonly<{ block: BlogBlock; sources?: readonly BlogSource[] }>) {
   switch (block.type) {
     case 'heading':
       return (
@@ -392,6 +446,8 @@ export function PostBlock({ block }: Readonly<{ block: BlogBlock }>) {
       );
     case 'paragraph':
       return <p className="website-body text-muted my-4 leading-relaxed">{block.text}</p>;
+    case 'richParagraph':
+      return <RichParagraph content={block.content} sources={sources} />;
     case 'table':
       return (
         <PostTable

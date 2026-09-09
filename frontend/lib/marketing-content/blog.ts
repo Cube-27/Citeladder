@@ -53,6 +53,7 @@ export type BlogBlock =
   | { type: 'heading'; text: string }
   | { type: 'subheading'; text: string }
   | { type: 'paragraph'; text: string }
+  | { type: 'richParagraph'; content: readonly BlogInline[] }
   | { type: 'list'; items: readonly string[]; ordered?: boolean }
   | {
       type: 'table';
@@ -74,9 +75,24 @@ export type BlogBlock =
       tone?: 'accent' | 'warning' | 'info';
     };
 
+type BlogInline =
+  | string
+  | { type: 'link'; text: string; href: `/${string}` }
+  | { type: 'citation'; sourceId: string; label?: string };
+
+export type BlogSource = {
+  id: string;
+  title: string;
+  publisher: string;
+  url: `https://${string}` | `http://${string}`;
+  publishedDate?: string;
+};
+
 export type BlogPost = {
   slug: string;
   title: string;
+  seoTitle: string;
+  seoDescription: string;
   excerpt: string;
   image: string;
   date?: string;
@@ -86,6 +102,8 @@ export type BlogPost = {
   authorRole?: string;
   authorUrl?: string;
   tags: readonly string[];
+  sources: readonly BlogSource[];
+  relatedSlugs: readonly string[];
   body: readonly BlogBlock[];
 };
 

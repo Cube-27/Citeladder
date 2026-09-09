@@ -2,7 +2,7 @@
 //
 // Pure logic: no DOM, no window, no React render. The suite-wide jsdom
 // default costs a full environment per file and buys nothing here.
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -43,6 +43,15 @@ import { SOLUTION_SEGMENTS } from './solutions';
  */
 const ALL_LEGAL: readonly LegalDocument[] = [COOKIE_POLICY, AI_POLICY];
 
+function richParagraphText(block: Extract<BlogBlock, { type: 'richParagraph' }>): string {
+  return block.content
+    .map((part) => {
+      if (typeof part === 'string') return part;
+      return part.type === 'link' ? `${part.text} ${part.href}` : part.sourceId;
+    })
+    .join(' ');
+}
+
 /** Every internal href declared anywhere in the marketing content. */
 function internalHrefs(): string[] {
   const fromDrops = NAV_DROPS.flatMap((drop) => [
@@ -61,6 +70,9 @@ function internalHrefs(): string[] {
 }
 
 function blockText(block: BlogBlock): string {
+  if ('text' in block) {
+    return block.type === 'callout' ? `${block.title ?? ''} ${block.text}` : block.text;
+  }
   switch (block.type) {
     case 'list':
       return block.items.join(' ');
@@ -70,13 +82,8 @@ function blockText(block: BlogBlock): string {
       return block.items.map((item) => `${item.title} ${item.description}`).join(' ');
     case 'diagram':
       return `${block.title ?? ''} ${JSON.stringify(block.data)}`;
-    case 'callout':
-      return `${block.title ?? ''} ${block.text}`;
-    case 'subheading':
-    case 'heading':
-    case 'paragraph':
-    default:
-      return block.text;
+    case 'richParagraph':
+      return richParagraphText(block);
   }
 }
 
@@ -156,6 +163,15 @@ describe('pricing content', () => {
 });
 
 describe('blog content', () => {
+  it('provides PNG share images at the dimensions declared in article metadata', () => {
+    for (const post of POSTS) {
+      const image = readFileSync(resolve(process.cwd(), 'public', post.image.slice(1)));
+      expect(image.subarray(0, 8).toString('hex'), post.slug).toBe('89504e470d0a1a0a');
+      expect(image.readUInt32BE(16), post.slug).toBe(1080);
+      expect(image.readUInt32BE(20), post.slug).toBe(630);
+    }
+  });
+
   it('has unique slugs', () => {
     // A duplicate slug makes one post permanently unreachable at
     // `/blog/[slug]`.
@@ -172,6 +188,8 @@ describe('blog content', () => {
   it('gives every post a title, an excerpt, a tag, and a body', () => {
     for (const post of POSTS) {
       expect(post.title.trim(), post.slug).not.toBe('');
+      expect(post.seoTitle.trim(), post.slug).not.toBe('');
+      expect(post.seoDescription.trim(), post.slug).not.toBe('');
       expect(post.excerpt.trim(), post.slug).not.toBe('');
       expect(post.tags.length, post.slug).toBeGreaterThan(0);
       expect(post.body.length, post.slug).toBeGreaterThan(0);
@@ -225,6 +243,49 @@ describe('blog content', () => {
     }
     for (const post of POSTS) {
       expect(post.date, post.slug).toBe('2026-09-03');
+      expect(post.dateModified, post.slug).toBe('2026-09-09');
+    }
+  });
+
+  it('resolves every citation against a unique, safe structured source', () => {
+    for (const post of POSTS) {
+      const sourceIds = post.sources.map((source) => source.id);
+      expect(new Set(sourceIds).size, post.slug).toBe(sourceIds.length);
+      for (const source of post.sources) {
+        expect(source.id, post.slug).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+        expect(['http:', 'https:'], `${post.slug}/${source.id}`).toContain(
+          new URL(source.url).protocol,
+        );
+      }
+      for (const block of post.body) {
+        if (block.type !== 'richParagraph') continue;
+        for (const part of block.content) {
+          if (typeof part !== 'string' && part.type === 'citation') {
+            expect(sourceIds, `${post.slug}/${part.sourceId}`).toContain(part.sourceId);
+          }
+        }
+      }
+    }
+  });
+
+  it('links every post to valid related guides and solutions without self-links', () => {
+    const slugs = POSTS.map((post) => post.slug);
+    for (const post of POSTS) {
+      expect(new Set(post.relatedSlugs).size, post.slug).toBe(post.relatedSlugs.length);
+      expect(post.relatedSlugs, post.slug).not.toContain(post.slug);
+      for (const slug of post.relatedSlugs) expect(slugs, `${post.slug}/${slug}`).toContain(slug);
+      const internalLinks = post.body.flatMap((block) =>
+        block.type === 'richParagraph'
+          ? block.content.flatMap((part) =>
+              typeof part !== 'string' && part.type === 'link' ? [part.href] : [],
+            )
+          : [],
+      );
+      expect(internalLinks, post.slug).toContain('/solutions');
+      expect(
+        internalLinks.some((href) => href.startsWith('/blog/')),
+        post.slug,
+      ).toBe(true);
     }
   });
 });

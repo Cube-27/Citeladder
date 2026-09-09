@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 
 import { BlogPostView } from '@/components/marketing/pages/blog';
 import { POSTS } from '@/lib/marketing-content/blog';
+import { absoluteUrl } from '@/lib/seo/site';
 
 /**
  * Public marketing blog post template (`/blog/[slug]`). Statically generated
@@ -27,24 +28,29 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = POSTS.find((candidate) => candidate.slug === slug);
   if (!post) return {};
-  // The root template appends ' · CiteLadder', so the bare post title is enough.
-  const title = post.title;
-  // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
+  const title = post.seoTitle;
+  const image = absoluteUrl(post.image);
   return {
     title,
-    description: post.excerpt,
+    description: post.seoDescription,
     keywords: [...post.tags, 'AI visibility', 'AEO'],
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
       title,
-      description: post.excerpt,
+      description: post.seoDescription,
       type: 'article',
       siteName: 'CiteLadder',
+      publishedTime: post.date,
+      modifiedTime: post.dateModified ?? post.date,
+      authors: post.author ? [post.author] : undefined,
+      tags: [...post.tags],
+      images: image ? [{ url: image, width: 1080, height: 630, alt: '' }] : undefined,
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title,
-      description: post.excerpt,
+      description: post.seoDescription,
+      images: image ? [image] : undefined,
     },
   };
 }

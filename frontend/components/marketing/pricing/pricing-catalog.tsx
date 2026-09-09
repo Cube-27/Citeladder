@@ -4,7 +4,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
 import {
   billingApi,
   createIdempotencyKey,
@@ -30,7 +29,6 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { BYOK_DISCLOSURE, BYOK_SWITCH_LABEL } from '@/lib/marketing-content/pricing';
 
 import { Section, SectionHeader } from '../primitives/section';
-import { BillingDetailsForm } from '@/components/billing/billing-details-form';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { CatalogPurchases } from './catalog-purchases';
 import { EarlyAccessDialog } from './early-access-dialog';
@@ -39,6 +37,7 @@ import { PricingTierCard } from './pricing-tier-card';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { useByokPricing } from './use-byok-pricing';
+import { PricingBillingDialog } from './pricing-billing-dialog';
 
 const STALE_INTENT_MESSAGE = 'That pricing option is no longer available. Please choose again.';
 
@@ -89,6 +88,7 @@ export function PricingCatalog() {
   const [billingDetails, setBillingDetails] = useState(emptyBillingCustomerDetails);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [earlyAccessOpen, setEarlyAccessOpen] = useState(false);
+  const [selectedCheckout, setSelectedCheckout] = useState<PendingPricingIntentV1 | null>(null);
 
   /**
    * Is anyone signed in? This is a PUBLIC page, so there is no SessionGuard
@@ -111,7 +111,6 @@ export function PricingCatalog() {
       billingApi.catalog(country.length === 2 ? country : undefined, { signal }),
   });
   const catalog = catalogQuery.data ?? null;
-  const checkoutReady = billingDetailsError(country, billingDetails) === null;
   const offerQuery = useQuery({
     queryKey: [...queryKeys.billing.all, 'early-access'],
     queryFn: ({ signal }) => billingApi.noCardOffer({ signal }),
@@ -248,23 +247,6 @@ export function PricingCatalog() {
           </p>
         </div>
 
-        <label htmlFor="pricing-billing-country" className="grid gap-2">
-          Billing country (two-letter code)
-          <Input
-            id="pricing-billing-country"
-            value={country}
-            maxLength={2}
-            autoComplete="country"
-            placeholder="US"
-            onChange={(event) => setCountry(event.target.value.toUpperCase())}
-          />
-        </label>
-        <BillingDetailsForm
-          country={country}
-          details={billingDetails}
-          setDetails={setBillingDetails}
-          idPrefix="pricing"
-        />
         {checkout.data?.quote ? (
           <BillingQuoteSummary
             quote={checkout.data.quote}
@@ -281,12 +263,37 @@ export function PricingCatalog() {
           byok={byok}
           pendingKey={pendingKey}
           earlyAccessAvailable={offerQuery.data?.status === 'available'}
-          runOrCapture={runOrCapture}
+          selectCheckout={setSelectedCheckout}
           openEarlyAccess={() => setEarlyAccessOpen(true)}
           billingDetails={billingDetails}
-          checkoutReady={checkoutReady}
         />
       </Section>
+
+      <PricingBillingDialog
+        open={selectedCheckout !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedCheckout(null);
+        }}
+        country={country}
+        setCountry={setCountry}
+        details={billingDetails}
+        setDetails={setBillingDetails}
+        onContinue={() => {
+          if (!selectedCheckout) return;
+          const intent = {
+            ...selectedCheckout,
+            country_code: country,
+            billing_details: billingDetails,
+          };
+          if (!catalog || !isStillValid(intent, catalog)) {
+            setNotice(STALE_INTENT_MESSAGE);
+            setSelectedCheckout(null);
+            return;
+          }
+          runOrCapture(intent);
+          setSelectedCheckout(null);
+        }}
+      />
 
       <Section tone="sunken" rhythm="tight" aria-label="Plan comparison">
         <SectionHeader
@@ -391,10 +398,9 @@ function PlansGrid({
   byok,
   pendingKey,
   earlyAccessAvailable,
-  runOrCapture,
+  selectCheckout,
   openEarlyAccess,
   billingDetails,
-  checkoutReady,
 }: Readonly<{
   catalog: Catalog | null;
   failed: boolean;
@@ -403,10 +409,9 @@ function PlansGrid({
   byok: boolean;
   pendingKey: string | null;
   earlyAccessAvailable: boolean;
-  runOrCapture: (intent: PendingPricingIntentV1) => void;
+  selectCheckout: (intent: PendingPricingIntentV1) => void;
   openEarlyAccess: () => void;
   billingDetails: BillingCustomerDetails;
-  checkoutReady: boolean;
 }>) {
   if (failed) return <CatalogError onRetry={retry} />;
   if (!catalog) return <LoadingCards />;
@@ -419,10 +424,9 @@ function PlansGrid({
           catalog={catalog}
           mode={mode}
           pending={pendingKey === plan.key}
-          checkoutReady={checkoutReady}
           onCheckout={(selected) => {
             const intent = checkoutIntent(selected, mode, byok, billingDetails);
-            if (intent) runOrCapture(intent);
+            if (intent) selectCheckout(intent);
           }}
           onEarlyAccess={
             plan.key === 'tier_1' && earlyAccessAvailable ? openEarlyAccess : undefined

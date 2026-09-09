@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { BlogIndex } from '@/components/marketing/pages/blog';
 
 const DESCRIPTION =
-  'Field notes on answer-engine optimization, AI visibility measurement, provenance, and BYOK.';
+  'Practical guides, frameworks, and lessons for finding content gaps, strengthening sources, and measuring AI visibility.';
 
 // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
