@@ -248,7 +248,23 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     deploy = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
     assert "group: gcp-demo-deploy" in deploy
     assert "cancel-in-progress: false" in deploy
-    assert deploy.count("gcloud artifacts docker images describe") >= 2
+    # Both images are resolved to a digest before they are deployed, and a
+    # lookup that returns nothing fails the job rather than building an
+    # `image@` reference with an empty digest.
+    #
+    # This asserts the digest RESOLUTION, not the command that performs it:
+    # the previous assertion pinned `images describe`, which was replaced by
+    # `images list --filter` because `describe` additionally reads Container
+    # Analysis occurrences — a separate API the deploy account cannot read.
+    # The property being protected survived that change; the string did not.
+    assert "image_digest()" in deploy
+    assert deploy.count('gcloud artifacts docker images list "$registry/$1"') == 1
+    assert '--filter="tags:$GITHUB_SHA"' in deploy
+    assert deploy.count("image_digest backend") >= 1
+    assert deploy.count("image_digest frontend") >= 1
+    assert 'test -n "$backend_digest"' in deploy
+    assert 'test -n "$frontend_digest"' in deploy
+    assert 'test "$backend_digest" != "$frontend_digest"' in deploy
     assert "if grep -Fxq '0.0.0.0/0'" in deploy
     assert "if grep -Fxq '::/0'" in deploy
     assert "bash /tmp/citeladder-deploy/deploy-vm.sh" in deploy
@@ -332,7 +348,6 @@ def test_backups_are_fixed_and_operational() -> None:
     deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
     backup = (RUNTIME / "backup.sh").read_text(encoding="utf-8")
     storage = (GCP / "storage.tf").read_text(encoding="utf-8")
-    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
     assert "./backup.sh predeploy" in deploy
     assert "restoring the previous runtime and services" in deploy
     assert "runtime.env.previous" in deploy
@@ -350,7 +365,6 @@ def test_backups_are_fixed_and_operational() -> None:
     assert "citeladder-backup.timer" in deploy
     assert "pg_dump" in backup
     assert "age = 10" in storage
-    assert "gcloud artifacts docker images describe" in workflow
 
 
 def test_schema_preflight_precedes_service_shutdown() -> None:
