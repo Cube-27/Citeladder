@@ -28,10 +28,10 @@ def words(text: str) -> list[str]:
 # signal -- no vocabulary of placeholder words to keep current, and no way for a
 # non-English portfolio to slip past an English "[city]"/"[location]" list.
 #
-# Bounded and non-overlapping (the interior class excludes every bracket
-# character, so the closing bracket can only match after it), which keeps this
-# linear -- see `normalization.py` for why that matters on model-supplied text.
-_PLACEHOLDER_SPAN = re.compile(r"[\[{<][^\[\]{}<>]{0,80}[\]}>]")
+# Non-overlapping: the interior class excludes every bracket character, so the
+# closing bracket can only match after it. That keeps the scan linear without
+# letting a long unresolved slot bypass validation.
+_PLACEHOLDER_SPAN = re.compile(r"[\[{<][^\[\]{}<>]*[\]}>]")
 
 
 def contains_placeholder(text: str) -> bool:

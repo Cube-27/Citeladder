@@ -421,7 +421,7 @@ def test_an_unfilled_template_slot_never_becomes_a_measured_prompt() -> None:
 
     slots = build_prompt_slots(
         topics=[{"id": "t1", "name": "Connected E-Bikes", "description": ""}],
-        count=4,
+        count=5,
         cohort="core",
     )
     raw = json.dumps(
@@ -447,6 +447,12 @@ def test_an_unfilled_template_slot_never_becomes_a_measured_prompt() -> None:
                 },
                 {
                     "slot_id": slots[3].slot_id,
+                    "text": f"Best connected e-bikes for [{'city' * 30}]",
+                    "buyer_stage": "consideration",
+                    "prompt_intent": "recommend",
+                },
+                {
+                    "slot_id": slots[4].slot_id,
                     "text": "Where to test ride a connected e-bike in Bengaluru",
                     "buyer_stage": "decision",
                     "prompt_intent": "buy",
@@ -458,7 +464,7 @@ def test_an_unfilled_template_slot_never_becomes_a_measured_prompt() -> None:
     assert [row.text for row in accepted] == [
         "Where to test ride a connected e-bike in Bengaluru"
     ]
-    assert dropped == 3
+    assert dropped == 4
 
 
 def test_ordinary_punctuation_is_not_mistaken_for_a_template_slot() -> None:

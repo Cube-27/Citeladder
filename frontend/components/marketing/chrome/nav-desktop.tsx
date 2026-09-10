@@ -19,6 +19,7 @@ type DesktopNavigationProps = {
   lens: { left: number; width: number } | null;
   panelLeft: number;
   openDrop: NavDropKey | null;
+  openSource: OpenSource | null;
   reduceMotion: boolean;
   linksRef: RefObject<HTMLDivElement | null>;
   clearDropClose: () => void;
@@ -38,6 +39,7 @@ export function DesktopNavigation({
   lens,
   panelLeft,
   openDrop,
+  openSource,
   reduceMotion,
   linksRef,
   clearDropClose,
@@ -135,6 +137,7 @@ export function DesktopNavigation({
           dropKey={openDrop}
           layout={layout}
           panelLeft={panelLeft}
+          animate={openSource === 'hover'}
           clearDropClose={clearDropClose}
           selectDrop={selectDrop}
         />
@@ -147,12 +150,14 @@ function DesktopDropPanel({
   dropKey,
   layout,
   panelLeft,
+  animate,
   clearDropClose,
   selectDrop,
 }: Readonly<{
   dropKey: NavDropKey;
   layout: DropLayout;
   panelLeft: number;
+  animate: boolean;
   clearDropClose: () => void;
   selectDrop: (key?: NavDropKey) => void;
 }>) {
@@ -169,7 +174,8 @@ function DesktopDropPanel({
       }}
       className={cn(
         'bg-panel shadow-elevated absolute top-full rounded-[var(--radius-overlay)] p-3',
-        'marketing-nav-panel mt-2 overflow-hidden',
+        'mt-2 overflow-hidden',
+        animate && 'marketing-nav-panel',
       )}
     >
       <div className={cn('grid', layout[dropKey].twoColumn && 'sm:grid-cols-2')}>

@@ -75,7 +75,7 @@ export function useMarketingSession() {
   const projects = useQuery({
     queryKey: queryKeys.projects.marketingCount(),
     queryFn: ({ signal }) => fetchMarketingProjectCount({ signal }),
-    enabled: Boolean(me.data),
+    enabled: hasSessionHint && Boolean(me.data),
   });
   // Only a settled, successful count of zero is evidence that this account has
   // no projects. While the count is pending or failed we do not know — and the
@@ -91,18 +91,17 @@ export function useMarketingSession() {
   // show, and only then may the pre-hydration mark go. Dropping it on mount
   // would hand the row back to CSS's anonymous default mid-flight — the exact
   // flash the mark exists to prevent.
-  const sessionSettled = !hasSessionHint || !me.isPending;
-  const authenticated = Boolean(me.data);
+  const authenticated = hasSessionHint && Boolean(me.data);
   useEffect(() => {
-    if (!sessionSettled) return;
+    if (!hasSessionHint || me.isPending) return;
     document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
     // A hint that survived a 401 stands for a session revoked before its
     // expiry (signed out in another tab, or `session_version` bumped). Left
     // alone it would paint "Dashboard" again on the next load and swap it for
     // "Log in" a moment later, which is the flicker this whole path exists to
     // remove. Expire it so that mistake is made at most once.
-    if (hasSessionHint && !authenticated) clearSessionHintCookie();
-  }, [sessionSettled, authenticated, hasSessionHint]);
+    if (!authenticated && me.isSuccess) clearSessionHintCookie();
+  }, [authenticated, hasSessionHint, me.isPending, me.isSuccess]);
 
   return {
     // Only a visitor carrying the backend-issued hint has a session question
@@ -114,7 +113,7 @@ export function useMarketingSession() {
     // when this browser still holds the backend's session hint cookie, which
     // is where the swap would actually have happened. Everyone else gets
     // "Log in" and the demo CTA in the first paint.
-    sessionPending: hasSessionHint && me.isPending,
+    sessionPending: me.isPending,
     isAuthenticated: authenticated,
     dashboardHref: knownEmpty ? '/onboarding' : '/projects',
     hasSessionHint,

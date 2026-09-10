@@ -622,7 +622,7 @@
       "frontendE2E": ["e2e/marketing-pages.spec.ts", "e2e/landing-nav.spec.ts"]
     },
     {
-      "sources": ["frontend/components/analytics/**"],
+      "sources": ["frontend/components/analytics/**", "frontend/lib/consent/**"],
       "frontendTests": [
         "components/analytics/*.test.tsx",
         "components/marketing/chrome/cookie-banner.test.tsx"

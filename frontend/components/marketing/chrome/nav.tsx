@@ -39,6 +39,7 @@ function useScrolled() {
 
 function useDesktopDropdown() {
   const [openDrop, setOpenDrop] = useState<NavDropKey | null>(null);
+  const [openSource, setOpenSource] = useState<OpenSource | null>(null);
   const [lens, setLens] = useState<{ left: number; width: number } | null>(null);
   const [panelLeft, setPanelLeft] = useState(0);
   const closeTimer = useRef<number | null>(null);
@@ -58,7 +59,10 @@ function useDesktopDropdown() {
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
     closeTimer.current = null;
   };
-  const closeDrop = () => setOpenDrop(null);
+  const closeDrop = () => {
+    setOpenDrop(null);
+    setOpenSource(null);
+  };
   const selectDrop = (key?: NavDropKey) => {
     suppressedDrop.current = key ?? null;
     clearDropClose();
@@ -97,6 +101,7 @@ function useDesktopDropdown() {
     }
     clearDropClose();
     setOpenDrop(key);
+    setOpenSource(source);
     moveLens(trigger);
     const triggerBox = trigger.getBoundingClientRect();
     const containerBox = container.getBoundingClientRect();
@@ -129,6 +134,7 @@ function useDesktopDropdown() {
 
   return {
     openDrop,
+    openSource,
     lens,
     panelLeft,
     linksRef,
@@ -156,6 +162,7 @@ export function MarketingNav() {
     navRef,
     linksRef,
     openDrop,
+    openSource,
     lens,
     panelLeft,
     clearDropClose,
@@ -240,6 +247,7 @@ export function MarketingNav() {
           lens={lens}
           panelLeft={panelLeft}
           openDrop={openDrop}
+          openSource={openSource}
           reduceMotion={reduceMotion}
           linksRef={linksRef}
           clearDropClose={clearDropClose}
