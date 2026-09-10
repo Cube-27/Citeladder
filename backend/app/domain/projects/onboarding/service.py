@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.normalization import normalize_alias
 from app.connectors.web_evidence.url_policy import registrable_domain
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,
@@ -68,7 +69,6 @@ from app.domain.projects.schemas import BrandInput, CompetitorInput, ProjectCrea
 from app.domain.projects.service import create_project
 from app.domain.prompts.portfolio_validation import brand_terms
 from app.domain.prompts.service import prepare_prompt_inserts
-from app.domain.prompts.style import words
 from app.models.discovery import (
     BrandDiscovery,
     BrandDiscoveryTask,
@@ -707,32 +707,43 @@ def _seed_brand_aliases(brand_name: str, domains: list[str]) -> list[str]:
     list: aliases are editable on the project, and the compact matching in
     `app.analysis.normalization` covers the joined/split pair either way.
 
-    A label is only trusted when it SHARES A TOKEN with the confirmed brand
-    name. `_domain_brand_aliases` was written as a ban list for generated
-    prompts, where an over-broad entry only costs a prompt; here the same
-    string decides what counts as a mention, where an over-broad entry inflates
-    the number the customer is paying to measure. "shop-online.com" would
-    otherwise make every "shop online" in every answer a sighting of the brand.
+    A label is only trusted when it is RECOGNISABLY THIS BRAND.
+    `_domain_brand_aliases` was written as a ban list for generated prompts,
+    where an over-broad entry only costs a prompt; here the same string decides
+    what counts as a mention, where an over-broad entry inflates the number the
+    customer is paying to measure. "shop-online.com" would otherwise make every
+    "shop online" in every answer a sighting of the brand.
     """
-    brand_tokens = {token for token in words(brand_name) if len(token) >= 3}
     brand_key = brand_name.strip().casefold()
     return [
         alias
         for alias in _domain_brand_aliases(domains)
-        if alias.casefold() != brand_key and _shares_token(alias, brand_tokens)
+        if alias.casefold() != brand_key and _names_the_brand(alias, brand_name)
     ]
 
 
-def _shares_token(alias: str, brand_tokens: set[str]) -> bool:
-    """True when the label is recognisably this brand rather than a phrase.
+def _names_the_brand(alias: str, brand_name: str) -> bool:
+    """True when label and brand name are the same name, spelled two ways.
 
-    The label is one run of characters ("bestandless"), so the brand's tokens
-    are looked for INSIDE it rather than compared to it.
+    Compared as PREFIXES of each other with the separators removed, because
+    that is the actual relationship between a name and its domain: "Best &
+    Less" is "bestandless", "I Love Dooney" is "ilovedooney", and "Kmart
+    Australia" shortens to "kmart". Looking for a brand token anywhere inside
+    the label instead let a short one match by accident -- a brand whose name
+    contains "art" would have authorised "cart-example" and then counted every
+    "cart example" in every answer as a sighting.
+
+    Compacted through `normalize_alias`, the same function the scorer matches
+    with, so "&" becomes "and" on both sides. Tokenizing instead DROPS the
+    ampersand, which made "Best & Less" fail to recognise "bestandless" -- the
+    exact pair this whole change exists to connect.
     """
-    if not brand_tokens:
+    label = normalize_alias(alias).replace(" ", "")
+    brand = normalize_alias(brand_name).replace(" ", "")
+    if not label or not brand:
         return False
-    folded = alias.casefold()
-    return any(token in folded for token in brand_tokens)
+    shorter, longer = sorted((label, brand), key=len)
+    return len(shorter) >= 4 and longer.startswith(shorter)
 
 
 async def _generate_confirmed_portfolio(
