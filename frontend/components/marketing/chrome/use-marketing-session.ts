@@ -75,7 +75,15 @@ export function useMarketingSession() {
     queryFn: ({ signal }) => fetchMarketingProjectCount({ signal }),
     enabled: Boolean(me.data),
   });
+  // Only a settled, successful count of zero is evidence that this account has
+  // no projects. While the count is pending or failed we do not know — and the
+  // two guesses are not symmetric. `/projects` sits behind `OnboardingGate`,
+  // which redirects authoritatively when the account really has none; nothing
+  // corrects a wrong trip to `/onboarding`, and that trip is how someone ends
+  // up creating a second project their plan does not allow. So unknown routes
+  // to `/projects`.
   const hasProject = (projects.data ?? 0) > 0 || hasStoredProject;
+  const knownEmpty = projects.isSuccess && !hasProject;
 
   // Only once `me` has answered does React know what the actions row should
   // show, and only then may the pre-hydration mark go. Dropping it on mount
@@ -107,7 +115,7 @@ export function useMarketingSession() {
     // "Log in" and the demo CTA in the first paint.
     sessionPending: me.isPending,
     isAuthenticated: authenticated,
-    dashboardHref: hasProject ? '/projects' : '/onboarding',
+    dashboardHref: knownEmpty ? '/onboarding' : '/projects',
   };
 }
 

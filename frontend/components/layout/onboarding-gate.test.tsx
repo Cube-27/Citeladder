@@ -121,6 +121,31 @@ describe('OnboardingGate', () => {
   });
 });
 
+/**
+ * A refetch that FAILS does not advance `dataUpdatedAt`, so a committed
+ * selection stays unconfirmed. Without the error branch covering that, the
+ * skeleton held forever with no error and no retry — and a flaky connection is
+ * exactly when it happens, which is the failure this change exists to stop
+ * looking like a bug.
+ */
+it('offers recovery when a pending selection is stranded by a failed refetch', () => {
+  contextValue = {
+    projects: [{ id: 'p1' } as Project],
+    isLoading: false,
+    isError: true,
+    hasPendingSelection: true,
+  };
+  render(
+    <OnboardingGate>
+      <p>workspace</p>
+    </OnboardingGate>,
+  );
+
+  expect(replace).not.toHaveBeenCalled();
+  expect(screen.getByRole('heading', { name: 'Projects could not be loaded' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+});
+
 it('keeps failed project lookup recoverable without redirecting to onboarding', async () => {
   contextValue = { projects: [], isLoading: false, isError: true, hasPendingSelection: false };
   const { queryClient } = render(

@@ -1,8 +1,8 @@
 # Account management and billing: one authenticated shell, agency workspaces, and a portable commercial core
 
 > **Status:** proposed, three phases, in order. Written 2026-09-10 after a
-> customer (`arpan@cube27.com`) lost their first project to a provider-boundary
-> race.
+> customer lost their first project to a provider-boundary race. The account is
+> not stuck; the incident is recorded in the PR that shipped the interim fix.
 >
 > This is the guiding document for account management and billing. Phase 1 is
 > ready to implement. Phase 2 is a design to build. Phase 3 is explicitly
@@ -63,7 +63,7 @@ route groups contribute layouts without contributing URL segments, and they
 nest, so `app/(authed)/(app)/projects/page.tsx` still serves `/projects`. No
 route changes, no redirects, no external URL churn.
 
-```
+```text
 app/(authed)/layout.tsx          ← SessionGuard + ProjectProvider + EntitlementProvider
 app/(authed)/(app)/layout.tsx    ← Suspense + ProductTour + Toast + OnboardingGate + AppShell
 app/(authed)/(app)/…             ← the 14 existing route directories, unchanged

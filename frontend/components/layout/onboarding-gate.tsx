@@ -62,7 +62,12 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
     }
   }, [needsOnboarding, router]);
 
-  if (isError && projects.length === 0) {
+  // A pending selection belongs here as much as an empty list. `dataUpdatedAt`
+  // does not advance when a refetch FAILS, so the selection stays unconfirmed —
+  // and without this branch the skeleton below would hold forever, with no
+  // error and no way to retry. Transient network is exactly when that happens,
+  // and it is the failure this whole change is meant to stop looking like a bug.
+  if (isError && (projects.length === 0 || hasPendingSelection)) {
     return (
       <main
         id="main"

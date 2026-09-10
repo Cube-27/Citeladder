@@ -439,4 +439,34 @@ describe('MarketingNav', () => {
     );
     expect(screen.queryByRole('link', { name: /book a demo/i })).toBeNull();
   });
+
+  /**
+   * An unresolved project count is not evidence of an empty account, and the
+   * two guesses are not symmetric: `/projects` is gated and redirects
+   * authoritatively when the account really has none, whereas nothing corrects
+   * a wrong trip to `/onboarding` — which is how someone ends up creating a
+   * second project their plan does not allow.
+   */
+  it('sends an unresolved project count to the workspace, not to onboarding', async () => {
+    mswServer.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({
+          user: {
+            id: '11111111-1111-4111-8111-111111111111',
+            email: 'evaluator@example.com',
+            role: 'user',
+            is_active: true,
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+          },
+        }),
+      ),
+      http.get('/api/v1/projects', () => HttpResponse.json({ detail: 'boom' }, { status: 500 })),
+    );
+    renderWithProviders(<MarketingNav />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/projects'),
+    );
+  });
 });
