@@ -20,6 +20,9 @@ artifacts/
 # Node / frontend (F1+)
 node_modules/
 .next/
+/.playwright/
+frontend/.playwright-cli/
+/.playwright-cli/
 
 # The root package.json only delegates to frontend/ and backend/; it declares
 # no dependencies. pnpm still materializes an empty project there on any root
@@ -46,3 +49,18 @@ backend/.runtime/
 .coverage.*
 coverage.xml
 htmlcov/
+
+# Playwright CLI saved browser state. These files hold live session cookies
+# and auth tokens. The skill's own examples write `auth.json` and
+# `my-auth-state.json` as well as the `*.auth-state.json` it recommends
+# ignoring, so all three shapes are covered -- a footgun that only bites once.
+auth.json
+*.auth-state.json
+*-auth-state.json
+.auth/
+
+# Coding-agent config. `.claude/settings.json` is shared (it carries the
+# permission rules for the repository's own tooling) and stays tracked; the
+# rest is per-developer — a personal output style, a local launch profile.
+.claude/*
+!.claude/settings.json

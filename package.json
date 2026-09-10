@@ -18,6 +18,7 @@
     "setup:backend": "uv sync --frozen --extra dev --directory backend",
     "build": "pnpm --dir frontend build",
     "dev": "pnpm --dir frontend dev",
+    "playwright:cli": "pnpm --dir frontend exec playwright cli",
     "test": "pnpm run test:frontend && pnpm run test:backend",
     "test:frontend": "pnpm --dir frontend test",
     "test:backend": "uv run --directory backend python -m pytest",

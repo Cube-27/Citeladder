@@ -56,6 +56,27 @@ pnpm dev                    # http://127.0.0.1:3000
 `BACKEND_ORIGIN` is **server-only**. The browser calls relative `/api/*`; Next.js
 `rewrites()` proxy those to `BACKEND_ORIGIN` (see gotcha 2 below).
 
+## Browser automation for coding agents
+
+CiteLadder's pinned frontend Playwright dependency also provides the
+token-efficient Playwright Agent CLI. The repository-local skill is under
+`.agents/skills/playwright-cli`; use the root command below so no global npm
+install is required:
+
+```powershell
+# Start an isolated, headless browser session against a local app.
+pnpm run playwright:cli -- open http://127.0.0.1:3000
+
+# Follow the element refs from the CLI snapshot, then end the session.
+pnpm run playwright:cli -- snapshot
+pnpm run playwright:cli -- close
+```
+
+The first CLI use provisions its workspace under `.playwright/` and downloads
+its browser only when a suitable installed browser is unavailable. CLI session
+artifacts are local-only (`.playwright-cli/`). This agent interface is separate
+from, and does not replace, the Playwright Test runner used by `pnpm test:e2e`.
+
 ## Running the full stack with Docker Compose
 
 The Compose path is the clean-clone workflow. From the repository root, it builds and starts
