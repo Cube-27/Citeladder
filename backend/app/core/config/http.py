@@ -19,4 +19,7 @@ PROMPT_IMPORT_MAX_ROWS: Final = 500
 # config/audits.py) — same bound, two owners on purpose: the DTO knob bounds
 # what is WRITTEN; the planner knob bounds what may RUN (frozen snapshot).
 PROMPT_TEXT_MAX_CHARS: Final = 300
+# The floor that stops a degenerate row reaching a paid answer engine. Well
+# below any real query -- it exists to reject "x", not to shape phrasing.
+PROMPT_TEXT_MIN_WORDS: Final = 2
 PROMPT_INTENT_MAX_CHARS: Final = 64

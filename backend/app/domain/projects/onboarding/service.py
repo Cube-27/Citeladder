@@ -36,7 +36,7 @@ from app.core.config.prompts import (
     PROMPT_COHORT_CORE,
 )
 from app.core.config.visibility_prompts import (
-    BUYER_QUERY_ARCHETYPE_VERSION,
+    BUYER_QUERY_POLICY_VERSION,
     TOPIC_SELECTION_PROMPT_VERSION,
     VISIBILITY_TOPIC_MAX,
 )
@@ -68,6 +68,7 @@ from app.domain.projects.schemas import BrandInput, CompetitorInput, ProjectCrea
 from app.domain.projects.service import create_project
 from app.domain.prompts.portfolio_validation import brand_terms
 from app.domain.prompts.service import prepare_prompt_inserts
+from app.domain.prompts.style import words
 from app.models.discovery import (
     BrandDiscovery,
     BrandDiscoveryTask,
@@ -442,8 +443,7 @@ def _generated_prompts(
                 origin="generated",
                 generation_evidence={
                     "generator_version": BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,
-                    "buyer_query_archetype_version": BUYER_QUERY_ARCHETYPE_VERSION,
-                    "buyer_query_archetype": str(item.get("archetype") or ""),
+                    "buyer_query_policy_version": BUYER_QUERY_POLICY_VERSION,
                     "buyer_query_slot_id": str(item.get("slot_id") or ""),
                     "discovery_id": str(discovery_id),
                     "provider": provider,
@@ -480,7 +480,9 @@ async def _persist_project_shell(
         payload=ProjectCreate(
             name=payload.name or str(data["brand_name"]),
             brand_name=str(data["brand_name"]),
-            brand=BrandInput(),
+            brand=BrandInput(
+                aliases=_seed_brand_aliases(str(data["brand_name"]), list(row.domains))
+            ),
             website_url=str(data["website_url"]),
             industry=str(data["industry"]),
             subindustry=str(data.get("subindustry") or ""),
@@ -689,6 +691,48 @@ def _domain_brand_aliases(domains: list[str]) -> list[str]:
         if len(label) >= 4:
             aliases.append(label)
     return list(dict.fromkeys(aliases))
+
+
+def _seed_brand_aliases(brand_name: str, domains: list[str]) -> list[str]:
+    """The brand's own aliases, seeded from what onboarding already confirmed.
+
+    Competitors arrive from research carrying aliases; the brand arrived with
+    none, and nothing downstream ever filled them, so a project's brand was
+    matched by exactly one spelling -- whichever one happened to be typed into
+    the setup form. A brand whose name was entered as its domain label then
+    scored zero visibility against competitors that scored normally.
+
+    The domain label is confirmed evidence of a second spelling and costs
+    nothing to record. It is not a substitute for the owner correcting the
+    list: aliases are editable on the project, and the compact matching in
+    `app.analysis.normalization` covers the joined/split pair either way.
+
+    A label is only trusted when it SHARES A TOKEN with the confirmed brand
+    name. `_domain_brand_aliases` was written as a ban list for generated
+    prompts, where an over-broad entry only costs a prompt; here the same
+    string decides what counts as a mention, where an over-broad entry inflates
+    the number the customer is paying to measure. "shop-online.com" would
+    otherwise make every "shop online" in every answer a sighting of the brand.
+    """
+    brand_tokens = {token for token in words(brand_name) if len(token) >= 3}
+    brand_key = brand_name.strip().casefold()
+    return [
+        alias
+        for alias in _domain_brand_aliases(domains)
+        if alias.casefold() != brand_key and _shares_token(alias, brand_tokens)
+    ]
+
+
+def _shares_token(alias: str, brand_tokens: set[str]) -> bool:
+    """True when the label is recognisably this brand rather than a phrase.
+
+    The label is one run of characters ("bestandless"), so the brand's tokens
+    are looked for INSIDE it rather than compared to it.
+    """
+    if not brand_tokens:
+        return False
+    folded = alias.casefold()
+    return any(token in folded for token in brand_tokens)
 
 
 async def _generate_confirmed_portfolio(

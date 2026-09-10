@@ -13,7 +13,13 @@ import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { RankingRowsTable } from '@/components/visibility/ranking-rows';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
 import type { Visibility, VisibilityTrendPoint } from '@/lib/api/types';
-import { formatRate, type VisibilityFilters } from '@/lib/visibility/dashboard';
+import {
+  formatPercent,
+  formatPosition,
+  formatPositionExact,
+  formatRate,
+  type VisibilityFilters,
+} from '@/lib/visibility/dashboard';
 import { formatPointDate, toChartPoints, toCompetitorSeries } from '@/lib/visibility/trends';
 import { changeLabel, observationLabel } from '@/lib/visibility/vocabulary';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
@@ -54,6 +60,7 @@ export function VisibilityTrends({
   if (!selected) return <p aria-busy="true">Loading selected measurement…</p>;
   return (
     <Stack gap="workspace" aria-busy={visibilityQuery.isFetching}>
+      <PooledSelectionNote selected={selected} />
       <HeadlineMetrics selected={selected} />
       <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-2">
         <MeasurementHistory query={query} metric={metric} setMetric={setMetric} />
@@ -92,6 +99,29 @@ export function VisibilityTrends({
   );
 }
 
+/**
+ * What "All runs in period" actually pooled.
+ *
+ * Runs are only comparable within one frozen configuration, so pooling a period
+ * takes the runs of a single configuration — the most recent one — and leaves
+ * the rest out. That is the right measurement and the wrong silence: a reader
+ * who ran the same prompts against three model line-ups sees a number drawn
+ * from one of them under a chip that says "all runs", with no way to tell that
+ * runs were dropped or that the dropped ones scored differently.
+ */
+function PooledSelectionNote({ selected }: { selected: Visibility }) {
+  const groups = selected.configuration_groups;
+  if (selected.selection_mode !== 'range' || !groups) return null;
+  const total = Object.values(groups).reduce((sum, count) => sum + count, 0);
+  const pooled = selected.source_audit_ids?.length ?? 0;
+  if (Object.keys(groups).length < 2 || pooled >= total) return null;
+  return (
+    <Alert tone="info">
+      {`Pooled the ${pooled} of ${total} runs in this period that share one measurement setup. The other ${total - pooled} used a different set of models or prompts, so their answers are not comparable with these and are not counted here — open them individually from the measurement menu.`}
+    </Alert>
+  );
+}
+
 function HeadlineMetrics({ selected }: { selected: Visibility }) {
   const brand = selected.rankings.find((row) => row.is_brand);
   const count = selected.counts;
@@ -119,8 +149,9 @@ function HeadlineMetrics({ selected }: { selected: Visibility }) {
     },
   ];
   // Position is a rank, not a rate, so it renders beside the rates rather than
-  // through `formatRate`. Runs measured before competitor offsets were
-  // persisted have none, and the tile is omitted rather than shown empty.
+  // through `formatRate`, and as a whole place rather than the mean's fraction.
+  // Runs measured before competitor offsets were persisted have none, and the
+  // tile is omitted rather than shown empty.
   const position = brand?.avg_position ?? selected.avg_position ?? null;
   return (
     <MetricGroup>
@@ -149,12 +180,11 @@ function HeadlineMetrics({ selected }: { selected: Visibility }) {
             <span className="inline-flex items-center gap-1.5">
               Average position
               <InfoHint label="Average position">
-                Where your brand tends to appear among the brands an answer names. Counted only over
-                the answers that named you.
+                {`Where your brand tends to appear among the brands an answer names. Counted only over the answers that named you, and averaged to ${formatPositionExact(position)}.`}
               </InfoHint>
             </span>
           }
-          value={`#${position.toFixed(1)}`}
+          value={formatPosition(position)}
         />
       )}
     </MetricGroup>
@@ -171,9 +201,16 @@ function MeasurementHistory({
   setMetric: (value: (typeof VISIBILITY_METRICS)[number]['value']) => void;
 }) {
   const points = query.data ?? [];
+  const metricLabel =
+    VISIBILITY_METRICS.find((item) => item.value === metric)?.label ?? 'Visibility';
   const chartPoints = toChartPoints(points, metric).map((point, index) => ({
     ...point,
-    label: `${formatPointDate(points[index].completed_at)} · ${formatRate(point.value)}`,
+    // The plotted values are already whole percent, so `formatRate` — which
+    // scales a 0–1 rate — turned 38% into "3800%" in every hover label.
+    label: `${formatPointDate(points[index].completed_at)} · ${formatPercent(point.value)}`,
+    // The full date is the hover; the axis tick gets the short form the
+    // series was built with, so the ticks stay readable at three across.
+    axisLabel: point.label,
   }));
   const competitors = toCompetitorSeries(points, metric);
   return (
@@ -195,10 +232,15 @@ function MeasurementHistory({
         ) : (
           <Stack gap="compact" aria-busy={query.isFetching}>
             <TrendChart
-              label="Visibility over time"
+              label={`${metricLabel} over time`}
               data={chartPoints}
               series={competitors}
-              className="w-full"
+              width={360}
+              height={168}
+              xAxisLabel="Run date"
+              yAxisLabel={metricLabel}
+              formatTick={(value) => `${Math.round(value)}%`}
+              className="h-auto w-full"
             />
             {competitors.length ? (
               <ul className="flex flex-wrap gap-x-4 gap-y-1">

@@ -303,8 +303,15 @@ async def test_generation_drops_off_domain_model_output(
                         {
                             "slot_id": "q1",
                             "text": "Best running shoes for flat feet",
+                            "buyer_stage": "consideration",
+                            "prompt_intent": "recommend",
                         },
-                        {"slot_id": "q2", "text": "Best laptops for programming"},
+                        {
+                            "slot_id": "q2",
+                            "text": "Best laptops for programming",
+                            "buyer_stage": "consideration",
+                            "prompt_intent": "recommend",
+                        },
                     ]
                 }
             )

@@ -43,7 +43,8 @@ from tests.component.occupancy_helpers import (
     revoke_signup_baseline_grants,
     seed_occupancy_grants,
 )
-from tests.fixtures.archetype_text import (
+from tests.fixtures.prompt_generation import (
+    labelled_row,
     satisfies_slot,
     slot_text,
     slots_from_user_message,
@@ -131,9 +132,9 @@ class FakeAgent:
         return json.dumps(
             {
                 "prompts": [
-                    {
-                        "slot_id": slot["slot_id"],
-                        "text": _slot_text(
+                    labelled_row(
+                        slot,
+                        _slot_text(
                             slot,
                             candidate_texts[index]
                             if index < len(candidate_texts)
@@ -141,7 +142,7 @@ class FakeAgent:
                             index,
                             self.fallback_discriminator,
                         ),
-                    }
+                    )
                     for index, slot in enumerate(slots)
                 ]
             }
@@ -250,12 +251,11 @@ async def test_generate_creates_prompts_under_existing_topic(
     assert body["dropped_duplicates"] == 0
     assert len(body["generated"]) == 3
     assert {p["status"] for p in body["generated"]} == {"active"}
-    archetypes = {
-        p["generation_evidence"]["buyer_query_archetype"] for p in body["generated"]
-    }
-    # Three slots for one topic: the recommendation archetype is weighted
-    # heaviest, so it is planned twice before the recipe moves on.
-    assert archetypes == {"consideration_recommend", "decision_buy"}
+    assert {p["prompt_intent"] for p in body["generated"]} == {"recommend"}
+    assert all(
+        "buyer_query_archetype" not in p["generation_evidence"]
+        for p in body["generated"]
+    )
     for prompt in body["generated"]:
         assert prompt["origin"] == "generated"
         assert prompt["topic_id"] is not None
@@ -341,12 +341,8 @@ async def test_generate_persists_provenance_evidence(
         evidence = prompt.generation_evidence
         assert evidence is not None
         assert evidence["generator_version"] == "prompt-gen-v19"
-        assert evidence["buyer_query_archetype_version"] == "buyer-query-archetypes-v2"
-        assert evidence["buyer_query_archetype"] in {
-            "consideration_recommend",
-            "decision_buy",
-            "consideration_compare",
-        }
+        assert evidence["buyer_query_policy_version"] == "buyer-query-policy-2"
+        assert "buyer_query_archetype" not in evidence
         assert evidence["generation_mode"] == "model"
         assert evidence["model_identity"] == {
             "transport_host": "agent.test",
@@ -616,13 +612,7 @@ async def test_generate_into_target_topic(
 async def test_topic_scoped_generation_plans_only_that_topic(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Generating into one topic still spans the funnel and stays on that topic.
-
-    The topic-scoped path is the one a user reaches from a topic in the rail,
-    and it is the case where a single-archetype plan would be least visible:
-    every prompt lands under one heading, so a portfolio of five
-    recommendation queries looks intentional rather than broken.
-    """
+    """Generation respects the selected canonical topic without label quotas."""
     project, prompt_set_id = await _make_project_and_set(
         client, "gen-scoped@example.com"
     )
@@ -646,9 +636,9 @@ async def test_topic_scoped_generation_plans_only_that_topic(
     # Every prompt belongs to the requested topic — the other project topic is
     # never planned for.
     assert {prompt["topic_id"] for prompt in generated} == {target["id"]}
-    # And the seven slots span the buyer journey rather than repeating one job.
-    assert len({prompt["buyer_stage"] for prompt in generated}) >= 3
-    assert len({prompt["prompt_intent"] for prompt in generated}) >= 4
+    # The fake returns one label throughout; no funnel allocation overrides it.
+    assert {prompt["buyer_stage"] for prompt in generated} == {"consideration"}
+    assert {prompt["prompt_intent"] for prompt in generated} == {"recommend"}
     # The slots the model was given name only the scoped topic.
     planned = slots_from_user_message(agent.calls[0]["user"])
     assert {slot["topic"] for slot in planned} == {"School Uniforms"}
@@ -711,14 +701,7 @@ async def test_generation_reuses_existing_topic_with_description(
 def _agent_response_with_n_prompts(
     n: int, *, topic: str = "Running Shoes", discriminator: str = ""
 ) -> str:
-    """A single-topic response carrying ``n`` distinct prompts.
-
-    Texts embed the topic so responses from different runs never collide on
-    the per-set dedupe hash (letting a test insert fresh rows each run), and
-    each opens with a different token: generation caps how many prompts may
-    share their first three words, so a stub that repeats one opening is
-    rejected as templated rather than accepted as a batch.
-    """
+    """A single-topic response with distinct texts for occupancy tests."""
     text_prefix = discriminator or topic
     return json.dumps(
         {
@@ -765,13 +748,9 @@ async def test_generate_activates_validated_requested_count(
     )
     assert resp.status_code == 201
     body = resp.json()
-    # A single topic used to cap the plan at one slot per sentence frame, so a
-    # request for twenty silently returned four. The planner now cycles
-    # archetypes and surface forms, so the request is genuinely planned; the
-    # exact plan size is asserted in the planner's own unit test, and a few of
-    # this stub's canned texts still lose to the style gates.
+    # A single topic can fill the requested count without recipe limits.
     generated = body["generated"]
-    assert len(generated) > 4
+    assert len(generated) == 20
     assert [p["status"] for p in generated] == ["active"] * len(generated)
 
 
@@ -792,8 +771,8 @@ async def test_generate_comparison_cohort_is_active_and_branded(
             grants=(GrantSpec(key=KEY_PROMPT_SLOTS, value=2),),
         )
         await session.commit()
-    # Ten existing core prompts plus ten named comparisons settle at 12 active:
-    # 10 core + 2 comparison, because int(12 * 0.2) == 2.
+    # Ten existing prompts leave room for two more. Generation must not hide
+    # an over-capacity request by silently shortening its slot plan.
     for i in range(10):
         created = await client.post(
             f"/api/v1/prompt-sets/{prompt_set_id}/prompts",
@@ -825,6 +804,14 @@ async def test_generate_comparison_cohort_is_active_and_branded(
     resp = await client.post(
         f"/api/v1/prompt-sets/{prompt_set_id}/generate",
         json={"count": 10, "cohort": "comparison", "confirm_send_evidence": True},
+    )
+    assert resp.status_code == 403
+    listed = (await client.get(f"/api/v1/prompt-sets/{prompt_set_id}")).json()
+    assert len(listed["prompts"]) == 10
+
+    resp = await client.post(
+        f"/api/v1/prompt-sets/{prompt_set_id}/generate",
+        json={"count": 2, "cohort": "comparison", "confirm_send_evidence": True},
     )
     assert resp.status_code == 201
     body = resp.json()
@@ -876,7 +863,7 @@ async def test_generate_brand_diagnostic_uses_named_cohort_rules(
     assert [item["cohort"] for item in response.json()["generated"]] == [
         "brand_diagnostic"
     ]
-    assert "Every prompt must name the tracked brand" in agent.calls[0]["system"]
+    assert "Every query must name the tracked brand" in agent.calls[0]["system"]
 
 
 @pytest.mark.asyncio
@@ -889,18 +876,34 @@ async def test_generate_counts_intra_response_duplicates(
         response=json.dumps(
             {
                 "prompts": [
-                    {"slot_id": "q1", "text": "Best running shoes for flat feet"},
-                    {"slot_id": "q1", "text": "Best running shoes for flat feet"},
+                    {
+                        "slot_id": "q1",
+                        "text": "Best running shoes for flat feet",
+                        "buyer_stage": "consideration",
+                        "prompt_intent": "recommend",
+                    },
+                    {
+                        "slot_id": "q1",
+                        "text": "Best running shoes for flat feet",
+                        "buyer_stage": "consideration",
+                        "prompt_intent": "recommend",
+                    },
                     {
                         "slot_id": "q2",
+                        "buyer_stage": "consideration",
+                        "prompt_intent": "recommend",
                         "text": "Where to buy running shoes for marathon training",
                     },
                     {
                         "slot_id": "q3",
+                        "buyer_stage": "consideration",
+                        "prompt_intent": "recommend",
                         "text": "Are cheap running shoes worth buying for beginners",
                     },
                     {
                         "slot_id": "q4",
+                        "buyer_stage": "consideration",
+                        "prompt_intent": "recommend",
                         "text": "Best road running shoes compared with trail options",
                     },
                 ]

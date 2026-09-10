@@ -40,7 +40,6 @@ PROMPT_COHORTS: Final[frozenset[str]] = ORGANIC_PROMPT_COHORTS | {
 REQUESTABLE_PROMPT_COHORTS: Final[frozenset[str]] = frozenset(
     {PROMPT_COHORT_CORE, PROMPT_COHORT_COMPARISON, PROMPT_COHORT_COMMERCE}
 )
-PROMPT_NEAR_DUPLICATE_SIMILARITY: Final = 0.9
 ONBOARDING_PROMPT_SET_NAME: Final = "AI Visibility"
 
 # --- Topic origin ----------------------------------------------------------

@@ -13,7 +13,6 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from difflib import SequenceMatcher
 from typing import Any
 
 from sqlalchemy import select
@@ -26,11 +25,10 @@ from app.connectors.agent.gateway import ModelGateway
 from app.core.config.projects import PROMPT_ORIGIN_GENERATED
 from app.core.config.prompts import (
     GENERATOR_VERSION,
-    PROMPT_NEAR_DUPLICATE_SIMILARITY,
     PROMPT_STATUS_ACTIVE,
     prompt_generation_settings,
 )
-from app.core.config.visibility_prompts import BUYER_QUERY_ARCHETYPE_VERSION
+from app.core.config.visibility_prompts import BUYER_QUERY_POLICY_VERSION
 from app.domain.projects.knowledge_base import build_brand_knowledge_data
 from app.domain.projects.shim import project_scoring_identity
 from app.domain.prompts.generation_contract import (
@@ -50,7 +48,6 @@ from app.domain.prompts.generation_filtering import (
     build_validator,
     filter_for_cohort,
     generation_system_prompt,
-    supported_qualifiers,
 )
 from app.domain.prompts.locks import acquire_project_lock, acquire_prompt_set_lock
 from app.domain.prompts.normalization import prompt_text_hash
@@ -130,24 +127,16 @@ async def _load_prompt_set_with_project(
 def _drop_cross_batch_duplicates(
     existing: list[SuggestedTopic], incoming: list[SuggestedTopic]
 ) -> tuple[list[SuggestedTopic], int]:
-    """Remove and count rows too similar to an earlier accepted batch."""
-    previous = [
-        " ".join(prompt.text.casefold().split())
-        for topic in existing
-        for prompt in topic.prompts
-    ]
+    """Remove and count normalized exact duplicates across accepted batches."""
+    previous = {
+        prompt_text_hash(prompt.text) for topic in existing for prompt in topic.prompts
+    }
     retained: list[SuggestedTopic] = []
     dropped = 0
     for topic in incoming:
         prompts: list[SuggestedPrompt] = []
         for prompt in topic.prompts:
-            normalized = " ".join(prompt.text.casefold().split())
-            duplicate = any(
-                SequenceMatcher(None, normalized, prior).ratio()
-                >= PROMPT_NEAR_DUPLICATE_SIMILARITY
-                for prior in previous
-            )
-            if duplicate:
+            if prompt_text_hash(prompt.text) in previous:
                 dropped += 1
             else:
                 prompts.append(prompt)
@@ -348,7 +337,6 @@ async def _insert_prompts_returning(
             "origin": PROMPT_ORIGIN_GENERATED,
             "generation_evidence": {
                 **evidence_base,
-                "buyer_query_archetype": prompt.archetype,
                 "buyer_query_slot_id": prompt.slot_id,
             },
         }
@@ -455,7 +443,7 @@ def _generation_evidence(
         ),
         "generation_run_id": str(uuid.uuid4()),
         "generator_version": GENERATOR_VERSION,
-        "buyer_query_archetype_version": BUYER_QUERY_ARCHETYPE_VERSION,
+        "buyer_query_policy_version": BUYER_QUERY_POLICY_VERSION,
         "brand_context_hash": _brand_context_hash(brand_context),
         "requested_count": payload.count,
         "requested_intents": [intent for intent in payload.intents if intent],
@@ -509,9 +497,7 @@ async def _collect_model_suggestions(
 ) -> tuple[list[SuggestedTopic], int]:
     suggestions: list[SuggestedTopic] = []
     dropped = 0
-    # One validator for the whole generation. The portfolio-wide rules --
-    # opening diversity, near-duplicates, the per-topic market cap -- are
-    # meaningless per batch, because batches are one topic wide.
+    # Exact-duplicate state accumulates across all batches.
     validator = build_validator(
         frozenset(
             str(slot.topic_id) for slot in planned_slots if slot.topic_id is not None
@@ -593,10 +579,9 @@ async def _generate_suggestions(
             for item in brand_context.get("competitors", [])
             if item.get("name")
         ),
-        qualifiers=supported_qualifiers(brand_context),
     )
     if not planned_slots:
-        raise GenerationOutputError("No buyer-query archetype supports this request")
+        raise GenerationOutputError("No prompt labels support this request")
     await session.commit()
     if agent is None:
         raise GenerationOutputError("Model gateway is required for this cohort")

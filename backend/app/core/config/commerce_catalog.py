@@ -6,7 +6,6 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.dotenv import dotenv_sources
-from app.core.config.visibility_prompts import PROMPT_EXEMPLARS
 
 COMMERCE_PROJECTOR_VERSION: Final = "commerce-projector-5"
 COMMERCE_IMPORTER_VERSION: Final = "commerce-catalog-importer-1"
@@ -183,6 +182,55 @@ COMMERCE_BUYER_PROMPT_MAX_WORDS: Final = 24
 # unmistakable without turning the request into a catalogue dump.
 COMMERCE_PROMPT_CONTEXT_PRODUCT_LIMIT: Final = 12
 COMMERCE_PROMPT_CONTEXT_TERM_LIMIT: Final = 8
+
+_RETAIL_EXEMPLARS: Final = """\
+  GOOD  I want to buy cheap baby clothes in bulk
+  BAD   What are my best options for baby clothing?
+  GOOD  Which fridge under 30000 has the best cooling
+  BAD   Which good-value refrigerator options should I consider?\
+"""
+PROMPT_EXEMPLARS: Final[dict[str, str]] = {
+    "retail": _RETAIL_EXEMPLARS,
+    "marketplace": _RETAIL_EXEMPLARS,
+    "d2c_product": _RETAIL_EXEMPLARS,
+    "b2b_saas": """\
+  GOOD  Best tool for tracking failed subscription payments
+  BAD   What should I look for when choosing billing software?
+  GOOD  How do I monitor Kubernetes costs across AWS and Azure
+  BAD   How do I compare providers for cloud monitoring?\
+""",
+    "professional_service": """\
+  GOOD  Need an employment lawyer for a redundancy dispute
+  BAD   What are my best options for legal services?
+  GOOD  Who handles cross-border merger clearance in the EU
+  BAD   Which option for corporate law best fits my needs?\
+""",
+    "local_service": """\
+  GOOD  AC not cooling, who can repair it today
+  BAD   Where can I find reliable options for air conditioning?
+  GOOD  Someone to deep clean two bathrooms this weekend
+  BAD   What should I look for when choosing a cleaning service?\
+""",
+    "healthcare_provider": """\
+  GOOD  Best hospital in Chennai for knee replacement
+  BAD   What are my best options for orthopedic care?
+  GOOD  How much does cardiac bypass cost for an overseas patient
+  BAD   Which option for cardiology best fits my needs?\
+""",
+    "education_provider": """\
+  GOOD  Part time MBA colleges in Bangalore with weekend classes
+  BAD   What should I look for when choosing an MBA?
+  GOOD  Is a data science certificate worth it without a maths degree
+  BAD   Which good-value data science programs should I consider?\
+""",
+    "regulated_finance": """\
+  GOOD  Best business current account for a two person startup
+  BAD   What are my best options for business banking?
+  GOOD  Do I need landlord insurance for a single rental flat
+  BAD   Which option for property insurance best fits my needs?\
+""",
+}
+
 
 _GENERAL_EXEMPLARS: Final = """\
   GOOD  best instant read thermometer for grilling under $50

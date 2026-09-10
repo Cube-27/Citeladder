@@ -15,10 +15,8 @@ from app.core.config.brand_discovery import _discovery_research_system_prompt
 from app.core.config.visibility_prompts import (
     CONFIRMED_OFFERING_SOURCE_REF,
     MODEL_PRIOR_SOURCE_REF,
-    TEMPLATE_LEAD_INS,
     TOPIC_SELECTION_SYSTEM_PROMPT,
-    VISIBILITY_PROMPT_MAX_WORDS,
-    prompt_system_prompt,
+    cohort_system_prompt,
 )
 from app.domain.projects.discovery_schemas import (
     BrandDiscoveryCreate,
@@ -46,9 +44,7 @@ from app.domain.projects.onboarding.topic_admission import (
 from app.domain.prompts.portfolio_validation import (
     PortfolioValidator,
     brand_terms,
-    market_terms,
     ordered_portfolio,
-    positioning_shingles,
 )
 from app.domain.prompts.style import words as _words
 
@@ -152,14 +148,13 @@ def test_topic_prompt_asks_for_selection_not_invention() -> None:
 
 def test_prompt_instruction_shows_register_for_the_business_kind() -> None:
     """A law firm's prompts must not be taught with shopping examples."""
-    legal = prompt_system_prompt("professional_service")
-    retail = prompt_system_prompt("retail")
-    assert "redundancy dispute" in legal
+    legal = cohort_system_prompt("professional_service")
+    retail = cohort_system_prompt("retail")
+    assert "employment dispute" in legal
     assert "cheap baby clothes in bulk" not in legal
-    assert "cheap baby clothes in bulk" in retail
-    assert f"{VISIBILITY_PROMPT_MAX_WORDS} words" in retail
+    assert "Cheap baby clothes in bulk" in retail
     # An unknown facet still gets a concrete register rather than nothing.
-    assert "GOOD" in prompt_system_prompt("")
+    assert "Which providers should I shortlist" in cohort_system_prompt("")
 
 
 def _candidate(name: str, refs: list[str] | None = None) -> dict:
@@ -332,8 +327,6 @@ def _validator(**kwargs) -> PortfolioValidator:
         topic_ids=kwargs.get("topic_ids", frozenset({"t1", "t2"})),
         brand_terms=kwargs.get("brand_terms", ["Acme"]),
         competitor_terms=kwargs.get("competitor_terms", ["Rival"]),
-        positioning=kwargs.get("positioning", frozenset()),
-        market_words=kwargs.get("market_words", ("India", "Indian")),
     )
 
 
@@ -345,31 +338,6 @@ def _offer(validator: PortfolioValidator, text: str, **kwargs) -> str:
             "intent": kwargs.get("intent", "discovery"),
         },
         cohort=kwargs.get("cohort", "core"),
-    )
-
-
-@pytest.mark.parametrize("lead_in", TEMPLATE_LEAD_INS)
-def test_every_shipped_template_frame_is_rejected(lead_in: str) -> None:
-    """The old prompt asked for these to be avoided; the model used them."""
-    assert _offer(_validator(), f"{lead_in} kids clothing today") == "template_lead_in"
-
-
-def test_pasted_positioning_is_rejected() -> None:
-    validator = _validator(
-        positioning=positioning_shingles(
-            [
-                "Indian consumers seeking a wide range of products with "
-                "competitive pricing, convenience, and fast delivery"
-            ]
-        )
-    )
-    assert (
-        _offer(
-            validator,
-            "Shoes for Indian consumers seeking a wide range of products "
-            "with competitive pricing",
-        )
-        == "positioning_paste_in"
     )
 
 
@@ -387,21 +355,13 @@ def test_buyer_language_is_accepted() -> None:
     assert len(validator.accepted) == 2
 
 
-def test_repeated_openings_are_capped_across_the_portfolio() -> None:
+def test_repeated_openings_do_not_reject_distinct_needs() -> None:
     validator = _validator()
     assert _offer(validator, "best running shoes for flat feet") == ""
     assert (
         _offer(validator, "best running shoes under 5000 rupees", topic_id="t2") == ""
     )
-    assert _offer(validator, "best running shoes for wide toes") == "repeated_opening"
-
-
-def test_ordinary_words_containing_a_country_code_are_not_market_mentions() -> None:
-    """A bare "IN" matched inside "running", capping nearly every prompt."""
-    assert "IN" not in market_terms("IN", [])
-    validator = _validator(market_words=market_terms("IN", []))
-    assert not validator._names_market("best running shoes for finding flat feet")
-    assert validator._names_market("cheap school shoes in India")
+    assert _offer(validator, "best running shoes for wide toes") == ""
 
 
 def test_words_tokenize_every_script_not_just_ascii() -> None:
@@ -445,18 +405,14 @@ def test_named_brand_rows_reject_an_unknown_topic_id() -> None:
     assert validator.accepted[1]["topic_id"] == ""
 
 
-def test_market_is_named_at_most_once_per_topic() -> None:
+def test_market_can_be_named_in_multiple_queries_per_topic() -> None:
     validator = _validator()
     assert _offer(validator, "where to buy school shoes in India cheaply") == ""
-    assert (
-        _offer(validator, "which Indian store sells kids winter jackets")
-        == "market_mention_cap"
-    )
-    # A different topic gets its own allowance.
+    assert _offer(validator, "which Indian store sells kids winter jackets") == ""
     assert _offer(validator, "best Indian sites for baby clothes", topic_id="t2") == ""
 
 
-def test_unbound_brand_diagnostics_do_not_share_a_topic_market_cap() -> None:
+def test_unbound_brand_diagnostics_preserve_distinct_queries() -> None:
     validator = _validator()
     assert (
         _offer(
@@ -518,10 +474,10 @@ def test_identity_rules_per_cohort() -> None:
     )
 
 
-def test_length_bounds_reject_prose_and_fragments() -> None:
-    long_text = " ".join(["shoes"] * (VISIBILITY_PROMPT_MAX_WORDS + 1))
-    assert _offer(_validator(), long_text) == "length"
-    assert _offer(_validator(), "cheap shoes") == "length"
+def test_technical_length_bound_accepts_short_queries() -> None:
+    assert _offer(_validator(), "x" * 301) == "length"
+    assert _offer(_validator(), "") == "length"
+    assert _offer(_validator(), "cheap shoes") == ""
 
 
 def test_portfolio_is_ordered_round_robin_so_activation_covers_every_topic() -> None:
@@ -830,10 +786,17 @@ def test_one_unreadable_row_no_longer_voids_its_whole_batch() -> None:
         {
             "prompts": [
                 {
+                    "buyer_stage": "consideration",
+                    "prompt_intent": "recommend",
                     "slot_id": "q1",
                     "text": "Best linen dresses for a summer wedding",
                 },
-                {"slot_id": "unknown", "text": "Linen dresses under 200 online"},
+                {
+                    "slot_id": "unknown",
+                    "text": "Linen dresses under 200 online",
+                    "buyer_stage": "decision",
+                    "prompt_intent": "buy",
+                },
             ]
         }
     )
@@ -852,7 +815,7 @@ def test_onboarding_uses_the_shared_constrained_buyer_query_plan() -> None:
         _topic_request,
         onboarding_brand_context,
     )
-    from tests.fixtures.archetype_text import slots_from_user_message
+    from tests.fixtures.prompt_generation import slots_from_user_message
 
     topic = DiscoveryTopic(
         topic_id=uuid.uuid4(),
@@ -867,34 +830,23 @@ def test_onboarding_uses_the_shared_constrained_buyer_query_plan() -> None:
             "business_model": "b2b_saas",
             "buyer_register": "technical_buyer",
             "description": "Feedonomics manages retail product feeds.",
+            "products_services": ["Managed product feeds"],
         },
         competitors=["Productsup"],
     )
     user, slots = _topic_request(
-        brand_context=brand_context, topics=[topic], rejected=()
+        brand_context=brand_context,
+        topics=[topic],
+        rejected=(),
+        existing_prompts=("Existing feed-management query",),
     )
 
-    # Weighted toward the archetypes an assistant answers by naming a business,
-    # and still reaching every stage.
-    assert [slot.archetype for slot in slots] == [
-        "consideration_recommend",
-        "decision_buy",
-        "consideration_recommend",
-        "consideration_compare",
-        "decision_validate",
-        "awareness_solve",
-        "awareness_learn",
-    ]
-    # Every planned slot names a job and a surface form, and never a sentence
-    # frame the model would have to copy.
     planned = slots_from_user_message(user)
-    assert len(planned) == 7
-    assert {slot["form"] for slot in planned} == {
-        "question",
-        "first_person",
-        "search_phrase",
-    }
-    assert all(slot["job"] and "exact form" not in slot["job"] for slot in planned)
+    assert len(slots) == len(planned) == 7
+    assert all(slot.topic_id == str(topic.topic_id) for slot in slots)
+    assert all("archetype" not in slot and "form" not in slot for slot in planned)
+    assert "Managed product feeds" in user
+    assert "Existing feed-management query" in user
 
     _, brand_slots = _brand_request(
         brand_context=brand_context,
@@ -903,10 +855,7 @@ def test_onboarding_uses_the_shared_constrained_buyer_query_plan() -> None:
         count=2,
         cohort="brand_diagnostic",
     )
-    assert [slot.archetype for slot in brand_slots] == [
-        "brand_awareness_learn",
-        "brand_decision_validate",
-    ]
+    assert len(brand_slots) == 2
     assert all(slot.topic_id is None for slot in brand_slots)
 
 

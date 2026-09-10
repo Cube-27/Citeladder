@@ -13,7 +13,7 @@ So the context is split three ways:
     coarse, stable, reporting and benchmarking only -- never selects prompts.
 ``facets``
     a closed vocabulary (business model, market scope, buyer type, price tier)
-    that *routes* which archetypes and which buyer register apply.
+    that supplies business context and guides the buyer register.
 ``category`` and ``category_terms``
     open vocabulary written by the model and grounded in site evidence. This is
     what actually reaches prompt generation.
@@ -72,7 +72,7 @@ class BusinessContextProfile(BaseModel):
     category_terms: list[str] = Field(default_factory=list)
     jobs_to_be_done: list[str] = Field(default_factory=list)
 
-    # --- closed facets: the part that routes archetypes ------------------
+    # --- closed facets: business context and buyer register --------------
     sector: str = Field(default="Other")
     business_model: BusinessModel = "d2c_product"
     market_scope: MarketScope = "national"
