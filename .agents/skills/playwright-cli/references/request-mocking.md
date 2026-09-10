@@ -1,5 +1,11 @@
 # Request Mocking
 
+> **In this repository**, run the pinned CLI through
+> `pnpm run playwright:cli -- <command>` from the root; the bare
+> `playwright-cli` used in the generic examples below needs a global install.
+> Playwright itself is installed only under `frontend/`, so the test runner is
+> `pnpm test:e2e` rather than a bare `npx playwright test`.
+
 Intercept, mock, modify, and block network requests.
 
 ## CLI Route Commands
@@ -43,8 +49,12 @@ For conditional responses, request body inspection, response modification, or de
 ```bash
 playwright-cli run-code "async page => {
   await page.route('**/api/login', route => {
-    const body = route.request().postDataJSON();
-    if (body.username === 'admin') {
+    // postDataJSON() returns null when there is no body and THROWS when the
+    // body is not JSON. Either one escaping the handler aborts the route, and
+    // the request then hangs rather than failing visibly.
+    let body = null;
+    try { body = route.request().postDataJSON(); } catch { body = null; }
+    if (body?.username === 'admin') {
       route.fulfill({ body: JSON.stringify({ token: 'mock-token' }) });
     } else {
       route.fulfill({ status: 401, body: JSON.stringify({ error: 'Invalid' }) });

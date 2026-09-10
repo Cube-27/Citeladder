@@ -16,8 +16,17 @@ pnpm run playwright:cli -- <command>
 
 For example, use `pnpm run playwright:cli -- open http://127.0.0.1:3000`.
 This replaces the bare `playwright-cli` command used in the generic examples
-below, avoids a global npm install, and preserves the separately owned
-Playwright Test runner.
+below and in every file under `references/`, and avoids a global npm install.
+
+Playwright is installed under `frontend/` only, so a bare `npx playwright test`
+from the root finds no project configuration. The separately owned Playwright
+Test runner is `pnpm test:e2e`.
+
+Saved browser state (`state-save`, `storageState`) holds live session cookies.
+This repository ignores `auth.json`, `*.auth-state.json`, `*-auth-state.json`
+and `.auth/`; keep any other name you choose out of version control too, and
+pass real passwords through the environment rather than typing them into a
+command that lands in shell history.
 
 ## Quick start
 

@@ -1,5 +1,11 @@
 # Running Custom Playwright Code
 
+> **In this repository**, run the pinned CLI through
+> `pnpm run playwright:cli -- <command>` from the root; the bare
+> `playwright-cli` used in the generic examples below needs a global install.
+> Playwright itself is installed only under `frontend/`, so the test runner is
+> `pnpm test:e2e` rather than a bare `npx playwright test`.
+
 Use `run-code` to execute arbitrary Playwright code for advanced scenarios not covered by CLI commands.
 
 ## Syntax
@@ -36,8 +42,12 @@ playwright-cli run-code "async page => {
   await page.context().setGeolocation({ latitude: 51.5074, longitude: -0.1278 });
 }"
 
-# Clear geolocation override
+# Clear geolocation override.
+# `clearPermissions()` revokes the GRANT, not the coordinates -- the override
+# survives it and later pages keep receiving the old position. Clear the
+# override itself, and revoke the permission separately if you want both.
 playwright-cli run-code "async page => {
+  await page.context().setGeolocation(null);
   await page.context().clearPermissions();
 }"
 ```
@@ -216,12 +226,18 @@ playwright-cli run-code "async page => {
 
 ## Complex Workflows
 
+Two things to get right before running this against a real account: a
+password typed on the command line lands in your shell history, so read it from
+an environment variable instead; and `storageState` writes reusable session
+cookies to disk, so keep that file out of version control (this repository
+ignores `auth.json`, `*.auth-state.json` and `.auth/`).
+
 ```bash
-# Login and save state
+# Login and save state. PASSWORD comes from the environment, never the literal.
 playwright-cli run-code "async page => {
   await page.goto('https://example.com/login');
-  await page.getByRole('textbox', { name: 'Email' }).fill('user@example.com');
-  await page.getByRole('textbox', { name: 'Password' }).fill('secret');
+  await page.getByRole('textbox', { name: 'Email' }).fill(process.env.LOGIN_EMAIL);
+  await page.getByRole('textbox', { name: 'Password' }).fill(process.env.LOGIN_PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL('**/dashboard');
   await page.context().storageState({ path: 'auth.json' });
