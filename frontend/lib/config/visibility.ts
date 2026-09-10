@@ -13,6 +13,12 @@ export const PROMPT_ANALYSIS_MODES = [
   { value: 'strongest', label: 'Strongest' },
 ] as const;
 
+/** Mentions & Citations reads either the sites cited, or the answers themselves. */
+export const SOURCE_MODES: readonly { value: 'sources' | 'answers'; label: string }[] = [
+  { value: 'sources', label: 'Cited sources' },
+  { value: 'answers', label: 'Answers' },
+] as const;
+
 export const ANSWER_OUTCOMES = [
   { value: 'all', label: 'All answers' },
   { value: 'brand_absent', label: 'Brand absent' },

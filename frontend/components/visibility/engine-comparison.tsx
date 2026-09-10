@@ -33,7 +33,7 @@ export function EngineComparison({
     <Card>
       <CardHeader>
         <CardTitle>By model</CardTitle>
-        <CardDescription>Observed outcomes in the selected measurement</CardDescription>
+        <CardDescription>How each answer engine treated your brand.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         {!engines.length ? (
@@ -45,7 +45,7 @@ export function EngineComparison({
                 <TableHead>Model</TableHead>
                 <TableHead numeric>Visibility</TableHead>
                 <TableHead numeric>Owned citation rate</TableHead>
-                <TableHead>Responses</TableHead>
+                <TableHead numeric>Answers</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -72,12 +72,11 @@ export function EngineComparison({
                   </TableCell>
                   <TableCell numeric>{formatRate(engine.brand_mention_rate)}</TableCell>
                   <TableCell numeric>{formatRate(engine.owned_citation_rate)}</TableCell>
-                  <TableCell>
-                    {engine.total_completed} measured
-                    {engine.counts?.expected != null
-                      ? ` / ${engine.counts.expected} expected`
-                      : ' · expected count unavailable'}
-                  </TableCell>
+                  {/* This read "N measured / M expected", or "expected count
+                      unavailable" — the run's own bookkeeping. How many answers
+                      a rate is drawn from is the reader's business; how many we
+                      hoped for is not. */}
+                  <TableCell numeric>{engine.total_completed}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

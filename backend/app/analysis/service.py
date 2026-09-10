@@ -117,7 +117,7 @@ def _response_analysis(
         search_used=bool(score.get("search_used")),
         search_query_count=int(score.get("search_query_count") or 0),
         sentiment=None,
-        avg_position=None,
+        avg_position=score.get("brand_position"),
         score=score,
         entity_assessments=entity_assessments,
     )
@@ -153,6 +153,7 @@ def _persist_analysis_rows(
                 artifact_id=task.result_artifact_id,
                 analyzer_version=ANALYZER_VERSION,
                 competitor_name=name,
+                first_offset=(score.get("competitor_first_offsets") or {}).get(name),
             )
         )
     for ordinal, citation in enumerate(citations):

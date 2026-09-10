@@ -85,6 +85,9 @@ export const visibilitySourcesSchema = responseObject({
   total: z.number().int(),
   responses: z.number().int(),
   prompts: z.number().int(),
+  // Distinct cited domains per source class across the WHOLE selection, so the
+  // breakdown is not a picture of whichever page happens to be loaded.
+  category_totals: z.record(z.string(), z.number().int()).optional(),
   next_offset: z.number().int().nullable(),
   as_of: z.string(),
   comparison_status: z.string(),

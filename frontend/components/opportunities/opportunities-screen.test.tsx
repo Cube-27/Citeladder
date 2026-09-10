@@ -270,20 +270,11 @@ describe('OpportunitiesScreen', () => {
 
     renderScreen();
 
-    // Summary strip: compact recommendation queue.
-    expect(await screen.findByText('Recommendation queue')).toBeInTheDocument();
-    // The counts are in a mixed text+spans paragraph. Use the full
-    // textContent via a custom matcher on the parent <p>.
-    const countParagraph = screen.getByText((_content, element) => {
-      const text = element?.textContent ?? '';
-      return (
-        element?.tagName === 'P' &&
-        text.includes('2 open recommendations') &&
-        text.includes('1 high impact') &&
-        text.includes('0 in progress')
-      );
-    });
-    expect(countParagraph).toBeInTheDocument();
+    // Summary strip: the queue's state as labelled measured values rather than
+    // a paragraph the reader has to parse counts out of.
+    expect(await screen.findByText('Open')).toBeInTheDocument();
+    expect(screen.getByText('High impact')).toBeInTheDocument();
+    expect(screen.getByText('In progress')).toBeInTheDocument();
 
     // Export has been collapsed into a dropdown trigger.
     expect(screen.getByRole('button', { name: /Export/ })).toBeInTheDocument();
@@ -339,7 +330,7 @@ describe('OpportunitiesScreen', () => {
 
     renderScreen();
 
-    expect(await screen.findByText(/Last computed/)).toBeInTheDocument();
+    expect(await screen.findByText(/^Computed /)).toBeInTheDocument();
     expect(screen.getByText('Newer evidence available')).toBeInTheDocument();
   });
 
@@ -356,7 +347,7 @@ describe('OpportunitiesScreen', () => {
 
     renderScreen();
 
-    expect(await screen.findByText(/Last computed/)).toBeInTheDocument();
+    expect(await screen.findByText(/^Computed /)).toBeInTheDocument();
     expect(screen.queryByText('Newer evidence available')).not.toBeInTheDocument();
   });
 

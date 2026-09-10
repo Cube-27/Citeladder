@@ -37,7 +37,7 @@ export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = 
   // NOTE: `id` is the persisted `?tab=` URL value — only labels are restyled.
   { id: 'trends', label: 'Trends' },
   { id: 'mentions-citations', label: 'Mentions & Citations' },
-  { id: 'query-fanout', label: 'Query Fanout' },
+  { id: 'query-fanout', label: 'Query fanouts' },
 ] as const;
 
 /** The two evidence tabs share one execution-evidence query + cache key. */

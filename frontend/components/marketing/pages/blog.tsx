@@ -64,13 +64,16 @@ function PostByline({
   if (!(post.author || post.date || post.readTime)) return null;
   const updated = post.dateModified && post.dateModified !== post.date ? post.dateModified : null;
   const items = [
-    post.author ? (
-      <AuthorByline key="author" name={post.author} href={linkedin ? post.authorUrl : undefined} />
-    ) : null,
-    post.date ? <span key="date">PUBLISHED : {formatBlogDate(post.date)}</span> : null,
-    updated ? <span key="updated">UPDATED : {formatBlogDate(updated)}</span> : null,
-    post.readTime ? <span key="read">READING TIME : {post.readTime}</span> : null,
-  ].filter(Boolean);
+    post.author
+      ? {
+          id: 'author',
+          node: <AuthorByline name={post.author} href={linkedin ? post.authorUrl : undefined} />,
+        }
+      : null,
+    post.date ? { id: 'date', node: <span>PUBLISHED : {formatBlogDate(post.date)}</span> } : null,
+    updated ? { id: 'updated', node: <span>UPDATED : {formatBlogDate(updated)}</span> } : null,
+    post.readTime ? { id: 'read', node: <span>READING TIME : {post.readTime}</span> } : null,
+  ].filter((item) => item !== null);
   return (
     <p
       className={cn(
@@ -79,9 +82,9 @@ function PostByline({
       )}
     >
       {items.map((item, index) => (
-        <span key={index} className="contents">
+        <span key={item.id} className="contents">
           {index > 0 ? <span aria-hidden>,</span> : null}
-          {item}
+          {item.node}
         </span>
       ))}
     </p>

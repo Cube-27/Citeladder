@@ -44,8 +44,29 @@ const tabCodec = stringUrlCodec(
 );
 const engineCodec = stringUrlCodec(['all', ...TREND_ENGINES], 'all');
 const rangeCodec = stringUrlCodec<TrendRange>(['all', '30d', '90d', '1y'], '90d');
-const granularityCodec = stringUrlCodec<TrendGranularity>(['run', 'week', 'month'], 'run');
+const granularityCodec = stringUrlCodec<TrendGranularity>(
+  ['run', 'day', 'week', 'month'],
+  'run',
+);
 const cohortCodec = stringUrlCodec(['core', 'comparison'] as const, 'core');
+
+/**
+ * Writes the URL directly rather than closing over hook state, so its identity
+ * is stable across renders and memoized filter controls do not re-render.
+ */
+function setRange(value: TrendRange) {
+  setUrlParams({
+    range: value,
+    from: rangeToFrom(value) ?? null,
+    // No upper bound: a preset means "up to now", and pinning `to` to the
+    // moment the reader picked it froze the window there, so every run that
+    // completed afterwards stayed out of the series until they picked the
+    // same range again.
+    to: null,
+    configuration: null,
+    ...Object.fromEntries(pageKeys.map((key) => [key, null])),
+  });
+}
 
 export function useVisibilityFilters() {
   const [activeTab, selectTab] = useUrlState('tab', tabCodec);
@@ -67,18 +88,6 @@ export function useVisibilityFilters() {
   const [configuration, setConfiguration] = useUrlState('configuration', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });
-  const setRange = (value: TrendRange) =>
-    setUrlParams({
-      range: value,
-      from: rangeToFrom(value) ?? null,
-      // No upper bound: a preset means "up to now", and pinning `to` to the
-      // moment the reader picked it froze the window there, so every run that
-      // completed afterwards stayed out of the series until they picked the
-      // same range again.
-      to: null,
-      configuration: null,
-      ...Object.fromEntries(pageKeys.map((key) => [key, null])),
-    });
   const [granularity, setGranularity] = useUrlState('granularity', granularityCodec);
   const [cohort, setCohort] = useUrlState('cohort', cohortCodec, { clearKeys: pageKeys });
   const [baselineId, setBaselineId] = useUrlState('baseline', optionalStringUrlCodec);
@@ -87,6 +96,13 @@ export function useVisibilityFilters() {
   const [outcome, setOutcome] = useUrlState('outcome', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });
+  // Which half of Mentions & Citations is showing. It lives here rather than in
+  // the panel so the page keeps ONE filter row instead of stacking a second.
+  const [sourceMode, setSourceMode] = useUrlState(
+    'mode',
+    stringUrlCodec(['sources', 'answers'] as const, 'sources'),
+    { clearKeys: [...pageKeys, 'outcome'] },
+  );
   const [competitor] = useUrlState('competitor', optionalStringUrlCodec);
   const [domain] = useUrlState('domain', optionalStringUrlCodec);
   const [url] = useUrlState('url', optionalStringUrlCodec);
@@ -119,6 +135,8 @@ export function useVisibilityFilters() {
     asOf,
     outcome,
     setOutcome,
+    sourceMode,
+    setSourceMode,
     competitor,
     domain,
     url,
@@ -265,14 +283,23 @@ function useVisibilityRuns(projectId: string | null) {
   });
   const runOptions = useMemo(() => toRunOptions(auditsQuery.data ?? []), [auditsQuery.data]);
   const activeRun = useMemo(() => findActiveRun(auditsQuery.data ?? []), [auditsQuery.data]);
-  const previousLatest = useRef<string | null>(null);
-  const latest = runOptions[0]?.id ?? null;
+  // Both halves matter. Keying on the latest run alone missed a project's FIRST
+  // run — it stayed one id from queued to completed, so nothing invalidated and
+  // the 404 the projection answered with while the snapshot was still being
+  // written stayed on screen until a manual reload. Keying on the active run
+  // alone would miss a later run arriving. The pair moves in either case.
+  const runSignal = `${runOptions[0]?.id ?? ''}:${activeRun ? 'active' : 'idle'}`;
+  const previousSignal = useRef<string | undefined>(undefined);
+  const auditsLoaded = auditsQuery.isSuccess;
   useEffect(() => {
-    if (previousLatest.current && latest && previousLatest.current !== latest) {
+    if (!auditsLoaded) return;
+    const previous = previousSignal.current;
+    previousSignal.current = runSignal;
+    // `undefined` is the first resolved list, not a transition to react to.
+    if (previous !== undefined && previous !== runSignal) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.visibility.all });
     }
-    previousLatest.current = latest;
-  }, [latest, queryClient]);
+  }, [auditsLoaded, runSignal, queryClient]);
 
   return { queryClient, auditsQuery, runOptions, activeRun };
 }

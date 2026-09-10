@@ -26,6 +26,7 @@ from app.domain.analysis.projection_common import (
     load_snapshot,
 )
 from app.domain.analysis.schemas import (
+    CitationTotals,
     EngineComparisonRow,
     RankingRow,
     VisibilityResponse,
@@ -154,6 +155,7 @@ async def get_visibility(
         else _engine_rows(metrics),
         sentiment=metrics.get("sentiment"),
         avg_position=metrics.get("avg_position"),
+        citation_totals=CitationTotals(**(metrics.get("citation_totals") or {})),
         created_at=snapshot.created_at,
     )
 
@@ -248,10 +250,11 @@ def _rankings(
 ) -> list[RankingRow]:
     """Build the brand-vs-competitor rankings table from the aggregate.
 
-    Visibility % (mention rate) + SOV are populated; sentiment + average
-    position are present but null (decision B-2).
+    Visibility %, SOV and average position are populated. Sentiment stays null:
+    tone is the one measure a run does not already produce.
     """
     sov = metrics.get("share_of_voice") or {}
+    positions = metrics.get("average_positions") or {}
     counts = sov.get("mention_counts") or {}
     total_presences = sum(counts.values())
     share = {
@@ -269,6 +272,7 @@ def _rankings(
             citation_rate=observed_rate(metrics, "owned_citation_rate"),
             share=share,
             counts=counts,
+            positions=positions,
             logo_urls=logo_urls or {},
             identity_ids=logo_identity_ids or {},
             website_urls=website_urls,
@@ -283,6 +287,7 @@ def _rankings(
                 ),
                 share=share,
                 counts=counts,
+                positions=positions,
                 logo_urls=logo_urls or {},
                 identity_ids=logo_identity_ids or {},
                 website_urls=website_urls,
@@ -303,6 +308,7 @@ def _ranking_row(
     citation_rate: object,
     share: dict,
     counts: dict,
+    positions: dict | None = None,
     logo_urls: dict[uuid.UUID, str],
     identity_ids: dict[tuple[bool, str], uuid.UUID],
     website_urls: dict[tuple[bool, str], str] | None,
@@ -316,6 +322,7 @@ def _ranking_row(
         citation_rate=citation_rate,
         share_of_voice=share.get(name),
         mention_count=int(counts.get(name, 0) or 0),
+        avg_position=(positions or {}).get(name),
     )
 
 

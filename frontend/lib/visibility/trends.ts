@@ -13,10 +13,11 @@ import type { LogicalEngine, VisibilityTrendPoint } from '@/lib/api/types';
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
-export type TrendGranularity = 'run' | 'week' | 'month';
+export type TrendGranularity = 'run' | 'day' | 'week' | 'month';
 
 export const GRANULARITY_OPTIONS: readonly { value: TrendGranularity; label: string }[] = [
   { value: 'run', label: 'Per run' },
+  { value: 'day', label: 'Daily' },
   { value: 'week', label: 'Weekly' },
   { value: 'month', label: 'Monthly' },
 ] as const;
@@ -162,4 +163,50 @@ function versionChangeNote(point: VisibilityTrendPoint): string {
   return point.spans_version_boundary
     ? `Mixed scoring versions in this bucket (${scoring})`
     : `Scoring rule ${scoring} applied`;
+}
+
+/**
+ * Categorical stroke classes for comparison lines, in a fixed order.
+ *
+ * Fixed so a given competitor keeps its colour while the reader changes metric
+ * or period, and drawn from the design system's own chart ramp rather than a
+ * palette invented here.
+ */
+const SERIES_STROKES = [
+  'stroke-chart-2',
+  'stroke-chart-3',
+  'stroke-chart-4',
+  'stroke-chart-5',
+  'stroke-chart-6',
+  'stroke-chart-7',
+] as const;
+
+/**
+ * One comparison line per tracked competitor, aligned to the same points.
+ *
+ * Every point already carries the full ranking roster, so nothing is fetched to
+ * draw these. A competitor absent from a point contributes a gap there, never a
+ * zero: not measured and measured-as-zero are different facts.
+ */
+export function toCompetitorSeries(
+  points: readonly VisibilityTrendPoint[],
+  metric: TrendMetric,
+  limit = SERIES_STROKES.length,
+): { label: string; values: (number | null)[]; strokeClass: string }[] {
+  const latest = points.at(-1);
+  const names = (latest?.rankings ?? [])
+    .filter((row) => !row.is_brand)
+    .sort((a, b) => (b.mention_rate ?? -1) - (a.mention_rate ?? -1))
+    .slice(0, limit)
+    .map((row) => row.name);
+  return names.map((name, index) => ({
+    label: name,
+    strokeClass: SERIES_STROKES[index % SERIES_STROKES.length],
+    values: points.map((point) => {
+      const row = point.rankings.find((entry) => entry.name === name);
+      if (!row) return null;
+      const value = metric === 'owned_citation_rate' ? row.citation_rate : row.mention_rate;
+      return value === null || value === undefined ? null : value * 100;
+    }),
+  }));
 }

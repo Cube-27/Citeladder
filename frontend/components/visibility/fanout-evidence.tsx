@@ -1,9 +1,19 @@
 'use client';
 
-import { MinusCircle, Search } from 'lucide-react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Search } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   EvidenceEmpty,
   EvidencePagination,
@@ -11,39 +21,52 @@ import {
   EvidenceError,
   EvidenceFilteredEmpty,
   EvidenceSkeleton,
-  ExecutionHeader,
-  ProvenanceDisclosure,
   TruncationNotice,
   type EvidenceTabProps,
 } from '@/components/visibility/evidence-states';
-import type { VisibilityExecutionEvidence } from '@/lib/api/types';
+import { AnalysisChoice } from '@/components/visibility/analysis-choice';
+import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
+import { queryKeys } from '@/lib/api/query-keys';
+import { visibilityApi } from '@/lib/api/visibility';
+import { engineLabel } from '@/lib/visibility/dashboard';
 import {
-  countOnlyExplanation,
-  groupByPrompt,
-  queryTexts,
-  type PromptGroup,
-} from '@/lib/visibility/evidence';
+  searchRows,
+  searchRowsByPrompt,
+  searchRowsByTopic,
+  type SearchGroup,
+} from '@/lib/visibility/fanout-grouping';
+import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
-import { panelClasses } from '@/components/ui/panel';
-import { ledgerClasses } from '@/components/ui/workspace';
 
-const TITLE = 'Query Fanout';
+const TITLE = 'Query fanouts';
+
+/** Rows (or groups) per page, matching the shared table footer. */
+const PAGE_SIZE = 10;
+
+const GROUP_OPTIONS = [
+  { value: 'none', label: 'Group by: None' },
+  { value: 'prompt', label: 'Group by: Prompt' },
+  { value: 'topic', label: 'Group by: Topic' },
+] as const;
+
+const groupCodec = stringUrlCodec(
+  GROUP_OPTIONS.map((option) => option.value),
+  'none',
+);
 
 /**
- * Query Fanout tab — frozen prompt text, provider-generated search queries,
- * search counts, and text-availability state per execution, CLIENT-grouped by
- * the frozen prompt for presentation only. It never claims a global prompt
- * total, a true average over the truncated window, or numbered pagination the
- * endpoint cannot support, and it does NOT duplicate the citation browser (that
- * lives in Mentions & Citations).
+ * The searches an engine ran before answering, as ONE table.
  *
- * Per-execution query states are distinct (plan §Query Fanout / states gallery):
- *   - `queries_available` → the actual stored query strings;
- *   - `count_only`        → "Query text unavailable; provider reported N searches";
- *   - `no_search`         → "No web searches performed for this execution".
+ * This tab used to be two stacked cards that answered the same question twice:
+ * a summary card listing query strings with event counts, and a second card
+ * repeating every query nested inside per-execution panels. Both are folded
+ * into one table whose grouping the reader chooses — no grouping, by prompt, or
+ * by topic — which is the only axis that actually changed between them.
  *
- * States: skeleton, retryable error, empty, filtered-empty, and a truncation
- * notice when the newest window overflowed.
+ * The three per-execution states stay distinct, because they are different
+ * facts: a query whose text the model exposed becomes a row; a search whose
+ * wording was withheld, and an answer that searched nothing at all, are counted
+ * under the group rather than invented as rows.
  */
 export function FanoutEvidence({
   query,
@@ -51,60 +74,132 @@ export function FanoutEvidence({
   onClearFilters,
   limit,
   onNextPage,
-}: EvidenceTabProps) {
-  if (query.isLoading) {
-    return <EvidenceSkeleton title={TITLE} />;
-  }
-  if (query.isError) {
-    return <EvidenceError title={TITLE} onRetry={() => query.refetch()} />;
-  }
+  projectId,
+  runId,
+}: EvidenceTabProps & Readonly<{ projectId: string | null; runId: string | null }>) {
+  const [grouping, setGrouping] = useUrlState('group', groupCodec);
+  const [search, setSearch] = useUrlState('q', optionalStringUrlCodec);
+  const topicOf = usePromptTopics(projectId, runId, grouping === 'topic');
+  const items = useMemo(() => query.data?.items ?? [], [query.data]);
+  const groups = useMemo(() => {
+    if (grouping === 'prompt') return searchRowsByPrompt(items);
+    if (grouping === 'topic') return searchRowsByTopic(items, topicOf);
+    return searchRows(items);
+  }, [items, grouping, topicOf]);
+  const needle = (search ?? '').trim().toLowerCase();
+  const visible = needle
+    ? groups
+        .map((group) => ({
+          ...group,
+          rows: group.rows.filter((row) => row.query.toLowerCase().includes(needle)),
+        }))
+        .filter((group) => group.rows.length)
+    : groups;
+  // Grouped views page by group so a prompt's searches are never split across
+  // two pages; the ungrouped view pages by row.
+  const grouped = grouping !== 'none';
+  const unit = grouped ? visible.length : (visible[0]?.rows.length ?? 0);
+  const { page, setPage, pageCount, from, to } = useTablePage(unit, PAGE_SIZE);
+  const paged = grouped
+    ? visible.slice(from - 1, to)
+    : visible.map((group) => ({ ...group, rows: group.rows.slice(from - 1, to) }));
+  const totals = useMemo(
+    () => ({
+      distinct: new Set(groups.flatMap((group) => group.rows.map((row) => row.query))).size,
+      occurrences: groups.reduce(
+        (sum, group) => sum + group.rows.reduce((rows, row) => rows + row.occurrences, 0),
+        0,
+      ),
+    }),
+    [groups],
+  );
 
-  const items = query.data?.items ?? [];
-  const truncated = query.data?.truncated ?? false;
-
+  if (query.isLoading) return <EvidenceSkeleton title={TITLE} />;
+  if (query.isError) return <EvidenceError title={TITLE} onRetry={() => query.refetch()} />;
   if (items.length === 0) {
     return isFiltered ? (
       <EvidenceFilteredEmpty
         title={TITLE}
-        body="No executions match the selected run, engine, prompt, and date range. Widen the range or clear a filter."
+        body="No answers match the selected run, model, prompt and period. Widen the period or clear a filter."
         onClear={onClearFilters}
       />
     ) : (
       <EvidenceEmpty
         title={TITLE}
-        heading="No query fanout yet"
-        body="Once a run executes your prompts, the search queries each engine generated (and where text is unavailable) appear here, grouped by prompt."
+        heading="No searches recorded yet"
+        body="Once a run answers your prompts, the searches each engine ran first appear here."
       />
     );
   }
 
-  const groups = groupByPrompt(items);
-
   return (
     <Card className="relative" aria-busy={query.isFetching}>
       <EvidenceBusyBar active={query.isFetching} />
-      <CardHeader className="flex-row items-start justify-between gap-3">
-        <div className="grid gap-1">
-          <CardTitle>{TITLE}</CardTitle>
-          <p className="text-secondary text-sm">Per-execution search queries grouped by prompt.</p>
-        </div>
-        <Badge variant="neutral">
-          {query.data?.total ?? 'Unknown'} matching answers · {groups.length} prompts on this page
-        </Badge>
+      <CardHeader className="grid gap-1">
+        <CardTitle>{TITLE}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
-        <div className={ledgerClasses()}>
-          {groups.map((group) => (
-            <PromptGroupBlock key={group.promptSnapshotId} group={group} />
-          ))}
+        <div className="flex flex-wrap items-end gap-x-10 gap-y-4 px-[var(--card-padding)] pb-4">
+          <Total label="Distinct searches" value={totals.distinct} />
+          <Total label="Total occurrences" value={totals.occurrences} />
         </div>
+        <div className="border-border-subtle flex flex-wrap items-center gap-2 border-t px-[var(--card-padding)] py-3">
+          <Input
+            type="search"
+            value={search ?? ''}
+            onChange={(event) => setSearch(event.target.value || null)}
+            placeholder="Search queries…"
+            aria-label="Filter searches by text"
+            className="max-w-xs"
+          />
+          <span className="grow" />
+          <AnalysisChoice
+            label="Group searches by"
+            value={grouping}
+            options={GROUP_OPTIONS}
+            onChange={setGrouping}
+          />
+        </div>
+        {visible.length === 0 ? (
+          <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
+            No search matches “{search}”.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Search</TableHead>
+                <TableHead>Model</TableHead>
+                <TableHead numeric className="w-32">
+                  Occurrences
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paged.map((group) => (
+                <SearchGroupRows key={group.key} group={group} />
+              ))}
+            </TableBody>
+          </Table>
+        )}
+        {unit > PAGE_SIZE ? (
+          <TablePagination
+            page={page}
+            pageCount={pageCount}
+            from={from}
+            to={to}
+            total={unit}
+            noun={grouped ? (grouping === 'topic' ? 'topics' : 'prompts') : 'searches'}
+            onPageChange={setPage}
+          />
+        ) : null}
         {onNextPage ? (
           <EvidencePagination
             nextCursor={query.data?.next_cursor ?? null}
             asOf={query.data?.as_of ?? null}
             onPage={onNextPage}
           />
-        ) : truncated ? (
+        ) : query.data?.truncated ? (
           <TruncationNotice limit={limit} />
         ) : null}
       </CardContent>
@@ -112,70 +207,84 @@ export function FanoutEvidence({
   );
 }
 
-function PromptGroupBlock({ group }: Readonly<{ group: PromptGroup }>) {
+function Total({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
-    <section className="grid gap-3 px-[var(--card-padding)] py-4">
-      <div className="flex items-start gap-2">
-        <h3 className={textRole('bodyStrong', 'leading-relaxed sm:text-base')}>
-          {group.promptText}
-        </h3>
-      </div>
-      <ul className="grid gap-3">
-        {group.executions.map((item) => (
-          <ExecutionRow key={item.analysis_id} item={item} />
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function ExecutionRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
-  return (
-    <li className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-2.5')}>
-      <ExecutionHeader
-        item={item}
-        trailing={
-          <span className="mono text-secondary text-xs">
-            {item.search_query_count} {item.search_query_count === 1 ? 'search' : 'searches'}
-          </span>
-        }
-      />
-      <QueryDetail item={item} />
-      <ProvenanceDisclosure item={item} />
-    </li>
-  );
-}
-
-function QueryDetail({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
-  if (item.state === 'queries_available') {
-    const queries = queryTexts(item);
-    return (
-      <ul className="grid gap-1.5 pt-0.5">
-        {queries.map((query) => (
-          <li
-            key={query}
-            className="border-border-subtle bg-panel text-foreground flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-1.5 font-mono text-xs"
-          >
-            <Search className="text-muted size-3 shrink-0" aria-hidden />
-            <span className="break-all">{query}</span>
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
-  if (item.state === 'count_only') {
-    return (
-      <div className="border-border-subtle bg-panel text-muted rounded-[var(--radius-control)] border px-3 py-2 text-xs">
-        {countOnlyExplanation(item)}
-      </div>
-    );
-  }
-
-  return (
-    <div className="border-border-subtle bg-panel text-muted flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-xs">
-      <MinusCircle className="size-4 shrink-0" aria-hidden />
-      <span>No web searches performed for this execution</span>
+    <div className="grid gap-0.5">
+      <span className={textRole('label')}>{label}</span>
+      <span className={textRole('metric')}>{value}</span>
     </div>
   );
+}
+
+/**
+ * One group's heading row and its searches, inside the shared table.
+ *
+ * A group renders as rows of the SAME table rather than a table of its own, so
+ * every search in the tab sits on one set of columns. Repeating a header per
+ * group restarted the column widths at each prompt and left nothing aligned.
+ */
+function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
+  const note = [
+    group.undisclosed
+      ? `${group.undisclosed} ${group.undisclosed === 1 ? 'answer' : 'answers'} searched without returning the wording`
+      : null,
+    group.silent ? `${group.silent} answered without searching` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <>
+      {group.label ? (
+        <TableRow>
+          <TableCell colSpan={3} className="bg-surface-2">
+            <span className={textRole('bodyStrong')}>{group.label}</span>
+          </TableCell>
+        </TableRow>
+      ) : null}
+      {group.rows.map((row) => (
+        <TableRow key={`${group.key}-${row.query}`}>
+          <TableCell>
+            <span className={group.label ? 'flex items-start gap-2 ps-4' : 'flex items-start gap-2'}>
+              <Search className="text-muted mt-0.5 size-3 shrink-0" aria-hidden />
+              <span className="break-words">{row.query}</span>
+            </span>
+          </TableCell>
+          <TableCell>{row.engines.map(engineLabel).join(', ')}</TableCell>
+          <TableCell numeric>{row.occurrences}</TableCell>
+        </TableRow>
+      ))}
+      {note ? (
+        <TableRow>
+          <TableCell colSpan={3} className={textRole('meta', 'text-secondary')}>
+            {note}
+          </TableCell>
+        </TableRow>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * Prompt-to-topic map for the topic grouping.
+ *
+ * Evidence rows carry no topic; the prompt metrics projection already publishes
+ * one per prompt, so the join happens here rather than being pushed into the
+ * evidence endpoint. Only fetched when the reader actually groups by topic.
+ */
+function usePromptTopics(projectId: string | null, runId: string | null, enabled: boolean) {
+  const result = useQuery({
+    queryKey: [...queryKeys.visibility.prompts(projectId ?? '', runId ?? undefined), 'topics'],
+    queryFn: ({ signal }) =>
+      visibilityApi.getPromptMetrics(projectId ?? '', runId ?? undefined, { signal }),
+    enabled: enabled && Boolean(projectId && runId),
+  });
+  return useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of result.data ?? []) {
+      const topic = row.theme || 'Unclassified';
+      if (row.prompt_id) map.set(row.prompt_id, topic);
+      if (row.prompt_snapshot_id) map.set(row.prompt_snapshot_id, topic);
+    }
+    return map;
+  }, [result.data]);
 }

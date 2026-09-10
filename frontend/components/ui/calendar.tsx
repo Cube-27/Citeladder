@@ -51,12 +51,16 @@ function weekdayIndex(date: Date): number {
   return (date.getUTCDay() + 6) % 7;
 }
 
+// Explicit locale, not the ambient one: the server and the browser would
+// otherwise resolve different defaults and the heading would hydrate mismatched.
+const monthLabelFormat = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
 function monthLabel(date: Date): string {
-  return date.toLocaleDateString(undefined, {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  return monthLabelFormat.format(date);
 }
 
 function addMonths(date: Date, delta: number): Date {

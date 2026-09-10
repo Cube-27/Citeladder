@@ -33,8 +33,9 @@ export const visibilityEngineSchema = responseObject({
 
 // One brand-vs-competitor rankings-table row (B6 `RankingRow`). `website_url`
 // lets BrandLogo use its Logo.dev fallback when the cached `logo_url` is absent.
-// `mention_rate` is the Visibility% and `share_of_voice` the SOV%; `sentiment`
-// / `avg_position` are null until the roadmap computes them (decision B-2).
+// `mention_rate` is the Visibility% and `share_of_voice` the SOV%.
+// `avg_position` is the entity's mean rank among the brands named in an answer,
+// derived from mention offsets; `sentiment` stays null until tone is scored.
 export const rankingRowSchema = responseObject({
   name: z.string(),
   is_brand: z.boolean(),
@@ -92,7 +93,21 @@ export const visibilitySchema = responseObject({
   counts: measurementCountsSchema.optional(),
   comparison_key: z.string().nullable().optional(),
   comparison: visibilityComparisonSchema.optional(),
-  selection_mode: z.enum(['run', 'range']).optional(),
+  // Citations counted as citations. `owned_citation_rate` above counts ANSWERS
+  // that contained one, which is a different measure with a different
+  // denominator — both are true and they are never interchangeable.
+  citation_totals: z
+    .object({
+      citations: z.number().int(),
+      owned_citations: z.number().int(),
+      owned_share: z.number().nullable(),
+    })
+    .optional(),
+  // The backend answers with how the run was RESOLVED, not what was asked for:
+  // an omitted `audit_id` resolves to "latest". Accepting only run|range made
+  // the default landing request fail validation, which surfaced as
+  // "Could not load the selected measurement" on a perfectly good 200.
+  selection_mode: z.enum(['latest', 'run', 'range']).optional(),
   source_audit_ids: z.array(uuid()).optional(),
   configuration_groups: z.record(z.string(), z.number().int()).optional(),
   from_at: z.string().nullable().optional(),
@@ -133,6 +148,8 @@ export const promptMetricItemSchema = responseObject({
   intent: z.string().optional(),
   visibility_rate: z.number().nullable().optional(),
   owned_citation_rate: z.number().nullable().optional(),
+  // Mean rank among the brands named in this prompt's answers.
+  avg_position: z.number().nullable().optional(),
   visibility_delta: z.number().nullable().optional(),
   comparison_status: z.string().optional(),
   comparison: visibilityComparisonSchema.nullable().optional(),

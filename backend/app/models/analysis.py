@@ -194,6 +194,11 @@ class CompetitorMention(DerivedRowProvenanceMixin, Base):
         index=True,
     )
     competitor_name: Mapped[str] = mapped_column(String(255))
+    # Character offset of this competitor's first alias hit in the answer. The
+    # brand has carried one since the start; without the same value for every
+    # other named brand there is nothing to rank the brand AGAINST, which is the
+    # whole of average position.
+    first_offset: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

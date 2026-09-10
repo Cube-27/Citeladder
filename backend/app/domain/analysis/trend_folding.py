@@ -41,6 +41,12 @@ class _RankingAccumulator:
     mention_rate_denom: int = 0
     citation_rate_weight: float = 0.0
     citation_rate_denom: int = 0
+    # Position is a mean over the answers that NAMED this entity, so it folds
+    # weighted by that count — not by completions. Weighting by completions
+    # would let a run where the brand barely appeared drag the mean as hard as
+    # one where it appeared throughout.
+    position_weight: float = 0.0
+    position_denom: int = 0
 
 
 @dataclass
@@ -176,6 +182,7 @@ def _trend_rankings(metrics: dict) -> list[VisibilityTrendRankingRow]:
     }
     brand_name = _brand_name(counts, metrics)
     competitor_mention = metrics.get("competitor_mention_rate") or {}
+    positions = metrics.get("average_positions") or {}
 
     rows: list[VisibilityTrendRankingRow] = [
         VisibilityTrendRankingRow(
@@ -185,6 +192,7 @@ def _trend_rankings(metrics: dict) -> list[VisibilityTrendRankingRow]:
             citation_rate=observed_rate(metrics, "owned_citation_rate"),
             share_of_voice=share.get(brand_name),
             mention_count=int(counts.get(brand_name, 0) or 0),
+            avg_position=positions.get(brand_name),
         )
     ]
     for name in competitor_mention:
@@ -198,6 +206,7 @@ def _trend_rankings(metrics: dict) -> list[VisibilityTrendRankingRow]:
                 ),
                 share_of_voice=share.get(name),
                 mention_count=int(counts.get(name, 0) or 0),
+                avg_position=positions.get(name),
             )
         )
     rows.sort(key=lambda r: (-(r.share_of_voice or 0.0), r.name))
@@ -227,7 +236,7 @@ def _raw_point(source: _TrendSource) -> VisibilityTrendPoint:
         ),
         rankings=_trend_rankings(metrics),
         sentiment=None,
-        avg_position=None,
+        avg_position=metrics.get("avg_position"),
         transport_model=source.transport_model,
         retrieval_enabled=source.retrieval_enabled,
         model_provenance=source.model_provenance,
@@ -243,8 +252,10 @@ def _bucket_key(completed_at: datetime, granularity: str) -> datetime:
     at = _to_utc(completed_at)
     if granularity == "month":
         return datetime(at.year, at.month, 1, tzinfo=UTC)
-    # Week: ISO Monday 00:00 UTC.
     day = datetime(at.year, at.month, at.day, tzinfo=UTC)
+    if granularity == "day":
+        return day
+    # Week: ISO Monday 00:00 UTC.
     return day - timedelta(days=at.weekday())
 
 
@@ -334,6 +345,7 @@ def _accumulate_bucket_ranking(
     mention_rate: float | None,
     citation_rate: float | None,
     completions: int,
+    avg_position: float | None = None,
 ) -> None:
     _accumulate_entity(
         accumulators.rankings,
@@ -343,6 +355,7 @@ def _accumulate_bucket_ranking(
         mention_rate=mention_rate,
         citation_rate=citation_rate,
         completions=completions,
+        avg_position=avg_position,
     )
     accumulators.mention_counts[name] = (
         accumulators.mention_counts.get(name, 0) + mention_count
@@ -366,6 +379,7 @@ def _accumulate_bucket_source(
 
     sov = metrics.get("share_of_voice") or {}
     counts = sov.get("mention_counts") or {}
+    positions = metrics.get("average_positions") or {}
     brand_name = _brand_name(counts, metrics)
     accumulators.brand_names.add(brand_name)
     _accumulate_bucket_ranking(
@@ -376,6 +390,7 @@ def _accumulate_bucket_source(
         mention_rate=observed_rate(metrics, "brand_mention_rate"),
         citation_rate=observed_rate(metrics, "owned_citation_rate"),
         completions=completions,
+        avg_position=positions.get(brand_name),
     )
 
     competitor_mention = metrics.get("competitor_mention_rate") or {}
@@ -443,7 +458,10 @@ def _fold_bucket(key: datetime, bucket: list[_TrendSource]) -> VisibilityTrendPo
         ),
         rankings=ranking_rows,
         sentiment=None,
-        avg_position=None,
+        # Folded the way every other rate in this bucket is: each source's own
+        # mean rank, weighted by the completions behind it. Sources that never
+        # named the brand contribute no rank rather than a worst one.
+        avg_position=_folded_position(bucket),
         transport_model=transport_model,
         retrieval_enabled=retrieval_enabled,
         model_provenance=_bucket_provenance(bucket),
@@ -468,6 +486,7 @@ def _accumulate_entity(
     mention_rate: float | None,
     citation_rate: float | None,
     completions: int,
+    avg_position: float | None = None,
 ) -> None:
     acc = rankings.get(name)
     if acc is None:
@@ -475,6 +494,9 @@ def _accumulate_entity(
         rankings[name] = acc
     acc.is_brand = acc.is_brand or is_brand
     acc.mention_count += mention_count
+    if avg_position is not None and mention_count > 0:
+        acc.position_weight += float(avg_position) * mention_count
+        acc.position_denom += mention_count
     if completions > 0:
         if mention_rate is not None:
             acc.mention_rate_weight += float(mention_rate) * completions
@@ -510,7 +532,44 @@ def _fold_ranking_rows(
                 ),
                 share_of_voice=share,
                 mention_count=acc.mention_count,
+                avg_position=(
+                    acc.position_weight / acc.position_denom
+                    if acc.position_denom > 0
+                    else None
+                ),
             )
         )
     rows.sort(key=lambda r: (-(r.share_of_voice or 0.0), r.name))
     return rows
+
+
+def _folded_position(bucket) -> float | None:
+    """Mean rank across a bucket, weighted by the answers that ranked at all.
+
+    A run's mean rank is taken over the answers that NAMED the brand, so folding
+    two runs weights each by that same count. Weighting by completions instead
+    would give a run where the brand appeared twice in fifty answers the same
+    pull as one where it appeared in every answer.
+    """
+    weighted = 0.0
+    weight = 0
+    for source in bucket:
+        metrics = source.metrics or {}
+        position = metrics.get("avg_position")
+        ranked = _ranked_responses(metrics)
+        if position is None or ranked <= 0:
+            continue
+        weighted += float(position) * ranked
+        weight += ranked
+    return round(weighted / weight, 2) if weight else None
+
+
+def _ranked_responses(metrics: dict) -> int:
+    """Answers that named the brand, which is what a mean rank averages over."""
+    counts = metrics.get("counts")
+    if isinstance(counts, dict):
+        return int(counts.get("brand_responses") or 0)
+    sov = metrics.get("share_of_voice") or {}
+    mention_counts = sov.get("mention_counts") or {}
+    brand = _brand_name(mention_counts, metrics)
+    return int(mention_counts.get(brand, 0) or 0)

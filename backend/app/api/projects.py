@@ -246,7 +246,7 @@ async def get_visibility_trends_endpoint(
     An ordered series of ``VisibilityTrendPoint``s projected from the project's
     persisted dashboard-ready ``MetricSnapshot`` rows — optionally filtered by
     ``engine`` (``logical_engine``) and an inclusive UTC ``from``/``to`` window,
-    and bucketed by ``granularity=run|week|month``. No provider is called and no
+    and bucketed by ``granularity=run|day|week|month``. No provider is called and no
     historical run is re-scored. A valid project with no matching history
     returns ``[]`` (not 404); invalid engine/granularity/range or naive
     timestamps return 422.
@@ -320,6 +320,7 @@ async def get_visibility_sources_endpoint(
     engine: Annotated[str | None, Query()] = None,
     cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
     domain: Annotated[str | None, Query(max_length=255)] = None,
+    source_type: Annotated[str | None, Query(max_length=64)] = None,
     from_at: Annotated[datetime | None, Query(alias="from")] = None,
     to_at: Annotated[datetime | None, Query(alias="to")] = None,
     as_of: Annotated[datetime | None, Query()] = None,
@@ -338,6 +339,7 @@ async def get_visibility_sources_endpoint(
             logical_engine=engine,
             cohort=cohort,
             domain=domain,
+            source_class=source_type,
             from_at=from_at,
             to_at=to_at,
             as_of=as_of,

@@ -533,7 +533,7 @@ def test_provider_reported_cost_publishes_partial_and_missing_coverage() -> None
     }
 
 
-def test_share_of_voice_and_roadmap_fields() -> None:
+def test_share_of_voice_and_derived_position() -> None:
     """SOV is populated; sentiment + avg position are present but null (B-2)."""
     config = _config()
     executions = [
@@ -569,9 +569,11 @@ def test_share_of_voice_and_roadmap_fields() -> None:
     assert sov["mention_counts"]["Best&Less"] == 1
     assert sov["mention_counts"]["Kmart"] == 2
     assert sov["share"]["Kmart"] == pytest.approx(2 / 3)
-    # Roadmap metrics present but null (decision B-2, invariant 9).
+    # Tone still has no scoring stage; position does not need one. The brand is
+    # named in one answer and nothing precedes it there, so its mean rank is 1.
     assert summary["sentiment"] is None
-    assert summary["avg_position"] is None
+    assert summary["avg_position"] == 1.0
+    assert summary["average_positions"]["Best&Less"] == 1.0
 
 
 def test_classify_citation_labels() -> None:

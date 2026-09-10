@@ -326,6 +326,15 @@ function PostDiagram({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'di
   );
 }
 
+// Tone colours come from the design tokens the rest of the site uses. Raw
+// Tailwind palette hues (`amber-500`, `sky-500`) would be the only ones in
+// the codebase and would not follow a rebrand of the token set.
+const CALLOUT_TONES = {
+  warning: { icon: AlertTriangle, rail: 'border-l-warning', mark: 'text-warning' },
+  info: { icon: Info, rail: 'border-l-info', mark: 'text-info' },
+  accent: { icon: CheckCircle2, rail: 'border-l-accent-border', mark: 'text-accent-text' },
+} as const;
+
 function PostCallout({
   text,
   title,
@@ -335,15 +344,7 @@ function PostCallout({
   title?: string;
   tone?: 'accent' | 'warning' | 'info';
 }>) {
-  // Tone colours come from the design tokens the rest of the site uses. Raw
-  // Tailwind palette hues (`amber-500`, `sky-500`) would be the only ones in
-  // the codebase and would not follow a rebrand of the token set.
-  const TONES = {
-    warning: { icon: AlertTriangle, rail: 'border-l-warning', mark: 'text-warning' },
-    info: { icon: Info, rail: 'border-l-info', mark: 'text-info' },
-    accent: { icon: CheckCircle2, rail: 'border-l-accent-border', mark: 'text-accent-text' },
-  } as const;
-  const { icon: Icon, rail, mark } = TONES[tone];
+  const { icon: Icon, rail, mark } = CALLOUT_TONES[tone];
   return (
     <div
       className={cn(

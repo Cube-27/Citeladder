@@ -41,7 +41,7 @@ Canonical product and system truth lives in `AGENTS.md`, `docs/architecture.md`,
 ## Product Principles
 
 - Preserve one measurable product loop and one owner for each domain concept.
-- Show persisted evidence and provenance before explanation or recommendation.
+- Show persisted evidence before explanation or recommendation; keep its provenance reachable, not printed on the customer's surface.
 - Keep unknown, unavailable, excluded, not-applicable, and observed zero visibly distinct.
 - Require explicit user action for consequential external or publishing mutations.
 - Prefer one clear next action over a gallery of equal-weight product features.

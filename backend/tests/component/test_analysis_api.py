@@ -175,7 +175,9 @@ async def test_metrics_and_visibility_are_projections(
         assert metrics.analyzer_version
         assert "share_of_voice" in metrics.metrics
         assert metrics.metrics["sentiment"] is None
-        assert metrics.metrics["avg_position"] is None
+        # Position is derived from mention offsets, so a run that named the
+        # brand has one.
+        assert metrics.metrics["avg_position"] is not None
 
         vis = await get_visibility(
             session,
@@ -203,9 +205,9 @@ async def test_metrics_and_visibility_are_projections(
         ]
         # Vocabulary lock: no ``mode`` alias is ever emitted.
         assert "mode" not in vis.model_dump()
-        # Roadmap fields present but null (decision B-2).
+        # Tone has no scoring stage; position needs none.
         assert vis.sentiment is None
-        assert vis.avg_position is None
+        assert vis.avg_position is not None
 
 
 @pytest.mark.asyncio
@@ -293,9 +295,10 @@ async def test_execution_evidence_projection(
         assert evidence.transport_model == GEMINI_MODEL
         assert evidence.retrieval_enabled is True
         assert "mode" not in evidence.model_dump()
-        # Roadmap fields present but null.
+        # Per-answer position: the brand's rank among the brands this answer
+        # named. Tone still has no scoring stage.
         assert evidence.sentiment is None
-        assert evidence.avg_position is None
+        assert evidence.avg_position == 1.0
 
         # A foreign workspace cannot read the evidence (invariant 5).
         import uuid

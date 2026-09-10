@@ -5,7 +5,6 @@ import { LogoMark } from '@/components/ui/logo-mark';
 import { Menu, X } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { authApi } from '@/lib/api/auth';
@@ -356,7 +355,6 @@ export function MarketingNav() {
  * still a link to assistive tech.
  */
 function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
-  const pathname = usePathname();
   const reduceMotion = useReducedMotion();
 
   return (
@@ -366,7 +364,10 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
       className="focus-ring inline-flex shrink-0 items-center rounded-xs"
       onClick={(event) => {
         onNavigate();
-        if (pathname !== '/') return;
+        // Read on click rather than through usePathname(): the path only decides
+        // what this handler does, and subscribing re-rendered the logo on every
+        // marketing navigation.
+        if (window.location.pathname !== '/') return;
         // Modified clicks are the reader asking for a new tab/window; leave them
         // to the browser rather than swallowing them into a scroll.
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlparse
@@ -260,8 +261,32 @@ def score_execution(
         **prompt,
         **citation,
         **competitors,
+        "brand_position": _brand_position(
+            _first_offset(config.brand_aliases, normalized_answer),
+            competitors["competitor_first_offsets"],
+        ),
         "fanout_features": _fanout_features(search_events),
     }
+
+
+def _brand_position(
+    brand_offset: int | None, competitor_offsets: Mapping[str, int | None]
+) -> int | None:
+    """The brand's rank among the brands named in ONE answer, 1-based.
+
+    A brand that is not named has no position — distinct from last place, which
+    is why this is ``None`` rather than the count of competitors plus one. A
+    named brand whose offset could not be resolved is also ``None``: unknown is
+    not rank one.
+    """
+    if brand_offset is None:
+        return None
+    ahead = sum(
+        1
+        for offset in competitor_offsets.values()
+        if offset is not None and offset < brand_offset
+    )
+    return ahead + 1
 
 
 def _prompt_signals(config, prompt_text, query_text, query_text_available):
@@ -314,15 +339,23 @@ def _competitor_signals(
 ):
     mentioned: list[str] = []
     injected: list[str] = []
+    offsets: dict[str, int | None] = {}
     for competitor in config.competitors:
         if _entity_alias_present(competitor.aliases, answer_text, normalized_answer):
             mentioned.append(competitor.name)
+            # Same deterministic string scan the brand already uses. Ordering
+            # every named brand by where it first appears is what average
+            # position IS; no model judges anything here.
+            offsets[competitor.name] = _first_offset(
+                competitor.aliases, normalized_answer
+            )
         if query_text_available and competitor.name not in prompt_competitors:
             if _entity_alias_present(competitor.aliases, query_text, query_blob):
                 injected.append(competitor.name)
     return {
         "competitors_mentioned": mentioned,
         "competitors_injected_in_search": injected,
+        "competitor_first_offsets": offsets,
     }
 
 
@@ -403,18 +436,65 @@ def aggregate_run(
         **citation,
         **competitors,
         "share_of_voice": _share_of_voice(scores, config),
+        "average_positions": _average_positions(scores, config),
+        "citation_totals": _citation_totals(scores),
         "prompt_class_counts": dict(
             Counter(score.get("prompt_class", "unknown") for score in scores)
         ),
         "per_prompt": _per_prompt_metrics(completed, config),
         "token_usage": token_usage,
         "cost": aggregate_cost(completed, token_usage, config),
-        # Roadmap metrics (decision B-2): not computed yet (no LLM for
-        # headline metrics, invariant 9). Present + null so the projection shape
-        # is stable and the frontend can render the columns.
+        # Tone still needs a scoring stage that does not exist; position does
+        # not, and is computed above from mention offsets the run already
+        # produces.
         "sentiment": None,
-        "avg_position": None,
+        "avg_position": _mean_position(
+            [score.get("brand_position") for score in scores]
+        ),
     }
+
+
+def _mean_position(positions: Iterable[int | None]) -> float | None:
+    """Mean rank over the answers that named the entity at all.
+
+    Answers that never named it are excluded rather than counted as a worst
+    rank: average position answers "when you appear, how high", and visibility
+    already answers "how often you appear".
+    """
+    ranked = [position for position in positions if position is not None]
+    return round(sum(ranked) / len(ranked), 2) if ranked else None
+
+
+def _average_positions(
+    scores: list[dict[str, Any]], config: ScoringConfig
+) -> dict[str, float | None]:
+    """Mean rank per tracked entity, keyed exactly like ``share_of_voice``."""
+    brand = config.brand_name or "Brand"
+    per_entity: dict[str, list[int | None]] = {
+        brand: [score.get("brand_position") for score in scores]
+    }
+    for competitor in config.competitors:
+        per_entity[competitor.name] = [
+            _competitor_position(score, competitor.name) for score in scores
+        ]
+    return {name: _mean_position(values) for name, values in per_entity.items()}
+
+
+def _competitor_position(score: dict[str, Any], name: str) -> int | None:
+    """One competitor's rank inside one answer, by the same offset ordering."""
+    offsets = score.get("competitor_first_offsets") or {}
+    own = offsets.get(name)
+    if own is None:
+        return None
+    brand_offset = score.get("brand_first_offset")
+    ahead = sum(
+        1
+        for other, offset in offsets.items()
+        if other != name and offset is not None and offset < own
+    )
+    if brand_offset is not None and brand_offset < own:
+        ahead += 1
+    return ahead + 1
 
 
 def _share_of_voice(
@@ -519,6 +599,23 @@ def _headline_aggregates(scores, total):
 
 def _optional_rate(numerator, denominator):
     return _rate(numerator, denominator) if denominator else None
+
+
+def _citation_totals(scores: list[dict[str, Any]]) -> dict[str, Any]:
+    """Citations counted as citations, not as answers containing one.
+
+    ``owned_citation_rate`` answers "how many ANSWERS linked to a page you own",
+    which is the right denominator for a visibility rate and the wrong one for
+    "how many citations did we earn". One answer citing four owned pages is one
+    for that rate and four here. Both are true; they are not the same measure.
+    """
+    citations = sum(int(score.get("citation_count") or 0) for score in scores)
+    owned = sum(int(score.get("owned_citation_count") or 0) for score in scores)
+    return {
+        "citations": citations,
+        "owned_citations": owned,
+        "owned_share": _rate(owned, citations),
+    }
 
 
 def _citation_aggregates(completed, total):
@@ -643,6 +740,11 @@ def _prompt_metric_row(prompt_index, group, config):
         "score_weights": score["weights"],
         "per_engine_scores": engine_scores,
         "cross_engine_consistency": _cross_engine_consistency(engine_scores),
+        # The brand's mean rank across this prompt's answers, over the answers
+        # that named it. Same offset ordering as the run-level figure.
+        "avg_position": _mean_position(
+            [item["score"].get("brand_position") for item in group]
+        ),
     }
 
 

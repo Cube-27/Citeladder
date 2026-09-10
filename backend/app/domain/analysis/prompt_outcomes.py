@@ -72,6 +72,17 @@ def _counts(responses, tasks):
     )
 
 
+def _mean_position(responses) -> float | None:
+    """The brand's mean rank across a prompt's answers.
+
+    Averaged over the answers that named the brand at all — an answer that never
+    named it has no rank, which is not the same as a worst one, and visibility
+    already reports how often that happens.
+    """
+    ranked = [row.avg_position for row in responses if row.avg_position is not None]
+    return round(sum(ranked) / len(ranked), 2) if ranked else None
+
+
 def _rate(numerator, denominator):
     return numerator / denominator if denominator else None
 
@@ -166,6 +177,7 @@ def _enrich_row(item, prompt, current, tasks):
     item.owned_citation_rate = _rate(
         item.counts.owned_citation_responses, item.counts.responses
     )
+    item.avg_position = _mean_position(responses)
     groups = defaultdict(list)
     for response in responses:
         groups[(response.logical_engine, response.transport_model)].append(response)

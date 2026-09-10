@@ -30,6 +30,7 @@ async def get_visibility_sources(
     from_at: datetime | None = None,
     to_at: datetime | None = None,
     domain: str | None = None,
+    source_class: str | None = None,
     offset: int = 0,
     limit: int = VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     as_of: datetime | None = None,
@@ -105,8 +106,16 @@ async def get_visibility_sources(
     )
     if domain:
         grouped = grouped.where(Citation.domain == domain)
+    # Filtering here rather than on the loaded page keeps `total`, `next_offset`
+    # and the rows describing the same set. A client-side filter left the footer
+    # counting domains the table was no longer showing.
+    if source_class:
+        grouped = grouped.where(Citation.source_class == source_class)
     source_groups = grouped.group_by(key).subquery()
     total = await session.scalar(select(func.count()).select_from(source_groups))
+    category_totals = await _category_totals(
+        session, workspace_id=workspace_id, scope=scope, domain=domain
+    )
     rows = (
         (
             await session.execute(
@@ -128,6 +137,7 @@ async def get_visibility_sources(
         prompts=prompts,
         as_of=as_of,
         next_offset=offset + limit if offset + limit < (total or 0) else None,
+        category_totals=category_totals,
         items=[_source_row(row, denominator, prompts) for row in rows],
     )
     if baseline_audit_ids:
@@ -169,3 +179,30 @@ def _source_boundary(as_of):
     if boundary.tzinfo is None:
         raise TrendQueryError("'as_of' must be timezone-aware")
     return boundary
+
+
+async def _category_totals(session, *, workspace_id, scope, domain) -> dict[str, int]:
+    """Distinct cited domains per source class, across the whole selection.
+
+    Counted server-side because the rows are paginated: a client folding the
+    page it happens to hold would present page one as the mix. Distinct DOMAINS
+    rather than citations, so one heavily cited site cannot look like a whole
+    category.
+    """
+    statement = (
+        select(
+            Citation.source_class,
+            func.count(func.distinct(Citation.domain)).label("domains"),
+        )
+        .join(scope, scope.c.analysis_id == Citation.analysis_id)
+        .where(
+            Citation.workspace_id == workspace_id,
+            Citation.source_class.is_not(None),
+        )
+    )
+    if domain:
+        statement = statement.where(Citation.domain == domain)
+    rows = (await session.execute(statement.group_by(Citation.source_class))).all()
+    return {
+        str(source_class): int(count) for source_class, count in rows if source_class
+    }

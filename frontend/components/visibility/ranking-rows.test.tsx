@@ -40,13 +40,12 @@ describe('RankingRowsTable', () => {
     expect(screen.queryByRole('columnheader', { name: /rank/i })).toBeNull();
   });
   it('identifies the brand and shows actual citation measurements', () => {
-    render(<RankingRowsTable rows={[row({ is_brand: true })]} responses={10} />);
+    render(<RankingRowsTable rows={[row({ is_brand: true })]} />);
     expect(screen.getByText('You')).toBeVisible();
-    expect(screen.getByText('5 of 10 responses')).toBeVisible();
-    expect(screen.getByRole('columnheader', { name: 'Citation rate' })).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: 'Citations' })).toBeVisible();
     expect(screen.queryByRole('columnheader', { name: 'Sentiment' })).toBeNull();
   });
-  it('distinguishes measured zero, unavailable rates, and incompatible changes', () => {
+  it('distinguishes measured zero, unavailable rates, and incomparable changes', () => {
     render(
       <RankingRowsTable
         rows={[row({ mention_rate: 0 }), row({ name: 'Unknown', mention_rate: null })]}
@@ -55,7 +54,9 @@ describe('RankingRowsTable', () => {
     expect(screen.getByText('0%')).toBeVisible();
     const unknown = screen.getByText('Unknown').closest('tr')!;
     expect(within(unknown).getByText('Not measured')).toBeVisible();
-    expect(within(unknown).getByText('No comparable change')).toBeVisible();
+    // With no prior run, NO brand has a change, so the column is not drawn at
+    // all; the reason is stated once above the table.
+    expect(screen.queryByRole('columnheader', { name: 'Change' })).toBeNull();
   });
   it('opens the exact same-response competitor gap', () => {
     const onSelect = vi.fn();
@@ -66,14 +67,17 @@ describe('RankingRowsTable', () => {
       />,
     );
     expect(screen.getByText('+0.3 pp')).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: '3 brand-absent answers' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Show the 3 answers naming Globex but not you' }),
+    );
     expect(onSelect).toHaveBeenCalledWith('Globex');
   });
-  it('keeps subset change separate from full-selection values', () => {
+  it('prefers the matched-subset change when the run has one', () => {
     render(
       <RankingRowsTable
         rows={[
           row({
+            visibility_delta: 2,
             matched_visibility_delta: 10,
             matched_visibility_rate: 0.6,
             matched_response_count: 4,
@@ -81,9 +85,10 @@ describe('RankingRowsTable', () => {
         ]}
       />,
     );
-    const detail = screen.getByText('Matched subset').closest('details')!;
-    fireEvent.click(screen.getByText('Matched subset'));
-    expect(within(detail).getByText('+10.0 pp')).toBeVisible();
-    expect(within(detail).getByText(/4 matched responses/)).toBeVisible();
+    // Which comparison produced the number is explained once above the table,
+    // so the cell shows the number and nothing else.
+    expect(screen.getByText('+10.0 pp')).toBeVisible();
+    expect(screen.queryByText('Matched subset')).toBeNull();
   });
+
 });

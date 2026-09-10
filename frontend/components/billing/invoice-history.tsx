@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { billingApi, type BillingInvoice } from '@/lib/api/billing';
 import { formatMoney } from '@/lib/billing/catalog';
+import { formatTimestampDate } from '@/lib/format';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -64,8 +65,7 @@ export function InvoiceHistory({
                 Invoice {invoice.invoice_number} · Receipt {invoice.receipt_number}
               </span>
               <span className="text-muted">
-                Paid {new Date(invoice.paid_at).toLocaleDateString()} ·{' '}
-                {formatMoney(invoice.amount_paid, 2)}
+                Paid {formatTimestampDate(invoice.paid_at)} · {formatMoney(invoice.amount_paid, 2)}
               </span>
               <span className="text-muted text-xs">
                 GST: {invoice.tax_treatment.replaceAll('_', ' ')} · CGST{' '}

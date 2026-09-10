@@ -37,11 +37,13 @@ export function filterAndSortPosts(
     .map(({ post }) => post);
 }
 
+const blogDateFormat = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
 export function formatBlogDate(date: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(date));
+  return blogDateFormat.format(new Date(date));
 }

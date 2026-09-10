@@ -3,7 +3,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { ArrowUpRight, LogOut, Map } from 'lucide-react';
 import Link from 'next/link';
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import {
   Dropdown,
@@ -125,17 +125,28 @@ export function UserMenuController({ children }: Readonly<{ children: ReactNode 
   const { user, clearSession } = useSession();
   const [activePresenter, setActivePresenter] = useState<UserMenuPresenter | null>(null);
   // clearSession removes account-scoped cache only after cookie revocation succeeds.
-  // react-doctor-disable-next-line
+  // react-doctor-disable-next-line react-doctor/query-mutation-missing-invalidation
   const logout = useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: () => clearSession(),
   });
-  const setOpen = (presenter: UserMenuPresenter, open: boolean) =>
-    setActivePresenter(open ? presenter : null);
-
-  return (
-    <UserMenuContext.Provider value={{ email: user.email, logout, activePresenter, setOpen }}>
-      {children}
-    </UserMenuContext.Provider>
+  const setOpen = useCallback(
+    (presenter: UserMenuPresenter, open: boolean) => setActivePresenter(open ? presenter : null),
+    [],
   );
+
+  // useMutation returns a fresh object every render, so the context value is
+  // built from the three fields consumers read rather than the result itself.
+  const { mutate: logoutMutate, isError: logoutIsError, isPending: logoutIsPending } = logout;
+  const value = useMemo<UserMenuState>(
+    () => ({
+      email: user.email,
+      logout: { mutate: logoutMutate, isError: logoutIsError, isPending: logoutIsPending },
+      activePresenter,
+      setOpen,
+    }),
+    [user.email, logoutMutate, logoutIsError, logoutIsPending, activePresenter, setOpen],
+  );
+
+  return <UserMenuContext.Provider value={value}>{children}</UserMenuContext.Provider>;
 }

@@ -43,9 +43,10 @@ PROMPT_DECLINE_HISTORY_CANDIDATE_LIMIT: Final = 20
 # how that projection is windowed and bucketed.
 #
 # Allowed ``granularity`` values: ``run`` returns one point per persisted
-# snapshot; ``week`` / ``month`` fold snapshots into deterministic UTC buckets.
+# snapshot; ``day`` / ``week`` / ``month`` fold snapshots into deterministic UTC
+# buckets.
 VISIBILITY_TREND_GRANULARITIES: Final[frozenset[str]] = frozenset(
-    {"run", "week", "month"}
+    {"run", "day", "week", "month"}
 )
 # Default when the request omits ``granularity``.
 VISIBILITY_TREND_DEFAULT_GRANULARITY: Final = "run"
