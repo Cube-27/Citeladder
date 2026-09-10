@@ -1,8 +1,15 @@
 # CiteLadder production hardening
 
-**Status:** Planned. Phase 0 is implemented and shipping separately; phases 1–3
-are not started and require dedicated audit before implementation. This document
-does not claim completed infrastructure work or measured post-change results.
+**Status:** Phase 0 and the marketing-surface performance work (phases 1a–1c)
+are implemented. **Everything that remains is deployment and infrastructure:**
+the zone move (1d), durability and observability (phase 2), and deployment
+architecture (phase 3) — none of which is started, and each of which needs its
+own audit before implementation.
+
+Performance results quoted in phase 1 are BUILD measurements (JS referenced by
+the prerendered landing page). No post-change Lighthouse or field capture has
+been taken; the LCP and TBT effects are expectations from the mechanism, not
+observed numbers. This document still claims no completed infrastructure work.
 
 **Scope:** Public marketing surface performance, infrastructure durability, and
 deployment architecture. The signed-in application's client-side performance is
@@ -112,50 +119,121 @@ rather than relying on the robots rule.
 Operator reports "overall loading was slow on every page" — both marketing and
 signed-in. That splits into two causes with different fixes.
 
-### 1a. Anonymous session round-trip on marketing pages
+**Status: 1a–1c are implemented (10 Sep 2026).** The client-side work in this
+phase is done; what remains in this document is deployment and infrastructure.
+Numbers below are measured against the production build (`pnpm build`), by
+summing the JS chunks the prerendered `/` HTML actually references. They are
+BUILD measurements, not field results — no post-change Lighthouse run has been
+captured, and the LCP/TBT claims are expectations from the mechanism, not
+observed improvements. **Re-run PageSpeed after deploy to confirm.**
 
-**Partially addressed. The remaining work needs a design decision.**
+Baseline at `730a3563`: PageSpeed mobile score 64 — LCP 6.0 s, TBT 460 ms,
+Speed Index 4.0 s, FCP 1.7 s, CLS 0.
 
-`useMarketingSession` in `components/marketing/chrome/nav.tsx` calls
-`authApi.me` on mount for every marketing visitor, including anonymous ones,
-to choose a navigation variant.
+### 1a. The marketing bundle shipped the entire product schema layer
 
-**Done:** `LandingSessionRedirect` fired a *second*, duplicate query against
-the same `queryKeys.auth.me()` key purely to prime the cache. The nav already
-resolves it, so the island was removed along with the landing page's only
-client component. `app/(marketing)/page.test.tsx` now asserts the page reads
-no session at all, which is what prevents one being reintroduced.
+**Done — the single largest win in this phase: 449 KB removed from every
+marketing page.**
 
-**Not done, and why.** Gating the query on the `ACTIVE_PROJECT_STORAGE_KEY`
-trace that `ReturningVisitorHint` already reads before first paint was tried
-and reverted. It breaks a real case: a signed-in visitor on a new device, in a
-private window, or after localStorage eviction holds a valid session cookie but
-no stored trace, and would be shown "Log in" permanently. The existing nav tests
-(`carries both session answers in the markup until me has answered`,
-`swaps the CTA for a dashboard link once the session resolves`) caught this.
-localStorage is a rendering hint, not evidence of session state.
+`useMarketingSession` in `components/marketing/chrome/nav.tsx` needs two
+answers: is anyone signed in, and do they have a project. It got them from
+`authApi.me` and `projectsApi.listProjects`, both of which validate through
+`lib/api/schemas` — a barrel re-exporting **every schema in the product**
+(~2,600 lines of Zod across billing, audits, visibility, opportunities,
+performance…). `nav.tsx` is the marketing tree's client boundary, so that
+barrel landed on `/`, `/pricing`, `/blog/*` and every other static marketing
+page: a measured **449 KB chunk** to answer two yes/no questions.
 
-A correct fix reads the `citeladder_session` cookie server-side and passes the
-answer down, so the anonymous case never issues a request while the signed-in
-case stays correct. That conflicts with the marketing pages being fully static
-(`cacheComponents: true`), so it is a real design decision about which routes
-stay static — not a quick fix. **Defer to the dedicated audit.**
+`lib/api/marketing-session.ts` now serves both from the transport
+(`lib/api/client.ts`, which is Zod-free), returning a `boolean` and a `number`.
+Validation is dropped deliberately and only here: `strictValidate` exists to
+fail loud on contract drift, which is right when a response drives product
+behaviour, but these two drive a navigation variant. Drift shows a visitor
+"Log in" instead of "Dashboard", self-correcting on their next real page.
 
-### 1b. `QueryProvider` wraps the marketing tree
+**The cache keys had to change too, and this was the subtle part.** Reusing
+`queryKeys.auth.me()` / `projects.list()` would have written a `boolean` and a
+`number` where `SessionGuard` and `ProjectProvider` read a user object and a
+`Project[]`. One `QueryClient` spans both surfaces with a 30-minute `gcTime`,
+so a visitor going `/` → `/projects` would have handed the shell the wrong
+shape. Hence `authKeys.marketingSession()` and
+`projectKeys.marketingCount()`.
 
-`frontend/app/layout.tsx:72` places `QueryProvider` around all children. All 21
-files under `app/(marketing)/` are server components — that architecture is
-correct and should be preserved — but the marketing bundle still ships the
-client-state library. Move the provider into the app layout group.
+**Still not done — the anonymous round trip itself.** Every marketing visitor,
+including anonymous ones, still issues one `me` request on mount. Gating it on
+the `ACTIVE_PROJECT_STORAGE_KEY` trace was tried and reverted: a signed-in
+visitor on a new device, in a private window, or after localStorage eviction
+holds a valid cookie but no trace, and would be shown "Log in" permanently.
+The nav tests (`carries both session answers in the markup until me has
+answered`, `swaps the CTA for a dashboard link once the session resolves`)
+caught it. localStorage is a rendering hint, not evidence of session state.
 
-`LandingSessionRedirect` is gone, but `nav.tsx` and `pricing-catalog.tsx` are
-client components using the provider, so this needs the 1a resolution first.
+A correct fix reads the `citeladder_session` cookie server-side, so the
+anonymous case never issues a request. That conflicts with the marketing pages
+being fully static (`cacheComponents: true`), so it is a real design decision
+about which routes stay static — not a quick fix. **Defer to the dedicated
+audit.** It is now a latency question only; the payload cost is gone.
 
-### 1c. Non-composited animations
+### 1b. `QueryProvider` wrapping the marketing tree — deliberately not doing
 
-Lighthouse reports three animated elements not running on the compositor. Move
-to `transform` / `opacity`. Protects the current CLS of 0, which must not
-regress.
+`frontend/app/layout.tsx` places `QueryProvider` around all children, and the
+original plan was to move it into the app layout group so marketing stops
+shipping the client-state library.
+
+**Measured and rejected.** react-query is ~36 KB here, and `nav.tsx` and
+`pricing-catalog.tsx` are marketing client components that genuinely call
+`useQuery`. Moving the provider relocates the dependency without removing it —
+marketing still downloads react-query, and the root layout gains a split that
+buys nothing. This only becomes worth doing if 1a's server-side cookie read
+lands and the nav stops using `useQuery` at all; it is a consequence of that
+decision, not an independent task.
+
+### 1c. Hero animations — LCP and the compositor
+
+**Done.** Two defects in `app/globals.css`, both above the fold:
+
+1. **The hero entrance was deferring LCP by ~1 s.** `.hero-entrance`'s beat
+   stagger animated `opacity: 0 → 1` over each of the hero column's children,
+   and the `<h1>` — the largest text block on the first screen, and so the LCP
+   element on nearly every visit — was the second beat: a 0.19 s delay plus a
+   0.85 s duration. **Chrome does not accept an `opacity: 0` element as an LCP
+   candidate**, so LCP could not be reported until that beat finished. The
+   headline now animates through `hero-beat-in-opaque`, which moves it without
+   ever making it transparent, and carries no delay. Every other beat keeps
+   its fade, shortened from 0.85 s/0.09 s to 0.5 s/0.05 s — the old sequence
+   left the sixth child settling 1.4 s after CSS applied.
+
+2. **`.engine-rotor-inner` runs an infinite 8 s 3D flip.** `perspective` plus
+   `rotateX` on a `preserve-3d` subtree repainted the logos and their text
+   every frame — Lighthouse's "non-composited animation" — directly above the
+   fold, competing with hydration during exactly the window TBT measures.
+   `will-change: transform` promotes it to its own layer.
+
+CLS stays 0: no change adds layout-affecting properties, and the entrance
+still animates `transform` / `opacity` only.
+
+**Pausing the rotor off screen was tried and reverted.** An infinite animation
+runs for as long as the tab is open, but `animation-timeline: view()` makes
+the flip *scrub with scroll position* instead of running on its own clock,
+which is a different design. Genuine off-screen pausing needs an
+IntersectionObserver — JavaScript on the marketing bundle, which is what this
+pass is removing. Left as a time-based animation on a promoted layer.
+
+### Result of 1a–1c (build measurement)
+
+| | Before | After |
+|---|---|---|
+| JS referenced by prerendered `/` | 1280.1 KB | **833.4 KB** |
+| Chunks | 15 | 14 |
+
+Of the 833 KB that remains, **110 KB is Next's `nomodule` legacy polyfill
+bundle** (`build-manifest.json` → `polyfillFiles`), which modern browsers
+download but never execute — it does not affect TBT. This is also the source
+of Lighthouse's "Legacy JavaScript" item: it is Next-owned, confirming the
+note under *Preserve these* that no action is available in application code.
+The next largest single item is motion's `domMax` feature bundle at 145 KB,
+loaded through `LazyMotion` in its own async chunk for the nav's `layout`
+animation.
 
 ### 1d. Zone move — `asia-south1-b` → `asia-south1-a`
 

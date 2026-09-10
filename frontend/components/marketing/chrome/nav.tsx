@@ -7,8 +7,7 @@ import { useReducedMotion } from 'motion/react';
 import Link from 'next/link';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
-import { authApi } from '@/lib/api/auth';
-import { projectsApi } from '@/lib/api/projects';
+import { fetchMarketingProjectCount, fetchMarketingSession } from '@/lib/api/marketing-session';
 import { queryKeys } from '@/lib/api/query-keys';
 import { DEMO_CTA, type NavDropKey } from '@/lib/marketing-content/nav';
 import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
@@ -56,18 +55,30 @@ function useMarketingSession() {
     readStoredActiveProject,
     noStoredActiveProject,
   );
+  // Both queries go through `lib/api/marketing-session`, NOT the validated
+  // `authApi` / `projectsApi`: those import the schema barrel, which put Zod
+  // and every product schema (a measured 449 KB) into the marketing bundle to
+  // answer two yes/no questions. See that module for why validation is the
+  // right trade to drop here specifically.
+  //
+  // These use marketing-only cache keys. They hold a boolean and a count,
+  // whereas `auth.me()` / `projects.list()` hold the validated user object and
+  // project array that `SessionGuard` and `ProjectProvider` read fields off —
+  // one `QueryClient` spans both surfaces with a 30-minute `gcTime`, so
+  // sharing a key would hand the app shell the wrong shape on the first
+  // navigation in from `/`.
   const me = useQuery({
-    queryKey: queryKeys.auth.me(),
-    queryFn: ({ signal }) => authApi.me({ signal }),
+    queryKey: queryKeys.auth.marketingSession(),
+    queryFn: ({ signal }) => fetchMarketingSession({ signal }),
     retry: false,
     refetchOnWindowFocus: false,
   });
   const projects = useQuery({
-    queryKey: queryKeys.projects.list(),
-    queryFn: ({ signal }) => projectsApi.listProjects({ signal }),
+    queryKey: queryKeys.projects.marketingCount(),
+    queryFn: ({ signal }) => fetchMarketingProjectCount({ signal }),
     enabled: Boolean(me.data),
   });
-  const hasProject = (projects.data?.length ?? 0) > 0 || hasStoredProject;
+  const hasProject = (projects.data ?? 0) > 0 || hasStoredProject;
 
   // Only once `me` has answered does React know what the actions row should
   // show, and only then may the pre-hydration mark go. Dropping it on mount

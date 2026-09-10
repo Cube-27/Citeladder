@@ -1075,12 +1075,28 @@ samp {
   }
 }
 
-.hero-entrance > *:nth-child(1) { animation: hero-beat-in 0.85s var(--ease-standard) 0.1s both; }
-.hero-entrance > *:nth-child(2) { animation: hero-beat-in 0.85s var(--ease-standard) 0.19s both; }
-.hero-entrance > *:nth-child(3) { animation: hero-beat-in 0.85s var(--ease-standard) 0.28s both; }
-.hero-entrance > *:nth-child(4) { animation: hero-beat-in 0.85s var(--ease-standard) 0.37s both; }
-.hero-entrance > *:nth-child(5) { animation: hero-beat-in 0.85s var(--ease-standard) 0.46s both; }
-.hero-entrance > *:nth-child(6) { animation: hero-beat-in 0.85s var(--ease-standard) 0.55s both; }
+/* The headline rises but is NEVER transparent, and it carries no delay.
+   Chrome does not accept an `opacity: 0` element as an LCP candidate, so
+   while the h1 faded in, LCP could not be reported before the beat finished:
+   the 0.19s delay plus a 0.85s duration put the landing page's LCP a full
+   second behind its actual paint. It is the largest text block on the first
+   screen and therefore the LCP element on nearly every visit — it has to be
+   opaque in the first frame. Movement alone still reads as an entrance. */
+@keyframes hero-beat-in-opaque {
+  from {
+    transform: translateY(24px);
+  }
+}
+
+/* Beats are shortened from 0.85s/0.09s to 0.5s/0.05s. The old sequence left
+   the sixth child settling 1.4s after CSS applied — long enough that the
+   engine roster was still arriving when a visitor started reading. */
+.hero-entrance > *:nth-child(1) { animation: hero-beat-in 0.5s var(--ease-standard) 0.05s both; }
+.hero-entrance > *:nth-child(2) { animation: hero-beat-in-opaque 0.5s var(--ease-standard) both; }
+.hero-entrance > *:nth-child(3) { animation: hero-beat-in 0.5s var(--ease-standard) 0.1s both; }
+.hero-entrance > *:nth-child(4) { animation: hero-beat-in 0.5s var(--ease-standard) 0.15s both; }
+.hero-entrance > *:nth-child(5) { animation: hero-beat-in 0.5s var(--ease-standard) 0.2s both; }
+.hero-entrance > *:nth-child(6) { animation: hero-beat-in 0.5s var(--ease-standard) 0.25s both; }
 
 /* The global reduced-motion rule above collapses animation DURATION, but the
    per-beat delays survive it: a `both`-filled child would hold its opacity-0
@@ -1178,7 +1194,21 @@ samp {
   height: 100%;
   transform-style: preserve-3d;
   animation: citeladder-engine-flip 8s cubic-bezier(0.5, 0, 0, 0.75) infinite;
+  /* Promote the rotor to its own layer and tell the compositor the transform
+     is the only thing changing. Without it the flip repaints the logos and
+     their text on every frame — Lighthouse's "non-composited animation", and
+     an infinite one directly above the fold, so it competes with hydration
+     during exactly the window TBT measures. */
+  will-change: transform;
 }
+
+/* The rotor stays a time-based infinite animation on purpose. Pausing it off
+   screen was tried via `animation-timeline: view()` and reverted: attaching a
+   view timeline makes the flip SCRUB with scroll position instead of running
+   on its own clock, which is a different design. Genuine off-screen pausing
+   needs an IntersectionObserver toggling `animation-play-state`, and that
+   trades JavaScript on the marketing bundle — the thing this pass is removing
+   — for frames the compositor now handles on its own layer. */
 
 .engine-rotor-face {
   position: absolute;
