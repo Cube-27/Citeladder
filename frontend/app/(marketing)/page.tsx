@@ -7,7 +7,6 @@ import { SeeIt } from '@/components/marketing/landing/see-it';
 import { Shift } from '@/components/marketing/landing/shift';
 import { Trust } from '@/components/marketing/landing/trust';
 import { Workflow } from '@/components/marketing/landing/workflow';
-import { LandingSessionRedirect } from '@/components/marketing/landing-session-redirect';
 
 const DESCRIPTION =
   'AI visibility software that records how ChatGPT, Gemini, and Claude describe your brand, then opens every score to the persisted answer. Runs on your provider keys.';
@@ -33,10 +32,9 @@ export const metadata: Metadata = {
 
 /**
  * Public marketing landing page (`/`) on the Proof surface. Server-rendered so
- * the full page is in the initial HTML (SEO + first paint); the only client
- * island the page renders is the invisible LandingSessionRedirect, which
- * forwards signed-in visitors to their dashboard (`/projects`) or to
- * first-run `/onboarding` — the contract `/` had before this page existed.
+ * the full page is in the initial HTML (SEO + first paint), with no client
+ * island of its own: the session the nav needs is resolved by the nav, and
+ * only for visitors whose browser carries a trace of a previous session.
  *
  * Eight beats, in order: the hook with the rotating engine roster (Hero), why
  * growth changed (Shift), the product itself (SeeIt), how the loop runs
@@ -53,16 +51,14 @@ export const metadata: Metadata = {
  */
 export default function LandingPage() {
   return (
-    <LandingSessionRedirect>
-      <main id="main">
-        <Hero />
-        <Shift />
-        <SeeIt />
-        <Workflow />
-        <Packs />
-        <Trust />
-        <FinalCta />
-      </main>
-    </LandingSessionRedirect>
+    <main id="main">
+      <Hero />
+      <Shift />
+      <SeeIt />
+      <Workflow />
+      <Packs />
+      <Trust />
+      <FinalCta />
+    </main>
   );
 }

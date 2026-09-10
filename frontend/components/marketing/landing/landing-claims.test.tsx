@@ -1,14 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import Page from '@/app/(marketing)/page';
 import { FAQ_GROUPS } from '@/lib/marketing-content/faq';
-
-// The landing page's only client island forwards signed-in visitors away;
-// it needs a session provider it does not have under a plain render.
-vi.mock('@/components/marketing/landing-session-redirect', () => ({
-  LandingSessionRedirect: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
 
 /**
  * Claim guards for the landing page.

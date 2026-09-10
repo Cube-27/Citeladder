@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 
 import { queryKeys } from '@/lib/api/query-keys';
 import { DEMO_HREF } from '@/lib/marketing-content/nav';
@@ -21,7 +21,9 @@ afterEach(() => {
 });
 afterAll(() => mswServer.close());
 
-/** Anonymous visitor: the session check 401s and the island stays inert. */
+/** Anonymous visitor. The handler exists so an accidental `me` fetch would
+ * resolve rather than trip `onUnhandledRequest`, letting the test below assert
+ * the query was never made at all. */
 function stubAnonymous() {
   mswServer.use(
     http.get('/api/v1/auth/me', () =>
@@ -34,10 +36,10 @@ function stubAnonymous() {
 // LandingFooter) moved into the (marketing) route-group layout, whose
 // next/font import makes direct layout renders impractical in vitest — the
 // nav/footer contracts get colocated component tests and the layout
-// composition is covered by e2e. The LandingSessionRedirect island itself is
-// covered exhaustively in components/marketing/landing-session-redirect.test.tsx.
+// composition is covered by e2e. The page renders no client island of its own:
+// the nav resolves the session, and only for returning visitors.
 describe('Landing page (public marketing `/`)', () => {
-  it('renders exactly one h1 and keeps the marketing content up after the 401 settles', async () => {
+  it('renders exactly one h1 and reads no session of its own', async () => {
     stubAnonymous();
     const { queryClient } = renderWithProviders(<Page />);
 
@@ -52,11 +54,12 @@ describe('Landing page (public marketing `/`)', () => {
       expect(heading).not.toHaveTextContent(/citeladder/i);
     }
 
-    // The session-check island stays inert for an anonymous visitor: the 401
-    // settles, no redirect fires, and the content never leaves the screen.
-    await waitFor(() =>
-      expect(queryClient.getQueryState(queryKeys.auth.me())?.status).toBe('error'),
-    );
+    // The page itself no longer reads the session — the nav does, and the nav
+    // is not in this render — so `me` must never be fetched here. Asserting the
+    // absence of the query is what keeps a session-reading island from being
+    // reintroduced into the landing page: `onUnhandledRequest: 'error'` would
+    // not catch it, because the handler above answers it.
+    expect(queryClient.getQueryState(queryKeys.auth.me())).toBeUndefined();
     expect(replace).not.toHaveBeenCalled();
     expect(h1s[0]).toBeInTheDocument();
   });

@@ -21,8 +21,8 @@ export const instant = true;
  * watchdog), then `<OnboardingGate>` (first-run users have no project yet, so
  * they go to `/onboarding` rather than into an empty workspace), then the
  * `<AppShell>` chrome (sidebar + top bar). `/` is now the public marketing
- * page (see `app/(marketing)/`); its LandingSessionRedirect island forwards
- * signed-in visitors here (`/projects`, or `/onboarding` pre-project).
+ * page (see `app/(marketing)/`), which does not redirect: a signed-in visitor
+ * reads it with the signed-in nav and follows a link here themselves.
  *
  * The provider sits OUTSIDE the guard on purpose. Its project list needs only
  * the session cookie — the workspace header is derived from its own result —
