@@ -41,7 +41,7 @@ def test_vm_is_shielded_fixed_size_and_avoids_incidental_replacement() -> None:
     compute = (GCP / "compute.tf").read_text(encoding="utf-8")
     variables = (GCP / "variables.tf").read_text(encoding="utf-8")
     assert 'default = "e2-standard-2"' in variables
-    assert 'default = "asia-south1-b"' in variables
+    assert 'default = "asia-south1-a"' in variables
     assert 'regex("^asia-south1-[a-z]$", var.zone)' in variables
     assert 'for label in split(".", var.domain_name)' in variables
     assert "size  = 30" in compute

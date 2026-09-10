@@ -32,16 +32,16 @@ variable "region" {
   default = "asia-south1"
   validation {
     condition     = var.region == "asia-south1"
-    error_message = "The temporary demo is fixed to asia-south1 (Mumbai)."
+    error_message = "The deployment is fixed to asia-south1 (Mumbai)."
   }
 }
 
 variable "zone" {
   type    = string
-  default = "asia-south1-b"
+  default = "asia-south1-a"
   validation {
     condition     = can(regex("^asia-south1-[a-z]$", var.zone))
-    error_message = "The temporary demo zone must be in asia-south1 (Mumbai)."
+    error_message = "The zone must be in asia-south1 (Mumbai)."
   }
 }
 

@@ -5,7 +5,7 @@ param(
     [Parameter(Mandatory)] [string] $BillingAccount,
     [Parameter(Mandatory)] [string] $StateBucket,
     [string] $Region = 'asia-south1',
-    [string] $Zone = 'asia-south1-b',
+    [string] $Zone = 'asia-south1-a',
     [string] $Repository = 'Cube-27/Citeladder',
     [string] $Environment = 'gcp-demo'
 )
@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 if ($Region -ne 'asia-south1' -or $Zone -notmatch '^asia-south1-[a-z]$') {
-    throw 'The reviewed demo region is asia-south1; select a zone in that region.'
+    throw 'The region is fixed to asia-south1; select a zone in that region.'
 }
 $pool = 'github'
 $provider = 'citeladder-main'

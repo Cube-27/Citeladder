@@ -62,7 +62,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", required=True)
     parser.add_argument("--instance", default="citeladder-demo")
-    parser.add_argument("--zone", default="asia-south1-b")
+    # No default: reset-gcp-db.ps1 resolves the live zone and always passes
+    # one. A stale default here would silently target the wrong VM.
+    parser.add_argument("--zone", required=True)
     parser.add_argument(
         "--reset-project", help="Destructive opt-in: repeat the exact project ID"
     )

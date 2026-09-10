@@ -5,8 +5,12 @@ param(
 
     [string] $Instance = "citeladder-demo",
 
-    [ValidatePattern("^[a-z]+-[a-z]+[0-9]-[a-z]$")]
-    [string] $Zone = "asia-south1-b",
+    # Empty means "ask GCP where the instance actually is". A hardcoded default
+    # goes stale the moment the VM is rebuilt in another zone after a capacity
+    # stockout, and the failure is a confusing "instance not found" rather than
+    # a wrong-zone message.
+    [ValidatePattern("^$|^[a-z]+-[a-z]+[0-9]-[a-z]$")]
+    [string] $Zone = "",
 
     [switch] $Reset,
 
@@ -41,6 +45,15 @@ $python = Get-Command python -CommandType Application -ErrorAction SilentlyConti
     Select-Object -First 1
 if ($null -eq $python) {
     throw "Python is required. Install Python, then authenticate gcloud before retrying."
+}
+
+if ([string]::IsNullOrEmpty($Zone)) {
+    $Zone = (& gcloud compute instances list --project $ProjectId `
+        --filter "name=$Instance" --format "value(zone)" 2>$null | Select-Object -First 1)
+    if ([string]::IsNullOrEmpty($Zone)) {
+        throw "Could not find instance '$Instance' in project '$ProjectId'. Pass -Zone explicitly if it exists but is not listable."
+    }
+    Write-Verbose "Resolved zone $Zone for $Instance."
 }
 
 $arguments = @(

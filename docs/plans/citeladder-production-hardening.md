@@ -112,21 +112,34 @@ rather than relying on the robots rule.
 Operator reports "overall loading was slow on every page" — both marketing and
 signed-in. That splits into two causes with different fixes.
 
-### 1a. Anonymous visitors make an authenticated API call
+### 1a. Anonymous session round-trip on marketing pages
 
-**Highest-value single change in this phase.**
+**Partially addressed. The remaining work needs a design decision.**
 
-`components/marketing/landing-session-redirect.tsx` is a client component on the
-public landing page calling `useQuery(authApi.me)` on mount. Every anonymous
-visitor therefore downloads and hydrates TanStack Query, then makes a session
-round-trip to the origin purely to select a navigation variant — a request that
-returns unauthenticated for exactly the visitors the page exists to convert.
+`useMarketingSession` in `components/marketing/chrome/nav.tsx` calls
+`authApi.me` on mount for every marketing visitor, including anonymous ones,
+to choose a navigation variant.
 
-Render the signed-out navigation on the server; swap after hydration only when a
-session cookie is present, so the query never fires for anonymous traffic.
+**Done:** `LandingSessionRedirect` fired a *second*, duplicate query against
+the same `queryKeys.auth.me()` key purely to prime the cache. The nav already
+resolves it, so the island was removed along with the landing page's only
+client component. `app/(marketing)/page.test.tsx` now asserts the page reads
+no session at all, which is what prevents one being reintroduced.
 
-Accounts for a substantial share of the reported 457 KiB unused JavaScript and
-contributes to the 520 ms Total Blocking Time.
+**Not done, and why.** Gating the query on the `ACTIVE_PROJECT_STORAGE_KEY`
+trace that `ReturningVisitorHint` already reads before first paint was tried
+and reverted. It breaks a real case: a signed-in visitor on a new device, in a
+private window, or after localStorage eviction holds a valid session cookie but
+no stored trace, and would be shown "Log in" permanently. The existing nav tests
+(`carries both session answers in the markup until me has answered`,
+`swaps the CTA for a dashboard link once the session resolves`) caught this.
+localStorage is a rendering hint, not evidence of session state.
+
+A correct fix reads the `citeladder_session` cookie server-side and passes the
+answer down, so the anonymous case never issues a request while the signed-in
+case stays correct. That conflicts with the marketing pages being fully static
+(`cacheComponents: true`), so it is a real design decision about which routes
+stay static — not a quick fix. **Defer to the dedicated audit.**
 
 ### 1b. `QueryProvider` wraps the marketing tree
 
@@ -135,7 +148,8 @@ files under `app/(marketing)/` are server components — that architecture is
 correct and should be preserved — but the marketing bundle still ships the
 client-state library. Move the provider into the app layout group.
 
-Depends on 1a: while `LandingSessionRedirect` needs the provider, it cannot move.
+`LandingSessionRedirect` is gone, but `nav.tsx` and `pricing-catalog.tsx` are
+client components using the provider, so this needs the 1a resolution first.
 
 ### 1c. Non-composited animations
 
@@ -148,10 +162,29 @@ regress.
 **This is the operator's highest-priority item and carries the highest risk in
 this phase. Treat it as a migration, not a config tweak.**
 
-The zone originates from the GitHub repo variable `GCP_ZONE`
-(`.github/workflows/gcp-demo-deploy.yml:34`), not the Terraform default. The
-existing validation regex `^asia-south1-[a-z]$` already permits `-a`, so **no
-Terraform change is required** — only the repository variable.
+**The zone was never hardcoded in the deployment path.** `GCP_ZONE` comes from
+the `gcp-demo` GitHub environment (`gcp-demo-deploy.yml:34`) and Terraform's
+`var.zone` accepts it; the existing regex `^asia-south1-[a-z]$` already permits
+`-a`. What made the change feel invasive was five *independent defaults* in
+local operator scripts, each written so the script runs without a flag.
+
+Addressed (10 Sep 2026):
+
+| File | Was | Now |
+|---|---|---|
+| `infra/gcp/variables.tf` | `default = "asia-south1-b"` | `asia-south1-a` |
+| `infra/gcp/bootstrap.ps1` | `$Zone = 'asia-south1-b'` | `asia-south1-a` (provisioning; nothing to discover) |
+| `reset-gcp-db.ps1` | `$Zone = "asia-south1-b"` | empty; resolved from the running instance |
+| `infra/gcp/reset-db.py` | `--zone` default `asia-south1-b` | `required=True`; caller always passes the resolved zone |
+| `docs/operations/GCP_RUNBOOK.md` | documents `-b` | documents `-a` and the resolution behaviour |
+
+The two reset scripts now ask GCP where `citeladder-demo` actually is rather
+than assuming. That is the durable fix: a hardcoded default goes stale the next
+time a stockout moves the VM, and fails as a confusing "instance not found".
+
+**Still operator-owned:** `GCP_ZONE` in the `gcp-demo` GitHub environment.
+Repository variables are not in the repo, so this cannot be changed from a
+commit.
 
 **Blast radius.** Every other resource is regional (`network.tf`,
 `storage.tf`); only `google_compute_instance.demo` is zonal. Changing the zone
@@ -161,18 +194,35 @@ therefore forces replacement of the instance alone — but:
 - Postgres data lives in a Docker volume on that boot disk.
 - **The database is destroyed by this change.**
 
-**Required sequence:**
+**Operator decision (10 Sep 2026):** pre-revenue, no customer data, no backup
+required. Destruction of the database is accepted. This is recorded so the
+decision is not silently reused later — it does not survive the first paying
+customer.
 
-1. Take a manual backup and verify it is non-empty and restorable —
-   `/opt/citeladder/backup.sh predeploy` writes to
-   `gs://<project>-citeladder-demo-backups/predeploy/`.
-2. Copy that dump somewhere outside the bucket. The bucket has a 10-day
-   lifecycle delete and `force_destroy = true` (see 2b).
-3. Rehearse the restore before destroying anything.
-4. Change `GCP_ZONE` to `asia-south1-a`; apply; restore.
+**Verified before the move (10 Sep 2026):**
 
-Pre-revenue status makes this survivable, which is why it is acceptable here at
-all. It would not be acceptable after payments are enabled.
+| Check | Result |
+|---|---|
+| `asia-south1-a` zone status | `UP` |
+| `asia-south1-b` / `-c` status | `UP` |
+| `e2-standard-2` offered in `-a` | Yes (2 vCPU / 8192 MB) |
+| Regional CPU quota | 2 of 100 used |
+| Instances / addresses | 1 of 24 · 1 of 8 |
+
+Quota is not a constraint. Zone `-a` is healthy and offers the machine type.
+**Live capacity was not probed** — creating a throwaway instance to prove
+schedulability was declined as it provisions billable infrastructure. GCE
+stockouts (`ZONE_RESOURCE_POOL_EXHAUSTED`) are transient and cannot be read
+from any API, so the only proof is the apply itself.
+
+**Deployment risk and rollback.** The original move to `-b` was forced by a
+stockout in `-a`, so the failure mode is a recurrence. If the apply fails on
+capacity, it fails at instance creation — before traffic moves — and the
+recovery is to set `GCP_ZONE` back to `asia-south1-b` and re-run. Alternatives
+if `-a` will not take the instance: try `asia-south1-c`, or change
+`machine_type`, which currently requires removing the validation block in
+`infra/gcp/variables.tf` that pins `e2-standard-2` (see 3b). Other families
+(`n2`, `c3`, `t2d`) commonly have capacity where `e2` does not.
 
 **Caveat on the expected benefit.** The operator observed `-a` as faster and
 cheaper than `-b`. Zones within a region share egress pricing and are

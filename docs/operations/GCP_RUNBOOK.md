@@ -1,7 +1,7 @@
 # CiteLadder GCP Demo Runbook
 
 This is the operator procedure for the temporary CiteLadder demo. The reviewed
-design is fixed to `asia-south1`, defaults to `asia-south1-b`, and uses one
+design is fixed to `asia-south1`, defaults to `asia-south1-a`, and uses one
 `e2-standard-2` VM, Cloudflare in front of Caddy, and the protected `gcp-demo`
 GitHub environment. Never place a long-lived Google service-account key in
 GitHub.
@@ -52,7 +52,7 @@ Add these environment variables:
 | `GCP_PROJECT_ID` | Bootstrap project ID |
 | `GCP_PROJECT_NUMBER` | Bootstrap output |
 | `GCP_REGION` | `asia-south1` |
-| `GCP_ZONE` | `asia-south1-b` (or another `asia-south1` zone when capacity requires it) |
+| `GCP_ZONE` | `asia-south1-a` (or another `asia-south1` zone when capacity requires it) |
 | `GCP_WIF_PROVIDER` | Bootstrap output |
 | `GCP_DEPLOY_SERVICE_ACCOUNT` | Bootstrap output |
 | `GCP_TF_STATE_BUCKET` | Bootstrap state bucket |
@@ -281,6 +281,6 @@ PowerShell script. The first command previews counts and installed source revisi
 irreversibly replaces the fixed `citeladder` database, including users and
 sessions, using the installed image baseline; it does not back up data or deploy
 new images. It refuses a mismatched project or single-account demo mode. Existing
-configured credentials provision the new dev account. Optional `--instance` and
-`--zone` default to `citeladder-demo` and `asia-south1-b`; pass them to the
-PowerShell script if your deployment differs.
+configured credentials provision the new dev account. Optional `--instance`
+defaults to `citeladder-demo`; the zone is resolved from the running instance,
+so pass `-Zone` only when the VM cannot be listed.
