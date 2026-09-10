@@ -137,11 +137,21 @@ jobs:
           set -euo pipefail
           registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
           gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-          if ! gcloud artifacts docker images describe "$registry/backend:$GITHUB_SHA" >/dev/null 2>&1; then
+
+          # `images describe` reads Container Analysis occurrences alongside the
+          # digest, so it needs containeranalysis.occurrences.list — a separate
+          # API from Artifact Registry, and not covered by artifactregistry.admin.
+          # `images list` resolves the same digest from the registry alone, so
+          # the deploy does not depend on the scanning API being reachable.
+          # Prints the digest, or nothing when the tag does not exist.
+          image_digest() {
+            gcloud artifacts docker images list "$registry/$1" --include-tags --filter="tags:$GITHUB_SHA" --format='value(version)' --quiet 2>/dev/null | head -n 1
+          }
+          if [ -z "$(image_digest backend)" ]; then
             docker build --build-arg BUILD_REVISION="$GITHUB_SHA" -t "$registry/backend:$GITHUB_SHA" ../..
             docker push "$registry/backend:$GITHUB_SHA"
           fi
-          if ! gcloud artifacts docker images describe "$registry/frontend:$GITHUB_SHA" >/dev/null 2>&1; then
+          if [ -z "$(image_digest frontend)" ]; then
             docker build --build-arg BUILD_REVISION="$GITHUB_SHA" \
               --build-arg BACKEND_ORIGIN=http://127.0.0.1:8000 \
               --build-arg CITELADDER_TASK_LOCAL_BACKEND=true \
@@ -151,8 +161,10 @@ jobs:
               -t "$registry/frontend:$GITHUB_SHA" -f ../../frontend/Dockerfile ../..
             docker push "$registry/frontend:$GITHUB_SHA"
           fi
-          backend_digest=$(gcloud artifacts docker images describe "$registry/backend:$GITHUB_SHA" --format='value(image_summary.digest)')
-          frontend_digest=$(gcloud artifacts docker images describe "$registry/frontend:$GITHUB_SHA" --format='value(image_summary.digest)')
+          backend_digest="$(image_digest backend)"
+          frontend_digest="$(image_digest frontend)"
+          test -n "$backend_digest"
+          test -n "$frontend_digest"
           test "$backend_digest" != "$frontend_digest"
           backend="$registry/backend@$backend_digest"
           frontend="$registry/frontend@$frontend_digest"

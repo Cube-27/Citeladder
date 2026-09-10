@@ -104,6 +104,12 @@ if (-not (Test-GcloudResource { gcloud iam service-accounts describe $serviceAcc
 
 $projectRoles = @(
     'roles/artifactregistry.admin',
+    # Container Analysis is a separate API from Artifact Registry, and
+    # artifactregistry.admin carries none of its permissions. The deploy path
+    # resolves digests with `images list`, which does not need this, but
+    # `gcloud artifacts docker images describe` and any future scan-result read
+    # do. Granted read-only: the deploy never writes occurrences.
+    'roles/containeranalysis.occurrences.viewer',
     'roles/compute.admin',
     'roles/compute.osAdminLogin',
     'roles/iam.serviceAccountAdmin',
