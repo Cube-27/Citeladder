@@ -4011,6 +4011,7 @@ def upgrade() -> None:
         sa.Column("artifact_id", sa.UUID(), nullable=False),
         sa.Column("analyzer_version", sa.String(length=32), nullable=False),
         sa.Column("competitor_name", sa.String(length=255), nullable=False),
+        sa.Column("first_offset", sa.Integer(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
             ["analysis_id"], ["response_analyses.id"], ondelete="CASCADE"

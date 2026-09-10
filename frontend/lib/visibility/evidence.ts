@@ -62,30 +62,6 @@ export function queryTexts(item: VisibilityExecutionEvidence): string[] {
   return queries;
 }
 
-/** Human explanation for a count-only execution ("provider reported N searches"). */
-export function countOnlyExplanation(item: VisibilityExecutionEvidence): string {
-  const n = item.search_query_count;
-  return `Query text unavailable; provider reported ${n} ${n === 1 ? 'search' : 'searches'}`;
-}
-
-/** Provenance summary line: task/analysis + artifact-or-fallback source. */
-export function provenanceSummary(item: VisibilityExecutionEvidence): string {
-  const source =
-    item.event_source === 'raw_artifact'
-      ? item.artifact_id
-        ? `artifact ${shortId(item.artifact_id)}`
-        : 'artifact'
-      : item.event_source === 'audit_task'
-        ? 'task (artifact pruned)'
-        : 'no search source';
-  return `Provenance: task ${shortId(item.task_id)} · analysis ${shortId(item.analysis_id)} · ${source}`;
-}
-
-/** A short, stable id fragment for compact provenance display. */
-function shortId(id: string): string {
-  return id.slice(0, 8);
-}
-
 /** Format an execution completion timestamp, or a "date unavailable" note. */
 export function formatExecutionDate(timestamp: string | null): string {
   if (!timestamp) return 'Date unavailable';

@@ -11,7 +11,6 @@ import {
   EvidenceFilteredEmpty,
   EvidenceSkeleton,
   ExecutionHeader,
-  ProvenanceDisclosure,
   TruncationNotice,
   type EvidenceTabProps,
 } from '@/components/visibility/evidence-states';
@@ -126,7 +125,6 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
         <ExecutionHeader item={item} />
       </div>
 
-      <ProvenanceDisclosure item={item} />
       {!item.mentions.length && !item.citations.length ? (
         <p>No tracked mentions or citations in this answer.</p>
       ) : null}

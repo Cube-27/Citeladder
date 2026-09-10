@@ -279,6 +279,11 @@ export function MetricCards({
   );
 }
 
+const GA4_SUMMARY_ENTRIES = [
+  { key: 'sessions' as const, label: 'Sessions' },
+  { key: 'conversions' as const, label: 'Conversions' },
+];
+
 /**
  * Sessions and Conversions for the selected range: one compact,
  * non-interactive row beneath the GSC cards.
@@ -299,16 +304,12 @@ export function Ga4SummaryRow({
   compareLabel: string;
   loading?: boolean;
 }>) {
-  const entries = [
-    { key: 'sessions' as const, label: 'Sessions' },
-    { key: 'conversions' as const, label: 'Conversions' },
-  ];
   return (
     <dl
       className="border-border-subtle bg-panel flex flex-wrap gap-x-8 gap-y-2 rounded-[var(--radius-control)] border px-3 py-2"
       data-testid="ga4-summary"
     >
-      {entries.map((entry) => {
+      {GA4_SUMMARY_ENTRIES.map((entry) => {
         const value = selected.totals[entry.key];
         const comparisonValue = comparison ? comparison.totals[entry.key] : undefined;
         return (

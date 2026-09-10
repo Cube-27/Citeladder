@@ -65,6 +65,18 @@ export function formatWindowDate(isoDay: string): string {
   });
 }
 
+/** `2026-07-23T18:14:00Z` → `Jul 23, 2026` (date-only label for a full timestamp). */
+export function formatTimestampDate(timestamp: string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp;
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 /** Mono timestamp in the F5 idiom (`Jul 23, 2026 · 18:14 UTC`). */
 export function formatUtcTimestamp(timestamp: string): string {
   const date = new Date(timestamp);

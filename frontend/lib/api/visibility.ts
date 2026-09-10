@@ -132,6 +132,7 @@ export const visibilityApi = {
       engine?: string;
       cohort?: string;
       domain?: string;
+      source_type?: string;
       offset?: number;
       as_of?: string;
     },

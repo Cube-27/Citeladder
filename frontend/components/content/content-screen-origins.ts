@@ -7,16 +7,19 @@ import type { ContentTargetPage } from '@/lib/api/content';
 import type { ContentOpportunityContext } from './content-screen-data';
 import type { useSiteHealthHandoff } from './content-screen-data';
 
-function replaceAutomaticSkill(
-  current: string | null,
-  next: string,
+/**
+ * Whether an identifier-derived default at `priority` may claim the skill slot,
+ * recording the claim when it does. Deciding here rather than inside a
+ * `setState` updater keeps the ref write out of a callback React may replay.
+ */
+function claimAutomaticSkill(
   priority: number,
   automatic: { current: { priority: number } | null },
   userSelected: { current: boolean },
-): string | null {
-  if (userSelected.current || (automatic.current?.priority ?? -1) > priority) return current;
+): boolean {
+  if (userSelected.current || (automatic.current?.priority ?? -1) > priority) return false;
   automatic.current = { priority };
-  return next;
+  return true;
 }
 
 /** Apply identifier-derived defaults once while preserving every user choice. */
@@ -39,15 +42,8 @@ export function useOriginSelections(
   useEffect(() => {
     if (!opportunity || appliedOpportunity.current === opportunity.id) return;
     appliedOpportunity.current = opportunity.id;
-    setChosenSkillId((current) =>
-      replaceAutomaticSkill(
-        current,
-        opportunity.suggestedSkillId,
-        2,
-        automaticSkill,
-        userSelectedSkill,
-      ),
-    );
+    const claimed = claimAutomaticSkill(2, automaticSkill, userSelectedSkill);
+    setChosenSkillId((current) => (claimed ? opportunity.suggestedSkillId : current));
     if (opportunity.pathway === 'owned' && opportunity.targetUrl) {
       setTarget({ url: opportunity.targetUrl });
       setTargetSearch(opportunity.targetUrl);
@@ -58,15 +54,8 @@ export function useOriginSelections(
   useEffect(() => {
     if (!siteHealth || appliedSiteHealth.current === siteHealth.source_analysis_id) return;
     appliedSiteHealth.current = siteHealth.source_analysis_id;
-    setChosenSkillId((current) =>
-      replaceAutomaticSkill(
-        current,
-        siteHealth.suggested_skill_id,
-        3,
-        automaticSkill,
-        userSelectedSkill,
-      ),
-    );
+    const claimed = claimAutomaticSkill(3, automaticSkill, userSelectedSkill);
+    setChosenSkillId((current) => (claimed ? siteHealth.suggested_skill_id : current));
     setTargetSearch(siteHealth.normalized_url);
   }, [siteHealth]);
 

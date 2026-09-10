@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { Switch } from '@/components/ui/switch';
@@ -118,6 +118,7 @@ export function PricingCatalog() {
     retry: false,
   });
 
+  const queryClient = useQueryClient();
   const checkout = useSubscriptionCheckout();
   const activation = useMutation({
     onMutate: (intent: PendingPricingIntentV1) => setPendingKey(intent.catalog_key),
@@ -149,11 +150,18 @@ export function PricingCatalog() {
         key: intent.idempotency_key,
       });
     },
-    onSuccess: (result) => {
+    onSuccess: async (result, intent) => {
       // Retain pending intent identity for dismissal and uncertain-result
       // recovery; terminal outcomes allow a fresh selection.
       setPendingKey(null);
       if (result.status !== 'pending') clearPendingIntent();
+      // Add-ons and top-ups settle entitlements on the response, so the catalog
+      // and early-access reads have to be refetched before the buttons they
+      // gate are shown again. The subscription branch invalidates the same
+      // prefix inside useSubscriptionCheckout.
+      if (intent.kind === 'addon' || intent.kind === 'topup') {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
+      }
     },
     onError: () => setPendingKey(null),
   });

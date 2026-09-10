@@ -10,7 +10,6 @@ import {
   EvidenceFilteredEmpty,
   EvidenceSkeleton,
   ExecutionHeader,
-  ProvenanceDisclosure,
   TruncationNotice,
 } from './evidence-states';
 
@@ -153,42 +152,5 @@ describe('ExecutionHeader', () => {
     render(<ExecutionHeader item={ITEM} trailing={<span>2 searches</span>} />);
 
     expect(screen.getByText('2 searches')).toBeVisible();
-  });
-});
-
-describe('ProvenanceDisclosure', () => {
-  it('keeps raw ids collapsed behind a disclosure', () => {
-    render(<ProvenanceDisclosure item={ITEM} />);
-
-    // Ids are audit trail, not the evidence a reader came for, so they must
-    // not sit on the primary surface.
-    const summary = screen.getByText('Provenance');
-    expect(summary.closest('details')).not.toHaveAttribute('open');
-  });
-
-  it('names the artifact the evidence was read from', () => {
-    render(<ProvenanceDisclosure item={ITEM} />);
-
-    // Present in the DOM but collapsed: asserted by content, not visibility.
-    const line = screen.getByText(/^Provenance: task/);
-    expect(line).toHaveTextContent('task aaaaaaaa');
-    expect(line).toHaveTextContent('analysis bbbbbbbb');
-    expect(line).toHaveTextContent('artifact cccccccc');
-  });
-
-  it('says the artifact was pruned rather than implying no source', () => {
-    render(
-      <ProvenanceDisclosure item={{ ...ITEM, event_source: 'audit_task', artifact_id: null }} />,
-    );
-
-    expect(screen.getByText(/^Provenance: task/)).toHaveTextContent('task (artifact pruned)');
-  });
-
-  it('says there was no search source at all when there was none', () => {
-    render(<ProvenanceDisclosure item={{ ...ITEM, event_source: 'none', artifact_id: null }} />);
-
-    // "No search source" and "artifact pruned" are different facts about the
-    // run and must not read the same.
-    expect(screen.getByText(/^Provenance: task/)).toHaveTextContent('no search source');
   });
 });

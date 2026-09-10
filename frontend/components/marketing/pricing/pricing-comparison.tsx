@@ -3,6 +3,7 @@
 import { Check } from 'lucide-react';
 
 import type { BillingCatalog, CredentialMode } from '@/lib/api/billing';
+import { formatCount } from '@/lib/format';
 import { launchComparisonRows } from '@/lib/marketing-content/pricing';
 import { cn } from '@/lib/utils';
 
@@ -99,6 +100,6 @@ function renderCell(value: boolean | number | string | null | undefined) {
       <span className="text-subtle">—</span>
     );
   }
-  const display = typeof value === 'number' ? new Intl.NumberFormat('en-US').format(value) : value;
+  const display = typeof value === 'number' ? formatCount(value) : value;
   return <span className="text-foreground tabular-nums">{display}</span>;
 }

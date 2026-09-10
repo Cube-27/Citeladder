@@ -29,8 +29,8 @@ export const visibilityTrendRankingRowSchema = rankingRowSchema;
 // A raw per-run point carries a set `audit_id`; a week/month bucket folds many
 // snapshots (`audit_id` is null) and carries the full provenance list. Version
 // metadata lists every distinct analyzer/scoring version the point folds, with
-// `spans_version_boundary` set when a bucket mixes versions. `sentiment` /
-// `avg_position` stay null (decision B-2 / invariant 9).
+// `spans_version_boundary` set when a bucket mixes versions. `avg_position`
+// folds by completions; `sentiment` stays null until tone is scored.
 export const visibilityTrendPointSchema = responseObject({
   audit_id: uuid().nullable(),
   completed_at: z.string(),

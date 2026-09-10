@@ -128,7 +128,7 @@ describe('VisibilityPage — Mentions & Citations tab', () => {
   });
 });
 
-describe('VisibilityPage — Query Fanout tab', () => {
+describe('VisibilityPage — Query fanouts tab', () => {
   it('renders actual query text, count-only, and no-search states distinctly', async () => {
     setVisibilitySearch('tab=query-fanout');
     useBaseVisibilityHandlers([
@@ -170,22 +170,21 @@ describe('VisibilityPage — Query Fanout tab', () => {
     ]);
     renderVisibilityPage();
 
-    // Actual query text.
+    // A query whose wording the model exposed becomes a row of the table.
     expect(
       await screen.findByText('affordable family clothing Australia 2026'),
     ).toBeInTheDocument();
-    // Count-only legacy explanation.
-    expect(
-      screen.getByText('Query text unavailable; provider reported 1 search'),
-    ).toBeInTheDocument();
-    // No-search state.
-    expect(screen.getByText('No web searches performed for this execution')).toBeInTheDocument();
+    // The other two states are real facts about the run, so they are counted
+    // rather than invented as rows: one search whose wording was withheld, and
+    // one answer that searched nothing at all.
+    expect(screen.getByText(/1 answer searched without returning the wording/)).toBeInTheDocument();
+    expect(screen.getByText(/1 answered without searching/)).toBeInTheDocument();
     // No duplicated citation browser here.
     expect(screen.queryByText('Acme Blog')).toBeNull();
   });
 
-  it('groups executions by frozen prompt without claiming a global total', async () => {
-    setVisibilitySearch('tab=query-fanout');
+  it('groups searches under the frozen prompt when asked to', async () => {
+    setVisibilitySearch('tab=query-fanout&group=prompt');
     useBaseVisibilityHandlers([
       http.get(`/api/v1/projects/${PROJECT_ID}/visibility/evidence`, () =>
         HttpResponse.json(makeEvidenceResponse()),
@@ -193,12 +192,13 @@ describe('VisibilityPage — Query Fanout tab', () => {
     ]);
     renderVisibilityPage();
 
-    // The prompt heading appears once as the group header.
+    // The prompt names its group as a spanning row of the shared table, so
+    // every search in the tab keeps one set of columns.
     expect(
-      await screen.findByRole('heading', { name: 'Best affordable clothing stores in Australia?' }),
+      await screen.findByText('Best affordable clothing stores in Australia?'),
     ).toBeInTheDocument();
-    // The count is scoped to the page, never claimed as a project-wide total.
-    expect(screen.getByText(/1 prompts on this page/)).toBeInTheDocument();
+    // Totals count what the loaded window observed, never a project-wide claim.
+    expect(screen.getByText('Distinct searches')).toBeInTheDocument();
   });
 });
 
@@ -224,7 +224,7 @@ describe('VisibilityPage — shared filter persistence', () => {
 
     // Switch to an evidence tab; the engine filter carries over into the query.
     await user.click(screen.getByRole('tab', { name: 'Mentions & Citations' }));
-    await screen.findByRole('button', { name: /Mentions and citations mode/i });
+    await screen.findByRole('button', { name: /^Show$/i });
     await waitFor(() => expect(evidenceEngines).toContain('gemini'));
   });
 });

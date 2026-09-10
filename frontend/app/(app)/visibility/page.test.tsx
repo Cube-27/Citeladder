@@ -52,7 +52,7 @@ describe('VisibilityPage — tablist', () => {
     expect(tabs.map((t) => t.textContent)).toEqual([
       'Trends',
       'Mentions & Citations',
-      'Query Fanout',
+      'Query fanouts',
     ]);
     expect(
       tablist.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -76,7 +76,7 @@ describe('VisibilityPage — tablist', () => {
     expect(trendsTab).toHaveAttribute('aria-selected', 'true');
     // Exactly one panel is rendered.
     expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
-    expect(await screen.findByRole('heading', { name: 'Measurement history' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Over time' })).toBeVisible();
   });
 
   it('falls back to Trends for an invalid ?tab= value', async () => {
@@ -156,7 +156,7 @@ describe('VisibilityPage — tablist', () => {
     );
 
     await user.keyboard('{End}');
-    expect(screen.getByRole('tab', { name: 'Query Fanout' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Query fanouts' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -178,7 +178,7 @@ describe('VisibilityPage — tablist', () => {
     renderVisibilityPage();
 
     const tablist = await screen.findByRole('tablist', { name: 'Visibility views' });
-    for (const name of ['Trends', 'Mentions & Citations', 'Query Fanout']) {
+    for (const name of ['Trends', 'Mentions & Citations', 'Query fanouts']) {
       expect(within(tablist).getByRole('tab', { name })).toBeInTheDocument();
     }
   });
@@ -214,7 +214,7 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
     ).closest('div')!;
     const bodyRows = within(rankings).getAllByRole('row').slice(1);
     expect(within(bodyRows[0]).getByText('Acme')).toBeInTheDocument();
-    expect(screen.getByText(/Share is among the tracked roster/i)).toBeVisible();
+    expect(screen.getByText(/How often each brand is named/i)).toBeVisible();
   });
 
   it('changes the query when a different run is selected', async () => {
@@ -255,7 +255,7 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
     await screen.findByRole('heading', { name: 'By model' });
     expect(seen[0]).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: 'Select run' }));
+    await user.click(screen.getByRole('button', { name: 'Select measurement' }));
     const olderLabel = new Date('2026-07-10T00:00:00Z').toLocaleString(undefined, {
       year: 'numeric',
       month: 'short',
@@ -269,9 +269,11 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
     releaseOlder?.();
     await waitFor(() => expect(seen).toContain(AUDIT_OLDER));
 
-    await user.click(screen.getByRole('button', { name: 'Select run' }));
-    await user.click(await screen.findByRole('menuitemradio', { name: 'Latest' }));
-    expect(screen.getByRole('button', { name: 'Select run' })).toHaveTextContent('Latest');
+    await user.click(screen.getByRole('button', { name: 'Select measurement' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Latest run' }));
+    expect(screen.getByRole('button', { name: 'Select measurement' })).toHaveTextContent(
+      'Latest run',
+    );
   });
 
   it('refreshes the implicit latest projection when polling observes a completed run', async () => {
@@ -464,14 +466,14 @@ describe('VisibilityPage — per-tab query enablement + cache reuse', () => {
     await screen.findByRole('tab', { name: 'Trends' });
     await user.click(screen.getByRole('tab', { name: 'Mentions & Citations' }));
     // The tab opens on Sources; the executions themselves are the Answers mode.
-    await user.click(await screen.findByRole('button', { name: /Mentions and citations mode/i }));
+    await user.click(await screen.findByRole('button', { name: /^Show$/i }));
     await user.click(await screen.findByRole('menuitemradio', { name: 'Answers' }));
     expect(
       await screen.findByText('Best affordable clothing stores in Australia?'),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('tab', { name: 'Query Fanout' }));
-    // The Query Fanout panel renders from the same cached response.
+    await user.click(screen.getByRole('tab', { name: 'Query fanouts' }));
+    // The Query fanouts panel renders from the same cached response.
     expect(
       await screen.findByText('affordable family clothing Australia 2026'),
     ).toBeInTheDocument();
@@ -497,7 +499,7 @@ describe('VisibilityPage — Trends tab', () => {
     ]);
     renderVisibilityPage();
 
-    expect(await screen.findByRole('heading', { name: 'Measurement history' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Over time' })).toBeInTheDocument();
     // Every plotted metric is reachable from the one chart's selector.
     expect(screen.getByRole('button', { name: /Plotted metric/i })).toBeInTheDocument();
     // The tracked brand's row carries its own logo, resolved through logo.dev.
@@ -517,7 +519,10 @@ describe('VisibilityPage — Trends tab', () => {
     ]);
     renderVisibilityPage();
 
-    expect(await screen.findByText(/one measurement in this history window/i)).toBeInTheDocument();
+    // A single measurement is a dot on the chart, not an apology for having
+    // only one date.
+    const chart = await screen.findByLabelText(/Visibility over time/i);
+    expect(chart.querySelectorAll('circle.fill-accent')).toHaveLength(1);
   });
 
   it('renders a null trend metric as a chart gap, never a zero', async () => {
@@ -541,7 +546,7 @@ describe('VisibilityPage — Trends tab', () => {
 
     // An unavailable measurement is a GAP, never a zero: it draws no mark, and
     // the chart says so to a reader who cannot see it.
-    const svg = await screen.findByLabelText(/Measurement history/i);
+    const svg = await screen.findByLabelText(/Visibility over time/i);
     expect(svg.getAttribute('aria-label')).toContain('unavailable and shown as gaps');
     expect(svg.querySelectorAll('circle.fill-accent')).toHaveLength(2);
   });

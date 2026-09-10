@@ -5,7 +5,7 @@
 # view over the same snapshot, and the execution-evidence endpoint serves one
 # ``ResponseAnalysis`` + its child rows. No provider is ever called to build
 # these (invariant 7). Sentiment + average position are present but null until
-# the roadmap adds an LLM stage (decision B-2).
+# a tone-scoring stage is added (sentiment only).
 from __future__ import annotations
 
 import uuid
@@ -70,11 +70,22 @@ class SourceRow(BaseModel):
     response_delta: float | None = None
 
 
+class CitationTotals(BaseModel):
+    """Citation-level counts, distinct from the answer-level citation rate."""
+
+    citations: int = 0
+    owned_citations: int = 0
+    owned_share: float | None = None
+
+
 class SourcesResponse(BaseModel):
     items: list[SourceRow] = Field(default_factory=list)
     total: int = 0
     responses: int = 0
     prompts: int = 0
+    # Domains per source class across the WHOLE filtered selection, not the
+    # page. A client folding only the rows it loaded would chart page one.
+    category_totals: dict[str, int] = Field(default_factory=dict)
     next_offset: int | None = None
     as_of: datetime
     comparison_status: str = "no_baseline"
@@ -148,6 +159,8 @@ class PromptMetricItem(BaseModel):
     intent: str = ""
     visibility_rate: float | None = None
     owned_citation_rate: float | None = None
+    # Mean rank among the brands named in this prompt's answers.
+    avg_position: float | None = None
     visibility_delta: float | None = None
     comparison_status: str = "no_baseline"
     counts: MeasurementCounts = Field(default_factory=MeasurementCounts)
@@ -171,7 +184,8 @@ class RankingRow(BaseModel):
     matched_visibility_rate: float | None = None
     matched_visibility_delta: float | None = None
     matched_response_count: int | None = None
-    # Roadmap (B-2): present but null until an LLM stage is added.
+    # `avg_position` is deterministic (mention offsets); `sentiment` stays null
+    # until a tone-scoring stage exists.
     sentiment: str | None = None
     avg_position: float | None = None
 
@@ -211,8 +225,8 @@ class VisibilityResponse(BaseModel):
 
     Computed server-side from the persisted ``MetricSnapshot`` for the selected
     audit (defaults to the project's latest completed audit). No cross-run trend
-    yet (roadmap). Visibility % + SOV are populated; sentiment + average
-    position are present but null (decision B-2).
+    yet (roadmap). Visibility %, SOV and average position are populated;
+    sentiment stays null until a tone-scoring stage exists.
     """
 
     project_id: uuid.UUID
@@ -232,6 +246,7 @@ class VisibilityResponse(BaseModel):
     counts: MeasurementCounts = Field(default_factory=MeasurementCounts)
     comparison_key: str | None = None
     comparison: VisibilityComparison = Field(default_factory=VisibilityComparison)
+    citation_totals: CitationTotals = Field(default_factory=CitationTotals)
     selection_mode: str = "run"
     source_audit_ids: list[uuid.UUID] = Field(default_factory=list)
     configuration_groups: dict[str, int] = Field(default_factory=dict)
@@ -243,7 +258,8 @@ class VisibilityResponse(BaseModel):
     model_provenance: list[ModelProvenance] = Field(default_factory=list)
     rankings: list[RankingRow] = Field(default_factory=list)
     per_engine: list[EngineComparisonRow] = Field(default_factory=list)
-    # Roadmap (B-2): present but null until an LLM stage is added.
+    # `avg_position` is deterministic (mention offsets); `sentiment` stays null
+    # until a tone-scoring stage exists.
     sentiment: str | None = None
     avg_position: float | None = None
     created_at: datetime
@@ -278,7 +294,8 @@ class VisibilityTrendRankingRow(BaseModel):
     citation_rate: float | None = None
     share_of_voice: float | None = None
     mention_count: int = 0
-    # Roadmap (B-2): present but null until an LLM stage is added.
+    # `avg_position` is deterministic (mention offsets); `sentiment` stays null
+    # until a tone-scoring stage exists.
     sentiment: str | None = None
     avg_position: float | None = None
 
@@ -287,9 +304,9 @@ class VisibilityTrendPoint(BaseModel):
     """One point in the cross-run Visibility trend (projection only, inv. 7).
 
     A raw per-run point projects a single persisted ``MetricSnapshot`` (its
-    ``audit_id`` is set); a week/month bucket folds every contributing snapshot
-    (``audit_id`` is null) and carries the full provenance list. ``sentiment``
-    and ``avg_position`` stay null (decision B-2 / invariant 9). Version
+    ``audit_id`` is set); a day/week/month bucket folds every contributing
+    snapshot (``audit_id`` is null) and carries the full provenance list.
+    ``avg_position`` folds by completions; ``sentiment`` stays null. Version
     metadata lists every distinct analyzer/scoring version the point folds, with
     ``spans_version_boundary`` set when a bucket mixes versions.
     """
@@ -308,7 +325,8 @@ class VisibilityTrendPoint(BaseModel):
     owned_citation_rate: float | None = None
     sov: VisibilityTrendSov = Field(default_factory=VisibilityTrendSov)
     rankings: list[VisibilityTrendRankingRow] = Field(default_factory=list)
-    # Roadmap (B-2): present but null until an LLM stage is added.
+    # `avg_position` is deterministic (mention offsets); `sentiment` stays null
+    # until a tone-scoring stage exists.
     sentiment: str | None = None
     avg_position: float | None = None
     # Measurement identity partition (invariant 7): folding may combine points
@@ -377,7 +395,8 @@ class ExecutionEvidenceResponse(BaseModel):
     citation_count: int = 0
     search_used: bool = False
     search_query_count: int = 0
-    # Roadmap (B-2): present but null until an LLM stage is added.
+    # `avg_position` is deterministic (mention offsets); `sentiment` stays null
+    # until a tone-scoring stage exists.
     sentiment: str | None = None
     avg_position: float | None = None
     score: dict | None = None

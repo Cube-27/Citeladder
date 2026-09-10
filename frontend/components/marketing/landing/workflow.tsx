@@ -59,7 +59,7 @@ function StepPreview({ index }: Readonly<{ index: number }>) {
             <span className="text-foreground font-mono font-bold">68%</span>
           </div>
           <div className="border-border-subtle/60 bg-background flex h-2 w-full overflow-hidden rounded-full border">
-            <div className="bg-accent h-full w-[var(--workflow-share-yours)] transition-all duration-500" />
+            <div className="bg-accent h-full w-[var(--workflow-share-yours)] transition-[width] duration-500" />
             <div className="bg-border-strong h-full w-[var(--workflow-share-competitors)]" />
             <div className="bg-border h-full w-[var(--workflow-share-none)]" />
           </div>

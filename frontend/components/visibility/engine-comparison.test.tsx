@@ -22,7 +22,10 @@ describe('model outcome comparison', () => {
     render(<EngineComparison visibility={visibility([engine()])} filter="all" />);
     expect(screen.getByText('50%')).toBeVisible();
     expect(screen.getByText('25%')).toBeVisible();
-    expect(screen.getByText(/12 measured/)).toBeVisible();
+    // The answer count is the reader's; the run's expected-vs-measured
+    // bookkeeping that used to sit beside it is not.
+    expect(screen.getByText('12')).toBeVisible();
+    expect(screen.queryByText(/expected/)).toBeNull();
     expect(screen.queryByText('62%')).toBeNull();
   });
   it('uses catalog order and narrows to the selected engine', () => {

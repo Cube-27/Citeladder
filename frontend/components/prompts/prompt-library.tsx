@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { promptsApi, type PromptGenerateInput, type PromptInput } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
+import { visibilityApi } from '@/lib/api/visibility';
 import { topicsApi } from '@/lib/api/topics';
 import type {
   Prompt,
@@ -21,7 +22,7 @@ import { Tabs } from '@/components/ui/tabs';
 
 import { PromptEmptyState } from './prompt-empty-state';
 import { PromptLibraryDialogs } from './prompt-library-dialogs';
-import { PromptTable } from './prompt-table';
+import { PromptTable, type PromptMeasurement } from './prompt-table';
 import { PromptToolbar } from './prompt-toolbar';
 import { ResizablePromptWorkspace } from './resizable-prompt-workspace';
 import { TopicRail } from './topic-rail';
@@ -74,6 +75,7 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
     enabled: Boolean(projectId),
   });
   const topics: Topic[] = useMemo(() => topicsQuery.data ?? [], [topicsQuery.data]);
+  const measurements = useLatestPromptMeasurements(projectId);
 
   const invalidate = async () => {
     if (projectId) {
@@ -314,6 +316,7 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
                 statusMutation.mutate({ prompt, status });
               }}
               busyId={busyId}
+              measurements={measurements}
             />
           )}
         </div>
@@ -347,4 +350,36 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
       />
     </div>
   );
+}
+
+/**
+ * What the project's latest run measured for each prompt.
+ *
+ * Keyed by the SOURCE prompt id, because that is what this table's rows are.
+ * A prompt added since the last run simply has no entry, which reads as
+ * "Not measured" rather than a fabricated zero.
+ */
+function useLatestPromptMeasurements(projectId: string | null) {
+  const result = useQuery({
+    queryKey: queryKeys.visibility.prompts(projectId ?? ''),
+    queryFn: ({ signal }) =>
+      visibilityApi.getPromptMetrics(projectId as string, undefined, { signal }),
+    enabled: Boolean(projectId),
+  });
+  return useMemo(() => {
+    const map = new Map<string, PromptMeasurement>();
+    // A failed read is not a measured absence. Returning an empty map drops the
+    // columns entirely, which says "no run yet" rather than "every prompt is
+    // unmeasured" — the honest reading when we could not load the figures.
+    if (result.isError) return map;
+    for (const row of result.data ?? []) {
+      if (!row.prompt_id) continue;
+      map.set(row.prompt_id, {
+        visibilityRate: row.visibility_rate ?? null,
+        change: row.visibility_delta ?? null,
+        position: row.avg_position ?? null,
+      });
+    }
+    return map;
+  }, [result.data, result.isError]);
 }

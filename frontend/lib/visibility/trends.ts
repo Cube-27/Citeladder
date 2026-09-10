@@ -13,10 +13,11 @@ import type { LogicalEngine, VisibilityTrendPoint } from '@/lib/api/types';
 import { ENGINE_ORDER } from '@/lib/providers/catalog';
 
 /** Trend granularity — mirrors the backend `granularity=run|week|month`. */
-export type TrendGranularity = 'run' | 'week' | 'month';
+export type TrendGranularity = 'run' | 'day' | 'week' | 'month';
 
 export const GRANULARITY_OPTIONS: readonly { value: TrendGranularity; label: string }[] = [
   { value: 'run', label: 'Per run' },
+  { value: 'day', label: 'Daily' },
   { value: 'week', label: 'Weekly' },
   { value: 'month', label: 'Monthly' },
 ] as const;
@@ -72,44 +73,6 @@ export function formatPointDate(timestamp: string): string {
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export function historicalSelection(point: VisibilityTrendPoint, search: string): string {
-  const params = new URLSearchParams(search);
-  params.set('tab', 'trends');
-  for (const key of [
-    'cursor',
-    'as_of',
-    'source_offset',
-    'source_as_of',
-    'query_offset',
-    'prompt_page',
-    'baseline',
-  ])
-    params.delete(key);
-  if (point.audit_id) {
-    params.set('selection', 'run');
-    params.set('run', point.audit_id);
-    params.delete('configuration');
-  } else {
-    const start = new Date(point.completed_at);
-    const end = new Date(start);
-    if (params.get('granularity') === 'month') end.setUTCMonth(end.getUTCMonth() + 1);
-    else end.setUTCDate(end.getUTCDate() + 7);
-    params.set('selection', 'range');
-    params.delete('run');
-    params.set('from', start.toISOString());
-    params.set('to', new Date(end.getTime() - 1).toISOString());
-    params.set(
-      'configuration',
-      [
-        point.comparison_key ?? point.source_audit_ids?.[0],
-        point.analyzer_versions[0],
-        point.scoring_rule_versions[0],
-      ].join(':'),
-    );
-  }
-  return `/visibility?${params}`;
-}
-
 /** A metric's 0–100 value for a point (percentages scaled to whole percent). */
 function metricValue(point: VisibilityTrendPoint, metric: TrendMetric): number | null {
   switch (metric) {
@@ -162,4 +125,57 @@ function versionChangeNote(point: VisibilityTrendPoint): string {
   return point.spans_version_boundary
     ? `Mixed scoring versions in this bucket (${scoring})`
     : `Scoring rule ${scoring} applied`;
+}
+
+/**
+ * Categorical stroke classes for comparison lines, in a fixed order.
+ *
+ * Fixed so a given competitor keeps its colour while the reader changes metric
+ * or period, and drawn from the design system's own chart ramp rather than a
+ * palette invented here.
+ */
+const SERIES_STROKES = [
+  'stroke-chart-2',
+  'stroke-chart-3',
+  'stroke-chart-4',
+  'stroke-chart-5',
+  'stroke-chart-6',
+  'stroke-chart-7',
+] as const;
+
+/**
+ * One comparison line per tracked competitor, aligned to the same points.
+ *
+ * Every point already carries the full ranking roster, so nothing is fetched to
+ * draw these. A competitor absent from a point contributes a gap there, never a
+ * zero: not measured and measured-as-zero are different facts.
+ */
+export function toCompetitorSeries(
+  points: readonly VisibilityTrendPoint[],
+  metric: TrendMetric,
+  limit = SERIES_STROKES.length,
+): { label: string; values: (number | null)[]; strokeClass: string }[] {
+  const latest = points.at(-1);
+  const names = (latest?.rankings ?? [])
+    .filter((row) => !row.is_brand)
+    .sort((a, b) => (b.mention_rate ?? -1) - (a.mention_rate ?? -1))
+    .slice(0, limit)
+    .map((row) => row.name);
+  return names.map((name, index) => ({
+    label: name,
+    strokeClass: SERIES_STROKES[index % SERIES_STROKES.length],
+    values: points.map((point) => {
+      const row = point.rankings.find((entry) => entry.name === name);
+      if (!row) return null;
+      // Each metric reads its OWN column. Plotting mention rate under a Share
+      // of voice heading drew a line that was not the metric selected.
+      const value =
+        metric === 'owned_citation_rate'
+          ? row.citation_rate
+          : metric === 'sov'
+            ? row.share_of_voice
+            : row.mention_rate;
+      return value === null || value === undefined ? null : value * 100;
+    }),
+  }));
 }

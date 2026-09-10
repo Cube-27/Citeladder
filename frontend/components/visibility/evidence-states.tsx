@@ -22,7 +22,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import type { VisibilityExecutionEvidence, VisibilityEvidenceResponse } from '@/lib/api/types';
 import { engineLabel } from '@/lib/providers/catalog';
-import { formatExecutionDate, provenanceSummary } from '@/lib/visibility/evidence';
+import { formatExecutionDate } from '@/lib/visibility/evidence';
 
 /** Props shared by both evidence tabs (Query Fanout, Mentions & Citations). */
 export type EvidenceTabProps = Readonly<{
@@ -212,17 +212,5 @@ export function ExecutionHeader({
         </Button>
       </span>
     </div>
-  );
-}
-
-/** Collapsed task/analysis/artifact ids for one execution. */
-export function ProvenanceDisclosure({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
-  return (
-    <details className="text-muted grid gap-1 text-xs">
-      <summary className="focus-ring w-fit cursor-pointer rounded-[var(--radius-control)]">
-        Provenance
-      </summary>
-      <p className="font-mono">{provenanceSummary(item)}</p>
-    </details>
   );
 }

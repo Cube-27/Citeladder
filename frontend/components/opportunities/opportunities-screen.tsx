@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { textRole } from '@/components/ui/typography';
+import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import { OpportunitiesCatalog } from '@/components/opportunities/opportunities-catalog';
 import { opportunitySummaryPollingInterval } from '@/components/opportunities/opportunity-summary-polling';
 import {
@@ -172,38 +173,48 @@ function PreparingRecommendations({
   );
 }
 
+/**
+ * The queue's state as measured values, not four stacked sentences.
+ *
+ * This was a prose paragraph of counts, a second of percentages, a third
+ * explaining the sample, and a fourth naming the compute time — four rows to
+ * say six numbers. The numbers now read as numbers, and the sample size that
+ * qualifies the mix sits with the mix rather than on its own line.
+ */
 function SummaryStrip({ summary }: Readonly<{ summary: OpportunitySummary }>) {
   const openCount = summary.counts_by_status.open ?? 0;
   const inProgressCount = summary.counts_by_status.in_progress ?? 0;
   const highImpactCount =
     (summary.counts_by_severity.critical ?? 0) + (summary.counts_by_severity.high ?? 0);
+  const mix = summary.source_mix;
 
   return (
-    <div className="border-border-subtle flex flex-wrap items-center justify-between gap-4 border-b pb-3">
-      <div className="grid gap-1">
-        <AccentEyebrow>Recommendation queue</AccentEyebrow>
-        <p className="text-foreground text-sm">
-          <span className={textRole('emphasis', 'mono')}>{openCount}</span> open recommendations
-          <span className="text-muted"> · </span>
-          <span className={textRole('emphasis', 'mono')}>{highImpactCount}</span> high impact
-          <span className="text-muted"> · </span>
-          <span className={textRole('emphasis', 'mono')}>{inProgressCount}</span> in progress
-        </p>
-        <SourceMixHeadline mix={summary.source_mix} />
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-muted text-xs">
-            Last computed {formatAudited(summary.computed_at)} from your latest available evidence.
-          </p>
-          {summary.stale ? (
-            <Badge variant="status" value="warning">
-              Newer evidence available
-            </Badge>
-          ) : null}
-        </div>
-        {summary.limitations.length > 0 ? (
-          <p className="text-warning text-xs">{summary.limitations.join(' ')}</p>
+    <div className="border-border-subtle grid gap-3 border-b pb-3">
+      <MetricGroup>
+        <MetricItem label="Open" value={String(openCount)} />
+        <MetricItem label="High impact" value={String(highImpactCount)} />
+        <MetricItem label="In progress" value={String(inProgressCount)} />
+        {mix.state === 'available' ? (
+          <MetricItem
+            label="Earned evidence"
+            value={`${mix.percentages.earned ?? 0}%`}
+            detail={`${mix.percentages.competitive_evidence ?? 0}% competitive · ${
+              mix.percentages.owned ?? 0
+            }% owned · ${mix.observation_count} sources`}
+          />
+        ) : null}
+      </MetricGroup>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-muted text-xs">Computed {formatAudited(summary.computed_at)}</p>
+        {summary.stale ? (
+          <Badge variant="status" value="warning">
+            Newer evidence available
+          </Badge>
         ) : null}
       </div>
+      {summary.limitations.length > 0 ? (
+        <p className="text-warning text-xs">{summary.limitations.join(' ')}</p>
+      ) : null}
     </div>
   );
 }
@@ -236,28 +247,6 @@ function SummaryActions({
         </DropdownContent>
       </Dropdown>
       {summary.activation_state === 'delayed' ? <RetryButton projectId={projectId} /> : null}
-    </div>
-  );
-}
-
-function SourceMixHeadline({ mix }: Readonly<{ mix: OpportunitySummary['source_mix'] }>) {
-  if (mix.state === 'not_applicable') return null;
-  if (mix.state !== 'available') {
-    return <p className="text-muted text-xs">Source mix is unavailable for the observed gaps.</p>;
-  }
-  return (
-    <div className="grid gap-0.5">
-      <p className={textRole('body')}>
-        {mix.percentages.earned ?? 0}% Earned
-        <span className="text-muted"> · </span>
-        {mix.percentages.competitive_evidence ?? 0}% Competitive evidence
-        <span className="text-muted"> · </span>
-        {mix.percentages.owned ?? 0}% Owned
-      </p>
-      <p className="text-muted text-xs">
-        Based on {mix.observation_count} source observations across {mix.answers_with_sources} of{' '}
-        {mix.eligible_analyzed_answers} eligible analyzed gap answers.
-      </p>
     </div>
   );
 }

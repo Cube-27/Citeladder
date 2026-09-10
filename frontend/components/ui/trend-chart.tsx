@@ -10,6 +10,20 @@ export type TrendPoint = {
   href?: string;
 };
 
+/**
+ * A second, third, … line drawn behind the primary series.
+ *
+ * Comparison series carry no marks, links or version markers: they exist to
+ * give the primary line something to be read against, and every affordance they
+ * borrowed from it would compete with it.
+ */
+export type TrendSeries = {
+  label: string;
+  values: readonly (number | null)[];
+  /** Stroke class from the categorical chart tokens, e.g. `stroke-chart-2`. */
+  strokeClass: string;
+};
+
 const toLinePath = (segment: { x: number; y: number }[]) =>
   segment
     .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`)
@@ -84,6 +98,7 @@ function chartDescription(data: readonly TrendPoint[], label?: string): string {
 
 export function TrendChart({
   data,
+  series = [],
   width = 320,
   height = 96,
   label,
@@ -91,6 +106,8 @@ export function TrendChart({
   domainMax = 100,
 }: Readonly<{
   data: TrendPoint[];
+  /** Comparison lines sharing this chart's x positions and scale. */
+  series?: readonly TrendSeries[];
   width?: number;
   height?: number;
   label?: string;
@@ -138,7 +155,28 @@ export function TrendChart({
   }));
 
   const lineSegments = lineSegmentsOf(points);
-  const ariaLabel = chartDescription(data, label);
+  // Comparison lines reuse the primary series' x positions, so the two are read
+  // against one scale rather than two charts drawn side by side. A value the
+  // series never measured stays a gap here exactly as it does above.
+  const comparisonSegments = series.map((entry) =>
+    lineSegmentsOf(
+      points.map((point, index) => ({
+        x: point.x,
+        breakBefore: point.breakBefore,
+        y:
+          entry.values[index] === null || entry.values[index] === undefined
+            ? null
+            : padding + innerHeight * (1 - clamp(entry.values[index]) / effectiveDomainMax),
+      })),
+    ),
+  );
+  // Comparison lines carry no marks, so without naming them here a screen
+  // reader is told about one series on a chart that draws several.
+  const ariaLabel = series.length
+    ? `${chartDescription(data, label)} Compared with ${series
+        .map((entry) => entry.label)
+        .join(', ')}.`
+    : chartDescription(data, label);
 
   return (
     <svg
@@ -150,6 +188,23 @@ export function TrendChart({
       className={cn('overflow-visible', className)}
     >
       <title>{ariaLabel}</title>
+      {comparisonSegments.map((segments, seriesIndex) =>
+        segments.map((segment, index) => (
+          <path
+            key={`series-${series[seriesIndex].label}-${index}`}
+            d={toLinePath(segment)}
+            fill="none"
+            strokeWidth={1.5}
+            vectorEffect="non-scaling-stroke"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={cn(series[seriesIndex].strokeClass, 'opacity-70')}
+            aria-hidden
+          >
+            <title>{series[seriesIndex].label}</title>
+          </path>
+        )),
+      )}
       {lineSegments.map((segment, index) => (
         <path
           key={`line-${index}`}
