@@ -73,44 +73,6 @@ export function formatPointDate(timestamp: string): string {
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export function historicalSelection(point: VisibilityTrendPoint, search: string): string {
-  const params = new URLSearchParams(search);
-  params.set('tab', 'trends');
-  for (const key of [
-    'cursor',
-    'as_of',
-    'source_offset',
-    'source_as_of',
-    'query_offset',
-    'prompt_page',
-    'baseline',
-  ])
-    params.delete(key);
-  if (point.audit_id) {
-    params.set('selection', 'run');
-    params.set('run', point.audit_id);
-    params.delete('configuration');
-  } else {
-    const start = new Date(point.completed_at);
-    const end = new Date(start);
-    if (params.get('granularity') === 'month') end.setUTCMonth(end.getUTCMonth() + 1);
-    else end.setUTCDate(end.getUTCDate() + 7);
-    params.set('selection', 'range');
-    params.delete('run');
-    params.set('from', start.toISOString());
-    params.set('to', new Date(end.getTime() - 1).toISOString());
-    params.set(
-      'configuration',
-      [
-        point.comparison_key ?? point.source_audit_ids?.[0],
-        point.analyzer_versions[0],
-        point.scoring_rule_versions[0],
-      ].join(':'),
-    );
-  }
-  return `/visibility?${params}`;
-}
-
 /** A metric's 0–100 value for a point (percentages scaled to whole percent). */
 function metricValue(point: VisibilityTrendPoint, metric: TrendMetric): number | null {
   switch (metric) {
@@ -205,7 +167,14 @@ export function toCompetitorSeries(
     values: points.map((point) => {
       const row = point.rankings.find((entry) => entry.name === name);
       if (!row) return null;
-      const value = metric === 'owned_citation_rate' ? row.citation_rate : row.mention_rate;
+      // Each metric reads its OWN column. Plotting mention rate under a Share
+      // of voice heading drew a line that was not the metric selected.
+      const value =
+        metric === 'owned_citation_rate'
+          ? row.citation_rate
+          : metric === 'sov'
+            ? row.share_of_voice
+            : row.mention_rate;
       return value === null || value === undefined ? null : value * 100;
     }),
   }));

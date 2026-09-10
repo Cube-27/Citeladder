@@ -58,7 +58,8 @@ type ToolbarProps = Readonly<{
   onChangeSelectionMode: (mode: 'run' | 'range') => void;
   runs: RunOption[];
   selectedRunId: string | null;
-  onSelectRun: (runId: string | null) => void;
+  /** Selects a run AND leaves range mode in one URL write. */
+  onSelectMeasurement: (runId: string | null) => void;
   engine: EngineFilter;
   onChangeEngine: (engine: EngineFilter) => void;
   promptOptions: PromptOption[];
@@ -181,7 +182,7 @@ function CohortFilter({ cohort, onChangeCohort }: ToolbarProps) {
 function MeasurementFilter({
   runs,
   selectedRunId,
-  onSelectRun,
+  onSelectMeasurement,
   selectionMode,
   onChangeSelectionMode,
 }: ToolbarProps) {
@@ -201,13 +202,7 @@ function MeasurementFilter({
       <DropdownContent>
         <DropdownLabel>Measurement</DropdownLabel>
         <DropdownRadioGroup value={pooled ? '__range__' : (selectedRunId ?? '__latest__')}>
-          <DropdownRadioItem
-            value="__latest__"
-            onSelect={() => {
-              onChangeSelectionMode('run');
-              onSelectRun(null);
-            }}
-          >
+          <DropdownRadioItem value="__latest__" onSelect={() => onSelectMeasurement(null)}>
             Latest run
           </DropdownRadioItem>
           <DropdownRadioItem value="__range__" onSelect={() => onChangeSelectionMode('range')}>
@@ -221,10 +216,7 @@ function MeasurementFilter({
                 <DropdownRadioItem
                   key={run.id}
                   value={run.id}
-                  onSelect={() => {
-                    onChangeSelectionMode('run');
-                    onSelectRun(run.id);
-                  }}
+                  onSelect={() => onSelectMeasurement(run.id)}
                 >
                   {run.label}
                 </DropdownRadioItem>

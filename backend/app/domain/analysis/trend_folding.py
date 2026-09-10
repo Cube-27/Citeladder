@@ -404,6 +404,7 @@ def _accumulate_bucket_source(
             mention_rate=competitor_mention.get(name),
             citation_rate=competitor_citation.get(name),
             completions=completions,
+            avg_position=positions.get(name),
         )
 
 

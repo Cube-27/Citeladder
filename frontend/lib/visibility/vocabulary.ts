@@ -13,70 +13,12 @@
  *   - Copy states what the reader observes, never how it was computed. The
  *     denominator ("3 of 10 answers") is the reader's; the numerator's SQL is
  *     not.
- *   - "No comparison is possible" is one page-level sentence, not a phrase
- *     repeated in every cell that lacks a delta. Where NOTHING in a selection
- *     is comparable, the change column is not rendered at all; where one row
- *     among many lacks a change, it uses the shared availability vocabulary.
+ *   - Where NOTHING in a selection is comparable, the change column is not
+ *     rendered at all; where one row among many lacks a change, it uses the
+ *     shared availability vocabulary. Never a placeholder sentence per cell.
  */
 
 import { sourceClassLabel, type SourceClass } from '@/lib/opportunities/source-pattern';
-
-type ComparisonCopy = {
-  /** Page-level sentence. `null` where the state needs no explanation. */
-  readonly note: (baselineAt: string | null) => string | null;
-  /** Whether per-metric deltas are meaningful at all in this state. */
-  readonly hasDeltas: boolean;
-};
-
-const COMPARISON: Record<string, ComparisonCopy> = {
-  no_baseline: {
-    note: () => 'First run — there is nothing to compare against yet.',
-    hasDeltas: false,
-  },
-  identity_unavailable: {
-    note: () => 'Change since the previous run is unavailable.',
-    hasDeltas: false,
-  },
-  changed_context: {
-    note: () =>
-      'Your prompts or models changed since the last run, so the two runs are not directly comparable.',
-    hasDeltas: false,
-  },
-  comparable: {
-    note: (at) => (at ? `Compared with ${at}.` : null),
-    hasDeltas: true,
-  },
-  matched_subset: {
-    note: (at) =>
-      at
-        ? `Compared with ${at}, across the prompts and models both runs share.`
-        : 'Compared across the prompts and models both runs share.',
-    hasDeltas: true,
-  },
-  partial_coverage: {
-    note: (at) =>
-      at ? `Compared with ${at}. Part of this period has no measurements.` : null,
-    hasDeltas: true,
-  },
-};
-
-/**
- * One sentence explaining what the change figures mean — or `null` when the
- * state is ordinary enough to need no sentence at all. Callers render this once
- * per page, under the headline, never per metric.
- */
-export function comparisonNote(
-  status: string | null | undefined,
-  baselineAt: string | null = null,
-): string | null {
-  if (!status) return null;
-  return COMPARISON[status]?.note(baselineAt) ?? null;
-}
-
-/** True when this comparison state produces deltas worth showing at all. */
-export function hasComparableChange(status: string | null | undefined): boolean {
-  return status ? (COMPARISON[status]?.hasDeltas ?? false) : false;
-}
 
 /**
  * A change in percentage points, or `null` when there is none to show.
@@ -95,14 +37,6 @@ export function changeLabel(value: number | null | undefined): string | null {
   return `${rounded > 0 ? '+' : ''}${rounded.toFixed(1)} pp`;
 }
 
-/** Tone for a change figure. Neutral when there is no change to speak of. */
-export function changeTone(value: number | null | undefined): 'positive' | 'negative' | 'neutral' {
-  if (value === null || value === undefined) return 'neutral';
-  const rounded = Number(value.toFixed(1));
-  if (rounded === 0) return 'neutral';
-  return rounded > 0 ? 'positive' : 'negative';
-}
-
 /**
  * What the reader is told when a measurement produced no observations at all —
  * distinct from an observed zero, which stays `0%` (design.md, availability
@@ -110,24 +44,6 @@ export function changeTone(value: number | null | undefined): 'positive' | 'nega
  */
 export function observationLabel(state: string | null | undefined): string | null {
   return state === 'no_observations' ? 'Not measured' : null;
-}
-
-/**
- * Who runs a cited site, in the reader's terms.
- *
- * The Sources table printed these tokens verbatim — a row read
- * "Ownership: third_party". It is a category of website, and it has a name.
- */
-const OWNERSHIP: Record<string, string> = {
-  owned: 'Your site',
-  brand_owned: 'Your site',
-  competitor: 'Competitor site',
-  competitor_owned: 'Competitor site',
-  third_party: 'Independent site',
-};
-
-export function ownershipLabels(values: readonly string[]): string[] {
-  return [...new Set(values.map((value) => OWNERSHIP[value]).filter(Boolean))];
 }
 
 /**
@@ -149,28 +65,4 @@ export function sourceCategoryLabels(values: readonly string[]): string[] {
         .filter((label): label is string => Boolean(label)),
     ),
   ];
-}
-
-/**
- * How many answers revealed the searches behind them.
- *
- * The Query Fanout header rendered this map by key, producing
- * "queries available: 8 responses · no search: 2 responses". The states are
- * real and worth knowing; their storage names are not.
- */
-const FANOUT_COVERAGE: Record<string, (count: number) => string> = {
-  queries_available: (count) => `${count} showed the searches they ran`,
-  count_only: (count) => `${count} searched without revealing the wording`,
-  no_search: (count) => `${count} answered without searching`,
-};
-
-export function fanoutCoverageSentence(
-  coverage: Record<string, number> | null | undefined,
-): string | null {
-  const parts = Object.entries(coverage ?? {})
-    .filter(([state, count]) => count > 0 && FANOUT_COVERAGE[state])
-    .map(([state, count]) => FANOUT_COVERAGE[state](count));
-  if (!parts.length) return null;
-  const total = Object.values(coverage ?? {}).reduce((sum, count) => sum + count, 0);
-  return `Of ${total} ${total === 1 ? 'answer' : 'answers'}: ${parts.join(', ')}.`;
 }

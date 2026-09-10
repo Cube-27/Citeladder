@@ -362,11 +362,16 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
 function useLatestPromptMeasurements(projectId: string | null) {
   const result = useQuery({
     queryKey: queryKeys.visibility.prompts(projectId ?? ''),
-    queryFn: ({ signal }) => visibilityApi.getPromptMetrics(projectId as string, undefined, { signal }),
+    queryFn: ({ signal }) =>
+      visibilityApi.getPromptMetrics(projectId as string, undefined, { signal }),
     enabled: Boolean(projectId),
   });
   return useMemo(() => {
     const map = new Map<string, PromptMeasurement>();
+    // A failed read is not a measured absence. Returning an empty map drops the
+    // columns entirely, which says "no run yet" rather than "every prompt is
+    // unmeasured" — the honest reading when we could not load the figures.
+    if (result.isError) return map;
     for (const row of result.data ?? []) {
       if (!row.prompt_id) continue;
       map.set(row.prompt_id, {
@@ -376,5 +381,5 @@ function useLatestPromptMeasurements(projectId: string | null) {
       });
     }
     return map;
-  }, [result.data]);
+  }, [result.data, result.isError]);
 }

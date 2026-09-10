@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 
@@ -43,6 +43,13 @@ const TITLE = 'Query fanouts';
 /** Rows (or groups) per page, matching the shared table footer. */
 const PAGE_SIZE = 10;
 
+/** What a page of this grouping is counting, for the shared table footer. */
+const GROUP_NOUNS: Record<string, string> = {
+  none: 'searches',
+  prompt: 'prompts',
+  topic: 'topics',
+};
+
 const GROUP_OPTIONS = [
   { value: 'none', label: 'Group by: None' },
   { value: 'prompt', label: 'Group by: Prompt' },
@@ -77,42 +84,22 @@ export function FanoutEvidence({
   projectId,
   runId,
 }: EvidenceTabProps & Readonly<{ projectId: string | null; runId: string | null }>) {
-  const [grouping, setGrouping] = useUrlState('group', groupCodec);
-  const [search, setSearch] = useUrlState('q', optionalStringUrlCodec);
-  const topicOf = usePromptTopics(projectId, runId, grouping === 'topic');
-  const items = useMemo(() => query.data?.items ?? [], [query.data]);
-  const groups = useMemo(() => {
-    if (grouping === 'prompt') return searchRowsByPrompt(items);
-    if (grouping === 'topic') return searchRowsByTopic(items, topicOf);
-    return searchRows(items);
-  }, [items, grouping, topicOf]);
-  const needle = (search ?? '').trim().toLowerCase();
-  const visible = needle
-    ? groups
-        .map((group) => ({
-          ...group,
-          rows: group.rows.filter((row) => row.query.toLowerCase().includes(needle)),
-        }))
-        .filter((group) => group.rows.length)
-    : groups;
-  // Grouped views page by group so a prompt's searches are never split across
-  // two pages; the ungrouped view pages by row.
-  const grouped = grouping !== 'none';
-  const unit = grouped ? visible.length : (visible[0]?.rows.length ?? 0);
-  const { page, setPage, pageCount, from, to } = useTablePage(unit, PAGE_SIZE);
-  const paged = grouped
-    ? visible.slice(from - 1, to)
-    : visible.map((group) => ({ ...group, rows: group.rows.slice(from - 1, to) }));
-  const totals = useMemo(
-    () => ({
-      distinct: new Set(groups.flatMap((group) => group.rows.map((row) => row.query))).size,
-      occurrences: groups.reduce(
-        (sum, group) => sum + group.rows.reduce((rows, row) => rows + row.occurrences, 0),
-        0,
-      ),
-    }),
-    [groups],
-  );
+  const {
+    grouping,
+    setGrouping,
+    search,
+    setSearch,
+    items,
+    visible,
+    paged,
+    totals,
+    unit,
+    page,
+    setPage,
+    pageCount,
+    from,
+    to,
+  } = useSearchTable(query, projectId, runId);
 
   if (query.isLoading) return <EvidenceSkeleton title={TITLE} />;
   if (query.isError) return <EvidenceError title={TITLE} onRetry={() => query.refetch()} />;
@@ -189,7 +176,7 @@ export function FanoutEvidence({
             from={from}
             to={to}
             total={unit}
-            noun={grouped ? (grouping === 'topic' ? 'topics' : 'prompts') : 'searches'}
+            noun={GROUP_NOUNS[grouping]}
             onPageChange={setPage}
           />
         ) : null}
@@ -205,6 +192,79 @@ export function FanoutEvidence({
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Everything the table derives from one loaded evidence window.
+ *
+ * Kept out of the component because it is all one derivation — choose a
+ * grouping, filter by text, page the result, and total what survives — and
+ * reading it inline buried the four states the component actually renders.
+ */
+function useSearchTable(
+  query: EvidenceTabProps['query'],
+  projectId: string | null,
+  runId: string | null,
+) {
+  const [grouping, setGrouping] = useUrlState('group', groupCodec);
+  const [search, setSearch] = useUrlState('q', optionalStringUrlCodec);
+  const topicOf = usePromptTopics(projectId, runId, grouping === 'topic');
+  const items = useMemo(() => query.data?.items ?? [], [query.data]);
+  const groups = useMemo(() => {
+    if (grouping === 'prompt') return searchRowsByPrompt(items);
+    if (grouping === 'topic') return searchRowsByTopic(items, topicOf);
+    return searchRows(items);
+  }, [items, grouping, topicOf]);
+  const visible = useMemo(() => {
+    const needle = (search ?? '').trim().toLowerCase();
+    if (!needle) return groups;
+    return groups
+      .map((group) => ({
+        ...group,
+        rows: group.rows.filter((row) => row.query.toLowerCase().includes(needle)),
+      }))
+      .filter((group) => group.rows.length);
+  }, [groups, search]);
+  // Totalled over what the reader can SEE. Counting `groups` reported every
+  // search in the window while the table showed only the ones matching a
+  // filter, so the two disagreed the moment anything was typed.
+  const totals = useMemo(
+    () => ({
+      distinct: new Set(visible.flatMap((group) => group.rows.map((row) => row.query))).size,
+      occurrences: visible.reduce(
+        (sum, group) => sum + group.rows.reduce((rows, row) => rows + row.occurrences, 0),
+        0,
+      ),
+    }),
+    [visible],
+  );
+  // Grouped views page by group so a prompt's searches are never split across
+  // two pages; the ungrouped view pages by row.
+  const grouped = grouping !== 'none';
+  const unit = grouped ? visible.length : (visible[0]?.rows.length ?? 0);
+  const { page, setPage, pageCount, from, to } = useTablePage(unit, PAGE_SIZE);
+  // Regrouping or searching produces a different set; page 3 of the old set is
+  // not page 3 of the new one.
+  useEffect(() => setPage(1), [grouping, search, setPage]);
+  const paged = grouped
+    ? visible.slice(from - 1, to)
+    : visible.map((group) => ({ ...group, rows: group.rows.slice(from - 1, to) }));
+  return {
+    grouping,
+    setGrouping,
+    search,
+    setSearch,
+    items,
+    visible,
+    paged,
+    totals,
+    unit,
+    page,
+    setPage,
+    pageCount,
+    from,
+    to,
+  };
 }
 
 function Total({ label, value }: Readonly<{ label: string; value: number }>) {
@@ -244,7 +304,9 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
       {group.rows.map((row) => (
         <TableRow key={`${group.key}-${row.query}`}>
           <TableCell>
-            <span className={group.label ? 'flex items-start gap-2 ps-4' : 'flex items-start gap-2'}>
+            <span
+              className={group.label ? 'flex items-start gap-2 ps-4' : 'flex items-start gap-2'}
+            >
               <Search className="text-muted mt-0.5 size-3 shrink-0" aria-hidden />
               <span className="break-words">{row.query}</span>
             </span>

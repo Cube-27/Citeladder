@@ -170,7 +170,13 @@ export function TrendChart({
       })),
     ),
   );
-  const ariaLabel = chartDescription(data, label);
+  // Comparison lines carry no marks, so without naming them here a screen
+  // reader is told about one series on a chart that draws several.
+  const ariaLabel = series.length
+    ? `${chartDescription(data, label)} Compared with ${series
+        .map((entry) => entry.label)
+        .join(', ')}.`
+    : chartDescription(data, label);
 
   return (
     <svg

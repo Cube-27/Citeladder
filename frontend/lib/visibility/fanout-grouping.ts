@@ -11,7 +11,7 @@ import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { groupByPrompt, queryTexts } from '@/lib/visibility/evidence';
 
 /** One search string, and what was observed running it. */
-export type SearchRow = {
+type SearchRow = {
   query: string;
   /** Logical engines observed running this query, in catalog encounter order. */
   engines: string[];
@@ -77,9 +77,7 @@ export function searchRows(items: readonly VisibilityExecutionEvidence[]): Searc
 }
 
 /** One group per frozen prompt, in the order the window first mentions it. */
-export function searchRowsByPrompt(
-  items: readonly VisibilityExecutionEvidence[],
-): SearchGroup[] {
+export function searchRowsByPrompt(items: readonly VisibilityExecutionEvidence[]): SearchGroup[] {
   return groupByPrompt(items).map((group) => ({
     ...foldRows(group.executions),
     key: group.promptSnapshotId,

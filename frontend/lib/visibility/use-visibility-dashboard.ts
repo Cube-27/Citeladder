@@ -44,10 +44,7 @@ const tabCodec = stringUrlCodec(
 );
 const engineCodec = stringUrlCodec(['all', ...TREND_ENGINES], 'all');
 const rangeCodec = stringUrlCodec<TrendRange>(['all', '30d', '90d', '1y'], '90d');
-const granularityCodec = stringUrlCodec<TrendGranularity>(
-  ['run', 'day', 'week', 'month'],
-  'run',
-);
+const granularityCodec = stringUrlCodec<TrendGranularity>(['run', 'day', 'week', 'month'], 'run');
 const cohortCodec = stringUrlCodec(['core', 'comparison'] as const, 'core');
 
 /**
@@ -142,6 +139,15 @@ export function useVisibilityFilters() {
     url,
     selectionMode,
     setSelectionMode,
+    // One write, so selecting a run from range mode cannot leave
+    // `selection=range` behind on a stale URL and ignore the run.
+    selectMeasurement: (runId: string | null) =>
+      setUrlParams({
+        selection: 'run',
+        run: runId,
+        configuration: null,
+        ...Object.fromEntries(pageKeys.map((key) => [key, null])),
+      }),
     configuration,
     setConfiguration,
     fromAt,
@@ -288,7 +294,10 @@ function useVisibilityRuns(projectId: string | null) {
   // the 404 the projection answered with while the snapshot was still being
   // written stayed on screen until a manual reload. Keying on the active run
   // alone would miss a later run arriving. The pair moves in either case.
-  const runSignal = `${runOptions[0]?.id ?? ''}:${activeRun ? 'active' : 'idle'}`;
+  // The ACTIVE run's id, not merely whether one exists: one run finishing as
+  // the next begins keeps 'active' true, and a signal that cannot see the
+  // swap leaves the finished run's results uninvalidated.
+  const runSignal = `${runOptions[0]?.id ?? ''}:${activeRun?.id ?? 'idle'}`;
   const previousSignal = useRef<string | undefined>(undefined);
   const auditsLoaded = auditsQuery.isSuccess;
   useEffect(() => {

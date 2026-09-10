@@ -5,10 +5,10 @@ import { expect, test, type Page, type Request } from '@playwright/test';
  *
  * All backend calls are stubbed at the network layer so the spec runs without a
  * live backend (mirrors `runs.spec.ts`). It asserts the four-tab IA — exactly
- * Trends, Mentions & Citations, Query Fanout (no Overview / Sources / Topics /
+ * Trends, Mentions & Citations, Query fanouts (no Overview / Sources / Topics /
  * Sentiment) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
  * a time, `?tab=` URL sync), shared-filter persistence across tabs, the evidence
- * populated / empty / error states, the three Query Fanout query states, and a
+ * populated / empty / error states, the three query-fanout states, and a
  * narrow-viewport (mobile) layout check.
  *
  * The app calls only relative `/api/v1` paths (Next rewrites proxy them), so the
@@ -242,7 +242,7 @@ function evidenceItem(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** Fixture with all three Query Fanout states present. */
+/** Fixture with all three query-fanout states present. */
 function fanoutStatesResponse() {
   return {
     items: [
@@ -401,13 +401,13 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   const { requests, evidenceUrls } = await setup(page, { evidence: fanoutStatesResponse() });
   await page.goto('/visibility');
 
-  await expect(page.getByText('Measurement history', { exact: true })).toBeVisible();
+  await expect(page.getByText('Over time', { exact: true })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
   // Mentions & Citations.
   await page.getByRole('tab', { name: 'Mentions & Citations' }).click();
   await expect(page).toHaveURL(/[?&]tab=mentions-citations/);
-  await page.getByRole('button', { name: 'Mentions and citations mode' }).click();
+  await page.getByRole('button', { name: 'Show' }).click();
   await page.getByRole('menuitemradio', { name: 'Answers', exact: true }).click();
   // One row per execution, each captioned with the frozen prompt it answered —
   // the fixture holds three answers to the same prompt.
@@ -415,8 +415,8 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   await expect(page.getByText('Acme Blog').first()).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
-  // Query Fanout — reuses the shared evidence cache.
-  await page.getByRole('tab', { name: 'Query Fanout' }).click();
+  // Query fanouts — reuses the shared evidence cache.
+  await page.getByRole('tab', { name: 'Query fanouts' }).click();
   await expect(page).toHaveURL(/[?&]tab=query-fanout/);
   await expect(page.getByText('affordable family clothing Australia 2026')).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
@@ -441,18 +441,18 @@ test('keyboard navigation moves selection with focus transfer (WAI-ARIA)', async
   await expect(page.getByRole('tab', { name: 'Mentions & Citations' })).toBeFocused();
 
   await page.keyboard.press('End');
-  await expect(page.getByRole('tab', { name: 'Query Fanout' })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Query fanouts' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
-  await expect(page.getByRole('tab', { name: 'Query Fanout' })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'Query fanouts' })).toBeFocused();
 
   // Wraps forward from the last tab back to the first.
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
 
   await page.keyboard.press('End');
-  await expect(page.getByRole('tab', { name: 'Query Fanout' })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Query fanouts' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
@@ -505,7 +505,7 @@ for (const width of [1280, 375]) {
       },
     });
     await page.goto(`/visibility?run=${AUDIT_EARLIER}&engine=gemini`);
-    await page.getByRole('button', { name: '2 brand-absent answers' }).click();
+    await page.getByRole('button', { name: /answers naming .* but not you/ }).click();
     await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toBeVisible();
     const evidenceUrl = evidenceUrls.at(-1)!;
     expect(evidenceUrl.searchParams.get('audit_id')).toBe(AUDIT_EARLIER);
@@ -517,7 +517,7 @@ for (const width of [1280, 375]) {
     );
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`run=${AUDIT_EARLIER}.*engine=gemini`));
-    await expect(page.getByRole('button', { name: '2 brand-absent answers' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /answers naming .* but not you/ })).toBeVisible();
     await page.screenshot({ path: `test-results/visibility-${width}.png`, fullPage: true });
   });
 }

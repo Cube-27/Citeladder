@@ -90,5 +90,4 @@ describe('RankingRowsTable', () => {
     expect(screen.getByText('+10.0 pp')).toBeVisible();
     expect(screen.queryByText('Matched subset')).toBeNull();
   });
-
 });

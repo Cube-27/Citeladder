@@ -32,11 +32,8 @@ export function VisibilityDashboard() {
     queries.auditsQuery.isError,
     queries.hasRuns,
   );
-  return (
-    <VisibilityWorkspace filters={filters} queries={queries} state={state} />
-  );
+  return <VisibilityWorkspace filters={filters} queries={queries} state={state} />;
 }
-
 
 function dashboardState(
   projectId: string | null,
@@ -94,7 +91,7 @@ function VisibilityWorkspace({
             activeTab={filters.activeTab}
             runs={queries.runOptions}
             selectedRunId={filters.selectedRunId}
-            onSelectRun={filters.setSelectedRunId}
+            onSelectMeasurement={filters.selectMeasurement}
             engine={filters.engine}
             onChangeEngine={filters.setEngine}
             promptOptions={queries.promptOptions}

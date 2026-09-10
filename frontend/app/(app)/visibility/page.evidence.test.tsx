@@ -177,9 +177,7 @@ describe('VisibilityPage — Query fanouts tab', () => {
     // The other two states are real facts about the run, so they are counted
     // rather than invented as rows: one search whose wording was withheld, and
     // one answer that searched nothing at all.
-    expect(
-      screen.getByText(/1 answer searched without returning the wording/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/1 answer searched without returning the wording/)).toBeInTheDocument();
     expect(screen.getByText(/1 answered without searching/)).toBeInTheDocument();
     // No duplicated citation browser here.
     expect(screen.queryByText('Acme Blog')).toBeNull();

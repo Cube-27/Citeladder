@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -254,28 +255,27 @@ def _rankings(
     tone is the one measure a run does not already produce.
     """
     sov = metrics.get("share_of_voice") or {}
-    positions = metrics.get("average_positions") or {}
     counts = sov.get("mention_counts") or {}
     total_presences = sum(counts.values())
-    share = {
-        name: count / total_presences if total_presences else None
-        for name, count in counts.items()
-    }
+    shared = _RankingContext(
+        share={
+            name: count / total_presences if total_presences else None
+            for name, count in counts.items()
+        },
+        counts=counts,
+        positions=metrics.get("average_positions") or {},
+        logo_urls=logo_urls or {},
+        identity_ids=logo_identity_ids or {},
+        website_urls=website_urls,
+    )
     brand_name = _brand_name(counts, metrics)
-    competitor_mention = metrics.get("competitor_mention_rate") or {}
-
     rows = [
         _ranking_row(
             name=brand_name,
             is_brand=True,
             mention_rate=observed_rate(metrics, "brand_mention_rate"),
             citation_rate=observed_rate(metrics, "owned_citation_rate"),
-            share=share,
-            counts=counts,
-            positions=positions,
-            logo_urls=logo_urls or {},
-            identity_ids=logo_identity_ids or {},
-            website_urls=website_urls,
+            shared=shared,
         ),
         *[
             _ranking_row(
@@ -285,19 +285,31 @@ def _rankings(
                 citation_rate=competitor_rate(
                     metrics, "competitor_citation_rate", name
                 ),
-                share=share,
-                counts=counts,
-                positions=positions,
-                logo_urls=logo_urls or {},
-                identity_ids=logo_identity_ids or {},
-                website_urls=website_urls,
+                shared=shared,
             )
-            for name in competitor_mention
+            for name in metrics.get("competitor_mention_rate") or {}
         ],
     ]
     # Deterministic order: highest SOV first, then name for stable ties.
     rows.sort(key=lambda r: (-(r.share_of_voice or 0.0), r.name))
     return rows
+
+
+@dataclass(frozen=True)
+class _RankingContext:
+    """Everything a ranking row needs that is the same for every row.
+
+    Passing these six as separate arguments meant each new per-row measure was
+    another parameter threaded through two call sites and a default; they travel
+    together because they describe the selection, not the entity.
+    """
+
+    share: dict
+    counts: dict
+    positions: dict
+    logo_urls: dict[uuid.UUID, str]
+    identity_ids: dict[tuple[bool, str], uuid.UUID]
+    website_urls: dict[tuple[bool, str], str] | None
 
 
 def _ranking_row(
@@ -306,23 +318,20 @@ def _ranking_row(
     is_brand: bool,
     mention_rate: object,
     citation_rate: object,
-    share: dict,
-    counts: dict,
-    positions: dict | None = None,
-    logo_urls: dict[uuid.UUID, str],
-    identity_ids: dict[tuple[bool, str], uuid.UUID],
-    website_urls: dict[tuple[bool, str], str] | None,
+    shared: _RankingContext,
 ) -> RankingRow:
     return RankingRow(
         name=name,
         is_brand=is_brand,
-        logo_url=_logo_url_for_name(name, is_brand, logo_urls, identity_ids),
-        website_url=_website_url_for_name(name, is_brand, website_urls),
+        logo_url=_logo_url_for_name(
+            name, is_brand, shared.logo_urls, shared.identity_ids
+        ),
+        website_url=_website_url_for_name(name, is_brand, shared.website_urls),
         mention_rate=mention_rate,
         citation_rate=citation_rate,
-        share_of_voice=share.get(name),
-        mention_count=int(counts.get(name, 0) or 0),
-        avg_position=(positions or {}).get(name),
+        share_of_voice=shared.share.get(name),
+        mention_count=int(shared.counts.get(name, 0) or 0),
+        avg_position=shared.positions.get(name),
     )
 
 

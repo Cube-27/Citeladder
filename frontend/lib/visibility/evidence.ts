@@ -62,13 +62,6 @@ export function queryTexts(item: VisibilityExecutionEvidence): string[] {
   return queries;
 }
 
-/** Human explanation for a count-only execution ("provider reported N searches"). */
-export function countOnlyExplanation(item: VisibilityExecutionEvidence): string {
-  const n = item.search_query_count;
-  return `Query text unavailable; provider reported ${n} ${n === 1 ? 'search' : 'searches'}`;
-}
-
-
 /** Format an execution completion timestamp, or a "date unavailable" note. */
 export function formatExecutionDate(timestamp: string | null): string {
   if (!timestamp) return 'Date unavailable';

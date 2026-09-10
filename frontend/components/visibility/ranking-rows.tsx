@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Table,
@@ -7,19 +7,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { BrandLogo } from "@/components/ui/brand-logo";
-import { UnavailableValue } from "@/components/ui/unavailable-value";
-import { Button } from "@/components/ui/button";
-import type { RankingRow } from "@/lib/api/types";
-import { formatRate } from "@/lib/visibility/dashboard";
-import { changeLabel } from "@/lib/visibility/vocabulary";
-import {
-  TablePagination,
-  useTablePage,
-} from "@/components/ui/table-pagination";
-import { textRole } from "@/components/ui/typography";
-import { tagClasses } from "@/components/ui/filter-chip-variants";
+} from '@/components/ui/table';
+import { BrandLogo } from '@/components/ui/brand-logo';
+import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Button } from '@/components/ui/button';
+import type { RankingRow } from '@/lib/api/types';
+import { formatRate } from '@/lib/visibility/dashboard';
+import { changeLabel } from '@/lib/visibility/vocabulary';
+import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
+import { textRole } from '@/components/ui/typography';
+import { tagClasses } from '@/components/ui/filter-chip-variants';
 
 /**
  * Where you stand against the brands you track.
@@ -43,14 +40,9 @@ export function RankingRowsTable({
   onSelect?: (name: string) => void;
 }>) {
   const ordered = [...rows].sort(
-    (a, b) =>
-      (b.mention_rate ?? -1) - (a.mention_rate ?? -1) ||
-      a.name.localeCompare(b.name),
+    (a, b) => (b.mention_rate ?? -1) - (a.mention_rate ?? -1) || a.name.localeCompare(b.name),
   );
-  const { page, setPage, pageCount, from, to } = useTablePage(
-    ordered.length,
-    PAGE_SIZE,
-  );
+  const { page, setPage, pageCount, from, to } = useTablePage(ordered.length, PAGE_SIZE);
   if (!ordered.length) return <p>No measured responses in this selection.</p>;
   const paged = ordered.slice(from - 1, to);
   // With no prior run there is no change for ANY brand, and a column of
@@ -86,14 +78,9 @@ export function RankingRowsTable({
             // A matched-subset delta is the same measurement taken over the cells
             // both runs share. Which one it is belongs to the note above the
             // table, not to a disclosure inside every cell.
-            const change = changeLabel(
-              row.matched_visibility_delta ?? row.visibility_delta,
-            );
+            const change = changeLabel(row.matched_visibility_delta ?? row.visibility_delta);
             return (
-              <TableRow
-                key={`${row.is_brand}-${row.name}`}
-                highlight={row.is_brand}
-              >
+              <TableRow key={`${row.is_brand}-${row.name}`} highlight={row.is_brand}>
                 <TableCell>
                   <span className="flex items-center gap-2">
                     <BrandLogo
@@ -102,17 +89,13 @@ export function RankingRowsTable({
                       websiteUrl={row.website_url}
                       size="sm"
                     />
-                    <span className={textRole("emphasis")}>{row.name}</span>
+                    <span className={textRole('emphasis')}>{row.name}</span>
                     {row.is_brand ? (
-                      <span className={textRole("label", tagClasses())}>
-                        You
-                      </span>
+                      <span className={textRole('label', tagClasses())}>You</span>
                     ) : null}
                   </span>
-                  <span
-                    className={textRole("meta", "text-secondary md:hidden")}
-                  >
-                    {formatRate(row.share_of_voice)} share of voice ·{" "}
+                  <span className={textRole('meta', 'text-secondary md:hidden')}>
+                    {formatRate(row.share_of_voice)} share of voice ·{' '}
                     {formatRate(row.citation_rate)} citations
                   </span>
                 </TableCell>

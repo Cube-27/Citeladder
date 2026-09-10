@@ -45,6 +45,11 @@ const modeCodec = stringUrlCodec(
   'sources',
 );
 
+/** A query parameter is either a value or absent; null is neither. */
+function set<T>(value: T | null | undefined): T | undefined {
+  return value ?? undefined;
+}
+
 type SourceRow = z.infer<typeof visibilitySourcesSchema>['items'][number];
 type SourceData = z.infer<typeof visibilitySourcesSchema>;
 type SourceFilters = ReturnType<typeof useVisibilityFilters>;
@@ -63,7 +68,11 @@ export function VisibilitySources({
   const [domain] = useUrlState('source_domain', optionalStringUrlCodec);
   const [offset] = useUrlState('source_offset', optionalStringUrlCodec);
   const [asOf] = useUrlState('source_as_of', optionalStringUrlCodec);
-  const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec);
+  // A different type is a different result set, so its offset cursor cannot
+  // carry over — page three of one filter is not page three of another.
+  const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec, {
+    clearKeys: ['source_offset', 'source_as_of'],
+  });
   const { params, sourceQuery } = useSourceAnalysis(
     filters,
     queries,
@@ -73,9 +82,6 @@ export function VisibilitySources({
     asOf,
     sourceType,
   );
-  const data = sourceQuery.data;
-  const types = useSourceTypes(data);
-  const rows = data?.items ?? [];
 
   return (
     <Stack gap="workspace">
@@ -87,78 +93,112 @@ export function VisibilitySources({
       {mode === 'answers' ? (
         children
       ) : (
-        <>
-          <SourceTotals
-            data={data}
-            domain={domain}
-            citations={queries.visibilityQuery.data?.citation_totals}
-          />
-          <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-            <Card>
-              <CardHeader className="flex-row items-center justify-between gap-3">
-                <div className="grid gap-1">
-                  <CardTitle>{domain ? `Cited pages · ${domain}` : 'Source domains'}</CardTitle>
-                  <p className={textRole('meta', 'text-secondary')}>
-                    {domain
-                      ? 'The pages on this domain the models cited.'
-                      : 'Ordered by how many answers cited them.'}
-                  </p>
-                </div>
-                {types.length > 1 ? (
-                  <AnalysisChoice
-                    label="Filter by source type"
-                    value={sourceType ?? 'all'}
-                    options={[
-                      { value: 'all', label: 'All source types' },
-                      ...types.map((type) => ({ value: type.token, label: type.label })),
-                    ]}
-                    onChange={(value) => setSourceType(value === 'all' ? null : value)}
-                  />
-                ) : null}
-              </CardHeader>
-              <CardContent className="p-0">
-                {sourceQuery.isError ? (
-                  <Alert tone="danger">Could not load cited sources.</Alert>
-                ) : null}
-                {sourceQuery.isLoading ? <p aria-busy="true">Loading sources…</p> : null}
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{domain ? 'Page' : 'Domain'}</TableHead>
-                      <TableHead numeric>Answers</TableHead>
-                      <TableHead numeric>Share of answers</TableHead>
-                      <TableHead numeric className="hidden md:table-cell">
-                        Prompts
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rows.map((row) => (
-                      <SourceTableRow
-                        key={row.key}
-                        row={row}
-                        domain={domain}
-                        filters={filters}
-                        activeRunId={queries.activeRunId}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-                {data && rows.length === 0 ? (
-                  <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
-                    {sourceType
-                      ? 'No sources of this type in this selection.'
-                      : 'No cited sources in this selection.'}
-                  </p>
-                ) : null}
-                <SourcePaging data={data} domain={domain} offset={params.offset} />
-              </CardContent>
-            </Card>
-            <SourceTypes types={types} />
-          </div>
-        </>
+        <SourcesPanel
+          filters={filters}
+          queries={queries}
+          sourceQuery={sourceQuery}
+          domain={domain}
+          offset={params.offset}
+          sourceType={sourceType}
+          onChangeSourceType={setSourceType}
+        />
       )}
     </Stack>
+  );
+}
+
+/** The cited-sources half: the totals band, the domain table, and the mix. */
+function SourcesPanel({
+  filters,
+  queries,
+  sourceQuery,
+  domain,
+  offset,
+  sourceType,
+  onChangeSourceType,
+}: Readonly<{
+  filters: SourceFilters;
+  queries: SourceQueries;
+  sourceQuery: ReturnType<typeof useSourceAnalysis>['sourceQuery'];
+  domain: string | null;
+  offset: number;
+  sourceType: string | null;
+  onChangeSourceType: (value: string | null) => void;
+}>) {
+  const data = sourceQuery.data;
+  const types = useSourceTypes(data);
+  const rows = data?.items ?? [];
+  return (
+    <>
+      <SourceTotals
+        data={data}
+        domain={domain}
+        citations={queries.visibilityQuery.data?.citation_totals}
+      />
+      <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between gap-3">
+            <div className="grid gap-1">
+              <CardTitle>{domain ? `Cited pages · ${domain}` : 'Source domains'}</CardTitle>
+              <p className={textRole('meta', 'text-secondary')}>
+                {domain
+                  ? 'The pages on this domain the models cited.'
+                  : 'Ordered by how many answers cited them.'}
+              </p>
+            </div>
+            {types.length > 1 ? (
+              <AnalysisChoice
+                label="Filter by source type"
+                value={sourceType ?? 'all'}
+                options={[
+                  { value: 'all', label: 'All source types' },
+                  ...types.map((type) => ({ value: type.token, label: type.label })),
+                ]}
+                onChange={(value) => onChangeSourceType(value === 'all' ? null : value)}
+              />
+            ) : null}
+          </CardHeader>
+          <CardContent className="p-0">
+            {sourceQuery.isError ? (
+              <Alert tone="danger">Could not load cited sources.</Alert>
+            ) : null}
+            {sourceQuery.isLoading ? <p aria-busy="true">Loading sources…</p> : null}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{domain ? 'Page' : 'Domain'}</TableHead>
+                  <TableHead numeric>Answers</TableHead>
+                  <TableHead numeric>Share of answers</TableHead>
+                  <TableHead numeric className="hidden md:table-cell">
+                    Prompts
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <SourceTableRow
+                    key={row.key}
+                    row={row}
+                    domain={domain}
+                    filters={filters}
+                    activeRunId={queries.activeRunId}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+            {data && rows.length === 0 ? (
+              <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
+                {sourceType
+                  ? 'No sources of this type in this selection.'
+                  : 'No cited sources in this selection.'}
+              </p>
+            ) : null}
+            <SourcePaging data={data} domain={domain} offset={offset} />
+          </CardContent>
+        </Card>
+        <SourceTypes types={types} selected={sourceType} />
+      </div>
+    </>
   );
 }
 
@@ -236,7 +276,10 @@ function useSourceTypes(data?: SourceData): SourceType[] {
   }, [data]);
 }
 
-function SourceTypes({ types }: Readonly<{ types: SourceType[] }>) {
+function SourceTypes({
+  types,
+  selected,
+}: Readonly<{ types: SourceType[]; selected: string | null }>) {
   if (!types.length) return null;
   return (
     <Card>
@@ -251,7 +294,7 @@ function SourceTypes({ types }: Readonly<{ types: SourceType[] }>) {
           </span>
         </CardTitle>
         <p className={textRole('meta', 'text-secondary')}>
-          Across every cited domain in this selection.
+          Across every cited domain in this selection, including types the table is filtered out of.
         </p>
       </CardHeader>
       <CardContent>
@@ -259,12 +302,13 @@ function SourceTypes({ types }: Readonly<{ types: SourceType[] }>) {
           {types.map((type) => (
             <div key={type.label} className="grid gap-1.5">
               <div className="flex items-baseline justify-between gap-3">
-                <span className={textRole('body')}>{type.label}</span>
+                <span className={textRole(type.token === selected ? 'bodyStrong' : 'body')}>
+                  {type.label}
+                  {type.token === selected ? ' · filtered' : ''}
+                </span>
                 <span className={textRole('metricSm')}>
                   {formatRate(type.share)}
-                  <span className={textRole('meta', 'text-secondary ms-1.5')}>
-                    {type.domains}
-                  </span>
+                  <span className={textRole('meta', 'text-secondary ms-1.5')}>{type.domains}</span>
                 </span>
               </div>
               <div className="bg-surface-2 h-1.5 w-full overflow-hidden rounded-full" aria-hidden>
@@ -328,19 +372,18 @@ function useSourceAnalysis(
   asOf: string | null,
   sourceType: string | null,
 ) {
+  const comparison = queries.visibilityQuery.data?.comparison;
   const params = {
-    audit_id: queries.selectedRunIds ? undefined : (queries.activeRunId ?? undefined),
+    audit_id: queries.selectedRunIds ? undefined : set(queries.activeRunId),
     audit_ids: queries.selectedRunIds,
     baseline_audit_ids:
-      queries.visibilityQuery.data?.comparison?.status === 'comparable'
-        ? queries.visibilityQuery.data.comparison.baseline_audit_ids
-        : undefined,
-    engine: filters.engine === 'all' ? undefined : filters.engine,
+      comparison?.status === 'comparable' ? comparison.baseline_audit_ids : undefined,
+    engine: set(filters.engine === 'all' ? null : filters.engine),
     cohort: filters.cohort,
-    domain: domain ?? undefined,
-    source_type: sourceType ?? undefined,
+    domain: set(domain),
+    source_type: set(sourceType),
     offset: Math.max(0, Number.parseInt(offset ?? '0', 10) || 0),
-    as_of: asOf ?? undefined,
+    as_of: set(asOf),
   };
   const sourceQuery = useQuery({
     queryKey: queryKeys.visibility.sources(queries.projectId ?? '', params),

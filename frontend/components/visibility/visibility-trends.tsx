@@ -191,9 +191,7 @@ function MeasurementHistory({
         {query.isError ? (
           <Alert tone="danger">Could not load history.</Alert>
         ) : !points.length ? (
-          <p className={textRole('body', 'text-secondary')}>
-            No measurements in this period yet.
-          </p>
+          <p className={textRole('body', 'text-secondary')}>No measurements in this period yet.</p>
         ) : (
           <Stack gap="compact" aria-busy={query.isFetching}>
             <TrendChart

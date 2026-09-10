@@ -80,11 +80,14 @@ def test_ranking_rows_key_logo_and_website_by_brand_flag_not_name() -> None:
             is_brand=is_brand,
             mention_rate=1.0,
             citation_rate=1.0,
-            share={},
-            counts={},
-            logo_urls=logo_urls,
-            identity_ids=identity_ids,
-            website_urls=website_urls,
+            shared=analysis_service._RankingContext(
+                share={},
+                counts={},
+                positions={},
+                logo_urls=logo_urls,
+                identity_ids=identity_ids,
+                website_urls=website_urls,
+            ),
         )
 
     brand_row = _row(True)
@@ -101,11 +104,14 @@ def test_ranking_rows_key_logo_and_website_by_brand_flag_not_name() -> None:
         is_brand=False,
         mention_rate=0.0,
         citation_rate=0.0,
-        share={},
-        counts={},
-        logo_urls=logo_urls,
-        identity_ids=identity_ids,
-        website_urls=None,
+        shared=analysis_service._RankingContext(
+            share={},
+            counts={},
+            positions={},
+            logo_urls=logo_urls,
+            identity_ids=identity_ids,
+            website_urls=None,
+        ),
     )
     assert missing.logo_url is None
     assert missing.website_url is None
