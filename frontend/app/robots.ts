@@ -3,40 +3,35 @@ import type { MetadataRoute } from 'next';
 import { absoluteUrl } from '@/lib/seo/site';
 
 /**
- * Route groups that must never be crawled: the signed-in app, onboarding, and
- * the API proxy. robots.txt group matching is most-specific-agent-wins, so a
- * named user-agent group does NOT inherit the `*` group — every group has to
- * carry this list or naming an agent silently opens the private surface to it.
+ * Signed-in app route segments that must never be crawled, as bare prefixes.
+ *
+ * A bare `/settings` prefix-matches the segment AND everything beneath it —
+ * `/settings/billing`, `/settings?tab=plan`, `/settings/`. The earlier
+ * `/settings$` + `/settings/` pair missed query-string forms, because `$`
+ * anchors to end-of-URL and `?tab=plan` means the URL no longer ends there.
+ *
+ * robots.txt group matching is most-specific-agent-wins, so a named
+ * user-agent group does NOT inherit the `*` group — every group has to carry
+ * this list or naming an agent silently opens the private surface to it.
  */
-const PRIVATE_PATHS = [
-  '/api/',
-  '/onboarding$',
-  '/onboarding/',
-  '/visibility$',
-  '/visibility/',
-  '/ai-referrals$',
-  '/ai-referrals/',
-  '/traffic$',
-  '/traffic/',
-  '/prompts$',
-  '/prompts/',
-  '/products$',
-  '/products/',
-  '/runs$',
-  '/runs/',
-  '/content$',
-  '/content/',
-  '/site$',
-  '/site/',
-  '/issues$',
-  '/issues/',
-  '/opportunities$',
-  '/opportunities/',
-  '/projects$',
-  '/projects/',
-  '/settings$',
-  '/settings/',
+const PRIVATE_SEGMENTS = [
+  'onboarding',
+  'ai-referrals',
+  'content',
+  'demand',
+  'issues',
+  'opportunities',
+  'performance',
+  'products',
+  'projects',
+  'prompts',
+  'runs',
+  'settings',
+  'site',
+  'visibility',
 ];
+
+const PRIVATE_PATHS = ['/api/', ...PRIVATE_SEGMENTS.map((segment) => `/${segment}`)];
 
 /**
  * Answer-engine crawlers and the training/grounding opt-in tokens. Listing them

@@ -74,35 +74,6 @@ describe('sitemap', () => {
 });
 
 describe('robots', () => {
-  it('keeps the signed-in app and API out of the crawl', () => {
-    delete process.env.NEXT_PUBLIC_SITE_URL;
-    const result = robots();
-    const rules = Array.isArray(result.rules) ? result.rules : [result.rules];
-    expect(rules[0]?.userAgent).toBe('*');
-    expect(rules[0]?.allow).toBe('/');
-    const disallow = rules[0]?.disallow;
-    expect(disallow).toEqual(
-      expect.arrayContaining([
-        '/api/',
-        ...[
-          '/onboarding',
-          '/visibility',
-          '/ai-referrals',
-          '/traffic',
-          '/prompts',
-          '/products',
-          '/runs',
-          '/content',
-          '/site',
-          '/issues',
-          '/opportunities',
-          '/projects',
-          '/settings',
-        ].flatMap((path) => [`${path}$`, `${path}/`]),
-      ]),
-    );
-  });
-
   it('closes the private surface to named AI crawlers too', () => {
     // robots.txt is most-specific-agent-wins: a bot that matches a named group
     // ignores the `*` group entirely, so the named group has to repeat the

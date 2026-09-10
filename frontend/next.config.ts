@@ -158,6 +158,24 @@ const nextConfig: NextConfig = {
         ],
       })),
       {
+        // Next ships `max-age=0, must-revalidate` on metadata routes, so every
+        // crawler fetch of these two fell through the CDN to the origin in
+        // asia-south1 and some timed out — Search Console reported robots.txt
+        // as unreachable. Both are build-time constants (the route list and
+        // the content modules are compiled in), so they only change on deploy.
+        // `s-maxage` lets the edge serve them while `max-age=0` keeps crawlers
+        // revalidating, so an updated file is picked up on the next deploy.
+        // Route segment `revalidate` is not an option here: `cacheComponents`
+        // rejects it at build time.
+        source: '/:file(robots.txt|sitemap.xml)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate, s-maxage=86400',
+          },
+        ],
+      },
+      {
         // Self-hosted font files are content-stable: a new cut ships under a
         // new filename, so a year of immutable caching can never go stale.
         source: '/:file*.:ext(woff2|woff|ttf|otf)',
