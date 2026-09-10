@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.browser_cookies import (
     clear_auth_oauth_cookie,
     clear_integration_oauth_cookie,
+    clear_session_cookie,
     set_session_cookie,
 )
 from app.api.deps import get_current_user, get_db
@@ -108,7 +109,7 @@ async def logout(
 ) -> Response:
     user.session_version += 1
     await session.commit()
-    response.delete_cookie(settings.session_cookie_name, path="/")
+    clear_session_cookie(response)
     clear_integration_oauth_cookie(response)
     clear_auth_oauth_cookie(response)
     response.status_code = status.HTTP_204_NO_CONTENT

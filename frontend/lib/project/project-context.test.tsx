@@ -38,18 +38,34 @@ function project(id: string, name: string, workspaceId = WORKSPACE_A) {
 }
 
 function Harness() {
-  const { activeProject, activeProjectId, projects, setActiveProjectId } = useProjectContext();
+  const { activeProject, activeProjectId, projects, setActiveProjectId, hasPendingSelection } =
+    useProjectContext();
   return (
     <div>
       <div data-testid="active">{activeProject?.name ?? 'none'}</div>
       <div data-testid="active-id">{activeProjectId ?? 'none'}</div>
       <div data-testid="count">{projects.length}</div>
+      <div data-testid="pending">{hasPendingSelection ? 'yes' : 'no'}</div>
       {projects.map((p) => (
         <button key={p.id} type="button" onClick={() => setActiveProjectId(p.id)}>
           select {p.name}
         </button>
       ))}
     </div>
+  );
+}
+
+/**
+ * The route-group boundary. Onboarding lives in `(onboarding)` and the
+ * workspace in `(app)`; each layout mounts its own `ProjectProvider`, so
+ * crossing between them destroys one provider and builds another against the
+ * same query cache. A changed `key` reproduces exactly that.
+ */
+function Boundary({ side }: Readonly<{ side: 'onboarding' | 'app' }>) {
+  return (
+    <ProjectProvider key={side}>
+      <Harness />
+    </ProjectProvider>
   );
 }
 
@@ -172,6 +188,100 @@ describe('ProjectProvider', () => {
     await waitFor(() =>
       expect(window.localStorage.getItem('citeladder.active-project-id')).toBe(PROJECT_2),
     );
+  });
+
+  /**
+   * The bug that cost a user their first project.
+   *
+   * Onboarding commits the project, persists the selection, and navigates to
+   * `/projects`. The provider that mounts there is BRAND NEW and its cached
+   * list can still be the pre-create one — settled, and empty. Resolving that
+   * to "no active project" is what let `OnboardingGate` read the account as
+   * having none and bounce the user back to a blank `/onboarding`; they filled
+   * it in again and the second completion was refused with "not allowed to
+   * create more projects", because the first project had been there all along.
+   */
+  it('carries a committed selection across a provider boundary on storage alone', async () => {
+    let created = false;
+    mswServer.use(
+      http.get('/api/v1/projects', () =>
+        HttpResponse.json(created ? [project(PROJECT_2, 'Globex')] : []),
+      ),
+    );
+
+    const { queryClient, rerender } = renderWithProviders(<Boundary side="onboarding" />);
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('0'));
+
+    // Completion: the project exists on the server and the selection is
+    // persisted. `refetchType: 'none'` is what makes this the RACE rather than
+    // the happy path — the list is stale but the re-read has not landed, which
+    // is the state a provider mounting on the far side of the boundary starts
+    // in whenever onboarding's own refetch did not beat the navigation.
+    created = true;
+    window.localStorage.setItem('citeladder.active-project-id', PROJECT_2);
+    await queryClient.invalidateQueries({
+      queryKey: ['projects', 'list'],
+      refetchType: 'none',
+    });
+
+    rerender(<Boundary side="app" />);
+
+    // Before its own list answers, the new provider still knows which project
+    // it is waiting for — and says so, so the gate holds rather than redirects.
+    expect(screen.getByTestId('active-id')).toHaveTextContent(PROJECT_2);
+    expect(screen.getByTestId('pending')).toHaveTextContent('yes');
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Globex'));
+    expect(screen.getByTestId('pending')).toHaveTextContent('no');
+  });
+
+  it('does not let a stale list resolve a stored selection to the wrong project', async () => {
+    let created = false;
+    mswServer.use(
+      http.get('/api/v1/projects', () =>
+        HttpResponse.json(
+          created
+            ? [project(PROJECT_1, 'Acme'), project(PROJECT_2, 'Globex')]
+            : [project(PROJECT_1, 'Acme')],
+        ),
+      ),
+    );
+
+    const { queryClient, rerender } = renderWithProviders(<Boundary side="onboarding" />);
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
+
+    created = true;
+    window.localStorage.setItem('citeladder.active-project-id', PROJECT_2);
+    await queryClient.invalidateQueries({
+      queryKey: ['projects', 'list'],
+      refetchType: 'none',
+    });
+    rerender(<Boundary side="app" />);
+
+    // Falling back to projects[0] here was not a flicker: the promotion effect
+    // WRITES the resolved default back to storage, so the wrong project would
+    // stick for good.
+    expect(screen.getByTestId('active-id')).toHaveTextContent(PROJECT_2);
+    expect(window.localStorage.getItem('citeladder.active-project-id')).toBe(PROJECT_2);
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Globex'));
+  });
+
+  it('releases a stored selection whose project no longer exists', async () => {
+    // The bound on the seeded pin. Without it, a localStorage id left behind by
+    // a deleted project would hold the context on a dead id forever.
+    window.localStorage.setItem('citeladder.active-project-id', PROJECT_2);
+    mswServer.use(
+      http.get('/api/v1/projects', () => HttpResponse.json([project(PROJECT_1, 'Acme')])),
+    );
+
+    renderWithProviders(
+      <ProjectProvider>
+        <Harness />
+      </ProjectProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
+    expect(screen.getByTestId('pending')).toHaveTextContent('no');
+    expect(window.localStorage.getItem('citeladder.active-project-id')).toBe(PROJECT_1);
   });
 
   it('backfills logos for projects that have none, then re-reads the list once', async () => {

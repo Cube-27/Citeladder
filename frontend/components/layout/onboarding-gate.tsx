@@ -29,21 +29,31 @@ import { useProjectContext } from '@/lib/project/project-context';
  *     stops an existing user being bounced to onboarding for a frame.
  *
  * (b) **No bounce-back after confirm.** Onboarding awaits the projects refetch
- *     before navigating here, so by the time this mounts the list is warm. The
- *     skeleton below covers the gap either way rather than rendering the app
- *     against an empty context.
+ *     before navigating here, but that refetch belongs to the provider it is
+ *     leaving: crossing from `(onboarding)` to `(app)` mounts a NEW provider,
+ *     and nothing guarantees its list has caught up by this frame. The pending
+ *     selection below is the signal that it has not. The skeleton covers the
+ *     gap either way rather than rendering the app against an empty context.
  */
 export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { projects, isLoading, isError } = useProjectContext();
+  const { projects, isLoading, isError, hasPendingSelection } = useProjectContext();
   // Entitlement decides which controls the shell HAS — the Growth Agent
   // trigger, the capability-gated navigation rows — so waiting for it here is
   // what lets the shell paint complete instead of growing a button and a link
   // a round trip later. It resolves to a settled answer either way: a failed
   // request stops loading and the shell draws with nothing granted.
   const { isLoading: entitlementLoading } = useEntitlement();
-  const needsOnboarding = !isLoading && !isError && projects.length === 0;
+  // `hasPendingSelection` is the third loading state, and leaving it out is what
+  // made a first project vanish. Arriving from onboarding, this provider is new
+  // and its list can still be the pre-create one — `isLoading` false, `projects`
+  // empty. Reading that as "this account has no projects" bounced the user back
+  // to a blank `/onboarding` seconds after they had finished it; they filled it
+  // in again, and the second completion was refused with "not allowed to create
+  // more projects" because the first project existed all along. A selection
+  // committed but not yet confirmed means the list is still catching up.
+  const needsOnboarding = !isLoading && !isError && !hasPendingSelection && projects.length === 0;
 
   useEffect(() => {
     if (needsOnboarding) {
@@ -79,7 +89,9 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   // that follows it is already complete. `needsOnboarding` holds here too —
   // the redirect is already in flight, and drawing a workspace the visitor is
   // about to be taken out of would only be a flash of the wrong app.
-  if (isLoading || entitlementLoading || needsOnboarding) return <ShellFallback />;
+  if (isLoading || entitlementLoading || needsOnboarding || hasPendingSelection) {
+    return <ShellFallback />;
+  }
 
   return <>{children}</>;
 }

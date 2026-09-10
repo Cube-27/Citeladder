@@ -32,6 +32,12 @@ type ProjectContextValue = {
   activeProjectId: string | null;
   /** Select a project by id (persists + stamps the workspace header). */
   setActiveProjectId: (projectId: string) => void;
+  /**
+   * A selection is committed but the list has not confirmed it yet — the
+   * workspace is still resolving, and an empty `projects` here is not evidence
+   * that the account has none. `OnboardingGate` reads this.
+   */
+  hasPendingSelection: boolean;
   /** True while the project list is loading. */
   isLoading: boolean;
   /** True when project ownership could not be resolved. */
@@ -62,6 +68,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
     data: projects = [],
     isLoading,
     isError,
+    dataUpdatedAt,
   } = useQuery({
     queryKey: queryKeys.projects.list(),
     queryFn: ({ signal }) => projectsApi.listProjects({ signal }),
@@ -72,18 +79,41 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   // authoritative even before the list refetch catches up. Without this, a
   // selection whose project is not yet in `projects` fails the membership check
   // below and gets reset to `projects[0]` — the "I added a project and landed on
-  // the first one" bug. Only a selection the user never made (a stale
-  // localStorage id for a deleted project) may fall back.
+  // the first one" bug.
+  //
+  // The pin is SEEDED FROM STORAGE, which is what carries a selection across a
+  // route-group boundary. Onboarding lives in `(onboarding)` and the workspace
+  // in `(app)`; each layout mounts its own provider, so the pin that onboarding
+  // set dies with its provider and this one starts over from the stored id
+  // alone. Seeding only `selectedId` from storage was not enough: an id absent
+  // from a not-yet-refetched list fails the membership check, resolves to
+  // `projects[0]`, and the promotion effect below then WRITES that wrong id to
+  // storage — so the miss is permanent, not a flicker. (This is what the
+  // `?project=` hand-off in the URL was papering over, one effect-tick too
+  // late and only on `/projects`.)
   //
   // State rather than a ref because `activeProjectId` is derived from it during
   // render: clearing the pin has to re-run that memo. It is released purely by
-  // derivation below (never by an effect) once the list catches up.
-  const [pinnedId, setPinnedId] = useState<string | null>(null);
-  // The pin stops applying the moment the list actually contains it — from then
-  // on the ordinary membership check governs, so a project deleted later still
-  // falls back to the first one instead of stranding the context on a dead id.
+  // derivation below (never by an effect).
+  const [pin, setPin] = useState<{ id: string; asOf: number } | null>(() => {
+    const stored = readStoredActiveProjectId();
+    // `dataUpdatedAt` here is the list generation this provider STARTED from —
+    // 0 with a cold cache, the cached timestamp when it inherits one from the
+    // provider it is replacing. Captured in the lazy initializer so it is the
+    // mount-time value, not whatever the current render sees.
+    return stored === null ? null : { id: stored, asOf: dataUpdatedAt };
+  });
+  // `asOf` is the list's `dataUpdatedAt` when the pin was set, and the pin holds
+  // only until a list fetched AFTER that comes back. That bound is what keeps a
+  // stale localStorage id for a DELETED project from stranding the context on a
+  // dead id forever: one authoritative list without it releases the pin and the
+  // ordinary membership check takes over. It also releases the moment the list
+  // does contain it, which is the common case.
   const pinApplies =
-    pinnedId !== null && selectedId === pinnedId && !projects.some((p) => p.id === pinnedId);
+    pin !== null &&
+    selectedId === pin.id &&
+    !projects.some((project) => project.id === pin.id) &&
+    dataUpdatedAt <= pin.asOf;
 
   // Resolve the effective active id: keep a valid selection, else default to
   // the first project, else null.
@@ -101,11 +131,20 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
     [projects, activeProjectId],
   );
 
-  const setActiveProjectId = useCallback((projectId: string) => {
-    setPinnedId(projectId);
-    setSelectedId(projectId);
-    writeStoredActiveProjectId(projectId);
-  }, []);
+  const setActiveProjectId = useCallback(
+    (projectId: string) => {
+      // The generation is read from the cache rather than closed over, so this
+      // callback stays referentially stable — every consumer holds it across
+      // renders — while still stamping the pin with the list the selection was
+      // actually made against.
+      const listGeneration =
+        queryClient.getQueryState(queryKeys.projects.list())?.dataUpdatedAt ?? 0;
+      setPin({ id: projectId, asOf: listGeneration });
+      setSelectedId(projectId);
+      writeStoredActiveProjectId(projectId);
+    },
+    [queryClient],
+  );
 
   // Persist a resolved default (first project) so a reload is stable, and keep
   // the API client's workspace header in sync with the active project.
@@ -179,10 +218,11 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
       activeProject,
       activeProjectId,
       setActiveProjectId,
+      hasPendingSelection: pinApplies,
       isLoading,
       isError,
     }),
-    [projects, activeProject, activeProjectId, setActiveProjectId, isLoading, isError],
+    [projects, activeProject, activeProjectId, setActiveProjectId, pinApplies, isLoading, isError],
   );
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;

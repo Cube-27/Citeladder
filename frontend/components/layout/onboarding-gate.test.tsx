@@ -9,8 +9,13 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace, push: vi.fn() }),
 }));
 
-// The gate reads only projects + isLoading from context.
-let contextValue = { projects: [] as Project[], isError: false, isLoading: false };
+// The gate reads projects, isLoading, isError and hasPendingSelection.
+let contextValue = {
+  projects: [] as Project[],
+  isError: false,
+  isLoading: false,
+  hasPendingSelection: false,
+};
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => contextValue,
 }));
@@ -29,7 +34,7 @@ beforeEach(() => {
 
 describe('OnboardingGate', () => {
   it('redirects to /onboarding when the workspace has no projects', async () => {
-    contextValue = { projects: [], isError: false, isLoading: false };
+    contextValue = { projects: [], isError: false, isLoading: false, hasPendingSelection: false };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -45,7 +50,7 @@ describe('OnboardingGate', () => {
     // Race (a): `projects` is [] during the fetch, which is indistinguishable
     // from "no projects" on length alone. Redirecting here would bounce an
     // existing user to onboarding for a frame.
-    contextValue = { projects: [], isError: false, isLoading: true };
+    contextValue = { projects: [], isError: false, isLoading: true, hasPendingSelection: false };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -61,7 +66,12 @@ describe('OnboardingGate', () => {
    * answers means growing a button and a navigation row a round trip later.
    */
   it('holds the shell until entitlement has answered', () => {
-    contextValue = { projects: [{ id: 'p1' } as Project], isError: false, isLoading: false };
+    contextValue = {
+      projects: [{ id: 'p1' } as Project],
+      isError: false,
+      isLoading: false,
+      hasPendingSelection: false,
+    };
     entitlementLoading = true;
     render(
       <OnboardingGate>
@@ -78,6 +88,7 @@ describe('OnboardingGate', () => {
       projects: [{ id: 'p1' } as Project],
       isError: false,
       isLoading: false,
+      hasPendingSelection: false,
     };
     render(
       <OnboardingGate>
@@ -88,10 +99,30 @@ describe('OnboardingGate', () => {
     expect(replace).not.toHaveBeenCalled();
     expect(screen.getByText('workspace')).toBeInTheDocument();
   });
+
+  /**
+   * Race (c), and the one that cost a user their first project. Arriving from
+   * onboarding mounts a NEW provider whose list can still be the pre-create
+   * one: not loading, and empty. Read on length alone that says "this account
+   * has no projects", so the gate sent them back to a blank /onboarding right
+   * after they had finished it — and the second completion was refused with
+   * "not allowed to create more projects", because the first one existed.
+   */
+  it('waits instead of redirecting while a committed selection is unconfirmed', () => {
+    contextValue = { projects: [], isError: false, isLoading: false, hasPendingSelection: true };
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.queryByText('workspace')).toBeNull();
+  });
 });
 
 it('keeps failed project lookup recoverable without redirecting to onboarding', async () => {
-  contextValue = { projects: [], isLoading: false, isError: true };
+  contextValue = { projects: [], isLoading: false, isError: true, hasPendingSelection: false };
   const { queryClient } = render(
     <OnboardingGate>
       <p>workspace</p>

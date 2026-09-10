@@ -1258,6 +1258,37 @@ samp {
   }
 }
 
+/* Three engines, one row, on every phone.
+   Side by side the widest face ("Perplexity" at 14px beside a 28px logo) needs
+   roughly 115px, and three of those plus gaps overrun a 320px viewport — which
+   is why the roster used to fall to two columns and wrap onto a second row.
+   Stacking the logo over its label at label scale brings a face down to about
+   60px, so the row holds and the roster stays one line of three. The rotor
+   slot is 4rem tall: 24 + 4 + 16 of content inside 1rem of padding fits it
+   exactly, so nothing here changes the flip's geometry. */
+@media (max-width: 639px) {
+  .engine-rotor-face,
+  .engine-roster-static-item {
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-inline: 0.25rem;
+  }
+
+  .engine-rotor-face > svg,
+  .engine-rotor-face > img,
+  .engine-roster-static-item > svg,
+  .engine-roster-static-item > img {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .engine-rotor-face > .website-nav,
+  .engine-roster-static-item > .website-nav {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .engine-rotor-inner {
     animation: none;

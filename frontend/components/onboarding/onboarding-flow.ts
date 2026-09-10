@@ -191,7 +191,11 @@ export function useOnboardingFlow() {
         .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() }))
         .catch(() => undefined);
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
-      router.replace(`/projects?project=${encodeURIComponent(projectId)}`);
+      // No `?project=` hand-off. `setActiveProjectId` above persists the choice,
+      // and the provider `(app)` mounts seeds its pin from that same storage, so
+      // the selection crosses the route-group boundary without a query string
+      // that has to be shown and then scrubbed from the address bar.
+      router.replace('/projects');
     },
     [queryClient, router, setActiveProjectId],
   );
