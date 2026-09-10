@@ -222,6 +222,8 @@ def test_deploy_validates_the_latest_commit_as_a_full_diff() -> None:
     ].split("- uses:", 1)[0]
     assert 'git rev-parse "$env:GITHUB_SHA^"' in gate
     assert "git update-ref refs/remotes/origin/main $deployBase" in gate
+    assert gate.index("git update-ref") < gate.index("./scripts/check.ps1")
+    assert gate.index("./scripts/check.ps1") < gate.index("./scripts/test.ps1")
     assert "./scripts/test.ps1" in gate
     assert "-ChangedFiles" not in gate
 

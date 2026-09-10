@@ -317,6 +317,7 @@
       "sources": [
         "backend/app/domain/analysis/**",
         "backend/app/analysis/scoring.py",
+        "backend/app/analysis/position.py",
         "backend/app/analysis/service.py",
         "backend/app/analysis/costs.py",
         "backend/app/analysis/csv_cells.py",
@@ -790,10 +791,8 @@
         "frontend/lib/traffic/**"
       ],
       "frontendTests": [
-        "components/performance/*.test.tsx",
         "lib/performance/*.test.ts",
-        "lib/table/*.test.ts",
-        "lib/api/performance.test.ts"
+        "lib/table/*.test.ts"
       ]
     },
     {
