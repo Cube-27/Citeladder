@@ -324,9 +324,9 @@ Collect the generated code and write the test file at the path given in the spec
 ```ts
 // spec: specs/basic-operations.plan.md
 // seed: tests/seed.spec.ts
-// The fixture lives at `tests/fixtures.ts` while this file is written to
-// `tests/<group>/`, so the import is `../fixtures` -- one level up. The seed
-// itself sits directly under `tests/` and correctly imports `./fixtures`.
+// Resolve the fixtures path against THIS file: `tests/fixtures.ts` is
+// `../fixtures` from `tests/<group>/`, and `./fixtures` from the seed. This
+// repository has neither, so its specs import '@playwright/test'.
 import { test, expect } from '../fixtures';  // or '@playwright/test' if no fixtures file
 
 test.describe('Signing in and out', () => {
@@ -354,8 +354,13 @@ Rules:
 - Prefix each numbered step with a `// N. <step text>` comment before its actions.
 - Use the describe group name verbatim from the spec (no `1.` ordinal).
 - Import the fixtures file if the project has one, otherwise `@playwright/test`.
-  Resolve the path against THIS file's directory: a test at
-  `tests/<group>/<name>.spec.ts` reaches `tests/fixtures.ts` as `../fixtures`.
+  Resolve the path against THIS file's directory, not against the tests root:
+  under the generic `tests/` layout below, a test at `tests/<group>/<name>.spec.ts`
+  reaches `tests/fixtures.ts` as `../fixtures`, while the seed at
+  `tests/seed.spec.ts` reaches it as `./fixtures`.
+  **In this repository** there is no `tests/` tree and no fixtures file: e2e
+  specs are flat under `frontend/e2e/` (`testDir: './e2e'`), so import from
+  `@playwright/test` and put shared helpers in `frontend/e2e/helpers/`.
 - **Important**: close the CLI session and stop the background test before moving to the next scenario.
 
 ### 2.3 Generate multiple scenarios

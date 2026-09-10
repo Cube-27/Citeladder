@@ -15,8 +15,10 @@ pnpm run playwright:cli -- <command>
 ```
 
 For example, use `pnpm run playwright:cli -- open http://127.0.0.1:3000`.
-This replaces the bare `playwright-cli` command used in the generic examples
-below and in every file under `references/`, and avoids a global npm install.
+The Quick start below is written this way. Every later section, and every
+file under `references/`, uses the bare `playwright-cli` of the upstream
+documentation -- substitute the pinned form for it. This avoids a global npm
+install and keeps those examples matching their source.
 
 Playwright is installed under `frontend/` only, so a bare `npx playwright test`
 from the root finds no project configuration. The separately owned Playwright
@@ -30,15 +32,18 @@ command that lands in shell history.
 
 ## Quick start
 
+Written in this repository's pinned form. Everything after this section uses
+the bare `playwright-cli`; substitute `pnpm run playwright:cli -- ` for it.
+
 ```bash
 # open new browser
-playwright-cli open
+pnpm run playwright:cli -- open
 # navigate to a page
-playwright-cli goto https://playwright.dev
+pnpm run playwright:cli -- goto https://playwright.dev
 # interact with the page using refs from the snapshot
-playwright-cli click e15
-playwright-cli type "page.click"
-playwright-cli press Enter
+pnpm run playwright:cli -- click e15
+pnpm run playwright:cli -- type "page.click"
+pnpm run playwright:cli -- press Enter
 # take a screenshot (rarely used, as snapshot is more common)
 playwright-cli screenshot
 # close the browser
