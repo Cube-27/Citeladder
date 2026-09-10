@@ -15,7 +15,12 @@ from typing import Final
 # derived row can always be traced to the exact rules that produced it. Stamped
 # onto ``ResponseAnalysis`` / ``BrandMention`` / ``CompetitorMention`` /
 # ``Citation`` / ``MetricSnapshot`` and the parent ``Audit`` at finalize.
-ANALYZER_VERSION: Final = "grounded-analysis-v4"
+# v5: alias matching spans token boundaries, so a brand written "Best & Less"
+# and one written "bestandless" are the same mention. Runs scored under v4
+# under-counted every brand whose configured spelling differed from the one the
+# models used, so a v4 row and a v5 row are NOT comparable and must not fold
+# into one bucket -- which is what this bump is for.
+ANALYZER_VERSION: Final = "grounded-analysis-v5"
 ENTITY_ASSESSMENT_VERSION: Final = "entity-assessment-1"
 # The per-execution/aggregate formula version (separate from the analyzer so a
 # formula-only change can be tracked independently of an extraction change).

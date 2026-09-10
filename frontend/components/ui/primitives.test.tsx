@@ -235,6 +235,67 @@ describe('TrendChart (cross-run Visibility trend)', () => {
     expect(chart.querySelectorAll(':scope > circle')).toHaveLength(1);
   });
 
+  it('draws no axes, ticks or gridlines unless an axis is named', () => {
+    render(
+      <TrendChart
+        label="Visibility trend"
+        data={[
+          { label: 'Jun', value: 40 },
+          { label: 'Jul', value: 70 },
+        ]}
+      />,
+    );
+    const chart = screen.getByRole('img', { name: /Visibility trend/ });
+    expect(chart.querySelector('text')).toBeNull();
+    expect(chart.querySelector('line')).toBeNull();
+  });
+
+  it('labels both axes and scales the y ticks to the domain', () => {
+    render(
+      <TrendChart
+        label="Visibility trend"
+        data={[
+          { label: '1 Jun', value: 40 },
+          { label: '1 Jul', value: 55 },
+          { label: '1 Aug', value: 70 },
+        ]}
+        xAxisLabel="Run date"
+        yAxisLabel="Visibility"
+        formatTick={(value) => `${Math.round(value)}%`}
+      />,
+    );
+    const chart = screen.getByRole('img', { name: /Visibility trend/ });
+    const text = [...chart.querySelectorAll('text')].map((node) => node.textContent);
+    expect(text).toContain('Run date');
+    expect(text).toContain('Visibility');
+    // Floor, midpoint and ceiling of the 0–100 domain.
+    expect(text).toContain('0%');
+    expect(text).toContain('50%');
+    expect(text).toContain('100%');
+    // First, middle and last point, so a reader can place the x positions.
+    expect(text).toContain('1 Jun');
+    expect(text).toContain('1 Jul');
+    expect(text).toContain('1 Aug');
+  });
+
+  it('ticks the x axis with the short label, not the full point description', () => {
+    render(
+      <TrendChart
+        label="Visibility trend"
+        data={[
+          { label: '1 Jun 2026 · 40%', axisLabel: '1 Jun', value: 40 },
+          { label: '1 Jul 2026 · 70%', axisLabel: '1 Jul', value: 70 },
+        ]}
+        xAxisLabel="Run date"
+        yAxisLabel="Visibility"
+      />,
+    );
+    const chart = screen.getByRole('img', { name: /Visibility trend/ });
+    const text = [...chart.querySelectorAll('text')].map((node) => node.textContent);
+    expect(text).toContain('1 Jun');
+    expect(text).not.toContain('1 Jun 2026 · 40%');
+  });
+
   it('renders an empty state with no data points', () => {
     render(<TrendChart label="Visibility trend" data={[]} />);
     expect(

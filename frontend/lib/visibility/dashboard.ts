@@ -167,10 +167,43 @@ export function formatRate(rate: number | null): string {
   return `${Math.round(rate * 100)}%`;
 }
 
+/**
+ * Format a value that is ALREADY a percentage, or the placeholder.
+ *
+ * `formatRate` takes a 0–1 rate and scales it. The trend series is built in
+ * whole percent, so passing its points through `formatRate` multiplied them a
+ * second time and labelled a 38% point "3800%".
+ */
+export function formatPercent(value: number | null): string {
+  if (value === null || Number.isNaN(value)) return PLACEHOLDER;
+  return `${Math.round(value)}%`;
+}
+
 /** Format a 0–100 score as a whole number, or the placeholder. */
 export function formatScore(score: number | null): string {
   if (score === null || Number.isNaN(score)) return PLACEHOLDER;
   return `${Math.round(score)}`;
+}
+
+/**
+ * A rank, rendered as a rank.
+ *
+ * The underlying value is a mean over the answers that named the brand, so it
+ * genuinely carries a fraction — but `#1.2` reads as a broken ordinal, not as
+ * an average, and a reader cannot be anywhere other than a whole place in a
+ * list. The whole number is what the cell shows; `formatPositionExact` keeps
+ * the fraction for the tooltip, so the ordering that separates two brands
+ * rounding to the same place is still there to read.
+ */
+export function formatPosition(position: number | null): string {
+  if (position === null || Number.isNaN(position)) return PLACEHOLDER;
+  return `#${Math.max(1, Math.round(position))}`;
+}
+
+/** The unrounded mean, for the title/description that explains the rank. */
+export function formatPositionExact(position: number | null): string {
+  if (position === null || Number.isNaN(position)) return PLACEHOLDER;
+  return position.toFixed(1);
 }
 
 /** The not-yet-computed placeholder for sentiment + avg-position (B-2). */

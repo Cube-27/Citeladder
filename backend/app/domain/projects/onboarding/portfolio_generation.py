@@ -39,8 +39,7 @@ from app.core.config.visibility_prompts import (
     VISIBILITY_PROMPTS_PER_TOPIC,
     VISIBILITY_TOPIC_BATCH_SIZE,
     VISIBILITY_TOPIC_NAME_LIMIT,
-    brand_cohort_system_prompt,
-    prompt_system_prompt,
+    cohort_system_prompt,
 )
 from app.domain.projects.discovery_schemas import DiscoveryTopic
 from app.domain.prompts.generation_contract import (
@@ -49,12 +48,9 @@ from app.domain.prompts.generation_contract import (
     build_generation_user_message,
     parse_planned_output,
 )
-from app.domain.prompts.generation_filtering import supported_qualifiers
 from app.domain.prompts.portfolio_validation import (
     PortfolioValidator,
-    market_terms,
     ordered_portfolio,
-    positioning_shingles,
 )
 from app.domain.prompts.query_patterns import PromptSlot, build_prompt_slots
 
@@ -97,8 +93,11 @@ def onboarding_brand_context(
         "country_code": primary_market,
         "language_code": str(profile.get("language_code") or ""),
         "knowledge_base": {
-            field: str(profile.get(field) or "")
-            for field in ("description", "positioning", "target_audience")
+            **{
+                field: str(profile.get(field) or "")
+                for field in ("description", "positioning", "target_audience")
+            },
+            "products_services": list(profile.get("products_services") or []),
         },
         "business_context": {
             field: profile.get(field)
@@ -121,19 +120,19 @@ def _topic_request(
     brand_context: dict,
     topics: list[DiscoveryTopic],
     rejected: tuple[str, ...],
+    existing_prompts: tuple[str, ...] = (),
 ) -> tuple[str, list[PromptSlot]]:
     slots = build_prompt_slots(
         topics=topics,
         count=len(topics) * VISIBILITY_PROMPTS_PER_TOPIC,
         cohort=PROMPT_COHORT_CORE,
         brand_name=str(brand_context.get("brand_name") or ""),
-        qualifiers=supported_qualifiers(brand_context),
     )
     return (
         build_generation_user_message(
             brand_context=brand_context,
             slots=slots,
-            existing_prompts=[],
+            existing_prompts=list(existing_prompts),
             rejected_reasons=rejected,
         ),
         slots,
@@ -148,6 +147,7 @@ def _brand_request(
     count: int,
     cohort: str,
     rejected: tuple[str, ...] = (),
+    existing_prompts: tuple[str, ...] = (),
 ) -> tuple[str, list[PromptSlot]]:
     slots = build_prompt_slots(
         topics=topics,
@@ -155,7 +155,6 @@ def _brand_request(
         cohort=cohort,
         brand_name=str(brand_context.get("brand_name") or ""),
         competitor_names=tuple(competitors),
-        qualifiers=supported_qualifiers(brand_context),
         unbound_brand_diagnostic=cohort == PROMPT_COHORT_BRAND_DIAGNOSTIC,
     )
     named_context = dict(brand_context)
@@ -165,7 +164,7 @@ def _brand_request(
         build_generation_user_message(
             brand_context=named_context,
             slots=slots,
-            existing_prompts=[],
+            existing_prompts=list(existing_prompts),
             rejected_reasons=rejected,
         ),
         slots,
@@ -195,7 +194,6 @@ async def _call(
             "buyer_stage": prompt.buyer_stage,
             "prompt_intent": prompt.prompt_intent,
             "cohort": prompt.cohort,
-            "archetype": prompt.archetype,
         }
         for prompt in planned
     ]
@@ -208,6 +206,7 @@ async def _gather_batches(
     system: str,
     brand_context: dict,
     rejected: tuple[str, ...] = (),
+    existing_prompts: tuple[str, ...] = (),
 ) -> list[tuple[list[DiscoveryTopic], list[dict] | None]]:
     semaphore = asyncio.Semaphore(DISCOVERY_PROMPT_GENERATION_CONCURRENCY)
 
@@ -217,6 +216,7 @@ async def _gather_batches(
                 brand_context=brand_context,
                 topics=topics,
                 rejected=rejected,
+                existing_prompts=existing_prompts,
             )
             return await _call(
                 client,
@@ -289,7 +289,7 @@ async def _generate_core(
     reasons used to be consumed by the retry and then dropped, which is why a
     portfolio that lost its whole organic cohort reported nothing about why.
     """
-    system = prompt_system_prompt(business_model)
+    system = cohort_system_prompt(business_model)
     results = await _gather_batches(
         client,
         batches=_batches(topics),
@@ -311,6 +311,7 @@ async def _generate_core(
             system=system,
             brand_context=brand_context,
             rejected=tuple(dict.fromkeys(reasons))[:8],
+            existing_prompts=tuple(row["text"] for row in validator.accepted),
         )
         for _batch, rows in retried:
             absorbed = _absorb(validator, rows, cohort=PROMPT_COHORT_CORE)
@@ -400,10 +401,11 @@ async def _named_attempt(
         count=count,
         cohort=cohort,
         rejected=rejected,
+        existing_prompts=tuple(row["text"] for row in validator.accepted),
     )
     rows = await _call(
         client,
-        system=brand_cohort_system_prompt(business_model, cohort),
+        system=cohort_system_prompt(business_model, cohort),
         user=user,
         slots=slots,
     )
@@ -416,23 +418,11 @@ def _validator(
     competitors: list[str],
     competitor_terms: list[str] | None,
     topics: list[DiscoveryTopic],
-    profile: dict,
-    primary_market: str,
 ) -> PortfolioValidator:
     return PortfolioValidator(
         topic_ids=frozenset(str(topic.topic_id) for topic in topics),
         brand_terms=brand_terms,
         competitor_terms=competitor_terms or competitors,
-        positioning=positioning_shingles(
-            [
-                str(profile.get("description") or ""),
-                str(profile.get("positioning") or ""),
-                str(profile.get("target_audience") or ""),
-            ]
-        ),
-        market_words=market_terms(
-            primary_market, list(profile.get("service_areas") or [])
-        ),
     )
 
 
@@ -547,8 +537,6 @@ async def generate_portfolio(
         competitors=competitors,
         competitor_terms=competitor_terms,
         topics=topics,
-        profile=profile,
-        primary_market=primary_market,
     )
     warnings: list[str] = []
     try:

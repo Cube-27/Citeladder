@@ -12,7 +12,7 @@ import { BrandLogo } from '@/components/ui/brand-logo';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { Button } from '@/components/ui/button';
 import type { RankingRow } from '@/lib/api/types';
-import { formatRate } from '@/lib/visibility/dashboard';
+import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import { changeLabel } from '@/lib/visibility/vocabulary';
 import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
 import { textRole } from '@/components/ui/typography';
@@ -108,7 +108,11 @@ export function RankingRowsTable({
                     {row.avg_position == null ? (
                       <UnavailableValue state="not_measured" />
                     ) : (
-                      `#${row.avg_position.toFixed(1)}`
+                      <span
+                        title={`Average of ${formatPositionExact(row.avg_position)} across the answers naming ${row.name}`}
+                      >
+                        {formatPosition(row.avg_position)}
+                      </span>
                     )}
                   </TableCell>
                 ) : null}

@@ -1,8 +1,7 @@
 # Visibility topic and prompt generation
 
-> **Status:** canonical implementation contract. Supersedes the 3–5 topic /
-> 8-plus-2 prompt contract entirely. Every claim below was measured against
-> live sites; the measurements are in "Evidence" at the end.
+> **Status:** canonical topic-selection and prompt-generation contract.
+> Historical measurements below describe their dated implementation.
 
 ## What went wrong, precisely
 
@@ -99,9 +98,9 @@ existing secure website acquisition
   -> Pass B: topic selection from the harvest    (new, dedicated call)
   -> deterministic topic admission
   -> persist canonical topics with UUIDs
-  -> Pass C: prompts, per topic, in small batches, few-shot by business model
+  -> Pass C: commercial queries per topic, in small batches
   -> deterministic prompt validation
-  -> activate up to the configured ceiling, archive the remainder
+  -> existing persistence and activation flow
 ```
 
 No topic ranker, topic repair pass, semantic reranker, prompt-modifier model,
@@ -447,305 +446,99 @@ creates topics from the explicitly confirmed `products_services`, capped at
 ten and stamped `confirmed_profile:products_services`. It never falls back to
 industry defaults or unconfirmed model prose.
 
-## Step 5: Pass C — prompt generation
+## Step 5: Pass C — commercial prompt generation
 
-### Shape
+The shared flow is confirmed context → model generation → structural validation
+→ existing save flow. Onboarding and existing-project generation use the same
+instructions, slot planner, parser and cohort validator.
 
-One config-owned planner creates exact buyer-query slots before provider I/O.
-Each slot freezes its canonical topic ID, cohort, buyer stage, intent,
-archetype, surface form, and short `slot_id`. The model returns only `slot_id`
-and natural query text; it cannot choose or change portfolio composition.
+Code assigns topics, short slot IDs, requested count and cohort. It covers topics
+round-robin without allocating buyer stages, archetypes or sentence forms.
+The model chooses natural wording and distinct buying angles. It returns
+`slot_id`, `text`, `buyer_stage` and `prompt_intent`. Stage and intent use
+the existing vocabulary as descriptive labels. Code maps prompt intent to legacy
+intent: learn/solve → discovery; recommend/validate/buy → purchase;
+compare → comparison; implement → service. Explicit legacy intent filters restrict
+the allowed labels (local allows recommend/buy); they never require funnel quotas.
 
-Core generation uses seven buyer-query **archetypes**. An archetype names the
-JOB a query does — never the words it must open with:
+Core queries should help someone discover, shortlist, choose, buy, hire, book or
+enrol. Their useful answers naturally suggest products, providers, tools,
+businesses or institutions. Simple category queries and problem-led discovery
+are valid. Definitions, care instructions and advice-only comparisons do not
+belong in default discovery. The query need not contain “brand” or “recommend”.
+A competitor-only answer is a valid visibility observation.
 
-| Archetype | Buyer stage | Intent | Job | Weight |
-| --- | --- | --- | --- | --- |
-| `consideration_recommend` | consideration | recommend | Best/right option carrying one or two real constraints | 3 |
-| `decision_buy` | decision | buy | Where to get it, what it costs, delivery or booking | 2 |
-| `consideration_compare` | consideration | compare | Two kinds, formats or approaches weighed, no company named | 1 |
-| `decision_validate` | decision | validate | Worth it, holds up, can be trusted — just before committing | 1 |
-| `awareness_solve` | awareness | solve | A situation stated in the person's words, category unnamed | 1 |
-| `awareness_learn` | awareness | learn | What matters when choosing, from someone undecided | 1 |
-| `implementation_implement` | implementation | implement | Already bought it: care, sizing, setup, returns | 1 |
+Prefer concise buying searches, including category phrases without a question
+mark or a “Where can I buy” wrapper. Longer questions remain useful when the
+selection problem needs context. Set review shortens wordy drafts and removes
+unnecessary qualifiers; it must not manufacture variety through exact prices,
+sizes, cities or bundles of niche seller attributes. This is model guidance,
+not a word-count rule or an opening quota.
 
-There is deliberately **no definitional archetype**. `What is [topic]?` cannot
-be answered by recommending a business, which contradicts the one rule every
-prompt here must satisfy, and a customer portfolio built from it read as four
-sentence frames rotating over topic names.
+Both paths supply the confirmed profile, products/services, business model,
+canonical topics and market/language. Available demand observations are optional.
+Context establishes relevance rather than a combination of attributes engineered
+to favour the tracked company. Plausible buyer requirements are not claims of
+the company's capabilities. The model reviews its set for weak or repetitive
+queries before returning final structured output, without scores or explanations.
 
-Weights make the portfolio commercially shaped rather than evenly split, and
-are interleaved through the recipe rather than appended, so a recommendation
-slot appears early at any plan size. Each topic starts at a strided offset into
-the recipe, so a multi-topic portfolio still reaches implementation and
-awareness slots instead of stopping at the first few entries.
+Existing batching, concurrency and bounded technical retries remain. Subsequent
+calls receive existing/accepted prompts when available, including onboarding
+retries; concurrent siblings do not coordinate. A topic without accepted prompts
+is reported through the existing partial-result behavior. No quality-rewrite loop,
+separate judge, research pass or new evidence store is involved.
 
-Each slot also carries a rotating surface **form** — `question`,
-`first_person`, or `search_phrase` (a bare noun phrase, no verb) — which is
-what actually produces varied openings. Adjacent slots never share one.
+## Step 6: structural validation and portfolio selection
 
-`topic` is the canonical buyer-demand cluster: something a customer buys,
-hires, books, or enrolls in. It is never restricted to a commerce product.
-Constraints may be filled only from the confirmed profile, topic description,
-business context, or supplied demand evidence. Unsupported detail is rejected
-rather than invented. A small set of commercial qualifiers ("affordable",
-"best value") is offered per project, drawn only from words the brand's own
-positioning and demand data already use.
+Retain known unique slot IDs, canonical topic ownership, existing stage/intent
+labels, cohort identity, normalized exact duplicates and the shared 300-character
+technical bound. Whitespace-only text is invalid. Core queries cannot name the
+tracked business, its aliases/short forms or supplied competing providers.
+Brand diagnostics must name the tracked brand; comparisons must additionally
+name a supplied competitor and carry comparison intent. Existing project-level
+admission, manual/import validation and persistence safeguards remain.
 
-The plan traverses every topic × weighted-recipe occurrence once, then
-continues in further cycles with a different surface form for each repeated
-pairing. Weighting means occurrences are not unique archetypes: the tested
-seven-slot slice repeats `consideration_recommend` and does not yet reach
-`implementation_implement`. A request larger than the plan can support is
-reported back as `requested_count` beside what was generated, rather than
-silently returning fewer rows.
+Generation does not enforce commercial-word lists, non-topic token counts,
+slot-level token binding, word-count windows, banned openings, positioning
+shingles, fuzzy similarity, shared-opening caps or location quotas. These are
+not semantic quality measurements. Natural-language relevance and distinct
+buying needs are generation instructions and human review criteria.
 
-Portfolio-level cohorts are generated once, not per topic: two
-`brand_diagnostic` prompts (brand overview and brand fit) and one brand-vs-
-competitor comparison when a confirmed competitor exists. Named cohorts are
-bound by identity — the brand, and for a comparison a competitor — rather than
-by a topic token. Neither contributes to the organic AI Visibility score.
+Onboarding retains seven generated candidates per topic, the organic ceiling
+of 20 and topic round-robin selection in model order. It retains two
+brand-diagnostic prompts and one comparison when competitors exist, along with
+the existing branded-share cap and diagnostic floor. Named cohorts keep their
+existing measurement treatment. No count changes imply extra activation or
+measurement authorization.
 
-The organic side is capped at `VISIBILITY_MAX_ORGANIC_PROMPTS` (default 20) and
-selected round-robin across topics, so every topic is represented before any
-topic gets a second prompt. Twenty is a portfolio someone will actually read
-and pay to audit; audits then run it ten prompts at a time (see below).
+## Persistence and existing-project generation
 
-### Exact model boundary
+No public request/response shape or database schema changes. New generation
+evidence records `buyer_query_policy_version` instead of archetype metadata,
+along with the existing generator, slot, actual provider/model, context and source
+provenance. Historical prompts and evidence are unchanged.
 
-The planner sends a compact list such as:
+Generation retains workspace authorization, capacity checks, lock ordering,
+post-provider ownership checks and conflict-safe inserts. Saving and activation
+use the existing flow; generation does not initiate answer-engine measurement.
 
-```json
-{
-  "slot_id": "q2",
-  "topic": "Product Feed Management",
-  "topic_description": "Retail catalog distribution and diagnostics",
-  "archetype": "consideration_recommend",
-  "buyer_stage": "consideration",
-  "intent": "recommend",
-  "job": "Ask for the best or right option, carrying one or two real constraints - a budget, an occasion, a season, a size, an audience, a place",
-  "form": "first_person",
-  "example": "Best affordable plus size clothing stores Australia online",
-  "brand": "Feedonomics",
-  "competitors": ["Productsup"]
-}
-```
-
-The `example` demonstrates the job. It is explicitly **not** a template, and
-the model is told never to reuse its wording or opening. That distinction is
-the whole design: the previous contract shipped `pattern_instruction` strings
-like `Use the exact form "What is [topic]?"` and enforced them with prefix
-matchers, leaving no wording for the model to own.
-
-The structured response is deliberately smaller:
-
-```json
-{
-  "prompts": [
-    {"slot_id": "q2", "text": "Best product feed management for large catalogs"}
-  ]
-}
-```
-
-Code resolves the short slot back to the frozen topic UUID, cohort, buyer
-stage, intent, and archetype.
-
-### One path, not two
-
-Onboarding's initial portfolio and the **Generate prompts** action on an
-existing project are the same code: the same planner, the same instruction, the
-same user message (`build_generation_user_message`), and the same validator
-(`domain/prompts/portfolio_validation.py`).
-
-They were not, and the differences were accidents rather than decisions. The
-manual path never expanded a brand's short forms, so with *Apollo Hospitals*
-tracked, "Best Apollo hospital for kidney stone treatment" could enter the
-ORGANIC cohort — the exact case that invalidates a visibility score. It also
-never capped market mentions per topic, so every prompt in a portfolio could
-end "in Australia", and it used a looser near-duplicate threshold. Onboarding,
-for its part, sent none of the brand knowledge base, confirmed business context
-or competitor list that the manual path had been sending all along.
-
-Topic-scoped generation (`topic_id` on the request) plans against that one
-topic only, and is otherwise identical. Unknown, repeated, omitted, malformed, or wrong-shape slots are
-dropped. The same plan, schema, and validator are used during onboarding and by
-the later **Generate prompts** action.
-
-## Step 6: prompt validation (deterministic)
-
-Every prohibition the model demonstrably ignored becomes a check here.
-
-Per prompt:
-
-- `slot_id` exists in the frozen plan; code supplies the persisted topic UUID,
-  cohort, buyer stage, intent, and archetype;
-- text does the slot's job. These checks are semantic, never positional: the
-  query must carry at least two content tokens beyond its own topic name
-  (`MIN_CONSTRAINT_TOKENS`), must carry the archetype's own signal where one is
-  discriminating (price or acquisition for `decision_buy`, comparison words for
-  a compare slot, procedural words for an implementation slot), and — for
-  consideration and decision stages only — must be answerable by naming a
-  business;
-- core prompts remain topically bound to their own slot's topic.
-  `awareness_solve` and `implementation_implement` are exempt from that
-  per-slot check, because their job is to describe a situation rather than name
-  a department. They are NOT exempt from project-level topical binding, so
-  their instructions tell the model to name the thing itself — an instruction
-  that let a solve query skip the domain entirely would have had every one of
-  them dropped downstream, which is the same instruction-versus-enforcement
-  split this rewrite exists to remove;
-- word count is within 4–16;
-- not an exact or near duplicate (`SequenceMatcher` ≥ 0.88) of an accepted
-  prompt, project-wide;
-- organic prompts contain no brand, alias, or competitor; `brand_diagnostic`
-  contains the brand; `comparison` contains the brand, a confirmed competitor,
-  and the comparison intent;
-- **brand short forms count as the brand.** Tracking only the full name let
-  every short form through: with `Apollo Hospitals` tracked, `Best Apollo
-  hospital for kidney stone treatment` was generated as an *organic* prompt and
-  nothing rejected it, which is precisely the case that invalidates a
-  visibility score. Each brand-name token of four or more characters is tracked
-  too, minus tokens that merely name the kind of provider (`Hospitals`,
-  `Company`) or are common query words (`Best`, `Top`, `Shop`) — banning those
-  would reject legitimate prompts across the whole category;
-- **template lead-in reject** — the normalized text must not start with any
-  entry in `TEMPLATE_LEAD_INS`:
-
-  ```python
-  TEMPLATE_LEAD_INS = (
-      "what are my best options for",
-      "what are the best options for",
-      "what should i look for when choosing",
-      "which option for",
-      "which good-value",
-      "how do i compare providers for",
-      "where can i find reliable options for",
-      "can you recommend options for",
-  )
-  ```
-
-  Every one is quoted verbatim from the failing output.
-
-- **positioning paste-in reject** — reject when the prompt shares a six-word
-  contiguous shingle with `profile.description`, `positioning`, or
-  `target_audience`;
-- **market-mention cap** — at most one accepted prompt per topic names the
-  market country or a city.
-
-Per portfolio:
-
-- **opening-diversity cap** — at most two accepted prompts share their first
-  three normalized words. This is the general form of the template check and
-  catches frames `TEMPLATE_LEAD_INS` does not yet know about.
-
-Validation never rewrites or synthesizes a prompt. Rejected rows are dropped
-with a reason code.
-
-### Failure is per topic, not per portfolio
-
-A material change. The old `select_portfolio` returned nothing unless it could
-assemble exactly eight organic and two brand prompts, so one bad row voided the
-run.
-
-Now a topic yielding at least one valid prompt is complete. A topic yielding
-none is retried once in its own batch with the reject reasons appended; if it
-still yields none it persists with zero prompts and is reported in `warnings`
-as `topic_without_prompts:<name>`. The topic still exists and the user can add
-a prompt by hand. Generation fails as a whole only when *no* topic produced a
-prompt.
-
-## Step 7: cost
-
-A full portfolio is at most 15 prompts — 12 organic, 2 brand-diagnostic, 1
-comparison — which is the same order as the portfolio this contract replaced.
-Every prompt is written `active`; there is no archived overflow tier, because
-nothing overflows.
-
-Topics and prompts are separate budgets on purpose. A topic is a row in the
-topics rail and costs nothing; only an active prompt is measured against every
-engine on every audit. Raising `VISIBILITY_TOPIC_MAX` widens the taxonomy the
-user sees for free. Raising `VISIBILITY_MAX_ORGANIC_PROMPTS` is what costs
-money.
-
-## Persistence
-
-Every prompt keeps its canonical `topic_id`, cohort, buyer stage, intent, and
-`generation_evidence` carrying generator version, prompt-template version,
-buyer-query archetype version and archetype ID, provider, model, the Pass A/B
-snapshot artifact IDs, the `source_refs` of its topic, and the validation
-version.
-
-Organic prompts (`core`) feed the AI Visibility score. `brand_diagnostic` and
-`comparison` are separate diagnostic projections and never contribute to it.
-
-## Removed by this contract
-
-- `DISCOVERY_TOPIC_MIN` / `DISCOVERY_TOPIC_MAX` as a 3–5 generation target;
-- `DISCOVERY_ORGANIC_PROMPT_COUNT` / `DISCOVERY_BRAND_CONTEXT_PROMPT_COUNT` and
-  the `PORTFOLIO_PROMPT_MIN == PORTFOLIO_PROMPT_MAX` identity;
-- `DISCOVERY_PROMPT_MAX_WORDS = 12`;
-- the `TOPICS` paragraph in `DISCOVERY_RESEARCH_SYSTEM_PROMPT` and `topics` on
-  `ResearchEnvelope`;
-- `BRAND_EVIDENCE_COMMERCIAL_LINK_TERMS` as a retail-only page selector,
-  replaced by the offering-hub vocabulary;
-- the `//body//a` fallback firing only when scoped navigation is empty;
-- the modifier blacklist on topic names (`best`, `cheap`, `affordable`,
-  `near me`, price bounds) — now permitted;
-- the negative-instruction block in `_onboarding_portfolio_system_prompt`,
-  replaced by exemplars plus `TEMPLATE_LEAD_INS`;
-- `business_summary` in the Pass C request payload;
-- `PRICE_TIER_QUERY_MODIFIERS` — defined in config, referenced nowhere;
-- `GENERATION_SYSTEM_PROMPT` and `GENERATION_COMPARISON_SYSTEM_PROMPT` — the
-  manual surface's separate instruction set, replaced by the shared one;
-- all-or-nothing portfolio selection;
-- model-selected topic IDs, intents, cohorts, counts, and free-form query
-  structures, replaced by short slot IDs plus deterministic archetype plans;
-- generating `theme` names in the prompt pass, rebuilding topics from prompt
-  text, converting unconfirmed profile prose into topics, fuzzy topic repair,
-  post-hoc topic-label rewriting, and deterministic prompt templates used to
-  disguise unavailable model output. Already superseded; must not return.
-
-## Manual generation uses the same logic
-
-The "Generate prompts" action on an existing project is the same task as Pass C
-and calls the same buyer-query slot planner, structured schema, and archetype
-gate—not a parallel instruction set:
-
-- the same buyer-stage archetype recipes for organic, brand-diagnostic, and
-  comparison cohorts;
-- the same topic-first, weighted archetype rotation and bounded prompt count;
-- the same style gate in `domain/prompts/style.py`: word bounds, template
-  lead-in rejection, positioning paste-in rejection, and the shared-opening cap.
-
-It previously had its own instruction set, which still carried the "avoid
-padded lead-ins" prose that models ignore, so the surface kept reproducing the
-register this contract exists to eliminate. Two instruction sets meant two
-registers.
-
-It targets existing topics in normal use. One recovery case is deliberate: when
-onboarding left a completed project with no topics, the explicit action first
-reuses the deterministic confirmed-offering fallback from onboarding, commits
-those generated-origin topic rows, and then runs Pass C. This does not ask the
-prompt model to expand or infer the taxonomy; without confirmed offerings the
-request fails before provider I/O.
+Existing-project generation targets existing topics. Its existing recovery for
+a completed project without topics uses confirmed `products_services`, commits
+the recovered topics, then generates. Without confirmed offerings, it fails
+before provider I/O. Topic discovery and Commerce generation are separate owners.
 
 ## Acceptance
 
-1. Zero admitted topics match `PROVIDER_DESCRIPTION_PHRASES`.
-2. No two admitted topics share a singular-normalized token set.
-3. No accepted prompt begins with a `TEMPLATE_LEAD_INS` entry.
-4. No accepted prompt contains a six-word shingle from the business summary.
-5. At most one accepted prompt per topic names the market.
-6. No more than two accepted prompts share their first three words.
-7. At least three quarters of topics carry the full `PROMPTS_PER_TOPIC`.
-8. A site whose offering list cannot be read uses only the offerings confirmed
-   by the user, with `confirmed_profile:products_services` provenance; it never
-   fabricates category padding.
+Focused deterministic tests cover slot and label resolution, context parity,
+cohort identity, technical bounds, exact duplicates, topic coverage, partial
+results and persistence integrity. They do not use lexical heuristics as a
+semantic-quality oracle.
 
-Regression fixtures, one per row of the business-model table, plus one site
-whose offering list is client-side rendered.
+A small human review of generated sets checks relevant commercial discovery,
+natural language, plausible constraints, neutral framing and distinct needs.
+It does not score success by whether the tracked brand appears in an answer.
 
-## Evidence
+## Historical evidence
 
 Measured 2026-08-20 against live sites, running the implemented pipeline end to
 end on the production model (`mistral-small-2603`).
@@ -806,24 +599,3 @@ so the harvest returns eighteen mostly-chrome links and no practice areas at
 all — yet the pass still produced twenty-three correct practice areas from the
 page text of the capabilities page the offering-hub selector chose to read.
 That is the fallback path working as specified, not the harvest succeeding.
-
-## Acceptance
-
-1. Zero admitted topics match `PROVIDER_DESCRIPTION_PHRASES`.
-2. No two admitted topics share a singular-normalized token set.
-3. No accepted prompt begins with a `TEMPLATE_LEAD_INS` entry.
-4. No accepted prompt contains a six-word shingle from the business summary.
-5. No accepted organic prompt contains the brand, a brand short form, an alias,
-   or a competitor.
-6. At most one accepted prompt per topic names the market.
-7. No more than two accepted prompts share their first three words.
-8. A site whose offering list cannot be read and whose page text does not
-   support three topics produces `insufficient_evidence`, never a fabricated
-   portfolio.
-9. Onboarding and later generation resolve the same short slot schema through
-   the same `buyer-query-archetypes-v2` planner; neither lets the model choose
-   topic, buyer stage, intent, cohort, archetype, form, or count.
-
-Covered by `tests/unit/test_brand_discovery.py`, one case per rule, with the
-five topics and every template frame that shipped to a real customer used as
-the negative fixtures.

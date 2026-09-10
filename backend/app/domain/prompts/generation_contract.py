@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.connectors.web_evidence.brand_evidence import evidence_block_lines
 from app.core.config.prompts import prompt_generation_settings
+from app.core.config.visibility_prompts import BUYER_STAGES, PROMPT_INTENT_VOCABULARY
 from app.domain.projects.knowledge_base import serialize_brand_knowledge_context
 from app.domain.prompts.query_patterns import (
     PlannedPrompt,
@@ -27,7 +28,6 @@ class SuggestedPrompt(BaseModel):
     intent: str = ""
     buyer_stage: str = ""
     prompt_intent: str = ""
-    archetype: str = ""
     slot_id: str = ""
 
 
@@ -40,8 +40,18 @@ class SuggestedTopic(BaseModel):
 class GeneratedPrompt(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    slot_id: str = Field(min_length=1, max_length=16)
+    # Bounds a model can violate belong to the ROW, not to the schema. Pydantic
+    # rejects the whole response on the first over-long `text`, so one runaway
+    # row took its valid siblings down with it and surfaced as a 502 for the
+    # entire batch -- the opposite of the per-row dropping the rest of this
+    # module exists to do (see `resolve_planned_prompts`, which already applies
+    # both limits and counts the drop). Only presence is structural here.
+    slot_id: str = Field(min_length=1)
     text: str = Field(min_length=1)
+    buyer_stage: str = Field(json_schema_extra={"enum": list(BUYER_STAGES)})
+    prompt_intent: str = Field(
+        json_schema_extra={"enum": list(PROMPT_INTENT_VOCABULARY)}
+    )
 
 
 class GenerationOutput(BaseModel):
@@ -74,7 +84,11 @@ def parse_generation_output(
 
     grouped: dict[str, list[SuggestedPrompt]] = {}
     planned, dropped = resolve_planned_prompts(
-        [(prompt.slot_id, prompt.text) for prompt in output.prompts], slots
+        [
+            (prompt.slot_id, prompt.text, prompt.buyer_stage, prompt.prompt_intent)
+            for prompt in output.prompts
+        ],
+        slots,
     )
     for prompt in planned:
         topic_id = str(prompt.topic_id)
@@ -87,7 +101,6 @@ def parse_generation_output(
                 intent=prompt.intent,
                 buyer_stage=prompt.buyer_stage,
                 prompt_intent=prompt.prompt_intent,
-                archetype=prompt.archetype,
                 slot_id=prompt.slot_id,
             )
         )
@@ -111,7 +124,11 @@ def parse_planned_output(
     except ValidationError as exc:
         raise GenerationOutputError(f"Unparseable agent output: {exc}") from exc
     planned, dropped = resolve_planned_prompts(
-        [(prompt.slot_id, prompt.text) for prompt in output.prompts], slots
+        [
+            (prompt.slot_id, prompt.text, prompt.buyer_stage, prompt.prompt_intent)
+            for prompt in output.prompts
+        ],
+        slots,
     )
     if not planned:
         raise GenerationOutputError("Agent output contained no usable prompts")
@@ -171,8 +188,7 @@ def build_generation_user_message(
     )
     _append_json_context(
         lines,
-        "Demand evidence (what people already search for here - ground "
-        "constraints in this, never invent one): ",
+        "Available demand evidence (reference observations, not mandatory wording): ",
         list(brand_context.get("demand_signals") or []),
     )
     lines += [
@@ -181,6 +197,8 @@ def build_generation_user_message(
         f"Competitors: {', '.join(competitors) or 'none'}",
         f"Market country: {brand_context.get('country_code') or 'unspecified'}",
         f"Language: {brand_context.get('language_code') or 'unspecified'}",
+        f"buyer_stage labels: {', '.join(BUYER_STAGES)}",
+        f"prompt_intent labels: {', '.join(PROMPT_INTENT_VOCABULARY)}",
         "Buyer-query slots (return one row per slot): "
         + json.dumps(
             [slot.as_model_input() for slot in slots],

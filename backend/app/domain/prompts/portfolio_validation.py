@@ -1,33 +1,11 @@
-"""Deterministic admission for generated visibility prompts.
-
-The single owner of the cross-prompt rules, for BOTH generation paths:
-onboarding's initial portfolio and the "Generate prompts" action on an existing
-project. They ran different validators before, and the differences were not
-deliberate -- the manual path never expanded a brand's short forms (so "Best
-Apollo hospital for kidney stones" could enter the organic cohort of an Apollo
-Hospitals project) and never capped market mentions per topic (so every prompt
-in a portfolio could end "in Australia"). One planner, one instruction, one
-validator.
-
-Every rule here exists because a model ignored the same instruction in prose.
-The old system prompt asked for no padded lead-ins and got "What are my best
-options for online general merchandise in India?"; it asked for no pasted
-positioning and got "...best fits my needs as Indian consumers seeking a wide
-range of products with competitive pricing, convenience, and fast delivery".
-Asking is advisory. This is not.
-
-Validation never rewrites or synthesizes prompt text. A candidate that fails is
-dropped with a reason, and the reason is fed back into a single retry.
-"""
+"""Shared structural and cohort admission for generated visibility prompts."""
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from difflib import SequenceMatcher
 
-from app.analysis.normalization import normalize_alias
-from app.core.config.brand_discovery import MARKET_CONTEXT_TERMS
+from app.core.config.http import PROMPT_TEXT_MAX_CHARS, PROMPT_TEXT_MIN_WORDS
 from app.core.config.projects import PROMPT_INTENTS
 from app.core.config.prompts import (
     BRAND_TOKEN_COMMON_WORDS,
@@ -37,30 +15,17 @@ from app.core.config.prompts import (
     TOPICAL_BINDING_STOPWORDS,
 )
 from app.core.config.visibility_prompts import (
-    CORE_ARCHETYPES,
     PROVIDER_DESCRIPTION_PHRASES,
     VISIBILITY_MAX_ORGANIC_PROMPTS,
-    VISIBILITY_MAX_SHARED_OPENINGS,
-    VISIBILITY_PROMPT_DUPLICATE_RATIO,
-    VISIBILITY_PROMPT_MAX_WORDS,
-    VISIBILITY_PROMPT_MIN_WORDS,
 )
+from app.domain.prompts.normalization import prompt_text_hash
 from app.domain.prompts.portfolio import contains_tracked_name
-from app.domain.prompts.style import (
-    names_market,
-    opening_key,
-    positioning_shingles,
-    repeats_positioning,
-    starts_with_template,
-    words,
-)
+from app.domain.prompts.style import words
 
 __all__ = [
     "PortfolioValidator",
     "brand_terms",
-    "market_terms",
     "ordered_portfolio",
-    "positioning_shingles",
 ]
 
 
@@ -185,43 +150,19 @@ def _stem(token: str) -> str:
     return token
 
 
-def market_terms(market: str, service_areas: list[str]) -> tuple[str, ...]:
-    """Words whose presence means a prompt named where the buyer is.
-
-    The bare ISO code is deliberately NOT included. "IN" matched as a substring
-    of "running", "finding" and "shipping", so nearly every prompt registered as
-    naming its market and the one-per-topic cap rejected good prompts wholesale.
-    The configured context terms already carry the readable names a buyer would
-    actually type.
-    """
-    configured = MARKET_CONTEXT_TERMS.get(market.upper(), ())
-    areas = [str(area).strip() for area in service_areas if str(area).strip()]
-    return tuple(dict.fromkeys([*configured, *areas]))
-
-
 def _candidate_field(candidate: dict, key: str) -> str:
     return str(candidate.get(key) or "")
 
 
 @dataclass(slots=True)
 class PortfolioValidator:
-    """Accumulates an accepted portfolio, enforcing the cross-prompt rules.
-
-    Stateful because three of the rules are portfolio-wide, not per-prompt:
-    duplicates, opening diversity, and the per-topic market-mention cap. Batches
-    are generated separately and concurrently, so the state has to live outside
-    any one of them.
-    """
+    """Accumulates exact duplicates across calls in one generation."""
 
     topic_ids: frozenset[str]
     brand_terms: list[str]
     competitor_terms: list[str]
-    positioning: frozenset[str] = frozenset()
-    market_words: tuple[str, ...] = ()
     _accepted: list[dict] = field(default_factory=list, init=False)
-    _normalized: list[str] = field(default_factory=list, init=False)
-    _openings: dict[str, int] = field(default_factory=dict, init=False)
-    _market_by_topic: dict[str, int] = field(default_factory=dict, init=False)
+    _normalized: set[str] = field(default_factory=set, init=False)
 
     @property
     def accepted(self) -> list[dict]:
@@ -239,11 +180,15 @@ class PortfolioValidator:
             return "topic_id"
         if intent not in PROMPT_INTENTS:
             return "intent"
-        if (
-            not VISIBILITY_PROMPT_MIN_WORDS
-            <= len(words(text))
-            <= VISIBILITY_PROMPT_MAX_WORDS
-        ):
+        if not text or len(text) > PROMPT_TEXT_MAX_CHARS:
+            return "length"
+        # A floor as well as a ceiling. The old four-word window is gone on
+        # purpose -- real queries are short -- but its removal left NO lower
+        # bound, and onboarding's portfolio path has no topical-binding gate to
+        # catch what slips through. A one-character row would persist into the
+        # initial portfolio and then be measured against paid answer-engine
+        # calls. Two tokens rejects nothing anyone would ask.
+        if len(words(text)) < PROMPT_TEXT_MIN_WORDS:
             return "length"
         return ""
 
@@ -262,32 +207,6 @@ class PortfolioValidator:
                 return "missing_competitor_name"
         return ""
 
-    def _style_error(self, text: str, topic_id: str) -> str:
-        if starts_with_template(text):
-            return "template_lead_in"
-        if repeats_positioning(text, self.positioning):
-            return "positioning_paste_in"
-        alias = normalize_alias(text)
-        if any(
-            alias == prior
-            or SequenceMatcher(None, alias, prior).ratio()
-            >= VISIBILITY_PROMPT_DUPLICATE_RATIO
-            for prior in self._normalized
-        ):
-            return "duplicate"
-        if self._openings.get(opening_key(text), 0) >= VISIBILITY_MAX_SHARED_OPENINGS:
-            return "repeated_opening"
-        if (
-            topic_id
-            and self._names_market(text)
-            and self._market_by_topic.get(topic_id, 0) >= 1
-        ):
-            return "market_mention_cap"
-        return ""
-
-    def _names_market(self, text: str) -> bool:
-        return names_market(text, self.market_words)
-
     def offer(self, candidate: dict, *, cohort: str) -> str:
         """Accept one candidate, or return the reason it was rejected."""
         text = " ".join(_candidate_field(candidate, "text").split())
@@ -296,15 +215,11 @@ class PortfolioValidator:
         error = (
             self._shape_error(text, topic_id, intent, cohort)
             or self._name_error(text, cohort, intent)
-            or self._style_error(text, topic_id)
+            or ("duplicate" if prompt_text_hash(text) in self._normalized else "")
         )
         if error:
             return error
-        self._normalized.append(normalize_alias(text))
-        opening = opening_key(text)
-        self._openings[opening] = self._openings.get(opening, 0) + 1
-        if topic_id and self._names_market(text):
-            self._market_by_topic[topic_id] = self._market_by_topic.get(topic_id, 0) + 1
+        self._normalized.add(prompt_text_hash(text))
         self._accepted.append(
             {
                 "slot_id": _candidate_field(candidate, "slot_id"),
@@ -314,7 +229,6 @@ class PortfolioValidator:
                 "buyer_stage": _candidate_field(candidate, "buyer_stage"),
                 "prompt_intent": _candidate_field(candidate, "prompt_intent"),
                 "cohort": cohort,
-                "archetype": _candidate_field(candidate, "archetype"),
             }
         )
         return ""
@@ -333,52 +247,14 @@ def _partition_portfolio(
     return by_topic, trailing
 
 
-def _available_index(
-    rows: list[dict], used: set[int], desired_archetype: str
-) -> int | None:
-    preferred = next(
-        (
-            index
-            for index, row in enumerate(rows)
-            if index not in used and row.get("archetype") == desired_archetype
-        ),
-        None,
-    )
-    if preferred is not None:
-        return preferred
-    return next((index for index in range(len(rows)) if index not in used), None)
-
-
-def _rotated_organic(
-    by_topic: dict[str, list[dict]], topic_ids: list[str]
-) -> list[dict]:
-    ordered: list[dict] = []
-    used: dict[str, set[int]] = {topic_id: set() for topic_id in topic_ids}
-    round_index = 0
-    while len(ordered) < VISIBILITY_MAX_ORGANIC_PROMPTS and any(
-        len(used[topic_id]) < len(by_topic[topic_id]) for topic_id in topic_ids
-    ):
-        for topic_index, topic_id in enumerate(topic_ids):
-            rows = by_topic[topic_id]
-            if len(ordered) >= VISIBILITY_MAX_ORGANIC_PROMPTS:
-                break
-            desired = CORE_ARCHETYPES[
-                (topic_index + round_index) % len(CORE_ARCHETYPES)
-            ].key
-            choice = _available_index(rows, used[topic_id], desired)
-            if choice is not None:
-                used[topic_id].add(choice)
-                ordered.append(rows[choice])
-        round_index += 1
-    return ordered
-
-
 def ordered_portfolio(prompts: list[dict], *, topic_ids: list[str]) -> list[dict]:
-    """Round-robin across topics and archetypes, then append named cohorts.
-
-    Every topic gets a first prompt before any gets a second, and the preferred
-    archetype rotates by topic and round, so the organic cap lands a spread of
-    buyer stages rather than one stage repeated across every topic.
-    """
+    """Round-robin across topics in model order, then append named cohorts."""
     by_topic, trailing = _partition_portfolio(prompts, topic_ids)
-    return [*_rotated_organic(by_topic, topic_ids), *trailing]
+    organic: list[dict] = []
+    depth = max((len(rows) for rows in by_topic.values()), default=0)
+    for index in range(depth):
+        for topic_id in topic_ids:
+            rows = by_topic[topic_id]
+            if index < len(rows) and len(organic) < VISIBILITY_MAX_ORGANIC_PROMPTS:
+                organic.append(rows[index])
+    return [*organic, *trailing]

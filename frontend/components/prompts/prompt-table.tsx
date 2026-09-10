@@ -25,7 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { Prompt, PromptStatus } from '@/lib/api/types';
 import { buyerStageLabels, intentLabels } from '@/lib/prompts/forms';
-import { formatRate } from '@/lib/visibility/dashboard';
+import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import { changeLabel } from '@/lib/visibility/vocabulary';
 
 /** What the latest run measured for one prompt, keyed by prompt id. */
@@ -196,7 +196,11 @@ function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasureme
         {measurement?.position == null ? (
           <UnavailableValue state="not_measured" />
         ) : (
-          `#${measurement.position.toFixed(1)}`
+          <span
+            title={`Average of ${formatPositionExact(measurement.position)} across this prompt's answers`}
+          >
+            {formatPosition(measurement.position)}
+          </span>
         )}
       </TableCell>
       <TableCell numeric>{change ?? <UnavailableValue state="not_measured" />}</TableCell>

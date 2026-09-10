@@ -1,37 +1,19 @@
-"""Cohort filtering for generated prompt suggestions.
-
-Thin by design. The cross-prompt rules live in one place --
-``domain/prompts/portfolio_validation.py`` -- and this module's job is only to
-build that validator from a project's brand context and feed the parsed
-suggestions through it.
-
-It used to reimplement those rules, and the copy had drifted: it never expanded
-a brand's short forms, never capped market mentions per topic, and used a
-different near-duplicate threshold. A portfolio generated from the "Generate
-prompts" button was therefore judged more loosely than the same project's
-onboarding portfolio, which is how prompts that all ended "in Australia" and
-organic prompts naming the tracked brand reached a customer.
-"""
+"""Build and apply the shared generation validator; retain Commerce admission."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from app.core.config.prompts import PROMPT_GROUNDING_BUSINESS_CONTEXT_FIELDS
-from app.core.config.visibility_prompt_vocabulary import PRICE_WORDS, SELECTION_WORDS
 from app.core.config.visibility_prompts import (
-    brand_cohort_system_prompt,
-    prompt_system_prompt,
+    cohort_system_prompt,
 )
 from app.domain.prompts.generation_contract import SuggestedPrompt, SuggestedTopic
 from app.domain.prompts.portfolio import contains_tracked_name
 from app.domain.prompts.portfolio_validation import (
     PortfolioValidator,
     brand_terms,
-    market_terms,
-    positioning_shingles,
 )
-from app.domain.prompts.style import words
 
 
 def _competitor_terms(brand_context: dict[str, Any]) -> list[str]:
@@ -65,8 +47,6 @@ def build_validator(
     suggestions_topic_ids: frozenset[str], brand_context: dict[str, Any]
 ) -> PortfolioValidator:
     """The same validator onboarding builds, from an existing project's context."""
-    knowledge = brand_context.get("knowledge_base") or {}
-    context = brand_context.get("business_context") or {}
     return PortfolioValidator(
         topic_ids=suggestions_topic_ids,
         brand_terms=brand_terms(
@@ -75,16 +55,6 @@ def build_validator(
             _category_vocabulary(brand_context),
         ),
         competitor_terms=_competitor_terms(brand_context),
-        positioning=positioning_shingles(
-            [
-                str(knowledge.get(field) or "")
-                for field in ("description", "positioning", "target_audience")
-            ]
-        ),
-        market_words=market_terms(
-            str(brand_context.get("country_code") or ""),
-            [str(area) for area in context.get("service_areas") or []],
-        ),
     )
 
 
@@ -152,7 +122,6 @@ def _drop_invalid_prompts(
                     "intent": prompt.intent,
                     "buyer_stage": prompt.buyer_stage,
                     "prompt_intent": prompt.prompt_intent,
-                    "archetype": prompt.archetype,
                 },
                 cohort=cohort,
             )
@@ -171,13 +140,7 @@ def filter_for_cohort(
     *,
     validator: PortfolioValidator | None = None,
 ) -> list[SuggestedTopic]:
-    """Admit suggestions for one cohort.
-
-    ``validator`` is owned by the caller so the portfolio-wide rules -- opening
-    diversity, near-duplicates, the per-topic market cap -- accumulate across
-    every model call in one run. Batches are one topic wide, so a per-batch
-    validator only ever compared a topic against itself.
-    """
+    """Admit one cohort with exact-duplicate state shared across batches."""
     if cohort == "commerce":
         return _filter_commerce_prompts(suggestions, brand_context)
     if validator is None:
@@ -187,40 +150,10 @@ def filter_for_cohort(
     return _drop_invalid_prompts(suggestions, cohort=cohort, validator=validator)
 
 
-# Commercial qualifiers a prompt may reach for. Offered to the model, never
-# required: "cheap", "affordable" and "best value" run through every good
-# best&less query because value IS that brand's positioning, and inventing the
-# same words for a premium brand would be a fabricated constraint.
-_QUALIFIER_VOCABULARY = SELECTION_WORDS | PRICE_WORDS
-
-
-def supported_qualifiers(brand_context: dict[str, Any]) -> tuple[str, ...]:
-    """Qualifier words the brand's own confirmed copy and demand data use.
-
-    Grounding, not decoration: only words already present in the positioning,
-    description, audience or observed demand clusters are offered, so the model
-    cannot justify "affordable" for a business that never claims it.
-    """
-    knowledge = brand_context.get("knowledge_base") or {}
-    sources = [
-        str(knowledge.get(field) or "")
-        for field in ("description", "positioning", "target_audience")
-    ]
-    sources += [
-        str(signal.get("topic") or "")
-        for signal in brand_context.get("demand_signals") or []
-    ]
-    found = {token for source in sources for token in words(source)}
-    return tuple(sorted(found & _QUALIFIER_VOCABULARY))
-
-
 def business_model(brand_context: dict[str, Any]) -> str:
     context = brand_context.get("business_context") or {}
     return str(context.get("business_model") or "")
 
 
 def generation_system_prompt(cohort: str, brand_context: dict[str, Any]) -> str:
-    model = business_model(brand_context)
-    if cohort == "core":
-        return prompt_system_prompt(model)
-    return brand_cohort_system_prompt(model, cohort)
+    return cohort_system_prompt(business_model(brand_context), cohort)

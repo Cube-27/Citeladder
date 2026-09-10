@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.normalization import normalize_alias
 from app.connectors.web_evidence.url_policy import registrable_domain
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,
@@ -36,7 +37,7 @@ from app.core.config.prompts import (
     PROMPT_COHORT_CORE,
 )
 from app.core.config.visibility_prompts import (
-    BUYER_QUERY_ARCHETYPE_VERSION,
+    BUYER_QUERY_POLICY_VERSION,
     TOPIC_SELECTION_PROMPT_VERSION,
     VISIBILITY_TOPIC_MAX,
 )
@@ -442,8 +443,7 @@ def _generated_prompts(
                 origin="generated",
                 generation_evidence={
                     "generator_version": BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION,
-                    "buyer_query_archetype_version": BUYER_QUERY_ARCHETYPE_VERSION,
-                    "buyer_query_archetype": str(item.get("archetype") or ""),
+                    "buyer_query_policy_version": BUYER_QUERY_POLICY_VERSION,
                     "buyer_query_slot_id": str(item.get("slot_id") or ""),
                     "discovery_id": str(discovery_id),
                     "provider": provider,
@@ -480,7 +480,9 @@ async def _persist_project_shell(
         payload=ProjectCreate(
             name=payload.name or str(data["brand_name"]),
             brand_name=str(data["brand_name"]),
-            brand=BrandInput(),
+            brand=BrandInput(
+                aliases=_seed_brand_aliases(str(data["brand_name"]), list(row.domains))
+            ),
             website_url=str(data["website_url"]),
             industry=str(data["industry"]),
             subindustry=str(data.get("subindustry") or ""),
@@ -689,6 +691,59 @@ def _domain_brand_aliases(domains: list[str]) -> list[str]:
         if len(label) >= 4:
             aliases.append(label)
     return list(dict.fromkeys(aliases))
+
+
+def _seed_brand_aliases(brand_name: str, domains: list[str]) -> list[str]:
+    """The brand's own aliases, seeded from what onboarding already confirmed.
+
+    Competitors arrive from research carrying aliases; the brand arrived with
+    none, and nothing downstream ever filled them, so a project's brand was
+    matched by exactly one spelling -- whichever one happened to be typed into
+    the setup form. A brand whose name was entered as its domain label then
+    scored zero visibility against competitors that scored normally.
+
+    The domain label is confirmed evidence of a second spelling and costs
+    nothing to record. It is not a substitute for the owner correcting the
+    list: aliases are editable on the project, and the compact matching in
+    `app.analysis.normalization` covers the joined/split pair either way.
+
+    A label is only trusted when it is RECOGNISABLY THIS BRAND.
+    `_domain_brand_aliases` was written as a ban list for generated prompts,
+    where an over-broad entry only costs a prompt; here the same string decides
+    what counts as a mention, where an over-broad entry inflates the number the
+    customer is paying to measure. "shop-online.com" would otherwise make every
+    "shop online" in every answer a sighting of the brand.
+    """
+    brand_key = brand_name.strip().casefold()
+    return [
+        alias
+        for alias in _domain_brand_aliases(domains)
+        if alias.casefold() != brand_key and _names_the_brand(alias, brand_name)
+    ]
+
+
+def _names_the_brand(alias: str, brand_name: str) -> bool:
+    """True when label and brand name are the same name, spelled two ways.
+
+    Compared as PREFIXES of each other with the separators removed, because
+    that is the actual relationship between a name and its domain: "Best &
+    Less" is "bestandless", "I Love Dooney" is "ilovedooney", and "Kmart
+    Australia" shortens to "kmart". Looking for a brand token anywhere inside
+    the label instead let a short one match by accident -- a brand whose name
+    contains "art" would have authorised "cart-example" and then counted every
+    "cart example" in every answer as a sighting.
+
+    Compacted through `normalize_alias`, the same function the scorer matches
+    with, so "&" becomes "and" on both sides. Tokenizing instead DROPS the
+    ampersand, which made "Best & Less" fail to recognise "bestandless" -- the
+    exact pair this whole change exists to connect.
+    """
+    label = normalize_alias(alias).replace(" ", "")
+    brand = normalize_alias(brand_name).replace(" ", "")
+    if not label or not brand:
+        return False
+    shorter, longer = sorted((label, brand), key=len)
+    return len(shorter) >= 4 and longer.startswith(shorter)
 
 
 async def _generate_confirmed_portfolio(

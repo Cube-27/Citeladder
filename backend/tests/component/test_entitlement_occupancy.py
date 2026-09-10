@@ -60,7 +60,7 @@ from tests.component.occupancy_helpers import (
     seed_account_workspace,
     seed_occupancy_grants,
 )
-from tests.fixtures.archetype_text import slot_text
+from tests.fixtures.prompt_generation import labelled_row, slot_text
 
 
 @pytest.fixture(autouse=True)
@@ -328,10 +328,7 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
     barrier = asyncio.Barrier(2)
 
     def _agent_payload(run_label: str, user: str) -> str:
-        # Each prompt opens with a different token. Generation caps how many
-        # prompts may share their first three words, so a stub that repeats one
-        # opening is rejected as templated and this test would never reach the
-        # grant at all.
+        # Distinct fixture texts exercise occupancy rather than quality.
         marker = "Buyer-query slots (return one row per slot): "
         slot_line = next(line for line in user.splitlines() if line.startswith(marker))
         slots = json.loads(slot_line.removeprefix(marker))
@@ -339,10 +336,7 @@ async def test_concurrent_generation_inserts_never_exceed_grant(
         return json.dumps(
             {
                 "prompts": [
-                    {
-                        "slot_id": slot["slot_id"],
-                        "text": slot_text(slot, f"{run_label}{index}"),
-                    }
+                    labelled_row(slot, slot_text(slot, f"{run_label}{index}"))
                     for index, slot in enumerate(slots)
                 ]
             }

@@ -8,11 +8,11 @@ import pytest
 
 from app.domain.projects.discovery_schemas import DiscoveryTopic
 from app.domain.projects.onboarding import portfolio_generation as pg
-from tests.fixtures.archetype_text import response_for
+from tests.fixtures.prompt_generation import response_for
 
 
 class _EchoesShortSlots:
-    """The model echoes only short slot IDs; code owns every UUID and label."""
+    """The model echoes only short slot IDs; code owns every UUID."""
 
     base_url_host = "fake"
     model = "fake-small"
@@ -115,3 +115,48 @@ def test_an_empty_organic_cohort_still_keeps_the_diagnostic_floor() -> None:
 
     assert capped == accepted
     assert was_capped is False
+
+
+@pytest.mark.asyncio
+async def test_core_retry_receives_accepted_sibling_prompts() -> None:
+    import json
+
+    from app.domain.prompts.portfolio_validation import PortfolioValidator
+    from tests.fixtures.prompt_generation import slots_from_user_message
+
+    topics = _topics("Jeans", "Jackets")
+    context = pg.onboarding_brand_context(
+        brand_name="Acme",
+        primary_market="GB",
+        profile={"business_model": "retail", "products_services": ["Jeans", "Jackets"]},
+        competitors=[],
+    )
+
+    class PartialAgent:
+        def __init__(self):
+            self.jacket_calls = []
+
+        async def complete_structured_json(self, *, system, user, schema_name, schema):
+            slots = slots_from_user_message(user)
+            if slots[0]["topic"] == "Jackets":
+                self.jacket_calls.append(user)
+                if len(self.jacket_calls) == 1:
+                    return json.dumps({"prompts": []})
+            return response_for(user)
+
+    agent = PartialAgent()
+    validator = PortfolioValidator(
+        topic_ids=frozenset(str(t.topic_id) for t in topics),
+        brand_terms=["Acme"],
+        competitor_terms=[],
+    )
+    warnings, _ = await pg._generate_core(
+        agent, validator, topics=topics, brand_context=context, business_model="retail"
+    )
+    assert warnings == []
+    assert len(agent.jacket_calls) == 2
+    assert "Existing prompts" not in agent.jacket_calls[0]
+    assert "Best Jeans for use case 0" in agent.jacket_calls[1]
+    assert {row["topic_id"] for row in validator.accepted} == {
+        str(t.topic_id) for t in topics
+    }

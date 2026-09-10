@@ -207,7 +207,7 @@ class PromptGenerateResponse(BaseModel):
     generated: list[PromptResponse] = Field(default_factory=list)
     topics: list[TopicResponse] = Field(default_factory=list)
     # What the caller asked for. A request can exceed what the selected topics
-    # and archetypes can support, and returning fewer prompts with no
+    # can support, and returning fewer prompts with no
     # explanation is how a silent cap went unnoticed for a release.
     requested_count: int = 0
     # Total prompts dropped as duplicates: intra-response collapses (an

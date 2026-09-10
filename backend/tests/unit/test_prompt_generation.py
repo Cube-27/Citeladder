@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import itertools
 import json
 import time
 import uuid
@@ -22,7 +21,6 @@ from app.domain.prompts.generation import (
 )
 from app.domain.prompts.normalization import normalize_prompt_text, prompt_text_hash
 from app.domain.prompts.query_patterns import build_prompt_slots
-from tests.fixtures.archetype_text import satisfies_slot, slot_text
 
 TOPIC_ID = uuid.uuid4()
 SECOND_TOPIC_ID = uuid.uuid4()
@@ -53,74 +51,72 @@ def test_normalization_remains_linear() -> None:
     assert time.perf_counter() - started < 1.0
 
 
-def test_parse_resolves_short_slots_to_code_owned_stage_and_intent() -> None:
+def _row(
+    slot_id: str, text: str, intent: str = "recommend", stage: str = "consideration"
+) -> dict:
+    return {
+        "slot_id": slot_id,
+        "text": text,
+        "buyer_stage": stage,
+        "prompt_intent": intent,
+    }
+
+
+def test_parse_resolves_slots_and_preserves_descriptive_labels() -> None:
     raw = json.dumps(
         {
             "prompts": [
-                {"slot_id": "q1", "text": "Best footwear stores for wide feet"},
-                {
-                    "slot_id": "q2",
-                    "text": "Cheap activewear wears out after marathon training",
-                },
+                _row("q1", "Best footwear stores for wide feet"),
+                _row(
+                    "q2", "What can replace worn out activewear?", "solve", "awareness"
+                ),
             ]
         }
     )
-
     topics, dropped = parse_generation_output(raw, slots=SLOTS)
-
     assert dropped == 0
     assert [(topic.topic_id, topic.name) for topic in topics] == [
         (TOPIC_ID, "Footwear"),
         (SECOND_TOPIC_ID, "Activewear"),
     ]
-    # Stage and intent come from the plan, never from the returned text.
-    assert topics[0].prompts[0].buyer_stage == "consideration"
-    assert topics[0].prompts[0].prompt_intent == "recommend"
     assert topics[0].prompts[0].intent == "purchase"
-    assert topics[1].prompts[0].buyer_stage == "awareness"
+    assert topics[0].prompts[0].buyer_stage == "consideration"
+    assert topics[1].prompts[0].intent == "discovery"
     assert topics[1].prompts[0].prompt_intent == "solve"
+    assert topics[1].prompts[0].buyer_stage == "awareness"
 
 
-def test_slot_plan_rotates_archetypes_and_forms_while_covering_topics() -> None:
-    # Topic-first: every topic is covered before any repeats. The two topics
-    # start at opposite ends of the recipe, so a small plan still spans stages
-    # instead of asking each topic the same kind of question.
-    assert [(slot.topic_id, slot.archetype) for slot in SLOTS] == [
-        (str(TOPIC_ID), "consideration_recommend"),
-        (str(SECOND_TOPIC_ID), "awareness_solve"),
-        (str(TOPIC_ID), "decision_buy"),
-        (str(SECOND_TOPIC_ID), "awareness_learn"),
+def test_slots_cover_topics_without_allocating_forms_or_stages() -> None:
+    assert [slot.topic_id for slot in SLOTS] == [
+        str(TOPIC_ID),
+        str(SECOND_TOPIC_ID),
+        str(TOPIC_ID),
+        str(SECOND_TOPIC_ID),
     ]
-    # Adjacent slots never share a surface form, which is what stops a batch
-    # coming back as one sentence frame repeated across topics.
-    forms = [slot.form for slot in SLOTS]
-    assert all(first != second for first, second in itertools.pairwise(forms))
+    assert [slot.slot_id for slot in SLOTS] == ["q1", "q2", "q3", "q4"]
+    for slot in SLOTS:
+        assert (
+            not {"archetype", "form", "job", "buyer_stage"}
+            & slot.as_model_input().keys()
+        )
 
 
-def test_parse_drops_unknown_duplicate_and_off_job_slots() -> None:
+def test_parse_drops_unknown_slots_duplicates_and_invalid_labels() -> None:
     raw = json.dumps(
         {
             "prompts": [
-                {"slot_id": "unknown", "text": "Best footwear stores for wide feet"},
-                {"slot_id": "q1", "text": "Best footwear stores for wide feet"},
-                {"slot_id": "q1", "text": "Best footwear shops for wide feet"},
-                # Does not do its job: no constraint beyond the topic name.
-                {"slot_id": "q2", "text": "What is activewear?"},
-                # "Where" alone is not a buying signal. This is educational,
-                # so it cannot inherit q3's decision/buy provenance.
-                {
-                    "slot_id": "q3",
-                    "text": "Where can I learn about footwear energy ratings",
-                },
+                _row("unknown", "Best footwear"),
+                _row("q1", "Best footwear"),
+                _row("q1", "Other footwear"),
+                _row("q2", " best FOOTWEAR? "),
+                _row("q3", "Best activewear", "invented"),
+                _row("q4", "Best activewear", stage="invented"),
             ]
         }
     )
-
     topics, dropped = parse_generation_output(raw, slots=SLOTS)
-
-    assert dropped == 4
-    assert len(topics) == 1
-    assert topics[0].topic_id == TOPIC_ID
+    assert dropped == 5
+    assert [p.text for t in topics for p in t.prompts] == ["Best footwear"]
 
 
 @pytest.mark.parametrize(
@@ -224,166 +220,216 @@ def test_negative_existing_context_limit_is_rejected() -> None:
         PromptGenerationSettings(generation_existing_prompt_context_limit=-1)
 
 
-def test_manual_generation_applies_the_same_buyer_style_gate() -> None:
-    """The "Generate prompts" button must not reintroduce the survey register."""
-    from app.domain.prompts.generation_contract import SuggestedPrompt, SuggestedTopic
+def test_shared_validator_admits_natural_queries_without_style_quotas() -> None:
     from app.domain.prompts.generation_filtering import filter_for_cohort
 
-    topic_id = uuid.uuid4()
-    brand_context = {
-        "brand_name": "Acme",
-        "brand_aliases": [],
-        "competitors": [],
-        "knowledge_base": {
-            "positioning": "Acme serves families seeking affordable everyday footwear"
-        },
-        "business_context": {"business_model": "retail"},
-    }
     candidates = [
-        "What are my best options for kids shoes?",
-        "which retailer serves families seeking affordable everyday footwear",
-        "cheap shoes",
-        "I need school shoes for a 6 year old before term starts",
-        "best running shoes for flat feet",
-        "best running shoes for wide toes",
-        "best running shoes for high arches",
+        "Selvedge jeans",
+        "Cheap baby clothes in bulk",
+        "Best affordable plus size clothing stores Australia online",
+        "Looking for cheap kids school clothes before term starts",
+        "Best running shoes for flat feet",
+        "Best running shoes for wide toes",
+        "Best running shoes for high arches",
+        "CBSE boarding schools in Dehradun",
+        "Day schools in Dehradun with sports facilities",
+        "What feed management software should I shortlist for a Shopify store "
+        "that sells across several marketplaces and needs managed support?",
     ]
     result = filter_for_cohort(
         [
             SuggestedTopic(
-                topic_id=topic_id,
-                name="Kids Shoes",
+                topic_id=TOPIC_ID,
+                name="Offerings",
                 prompts=[
-                    SuggestedPrompt(text=text, intent="discovery")
-                    for text in candidates
+                    SuggestedPrompt(text=text, intent="purchase") for text in candidates
                 ],
             )
         ],
         "core",
-        brand_context,
+        BRAND_CONTEXT,
     )
-    kept = [prompt.text for topic in result for prompt in topic.prompts]
-    assert "What are my best options for kids shoes?" not in kept  # template frame
-    # Unbranded, so it clears the tracked-name gate and is dropped by the
-    # positioning-paste rule it exists to cover.
-    assert not any("families seeking affordable" in text for text in kept)
-    assert "cheap shoes" not in kept  # too short to carry a real need
-    assert "I need school shoes for a 6 year old before term starts" in kept
-    # At most two prompts may share an opening, so the third "best running
-    # shoes" variant is dropped.
-    assert sum(text.startswith("best running shoes") for text in kept) == 2
+    assert [p.text for t in result for p in t.prompts] == candidates
 
 
-def test_named_manual_generation_keeps_identity_and_style_rules() -> None:
-    from app.domain.prompts.generation_contract import SuggestedPrompt, SuggestedTopic
+def test_shared_validator_preserves_named_cohort_identity_and_text_limit() -> None:
     from app.domain.prompts.generation_filtering import filter_for_cohort
 
-    topic_id = uuid.uuid4()
-    brand_context = {
-        "brand_name": "Acme",
-        "brand_aliases": [],
-        "competitors": [{"name": "Rival", "aliases": []}],
-        "knowledge_base": {},
-    }
-
-    def filtered(cohort: str, prompts: list[SuggestedPrompt]) -> list[str]:
-        result = filter_for_cohort(
-            [SuggestedTopic(topic_id=topic_id, name="Shoes", prompts=prompts)],
-            cohort,
-            brand_context,
-        )
-        return [prompt.text for topic in result for prompt in topic.prompts]
-
-    comparisons = filtered(
-        "comparison",
-        [
-            SuggestedPrompt(
-                text="What are my best options for Acme versus Rival?",
-                intent="comparison",
-            ),
-            SuggestedPrompt(
-                text="Acme or Rival for school shoes this year", intent="comparison"
-            ),
-            SuggestedPrompt(
-                text=" ".join(["Acme", "Rival", *(["shoes"] * 16)]),
-                intent="comparison",
-            ),
-        ],
-    )
-    assert comparisons == ["Acme or Rival for school shoes this year"]
-
-    diagnostics = filtered(
-        "brand_diagnostic",
-        [
-            SuggestedPrompt(
-                text="Is Acme reliable for school shoes in India",
-                intent="discovery",
-            )
-        ],
-    )
-    assert diagnostics == ["Is Acme reliable for school shoes in India"]
-
-
-def test_one_topic_no_longer_caps_the_plan_at_one_slot_per_archetype() -> None:
-    """A request larger than topics x recipe is planned, not silently truncated.
-
-    ``min(count, topics * recipe)`` meant a single selected topic returned four
-    prompts however many were asked for, with no error to say so. Extra cycles
-    reuse a pairing only with a different surface form.
-    """
-    topics = [{"id": "t1", "name": "Running Shoes", "description": "Trainers"}]
-
-    assert len(build_prompt_slots(topics=topics, count=20, cohort="core")) == 20
-
-    slots = build_prompt_slots(topics=topics, count=12, cohort="core")
-    assert {slot.form for slot in slots} == {
-        "question",
-        "first_person",
-        "search_phrase",
-    }
-
-
-def test_repeated_pairing_advances_form_for_one_topic_brand_diagnostic() -> None:
-    slots = build_prompt_slots(
-        topics=[{"id": "t1", "name": "Running Shoes", "description": "Trainers"}],
-        count=3,
-        cohort="brand_diagnostic",
-        brand_name="Acme",
-    )
-
-    assert slots[0].archetype == slots[2].archetype
-    assert [slot.form for slot in slots] == [
-        "question",
-        "first_person",
-        "search_phrase",
+    candidates = [
+        SuggestedPrompt(text="Acme Corp or Globex?", intent="comparison"),
+        SuggestedPrompt(text="Acme Corp or another provider?", intent="comparison"),
+        SuggestedPrompt(text="Globex or another provider?", intent="comparison"),
+        SuggestedPrompt(
+            text="Acme Corp versus Globex " + "x" * 300, intent="comparison"
+        ),
     ]
+    result = filter_for_cohort(
+        [SuggestedTopic(topic_id=TOPIC_ID, name="Shoes", prompts=candidates)],
+        "comparison",
+        BRAND_CONTEXT,
+    )
+    assert [p.text for t in result for p in t.prompts] == ["Acme Corp or Globex?"]
 
 
-def test_fixture_renderer_honors_each_planned_surface_form() -> None:
+def test_slot_count_is_not_limited_by_recipes() -> None:
+    assert (
+        len(build_prompt_slots(topics=ALLOWED_TOPICS[:1], count=100, cohort="core"))
+        == 100
+    )
+
+
+@pytest.mark.parametrize(
+    ("legacy", "labels"),
+    [
+        ("discovery", ("learn", "solve")),
+        ("purchase", ("recommend", "validate", "buy")),
+        ("comparison", ("compare",)),
+        ("service", ("implement",)),
+        ("local", ("recommend", "buy")),
+    ],
+)
+def test_explicit_filters_restrict_labels_without_relabelling(legacy, labels) -> None:
     slots = build_prompt_slots(
-        topics=[{"id": "t1", "name": "Running Shoes", "description": "Trainers"}],
-        count=3,
+        topics=ALLOWED_TOPICS, count=2, cohort="core", intents=(legacy,)
+    )
+    assert slots[0].allowed_prompt_intents == labels
+    raw = json.dumps(
+        {
+            "prompts": [
+                _row("q1", "Relevant buying query", labels[0]),
+                _row("q2", "Another query", "unknown"),
+            ]
+        }
+    )
+    topics, dropped = parse_generation_output(raw, slots=slots)
+    assert dropped == 1
+    assert topics[0].prompts[0].prompt_intent == labels[0]
+
+
+def test_parser_does_not_attempt_semantic_quality_assessment() -> None:
+    raw = json.dumps({"prompts": [_row("q1", "What is denim?", "learn", "awareness")]})
+    topics, dropped = parse_generation_output(raw, slots=SLOTS)
+    assert dropped == 0
+    assert topics[0].prompts[0].text == "What is denim?"
+
+
+def test_a_named_cohort_keeps_its_labels_under_an_unrelated_intent_filter() -> None:
+    """A cohort's labels come from what it measures, not from the filter.
+
+    Intersecting the two resolved `comparison` + `purchase` to no labels at
+    all, so every slot was rejected and a well-formed request 502'd before a
+    single provider call.
+    """
+    from app.domain.prompts.query_patterns import _allowed_intents, build_prompt_slots
+
+    topics = [{"id": "t1", "name": "Linen Dresses", "description": ""}]
+    for intents in [("purchase",), ("discovery",), ("service",), ("local",), ()]:
+        assert _allowed_intents("comparison", intents) == ("compare",)
+        slots = build_prompt_slots(
+            topics=topics, count=3, cohort="comparison", intents=intents
+        )
+        assert len(slots) == 3
+        assert all(slot.allowed_prompt_intents == ("compare",) for slot in slots)
+
+
+def test_an_over_long_row_is_dropped_without_voiding_its_siblings() -> None:
+    """The length bound is a per-row rule, not a schema rule.
+
+    As a schema bound, pydantic rejected the whole response on the first
+    over-long text, so one runaway row 502'd the entire batch.
+    """
+    import json
+
+    from app.core.config.http import PROMPT_TEXT_MAX_CHARS
+    from app.domain.prompts.generation_contract import parse_planned_output
+    from app.domain.prompts.query_patterns import build_prompt_slots
+
+    slots = build_prompt_slots(
+        topics=[{"id": "t1", "name": "Linen Dresses", "description": ""}],
+        count=2,
         cohort="core",
     )
+    raw = json.dumps(
+        {
+            "prompts": [
+                {
+                    "slot_id": slots[0].slot_id,
+                    "text": "x" * (PROMPT_TEXT_MAX_CHARS + 1),
+                    "buyer_stage": "consideration",
+                    "prompt_intent": "recommend",
+                },
+                {
+                    "slot_id": slots[1].slot_id,
+                    "text": "Best linen dresses for a summer wedding",
+                    "buyer_stage": "decision",
+                    "prompt_intent": "buy",
+                },
+            ]
+        }
+    )
+    accepted, dropped = parse_planned_output(raw, slots=slots)
+    assert [row.text for row in accepted] == ["Best linen dresses for a summer wedding"]
+    assert dropped == 1
 
-    for index, slot in enumerate(slots):
-        payload = slot.as_model_input()
-        text = slot_text(payload, index)
-        assert satisfies_slot(payload, text)
 
+def test_a_degenerate_row_cannot_reach_a_paid_answer_engine() -> None:
+    """There is a ceiling on prompt text; there has to be a floor too."""
+    import json
 
-def test_narrowing_intents_stamps_the_archetype_intent_not_the_request() -> None:
-    """Asking for ``comparison`` selects the comparison job, it does not relabel.
+    from app.domain.prompts.generation_contract import parse_planned_output
+    from app.domain.prompts.query_patterns import build_prompt_slots
 
-    The previous planner stamped the REQUESTED intent onto whatever slot it
-    produced, so a ``comparison`` request on the core cohort returned a
-    recommendation slot wearing a comparison label.
-    """
-    topics = [{"id": "t1", "name": "Running Shoes", "description": "Trainers"}]
     slots = build_prompt_slots(
-        topics=topics, count=3, cohort="core", intents=("comparison",)
+        topics=[{"id": "t1", "name": "Linen Dresses", "description": ""}],
+        count=2,
+        cohort="core",
+    )
+    raw = json.dumps(
+        {
+            "prompts": [
+                {
+                    "slot_id": slots[0].slot_id,
+                    "text": "x",
+                    "buyer_stage": "consideration",
+                    "prompt_intent": "recommend",
+                },
+                {
+                    "slot_id": slots[1].slot_id,
+                    "text": "Best linen dresses for a summer wedding",
+                    "buyer_stage": "decision",
+                    "prompt_intent": "buy",
+                },
+            ]
+        }
+    )
+    accepted, dropped = parse_planned_output(raw, slots=slots)
+    assert [row.text for row in accepted] == ["Best linen dresses for a summer wedding"]
+    assert dropped == 1
+
+
+def test_an_unmapped_cohort_falls_back_instead_of_raising() -> None:
+    """Adding a cohort must not break generation before its rules are written."""
+    from app.core.config.visibility_prompts import cohort_system_prompt
+
+    assert cohort_system_prompt("retail", "commerce")
+    assert cohort_system_prompt("retail", "not_a_cohort")
+
+
+def test_the_intent_vocabulary_has_exactly_one_source() -> None:
+    """The schema enum and the resolver accept-list cannot drift apart."""
+    from app.core.config.visibility_prompts import (
+        PROMPT_INTENT_LEGACY,
+        PROMPT_INTENT_VOCABULARY,
     )
 
-    assert {slot.archetype for slot in slots} == {"consideration_compare"}
-    assert slots[0].intent == "comparison"
-    assert slots[0].prompt_intent == "compare"
+    assert PROMPT_INTENT_VOCABULARY == tuple(PROMPT_INTENT_LEGACY)
+
+
+def test_every_business_model_has_its_own_exemplar() -> None:
+    """A new business model must not silently fall back to the general example."""
+    from typing import get_args
+
+    from app.core.config.visibility_prompts import PROMPT_EXEMPLARS
+    from app.domain.projects.discovery_schemas import BusinessModel
+
+    assert set(PROMPT_EXEMPLARS) == set(get_args(BusinessModel))
