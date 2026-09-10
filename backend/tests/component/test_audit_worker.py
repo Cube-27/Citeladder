@@ -176,9 +176,12 @@ class _ConcurrencyProbeAdapter(_StubAdapter):
     Postgres latency, not of the worker, and it made this test fail on a
     Docker-for-Windows loopback (~175ms a query) while passing in CI.
 
-    `arrived` is released as soon as `expected` calls are in flight; the
-    timeout is a failure guard, so genuine serialization still fails the
-    assertion quickly rather than hanging the suite.
+    `arrived` is released as soon as `expected` calls are in flight. The
+    timeout is a failure guard, and it is a DEADLINE shared by every call
+    rather than a per-call budget: serialized calls each wait their own turn,
+    so a per-call timeout would multiply by the number of tasks -- four calls
+    against a 10s guard would take 40s to report a failure the guard promises
+    to report in 10.
     """
 
     in_flight = 0
@@ -186,6 +189,7 @@ class _ConcurrencyProbeAdapter(_StubAdapter):
     expected = 1
     rendezvous_timeout = 10.0
     _arrived: asyncio.Event | None = None
+    _deadline = 0.0
 
     @classmethod
     def reset(cls, *, expected: int) -> None:
@@ -193,6 +197,7 @@ class _ConcurrencyProbeAdapter(_StubAdapter):
         cls.max_in_flight = 0
         cls.expected = expected
         cls._arrived = asyncio.Event()
+        cls._deadline = asyncio.get_running_loop().time() + cls.rendezvous_timeout
 
     async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
         cls = _ConcurrencyProbeAdapter
@@ -203,8 +208,10 @@ class _ConcurrencyProbeAdapter(_StubAdapter):
             assert arrived is not None, "call reset() before running the worker"
             if cls.in_flight >= cls.expected:
                 arrived.set()
-            with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(arrived.wait(), cls.rendezvous_timeout)
+            remaining = cls._deadline - asyncio.get_running_loop().time()
+            if remaining > 0:
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(arrived.wait(), remaining)
             return await super().execute(request)
         finally:
             cls.in_flight -= 1

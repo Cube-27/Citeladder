@@ -1,6 +1,25 @@
 # Running Playwright Tests
 
+> **In this repository**, run the pinned CLI through
+> `pnpm run playwright:cli -- <command>` from the root; the bare
+> `playwright-cli` used in the generic examples below needs a global install.
+> Playwright itself is installed only under `frontend/`, so the test runner is
+> `pnpm test:e2e` rather than a bare `npx playwright test`.
+
 To run Playwright tests, use the `npx playwright test` command, or a package manager script. To avoid opening the interactive html report, use `PLAYWRIGHT_HTML_OPEN=never` environment variable.
+
+In this repository, run them from the root through the frontend workspace --
+`npx playwright test` at the root finds no configuration:
+
+```bash
+# Run all e2e tests (frontend/playwright.config.ts, testDir ./e2e)
+PLAYWRIGHT_HTML_OPEN=never pnpm test:e2e
+
+# Run one spec
+PLAYWRIGHT_HTML_OPEN=never pnpm test:e2e e2e/marketing-pages.spec.ts
+```
+
+The generic form, for a project whose Playwright is installed at the root:
 
 ```bash
 # Run all tests

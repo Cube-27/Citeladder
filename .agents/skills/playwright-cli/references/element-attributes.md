@@ -1,5 +1,11 @@
 # Inspecting Element Attributes
 
+> **In this repository**, run the pinned CLI through
+> `pnpm run playwright:cli -- <command>` from the root; the bare
+> `playwright-cli` used in the generic examples below needs a global install.
+> Playwright itself is installed only under `frontend/`, so the test runner is
+> `pnpm test:e2e` rather than a bare `npx playwright test`.
+
 When the snapshot doesn't show an element's `id`, `class`, `data-*` attributes, or other DOM properties, use `eval` to inspect them.
 
 ## Examples

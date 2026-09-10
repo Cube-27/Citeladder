@@ -15,21 +15,35 @@ pnpm run playwright:cli -- <command>
 ```
 
 For example, use `pnpm run playwright:cli -- open http://127.0.0.1:3000`.
-This replaces the bare `playwright-cli` command used in the generic examples
-below, avoids a global npm install, and preserves the separately owned
-Playwright Test runner.
+The Quick start below is written this way. Every later section, and every
+file under `references/`, uses the bare `playwright-cli` of the upstream
+documentation -- substitute the pinned form for it. This avoids a global npm
+install and keeps those examples matching their source.
+
+Playwright is installed under `frontend/` only, so a bare `npx playwright test`
+from the root finds no project configuration. The separately owned Playwright
+Test runner is `pnpm test:e2e`.
+
+Saved browser state (`state-save`, `storageState`) holds live session cookies.
+This repository ignores `auth.json`, `*.auth-state.json`, `*-auth-state.json`
+and `.auth/`; keep any other name you choose out of version control too, and
+pass real passwords through the environment rather than typing them into a
+command that lands in shell history.
 
 ## Quick start
 
+Written in this repository's pinned form. Everything after this section uses
+the bare `playwright-cli`; substitute `pnpm run playwright:cli -- ` for it.
+
 ```bash
 # open new browser
-playwright-cli open
+pnpm run playwright:cli -- open
 # navigate to a page
-playwright-cli goto https://playwright.dev
+pnpm run playwright:cli -- goto https://playwright.dev
 # interact with the page using refs from the snapshot
-playwright-cli click e15
-playwright-cli type "page.click"
-playwright-cli press Enter
+pnpm run playwright:cli -- click e15
+pnpm run playwright:cli -- type "page.click"
+pnpm run playwright:cli -- press Enter
 # take a screenshot (rarely used, as snapshot is more common)
 playwright-cli screenshot
 # close the browser

@@ -1,5 +1,11 @@
 # Test generation (plan → generate → heal)
 
+> **In this repository**, run the pinned CLI through
+> `pnpm run playwright:cli -- <command>` from the root; the bare
+> `playwright-cli` used in the generic examples below needs a global install.
+> Playwright itself is installed only under `frontend/`, so the test runner is
+> `pnpm test:e2e` rather than a bare `npx playwright test`.
+
 End-to-end workflow for authoring and maintaining Playwright tests with `playwright-cli`. Every `playwright-cli` action emits the equivalent Playwright TypeScript, and that generated code is the raw material for every test. The sections below can be used independently:
 
 - **How generation works** — the core mechanic everything else relies on: actions become TypeScript, plus how to add assertions.
@@ -318,7 +324,10 @@ Collect the generated code and write the test file at the path given in the spec
 ```ts
 // spec: specs/basic-operations.plan.md
 // seed: tests/seed.spec.ts
-import { test, expect } from './fixtures';   // or '@playwright/test' if no fixtures file
+// Resolve the fixtures path against THIS file: `tests/fixtures.ts` is
+// `../fixtures` from `tests/<group>/`, and `./fixtures` from the seed. This
+// repository has neither, so its specs import '@playwright/test'.
+import { test, expect } from '../fixtures';  // or '@playwright/test' if no fixtures file
 
 test.describe('Signing in and out', () => {
   test('should sign in', async ({ page }) => {
@@ -344,7 +353,14 @@ Rules:
 - **One test per file.** File path, describe name, and test name come verbatim from the spec (minus the ordinal).
 - Prefix each numbered step with a `// N. <step text>` comment before its actions.
 - Use the describe group name verbatim from the spec (no `1.` ordinal).
-- Import from `./fixtures` if the project has one; otherwise `@playwright/test`.
+- Import the fixtures file if the project has one, otherwise `@playwright/test`.
+  Resolve the path against THIS file's directory, not against the tests root:
+  under the generic `tests/` layout below, a test at `tests/<group>/<name>.spec.ts`
+  reaches `tests/fixtures.ts` as `../fixtures`, while the seed at
+  `tests/seed.spec.ts` reaches it as `./fixtures`.
+  **In this repository** there is no `tests/` tree and no fixtures file: e2e
+  specs are flat under `frontend/e2e/` (`testDir: './e2e'`), so import from
+  `@playwright/test` and put shared helpers in `frontend/e2e/helpers/`.
 - **Important**: close the CLI session and stop the background test before moving to the next scenario.
 
 ### 2.3 Generate multiple scenarios
