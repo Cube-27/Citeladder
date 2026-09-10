@@ -1,22 +1,18 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { LogoMark } from '@/components/ui/logo-mark';
 import { Menu, X } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import Link from 'next/link';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { fetchMarketingProjectCount, fetchMarketingSession } from '@/lib/api/marketing-session';
-import { queryKeys } from '@/lib/api/query-keys';
 import { DEMO_CTA, type NavDropKey } from '@/lib/marketing-content/nav';
-import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
-import { RETURNING_VISITOR_ATTRIBUTE } from './returning-visitor-hint';
+import { useMarketingSession, useSessionHint } from './use-marketing-session';
 
 /** What asked for a dropdown: a resting pointer, or an explicit focus move. */
 export type OpenSource = 'hover' | 'focus';
@@ -28,84 +24,6 @@ const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
   solutions: { width: COLUMN, twoColumn: false },
   resources: { width: COLUMN, twoColumn: false },
 };
-
-const noStoredActiveProject = () => false;
-
-function readStoredActiveProject(): boolean {
-  try {
-    return Boolean(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY));
-  } catch {
-    return false;
-  }
-}
-
-function subscribeToStoredActiveProject(onStoreChange: () => void): () => void {
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === ACTIVE_PROJECT_STORAGE_KEY && event.storageArea === window.localStorage) {
-      onStoreChange();
-    }
-  };
-  window.addEventListener('storage', onStorage);
-  return () => window.removeEventListener('storage', onStorage);
-}
-
-function useMarketingSession() {
-  const hasStoredProject = useSyncExternalStore(
-    subscribeToStoredActiveProject,
-    readStoredActiveProject,
-    noStoredActiveProject,
-  );
-  // Both queries go through `lib/api/marketing-session`, NOT the validated
-  // `authApi` / `projectsApi`: those import the schema barrel, which put Zod
-  // and every product schema (a measured 449 KB) into the marketing bundle to
-  // answer two yes/no questions. See that module for why validation is the
-  // right trade to drop here specifically.
-  //
-  // These use marketing-only cache keys. They hold a boolean and a count,
-  // whereas `auth.me()` / `projects.list()` hold the validated user object and
-  // project array that `SessionGuard` and `ProjectProvider` read fields off —
-  // one `QueryClient` spans both surfaces with a 30-minute `gcTime`, so
-  // sharing a key would hand the app shell the wrong shape on the first
-  // navigation in from `/`.
-  const me = useQuery({
-    queryKey: queryKeys.auth.marketingSession(),
-    queryFn: ({ signal }) => fetchMarketingSession({ signal }),
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-  const projects = useQuery({
-    queryKey: queryKeys.projects.marketingCount(),
-    queryFn: ({ signal }) => fetchMarketingProjectCount({ signal }),
-    enabled: Boolean(me.data),
-  });
-  const hasProject = (projects.data ?? 0) > 0 || hasStoredProject;
-
-  // Only once `me` has answered does React know what the actions row should
-  // show, and only then may the pre-hydration mark go. Dropping it on mount
-  // would hand the row back to CSS's anonymous default mid-flight — the exact
-  // flash the mark exists to prevent — and keeping it forever would hide
-  // "Log in" from a browser whose stored trace has outlived its session.
-  const sessionSettled = !me.isPending;
-  useEffect(() => {
-    if (sessionSettled) document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
-  }, [sessionSettled]);
-
-  return {
-    // Until `me` has settled (success or 401) we know nothing for certain about
-    // the visitor, and rendering the anonymous actions during that window only
-    // to swap in the dashboard link is the refresh flicker.
-    //
-    // Waiting on every visitor would cure that flicker by hiding the primary
-    // CTA behind an auth round trip for the anonymous majority, who are the
-    // people the marketing site exists for. So the placeholder is shown only
-    // when this browser carries a trace of a previous session — the stored
-    // active project — which is where the swap would actually have happened.
-    // Everyone else gets "Log in" and the demo CTA in the first paint.
-    sessionPending: me.isPending,
-    isAuthenticated: Boolean(me.data),
-    dashboardHref: hasProject ? '/projects' : '/onboarding',
-  };
-}
 
 function useScrolled() {
   const [scrolled, setScrolled] = useState(false);
@@ -231,6 +149,7 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
 export function MarketingNav() {
   const reduceMotion = useReducedMotion();
   const { isAuthenticated, sessionPending, dashboardHref } = useMarketingSession();
+  const hasSessionHint = useSessionHint();
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<NavDropKey | null>(null);
@@ -297,15 +216,24 @@ export function MarketingNav() {
       <nav
         ref={navRef}
         aria-label="Main navigation"
-        // Three tracks, not a flex row: the links sit in the middle track, so
-        // their position is a function of the viewport alone. As a flex row
-        // they were centred in whatever space the actions left over, and the
-        // actions change width twice on a returning visitor's refresh (the
-        // anonymous pair, then the pending placeholder, then Dashboard) — which
-        // slid the whole navigation sideways each time. The side tracks are
-        // `minmax(0,1fr)` so they stay exactly equal regardless of what either
-        // one holds.
-        className="mx-auto grid h-16 w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-5 px-[var(--site-gutter)]"
+        // From `lg` up: three tracks, not a flex row. The links sit in the
+        // middle track, so their position is a function of the viewport alone.
+        // As a flex row they were centred in whatever space the actions left
+        // over, and the actions change width twice on a returning visitor's
+        // refresh (the anonymous pair, then the pending placeholder, then
+        // Dashboard) — which slid the whole navigation sideways each time. The
+        // side tracks are `minmax(0,1fr)` so they stay exactly equal regardless
+        // of what either one holds.
+        //
+        // Below `lg` it is a plain row, and that is not a stylistic choice.
+        // `DesktopNavigation` is `hidden` there, so it generates no box and is
+        // not a grid item at all — which handed the ACTIONS the middle `auto`
+        // track and left the trailing `1fr` empty. `justify-self-end` does
+        // nothing in a track sized to its content, so "Log in" and the
+        // hamburger sat marooned in the middle of the bar with dead space to
+        // their right, and the two empty gutters ate 40px that a 320px phone
+        // does not have. Two items want two ends: `justify-between`.
+        className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-5 px-[var(--site-gutter)] lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
       >
         <HomeLogoLink onNavigate={closeMenu} />
 
@@ -339,7 +267,11 @@ export function MarketingNav() {
       {mobileOpen && (
         <MobileNavigation
           isAuthenticated={isAuthenticated}
-          sessionPending={sessionPending}
+          // The sheet has no static HTML to match, so it can read the hint
+          // cookie directly: only a visitor who actually holds a session waits
+          // on the skeleton. Everyone else is offered "Log in" immediately,
+          // which is the same rule the header actions follow in CSS.
+          sessionPending={sessionPending && hasSessionHint}
           dashboardHref={dashboardHref}
           openAcc={openAcc}
           setOpenAcc={setOpenAcc}
@@ -423,33 +355,42 @@ function NavActions({
 }>) {
   return (
     <div className="flex shrink-0 items-center gap-3 justify-self-end">
-      {sessionPending ? (
-        // `me` has not answered yet, and this render is also the STATIC HTML —
-        // so React cannot choose here without guessing. It emits both answers
-        // and lets CSS pick before paint: `ReturningVisitorHint` marks the
-        // document when this browser holds a stored project, and `globals.css`
-        // shows the matching branch. The anonymous majority get "Log in" in
-        // the first paint; someone returning gets Dashboard in the first
-        // paint, instead of an empty row that fills in a moment later.
-        <>
-          <span data-session-anon>
-            <AnonymousActions />
-          </span>
-          <span data-session-returning>
-            <ButtonLink href="/projects" variant="primary" className="min-h-10 px-4">
-              Dashboard
-            </ButtonLink>
-          </span>
-        </>
-      ) : isAuthenticated ? (
-        // The topbar CTA runs one step smaller than the page CTAs — chrome,
-        // not a section action.
-        <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
-          Dashboard
-        </ButtonLink>
-      ) : (
-        <AnonymousActions />
-      )}
+      {/* While the sheet is open it owns the account actions — it carries its
+          own "Log in" / "Dashboard" row at the bottom. Leaving these in the bar
+          too put the same call to action on screen twice, a few hundred pixels
+          apart, with the close button wedged beside the duplicate. Hidden in
+          CSS rather than unmounted so a phone-width menu left open across a
+          resize to desktop, where the sheet itself is `lg:hidden`, does not
+          take the desktop actions down with it. */}
+      <div className={cn('flex items-center gap-3', mobileOpen && 'max-lg:hidden')}>
+        {sessionPending ? (
+          // `me` has not answered yet, and this render is also the STATIC HTML —
+          // so React cannot choose here without guessing. It emits both answers
+          // and lets CSS pick before paint: `ReturningVisitorHint` marks the
+          // document when this browser holds a live session hint, and
+          // `globals.css` shows the matching branch. The anonymous majority get
+          // "Log in" in the first paint; someone returning gets Dashboard in
+          // the first paint, instead of an empty row that fills in a moment later.
+          <>
+            <span data-session-anon>
+              <AnonymousActions />
+            </span>
+            <span data-session-returning>
+              <ButtonLink href="/projects" variant="primary" className="min-h-10 px-4">
+                Dashboard
+              </ButtonLink>
+            </span>
+          </>
+        ) : isAuthenticated ? (
+          // The topbar CTA runs one step smaller than the page CTAs — chrome,
+          // not a section action.
+          <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
+            Dashboard
+          </ButtonLink>
+        ) : (
+          <AnonymousActions />
+        )}
+      </div>
       <button
         type="button"
         className="border-border-subtle text-foreground grid size-10 place-items-center rounded-[var(--radius-control)] border lg:hidden"

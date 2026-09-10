@@ -6,12 +6,16 @@ import userEvent from '@testing-library/user-event';
 
 import { DEMO_HREF, NAV_DROPS } from '@/lib/marketing-content/nav';
 import { queryKeys } from '@/lib/api/query-keys';
-import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
 import { MarketingNav } from './nav';
-import { RETURNING_VISITOR_ATTRIBUTE } from './returning-visitor-hint';
+import {
+  RETURNING_VISITOR_ATTRIBUTE,
+  SESSION_HINT_COOKIE,
+  clearSessionHintCookie,
+  hasSessionHintCookie,
+} from './returning-visitor-hint';
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => mswServer.resetHandlers());
@@ -109,7 +113,9 @@ describe('MarketingNav', () => {
     // user tabbing to the next trigger has explicitly asked for it, and a flag
     // only a `mouseleave` can clear would leave them with no dropdowns at all.
     const [first, second] = NAV_DROPS;
-    const firstTrigger = screen.getByRole('link', { name: new RegExp(`^${first.label}$`, 'i') });
+    const firstTrigger = screen.getByRole('link', {
+      name: new RegExp(`^${first.label}$`, 'i'),
+    });
     await user.hover(firstTrigger);
     await waitFor(() => expect(firstTrigger).toHaveAttribute('aria-expanded', 'true'));
 
@@ -117,7 +123,9 @@ describe('MarketingNav', () => {
     await user.click(within(panel as HTMLElement).getAllByRole('link')[0]);
     await waitFor(() => expect(firstTrigger).toHaveAttribute('aria-expanded', 'false'));
 
-    const secondTrigger = screen.getByRole('link', { name: new RegExp(`^${second.label}$`, 'i') });
+    const secondTrigger = screen.getByRole('link', {
+      name: new RegExp(`^${second.label}$`, 'i'),
+    });
     secondTrigger.focus();
 
     await waitFor(() => expect(secondTrigger).toHaveAttribute('aria-expanded', 'true'));
@@ -184,7 +192,10 @@ describe('MarketingNav', () => {
     // original descriptor goes back — hence the capture/restore pair.
     const scrollYDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
     try {
-      Object.defineProperty(window, 'scrollY', { configurable: true, value: 24 });
+      Object.defineProperty(window, 'scrollY', {
+        configurable: true,
+        value: 24,
+      });
       window.dispatchEvent(new Event('scroll'));
 
       // The behaviour is the contract: the bar flags itself as scrolled and the
@@ -320,7 +331,9 @@ describe('MarketingNav', () => {
     await user.click(screen.getByRole('button', { name: 'Open menu' }));
     const menu = document.querySelector('#mobile-menu');
     expect(menu).not.toBeNull();
-    const menuDemo = within(menu as HTMLElement).getByRole('link', { name: /book a demo/i });
+    const menuDemo = within(menu as HTMLElement).getByRole('link', {
+      name: /book a demo/i,
+    });
     expect(menuDemo).toHaveAttribute('href', DEMO_HREF);
     expect(menuDemo).toHaveAttribute('target', '_blank');
     await user.click(menuDemo);
@@ -328,13 +341,14 @@ describe('MarketingNav', () => {
   });
 
   /**
-   * A browser that still carries a stored project from a session that has
-   * since expired: the pre-hydration mark hid the anonymous actions, so once
-   * `me` says 401 the mark must be gone or "Log in" stays invisible forever.
+   * A browser holding a hint for a session that was revoked before its expiry
+   * (signed out elsewhere, or `session_version` bumped): the pre-hydration mark
+   * hid the anonymous actions, so once `me` says 401 the mark must be gone or
+   * "Log in" stays invisible forever.
    */
-  it('releases the returning-visitor mark so a stale trace still ends at Log in', async () => {
+  it('releases the returning-visitor mark so a stale hint still ends at Log in', async () => {
     stubAnonymous();
-    window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, 'stale-project');
+    document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
     document.documentElement.setAttribute(RETURNING_VISITOR_ATTRIBUTE, '');
     try {
       renderWithProviders(<MarketingNav />);
@@ -346,9 +360,31 @@ describe('MarketingNav', () => {
       );
       expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
       expect(screen.queryByRole('link', { name: /dashboard/i })).toBeNull();
+      // And the hint itself goes, so the NEXT load paints "Log in" directly
+      // instead of flashing "Dashboard" and taking it away again.
+      expect(hasSessionHintCookie()).toBe(false);
     } finally {
-      window.localStorage.removeItem(ACTIVE_PROJECT_STORAGE_KEY);
+      clearSessionHintCookie();
       document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
+    }
+  });
+
+  /**
+   * The inverse: a live session must not have its hint swept up, or every
+   * marketing navigation would re-introduce the flash it exists to prevent.
+   */
+  it('keeps the session hint when me confirms the session', async () => {
+    stubSignedIn();
+    document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
+    try {
+      renderWithProviders(<MarketingNav />);
+
+      await waitFor(() =>
+        expect(screen.getAllByRole('link', { name: /dashboard/i })).not.toHaveLength(0),
+      );
+      expect(hasSessionHintCookie()).toBe(true);
+    } finally {
+      clearSessionHintCookie();
     }
   });
 
@@ -402,5 +438,35 @@ describe('MarketingNav', () => {
       ),
     );
     expect(screen.queryByRole('link', { name: /book a demo/i })).toBeNull();
+  });
+
+  /**
+   * An unresolved project count is not evidence of an empty account, and the
+   * two guesses are not symmetric: `/projects` is gated and redirects
+   * authoritatively when the account really has none, whereas nothing corrects
+   * a wrong trip to `/onboarding` — which is how someone ends up creating a
+   * second project their plan does not allow.
+   */
+  it('sends an unresolved project count to the workspace, not to onboarding', async () => {
+    mswServer.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({
+          user: {
+            id: '11111111-1111-4111-8111-111111111111',
+            email: 'evaluator@example.com',
+            role: 'user',
+            is_active: true,
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+          },
+        }),
+      ),
+      http.get('/api/v1/projects', () => HttpResponse.json({ detail: 'boom' }, { status: 500 })),
+    );
+    renderWithProviders(<MarketingNav />);
+
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/projects'),
+    );
   });
 });

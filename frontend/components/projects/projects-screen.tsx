@@ -2,8 +2,7 @@
 
 import { FolderOpen, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -27,22 +26,8 @@ import { DashboardScreen } from './dashboard-screen';
  * just as much as the first did.
  */
 export function ProjectsScreen() {
-  const { projects, setActiveProjectId } = useProjectContext();
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { projects } = useProjectContext();
   const [editing, setEditing] = useState<Project | null>(null);
-
-  // Apply the one-time onboarding handoff inside this route group's provider,
-  // then normalize the URL once the explicit selection has been recorded.
-  useEffect(() => {
-    const projectId = searchParams.get('project');
-    if (!projectId) return;
-    setActiveProjectId(projectId);
-    const next = new URLSearchParams(searchParams.toString());
-    next.delete('project');
-    const query = next.toString();
-    router.replace(query ? `/projects?${query}` : '/projects', { scroll: false });
-  }, [router, searchParams, setActiveProjectId]);
 
   // OnboardingGate (the layout wrapper) already gates on this exact
   // useProjectContext().isLoading and shows PageLoading, so by the time this

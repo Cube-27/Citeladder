@@ -15,6 +15,7 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.browser_cookies import SESSION_HINT_COOKIE
 from app.core.config import settings
 from app.core.config.abuse import abuse_settings
 from app.core.config.entitlements import (
@@ -194,6 +195,62 @@ async def test_logout_clears_session(client: httpx.AsyncClient) -> None:
     assert (await client.get("/api/v1/auth/me")).status_code == 401
     client.cookies.set(COOKIE, old_token)
     assert (await client.get("/api/v1/auth/me")).status_code == 401
+
+
+def _set_cookie_directives(response: httpx.Response, name: str) -> dict[str, str]:
+    """Parse the directives of one `Set-Cookie` header by cookie name."""
+    for header in response.headers.get_list("set-cookie"):
+        first, _, rest = header.partition(";")
+        if first.split("=", 1)[0].strip() != name:
+            continue
+        directives: dict[str, str] = {}
+        for part in rest.split(";"):
+            key, _, value = part.strip().partition("=")
+            if key:
+                directives[key.lower()] = value
+        return directives
+    raise AssertionError(f"no Set-Cookie for {name!r}")
+
+
+@pytest.mark.asyncio
+async def test_login_issues_a_readable_session_hint_beside_the_session(
+    client: httpx.AsyncClient,
+) -> None:
+    """The hint the statically rendered marketing nav reads before hydration.
+
+    It must be readable by JavaScript (no HttpOnly) and must expire on exactly
+    the session's schedule — a hint that outlives its session is what made the
+    marketing header paint "Dashboard" and then take it away.
+    """
+    await _register(client, "hint@example.com")
+    client.cookies.clear()
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "hint@example.com", "password": "password123"},
+    )
+
+    assert response.status_code == 200
+    session = _set_cookie_directives(response, COOKIE)
+    hint = _set_cookie_directives(response, SESSION_HINT_COOKIE)
+    assert "httponly" in session
+    assert "httponly" not in hint
+    assert hint["max-age"] == session["max-age"]
+    assert hint["path"] == session["path"] == "/"
+    assert client.cookies[SESSION_HINT_COOKIE] == "1"
+
+
+@pytest.mark.asyncio
+async def test_logout_clears_the_session_hint_with_the_session(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "hint-logout@example.com")
+    assert client.cookies.get(SESSION_HINT_COOKIE) == "1"
+
+    logout = await client.post("/api/v1/auth/logout")
+
+    assert logout.status_code == 204
+    assert _set_cookie_directives(logout, SESSION_HINT_COOKIE)["max-age"] == "0"
+    assert client.cookies.get(SESSION_HINT_COOKIE) is None
 
 
 @pytest.mark.asyncio
