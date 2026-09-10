@@ -47,6 +47,7 @@ function subscribeToStoredActiveProject(onStoreChange: () => void): () => void {
 }
 
 export function useMarketingSession() {
+  const hasSessionHint = useSessionHint();
   const hasStoredProject = useSyncExternalStore(
     subscribeToStoredActiveProject,
     readStoredActiveProject,
@@ -67,13 +68,14 @@ export function useMarketingSession() {
   const me = useQuery({
     queryKey: queryKeys.auth.marketingSession(),
     queryFn: ({ signal }) => fetchMarketingSession({ signal }),
+    enabled: hasSessionHint,
     retry: false,
     refetchOnWindowFocus: false,
   });
   const projects = useQuery({
     queryKey: queryKeys.projects.marketingCount(),
     queryFn: ({ signal }) => fetchMarketingProjectCount({ signal }),
-    enabled: Boolean(me.data),
+    enabled: hasSessionHint && Boolean(me.data),
   });
   // Only a settled, successful count of zero is evidence that this account has
   // no projects. While the count is pending or failed we do not know — and the
@@ -89,23 +91,21 @@ export function useMarketingSession() {
   // show, and only then may the pre-hydration mark go. Dropping it on mount
   // would hand the row back to CSS's anonymous default mid-flight — the exact
   // flash the mark exists to prevent.
-  const sessionSettled = !me.isPending;
-  const authenticated = Boolean(me.data);
+  const authenticated = hasSessionHint && Boolean(me.data);
   useEffect(() => {
-    if (!sessionSettled) return;
+    if (!hasSessionHint || me.isPending) return;
     document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
     // A hint that survived a 401 stands for a session revoked before its
     // expiry (signed out in another tab, or `session_version` bumped). Left
     // alone it would paint "Dashboard" again on the next load and swap it for
     // "Log in" a moment later, which is the flicker this whole path exists to
     // remove. Expire it so that mistake is made at most once.
-    if (!authenticated) clearSessionHintCookie();
-  }, [sessionSettled, authenticated]);
+    if (!authenticated && me.isSuccess) clearSessionHintCookie();
+  }, [authenticated, hasSessionHint, me.isPending, me.isSuccess]);
 
   return {
-    // Until `me` has settled (success or 401) we know nothing for certain about
-    // the visitor, and rendering the anonymous actions during that window only
-    // to swap in the dashboard link is the refresh flicker.
+    // Only a visitor carrying the backend-issued hint has a session question
+    // to settle. Everyone else is anonymous without paying for an auth request.
     //
     // Waiting on every visitor would cure that flicker by hiding the primary
     // CTA behind an auth round trip for the anonymous majority, who are the
@@ -116,6 +116,7 @@ export function useMarketingSession() {
     sessionPending: me.isPending,
     isAuthenticated: authenticated,
     dashboardHref: knownEmpty ? '/onboarding' : '/projects',
+    hasSessionHint,
   };
 }
 
@@ -127,6 +128,6 @@ export function useMarketingSession() {
  * The header covers that first paint in CSS instead (see `NavActions`); this is
  * for surfaces such as the mobile sheet that only ever exist post-hydration.
  */
-export function useSessionHint(): boolean {
+function useSessionHint(): boolean {
   return useSyncExternalStore(subscribeNothing, hasSessionHintCookie, noSessionHint);
 }

@@ -340,8 +340,8 @@ async def test_generate_persists_provenance_evidence(
     for prompt in prompts:
         evidence = prompt.generation_evidence
         assert evidence is not None
-        assert evidence["generator_version"] == "prompt-gen-v19"
-        assert evidence["buyer_query_policy_version"] == "buyer-query-policy-2"
+        assert evidence["generator_version"] == "prompt-gen-v1"
+        assert evidence["buyer_query_policy_version"] == "buyer-query-policy-1"
         assert "buyer_query_archetype" not in evidence
         assert evidence["generation_mode"] == "model"
         assert evidence["model_identity"] == {

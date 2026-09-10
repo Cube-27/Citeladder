@@ -105,6 +105,7 @@ export function MobileNavigation({
         ) : (
           <Link
             href={isAuthenticated ? dashboardHref : '/login'}
+            prefetch={isAuthenticated ? undefined : false}
             className="text-muted py-3.5 text-lg font-medium"
             onClick={closeMenu}
           >

@@ -17,10 +17,9 @@ from typing import Final
 # ``Citation`` / ``MetricSnapshot`` and the parent ``Audit`` at finalize.
 # v5: alias matching spans token boundaries, so a brand written "Best & Less"
 # and one written "bestandless" are the same mention. Runs scored under v4
-# under-counted every brand whose configured spelling differed from the one the
-# models used, so a v4 row and a v5 row are NOT comparable and must not fold
-# into one bucket -- which is what this bump is for.
-ANALYZER_VERSION: Final = "grounded-analysis-v5"
+# Alias matching is part of this analyzer contract. Before launch, semantic
+# changes reset disposable data while the active provenance version remains 1.
+ANALYZER_VERSION: Final = "grounded-analysis-v1"
 ENTITY_ASSESSMENT_VERSION: Final = "entity-assessment-1"
 # The per-execution/aggregate formula version (separate from the analyzer so a
 # formula-only change can be tracked independently of an extraction change).

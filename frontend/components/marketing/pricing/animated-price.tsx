@@ -1,8 +1,8 @@
 'use client';
 
-import { useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 
+import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 import { PRICING_PRICE_TWEEN_MS } from '@/lib/config/billing';
 
 /**
@@ -13,8 +13,7 @@ import { PRICING_PRICE_TWEEN_MS } from '@/lib/config/billing';
  * value the catalog did not send would put fabricated prices on screen mid-
  * tween — the one thing this page must never do. Reduced motion always snaps.
  *
- * The tween is a plain requestAnimationFrame loop with a quad ease-out — the
- * GSAP tween it replaced pulled the whole library in for one number.
+ * The tween is a plain requestAnimationFrame loop with a quad ease-out.
  * `announce` is the settled semantic result; the live region emits one final
  * announcement rather than narrating every interpolated frame.
  */

@@ -24,6 +24,7 @@
  * the validated client, not here.
  */
 import { apiClient, type ApiRequestOptions } from './client';
+import { ApiError } from './errors';
 
 /**
  * True when the caller holds a live session.
@@ -33,8 +34,13 @@ import { apiClient, type ApiRequestOptions } from './client';
  * skipping `strictValidate` unsafe.
  */
 export async function fetchMarketingSession(options?: ApiRequestOptions): Promise<boolean> {
-  await apiClient.get<unknown>('/auth/me', options);
-  return true;
+  try {
+    await apiClient.get<unknown>('/auth/me', options);
+    return true;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return false;
+    throw error;
+  }
 }
 
 /**

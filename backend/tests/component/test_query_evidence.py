@@ -282,7 +282,7 @@ async def test_api_requires_window_rejects_bad_cursor_and_is_workspace_safe(
         coverage={"projected_row_count": 0},
         limitations=[],
         analyzer_version="query-evidence-1",
-        resolver_version="owned-page-resolver-2",
+        resolver_version="owned-page-resolver-1",
     )
     db_session.add(snapshot)
     await db_session.commit()

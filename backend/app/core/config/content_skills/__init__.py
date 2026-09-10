@@ -24,7 +24,7 @@ CONTENT_CHANNELS: Final[tuple[str, ...]] = (
     CHANNEL_EMAIL,
 )
 CONTENT_DEFAULT_SKILL: Final = "content_page"
-CONTENT_SKILL_CATALOG_VERSION: Final = "content-skills-v5"
+CONTENT_SKILL_CATALOG_VERSION: Final = "content-skills-v1"
 _REQUIRED_METADATA: Final = frozenset(
     {"id", "label", "channel", "order", "version", "description"}
 )

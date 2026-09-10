@@ -238,8 +238,8 @@ async def test_equal_concurrent_query_snapshot_insert_reuses_winner() -> None:
         source_artifact_ids=[],
         coverage={},
         limitations=[],
-        analyzer_version="query-evidence-3",
-        resolver_version="owned-page-resolver-2",
+        analyzer_version="query-evidence-1",
+        resolver_version="owned-page-resolver-1",
     )
     winner = QueryEvidenceSnapshot(
         workspace_id=snapshot.workspace_id,

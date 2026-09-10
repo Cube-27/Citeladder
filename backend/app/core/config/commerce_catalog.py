@@ -7,16 +7,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.dotenv import dotenv_sources
 
-COMMERCE_PROJECTOR_VERSION: Final = "commerce-projector-5"
+COMMERCE_PROJECTOR_VERSION: Final = "commerce-projector-1"
 COMMERCE_IMPORTER_VERSION: Final = "commerce-catalog-importer-1"
-COMMERCE_EDIT_VERSION: Final = "commerce-catalog-edit-2"
+COMMERCE_EDIT_VERSION: Final = "commerce-catalog-edit-1"
 COMMERCE_CATEGORY_EDIT_VERSION: Final = "commerce-category-edit-1"
 COMMERCE_COMPETITOR_PROVIDER_VERSION: Final = "tavily-commerce-1"
-COMMERCE_COMPETITOR_VALIDATOR_VERSION: Final = "commerce-competitor-validator-5"
-COMMERCE_PROMPT_TEMPLATE_VERSION: Final = "commerce-buyer-prompts-4"
-COMMERCE_RECOMMENDATION_PARSER_VERSION: Final = "commerce-recommendation-parser-3"
-COMMERCE_RECOMMENDATION_MATCHER_VERSION: Final = "commerce-recommendation-matcher-3"
-COMMERCE_SHELF_FORMULA_VERSION: Final = "commerce-shelf-formulas-2"
+COMMERCE_COMPETITOR_VALIDATOR_VERSION: Final = "commerce-competitor-validator-1"
+COMMERCE_PROMPT_TEMPLATE_VERSION: Final = "commerce-buyer-prompts-1"
+COMMERCE_RECOMMENDATION_PARSER_VERSION: Final = "commerce-recommendation-parser-1"
+COMMERCE_RECOMMENDATION_MATCHER_VERSION: Final = "commerce-recommendation-matcher-1"
+COMMERCE_SHELF_FORMULA_VERSION: Final = "commerce-shelf-formulas-1"
 
 COMMERCE_PROMPTS_MIN: Final = 2
 COMMERCE_PROMPTS_DEFAULT: Final = 5

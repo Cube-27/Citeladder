@@ -1065,9 +1065,9 @@ samp {
 }
 
 /* Hero on-load entrance — one beat per direct child of .hero-entrance, in
-   markup order. `both` fill holds the from-state through each delay, which is
-   what the old GSAP `set` + stagger did; the global reduced-motion rule
-   collapses every animation to 1ms, which lands on the settled frame. */
+   markup order. `both` fill holds the from-state through each delay; the
+   global reduced-motion rule collapses every animation to 1ms, which lands on
+   the settled frame. */
 @keyframes hero-beat-in {
   from {
     opacity: 0;
@@ -1108,8 +1108,20 @@ samp {
   }
 }
 
-/* Scroll reveals — CSS scroll-driven animations replace the GSAP ScrollTrigger
-   engine. LONGHANDS ONLY: the `animation` shorthand folds a following
+@keyframes marketing-nav-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.marketing-nav-panel {
+  transform-origin: top center;
+  animation: marketing-nav-panel-in 160ms var(--ease-standard) both;
+}
+
+/* Scroll reveals use native CSS scroll-driven animations. LONGHANDS ONLY: the
+   `animation` shorthand folds a following
    `animation-timeline` into itself when minified and the whole declaration
    dies silently. Content is server-rendered in its settled state; where
    `view()` is unsupported or the reader reduced motion, nothing ever hides. */

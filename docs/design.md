@@ -240,11 +240,11 @@ HeroUI is a reference for state completeness, not an installed dependency.
 
 ## Motion and accessibility
 
-Authenticated routes use shared CSS feedback, never the Motion runtime. Marketing owns a lazy Motion provider for limited editorial scenes. Pointer-opened menus use an origin-aware 150–180ms fade/shift; keyboard command interfaces open immediately. Drawers use interruptible 220–260ms right-side transitions; press feedback begins on pointer-down. Authenticated route content and tab indicators update immediately without opacity transitions.
+Authenticated and marketing routes use shared CSS feedback without a general-purpose animation runtime. Pointer-opened menus use a 150–180ms fade/shift; keyboard command interfaces open immediately. Drawers use interruptible 220–260ms right-side transitions; press feedback begins on pointer-down. Authenticated route content and tab indicators update immediately without opacity transitions.
 
-Sanctioned explanatory motion: rotating answer-engine wordmarks; product-window walkthrough; small GSAP scroll fade/rise reveals that never hide server-rendered content after hydration; master-detail continuity/domain-owned measured expansion; onboarding research results resolving below factual activity with a 220ms fade/rise and 60ms stagger.
+Sanctioned explanatory motion: rotating answer-engine wordmarks; product-window walkthrough; native CSS scroll fade/rise reveals that never hide server-rendered content after hydration; master-detail continuity/domain-owned measured expansion; onboarding research results resolving below factual activity with a 220ms fade/rise and 60ms stagger.
 
-All motion stops under `prefers-reduced-motion: reduce`: global CSS animations/transitions are neutralised, SMIL pipeline dots hidden, GSAP reveals disabled. WCAG 2.1 AA is the minimum. Preserve visible focus, non-colour-only meaning, usable keyboard/touch interactions, forced-colours, and print.
+All motion stops under `prefers-reduced-motion: reduce`: global CSS animations/transitions are neutralised and SMIL pipeline dots are hidden. WCAG 2.1 AA is the minimum. Preserve visible focus, non-colour-only meaning, usable keyboard/touch interactions, forced-colours, and print.
 
 ## Review checklist
 

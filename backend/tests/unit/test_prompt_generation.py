@@ -407,12 +407,108 @@ def test_a_degenerate_row_cannot_reach_a_paid_answer_engine() -> None:
     assert dropped == 1
 
 
-def test_an_unmapped_cohort_falls_back_instead_of_raising() -> None:
-    """Adding a cohort must not break generation before its rules are written."""
+def test_an_unfilled_template_slot_never_becomes_a_measured_prompt() -> None:
+    """A bracketed placeholder is an unfinished draft, not a buyer query.
+
+    "...connected e-bikes in [city]" was persisted verbatim and then sent to
+    every answer engine on every audit, so the portfolio measured literal
+    bracket text. Dropping the row re-asks its slot on the next call.
+    """
+    import json
+
+    from app.domain.prompts.generation_contract import parse_planned_output
+    from app.domain.prompts.query_patterns import build_prompt_slots
+
+    slots = build_prompt_slots(
+        topics=[{"id": "t1", "name": "Connected E-Bikes", "description": ""}],
+        count=5,
+        cohort="core",
+    )
+    raw = json.dumps(
+        {
+            "prompts": [
+                {
+                    "slot_id": slots[0].slot_id,
+                    "text": "Where to book a test ride for connected e-bikes in [city]",
+                    "buyer_stage": "consideration",
+                    "prompt_intent": "recommend",
+                },
+                {
+                    "slot_id": slots[1].slot_id,
+                    "text": "Best connected e-bikes for commuting in {location}",
+                    "buyer_stage": "consideration",
+                    "prompt_intent": "recommend",
+                },
+                {
+                    "slot_id": slots[2].slot_id,
+                    "text": "Which <brand> connected e-bike has the longest range?",
+                    "buyer_stage": "consideration",
+                    "prompt_intent": "recommend",
+                },
+                {
+                    "slot_id": slots[3].slot_id,
+                    "text": f"Best connected e-bikes for [{'city' * 30}]",
+                    "buyer_stage": "consideration",
+                    "prompt_intent": "recommend",
+                },
+                {
+                    "slot_id": slots[4].slot_id,
+                    "text": "Where to test ride a connected e-bike in Bengaluru",
+                    "buyer_stage": "decision",
+                    "prompt_intent": "buy",
+                },
+            ]
+        }
+    )
+    accepted, dropped = parse_planned_output(raw, slots=slots)
+    assert [row.text for row in accepted] == [
+        "Where to test ride a connected e-bike in Bengaluru"
+    ]
+    assert dropped == 4
+
+
+def test_ordinary_punctuation_is_not_mistaken_for_a_template_slot() -> None:
+    """The placeholder gate must not eat queries a buyer would really type."""
+    from app.domain.prompts.style import contains_placeholder
+
+    for text in (
+        "Best e-bikes under $2,000 (with a throttle)",
+        "Cheap baby clothes in bulk",
+        "AC not cooling, who can repair it in Delhi?",
+        "Are 3<5 kWh home batteries worth it",
+        "जयपुर में सबसे अच्छी ई-बाइक कौन सी है",
+    ):
+        assert not contains_placeholder(text), text
+
+
+def test_a_cohort_that_does_not_exist_is_not_treated_as_one_without_rules() -> None:
+    """Two opposite failures used to share `_COHORT_RULES.get(cohort, "")`.
+
+    A misspelt cohort silently lost the rule requiring the tracked brand and a
+    competitor, and generation then succeeded with prompts that measure the
+    wrong thing.
+    """
+    import pytest
+
     from app.core.config.visibility_prompts import cohort_system_prompt
 
-    assert cohort_system_prompt("retail", "commerce")
-    assert cohort_system_prompt("retail", "not_a_cohort")
+    with pytest.raises(ValueError, match="comparision"):
+        cohort_system_prompt("retail", "comparision")
+
+
+def test_a_real_cohort_without_rules_still_generates() -> None:
+    """Adding a cohort must not break generation before its rules are written.
+
+    `commerce` is in PROMPT_COHORTS with no `_COHORT_RULES` entry on purpose;
+    it must fall back to the base instruction, not raise the way a cohort that
+    does not exist at all does.
+    """
+    from app.core.config.prompts import PROMPT_COHORTS
+    from app.core.config.visibility_prompts import cohort_system_prompt
+
+    assert "commerce" in PROMPT_COHORTS
+    for cohort in PROMPT_COHORTS:
+        assert cohort_system_prompt("retail", cohort)
 
 
 def test_the_intent_vocabulary_has_exactly_one_source() -> None:

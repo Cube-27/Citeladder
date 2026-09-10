@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
-import Script from 'next/script';
 
+import { GoogleAnalytics } from '@/components/analytics/google-analytics';
 import { QueryProvider } from '@/lib/providers/query-provider';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, siteOrigin } from '@/lib/seo/site';
 import './globals.css';
@@ -45,23 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={geist.variable}>
       <body>
-        {GA_MEASUREMENT_ID ? (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-
-            gtag('config', '${GA_MEASUREMENT_ID}');
-          `}
-            </Script>
-          </>
-        ) : null}
+        {GA_MEASUREMENT_ID ? <GoogleAnalytics measurementId={GA_MEASUREMENT_ID} /> : null}
         <span hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
         {/* First tab stop on every route. Visually hidden until focused, so
             keyboard and screen-reader users can skip repeated chrome. Each

@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { useQuery } from '@tanstack/react-query';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -18,7 +18,11 @@ import {
 } from './returning-visitor-hint';
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => mswServer.resetHandlers());
+afterEach(() => {
+  mswServer.resetHandlers();
+  clearSessionHintCookie();
+  document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
+});
 afterAll(() => mswServer.close());
 
 function stubAnonymous() {
@@ -51,6 +55,15 @@ function NavWithAnonymousPricingSession() {
   useQuery({
     queryKey: queryKeys.auth.me(),
     queryFn: async () => null,
+  });
+  return <MarketingNav />;
+}
+
+function NavWithCachedMarketingSession() {
+  useQuery({
+    queryKey: queryKeys.auth.marketingSession(),
+    queryFn: async () => true,
+    initialData: true,
   });
   return <MarketingNav />;
 }
@@ -93,6 +106,7 @@ describe('MarketingNav', () => {
       // should announce. It is found by the id the trigger points at.
       const panel = document.getElementById(`desktop-nav-panel-${drop.key}`);
       expect(panel).not.toBeNull();
+      expect(panel).toHaveClass('marketing-nav-panel');
       expect(directLink).toHaveAttribute('aria-controls', `desktop-nav-panel-${drop.key}`);
       const expected = drop.groups.reduce((sum, group) => sum + group.items.length, 0);
       expect(within(panel as HTMLElement).getAllByRole('link')).toHaveLength(expected);
@@ -129,6 +143,9 @@ describe('MarketingNav', () => {
     secondTrigger.focus();
 
     await waitFor(() => expect(secondTrigger).toHaveAttribute('aria-expanded', 'true'));
+    expect(document.getElementById(`desktop-nav-panel-${second.key}`)).not.toHaveClass(
+      'marketing-nav-panel',
+    );
   });
 
   it('closes a dropdown when its top-level page link is chosen', async () => {
@@ -312,6 +329,23 @@ describe('MarketingNav', () => {
     expect(screen.queryByRole('button', { name: /toggle color theme/i })).toBeNull();
   });
 
+  it('does not request session state for an anonymous visitor without a hint', async () => {
+    const requested = vi.fn();
+    mswServer.use(
+      http.get('/api/v1/auth/me', () => {
+        requested();
+        return HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+      }),
+    );
+    const user = userEvent.setup();
+
+    renderWithProviders(<MarketingNav />);
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+
+    expect(requested).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('link', { name: /log in/i })).not.toHaveLength(0);
+  });
+
   it('keeps log in in the topbar at every width and puts the demo CTA in the mobile menu', async () => {
     stubAnonymous();
     const user = userEvent.setup();
@@ -388,13 +422,61 @@ describe('MarketingNav', () => {
     }
   });
 
-  it('does not treat a successful null session cache entry as authenticated', async () => {
-    renderWithProviders(<NavWithAnonymousPricingSession />);
+  it('keeps the returning marker until a live session resolves on refresh', async () => {
+    let releaseMe!: () => void;
+    const meSettled = new Promise<void>((resolve) => {
+      releaseMe = resolve;
+    });
+    mswServer.use(
+      http.get('/api/v1/auth/me', async () => {
+        await meSettled;
+        return HttpResponse.json({
+          user: {
+            id: '11111111-1111-4111-8111-111111111111',
+            email: 'evaluator@example.com',
+            role: 'user',
+            is_active: true,
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+          },
+        });
+      }),
+      http.get('/api/v1/projects', () => HttpResponse.json([])),
+    );
+    document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
+    document.documentElement.setAttribute(RETURNING_VISITOR_ATTRIBUTE, '');
 
-    // Both answers are in the markup until `me` settles — CSS picks one before
-    // paint — so the assertion is about the SETTLED row.
-    await waitFor(() => expect(screen.queryByRole('link', { name: /dashboard/i })).toBeNull());
-    expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
+    const { container } = renderWithProviders(<MarketingNav />);
+
+    expect(document.documentElement).toHaveAttribute(RETURNING_VISITOR_ATTRIBUTE);
+    expect(container.querySelector('[data-session-anon]')).not.toBeNull();
+    expect(container.querySelector('[data-session-returning]')).not.toBeNull();
+
+    releaseMe();
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
+        'href',
+        '/onboarding',
+      ),
+    );
+    expect(document.documentElement).not.toHaveAttribute(RETURNING_VISITOR_ATTRIBUTE);
+  });
+
+  it('does not treat a successful null session cache entry as authenticated', () => {
+    const { container } = renderWithProviders(<NavWithAnonymousPricingSession />);
+
+    // The disabled marketing query remains pending, so static markup carries
+    // both answers. With no hint marker, CSS selects the anonymous branch.
+    expect(container.querySelector('[data-session-anon]')).not.toBeNull();
+    expect(container.querySelector('[data-session-returning]')).not.toBeNull();
+    expect(document.documentElement).not.toHaveAttribute(RETURNING_VISITOR_ATTRIBUTE);
+  });
+
+  it('does not trust cached marketing session data after the hint is gone', async () => {
+    renderWithProviders(<NavWithCachedMarketingSession />);
+
+    await waitFor(() => expect(screen.getByRole('link', { name: /log in/i })).toBeInTheDocument());
+    expect(screen.queryByRole('link', { name: /dashboard/i })).toBeNull();
   });
 
   /**
@@ -414,6 +496,7 @@ describe('MarketingNav', () => {
         return new HttpResponse(null, { status: 401 });
       }),
     );
+    document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
 
     const { container } = renderWithProviders(<MarketingNav />);
 
@@ -428,6 +511,7 @@ describe('MarketingNav', () => {
 
   it('swaps the CTA for a dashboard link once the session resolves', async () => {
     stubSignedIn();
+    document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
     renderWithProviders(<MarketingNav />);
 
     // No projects yet, so the dashboard link routes into first-run onboarding.
@@ -463,6 +547,7 @@ describe('MarketingNav', () => {
       ),
       http.get('/api/v1/projects', () => HttpResponse.json({ detail: 'boom' }, { status: 500 })),
     );
+    document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
     renderWithProviders(<MarketingNav />);
 
     await waitFor(() =>

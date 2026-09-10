@@ -175,7 +175,7 @@ async def test_declaration_accepts_only_a_successful_generation_for_the_opportun
                 status=status,
                 provider="mistral",
                 requested_model="fixture-model",
-                generator_version="content-v3",
+                generator_version="content-v1",
             )
             for linked, status, character in (
                 (True, "succeeded", "a"),
@@ -325,7 +325,7 @@ async def test_terminal_crawl_appends_all_persisted_projection_states(
     assert observation["crawl_id"] == str(scenario.crawl_id)
     assert observation["source_analysis_ids"]
     assert observation["source_rule_evaluation_ids"]
-    assert observation["verifier_version"] == "implementation-verifier-2"
+    assert observation["verifier_version"] == "implementation-verifier-1"
     assert observation["result"]["state"] == "available"
     assert observation["result"]["legs"]["visibility"]["state"] == "not_run"
     assert observation["result"]["legs"]["ai_referral_traffic"]["state"] == "not_run"
