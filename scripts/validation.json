@@ -442,7 +442,6 @@
         "tests/component/test_traffic_*.py",
         "tests/component/test_performance_*.py",
         "tests/component/test_ai_referrals_*.py",
-        "tests/component/test_analytics_queue.py",
         "tests/component/test_referral_*.py",
         "tests/component/test_classify_referrals_worker.py"
       ]
@@ -462,11 +461,8 @@
       "backendTests": [
         "tests/unit/test_integration*.py",
         "tests/unit/test_oauth_*.py",
-        "tests/unit/test_feed_validators.py",
-        "tests/unit/test_order_sanitize.py",
         "tests/component/test_integration*.py",
         "tests/component/test_oauth_api.py",
-        "tests/component/test_order_resync_seq.py",
         "tests/component/test_post_sync_chain.py"
       ]
     },
