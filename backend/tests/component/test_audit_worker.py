@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 
 import pytest
 from sqlalchemy import func, select
@@ -161,19 +162,49 @@ class _OpenAIStubAdapter(_StubAdapter):
 
 
 class _ConcurrencyProbeAdapter(_StubAdapter):
-    """Stub that records how many executes overlap in flight."""
+    """Stub that records how many executes overlap in flight.
+
+    Overlap is proven by a RENDEZVOUS, not by a sleep. Each call announces
+    itself and then waits for the others, so the assertion holds whenever the
+    worker is genuinely concurrent and cannot pass when it is not.
+
+    A fixed sleep could not do that. Every task first does real database work
+    -- lease sweep, `FOR UPDATE SKIP LOCKED` claim, provider-capacity acquire
+    -- before reaching the stub, so on any machine where those round trips
+    outlast the sleep, the first call has already returned before the second
+    arrives and the probe reads 1. That is a measurement of the developer's
+    Postgres latency, not of the worker, and it made this test fail on a
+    Docker-for-Windows loopback (~175ms a query) while passing in CI.
+
+    `arrived` is released as soon as `expected` calls are in flight; the
+    timeout is a failure guard, so genuine serialization still fails the
+    assertion quickly rather than hanging the suite.
+    """
 
     in_flight = 0
     max_in_flight = 0
+    expected = 1
+    rendezvous_timeout = 10.0
+    _arrived: asyncio.Event | None = None
+
+    @classmethod
+    def reset(cls, *, expected: int) -> None:
+        cls.in_flight = 0
+        cls.max_in_flight = 0
+        cls.expected = expected
+        cls._arrived = asyncio.Event()
 
     async def execute(self, request: AnswerEngineRequest) -> AnswerEngineResponse:
         cls = _ConcurrencyProbeAdapter
         cls.in_flight += 1
         cls.max_in_flight = max(cls.max_in_flight, cls.in_flight)
         try:
-            # Yield so concurrently-running tasks can enter before we return;
-            # under serial execution max_in_flight would stay at 1.
-            await asyncio.sleep(0.05)
+            arrived = cls._arrived
+            assert arrived is not None, "call reset() before running the worker"
+            if cls.in_flight >= cls.expected:
+                arrived.set()
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(arrived.wait(), cls.rendezvous_timeout)
             return await super().execute(request)
         finally:
             cls.in_flight -= 1
@@ -188,8 +219,7 @@ async def test_worker_executes_claimed_batch_concurrently(
     # latency doesn't stack linearly across the run's wall-clock time.
     seed, audit = await _make_audit(session_factory, prompts=4, reps=1)  # 4 tasks
 
-    _ConcurrencyProbeAdapter.in_flight = 0
-    _ConcurrencyProbeAdapter.max_in_flight = 0
+    _ConcurrencyProbeAdapter.reset(expected=4)
     monkeypatch.setattr(
         audit_execution, "build_adapter", lambda **_: _ConcurrencyProbeAdapter()
     )
@@ -200,7 +230,7 @@ async def test_worker_executes_claimed_batch_concurrently(
     worker = AuditWorker(session_factory=session_factory, owner="w-conc")
     await worker.run_until_idle()
 
-    assert _ConcurrencyProbeAdapter.max_in_flight > 1
+    assert _ConcurrencyProbeAdapter.max_in_flight == 4
 
     async with session_factory() as session:
         tasks = await list_tasks(
