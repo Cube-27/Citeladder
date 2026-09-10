@@ -17,6 +17,8 @@
 
 export const COOKIE_CONSENT_STORAGE_KEY = 'citeladder.cookie-consent';
 
+const consentListeners = new Set<() => void>();
+
 /** The visitor's answer. Absent until they choose. */
 export type ConsentDecision = 'accepted' | 'rejected';
 
@@ -45,10 +47,24 @@ export function writeConsent(decision: ConsentDecision) {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, decision);
+    for (const listener of consentListeners) listener();
   } catch {
     // Private mode or quota. The banner still closes for this page view; the
     // visitor is re-asked next time, which is the safe direction to fail.
   }
+}
+
+/** Subscribe to consent changes in this tab and in other tabs. */
+export function subscribeToConsent(onChange: () => void): () => void {
+  consentListeners.add(onChange);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === COOKIE_CONSENT_STORAGE_KEY) onChange();
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    consentListeners.delete(onChange);
+    window.removeEventListener('storage', onStorage);
+  };
 }
 
 /**

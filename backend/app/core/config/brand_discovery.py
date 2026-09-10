@@ -157,8 +157,8 @@ CAPTURE_METHOD_APPLICATION_MODEL: Final = "application_model"
 CAPTURE_METHOD_EXTERNAL_SEARCH: Final = "external_search"
 CAPTURE_METHOD_EXTERNAL_FETCH: Final = "external_fetch"
 CAPTURE_METHOD_USER: Final = "user_input"
-BRAND_DISCOVERY_VERSION: Final = "brand-discovery-v8"
-BRAND_IDENTITY_PROMPT_VERSION: Final = "brand-identity-v2"
+BRAND_DISCOVERY_VERSION: Final = "brand-discovery-v1"
+BRAND_IDENTITY_PROMPT_VERSION: Final = "brand-identity-v1"
 
 # The identity fields a "sources disagreed" warning would actually be ABOUT.
 # The warning tells the user to go re-read the positioning, so it has to be
@@ -181,10 +181,10 @@ IDENTITY_CONFLICT_FIELDS: Final[tuple[str, ...]] = (
 # ignore the warning that matters. Corroborating the flag against the
 # confidence the same response reported keeps the warning about a real doubt.
 IDENTITY_CONFLICT_CONFIDENCE_CEILING: Final = 0.75
-BRAND_COMPETITOR_QUALIFICATION_VERSION: Final = "brand-competitor-qualification-v3"
+BRAND_COMPETITOR_QUALIFICATION_VERSION: Final = "brand-competitor-qualification-v1"
 KEENABLE_RESEARCH_VERSION: Final = "keenable-research-v1"
-BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION: Final = "brand-discovery-prompts-v10"
-BRAND_DISCOVERY_PROMPT_VALIDATION_VERSION: Final = "initial-portfolio-validation-v3"
+BRAND_DISCOVERY_PROMPT_GENERATOR_VERSION: Final = "brand-discovery-prompts-v1"
+BRAND_DISCOVERY_PROMPT_VALIDATION_VERSION: Final = "initial-portfolio-validation-v1"
 DISCOVERY_PROGRESS_TOTAL_STEPS: Final = 4
 DISCOVERY_PROMPT_GENERATION_CONCURRENCY: Final = 4
 # Bounded model-call duration. Completion ends its read transaction before the

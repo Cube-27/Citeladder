@@ -622,6 +622,22 @@
       "frontendE2E": ["e2e/marketing-pages.spec.ts", "e2e/landing-nav.spec.ts"]
     },
     {
+      "sources": ["frontend/components/analytics/**"],
+      "frontendTests": [
+        "components/analytics/*.test.tsx",
+        "components/marketing/chrome/cookie-banner.test.tsx"
+      ],
+      "frontendE2E": ["e2e/marketing-pages.spec.ts"]
+    },
+    {
+      "sources": ["frontend/lib/accessibility/**"],
+      "frontendTests": [
+        "components/marketing/chrome/nav.test.tsx",
+        "components/marketing/pricing/pricing-catalog.test.tsx",
+        "components/ui/activity-progress.test.tsx"
+      ]
+    },
+    {
       "sources": ["frontend/app/(auth)/**", "frontend/components/auth/**", "frontend/lib/auth/**"],
       "frontendTests": [
         "app/(auth)/**/*.test.tsx",

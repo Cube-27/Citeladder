@@ -222,7 +222,7 @@ def test_broad_retailer_pool_exposes_every_distinct_source(monkeypatch) -> None:
 
 
 def test_qualification_contract_accepts_matching_official_company_pages() -> None:
-    assert BRAND_COMPETITOR_QUALIFICATION_VERSION == "brand-competitor-qualification-v3"
+    assert BRAND_COMPETITOR_QUALIFICATION_VERSION == "brand-competitor-qualification-v1"
     assert (
         "official company homepage or product page"
         in COMPETITOR_QUALIFICATION_SYSTEM_PROMPT

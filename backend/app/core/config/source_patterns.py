@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Final
 
-SOURCE_TAXONOMY_VERSION: Final = "source-taxonomy-2"
+SOURCE_TAXONOMY_VERSION: Final = "source-taxonomy-1"
 SOURCE_MIX_PROJECTION_VERSION: Final = "opportunity-source-mix-1"
 CONTENT_HANDOFF_TEMPLATE_VERSION: Final = "opportunity-content-handoff-1"
 

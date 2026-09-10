@@ -20,7 +20,7 @@ from typing import Final
 # under-counted every brand whose configured spelling differed from the one the
 # models used, so a v4 row and a v5 row are NOT comparable and must not fold
 # into one bucket -- which is what this bump is for.
-ANALYZER_VERSION: Final = "grounded-analysis-v5"
+ANALYZER_VERSION: Final = "grounded-analysis-v1"
 ENTITY_ASSESSMENT_VERSION: Final = "entity-assessment-1"
 # The per-execution/aggregate formula version (separate from the analyzer so a
 # formula-only change can be tracked independently of an extraction change).

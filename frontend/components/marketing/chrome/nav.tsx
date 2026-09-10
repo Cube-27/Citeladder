@@ -2,22 +2,21 @@
 
 import { LogoMark } from '@/components/ui/logo-mark';
 import { Menu, X } from 'lucide-react';
-import { useReducedMotion } from 'motion/react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
+import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 import { DEMO_CTA, type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
-import { useMarketingSession, useSessionHint } from './use-marketing-session';
+import { useMarketingSession } from './use-marketing-session';
 
 /** What asked for a dropdown: a resting pointer, or an explicit focus move. */
 export type OpenSource = 'hover' | 'focus';
 
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 const COLUMN = 380;
 const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
   platform: { width: COLUMN, twoColumn: false },
@@ -38,7 +37,7 @@ function useScrolled() {
   return scrolled;
 }
 
-function useDesktopDropdown(reduceMotion: boolean | null) {
+function useDesktopDropdown() {
   const [openDrop, setOpenDrop] = useState<NavDropKey | null>(null);
   const [lens, setLens] = useState<{ left: number; width: number } | null>(null);
   const [panelLeft, setPanelLeft] = useState(0);
@@ -77,7 +76,7 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
   };
   const moveLens = (element: HTMLElement) => {
     const container = linksRef.current;
-    if (!container || reduceMotion) return;
+    if (!container) return;
     const trigger = element.getBoundingClientRect();
     const bounds = container.getBoundingClientRect();
     setLens({ left: trigger.left - bounds.left, width: trigger.width });
@@ -148,8 +147,7 @@ function useDesktopDropdown(reduceMotion: boolean | null) {
 /** Fixed marketing chrome with accessible desktop dropdowns and mobile accordions. */
 export function MarketingNav() {
   const reduceMotion = useReducedMotion();
-  const { isAuthenticated, sessionPending, dashboardHref } = useMarketingSession();
-  const hasSessionHint = useSessionHint();
+  const { isAuthenticated, sessionPending, dashboardHref, hasSessionHint } = useMarketingSession();
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<NavDropKey | null>(null);
@@ -168,7 +166,7 @@ export function MarketingNav() {
     openDropAt,
     moveLens,
     clearLens,
-  } = useDesktopDropdown(reduceMotion);
+  } = useDesktopDropdown();
   const surfaceVisible = scrolled || mobileOpen;
   const closeMenu = () => {
     setMobileOpen(false);
@@ -244,7 +242,6 @@ export function MarketingNav() {
           openDrop={openDrop}
           reduceMotion={reduceMotion}
           linksRef={linksRef}
-          lensTransition={{ layout: { duration: 0.18, ease: EASE_OUT } }}
           clearDropClose={clearDropClose}
           scheduleDropClose={scheduleDropClose}
           closeDrop={closeDrop}
@@ -329,6 +326,7 @@ function AnonymousActions() {
     <>
       <Link
         href="/login"
+        prefetch={false}
         className="website-nav text-muted hover:text-foreground inline-flex px-4 transition-colors"
       >
         Log in

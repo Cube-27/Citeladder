@@ -2,9 +2,9 @@
 
 from typing import Final
 
-DEMAND_ANALYZER_VERSION: Final = "demand-analyzer-6"
+DEMAND_ANALYZER_VERSION: Final = "demand-analyzer-1"
 DEMAND_FORMULA_VERSION: Final = "demand-priority-1"
-DEMAND_RULE_VERSION: Final = "demand-rules-6"
+DEMAND_RULE_VERSION: Final = "demand-rules-1"
 
 DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR: Final = "high_impression_low_ctr"
 DEMAND_SIGNAL_BRANDED_QUERY: Final = "branded_query_performance"
@@ -64,7 +64,7 @@ DEMAND_TREND_MIN_ABSOLUTE_CHANGE: Final = 20
 DEMAND_TREND_GAP_WEIGHT: Final = 1.1
 DEMAND_LIST_MAX_LIMIT: Final = 200
 
-QUERY_EVIDENCE_ANALYZER_VERSION: Final = "query-evidence-3"
+QUERY_EVIDENCE_ANALYZER_VERSION: Final = "query-evidence-1"
 ERROR_QUERY_EVIDENCE_CURSOR_INVALID: Final = "query_evidence_cursor_invalid"
 QUERY_EVIDENCE_DEFAULT_LIMIT: Final = 100
 QUERY_EVIDENCE_MAX_LIMIT: Final = 500
@@ -76,7 +76,7 @@ QUERY_EVIDENCE_STATE_UNAVAILABLE: Final = "unavailable"
 
 # Cross-source owned-page equivalence is deliberately separate from crawler
 # identity. Bump whenever evidence precedence or candidate construction changes.
-PAGE_EQUIVALENCE_RESOLVER_VERSION: Final = "owned-page-resolver-2"
+PAGE_EQUIVALENCE_RESOLVER_VERSION: Final = "owned-page-resolver-1"
 PAGE_EQUIVALENCE_MAX_CANDIDATES: Final = 16
 PAGE_EQUIVALENCE_MAX_ARTIFACTS: Final = 1000
 PAGE_EQUIVALENCE_QUERY_CHUNK_SIZE: Final = 500

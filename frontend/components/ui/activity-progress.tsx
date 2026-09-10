@@ -1,8 +1,9 @@
 'use client';
 
 import { Check, CircleAlert } from 'lucide-react';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
+import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 import { cn } from '@/lib/utils';
 
 type ActivityStepState = 'complete' | 'active' | 'pending' | 'attention';
@@ -24,16 +25,6 @@ function StepIndicator({ state }: Readonly<{ state: ActivityStepState }>) {
 function progressAnnouncement(activeStep: ActivityStep | undefined, completed: number): string {
   if (!activeStep) return `${completed} steps complete`;
   return `${activeStep.label}. ${activeStep.detail ?? ''}`;
-}
-
-function subscribeToReducedMotion(onChange: () => void) {
-  const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-  media.addEventListener('change', onChange);
-  return () => media.removeEventListener('change', onChange);
-}
-
-function reducedMotionSnapshot() {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 /**
@@ -59,11 +50,7 @@ export function ActivityProgress({
   const [displayedCompleted, setDisplayedCompleted] = useState(
     animateCompletion ? 0 : targetCompleted,
   );
-  const reduceMotion = useSyncExternalStore(
-    subscribeToReducedMotion,
-    reducedMotionSnapshot,
-    () => false,
-  );
+  const reduceMotion = useReducedMotion();
   const shouldAnimate = animateCompletion && !reduceMotion;
 
   useEffect(() => {

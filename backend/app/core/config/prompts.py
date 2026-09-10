@@ -50,7 +50,7 @@ TOPIC_ORIGINS: Final[frozenset[str]] = frozenset(
 )
 
 # --- Generation pipeline version (stamped into generation_evidence) --------
-GENERATOR_VERSION: Final = "prompt-gen-v19"
+GENERATOR_VERSION: Final = "prompt-gen-v1"
 COMMERCE_VALIDATION_SKU_PREVIEW_LIMIT: Final = 10
 COMMERCE_BUYER_DESTINATION_PROMPT_TEMPLATE: Final = (
     "Where can I buy {product_name} online?"

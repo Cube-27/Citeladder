@@ -19,7 +19,7 @@ from app.core.config.visibility_prompts import (
 )
 from app.domain.prompts.normalization import prompt_text_hash
 from app.domain.prompts.portfolio import contains_tracked_name
-from app.domain.prompts.style import words
+from app.domain.prompts.style import contains_placeholder, words
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,10 +145,46 @@ def _identity_is_valid(text: str, slot: PromptSlot) -> bool:
     )
 
 
+def _planned_prompt_is_valid(
+    *,
+    slot: PromptSlot,
+    slot_id: str,
+    text: str,
+    text_key: str,
+    buyer_stage: str,
+    prompt_intent: str,
+    seen_slots: set[str],
+    seen_text: set[str],
+) -> bool:
+    """Apply the bounded slot contract without obscuring the resolver flow."""
+    return all(
+        (
+            slot_id not in seen_slots,
+            text_key not in seen_text,
+            bool(text),
+            len(text) <= PROMPT_TEXT_MAX_CHARS,
+            len(words(text)) >= PROMPT_TEXT_MIN_WORDS,
+            not contains_placeholder(text),
+            buyer_stage in BUYER_STAGES,
+            prompt_intent in slot.allowed_prompt_intents,
+            _identity_is_valid(text, slot),
+        )
+    )
+
+
 def resolve_planned_prompts(
     rows: list[tuple[str, str, str, str]], slots: list[PromptSlot]
 ) -> tuple[list[PlannedPrompt], int]:
-    """Resolve exact slots and descriptive labels, never infer quality from words."""
+    """Resolve exact slots and descriptive labels, never infer quality from words.
+
+    Template slots the model left unfilled ("...e-bikes in [city]") are dropped
+    here rather than repaired. There is nothing to substitute -- the slot never
+    named a city, so any value this code invented would be a buying need no
+    buyer expressed -- and a dropped slot is simply re-asked on the next call in
+    `_collect_model_suggestions`, which is how every other structural rejection
+    in this function already heals. Persisting one instead measured answer
+    engines against literal bracket text for the life of the portfolio.
+    """
     slots_by_id = {slot.slot_id: slot for slot in slots}
     accepted: list[PlannedPrompt] = []
     seen_slots: set[str] = set()
@@ -158,16 +194,15 @@ def resolve_planned_prompts(
         slot = slots_by_id.get(slot_id)
         text = " ".join(raw_text.split())
         text_key = prompt_text_hash(text)
-        if (
-            slot is None
-            or slot_id in seen_slots
-            or text_key in seen_text
-            or not text
-            or len(text) > PROMPT_TEXT_MAX_CHARS
-            or len(words(text)) < PROMPT_TEXT_MIN_WORDS
-            or buyer_stage not in BUYER_STAGES
-            or prompt_intent not in slot.allowed_prompt_intents
-            or not _identity_is_valid(text, slot)
+        if slot is None or not _planned_prompt_is_valid(
+            slot=slot,
+            slot_id=slot_id,
+            text=text,
+            text_key=text_key,
+            buyer_stage=buyer_stage,
+            prompt_intent=prompt_intent,
+            seen_slots=seen_slots,
+            seen_text=seen_text,
         ):
             dropped += 1
             continue

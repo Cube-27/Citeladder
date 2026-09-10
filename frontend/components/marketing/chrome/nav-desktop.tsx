@@ -1,5 +1,4 @@
 import { ChevronDown } from 'lucide-react';
-import { AnimatePresence, m, type Transition } from 'motion/react';
 import Link from 'next/link';
 import type { RefObject } from 'react';
 
@@ -20,9 +19,8 @@ type DesktopNavigationProps = {
   lens: { left: number; width: number } | null;
   panelLeft: number;
   openDrop: NavDropKey | null;
-  reduceMotion: boolean | null;
+  reduceMotion: boolean;
   linksRef: RefObject<HTMLDivElement | null>;
-  lensTransition: Transition;
   clearDropClose: () => void;
   scheduleDropClose: () => void;
   closeDrop: () => void;
@@ -42,7 +40,6 @@ export function DesktopNavigation({
   openDrop,
   reduceMotion,
   linksRef,
-  lensTransition,
   clearDropClose,
   scheduleDropClose,
   closeDrop,
@@ -72,12 +69,13 @@ export function DesktopNavigation({
       }}
     >
       {lens && (
-        <m.span
-          layout={!reduceMotion}
+        <span
           aria-hidden
           style={{ left: lens.left, width: lens.width }}
-          transition={lensTransition}
-          className={cn('bg-active pointer-events-none rounded-full', 'absolute inset-y-0')}
+          className={cn(
+            'bg-active pointer-events-none absolute inset-y-0 rounded-full',
+            !reduceMotion && 'transition-[left,width] duration-200 ease-out',
+          )}
         />
       )}
 
@@ -132,17 +130,15 @@ export function DesktopNavigation({
         </Link>
       ))}
 
-      <AnimatePresence>
-        {openDrop !== null && (
-          <DesktopDropPanel
-            dropKey={openDrop}
-            layout={layout}
-            panelLeft={panelLeft}
-            clearDropClose={clearDropClose}
-            selectDrop={selectDrop}
-          />
-        )}
-      </AnimatePresence>
+      {openDrop !== null && (
+        <DesktopDropPanel
+          dropKey={openDrop}
+          layout={layout}
+          panelLeft={panelLeft}
+          clearDropClose={clearDropClose}
+          selectDrop={selectDrop}
+        />
+      )}
     </div>
   );
 }
@@ -173,7 +169,7 @@ function DesktopDropPanel({
       }}
       className={cn(
         'bg-panel shadow-elevated absolute top-full rounded-[var(--radius-overlay)] p-3',
-        'mt-2 overflow-hidden',
+        'marketing-nav-panel mt-2 overflow-hidden',
       )}
     >
       <div className={cn('grid', layout[dropKey].twoColumn && 'sm:grid-cols-2')}>

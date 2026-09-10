@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { useCallback, useSyncExternalStore } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { readConsent, writeConsent, type ConsentDecision } from '@/lib/consent/cookie-consent';
+import {
+  readConsent,
+  subscribeToConsent,
+  writeConsent,
+  type ConsentDecision,
+} from '@/lib/consent/cookie-consent';
 import { cn } from '@/lib/utils';
 
 import { Container } from '../primitives/section';
@@ -41,28 +46,15 @@ const MARKETING_SECONDARY =
 /** `'pending'` is the pre-hydration snapshot — distinct from an undecided visitor. */
 type BannerState = ConsentDecision | 'undecided' | 'pending';
 
-const listeners = new Set<() => void>();
-
-function subscribe(onChange: () => void) {
-  listeners.add(onChange);
-  // Another tab answering should dismiss the banner here too.
-  window.addEventListener('storage', onChange);
-  return () => {
-    listeners.delete(onChange);
-    window.removeEventListener('storage', onChange);
-  };
-}
-
 function getSnapshot(): BannerState {
   return readConsent() ?? 'undecided';
 }
 
 export function CookieBanner() {
-  const state = useSyncExternalStore<BannerState>(subscribe, getSnapshot, () => 'pending');
+  const state = useSyncExternalStore<BannerState>(subscribeToConsent, getSnapshot, () => 'pending');
 
   const decide = useCallback((next: ConsentDecision) => {
     writeConsent(next);
-    for (const listener of listeners) listener();
   }, []);
 
   if (state !== 'undecided') return null;

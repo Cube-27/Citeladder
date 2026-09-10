@@ -25,8 +25,10 @@ from __future__ import annotations
 
 from typing import Final
 
+from app.core.config.prompts import PROMPT_COHORTS
+
 # --- Topic selection (Pass B) ----------------------------------------------
-TOPIC_SELECTION_PROMPT_VERSION: Final = "visibility-topic-selection-v2"
+TOPIC_SELECTION_PROMPT_VERSION: Final = "visibility-topic-selection-v1"
 # There is deliberately no topic floor. One real offering is enough to start
 # measuring; a numerical minimum previously turned a transient selection miss
 # into a blocking onboarding failure. The ceiling bounds audit cost.
@@ -189,6 +191,13 @@ PROVIDER_DESCRIPTION_PHRASES: Final[frozenset[str]] = frozenset(
 )
 
 # --- Prompt generation (Pass C) --------------------------------------------
+# Generate-then-retain, NOT allocate-then-generate. Onboarding asks for
+# `len(topics) * VISIBILITY_PROMPTS_PER_TOPIC` candidates (up to 10 x 7 = 70 at
+# `portfolio_generation.py`) and `portfolio_validation.py` keeps the first
+# VISIBILITY_MAX_ORGANIC_PROMPTS that survive admission. So this is a candidate
+# budget per topic and the organic maximum is a final portfolio size; the two
+# are not meant to reconcile arithmetically, and raising this one widens the
+# pool the portfolio is chosen from rather than the portfolio itself.
 VISIBILITY_PROMPTS_PER_TOPIC: Final = 7
 # Topics per model call. One twelve-row call covering five topics is what
 # produced the templated output: a small model given many topics at once has no
@@ -229,7 +238,7 @@ VISIBILITY_MIN_BRANDED_PROMPTS: Final = 2
 VISIBILITY_BRANDED_SHARE_WARNING: Final = "branded_share_capped"
 # Retain topic coverage within the existing onboarding ceiling.
 VISIBILITY_MAX_ORGANIC_PROMPTS: Final = 20
-BUYER_QUERY_POLICY_VERSION: Final = "buyer-query-policy-2"
+BUYER_QUERY_POLICY_VERSION: Final = "buyer-query-policy-1"
 
 BUYER_STAGE_AWARENESS: Final = "awareness"
 BUYER_STAGE_CONSIDERATION: Final = "consideration"
@@ -291,7 +300,17 @@ PROMPT_EXEMPLARS: Final[dict[str, str]] = {
     "education_provider": "Best CBSE boarding schools in Dehradun",
     "regulated_finance": "Best business current accounts for a small company",
 }
-_GENERAL_PROMPT_EXAMPLE: Final = "Which providers should I shortlist for this service?"
+# The fallback does the same job as the exemplars above -- demonstrate
+# REGISTER -- and one sentence frame does it badly. A lone "Which providers
+# should I shortlist" taught every unrecognised business model to open each row
+# the same way, which is the defaulting the instruction below explicitly warns
+# against. Three shapes, matching the richer exemplars: a compact category
+# search, a problem-led request, and a shortlist question.
+_GENERAL_PROMPT_EXAMPLE: Final = (
+    '"Bulk office chairs for a new site"; '
+    '"Our current supplier keeps missing deadlines, who else can we use?"; '
+    '"Which providers should I shortlist for this service?"'
+)
 
 _PROMPT_SYSTEM_TEMPLATE: Final = """\
 Write realistic customer searches about the supplied offerings. Prefer queries
@@ -317,6 +336,9 @@ Start with the customer's need, not a bundle of the seller's differentiators.
 Add budget, location, audience, integrations or other details only when they
 materially help choose options. Keep simple needs simple. Do not manufacture
 differences by attaching an exact price, size, city or extra feature to each row.
+Write every query out in full, exactly as a buyer would type it. Never leave a
+template slot such as [city], {{location}} or <product> in the text: if a detail
+is not in the supplied context, write the query without it.
 Avoid combinations of niche attributes that effectively identify the tracked
 business even without its name. Buyer requirements are not
 claims that the tracked business meets them. Do not invent product capabilities,
@@ -380,11 +402,20 @@ def cohort_system_prompt(business_model: str, cohort: str = "core") -> str:
     `prompt_system_prompt(m)` was `brand_cohort_system_prompt(m, "core")`, and
     every caller had to know which of the two to reach for.
 
-    An unmapped cohort falls back to the base instruction rather than raising,
-    so adding a cohort cannot break generation before its rules are written --
-    subscripting `_COHORT_RULES[cohort]` left `commerce` a KeyError waiting on
-    one unrelated edit to the payload validator.
+    Unknown cohorts raise; a KNOWN cohort with no rules yet does not. The two
+    look identical at `_COHORT_RULES.get(cohort, "")` and are opposite
+    failures. `commerce` is a real cohort in `PROMPT_COHORTS` that
+    deliberately has no entry below, so raising on every missing key put a
+    KeyError back in front of commerce generation -- the bug this fell back to
+    avoid. But falling back on ANY missing key means a typo ("comparision")
+    silently drops the rule requiring the tracked brand and a competitor, and
+    generation then succeeds with prompts that look valid and measure the
+    wrong thing. Validating the name against the cohort vocabulary separates
+    them: a cohort that does not exist is a programming error, a cohort whose
+    policy is not written yet is not.
     """
+    if cohort not in PROMPT_COHORTS:
+        raise ValueError(f"Unknown prompt cohort: {cohort!r}")
     base = _PROMPT_SYSTEM_TEMPLATE.format(
         example=PROMPT_EXEMPLARS.get(business_model, _GENERAL_PROMPT_EXAMPLE)
     )

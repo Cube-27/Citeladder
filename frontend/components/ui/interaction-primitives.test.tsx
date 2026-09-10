@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { domAnimation, LazyMotion } from 'motion/react';
 import { createRef, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -86,20 +85,18 @@ describe('authenticated interaction primitives', () => {
     function Harness() {
       const [value, setValue] = useState<'one' | 'two'>('one');
       return (
-        <LazyMotion features={domAnimation} strict>
-          <Tabs
-            value={value}
-            onValueChange={setValue}
-            ariaLabel="Views"
-            items={[
-              { value: 'one', label: 'One' },
-              { value: 'two', label: 'Two' },
-            ]}
-          >
-            <TabPanel value="one">First panel</TabPanel>
-            <TabPanel value="two">Second panel</TabPanel>
-          </Tabs>
-        </LazyMotion>
+        <Tabs
+          value={value}
+          onValueChange={setValue}
+          ariaLabel="Views"
+          items={[
+            { value: 'one', label: 'One' },
+            { value: 'two', label: 'Two' },
+          ]}
+        >
+          <TabPanel value="one">First panel</TabPanel>
+          <TabPanel value="two">Second panel</TabPanel>
+        </Tabs>
       );
     }
     render(<Harness />);

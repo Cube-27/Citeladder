@@ -90,7 +90,7 @@ function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
     );
   }
   return link.href.startsWith('/') ? (
-    <Link className={LINK} href={link.href}>
+    <Link className={LINK} href={link.href} prefetch={link.href === '/login' ? false : undefined}>
       {link.label}
     </Link>
   ) : (

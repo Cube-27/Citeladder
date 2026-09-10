@@ -84,8 +84,8 @@ CONTENT_SCORE_BODY: Final = 2
 CONTENT_SCORE_MONITORED: Final = 5
 
 # --- Versioning + retry budget --------------------------------------------
-CONTENT_GENERATOR_VERSION: Final = "content-v3"
-CONTENT_CRAWL_FRAGMENT_SELECTION_VERSION: Final = "crawl-fragment-selection-2"
+CONTENT_GENERATOR_VERSION: Final = "content-v1"
+CONTENT_CRAWL_FRAGMENT_SELECTION_VERSION: Final = "crawl-fragment-selection-1"
 CONTENT_CONTEXT_VERSION: Final = "content-context-v1"
 CONTENT_MAX_ATTEMPTS: Final = 3
 

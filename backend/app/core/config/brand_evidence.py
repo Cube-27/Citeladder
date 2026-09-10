@@ -263,7 +263,7 @@ BRAND_EVIDENCE_CONTENT_TYPES: Final[frozenset[str]] = frozenset(
 )
 
 # Stamped into bounded generation provenance so evidence selection is inspectable.
-BRAND_EVIDENCE_VERSION: Final = "brand-evidence-v2"
+BRAND_EVIDENCE_VERSION: Final = "brand-evidence-v1"
 
 # Human-facing guidance per evidence-failure reason. The stable contract is the
 # reason TOKEN (mirroring ``BINDING_FAILURE_MESSAGES``); both the persisted

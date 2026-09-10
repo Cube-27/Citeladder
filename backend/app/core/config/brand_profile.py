@@ -45,7 +45,7 @@ BRAND_PROFILE_PRODUCT_MAX_CHARS: Final = 255
 BRAND_PROFILE_PRODUCTS_MAX_COUNT: Final = 100
 
 BRAND_KNOWLEDGE_CONTEXT_VERSION: Final = "brand-kb-v1"
-BRAND_PROFILE_SUGGESTER_VERSION: Final = "brand-profile-suggest-v2"
+BRAND_PROFILE_SUGGESTER_VERSION: Final = "brand-profile-suggest-v1"
 
 # The drafter is grounded in the brand's OWN website content, supplied in the
 # user message as a ``<brand_website_evidence>`` block. The previous version

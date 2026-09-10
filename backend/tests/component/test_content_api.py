@@ -47,7 +47,7 @@ _CONTEXT = {
         "issue_count": 0,
         "related_page_count": 1,
         "opportunity_id": None,
-        "selection_policy_version": "crawl-fragment-selection-2",
+        "selection_policy_version": "crawl-fragment-selection-1",
         "omissions": [],
     },
 }
@@ -152,7 +152,7 @@ async def _seed_generation(
             connection_id=route.connection_id,
             route_revision=route.revision,
             credential_revision=route.probed_credential_revision,
-            generator_version="content-v3",
+            generator_version="content-v1",
         )
         session.add(row)
         await session.commit()

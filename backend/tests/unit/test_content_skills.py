@@ -44,7 +44,7 @@ def test_file_backed_catalog_has_the_complete_ordered_skill_set() -> None:
     assert CONTENT_SKILL_IDS == _EXPECTED_SKILL_IDS
     assert CONTENT_SKILLS == frozenset(_EXPECTED_SKILL_IDS)
     assert CONTENT_DEFAULT_SKILL == "content_page"
-    assert CONTENT_SKILL_CATALOG_VERSION == "content-skills-v5"
+    assert CONTENT_SKILL_CATALOG_VERSION == "content-skills-v1"
 
 
 def test_every_skill_has_file_metadata_and_an_authored_body() -> None:

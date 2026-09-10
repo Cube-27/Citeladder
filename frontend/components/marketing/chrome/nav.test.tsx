@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { useQuery } from '@tanstack/react-query';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -18,7 +18,11 @@ import {
 } from './returning-visitor-hint';
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => mswServer.resetHandlers());
+afterEach(() => {
+  mswServer.resetHandlers();
+  clearSessionHintCookie();
+  document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
+});
 afterAll(() => mswServer.close());
 
 function stubAnonymous() {
@@ -312,6 +316,23 @@ describe('MarketingNav', () => {
     expect(screen.queryByRole('button', { name: /toggle color theme/i })).toBeNull();
   });
 
+  it('does not request session state for an anonymous visitor without a hint', async () => {
+    const requested = vi.fn();
+    mswServer.use(
+      http.get('/api/v1/auth/me', () => {
+        requested();
+        return HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+      }),
+    );
+    const user = userEvent.setup();
+
+    renderWithProviders(<MarketingNav />);
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+
+    expect(requested).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('link', { name: /log in/i })).not.toHaveLength(0);
+  });
+
   it('keeps log in in the topbar at every width and puts the demo CTA in the mobile menu', async () => {
     stubAnonymous();
     const user = userEvent.setup();
@@ -414,6 +435,7 @@ describe('MarketingNav', () => {
         return new HttpResponse(null, { status: 401 });
       }),
     );
+    document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
 
     const { container } = renderWithProviders(<MarketingNav />);
 
@@ -428,6 +450,7 @@ describe('MarketingNav', () => {
 
   it('swaps the CTA for a dashboard link once the session resolves', async () => {
     stubSignedIn();
+    document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
     renderWithProviders(<MarketingNav />);
 
     // No projects yet, so the dashboard link routes into first-run onboarding.
@@ -463,6 +486,7 @@ describe('MarketingNav', () => {
       ),
       http.get('/api/v1/projects', () => HttpResponse.json({ detail: 'boom' }, { status: 500 })),
     );
+    document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
     renderWithProviders(<MarketingNav />);
 
     await waitFor(() =>

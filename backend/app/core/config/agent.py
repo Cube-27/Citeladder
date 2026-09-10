@@ -32,7 +32,7 @@ STRUCTURED_OUTPUT_JSON_SCHEMA = "json_schema"
 # explicit ``unavailable`` attempt and withheld from the narration payload,
 # instead of being logged as ``completed`` and shipped to the provider as an
 # empty fact the model was asked to explain.
-AGENT_POLICY_VERSION: Final = "bounded-agent-v4"
+AGENT_POLICY_VERSION: Final = "bounded-agent-v1"
 
 # Status vocabulary for one ``AgentToolAttempt`` row. ``unavailable`` is a
 # THIRD outcome, distinct from both a successful read and a failed one
@@ -41,7 +41,7 @@ AGENT_POLICY_VERSION: Final = "bounded-agent-v4"
 TOOL_ATTEMPT_COMPLETED: Final = "completed"
 TOOL_ATTEMPT_UNAVAILABLE: Final = "unavailable"
 TOOL_ATTEMPT_FAILED: Final = "failed"
-AGENT_INSTRUCTION_VERSION: Final = "bounded-agent-narration-v3"
+AGENT_INSTRUCTION_VERSION: Final = "bounded-agent-narration-v1"
 AGENT_LIST_DEFAULT_LIMIT: Final = 25
 AGENT_LIST_MAX_LIMIT: Final = 100
 AGENT_OBJECTIVE_MAX_CHARS: Final = 2_000
