@@ -675,10 +675,20 @@ PAGE_KIND_EXPECTED_SCHEMA: Final[dict[str, PageKindSchemaExpectation]] = {
     ),
     PAGE_KIND_CATEGORY: PageKindSchemaExpectation(
         page_kind=PAGE_KIND_CATEGORY,
-        expected_types=("CollectionPage", "ItemList"),
+        # `Blog` is the schema.org type for a blog index, and a blog index is
+        # classified as a category. Omitting it meant a site that marked its
+        # index up CORRECTLY was told the expected schema was absent, and --
+        # because an unrecognized type is never enriched -- that its freshness
+        # signal was missing too, with its `dateModified` sitting in the block
+        # we declined to read. Two false issues for doing the right thing.
+        expected_types=("CollectionPage", "ItemList", "Blog"),
         required_properties=("itemListElement",),
         recommended_properties=(),
-        required_properties_by_type={"CollectionPage": ("name",)},
+        # `Blog` and `CollectionPage` are CONTAINERS: the entries live in a
+        # nested `blogPost` / `mainEntity` object, which the extractor lifts
+        # into its own block. Requiring `itemListElement` on the container
+        # would fail every correct markup of either.
+        required_properties_by_type={"CollectionPage": ("name",), "Blog": ("name",)},
     ),
     PAGE_KIND_PRICING: PageKindSchemaExpectation(
         page_kind=PAGE_KIND_PRICING,

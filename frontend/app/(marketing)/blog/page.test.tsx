@@ -112,9 +112,7 @@ describe('Blog index (public marketing `/blog`)', () => {
     const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).not.toBeNull();
     const data = JSON.parse(script?.textContent ?? '') as Record<string, never>;
-    // Both types: `Blog` is precise, `CollectionPage` is what CiteLadder's own
-    // structured-data reader recognizes, so a bare `Blog` would be skipped.
-    expect(data['@type']).toEqual(['CollectionPage', 'Blog']);
+    expect(data['@type']).toBe('Blog');
     // The freshness signal: a listing page that never says when its collection
     // last changed gives an answer engine no way to tell current from stale.
     // REVISION dates, not publication dates: revising an older post changes

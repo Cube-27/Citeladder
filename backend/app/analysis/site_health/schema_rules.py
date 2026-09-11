@@ -108,8 +108,31 @@ def _document_urls(facts: dict) -> set[str]:
 def _expected_blocks(
     blocks: list[dict], expectation: PageKindSchemaExpectation
 ) -> list[dict]:
+    """The expected-type blocks, at most ONE per source entity.
+
+    A single JSON-LD object may declare several types, and the extractor emits
+    one block per type. When two of those types are both expected for the page
+    kind -- ``["CollectionPage", "Blog"]`` on a blog index, say -- the page has
+    one entity, not two, and collapsing them here is what stops the
+    primary-entity rules reporting valid markup as ambiguous. The first
+    declared type wins, which is the one the author put first.
+
+    Blocks with no ``entity_index`` (microdata, and any pre-existing persisted
+    facts) keep their identity, so nothing is merged on a guess.
+    """
     expected = set(expectation.expected_types)
-    return [block for block in blocks if str(block.get("type") or "") in expected]
+    seen_entities: set[int] = set()
+    candidates: list[dict] = []
+    for block in blocks:
+        if str(block.get("type") or "") not in expected:
+            continue
+        entity = block.get("entity_index")
+        if isinstance(entity, int):
+            if entity in seen_entities:
+                continue
+            seen_entities.add(entity)
+        candidates.append(block)
+    return candidates
 
 
 def _document_entity_references(
