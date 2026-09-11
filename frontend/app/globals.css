@@ -107,8 +107,14 @@
   --color-accent-hover: #134dab;
   --color-accent-active: #10419d;
   --color-accent-fg: #ffffff;
-  --color-accent-subtle: #edf4ff;
-  --color-accent-soft: #edf4ff;
+  /* The selected/active/hover surface. One step deeper than the near-white it
+     was: at #edf4ff an active navigation pill and a hovered row were almost
+     indistinguishable from paper, so selection had to be read from the text
+     colour alone. #dfeafc keeps accent text at 4.94:1 and body ink at 10.6:1,
+     both above the 4.5:1 floor. Every selected surface in the app consumes
+     these two tokens, so they stay equal and move together. */
+  --color-accent-subtle: #dfeafc;
+  --color-accent-soft: #dfeafc;
   --color-accent-border: #c4d7f5;
   --color-recommendation: #f7faff;
   --color-accent-text: #175cd3;

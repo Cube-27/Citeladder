@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/typography';
+import { Label, textRole } from '@/components/ui/typography';
 import {
   recommendedActionLabel,
   sourceClassBadgeValue,
@@ -50,7 +50,7 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
           <span className="text-muted text-xs">Sources matched to a tracked competitor</span>
           {pattern.competitorSourceDomains.map(({ competitor, domains }) => (
             <div key={competitor} className="flex items-start justify-between gap-3 py-0.5">
-              <span className="text-secondary shrink-0 text-sm">{competitor}</span>
+              <span className={textRole('body', 'shrink-0')}>{competitor}</span>
               <span className="mono text-muted text-right text-xs break-all">
                 {domains.join(', ')}
               </span>

@@ -100,7 +100,7 @@ export function UserMenuTrigger({
       <Dropdown open={open} onOpenChange={(next) => setOpen(presenter, next)}>
         <DropdownTrigger
           aria-label={compact ? `Account menu for ${email}` : undefined}
-          className="focus-ring hover:bg-background-alt flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1 text-left transition-colors"
+          className="focus-ring hover:bg-accent-soft hover:text-accent-text flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1 text-left transition-colors"
         >
           <span
             aria-hidden

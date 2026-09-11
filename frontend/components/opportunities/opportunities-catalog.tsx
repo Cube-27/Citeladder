@@ -164,7 +164,7 @@ function FeaturedRecommendation({
             <ChevronRight className="size-4" aria-hidden />
           </Button>
         </div>
-        <p className="text-secondary text-sm whitespace-pre-line">{detail.remediation}</p>
+        <p className={textRole('body', 'whitespace-pre-line')}>{detail.remediation}</p>
         {target ? (
           <p className="text-muted min-w-0 truncate text-xs" title={target}>
             Applies to {target}
@@ -406,7 +406,7 @@ function RecommendationsBody({
     );
   if (!rows.length)
     return (
-      <div className="text-secondary py-[var(--empty-state-padding)] text-sm">
+      <div className={textRole('body', 'py-[var(--empty-state-padding)]')}>
         No recommendations match these filters. Try broadening the area, impact, or status.
       </div>
     );

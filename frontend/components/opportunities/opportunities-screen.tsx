@@ -165,9 +165,7 @@ function PreparingRecommendations({
       <h2 className={textRole('sectionTitle')}>
         {delayed ? 'Recommendations need another try' : 'Preparing recommendations'}
       </h2>
-      <p className="text-secondary max-w-md text-sm">
-        {preparationMessage(summary.activation_state)}
-      </p>
+      <p className={textRole('body', 'max-w-md')}>{preparationMessage(summary.activation_state)}</p>
       {delayed ? <RetryButton projectId={projectId} variant="secondary" /> : null}
     </div>
   );

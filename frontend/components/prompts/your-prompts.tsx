@@ -205,7 +205,7 @@ export function YourPrompts() {
           </Link>
         </div>
       ) : visiblePrompts.length === 0 ? (
-        <p className="text-secondary py-[var(--empty-state-padding)] text-sm">
+        <p className={textRole('body', 'py-[var(--empty-state-padding)]')}>
           No prompts match your search.
         </p>
       ) : (

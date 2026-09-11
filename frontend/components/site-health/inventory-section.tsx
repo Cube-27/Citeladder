@@ -56,7 +56,7 @@ export function InventorySection({
   let content: ReactNode;
   if (mode === 'none' || !crawl) {
     content = (
-      <p className="text-secondary py-[var(--empty-state-padding)] text-sm">
+      <p className={textRole('body', 'py-[var(--empty-state-padding)]')}>
         Pages appear here as discovery finds them.
       </p>
     );
@@ -207,7 +207,7 @@ function ScoredInventoryBody({
     );
   if (rows.length === 0 && rootErrors.length === 0)
     return (
-      <p className="text-secondary py-[var(--empty-state-padding)] text-sm">
+      <p className={textRole('body', 'py-[var(--empty-state-padding)]')}>
         {active ? 'Pages appear here as the audit reaches them.' : 'No pages in this view.'}
       </p>
     );
