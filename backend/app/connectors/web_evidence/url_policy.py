@@ -162,6 +162,17 @@ def _path_is_hard_excluded(path: str) -> bool:
     )
 
 
+def path_is_hard_excluded(path: str) -> bool:
+    """Whether this path names a non-content endpoint.
+
+    Exported so the link graph can apply the SAME catalog the frontier does.
+    Excluding a path only at admission keeps it out of the crawl but not out
+    of the anchors persisted from pages that link to it, which left Cloudflare
+    endpoints counted as internal links a site does not have.
+    """
+    return _path_is_hard_excluded(path)
+
+
 def _host_is_hard_excluded(host: str) -> bool:
     """Whether the host's leftmost label names a non-content endpoint.
 

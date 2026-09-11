@@ -350,7 +350,11 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
               supporting={linking.orphan_page_count === null ? undefined : ORPHAN_SCOPE_NOTE}
             />
           </div>
-          <OrphanPageList pages={linking.orphan_pages} total={linking.orphan_page_count} />
+          <OrphanPageList
+            pages={linking.orphan_pages}
+            total={linking.orphan_page_count}
+            crawlId={data.crawl_id}
+          />
         </CardContent>
       </Card>
       <Card>
@@ -387,9 +391,11 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
 function OrphanPageList({
   pages,
   total,
+  crawlId,
 }: Readonly<{
   pages: SiteArchitecture['internal_linking']['orphan_pages'];
   total: number | null;
+  crawlId: string | null;
 }>) {
   if (pages.length === 0) return null;
   const undisclosed = (total ?? pages.length) - pages.length;
@@ -399,7 +405,18 @@ function OrphanPageList({
       <ul className="grid gap-1">
         {pages.map((page) => (
           <li key={page.site_url_id} className="grid min-w-0 gap-0.5">
-            <span className="text-secondary truncate text-sm">{page.title || page.url}</span>
+            {/* Openable, like every other page reference in this tab. A count
+                nobody can act on is the failure this whole change is undoing. */}
+            {crawlId ? (
+              <Link
+                href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
+                className="text-accent-text truncate text-sm hover:underline"
+              >
+                {page.title || page.url}
+              </Link>
+            ) : (
+              <span className="text-secondary truncate text-sm">{page.title || page.url}</span>
+            )}
             <span className="text-muted truncate text-xs">{page.url}</span>
           </li>
         ))}

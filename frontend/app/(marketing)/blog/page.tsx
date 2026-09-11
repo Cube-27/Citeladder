@@ -3,24 +3,27 @@ import type { Metadata } from 'next';
 import { BlogIndex } from '@/components/marketing/pages/blog';
 import { JsonLd } from '@/components/marketing/seo/json-ld';
 import { POSTS } from '@/lib/marketing-content/blog';
-import { toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+import { blogPostFreshness, toBlogPostSummary } from '@/lib/marketing-content/blog-index';
 import { blogIndexJsonLd } from '@/lib/seo/json-ld';
 
 const DESCRIPTION =
   'Practical guides, frameworks, and lessons for finding content gaps, strengthening sources, and measuring AI visibility.';
 
-function newestPostDate(posts: readonly { date?: string }[]): string | null {
-  return posts
-    .flatMap((post) => (post.date ? [post.date] : []))
-    .reduce<string | null>(
-      (latest, date) => (latest === null || date > latest ? date : latest),
-      null,
-    );
-}
-
 // `metadata` is a module-level export, so this one date has to be resolved at
 // module scope. The JSON-LD is built per render instead, so it tracks POSTS.
-const LAST_MODIFIED = newestPostDate(POSTS);
+// Revision dates, not publication dates: revising an older post changes what
+// this index holds, and every post here carries a `dateModified` later than
+// its `date`, so reading `date` alone reported the index as months staler
+// than it is.
+const LAST_MODIFIED = POSTS.map(toBlogPostSummary)
+  .flatMap((post) => {
+    const freshness = blogPostFreshness(post);
+    return freshness ? [freshness] : [];
+  })
+  .reduce<string | null>(
+    (latest, date) => (latest === null || date > latest ? date : latest),
+    null,
+  );
 
 // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {

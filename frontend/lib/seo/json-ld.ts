@@ -1,5 +1,5 @@
 import type { BlogPost } from '@/lib/marketing-content/blog';
-import type { BlogPostSummary } from '@/lib/marketing-content/blog-index';
+import { blogPostFreshness, type BlogPostSummary } from '@/lib/marketing-content/blog-index';
 import type { FaqGroup } from '@/lib/marketing-content/faq';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { FOUNDER, PRODUCT_HEAD } from '@/lib/marketing-content/people';
@@ -135,12 +135,17 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
  * `dateModified` is the load-bearing part: a listing page that never states
  * when its collection last changed gives an answer engine no way to tell a
  * current index from a stale one, and CiteLadder's own crawler reports exactly
- * that absence. It is the newest post date, which is what actually changed.
+ * that absence. It is the newest REVISION date across the posts, not the
+ * newest publication date -- revising an older post changes what this page
+ * indexes, and reading only `date` would leave the signal stale.
  */
 export function blogIndexJsonLd(posts: readonly BlogPostSummary[]): JsonLdObject | null {
   const url = absoluteUrl('/blog');
   if (!url) return null;
-  const dates = posts.flatMap((post) => (post.date ? [post.date] : []));
+  const dates = posts.flatMap((post) => {
+    const freshness = blogPostFreshness(post);
+    return freshness ? [freshness] : [];
+  });
   const modified = dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : null;
   return {
     '@context': 'https://schema.org',

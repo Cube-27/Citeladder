@@ -115,11 +115,19 @@ describe('Blog index (public marketing `/blog`)', () => {
     expect(data['@type']).toBe('Blog');
     // The freshness signal: a listing page that never says when its collection
     // last changed gives an answer engine no way to tell current from stale.
-    const newest = POSTS.flatMap((post) => (post.date ? [post.date] : [])).reduce<string | null>(
-      (latest, date) => (latest === null || date > latest ? date : latest),
-      null,
-    );
-    expect(data.dateModified).toBe(newest);
+    // REVISION dates, not publication dates: revising an older post changes
+    // what this index holds, so reading `date` alone reported it as stale.
+    const latest = (dates: readonly (string | undefined)[]) =>
+      dates
+        .flatMap((date) => (date ? [date] : []))
+        .reduce<string | null>(
+          (newest, date) => (newest === null || date > newest ? date : newest),
+          null,
+        );
+    expect(data.dateModified).toBe(latest(POSTS.map((post) => post.dateModified ?? post.date)));
+    // And it must NOT be the newest publication date, which is what the first
+    // cut reported -- every post here was revised after it was published.
+    expect(data.dateModified).not.toBe(latest(POSTS.map((post) => post.date)));
     const list = data.mainEntity as unknown as Record<string, unknown>;
     expect(list['@type']).toBe('ItemList');
     expect(list.numberOfItems).toBe(POSTS.length);
