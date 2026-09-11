@@ -221,3 +221,57 @@ describe('block keys and anchors', () => {
     }
   });
 });
+
+describe('heading outline', () => {
+  /**
+   * Every published post's rendered heading levels, in document order.
+   * Assertions below read this rather than each block in isolation, because a
+   * skip is a relationship between two blocks, not a property of either.
+   */
+  function renderedLevels(body: readonly BlogBlock[]): number[] {
+    const { container } = render(
+      <>
+        {body.map((block, index) => (
+          <PostBlock key={index} block={block} />
+        ))}
+      </>,
+    );
+    return [...container.querySelectorAll('h2, h3, h4, h5, h6')].map((node) =>
+      Number(node.tagName.slice(1)),
+    );
+  }
+
+  it.each(POSTS.map((post) => [post.slug, post] as const))(
+    'never skips a level in %s',
+    (slug, post) => {
+      const levels = renderedLevels(post.body);
+      // The post title is the h1, so the body starts at h2.
+      const outline = [1, ...levels];
+      const skips = outline.flatMap((level, index) =>
+        index > 0 && level > outline[index - 1]! + 1 ? [`${outline[index - 1]} -> ${level}`] : [],
+      );
+      expect(skips, slug).toEqual([]);
+    },
+  );
+
+  it('gives a titled callout an h3, so it never skips under a section h2', () => {
+    const levels = renderedLevels([
+      { type: 'heading', text: 'A section' },
+      { type: 'callout', tone: 'accent', title: 'A note', text: 'Body copy.' },
+    ]);
+    expect(levels).toEqual([2, 3]);
+  });
+
+  it('keeps a diagram h3 even when the block carries no visible title', () => {
+    const levels = renderedLevels([
+      { type: 'heading', text: 'A section' },
+      {
+        type: 'diagram',
+        variant: 'flow',
+        data: { steps: [{ step: '1', title: 'Connect', desc: 'Link the sources.' }] },
+      },
+    ]);
+    // Without the unconditional h3 the diagram's h4s hang under the h2.
+    expect(levels).toEqual([2, 3, 4]);
+  });
+});

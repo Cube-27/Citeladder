@@ -9,6 +9,7 @@ from app.analysis.site_health.dom import DOM_ERRORS, dom_failure
 from app.analysis.site_health.dom import node_text as _text
 from app.analysis.site_health.fact_regions import element_region, node_is_rendered
 from app.core.config import site_health_acquisition as config
+from app.core.config.site_health_crawl_policy import NON_NAVIGABLE_HREF_PREFIXES
 
 # These are immutable normalized-fact labels, not task kinds. They remain
 # available to downstream deterministic readers without reintroducing the
@@ -39,7 +40,7 @@ def _anchor_assets(
             if not node_is_rendered(anchor):
                 continue
             href = (anchor.get("href") or "").strip()
-            if not href or href.startswith(("#", "javascript:", "mailto:", "tel:")):
+            if not href or href.startswith(NON_NAVIGABLE_HREF_PREFIXES):
                 continue
             anchors.append(
                 {

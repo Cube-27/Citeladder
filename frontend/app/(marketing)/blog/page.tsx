@@ -1,9 +1,26 @@
 import type { Metadata } from 'next';
 
 import { BlogIndex } from '@/components/marketing/pages/blog';
+import { JsonLd } from '@/components/marketing/seo/json-ld';
+import { POSTS } from '@/lib/marketing-content/blog';
+import { toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+import { blogIndexJsonLd } from '@/lib/seo/json-ld';
 
 const DESCRIPTION =
   'Practical guides, frameworks, and lessons for finding content gaps, strengthening sources, and measuring AI visibility.';
+
+function newestPostDate(posts: readonly { date?: string }[]): string | null {
+  return posts
+    .flatMap((post) => (post.date ? [post.date] : []))
+    .reduce<string | null>(
+      (latest, date) => (latest === null || date > latest ? date : latest),
+      null,
+    );
+}
+
+// `metadata` is a module-level export, so this one date has to be resolved at
+// module scope. The JSON-LD is built per render instead, so it tracks POSTS.
+const LAST_MODIFIED = newestPostDate(POSTS);
 
 // OG images require an absolute URL; they are added with NEXT_PUBLIC_SITE_URL (lib/seo/site.ts).
 export const metadata: Metadata = {
@@ -17,6 +34,9 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'CiteLadder',
   },
+  // States when the collection last changed. Without it an answer engine has
+  // no way to distinguish a current index from an abandoned one.
+  ...(LAST_MODIFIED ? { other: { 'article:modified_time': LAST_MODIFIED } } : {}),
   twitter: {
     card: 'summary',
     title: 'AEO & AI visibility resources',
@@ -36,8 +56,10 @@ export const metadata: Metadata = {
  * test can render it directly under Testing Library.
  */
 export default function BlogPage() {
+  const jsonLd = blogIndexJsonLd(POSTS.map(toBlogPostSummary));
   return (
     <main id="main">
+      {jsonLd ? <JsonLd id="blog-index-json-ld" data={jsonLd} /> : null}
       <BlogIndex />
     </main>
   );

@@ -104,6 +104,27 @@ describe('Blog index (public marketing `/blog`)', () => {
     // The page hero (and its single h1) still renders above the empty state.
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
+
+  it('emits Blog JSON-LD listing the posts and dating the collection', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://citeladder.example');
+    const { container } = render(<BlogPage />);
+
+    const script = container.querySelector('script[type="application/ld+json"]');
+    expect(script).not.toBeNull();
+    const data = JSON.parse(script?.textContent ?? '') as Record<string, never>;
+    expect(data['@type']).toBe('Blog');
+    // The freshness signal: a listing page that never says when its collection
+    // last changed gives an answer engine no way to tell current from stale.
+    const newest = POSTS.flatMap((post) => (post.date ? [post.date] : [])).reduce<string | null>(
+      (latest, date) => (latest === null || date > latest ? date : latest),
+      null,
+    );
+    expect(data.dateModified).toBe(newest);
+    const list = data.mainEntity as unknown as Record<string, unknown>;
+    expect(list['@type']).toBe('ItemList');
+    expect(list.numberOfItems).toBe(POSTS.length);
+    expect((list.itemListElement as { url: string }[])[0]?.url).toContain(`/blog/${POSTS[0].slug}`);
+  });
 });
 
 describe('BlogPostView (`/blog/[slug]` sync view)', () => {
