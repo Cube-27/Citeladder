@@ -733,6 +733,12 @@ def test_non_navigable_hrefs_never_enter_the_link_graph() -> None:
         <a href='data:text/plain,hi'>Data</a>
         <a href='about:blank'>About</a>
         <a href='blob:https://example.com/x'>Blob</a>
+        <!-- Schemes are case-insensitive per RFC 3986. A case-sensitive
+             check let these through, and a host-less URI is then marked
+             internal, so they inflated the internal-link counts. -->
+        <a href='MAILTO:hi@example.com'>Mixed-case email</a>
+        <a href='JavaScript:void(0)'>Mixed-case script</a>
+        <a href='TEL:+15551234'>Mixed-case phone</a>
         </main></body></html>"""
     )
 

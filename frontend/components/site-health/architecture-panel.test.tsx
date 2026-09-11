@@ -195,9 +195,18 @@ describe('Architecture panel', () => {
     renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
 
     expect(await screen.findByText('Coverage unknown')).toBeInTheDocument();
-    const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent('a discovery request failed');
-    expect(alert).toHaveTextContent('the crawl finished with URLs still queued');
+    expect(screen.getByText(/a discovery request failed/)).toBeInTheDocument();
+    expect(screen.getByText(/the crawl finished with URLs still queued/)).toBeInTheDocument();
+  });
+
+  it('renders coverage reasons even when there are no limitations', async () => {
+    // `limitations` is empty for complete coverage, so nesting the reasons
+    // inside it meant persisted reasons that nothing ever rendered.
+    stubArchitecture({ limitations: [], coverage_reasons: ['frontier_exhausted'] });
+    renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
+
+    expect(await screen.findByText(/the crawl emptied its discovery queue/)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('lists the pages the orphan count refers to', async () => {

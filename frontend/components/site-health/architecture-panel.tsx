@@ -161,9 +161,12 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
           {data.limitations.map((limitation) => (
             <Alert key={limitation} tone="info">
               {limitation}
-              <CoverageReasons reasons={data.coverage_reasons} />
             </Alert>
           ))}
+          {/* Independent of `limitations`, which the API empties for complete
+              coverage: nesting the reasons inside it meant a crawl could carry
+              persisted reasons that nothing ever rendered. */}
+          <CoverageReasons reasons={data.coverage_reasons} />
           {pageKinds.length === 0 ? (
             <p className="text-secondary text-sm">No page kinds were measured.</p>
           ) : (
@@ -180,9 +183,9 @@ function CoverageReasons({ reasons }: Readonly<{ reasons: readonly string[] }>) 
   const named = reasons.filter((reason) => reason in COVERAGE_REASON_LABELS);
   if (named.length === 0) return null;
   return (
-    <span className="block">
+    <p className="text-muted text-xs">
       Why: {named.map((reason) => COVERAGE_REASON_LABELS[reason]).join('; ')}.
-    </span>
+    </p>
   );
 }
 

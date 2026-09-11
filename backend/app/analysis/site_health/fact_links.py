@@ -40,7 +40,12 @@ def _anchor_assets(
             if not node_is_rendered(anchor):
                 continue
             href = (anchor.get("href") or "").strip()
-            if not href or href.startswith(NON_NAVIGABLE_HREF_PREFIXES):
+            # Case-insensitively: URL schemes are case-insensitive per RFC 3986,
+            # so `MAILTO:` passed a case-sensitive check, was marked internal
+            # (no host), and entered the persisted anchor facts. Canonicalization
+            # rejects it later, but by then it has already inflated the
+            # internal-link counts these facts feed.
+            if not href or href.casefold().startswith(NON_NAVIGABLE_HREF_PREFIXES):
                 continue
             anchors.append(
                 {

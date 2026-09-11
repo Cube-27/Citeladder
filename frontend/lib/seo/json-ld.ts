@@ -149,7 +149,12 @@ export function blogIndexJsonLd(posts: readonly BlogPostSummary[]): JsonLdObject
   const modified = dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : null;
   return {
     '@context': 'https://schema.org',
-    '@type': 'Blog',
+    // Both types, deliberately. `Blog` is the precise type for this page, but
+    // CiteLadder's own structured-data reader recognizes `CollectionPage` and
+    // NOT `Blog` (see STRUCTURED_DATA_RECOGNIZED_TYPES), so a bare `Blog` block
+    // would be skipped and its `dateModified` never read -- reinstating the
+    // very freshness gap this emits it to close.
+    '@type': ['CollectionPage', 'Blog'],
     '@id': url,
     url,
     name: `${SITE_NAME} Blog`,

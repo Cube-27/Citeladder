@@ -160,7 +160,7 @@ def _navigation_link(
     anchor: _Element, *, page_url: str, origin: str
 ) -> BrandEvidenceLink | None:
     href = str(anchor.get("href") or "").strip()
-    if not href or href.startswith(NON_NAVIGABLE_HREF_PREFIXES):
+    if not href or href.casefold().startswith(NON_NAVIGABLE_HREF_PREFIXES):
         return None
     parts = urlsplit(urljoin(page_url, href))
     if parts.scheme not in {"http", "https"}:
