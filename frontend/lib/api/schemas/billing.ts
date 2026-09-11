@@ -164,6 +164,17 @@ export const workspaceEntitlementSchema = responseObject({
       provenance: z.literal('effective_grant'),
     }),
   ),
+  // Member-safe remaining-allowance hints for occupancy counters. Three
+  // integers per key and nothing else: enough to hide a "New project" control
+  // a Member could not use, without exposing the workspace's finances.
+  occupancy: z.array(
+    responseObject({
+      key: z.string(),
+      allowance: z.number().int(),
+      consumed: z.number().int(),
+      remaining: z.number().int(),
+    }),
+  ),
 });
 
 export const noCardOfferSchema = responseObject({

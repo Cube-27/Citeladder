@@ -12,13 +12,16 @@ const { projectState, entitlementState, contextRetry } = vi.hoisted(() => ({
     retry: () => {},
   },
   entitlementState: {
-    usage: {
-      status: 'resolved',
-      items: [{ key: 'project_slots', remaining: 0 }],
+    // The MEMBER-SAFE workspace projection now carries the remaining
+    // allowance, so the first-project flow asks the same question an Owner
+    // and a Member can both have answered.
+    entitlement: {
+      status: 'resolved' as string,
+      occupancy: [{ key: 'project_slots', allowance: 1, consumed: 1, remaining: 0 }] as Array<
+        Record<string, unknown>
+      >,
     },
     isLoading: false,
-    usageIsLoading: false,
-    usageIsError: false,
   },
 }));
 
@@ -43,10 +46,11 @@ describe('OnboardingPageClient', () => {
     contextRetry.mockClear();
     projectState.status = 'ready';
     projectState.activeWorkspaceId = WORKSPACE;
-    entitlementState.usage.items = [{ key: 'project_slots', remaining: 0 }];
+    entitlementState.entitlement.status = 'resolved';
+    entitlementState.entitlement.occupancy = [
+      { key: 'project_slots', allowance: 1, consumed: 1, remaining: 0 },
+    ];
     entitlementState.isLoading = false;
-    entitlementState.usageIsLoading = false;
-    entitlementState.usageIsError = false;
   });
 
   it('blocks direct onboarding navigation when the project allowance is full', () => {
@@ -62,7 +66,9 @@ describe('OnboardingPageClient', () => {
 
   it('keeps first-project onboarding available for an empty workspace', () => {
     projectState.status = 'empty';
-    entitlementState.usage.items = [{ key: 'project_slots', remaining: 1 }];
+    entitlementState.entitlement.occupancy = [
+      { key: 'project_slots', allowance: 1, consumed: 0, remaining: 1 },
+    ];
 
     render(<OnboardingPageClient />);
 
@@ -90,7 +96,7 @@ describe('OnboardingPageClient', () => {
   });
 
   it('fails closed when the project capability is missing', () => {
-    entitlementState.usage.items = [];
+    entitlementState.entitlement.occupancy = [];
 
     render(<OnboardingPageClient />);
 
@@ -108,7 +114,9 @@ describe('OnboardingPageClient', () => {
   });
 
   it('keeps additional-project onboarding available for a development allowance', () => {
-    entitlementState.usage.items = [{ key: 'project_slots', remaining: 49_999 }];
+    entitlementState.entitlement.occupancy = [
+      { key: 'project_slots', allowance: 49_999, consumed: 0, remaining: 49_999 },
+    ];
 
     render(<OnboardingPageClient />);
 
@@ -140,13 +148,15 @@ describe('OnboardingPageClient', () => {
     ).toBeInTheDocument();
   });
 
-  it('distinguishes usage failure and retries the workspace and the allowance', () => {
-    entitlementState.usageIsError = true;
+  it('retries the workspace and the allowance when the allowance is unresolved', () => {
+    // An unresolved entitlement is a settled backend state, not a transient
+    // transport failure — but it is equally not a basis for asserting a limit,
+    // so the reader gets a retry rather than a claim about their access.
+    entitlementState.entitlement.status = 'entitlement_unresolved';
+    entitlementState.entitlement.occupancy = [];
     const { queryClient } = render(<OnboardingPageClient />);
     const refetch = vi.spyOn(queryClient, 'refetchQueries');
-    expect(
-      screen.getByRole('heading', { name: 'Project allowance could not be loaded' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Project access unavailable' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     // Both halves of the precondition are re-asked: the workspace this project
     // would be created in, and the allowance that says whether it may be.

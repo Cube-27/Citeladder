@@ -165,7 +165,7 @@ def _enable_checkout(monkeypatch: pytest.MonkeyPatch, refs: dict[str, str]) -> N
     }.items():
         monkeypatch.setattr(billing_settings, name, value)
     monkeypatch.setattr(
-        billing_api, "_purchase_identity", lambda _account: _billing_identity()
+        billing_api, "purchase_identity", lambda _account: _billing_identity()
     )
 
 

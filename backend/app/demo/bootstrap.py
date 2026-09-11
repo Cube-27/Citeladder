@@ -20,7 +20,7 @@ from app.core.security import hash_password, verify_password
 from app.domain.auth.service import get_user_by_email, register_user
 from app.domain.billing.bootstrap import (
     ensure_initial_catalog,
-    ensure_user_billing,
+    owned_workspace_account,
     provision_development_access,
 )
 from app.domain.entitlements.grants import issue_override_bundle
@@ -59,7 +59,7 @@ async def ensure_demo_account(
         user.is_active = True
         user.session_version += 1
 
-    account = await ensure_user_billing(session, user, provision_access=False)
+    account = await owned_workspace_account(session, user, provision_access=False)
     expires_at = candidate.demo_expires_at
     if expires_at is None:  # validate_production_security rejects this first
         raise RuntimeError("Demo expiry is required for entitlement provisioning")
@@ -119,12 +119,8 @@ async def ensure_configured_dev_account(
         user.session_version += 1
     user.is_active = True
     user.role = "admin"
-    workspace = await ensure_personal_workspace(session, user)
-    account = await ensure_user_billing(
-        session,
-        user,
-        workspace_ids=(workspace.id,) if workspace is not None else None,
-    )
+    await ensure_personal_workspace(session, user)
+    account = await owned_workspace_account(session, user)
     await provision_development_access(
         session,
         user=user,

@@ -19,10 +19,15 @@ The v6 ``/billing/me``, ``/billing/profile``, ``/billing/checkout``,
 aliases. ``GET /workspaces/{id}/entitlements`` is the member-safe effective
 capability projection; private account billing remains on the owner routes.
 
-Invariant 5: every mutation and every account read authorizes through the
-BILLING OWNER (``BillingAccount.owner_user_id``) via ``owned_account``; the
-public catalog is the single deliberate exception because it reads no account,
-workspace, connection, or probe. Invariant 6: no route accepts or returns an
+Invariant 5: every mutation and every private account read authorizes through
+the ACTIVE WORKSPACE and the ``manage_billing`` capability
+(``require_active_workspace_billing``), then resolves the workspace's single
+account via ``workspace_account``. ``BillingAccount.owner_user_id`` is audit
+metadata and authorizes nothing. Member and Viewer are refused these routes
+outright; the member-safe effective projection is
+``GET /workspaces/{id}/entitlements``. The public catalog is the single
+deliberate exception because it reads no account, workspace, connection, or
+probe. Invariant 6: no route accepts or returns an
 amount, a currency, a region, a provider reference, or an external provider id
 — the browser submits catalog/customer billing facts but never a commercial
 amount or provider reference, and the SERVER-resolved quote drives every
@@ -50,37 +55,40 @@ from fastapi import Path as PathParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.billing_checkout import router as checkout_router
+from app.api.billing_guards import (
+    addon_provider_call,
+    base_provider_call,
+    purchase_country,
+    purchase_identity,
+    reject_existing_addon,
+    reject_existing_base,
+    require_live_base,
+    topup_provider_call,
+)
 from app.api.billing_invoices import router as invoices_router
 from app.api.deps import (
     WorkspaceContext,
-    get_current_user,
     get_db,
+    require_active_workspace_billing,
     require_workspace_member,
 )
 from app.connectors.billing.base import (
-    BillingProvider,
     BillingProviderError,
-    HostedPayment,
-    HostedSubscription,
 )
 from app.connectors.billing.factory import get_billing_provider
 from app.core.config.billing_contracts import (
     ACTIVATION_PENDING,
     CREDENTIAL_MODE_BYOK,
-    LIVE_SUBSCRIPTION_STATUSES,
     OPERATION_ADDON_ACTIVATE,
     OPERATION_SUBSCRIPTION_CREATE,
     OPERATION_TOPUP_PURCHASE,
-    REASON_ADDON_EXISTS,
-    REASON_ADDON_PENDING,
-    REASON_SUBSCRIPTION_EXISTS,
-    REASON_SUBSCRIPTION_PENDING,
 )
 from app.core.config.billing_settings import (
     billing_settings,
 )
 from app.core.config.billing_tax import BillingIdentity, TaxPolicyError
 from app.core.http_errors import raise_api_error
+from app.domain.billing.accounts import billing_account_id_for
 from app.domain.billing.catalog import public_catalog
 from app.domain.billing.catalog_revisions import CatalogUnavailableError
 from app.domain.billing.commercial_journeys import (
@@ -94,12 +102,15 @@ from app.domain.billing.idempotency import (
     ProviderCall,
     TrialUnavailableError,
     execute_intent,
-    provider_metadata,
     reject_deferred_trial,
     replay_intent,
     validate_idempotency_key,
 )
-from app.domain.billing.reads import account_entitlement, account_usage
+from app.domain.billing.reads import (
+    account_entitlement,
+    account_usage,
+    workspace_occupancy_hints,
+)
 from app.domain.billing.schemas import (
     ActivationResponse,
     AddonActivateRequest,
@@ -120,18 +131,13 @@ from app.domain.billing.schemas import (
 from app.domain.billing.service import (
     BillingConflictError,
     ResolvedIntent,
-    current_addon_subscription,
-    current_base_subscription,
-    live_base_subscription,
-    owned_account,
-    pending_addon_activation,
-    pending_base_activation,
     persist_billing_profile,
     resolve_addon_intent,
     resolve_base_intent,
     resolve_topup_intent,
     schedule_addon_cancellation,
     schedule_base_cancellation,
+    workspace_account,
 )
 from app.domain.billing.webhooks import (
     InvalidWebhookError,
@@ -140,8 +146,7 @@ from app.domain.billing.webhooks import (
 )
 from app.domain.entitlements.service import resolve_workspace_entitlement
 from app.domain.entitlements.types import STATUS_RESOLVED
-from app.models.billing import BillingAccount, PendingActivation
-from app.models.user import User
+from app.models.billing import BillingAccount
 
 router = APIRouter(tags=["billing"])
 router.include_router(checkout_router)
@@ -163,8 +168,19 @@ def _idempotency_key(
 
 
 IdempotencyKey = Annotated[str, Depends(_idempotency_key)]
-CurrentUser = Annotated[User, Depends(get_current_user)]
 Session = Annotated[AsyncSession, Depends(get_db)]
+#: Every private billing route. Resolves the ACTIVE workspace and refuses any
+#: role without ``manage_billing`` before the handler body runs.
+BillingWorkspace = Annotated[
+    WorkspaceContext, Depends(require_active_workspace_billing)
+]
+
+
+async def _account(session: AsyncSession, ctx: WorkspaceContext) -> BillingAccount:
+    """The active workspace's single billing account."""
+    return await workspace_account(
+        session, workspace_id=ctx.workspace_id, user=ctx.user
+    )
 
 
 @contextmanager
@@ -291,12 +307,21 @@ async def get_workspace_entitlements(
     entitlement = await resolve_workspace_entitlement(
         session, workspace_id=ctx.workspace_id, at=datetime.now(UTC)
     )
+    account_id = await billing_account_id_for(session, ctx.workspace_id)
+    occupancy = (
+        await workspace_occupancy_hints(
+            session, account_id=account_id, entitlement=entitlement
+        )
+        if account_id is not None
+        else []
+    )
     return WorkspaceEntitlementResponse(
         workspace_id=ctx.workspace_id,
         status=entitlement.status,
         registry_revision=entitlement.registry_revision,
         entitlement_lifecycle_version=entitlement.entitlement_lifecycle_version,
         valid_until=entitlement.valid_until,
+        occupancy=occupancy,
         capabilities=[
             WorkspaceCapabilityResponse(
                 key=capability.key,
@@ -314,30 +339,32 @@ async def get_workspace_entitlements(
 
 @router.get("/billing/entitlement", response_model=BillingEntitlementResponse)
 async def get_entitlement(
-    user: CurrentUser,
+    ctx: BillingWorkspace,
     session: Session,
 ) -> BillingEntitlementResponse:
     """The authenticated account entitlement read; commits nothing."""
-    account = await owned_account(session, user)
+    account = await _account(session, ctx)
     return await account_entitlement(session, account=account, at=datetime.now(UTC))
 
 
 @router.get("/billing/usage", response_model=BillingUsageResponse)
-async def get_usage(user: CurrentUser, session: Session) -> BillingUsageResponse:
+async def get_usage(ctx: BillingWorkspace, session: Session) -> BillingUsageResponse:
     """The authenticated account usage read; commits nothing.
 
     Balances come from the immutable consumable ledger and every expiry is the
     MOVING effective expiry, not a grant's stored fixed date.
     """
-    account = await owned_account(session, user)
+    account = await _account(session, ctx)
     return await account_usage(session, account=account, at=datetime.now(UTC))
 
 
 @router.get("/billing/early-access", response_model=NoCardOfferResponse)
-async def get_early_access(user: CurrentUser, session: Session) -> NoCardOfferResponse:
-    account = await owned_account(session, user)
+async def get_early_access(
+    ctx: BillingWorkspace, session: Session
+) -> NoCardOfferResponse:
+    account = await _account(session, ctx)
     state = await offer_state(
-        session, account=account, user=user, now=datetime.now(UTC)
+        session, account=account, user=ctx.user, now=datetime.now(UTC)
     )
     return NoCardOfferResponse(
         campaign_id=state.campaign_id,
@@ -353,16 +380,16 @@ async def get_early_access(user: CurrentUser, session: Session) -> NoCardOfferRe
 @router.post("/billing/early-access/claim", response_model=NoCardClaimResponse)
 async def post_early_access_claim(
     payload: NoCardClaimRequest,
-    user: CurrentUser,
+    ctx: BillingWorkspace,
     session: Session,
     idempotency_key: IdempotencyKey,
 ) -> NoCardClaimResponse:
     with _safe_commercial_errors():
-        account = await owned_account(session, user)
+        account = await _account(session, ctx)
         result = await claim_introductory_access(
             session,
             account=account,
-            user=user,
+            user=ctx.user,
             campaign_id=payload.campaign_id,
             idempotency_key=idempotency_key,
             terms_consent=payload.terms_consent,
@@ -379,22 +406,22 @@ async def post_early_access_claim(
 
 @router.delete("/billing/early-access", response_model=IntroductoryEndResponse)
 async def delete_early_access(
-    user: CurrentUser, session: Session, idempotency_key: IdempotencyKey
+    ctx: BillingWorkspace, session: Session, idempotency_key: IdempotencyKey
 ) -> IntroductoryEndResponse:
     with _safe_commercial_errors():
-        account = await owned_account(session, user)
+        account = await _account(session, ctx)
         ended_at = await end_introductory_access(
             session,
             account=account,
-            user=user,
+            user=ctx.user,
             idempotency_key=idempotency_key,
         )
         return IntroductoryEndResponse(ended_at=ended_at)
 
 
 @router.get("/billing/card-trial/quote", response_model=CardTrialUnavailableResponse)
-async def get_card_trial_quote(user: CurrentUser) -> CardTrialUnavailableResponse:
-    del user
+async def get_card_trial_quote(ctx: BillingWorkspace) -> CardTrialUnavailableResponse:
+    del ctx
     return CardTrialUnavailableResponse()
 
 
@@ -405,7 +432,7 @@ async def get_card_trial_quote(user: CurrentUser) -> CardTrialUnavailableRespons
 )
 async def post_subscription(
     payload: SubscriptionCreateRequest,
-    user: CurrentUser,
+    ctx: BillingWorkspace,
     session: Session,
     idempotency_key: IdempotencyKey,
     response: Response,
@@ -421,7 +448,7 @@ async def post_subscription(
     provider = get_billing_provider()
     with _safe_commercial_errors():
         reject_deferred_trial(payload.trial_requested)
-        account = await owned_account(session, user)
+        account = await _account(session, ctx)
         identity = BillingIdentity(
             name=payload.billing_name,
             address_line1=payload.billing_address_line1,
@@ -447,7 +474,7 @@ async def post_subscription(
         )
         if replayed is not None:
             return replayed
-        await _reject_existing_base(session, account)
+        await reject_existing_base(session, account)
         intent = await resolve_base_intent(
             session,
             catalog_key=payload.catalog_key,
@@ -463,7 +490,7 @@ async def post_subscription(
             operation=OPERATION_SUBSCRIPTION_CREATE,
             intent=intent,
             idempotency_key=idempotency_key,
-            provider_call=_base_provider_call(provider, intent),
+            provider_call=base_provider_call(provider, intent),
             response=response,
         )
 
@@ -475,7 +502,7 @@ async def post_subscription(
 )
 async def post_addon(
     payload: AddonActivateRequest,
-    user: CurrentUser,
+    ctx: BillingWorkspace,
     session: Session,
     idempotency_key: IdempotencyKey,
     response: Response,
@@ -485,8 +512,8 @@ async def post_addon(
     """
     provider = get_billing_provider()
     with _safe_commercial_errors():
-        account = await owned_account(session, user)
-        identity = _purchase_identity(account)
+        account = await _account(session, ctx)
+        identity = purchase_identity(account)
         replayed = await _replayed_activation(
             session,
             account=account,
@@ -497,18 +524,18 @@ async def post_addon(
             idempotency_key=idempotency_key,
             response=response,
             billing_context={
-                "country_code": _purchase_country(account),
+                "country_code": purchase_country(account),
                 "customer": identity.snapshot(),
             },
         )
         if replayed is not None:
             return replayed
-        await _reject_existing_addon(session, account, payload.catalog_key)
+        await reject_existing_addon(session, account, payload.catalog_key)
         intent = await resolve_addon_intent(
             session,
             catalog_key=payload.catalog_key,
             quantity=payload.quantity,
-            country_code=_purchase_country(account),
+            country_code=purchase_country(account),
             billing_identity=identity,
             at=datetime.now(UTC),
         )
@@ -518,7 +545,7 @@ async def post_addon(
             operation=OPERATION_ADDON_ACTIVATE,
             intent=intent,
             idempotency_key=idempotency_key,
-            provider_call=_addon_provider_call(provider, intent),
+            provider_call=addon_provider_call(provider, intent),
             response=response,
         )
 
@@ -530,7 +557,7 @@ async def post_addon(
 )
 async def post_topup(
     payload: TopupPurchaseRequest,
-    user: CurrentUser,
+    ctx: BillingWorkspace,
     session: Session,
     idempotency_key: IdempotencyKey,
     response: Response,
@@ -542,8 +569,8 @@ async def post_topup(
     """
     provider = get_billing_provider()
     with _safe_commercial_errors():
-        account = await owned_account(session, user)
-        identity = _purchase_identity(account)
+        account = await _account(session, ctx)
+        identity = purchase_identity(account)
         replayed = await _replayed_activation(
             session,
             account=account,
@@ -554,18 +581,18 @@ async def post_topup(
             idempotency_key=idempotency_key,
             response=response,
             billing_context={
-                "country_code": _purchase_country(account),
+                "country_code": purchase_country(account),
                 "customer": identity.snapshot(),
             },
         )
         if replayed is not None:
             return replayed
-        await _require_live_base(session, account)
+        await require_live_base(session, account)
         intent = await resolve_topup_intent(
             session,
             catalog_key=payload.catalog_key,
             quantity=payload.quantity,
-            country_code=_purchase_country(account),
+            country_code=purchase_country(account),
             billing_identity=identity,
             at=datetime.now(UTC),
         )
@@ -575,14 +602,14 @@ async def post_topup(
             operation=OPERATION_TOPUP_PURCHASE,
             intent=intent,
             idempotency_key=idempotency_key,
-            provider_call=_topup_provider_call(provider, intent),
+            provider_call=topup_provider_call(provider, intent),
             response=response,
         )
 
 
 @router.delete("/billing/subscription", response_model=SubscriptionChangeResponse)
 async def delete_subscription(
-    user: CurrentUser,
+    ctx: BillingWorkspace,
     session: Session,
     idempotency_key: IdempotencyKey,
 ) -> SubscriptionChangeResponse:
@@ -598,7 +625,7 @@ async def delete_subscription(
     del idempotency_key
     provider = get_billing_provider()
     with _safe_commercial_errors():
-        account = await owned_account(session, user)
+        account = await _account(session, ctx)
         catalog_key, change_status, effective_at = await schedule_base_cancellation(
             session, provider, account_id=account.id
         )
@@ -609,7 +636,7 @@ async def delete_subscription(
 
 @router.delete("/billing/addons/{key}", response_model=SubscriptionChangeResponse)
 async def delete_addon(
-    user: CurrentUser,
+    ctx: BillingWorkspace,
     session: Session,
     idempotency_key: IdempotencyKey,
     key: Annotated[str, PathParam(max_length=64)],
@@ -618,7 +645,7 @@ async def delete_addon(
     del idempotency_key
     provider = get_billing_provider()
     with _safe_commercial_errors():
-        account = await owned_account(session, user)
+        account = await _account(session, ctx)
         change_status, effective_at = await schedule_addon_cancellation(
             session, provider, account_id=account.id, catalog_key=key
         )
@@ -653,148 +680,3 @@ async def razorpay_webhook(
     except InvalidWebhookError as exc:
         raise_api_error(400, str(exc), cause=exc)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# ---------------------------------------------------------------------------
-# Server-owned state guards and provider calls
-# ---------------------------------------------------------------------------
-# Every provider argument below comes from the SERVER-resolved quote/intent: a
-# browser can submit only a catalog key, a quantity, a credential mode, and an
-# ISO country, never an amount, a currency, or a provider reference.
-
-
-def _purchase_country(account: BillingAccount) -> str:
-    """The ISO country an add-on/top-up is priced for.
-
-    Only the base purchase carries a country, so it is the single writer of the
-    persisted account country; every later purchase re-resolves the region from
-    that locked value server-side.
-    """
-    return account.billing_country
-
-
-def _purchase_identity(account: BillingAccount) -> BillingIdentity:
-    """Restore normalized facts for later add-on/top-up tax decisions."""
-    if account.billing_profile is None:
-        raise BillingConflictError("checkout_unavailable")
-    try:
-        return BillingIdentity.from_snapshot(account.billing_profile)
-    except TaxPolicyError as exc:
-        raise BillingConflictError("checkout_unavailable") from exc
-
-
-async def _reject_live_base(session: AsyncSession, account: BillingAccount) -> None:
-    """Refuse a second base purchase while one is LIVE."""
-    subscription = await current_base_subscription(session, account.id)
-    if subscription is not None and subscription.status in LIVE_SUBSCRIPTION_STATUSES:
-        raise BillingConflictError(REASON_SUBSCRIPTION_EXISTS)
-
-
-async def _reject_unsettled_base(
-    session: AsyncSession, account: BillingAccount
-) -> None:
-    """Refuse a base purchase while an earlier intent is still SETTLING.
-
-    A committed ``pending`` base holds the one-base slot exactly as a live
-    subscription does — otherwise two different-key intents both reach the
-    provider. The partial unique index stays the final TOCTOU guard inside
-    the intent commit.
-    """
-    if await pending_base_activation(session, account.id) is not None:
-        raise BillingConflictError(REASON_SUBSCRIPTION_PENDING)
-
-
-async def _reject_existing_base(session: AsyncSession, account: BillingAccount) -> None:
-    """Refuse a second base purchase while one is live OR still settling."""
-    await _reject_live_base(session, account)
-    await _reject_unsettled_base(session, account)
-
-
-async def _reject_live_addon(
-    session: AsyncSession, account: BillingAccount, catalog_key: str
-) -> None:
-    """Refuse a duplicate add-on while one is LIVE (quantity changes are a
-    separate, later operation).
-    """
-    subscription = await current_addon_subscription(session, account.id, catalog_key)
-    if subscription is not None and subscription.status in LIVE_SUBSCRIPTION_STATUSES:
-        raise BillingConflictError(REASON_ADDON_EXISTS)
-
-
-async def _reject_unsettled_addon(
-    session: AsyncSession, account: BillingAccount, catalog_key: str
-) -> None:
-    """Refuse an add-on intent while an earlier one for the SAME (account,
-    catalog_key) is still settling; other add-on keys and top-ups are
-    unaffected.
-    """
-    if await pending_addon_activation(session, account.id, catalog_key) is not None:
-        raise BillingConflictError(REASON_ADDON_PENDING)
-
-
-async def _reject_existing_addon(
-    session: AsyncSession, account: BillingAccount, catalog_key: str
-) -> None:
-    """Refuse a duplicate add-on while one is live OR still settling."""
-    await _reject_live_addon(session, account, catalog_key)
-    await _reject_unsettled_addon(session, account, catalog_key)
-
-
-async def _require_live_base(session: AsyncSession, account: BillingAccount) -> None:
-    """A top-up requires a readable LIVE base subscription (checked twice: here
-    before provider I/O, and again inside the activation transaction).
-    """
-    await live_base_subscription(session, account.id)
-
-
-def _base_provider_call(
-    provider: BillingProvider, intent: ResolvedIntent
-) -> ProviderCall:
-    """Create the hosted base subscription from the SERVER-resolved price ref.
-
-    Trial checkout is deferred, so ``trial_days`` is always None here.
-    """
-
-    async def call(pending: PendingActivation) -> HostedSubscription:
-        return await provider.create_base_subscription(
-            price_ref=intent.price_ref,
-            intent_id=str(pending.id),
-            account_ref=str(pending.billing_account_id),
-            trial_days=None,
-            metadata=provider_metadata(pending),
-        )
-
-    return call
-
-
-def _addon_provider_call(
-    provider: BillingProvider, intent: ResolvedIntent
-) -> ProviderCall:
-    async def call(pending: PendingActivation) -> HostedSubscription:
-        return await provider.create_addon_subscription(
-            price_ref=intent.price_ref,
-            quantity=pending.quantity,
-            intent_id=str(pending.id),
-            account_ref=str(pending.billing_account_id),
-            metadata=provider_metadata(pending),
-        )
-
-    return call
-
-
-def _topup_provider_call(
-    provider: BillingProvider, intent: ResolvedIntent
-) -> ProviderCall:
-    """Charge exactly the server-resolved total (base + credit + tax)."""
-    total = intent.quote.total_price
-
-    async def call(pending: PendingActivation) -> HostedPayment:
-        return await provider.create_one_time_payment(
-            amount_minor=total.amount_minor,
-            currency=total.currency,
-            intent_id=str(pending.id),
-            account_ref=str(pending.billing_account_id),
-            metadata=provider_metadata(pending),
-        )
-
-    return call

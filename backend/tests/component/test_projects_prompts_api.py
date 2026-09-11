@@ -28,8 +28,11 @@ from app.core.config.entitlements import (
     KEY_PROMPT_SLOTS,
 )
 from app.domain.entitlements.types import GrantSpec
+from app.domain.workspaces.policy import WORKSPACE_ROLE_MEMBER
 from app.models.brand import Brand, BrandLogoAsset, Competitor
 from app.models.site_health.crawl import SiteCrawl
+from app.models.user import User
+from app.models.workspace import Workspace, WorkspaceMember
 from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import (
     revoke_signup_baseline_grants,
@@ -209,11 +212,28 @@ async def test_logo_is_served_without_the_active_workspace_header(
     the "brand logos never appear" bug.
     """
     await _register(client, "logo-second-ws@example.com")
-    # A second workspace, which is NOT the fallback the header-less request
-    # would otherwise resolve to.
-    second = (
-        await client.post("/api/v1/workspaces", json={"name": "Second workspace"})
-    ).json()
+    # A SECOND workspace the caller joined by invitation, which is NOT the
+    # fallback a header-less request would otherwise resolve to. A user owns
+    # exactly one workspace, so this one is seeded as a Member row.
+    user_id = await db_session.scalar(
+        select(User.id).where(User.email == "logo-second-ws@example.com")
+    )
+    assert user_id is not None
+    joined = Workspace(name="Second workspace")
+    db_session.add(joined)
+    await db_session.flush()
+    db_session.add(
+        WorkspaceMember(
+            workspace_id=joined.id, user_id=user_id, role=WORKSPACE_ROLE_MEMBER
+        )
+    )
+    await seed_occupancy_grants(
+        db_session,
+        workspace_id=joined.id,
+        grants=(GrantSpec(key=KEY_PROJECT_SLOTS, value=1),),
+    )
+    await db_session.commit()
+    second = {"id": str(joined.id)}
     project = (
         await client.post(
             "/api/v1/projects",

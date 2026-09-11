@@ -10,7 +10,7 @@ from fastapi import Path as PathParam
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import WorkspaceContext, get_db, require_active_workspace_billing
 from app.core.http_errors import raise_api_error
 from app.domain.billing.invoice_pdf import render_invoice_pdf
 from app.domain.billing.invoice_schemas import (
@@ -18,12 +18,13 @@ from app.domain.billing.invoice_schemas import (
     BillingInvoicesResponse,
 )
 from app.domain.billing.schemas import MoneyResponse
-from app.domain.billing.service import owned_account
+from app.domain.billing.service import workspace_account
 from app.models.billing_invoice import BillingInvoice
-from app.models.user import User
 
 router = APIRouter(tags=["billing"])
-CurrentUser = Annotated[User, Depends(get_current_user)]
+BillingWorkspace = Annotated[
+    WorkspaceContext, Depends(require_active_workspace_billing)
+]
 Session = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -61,11 +62,13 @@ def _summary(row: BillingInvoice) -> BillingInvoiceResponse:
 
 @router.get("/billing/invoices", response_model=BillingInvoicesResponse)
 async def get_billing_invoices(
-    user: CurrentUser,
+    ctx: BillingWorkspace,
     session: Session,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> BillingInvoicesResponse:
-    account = await owned_account(session, user)
+    account = await workspace_account(
+        session, workspace_id=ctx.workspace_id, user=ctx.user
+    )
     rows = (
         await session.scalars(
             select(BillingInvoice)
@@ -80,10 +83,12 @@ async def get_billing_invoices(
 @router.get("/billing/invoices/{invoice_id}/pdf")
 async def get_billing_invoice_pdf(
     invoice_id: Annotated[uuid.UUID, PathParam()],
-    user: CurrentUser,
+    ctx: BillingWorkspace,
     session: Session,
 ) -> Response:
-    account = await owned_account(session, user)
+    account = await workspace_account(
+        session, workspace_id=ctx.workspace_id, user=ctx.user
+    )
     invoice = await session.scalar(
         select(BillingInvoice).where(
             BillingInvoice.id == invoice_id,

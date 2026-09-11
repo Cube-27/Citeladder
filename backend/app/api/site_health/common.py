@@ -20,7 +20,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_run,
+    require_active_workspace_write,
+)
 from app.core.config.errors import CODE_INVALID_CURSOR, CODE_NOT_FOUND
 from app.core.errors import ApiException
 from app.domain.site_health.service import InvalidCursorError
@@ -28,6 +34,13 @@ from app.domain.site_health.service import InvalidCursorError
 router = APIRouter(prefix="", tags=["site-health"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Starting a crawl or a
+# page re-run is RUN work, not a read, however it is spelled over HTTP.
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
+_WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { Building2, Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import {
@@ -12,8 +12,12 @@ import {
   DropdownTrigger,
 } from '@/components/ui/dropdown';
 import { BrandLogo } from '@/components/ui/brand-logo';
-import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
-import { useProjectContext } from '@/lib/project/project-context';
+import {
+  useSelectProject,
+  useSelectWorkspace,
+  workspaceDestination,
+} from '@/lib/navigation/project-destination';
+import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
@@ -21,13 +25,20 @@ import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 
 /**
  * ProjectSwitcher (F5) — brand avatar + active project name with a dropdown of
- * all projects in the workspace.
+ * the workspaces the reader can select and the projects inside the active one.
  *
- * Selection goes through the shared navigation owner so the context, the
+ * Selection goes through the shared navigation owners so the context, the
  * device storage and the URL cannot disagree: the destination NAMES the
  * chosen project, which is what the arriving context resolves against. An
  * additional project carries its target workspace for the same reason — a
  * refresh of the creation route must not re-target it.
+ *
+ * A workspace is selectable INDEPENDENTLY of its projects (plan §2.4): an
+ * empty workspace appears here like any other and stays manageable, because
+ * choosing one is an explicit act rather than something inferred from a
+ * project. The workspace section is shown only when there is more than one to
+ * choose between, so the ordinary single-workspace account sees exactly the
+ * switcher it saw before.
  */
 /** Where "New project" goes, carrying the workspace it will be created in. */
 function newProjectHref(workspaceId: string | null): string {
@@ -39,12 +50,23 @@ function newProjectHref(workspaceId: string | null): string {
 export function ProjectSwitcher({ className }: Readonly<{ className?: string }>) {
   const router = useRouter();
   const selectProject = useSelectProject();
-  const { projects, activeProject, activeProjectId, activeWorkspaceId, isLoading, isError } =
-    useProjectContext();
-  const { usage } = useEntitlement();
-  const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
+  const selectWorkspace = useSelectWorkspace();
+  const {
+    workspaces,
+    activeWorkspace,
+    projects,
+    activeProject,
+    activeProjectId,
+    activeWorkspaceId,
+    isLoading,
+    isError,
+  } = useProjectContext();
+  const { entitlement } = useEntitlement();
+  const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
+  // Both must permit it: the role, and the workspace's remaining allowance.
+  const mayCreate = useWorkspaceCapability('write');
   const canAddProject =
-    !isError && remainingProjectSlots !== undefined && remainingProjectSlots > 0;
+    !isError && mayCreate && remainingProjectSlots !== undefined && remainingProjectSlots > 0;
 
   const label = activeProject?.brand_name ?? activeProject?.name ?? 'No project';
 
@@ -70,8 +92,36 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
         <ChevronsUpDown className="text-muted size-3.5 shrink-0" aria-hidden />
       </DropdownTrigger>
       <DropdownContent align="start" className="w-56">
+        {workspaces.length > 1 ? (
+          <>
+            <DropdownLabel>Workspaces</DropdownLabel>
+            <DropdownSeparator />
+            {workspaces.map((workspace) => {
+              const selected = workspace.id === activeWorkspaceId;
+              return (
+                <DropdownItem
+                  key={workspace.id}
+                  data-active={selected}
+                  onSelect={() => selectWorkspace(workspace.id)}
+                >
+                  <Building2 className="text-muted size-4 shrink-0" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
+                  {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
+                </DropdownItem>
+              );
+            })}
+            <DropdownSeparator />
+          </>
+        ) : null}
         <DropdownLabel>Projects</DropdownLabel>
         <DropdownSeparator />
+        {projects.length === 0 ? (
+          <DropdownItem disabled>
+            <span className="text-muted min-w-0 flex-1 truncate">
+              No projects in {activeWorkspace?.name ?? 'this workspace'}
+            </span>
+          </DropdownItem>
+        ) : null}
         {projects.map((project) => {
           const selected = project.id === activeProjectId;
           return (

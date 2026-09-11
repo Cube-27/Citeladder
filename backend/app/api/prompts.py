@@ -26,7 +26,13 @@ from fastapi import (
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_run,
+    require_active_workspace_write,
+)
 from app.api.request_bodies import read_limited_body, read_limited_upload
 from app.api.usage_limits import enforce_workspace_request
 from app.connectors.agent.client import AgentNotConfiguredError
@@ -115,6 +121,13 @@ from app.domain.prompts.topics import (
 router = APIRouter(tags=["prompts"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
+_WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -191,7 +204,7 @@ async def list_prompt_sets_endpoint(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_prompt_set_endpoint(
-    payload: PromptSetCreate, ctx: _WorkspaceDep, session: _SessionDep
+    payload: PromptSetCreate, ctx: _WriteDep, session: _SessionDep
 ) -> PromptSetResponse:
     try:
         prompt_set = await create_prompt_set(
@@ -219,7 +232,7 @@ async def get_prompt_set_endpoint(
 async def update_prompt_set_endpoint(
     prompt_set_id: uuid.UUID,
     payload: PromptSetUpdate,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> PromptSetResponse:
     try:
@@ -236,7 +249,7 @@ async def update_prompt_set_endpoint(
 
 @router.delete("/prompt-sets/{prompt_set_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_prompt_set_endpoint(
-    prompt_set_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    prompt_set_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> None:
     try:
         await delete_prompt_set(
@@ -273,7 +286,7 @@ async def list_prompts_endpoint(
 async def create_prompt_endpoint(
     prompt_set_id: uuid.UUID,
     payload: PromptInput,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> PromptResponse:
     create = PromptCreate(prompt_set_id=prompt_set_id, **payload.model_dump())
@@ -298,7 +311,7 @@ async def create_prompt_endpoint(
 async def update_prompt_endpoint(
     prompt_id: uuid.UUID,
     payload: PromptUpdate,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> PromptResponse:
     try:
@@ -321,7 +334,7 @@ async def update_prompt_endpoint(
 
 @router.delete("/prompts/{prompt_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_prompt_endpoint(
-    prompt_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    prompt_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> None:
     try:
         await delete_prompt(session, workspace_id=ctx.workspace_id, prompt_id=prompt_id)
@@ -363,7 +376,7 @@ async def _resolve_import_rows(
 async def import_prompts_endpoint(
     prompt_set_id: uuid.UUID,
     request: Request,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
     file: UploadFile | None = None,
 ) -> PromptSetResponse:
@@ -404,7 +417,7 @@ async def import_prompts_endpoint(
 async def generate_prompts_endpoint(
     prompt_set_id: uuid.UUID,
     payload: PromptGenerateRequest,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
 ) -> PromptGenerateResponse:
     """Generate prompts via the catalog script or app-level default agent.
@@ -500,7 +513,7 @@ async def generate_prompts_endpoint(
 async def bulk_status_endpoint(
     prompt_set_id: uuid.UUID,
     payload: PromptBulkStatusRequest,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> PromptSetResponse:
     """Bulk review transition (accept-all / archive-selected)."""
@@ -546,7 +559,7 @@ async def list_topics_endpoint(
 async def create_topic_endpoint(
     project_id: uuid.UUID,
     payload: TopicCreate,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> TopicResponse:
     try:
@@ -567,7 +580,7 @@ async def create_topic_endpoint(
 async def update_topic_endpoint(
     topic_id: uuid.UUID,
     payload: TopicUpdate,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> TopicResponse:
     try:
@@ -587,7 +600,7 @@ async def update_topic_endpoint(
 
 @router.delete("/topics/{topic_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_topic_endpoint(
-    topic_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    topic_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> None:
     try:
         await delete_topic(session, workspace_id=ctx.workspace_id, topic_id=topic_id)

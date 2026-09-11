@@ -30,6 +30,7 @@ export {
   useActiveProject,
   useActiveWorkspaceId,
   useProjectContext,
+  useWorkspaceCapability,
   type ProjectContextValue,
 } from '@/lib/project/project-scope';
 

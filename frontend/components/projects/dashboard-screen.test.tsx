@@ -104,7 +104,10 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({
-    usage: { status: 'resolved', items: [{ key: 'project_slots', remaining: 0 }] },
+    entitlement: {
+      status: 'resolved',
+      occupancy: [{ key: 'project_slots', allowance: 1, consumed: 1, remaining: 0 }],
+    },
   }),
   capabilityRemaining: () => 0,
 }));

@@ -98,3 +98,32 @@ export function useSelectProject() {
     [activeProjectId, pathname, router, searchParams, setActiveProjectId],
   );
 }
+
+/**
+ * The one way the shell changes its WORKSPACE selection (plan §2.4).
+ *
+ * Selecting a workspace is an explicit act, never inferred from a project, so
+ * this is deliberately separate from `useSelectProject`. The destination names
+ * the workspace and drops any project parameter: the previous workspace's
+ * project does not exist in the new one, and carrying it over would produce
+ * exactly the contradictory pair the provider has to reject.
+ *
+ * A deliberate switch to a DIFFERENT workspace pushes one history entry;
+ * selecting the one already active does nothing.
+ */
+export function useSelectWorkspace() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { activeWorkspaceId, setActiveWorkspaceId } = useProjectContext();
+
+  return useCallback(
+    (workspaceId: string, destination?: string) => {
+      const samePage = destination === undefined || destination === pathname;
+      if (workspaceId === activeWorkspaceId && samePage) return;
+      setActiveWorkspaceId(workspaceId);
+      router.push(workspaceDestination(destination ?? pathname, searchParams, workspaceId));
+    },
+    [activeWorkspaceId, pathname, router, searchParams, setActiveWorkspaceId],
+  );
+}

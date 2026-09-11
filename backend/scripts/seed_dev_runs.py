@@ -36,7 +36,7 @@ from app.core.config.site_health_contracts import (
 )
 from app.core.database import SessionLocal
 from app.domain.audits.creation import create_audit
-from app.domain.billing.bootstrap import ensure_user_billing
+from app.domain.billing.bootstrap import ensure_workspace_billing
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.opportunities import commands
@@ -109,7 +109,9 @@ async def seed_monitored_urls_grant(
     owner = await session.get(User, owner_user_id)
     if owner is None:  # pragma: no cover - the seeder just created this user
         raise RuntimeError("demo user missing during entitlement seed")
-    account = await ensure_user_billing(session, owner, workspace_ids=(workspace_id,))
+    account = await ensure_workspace_billing(
+        session, workspace_id=workspace_id, provisioning_user=owner
+    )
     await issue_override_bundle(
         session,
         operator_user=owner,

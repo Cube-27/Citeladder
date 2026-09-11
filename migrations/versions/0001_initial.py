@@ -253,7 +253,8 @@ def upgrade() -> None:
     op.create_table(
         "billing_accounts",
         sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("owner_user_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("owner_user_id", sa.UUID(), nullable=True),
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("billing_country", sa.String(length=2), nullable=False),
         sa.Column("country_verification", sa.String(length=16), nullable=False),
@@ -276,14 +277,25 @@ def upgrade() -> None:
             "entitlement_lifecycle_version >= 0",
             name="ck_billing_account_entitlement_version_nonneg",
         ),
-        sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_index(
+        op.f("ix_billing_accounts_workspace_id"),
+        "billing_accounts",
+        ["workspace_id"],
+        unique=True,
+    )
+    # Audit metadata only: non-unique, and a departing user SETs NULL rather
+    # than cascading the workspace's billing account away.
     op.create_index(
         op.f("ix_billing_accounts_owner_user_id"),
         "billing_accounts",
         ["owner_user_id"],
-        unique=True,
+        unique=False,
     )
     op.create_table(
         "introductory_operator_codes",
@@ -551,6 +563,57 @@ def upgrade() -> None:
         "queue_workspace_turns",
         ["queue_name", "last_claimed_at"],
         unique=False,
+    )
+    op.create_table(
+        "workspace_invitations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("email_normalized", sa.String(length=255), nullable=False),
+        sa.Column("role", sa.String(length=20), nullable=False),
+        sa.Column("token_sha256", sa.String(length=64), nullable=False),
+        sa.Column("invited_by_user_id", sa.UUID(), nullable=True),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("accepted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("accepted_by_user_id", sa.UUID(), nullable=True),
+        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint(
+            "role IN ('admin', 'member', 'viewer')",
+            name="ck_workspace_invitation_role",
+        ),
+        sa.ForeignKeyConstraint(
+            ["accepted_by_user_id"], ["users.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["invited_by_user_id"], ["users.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_sha256"),
+    )
+    op.create_index(
+        op.f("ix_workspace_invitations_workspace_id"),
+        "workspace_invitations",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_workspace_invitation_workspace",
+        "workspace_invitations",
+        ["workspace_id", "created_at"],
+        unique=False,
+    )
+    # At most ONE live invitation per (workspace, address): a revoked or
+    # accepted row stays for audit without blocking a fresh invitation.
+    op.create_index(
+        "uq_workspace_invitation_pending_email",
+        "workspace_invitations",
+        ["workspace_id", "email_normalized"],
+        unique=True,
+        postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
     )
     op.create_table(
         "workspace_members",
@@ -1334,32 +1397,6 @@ def upgrade() -> None:
         "unintended_domains",
         ["project_id"],
         unique=False,
-    )
-    op.create_table(
-        "workspace_billing_links",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("billing_account_id", sa.UUID(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_workspace_billing_links_billing_account_id"),
-        "workspace_billing_links",
-        ["billing_account_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_workspace_billing_links_workspace_id"),
-        "workspace_billing_links",
-        ["workspace_id"],
-        unique=True,
     )
     op.create_table(
         "audit_engine_snapshots",
@@ -6054,7 +6091,6 @@ def downgrade() -> None:
         "audit_schedules",
         "agent_tool_attempts",
         "agent_model_attempts",
-        "workspace_billing_links",
         "unintended_domains",
         "traffic_snapshots",
         "topics",
@@ -6088,6 +6124,7 @@ def downgrade() -> None:
         "account_grants",
         "workspace_site_health_runtime",
         "workspace_members",
+        "workspace_invitations",
         "queue_workspace_turns",
         "provider_connections",
         "projects",

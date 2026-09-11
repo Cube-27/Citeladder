@@ -38,6 +38,7 @@ from app.core.config.task_queue import (
     TASK_TERMINAL_STATUSES,
 )
 from app.domain.abuse.service import reserve_workspace_capacity
+from app.domain.billing.accounts import billing_account_id_for
 from app.domain.billing.catalog_revisions import (
     CatalogUnavailableError,
     published_ai_credit_policy,
@@ -230,13 +231,7 @@ def _insert_generation(
 async def _billing_account_id(
     session: AsyncSession, *, workspace_id: uuid.UUID
 ) -> uuid.UUID:
-    from app.models.billing import WorkspaceBillingLink
-
-    account_id = await session.scalar(
-        select(WorkspaceBillingLink.billing_account_id).where(
-            WorkspaceBillingLink.workspace_id == workspace_id
-        )
-    )
+    account_id = await billing_account_id_for(session, workspace_id)
     if account_id is None:
         raise ProviderNotConfiguredError("workspace funding sponsor is unavailable")
     return account_id

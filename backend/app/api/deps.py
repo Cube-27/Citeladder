@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 
 from fastapi import Cookie, Depends, Header, Path, status
 from sqlalchemy import select
@@ -16,10 +17,15 @@ from app.core.config import demo_access_expired, settings
 from app.core.database import get_session
 from app.core.http_errors import raise_api_error, raise_not_found
 from app.core.security import decode_access_token
+from app.domain.workspaces.policy import (
+    WorkspaceCapability,
+    effective_capabilities,
+    role_allows,
+)
 from app.domain.workspaces.service import get_membership
 from app.models.project import Project
 from app.models.user import User
-from app.models.workspace import WorkspaceMember
+from app.models.workspace import Workspace, WorkspaceMember
 
 
 async def get_db(
@@ -76,7 +82,9 @@ async def get_current_user(
 class WorkspaceContext:
     """The resolved (user, membership) pair for a workspace-scoped request.
 
-    Handlers read ``workspace_id`` from here to filter every downstream query.
+    Handlers read ``workspace_id`` from here to filter every downstream query,
+    and ``role``/``allows`` to apply the ONE workspace policy
+    (``app.domain.workspaces.policy``). No handler spells its own role set.
     """
 
     __slots__ = ("member", "user")
@@ -88,6 +96,32 @@ class WorkspaceContext:
     @property
     def workspace_id(self) -> uuid.UUID:
         return self.member.workspace_id
+
+    @property
+    def role(self) -> str:
+        return self.member.role
+
+    def allows(self, capability: WorkspaceCapability) -> bool:
+        """Whether the caller's role permits ``capability`` (fail-closed)."""
+        return role_allows(self.member.role, capability)
+
+    def capabilities(self) -> tuple[str, ...]:
+        """The caller's safe effective capability names for UI controls."""
+        return effective_capabilities(self.member.role)
+
+    def require(self, capability: WorkspaceCapability) -> None:
+        """403 unless the caller's role permits ``capability``.
+
+        Role authorization only. Whether the workspace's ENTITLEMENT allows
+        the action is a separate decision the domain still makes; both must
+        permit it.
+        """
+        if not self.allows(capability):
+            raise_api_error(
+                status.HTTP_403_FORBIDDEN,
+                _DENIAL[capability],
+                code="workspace_role_forbidden",
+            )
 
 
 async def require_workspace_member(
@@ -162,11 +196,17 @@ async def require_active_workspace(
             raise_not_found("Workspace")
         return WorkspaceContext(user=user, member=member)
 
-    # No explicit selection: fall back to the earliest membership so a
-    # freshly-registered user (single auto-created workspace) just works.
+    # No explicit selection: fall back to the earliest TENANT membership so a
+    # freshly-registered user (single auto-created workspace) just works. The
+    # reserved system workspace is never a tenant workspace (T11) and can
+    # never be resolved here, even if a stray membership row exists.
     result = await session.execute(
         select(WorkspaceMember)
-        .where(WorkspaceMember.user_id == user.id)
+        .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
+        .where(
+            WorkspaceMember.user_id == user.id,
+            Workspace.is_system.is_(False),
+        )
         .order_by(WorkspaceMember.created_at.asc())
         .limit(1)
     )
@@ -174,3 +214,61 @@ async def require_active_workspace(
     if member is None:
         raise_not_found("Workspace")
     return WorkspaceContext(user=user, member=member)
+
+
+# ---------------------------------------------------------------------------
+# Capability-gated dependencies (plan §2.3)
+# ---------------------------------------------------------------------------
+# The API layer's ONLY expression of the role matrix. Each alias below wraps
+# an existing authorization dependency and adds one capability check from
+# ``app.domain.workspaces.policy``; a route selects the alias that names what
+# it actually does. Hiding a control in the browser is never the boundary —
+# these are.
+
+_DENIAL: dict[WorkspaceCapability, str] = {
+    WorkspaceCapability.READ: "Workspace access is required",
+    WorkspaceCapability.WRITE: "Workspace member access is required",
+    WorkspaceCapability.RUN: "Workspace member access is required",
+    WorkspaceCapability.MANAGE_BILLING: "Workspace owner or admin access is required",
+    WorkspaceCapability.MANAGE_MEMBERS: "Workspace owner or admin access is required",
+    WorkspaceCapability.MANAGE_CREDENTIALS: (
+        "Workspace owner or admin access is required"
+    ),
+}
+
+
+def _gated(
+    resolver: Callable[..., Awaitable[WorkspaceContext]],
+    capability: WorkspaceCapability,
+) -> Callable[..., Awaitable[WorkspaceContext]]:
+    """Build a dependency that resolves through ``resolver`` then gates it."""
+
+    async def dependency(
+        ctx: WorkspaceContext = Depends(resolver),  # noqa: B008 - FastAPI injects.
+    ) -> WorkspaceContext:
+        ctx.require(capability)
+        return ctx
+
+    return dependency
+
+
+# Flat (``X-Workspace-Id``) routes.
+require_active_workspace_write = _gated(
+    require_active_workspace, WorkspaceCapability.WRITE
+)
+require_active_workspace_run = _gated(require_active_workspace, WorkspaceCapability.RUN)
+require_active_workspace_billing = _gated(
+    require_active_workspace, WorkspaceCapability.MANAGE_BILLING
+)
+require_active_workspace_credentials = _gated(
+    require_active_workspace, WorkspaceCapability.MANAGE_CREDENTIALS
+)
+
+# Path ``{workspace_id}`` routes.
+require_workspace_members_admin = _gated(
+    require_workspace_member, WorkspaceCapability.MANAGE_MEMBERS
+)
+
+# Path ``{project_id}`` routes.
+require_project_write = _gated(require_project_member, WorkspaceCapability.WRITE)
+require_project_run = _gated(require_project_member, WorkspaceCapability.RUN)

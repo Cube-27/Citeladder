@@ -8,7 +8,7 @@ import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
-import type { BillingUsage } from '@/lib/api/billing';
+import type { WorkspaceEntitlement } from '@/lib/api/billing';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
@@ -19,11 +19,12 @@ import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
  * Routes that manage the WORKSPACE rather than work inside a project.
  *
  * A workspace with no projects is a perfectly valid workspace: its owner may
- * still need to reach billing, members and settings. Redirecting these to
+ * still need to reach billing, members and settings, and an invitee arriving
+ * at an acceptance link has not joined anything yet. Redirecting these to
  * project creation answered a question nobody asked and made an empty
  * workspace unmanageable.
  */
-const WORKSPACE_ONLY_PREFIXES = ['/settings'] as const;
+const WORKSPACE_ONLY_PREFIXES = ['/settings', '/invitations'] as const;
 
 function isWorkspaceOnlyRoute(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -42,17 +43,8 @@ function isWorkspaceOnlyRoute(pathname: string | null): boolean {
  */
 type Allowance = 'unknown' | 'spent' | 'spare';
 
-function resolveAllowance({
-  usage,
-  usageIsLoading,
-  usageIsError,
-}: {
-  usage: BillingUsage | null;
-  usageIsLoading: boolean;
-  usageIsError: boolean;
-}): Allowance {
-  if (usageIsLoading || usageIsError) return 'unknown';
-  const remaining = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
+function resolveAllowance(entitlement: WorkspaceEntitlement | null): Allowance {
+  const remaining = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
   if (remaining === undefined) return 'unknown';
   return remaining > 0 ? 'spare' : 'spent';
 }
@@ -102,15 +94,31 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   // trigger, the capability-gated navigation rows — so waiting for it here is
   // what lets the shell paint complete instead of growing a button and a link
   // a round trip later. It resolves to a settled answer either way.
-  const { isLoading: entitlementLoading, usage, usageIsLoading, usageIsError } = useEntitlement();
+  const { isLoading: entitlementLoading, entitlement } = useEntitlement();
 
-  // A Viewer reads what exists; it never starts the creation flow.
-  const mayCreate = activeWorkspace?.role !== 'viewer';
-  const allowance = resolveAllowance({ usage, usageIsLoading, usageIsError });
+  // A role that may not create a project is not offered the affordance. This
+  // reads the effective capability the backend published, not a role name, and
+  // the backend still enforces the denial itself.
+  const mayCreate = activeWorkspace?.capabilities.includes('write') ?? false;
+  // The remaining allowance comes from the MEMBER-SAFE workspace projection,
+  // so a Member sees the same "workspace is full" state an Owner does without
+  // reading the workspace's private finances.
+  const allowance = resolveAllowance(entitlement);
   const projectRequired = !isWorkspaceOnlyRoute(pathname);
   const redirecting = status === 'empty' && projectRequired && mayCreate && allowance === 'spare';
 
   useOnboardingRedirect(redirecting, activeWorkspaceId);
+
+  // LOADING is answered before any notice. An entitlement still in flight
+  // leaves the allowance 'unknown', which past this point means "settled and
+  // unresolved" — a real failure the reader can retry. Reading it while the
+  // request was still running turned every cold start into a failure notice.
+  //
+  // Deliberately the SAME loader the session wait showed: one uninterrupted
+  // state covers both round trips. `redirecting` holds here too — the
+  // redirect is already in flight, and drawing a workspace the visitor is
+  // about to be taken out of would only be a flash of the wrong app.
+  if (status === 'resolving' || entitlementLoading || redirecting) return <ShellFallback />;
 
   const notice = noticeFor(status, {
     projectRequired,
@@ -130,13 +138,6 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
       />
     );
   }
-
-  // Ahead of the shell, and deliberately the SAME loader the session wait
-  // showed: one uninterrupted state covers both round trips, and the chrome
-  // that follows it is already complete. `redirecting` holds here too — the
-  // redirect is already in flight, and drawing a workspace the visitor is
-  // about to be taken out of would only be a flash of the wrong app.
-  if (status === 'resolving' || entitlementLoading || redirecting) return <ShellFallback />;
 
   return <>{children}</>;
 }

@@ -47,7 +47,7 @@ from app.core.config.entitlements import (
     CapabilityType,
 )
 from app.domain.billing import quotes as _quotes
-from app.domain.billing.bootstrap import ensure_user_billing
+from app.domain.billing.bootstrap import ensure_workspace_billing
 from app.domain.billing.catalog_revisions import published_commercial_catalog
 from app.domain.billing.periods import (
     PeriodEvidenceError,
@@ -289,10 +289,26 @@ async def apply_subscription_state(
     return True
 
 
-async def owned_account(session: AsyncSession, user: User) -> BillingAccount:
-    # Also idempotently applies the current public/dev baseline so an account
-    # created before the policy shipped is repaired on its next entitlement read.
-    account = await ensure_user_billing(session, user)
+async def workspace_account(
+    session: AsyncSession, *, workspace_id: uuid.UUID, user: User
+) -> BillingAccount:
+    """The ONE billing account for ``workspace_id`` (plan §2.1).
+
+    Replaces the old ``owned_account(session, user)`` funnel: authority now
+    comes from the REQUEST's workspace and the caller's verified
+    administrative role, never from ``BillingAccount.owner_user_id`` or from
+    whichever personal account the signed-in user happens to have. A member of
+    somebody else's workspace therefore spends that workspace's budget, and
+    their own workspace's subscription sponsors nothing here.
+
+    Also idempotently applies the current public baseline, so a workspace
+    provisioned before the policy shipped is repaired on its next read.
+    ``user`` is the provisioning actor recorded as audit metadata when the
+    account has to be created; it never selects the account.
+    """
+    account = await ensure_workspace_billing(
+        session, workspace_id=workspace_id, provisioning_user=user
+    )
     await session.commit()
     return account
 
@@ -524,7 +540,6 @@ __all__ = [
     "current_addon_subscription",
     "current_base_subscription",
     "live_base_subscription",
-    "owned_account",
     "persist_billing_country",
     "persist_billing_profile",
     "resolve_addon_intent",
@@ -533,4 +548,5 @@ __all__ = [
     "resolve_topup_intent",
     "schedule_addon_cancellation",
     "schedule_base_cancellation",
+    "workspace_account",
 ]

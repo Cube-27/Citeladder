@@ -20,6 +20,7 @@ from app.api.deps import (
     WorkspaceContext,
     get_db,
     require_active_workspace,
+    require_active_workspace_write,
     require_project_member,
 )
 from app.api.usage_limits import enforce_workspace_request
@@ -107,6 +108,12 @@ async def _map_occupancy[T](call: Callable[[], Awaitable[T]]) -> T:
 _RES_PROJECT = "Project"
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 # For routes the browser hits directly (no X-Workspace-Id header can ride on an
 # <img src>), authorize through the project id already in the path.
 _ProjectMemberDep = Annotated[WorkspaceContext, Depends(require_project_member)]
@@ -136,7 +143,7 @@ async def list_projects_endpoint(
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project_endpoint(
-    payload: ProjectCreate, ctx: _WorkspaceDep, session: _SessionDep
+    payload: ProjectCreate, ctx: _WriteDep, session: _SessionDep
 ) -> ProjectResponse:
     project = await _map_occupancy(
         lambda: create_project(
@@ -174,7 +181,7 @@ async def get_brand_profile_endpoint(
 async def put_brand_profile_endpoint(
     project_id: uuid.UUID,
     payload: BrandProfileUpsert,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> BrandProfileResponse:
     try:
@@ -448,7 +455,7 @@ def _logo_response(
 
 @router.post("/{project_id}/logos/refresh", response_model=ProjectResponse)
 async def refresh_project_logos_endpoint(
-    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    project_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> ProjectResponse:
     await enforce_workspace_request(
         session,
@@ -669,7 +676,7 @@ async def list_observed_competitors_endpoint(
 async def accept_observed_competitor_endpoint(
     project_id: uuid.UUID,
     candidate_id: uuid.UUID,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> CompetitorResponse:
     try:
@@ -688,7 +695,7 @@ async def accept_observed_competitor_endpoint(
 async def update_project_endpoint(
     project_id: uuid.UUID,
     payload: ProjectUpdate,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> ProjectResponse:
     try:
@@ -705,7 +712,7 @@ async def update_project_endpoint(
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project_endpoint(
-    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    project_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> None:
     try:
         await _map_occupancy(

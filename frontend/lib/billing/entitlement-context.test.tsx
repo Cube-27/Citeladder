@@ -27,6 +27,7 @@ function entitlement(capabilities: readonly unknown[]) {
     entitlement_lifecycle_version: 1,
     valid_until: null,
     capabilities,
+    occupancy: [],
   };
 }
 

@@ -31,6 +31,7 @@ from app.core.config.integrations_transport import (
 )
 from app.core.config.oauth import oauth_settings
 from app.core.security import decrypt_secret
+from app.domain.workspaces.policy import WORKSPACE_ROLE_ADMIN
 from app.models.integrations import (
     IntegrationConnection,
     IntegrationEvent,
@@ -39,7 +40,7 @@ from app.models.integrations import (
 )
 from app.models.user import User
 from app.models.user_identity import UserIdentity
-from app.models.workspace import WorkspaceMember
+from app.models.workspace import Workspace, WorkspaceMember
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "integrations"
 _BASE = "/api/v1/integrations"
@@ -421,9 +422,22 @@ async def test_workspace_comes_from_verified_state_not_client(
     _fake_oauth: _FakeOAuthServer,
 ) -> None:
     await _register(client, "int-crossws@example.com")
-    second = await client.post("/api/v1/workspaces", json={"name": "Second WS"})
-    assert second.status_code == 201
-    ws2 = second.json()["id"]
+    # A user OWNS one workspace; further memberships come by invitation. Seed
+    # an Admin membership in somebody else's workspace, which is the role that
+    # may manage that workspace's credentials.
+    user_id = await db_session.scalar(
+        select(User.id).where(User.email == "int-crossws@example.com")
+    )
+    other = Workspace(name="Second WS")
+    db_session.add(other)
+    await db_session.flush()
+    db_session.add(
+        WorkspaceMember(
+            workspace_id=other.id, user_id=user_id, role=WORKSPACE_ROLE_ADMIN
+        )
+    )
+    await db_session.commit()
+    ws2 = str(other.id)
 
     # Start bound to the SECOND workspace via the active-workspace header.
     start = await _start(client, "gsc", headers={"X-Workspace-Id": ws2})

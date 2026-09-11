@@ -1,4 +1,4 @@
-"""Owner-authorized persisted checkout and authenticated reconciliation requests."""
+"""Workspace-authorized persisted checkout and reconciliation requests."""
 
 from __future__ import annotations
 
@@ -36,19 +36,26 @@ class CheckoutVerifyRequest(BaseModel):
     razorpay_signature: str = Field(pattern=r"^[a-fA-F0-9]{64}$", repr=False)
 
 
-async def owned_activation(
+async def workspace_activation(
     session: AsyncSession,
     *,
     activation_id: uuid.UUID,
-    user_id: uuid.UUID,
+    workspace_id: uuid.UUID,
     lock: bool = False,
 ) -> PendingActivation | None:
+    """One base activation belonging to ``workspace_id``'s billing account.
+
+    Authorization is the WORKSPACE the caller is administering, joined
+    through ``BillingAccount.workspace_id`` — never the signed-in user's own
+    account. A different workspace's activation is indistinguishable from a
+    missing one.
+    """
     query = (
         select(PendingActivation)
         .join(BillingAccount)
         .where(
             PendingActivation.id == activation_id,
-            BillingAccount.owner_user_id == user_id,
+            BillingAccount.workspace_id == workspace_id,
             PendingActivation.activation_kind == "base",
         )
     )

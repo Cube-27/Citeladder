@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.entitlements import LEDGER_ENTRY_RESERVATION
+from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.ledger import (
     FundedCreditsExhaustedError,
     GrantAllocation,
@@ -24,7 +25,7 @@ from app.domain.entitlements.ledger import (
     record_billable_attempt,
     release_unused_reservation,
 )
-from app.models.billing import ConsumableLedger, WorkspaceBillingLink
+from app.models.billing import ConsumableLedger
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,12 +91,8 @@ async def reserve_metered_usage(
                 for entry in entries
             ),
         )
-    linked_account = await session.scalar(
-        select(WorkspaceBillingLink.billing_account_id).where(
-            WorkspaceBillingLink.workspace_id == subject.workspace_id
-        )
-    )
-    if linked_account != account_id:
+    subject_account = await billing_account_id_for(session, subject.workspace_id)
+    if subject_account != account_id:
         raise LedgerError("metered subject does not belong to billing account")
     grants = await _active_grants_in_draw_order(
         session, account_id=account_id, capability_key=capability_key, at=at

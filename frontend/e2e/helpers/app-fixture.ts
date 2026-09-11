@@ -132,6 +132,9 @@ export function permittedWorkspaceEntitlement(workspaceId: string) {
   return {
     workspace_id: workspaceId,
     status: 'resolved',
+    // Member-safe occupancy hints: the shell reads its remaining project
+    // allowance from here rather than from the owner-private usage report.
+    occupancy: [{ key: 'project_slots', allowance: 10, consumed: 1, remaining: 9 }],
     registry_revision: PERMITTED_ENTITLEMENT.registry_revision,
     entitlement_lifecycle_version: PERMITTED_ENTITLEMENT.entitlement_lifecycle_version,
     valid_until: PERMITTED_ENTITLEMENT.valid_until,
@@ -195,6 +198,16 @@ function membershipRows(ids: readonly string[]) {
     id,
     name: 'Fixture Workspace',
     role: 'owner',
+    // The Owner's effective capabilities, as the backend's one role policy
+    // publishes them. The shell gates controls on these names.
+    capabilities: [
+      'manage_billing',
+      'manage_credentials',
+      'manage_members',
+      'read',
+      'run',
+      'write',
+    ],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   }));

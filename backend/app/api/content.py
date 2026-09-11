@@ -8,7 +8,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_run,
+    require_active_workspace_write,
+)
 from app.core.config.content import (
     CONTENT_IDEMPOTENCY_KEY_MAX_LEN,
     CONTENT_LIST_DEFAULT_LIMIT,
@@ -63,6 +69,13 @@ from app.domain.entitlements.enforcement import (
 router = APIRouter(prefix="/content", tags=["content"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
+_WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -228,7 +241,7 @@ async def list_target_pages_endpoint(
 )
 async def enqueue_generation_endpoint(
     payload: ContentGenerationCreate,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
     idempotency_key: Annotated[
         str | None,
@@ -265,7 +278,7 @@ async def enqueue_generation_endpoint(
 
 @router.delete("/generations/{generation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_generation_endpoint(
-    generation_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    generation_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> None:
     try:
         await delete_generation(
@@ -285,7 +298,7 @@ async def delete_generation_endpoint(
 
 @router.delete("/generations", status_code=status.HTTP_204_NO_CONTENT)
 async def clear_generation_history_endpoint(
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
     project_id: Annotated[uuid.UUID, Query()],
 ) -> None:
@@ -316,7 +329,7 @@ async def get_generation_endpoint(
 async def content_feedback_endpoint(
     generation_id: uuid.UUID,
     payload: ContentFeedbackRequest,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> ContentGenerationDetail:
     try:
@@ -361,7 +374,7 @@ async def _repeat_generation(
     status_code=status.HTTP_201_CREATED,
 )
 async def regenerate_endpoint(
-    generation_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    generation_id: uuid.UUID, ctx: _RunDep, session: _SessionDep
 ) -> ContentGenerationDetail:
     return await _repeat_generation(
         regenerate,
@@ -377,7 +390,7 @@ async def regenerate_endpoint(
     status_code=status.HTTP_201_CREATED,
 )
 async def try_again_endpoint(
-    generation_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    generation_id: uuid.UUID, ctx: _RunDep, session: _SessionDep
 ) -> ContentGenerationDetail:
     return await _repeat_generation(
         try_again,
@@ -391,7 +404,7 @@ async def try_again_endpoint(
     "/generations/{generation_id}/cancel", response_model=ContentGenerationDetail
 )
 async def cancel_generation_endpoint(
-    generation_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    generation_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> ContentGenerationDetail:
     try:
         row = await cancel_generation(

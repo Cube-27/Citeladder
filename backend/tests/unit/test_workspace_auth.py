@@ -16,10 +16,14 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.deps import require_workspace_member
+from app.core.config.workspaces import MAX_OWNED_WORKSPACES_PER_USER
 from app.core.security import create_access_token
 from app.domain.auth.service import register_user
 from app.domain.workspaces import service as workspace_service
+from app.domain.workspaces.policy import WORKSPACE_ROLE_MEMBER
 from app.domain.workspaces.service import (
+    WorkspaceLimitExceededError,
+    count_owned_workspaces,
     create_workspace,
     ensure_personal_workspace,
     get_membership,
@@ -76,10 +80,45 @@ async def test_get_membership_returns_none_for_non_member(
 ) -> None:
     owner = await _register(db_session, "o2@example.com")
     other = await _register(db_session, "u2@example.com")
-    ws, _ = await create_workspace(db_session, owner, "Team")
+    # Registration already provisions the ONE workspace a user owns.
+    ws, _ = (await list_workspaces_for_user(db_session, owner))[0]
 
     assert await get_membership(db_session, ws.id, owner.id) is not None
     assert await get_membership(db_session, ws.id, other.id) is None
+
+
+@pytest.mark.asyncio
+async def test_a_user_owns_exactly_one_workspace(db_session: AsyncSession) -> None:
+    """The owned cap is 1: a second owned workspace is refused."""
+    owner = await _register(db_session, "cap@example.com")
+    assert len(await list_workspaces_for_user(db_session, owner)) == 1
+    with pytest.raises(WorkspaceLimitExceededError) as exc:
+        await create_workspace(db_session, owner, "Second")
+    assert exc.value.limit == MAX_OWNED_WORKSPACES_PER_USER
+
+
+@pytest.mark.asyncio
+async def test_invited_membership_does_not_consume_the_owned_cap(
+    db_session: AsyncSession,
+) -> None:
+    """A membership held by invitation is somebody else's tenant root.
+
+    It must not count against the invitee's own allocation, and it must not
+    suppress provisioning of the workspace they do own.
+    """
+    owner = await _register(db_session, "host@example.com")
+    guest = await _register(db_session, "guest@example.com")
+    host_ws, _ = (await list_workspaces_for_user(db_session, owner))[0]
+    db_session.add(
+        WorkspaceMember(
+            workspace_id=host_ws.id, user_id=guest.id, role=WORKSPACE_ROLE_MEMBER
+        )
+    )
+    await db_session.commit()
+
+    assert await count_owned_workspaces(db_session, guest.id) == 1
+    assert len(await list_workspaces_for_user(db_session, guest)) == 2
+    assert await ensure_personal_workspace(db_session, guest) is None
 
 
 @pytest.mark.asyncio
@@ -111,7 +150,7 @@ async def test_create_and_personal_workspace_ensure_share_creation_lock(
         await release_create.wait()
 
     monkeypatch.setattr(workspace_service, "lock_subject", observe_lock)
-    monkeypatch.setattr(workspace_service, "ensure_user_billing", pause_billing)
+    monkeypatch.setattr(workspace_service, "ensure_workspace_billing", pause_billing)
 
     async def create_explicit_workspace() -> None:
         async with session_factory() as session:

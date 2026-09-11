@@ -29,6 +29,7 @@ from app.core.config.entitlements import (
     KEY_PROJECT_SLOTS,
     KEY_PROMPT_SLOTS,
 )
+from app.core.config.workspaces import MAX_OWNED_WORKSPACES_PER_USER
 from app.domain.workspaces import service as workspace_service
 from app.models.user import User
 
@@ -317,41 +318,43 @@ async def test_valid_login_bypasses_attacker_exhausted_email_failure_limit(
 
 
 @pytest.mark.asyncio
-async def test_create_and_list_workspaces(client: httpx.AsyncClient) -> None:
+async def test_registration_provisions_the_one_owned_workspace(
+    client: httpx.AsyncClient,
+) -> None:
+    """A user OWNS exactly one workspace, auto-provisioned at registration."""
     await _register(client, "frank@example.com")
-    created = await client.post("/api/v1/workspaces", json={"name": "Acme"})
-    assert created.status_code == 201
-    assert created.json()["name"] == "Acme"
-
     listing = await client.get("/api/v1/workspaces")
-    names = {w["name"] for w in listing.json()}
-    # personal auto-created workspace + the new one.
-    assert "Acme" in names
-    assert len(listing.json()) == 2
+    workspaces = listing.json()
+    assert len(workspaces) == 1
+    assert workspaces[0]["role"] == "owner"
+    # The safe effective-capability projection reaches the browser with it.
+    assert "manage_billing" in workspaces[0]["capabilities"]
+
+    blocked = await client.post("/api/v1/workspaces", json={"name": "Acme"})
+    assert blocked.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_workspace_creation_enforces_account_cap(
-    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+async def test_workspace_creation_enforces_the_owned_cap(
+    client: httpx.AsyncClient,
 ) -> None:
-    monkeypatch.setattr(workspace_service, "MAX_WORKSPACES_PER_USER", 2)
+    """The owned cap is 1 and counts only OWNED memberships."""
     await _register(client, "workspace-cap@example.com")
-    assert (
-        await client.post("/api/v1/workspaces", json={"name": "Second"})
-    ).status_code == 201
 
-    blocked = await client.post("/api/v1/workspaces", json={"name": "Third"})
+    blocked = await client.post("/api/v1/workspaces", json={"name": "Second"})
     assert blocked.status_code == 403
     assert blocked.json()["detail"]["code"] == "workspace_limit_exceeded"
-    assert blocked.json()["detail"]["limit"] == 2
-    assert blocked.json()["error"]["details"] == {"limit": 2}
+    assert blocked.json()["detail"]["limit"] == MAX_OWNED_WORKSPACES_PER_USER
+    assert blocked.json()["error"]["details"] == {
+        "limit": MAX_OWNED_WORKSPACES_PER_USER
+    }
 
 
 @pytest.mark.asyncio
 async def test_concurrent_workspace_creates_cannot_overrun_cap(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(workspace_service, "MAX_WORKSPACES_PER_USER", 2)
+    monkeypatch.setattr(workspace_service, "MAX_OWNED_WORKSPACES_PER_USER", 2)
     await _register(client, "workspace-cap-race@example.com")
 
     first, second = await asyncio.gather(
@@ -370,10 +373,7 @@ async def test_workspaces_list_requires_auth(client: httpx.AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_cross_workspace_isolation(client: httpx.AsyncClient) -> None:
     """A member of workspace A cannot see workspace B (invariant 5)."""
-    # User A registers (auto workspace A) and creates an extra workspace.
     await _register(client, "usera@example.com")
-    a_extra = await client.post("/api/v1/workspaces", json={"name": "A-Team"})
-    assert a_extra.status_code == 201
     a_workspaces = {w["id"] for w in (await client.get("/api/v1/workspaces")).json()}
 
     # Switch to user B in the same client (new session cookie).

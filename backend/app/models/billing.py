@@ -83,10 +83,23 @@ class BillingAccount(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    owner_user_id: Mapped[uuid.UUID] = mapped_column(
+    # The ONE workspace this account bills for (plan §2.1). Non-null and
+    # unique: a billing account is never shared across workspaces, and a
+    # workspace never has two.
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
         unique=True,
+        index=True,
+    )
+    # AUDIT METADATA ONLY: who provisioned this account. Deliberately
+    # non-unique and SET NULL — payer selection and authorization resolve
+    # through ``workspace_id``, and a departing user must not cascade-delete
+    # the workspace's billing account.
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
     )
     status: Mapped[str] = mapped_column(String(24), default="active")
@@ -122,28 +135,6 @@ class BillingAccount(Base):
             "entitlement_lifecycle_version >= 0",
             name="ck_billing_account_entitlement_version_nonneg",
         ),
-    )
-
-
-class WorkspaceBillingLink(Base):
-    __tablename__ = "workspace_billing_links"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
-        unique=True,
-        index=True,
-    )
-    billing_account_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("billing_accounts.id", ondelete="CASCADE"),
-        index=True,
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
     )
 
 

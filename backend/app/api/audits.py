@@ -28,7 +28,13 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.exports import audit_to_csv, audit_to_markdown
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_run,
+    require_active_workspace_write,
+)
 from app.core.config.audits import (
     AUDIT_TERMINAL_STATUSES,
     AUDIT_TRIGGER_MANUAL,
@@ -90,6 +96,13 @@ from app.models.audit import Audit, AuditEvent
 router = APIRouter(prefix="/audits", tags=["audits"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
+_WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 # Admission denial code -> HTTP status. Codes are config-owned; only the
@@ -147,7 +160,7 @@ def _translate_create_audit_errors() -> Iterator[None]:
 
 @router.post("", response_model=AuditResponse, status_code=status.HTTP_201_CREATED)
 async def create_audit_endpoint(
-    payload: AuditCreate, ctx: _WorkspaceDep, session: _SessionDep
+    payload: AuditCreate, ctx: _RunDep, session: _SessionDep
 ) -> AuditResponse:
     with _translate_create_audit_errors():
         audit = await create_audit(
@@ -218,7 +231,7 @@ async def audit_performance_endpoint(
 
 @router.post("/{audit_id}/cancel", response_model=AuditResponse)
 async def cancel_audit_endpoint(
-    audit_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    audit_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> AuditResponse:
     try:
         audit = await cancel_audit(
@@ -241,7 +254,7 @@ async def rerun_failures_endpoint(
     audit_id: uuid.UUID,
     payload: AuditRepairRequest,
     response: Response,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
 ) -> AuditResponse:
     """Create an immutable child audit for selected failed execution slots."""

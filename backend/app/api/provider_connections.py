@@ -14,7 +14,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_credentials,
+)
 from app.api.usage_limits import enforce_workspace_request
 from app.core.config.abuse import abuse_settings
 from app.core.config.provider_catalog import (
@@ -52,18 +57,17 @@ from app.domain.providers.service import (
 router = APIRouter(prefix="/provider-connections", tags=["providers"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Managing a workspace's provider credentials is ADMINISTRATIVE, alongside
+# billing and member management (owner decision, 11 September 2026). The gate
+# now comes from the ONE role policy instead of a role set spelled here; the
+# behaviour is unchanged — Owner and Admin, never Member or Viewer.
+_CredentialDep = Annotated[
+    WorkspaceContext, Depends(require_active_workspace_credentials)
+]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 _NOT_FOUND = "Provider connection not found"
-_CREDENTIAL_MANAGER_ROLES = frozenset({"owner", "admin"})
-
-
-def _require_credential_manager(ctx: WorkspaceContext) -> None:
-    if ctx.member.role not in _CREDENTIAL_MANAGER_ROLES:
-        raise_api_error(
-            status.HTTP_403_FORBIDDEN,
-            "Workspace owner or admin access is required",
-        )
 
 
 @router.get("", response_model=list[ProviderConnectionResponse])
@@ -93,10 +97,9 @@ async def get_connection_states_endpoint(
 )
 async def create_connection_endpoint(
     payload: ProviderConnectionCreate,
-    ctx: _WorkspaceDep,
+    ctx: _CredentialDep,
     session: _SessionDep,
 ) -> ProviderConnectionResponse:
-    _require_credential_manager(ctx)
     try:
         connection = await create_connection(
             session, workspace_id=ctx.workspace_id, payload=payload
@@ -110,10 +113,9 @@ async def create_connection_endpoint(
 async def update_connection_endpoint(
     connection_id: uuid.UUID,
     payload: ProviderConnectionUpdate,
-    ctx: _WorkspaceDep,
+    ctx: _CredentialDep,
     session: _SessionDep,
 ) -> ProviderConnectionResponse:
-    _require_credential_manager(ctx)
     try:
         connection = await update_connection(
             session,
@@ -132,9 +134,8 @@ async def update_connection_endpoint(
 
 @router.delete("/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_connection_endpoint(
-    connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    connection_id: uuid.UUID, ctx: _CredentialDep, session: _SessionDep
 ) -> None:
-    _require_credential_manager(ctx)
     try:
         await delete_connection(
             session,
@@ -152,10 +153,9 @@ async def delete_connection_endpoint(
     response_model=ProviderConnectionTestResponse,
 )
 async def test_connection_endpoint(
-    connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    connection_id: uuid.UUID, ctx: _CredentialDep, session: _SessionDep
 ) -> ProviderConnectionTestResponse:
     """Live-ish connectivity check through the adapter (mirrors llm.py)."""
-    _require_credential_manager(ctx)
     try:
         # Ensure the connection exists in this workspace before probing.
         await get_connection(

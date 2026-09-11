@@ -8,7 +8,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_run,
+    require_active_workspace_write,
+)
 from app.api.usage_limits import enforce_workspace_request
 from app.core.config.abuse import abuse_settings
 from app.core.config.agent import (
@@ -41,6 +47,13 @@ from app.domain.entitlements.enforcement import (
 router = APIRouter(prefix="/agent", tags=["agent"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
+_WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -57,7 +70,7 @@ def _error(exc: Exception) -> ApiException:
 @router.post("/tasks", status_code=status.HTTP_201_CREATED)
 async def submit_task_endpoint(
     payload: AgentTaskSubmit,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
     idempotency_key: Annotated[
         str | None,
@@ -135,7 +148,7 @@ async def get_task_endpoint(
 @router.post("/tasks/{run_id}/cancel")
 async def cancel_task_endpoint(
     run_id: uuid.UUID,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
     project_id: Annotated[uuid.UUID, Query()],
 ) -> AgentTaskRunDetail:

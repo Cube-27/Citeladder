@@ -23,6 +23,17 @@ export function testProjectSelection(
     id: TEST_WORKSPACE_ID,
     name: 'Test Workspace',
     role: 'owner',
+    // The Owner's effective capabilities, as the backend's one role policy
+    // publishes them. Consumers gate controls on these names, so a harness
+    // that omitted them would hide exactly what most screens render.
+    capabilities: [
+      'manage_billing',
+      'manage_credentials',
+      'manage_members',
+      'read',
+      'run',
+      'write',
+    ],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   };

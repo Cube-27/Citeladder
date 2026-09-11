@@ -33,6 +33,7 @@ from app.domain.billing.schemas import (
     TrialGrantSummaryResponse,
     UsageGrantBalanceResponse,
     UsageItemResponse,
+    WorkspaceOccupancyHintResponse,
 )
 from app.domain.entitlements.occupancy import OCCUPANCY_COUNTERS
 from app.domain.entitlements.resolver import effective_grant_expiry
@@ -361,3 +362,36 @@ async def _project_occupancy_usage(
         item.reserved = 0
         item.remaining = max(capability.value - consumed, 0)
         item.limit_state = LIMIT_STATE_FINITE
+
+
+async def workspace_occupancy_hints(
+    session: AsyncSession,
+    *,
+    account_id: uuid.UUID,
+    entitlement: ResolvedEntitlement,
+) -> list[WorkspaceOccupancyHintResponse]:
+    """Member-safe remaining-allowance hints for the workspace's occupancy.
+
+    Only resolved occupancy counters are projected, and only as three
+    integers each. Everything private to the account — grants, subscription,
+    billing profile, invoices, provider references — stays on the owner
+    routes, which is what lets a Member's UI hide a "New project" control it
+    would not be allowed to use anyway. The server still enforces the limit.
+    """
+    if entitlement.status != "resolved":
+        return []
+    hints: list[WorkspaceOccupancyHintResponse] = []
+    for key, counter in OCCUPANCY_COUNTERS.items():
+        capability = entitlement.capability(key)
+        if capability is None or not isinstance(capability.value, int):
+            continue
+        consumed = await counter(session, account_id)
+        hints.append(
+            WorkspaceOccupancyHintResponse(
+                key=key,
+                allowance=capability.value,
+                consumed=consumed,
+                remaining=max(capability.value - consumed, 0),
+            )
+        )
+    return hints

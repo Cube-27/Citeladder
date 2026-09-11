@@ -198,6 +198,33 @@ A deliberate switch to a different project pushes one history entry. Filling an 
 
 Maintain workspace context on workspace-only destinations. Update moved imports, route-policy prefixes and fixtures. Compare normalized public routes, not raw route-group filesystem paths. Run the production build and the focused creation/navigation regression flows before expanding into membership and billing changes.
 
+## Delivery record (Phase 2, 11 September 2026)
+
+**Multi-workspace sign-in selection: DEFERRED**, as §0.1 permits. What shipped
+instead is explicit workspace selection everywhere it is reachable after
+sign-in: the switcher lists every accessible workspace (including empty ones)
+and selecting one is an explicit act through the shared navigation owner, which
+carries the workspace on the URL and drops the previous workspace's project.
+Sign-in itself still routes into the caller's resolved workspace rather than
+offering a chooser. Nothing about the deferral blocks it later: the selection
+owner, the workspace-scoped keys and the explicit `?workspace=` parameter are
+all in place, so the remaining work is a sign-in screen, not a re-architecture.
+
+**Invitation delivery: no mail transport exists in this repository.** §2.4 says
+to use the existing mail-delivery owner; there is none — no SMTP client, no
+provider integration, no template layer, and inventing one is outside this
+scope and would need its own authorization. The token lifecycle is therefore
+implemented in full (expiring, single-use, stored only as a SHA-256 hash, bound
+to the invited address on acceptance) and the acceptance link is returned ONCE
+to the inviting administrator, who delivers it. When a mail owner exists it
+becomes the one place `domain/workspaces/invitations.py` calls; nothing else
+about the lifecycle changes.
+
+**Owned-workspace cap.** `MAX_WORKSPACES_PER_USER` is replaced by
+`MAX_OWNED_WORKSPACES_PER_USER = 1`, counting only memberships whose role is
+`owner`. A membership held by invitation never consumes the invitee's own
+allocation and never suppresses provisioning of the one workspace they own.
+
 ## Phase 2: workspace-owned billing and four enforced roles
 
 ### 2.1 One workspace, one account

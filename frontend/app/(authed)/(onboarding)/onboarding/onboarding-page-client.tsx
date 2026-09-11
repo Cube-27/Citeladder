@@ -31,14 +31,14 @@ export function OnboardingPageClient() {
 function ProjectSetupGate() {
   const queryClient = useQueryClient();
   const { status, activeWorkspaceId, retry: retryContext } = useProjectContext();
-  const { usage, isLoading: entitlementLoading, usageIsLoading, usageIsError } = useEntitlement();
+  const { entitlement, isLoading: entitlementLoading } = useEntitlement();
 
   const retry = () => {
     retryContext();
-    void queryClient.refetchQueries({ queryKey: queryKeys.billing.allUsage() });
+    void queryClient.refetchQueries({ queryKey: queryKeys.billing.all });
   };
 
-  const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
+  const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
 
   // Every settled FAILURE is answered before the loading branch. A failed
   // workspace read leaves `activeWorkspaceId` null forever, so testing for it
@@ -60,19 +60,7 @@ function ProjectSetupGate() {
       </ProjectSetupBlocked>
     );
   }
-  if (usageIsError) {
-    return (
-      <ProjectSetupBlocked title="Project allowance could not be loaded" onRetry={retry}>
-        We could not load your workspace usage. Retry to check your project allowance.
-      </ProjectSetupBlocked>
-    );
-  }
-  if (
-    status === 'resolving' ||
-    activeWorkspaceId === null ||
-    entitlementLoading ||
-    usageIsLoading
-  ) {
+  if (status === 'resolving' || activeWorkspaceId === null || entitlementLoading) {
     return null;
   }
   if (remainingProjectSlots === undefined) {

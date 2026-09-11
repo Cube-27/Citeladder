@@ -60,6 +60,7 @@ from app.models.audit import (
 from app.models.billing import BillingAccount
 from app.models.provider import ProviderConnection
 from app.models.user import User
+from app.models.workspace import Workspace
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.orchestration.provider_capacity import (
     CapacityOutcome,
@@ -120,8 +121,11 @@ async def _seed(
                 is_active=True,
             )
             session.add(user)
+            # Each account bills its OWN workspace (plan §2.1).
+            workspace = Workspace(name=f"Capacity WS {uuid.uuid4().hex[:6]}")
+            session.add(workspace)
             await session.flush()
-            account = BillingAccount(owner_user_id=user.id)
+            account = BillingAccount(workspace_id=workspace.id, owner_user_id=user.id)
             session.add(account)
             await session.flush()
             account_ids.append(account.id)

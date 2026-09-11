@@ -23,7 +23,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_run,
+)
 from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
 )
@@ -65,6 +70,12 @@ from app.models.analytics import AnalyticsTask
 router = APIRouter(prefix="/projects", tags=["performance"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -191,7 +202,7 @@ def _range_task_response(task: AnalyticsTask) -> PerformanceRangeTaskResponse:
 )
 async def enqueue_performance_range_endpoint(
     project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
     from_date: Annotated[date, Query(alias="from")],
     to_date: Annotated[date, Query(alias="to")],
@@ -263,7 +274,7 @@ async def get_performance_range_endpoint(
 )
 async def sync_performance_endpoint(
     project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
 ) -> list[IntegrationSyncEnqueueResponse]:
     """Enqueue one on-demand sync run per active mapped GSC/GA4 connection.

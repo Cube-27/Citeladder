@@ -41,7 +41,7 @@ def _arrange_existing_login(monkeypatch: pytest.MonkeyPatch):
         AsyncMock(return_value=workspace),
     )
     monkeypatch.setattr(
-        provision_dev_login, "ensure_user_billing", AsyncMock(return_value=account)
+        provision_dev_login, "ensure_workspace_billing", AsyncMock(return_value=account)
     )
     monkeypatch.setattr(provision_dev_login, "issue_override_bundle", AsyncMock())
     monkeypatch.setattr(provision_dev_login, "ensure_initial_catalog", AsyncMock())

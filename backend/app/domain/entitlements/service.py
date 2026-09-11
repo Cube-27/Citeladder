@@ -29,6 +29,7 @@ from app.core.config.entitlements import CAPABILITY_REGISTRY, KEY_MONITORED_URLS
 from app.core.config.site_health_runtime import (
     runtime_policy_for_allowance,
 )
+from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.resolver import ResolverInputError, fold_entitlement
 from app.domain.entitlements.types import (
     STATUS_RESOLVED,
@@ -47,14 +48,13 @@ from app.models.billing import (
     BillingAccount,
     BillingSubscription,
     GrantRevocation,
-    WorkspaceBillingLink,
 )
 from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
 
 logger = logging.getLogger("app.billing")
 
 # Sentinel account id for unresolved lookups with no billing account (e.g. a
-# workspace with no WorkspaceBillingLink). Never persisted.
+# workspace with no billing account). Never persisted.
 _NULL_ACCOUNT_ID = uuid.UUID(int=0)
 
 
@@ -184,22 +184,18 @@ async def resolve_account_entitlement(
 async def resolve_workspace_entitlement(
     session: AsyncSession, *, workspace_id: uuid.UUID, at: datetime
 ) -> ResolvedEntitlement:
-    """Resolve the entitlement for the account linked to ``workspace_id``.
+    """Resolve the entitlement for the account that bills ``workspace_id``.
 
-    A missing ``WorkspaceBillingLink`` is unresolved/no-capability, not a
+    A workspace with no billing account is unresolved/no-capability, not a
     default profile.
     """
-    account_id = await session.scalar(
-        select(WorkspaceBillingLink.billing_account_id).where(
-            WorkspaceBillingLink.workspace_id == workspace_id
-        )
-    )
+    account_id = await billing_account_id_for(session, workspace_id)
     if account_id is None:
         return _unresolved(
             account_id=_NULL_ACCOUNT_ID,
             entitlement_lifecycle_version=0,
             at=at,
-            error="workspace_billing_link_missing",
+            error="workspace_billing_account_missing",
         )
     return await resolve_account_entitlement(session, account_id=account_id, at=at)
 
@@ -207,11 +203,11 @@ async def resolve_workspace_entitlement(
 async def refresh_site_health_runtime_for_account(
     session: AsyncSession, *, account_id: uuid.UUID, at: datetime
 ) -> ResolvedEntitlement:
-    """Re-project every linked workspace's Site Health runtime row.
+    """Re-project the account workspace's Site Health runtime row.
 
     Resolves the account ONCE, maps only the resolved ``monitored_urls``
-    allowance into each runtime row via the neutral policy, and stamps the
-    resolver provenance. Rewrites a row only when the projection drifted.
+    allowance into the runtime row via the neutral policy, and stamps the
+    resolver provenance. Rewrites the row only when the projection drifted.
     Callers own commit.
     """
     entitlement = await resolve_account_entitlement(
@@ -223,14 +219,11 @@ async def refresh_site_health_runtime_for_account(
         else 0
     )
     policy = runtime_policy_for_allowance(allowance)
-    # Deterministic order: every caller re-projects the same account's rows in
-    # the same sequence, so two concurrent refreshes take the runtime rows'
-    # locks in one global order instead of racing into a deadlock.
+    # An account bills exactly ONE workspace, so this is at most one row; the
+    # loop shape is kept so a missing account row simply projects nothing.
     workspace_ids = (
         await session.scalars(
-            select(WorkspaceBillingLink.workspace_id)
-            .where(WorkspaceBillingLink.billing_account_id == account_id)
-            .order_by(WorkspaceBillingLink.workspace_id.asc())
+            select(BillingAccount.workspace_id).where(BillingAccount.id == account_id)
         )
     ).all()
     for workspace_id in workspace_ids:
@@ -253,17 +246,13 @@ async def refresh_site_health_runtime_for_account(
 async def refresh_site_health_runtime_for_workspace(
     session: AsyncSession, *, workspace_id: uuid.UUID, at: datetime
 ) -> WorkspaceSiteHealthRuntime:
-    """Lazily re-project one workspace's runtime row from its linked account.
+    """Lazily re-project one workspace's runtime row from its own account.
 
     Called before planner/selection reads so the row follows grant,
-    revocation, and lifecycle changes. With no linked account the row
+    revocation, and lifecycle changes. With no billing account the row
     projects the fail-closed zero-allowance sample policy.
     """
-    account_id = await session.scalar(
-        select(WorkspaceBillingLink.billing_account_id).where(
-            WorkspaceBillingLink.workspace_id == workspace_id
-        )
-    )
+    account_id = await billing_account_id_for(session, workspace_id)
     if account_id is not None:
         await refresh_site_health_runtime_for_account(
             session, account_id=account_id, at=at

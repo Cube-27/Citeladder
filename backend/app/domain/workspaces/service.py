@@ -8,22 +8,24 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.product_tour import PRODUCT_TOUR_VERSION
-from app.core.config.workspaces import MAX_WORKSPACES_PER_USER
+from app.core.config.workspaces import MAX_OWNED_WORKSPACES_PER_USER
 from app.domain.abuse.service import lock_subject
-from app.domain.billing.bootstrap import ensure_user_billing
+from app.domain.billing.bootstrap import ensure_workspace_billing
+from app.domain.workspaces.policy import WORKSPACE_ROLE_OWNER
 from app.domain.workspaces.schemas import ProductTourResponse, ProductTourUpdate
 from app.models.user import User
 from app.models.workspace import ProductTourStatus, Workspace, WorkspaceMember
 
-# Roles a member can hold within a workspace. The creator is the owner.
-WORKSPACE_ROLE_OWNER = "owner"
-
 
 class WorkspaceLimitExceededError(ValueError):
-    """The account already owns or belongs to the maximum tenant roots."""
+    """The user already OWNS the maximum number of tenant roots.
+
+    Memberships held by invitation never count: those workspaces belong to
+    somebody else and carry somebody else's billing account.
+    """
 
     def __init__(self, *, limit: int) -> None:
-        super().__init__(f"Workspace limit of {limit} reached")
+        super().__init__(f"Owned workspace limit of {limit} reached")
         self.limit = limit
 
 
@@ -128,21 +130,37 @@ async def list_workspaces_for_user(
     return [tuple(row) for row in result.all()]
 
 
+async def count_owned_workspaces(session: AsyncSession, user_id: uuid.UUID) -> int:
+    """How many non-system workspaces ``user_id`` is the Owner of."""
+    return int(
+        await session.scalar(
+            select(func.count(WorkspaceMember.id))
+            .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
+            .where(
+                WorkspaceMember.user_id == user_id,
+                WorkspaceMember.role == WORKSPACE_ROLE_OWNER,
+                Workspace.is_system.is_(False),
+            )
+        )
+        or 0
+    )
+
+
 async def create_workspace(
     session: AsyncSession, user: User, name: str
 ) -> tuple[Workspace, WorkspaceMember]:
-    """Create a workspace and add ``user`` as its owner."""
+    """Create a workspace, its billing account, and ``user``'s Owner row.
+
+    The workspace and its single billing account are created in ONE
+    transaction (plan §2.1/§2.2): a workspace never exists without the
+    account that bills it, and the new workspace provisions only its own
+    baseline terms — never a copy of another workspace's paid subscription
+    or grants.
+    """
     await lock_subject(session, namespace="workspace.create", subject=user.id)
-    current = await session.scalar(
-        select(func.count(WorkspaceMember.id))
-        .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
-        .where(
-            WorkspaceMember.user_id == user.id,
-            Workspace.is_system.is_(False),
-        )
-    )
-    if int(current or 0) >= MAX_WORKSPACES_PER_USER:
-        raise WorkspaceLimitExceededError(limit=MAX_WORKSPACES_PER_USER)
+    owned = await count_owned_workspaces(session, user.id)
+    if owned >= MAX_OWNED_WORKSPACES_PER_USER:
+        raise WorkspaceLimitExceededError(limit=MAX_OWNED_WORKSPACES_PER_USER)
     workspace = Workspace(name=name)
     session.add(workspace)
     await session.flush()
@@ -153,7 +171,9 @@ async def create_workspace(
     )
     session.add(member)
     await session.flush()
-    await ensure_user_billing(session, user, workspace_ids=(workspace.id,))
+    await ensure_workspace_billing(
+        session, workspace_id=workspace.id, provisioning_user=user
+    )
     await session.commit()
     await session.refresh(workspace)
     await session.refresh(member)
@@ -163,17 +183,16 @@ async def create_workspace(
 async def ensure_personal_workspace(
     session: AsyncSession, user: User
 ) -> Workspace | None:
-    """Auto-create a personal workspace + owner membership if the user has none.
+    """Auto-create the user's OWN workspace + Owner row if they own none.
 
-    Returns the newly created workspace, or ``None`` if the user was already a
-    member of at least one workspace. Flushes but does not commit — the caller
-    owns the transaction boundary.
+    Returns the newly created workspace, or ``None`` when the user already
+    owns one. Membership held by invitation deliberately does not suppress
+    this: a user who has only ever been invited into somebody else's
+    workspace still gets the one workspace they own. Flushes but does not
+    commit — the caller owns the transaction boundary.
     """
     await lock_subject(session, namespace="workspace.create", subject=user.id)
-    existing = await session.execute(
-        select(WorkspaceMember.id).where(WorkspaceMember.user_id == user.id).limit(1)
-    )
-    if existing.scalar_one_or_none() is not None:
+    if await count_owned_workspaces(session, user.id) > 0:
         return None
     workspace = Workspace(name=_default_workspace_name(user))
     session.add(workspace)

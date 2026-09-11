@@ -37,14 +37,43 @@ export const oauthStartResponseSchema = responseObject({
   session_nonce: z.string().default(''),
 });
 
-// Backend `WorkspaceResponse` is `{ id, name, role, created_at, updated_at }` —
-// no slug; the caller's membership `role` is carried instead.
+// Backend `WorkspaceResponse` carries the caller's membership `role` and the
+// safe effective `capabilities` that role confers — capability names only,
+// never a billing profile or another member's identity. Controls may be
+// hidden from them; the server still enforces every denial itself.
 export const workspaceSchema = responseObject({
   id: uuid(),
   name: z.string(),
   role: z.string(),
+  capabilities: z.array(z.string()),
   created_at: z.string(),
   updated_at: z.string(),
+});
+
+// One membership row on the workspace roster (Owner/Admin only).
+export const workspaceMemberSchema = responseObject({
+  id: uuid(),
+  user_id: uuid(),
+  email: z.string(),
+  role: z.string(),
+  is_self: z.boolean(),
+  created_at: z.string(),
+});
+
+// A pending invitation. The acceptance token is never listed: only the issue
+// and resend responses carry it, once.
+export const workspaceInvitationSchema = responseObject({
+  id: uuid(),
+  workspace_id: uuid(),
+  email: z.string(),
+  role: z.string(),
+  expires_at: z.string(),
+  created_at: z.string(),
+});
+
+export const workspaceInvitationIssuedSchema = responseObject({
+  invitation: workspaceInvitationSchema,
+  token: z.string(),
 });
 
 // Cross-route onboarding tour state belongs to the caller's workspace

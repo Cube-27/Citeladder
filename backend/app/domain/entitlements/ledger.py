@@ -41,11 +41,12 @@ from app.core.config.entitlements import (
     LEDGER_ENTRY_RELEASE,
     LEDGER_ENTRY_RESERVATION,
 )
+from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.resolver import ordered_consumable_grants
 from app.domain.entitlements.service import resolve_account_entitlement
 from app.domain.entitlements.types import STATUS_RESOLVED, GrantInput
 from app.models.audit import AuditTask
-from app.models.billing import AccountGrant, ConsumableLedger, WorkspaceBillingLink
+from app.models.billing import AccountGrant, ConsumableLedger
 
 logger = logging.getLogger("app.billing")
 
@@ -308,12 +309,8 @@ async def reserve_funded_task(
 
     reservation_id = uuid.uuid4()
     workspace_id = await _audit_workspace(session, task_id)
-    linked_account = await session.scalar(
-        select(WorkspaceBillingLink.billing_account_id).where(
-            WorkspaceBillingLink.workspace_id == workspace_id
-        )
-    )
-    if linked_account != account_id:
+    subject_account = await billing_account_id_for(session, workspace_id)
+    if subject_account != account_id:
         raise LedgerError("audit subject does not belong to billing account")
     for index, allocation in enumerate(allocations):
         # The FIRST allocation row carries the base key verbatim so replays

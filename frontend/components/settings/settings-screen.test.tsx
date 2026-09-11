@@ -51,11 +51,20 @@ const nextProject = {
 const setActiveProjectId = vi.fn();
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  // The Members tab gates itself on the caller's effective capability, so the
+  // mock has to answer that question too — an Owner here.
+  useWorkspaceCapability: () => true,
   useProjectContext: () => ({
     projects: [activeProject],
     activeProject,
     activeProjectId: activeProject.id,
     setActiveProjectId,
+    activeWorkspace: {
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      name: 'Test Workspace',
+      role: 'owner',
+      capabilities: ['manage_billing', 'manage_members', 'read', 'run', 'write'],
+    },
     isLoading: false,
   }),
 }));
@@ -111,8 +120,11 @@ describe('SettingsScreen', () => {
     renderScreen();
     const tablist = screen.getByRole('tablist', { name: /settings sections/i });
     const tabs = within(tablist).getAllByRole('tab');
+    // Members is administrative and the mocked caller is an Owner, so it is
+    // offered here; a role without `manage_members` never sees the tab.
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       'Account',
+      'Members',
       'Billing',
       'Providers',
       'Integrations',
@@ -222,7 +234,7 @@ describe('SettingsScreen', () => {
     const account = screen.getByRole('tab', { name: 'Account' });
     account.focus();
     await ue.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Billing' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Members' })).toHaveAttribute('aria-selected', 'true');
     await ue.keyboard('{End}');
     expect(screen.getByRole('tab', { name: 'Integrations' })).toHaveAttribute(
       'aria-selected',

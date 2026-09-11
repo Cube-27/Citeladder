@@ -72,3 +72,25 @@ export function useActiveProject(): Project | null {
 export function useActiveWorkspaceId(): string | null {
   return useProjectContext().activeWorkspaceId;
 }
+
+/**
+ * What the caller may do in the ACTIVE workspace.
+ *
+ * The names come straight from the backend's one role policy, on the
+ * workspace list response. Use them to hide controls a role cannot use — not
+ * as the boundary: every denial is enforced on the server, which is the only
+ * thing a caller cannot bypass.
+ */
+type WorkspaceCapability =
+  | 'read'
+  | 'write'
+  | 'run'
+  | 'manage_billing'
+  | 'manage_members'
+  | 'manage_credentials';
+
+/** Whether the active workspace grants `capability`. Fails closed. */
+export function useWorkspaceCapability(capability: WorkspaceCapability): boolean {
+  const { activeWorkspace } = useProjectContext();
+  return activeWorkspace?.capabilities.includes(capability) ?? false;
+}

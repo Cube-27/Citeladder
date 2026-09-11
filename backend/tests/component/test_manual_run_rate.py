@@ -35,7 +35,6 @@ from app.domain.entitlements.enforcement import (
 )
 from app.domain.entitlements.types import GrantSpec
 from app.models.audit import Audit
-from app.models.billing import BillingAccount, WorkspaceBillingLink
 from app.models.project import Project
 from app.models.workspace import Workspace
 from tests.component.audit_helpers import seed_audit_fixtures
@@ -54,17 +53,17 @@ def _clear_cache():
     clear_cache()
 
 
-async def _linked_project(
-    session: AsyncSession, account: BillingAccount
+async def _separate_account_project(
+    session: AsyncSession,
 ) -> tuple[Workspace, Project]:
-    """A second workspace linked to the same account, with one project."""
-    workspace = Workspace(name="Linked WS")
-    session.add(workspace)
-    await session.flush()
-    session.add(
-        WorkspaceBillingLink(workspace_id=workspace.id, billing_account_id=account.id)
-    )
-    project = Project(workspace_id=workspace.id, name="Linked Project")
+    """A second workspace with its OWN billing account and one project.
+
+    Rate accounting is per account, and an account bills exactly one
+    workspace, so this workspace's runs must never consume the first
+    account's manual-run window.
+    """
+    _, workspace, _ = await seed_account_workspace(session)
+    project = Project(workspace_id=workspace.id, name="Separate Project")
     session.add(project)
     await session.flush()
     await session.commit()
@@ -96,11 +95,11 @@ async def _evaluate(
 
 
 @pytest.mark.asyncio
-async def test_rolling_window_counts_across_linked_workspaces(
+async def test_rolling_window_is_scoped_to_the_accounts_own_workspace(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        account, workspace_a, _user = await seed_account_workspace(session)
+        _account, workspace_a, _user = await seed_account_workspace(session)
         await seed_occupancy_grants(
             session,
             workspace_id=workspace_a.id,
@@ -108,7 +107,12 @@ async def test_rolling_window_counts_across_linked_workspaces(
         )
         project_a = Project(workspace_id=workspace_a.id, name="A")
         session.add(project_a)
-        workspace_b, project_b = await _linked_project(session, account)
+        workspace_b, project_b = await _separate_account_project(session)
+        await seed_occupancy_grants(
+            session,
+            workspace_id=workspace_b.id,
+            grants=(GrantSpec(key=KEY_MANUAL_RUNS_PER_DAY, value=3),),
+        )
         session.add_all(
             [
                 # 23h old in workspace A: inside the window.
@@ -118,7 +122,15 @@ async def test_rolling_window_counts_across_linked_workspaces(
                     trigger=AUDIT_TRIGGER_MANUAL,
                     created_at=_AT - timedelta(hours=23),
                 ),
-                # 1h old in workspace B: counts across linked workspaces.
+                # 1h old in workspace A: also inside the window.
+                _audit_row(
+                    workspace_id=workspace_a.id,
+                    project_id=project_a.id,
+                    trigger=AUDIT_TRIGGER_MANUAL,
+                    created_at=_AT - timedelta(hours=1),
+                ),
+                # 1h old in workspace B, which bills through its OWN account:
+                # it must not consume workspace A's window.
                 _audit_row(
                     workspace_id=workspace_b.id,
                     project_id=project_b.id,
@@ -159,9 +171,9 @@ async def test_rolling_window_counts_across_linked_workspaces(
         assert decision.remaining == 1
         # Reset is when the OLDEST in-window run (23h old) ages out: +1h.
         assert decision.reset_at == _AT - timedelta(hours=23) + timedelta(hours=24)
-        # The same account scope is visible from the other workspace.
+        # The other workspace spends its OWN budget: one run, not three.
         decision_b = await _evaluate(session, workspace_b.id)
-        assert decision_b.used == 2
+        assert decision_b.used == 1
 
 
 @pytest.mark.asyncio
@@ -169,7 +181,7 @@ async def test_allowance_reached_rejects_with_safe_metadata(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        account, workspace_a, _user = await seed_account_workspace(session)
+        _account, workspace_a, _user = await seed_account_workspace(session)
         await seed_occupancy_grants(
             session,
             workspace_id=workspace_a.id,
@@ -177,11 +189,11 @@ async def test_allowance_reached_rejects_with_safe_metadata(
         )
         project_a = Project(workspace_id=workspace_a.id, name="A")
         session.add(project_a)
-        _workspace_b, project_b = await _linked_project(session, account)
+        await session.flush()
         session.add(
             _audit_row(
-                workspace_id=project_b.workspace_id,
-                project_id=project_b.id,
+                workspace_id=workspace_a.id,
+                project_id=project_a.id,
                 trigger=AUDIT_TRIGGER_MANUAL,
                 created_at=_AT - timedelta(hours=2),
             )
@@ -202,7 +214,7 @@ async def test_unprovisioned_accounts_are_not_gated(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        # No billing link at all: pre-commercial passthrough.
+        # No billing account at all: pre-commercial passthrough.
         workspace = Workspace(name="Unlinked WS")
         session.add(workspace)
         await session.flush()

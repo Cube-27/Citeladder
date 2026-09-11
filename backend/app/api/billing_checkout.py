@@ -1,4 +1,4 @@
-"""Standard Checkout routes under the existing billing owner."""
+"""Standard Checkout routes under the active workspace's billing account."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import WorkspaceContext, get_db, require_active_workspace_billing
 from app.core.http_errors import raise_api_error, raise_not_found
 from app.domain.billing.checkout import (
     CheckoutResponse,
@@ -16,14 +16,15 @@ from app.domain.billing.checkout import (
     CheckoutVerifyRequest,
     activation_response,
     checkout_response,
-    owned_activation,
     verify_checkout,
+    workspace_activation,
 )
 from app.domain.billing.schemas import ActivationResponse
-from app.models.user import User
 
 router = APIRouter()
-CurrentUser = Annotated[User, Depends(get_current_user)]
+BillingWorkspace = Annotated[
+    WorkspaceContext, Depends(require_active_workspace_billing)
+]
 Session = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -31,10 +32,10 @@ Session = Annotated[AsyncSession, Depends(get_db)]
     "/billing/subscriptions/{activation_id}/checkout", response_model=CheckoutResponse
 )
 async def get_checkout(
-    activation_id: uuid.UUID, user: CurrentUser, session: Session
+    activation_id: uuid.UUID, ctx: BillingWorkspace, session: Session
 ) -> CheckoutResponse:
-    pending = await owned_activation(
-        session, activation_id=activation_id, user_id=user.id
+    pending = await workspace_activation(
+        session, activation_id=activation_id, workspace_id=ctx.workspace_id
     )
     if pending is None:
         raise_not_found("Activation")
@@ -46,10 +47,10 @@ async def get_checkout(
 
 @router.get("/billing/activations/{activation_id}", response_model=ActivationResponse)
 async def get_activation(
-    activation_id: uuid.UUID, user: CurrentUser, session: Session
+    activation_id: uuid.UUID, ctx: BillingWorkspace, session: Session
 ) -> ActivationResponse:
-    pending = await owned_activation(
-        session, activation_id=activation_id, user_id=user.id
+    pending = await workspace_activation(
+        session, activation_id=activation_id, workspace_id=ctx.workspace_id
     )
     if pending is None:
         raise_not_found("Activation")
@@ -67,11 +68,11 @@ async def get_activation(
 async def post_verify(
     activation_id: uuid.UUID,
     payload: CheckoutVerifyRequest,
-    user: CurrentUser,
+    ctx: BillingWorkspace,
     session: Session,
 ) -> ActivationResponse:
-    pending = await owned_activation(
-        session, activation_id=activation_id, user_id=user.id, lock=True
+    pending = await workspace_activation(
+        session, activation_id=activation_id, workspace_id=ctx.workspace_id, lock=True
     )
     if pending is None:
         raise_not_found("Activation")

@@ -50,7 +50,6 @@ from app.domain.prompts.service import (
     import_prompts,
     update_prompt,
 )
-from app.models.billing import WorkspaceBillingLink
 from app.models.brand import Brand
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
@@ -151,24 +150,25 @@ async def test_concurrent_project_creates_never_exceed_grant(
 
 
 @pytest.mark.asyncio
-async def test_project_slots_counts_every_linked_workspace(
+async def test_project_slots_are_scoped_to_the_accounts_own_workspace(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
+    """One workspace, one account, one budget.
+
+    Workspace A's single slot is consumed by A's project, so a second project
+    in A is denied. Workspace B bills through its OWN account and is
+    unaffected — the previous account-wide aggregation across linked
+    workspaces is superseded by the owner's one-to-one decision.
+    """
     async with session_factory() as session:
-        account, workspace_a, _user = await seed_account_workspace(session)
-        workspace_b = Workspace(name="Second WS")
-        session.add(workspace_b)
-        await session.flush()
-        session.add(
-            WorkspaceBillingLink(
-                workspace_id=workspace_b.id, billing_account_id=account.id
+        _account, workspace_a, _user = await seed_account_workspace(session)
+        _, workspace_b, _ = await seed_account_workspace(session)
+        for workspace_id in (workspace_a.id, workspace_b.id):
+            await seed_occupancy_grants(
+                session,
+                workspace_id=workspace_id,
+                grants=(GrantSpec(key=KEY_PROJECT_SLOTS, value=1),),
             )
-        )
-        await seed_occupancy_grants(
-            session,
-            workspace_id=workspace_a.id,
-            grants=(GrantSpec(key=KEY_PROJECT_SLOTS, value=1),),
-        )
         await session.commit()
 
     async with session_factory() as session:
@@ -177,16 +177,21 @@ async def test_project_slots_counts_every_linked_workspace(
             workspace_id=workspace_a.id,
             payload=ProjectCreate(name="In A"),
         )
-    # The project in workspace A consumes the account-wide slot, so a create
-    # in the OTHER linked workspace is denied.
     async with session_factory() as session:
         with pytest.raises(OccupancyLimitExceededError):
             await create_project(
                 session,
-                workspace_id=workspace_b.id,
-                payload=ProjectCreate(name="In B"),
+                workspace_id=workspace_a.id,
+                payload=ProjectCreate(name="Second in A"),
             )
         await session.rollback()
+    # The other workspace spends its own budget and is not blocked by A.
+    async with session_factory() as session:
+        await create_project(
+            session,
+            workspace_id=workspace_b.id,
+            payload=ProjectCreate(name="In B"),
+        )
 
 
 # =========================================================================
