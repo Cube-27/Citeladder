@@ -92,6 +92,31 @@ function createRequestId() {
   );
 }
 
+/**
+ * Scope flat routes to the workspace this request was issued for.
+ *
+ * An explicit `workspaceId` is AUTHORITATIVE: it replaces any `X-Workspace-Id`
+ * the caller's own headers carried, and an explicit `null` removes the header
+ * entirely so the backend resolves access from the path or the caller's
+ * default workspace. Deferring to a copied header instead would let one reused
+ * header object silently decide the tenancy of a request that named its own
+ * workspace — the exact failure this option exists to remove.
+ *
+ * With no explicit value the ambient selection applies, and a caller-supplied
+ * header still wins: that is the un-converted compatibility path.
+ */
+function applyWorkspaceHeader(headers: Headers, workspaceId: string | null | undefined) {
+  if (workspaceId === undefined) {
+    if (activeWorkspaceId && !headers.has('X-Workspace-Id')) {
+      headers.set('X-Workspace-Id', activeWorkspaceId);
+    }
+  } else if (workspaceId) {
+    headers.set('X-Workspace-Id', workspaceId);
+  } else {
+    headers.delete('X-Workspace-Id');
+  }
+}
+
 function buildHeaders(options: InternalRequestOptions, requestId: string) {
   const headers = new Headers(options.headers);
   // Keep ordinary GETs "simple" (no custom header) to avoid a CORS preflight;
@@ -100,14 +125,7 @@ function buildHeaders(options: InternalRequestOptions, requestId: string) {
     headers.set('X-Request-ID', requestId);
   }
   if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey);
-  // Scope flat routes to the workspace this request was issued for. An
-  // explicit `workspaceId` wins over the ambient selection, and an explicit
-  // `null` suppresses the header entirely so the backend resolves the
-  // caller's default workspace.
-  const workspaceId = options.workspaceId === undefined ? activeWorkspaceId : options.workspaceId;
-  if (workspaceId && !headers.has('X-Workspace-Id')) {
-    headers.set('X-Workspace-Id', workspaceId);
-  }
+  applyWorkspaceHeader(headers, options.workspaceId);
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }

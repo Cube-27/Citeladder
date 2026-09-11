@@ -132,6 +132,7 @@ describe('pickActiveProject', () => {
 describe('resolveStatus', () => {
   const base = {
     contradictoryRequest: false,
+    requestedProjectPending: false,
     requestedProjectMissing: false,
     failed: false,
     workspaceId: WORKSPACE_A,
@@ -166,6 +167,15 @@ describe('resolveStatus', () => {
         activeProjectId: null,
         listSettled: false,
       }),
+    ).toBe('resolving');
+  });
+
+  it('holds at resolving while an explicit project is still being fetched', () => {
+    // The requested id becomes the active id immediately, so a workspace list
+    // that settles first would otherwise report `ready` with no active project
+    // and let a screen render against a project still in flight.
+    expect(
+      resolveStatus({ ...base, requestedProjectPending: true, hasResolvedProject: false }),
     ).toBe('resolving');
   });
 

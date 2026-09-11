@@ -2,12 +2,20 @@
 
 import { useEffect } from 'react';
 
-import { getActiveWorkspaceId } from '@/lib/api/client';
 import { parseSseFrame, splitSseFrames, type RawSseFrame } from '@/lib/sse/frames';
 
 type SseEventStreamOptions = {
   enabled: boolean;
   url: string | null;
+  /**
+   * The workspace this stream belongs to.
+   *
+   * Read from the caller rather than from the module-level selection, and part
+   * of the effect's identity: a reconnect therefore resends the workspace the
+   * stream STARTED under, and switching workspace tears the stream down
+   * instead of silently resuming someone else's run under the new one.
+   */
+  workspaceId: string | null;
   invalidateDebounceMs: number;
   reconnectBaseMs: number;
   reconnectMaxMs: number;
@@ -16,9 +24,11 @@ type SseEventStreamOptions = {
   streamName: string;
 };
 
-function streamHeaders(lastEventId: string | null): Record<string, string> {
+function streamHeaders(
+  workspaceId: string | null,
+  lastEventId: string | null,
+): Record<string, string> {
   const headers: Record<string, string> = { Accept: 'text/event-stream' };
-  const workspaceId = getActiveWorkspaceId();
   if (workspaceId) headers['X-Workspace-Id'] = workspaceId;
   if (lastEventId) headers['Last-Event-ID'] = lastEventId;
   return headers;
@@ -57,6 +67,7 @@ async function readSseResponse(
 export function useSseEventStream({
   enabled,
   url,
+  workspaceId,
   invalidateDebounceMs,
   reconnectBaseMs,
   reconnectMaxMs,
@@ -84,7 +95,7 @@ export function useSseEventStream({
     const connect = async (): Promise<number | null> => {
       const response = await fetch(url, {
         method: 'GET',
-        headers: streamHeaders(lastEventId),
+        headers: streamHeaders(workspaceId, lastEventId),
         credentials: 'include',
         cache: 'no-store',
         signal: controller.signal,
@@ -133,5 +144,6 @@ export function useSseEventStream({
     reconnectMaxMs,
     streamName,
     url,
+    workspaceId,
   ]);
 }

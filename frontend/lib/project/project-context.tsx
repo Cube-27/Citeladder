@@ -159,6 +159,8 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
 
   const status = resolveStatus({
     contradictoryRequest,
+    requestedProjectPending:
+      requestedProjectId !== null && activeProject === null && !requestedProjectMissing,
     requestedProjectMissing,
     failed,
     workspaceId: activeWorkspaceId,

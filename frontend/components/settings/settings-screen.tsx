@@ -99,8 +99,9 @@ function ProjectDeletionControls() {
       if (next) {
         // Navigate, do not merely re-select: the deleted id may be the one in
         // `?project=`, and leaving it there would resolve to a project that no
-        // longer exists and present as "that project is unavailable".
-        selectProject(next.id);
+        // longer exists and present as "that project is unavailable". Replace
+        // rather than push for the same reason — Back must not return to it.
+        selectProject(next.id, { replace: true });
         setConfirmOpen(false);
       } else {
         router.replace(

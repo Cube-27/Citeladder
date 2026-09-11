@@ -101,6 +101,15 @@ export function resolveProjectId({
 export type StatusInputs = {
   /** The URL named a workspace AND a project that does not belong to it. */
   contradictoryRequest: boolean;
+  /**
+   * An explicit project was requested and has not resolved yet.
+   *
+   * The requested id becomes the active id immediately, so a workspace list
+   * that settles BEFORE the project-detail read would otherwise report
+   * `ready` with no active project — and the shell would render a screen
+   * against the project it is still fetching.
+   */
+  requestedProjectPending: boolean;
   /** The explicitly requested project is confirmed missing/unauthorized. */
   requestedProjectMissing: boolean;
   /** A read failed in a way the reader can retry. */
@@ -121,6 +130,7 @@ export type StatusInputs = {
  */
 export function resolveStatus({
   contradictoryRequest,
+  requestedProjectPending,
   requestedProjectMissing,
   failed,
   workspaceId,
@@ -130,6 +140,7 @@ export function resolveStatus({
 }: StatusInputs): SelectionStatus {
   if (contradictoryRequest || requestedProjectMissing) return 'unavailable';
   if (failed) return 'error';
+  if (requestedProjectPending) return 'resolving';
   // A resolved project is usable on its own. Holding the shell for a list
   // refetch that only reconciles what is already known is what made a brand
   // new project look absent.

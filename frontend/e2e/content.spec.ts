@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { PERMITTED_ENTITLEMENT, permittedWorkspaceEntitlement } from './helpers/app-fixture';
+import { stubWorkspaceList } from './helpers/app-fixture';
 
 /**
  * Content screen stubbed e2e (Task 5).
@@ -119,6 +120,7 @@ test('content nav link is live and the enqueue → output flow renders sanitised
 
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
+  await stubWorkspaceList(page, WORKSPACE_ID);
   await page.route('**/api/v1/billing/entitlement', (route) =>
     route.fulfill({ json: PERMITTED_ENTITLEMENT }),
   );

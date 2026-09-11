@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { stubWorkspaceList } from './helpers/app-fixture';
 
 /**
  * F9 four-tab Visibility workspace e2e (Task 4).
@@ -313,6 +314,7 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
 
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
+  await stubWorkspaceList(page, WORKSPACE_ID);
   // The visibility dashboard lists audits via the flat `/audits?project_id=` route.
   await page.route('**/api/v1/audits**', (route) =>
     route.fulfill({

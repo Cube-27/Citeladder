@@ -48,6 +48,54 @@ describe('apiClient', () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe('/api/v1/ping');
   });
 
+  it('scopes a request to the workspace it names, over the ambient selection', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { apiClient, setActiveWorkspaceId } = await import('./client');
+    setActiveWorkspaceId('ambient-workspace');
+    await apiClient.get('/projects', { workspaceId: 'requested-workspace' });
+
+    const headers = new Headers(requestInitAt(fetchMock, 0).headers);
+    expect(headers.get('X-Workspace-Id')).toBe('requested-workspace');
+    setActiveWorkspaceId(null);
+  });
+
+  it('replaces a workspace header the caller copied in', async () => {
+    // A reused header object must not decide the tenancy of a request that
+    // named its own workspace — that is the failure this option exists to
+    // remove, so the explicit value wins rather than deferring.
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { apiClient } = await import('./client');
+    await apiClient.get('/projects', {
+      workspaceId: 'requested-workspace',
+      headers: { 'X-Workspace-Id': 'stale-workspace' },
+    });
+
+    const headers = new Headers(requestInitAt(fetchMock, 0).headers);
+    expect(headers.get('X-Workspace-Id')).toBe('requested-workspace');
+  });
+
+  it('removes the workspace header entirely for an explicit null', async () => {
+    // How a path-authorized read (`GET /projects/{id}`) asks the backend to
+    // resolve access from the path instead of a header that may be wrong.
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { apiClient, setActiveWorkspaceId } = await import('./client');
+    setActiveWorkspaceId('ambient-workspace');
+    await apiClient.get('/projects/abc', {
+      workspaceId: null,
+      headers: { 'X-Workspace-Id': 'stale-workspace' },
+    });
+
+    const headers = new Headers(requestInitAt(fetchMock, 0).headers);
+    expect(headers.has('X-Workspace-Id')).toBe(false);
+    setActiveWorkspaceId(null);
+  });
+
   it('throws ApiError with status and request id on 4xx', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response('Bad Request', {

@@ -1,5 +1,6 @@
 import { expect, test, type Request } from '@playwright/test';
 import { providerCatalogFixture } from '../test/provider-catalog-fixture';
+import { stubWorkspaceList } from './helpers/app-fixture';
 
 /**
  * F8 direct-provider Provider Settings e2e (Task 4).
@@ -111,6 +112,7 @@ test('provider settings: available engines save and test an OpenAI key', async (
 
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
+  await stubWorkspaceList(page, WORKSPACE_ID);
   await page.route('**/api/v1/provider-catalog', (route) => route.fulfill({ json: catalog }));
   await page.route('**/api/v1/provider-connections', (route) => {
     if (route.request().method() === 'POST') {

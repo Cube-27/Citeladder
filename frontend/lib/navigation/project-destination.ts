@@ -44,6 +44,18 @@ export function workspaceDestination(
   return `${pathname}?${params.toString()}`;
 }
 
+export type SelectProjectOptions = {
+  /** Navigate to another route instead of the current one. */
+  destination?: string;
+  /**
+   * Replace the current history entry rather than pushing.
+   *
+   * For a selection whose predecessor is GONE — the project was just deleted —
+   * so Back must not return to a URL naming a project that no longer exists.
+   */
+  replace?: boolean;
+};
+
 /**
  * The one way the shell changes its project selection.
  *
@@ -67,16 +79,21 @@ export function useSelectProject() {
   const { activeProjectId, setActiveProjectId } = useProjectContext();
 
   return useCallback(
-    (projectId: string, destination?: string) => {
+    (projectId: string, options: SelectProjectOptions = {}) => {
+      const { destination, replace = false } = options;
       setActiveProjectId(projectId);
       const target = projectDestination(destination ?? pathname, searchParams, projectId);
       const urlAlreadyNamesIt = searchParams?.get(PROJECT_PARAM) === projectId;
       const samePage = destination === undefined || destination === pathname;
-      if (urlAlreadyNamesIt && samePage) return;
-      // Replacing is only correct when nothing the reader can go BACK to is
-      // being left behind: same page, same project, parameter simply absent.
-      if (samePage && projectId === activeProjectId) router.replace(target, { scroll: false });
-      else router.push(target);
+      if (urlAlreadyNamesIt && samePage && !replace) return;
+      // Replacing is correct when nothing the reader can usefully go BACK to is
+      // being left behind: the same project with the parameter simply absent,
+      // or an entry the caller knows is now dead (a deleted project).
+      if (replace || (samePage && projectId === activeProjectId)) {
+        router.replace(target, { scroll: false });
+      } else {
+        router.push(target);
+      }
     },
     [activeProjectId, pathname, router, searchParams, setActiveProjectId],
   );

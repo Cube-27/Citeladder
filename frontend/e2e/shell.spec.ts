@@ -81,10 +81,14 @@ test('project lookup failure retries in place and only confirmed empty projects 
       : route.fulfill({ json: [] }),
   );
   await page.goto('/projects');
-  await expect(page.getByRole('heading', { name: 'Projects could not be loaded' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Your workspace could not be loaded' }),
+  ).toBeVisible();
   await expect(page).toHaveURL(/\/projects$/);
   failed = false;
   await page.getByRole('button', { name: 'Retry', exact: true }).click();
-  await expect(page).toHaveURL(/\/onboarding$/);
+  // The redirect carries the workspace the project will be created in, so a
+  // refresh of the creation route cannot silently re-target it.
+  await expect(page).toHaveURL(/\/onboarding\?workspace=/);
   await expect(page.getByRole('heading', { name: "Let's get started" })).toBeVisible();
 });

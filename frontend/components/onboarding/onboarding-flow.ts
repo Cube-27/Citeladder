@@ -152,10 +152,13 @@ export function useOnboardingFlow() {
     // reader was creating in, and dropping it here would silently re-target
     // the retry at whichever workspace resolves by default.
     const reset = new URLSearchParams({ new: '1' });
-    const workspace = searchParams?.get('workspace');
+    // The URL is the first authority, but an orphaned legacy completion link
+    // may carry no workspace at all — and the resolved one is still the
+    // workspace this draft belonged to.
+    const workspace = searchParams?.get('workspace') ?? activeWorkspaceId;
     if (workspace) reset.set('workspace', workspace);
     router.replace(`/onboarding?${reset.toString()}`, { scroll: false });
-  }, [form, orphanedCompletion, router, searchParams]);
+  }, [activeWorkspaceId, form, orphanedCompletion, router, searchParams]);
 
   useEffect(() => {
     if (orphanedCompletion) return;

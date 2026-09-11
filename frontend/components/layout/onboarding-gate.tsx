@@ -8,6 +8,7 @@ import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
+import type { BillingUsage } from '@/lib/api/billing';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
@@ -31,19 +32,52 @@ function isWorkspaceOnlyRoute(pathname: string | null): boolean {
   );
 }
 
+/**
+ * What the workspace's project allowance currently says.
+ *
+ * `unknown` covers a FAILED read as well as an unresolved one, even when a
+ * stale positive value is still in the cache: sending someone into creation on
+ * the strength of a number the server just refused to confirm is how a
+ * transient failure turns into a rejected second attempt.
+ */
+type Allowance = 'unknown' | 'spent' | 'spare';
+
+function resolveAllowance({
+  usage,
+  usageIsLoading,
+  usageIsError,
+}: {
+  usage: BillingUsage | null;
+  usageIsLoading: boolean;
+  usageIsError: boolean;
+}): Allowance {
+  if (usageIsLoading || usageIsError) return 'unknown';
+  const remaining = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
+  if (remaining === undefined) return 'unknown';
+  return remaining > 0 ? 'spare' : 'spent';
+}
+
 /** Which standing notice, if any, this state owes the reader. */
 type NoticeKind = 'failed' | 'missing-project' | 'no-projects' | null;
 
+type NoticeInputs = {
+  projectRequired: boolean;
+  redirecting: boolean;
+  /** The allowance read failed, so no statement about capacity is truthful. */
+  allowanceFailed: boolean;
+};
+
 function noticeFor(
   status: SelectionStatus,
-  { projectRequired, redirecting }: { projectRequired: boolean; redirecting: boolean },
+  { projectRequired, redirecting, allowanceFailed }: NoticeInputs,
 ): NoticeKind {
   if (status === 'error') return 'failed';
   if (status === 'unavailable') return 'missing-project';
-  // An empty workspace that is NOT being redirected has nowhere else to go:
-  // say so once rather than bouncing off a creation screen that would refuse.
-  if (status === 'empty' && projectRequired && !redirecting) return 'no-projects';
-  return null;
+  if (status !== 'empty' || !projectRequired || redirecting) return null;
+  // "Your access does not include another project" is a claim about the
+  // allowance. With the allowance read failed it is not a claim we can make,
+  // so offer the retry instead of asserting a limit that may not exist.
+  return allowanceFailed ? 'failed' : 'no-projects';
 }
 
 /**
@@ -68,19 +102,31 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   // trigger, the capability-gated navigation rows — so waiting for it here is
   // what lets the shell paint complete instead of growing a button and a link
   // a round trip later. It resolves to a settled answer either way.
-  const { isLoading: entitlementLoading, usage, usageIsLoading } = useEntitlement();
+  const { isLoading: entitlementLoading, usage, usageIsLoading, usageIsError } = useEntitlement();
 
   // A Viewer reads what exists; it never starts the creation flow.
   const mayCreate = activeWorkspace?.role !== 'viewer';
-  const remaining = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
-  const hasAllowance = !usageIsLoading && remaining !== undefined && remaining > 0;
+  const allowance = resolveAllowance({ usage, usageIsLoading, usageIsError });
   const projectRequired = !isWorkspaceOnlyRoute(pathname);
-  const redirecting = status === 'empty' && projectRequired && mayCreate && hasAllowance;
+  const redirecting = status === 'empty' && projectRequired && mayCreate && allowance === 'spare';
 
   useOnboardingRedirect(redirecting, activeWorkspaceId);
 
-  const notice = noticeFor(status, { projectRequired, redirecting });
-  if (notice) return <GateNotice kind={notice} mayCreate={mayCreate} onRetry={retry} />;
+  const notice = noticeFor(status, {
+    projectRequired,
+    redirecting,
+    allowanceFailed: allowance === 'unknown',
+  });
+  if (notice) {
+    return (
+      <GateNotice
+        kind={notice}
+        mayCreate={mayCreate}
+        workspaceId={activeWorkspaceId}
+        onRetry={retry}
+      />
+    );
+  }
 
   // Ahead of the shell, and deliberately the SAME loader the session wait
   // showed: one uninterrupted state covers both round trips, and the chrome
@@ -110,12 +156,18 @@ function useOnboardingRedirect(redirecting: boolean, workspaceId: string | null)
 function GateNotice({
   kind,
   mayCreate,
+  workspaceId,
   onRetry,
-}: Readonly<{ kind: Exclude<NoticeKind, null>; mayCreate: boolean; onRetry: () => void }>) {
+}: Readonly<{
+  kind: Exclude<NoticeKind, null>;
+  mayCreate: boolean;
+  workspaceId: string | null;
+  onRetry: () => void;
+}>) {
   if (kind === 'failed') {
     return (
       <NoticeShell title="Your workspace could not be loaded">
-        <p>Your session is active. Retry to load your workspace and projects.</p>
+        <p>Your session is active. Retry to load your workspace, projects and allowance.</p>
         <Button variant="secondary" className="w-fit" onClick={onRetry}>
           Retry
         </Button>
@@ -129,7 +181,7 @@ function GateNotice({
           It may have been deleted, or it belongs to a workspace you do not have access to. Choose
           another project to continue.
         </p>
-        <NoticeLink href="/projects">Go to your projects</NoticeLink>
+        <NoticeLink href={noticeHref('/projects', workspaceId)}>Go to your projects</NoticeLink>
       </NoticeShell>
     );
   }
@@ -140,9 +192,21 @@ function GateNotice({
           ? 'Your current access does not include another project.'
           : 'You have read-only access to this workspace.'}
       </p>
-      <NoticeLink href="/settings">Open workspace settings</NoticeLink>
+      <NoticeLink href={noticeHref('/settings', workspaceId)}>Open workspace settings</NoticeLink>
     </NoticeShell>
   );
+}
+
+/**
+ * Carry the workspace out of a notice.
+ *
+ * These links are the reader's only way forward from a dead end, and the
+ * workspace they are in is not necessarily the one that resolves by default.
+ * Naming it keeps the destination in the same workspace even when device
+ * storage is unavailable.
+ */
+function noticeHref(pathname: string, workspaceId: string | null): string {
+  return workspaceId ? workspaceDestination(pathname, null, workspaceId) : pathname;
 }
 
 function NoticeLink({ href, children }: Readonly<{ href: string; children: ReactNode }>) {

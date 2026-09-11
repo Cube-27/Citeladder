@@ -118,7 +118,7 @@ export function ProjectEditPanel({
         }),
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.lists() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       onOpenChange(false);
     },
   });

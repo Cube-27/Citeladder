@@ -4,9 +4,12 @@ import type { Page } from '@playwright/test';
  * Authed-shell network fixture for e2e + visual specs.
  *
  * The app authenticates by cookie session: `SessionGuard` calls
- * `GET /api/v1/auth/me`, `ProjectProvider` calls `GET /api/v1/projects`, and
- * `EntitlementProvider` calls the billing entitlement and usage endpoints.
- * Stubbing those four endpoints is the whole "logged in with one project" arrangement
+ * `GET /api/v1/auth/me`, `ProjectProvider` calls `GET /api/v1/workspaces` and
+ * `GET /api/v1/projects`, and `EntitlementProvider` calls the billing
+ * entitlement and usage endpoints. The workspace list is what resolves the
+ * shell's workspace — it is answered independently of any project, because a
+ * workspace with none is still a workspace.
+ * Stubbing those endpoints is the whole "logged in with one project" arrangement
  * — no token needs seeding. Feature-permitted shell fixtures also provide a
  * schema-valid resolved billing entitlement; negative access states
  * belong in specs that explicitly exercise denied or unresolved behavior.
@@ -19,6 +22,9 @@ const FIXTURE_USER = {
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 } as const;
+
+/** The workspace every fixture account belongs to. */
+const FIXTURE_WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 const PROJECT_SLOTS_GRANT_ID = '33333333-3333-4333-8333-333333333333';
 const CONTENT_CREATION_GRANT_ID = '55555555-5555-4555-8555-555555555555';
@@ -177,6 +183,38 @@ export const FIXTURE_PROJECT = {
  * catch-all FIRST and the specific stubs after it; the last-registered
  * matching route wins. `stubs` lets a spec layer its own endpoints on top.
  */
+/** One membership row per workspace the fixture projects belong to. */
+function workspacesFor(projects: ReadonlyArray<typeof FIXTURE_PROJECT>) {
+  const ids = new Set(projects.map((project) => project.workspace_id));
+  if (ids.size === 0) ids.add(FIXTURE_WORKSPACE_ID);
+  return membershipRows([...ids]);
+}
+
+function membershipRows(ids: readonly string[]) {
+  return ids.map((id) => ({
+    id,
+    name: 'Fixture Workspace',
+    role: 'owner',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  }));
+}
+
+/**
+ * Answer the shell's membership read for a spec that builds its own network
+ * fixture.
+ *
+ * `ProjectProvider` resolves its workspace from `GET /workspaces` before it
+ * scopes a single request, so a spec that leaves this to a 404 catch-all never
+ * reaches the shell at all — the workspace read fails and the gate shows its
+ * recoverable error instead of the screen under test.
+ */
+export async function stubWorkspaceList(page: Page, ...workspaceIds: string[]): Promise<void> {
+  await page.route('**/api/v1/workspaces', (route) =>
+    route.fulfill({ json: membershipRows(workspaceIds) }),
+  );
+}
+
 export async function stubAuthedShell(
   page: Page,
   stubs: ReadonlyArray<readonly [string | RegExp, unknown]> = [],
@@ -190,11 +228,17 @@ export async function stubAuthedShell(
     }),
   );
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user: FIXTURE_USER } }));
+  // Answered even when `projects` is empty: the shell resolves its workspace
+  // from here, not from a project, so an empty account still has a workspace to
+  // scope its reads (and its allowance check) against.
+  await page.route('**/api/v1/workspaces', (route) =>
+    route.fulfill({ json: workspacesFor(projects) }),
+  );
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: projects }));
   await page.route('**/api/v1/billing/entitlement', (route) =>
     route.fulfill({ json: PERMITTED_ENTITLEMENT }),
   );
-  for (const workspaceId of new Set(projects.map((project) => project.workspace_id))) {
+  for (const workspaceId of new Set(workspacesFor(projects).map((workspace) => workspace.id))) {
     await page.route(`**/api/v1/workspaces/${workspaceId}/entitlements`, (route) =>
       route.fulfill({ json: permittedWorkspaceEntitlement(workspaceId) }),
     );

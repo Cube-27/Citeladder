@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '@/lib/api/query-keys';
 import { RUN_STREAM_RECONNECT_BASE_MS } from '@/lib/config/runs';
 import { useRunEvents } from './use-run-events';
+import { ProjectSelectionProvider } from '@/lib/project/project-scope';
+import { testProjectSelection } from '@/test/render';
 
 const AUDIT = '11111111-1111-4111-8111-111111111111';
 const PROJECT = '22222222-2222-4222-8222-222222222222';
@@ -21,9 +23,23 @@ function streamResponse(chunks: string[]): Response {
   return { ok: true, body } as unknown as Response;
 }
 
+/** The stream reads its workspace from the shared selection. */
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+/** A resolved selection naming the workspace the stream belongs to. */
+function selectionFor(workspaceId: string | null) {
+  return testProjectSelection({ activeWorkspaceId: workspaceId });
+}
+
 function wrapper(client: QueryClient) {
   function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={client}>
+        <ProjectSelectionProvider value={selectionFor(WORKSPACE)}>
+          {children}
+        </ProjectSelectionProvider>
+      </QueryClientProvider>
+    );
   }
   return Wrapper;
 }

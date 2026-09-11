@@ -353,8 +353,12 @@ describe('OnboardingScreen', () => {
     mswServer.use(catalogHandler());
     renderWithProviders(<OnboardingScreen />);
 
+    // The retry keeps the workspace the discarded draft belonged to, so it is
+    // not silently re-targeted at whichever workspace resolves by default.
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith('/onboarding?new=1', { scroll: false }),
+      expect(replace).toHaveBeenCalledWith(`/onboarding?new=1&workspace=${WORKSPACE_ID}`, {
+        scroll: false,
+      }),
     );
     expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
   });

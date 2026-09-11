@@ -466,7 +466,9 @@ on the request itself, so a retry or a late response cannot answer for a
 workspace the reader has since left. `lib/navigation/project-destination.ts`
 is the single owner of selection navigation: a deliberate switch pushes one
 history entry, filling an absent parameter for the current selection replaces,
-and re-selecting the project already in the URL does nothing.
+re-selecting the project already in the URL does nothing, and a caller whose
+previous entry is dead — the project it named was just deleted — asks for
+`replace` so Back cannot return to it.
 
 ## Data and query ownership
 

@@ -27,7 +27,12 @@ vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => contextValue,
 }));
 
-let entitlement: { isLoading: boolean; usage: unknown; usageIsLoading: boolean };
+let entitlement: {
+  isLoading: boolean;
+  usage: unknown;
+  usageIsLoading: boolean;
+  usageIsError: boolean;
+};
 vi.mock('@/lib/billing/entitlement-context', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useEntitlement: () => entitlement,
@@ -53,7 +58,7 @@ beforeEach(() => {
   replace.mockClear();
   pathname = '/projects';
   setContext('ready');
-  entitlement = { isLoading: false, usage: usage(1), usageIsLoading: false };
+  entitlement = { isLoading: false, usage: usage(1), usageIsLoading: false, usageIsError: false };
 });
 
 describe('OnboardingGate', () => {
@@ -153,7 +158,7 @@ describe('OnboardingGate', () => {
 
   it('does not loop through creation when the allowance is exhausted', () => {
     setContext('empty');
-    entitlement = { isLoading: false, usage: usage(0), usageIsLoading: false };
+    entitlement = { isLoading: false, usage: usage(0), usageIsLoading: false, usageIsError: false };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -166,8 +171,26 @@ describe('OnboardingGate', () => {
     ).toBeInTheDocument();
   });
 
+  it('retries rather than asserting a limit when the allowance read failed', () => {
+    // A stale positive value can still be in the cache after a failed refetch.
+    // Redirecting into creation on the strength of a number the server just
+    // refused to confirm is how a transient failure becomes a rejected second
+    // attempt — and telling the reader their access excludes another project
+    // would be a claim about an allowance nobody could read.
+    setContext('empty');
+    entitlement = { isLoading: false, usage: usage(1), usageIsLoading: false, usageIsError: true };
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
   it('waits for entitlements so the shell paints complete', () => {
-    entitlement = { isLoading: true, usage: null, usageIsLoading: true };
+    entitlement = { isLoading: true, usage: null, usageIsLoading: true, usageIsError: false };
     render(
       <OnboardingGate>
         <p>workspace</p>

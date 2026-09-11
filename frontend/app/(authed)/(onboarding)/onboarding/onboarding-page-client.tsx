@@ -39,15 +39,24 @@ function ProjectSetupGate() {
   };
 
   const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
-  const loading =
-    status === 'resolving' || activeWorkspaceId === null || entitlementLoading || usageIsLoading;
-  const additionalProjectBlocked = !loading && remainingProjectSlots === 0;
 
-  if (loading) return null;
+  // Every settled FAILURE is answered before the loading branch. A failed
+  // workspace read leaves `activeWorkspaceId` null forever, so testing for it
+  // first hid the retry behind a spinner that never resolved.
   if (status === 'error') {
     return (
       <ProjectSetupBlocked title="Your workspace could not be loaded" onRetry={retry}>
         We could not confirm which workspace to create this project in. Retry to load it again.
+      </ProjectSetupBlocked>
+    );
+  }
+  if (status === 'unavailable') {
+    // Reached by linking here with a `?project=` that is missing, unauthorized,
+    // or contradicts the workspace. Creating a project is not the answer to a
+    // request that named a different one.
+    return (
+      <ProjectSetupBlocked title="That project is unavailable">
+        The project this link names could not be opened. Go back to your projects to continue.
       </ProjectSetupBlocked>
     );
   }
@@ -58,6 +67,14 @@ function ProjectSetupGate() {
       </ProjectSetupBlocked>
     );
   }
+  if (
+    status === 'resolving' ||
+    activeWorkspaceId === null ||
+    entitlementLoading ||
+    usageIsLoading
+  ) {
+    return null;
+  }
   if (remainingProjectSlots === undefined) {
     return (
       <ProjectSetupBlocked title="Project access unavailable" onRetry={retry}>
@@ -65,7 +82,7 @@ function ProjectSetupGate() {
       </ProjectSetupBlocked>
     );
   }
-  if (additionalProjectBlocked) {
+  if (remainingProjectSlots === 0) {
     return (
       <ProjectSetupBlocked title="Project limit reached">
         Your current access does not include another project.

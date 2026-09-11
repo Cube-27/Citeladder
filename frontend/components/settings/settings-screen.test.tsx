@@ -261,6 +261,10 @@ describe('SettingsScreen', () => {
     await ue.click(within(dialog).getByRole('button', { name: 'Delete project' }));
 
     await waitFor(() => expect(setActiveProjectId).toHaveBeenCalledWith(nextProject.id));
-    expect(replace).not.toHaveBeenCalled();
+    // REPLACE, not push: the entry left behind names the project that was just
+    // deleted, so Back must not return to it.
+    expect(replace).toHaveBeenCalledWith(`/settings?project=${nextProject.id}`, {
+      scroll: false,
+    });
   });
 });

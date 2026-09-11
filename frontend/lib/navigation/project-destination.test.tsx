@@ -90,11 +90,24 @@ describe('useSelectProject', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
+  it('replaces when the entry being left behind is dead', () => {
+    // After deleting the active project, Back must not return to a URL naming
+    // a project that no longer exists.
+    activeProjectId = PROJECT_1;
+    search = new URLSearchParams({ project: PROJECT_1 });
+    const { result } = renderHook(() => useSelectProject());
+
+    act(() => result.current(PROJECT_2, { replace: true }));
+
+    expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_2}`, { scroll: false });
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it('pushes when the selection also changes page', () => {
     activeProjectId = PROJECT_1;
     const { result } = renderHook(() => useSelectProject());
 
-    act(() => result.current(PROJECT_1, '/settings'));
+    act(() => result.current(PROJECT_1, { destination: '/settings' }));
 
     expect(push).toHaveBeenCalledWith(`/settings?project=${PROJECT_1}`);
   });

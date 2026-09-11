@@ -3,10 +3,11 @@ import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { setActiveWorkspaceId } from '@/lib/api/client';
 import { queryKeys } from '@/lib/api/query-keys';
 import { SITE_HEALTH_STREAM_RECONNECT_BASE_MS } from '@/lib/config/site-health';
 import { useCrawlEvents } from './use-crawl-events';
+import { ProjectSelectionProvider } from '@/lib/project/project-scope';
+import { testProjectSelection } from '@/test/render';
 
 const CRAWL = '11111111-1111-4111-8111-111111111111';
 const PROJECT = '22222222-2222-4222-8222-222222222222';
@@ -22,9 +23,27 @@ function makeStreamResponse(chunks: string[]): Response {
   return { ok: true, body } as unknown as Response;
 }
 
-function wrapper(client: QueryClient) {
+/**
+ * The stream reads its workspace from the shared selection rather than from
+ * the module-level header, so the hook needs a resolved context — the same one
+ * every authed screen mounts inside.
+ */
+const WORKSPACE = '99999999-9999-4999-8999-999999999999';
+
+/** A resolved selection naming the workspace the stream belongs to. */
+function selectionFor(workspaceId: string | null) {
+  return testProjectSelection({ activeWorkspaceId: workspaceId });
+}
+
+function wrapper(client: QueryClient, workspaceId: string | null = null) {
   function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={client}>
+        <ProjectSelectionProvider value={selectionFor(workspaceId)}>
+          {children}
+        </ProjectSelectionProvider>
+      </QueryClientProvider>
+    );
   }
   return Wrapper;
 }
@@ -35,12 +54,10 @@ afterEach(() => {
   // returns early and would otherwise leave `fetch` stubbed for every test
   // that follows.
   vi.unstubAllGlobals();
-  setActiveWorkspaceId(null);
 });
 
 describe('useCrawlEvents', () => {
   it('sends X-Workspace-Id and credentials, and invalidates on a data frame', async () => {
-    setActiveWorkspaceId('99999999-9999-4999-8999-999999999999');
     const fetchMock = vi
       .fn()
       .mockResolvedValue(makeStreamResponse(['data: {"event_type":"page_updated"}\n\n']));
@@ -49,12 +66,16 @@ describe('useCrawlEvents', () => {
     const client = new QueryClient();
     const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
 
-    renderHook(() => useCrawlEvents(CRAWL, PROJECT, true), { wrapper: wrapper(client) });
+    renderHook(() => useCrawlEvents(CRAWL, PROJECT, true), {
+      wrapper: wrapper(client, WORKSPACE),
+    });
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const [, init] = fetchMock.mock.calls[0];
     expect(init.credentials).toBe('include');
-    expect(init.headers['X-Workspace-Id']).toBe('99999999-9999-4999-8999-999999999999');
+    // Carried from the resolved selection, so a reconnect resends the
+    // workspace the stream STARTED under rather than whatever is selected now.
+    expect(init.headers['X-Workspace-Id']).toBe(WORKSPACE);
 
     // A lifecycle frame refreshes the dashboard subscription. Its progress
     // fingerprint owns the one downstream list invalidation round.

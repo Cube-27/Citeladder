@@ -16,7 +16,9 @@ const TEST_WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
  * rendering one without this context is a failure mode of the harness rather
  * than of the component (the same reason `TooltipProvider` is here).
  */
-function testProjectSelection(overrides: Partial<ProjectContextValue> = {}): ProjectContextValue {
+export function testProjectSelection(
+  overrides: Partial<ProjectContextValue> = {},
+): ProjectContextValue {
   return {
     workspaces: [],
     activeWorkspaceId: TEST_WORKSPACE_ID,
@@ -26,7 +28,10 @@ function testProjectSelection(overrides: Partial<ProjectContextValue> = {}): Pro
     activeProject: null,
     activeProjectId: null,
     setActiveProjectId: vi.fn(),
-    status: 'ready',
+    // A settled workspace with NO project is `empty`, not `ready`. Claiming
+    // `ready` here would let a test skip the very branch a consumer takes when
+    // there is nothing selected.
+    status: 'empty',
     retry: vi.fn(),
     isLoading: false,
     isError: false,

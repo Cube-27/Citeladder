@@ -115,6 +115,31 @@ describe('OnboardingPageClient', () => {
     expect(screen.getByText('Onboarding flow')).toBeInTheDocument();
   });
 
+  it('surfaces a workspace failure that leaves no workspace resolved', () => {
+    // The failure path has no workspace by definition, so testing for a null
+    // workspace FIRST hid the retry behind a spinner that never resolved.
+    projectState.status = 'error';
+    projectState.activeWorkspaceId = null;
+
+    render(<OnboardingPageClient />);
+
+    expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Your workspace could not be loaded' }),
+    ).toBeInTheDocument();
+  });
+
+  it('does not offer creation for a link naming an unavailable project', () => {
+    projectState.status = 'unavailable';
+
+    render(<OnboardingPageClient />);
+
+    expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'That project is unavailable' }),
+    ).toBeInTheDocument();
+  });
+
   it('distinguishes usage failure and retries the workspace and the allowance', () => {
     entitlementState.usageIsError = true;
     const { queryClient } = render(<OnboardingPageClient />);
