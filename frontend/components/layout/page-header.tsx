@@ -47,7 +47,12 @@ export function PageHeader({
     <header
       className={cn(
         'flex min-w-0 flex-col gap-[var(--page-header-gap)] pt-[var(--page-header-padding-top)] pb-[var(--page-header-padding-bottom)] min-[701px]:flex-row min-[701px]:items-center min-[701px]:justify-between',
+        // Desktop: one 56px band, the same height as the sidebar's first row,
+        // so the route title sits on the project switcher's line instead of
+        // starting a row of its own below it.
+        'min-[981px]:min-h-[var(--compact-topbar-height)] min-[981px]:pt-0',
         !description && !actions && 'max-[700px]:hidden',
+
         className,
       )}
     >
@@ -67,7 +72,11 @@ export function PageHeader({
         ) : null}
       </div>
       {actions ? (
-        <div className="flex min-h-[var(--control-height)] shrink-0 flex-wrap items-center gap-2">
+        // The shell paints the account glyph at the end of this same row, so
+        // route actions reserve its width instead of running underneath it.
+        // The reservation is desktop-only, because that is the only width the
+        // glyph appears at; the compact topbar owns it below 981px.
+        <div className="flex min-h-[var(--control-height)] shrink-0 flex-wrap items-center gap-2 min-[981px]:pe-[calc(var(--control-height)+0.75rem)]">
           {actions}
         </div>
       ) : null}

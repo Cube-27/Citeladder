@@ -2,16 +2,19 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { UserPlus } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { SearchField } from '@/components/ui/search-field';
+import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { queryKeys } from '@/lib/api/query-keys';
 import { workspacesApi, type AssignableWorkspaceRole } from '@/lib/api/workspaces';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
-import { InviteForm, PendingInvitations } from './member-invitations';
+import { InviteDialog, PendingInvitations } from './member-invitations';
 import { MemberRoster } from './member-roster';
 
 /**
@@ -114,6 +117,14 @@ export function MemberSettings() {
     onSuccess: refresh,
   });
 
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const needle = search.trim().toLowerCase();
+  const allMembers = membersQuery.data ?? [];
+  const visibleMembers = needle
+    ? allMembers.filter((member) => member.email.toLowerCase().includes(needle))
+    : allMembers;
+
   const mutations = [invite, resend, revoke, changeRole, remove, transfer];
   const failure = mutations.find((mutation) => mutation.isError);
   const busy = mutations.some((mutation) => mutation.isPending);
@@ -121,12 +132,9 @@ export function MemberSettings() {
   if (!mayManage) {
     return (
       <div className="grid gap-[var(--workspace-gap)]">
-        <EditorialSectionHeader
-          title="Members"
-          description="Managing members is available to the workspace owner and admins."
-        />
         <Alert tone="info">
-          Ask an owner or admin to change roles or invite someone to this workspace.
+          Managing members is available to the workspace owner and admins. Ask one of them to change
+          roles or invite someone to this workspace.
         </Alert>
       </div>
     );
@@ -134,10 +142,26 @@ export function MemberSettings() {
 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
-      <EditorialSectionHeader
-        title="Members"
-        description={`Who can work in ${activeWorkspace?.name ?? 'this workspace'}, and what each of them may do.`}
-      />
+      {/* The tab already names this section; the row states the scope and
+          carries the roster's controls. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className={textRole('body')}>
+          Who can work in {activeWorkspace?.name ?? 'this workspace'}, and what each of them may do.
+        </p>
+        <div className="flex items-center gap-2">
+          <SearchField
+            value={search}
+            onValueChange={setSearch}
+            placeholder="Search members…"
+            aria-label="Search members"
+            className="w-full sm:w-56"
+          />
+          <Button type="button" onClick={() => setInviteOpen(true)}>
+            <UserPlus className="size-4" aria-hidden />
+            Invite
+          </Button>
+        </div>
+      </div>
 
       {failure ? (
         <MutationNotice
@@ -151,14 +175,16 @@ export function MemberSettings() {
         />
       ) : null}
 
-      <InviteForm
+      <InviteDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
         issuedToken={issuedToken}
         pending={invite.isPending}
         onInvite={(email, role) => invite.mutate({ email, role })}
       />
 
       <MemberRoster
-        members={membersQuery.data ?? []}
+        members={visibleMembers}
         isLoading={membersQuery.isLoading}
         isError={membersQuery.isError}
         busy={busy}

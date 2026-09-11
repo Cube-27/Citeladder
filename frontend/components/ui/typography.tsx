@@ -32,8 +32,8 @@ const TEXT_ROLES = {
   label: 'text-sm font-medium text-foreground',
   /** Shared metadata label. */
   eyebrow: eyebrowClasses,
-  /** A primary numeral. 28/600/foreground, tabular. */
-  metric: 'font-display text-3xl font-semibold tracking-[-0.65px] text-foreground tabular-nums',
+  /** A primary numeral. 24/600/foreground, tabular. */
+  metric: 'font-display text-2xl font-semibold tracking-[-0.5px] text-foreground tabular-nums',
   /** A secondary numeral inside a dense row. 16/500/foreground, tabular. */
   metricSm: 'font-display text-base font-semibold text-foreground tabular-nums',
   /**

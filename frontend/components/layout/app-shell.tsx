@@ -97,13 +97,11 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             </aside>
 
             <div className="relative z-1 flex min-w-0 flex-1 flex-col">
-              {/* One header, two widths. Below 981px it carries the menu
-                  trigger and the route title, as before. From 981px the rail
-                  beside it already names the route, so the row keeps only the
-                  account — initials, no address — at the end. That is why the
-                  sidebar no longer spends a full row on the email. */}
-              <header className="bg-shell sticky top-0 z-20 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-[var(--content-gutter)]">
-                <div className="flex items-center min-[981px]:hidden">
+              {/* Compact only, exactly as before. On desktop the account
+                  trigger rides the route's own header row instead, so the shell
+                  adds no second bar above the work. */}
+              <header className="bg-shell sticky top-0 z-20 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-[var(--content-gutter)] min-[981px]:hidden">
+                <div className="flex items-center">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -114,16 +112,30 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                     <Menu className="size-4" aria-hidden />
                   </Button>
                 </div>
-                <div className="text-secondary min-w-0 truncate text-sm min-[981px]:hidden">
-                  {compactTitle}
-                </div>
-                <div className="flex items-center justify-end gap-2.5 justify-self-end min-[981px]:col-start-3">
-                  <AgentSheetTrigger className="min-[981px]:hidden" />
+                <div className="text-secondary min-w-0 truncate text-sm">{compactTitle}</div>
+                <div className="flex items-center justify-end gap-2.5 justify-self-end">
+                  <AgentSheetTrigger />
                   <UserMenuTrigger presenter="compact" />
                 </div>
               </header>
 
-              <main id="main" className="app-pane app-pane-workspace flex-1">
+              <main id="main" className="app-pane app-pane-workspace relative flex-1">
+                {/* The account rides the route's own first row rather than a
+                    bar of its own, so the shell adds no second row above the
+                    work. It is positioned rather than placed in PageHeader
+                    because the account belongs to the shell: routes render
+                    their header on its own in tests and previews, and coupling
+                    every one of them to the account controller would make the
+                    header unmountable outside this provider.
+
+                    Desktop only — the compact topbar already carries it. The
+                    inline-size padding matches the pane's gutter so the glyph
+                    lines up with the actions beneath it. */}
+                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-[var(--compact-topbar-height)] items-center justify-end px-[var(--content-gutter)] min-[981px]:flex">
+                  <div className="pointer-events-auto">
+                    <UserMenuTrigger presenter="header" />
+                  </div>
+                </div>
                 <div className="mx-auto grid w-full max-w-[var(--content-max-width)] grid-cols-[minmax(0,1fr)] gap-0 px-[var(--content-gutter)] pb-[var(--content-gutter)]">
                   <div>{children}</div>
                 </div>

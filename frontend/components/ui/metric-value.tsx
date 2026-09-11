@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 
 /** Line box per numeral role, so the slot is the same height in every state. */
 const SLOT_HEIGHT = {
-  metric: 'min-h-9',
+  metric: 'min-h-8',
   metricSm: 'min-h-6',
 } as const;
 

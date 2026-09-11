@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 export const hairlineBandClasses =
   'border-border-subtle divide-border-subtle grid divide-y border-y sm:divide-x sm:divide-y-0';
 
-export const hairlineBandItemClasses = 'min-w-0 py-3 sm:px-4 sm:first:ps-0 sm:last:pe-0';
+export const hairlineBandItemClasses = 'min-w-0 py-2.5 sm:px-4 sm:first:ps-0 sm:last:pe-0';
 
 /**
  * The ledger: a vertical list of peers separated by rules rather than boxed
@@ -69,7 +69,7 @@ export function MetricGroup({
  * cell is not a plain label/value pair still has to sit on this grid.
  */
 export const metricItemClasses =
-  'min-w-0 px-0 py-3 sm:px-4 sm:odd:ps-0 sm:even:pe-0 sm:last:pe-0 lg:px-4 lg:odd:ps-4 lg:even:pe-4 lg:first:ps-0 lg:last:pe-0';
+  'min-w-0 px-0 py-2.5 sm:px-4 sm:odd:ps-0 sm:even:pe-0 sm:last:pe-0 lg:px-4 lg:odd:ps-4 lg:even:pe-4 lg:first:ps-0 lg:last:pe-0';
 
 export function MetricItem({
   label,
@@ -90,7 +90,7 @@ export function MetricItem({
         <span className="truncate">{label}</span>
         {marker}
       </dt>
-      <dd className={cn(textRole('metric'), 'mt-2')}>{value}</dd>
+      <dd className={cn(textRole('metric'), 'mt-1')}>{value}</dd>
       {detail ? <dd className="text-muted mt-1 text-xs">{detail}</dd> : null}
     </div>
   );
