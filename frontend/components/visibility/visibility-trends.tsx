@@ -2,6 +2,7 @@
 
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
@@ -20,10 +21,15 @@ import {
   formatRate,
   type VisibilityFilters,
 } from '@/lib/visibility/dashboard';
-import { formatPointDate, toChartPoints, toCompetitorSeries } from '@/lib/visibility/trends';
+import {
+  formatPointDate,
+  toChartPoints,
+  toCompetitorSeries,
+  toNamedChartPoints,
+} from '@/lib/visibility/trends';
 import { changeLabel, observationLabel } from '@/lib/visibility/vocabulary';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
-import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 
 const metricCodec = stringUrlCodec(
   VISIBILITY_METRICS.map((item) => item.value),
@@ -44,6 +50,9 @@ export function VisibilityTrends({
   onEvidence?: (slice: Record<string, string | null>) => void;
 }>) {
   const [metric, setMetric] = useUrlState('metric', metricCodec);
+  // Which single brand the chart is plotting, or null for the default roster.
+  // URL-held so a focused comparison survives a reload and can be linked to.
+  const [focused, setFocused] = useUrlState('brand', optionalStringUrlCodec);
   const selected = visibilityQuery.data;
   if (visibilityQuery.isError) {
     // A 404 here is not a failure: the run exists but its results have not been
@@ -58,32 +67,38 @@ export function VisibilityTrends({
     return <Alert tone="danger">Could not load the selected measurement.</Alert>;
   }
   if (!selected) return <p aria-busy="true">Loading selected measurement…</p>;
+  // A `brand` carried in from another run's URL may name nobody in THIS
+  // selection. Plotting it anyway drew an empty chart captioned with a brand
+  // the run never measured, which reads as "measured, scored zero". An
+  // unrecognized name falls back to the full roster.
+  const focusedBrand =
+    focused !== null && selected.rankings.some((row) => row.name === focused) ? focused : null;
   return (
     <Stack gap="workspace" aria-busy={visibilityQuery.isFetching}>
       <PooledSelectionNote selected={selected} />
       <HeadlineMetrics selected={selected} />
       <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-2">
-        <MeasurementHistory query={query} metric={metric} setMetric={setMetric} />
+        <MeasurementHistory
+          query={query}
+          metric={metric}
+          setMetric={setMetric}
+          focused={focusedBrand}
+          onClearFocus={() => setFocused(null)}
+          brandName={selected.rankings.find((row) => row.is_brand)?.name ?? null}
+        />
         <Card>
           <CardHeader>
             <CardTitle>Brand and competitors</CardTitle>
             <p className={textRole('meta', 'text-secondary')}>
-              How often each brand is named, across the same answers.
+              How often each brand is named, across the same answers. Select a row to plot it on its
+              own.
             </p>
           </CardHeader>
           <CardContent className="p-0">
             <RankingRowsTable
               rows={selected.rankings}
-              onSelect={
-                onEvidence
-                  ? (name) =>
-                      onEvidence({
-                        run: selected.audit_id,
-                        outcome: 'competitor_gap',
-                        competitor: name,
-                      })
-                  : undefined
-              }
+              onSelect={setFocused}
+              selectedName={focusedBrand}
             />
           </CardContent>
         </Card>
@@ -195,15 +210,30 @@ function MeasurementHistory({
   query,
   metric,
   setMetric,
+  focused,
+  onClearFocus,
+  brandName,
 }: {
   query: UseQueryResult<VisibilityTrendPoint[], unknown>;
   metric: (typeof VISIBILITY_METRICS)[number]['value'];
   setMetric: (value: (typeof VISIBILITY_METRICS)[number]['value']) => void;
+  /** Plot this brand alone, or the default roster when null. */
+  focused: string | null;
+  onClearFocus: () => void;
+  brandName: string | null;
 }) {
   const points = query.data ?? [];
   const metricLabel =
     VISIBILITY_METRICS.find((item) => item.value === metric)?.label ?? 'Visibility';
-  const chartPoints = toChartPoints(points, metric).map((point, index) => ({
+  // Focusing the tracked brand is the brand's OWN series, not a ranking lookup:
+  // the rankings carry competitors and the brand alike, but the brand's line is
+  // the one the projection publishes directly.
+  const focusedIsBrand = focused !== null && focused === brandName;
+  const base =
+    focused === null || focusedIsBrand
+      ? toChartPoints(points, metric)
+      : toNamedChartPoints(points, metric, focused);
+  const chartPoints = base.map((point, index) => ({
     ...point,
     // The plotted values are already whole percent, so `formatRate` — which
     // scales a 0–1 rate — turned 38% into "3800%" in every hover label.
@@ -212,7 +242,10 @@ function MeasurementHistory({
     // series was built with, so the ticks stay readable at three across.
     axisLabel: point.label,
   }));
-  const competitors = toCompetitorSeries(points, metric);
+  // One selected brand means one line: the comparison roster is what the reader
+  // asked to step out of.
+  const competitors = focused === null ? toCompetitorSeries(points, metric) : [];
+  const primaryLabel = focused ?? 'You';
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3">
@@ -238,22 +271,27 @@ function MeasurementHistory({
               width={360}
               height={168}
               xAxisLabel="Run date"
-              yAxisLabel={metricLabel}
+              yAxisLabel={`${metricLabel} (%)`}
               formatTick={(value) => `${Math.round(value)}%`}
               className="h-auto w-full"
             />
-            {competitors.length ? (
-              <ul className="flex flex-wrap gap-x-4 gap-y-1">
-                <SeriesKey label="You" swatchClass="bg-accent" />
-                {competitors.map((entry) => (
-                  <SeriesKey
-                    key={entry.label}
-                    label={entry.label}
-                    swatchClass={entry.strokeClass.replace('stroke-', 'bg-')}
-                  />
-                ))}
-              </ul>
-            ) : null}
+            <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <SeriesKey label={primaryLabel} swatchClass="bg-accent" />
+              {competitors.map((entry) => (
+                <SeriesKey
+                  key={entry.label}
+                  label={entry.label}
+                  swatchClass={entry.strokeClass.replace('stroke-', 'bg-')}
+                />
+              ))}
+              {focused ? (
+                <li>
+                  <Button variant="ghost" size="sm" onClick={onClearFocus}>
+                    Show all brands
+                  </Button>
+                </li>
+              ) : null}
+            </ul>
           </Stack>
         )}
       </CardContent>

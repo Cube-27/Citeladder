@@ -115,7 +115,13 @@ function plotBox({
   // No axis title means no rotated-label column, and no axes at all means the
   // chart keeps the symmetric padding it has always drawn with — which is what
   // makes this change invisible to every caller that names no axis.
-  const gutterLeft = axes ? (yAxisLabel ? 30 : 22) : padding;
+  //
+  // The y gutter holds TWO pieces of text side by side: the rotated axis title
+  // against the edge, and the tick values right-aligned against the plot. At 30
+  // units they collided — a tick reading "100%" is about 22 units wide, so it
+  // ran back to x≈3 and straight through the title sitting at x≈9. The gutter
+  // is sized for both.
+  const gutterLeft = axes ? (yAxisLabel ? 42 : 22) : padding;
   const gutterBottom = axes ? (xAxisLabel ? 24 : 14) : padding;
   return {
     padding,

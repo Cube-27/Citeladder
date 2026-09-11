@@ -105,12 +105,22 @@ def _policy_fields(
 
 
 def _web_search_tool(country_code: str) -> dict[str, Any]:
-    """The native ``web_search`` server-tool spec with an optional country hint."""
+    """The native ``web_search`` server-tool spec with an optional country hint.
+
+    ``max_uses`` is OMITTED unless configured positive. The key is a ceiling on
+    how far the model may fan one prompt out, and a fanout measurement whose
+    ceiling we imposed measures our own configuration rather than the engine's
+    behaviour: an answer cut off at the cap looks exactly like an answer that
+    chose to stop. Uncapped is therefore the honest default, and the setting
+    stays available for bounding cost.
+    """
     tool: dict[str, Any] = {
         "type": _WEB_SEARCH_TOOL_TYPE,
         "name": "web_search",
-        "max_uses": provider_catalog_settings.anthropic_max_uses,
     }
+    max_uses = provider_catalog_settings.anthropic_max_uses
+    if max_uses > 0:
+        tool["max_uses"] = max_uses
     if country_code:
         tool["user_location"] = {"type": "approximate", "country": country_code}
     return tool

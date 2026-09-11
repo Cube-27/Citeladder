@@ -86,7 +86,9 @@ export function PromptTable({
             <TableHead>Stage</TableHead>
             <TableHead>Intent</TableHead>
             {measured ? <TableHead numeric>Visibility</TableHead> : null}
-            {measured ? <TableHead numeric>Position</TableHead> : null}
+            {/* A mean mention ordinal, not a competitive rank — the rankings
+                table owns that word. Named for what it measures. */}
+            {measured ? <TableHead numeric>Avg. mention position</TableHead> : null}
             {measured ? <TableHead numeric>Change</TableHead> : null}
             <TableHead>Enabled</TableHead>
             <TableHead className="w-16 text-right">Actions</TableHead>
