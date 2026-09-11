@@ -32,7 +32,10 @@ from app.connectors.answer_engines.gemini_parser import parse_interaction
 from app.connectors.answer_engines.openai import OpenAIAnswerEngineAdapter
 from app.connectors.answer_engines.openai import _payload as openai_payload
 from app.connectors.answer_engines.openai_parser import parse_openai_response
-from app.core.config.provider_catalog import measurement_route
+from app.core.config.provider_catalog import (
+    measurement_route,
+    provider_catalog_settings,
+)
 
 _FIXTURE_DIR = Path(__file__).resolve().parent.parent / "fixtures"
 _CHATGPT_BENCHMARK_MODEL = measurement_route("chatgpt").transport_model
@@ -291,6 +294,35 @@ def test_anthropic_payload_omits_system_and_location_when_absent() -> None:
     payload = anthropic_payload(request, country_code="")
     assert "system" not in payload
     assert "user_location" not in payload["tools"][0]
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected"),
+    [(5, 5), (1, 1), (0, None), (-1, None)],
+)
+def test_anthropic_payload_sends_the_search_cap_only_when_configured_positive(
+    monkeypatch: pytest.MonkeyPatch, configured: int, expected: int | None
+) -> None:
+    """``max_uses`` is a ceiling on the fanout, so it is sent only when meant.
+
+    A non-positive setting must OMIT the key rather than send it as zero, which
+    the provider would read as "no searches at all" — the opposite of the
+    uncapped run the setting is asking for.
+    """
+    monkeypatch.setattr(
+        provider_catalog_settings, "anthropic_max_uses", configured, raising=False
+    )
+    request = AnswerEngineRequest(
+        prompt="cheap baby clothes",
+        system_instruction="",
+        model=_CLAUDE_BENCHMARK_MODEL,
+        timeout_seconds=30,
+        retrieval_enabled=True,
+        max_output_tokens=4096,
+        reasoning_effort="low",
+    )
+    tool = anthropic_payload(request, country_code="")["tools"][0]
+    assert tool.get("max_uses") == expected
 
 
 def test_anthropic_parser_extracts_answer_citations_and_provenance() -> None:
