@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
@@ -59,6 +61,13 @@ export function MentionsCitations({
   const truncated = query.data?.truncated ?? false;
   // Before the early returns: a hook cannot sit behind a conditional.
   const { page, setPage, pageCount, from, to } = useTablePage(items.length, PAGE_SIZE);
+  // Paging the SERVER cursor replaces every item, so the local page has to
+  // start over. `useTablePage` only clamps, which rescues a window that got
+  // shorter but leaves a reader who asked for the next window sitting on its
+  // third page. The key changes on a new window and not on a refetch that
+  // returns the same one, so a background poll does not yank the page back.
+  const windowKey = `${query.data?.as_of ?? ''}:${items[0]?.analysis_id ?? ''}:${items.length}`;
+  useEffect(() => setPage(1), [windowKey, setPage]);
 
   if (query.isLoading) {
     return <EvidenceSkeleton title={TITLE} />;

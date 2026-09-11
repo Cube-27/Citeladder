@@ -67,6 +67,12 @@ export function VisibilityTrends({
     return <Alert tone="danger">Could not load the selected measurement.</Alert>;
   }
   if (!selected) return <p aria-busy="true">Loading selected measurement…</p>;
+  // A `brand` carried in from another run's URL may name nobody in THIS
+  // selection. Plotting it anyway drew an empty chart captioned with a brand
+  // the run never measured, which reads as "measured, scored zero". An
+  // unrecognized name falls back to the full roster.
+  const focusedBrand =
+    focused !== null && selected.rankings.some((row) => row.name === focused) ? focused : null;
   return (
     <Stack gap="workspace" aria-busy={visibilityQuery.isFetching}>
       <PooledSelectionNote selected={selected} />
@@ -76,7 +82,7 @@ export function VisibilityTrends({
           query={query}
           metric={metric}
           setMetric={setMetric}
-          focused={focused}
+          focused={focusedBrand}
           onClearFocus={() => setFocused(null)}
           brandName={selected.rankings.find((row) => row.is_brand)?.name ?? null}
         />
@@ -92,7 +98,7 @@ export function VisibilityTrends({
             <RankingRowsTable
               rows={selected.rankings}
               onSelect={setFocused}
-              selectedName={focused}
+              selectedName={focusedBrand}
             />
           </CardContent>
         </Card>
