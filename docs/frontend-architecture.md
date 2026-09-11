@@ -426,21 +426,47 @@ cache transition. After the destination is resolved, login crosses the identity
 boundary with a full-document navigation so the protected layout reads the new
 session cookie and cannot reuse a prefetched anonymous shell.
 
-Only a successful empty project lookup routes login to onboarding. Failed
-lookups go to `/projects`, where the application gate shows a retryable loading
-error before interpreting an empty list. Onboarding distinguishes project-fetch
-failure, usage-fetch failure, unresolved allowance, and exhausted capacity;
-Retry refetches projects and account usage without changing the session.
+Login routes into `/projects` and lets the application gate decide whether the
+resolved workspace needs onboarding. It no longer reads the project list to
+pick a destination: no workspace is resolved at that moment, so the list could
+only be read unscoped and answered for whichever workspace the backend
+defaulted to. The gate shows a retryable loading error before interpreting an
+empty list, keeps an empty workspace on its own billing/members/settings
+routes, and redirects to creation only when role and allowance permit it.
+Onboarding distinguishes workspace-resolution failure, usage-fetch failure,
+unresolved allowance, and exhausted capacity; Retry re-asks both the workspace
+and the allowance without changing the session.
 
 An OAuth authorization handoff may supply a strictly validated internal
 `/mcp/oauth/consent?transaction=...` return path. Login preserves that one-time
 handoff through the same full-document navigation; arbitrary and external
 return URLs are ignored.
 
-Onboarding completion carries the committed project ID into `/projects` as a
-one-time query handoff. The authenticated projects screen applies that explicit
-selection to its own `ProjectProvider` before removing the handoff parameter,
-so a stale project-list cache cannot silently select the first project.
+### Workspace and project selection
+
+The workspace is resolved independently of any project, so a workspace with
+zero projects still has an identity for its scoped reads — including the
+allowance check that decides whether a first project may be created. An
+authorized project decides its own workspace; otherwise an explicit
+`?workspace=` wins, then this session's choice (seeded from device storage,
+which is a convenience and never an authorization input), then the first
+membership from `GET /workspaces`.
+
+An explicit `?project=<id>` is resolved directly through
+`GET /projects/{id}`, which authorizes from the path rather than the
+`X-Workspace-Id` header, and is never substituted — a list fetched before the
+project existed cannot contradict it. Onboarding therefore hands a committed
+creation to `/projects?project=<id>` after seeding that project's detail cache,
+and the destination is usable on arrival. A URL naming both a workspace and a
+project from a different workspace is rejected rather than reconciled.
+
+Workspace-scoped reads — project lists, provider connections and states,
+workspace usage and entitlements — carry the workspace in their query key AND
+on the request itself, so a retry or a late response cannot answer for a
+workspace the reader has since left. `lib/navigation/project-destination.ts`
+is the single owner of selection navigation: a deliberate switch pushes one
+history entry, filling an absent parameter for the current selection replaces,
+and re-selecting the project already in the URL does nothing.
 
 ## Data and query ownership
 

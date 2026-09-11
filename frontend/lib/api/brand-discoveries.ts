@@ -63,8 +63,16 @@ export const brandDiscoveriesApi = {
     const value = await apiClient.get('/brand-discovery-catalog', options);
     return strictValidate(brandDiscoveryCatalogSchema, value, 'brandDiscovery.catalog');
   },
-  create: async (input: BrandDiscoveryInput, idempotencyKey: string) => {
+  // A discovery — and the project it becomes — belongs to ONE workspace, so
+  // every call names the workspace it is for rather than inheriting whichever
+  // one happened to be selected when the request was retried.
+  create: async (
+    input: BrandDiscoveryInput,
+    idempotencyKey: string,
+    options?: ApiRequestOptions,
+  ) => {
     const value = await apiClient.post('/brand-discoveries', input, {
+      ...options,
       idempotencyKey,
       retryNetworkFailures: true,
     });
@@ -74,8 +82,14 @@ export const brandDiscoveriesApi = {
     const value = await apiClient.get(`/brand-discoveries/${id}`, options);
     return strictValidate(brandDiscoverySchema, value, 'brandDiscovery.get');
   },
-  complete: async (id: string, input: BrandDiscoveryCompletion, idempotencyKey: string) => {
+  complete: async (
+    id: string,
+    input: BrandDiscoveryCompletion,
+    idempotencyKey: string,
+    options?: ApiRequestOptions,
+  ) => {
     const value = await apiClient.post(`/brand-discoveries/${id}/complete`, input, {
+      ...options,
       idempotencyKey,
       retryNetworkFailures: true,
     });

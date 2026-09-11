@@ -8,13 +8,15 @@ import { renderWithProviders } from '@/test/render';
 import { EntitlementProvider, useEntitlement } from './entitlement-context';
 
 const WORKSPACE = '22222222-2222-4222-8222-222222222222';
-const PROJECT = '11111111-1111-4111-8111-111111111111';
 
-let projectsLoading = true;
-let activeProject: { id: string; workspace_id: string } | null = null;
+let selection: { activeWorkspaceId: string | null; status: string } = {
+  activeWorkspaceId: null,
+  status: 'resolving',
+};
 
 vi.mock('@/lib/project/project-context', () => ({
-  useProjectContext: () => ({ activeProject, isLoading: projectsLoading }),
+  useActiveWorkspaceId: () => selection.activeWorkspaceId,
+  useProjectContext: () => selection,
 }));
 
 function entitlement(capabilities: readonly unknown[]) {
@@ -40,16 +42,19 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 /**
- * The workspace comes from the active project, so the entitlement query sits
- * DISABLED until the project list lands — and a disabled query is not
- * `isLoading`. Reading that alone reported a settled "no capabilities" during
- * the busiest moment of a cold start, and the shell drew itself without the
- * controls it was about to gain, then grew them a moment later.
+ * Until the WORKSPACE resolves the entitlement query has nothing to ask about
+ * and sits DISABLED — and a disabled query is not `isLoading`. Reading that
+ * alone reported a settled "no capabilities" during the busiest moment of a
+ * cold start, and the shell drew itself without the controls it was about to
+ * gain, then grew them a moment later.
+ *
+ * The workspace deliberately does NOT come from the active project any more: a
+ * workspace with no project still has entitlements, and that is exactly the
+ * workspace being asked whether it may create its first one.
  */
 describe('EntitlementProvider', () => {
-  it('reports unresolved while the project list is still loading', async () => {
-    projectsLoading = true;
-    activeProject = null;
+  it('reports unresolved while the workspace is still resolving', async () => {
+    selection = { activeWorkspaceId: null, status: 'resolving' };
     mswServer.use(
       http.get(`/api/v1/workspaces/${WORKSPACE}/entitlements`, () =>
         HttpResponse.json(entitlement([])),
@@ -65,9 +70,8 @@ describe('EntitlementProvider', () => {
     expect(screen.getByTestId('probe')).toHaveTextContent('unresolved:false');
   });
 
-  it('settles once the workspace entitlement answers', async () => {
-    projectsLoading = false;
-    activeProject = { id: PROJECT, workspace_id: WORKSPACE };
+  it('settles once the workspace entitlement answers, with no project selected', async () => {
+    selection = { activeWorkspaceId: WORKSPACE, status: 'empty' };
     mswServer.use(
       http.get(`/api/v1/workspaces/${WORKSPACE}/entitlements`, () =>
         HttpResponse.json(

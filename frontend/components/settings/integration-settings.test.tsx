@@ -42,6 +42,7 @@ const activeProject = {
   brand_name: 'Example',
 } as unknown as Project;
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     projects: [activeProject],
     activeProject,

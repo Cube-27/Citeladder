@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Stub next/navigation (Link uses it in jsdom).
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => '/visibility',
 }));

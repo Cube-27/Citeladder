@@ -23,10 +23,13 @@ const { push, setActiveProjectId, projectContext } = vi.hoisted(() => {
 });
 
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/projects',
   useRouter: () => ({ push }),
 }));
 
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => projectContext,
 }));
 

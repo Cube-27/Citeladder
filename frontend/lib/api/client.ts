@@ -57,6 +57,20 @@ export function getActiveWorkspaceId() {
 export type ApiRequestOptions = {
   signal?: AbortSignal;
   headers?: HeadersInit;
+  /**
+   * The workspace this request is FOR, carried with the request itself.
+   *
+   * A request must be answered for the workspace it was issued for, even if
+   * the user selects a different one while it is in flight or it is retried
+   * afterwards. Reading the mutable module-level selection at send time made
+   * that untrue: a retry of a request issued for workspace A picked up B's
+   * header and returned B's data under A's cache key.
+   *
+   * `undefined` keeps the ambient selection (the compatibility path for
+   * callers not yet converted); an explicit `null` deliberately sends NO
+   * header, letting the backend resolve the caller's default workspace.
+   */
+  workspaceId?: string | null;
   requestId?: string;
   idempotencyKey?: string;
   retryNetworkFailures?: boolean;
@@ -86,10 +100,13 @@ function buildHeaders(options: InternalRequestOptions, requestId: string) {
     headers.set('X-Request-ID', requestId);
   }
   if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey);
-  // Scope flat routes to the active workspace when one is selected; the backend
-  // falls back to the caller's default workspace when this header is absent.
-  if (activeWorkspaceId && !headers.has('X-Workspace-Id')) {
-    headers.set('X-Workspace-Id', activeWorkspaceId);
+  // Scope flat routes to the workspace this request was issued for. An
+  // explicit `workspaceId` wins over the ambient selection, and an explicit
+  // `null` suppresses the header entirely so the backend resolves the
+  // caller's default workspace.
+  const workspaceId = options.workspaceId === undefined ? activeWorkspaceId : options.workspaceId;
+  if (workspaceId && !headers.has('X-Workspace-Id')) {
+    headers.set('X-Workspace-Id', workspaceId);
   }
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');

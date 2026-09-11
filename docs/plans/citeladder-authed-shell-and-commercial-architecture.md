@@ -1,432 +1,348 @@
-# Account management and billing: one authenticated shell, agency workspaces, and a portable commercial core
+# Account management and billing: reliable project context, workspace ownership, and provider portability
 
-> **Status:** proposed, three phases, in order. Written 2026-09-10 after a
-> customer lost their first project to a provider-boundary race. The account is
-> not stuck; the incident is recorded in the PR that shipped the interim fix.
->
-> This is the guiding document for account management and billing. Phase 1 is
-> ready to implement. Phase 2 is a design to build. Phase 3 is explicitly
-> **no implementation** — it de-hardcodes provider decisions and records the
-> migration process so that a later agent inherits the decisions rather than
-> re-making them.
->
-> This plan authorizes no deployment, no live checkout, no provider mutation,
-> and no database reset. It supersedes nothing in
-> [the Razorpay local test integration plan](citeladder-razorpay-local-test-integration.md);
-> Phase 3 here is the portability work that plan's section 2D gestured at, and
-> it inherits that plan's outstanding items rather than restating them.
+Date: 11 September 2026  
+Repository reviewed: `Cube-27/Citeladder`  
+Static-review baseline: `98cfb2dfa369b541fbab882ba0b70ca3395b8f29`
 
-## 0. The incident this starts from
+**Status: revised implementation handoff. All three phases below are in scope, in order.** Phase 1 fixes the reported customer-facing project-selection failure. Phase 2 implements the owner's workspace and role decisions. Phase 3 implements provider-neutral architecture, not an unfinished Razorpay integration or another vendor's integration.
 
-A customer completed onboarding, watched the address bar show
-`/projects?project=<uuid>` flick to `/projects`, and was told they were **not
-allowed to create more projects**. On refresh the project was there.
+This replaces the earlier account-management plan and its review addendum for this scope. It specifically supersedes the previous Phase 2 decision hold, the Phase 3 documentation-only restriction, and instructions to finish or wait for pending Razorpay work. Retain the separate Razorpay plan only as a paused historical integration record; do not execute its remaining checklist.
 
-The flicker was the visible edge of a hand-off. `/onboarding` lives in
-`app/(onboarding)` and `/projects` in `app/(app)`; each layout mounts its own
-`ProjectProvider`, so the selection onboarding made died with its provider. The
-`?project=` parameter carried it across, and `ProjectsScreen` scrubbed it once
-applied.
+No deployment, live database reset, live checkout, real payment, external provider mutation, or merchant-account configuration is authorized. Greenfield means no legacy data migration or compatibility programme, not permission to destroy a running environment. Update models, the existing pre-launch schema baseline, and fixtures together. Any reset outside the normal isolated test-database lifecycle requires separate, exact-target authorization.
 
-The hand-off could not close the window it was built for. It ran one effect tick
-*after* the new provider had already resolved a project — and when that
-provider's list was the pre-create one, "resolved" meant either `projects[0]`
-(which the promotion effect wrote back to storage, making the wrong selection
-permanent) or, for a first-ever project, an empty list that `OnboardingGate` read
-as "this account has no projects". The gate redirected to a blank `/onboarding`;
-the customer filled it in again; the second completion reached `create_project`
-→ `enforce_occupancy` with `FREE_PROJECT_SLOTS = 1` already consumed, and was
-refused.
+## 0. Problem and decisions
 
-An interim fix has shipped: the provider seeds its pin from storage, stamped with
-the list generation it mounted against, and the gate treats an unconfirmed
-selection as a third loading state. That closes the incident. It is still a
-hand-off — storage instead of the URL — and a hand-off is a thing that can be
-raced. Under a slow connection the same shape reads as a bug to the next
-customer.
+### The problem to solve
 
-**Two independent mistakes are visible here**, and the phases separate them:
+The owner reports that creating a project sometimes navigates to a "no project available" state, or selects the previous project; refreshing then reveals the correct project/workspace. The original incident account describes selection being lost across separate onboarding/app providers and a stale project list being interpreted as an empty account.
 
-1. Two providers for one session, so state had to travel between them.
-2. The active project was never durable state anywhere. It lived in a
-   component's memory, was mirrored to storage, and was deliberately erased from
-   the one place a user can see, bookmark and share.
+The inspected code still has a storage-seeded selection pin, a workspace-independent `projects.list()` cache key, and a workspace header derived in an effect from the selected project. The project-detail endpoint also currently resolves through the active-workspace dependency. These are observed code properties, not proof that every reported incident has the same cause.
 
-Phase 1 fixes both.
+**Required outcome:** a successful creation response leads directly to that project in its owning workspace, without refresh, selection substitution, another creation submission, or an erroneous onboarding/allowance error.
 
-## Phase 1 — One authenticated shell, with the project id in the URL
+### Owner-confirmed decisions
 
-### 1.1 Collapse the provider boundary
+| Area | Decision |
+| --- | --- |
+| Billing | Exactly one billing account per workspace. A billing account is not shared across workspaces. |
+| Owner | Full workspace access; can assign Admin, Member, or Viewer. |
+| Admin | The same application permissions as Owner, including billing and member management. |
+| Member | All normal workspace/product access except billing and member management. |
+| Viewer | Read-only access. |
+| Data | Greenfield. No existing-customer backfill, account splitting, financial-history conversion, dual-write phase, or migration tooling. |
+| Razorpay | Rejected CiteLadder according to the owner; discussions continue. Do not finish its pending integration. Keep it possible to return to Razorpay or add another provider. |
+| Portability | Implement the provider-neutral architecture now, without enabling payments or selecting a replacement provider. |
 
-Introduce `app/(authed)/layout.tsx` and nest the existing groups inside it. Next
-route groups contribute layouts without contributing URL segments, and they
-nest, so `app/(authed)/(app)/projects/page.tsx` still serves `/projects`. No
-route changes, no redirects, no external URL churn.
+### Bounded scope choices used in this handoff
+
+These are implementation recommendations rather than additional pricing decisions:
+
+* Workspace membership covers all projects in that workspace. Remove the original per-project ACL proposal from this delivery. Do not create a second tenancy entity called Company or Agency.
+* Members use the workspace's entitlements and usage budget. Their personal workspaces or subscriptions do not sponsor this workspace. Do not add seat billing, new seat caps, or change existing prices, grants, or limits.
+* Interpret Viewer as read-only **non-administrative workspace/product access**. Billing and member-administration surfaces remain unavailable, rather than exposing more administrative data to Viewer than to Member. Ordinary project read responses can expose safe capability/remaining-allowance hints without exposing billing profiles or invoices.
+* Keep one designated Owner for continuity. Owner and Admin have equal permissions, including initiating ownership transfer. Transfer replaces the designated Owner atomically; neither role may leave the workspace ownerless. Do not introduce an Owner-only permission exception.
+* Do not build project transfers between workspaces, consolidated agency billing, a new workspace-deletion product flow, or a payment-provider marketplace.
+
+## 0.1 Owner decisions resolving this handoff (11 September 2026)
+
+These answers were given by the owner against the code as it stands and take
+precedence over any reading of the sections below.
+
+| Question raised in review | Resolution |
+| --- | --- |
+| Free baseline per workspace vs per user | Non-issue. The shipped product gives each user one auto-provisioned workspace; paid tiers are not public and the free profile allows exactly one project (`FREE_PROJECT_SLOTS = 1`, `FREE_PROMPT_SLOTS = 10`, `FREE_MONITORED_URLS = 20`). One account per workspace is a cleaner spelling of today's one account per user, not a commercial change. Do not add or remove grants. |
+| Workspace cardinality | A user OWNS one workspace, and every workspace has exactly one Owner. A user MAY belong to further workspaces through invitation. Workspace selection is an explicit act at sign-in / in the switcher, never inferred from a project. `MAX_WORKSPACES_PER_USER` must therefore count only owned memberships. |
+| Multi-workspace sign-in selection | Wanted, and may be deferred if it endangers the rest of the delivery. If deferred, record it here rather than shipping a partial version. |
+| Provider/integration credentials vs the role matrix | Credential management stays Owner/Admin only. Treat workspace credentials as administrative alongside billing and member management; the existing `_CREDENTIAL_MANAGER_ROLES` gate is preserved, not widened to Member. |
+| Delivery | Two pull requests: Phase 1 (plus the crawl-termination fix below) first, then Phases 2 and 3 together. |
+
+### Additional in-scope defect: a crawl that never terminates
+
+Reported by the owner alongside this plan. Analysis stops at the 20-URL
+monitored budget and the screen reflects that, but the crawl stays in a live
+(non-terminal) state until it is cancelled by hand. Fix the
+discovery-exhaustion-to-terminalization path so a budget-exhausted crawl
+finalizes itself. This ships with Phase 1 because it is customer-facing and
+touches none of the billing ownership modules.
+
+### Corrections to the review basis
+
+* The completion response for the only production creation path
+  (`POST /brand-discoveries/{discovery_id}/complete`) returns
+  `{discovery_id, status, project_id, crawl_id, page_limit, warnings}` — no
+  project body and no `workspace_id`, and `project_id` is legitimately null
+  while the worker finishes. Section 1.5's "returned project ID and workspace
+  ID" is therefore satisfied by committing on `project_id` and resolving the
+  workspace through the re-authorized project-detail read of section 1.3.
+* `frontend/lib/api/projects.ts` already exposes `listWorkspaces()` against
+  `GET /workspaces`, and `workspaceKeys.list()` already exists. Both are
+  currently unused; section 1.2 wires them rather than introducing them.
+* There is no `docs/billing/` directory. The Phase 3 provider-readiness
+  checklist lives at `docs/billing-provider-readiness.md`.
+* `/onboarding` carries `new`, `discovery` and `step` today. The `workspace`
+  parameter of section 1.2 is added, not preserved.
+
+## Phase 1: reliable workspace and project context
+
+**Status: delivered.** Shipped with the crawl-termination fix as the first of
+the two pull requests. What landed:
+
+* `app/(authed)/layout.tsx` owns one session + workspace/project + entitlement
+  provider lifetime, shared by `(app)` and `(onboarding)`; neither group mounts
+  a provider of its own.
+* `lib/project/project-scope.tsx` holds the context and its consumers,
+  `lib/project/selection.ts` the pure precedence rules, and
+  `lib/project/project-context.tsx` the provider that resolves them. The
+  storage-seeded pin and its list-generation bookkeeping are gone.
+* `GET /projects/{project_id}` authorizes through `require_project_member`, so
+  an explicit `?project=` resolves before any workspace is known.
+* Workspace-scoped query keys and requests agree: project lists, provider
+  connections/states, and workspace usage/entitlements all carry the workspace
+  in the key and on the request (`ApiRequestOptions.workspaceId`).
+* Onboarding commits the creation, seeds the detail cache, merges the list, and
+  navigates to `/projects?project=<id>`; login routes into the app and lets the
+  gate decide whether the workspace needs onboarding.
+* `lib/navigation/project-destination.ts` is the single selection-navigation
+  owner, with the push/replace/no-op history rules of section 1.7.
+
+### 1.1 One authenticated provider lifetime
+
+Keep the original shared route-group direction:
 
 ```text
-app/(authed)/layout.tsx          ← SessionGuard + ProjectProvider + EntitlementProvider
-app/(authed)/(app)/layout.tsx    ← Suspense + ProductTour + Toast + OnboardingGate + AppShell
-app/(authed)/(app)/…             ← the 14 existing route directories, unchanged
-app/(authed)/(onboarding)/onboarding/…
+app/(authed)/layout.tsx
+  Suspense above the URL-reading client provider
+  Shared project/workspace context and session render guard
+  Shared entitlement context
+
+app/(authed)/(app)/layout.tsx
+  Existing workspace chrome, tour, toasts and project-route gate
+
+app/(authed)/(onboarding)/...
+  Existing focused onboarding layout, without another project provider
 ```
 
-| Layer | Owns |
-|---|---|
-| `(authed)` | The session, the project list and active-project selection, the entitlement read — everything an authenticated request needs to be correctly scoped. |
-| `(app)` | The workspace chrome and the first-run gate. |
-| `(onboarding)` | A task column with no chrome. |
-
-`ProjectProvider` sits above both because the `X-Workspace-Id` header it installs
-is a property of the session, not of which chrome is drawn. `EntitlementProvider`
-joins it: onboarding already reads entitlements to decide whether an additional
-project is allowed, so hoisting resolves the allowance once per session instead
-of re-fetching on every crossing.
-
-### 1.2 The project id becomes durable URL state
-
-The `?project=` parameter was not the mistake — **scrubbing it was**. Peer tools
-keep it (Peec: `app.peec.ai/insights?brand=kw_…&resolution=day`), and they are
-right to. Make it real state rather than a transient hand-off:
-
-- **Precedence for the active project:** URL parameter → stored last-used id →
-  first project. The URL is an explicit request and always wins.
-- **The provider reads it,** not `ProjectsScreen`. Reading it in the provider
-  means it is available on the *first render*, synchronously, before any effect —
-  which is what removes the race rather than narrowing it. There is no window in
-  which the provider can resolve to a different project, so nothing needs pinning
-  and nothing needs handing off.
-- **Selecting a project writes it,** preserving other parameters, so the switcher
-  updates the address bar the way a filter does.
-- **Nothing ever removes it.**
-- **`localStorage` keeps one job:** what this browser had selected last time, used
-  only when the URL names no project. It stops being a message between
-  components.
-
-What this buys beyond the bug fix, and why it matters more in Phase 2: a link to
-a project is a link to *that project*. Back and forward work. Two tabs can hold
-two different projects without fighting over one storage key. An agency can send
-a teammate a URL instead of "switch to the Acme project first". That last one is
-the reason to do it now rather than later.
-
-**A URL naming a project that does not exist, or that this user cannot see, is
-an explicit error state** — "project not found, or you don't have access" — never
-a silent fall back to `projects[0]`. Silently showing someone a different
-project's data than the one they asked for is the failure mode worth spending a
-state on.
-
-### 1.3 What this deletes
-
-- The strip effect in `components/projects/projects-screen.tsx` (already gone;
-  it stays gone).
-- The storage-seeded pin and the `asOf` list-generation bound in
-  `lib/project/project-context.tsx`. With the URL authoritative at first render,
-  the pin returns to its original and only job: holding an **in-session**
-  selection ahead of the refetch that confirms it.
-- `hasPendingSelection` from the context and `OnboardingGate` — **only if** 1.4
-  confirms the gate no longer needs it. Verify rather than assume; if a slow
-  refetch still leaves a window, keep it. It is honest about a real state.
-
-### 1.4 The gate's contract, restated
-
-`OnboardingGate` decides one thing: does this account have zero projects? It may
-answer "yes" only from a **settled, successful, current** list. Loading, error,
-and refetching-after-create are all "wait", never "onboard". State it in the
-component and cover it with tests independent of how many providers exist — this
-is the invariant the incident violated, and it must survive Phase 2 rewiring.
-
-### 1.5 Risks and how they are checked
-
-| Risk | Check |
-|---|---|
-| A route group move silently changes a URL | Enumerate every route before and after; assert the sets are equal (`find app -name page.tsx`, diffed). |
-| `export const instant = true` stops applying | It lives in `(app)/layout.tsx` and moves with the file. Confirm the shell still renders immediately on navigation. |
-| `error.tsx` / `not-found.tsx` change scope | They move with `(app)`. An error thrown inside `(app)` must still be caught there, not escape to the root. |
-| `(auth)` and `(marketing)` regress | They stay outside `(authed)`. Marketing must still load with no session query beyond its own. |
-| URL/state feedback loop | Selecting writes the URL, which the provider reads, which could re-trigger a write. Assert one history entry per selection and no repeated `replace`. |
-| Stale references | Four known: `test/fixtures/visibility.tsx`, `test/fixtures/prompts.tsx`, the `app/(app)/` prefix in `scripts/check-design-system.mjs`, and a comment in `(onboarding)/layout.tsx`. Grep again after moving. |
-
-### 1.6 Coverage, including the additional-project path
-
-The `?new=1` flow — adding a project to an existing account — has been hard to
-exercise because Google sign-in is rate-limited, so in practice it is only walked
-on the dev account. **The owner has confirmed a seeded password account is
-acceptable for local and CI verification**, which removes that constraint. After
-1.1 the two flows are the same code path distinguished only by `isAdditional`,
-and every interesting state sits below the OAuth boundary:
-
-- **Provider and gate level** (no network, no OAuth): first project with a cold
-  list; additional project with a warm list; a refetch returning without the new
-  project; a URL naming a deleted project; a URL naming another workspace's
-  project; a failed list request.
-- **Flow level** (mocked API): complete onboarding as a first project and as an
-  additional one, asserting the same post-condition — the committed project is
-  active, the URL names it, and no second completion is ever sent.
-- **Browser level** (seeded password account, no Google): both flows end to end,
-  plus the transient-network case — the list delayed past the navigation —
-  asserting the workspace waits rather than redirecting to onboarding.
-
-Seed through the ordinary password path; do not add a test-only auth bypass.
-Google's limits constrain how we sign in during testing. They must not constrain
-what we can prove.
-
-### 1.7 Completion criteria
-
-- Route set identical before and after.
-- No component outside `(authed)` reads or writes the active-project selection.
-- The project id is visible in the URL on every project-scoped route and is never
-  removed.
-- An unknown or unauthorized project id renders an explicit error, not a
-  substitution.
-- The provider/gate tests fail against the pre-fix code and pass after.
-- `lint`, `tsc --noEmit`, `oxfmt --check`, `check:policy`, `knip` and the full
-  vitest suite green; Playwright green for both project-creation flows.
-
-## Phase 2 — Workspace management for agencies
-
-### 2.1 The honest baseline
-
-Less exists than the model suggests:
-
-- `Workspace` is a real tenancy boundary. Every project-owned resource is scoped
-  by `workspace_id`, and `require_workspace_member` / `require_active_workspace`
-  / `require_project_member` verify membership on every query, returning 404
-  rather than distinguishing a missing workspace from a forbidden one.
-- `WorkspaceMember` has a `role` column — and **the only value ever written is
-  `"owner"`**. No code authorizes on role. There is no non-owner path.
-- There are **no invitations**. Nothing in the backend mentions them.
-- There is **no per-project access**. Membership is workspace-wide and total.
-- `BillingAccount.owner_user_id` is `UNIQUE`: one billing account per *user*,
-  with workspaces attached through `WorkspaceBillingLink`.
-
-So the tenancy and authorization spine is sound, and everything an agency needs
-sits on top of it, unbuilt.
-
-### 2.2 The shape to build
-
-The reference product's vocabulary is worth adopting because it matches the
-tenancy we already have: a **company** owns projects, has **members** with a
-company role and per-project access, and carries **billing**. Mapped onto
-CiteLadder, `Workspace` *is* the company. Do not introduce a new container.
-
-| Concept | Maps to | Work |
-|---|---|---|
-| Company | `Workspace` | Naming and a settings surface. No new entity. |
-| Member | `WorkspaceMember` | Make `role` load-bearing; today it is decorative. |
-| Per-project access | new | A member may be scoped to a subset of the workspace's projects. |
-| Invitation | new | Email invitation, pending state, acceptance binding to a persisted user id. |
-| Billing | `BillingAccount` | Ownership moves from user to workspace — see 2.3. |
-
-**Roles.** Start with the fewest that carry real authorization difference, and
-write down what each may do before implementing:
-
-- **Owner** — billing, members, workspace deletion, everything below.
-- **Admin** — members and projects, not billing.
-- **Member** — the projects they are granted, no member or billing management.
-
-Resist a fourth until a customer names it. Every role is a permission matrix that
-must be enforced in every handler, and an unenforced role is worse than no role
-because it reads as a guarantee.
-
-**Enforcement rule.** Role and project-access checks belong beside the existing
-membership check in `app/api/deps.py`, in `WorkspaceContext` — never re-derived
-per handler. `WorkspaceContext` already carries the resolved `member`; extend it
-to answer "may this member do this to this project" and make that the only place
-the question is asked. A permission model with two enforcement sites has one
-enforcement site and one bug.
-
-**Invariant to preserve.** Invitations bind to a **persisted user id** on
-acceptance, never to an email string used later as authority. This is the same
-discipline that keeps operator access out of customer entitlement today
-(`provision_development_access` is bound to a UUID, deliberately not an email
-comparison) and it is the discipline invitations most commonly break.
-
-### 2.3 The billing-ownership migration
-
-`BillingAccount.owner_user_id UNIQUE` expresses "a person pays for their own
-workspaces" exactly, and cannot express what Phase 2 is for: an agency paying for
-work owned by several of its people, seat-based pricing where payer and users
-differ, or billing surviving the departure of whoever signed up.
-
-In the previous draft this was a hypothetical and the recommendation was a seam.
-Phase 2 makes it real, so it becomes a migration — and it must happen **in**
-Phase 2, before subscriptions carry customers and receipts reference accounts.
-
-**Direction.** Billing attaches to the workspace, not the user. `BillingAccount`
-keeps its identity, grants, `entitlement_lifecycle_version` and
-`registration_cohort_at`; what changes is the ownership edge:
-`owner_user_id UNIQUE` becomes a membership relation, with exactly one member
-holding the owner role at any time.
-
-**What must not change**, because it is already correct:
-
-- Occupancy counts across **every** linked workspace
-  (`_count_project_slots`, `_count_prompt_slots` join through
-  `WorkspaceBillingLink`), so allowances cannot be escaped by making another
-  workspace. Extending ownership must not narrow this to one workspace.
-- `registration_cohort_at` stays frozen from `User.created_at` and is never moved
-  by login repair, workspace creation, or ownership transfer — otherwise campaign
-  eligibility becomes farmable.
-- `ensure_user_billing` stays idempotent and self-healing on register, login,
-  OAuth and workspace creation, so a partially-failed signup repairs itself on
-  the next request.
-- The `entitlement_lifecycle_version` bump stays a single account-level write
-  under a row lock. Do not replace it with a `max()` across subscriptions or
-  members.
-
-**Sequencing within Phase 2.** Introduce a single resolver —
-`billing_account_for(workspace)` — and route every caller through it *before*
-changing the schema. With one call site, the ownership change is a change to one
-function plus a data migration, and the blast radius is knowable. Doing it the
-other way round means finding every `owner_user_id` read under time pressure.
-
-Record the outcome as an ADR: what a billing account attaches to, who may hold
-the owner role, what happens on transfer, and what happens to grants and
-in-flight subscriptions when a workspace leaves an account.
-
-### 2.4 Open design questions for Phase 2
-
-These need answers before implementation, not during:
-
-1. Can one billing account span multiple workspaces for a *customer* (an agency
-   with a workspace per client), or is it one account per workspace? The schema
-   supports the former today via `WorkspaceBillingLink`; the pricing model has to
-   agree with the schema.
-2. Are members billable seats, or is pricing purely by project/prompt occupancy?
-   This decides whether member management writes to entitlement at all.
-3. Does an invited member consume the inviter's allowance, or bring their own?
-   The Razorpay plan's acceptance list already carries "an invited member
-   receives only the correct workspace sponsor's access" as a requirement — that
-   sentence is only testable once this is decided.
-4. What happens to a member's project access when a project moves or is deleted?
-
-## Phase 3 — Provider portability, without implementation
-
-**No Razorpay implementation happens in this phase.** Access is not available.
-The goal is that whenever a provider decision is made — Razorpay or a successor —
-no agent has to re-derive it. This section is both the de-hardcoding work and the
-migration runbook.
-
-### 3.1 What is already right, and must be preserved
-
-`app/connectors/billing/base.py` defines `BillingProvider` as a `Protocol` in
-commercial vocabulary — `create_base_subscription`, `fetch_subscription`,
-`cancel_subscription`, `fetch_payment`, `refund_payment` — taking only
-server-resolved arguments, with provider-neutral DTOs carrying status, amount,
-currency, period bounds and update version. A browser value never reaches a
-provider call. `get_billing_provider()` is a single factory.
-
-**This is the hard part and it is done.** A provider switch is an adapter plus
-the leaks in 3.2 — not a rewrite. Preserve the protocol's shape above all: any
-change that lets a provider concept into the signature undoes the work.
-
-Equally preserved: persisted evidence — receipts, activations, webhook events —
-already records `provider_mode` and the catalog revision, so settlement history
-stays interpretable *across* a switch. That property is what makes migration
-possible at all.
-
-### 3.2 Hardcoded provider decisions to remove
-
-Nine files mention Razorpay; six mentions are load-bearing outside the connector.
-
-| # | Leak | Where | Why it costs at migration |
-|---|---|---|---|
-| 1 | Quote signing falls back to the Razorpay key secret | `app/domain/billing/quotes.py` | Quote integrity coupled to one provider's credential. An independent `BILLING_QUOTE_SIGNING_SECRET` is already specified in the Razorpay plan; finishing it is a security improvement regardless of provider. **Do first.** |
-| 2 | Webhook ingress named for the provider: `POST /billing/webhooks/razorpay`, `X-Razorpay-Signature`, `X-Razorpay-Event-Id` | `app/api/billing.py` | A second provider needs a second route and a second signature path, with nothing forcing them to share dedupe, leases, receipts or redaction. Normalize to `POST /billing/webhooks/{provider}` with all shared machinery in shared code and only signature computation plus event parsing behind the adapter. |
-| 3 | Callback DTO typed as `razorpay_payment_id` / `razorpay_subscription_id` / `razorpay_signature` | `app/domain/billing/checkout.py` | The *domain* speaks Razorpay. Rename to provider-neutral fields, accepting the current names as input aliases. |
-| 4 | `BILLING_RAZORPAY_*` settings — mode, four readiness flags, key prefixes, API host, checkout hosts | `app/core/config/billing_settings.py` | Provider selection spelled into ~15 setting names; a second provider duplicates the block. Largest diff, lowest risk, genuinely deferrable until a second provider is real. |
-
-Do 1–3 while Razorpay is the only provider. Portability work with one
-implementation is cheap and provable; during a migration it competes with the
-migration.
-
-### 3.3 Three rules that must never become provider-shaped
-
-The current code follows all three. A migration erodes these first, so they are
-recorded as rules rather than left as observations:
-
-1. **CiteLadder owns the quote.** Taxable value and tax-component allocation are
-   ours, frozen per intent, never read back from provider invoice metadata.
-2. **A callback is authentication, not entitlement.** Access follows captured
-   payment evidence with amount and currency parity against the frozen quote —
-   never a valid signature, never a provider status string alone.
-3. **Uncertain is not failed.** Transport errors and 5xx leave the intent pending
-   for reconciliation. `BillingProviderError.retryable` encodes this; every
-   adapter must set it correctly, because a provider that reports uncertainty as
-   failure will double-charge under retry.
-
-### 3.4 Migration procedure: Razorpay to another provider
-
-The order matters; each step is verifiable before the next.
-
-1. **Confirm the protocol covers the new provider's model.** Recurring
-   subscriptions, mandate/authorization semantics, refunds, and whether it
-   reports uncertainty distinguishably. A provider that cannot express
-   `retryable` needs that handled in its adapter, not in the domain.
-2. **Write the adapter** against `BillingProvider`, mapping its statuses to the
-   neutral DTOs. Largest piece of work, unavoidable under any design.
-3. **Add the provider's signature verification and event parsing** behind the
-   normalized webhook ingress from 3.2 #2. Shared dedupe, leases, receipts and
-   redaction are reused, not reimplemented.
-4. **Create a new catalog revision** holding that provider's private price
-   references, with its own frozen FX and tax metadata. Never mutate a published
-   revision: historical receipts must keep resolving against the terms they were
-   sold under.
-5. **Run both providers concurrently, read-only for the new one.** Existing
-   subscriptions keep settling through Razorpay; new checkouts route to the new
-   provider by catalog revision. `provider_mode` on persisted evidence is what
-   makes this legible.
-6. **Re-run the sandbox acceptance matrix** — the Razorpay plan's section 5,
-   with that provider's supported methods substituted. Do not carry a passed
-   route across providers.
-7. **Migrate or expire existing subscriptions.** Most providers cannot transfer
-   mandates; assume customers must re-authorize, and plan the communication as
-   part of the migration rather than discovering it during one.
-8. **Retire the old adapter only after** its last subscription reaches a terminal
-   state and its reconciliation window closes. Keep its evidence readable
-   forever.
-
-### 3.5 What remains unimplemented in Razorpay itself
-
-Carried from the Razorpay plan's handoff so this document is a complete picture.
-None of it is authorized here; it is recorded so a later agent knows the true
-state:
-
-- Real sandbox captures, recurring-method acceptance, and GST parity have **not**
-  been performed.
-- International setup and readiness remain **unverified and disabled**.
-- Merchant capability for Subscriptions, recurring methods and international
-  recurring is **owner-reported, not verified**.
-- Funded checkout remains **disabled** — its provider call charges the base plan
-  only and does not match the funded quote.
-- The tax verification gate is **unproven**: that the merchant's plan/invoice
-  configuration produces a separate GST line and the exact quoted total. If it
-  cannot, INR checkout stays unavailable.
-- Enterprise remains contact-only; card trials, no-card campaigns, add-ons and
-  top-ups stay disabled.
-
-A provider migration decision should be made knowing that Razorpay itself is
-**not yet proven in sandbox**. If that proving does not succeed, the migration is
-not a fallback plan — it is the plan.
-
-## Sequencing summary
-
-| Phase | Contents | Blocking |
-|---|---|---|
-| 1 | `(authed)` layout, project id as durable URL state, gate contract, seeded-account coverage | Nothing. Ready to implement. |
-| 2 | Members, roles, per-project access, invitations, billing ownership migration + ADR | Phase 1 (shares the provider and the URL it reads). Answer 2.4 first. |
-| 3 | Quote-signing secret, normalized webhook ingress, neutral callback DTO; settings block deferred | Sequence 3.2 #1–3 after the in-flight Razorpay change merges — it edits `webhooks.py` and `checkout.py` too. |
-
-Phase 3's de-hardcoding does not depend on Phase 2 and may proceed in parallel
-once the Razorpay change lands. Phase 2's billing-ownership migration should not
-begin while Phase 3 is mid-edit in the same billing modules.
-
-## Decisions recorded
-
-- **Project id in the URL:** keep it, visibly and permanently. Scrubbing it was
-  the mistake, not showing it. (Owner, 2026-09-10.)
-- **Test access:** a seeded password account is acceptable for local and CI
-  verification of both project-creation flows; Google rate limits do not gate
-  coverage. (Owner, 2026-09-10.)
-- **Razorpay:** no implementation in Phase 3. Access is unavailable; the phase
-  exists to remove hardcoded decisions and record the migration path.
-  (Owner, 2026-09-10.)
+Move the existing providers rather than wrapping duplicated providers in a new manager. Keep one QueryClient. Keep authentication/public routes outside this branch. Preserve existing external paths, safe auth/MCP return destinations, error boundaries, visual design, and public-page behavior.
+
+Preserve parallel session and safe authenticated bootstrap reads where possible. The session guard still prevents protected content from rendering before authentication resolves; do not manufacture an additional request waterfall merely to reorder layouts. Put the Suspense boundary above the component calling `useSearchParams`, not only in the child app layout, and validate with a production build.
+
+### 1.2 Workspace exists independently of an active project
+
+Extend the existing context rather than introducing another global store or a state-machine dependency. The shared context must distinguish the requested project, the authorized active workspace, the resolved project, and the existing loading/error states.
+
+A workspace can be valid while it has zero projects. Its identity must therefore remain available during first-project creation, additional-project creation, and workspace billing/member settings. Do not derive the only workspace identity from `activeProject?.workspace_id`.
+
+For a project URL, the authorized project determines the workspace. For onboarding and workspace-only routes without a project, preserve an explicit `workspace` URL parameter for the selected workspace. On a genuinely unscoped entry, resolve a valid membership from the existing workspace-list/bootstrap contract. Browser last-used storage is a user-scoped convenience fallback, never an authorization source.
+
+An additional-project launch must carry its target workspace, for example `/onboarding?new=1&workspace=<id>`. Refreshing that route must not silently change the workspace in which the project will be created. When a URL names both a workspace and project, reject an incompatible pair rather than combining one project's ID with another workspace's limits.
+
+Do not add workspace parameters to every project URL unnecessarily: a verified project ID already identifies its workspace.
+
+### 1.3 Resolve the requested project directly
+
+Keep `?project=<id>` on project-scoped URLs. Precedence is explicit URL, then a valid stored selection in the resolved context, then a project from the authorized current workspace. Once an explicit ID exists, never substitute the first project because a list omits it.
+
+Use the existing `GET /projects/{project_id}` as the narrow resolution read. Change its authorization dependency to the existing path-based `require_project_member` pattern, so it can return the authorized project's `workspace_id` without needing a previously correct active-workspace header. Keep the ordinary project list workspace-scoped. Preserve the combined missing/not-authorized response and membership enforcement; do not add an admin tenancy bypass.
+
+Use cached project detail or the successful creation response when it is valid for the current authenticated session. Otherwise resolve the explicit ID through the detail read. Only then enable reads and mutations that depend on its workspace. A list omission is not an authorization result. A network failure is a recoverable error, not proof of no access.
+
+Avoid an unnecessary sequence of waiting for the entire project list before using an already-authorized project. The matching list can reconcile in the background; its older omission must not clear a separately resolved explicit project.
+
+### 1.4 Bind cache identity and request identity together
+
+Change workspace-dependent query-key factories and their callers to include the workspace identity. At minimum cover project lists, workspace usage/entitlements, member settings, and workspace integration/provider-state lists. In Phase 2 also apply this to all workspace billing reads.
+
+A project-ID-keyed resource whose UUID already uniquely identifies the resource does not need a ceremonial extra key dimension. A list or projection whose results change with `X-Workspace-Id` does need that dimension. Keep account-transition cache clearing; clear old-user selection state and in-flight work on logout/user changes.
+
+Pass the resolved workspace explicitly through existing request options for scope-dependent requests, including retries and background work. The transport already respects an explicitly supplied `X-Workspace-Id`; reuse that support through the existing API/query owners rather than scattering manual headers across components.
+
+Do not allow a request keyed as workspace A to obtain workspace B's header from a mutable global selection on a later retry. Do not use a global header update in a React effect as the correctness mechanism. Keep that setter only as temporary compatibility during this bounded refactor, and remove it if the completed caller inventory no longer needs it.
+
+Keep previous-workspace data out of the newly selected workspace's view. Abort obsolete requests through the existing cancellation path and ensure their results cannot change the current selection. Cancellation complements scoped keys and explicit request inputs; it does not replace them.
+
+### 1.5 Commit creation before navigation
+
+Use one successful-creation handler for first and additional projects:
+
+1. Submit to the already-authorized target workspace through the existing mutation path. Keep the existing transactional occupancy check and prevent repeated submission while the operation is pending.
+2. On confirmed server success, take the returned project ID and workspace ID as the committed result. Do not synthesize a project before server success.
+3. Cancel obsolete relevant list/detail reads, then seed the detail cache and update the matching workspace-list cache with the returned project, deduplicated by ID. Do not mark an incomplete list as a complete authoritative inventory merely because one returned project was inserted.
+4. Select/navigate to `/projects?project=<created-id>` through the shared navigation owner. Project detail must already be usable when this destination mounts.
+5. Reconcile the workspace list and usage in the background. Reconciliation failure cannot undo the successful creation or send the user through creation again.
+
+The creation response, not a later full-list fetch, is the immediate source of truth for what was just created. A pre-create request arriving later must not erase that committed selection. Do not automatically retry a create mutation after an unknown network outcome unless the existing server contract makes the retry idempotent; distinguish this from the confirmed-success handoff bug being fixed here.
+
+Keep a small pending-resolution state only where an ID is genuinely unresolved. Remove the storage-mediated remount pin/generation workaround once the replacement regression tests pass. Do not add sleeps, delayed redirects, forced refreshes, more storage messages, or a second selection authority.
+
+### 1.6 Correct the gate, not just the error message
+
+The gate answers: **does this authorized workspace currently need project onboarding on this project-required route?** It does not answer whether the signed-in user has projects in every workspace.
+
+| State | Behavior |
+| --- | --- |
+| Workspace/project context unresolved | Loading with no fallback project and no creation redirect. |
+| Confirmed created or resolved project, list reconciling | Keep that project usable. Do not block merely on background refetch. |
+| Relevant resolution/list request failed, no usable resolved project | Recoverable error and Retry, preserving the requested context. |
+| Explicit project is confirmed missing or unauthorized | Combined unavailable state, with deliberate selection of another accessible project. |
+| Current workspace has a successful, relevant empty list and no unresolved explicit/created project | On project-required routes, show onboarding/create affordance only when role and allowance permit it. |
+| Workspace has zero projects but route is billing, members, workspace settings, or an invitation | Remain on that route. No project is required to manage the workspace. |
+| Viewer in an empty workspace | Read-only empty state, not a create-project loop. |
+
+Use the existing visual components. Account/workspace usage can resolve without a project. In Phase 2 permission-gate controls, while the backend remains authoritative. A real quota denial must remain a quota denial; do not bypass limits to mask selection bugs.
+
+### 1.7 Navigation and completion
+
+Use one small destination helper in the existing navigation layer for project-scoped links, the switcher, desktop/mobile shell, command palette and programmatic navigation. Preserve destination parameters and fragments, but do not leak source-page filters into unrelated routes.
+
+A deliberate switch to a different project pushes one history entry. Filling an absent parameter for an already-resolved selection replaces the current entry. Back/Forward only reads the resulting URL. Selecting the same project does not add history. Another tab changing stored last-used state must not override this tab's explicit URL.
+
+Maintain workspace context on workspace-only destinations. Update moved imports, route-policy prefixes and fixtures. Compare normalized public routes, not raw route-group filesystem paths. Run the production build and the focused creation/navigation regression flows before expanding into membership and billing changes.
+
+## Phase 2: workspace-owned billing and four enforced roles
+
+### 2.1 One workspace, one account
+
+Use one direct relationship: `BillingAccount.workspace_id`, non-null, unique and referencing `Workspace`. Create the workspace and its billing account together through the existing transaction/service owner. Remove the user-owned billing authority and the many-workspace `WorkspaceBillingLink` structure; do not retain both as competing ownership mechanisms.
+
+Route entitlement, usage, billing-profile, quote, receipt and subscription operations through one `billing_account_for(workspace_id)` resolver. Remove assumptions that the authenticated user's personal billing account or `owner_user_id UNIQUE` determines authority. Creator identity may remain as audit metadata, but never as the payer-selection or authorization rule, and deleting/departing users must not cascade-delete the workspace's billing account.
+
+This is a coordinated schema/caller change, not a promise that changing one resolver alone completes the work. Update the model, pre-launch baseline, bootstrap/auth repair, fixtures and existing billing callers in the same phase. Do not build a legacy data backfill, preserve the old ownership branch, or require a live reset to perform this review/handoff.
+
+Count project/prompt occupancy and usage within the account's single workspace. The original instruction to aggregate multiple linked workspaces is superseded by the owner's one-to-one decision. Enforce the workspace's limits transactionally for every member; the workspace creator's other accounts are irrelevant.
+
+### 2.2 Provisioning and commercial invariants
+
+Refactor the existing ensure/provision path to ensure billing for a workspace idempotently. Repeated login must not create another workspace/account. Creating another workspace provisions only its own existing baseline terms, never a copy of another workspace's paid subscription or grants. Ordinary signup retains its intended workspace-bootstrap behavior; accepting an invitation joins the target workspace without creating a duplicate sponsor account or copying personal grants into it.
+
+Retain existing prices, entitlement/grant accounting, immutable commercial evidence, and the account-level locked `entitlement_lifecycle_version`. Freeze `registration_cohort_at` from the original provisioning user's registration timestamp when the workspace account is created, preserving the original anti-reset intent. Never rewrite it on login, invite acceptance, or owner transfer. Do not enable deferred campaigns or build a new campaign-abuse system in this scope.
+
+Owner changes modify membership authority, not the billing-account identity or the accepted subscription/receipt terms. No cross-workspace pooling or transfer is supported in this delivery.
+
+### 2.3 Permissions
+
+| Capability | Owner | Admin | Member | Viewer |
+| --- | --- | --- | --- | --- |
+| Read non-administrative workspace/project data | Yes | Yes | Yes | Yes |
+| Create/edit/delete projects, manage prompts, configure product features | Yes | Yes | Yes | No |
+| Start audits, crawls, generation and other product work | Yes | Yes | Yes | No |
+| Manage billing, invoices, payment settings or purchase intents | Yes | Yes | No | No |
+| Invite/remove members, change roles or transfer ownership | Yes | Yes | No | No |
+
+Member retains all other existing non-billing/non-member-management product and workspace actions. Do not silently introduce a third restricted category. The plan does not add new destructive workspace-lifecycle product features. Viewer downloads/reads of existing reports may be allowed; initiating new generated work is not a read.
+
+Define this static policy once next to the existing workspace authorization owners. API dependencies apply it; services/workers/MCP or other entry points that can perform the same actions must reuse the same policy rather than bypassing it or defining a second matrix. Verify every relevant entry point, including operations exposed as POST despite being reads and apparent reads that can trigger paid work.
+
+Keep role authorization separate from entitlements: a role permits an action; the workspace's capabilities and remaining allowance decide whether that action is available. Both must permit it. Workspace Admin is not platform/operator admin and gains no global catalog, secret, or cross-workspace privileges.
+
+Return safe effective capabilities for frontend controls. Enforce denial on the server; hiding a button is not the boundary. Do not serialize billing/customer secrets for Member or Viewer just because their shared provider asks for usage hints.
+
+### 2.4 Workspace selection and invitations
+
+Extend existing settings and the workspace/project switcher so a user can select an accessible workspace independently of its projects. Empty workspaces remain selectable and manageable. Keep the current design system and support desktop/mobile; do not redesign navigation while adding the missing management functions.
+
+Implement the original invitation scope: invite an email with Admin, Member or Viewer role; list pending invitations; revoke/resend; accept into the target workspace. Both Owner and Admin can manage these actions.
+
+Use expiring single-use tokens stored as hashes. Bind acceptance to an authenticated, verified matching identity, then persist `WorkspaceMember.user_id`. Repeated acceptance must not duplicate membership or create another billing account. Enforce role choice server-side; a Member or Viewer cannot invite/promote themselves by calling the endpoint directly. Use the existing mail-delivery owner, not a new email platform.
+
+Keep one designated Owner. A transfer initiated by Owner or Admin changes the new Owner and the previous Owner's role in one transaction; the previous Owner becomes Admin. Reject removal/demotion/departure that would leave no Owner unless that same transaction installs the replacement. This is an invariant that applies equally to both privileged roles, not an Owner-only privilege.
+
+Membership removal or role change must affect subsequent server operations and refresh the affected UI access state. Do not add per-project membership rows or billable-seat behavior.
+
+## Phase 3: implement provider-neutral billing architecture
+
+### 3.1 What is authorized now
+
+Implement code boundaries, routing, contracts and tests that make the existing commercial core independent of Razorpay. Preserve completed working integration code behind its adapter. Do not finish its missing checkout, GST/provider parity, international, recurring-method, merchant-approval, tunnel, provisioning or sandbox-transaction tasks.
+
+Do not integrate another real vendor without its selection and a separate integration task. Keep payment admission disabled. The application, workspace billing reads and public pricing must work without any provider credentials configured.
+
+The independent quote-signing secret is already implemented at the review baseline. Preserve it and its no-fallback/secret-separation checks; do not redo it as new work. When isolating provider settings, keep equivalent secret-separation validation without coupling new quotes to the currently selected gateway secret.
+
+### 3.2 Reuse the commercial core
+
+Keep catalog/pricing, quote and tax calculation, accepted terms, billing accounts, entitlements, receipts, activation and reconciliation under their existing owners. Keep the existing `BillingProvider` protocol and neutral DTOs as the starting point, adjusting only demonstrated provider-shaped assumptions.
+
+The core decides **what was sold and what payment evidence is required**. An adapter translates provider APIs, statuses, signatures, callbacks and public checkout initialization. Do not introduce a generic workflow engine, dynamic plugin loader, distributed payment service or parallel billing subsystem.
+
+### 3.3 Explicit provider identity, environment and routing
+
+Extend the existing factory to select an adapter by provider identity and environment rather than always constructing Razorpay. Use a small explicit mapping, not runtime discovery. Only register real configured adapters; use test doubles under test ownership.
+
+Keep `provider` distinct from `provider_mode` (`test` or `live`). Operational `disabled` means no checkout admission, not a valid environment for a newly created payable intent. Missing or unsupported provider configuration returns a safe unavailable result before provider I/O; it must not fall back to Razorpay.
+
+For new checkout, resolve an approved provider and compatible private price reference from server-controlled configuration/catalog. Freeze the chosen provider, environment and references into the intent before network calls. For existing activations, subscription actions, payments, refunds, callbacks and reconciliation, always use the persisted originating provider/environment, never the current new-checkout default.
+
+Reuse existing identity fields and add only genuine gaps. Namespace external customer/payment/subscription/invoice/refund IDs and webhook deduplication by provider and environment. Do not let switching the new-checkout default reinterpret existing records. Keep one configured merchant account per provider/environment in this scope; do not build multi-merchant routing.
+
+Never retry an uncertain creation against another provider. Reconcile with its original provider and existing idempotency rules. Checkout admission and reconciliation eligibility remain separate so stopping new sales does not disable existing obligations.
+
+### 3.4 Configuration, browser checkout and callbacks
+
+Separate shared settings, such as the checkout kill switch and quote-signing secret, from adapter-owned credentials, API origins, webhook secrets and readiness checks. Preserve fixed provider API origins, secret redaction and environment guards. Validate enabled provider operations, not unrelated application startup when billing is disabled.
+
+Keep vendor-specific settings clearly vendor-specific inside their owner. Do not rename every `RAZORPAY_*` variable to a generic variable whose meaning changes when a different provider is selected. Isolate the existing block; add other providers only when real.
+
+The shared checkout controller should handle pending, failure, verification and confirmed activation without inspecting Razorpay field names. Isolate the existing vendor SDK loader and callback parsing. Make the small public checkout-init contract describe a validated redirect or adapter-selected SDK flow, exposing only public initialization fields. Do not assume all vendors share subscription IDs, callback tuples or an HMAC scheme. Do not build future vendor UI flows now.
+
+Callback verification belongs to the selected adapter and is bound to the authorized persisted activation. The application callback endpoint can remain activation-based. Keep provider-specific payload parsing typed and allowlisted; a neutral wrapper is not permission to accept arbitrary scripts, URLs or unchecked callback data. Do not retain old callback aliases solely for imaginary pre-launch clients.
+
+### 3.5 Webhooks and shared settlement
+
+A provider-specific webhook URL is not itself a design defect. Use `/billing/webhooks/{provider}` for common dispatch where that simplifies the current route, preserving `/billing/webhooks/razorpay` as its concrete existing path. Do not rename vendor signature headers into a fictitious shared protocol.
+
+Each adapter authenticates the exact raw request using its correct configured credentials and parses it into the common event/evidence shape. Determine the environment from trusted server/endpoint configuration, not an unsigned field. Verify before any activation side effect. Unknown/unconfigured providers and invalid signatures never grant access.
+
+Reuse the existing durable receipt, dedupe, leases, bounded retries, redaction and reconciliation machinery once. Keep vendor status mapping and invoice/payment association inside the adapter. A neutral event must retain enough originating identity and paid evidence for the same shared activation checks.
+
+Preserve the required commercial invariants: a callback alone never grants paid access; captured/settled evidence must satisfy the accepted terms and amount/currency/period checks; duplicates cannot create duplicate receipts or grants; renewals require distinct paid-period evidence; transport uncertainty remains pending for reconciliation. Refactoring must not label these invariants externally verified when only local tests exist.
+
+### 3.6 Prove the boundary without a replacement provider
+
+Use existing test infrastructure with two lightweight provider identities/test doubles to prove routing isolation. They should test real shared behavior, not merely stub out every core assertion. No external keys, SDK network, Dashboard changes or real payments are required.
+
+Prove that changing the new-checkout default leaves prior-record operations on their original adapter, equivalent external IDs in different providers/environments do not collide, callback/webhook authentication dispatch is provider-specific, duplicate delivery grants once, and an uncertain result does not create a second cross-provider attempt. Reuse existing settlement tests for amount/currency mismatch and confirmed-payment activation.
+
+When a real provider is selected later, implement only its actual adapter/browser requirements, verify its commercial and tax role and supported flows, pass its sandbox acceptance, and seek separate payment-enablement authorization. That also applies to returning to Razorpay. Do not build subscription migration tooling now because there is no live customer migration to perform.
+
+## Delivery order, validation and documentation
+
+Complete Phase 1's customer-facing fix before broad Phase 2/3 billing edits. Then implement the workspace-account/role changes; then refactor payment-provider boundaries. Do not run parallel agents over the same billing ownership or settlement modules.
+
+Use one bounded exploration pass per phase to map the existing owners and changed call sites. Implement within those owners. A review/simplification pass removes superseded pins, duplicate authority paths and unused adapters/helpers after the replacements pass their regression checks. Do not reopen the settled ownership/role decisions or turn this into another architecture-design project.
+
+| Verification group | Required evidence |
+| --- | --- |
+| Creation | First and additional project creation land on the returned project without refresh; delayed pre-create lists cannot change selection; failed reconciliation cannot cause another create. |
+| Context/navigation | Cold cross-workspace project link, empty workspace, direct onboarding workspace refresh, invalid project, failed resolution, navigation, Back/Forward and two-tab independence. |
+| Scope | Workspace-dependent keys and requests agree, including retries; no previous-workspace payload is presented as the new workspace; account switches clear old-user state. |
+| Authorization/billing | Owner and Admin parity; Member billing/member-management denials; Viewer write denials; invite/transfer invariants; shared workspace usage for members; separate usage across workspace accounts; billing with zero projects. |
+| Provider boundary | Disabled/no-credential operation, originating-provider routing, identity isolation, provider-specific verification, duplicate settlement and uncertain outcomes. |
+| Rendering | Unchanged normalized public route set, shared provider lifetime, public/auth routes unaffected, successful frontend production build and desktop/mobile changed flows. |
+
+Extend existing behavior tests and use the smallest appropriate layer. Parameterize the role matrix rather than writing a new suite per role per endpoint. Keep a small browser set for actual creation/navigation and management interactions; use focused service/API tests for authorization and settlement. Use an ordinary seeded password account, not an auth bypass. Do not duplicate the same scenario at unit, API and browser levels without a distinct reason.
+
+Run focused checks after coherent code changes. At the completed handoff, run the applicable repository checks and required CI once against the final diff, plus the production build. Re-run only a failing/changed portion locally as appropriate. Do not run full unrelated suites after documentation edits or every few changed lines, add source-text/rename tests, weaken existing gates, or claim a check passed without running it.
+
+Update the original plan in place with this revision, the existing relevant architecture documentation, and a short provider-readiness checklist under the existing billing docs. Mark Razorpay integration paused and distinguish code-complete from externally unverified. Do not create parallel plans, duplicate ADRs, or extensive migration runbooks for greenfield data.
+
+The implementer's final report must state changed paths, behavior demonstrated, checks actually run, residual failures, and provider integration items intentionally left paused. It must not claim payments are production-ready from mock/contract tests.
+
+## Review basis
+
+The original supplied plan's incident, shared route-group structure, membership boundary, billing protocol and commercial invariants are retained. Its role matrix, multi-workspace billing direction, migration programme, per-project ACL proposal, and Phase 3 execution restriction are replaced by the owner decisions and explicitly labelled scope choices above.
+
+Relevant inspected paths at the review baseline:
+
+* `frontend/lib/project/project-context.tsx`
+* `frontend/lib/api/query-keys/core.ts`
+* `frontend/lib/api/client.ts`
+* `frontend/components/layout/onboarding-gate.tsx`
+* `frontend/app/(app)/layout.tsx`
+* `frontend/lib/billing/entitlement-context.tsx`
+* `backend/app/api/projects.py` and `backend/app/api/deps.py`
+* `backend/app/models/billing.py`
+* `backend/app/connectors/billing/base.py` and `factory.py`
+* `backend/app/domain/billing/quotes.py`
+* `backend/app/core/config/billing_settings.py`
+
+Framework references checked: official Next.js `useSearchParams` documentation and TanStack Query guidance on query keys and mutation-response cache updates. This was a static plan/code review, not an application run, build, test execution, deployment check or provider acceptance test.

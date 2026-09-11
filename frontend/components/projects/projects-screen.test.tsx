@@ -6,11 +6,13 @@ import { ProjectsScreen } from './projects-screen';
 const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
 
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/projects',
   useRouter: () => ({ replace }),
   useSearchParams: () => new URLSearchParams(''),
 }));
 
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     projects: [{ id: 'first-project' }],
     isLoading: false,

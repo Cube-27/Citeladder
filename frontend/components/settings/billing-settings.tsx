@@ -35,6 +35,7 @@ import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
 import { PlanRow } from '@/components/billing/plan-row';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
@@ -64,14 +65,24 @@ function useBillingState(): BillingState {
   return { country, billingDetails, cancelOpen, setCountry, setBillingDetails, setCancelOpen };
 }
 
+/**
+ * Billing reads are workspace-scoped, so they wait for the workspace the same
+ * way they wait for the panel to be enabled at all.
+ */
+function billingReadsEnabled(enabled: boolean, workspaceId: string | null): boolean {
+  return enabled && workspaceId !== null;
+}
+
 /** Account plan orchestration. Usage rendering lives in `UsageMeters`. */
 export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean }>) {
   const queryClient = useQueryClient();
   const { isLoading: entitlementLoading } = useEntitlement();
+  const workspaceId = useActiveWorkspaceId();
+  const reads = billingReadsEnabled(enabled, workspaceId);
   const entitlementQuery = useQuery({
-    queryKey: queryKeys.billing.entitlement(),
-    queryFn: ({ signal }) => billingApi.entitlement({ signal }),
-    enabled,
+    queryKey: queryKeys.billing.entitlement(workspaceId ?? 'unresolved'),
+    queryFn: ({ signal }) => billingApi.entitlement({ signal, workspaceId }),
+    enabled: reads,
     retry: false,
   });
   const entitlement = entitlementQuery.data ?? null;

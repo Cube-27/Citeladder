@@ -28,6 +28,7 @@ import { useEngineConnection } from '@/lib/providers/use-engine-connection';
 import { EngineConnectionFields } from './engine-connection-fields';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /**
  * ConnectProviderDialog (Task 3.2) — the guided single-provider connect flow,
@@ -55,10 +56,11 @@ export function ConnectProviderDialog({
     queryFn: ({ signal }) => providersApi.getCatalog({ signal }),
     enabled: open,
   });
+  const workspaceId = useActiveWorkspaceId();
   const connectionsQuery = useQuery({
-    queryKey: queryKeys.providers.connections(),
-    queryFn: ({ signal }) => providersApi.listConnections({ signal }),
-    enabled: open,
+    queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
+    queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
+    enabled: open && workspaceId !== null,
   });
 
   const cards = buildEngineCards(catalogQuery.data);

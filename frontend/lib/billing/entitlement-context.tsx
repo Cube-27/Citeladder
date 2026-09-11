@@ -45,28 +45,33 @@ const EntitlementContext = createContext<EntitlementContextValue | null>(null);
  * failure, and it must not read as "allowed".
  */
 export function EntitlementProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const { activeProject, isLoading: projectsLoading } = useProjectContext();
-  const workspaceId = activeProject?.workspace_id ?? null;
+  // The WORKSPACE, not the active project. Deriving it from a project made
+  // entitlements unanswerable in exactly the workspace that needs them most:
+  // one with no project yet, where the reader is about to be told whether
+  // they may create one.
+  const { activeWorkspaceId: workspaceId, status } = useProjectContext();
   const entitlementQuery = useQuery({
     queryKey: queryKeys.billing.workspaceEntitlement(workspaceId),
-    queryFn: ({ signal }) => billingApi.workspaceEntitlement(workspaceId!, { signal }),
+    queryFn: ({ signal }) =>
+      billingApi.workspaceEntitlement(String(workspaceId), { signal, workspaceId }),
     enabled: workspaceId !== null,
   });
   const usageQuery = useQuery({
-    queryKey: queryKeys.billing.usage(),
-    queryFn: ({ signal }) => billingApi.usage({ signal }),
+    queryKey: queryKeys.billing.usage(workspaceId ?? 'unresolved'),
+    queryFn: ({ signal }) => billingApi.usage({ signal, workspaceId }),
+    enabled: workspaceId !== null,
   });
 
   /**
    * Not yet answerable, which is not the same as answered "no".
    *
-   * The workspace comes from the active project, so until the project list
-   * lands the entitlement query has nothing to ask about and sits DISABLED —
-   * and a disabled query is not `isLoading`. Reading that alone reported a
-   * settled "no capabilities" during the busiest moment of a cold start, and
-   * the shell drew itself without the controls it was about to gain.
+   * Until the workspace resolves, the entitlement query has nothing to ask
+   * about and sits DISABLED — and a disabled query is not `isLoading`.
+   * Reading that alone reported a settled "no capabilities" during the
+   * busiest moment of a cold start, and the shell drew itself without the
+   * controls it was about to gain.
    */
-  const unresolved = projectsLoading || entitlementQuery.isLoading;
+  const unresolved = workspaceId === null || status === 'resolving' || entitlementQuery.isLoading;
 
   const value = useMemo<EntitlementContextValue>(() => {
     const data = entitlementQuery.data;
@@ -74,9 +79,9 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
     if (!data || data.status !== 'resolved') {
       return {
         ...FAIL_CLOSED,
-        // Account usage is independently authoritative. A new account has a
-        // workspace but no active project yet, so the workspace entitlement
-        // query is intentionally disabled during first-project onboarding.
+        // Account usage is independently authoritative: the allowance a new
+        // workspace spends against is answerable before it owns any project,
+        // which is what the first-project flow asks about.
         usage,
         isLoading: unresolved,
         usageIsLoading: usageQuery.isLoading,

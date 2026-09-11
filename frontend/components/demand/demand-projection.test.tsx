@@ -11,6 +11,7 @@ import { DemandProjection } from './demand-projection';
 const project = vi.hoisted(() => ({ id: '11111111-1111-4111-8111-111111111111' }));
 
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     activeProject: { id: project.id },
     isLoading: false,
@@ -102,7 +103,7 @@ describe('DemandProjection', () => {
     vi.mocked(demandApi.getLatest).mockResolvedValue(snapshot);
   });
 
-  // Mirrors the route: `app/(app)/demand/page.tsx` owns the TooltipProvider,
+  // Mirrors the route: `app/(authed)/(app)/demand/page.tsx` owns the TooltipProvider,
   // as every other tooltip-using page in the app does.
   let client: QueryClient;
 

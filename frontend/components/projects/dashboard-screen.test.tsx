@@ -98,6 +98,7 @@ const commandCenter = {
   stale: false,
 };
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/projects',
 }));
@@ -120,6 +121,7 @@ vi.mock('@tanstack/react-query', () => ({
   useMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useActiveProject: () => project,
   useProjectContext: () => ({
     projects: [project],

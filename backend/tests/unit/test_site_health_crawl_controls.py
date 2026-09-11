@@ -2,19 +2,27 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import ClassVar
 
 import pytest
 from pydantic import ValidationError
 
+from app.core.config.entitlements import FREE_MONITORED_URLS
 from app.core.config.site_health_contracts import RULE_CATALOG_VERSION
+from app.core.config.site_health_crawl_policy import (
+    FULL_DISCOVERY_HEADROOM,
+    MIN_FULL_DISCOVERY_URL_CAP,
+)
 from app.core.config.site_health_runtime import (
     SiteHealthSettings,
+    runtime_policy_for_allowance,
     site_health_settings,
 )
 from app.domain.site_health import discovery, frontier
 from app.domain.site_health.planner import (
     CrawlPlanError,
+    _allowance_discovery_budget,
 )
 from app.domain.site_health.planner_controls import resolve_controls
 from app.domain.site_health.planner_policy import frozen_configuration
@@ -255,3 +263,41 @@ async def test_hard_excluded_candidate_never_reaches_enqueue_or_fetch(monkeypatc
     )
     assert result.admitted == 0
     assert pending_frontier_checked is True
+
+
+def test_full_discovery_cap_scales_with_the_monitored_allowance():
+    """An allowance governs how far discovery maps the site, not just analysis.
+
+    Full mode used to project no cap at all, so every entitled workspace
+    discovered the flat operational limit regardless of how few URLs it could
+    monitor — the crawl kept fetching long after the screen had settled.
+    """
+    settings = site_health_settings
+    free = runtime_policy_for_allowance(FREE_MONITORED_URLS)
+    assert free.discovery_mode == "full"
+    assert free.discovery_url_cap == max(
+        MIN_FULL_DISCOVERY_URL_CAP, FREE_MONITORED_URLS * FULL_DISCOVERY_HEADROOM
+    )
+    assert free.discovery_url_cap < settings.automatic_page_limit
+
+
+def test_full_discovery_cap_never_exceeds_the_operational_limit():
+    """No allowance widens the crawler past its configured ceiling."""
+    policy = runtime_policy_for_allowance(10_000)
+    assert policy.discovery_url_cap == site_health_settings.automatic_page_limit
+
+
+def test_small_allowance_still_maps_past_the_navigation_shell():
+    """The floor is what keeps a tiny budget from stopping at category hubs."""
+    policy = runtime_policy_for_allowance(1)
+    assert policy.discovery_url_cap == MIN_FULL_DISCOVERY_URL_CAP
+
+
+@pytest.mark.parametrize(
+    ("page_limit", "cap", "expected"),
+    [(500, 100, 100), (50, 100, 50), (500, None, 500)],
+)
+def test_allowance_budget_only_ever_narrows(page_limit, cap, expected):
+    """A runtime with no projected cap leaves the validated limit untouched."""
+    runtime = SimpleNamespace(discovery_url_cap=cap)
+    assert _allowance_discovery_budget(page_limit, runtime=runtime) == expected

@@ -2,8 +2,15 @@ import { renderWithProviders as render } from '@/test/render';
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { projectState, entitlementState } = vi.hoisted(() => ({
-  projectState: { projects: [{ id: 'existing-project' }], isLoading: false, isError: false },
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+const { projectState, entitlementState, contextRetry } = vi.hoisted(() => ({
+  contextRetry: vi.fn(),
+  projectState: {
+    status: 'ready' as string,
+    activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' as string | null,
+    retry: () => {},
+  },
   entitlementState: {
     usage: {
       status: 'resolved',
@@ -21,7 +28,8 @@ vi.mock('@/lib/billing/entitlement-context', async (importOriginal) => ({
 }));
 
 vi.mock('@/lib/project/project-context', () => ({
-  useProjectContext: () => projectState,
+  useActiveWorkspaceId: () => projectState.activeWorkspaceId,
+  useProjectContext: () => ({ ...projectState, retry: contextRetry }),
 }));
 
 vi.mock('@/components/onboarding/onboarding-screen', () => ({
@@ -32,9 +40,9 @@ import { OnboardingPageClient } from './onboarding-page-client';
 
 describe('OnboardingPageClient', () => {
   beforeEach(() => {
-    projectState.projects = [{ id: 'existing-project' }];
-    projectState.isLoading = false;
-    projectState.isError = false;
+    contextRetry.mockClear();
+    projectState.status = 'ready';
+    projectState.activeWorkspaceId = WORKSPACE;
     entitlementState.usage.items = [{ key: 'project_slots', remaining: 0 }];
     entitlementState.isLoading = false;
     entitlementState.usageIsLoading = false;
@@ -53,7 +61,7 @@ describe('OnboardingPageClient', () => {
   });
 
   it('keeps first-project onboarding available for an empty workspace', () => {
-    projectState.projects = [];
+    projectState.status = 'empty';
     entitlementState.usage.items = [{ key: 'project_slots', remaining: 1 }];
 
     render(<OnboardingPageClient />);
@@ -61,23 +69,23 @@ describe('OnboardingPageClient', () => {
     expect(screen.getByText('Onboarding flow')).toBeInTheDocument();
   });
 
-  it('does not mount onboarding before the project gate resolves', () => {
-    projectState.isLoading = true;
+  it('does not mount onboarding before the workspace resolves', () => {
+    projectState.status = 'resolving';
+    projectState.activeWorkspaceId = null;
 
     render(<OnboardingPageClient />);
 
     expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
   });
 
-  it('fails closed when existing project ownership cannot be resolved', () => {
-    projectState.projects = [];
-    projectState.isError = true;
+  it('fails closed when the target workspace cannot be resolved', () => {
+    projectState.status = 'error';
 
     render(<OnboardingPageClient />);
 
     expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Projects could not be loaded' }),
+      screen.getByRole('heading', { name: 'Your workspace could not be loaded' }),
     ).toBeInTheDocument();
   });
 
@@ -90,8 +98,8 @@ describe('OnboardingPageClient', () => {
     expect(screen.getByRole('heading', { name: 'Project access unavailable' })).toBeInTheDocument();
   });
 
-  it('blocks an empty workspace when another workspace consumed the account allowance', () => {
-    projectState.projects = [];
+  it('blocks an empty workspace when the allowance is already spent', () => {
+    projectState.status = 'empty';
 
     render(<OnboardingPageClient />);
 
@@ -107,14 +115,17 @@ describe('OnboardingPageClient', () => {
     expect(screen.getByText('Onboarding flow')).toBeInTheDocument();
   });
 
-  it('distinguishes usage failure and retries both account queries', () => {
+  it('distinguishes usage failure and retries the workspace and the allowance', () => {
     entitlementState.usageIsError = true;
     const { queryClient } = render(<OnboardingPageClient />);
-    const retry = vi.spyOn(queryClient, 'refetchQueries');
+    const refetch = vi.spyOn(queryClient, 'refetchQueries');
     expect(
       screen.getByRole('heading', { name: 'Project allowance could not be loaded' }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(retry).toHaveBeenCalledTimes(2);
+    // Both halves of the precondition are re-asked: the workspace this project
+    // would be created in, and the allowance that says whether it may be.
+    expect(contextRetry).toHaveBeenCalledTimes(1);
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

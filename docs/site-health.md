@@ -122,6 +122,23 @@ development-only; their separate discovery and analysis safety ceilings remain
 **50,000**. These are configuration-owned operational bounds, not throughput
 promises.
 
+A crawl's DISCOVERY budget is bound to what its workspace can actually analyze.
+Full mode projects `discovery_url_cap` from the monitored-URL allowance —
+headroom of `FULL_DISCOVERY_HEADROOM` times the allowance, floored at
+`MIN_FULL_DISCOVERY_URL_CAP` and capped by `automatic_page_limit` — and the
+planner clamps the validated page limit to it before freezing the
+configuration, so `discovery_requested_count` and `requested_page_limit` both
+record the budget the crawl will honour. Sample mode keeps its own
+`sample_discovery_url_cap`.
+
+Without that cap, full mode discovered the flat operational limit no matter how
+few URLs it could monitor: on the free profile, 500 fetches to analyze 20. The
+screen settled at 20/20 while the crawler kept working for many more minutes,
+which read as a crawl that never stops and got cancelled by hand. Headroom
+rather than equality is deliberate — discovery has to see more than it analyzes
+for the selection to have something to rank, and a cap at the allowance would
+spend a small budget entirely on a site's navigation shell.
+
 Before any crawl, Site Health shows one empty placeholder with **Run new
 crawl**. Once a crawl exists, the header exposes one contextual primary control:
 **Stop crawl** while its persisted status is active, otherwise **Run new

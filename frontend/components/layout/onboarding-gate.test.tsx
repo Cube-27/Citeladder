@@ -1,115 +1,91 @@
 import { renderWithProviders as render } from '@/test/render';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Project } from '@/lib/api/types';
+import type { SelectionStatus } from '@/lib/project/selection';
 
 const replace = vi.fn();
+let pathname = '/projects';
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ replace, push: vi.fn() }),
+  usePathname: () => pathname,
 }));
 
-// The gate reads projects, isLoading, isError and hasPendingSelection.
-let contextValue = {
-  projects: [] as Project[],
-  isError: false,
-  isLoading: false,
-  hasPendingSelection: false,
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+type Role = 'owner' | 'admin' | 'member' | 'viewer';
+
+let contextValue: {
+  status: SelectionStatus;
+  activeWorkspaceId: string | null;
+  activeWorkspace: { id: string; role: Role } | null;
+  retry: () => void;
 };
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => contextValue,
 }));
 
-let entitlementLoading = false;
-vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({ isLoading: entitlementLoading }),
+let entitlement: { isLoading: boolean; usage: unknown; usageIsLoading: boolean };
+vi.mock('@/lib/billing/entitlement-context', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useEntitlement: () => entitlement,
 }));
 
 import { OnboardingGate } from './onboarding-gate';
 
+/** A resolved usage payload granting `remaining` further project slots. */
+function usage(remaining: number) {
+  return { status: 'resolved', items: [{ key: 'project_slots', remaining }] };
+}
+
+function setContext(status: SelectionStatus, role: Role = 'owner') {
+  contextValue = {
+    status,
+    activeWorkspaceId: WORKSPACE,
+    activeWorkspace: { id: WORKSPACE, role },
+    retry: vi.fn(),
+  };
+}
+
 beforeEach(() => {
   replace.mockClear();
-  entitlementLoading = false;
+  pathname = '/projects';
+  setContext('ready');
+  entitlement = { isLoading: false, usage: usage(1), usageIsLoading: false };
 });
 
 describe('OnboardingGate', () => {
-  it('redirects to /onboarding when the workspace has no projects', async () => {
-    contextValue = { projects: [], isError: false, isLoading: false, hasPendingSelection: false };
+  it('renders the app once the workspace and project are resolved', () => {
     render(
       <OnboardingGate>
         <p>workspace</p>
       </OnboardingGate>,
     );
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
-    // The app is never rendered behind the redirect.
-    expect(screen.queryByText('workspace')).toBeNull();
-  });
-
-  it('does not redirect while projects are still loading', () => {
-    // Race (a): `projects` is [] during the fetch, which is indistinguishable
-    // from "no projects" on length alone. Redirecting here would bounce an
-    // existing user to onboarding for a frame.
-    contextValue = { projects: [], isError: false, isLoading: true, hasPendingSelection: false };
-    render(
-      <OnboardingGate>
-        <p>workspace</p>
-      </OnboardingGate>,
-    );
-
-    expect(replace).not.toHaveBeenCalled();
-    expect(screen.queryByText('workspace')).toBeNull();
-  });
-
-  /**
-   * Entitlement decides which controls the shell has, so drawing before it
-   * answers means growing a button and a navigation row a round trip later.
-   */
-  it('holds the shell until entitlement has answered', () => {
-    contextValue = {
-      projects: [{ id: 'p1' } as Project],
-      isError: false,
-      isLoading: false,
-      hasPendingSelection: false,
-    };
-    entitlementLoading = true;
-    render(
-      <OnboardingGate>
-        <p>app</p>
-      </OnboardingGate>,
-    );
-
-    expect(screen.queryByText('app')).toBeNull();
-    expect(replace).not.toHaveBeenCalled();
-  });
-
-  it('renders the app once projects exist, without redirecting', () => {
-    contextValue = {
-      projects: [{ id: 'p1' } as Project],
-      isError: false,
-      isLoading: false,
-      hasPendingSelection: false,
-    };
-    render(
-      <OnboardingGate>
-        <p>workspace</p>
-      </OnboardingGate>,
-    );
-
-    expect(replace).not.toHaveBeenCalled();
     expect(screen.getByText('workspace')).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
   });
 
-  /**
-   * Race (c), and the one that cost a user their first project. Arriving from
-   * onboarding mounts a NEW provider whose list can still be the pre-create
-   * one: not loading, and empty. Read on length alone that says "this account
-   * has no projects", so the gate sent them back to a blank /onboarding right
-   * after they had finished it — and the second completion was refused with
-   * "not allowed to create more projects", because the first one existed.
-   */
-  it('waits instead of redirecting while a committed selection is unconfirmed', () => {
-    contextValue = { projects: [], isError: false, isLoading: false, hasPendingSelection: true };
+  it('sends an empty workspace to onboarding, carrying the workspace', async () => {
+    setContext('empty');
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    // The workspace travels with the redirect: refreshing the creation route
+    // must not silently change which workspace the project is created in.
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/onboarding?workspace=${WORKSPACE}`));
+    expect(screen.queryByText('workspace')).toBeNull();
+  });
+
+  it('does not redirect while the context is still resolving', () => {
+    // An unsettled read is indistinguishable from "no projects" on length
+    // alone. Redirecting here bounced existing users to onboarding for a frame.
+    setContext('resolving');
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -119,43 +95,85 @@ describe('OnboardingGate', () => {
     expect(replace).not.toHaveBeenCalled();
     expect(screen.queryByText('workspace')).toBeNull();
   });
-});
 
-/**
- * A refetch that FAILS does not advance `dataUpdatedAt`, so a committed
- * selection stays unconfirmed. Without the error branch covering that, the
- * skeleton held forever with no error and no retry — and a flaky connection is
- * exactly when it happens, which is the failure this change exists to stop
- * looking like a bug.
- */
-it('offers recovery when a pending selection is stranded by a failed refetch', () => {
-  contextValue = {
-    projects: [{ id: 'p1' } as Project],
-    isLoading: false,
-    isError: true,
-    hasPendingSelection: true,
-  };
-  render(
-    <OnboardingGate>
-      <p>workspace</p>
-    </OnboardingGate>,
-  );
+  it('offers a retry instead of onboarding when a read failed', () => {
+    setContext('error');
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
 
-  expect(replace).not.toHaveBeenCalled();
-  expect(screen.getByRole('heading', { name: 'Projects could not be loaded' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-});
+    // An empty error result is never evidence that the account needs
+    // onboarding — sending them there is what let a transient network failure
+    // present as a brand new account.
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
 
-it('keeps failed project lookup recoverable without redirecting to onboarding', async () => {
-  contextValue = { projects: [], isLoading: false, isError: true, hasPendingSelection: false };
-  const { queryClient } = render(
-    <OnboardingGate>
-      <p>workspace</p>
-    </OnboardingGate>,
-  );
-  const retry = vi.spyOn(queryClient, 'refetchQueries');
-  expect(replace).not.toHaveBeenCalled();
-  expect(screen.getByRole('heading', { name: 'Projects could not be loaded' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-  expect(retry).toHaveBeenCalledOnce();
+  it('names a missing project rather than substituting another one', () => {
+    setContext('unavailable');
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByText('That project is unavailable')).toBeInTheDocument();
+  });
+
+  it('keeps an empty workspace on its workspace-management routes', () => {
+    // A workspace with no projects is still a workspace: its owner may need
+    // billing, members and settings, and redirecting those to project creation
+    // made an empty workspace unmanageable.
+    pathname = '/settings';
+    setContext('empty');
+    render(
+      <OnboardingGate>
+        <p>settings</p>
+      </OnboardingGate>,
+    );
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByText('settings')).toBeInTheDocument();
+  });
+
+  it('does not loop a Viewer through a creation flow that would refuse them', () => {
+    setContext('empty', 'viewer');
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByText('You have read-only access to this workspace.')).toBeInTheDocument();
+  });
+
+  it('does not loop through creation when the allowance is exhausted', () => {
+    setContext('empty');
+    entitlement = { isLoading: false, usage: usage(0), usageIsLoading: false };
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(
+      screen.getByText('Your current access does not include another project.'),
+    ).toBeInTheDocument();
+  });
+
+  it('waits for entitlements so the shell paints complete', () => {
+    entitlement = { isLoading: true, usage: null, usageIsLoading: true };
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    expect(screen.queryByText('workspace')).toBeNull();
+  });
 });

@@ -9,6 +9,7 @@ import { billingApi, type UsageItem } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /**
  * Preferred display order. Rows the backend sends that are not listed here
@@ -43,10 +44,11 @@ function ordered(items: readonly UsageItem[]): UsageItem[] {
  * numbers would be worse than showing none.
  */
 export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>) {
+  const workspaceId = useActiveWorkspaceId();
   const usageQuery = useQuery({
-    queryKey: queryKeys.billing.usage(),
-    queryFn: ({ signal }) => billingApi.usage({ signal }),
-    enabled,
+    queryKey: queryKeys.billing.usage(workspaceId ?? 'unresolved'),
+    queryFn: ({ signal }) => billingApi.usage({ signal, workspaceId }),
+    enabled: enabled && workspaceId !== null,
   });
 
   return (

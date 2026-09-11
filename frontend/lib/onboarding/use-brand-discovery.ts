@@ -16,6 +16,7 @@ function operationKey() {
 export function useBrandDiscovery(
   input: BrandDiscoveryInput | null,
   resumeId: string | null = null,
+  workspaceId: string | null = null,
 ) {
   const fingerprint = useMemo(() => JSON.stringify(input), [input]);
   const createdFor = useRef<string | null>(null);
@@ -27,7 +28,7 @@ export function useBrandDiscovery(
     }: {
       payload: BrandDiscoveryInput;
       idempotencyKey: string;
-    }) => brandDiscoveriesApi.create(payload, idempotencyKey),
+    }) => brandDiscoveriesApi.create(payload, idempotencyKey, { workspaceId }),
     onSuccess: (_data, { payload }) => {
       setResponseFor(JSON.stringify(payload));
     },
@@ -45,7 +46,7 @@ export function useBrandDiscovery(
   const discoveryId = createdDiscoveryId ?? resumeId;
   const query = useQuery({
     queryKey: ['brand-discovery', discoveryId],
-    queryFn: ({ signal }) => brandDiscoveriesApi.get(discoveryId!, { signal }),
+    queryFn: ({ signal }) => brandDiscoveriesApi.get(String(discoveryId), { signal, workspaceId }),
     enabled: Boolean(discoveryId),
     initialData: !createdDiscoveryId ? undefined : create.data,
     // `completing` is the portfolio generation the completion request queued.

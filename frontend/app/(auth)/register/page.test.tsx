@@ -12,6 +12,7 @@ import { renderWithProviders } from '@/test/render';
 const replace = vi.fn();
 let searchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/projects',
   useRouter: () => ({ replace, push: vi.fn(), refresh: vi.fn() }),
   useSearchParams: () => searchParams,
 }));

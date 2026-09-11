@@ -10,6 +10,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@/lib/api/types';
 import { ENGINE_ORDER, isConfigured, isVerified } from '@/lib/providers/catalog';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import {
   auditablePrompts,
   buildLaunchPayload,
@@ -98,10 +99,11 @@ export function LaunchDialog({
     queryFn: ({ signal }) => promptsApi.listPromptSets(projectId, { signal }),
     enabled: open,
   });
+  const workspaceId = useActiveWorkspaceId();
   const connectionsQuery = useQuery({
-    queryKey: queryKeys.providers.connections(),
-    queryFn: ({ signal }) => providersApi.listConnections({ signal }),
-    enabled: open,
+    queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
+    queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
+    enabled: open && workspaceId !== null,
   });
   const { configuredEngines, unverifiedEngines } = useMemo(
     () => availableEngines(connectionsQuery.data),
