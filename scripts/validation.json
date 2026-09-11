@@ -360,16 +360,8 @@
     },
     {
       "sources": [
-        "backend/app/analysis/product_scoring.py",
-        "backend/app/analysis/product_scoring_aggregation.py",
-        "backend/app/analysis/product_service.py",
-        "backend/app/domain/products/**",
-        "backend/app/domain/attribution/**",
         "backend/app/domain/commerce/**",
-        "backend/app/api/products.py",
         "backend/app/api/commerce.py",
-        "backend/app/models/product.py",
-        "backend/app/models/attribution.py",
         "backend/app/models/commerce.py",
         "backend/app/connectors/commerce_competitors.py",
         "backend/app/core/config/commerce_catalog.py",
@@ -432,7 +424,6 @@
         "backend/app/domain/analytics/**",
         "backend/app/workers/analytics_worker.py",
         "backend/app/api/performance.py",
-        "backend/app/api/traffic.py",
         "backend/app/api/ai_referrals.py",
         "backend/app/models/traffic.py",
         "backend/app/models/analytics.py",
@@ -675,8 +666,6 @@
         "frontend/app/layout.tsx",
         "frontend/app/(authed)/layout.tsx",
         "frontend/app/(authed)/(app)/layout.tsx",
-        "frontend/app/(authed)/(app)/loading.tsx",
-        "frontend/app/(authed)/(app)/route-states.tsx",
         "frontend/app/(authed)/(app)/error.tsx",
         "frontend/app/(authed)/(app)/not-found.tsx"
       ],
@@ -803,10 +792,7 @@
         "frontend/app/(authed)/(app)/performance/**",
         "frontend/components/performance/**",
         "frontend/lib/performance/**",
-        "frontend/lib/table/**",
-        "frontend/app/(authed)/(app)/traffic/**",
-        "frontend/components/traffic/**",
-        "frontend/lib/traffic/**"
+        "frontend/lib/table/**"
       ],
       "frontendTests": [
         "lib/performance/*.test.ts",
@@ -882,8 +868,7 @@
         "frontend/app/health/**",
         "frontend/app/manifest.ts",
         "frontend/app/robots.ts",
-        "frontend/app/sitemap.ts",
-        "frontend/app/(authed)/(app)/page.tsx"
+        "frontend/app/sitemap.ts"
       ],
       "frontendTests": ["app/sitemap.test.ts"]
     },
