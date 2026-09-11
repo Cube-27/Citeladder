@@ -12,7 +12,8 @@ Routes, in the frozen order of the work order:
 8. ``POST /billing/addons``         add-on activation;
 9. ``POST /billing/topups``         top-up purchase;
 10. ``DELETE /billing/addons/{key}`` schedule add-on cancellation;
-11. ``POST /billing/webhooks/razorpay`` signed ingress, 204 with no body.
+11. ``POST /billing/webhooks/{provider}`` signed ingress, 204 with no body
+    (``/billing/webhooks/razorpay`` is that path for Razorpay).
 
 The v6 ``/billing/me``, ``/billing/profile``, ``/billing/checkout``,
 ``/billing/cancel``, and ``/billing/manage`` routes are DELETED without
@@ -141,8 +142,8 @@ from app.domain.billing.service import (
 )
 from app.domain.billing.webhooks import (
     InvalidWebhookError,
-    process_razorpay_webhook,
-    verify_razorpay_signature,
+    authenticate_webhook,
+    process_webhook_envelope,
 )
 from app.domain.entitlements.service import resolve_workspace_entitlement
 from app.domain.entitlements.types import STATUS_RESOLVED
@@ -654,18 +655,25 @@ async def delete_addon(
         )
 
 
-@router.post("/billing/webhooks/razorpay", status_code=status.HTTP_204_NO_CONTENT)
-async def razorpay_webhook(
+@router.post("/billing/webhooks/{provider}", status_code=status.HTTP_204_NO_CONTENT)
+async def provider_webhook(
+    provider: Annotated[str, PathParam(max_length=24)],
     request: Request,
     session: Session,
-    signature: Annotated[str, Header(alias="X-Razorpay-Signature")],
-    event_id: Annotated[str, Header(alias="X-Razorpay-Event-Id")],
 ) -> Response:
-    """Signed webhook ingress: 204 with NO response body.
+    """Signed webhook ingress for ONE provider: 204 with NO response body.
 
-    The body-size guard and the HMAC signature check both run BEFORE any JSON
-    parsing or activation, so an unsigned or oversized body never reaches the
-    activation transaction and grants nothing.
+    ``/billing/webhooks/razorpay`` is the concrete existing path and keeps
+    working unchanged; the path parameter is common dispatch, not a rename. The
+    signature headers stay each vendor's real header names — the adapter
+    declares them and reads them itself, so nothing here invents a shared
+    signature protocol.
+
+    Order is unchanged and security-critical: the body-size guard runs first,
+    then the adapter authenticates the EXACT raw bytes with its own configured
+    credentials, and only then is anything parsed or recorded. An unknown
+    provider, an unconfigured one, an unsigned body, and an oversized body all
+    refuse before the activation transaction and grant nothing.
     """
     body = bytearray()
     async for chunk in request.stream():
@@ -673,10 +681,11 @@ async def razorpay_webhook(
             raise_api_error(413, "Webhook body too large")
         body.extend(chunk)
     raw_body = bytes(body)
-    if not verify_razorpay_signature(raw_body, signature):
-        raise_api_error(400, "Invalid webhook signature")
     try:
-        await process_razorpay_webhook(session, raw_body=raw_body, event_id=event_id)
+        envelope = authenticate_webhook(
+            provider, raw_body=raw_body, headers=request.headers
+        )
+        await process_webhook_envelope(session, envelope, raw_body=raw_body)
     except InvalidWebhookError as exc:
         raise_api_error(400, str(exc), cause=exc)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

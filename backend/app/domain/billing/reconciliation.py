@@ -26,13 +26,19 @@ from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import (
     BillingProvider,
     BillingProviderError,
     ProviderPayment,
+)
+from app.connectors.billing.factory import provider_for_record
+from app.connectors.billing.registry import (
+    ProviderUnavailableError,
+    registrations,
+    status_normalizer,
 )
 from app.core.config.billing_contracts import (
     ACTIVATION_ABANDONED,
@@ -43,7 +49,6 @@ from app.core.config.billing_contracts import (
     ACTIVATION_PENDING,
     PAYMENT_FAILED,
     PAYMENT_PAID,
-    RAZORPAY_STATUS_MAP,
     REASON_ACTIVATION_EXPIRED,
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCEL_SCHEDULED,
@@ -108,13 +113,21 @@ class ReconciliationSummary:
 
 @dataclass(frozen=True, slots=True)
 class _Claim:
-    """The safe fields a claimed row contributes to the provider read."""
+    """The safe fields a claimed row contributes to the provider read.
+
+    ``provider``/``provider_mode`` are the row's ORIGINATING pair, frozen when
+    the intent was committed. The sweep reads them back rather than consulting
+    the current new-checkout default, so switching that default never sends an
+    existing obligation to a different provider (plan section 3.3).
+    """
 
     pending_id: uuid.UUID
     account_id: uuid.UUID
     lease_token: uuid.UUID
     activation_kind: str
     external_reference: str
+    provider: str
+    provider_mode: str
     created_at: datetime
     attempt: int
 
@@ -129,8 +142,13 @@ async def _claim_batch(
                 select(PendingActivation)
                 .where(
                     PendingActivation.status == ACTIVATION_PENDING,
-                    PendingActivation.provider_mode
-                    == billing_settings.require_provider_mode(),
+                    # Only rows whose originating provider is still registered
+                    # AND still configured in the SAME environment. A row left
+                    # behind by a provider that has been switched off is not
+                    # reconciled against somebody else's API.
+                    tuple_(
+                        PendingActivation.provider, PendingActivation.provider_mode
+                    ).in_(reconcilable_pairs()),
                     (PendingActivation.created_at <= now - stale_after)
                     | (PendingActivation.reconciliation_next_at <= now),
                     (PendingActivation.reconciliation_next_at.is_(None))
@@ -167,6 +185,8 @@ async def _claim_batch(
                 lease_token=token,
                 activation_kind=row.activation_kind,
                 external_reference=row.external_reference or "",
+                provider=row.provider,
+                provider_mode=row.provider_mode,
                 created_at=row.created_at,
                 attempt=row.reconciliation_attempts,
             )
@@ -206,15 +226,21 @@ async def _lock_owned_claim(session: AsyncSession, claim: _Claim) -> bool:
     return owned is not None
 
 
-def _authoritative_status(record: ProviderRecord) -> str:
-    """Neutral status of a provider record: activated | failed | pending."""
+def _authoritative_status(record: ProviderRecord, provider: str) -> str:
+    """Neutral status of a provider record: activated | failed | pending.
+
+    Payment status already arrives in the neutral vocabulary (the adapter
+    translates it when it builds the DTO). Subscription status does not, so it
+    is translated by the ORIGINATING provider's own map — never by whichever
+    vendor happens to be the new-checkout default.
+    """
     if isinstance(record, ProviderPayment):
         if record.status == PAYMENT_PAID:
             return ACTIVATION_ACTIVATED
         if record.status in _TERMINAL_PROVIDER_STATES:
             return ACTIVATION_FAILED
         return ACTIVATION_PENDING
-    normalized = RAZORPAY_STATUS_MAP.get(record.status)
+    normalized = status_normalizer(provider)(record.status)
     if normalized in _SETTLEABLE_SUBSCRIPTION_STATES:
         return ACTIVATION_ACTIVATED
     if normalized in _TERMINAL_SUBSCRIPTION_STATES:
@@ -296,17 +322,54 @@ async def _provider_failure(
     return ReconciliationSummary(claimed=1, still_pending=1)
 
 
+def reconcilable_pairs() -> list[tuple[str, str]]:
+    """(provider, environment) pairs a sweep may currently talk to.
+
+    Empty when nothing is configured, which makes the claim query select
+    nothing at all — a deployment with billing switched off reconciles nothing
+    rather than reconciling against the wrong gateway.
+    """
+    pairs: list[tuple[str, str]] = []
+    for registration in registrations().values():
+        mode = registration.configured_mode()
+        if mode:
+            pairs.append((registration.provider, mode))
+    return pairs
+
+
+def _claim_adapter(
+    claim: _Claim, override: BillingProvider | None
+) -> BillingProvider | None:
+    """The adapter for this row's ORIGINATING provider/environment.
+
+    ``override`` is the injected test seam; production passes ``None`` and the
+    binding comes from the persisted pair.
+    """
+    if override is not None:
+        return override
+    try:
+        return provider_for_record(claim.provider, claim.provider_mode)
+    except ProviderUnavailableError:
+        return None
+
+
 async def _settle_claim(
     session: AsyncSession,
-    provider: BillingProvider,
+    provider: BillingProvider | None,
     claim: _Claim,
     *,
     now: datetime,
     abandon_after: timedelta,
 ) -> ReconciliationSummary:
-    """Settle ONE claimed row from the provider's authoritative record."""
+    """Settle ONE claimed row from its ORIGINATING provider's record."""
+    adapter = _claim_adapter(claim, provider)
+    if adapter is None:
+        # The originating provider is no longer usable. Leave the row pending
+        # for a later sweep rather than retrying it against another provider.
+        await session.rollback()
+        return ReconciliationSummary(claimed=1, still_pending=1)
     try:
-        record = await _fetch_provider_record(provider, claim)
+        record = await _fetch_provider_record(adapter, claim)
     except BillingProviderError as exc:
         failure = await _provider_failure(session, claim, exc, now)
         if failure is not None:
@@ -328,7 +391,7 @@ async def _settle_claim(
         return ReconciliationSummary(claimed=1, still_pending=1)
     if not await _bind_creation_outcome(session, claim, record):
         return ReconciliationSummary(claimed=1, errors=1)
-    status = _authoritative_status(record)
+    status = _authoritative_status(record, claim.provider)
     if status == ACTIVATION_FAILED:
         await _mark_terminal(
             session,
@@ -364,7 +427,7 @@ async def _settle_claim(
 
 async def reconcile_pending_activations(
     session_factory: SessionFactory,
-    provider: BillingProvider,
+    provider: BillingProvider | None = None,
     *,
     now: datetime,
     batch_size: int | None = None,
@@ -376,6 +439,11 @@ async def reconcile_pending_activations(
     Every window and bound comes from config (invariant 1). One session is used
     for the claim boundary and each settlement, and every settlement goes
     through the same ``activate_pending`` transaction the webhook uses.
+
+    Each row is settled against the provider and environment PERSISTED on it.
+    An uncertain creation is therefore never retried against a different
+    provider: the only adapter this sweep will use for a row is the one that
+    created it. ``provider`` overrides that binding and exists for tests.
     """
     limit = batch_size or billing_settings.reconciliation_batch_size
     stale = stale_after or timedelta(

@@ -110,11 +110,14 @@ export type SubscriptionCheckoutInput = {
   country_code: string;
 } & BillingCustomerDetails;
 
-export type CheckoutCallback = {
-  razorpay_payment_id: string;
-  razorpay_subscription_id: string;
-  razorpay_signature: string;
-};
+/**
+ * A provider's browser callback, in the NEUTRAL wrapper the API accepts.
+ *
+ * The field names inside are the vendor's own; the shared controller never
+ * reads them, and the originating adapter allowlists exactly the ones it
+ * accepts before checking any signature.
+ */
+export type CheckoutCallback = { fields: Record<string, string> };
 
 export const billingApi = {
   checkout: async (activationId: string) =>

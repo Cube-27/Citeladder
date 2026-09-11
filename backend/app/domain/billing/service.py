@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import BillingProvider
+from app.connectors.billing.registry import status_normalizer
 from app.core.config.billing_catalog import plan_checkout_availability
 from app.core.config.billing_contracts import (
     ACTIVATION_KIND_ADDON,
@@ -32,7 +33,6 @@ from app.core.config.billing_contracts import (
     CANCELLATION_SCHEDULED,
     COUNTRY_VERIFICATION_DECLARED,
     LIVE_SUBSCRIPTION_STATUSES,
-    RAZORPAY_STATUS_MAP,
     REASON_BASE_SUBSCRIPTION_REQUIRED,
     REASON_NO_CURRENT_SUBSCRIPTION,
     SUBSCRIPTION_ACTIVE,
@@ -108,6 +108,11 @@ def accept_subscription_event(
     events for this subscription only — it is not a cross-process entitlement
     invalidator). Same-status events with a newer provider version are
     accepted and projected.
+
+    ``provider_status`` is in the ORIGINATING provider's own vocabulary and is
+    translated by that provider's adapter. A provider that is no longer
+    registered or configured translates nothing, so its statuses refuse rather
+    than being read through another vendor's map.
     """
     if subscription.status in _TERMINAL_STATUSES:
         return _expired_terminal_event(subscription, updated_at)
@@ -119,7 +124,7 @@ def accept_subscription_event(
         return None
     if updated_at and updated_at < subscription.provider_state_version:
         return None
-    normalized = RAZORPAY_STATUS_MAP.get(provider_status)
+    normalized = status_normalizer(subscription.provider)(provider_status)
     if normalized is None:
         raise BillingConflictError("unsupported_subscription_status")
     if cancel_at_period_end and normalized == SUBSCRIPTION_ACTIVE:

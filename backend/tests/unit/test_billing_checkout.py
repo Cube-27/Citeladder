@@ -13,22 +13,24 @@ from pydantic import SecretStr, ValidationError
 
 from app.connectors.billing.base import BillingProviderError
 from app.connectors.billing.razorpay import RazorpayBillingProvider
+from app.connectors.billing.razorpay_webhook import verify_signature
 from app.core.config.billing_settings import BillingSettings, billing_settings
+from app.core.config.razorpay_settings import RazorpaySettings, razorpay_settings
 from app.domain.billing.checkout import (
     CheckoutVerifyRequest,
     checkout_response,
     verify_checkout,
 )
-from app.domain.billing.webhooks import verify_razorpay_signature
 from scripts.provision_razorpay_plans import verify_plan
 
 
-def configured(**overrides) -> BillingSettings:
-    return BillingSettings(
+def configured(**overrides) -> RazorpaySettings:
+    """A fully configured Razorpay VENDOR block for the adapter under test."""
+    return RazorpaySettings(
         _env_file=None,
-        razorpay_mode="test",
-        razorpay_key_id="rzp_test_fixture",
-        razorpay_key_secret=SecretStr("synthetic-api-secret"),
+        mode="test",
+        key_id="rzp_test_fixture",
+        key_secret=SecretStr("synthetic-api-secret"),
         **overrides,
     )
 
@@ -37,7 +39,7 @@ def configured(**overrides) -> BillingSettings:
     "overrides",
     [
         {"APP_ENV": "production"},
-        {"razorpay_api_base_url": "https://example.invalid/v1"},
+        {"api_base_url": "https://example.invalid/v1"},
     ],
 )
 def test_configuration_rejects_unsafe_boundaries(overrides) -> None:
@@ -46,9 +48,9 @@ def test_configuration_rejects_unsafe_boundaries(overrides) -> None:
 
 
 def test_aliases_conflicts_and_redaction() -> None:
-    settings = BillingSettings(
+    settings = RazorpaySettings(
         _env_file=None,
-        razorpay_mode="test",
+        mode="test",
         RAZORPAY_TEST_KEY_ID="rzp_test_fixture",
         RAZORPAY_TEST_KEY_SECRET="alias-secret",
     )
@@ -57,11 +59,20 @@ def test_aliases_conflicts_and_redaction() -> None:
     with pytest.raises(ValidationError, match="Conflicting"):
         configured(RAZORPAY_TEST_KEY_SECRET="different-secret")
     with pytest.raises(ValidationError):
-        BillingSettings(
+        RazorpaySettings(
             _env_file=None,
-            razorpay_mode="live",
+            mode="live",
             RAZORPAY_TEST_KEY_ID="rzp_test_fixture",
         )
+
+
+def test_shared_settings_hold_no_vendor_credentials() -> None:
+    """The shared block must not carry a gateway credential (plan 3.4)."""
+    shared = set(BillingSettings.model_fields)
+    assert not [name for name in shared if name.startswith("razorpay_")]
+    assert "checkout_enabled" in shared and "quote_signing_secret" in shared
+    vendor = set(RazorpaySettings.model_fields)
+    assert {"key_id", "key_secret", "webhook_secret", "mode"} <= vendor
 
 
 @pytest.mark.asyncio
@@ -111,35 +122,33 @@ async def test_captured_payment_uses_provider_created_at_and_method() -> None:
 
 def test_previous_webhook_secret_has_bounded_expiry(monkeypatch) -> None:
     now = datetime.now(UTC)
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr("new"))
-    monkeypatch.setattr(
-        billing_settings, "razorpay_webhook_previous_secret", SecretStr("old")
-    )
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr("new"))
+    monkeypatch.setattr(razorpay_settings, "webhook_previous_secret", SecretStr("old"))
     raw = b'{"event":"subscription.charged"}'
     signature = hmac.new(b"old", raw, hashlib.sha256).hexdigest()
     monkeypatch.setattr(
-        billing_settings,
-        "razorpay_webhook_previous_secret_started_at",
+        razorpay_settings,
+        "webhook_previous_secret_started_at",
         now - timedelta(hours=1),
     )
     monkeypatch.setattr(
-        billing_settings,
-        "razorpay_webhook_previous_secret_expires_at",
+        razorpay_settings,
+        "webhook_previous_secret_expires_at",
         now + timedelta(hours=1),
     )
-    assert verify_razorpay_signature(raw, signature)
+    assert verify_signature(raw, signature)
     monkeypatch.setattr(
-        billing_settings,
-        "razorpay_webhook_previous_secret_expires_at",
+        razorpay_settings,
+        "webhook_previous_secret_expires_at",
         now - timedelta(seconds=1),
     )
-    assert not verify_razorpay_signature(raw, signature)
+    assert not verify_signature(raw, signature)
     monkeypatch.setattr(
-        billing_settings,
-        "razorpay_webhook_previous_secret_expires_at",
+        razorpay_settings,
+        "webhook_previous_secret_expires_at",
         now + timedelta(hours=25),
     )
-    assert not verify_razorpay_signature(raw, signature)
+    assert not verify_signature(raw, signature)
 
 
 def pending() -> SimpleNamespace:
@@ -151,6 +160,7 @@ def pending() -> SimpleNamespace:
         catalog_key="tier_1",
         quantity=1,
         status="pending",
+        provider="razorpay",
         provider_mode="test",
         external_reference="sub_fixture",
         expires_at=expires,
@@ -182,35 +192,51 @@ def pending() -> SimpleNamespace:
 
 @pytest.mark.asyncio
 async def test_valid_callback_only_requests_reconciliation(monkeypatch) -> None:
-    for key, value in configured().model_dump().items():
-        if hasattr(billing_settings, key):
-            monkeypatch.setattr(billing_settings, key, value)
+    """The shared controller never inspects a vendor field name.
+
+    It hands the neutral wrapper to the ORIGINATING adapter, which owns the
+    ``razorpay_*`` names, their formats and the HMAC scheme.
+    """
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_fixture")
     monkeypatch.setattr(
-        billing_settings, "razorpay_key_secret", SecretStr("synthetic-api-secret")
+        razorpay_settings, "key_secret", SecretStr("synthetic-api-secret")
     )
     row = pending()
     session = SimpleNamespace(commit=AsyncMock())
     signature = hmac.new(
         b"synthetic-api-secret", b"pay_fixture|sub_fixture", hashlib.sha256
     ).hexdigest()
-    callback = CheckoutVerifyRequest(
-        razorpay_payment_id="pay_fixture",
-        razorpay_subscription_id="sub_fixture",
-        razorpay_signature=signature,
-    )
+    fields = {
+        "razorpay_payment_id": "pay_fixture",
+        "razorpay_subscription_id": "sub_fixture",
+        "razorpay_signature": signature,
+    }
+    callback = CheckoutVerifyRequest(fields=fields)
     result = await verify_checkout(session, row, callback)
     assert result.status == "pending" and row.reconciliation_next_at is not None
-    assert not hasattr(row, "razorpay_signature")
     session.commit.assert_awaited_once()
     with pytest.raises(ValueError):
         await verify_checkout(
             session,
             row,
-            callback.model_copy(update={"razorpay_subscription_id": "sub_foreign"}),
+            CheckoutVerifyRequest(
+                fields={**fields, "razorpay_subscription_id": "sub_foreign"}
+            ),
         )
     with pytest.raises(ValueError):
         await verify_checkout(
-            session, row, callback.model_copy(update={"razorpay_signature": "0" * 64})
+            session,
+            row,
+            CheckoutVerifyRequest(fields={**fields, "razorpay_signature": "0" * 64}),
+        )
+    # An unknown callback field is refused by the adapter's allowlist: a
+    # neutral wrapper is not permission to accept arbitrary data.
+    with pytest.raises(ValueError):
+        await verify_checkout(
+            session,
+            row,
+            CheckoutVerifyRequest(fields={**fields, "return_url": "http://evil"}),
         )
     row.expires_at = datetime.now(UTC) - timedelta(seconds=1)
     with pytest.raises(ValueError):
@@ -250,7 +276,11 @@ def test_provider_plan_verification_checks_terms_and_tax() -> None:
 
 
 @pytest.mark.asyncio
-async def test_subscription_lookup_pages_and_rejects_truncated_search() -> None:
+async def test_subscription_lookup_pages_and_rejects_truncated_search(
+    monkeypatch,
+) -> None:
+    # Page size and page bound are SHARED settings, not vendor credentials.
+    monkeypatch.setattr(billing_settings, "reconciliation_list_count", 1)
     offsets = []
 
     def respond(request):
@@ -261,12 +291,10 @@ async def test_subscription_lookup_pages_and_rejects_truncated_search() -> None:
         )
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
-        provider = RazorpayBillingProvider(
-            client=client, settings=configured(reconciliation_list_count=1)
-        )
+        provider = RazorpayBillingProvider(client=client, settings=configured())
         assert await provider.find_subscription("intent", "account") is None
         assert offsets == [0, 1]
-        provider.settings.reconciliation_max_pages = 1
+        monkeypatch.setattr(billing_settings, "reconciliation_max_pages", 1)
         with pytest.raises(
             BillingProviderError, match="collection_incomplete"
         ) as failure:

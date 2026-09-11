@@ -14,6 +14,10 @@ from sqlalchemy.exc import IntegrityError
 
 from app.connectors.billing.base import BillingProviderError, ProviderMetadata
 from app.connectors.billing.razorpay import RazorpayBillingProvider
+from app.connectors.billing.razorpay_webhook import (
+    parse_payment_event,
+    verify_signature,
+)
 from app.core.config.billing_catalog import (
     GrantTemplate,
     commercial_catalog,
@@ -56,6 +60,7 @@ from app.core.config.provider_catalog import (
     PUBLIC_PROVIDER_CATALOG,
     public_provider_routes,
 )
+from app.core.config.razorpay_settings import razorpay_settings
 from app.domain.auth import service as auth_service
 from app.domain.billing import schemas as billing_schemas
 from app.domain.billing.idempotency import (
@@ -73,7 +78,6 @@ from app.domain.billing.schemas import (
     SubscriptionCreateRequest,
     UsageItemResponse,
 )
-from app.domain.billing.webhooks import parse_payment_event, verify_razorpay_signature
 from scripts.provision_razorpay_plans import (
     _validate_environment,
 )
@@ -83,20 +87,20 @@ def test_webhook_signature_uses_exact_raw_body(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     secret = "webhook-test-secret"
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(secret))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(secret))
     raw = b'{"event":"subscription.activated"}'
     signature = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
-    assert verify_razorpay_signature(raw, signature)
-    assert not verify_razorpay_signature(raw + b"\n", signature)
+    assert verify_signature(raw, signature)
+    assert not verify_signature(raw + b"\n", signature)
 
 
 def test_payment_webhook_discards_oversized_optional_method(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
-    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_fixture")
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_fixture")
     monkeypatch.setattr(
-        billing_settings, "razorpay_key_secret", SecretStr("synthetic-api-secret")
+        razorpay_settings, "key_secret", SecretStr("synthetic-api-secret")
     )
     payment = parse_payment_event(
         {
@@ -114,7 +118,8 @@ def test_payment_webhook_discards_oversized_optional_method(
                     }
                 }
             },
-        }
+        },
+        provider_mode="test",
     )
     assert payment.payment_method == ""
 
@@ -136,7 +141,7 @@ async def test_login_rechecks_billing_bootstrap_idempotently(
     monkeypatch.setattr(
         auth_service, "ensure_personal_workspace", AsyncMock(return_value=None)
     )
-    monkeypatch.setattr(auth_service, "ensure_user_billing", repair)
+    monkeypatch.setattr(auth_service, "ensure_billing_for_user_workspaces", repair)
     monkeypatch.setattr(
         auth_service,
         "create_access_token",
@@ -162,11 +167,9 @@ def _metadata() -> ProviderMetadata:
 async def test_razorpay_adapter_creates_hosted_subscription(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
-    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
-    monkeypatch.setattr(
-        billing_settings, "razorpay_key_secret", SecretStr("test-secret")
-    )
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_key")
+    monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("test-secret"))
 
     async def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/v1/subscriptions"
@@ -207,11 +210,9 @@ async def test_razorpay_adapter_creates_hosted_subscription(
 async def test_subscription_does_not_use_provider_checkout_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
-    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
-    monkeypatch.setattr(
-        billing_settings, "razorpay_key_secret", SecretStr("test-secret")
-    )
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_key")
+    monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("test-secret"))
 
     async def handler(_request: httpx.Request) -> httpx.Response:
         assert _request.method == "POST"
@@ -241,11 +242,9 @@ async def test_subscription_does_not_use_provider_checkout_url(
 async def test_razorpay_fetch_subscription_echoes_intent_identity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
-    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
-    monkeypatch.setattr(
-        billing_settings, "razorpay_key_secret", SecretStr("test-secret")
-    )
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_key")
+    monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("test-secret"))
     requests: list[httpx.Request] = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -286,11 +285,9 @@ async def test_razorpay_fetch_subscription_echoes_intent_identity(
 async def test_razorpay_adapter_rejects_an_echoed_price_ref_mismatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
-    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
-    monkeypatch.setattr(
-        billing_settings, "razorpay_key_secret", SecretStr("test-secret")
-    )
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_key")
+    monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("test-secret"))
 
     async def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -319,11 +316,9 @@ async def test_razorpay_adapter_rejects_an_echoed_price_ref_mismatch(
 async def test_razorpay_one_time_payment_validates_the_echoed_amount(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
-    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
-    monkeypatch.setattr(
-        billing_settings, "razorpay_key_secret", SecretStr("test-secret")
-    )
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_key")
+    monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("test-secret"))
     bodies: list[str] = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -369,11 +364,9 @@ async def test_razorpay_one_time_payment_validates_the_echoed_amount(
 async def test_razorpay_adapter_maps_all_transport_errors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_mode", "test")
-    monkeypatch.setattr(billing_settings, "razorpay_key_id", "rzp_test_key")
-    monkeypatch.setattr(
-        billing_settings, "razorpay_key_secret", SecretStr("test-secret")
-    )
+    monkeypatch.setattr(razorpay_settings, "mode", "test")
+    monkeypatch.setattr(razorpay_settings, "key_id", "rzp_test_key")
+    monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("test-secret"))
 
     async def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ProtocolError("broken transport", request=request)
@@ -406,11 +399,9 @@ def test_plan_provisioning_validates_credential_environment(
     key_id: str,
     valid: bool,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_mode", environment)
-    monkeypatch.setattr(
-        billing_settings, "razorpay_key_secret", SecretStr("synthetic-api")
-    )
-    monkeypatch.setattr(billing_settings, "razorpay_key_id", key_id)
+    monkeypatch.setattr(razorpay_settings, "mode", environment)
+    monkeypatch.setattr(razorpay_settings, "key_secret", SecretStr("synthetic-api"))
+    monkeypatch.setattr(razorpay_settings, "key_id", key_id)
     if valid:
         _validate_environment(environment)
     else:
@@ -549,8 +540,8 @@ def test_plan_checkout_requires_a_private_ref_and_enabled_region(
         REASON_CONTACT_ONLY,
     )
     monkeypatch.setattr(billing_settings, "checkout_enabled", True)
-    monkeypatch.setattr(billing_settings, "razorpay_live_ready", True)
-    monkeypatch.setattr(billing_settings, "razorpay_international_ready", True)
+    monkeypatch.setattr(razorpay_settings, "live_ready", True)
+    monkeypatch.setattr(razorpay_settings, "international_ready", True)
     monkeypatch.setattr(
         billing_settings,
         "provider_price_refs",

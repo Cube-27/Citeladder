@@ -1,12 +1,19 @@
-"""Bounded recovery of durable webhook receipts, including interrupted dispatch."""
+"""Bounded recovery of durable webhook receipts, including interrupted dispatch.
+
+Each receipt is replayed against the provider and environment PERSISTED on
+it, never against the current new-checkout default, so a deployment that
+switches providers cannot finish somebody else's obligation with the wrong
+gateway. ``provider`` overrides that binding and exists for tests.
+"""
 
 from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import (
@@ -14,7 +21,12 @@ from app.connectors.billing.base import (
     BillingProviderError,
     ProviderPayment,
 )
-from app.core.config.billing_contracts import RAZORPAY_PAYMENT_EVENT_TYPES
+from app.connectors.billing.factory import provider_for_record
+from app.connectors.billing.registry import (
+    ProviderUnavailableError,
+    payment_event_predicate,
+    registrations,
+)
 from app.core.config.billing_settings import billing_settings
 from app.domain.billing.payments import PaymentReceiptConflictError
 from app.domain.billing.service import BillingConflictError
@@ -26,8 +38,29 @@ from app.domain.billing.webhooks import (
 from app.models.billing import BillingWebhookEvent
 
 
+def _recoverable_pairs() -> list[tuple[str, str]]:
+    """(provider, environment) pairs whose receipts may be replayed now."""
+    pairs: list[tuple[str, str]] = []
+    for registration in registrations().values():
+        mode = registration.configured_mode()
+        if mode:
+            pairs.append((registration.provider, mode))
+    return pairs
+
+
+def _receipt_adapter(
+    provider: str, provider_mode: str, override: BillingProvider | None
+) -> BillingProvider | None:
+    if override is not None:
+        return override
+    try:
+        return provider_for_record(provider, provider_mode)
+    except ProviderUnavailableError:
+        return None
+
+
 async def recover_webhook_receipts(
-    session: AsyncSession, provider: BillingProvider
+    session: AsyncSession, provider: BillingProvider | None = None
 ) -> int:
     now = datetime.now(UTC)
     rows = list(
@@ -36,8 +69,10 @@ async def recover_webhook_receipts(
                 select(BillingWebhookEvent)
                 .where(
                     BillingWebhookEvent.processing_state == "pending",
-                    BillingWebhookEvent.provider_mode
-                    == billing_settings.require_provider_mode(),
+                    tuple_(
+                        BillingWebhookEvent.provider,
+                        BillingWebhookEvent.provider_mode,
+                    ).in_(_recoverable_pairs()),
                     BillingWebhookEvent.attempt_count
                     < billing_settings.webhook_max_attempts,
                     (BillingWebhookEvent.next_attempt_at.is_(None))
@@ -67,11 +102,26 @@ async def recover_webhook_receipts(
                 row.lease_token,
                 row.event_type,
                 (row.safe_summary or {}).get("reference", ""),
+                row.provider,
+                row.provider_mode,
             )
         )
     await session.commit()
-    for event_id, token, event_type, reference in claims:
-        await _recover_one(session, provider, event_id, token, event_type, reference)
+    for event_id, token, event_type, reference, name, mode in claims:
+        adapter = _receipt_adapter(name, mode, provider)
+        if adapter is None:
+            # Leave the receipt pending rather than replaying it against a
+            # provider that did not originate it.
+            continue
+        await _recover_one(
+            session,
+            adapter,
+            event_id,
+            token,
+            event_type,
+            reference,
+            payment_event_predicate(name),
+        )
     return len(claims)
 
 
@@ -82,6 +132,7 @@ async def _recover_one(
     token: uuid.UUID,
     event_type: str,
     reference: str,
+    is_payment: Callable[[str], bool],
 ) -> None:
     try:
         if not reference:
@@ -93,9 +144,11 @@ async def _recover_one(
                     extra={"webhook_receipt_id": str(event_id)},
                 )
             return
+        # Which KIND of record this event names is the originating vendor's
+        # own vocabulary, so the question goes to that vendor's adapter.
         record = (
             await provider.fetch_payment(reference)
-            if event_type in RAZORPAY_PAYMENT_EVENT_TYPES
+            if is_payment(event_type)
             else await provider.fetch_subscription(reference)
         )
         event = await _claimed_event(session, event_id, token)

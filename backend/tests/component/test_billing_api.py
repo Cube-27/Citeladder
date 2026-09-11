@@ -32,6 +32,7 @@ from app.core.config.entitlements import (
     GRANT_SOURCE_PLAN,
     KEY_MONITORED_URLS,
 )
+from app.core.config.razorpay_settings import razorpay_settings
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
@@ -218,7 +219,7 @@ async def test_signed_unmatched_webhook_is_acknowledged_and_grants_nothing(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     raw = json.dumps(
         {
             "event": "payment.captured",
@@ -251,7 +252,7 @@ async def test_activation_issues_one_period_bundle_and_projects_runtime(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-activate@example.com")
     baseline_version = await _account_version(db_session)
@@ -338,7 +339,7 @@ async def test_stale_event_is_rejected_without_a_version_bump(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-stale@example.com")
     baseline_version = await _account_version(db_session)
@@ -375,7 +376,7 @@ async def test_cancellation_without_period_preserves_verified_paid_time_on_repla
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-terminal@example.com")
     workspace = (await client.get("/api/v1/workspaces")).json()[0]
@@ -467,7 +468,7 @@ async def test_cancel_at_period_end_keeps_access_and_writes_no_revocations(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-cape@example.com")
     baseline_version = await _account_version(db_session)

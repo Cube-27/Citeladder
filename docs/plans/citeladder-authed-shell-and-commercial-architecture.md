@@ -275,6 +275,25 @@ Keep one designated Owner. A transfer initiated by Owner or Admin changes the ne
 
 Membership removal or role change must affect subsequent server operations and refresh the affected UI access state. Do not add per-project membership rows or billable-seat behavior.
 
+## Delivery record (Phase 3, 11 September 2026)
+
+**Payments remain disabled and Razorpay remains paused.** What shipped is the
+boundary, not an integration: `connectors/billing/registry.py` selects an
+adapter by explicit provider identity and environment, the shared checkout
+controller and webhook dispatcher hold no vendor field names, and each vendor's
+credentials, status vocabulary, event names, HMAC scheme and SDK stay inside
+its own adapter. Razorpay's working code is preserved behind that adapter; none
+of its outstanding checkout, GST, international, recurring-method,
+merchant-approval, tunnel, provisioning or sandbox work was done.
+
+The readiness checklist is `docs/billing-provider-readiness.md`. It states
+plainly which guarantees are verified by LOCAL tests only, and that no payment
+has been taken.
+
+**Vendor variable names were not renamed.** `BILLING_RAZORPAY_*` keeps its
+exact spelling; the block moved to its own settings module, so no deployment
+edit is needed and no name means "the current gateway".
+
 ## Phase 3: implement provider-neutral billing architecture
 
 ### 3.1 What is authorized now

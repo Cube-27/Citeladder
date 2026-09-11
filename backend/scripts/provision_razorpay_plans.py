@@ -13,13 +13,13 @@ from collections.abc import Sequence
 import httpx
 
 from app.connectors.billing.razorpay import RazorpayBillingProvider
-from app.core.config.billing_settings import billing_settings
+from app.core.config.razorpay_settings import razorpay_settings
 from app.core.database import SessionLocal, dispose_engine
 from app.domain.billing.catalog_revisions import catalog_revision, validate_payload
 
 
 def _validate_environment(environment: str) -> None:
-    if billing_settings.require_provider_mode() != environment:
+    if razorpay_settings.require_provider_mode() != environment:
         raise RuntimeError("Configured provider mode does not match --environment")
 
 

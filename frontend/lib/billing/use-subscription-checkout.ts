@@ -7,7 +7,14 @@ import { billingApi, type SubscriptionCheckoutInput } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { CHECKOUT_POLL_ATTEMPTS, CHECKOUT_POLL_INTERVAL_MS } from '@/lib/config/billing';
 import { checkoutAttempt, clearCheckoutAttempt } from './checkout-attempt';
-import { openRazorpay } from './razorpay-checkout';
+import { startCheckoutFlow } from './checkout-flow';
+
+/** Copy for a checkout that ended without a provider callback. */
+const INCOMPLETE_CHECKOUT: Record<string, string | null> = {
+  redirected: null,
+  unsupported: 'Checkout is unavailable for this payment provider.',
+  dismissed: 'Checkout closed. Retry to reopen the same subscription.',
+};
 
 export function useSubscriptionCheckout() {
   const queryClient = useQueryClient();
@@ -56,14 +63,17 @@ export function useSubscriptionCheckout() {
       if (current.status !== 'pending') return current;
       const checkout = await billingApi.checkout(activation.activation_id);
       setTestMode(checkout.provider_mode === 'test');
-      const callback = await openRazorpay(checkout, user.email, setNotice);
-      if (!callback) {
-        setNotice('Checkout closed. Retry to reopen the same subscription.');
+      const outcome = await startCheckoutFlow(checkout, user.email, setNotice);
+      if (outcome.kind !== 'callback') {
+        // A redirect hands the browser to the provider and this tab is done;
+        // the other two are settled non-outcomes the reader is told about.
+        const message = INCOMPLETE_CHECKOUT[outcome.kind];
+        if (message) setNotice(message);
         return activation;
       }
       setNotice('Payment verification pending');
       try {
-        await billingApi.verifyCheckout(activation.activation_id, callback);
+        await billingApi.verifyCheckout(activation.activation_id, outcome.callback);
       } catch {
         setNotice('Payment verification is uncertain. Refresh status before retrying.');
         return activation;

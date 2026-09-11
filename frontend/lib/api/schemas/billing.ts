@@ -348,11 +348,19 @@ export const providerConnectionStatesSchema = responseObject({
   providers: z.array(providerConnectionStateEntrySchema),
 });
 
+// The small PUBLIC checkout-init contract. `flow` says whether the browser
+// follows a validated `redirect_url` or loads the adapter-named SDK with
+// `public_key` and `reference`. Only public initialization fields appear here:
+// never a secret, an amount, or a private price reference.
 export const subscriptionCheckoutSchema = responseObject({
   activation_id: uuid(),
+  provider: z.string(),
   provider_mode: z.enum(['test', 'live']),
-  key_id: z.string(),
-  subscription_id: z.string(),
+  flow: z.enum(['hosted_redirect', 'provider_sdk']),
+  redirect_url: z.string(),
+  sdk_name: z.string(),
+  public_key: z.string(),
+  reference: z.string(),
   expires_at: z.string(),
   quote: resolvedQuoteSchema,
 });

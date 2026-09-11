@@ -142,11 +142,15 @@ class BillingCustomer(Base):
     __tablename__ = "billing_customers"
     __table_args__ = (
         UniqueConstraint(
-            "provider", "external_customer_id", name="uq_billing_customer_external"
+            "provider",
+            "provider_mode",
+            "external_customer_id",
+            name="uq_billing_customer_external",
         ),
         UniqueConstraint(
             "billing_account_id",
             "provider",
+            "provider_mode",
             name="uq_billing_customer_account_provider",
         ),
     )
@@ -160,6 +164,13 @@ class BillingCustomer(Base):
         index=True,
     )
     provider: Mapped[str] = mapped_column(String(24), default=PROVIDER_RAZORPAY)
+    # test | live | disabled. A customer record created against a provider's
+    # test environment names a different external entity than the same
+    # provider's live one, so the environment is part of this row's identity
+    # exactly as it already is on subscriptions and webhook events.
+    provider_mode: Mapped[str] = mapped_column(
+        String(8), default="disabled", server_default="disabled"
+    )
     external_customer_id: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -174,6 +185,7 @@ class BillingSubscription(Base):
     __table_args__ = (
         UniqueConstraint(
             "provider",
+            "provider_mode",
             "external_subscription_id",
             name="uq_billing_subscription_external",
         ),
@@ -261,8 +273,13 @@ class BillingSubscription(Base):
 class BillingWebhookEvent(Base):
     __tablename__ = "billing_webhook_events"
     __table_args__ = (
+        # Webhook deduplication is per provider AND environment: a test
+        # event id never suppresses a live one (plan §3.3).
         UniqueConstraint(
-            "provider", "external_event_id", name="uq_billing_webhook_external"
+            "provider",
+            "provider_mode",
+            "external_event_id",
+            name="uq_billing_webhook_external",
         ),
     )
 
@@ -611,6 +628,7 @@ class PendingActivation(Base):
         Index(
             "uq_pending_activation_provider_reference",
             "provider",
+            "provider_mode",
             "external_reference",
             unique=True,
             postgresql_where=text("external_reference IS NOT NULL"),

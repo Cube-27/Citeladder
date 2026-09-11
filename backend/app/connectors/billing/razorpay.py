@@ -28,10 +28,11 @@ from app.connectors.billing.base import (
 from app.core.config.billing_contracts import (
     RAZORPAY_PAYMENT_STATUS_MAP,
 )
-from app.core.config.billing_settings import (
-    BillingSettings,
-    billing_settings,
-)
+
+# Shared commercial settings (timeouts, sweep bounds, subscription cycles)
+# stay here; every credential/origin/host below is this vendor's own.
+from app.core.config.billing_settings import billing_settings
+from app.core.config.razorpay_settings import RazorpaySettings, razorpay_settings
 
 _SECONDS_PER_DAY = 86_400
 _NOTE_INTENT = "citeladder_intent_id"
@@ -42,7 +43,7 @@ class RazorpayBillingProvider:
     def __init__(
         self,
         *,
-        settings: BillingSettings = billing_settings,
+        settings: RazorpaySettings = razorpay_settings,
         client: httpx.AsyncClient,
     ) -> None:
         self.settings = settings
@@ -53,8 +54,8 @@ class RazorpayBillingProvider:
             self.settings.require_provider_mode()
         except ValueError as exc:
             raise BillingProviderError("provider_not_configured") from exc
-        key_id = self.settings.razorpay_key_id.strip()
-        secret = self.settings.razorpay_key_secret.get_secret_value()
+        key_id = self.settings.key_id.strip()
+        secret = self.settings.key_secret.get_secret_value()
         if not key_id or not secret:
             raise BillingProviderError("provider_not_configured")
         return httpx.BasicAuth(key_id, secret)
@@ -77,11 +78,11 @@ class RazorpayBillingProvider:
         try:
             response = await self._client.request(
                 method,
-                f"{self.settings.razorpay_api_base_url.rstrip('/')}{path}",
+                f"{self.settings.api_base_url.rstrip('/')}{path}",
                 auth=self._auth(),
                 json=payload,
                 headers=headers,
-                timeout=self.settings.request_timeout_seconds,
+                timeout=billing_settings.request_timeout_seconds,
                 follow_redirects=False,
             )
         except httpx.TransportError as exc:
@@ -131,7 +132,7 @@ class RazorpayBillingProvider:
         if (
             parsed.scheme.lower() != "https"
             or not parsed.hostname
-            or parsed.hostname.lower() not in self.settings.checkout_hosts()
+            or parsed.hostname.lower() not in self.settings.checkout_host_set()
             or parsed.username
             or parsed.password
         ):
@@ -203,7 +204,7 @@ class RazorpayBillingProvider:
     ) -> HostedSubscription:
         payload: dict[str, Any] = {
             "plan_id": price_ref,
-            "total_count": self.settings.subscription_total_cycles,
+            "total_count": billing_settings.subscription_total_cycles,
             "customer_notify": 1,
             "notes": metadata.as_notes(),
         }
@@ -232,7 +233,7 @@ class RazorpayBillingProvider:
             payload={
                 "plan_id": price_ref,
                 "quantity": quantity,
-                "total_count": self.settings.subscription_total_cycles,
+                "total_count": billing_settings.subscription_total_cycles,
                 "customer_notify": 1,
                 "notes": metadata.as_notes(),
             },
@@ -286,9 +287,9 @@ class RazorpayBillingProvider:
     async def _collection(self, path: str) -> dict[str, Any]:
         """Read bounded pages; a truncated search is not proof of absence."""
         items: list[dict[str, Any]] = []
-        count = self.settings.reconciliation_list_count
+        count = billing_settings.reconciliation_list_count
         separator = "&" if "?" in path else "?"
-        for page in range(self.settings.reconciliation_max_pages):
+        for page in range(billing_settings.reconciliation_max_pages):
             data = await self._request(
                 "GET", f"{path}{separator}count={count}&skip={page * count}"
             )

@@ -22,9 +22,14 @@ describe('subscription modal', () => {
     const result = await openRazorpay(
       {
         activation_id: 'activation',
+        provider: 'razorpay',
         provider_mode: 'test',
-        key_id: 'rzp_test_fixture',
-        subscription_id: 'sub_fixture',
+        flow: 'provider_sdk',
+        sdk_name: 'razorpay-checkout',
+        // The PUBLIC initialization fields: a publishable key and the
+        // provider's own reference for the intent. No secret, no amount.
+        public_key: 'rzp_test_fixture',
+        reference: 'sub_fixture',
         expires_at: '2099-01-01',
         quote: {},
       } as Parameters<typeof openRazorpay>[0],
@@ -74,13 +79,15 @@ it('allows a payment retry to succeed inside the same open modal', async () => {
   };
   const result = await openRazorpay(
     {
-      key_id: 'rzp_test_fixture',
-      subscription_id: 'sub_fixture',
+      public_key: 'rzp_test_fixture',
+      reference: 'sub_fixture',
       provider_mode: 'test',
     } as Parameters<typeof openRazorpay>[0],
     'payer@example.com',
     onFailure,
   );
   expect(onFailure).toHaveBeenCalledWith(expect.stringContaining('Payment failed'));
-  expect(result).toEqual(callback);
+  // The vendor's field names go back inside the NEUTRAL wrapper: the shared
+  // controller never reads them, and this vendor's adapter allowlists them.
+  expect(result).toEqual({ fields: callback });
 });

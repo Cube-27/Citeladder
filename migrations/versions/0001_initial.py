@@ -54,7 +54,10 @@ def upgrade() -> None:
         sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
-            "provider", "external_event_id", name="uq_billing_webhook_external"
+            "provider",
+            "provider_mode",
+            "external_event_id",
+            name="uq_billing_webhook_external",
         ),
     )
     op.create_table(
@@ -863,6 +866,12 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("billing_account_id", sa.UUID(), nullable=False),
         sa.Column("provider", sa.String(length=24), nullable=False),
+        sa.Column(
+            "provider_mode",
+            sa.String(length=8),
+            server_default="disabled",
+            nullable=False,
+        ),
         sa.Column("external_customer_id", sa.String(length=255), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
@@ -873,10 +882,14 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "billing_account_id",
             "provider",
+            "provider_mode",
             name="uq_billing_customer_account_provider",
         ),
         sa.UniqueConstraint(
-            "provider", "external_customer_id", name="uq_billing_customer_external"
+            "provider",
+            "provider_mode",
+            "external_customer_id",
+            name="uq_billing_customer_external",
         ),
     )
     op.create_index(
@@ -1486,6 +1499,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "provider",
+            "provider_mode",
             "external_subscription_id",
             name="uq_billing_subscription_external",
         ),
@@ -4550,7 +4564,7 @@ def upgrade() -> None:
     op.create_index(
         "uq_pending_activation_provider_reference",
         "pending_activations",
-        ["provider", "external_reference"],
+        ["provider", "provider_mode", "external_reference"],
         unique=True,
         postgresql_where=sa.text("external_reference IS NOT NULL"),
     )
@@ -4604,8 +4618,8 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_billing_payments_billing_account_id"), "billing_payments", ["billing_account_id"], unique=False)
     op.create_index("ix_billing_payment_account_paid", "billing_payments", ["billing_account_id", "paid_at"], unique=False)
-    op.create_index("uq_billing_payment_external", "billing_payments", ["provider", "external_payment_id"], unique=True, postgresql_where=sa.text("receipt_kind = 'payment'"))
-    op.create_index("uq_billing_refund_external", "billing_payments", ["provider", "external_refund_id"], unique=True, postgresql_where=sa.text("external_refund_id IS NOT NULL"))
+    op.create_index("uq_billing_payment_external", "billing_payments", ["provider", "provider_mode", "external_payment_id"], unique=True, postgresql_where=sa.text("receipt_kind = 'payment'"))
+    op.create_index("uq_billing_refund_external", "billing_payments", ["provider", "provider_mode", "external_refund_id"], unique=True, postgresql_where=sa.text("external_refund_id IS NOT NULL"))
     op.create_table(
         "billing_invoice_counters",
         sa.Column("financial_year", sa.String(length=7), nullable=False),

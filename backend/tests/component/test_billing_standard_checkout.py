@@ -17,7 +17,6 @@ from app.connectors.billing.base import (
     ProviderPayment,
     ProviderSubscription,
 )
-from app.core.config.billing_settings import billing_settings
 from app.domain.billing.activations import ActivationRejectedError, activate_pending
 from app.domain.billing.catalog_revisions import payload_digest, validate_payload
 from app.models.billing import (
@@ -28,6 +27,7 @@ from app.models.billing import (
 )
 from app.models.billing_payment import BillingPayment
 from app.models.user import User
+from tests.billing_settings_support import apply_billing_settings
 from tests.component.auth_helpers import register_and_login
 
 pytestmark = pytest.mark.asyncio
@@ -52,24 +52,26 @@ def _sandbox_payload():
 
 @pytest.fixture
 async def checkout(client, db_session, monkeypatch):
-    for name, value in {
-        "razorpay_mode": "test",
-        "razorpay_key_id": "rzp_test_fixture",
-        "razorpay_key_secret": SecretStr("synthetic-api-secret"),
-        "quote_signing_secret": SecretStr("synthetic-quote-secret"),
-        "checkout_enabled": True,
-        "razorpay_test_ready": True,
-        "razorpay_test_international_ready": True,
-        "seller_legal_name": "CiteLadder Private Limited",
-        "seller_legal_address": "1 Seller Street, Mumbai",
-        "seller_email": "billing@citeladder.test",
-        "seller_gstin": "27ABCDE1234F1Z5",
-        "seller_gst_state_code": "27",
-        "seller_gst_state_name": "Maharashtra",
-        "seller_sac": "998313",
-        "seller_lut_reference": "LUT/2026/001",
-    }.items():
-        monkeypatch.setattr(billing_settings, name, value)
+    apply_billing_settings(
+        monkeypatch,
+        {
+            "razorpay_mode": "test",
+            "razorpay_key_id": "rzp_test_fixture",
+            "razorpay_key_secret": SecretStr("synthetic-api-secret"),
+            "quote_signing_secret": SecretStr("synthetic-quote-secret"),
+            "checkout_enabled": True,
+            "razorpay_test_ready": True,
+            "razorpay_test_international_ready": True,
+            "seller_legal_name": "CiteLadder Private Limited",
+            "seller_legal_address": "1 Seller Street, Mumbai",
+            "seller_email": "billing@citeladder.test",
+            "seller_gstin": "27ABCDE1234F1Z5",
+            "seller_gst_state_code": "27",
+            "seller_gst_state_name": "Maharashtra",
+            "seller_sac": "998313",
+            "seller_lut_reference": "LUT/2026/001",
+        },
+    )
     payload = _sandbox_payload()
     payload["plans"][0]["regional_byok_prices"]["international"][
         "provider_price_ref"
@@ -123,19 +125,27 @@ async def test_owner_checkout_callback_and_cross_account_isolation(
     prefix = f"/api/v1/billing/subscriptions/{activation_id}"
     response = await client.get(prefix + "/checkout")
     assert response.status_code == 200
-    assert response.json()["subscription_id"] == "sub_fixture"
+    body = response.json()
+    # The PUBLIC init contract: a flow, a publishable key and the provider's
+    # own reference. No secret and no amount cross this boundary.
+    assert body["provider"] == "razorpay"
+    assert body["flow"] == "provider_sdk"
+    assert body["reference"] == "sub_fixture"
+    assert body["public_key"] == "rzp_test_fixture"
     assert "synthetic-api-secret" not in response.text
     signature = hmac.new(
         b"synthetic-api-secret", b"pay_fixture|sub_fixture", hashlib.sha256
     ).hexdigest()
-    callback = {
+    fields = {
         "razorpay_payment_id": "pay_fixture",
         "razorpay_subscription_id": "sub_fixture",
         "razorpay_signature": signature,
     }
+    callback = {"fields": fields}
     assert (
         await client.post(
-            prefix + "/verify", json={**callback, "razorpay_signature": "0" * 64}
+            prefix + "/verify",
+            json={"fields": {**fields, "razorpay_signature": "0" * 64}},
         )
     ).status_code == 400
     assert (await client.post(prefix + "/verify", json=callback)).json()[
