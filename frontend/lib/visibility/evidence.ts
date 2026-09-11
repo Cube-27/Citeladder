@@ -49,15 +49,27 @@ export function groupByPrompt(items: readonly VisibilityExecutionEvidence[]): Pr
   return order.map((key) => groups.get(key)!);
 }
 
-/** The distinct non-blank search-query strings for one execution, in order. */
+/**
+ * Every non-blank search-query string for one execution, in provider order.
+ *
+ * One event in, one string out: a query the engine ran three times while
+ * answering one prompt yields three strings. This used to de-duplicate within
+ * the execution, which silently turned "how many searches did the engine run"
+ * into "how many distinct phrases did it use" — every repeat was dropped before
+ * anything could count it, so the fanout tab's occurrence column could never
+ * read anything but 1 for a single-execution query. Repeats are a real signal
+ * about how hard an engine worked a prompt; de-duplication, where a view wants
+ * it, belongs to that view and not to the capture path.
+ *
+ * Blank queries are still skipped: a count-only event (the provider ran a
+ * search but withheld the wording) is not a query string, and the fanout tab
+ * reports those separately as `undisclosed`.
+ */
 export function queryTexts(item: VisibilityExecutionEvidence): string[] {
   const queries: string[] = [];
-  const seen = new Set<string>();
   for (const event of item.search_events) {
     const query = event.query.trim();
-    if (!query || seen.has(query)) continue;
-    seen.add(query);
-    queries.push(query);
+    if (query) queries.push(query);
   }
   return queries;
 }

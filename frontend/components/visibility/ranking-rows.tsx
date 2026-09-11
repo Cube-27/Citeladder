@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/table';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { Button } from '@/components/ui/button';
 import type { RankingRow } from '@/lib/api/types';
 import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 import { changeLabel } from '@/lib/visibility/vocabulary';
@@ -25,19 +24,130 @@ import { tagClasses } from '@/components/ui/filter-chip-variants';
  * comparable prior run printed the sentence "No comparable change" inside a
  * numeric cell, so a column of numbers became a column of wrapped prose; a
  * missing change is now an em dash, and the one sentence explaining why sits
- * above the table instead of in every row. And the last column held a
- * full-width button labelled "N brand-absent answers", which truncated
- * mid-word; it is a number under a plain heading now.
+ * above the table instead of in every row.
+ *
+ * The table compares brands on the measures every brand has: how often it is
+ * named, where it lands among the brands an answer names, its share of voice,
+ * and how often it is cited. "Answers without you" was none of those — it was
+ * an overlap between one competitor and the tracked brand, undefined for the
+ * tracked brand itself (which printed "Not applicable" in its own row) and so
+ * asymmetric with every other column. The measure still exists on
+ * `RankingRow.gap_count` and in the backend's `gap_counts` projection, where
+ * opportunity analysis can use it; it is simply not a column of this table.
  */
 /** Rows per page, matching the shared table footer used across the app. */
 const PAGE_SIZE = 10;
 
+/** Stable identity for one row, matching the React key used below. */
+function rowKey(row: RankingRow): string {
+  return `${row.is_brand}-${row.name}`;
+}
+
+/**
+ * Competitive rank, 1…N, over the ordering the table actually renders.
+ *
+ * `#1` is a claim about a brand's place among the brands beside it, so it has
+ * to be derived from the comparison the table makes. It previously rendered
+ * `avg_position` — the mean ordinal at which an answer first mentions a brand,
+ * averaged over the answers naming THAT brand. Two brands each mentioned first
+ * in their own answers both average 1.0 and both printed `#1`, while the rows
+ * around them were ordered by visibility. The column and the row order were
+ * answering different questions, and only one of them was the question `#1`
+ * implies.
+ *
+ * Ties share a rank (1, 2, 2, 4): equal visibility is equal standing, and
+ * breaking the tie alphabetically would invent a difference the measurement
+ * does not support. A brand with no measured visibility has no standing to
+ * report and is left unranked rather than pushed to last place.
+ */
+function competitiveRanks(ordered: readonly RankingRow[]): Map<string, number | null> {
+  const ranks = new Map<string, number | null>();
+  let previousRate: number | null = null;
+  let previousRank = 0;
+  ordered.forEach((row, index) => {
+    if (row.mention_rate == null) {
+      ranks.set(rowKey(row), null);
+      return;
+    }
+    if (previousRate !== null && row.mention_rate === previousRate) {
+      ranks.set(rowKey(row), previousRank);
+      return;
+    }
+    previousRank = index + 1;
+    previousRate = row.mention_rate;
+    ranks.set(rowKey(row), previousRank);
+  });
+  return ranks;
+}
+
+/**
+ * Whole-row click, for the mouse only.
+ *
+ * The row keeps its implicit `row` role: putting `role="button"` on a `<tr>`
+ * REPLACES that role, which drops the row out of the table for anyone reading
+ * it through the table's own structure. The accessible control is the real
+ * button in the Brand cell; this is a convenience on top of it, so it adds no
+ * role, no tabindex and no key handling of its own.
+ */
+function selectionProps(
+  row: RankingRow,
+  selected: boolean,
+  onSelect?: (name: string | null) => void,
+) {
+  if (!onSelect) return {};
+  return {
+    onClick: () => onSelect(selected ? null : row.name),
+    className: 'cursor-pointer',
+  };
+}
+
+/**
+ * The brand name, as the control that plots it alone.
+ *
+ * A real `<button>` rather than a handler on the row: it is focusable, it
+ * announces its pressed state, and Enter/Space work without re-implementing
+ * them. Clicks stop here so the row's own convenience handler does not toggle
+ * the same selection a second time and cancel it.
+ */
+function BrandName({
+  row,
+  selected,
+  onSelect,
+}: Readonly<{
+  row: RankingRow;
+  selected: boolean;
+  onSelect?: (name: string | null) => void;
+}>) {
+  const name = <span className={textRole('emphasis')}>{row.name}</span>;
+  if (!onSelect) return name;
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      aria-label={selected ? `Stop plotting ${row.name} on its own` : `Plot ${row.name} on its own`}
+      className="focus-ring hover:text-accent-text rounded-xs text-left transition-colors"
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(selected ? null : row.name);
+      }}
+    >
+      {name}
+    </button>
+  );
+}
+
 export function RankingRowsTable({
   rows,
   onSelect,
+  selectedName = null,
 }: Readonly<{
   rows: readonly RankingRow[];
-  onSelect?: (name: string) => void;
+  /**
+   * Plot this brand alone in the chart beside the table. Selecting the brand
+   * already selected clears it, so the same row both focuses and restores.
+   */
+  onSelect?: (name: string | null) => void;
+  selectedName?: string | null;
 }>) {
   const ordered = [...rows].sort(
     (a, b) => (b.mention_rate ?? -1) - (a.mention_rate ?? -1) || a.name.localeCompare(b.name),
@@ -51,10 +161,11 @@ export function RankingRowsTable({
   const anyChange = ordered.some(
     (row) => (row.matched_visibility_delta ?? row.visibility_delta) != null,
   );
-  // Runs measured before competitor offsets were persisted have no ranking to
-  // show for anyone, so the column is omitted rather than filled with a
-  // placeholder in every row.
-  const anyPosition = ordered.some((row) => row.avg_position != null);
+  const ranks = competitiveRanks(ordered);
+  const rankedCount = [...ranks.values()].filter((rank) => rank != null).length;
+  // Nothing measured means nothing to rank, so the column is omitted rather
+  // than filled with a placeholder in every row.
+  const anyPosition = rankedCount > 0;
   return (
     <>
       <Table>
@@ -70,7 +181,6 @@ export function RankingRowsTable({
             <TableHead numeric className="hidden md:table-cell">
               Citations
             </TableHead>
-            <TableHead numeric>Answers without you</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -79,8 +189,13 @@ export function RankingRowsTable({
             // both runs share. Which one it is belongs to the note above the
             // table, not to a disclosure inside every cell.
             const change = changeLabel(row.matched_visibility_delta ?? row.visibility_delta);
+            const selected = selectedName === row.name;
             return (
-              <TableRow key={`${row.is_brand}-${row.name}`} highlight={row.is_brand}>
+              <TableRow
+                key={`${row.is_brand}-${row.name}`}
+                highlight={row.is_brand || selected}
+                {...selectionProps(row, selected, onSelect)}
+              >
                 <TableCell>
                   <span className="flex items-center gap-2">
                     <BrandLogo
@@ -89,7 +204,7 @@ export function RankingRowsTable({
                       websiteUrl={row.website_url}
                       size="sm"
                     />
-                    <span className={textRole('emphasis')}>{row.name}</span>
+                    <BrandName row={row} selected={selected} onSelect={onSelect} />
                     {row.is_brand ? (
                       <span className={textRole('label', tagClasses())}>You</span>
                     ) : null}
@@ -105,13 +220,17 @@ export function RankingRowsTable({
                 <TableCell numeric>{formatRate(row.mention_rate)}</TableCell>
                 {anyPosition ? (
                   <TableCell numeric>
-                    {row.avg_position == null ? (
+                    {ranks.get(rowKey(row)) == null ? (
                       <UnavailableValue state="not_measured" />
                     ) : (
                       <span
-                        title={`Average of ${formatPositionExact(row.avg_position)} across the answers naming ${row.name}`}
+                        title={`${row.name} ranks ${formatPosition(ranks.get(rowKey(row)) ?? null)} of ${rankedCount} tracked brands by visibility${
+                          row.avg_position == null
+                            ? ''
+                            : `, and is named ${formatPositionExact(row.avg_position)} on average within the answers that name it`
+                        }`}
                       >
-                        {formatPosition(row.avg_position)}
+                        {formatPosition(ranks.get(rowKey(row)) ?? null)}
                       </span>
                     )}
                   </TableCell>
@@ -126,20 +245,6 @@ export function RankingRowsTable({
                 </TableCell>
                 <TableCell numeric className="hidden md:table-cell">
                   {formatRate(row.citation_rate)}
-                </TableCell>
-                <TableCell numeric>
-                  {row.is_brand || !onSelect ? (
-                    <UnavailableValue state="not_applicable" />
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onSelect(row.name)}
-                      aria-label={`Show the ${row.gap_count ?? 0} answers naming ${row.name} but not you`}
-                    >
-                      {row.gap_count ?? 0}
-                    </Button>
-                  )}
                 </TableCell>
               </TableRow>
             );

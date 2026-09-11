@@ -53,24 +53,64 @@ describe('RankingRowsTable', () => {
     );
     expect(screen.getByText('0%')).toBeVisible();
     const unknown = screen.getByText('Unknown').closest('tr')!;
-    expect(within(unknown).getByText('Not measured')).toBeVisible();
+    // Unmeasured visibility leaves the rank unmeasured too: a brand with no
+    // measured presence has no standing to report, rather than last place.
+    expect(within(unknown).getAllByText('Not measured').length).toBeGreaterThan(0);
     // With no prior run, NO brand has a change, so the column is not drawn at
     // all; the reason is stated once above the table.
     expect(screen.queryByRole('columnheader', { name: 'Change' })).toBeNull();
   });
-  it('opens the exact same-response competitor gap', () => {
+  it('compares brands without an asymmetric answers-without-you column', () => {
+    render(
+      <RankingRowsTable rows={[row({ name: 'Globex', gap_count: 3, visibility_delta: 0.3 })]} />,
+    );
+    expect(screen.getByText('+0.3 pp')).toBeVisible();
+    // The overlap measure is undefined for the tracked brand itself, so it is
+    // not a column of a table whose every other column applies to every row.
+    // It survives on `gap_count` for opportunity analysis.
+    expect(screen.queryByRole('columnheader', { name: /answers without you/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /answers naming/i })).toBeNull();
+  });
+  it('ranks competitively over the rendered order, sharing a rank on ties', () => {
+    render(
+      <RankingRowsTable
+        rows={[
+          row({ name: 'Leader', mention_rate: 1 }),
+          row({ name: 'Acme', mention_rate: 0.5 }),
+          row({ name: 'Zulu', mention_rate: 0.5 }),
+        ]}
+      />,
+    );
+    const cells = (name: string) =>
+      within(screen.getByText(name).closest('tr')!).getByTitle(/ranks #/);
+    expect(cells('Leader')).toHaveTextContent('#1');
+    // Equal visibility is equal standing; the alphabetical tie-break orders the
+    // rows but must not invent a difference in rank.
+    expect(cells('Acme')).toHaveTextContent('#2');
+    expect(cells('Zulu')).toHaveTextContent('#2');
+  });
+  it('selects a row to plot it alone, and re-selecting it restores every brand', () => {
     const onSelect = vi.fn();
     render(
       <RankingRowsTable
-        rows={[row({ name: 'Globex', gap_count: 3, visibility_delta: 0.3 })]}
+        rows={[row({ name: 'Globex' }), row({ name: 'Acme' })]}
         onSelect={onSelect}
       />,
     );
-    expect(screen.getByText('+0.3 pp')).toBeVisible();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Show the 3 answers naming Globex but not you' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Plot Globex on its own' }));
     expect(onSelect).toHaveBeenCalledWith('Globex');
+    onSelect.mockClear();
+    // Already-selected rows clear the focus, so one row both focuses and
+    // restores rather than stranding the reader on a single-brand chart.
+    render(
+      <RankingRowsTable
+        rows={[row({ name: 'Globex' })]}
+        onSelect={onSelect}
+        selectedName="Globex"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Stop plotting Globex on its own' }));
+    expect(onSelect).toHaveBeenCalledWith(null);
   });
   it('prefers the matched-subset change when the run has one', () => {
     render(

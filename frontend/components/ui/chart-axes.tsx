@@ -43,29 +43,34 @@ export function ChartAxes({
 }>) {
   return (
     <g aria-hidden>
+      {/* Tick VALUES without tick lines. A gridline behind every tick puts a
+          horizontal rule through the series at exactly the heights a reader is
+          trying to compare against; the number in the gutter already places the
+          point, and the two axis lines already bound the plot. */}
       {ticks.map((tick) => (
-        <g key={`y-${tick.at}`}>
-          <line
-            x1={x}
-            y1={tick.at}
-            x2={x + innerWidth}
-            y2={tick.at}
-            strokeWidth={1}
-            vectorEffect="non-scaling-stroke"
-            className="stroke-border-subtle"
-          />
-          <text
-            x={x - 4}
-            y={tick.at}
-            textAnchor="end"
-            dominantBaseline="middle"
-            fontSize={TICK_FONT_SIZE}
-            className="fill-muted"
-          >
-            {tick.text}
-          </text>
-        </g>
+        <text
+          key={`y-${tick.at}`}
+          x={x - 5}
+          y={tick.at}
+          textAnchor="end"
+          dominantBaseline="middle"
+          fontSize={TICK_FONT_SIZE}
+          className="fill-muted"
+        >
+          {tick.text}
+        </text>
       ))}
+      {/* The two axis lines: the value axis up the left, the date axis along
+          the bottom. */}
+      <line
+        x1={x}
+        y1={y}
+        x2={x}
+        y2={y + innerHeight}
+        strokeWidth={1}
+        vectorEffect="non-scaling-stroke"
+        className="stroke-border"
+      />
       <line
         x1={x}
         y1={y + innerHeight}

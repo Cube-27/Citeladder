@@ -543,7 +543,12 @@ class ProviderCatalogSettings(BaseSettings):
     platform_google_api_key: SecretStr = SecretStr("")
     anthropic_version: str = "2023-06-01"
     # Caps server-side web_search invocations per Anthropic request.
-    anthropic_max_uses: int = 3
+    # 0 (the default) sends NO cap, letting the model fan a prompt out into as
+    # many searches as it judges the question needs. A ceiling here is a
+    # ceiling on the fanout itself — capped answers stop searching mid-question,
+    # and the truncated fanout is then indistinguishable from an engine that
+    # simply chose to search less. Set a positive value only to bound cost.
+    anthropic_max_uses: int = 0
     # Per-call output-token cap sent to every transport payload.
     # Global fallback for any non-frozen request. Audit calls normally carry
     # their own frozen cap; keeping this aligned prevents an adapter caller from

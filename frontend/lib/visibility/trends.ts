@@ -144,6 +144,58 @@ const SERIES_STROKES = [
 ] as const;
 
 /**
+ * Comparison lines drawn by default.
+ *
+ * Five, plus the tracked brand, is six lines sharing one 360-unit plot — about
+ * as many as stay tellable apart at this size before the key becomes the only
+ * way to read the chart. The roster is not truncated as a result: the table
+ * beside the chart lists every brand, and selecting one there plots it alone.
+ */
+const TREND_SERIES_LIMIT = 5;
+
+/**
+ * One ranking row's value for a metric, as whole percent.
+ *
+ * Each metric reads its OWN column — plotting mention rate under a Share of
+ * voice heading drew a line that was not the metric selected.
+ */
+function rankingMetricValue(
+  row: { mention_rate: number | null; citation_rate: number | null; share_of_voice: number | null },
+  metric: TrendMetric,
+): number | null {
+  const value =
+    metric === 'owned_citation_rate'
+      ? row.citation_rate
+      : metric === 'sov'
+        ? row.share_of_voice
+        : row.mention_rate;
+  return value === null || value === undefined ? null : value * 100;
+}
+
+/**
+ * The chart points for ONE named competitor, on the brand series' own x scale.
+ *
+ * Selecting a brand in the rankings table plots that brand ALONE, so it needs
+ * the primary-series shape (marks, hover labels, version markers) rather than a
+ * comparison line. Timestamps, gaps and version boundaries come from the same
+ * projection as the brand's own line, so the two are read on one scale; only
+ * the plotted value changes.
+ */
+export function toNamedChartPoints(
+  points: readonly VisibilityTrendPoint[],
+  metric: TrendMetric,
+  name: string,
+): TrendPoint[] {
+  return toChartPoints(points, metric).map((point, index) => ({
+    ...point,
+    value: (() => {
+      const row = points[index].rankings.find((entry) => entry.name === name);
+      return row ? rankingMetricValue(row, metric) : null;
+    })(),
+  }));
+}
+
+/**
  * One comparison line per tracked competitor, aligned to the same points.
  *
  * Every point already carries the full ranking roster, so nothing is fetched to
@@ -153,7 +205,7 @@ const SERIES_STROKES = [
 export function toCompetitorSeries(
   points: readonly VisibilityTrendPoint[],
   metric: TrendMetric,
-  limit = SERIES_STROKES.length,
+  limit = TREND_SERIES_LIMIT,
 ): { label: string; values: (number | null)[]; strokeClass: string }[] {
   const latest = points.at(-1);
   const names = (latest?.rankings ?? [])
@@ -166,16 +218,7 @@ export function toCompetitorSeries(
     strokeClass: SERIES_STROKES[index % SERIES_STROKES.length],
     values: points.map((point) => {
       const row = point.rankings.find((entry) => entry.name === name);
-      if (!row) return null;
-      // Each metric reads its OWN column. Plotting mention rate under a Share
-      // of voice heading drew a line that was not the metric selected.
-      const value =
-        metric === 'owned_citation_rate'
-          ? row.citation_rate
-          : metric === 'sov'
-            ? row.share_of_voice
-            : row.mention_rate;
-      return value === null || value === undefined ? null : value * 100;
+      return row ? rankingMetricValue(row, metric) : null;
     }),
   }));
 }
