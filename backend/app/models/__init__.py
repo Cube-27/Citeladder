@@ -45,7 +45,6 @@ from app.models.billing import (
     GrantRevocation,
     IdempotencyRecord,
     PendingActivation,
-    WorkspaceBillingLink,
 )
 from app.models.billing_invoice import (
     BillingInvoice as BillingInvoice,
@@ -150,7 +149,11 @@ from app.models.traffic import (
 )
 from app.models.user import User
 from app.models.user_identity import UserIdentity
-from app.models.workspace import Workspace, WorkspaceMember
+from app.models.workspace import (
+    Workspace,
+    WorkspaceInvitation,
+    WorkspaceMember,
+)
 
 __all__ = [
     "AccountGrant",
@@ -274,7 +277,7 @@ __all__ = [
     "User",
     "UserIdentity",
     "Workspace",
-    "WorkspaceBillingLink",
+    "WorkspaceInvitation",
     "WorkspaceMember",
     "WorkspaceSiteHealthRuntime",
 ]

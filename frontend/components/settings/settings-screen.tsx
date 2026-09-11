@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { BillingSettings } from '@/components/settings/billing-settings';
+import { MemberSettings } from '@/components/settings/member-settings';
 import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { projectsApi } from '@/lib/api/projects';
@@ -19,7 +20,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { useSessionUser } from '@/lib/auth/session-guard';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_DELETION_CAPABILITY } from '@/lib/config/billing';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { emailInitials } from '@/lib/utils';
 import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -66,12 +67,23 @@ function DetailRow({
 
 const SETTINGS_TABS = [
   { id: 'account', label: 'Account' },
+  { id: 'members', label: 'Members' },
   { id: 'billing', label: 'Billing' },
   { id: 'providers', label: 'Providers' },
   { id: 'integrations', label: 'Integrations' },
 ] as const;
 
 type SettingsTab = (typeof SETTINGS_TABS)[number]['id'];
+
+/**
+ * Members is administrative, so a role without `manage_members` is not shown
+ * a tab whose only content would be an explanation of why it is empty. The
+ * panel keeps its own guard: hiding the tab is the courtesy, the server is
+ * the boundary, and a deep link still lands somewhere honest.
+ */
+function visibleTabs(mayManageMembers: boolean) {
+  return SETTINGS_TABS.filter((tab) => tab.id !== 'members' || mayManageMembers);
+}
 
 const SETTINGS_TAB_CODEC = stringUrlCodec(
   SETTINGS_TABS.map((tab) => tab.id),
@@ -217,14 +229,20 @@ export function SettingsScreen() {
   const updatedLabel = formatTimestamp(user.updated_at);
   // Deep-linkable initial tab (`/settings?tab=providers` from the onboarding
   // card); invalid/absent values fall back to Account.
-  const [activeTab, setActiveTab] = useUrlState('tab', SETTINGS_TAB_CODEC);
+  const [requestedTab, setActiveTab] = useUrlState('tab', SETTINGS_TAB_CODEC);
+  const mayManageMembers = useWorkspaceCapability('manage_members');
+  const tabs = visibleTabs(mayManageMembers);
+  // `?tab=members` is deep-linkable, so a non-administrator can arrive asking
+  // for a tab that is not offered. Fall back to Account rather than selecting
+  // a tab that no longer exists, which would leave no panel visible at all.
+  const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'account';
 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
-        items={SETTINGS_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
+        items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
         ariaLabel="Settings sections"
         rootClassName="grid gap-[var(--page-section-gap)]"
       >
@@ -289,6 +307,10 @@ export function SettingsScreen() {
           </div>
 
           <ProjectDeletionControls />
+        </TabPanel>
+
+        <TabPanel value="members" forceMount className="focus-ring data-[state=inactive]:hidden">
+          <MemberSettings />
         </TabPanel>
 
         <TabPanel value="providers" forceMount className="focus-ring data-[state=inactive]:hidden">

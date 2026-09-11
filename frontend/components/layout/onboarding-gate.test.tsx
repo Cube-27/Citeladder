@@ -20,7 +20,7 @@ let contextValue: {
   status: SelectionStatus;
   errorScope: FailureScope;
   activeWorkspaceId: string | null;
-  activeWorkspace: { id: string; role: Role } | null;
+  activeWorkspace: { id: string; role: Role; capabilities: readonly string[] } | null;
   retry: () => void;
 };
 vi.mock('@/lib/project/project-context', () => ({
@@ -28,12 +28,7 @@ vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => contextValue,
 }));
 
-let entitlement: {
-  isLoading: boolean;
-  usage: unknown;
-  usageIsLoading: boolean;
-  usageIsError: boolean;
-};
+let entitlement: { isLoading: boolean; entitlement: unknown };
 vi.mock('@/lib/billing/entitlement-context', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useEntitlement: () => entitlement,
@@ -41,10 +36,31 @@ vi.mock('@/lib/billing/entitlement-context', async (importOriginal) => ({
 
 import { OnboardingGate } from './onboarding-gate';
 
-/** A resolved usage payload granting `remaining` further project slots. */
-function usage(remaining: number) {
-  return { status: 'resolved', items: [{ key: 'project_slots', remaining }] };
+/**
+ * A resolved workspace entitlement leaving `remaining` further project slots.
+ *
+ * The allowance now comes from the MEMBER-SAFE occupancy hints on the
+ * workspace projection, not from the owner-private usage report — so a Member
+ * reaches the same state an Owner does without reading the workspace's
+ * finances.
+ */
+function withSlots(remaining: number) {
+  return {
+    status: 'resolved',
+    occupancy: [{ key: 'project_slots', allowance: 1, consumed: 1 - remaining, remaining }],
+  };
 }
+
+/** An entitlement that never resolved: the allowance is not answerable. */
+const UNRESOLVED = { status: 'entitlement_unresolved', occupancy: [] };
+
+/** The effective capabilities each role publishes on the workspace row. */
+const CAPABILITIES: Record<Role, readonly string[]> = {
+  owner: ['manage_billing', 'manage_credentials', 'manage_members', 'read', 'run', 'write'],
+  admin: ['manage_billing', 'manage_credentials', 'manage_members', 'read', 'run', 'write'],
+  member: ['read', 'run', 'write'],
+  viewer: ['read'],
+};
 
 function setContext(
   status: SelectionStatus,
@@ -55,7 +71,7 @@ function setContext(
     status,
     errorScope,
     activeWorkspaceId: WORKSPACE,
-    activeWorkspace: { id: WORKSPACE, role },
+    activeWorkspace: { id: WORKSPACE, role, capabilities: CAPABILITIES[role] },
     retry: vi.fn(),
   };
 }
@@ -64,7 +80,7 @@ beforeEach(() => {
   replace.mockClear();
   pathname = '/projects';
   setContext('ready');
-  entitlement = { isLoading: false, usage: usage(1), usageIsLoading: false, usageIsError: false };
+  entitlement = { isLoading: false, entitlement: withSlots(1) };
 });
 
 describe('OnboardingGate', () => {
@@ -183,7 +199,7 @@ describe('OnboardingGate', () => {
 
   it('does not loop through creation when the allowance is exhausted', () => {
     setContext('empty');
-    entitlement = { isLoading: false, usage: usage(0), usageIsLoading: false, usageIsError: false };
+    entitlement = { isLoading: false, entitlement: withSlots(0) };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -196,14 +212,13 @@ describe('OnboardingGate', () => {
     ).toBeInTheDocument();
   });
 
-  it('retries rather than asserting a limit when the allowance read failed', () => {
-    // A stale positive value can still be in the cache after a failed refetch.
-    // Redirecting into creation on the strength of a number the server just
-    // refused to confirm is how a transient failure becomes a rejected second
-    // attempt — and telling the reader their access excludes another project
-    // would be a claim about an allowance nobody could read.
+  it('retries rather than asserting a limit when the allowance is unresolved', () => {
+    // Redirecting into creation on the strength of a number the server never
+    // confirmed is how a transient failure becomes a rejected second attempt —
+    // and telling the reader their access excludes another project would be a
+    // claim about an allowance nobody could read.
     setContext('empty');
-    entitlement = { isLoading: false, usage: usage(1), usageIsLoading: false, usageIsError: true };
+    entitlement = { isLoading: false, entitlement: UNRESOLVED };
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -217,7 +232,7 @@ describe('OnboardingGate', () => {
   });
 
   it('waits for entitlements so the shell paints complete', () => {
-    entitlement = { isLoading: true, usage: null, usageIsLoading: true, usageIsError: false };
+    entitlement = { isLoading: true, entitlement: null };
     render(
       <OnboardingGate>
         <p>workspace</p>

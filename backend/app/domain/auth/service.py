@@ -19,7 +19,7 @@ from app.core.security import (
     verify_password,
 )
 from app.domain.billing.bootstrap import (
-    ensure_user_billing,
+    ensure_billing_for_user_workspaces,
 )
 from app.domain.workspaces.service import ensure_personal_workspace
 from app.models.user import User
@@ -93,7 +93,7 @@ async def provision_new_account(
     once so the user, workspace, membership, and billing rows land atomically.
     """
     workspace = await ensure_personal_workspace(session, user)
-    await ensure_user_billing(
+    await ensure_billing_for_user_workspaces(
         session,
         user,
         workspace_ids=(workspace.id,) if workspace is not None else None,
@@ -123,7 +123,7 @@ async def authenticate_user(
     if not verify_password(password, user.hashed_password):
         return None
     created = await ensure_personal_workspace(session, user)
-    await ensure_user_billing(
+    await ensure_billing_for_user_workspaces(
         session,
         user,
         workspace_ids=(created.id,) if created is not None else None,

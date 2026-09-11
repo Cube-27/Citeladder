@@ -21,6 +21,11 @@ export const workspaceKeys = {
   all: ['workspaces'] as const,
   list: () => ['workspaces', 'list'] as const,
   productTour: (workspaceId: string) => ['workspaces', 'product-tour', workspaceId] as const,
+  // Administrative reads. The workspace is part of the key because the
+  // response IS that workspace's roster: keyed without it, switching
+  // workspace would show the previous one's members until a refetch landed.
+  members: (workspaceId: string) => ['workspaces', 'members', workspaceId] as const,
+  invitations: (workspaceId: string) => ['workspaces', 'invitations', workspaceId] as const,
 };
 
 export const projectKeys = {

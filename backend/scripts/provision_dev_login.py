@@ -25,7 +25,10 @@ from app.core.config import settings
 from app.core.config.entitlements import CAPABILITY_REGISTRY, CapabilityType
 from app.core.database import SessionLocal, dispose_engine
 from app.domain.auth.service import authenticate_user, get_user_by_email, register_user
-from app.domain.billing.bootstrap import ensure_initial_catalog, ensure_user_billing
+from app.domain.billing.bootstrap import (
+    ensure_initial_catalog,
+    ensure_workspace_billing,
+)
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.types import GrantSpec
 from app.domain.workspaces.service import ensure_personal_workspace
@@ -88,10 +91,10 @@ async def _run(email: str, password: str, counter_allowance: int) -> None:
                 )
             if workspace is None:
                 raise RuntimeError("Development user has no workspace membership")
-            account = await ensure_user_billing(
+            account = await ensure_workspace_billing(
                 session,
-                user,
-                workspace_ids=(workspace.id,),
+                workspace_id=workspace.id,
+                provisioning_user=user,
                 provision_access=False,
             )
             await issue_override_bundle(

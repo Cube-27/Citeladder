@@ -48,7 +48,15 @@ from app.domain.site_health.service import (
     SiteHealthNotFoundError,
 )
 
-from .common import _bad_cursor, _not_found, _SessionDep, _WorkspaceDep, router
+from .common import (
+    _bad_cursor,
+    _not_found,
+    _RunDep,
+    _SessionDep,
+    _WorkspaceDep,
+    _WriteDep,
+    router,
+)
 
 
 def _selection_error_response(exc: Exception) -> ApiException:
@@ -104,7 +112,7 @@ async def get_entitlements_endpoint(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_crawl_endpoint(
-    payload: CreateCrawlRequest, ctx: _WorkspaceDep, session: _SessionDep
+    payload: CreateCrawlRequest, ctx: _RunDep, session: _SessionDep
 ) -> CrawlResponse:
     await enforce_workspace_request(
         session,
@@ -201,7 +209,7 @@ async def get_crawl_endpoint(
 
 @router.post("/site-crawls/{crawl_id}/cancel", response_model=CrawlResponse)
 async def cancel_crawl_endpoint(
-    crawl_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    crawl_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> CrawlResponse:
     try:
         crawl = await service.cancel_crawl(
@@ -266,7 +274,7 @@ async def get_monitored_urls_endpoint(
 async def replace_monitored_urls_endpoint(
     project_id: uuid.UUID,
     payload: ReplaceMonitoredRequest,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> MonitoredUrlsResponse:
     # Authorize the project first so a foreign id is a 404 (not a coded error).
@@ -307,7 +315,7 @@ async def replace_monitored_urls_endpoint(
 async def bulk_select_monitored_urls_endpoint(
     project_id: uuid.UUID,
     payload: BulkSelectMonitoredRequest,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> MonitoredUrlsResponse:
     """Server-resolved bulk selection (first N / all / clear).

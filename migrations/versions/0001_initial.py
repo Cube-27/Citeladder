@@ -54,7 +54,10 @@ def upgrade() -> None:
         sa.Column("lease_expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
-            "provider", "external_event_id", name="uq_billing_webhook_external"
+            "provider",
+            "provider_mode",
+            "external_event_id",
+            name="uq_billing_webhook_external",
         ),
     )
     op.create_table(
@@ -253,7 +256,8 @@ def upgrade() -> None:
     op.create_table(
         "billing_accounts",
         sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("owner_user_id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("owner_user_id", sa.UUID(), nullable=True),
         sa.Column("status", sa.String(length=24), nullable=False),
         sa.Column("billing_country", sa.String(length=2), nullable=False),
         sa.Column("country_verification", sa.String(length=16), nullable=False),
@@ -276,14 +280,25 @@ def upgrade() -> None:
             "entitlement_lifecycle_version >= 0",
             name="ck_billing_account_entitlement_version_nonneg",
         ),
-        sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_index(
+        op.f("ix_billing_accounts_workspace_id"),
+        "billing_accounts",
+        ["workspace_id"],
+        unique=True,
+    )
+    # Audit metadata only: non-unique, and a departing user SETs NULL rather
+    # than cascading the workspace's billing account away.
     op.create_index(
         op.f("ix_billing_accounts_owner_user_id"),
         "billing_accounts",
         ["owner_user_id"],
-        unique=True,
+        unique=False,
     )
     op.create_table(
         "introductory_operator_codes",
@@ -553,6 +568,57 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
+        "workspace_invitations",
+        sa.Column("id", sa.UUID(), nullable=False),
+        sa.Column("workspace_id", sa.UUID(), nullable=False),
+        sa.Column("email_normalized", sa.String(length=255), nullable=False),
+        sa.Column("role", sa.String(length=20), nullable=False),
+        sa.Column("token_sha256", sa.String(length=64), nullable=False),
+        sa.Column("invited_by_user_id", sa.UUID(), nullable=True),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("accepted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("accepted_by_user_id", sa.UUID(), nullable=True),
+        sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint(
+            "role IN ('admin', 'member', 'viewer')",
+            name="ck_workspace_invitation_role",
+        ),
+        sa.ForeignKeyConstraint(
+            ["accepted_by_user_id"], ["users.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["invited_by_user_id"], ["users.id"], ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_sha256"),
+    )
+    op.create_index(
+        op.f("ix_workspace_invitations_workspace_id"),
+        "workspace_invitations",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_workspace_invitation_workspace",
+        "workspace_invitations",
+        ["workspace_id", "created_at"],
+        unique=False,
+    )
+    # At most ONE live invitation per (workspace, address): a revoked or
+    # accepted row stays for audit without blocking a fresh invitation.
+    op.create_index(
+        "uq_workspace_invitation_pending_email",
+        "workspace_invitations",
+        ["workspace_id", "email_normalized"],
+        unique=True,
+        postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
+    )
+    op.create_table(
         "workspace_members",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
@@ -800,6 +866,12 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("billing_account_id", sa.UUID(), nullable=False),
         sa.Column("provider", sa.String(length=24), nullable=False),
+        sa.Column(
+            "provider_mode",
+            sa.String(length=8),
+            server_default="disabled",
+            nullable=False,
+        ),
         sa.Column("external_customer_id", sa.String(length=255), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
@@ -810,10 +882,14 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "billing_account_id",
             "provider",
+            "provider_mode",
             name="uq_billing_customer_account_provider",
         ),
         sa.UniqueConstraint(
-            "provider", "external_customer_id", name="uq_billing_customer_external"
+            "provider",
+            "provider_mode",
+            "external_customer_id",
+            name="uq_billing_customer_external",
         ),
     )
     op.create_index(
@@ -1336,32 +1412,6 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
-        "workspace_billing_links",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("workspace_id", sa.UUID(), nullable=False),
-        sa.Column("billing_account_id", sa.UUID(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["billing_account_id"], ["billing_accounts.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_workspace_billing_links_billing_account_id"),
-        "workspace_billing_links",
-        ["billing_account_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_workspace_billing_links_workspace_id"),
-        "workspace_billing_links",
-        ["workspace_id"],
-        unique=True,
-    )
-    op.create_table(
         "audit_engine_snapshots",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("audit_id", sa.UUID(), nullable=False),
@@ -1449,6 +1499,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "provider",
+            "provider_mode",
             "external_subscription_id",
             name="uq_billing_subscription_external",
         ),
@@ -4513,7 +4564,7 @@ def upgrade() -> None:
     op.create_index(
         "uq_pending_activation_provider_reference",
         "pending_activations",
-        ["provider", "external_reference"],
+        ["provider", "provider_mode", "external_reference"],
         unique=True,
         postgresql_where=sa.text("external_reference IS NOT NULL"),
     )
@@ -4567,8 +4618,8 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_billing_payments_billing_account_id"), "billing_payments", ["billing_account_id"], unique=False)
     op.create_index("ix_billing_payment_account_paid", "billing_payments", ["billing_account_id", "paid_at"], unique=False)
-    op.create_index("uq_billing_payment_external", "billing_payments", ["provider", "external_payment_id"], unique=True, postgresql_where=sa.text("receipt_kind = 'payment'"))
-    op.create_index("uq_billing_refund_external", "billing_payments", ["provider", "external_refund_id"], unique=True, postgresql_where=sa.text("external_refund_id IS NOT NULL"))
+    op.create_index("uq_billing_payment_external", "billing_payments", ["provider", "provider_mode", "external_payment_id"], unique=True, postgresql_where=sa.text("receipt_kind = 'payment'"))
+    op.create_index("uq_billing_refund_external", "billing_payments", ["provider", "provider_mode", "external_refund_id"], unique=True, postgresql_where=sa.text("external_refund_id IS NOT NULL"))
     op.create_table(
         "billing_invoice_counters",
         sa.Column("financial_year", sa.String(length=7), nullable=False),
@@ -6054,7 +6105,6 @@ def downgrade() -> None:
         "audit_schedules",
         "agent_tool_attempts",
         "agent_model_attempts",
-        "workspace_billing_links",
         "unintended_domains",
         "traffic_snapshots",
         "topics",
@@ -6088,6 +6138,7 @@ def downgrade() -> None:
         "account_grants",
         "workspace_site_health_runtime",
         "workspace_members",
+        "workspace_invitations",
         "queue_workspace_turns",
         "provider_connections",
         "projects",

@@ -10,10 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.billing.reads import account_usage
 from app.domain.entitlements.types import GrantSpec
-from app.models.billing import WorkspaceBillingLink
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
-from app.models.workspace import Workspace
 from tests.component.auth_helpers import register_and_login
 from tests.component.occupancy_helpers import (
     seed_account_workspace,
@@ -39,18 +37,19 @@ async def test_login_usage_allows_first_project(
 
 
 @pytest.mark.asyncio
-async def test_usage_counts_linked_workspaces_and_isolates_other_accounts(
+async def test_usage_counts_only_its_own_workspace(
     db_session: AsyncSession,
 ) -> None:
+    """One workspace, one account: usage is that workspace's occupancy.
+
+    A second workspace has its OWN account and its own budget, so its
+    projects and prompts never appear in this account's usage. This replaces
+    the previous multi-workspace aggregation, superseded by the owner's
+    one-account-per-workspace decision.
+    """
     account, workspace, _ = await seed_account_workspace(db_session)
     _, foreign_workspace, _ = await seed_account_workspace(db_session)
-    linked = Workspace(name="Second owned workspace")
-    db_session.add(linked)
-    await db_session.flush()
-    db_session.add(
-        WorkspaceBillingLink(workspace_id=linked.id, billing_account_id=account.id)
-    )
-    for workspace_id in (workspace.id, linked.id, foreign_workspace.id):
+    for workspace_id in (workspace.id, foreign_workspace.id):
         project = Project(workspace_id=workspace_id, name="Persisted project")
         db_session.add(project)
         await db_session.flush()
@@ -78,12 +77,12 @@ async def test_usage_counts_linked_workspaces_and_isolates_other_accounts(
         items["project_slots"].allowance,
         items["project_slots"].consumed,
         items["project_slots"].remaining,
-    ) == (1, 2, 0)
+    ) == (1, 1, 0)
     assert (
         items["prompt_slots"].allowance,
         items["prompt_slots"].consumed,
         items["prompt_slots"].remaining,
-    ) == (5, 2, 3)
+    ) == (5, 1, 4)
     assert items["project_slots"].reserved == items["prompt_slots"].reserved == 0
     assert items["monitored_urls"].limit_state == "unknown"
     assert not db_session.new and not db_session.dirty and not db_session.deleted

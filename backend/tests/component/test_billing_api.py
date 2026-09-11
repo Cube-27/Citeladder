@@ -25,13 +25,14 @@ from pydantic import SecretStr
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import billing as billing_api
 from app.connectors.billing.base import ProviderSubscription
 from app.core.config.billing_settings import billing_settings
 from app.core.config.entitlements import (
     GRANT_SOURCE_PLAN,
     KEY_MONITORED_URLS,
 )
+from app.core.config.razorpay_settings import razorpay_settings
+from app.domain.billing import service as billing_service
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
@@ -218,7 +219,7 @@ async def test_signed_unmatched_webhook_is_acknowledged_and_grants_nothing(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     raw = json.dumps(
         {
             "event": "payment.captured",
@@ -251,7 +252,7 @@ async def test_activation_issues_one_period_bundle_and_projects_runtime(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-activate@example.com")
     baseline_version = await _account_version(db_session)
@@ -338,7 +339,7 @@ async def test_stale_event_is_rejected_without_a_version_bump(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-stale@example.com")
     baseline_version = await _account_version(db_session)
@@ -375,7 +376,7 @@ async def test_cancellation_without_period_preserves_verified_paid_time_on_repla
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-terminal@example.com")
     workspace = (await client.get("/api/v1/workspaces")).json()[0]
@@ -467,7 +468,7 @@ async def test_cancel_at_period_end_keeps_access_and_writes_no_revocations(
     db_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     _patch_catalog(monkeypatch)
     await _register(client, "billing-cape@example.com")
     baseline_version = await _account_version(db_session)
@@ -547,6 +548,10 @@ async def test_cancel_marks_cancel_at_period_end(
     now = datetime.now(UTC)
     subscription = BillingSubscription(
         billing_account_id=account.id,
+        # Cancellation resolves the adapter from the row's ORIGINATING pair,
+        # so the row has to name a real environment rather than the
+        # "disabled" default.
+        provider_mode="test",
         external_subscription_id="sub_cancel_me",
         external_price_id="plan_test",
         catalog_key="tier_1",
@@ -578,7 +583,11 @@ async def test_cancel_marks_cancel_at_period_end(
                 cancel_at_period_end=True,
             )
 
-    monkeypatch.setattr(billing_api, "get_billing_provider", FakeProvider)
+    # The injection point moved with the routing: cancellation no longer asks
+    # the new-checkout default, it asks the subscription's own provider.
+    monkeypatch.setattr(
+        billing_service, "adapter_for_record", lambda _provider, _mode: FakeProvider()
+    )
     response = await client.delete(
         "/api/v1/billing/subscription", headers={"Idempotency-Key": "cancel-key-2"}
     )

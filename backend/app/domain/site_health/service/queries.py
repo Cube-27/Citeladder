@@ -28,6 +28,7 @@ from app.core.config.site_health_contracts import (
 from app.core.config.site_health_runtime import (
     site_health_settings,
 )
+from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.service import (
     refresh_site_health_runtime_for_account,
     refresh_site_health_runtime_for_workspace,
@@ -62,7 +63,6 @@ from app.domain.site_health.service.presentation import (
     presentation_status_for,
     project_crawl,
 )
-from app.models.billing import WorkspaceBillingLink
 from app.models.site_health.analysis import SiteIssue, SitePageAnalysis
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.links import SitePageLinkMetric
@@ -98,11 +98,7 @@ async def _site_health_entitlement_view(
     neutral sample limit, no disclosure, and empty grant IDs. The read
     commits nothing.
     """
-    account_id = await session.scalar(
-        select(WorkspaceBillingLink.billing_account_id).where(
-            WorkspaceBillingLink.workspace_id == workspace_id
-        )
-    )
+    account_id = await billing_account_id_for(session, workspace_id)
     if account_id is None:
         entitlement = await resolve_workspace_entitlement(
             session, workspace_id=workspace_id, at=at

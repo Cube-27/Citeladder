@@ -110,17 +110,24 @@ export type SubscriptionCheckoutInput = {
   country_code: string;
 } & BillingCustomerDetails;
 
-export type CheckoutCallback = {
-  razorpay_payment_id: string;
-  razorpay_subscription_id: string;
-  razorpay_signature: string;
-};
+/**
+ * A provider's browser callback, in the NEUTRAL wrapper the API accepts.
+ *
+ * The field names inside are the vendor's own; the shared controller never
+ * reads them, and the originating adapter allowlists exactly the ones it
+ * accepts before checking any signature.
+ */
+export type CheckoutCallback = { fields: Record<string, string> };
 
 export const billingApi = {
-  checkout: async (activationId: string) =>
+  // These endpoints are WORKSPACE-scoped on the server, so each one carries
+  // its workspace explicitly. Without it the transport falls back to the
+  // mutable active selection, and a call begun in one workspace could be
+  // answered for another after a switch.
+  checkout: async (activationId: string, options?: ApiRequestOptions) =>
     strictValidate(
       subscriptionCheckoutSchema,
-      await apiClient.get<unknown>(`/billing/subscriptions/${activationId}/checkout`),
+      await apiClient.get<unknown>(`/billing/subscriptions/${activationId}/checkout`, options),
       'billing.checkout',
     ),
   activation: async (activationId: string, options?: ApiRequestOptions) =>
@@ -129,10 +136,18 @@ export const billingApi = {
       await apiClient.get<unknown>(`/billing/activations/${activationId}`, options),
       'billing.activation',
     ),
-  verifyCheckout: async (activationId: string, callback: CheckoutCallback) =>
+  verifyCheckout: async (
+    activationId: string,
+    callback: CheckoutCallback,
+    options?: ApiRequestOptions,
+  ) =>
     strictValidate(
       activationSchema,
-      await apiClient.post<unknown>(`/billing/subscriptions/${activationId}/verify`, callback),
+      await apiClient.post<unknown>(
+        `/billing/subscriptions/${activationId}/verify`,
+        callback,
+        options,
+      ),
       'billing.verifyCheckout',
     ),
   catalog: async (countryCode?: string, options?: ApiRequestOptions) => {

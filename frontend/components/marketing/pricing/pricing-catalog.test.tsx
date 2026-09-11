@@ -182,6 +182,18 @@ const anonymous = () =>
   );
 const authenticated = () => http.get('/api/v1/auth/me', () => HttpResponse.json({ user: USER }));
 
+/**
+ * Mount the catalog the way /pricing does: with NO workspace/project
+ * selection above it.
+ *
+ * This is the point of the file. The page is public — it renders for
+ * anonymous visitors and is prerendered at build time — so a consumer here
+ * that needs the authenticated shell's context is not a degraded experience,
+ * it is a build failure. Rendering inside the harness's default selection
+ * would hide exactly that.
+ */
+const renderPricingPage = () => renderWithProviders(<PricingCatalog />, { projectSelection: null });
+
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   window.history.replaceState(null, '', '/pricing');
@@ -198,7 +210,7 @@ afterAll(() => mswServer.close());
 describe('PricingCatalog', () => {
   it('renders four tiers from the catalog without a free plan', async () => {
     mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
-    renderWithProviders(<PricingCatalog />);
+    renderPricingPage();
 
     await screen.findByRole('heading', { name: 'Starter' }, { timeout: 3_000 });
     expect(document.querySelectorAll('[data-tier]')).toHaveLength(4);
@@ -216,7 +228,7 @@ describe('PricingCatalog', () => {
 
   it('defaults to BYOK', async () => {
     mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
-    renderWithProviders(<PricingCatalog />);
+    renderPricingPage();
 
     await screen.findByRole('heading', { name: 'Starter' });
     expect(screen.getByRole('switch', { name: /use your own api keys/i })).toHaveAttribute(
@@ -227,7 +239,7 @@ describe('PricingCatalog', () => {
 
   it('keeps unsupported funded checkout disabled', async () => {
     mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
-    renderWithProviders(<PricingCatalog />);
+    renderPricingPage();
 
     await screen.findByRole('heading', { name: 'Starter' });
     await userEvent.click(screen.getByRole('switch', { name: /use your own api keys/i }));
@@ -240,7 +252,7 @@ describe('PricingCatalog', () => {
   it('mirrors the switch into ?byok= while preserving other parameters', async () => {
     window.history.replaceState(null, '', '/pricing?utm=ads#plans');
     mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
-    renderWithProviders(<PricingCatalog />);
+    renderPricingPage();
 
     await screen.findByRole('heading', { name: 'Starter' });
     await userEvent.click(screen.getByRole('switch', { name: /use your own api keys/i }));
@@ -260,7 +272,7 @@ describe('PricingCatalog', () => {
         return HttpResponse.json(activation('base', 'tier_1'));
       }),
     );
-    renderWithProviders(<PricingCatalog />);
+    renderPricingPage();
 
     await screen.findByRole('heading', { name: 'Starter' });
     await userEvent.click(await screen.findByRole('button', { name: /Choose Starter/ }));
@@ -328,7 +340,7 @@ describe('PricingCatalog', () => {
     );
     window.history.replaceState(null, '', '/pricing?resumeActivation=1');
 
-    renderWithProviders(<PricingCatalog />);
+    renderPricingPage();
 
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual({
@@ -379,7 +391,7 @@ describe('PricingCatalog', () => {
     );
     window.history.replaceState(null, '', '/pricing?resumeActivation=1');
 
-    renderWithProviders(<PricingCatalog />);
+    renderPricingPage();
 
     expect(
       await screen.findByText(/no longer available. Please choose again/i),
@@ -390,7 +402,7 @@ describe('PricingCatalog', () => {
 
   it('renders add-ons and top-ups generically, with unpriced entries unavailable', async () => {
     mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
-    renderWithProviders(<PricingCatalog />);
+    renderPricingPage();
 
     await screen.findByRole('heading', { name: 'Add-ons' });
     const priced = document.querySelector('[data-catalog-key="addon_seats"]') as HTMLElement;
@@ -412,7 +424,7 @@ describe('PricingCatalog', () => {
       ),
       anonymous(),
     );
-    renderWithProviders(<PricingCatalog />);
+    renderPricingPage();
 
     expect(
       await screen.findByRole('button', { name: 'Retry' }, { timeout: 10_000 }),
@@ -423,7 +435,7 @@ describe('PricingCatalog', () => {
 
   it('renders no trial CTA anywhere', async () => {
     mswServer.use(catalogHandler(), noOfferHandler(), anonymous());
-    renderWithProviders(<PricingCatalog />);
+    renderPricingPage();
 
     await screen.findByRole('heading', { name: 'Starter' });
     expect(document.body.textContent).not.toMatch(/free trial|7 days free|start trial/i);

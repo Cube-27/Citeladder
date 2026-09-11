@@ -33,7 +33,7 @@ from app.domain.site_health.selection import (
 )
 from app.domain.site_health.service import InvalidCursorError, SiteHealthNotFoundError
 
-from .common import _bad_cursor, _not_found, _SessionDep, _WorkspaceDep, router
+from .common import _bad_cursor, _not_found, _RunDep, _SessionDep, _WorkspaceDep, router
 
 
 @router.get("/site-crawls/{crawl_id}/pages", response_model=PagesPage)
@@ -96,7 +96,7 @@ async def get_page_detail_endpoint(
 async def rerun_page_endpoint(
     crawl_id: uuid.UUID,
     site_url_id: uuid.UUID,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
 ) -> RerunPageResponse:
     """Enqueue an explicit rerun of one page's analysis (202).

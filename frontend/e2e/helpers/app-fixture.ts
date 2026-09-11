@@ -31,6 +31,9 @@ const CONTENT_CREATION_GRANT_ID = '55555555-5555-4555-8555-555555555555';
 const GROWTH_AGENT_GRANT_ID = '66666666-6666-4666-8666-666666666666';
 const ENTITLEMENT_PERIOD_END = '2030-02-01T00:00:00Z';
 
+/** The one project allowance this fixture account has, used everywhere. */
+const PROJECT_SLOT_ALLOWANCE = 1;
+
 /** A bounded, resolved account state for feature-permitted shell flows. */
 export const PERMITTED_ENTITLEMENT = {
   billing_account_id: '44444444-4444-4444-8444-444444444444',
@@ -51,7 +54,7 @@ export const PERMITTED_ENTITLEMENT = {
     {
       key: 'project_slots',
       capability_type: 'counter.occupancy',
-      value: 1,
+      value: PROJECT_SLOT_ALLOWANCE,
       contributing_grant_ids: [PROJECT_SLOTS_GRANT_ID],
       ordered_draw_grant_ids: [],
     },
@@ -115,10 +118,10 @@ function permittedUsage(projectCount: number) {
         capability_type: 'counter.occupancy',
         unit: 'project',
         limit_state: 'finite',
-        allowance: 1,
+        allowance: PROJECT_SLOT_ALLOWANCE,
         consumed: projectCount,
         reserved: 0,
-        remaining: Math.max(0, 1 - projectCount),
+        remaining: Math.max(0, PROJECT_SLOT_ALLOWANCE - projectCount),
         window_started_at: null,
         resets_at: null,
         earliest_expiry: ENTITLEMENT_PERIOD_END,
@@ -128,10 +131,23 @@ function permittedUsage(projectCount: number) {
   } as const;
 }
 
-export function permittedWorkspaceEntitlement(workspaceId: string) {
+export function permittedWorkspaceEntitlement(workspaceId: string, projectCount = 1) {
   return {
     workspace_id: workspaceId,
     status: 'resolved',
+    // Member-safe occupancy hints: the shell reads its remaining project
+    // allowance from here rather than from the owner-private usage report.
+    // Derived exactly like `permittedUsage`, and from the same allowance the
+    // fixture's `project_slots` capability grants — three places disagreeing
+    // about one number is how a fixture stops describing a real account.
+    occupancy: [
+      {
+        key: 'project_slots',
+        allowance: PROJECT_SLOT_ALLOWANCE,
+        consumed: projectCount,
+        remaining: Math.max(0, PROJECT_SLOT_ALLOWANCE - projectCount),
+      },
+    ],
     registry_revision: PERMITTED_ENTITLEMENT.registry_revision,
     entitlement_lifecycle_version: PERMITTED_ENTITLEMENT.entitlement_lifecycle_version,
     valid_until: PERMITTED_ENTITLEMENT.valid_until,
@@ -195,6 +211,16 @@ function membershipRows(ids: readonly string[]) {
     id,
     name: 'Fixture Workspace',
     role: 'owner',
+    // The Owner's effective capabilities, as the backend's one role policy
+    // publishes them. The shell gates controls on these names.
+    capabilities: [
+      'manage_billing',
+      'manage_credentials',
+      'manage_members',
+      'read',
+      'run',
+      'write',
+    ],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   }));
@@ -240,7 +266,7 @@ export async function stubAuthedShell(
   );
   for (const workspaceId of new Set(workspacesFor(projects).map((workspace) => workspace.id))) {
     await page.route(`**/api/v1/workspaces/${workspaceId}/entitlements`, (route) =>
-      route.fulfill({ json: permittedWorkspaceEntitlement(workspaceId) }),
+      route.fulfill({ json: permittedWorkspaceEntitlement(workspaceId, projects.length) }),
     );
   }
   await page.route('**/api/v1/billing/usage', (route) =>

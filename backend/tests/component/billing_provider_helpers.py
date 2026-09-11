@@ -6,24 +6,29 @@ from pydantic import SecretStr
 from sqlalchemy import select
 
 from app.connectors.billing.base import ProviderPayment, ProviderSubscription
-from app.core.config.billing_settings import billing_settings
+from app.connectors.billing.razorpay_webhook import (
+    parse_payment_event,
+    parse_subscription_event,
+)
 from app.core.database import get_session
 from app.domain.billing.webhook_recovery import recover_webhook_receipts
-from app.domain.billing.webhooks import parse_payment_event, parse_subscription_event
 from app.main import app
 from app.models.billing import PendingActivation
+from tests.billing_settings_support import apply_billing_settings
 
 
 def configure_test_provider(monkeypatch):
-    for name, value in {
-        "razorpay_mode": "test",
-        "razorpay_key_id": "rzp_test_fixture",
-        "razorpay_key_secret": SecretStr("synthetic-api-secret"),
-        "quote_signing_secret": SecretStr("synthetic-quote-secret"),
-        "razorpay_test_ready": True,
-        "razorpay_test_international_ready": True,
-    }.items():
-        monkeypatch.setattr(billing_settings, name, value)
+    apply_billing_settings(
+        monkeypatch,
+        {
+            "razorpay_mode": "test",
+            "razorpay_key_id": "rzp_test_fixture",
+            "razorpay_key_secret": SecretStr("synthetic-api-secret"),
+            "quote_signing_secret": SecretStr("synthetic-quote-secret"),
+            "razorpay_test_ready": True,
+            "razorpay_test_international_ready": True,
+        },
+    )
 
 
 def captured_payment(
@@ -48,10 +53,10 @@ def captured_payment(
 async def drain_webhook(payload: dict) -> None:
     class FixtureProvider:
         async def fetch_payment(self, _reference):
-            return parse_payment_event(payload)
+            return parse_payment_event(payload, provider_mode="test")
 
         async def fetch_subscription(self, _reference):
-            record = parse_subscription_event(payload)
+            record = parse_subscription_event(payload, provider_mode="test")
             async for session in app.dependency_overrides[get_session]():
                 pending = await session.scalar(
                     select(PendingActivation).where(

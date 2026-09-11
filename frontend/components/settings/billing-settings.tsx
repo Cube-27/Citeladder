@@ -73,36 +73,63 @@ function billingReadsEnabled(enabled: boolean, workspaceId: string | null): bool
   return enabled && workspaceId !== null;
 }
 
-/** Account plan orchestration. Usage rendering lives in `UsageMeters`. */
-export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean }>) {
-  const queryClient = useQueryClient();
-  const { isLoading: entitlementLoading } = useEntitlement();
-  const workspaceId = useActiveWorkspaceId();
-  const reads = billingReadsEnabled(enabled, workspaceId);
+/**
+ * The three reads this screen renders, each scoped to the active workspace.
+ *
+ * Grouped so the screen states what it needs rather than how each one is
+ * fetched — and so the workspace appears in every key and every request, which
+ * is what keeps one workspace's receipts out of another's view.
+ */
+function useBillingReads({
+  workspaceId,
+  enabled,
+  reads,
+  country,
+}: {
+  workspaceId: string | null;
+  enabled: boolean;
+  reads: boolean;
+  country: string;
+}) {
   const entitlementQuery = useQuery({
     queryKey: queryKeys.billing.entitlement(workspaceId ?? 'unresolved'),
     queryFn: ({ signal }) => billingApi.entitlement({ signal, workspaceId }),
     enabled: reads,
     retry: false,
   });
-  const entitlement = entitlementQuery.data ?? null;
-  const state = useBillingState();
   const catalogQuery = useQuery({
-    queryKey: queryKeys.billing.catalog(state.country || undefined),
-    queryFn: ({ signal }) => billingApi.catalog(state.country || undefined, { signal }),
+    queryKey: queryKeys.billing.catalog(country || undefined),
+    queryFn: ({ signal }) => billingApi.catalog(country || undefined, { signal }),
     enabled,
     placeholderData: keepPreviousData,
   });
   const invoiceQuery = useQuery({
-    queryKey: [...queryKeys.billing.all, 'invoices'],
-    queryFn: ({ signal }) => billingApi.invoices({ signal }),
+    queryKey: [...queryKeys.billing.all, 'invoices', workspaceId ?? 'unresolved'],
+    queryFn: ({ signal }) => billingApi.invoices({ signal, workspaceId }),
     enabled,
     retry: false,
   });
+  return { entitlementQuery, catalogQuery, invoiceQuery };
+}
+
+/** Account plan orchestration. Usage rendering lives in `UsageMeters`. */
+export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean }>) {
+  const queryClient = useQueryClient();
+  const { isLoading: entitlementLoading } = useEntitlement();
+  const workspaceId = useActiveWorkspaceId();
+  const reads = billingReadsEnabled(enabled, workspaceId);
+  const state = useBillingState();
+  const { entitlementQuery, catalogQuery, invoiceQuery } = useBillingReads({
+    workspaceId,
+    enabled,
+    reads,
+    country: state.country,
+  });
+  const entitlement = entitlementQuery.data ?? null;
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
   const checkoutMutation = useSubscriptionCheckout();
   const cancelMutation = useMutation({
-    mutationFn: () => billingApi.cancelSubscription(),
+    mutationFn: () => billingApi.cancelSubscription({ workspaceId }),
     onSuccess: async () => {
       state.setCancelOpen(false);
       await refresh();

@@ -39,11 +39,7 @@ from app.domain.entitlements.types import (
     STATUS_RESOLVED,
     GrantSpec,
 )
-from app.models.billing import (
-    AccountGrant,
-    BillingAccount,
-    WorkspaceBillingLink,
-)
+from app.models.billing import AccountGrant, BillingAccount
 from app.models.site_health.runtime import WorkspaceSiteHealthRuntime
 from app.models.user import User
 from app.models.workspace import Workspace
@@ -68,15 +64,11 @@ async def _account_with_workspace(
     )
     session.add(user)
     await session.flush()
-    account = BillingAccount(owner_user_id=user.id)
-    session.add(account)
-    await session.flush()
     workspace = Workspace(name="Ent WS")
     session.add(workspace)
     await session.flush()
-    session.add(
-        WorkspaceBillingLink(workspace_id=workspace.id, billing_account_id=account.id)
-    )
+    account = BillingAccount(workspace_id=workspace.id, owner_user_id=user.id)
+    session.add(account)
     await session.commit()
     return account, workspace, user
 

@@ -19,7 +19,13 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.opportunities.exports import rows_to_csv, rows_to_markdown
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_run,
+    require_active_workspace_write,
+)
 from app.core.config.errors import (
     CODE_INVALID_CURSOR,
     CODE_NOT_FOUND,
@@ -97,6 +103,13 @@ from app.models.opportunity import (
 router = APIRouter(prefix="", tags=["opportunities"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
+_WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -238,7 +251,7 @@ async def get_summary_endpoint(
 )
 async def recompute_endpoint(
     project_id: uuid.UUID,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
     payload: RecomputeRequest | None = None,
 ) -> RecomputeResponse:
@@ -279,7 +292,7 @@ async def get_grouped_history_endpoint(
 async def create_implementation_event_endpoint(
     project_id: uuid.UUID,
     payload: ImplementationEventCreate,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
     response: Response,
     idempotency_key: Annotated[
@@ -422,7 +435,7 @@ async def get_opportunity_endpoint(
 async def update_status_endpoint(
     opportunity_id: uuid.UUID,
     payload: OpportunityStatusPatch,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> OpportunityItem:
     try:
@@ -449,7 +462,7 @@ async def update_status_endpoint(
 async def update_order_endpoint(
     project_id: uuid.UUID,
     payload: OpportunityOrderUpdate,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> OpportunityOrderResponse:
     try:
@@ -484,7 +497,7 @@ async def update_order_endpoint(
 )
 async def create_guidance_endpoint(
     opportunity_id: uuid.UUID,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
     idempotency_key: Annotated[
         str | None,

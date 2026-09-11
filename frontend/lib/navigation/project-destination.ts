@@ -7,6 +7,8 @@ import { useProjectContext } from '@/lib/project/project-context';
 
 const PROJECT_PARAM = 'project';
 const WORKSPACE_PARAM = 'workspace';
+/** The single-use invitation token. Never propagated to another URL. */
+const INVITATION_TOKEN_PARAM = 'token';
 
 /**
  * Build a destination that carries an explicit project.
@@ -41,6 +43,10 @@ export function workspaceDestination(
   const params = new URLSearchParams(search?.toString() ?? '');
   params.set(WORKSPACE_PARAM, workspaceId);
   params.delete(PROJECT_PARAM);
+  // A one-time invitation token is a credential, not a destination parameter.
+  // Carrying it forward would write it into the next URL and into browser
+  // history, where it long outlives the single use it was minted for.
+  params.delete(INVITATION_TOKEN_PARAM);
   return `${pathname}?${params.toString()}`;
 }
 
@@ -96,5 +102,34 @@ export function useSelectProject() {
       }
     },
     [activeProjectId, pathname, router, searchParams, setActiveProjectId],
+  );
+}
+
+/**
+ * The one way the shell changes its WORKSPACE selection (plan §2.4).
+ *
+ * Selecting a workspace is an explicit act, never inferred from a project, so
+ * this is deliberately separate from `useSelectProject`. The destination names
+ * the workspace and drops any project parameter: the previous workspace's
+ * project does not exist in the new one, and carrying it over would produce
+ * exactly the contradictory pair the provider has to reject.
+ *
+ * A deliberate switch to a DIFFERENT workspace pushes one history entry;
+ * selecting the one already active does nothing.
+ */
+export function useSelectWorkspace() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { activeWorkspaceId, setActiveWorkspaceId } = useProjectContext();
+
+  return useCallback(
+    (workspaceId: string, destination?: string) => {
+      const samePage = destination === undefined || destination === pathname;
+      if (workspaceId === activeWorkspaceId && samePage) return;
+      setActiveWorkspaceId(workspaceId);
+      router.push(workspaceDestination(destination ?? pathname, searchParams, workspaceId));
+    },
+    [activeWorkspaceId, pathname, router, searchParams, setActiveWorkspaceId],
   );
 }

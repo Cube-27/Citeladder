@@ -23,6 +23,17 @@ export function testProjectSelection(
     id: TEST_WORKSPACE_ID,
     name: 'Test Workspace',
     role: 'owner',
+    // The Owner's effective capabilities, as the backend's one role policy
+    // publishes them. Consumers gate controls on these names, so a harness
+    // that omitted them would hide exactly what most screens render.
+    capabilities: [
+      'manage_billing',
+      'manage_credentials',
+      'manage_members',
+      'read',
+      'run',
+      'write',
+    ],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   };
@@ -51,8 +62,14 @@ export function testProjectSelection(
 }
 
 type ProvidersOptions = Omit<RenderOptions, 'wrapper'> & {
-  /** Override the resolved workspace/project context for this render. */
-  projectSelection?: Partial<ProjectContextValue>;
+  /**
+   * Override the resolved workspace/project context for this render, or pass
+   * `null` to render with NO provider at all — the public marketing routes,
+   * which mount outside the authenticated shell. Reach for `null` whenever a
+   * component renders on both sides of that boundary: the default context is
+   * what would otherwise hide a consumer that cannot survive without one.
+   */
+  projectSelection?: Partial<ProjectContextValue> | null;
 };
 
 /**
@@ -73,13 +90,17 @@ type ProvidersOptions = Omit<RenderOptions, 'wrapper'> & {
 export function renderWithProviders(ui: ReactElement, options?: ProvidersOptions) {
   const queryClient = createAppQueryClient();
   const { projectSelection, ...renderOptions } = options ?? {};
-  const selection = testProjectSelection(projectSelection);
+  const selection = projectSelection === null ? null : testProjectSelection(projectSelection);
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <ProjectSelectionProvider value={selection}>{children}</ProjectSelectionProvider>
+          {selection === null ? (
+            children
+          ) : (
+            <ProjectSelectionProvider value={selection}>{children}</ProjectSelectionProvider>
+          )}
         </TooltipProvider>
       </QueryClientProvider>
     );

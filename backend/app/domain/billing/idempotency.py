@@ -43,6 +43,8 @@ from app.connectors.billing.base import (
     HostedSubscription,
     ProviderMetadata,
 )
+from app.connectors.billing.factory import new_checkout_binding
+from app.connectors.billing.registry import ProviderUnavailableError
 from app.core.config.billing_contracts import (
     ACTIVATION_FAILED,
     ACTIVATION_PENDING,
@@ -50,8 +52,8 @@ from app.core.config.billing_contracts import (
     IDEMPOTENCY_KEY_MAX_LENGTH,
     IDEMPOTENCY_KEY_MIN_LENGTH,
     IDEMPOTENCY_STARTED,
-    PROVIDER_RAZORPAY,
     REASON_ADDON_PENDING,
+    REASON_CHECKOUT_UNAVAILABLE,
     REASON_IDEMPOTENCY_KEY_REQUIRED,
     REASON_IDEMPOTENCY_KEY_REUSED,
     REASON_SUBSCRIPTION_PENDING,
@@ -188,6 +190,14 @@ async def _insert_intent(
 ) -> PendingActivation:
     """Insert the started record + pending row and COMMIT before provider I/O."""
     expires_at = now + timedelta(minutes=billing_settings.quote_validity_minutes)
+    # FREEZE the chosen provider and environment into the intent BEFORE any
+    # network call (plan §3.3). Everything that later follows this row —
+    # checkout init, callback verification, webhooks, reconciliation — reads
+    # these two fields back rather than the current new-checkout default.
+    try:
+        binding = new_checkout_binding()
+    except ProviderUnavailableError as exc:
+        raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE) from exc
     pending = PendingActivation(
         billing_account_id=account.id,
         activation_kind=intent.kind,
@@ -196,8 +206,8 @@ async def _insert_intent(
         catalog_revision=intent.quote.catalog_revision,
         credential_mode=intent.credential_mode,
         status=ACTIVATION_PENDING,
-        provider=PROVIDER_RAZORPAY,
-        provider_mode=billing_settings.require_provider_mode(),
+        provider=binding.provider,
+        provider_mode=binding.provider_mode,
         external_price_id=intent.price_ref,
         quote=intent.quote.model_dump(mode="json"),
         tax_snapshot=intent.tax_snapshot,

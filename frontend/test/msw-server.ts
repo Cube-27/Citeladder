@@ -21,6 +21,17 @@ const defaultHandlers = [
         id: TEST_WORKSPACE_ID,
         name: 'Test Workspace',
         role: 'owner',
+        // The response now publishes the role's effective capabilities, and
+        // the contract is strict — a row without them fails validation, which
+        // is exactly the shell's "workspace could not be loaded" state.
+        capabilities: [
+          'manage_billing',
+          'manage_credentials',
+          'manage_members',
+          'read',
+          'run',
+          'write',
+        ],
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
       },

@@ -49,7 +49,12 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
   // entitlements unanswerable in exactly the workspace that needs them most:
   // one with no project yet, where the reader is about to be told whether
   // they may create one.
-  const { activeWorkspaceId: workspaceId, status } = useProjectContext();
+  const { activeWorkspaceId: workspaceId, activeWorkspace, status } = useProjectContext();
+  // Private finance reads are Owner/Admin only on the server. Asking for them
+  // as a Member or Viewer would be a guaranteed 403, so the query is simply
+  // not issued — the member-safe allowance hints on the workspace entitlement
+  // cover what the shell actually needs.
+  const canReadBilling = activeWorkspace?.capabilities.includes('manage_billing') ?? false;
   const entitlementQuery = useQuery({
     queryKey: queryKeys.billing.workspaceEntitlement(workspaceId),
     queryFn: ({ signal }) =>
@@ -59,7 +64,7 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
   const usageQuery = useQuery({
     queryKey: queryKeys.billing.usage(workspaceId ?? 'unresolved'),
     queryFn: ({ signal }) => billingApi.usage({ signal, workspaceId }),
-    enabled: workspaceId !== null,
+    enabled: workspaceId !== null && canReadBilling,
   });
 
   /**
@@ -75,7 +80,10 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
 
   const value = useMemo<EntitlementContextValue>(() => {
     const data = entitlementQuery.data;
-    const usage = usageQuery.data?.status === 'resolved' ? usageQuery.data : null;
+    // A cached payload survives the query being disabled, so a reader who has
+    // lost `manage_billing` would keep seeing the finances they may no longer
+    // read. Gate on the capability, not just on the fetch.
+    const usage = canReadBilling && usageQuery.data?.status === 'resolved' ? usageQuery.data : null;
     if (!data || data.status !== 'resolved') {
       return {
         ...FAIL_CLOSED,
@@ -115,6 +123,7 @@ export function EntitlementProvider({ children }: Readonly<{ children: ReactNode
       canStartPaidWork: [...PAID_WORK_CAPABILITIES].some(hasCapability),
     };
   }, [
+    canReadBilling,
     entitlementQuery.data,
     unresolved,
     usageQuery.data,
@@ -131,8 +140,20 @@ export function useEntitlement() {
   return context;
 }
 
-export function capabilityRemaining(usage: BillingUsage | null, key: string): number | undefined {
-  if (!usage || usage.status !== 'resolved') return undefined;
-  const item = usage.items.find((candidate) => candidate.key === key);
-  return typeof item?.remaining === 'number' ? item.remaining : undefined;
+/**
+ * How much of one occupancy allowance is left in the active workspace.
+ *
+ * Reads the MEMBER-SAFE hints on the workspace entitlement rather than the
+ * owner-private usage report, so a Member sees the same "no slots left" state
+ * an Owner does without being shown the workspace's finances. `undefined`
+ * means "not answerable yet", which is not the same as zero — callers must
+ * not treat it as a denial.
+ */
+export function capabilityRemaining(
+  entitlement: WorkspaceEntitlement | null,
+  key: string,
+): number | undefined {
+  if (!entitlement || entitlement.status !== 'resolved') return undefined;
+  const hint = entitlement.occupancy.find((candidate) => candidate.key === key);
+  return hint?.remaining;
 }

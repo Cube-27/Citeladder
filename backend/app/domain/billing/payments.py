@@ -11,6 +11,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import ProviderPayment, ProviderRefund
+from app.connectors.billing.registry import (
+    PROVIDER_MODE_DISABLED as PROVIDER_MODE_UNSET,
+)
 from app.domain.billing.invoices import issue_paid_invoice
 from app.models.billing import BillingSubscription, PendingActivation
 from app.models.billing_payment import BillingPayment
@@ -45,9 +48,29 @@ def _payment_payload(
         "tax": payment.tax_minor,
         "currency": payment.currency,
         "paid_at": payment.paid_at,
-        "mode": payment.provider_mode,
+        "mode": pending.provider_mode,
         "method": payment.payment_method,
     }
+
+
+def _reject_foreign_environment(
+    pending: PendingActivation, payment: ProviderPayment
+) -> None:
+    """Refuse a payment that declares a DIFFERENT environment than the intent.
+
+    The authority is the SERVER's frozen ``pending.provider_mode``, not the
+    provider's advisory field — which some adapters leave unset. A payment
+    that positively declares another environment is refused before any lookup,
+    invoice, activation or replay; one that declares nothing is tagged and
+    found by the frozen value, so the write and the read cannot disagree.
+    """
+    declared = payment.provider_mode
+    if (
+        declared
+        and declared != PROVIDER_MODE_UNSET
+        and declared != pending.provider_mode
+    ):
+        raise PaymentReceiptConflictError("payment_provider_mode_mismatch")
 
 
 async def record_payment_receipt(
@@ -58,10 +81,14 @@ async def record_payment_receipt(
     subscription: BillingSubscription | None = None,
 ) -> BillingPayment:
     """Normalize one captured transaction independently of its Payment Link."""
+    _reject_foreign_environment(pending, payment)
+    # Receipt identity is (provider, ENVIRONMENT, external id), matching the
+    # unique index: a test payment id must never be mistaken for a live one.
     existing = await session.scalar(
         select(BillingPayment)
         .where(
             BillingPayment.provider == pending.provider,
+            BillingPayment.provider_mode == pending.provider_mode,
             BillingPayment.external_payment_id == payment.external_payment_id,
             BillingPayment.receipt_kind == "payment",
         )
@@ -92,7 +119,7 @@ async def record_payment_receipt(
         external_invoice_id=payment.external_invoice_id or None,
         amount_minor=payment.amount_minor,
         currency=payment.currency,
-        provider_mode=payment.provider_mode,
+        provider_mode=pending.provider_mode,
         payment_method=payment.payment_method,
         status=payment.status,
         paid_at=(
@@ -138,6 +165,7 @@ async def record_refund_receipt(
     existing = await session.scalar(
         select(BillingPayment).where(
             BillingPayment.provider == payment.provider,
+            BillingPayment.provider_mode == payment.provider_mode,
             BillingPayment.external_refund_id == refund.external_refund_id,
         )
     )

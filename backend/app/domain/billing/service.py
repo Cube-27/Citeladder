@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import BillingProvider
+from app.connectors.billing.registry import adapter_for_record, status_normalizer
 from app.core.config.billing_catalog import plan_checkout_availability
 from app.core.config.billing_contracts import (
     ACTIVATION_KIND_ADDON,
@@ -32,8 +33,8 @@ from app.core.config.billing_contracts import (
     CANCELLATION_SCHEDULED,
     COUNTRY_VERIFICATION_DECLARED,
     LIVE_SUBSCRIPTION_STATUSES,
-    RAZORPAY_STATUS_MAP,
     REASON_BASE_SUBSCRIPTION_REQUIRED,
+    REASON_CHECKOUT_UNAVAILABLE,
     REASON_NO_CURRENT_SUBSCRIPTION,
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCEL_SCHEDULED,
@@ -47,7 +48,7 @@ from app.core.config.entitlements import (
     CapabilityType,
 )
 from app.domain.billing import quotes as _quotes
-from app.domain.billing.bootstrap import ensure_user_billing
+from app.domain.billing.bootstrap import ensure_workspace_billing
 from app.domain.billing.catalog_revisions import published_commercial_catalog
 from app.domain.billing.periods import (
     PeriodEvidenceError,
@@ -108,6 +109,11 @@ def accept_subscription_event(
     events for this subscription only — it is not a cross-process entitlement
     invalidator). Same-status events with a newer provider version are
     accepted and projected.
+
+    ``provider_status`` is in the ORIGINATING provider's own vocabulary and is
+    translated by that provider's adapter. A provider that is no longer
+    registered or configured translates nothing, so its statuses refuse rather
+    than being read through another vendor's map.
     """
     if subscription.status in _TERMINAL_STATUSES:
         return _expired_terminal_event(subscription, updated_at)
@@ -119,7 +125,7 @@ def accept_subscription_event(
         return None
     if updated_at and updated_at < subscription.provider_state_version:
         return None
-    normalized = RAZORPAY_STATUS_MAP.get(provider_status)
+    normalized = status_normalizer(subscription.provider)(provider_status)
     if normalized is None:
         raise BillingConflictError("unsupported_subscription_status")
     if cancel_at_period_end and normalized == SUBSCRIPTION_ACTIVE:
@@ -289,10 +295,26 @@ async def apply_subscription_state(
     return True
 
 
-async def owned_account(session: AsyncSession, user: User) -> BillingAccount:
-    # Also idempotently applies the current public/dev baseline so an account
-    # created before the policy shipped is repaired on its next entitlement read.
-    account = await ensure_user_billing(session, user)
+async def workspace_account(
+    session: AsyncSession, *, workspace_id: uuid.UUID, user: User
+) -> BillingAccount:
+    """The ONE billing account for ``workspace_id`` (plan §2.1).
+
+    Replaces the old ``owned_account(session, user)`` funnel: authority now
+    comes from the REQUEST's workspace and the caller's verified
+    administrative role, never from ``BillingAccount.owner_user_id`` or from
+    whichever personal account the signed-in user happens to have. A member of
+    somebody else's workspace therefore spends that workspace's budget, and
+    their own workspace's subscription sponsors nothing here.
+
+    Also idempotently applies the current public baseline, so a workspace
+    provisioned before the policy shipped is repaired on its next read.
+    ``user`` is the provisioning actor recorded as audit metadata when the
+    account has to be created; it never selects the account.
+    """
+    account = await ensure_workspace_billing(
+        session, workspace_id=workspace_id, provisioning_user=user
+    )
     await session.commit()
     return account
 
@@ -487,32 +509,43 @@ async def _schedule_cancellation(
 
 
 async def schedule_base_cancellation(
-    session: AsyncSession,
-    provider: BillingProvider,
-    *,
-    account_id: uuid.UUID,
+    session: AsyncSession, *, account_id: uuid.UUID
 ) -> tuple[str, str, datetime]:
-    """Schedule the current base subscription's period-end cancellation."""
+    """Schedule the current base subscription's period-end cancellation.
+
+    The subscription is loaded FIRST and its adapter resolved from the
+    provider/environment persisted on it. Cancelling through the current
+    new-checkout default would ask the wrong provider to cancel an id it has
+    never heard of.
+    """
     subscription = await current_base_subscription(session, account_id)
     if subscription is None:
         raise BillingConflictError(REASON_NO_CURRENT_SUBSCRIPTION)
     catalog_key = subscription.catalog_key
-    status, effective_at = await _schedule_cancellation(session, provider, subscription)
+    status, effective_at = await _schedule_cancellation(
+        session, _originating_adapter(subscription), subscription
+    )
     return catalog_key, status, effective_at
 
 
 async def schedule_addon_cancellation(
-    session: AsyncSession,
-    provider: BillingProvider,
-    *,
-    account_id: uuid.UUID,
-    catalog_key: str,
+    session: AsyncSession, *, account_id: uuid.UUID, catalog_key: str
 ) -> tuple[str, datetime]:
-    """Schedule one add-on's period-end cancellation."""
+    """Schedule one add-on's period-end cancellation, on ITS own provider."""
     subscription = await current_addon_subscription(session, account_id, catalog_key)
     if subscription is None:
         raise BillingConflictError(REASON_NO_CURRENT_SUBSCRIPTION)
-    return await _schedule_cancellation(session, provider, subscription)
+    return await _schedule_cancellation(
+        session, _originating_adapter(subscription), subscription
+    )
+
+
+def _originating_adapter(subscription: BillingSubscription) -> BillingProvider:
+    """The adapter that CREATED this subscription, or a safe refusal."""
+    adapter = adapter_for_record(subscription.provider, subscription.provider_mode)
+    if adapter is None:
+        raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
+    return adapter
 
 
 __all__ = [
@@ -524,7 +557,6 @@ __all__ = [
     "current_addon_subscription",
     "current_base_subscription",
     "live_base_subscription",
-    "owned_account",
     "persist_billing_country",
     "persist_billing_profile",
     "resolve_addon_intent",
@@ -533,4 +565,5 @@ __all__ = [
     "resolve_topup_intent",
     "schedule_addon_cancellation",
     "schedule_base_cancellation",
+    "workspace_account",
 ]

@@ -8,7 +8,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_project_member
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_project_member,
+    require_project_write,
+)
 from app.core.http_errors import raise_api_error, raise_not_found
 from app.domain.audits.schedule_schemas import (
     AuditScheduleCreate,
@@ -27,6 +32,12 @@ from app.domain.audits.schedule_service import (
 
 router = APIRouter(prefix="/projects", tags=["audit-schedules"])
 _ProjectDep = Annotated[WorkspaceContext, Depends(require_project_member)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_WriteDep = Annotated[WorkspaceContext, Depends(require_project_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -38,7 +49,7 @@ _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 async def create_audit_schedule_endpoint(
     project_id: uuid.UUID,
     payload: AuditScheduleCreate,
-    ctx: _ProjectDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> AuditScheduleResponse:
     try:
@@ -91,7 +102,7 @@ async def update_audit_schedule_endpoint(
     project_id: uuid.UUID,
     schedule_id: uuid.UUID,
     payload: AuditScheduleUpdate,
-    ctx: _ProjectDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> AuditScheduleResponse:
     try:
@@ -116,7 +127,7 @@ async def update_audit_schedule_endpoint(
 async def delete_audit_schedule_endpoint(
     project_id: uuid.UUID,
     schedule_id: uuid.UUID,
-    ctx: _ProjectDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> None:
     try:

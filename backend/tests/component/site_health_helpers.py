@@ -158,23 +158,18 @@ async def seed_monitored_urls_allowance(
     """
     from datetime import UTC, datetime, timedelta
 
-    from sqlalchemy import select
-
     from app.core.config.entitlements import KEY_MONITORED_URLS
+    from app.domain.billing.accounts import billing_account_id_for
     from app.domain.entitlements.grants import issue_override_bundle
     from app.domain.entitlements.types import GrantSpec
-    from app.models.billing import BillingAccount, WorkspaceBillingLink
+    from app.models.billing import BillingAccount
+    from tests.component.occupancy_helpers import account_operator
 
-    account_id = await session.scalar(
-        select(WorkspaceBillingLink.billing_account_id).where(
-            WorkspaceBillingLink.workspace_id == workspace_id
-        )
-    )
+    account_id = await billing_account_id_for(session, workspace_id)
     if account_id is not None:
         account = await session.get(BillingAccount, account_id)
         assert account is not None
-        operator = await session.get(User, account.owner_user_id)
-        assert operator is not None
+        operator = await account_operator(session, account, workspace_id)
     else:
         operator = User(
             email=f"billing-{uuid.uuid4().hex[:8]}@example.com",
@@ -183,14 +178,8 @@ async def seed_monitored_urls_allowance(
         )
         session.add(operator)
         await session.flush()
-        account = BillingAccount(owner_user_id=operator.id)
+        account = BillingAccount(workspace_id=workspace_id, owner_user_id=operator.id)
         session.add(account)
-        await session.flush()
-        session.add(
-            WorkspaceBillingLink(
-                workspace_id=workspace_id, billing_account_id=account.id
-            )
-        )
         await session.flush()
     await issue_override_bundle(
         session,

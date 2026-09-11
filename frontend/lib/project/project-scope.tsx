@@ -56,11 +56,25 @@ export function ProjectSelectionProvider({
 
 /** Access the active-project context. Throws if used outside a provider. */
 export function useProjectContext(): ProjectContextValue {
-  const context = useContext(ProjectContext);
+  const context = useOptionalProjectContext();
   if (!context) {
     throw new Error('useProjectContext must be used within a <ProjectProvider>.');
   }
   return context;
+}
+
+/**
+ * The active-project context, or `null` when there is no provider above.
+ *
+ * For the few components that render on BOTH sides of the authenticated
+ * shell — the public pricing page renders the same checkout controller the
+ * account screens do — where "no selection exists" is a real, renderable
+ * state rather than a programming error. Everything inside the shell should
+ * use `useProjectContext`, whose throw is what keeps a missing provider from
+ * being mistaken for an unresolved one.
+ */
+export function useOptionalProjectContext(): ProjectContextValue | null {
+  return useContext(ProjectContext);
 }
 
 /** Convenience accessor for just the active project (or null). */
@@ -71,4 +85,26 @@ export function useActiveProject(): Project | null {
 /** Convenience accessor for the resolved workspace id (or null). */
 export function useActiveWorkspaceId(): string | null {
   return useProjectContext().activeWorkspaceId;
+}
+
+/**
+ * What the caller may do in the ACTIVE workspace.
+ *
+ * The names come straight from the backend's one role policy, on the
+ * workspace list response. Use them to hide controls a role cannot use — not
+ * as the boundary: every denial is enforced on the server, which is the only
+ * thing a caller cannot bypass.
+ */
+type WorkspaceCapability =
+  | 'read'
+  | 'write'
+  | 'run'
+  | 'manage_billing'
+  | 'manage_members'
+  | 'manage_credentials';
+
+/** Whether the active workspace grants `capability`. Fails closed. */
+export function useWorkspaceCapability(capability: WorkspaceCapability): boolean {
+  const { activeWorkspace } = useProjectContext();
+  return activeWorkspace?.capabilities.includes(capability) ?? false;
 }

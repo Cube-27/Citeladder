@@ -8,7 +8,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_run,
+    require_active_workspace_write,
+)
 from app.connectors.agent.client import AgentNotConfiguredError
 from app.connectors.agent.factory import create_model_gateway
 from app.connectors.agent.gateway import ModelGateway
@@ -56,6 +62,13 @@ from app.domain.entitlements.enforcement import OccupancyError
 router = APIRouter(prefix="/projects", tags=["commerce"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
+_WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -91,7 +104,7 @@ async def catalog_endpoint(
 async def catalog_import_endpoint(
     project_id: uuid.UUID,
     payload: CatalogImportRequest,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
 ) -> CatalogImportResponse:
     try:
@@ -113,7 +126,7 @@ async def catalog_import_endpoint(
 async def competitor_discovery_endpoint(
     project_id: uuid.UUID,
     payload: DiscoveryRequest,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
 ) -> DiscoveryResponse:
     try:
@@ -179,7 +192,7 @@ async def competitor_decision_endpoint(
     project_id: uuid.UUID,
     candidate_id: uuid.UUID,
     payload: CompetitorDecisionRequest,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> CompetitorCandidateResponse:
     try:
@@ -216,7 +229,7 @@ async def buyer_prompts_endpoint(
 async def buyer_prompts_generate_endpoint(
     project_id: uuid.UUID,
     payload: BuyerPromptGenerateRequest,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
 ) -> list[BuyerPromptResponse]:
     try:
@@ -258,7 +271,7 @@ async def buyer_prompts_generate_endpoint(
 async def buyer_prompt_manual_endpoint(
     project_id: uuid.UUID,
     payload: BuyerPromptManualRequest,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> BuyerPromptResponse:
     try:
@@ -285,7 +298,7 @@ async def buyer_prompt_decision_endpoint(
     project_id: uuid.UUID,
     prompt_id: uuid.UUID,
     payload: BuyerPromptDecisionRequest,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> BuyerPromptResponse:
     try:

@@ -88,20 +88,31 @@ test('billing: subscription modal verifies server activation', async ({ page }) 
   await page.route(`**/api/v1/billing/subscriptions/${ACCOUNT}/checkout`, (route) =>
     route.fulfill({
       json: {
+        // The PUBLIC checkout-init contract: a flow, the adapter's SDK name,
+        // a publishable key and the provider's own reference. No secret and
+        // no amount crosses this boundary.
         activation_id: ACCOUNT,
+        provider: 'razorpay',
         provider_mode: 'test',
-        key_id: 'rzp_test_fixture',
-        subscription_id: 'sub_fixture',
+        flow: 'provider_sdk',
+        sdk_name: 'razorpay-checkout',
+        redirect_url: '',
+        public_key: 'rzp_test_fixture',
+        reference: 'sub_fixture',
         expires_at: quote.expires_at,
         quote,
       },
     }),
   );
   await page.route(`**/api/v1/billing/subscriptions/${ACCOUNT}/verify`, async (route) => {
+    // The vendor's field names travel inside the NEUTRAL wrapper: the shared
+    // controller never reads them, and this vendor's adapter allowlists them.
     expect(route.request().postDataJSON()).toEqual({
-      razorpay_payment_id: 'pay_fixture',
-      razorpay_subscription_id: 'sub_fixture',
-      razorpay_signature: '0'.repeat(64),
+      fields: {
+        razorpay_payment_id: 'pay_fixture',
+        razorpay_subscription_id: 'sub_fixture',
+        razorpay_signature: '0'.repeat(64),
+      },
     });
     verified = true;
     await route.fulfill({ status: 202, json: activation });

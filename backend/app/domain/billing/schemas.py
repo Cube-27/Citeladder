@@ -329,6 +329,22 @@ class WorkspaceCapabilityResponse(_StrictResponse):
     provenance: Literal["effective_grant"]
 
 
+class WorkspaceOccupancyHintResponse(_StrictResponse):
+    """One MEMBER-SAFE remaining-allowance hint for an occupancy counter.
+
+    Deliberately narrow: how many project/prompt slots the workspace has and
+    how many are used. It carries no grant provenance, no subscription, no
+    billing profile, no invoice and no provider reference, so a Member or
+    Viewer can be told "the workspace is full" without being shown the
+    workspace's finances (plan §2.3).
+    """
+
+    key: str
+    allowance: int
+    consumed: int
+    remaining: int
+
+
 class WorkspaceEntitlementResponse(_StrictResponse):
     """Workspace-effective capability projection without private billing data."""
 
@@ -338,6 +354,7 @@ class WorkspaceEntitlementResponse(_StrictResponse):
     entitlement_lifecycle_version: int
     valid_until: datetime | None
     capabilities: list[WorkspaceCapabilityResponse]
+    occupancy: list[WorkspaceOccupancyHintResponse]
 
 
 # --- Commercial mutations -------------------------------------------------

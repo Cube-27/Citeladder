@@ -8,7 +8,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_run,
+)
 from app.core.config.brand_discovery import (
     DISCOVERY_STATUS_COMPLETING,
     DISCOVERY_STATUS_FAILED,
@@ -34,6 +39,12 @@ from app.domain.projects.discovery_schemas import (
 
 router = APIRouter(tags=["brand-discoveries"])
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -55,7 +66,7 @@ async def get_brand_discovery_catalog() -> BrandDiscoveryCatalogResponse:
 )
 async def create_brand_discovery(
     payload: BrandDiscoveryCreate,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
 ) -> BrandDiscoveryResponse:
@@ -91,7 +102,7 @@ async def get_brand_discovery(
 async def complete_brand_discovery(
     discovery_id: uuid.UUID,
     payload: BrandDiscoveryComplete,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
 ) -> BrandDiscoveryCompleteResponse:

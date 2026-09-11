@@ -104,7 +104,10 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({
-    usage: { status: 'resolved', items: [{ key: 'project_slots', remaining: 0 }] },
+    entitlement: {
+      status: 'resolved',
+      occupancy: [{ key: 'project_slots', allowance: 1, consumed: 1, remaining: 0 }],
+    },
   }),
   capabilityRemaining: () => 0,
 }));
@@ -122,6 +125,9 @@ vi.mock('@tanstack/react-query', () => ({
 }));
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  // `ProjectControls` gates the create affordance on the caller's role as
+  // well as on the remaining allowance; this fixture is an Owner.
+  useWorkspaceCapability: () => true,
   useActiveProject: () => project,
   useProjectContext: () => ({
     projects: [project],

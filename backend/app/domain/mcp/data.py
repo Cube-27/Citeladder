@@ -17,11 +17,16 @@ from app.core.config.content import (
 )
 from app.core.config.mcp import MCP_MAX_SEARCH_RESULTS
 from app.domain.agent.tools import ToolExecutionContext, execute_tool
+from app.domain.workspaces.policy import WorkspaceCapability, roles_with
 from app.models.brand import BrandProfile
 from app.models.opportunity import Opportunity
 from app.models.project import Project
 from app.models.prompt import Prompt, PromptSet
 from app.models.workspace import Workspace, WorkspaceMember
+
+# Every MCP tool is a READ. Resolved from the shared policy at import time so
+# the MCP surface and the HTTP API can never disagree about who may read.
+_MCP_READER_ROLES = roles_with(WorkspaceCapability.READ)
 
 # The reads that describe a project as a whole. ``performance.read_table`` is
 # deliberately absent: it is a paged drill-down into one dimension, and a
@@ -64,6 +69,14 @@ def _caller_is_member_of(workspace_column: Any) -> Any:
     subquery rather than a join, so adding it can neither duplicate rows for a
     caller holding several memberships nor collide with a query's own joins —
     it drops into any ``where`` unchanged.
+
+    The role filter comes from the ONE workspace policy
+    (``app.domain.workspaces.policy``), not from a list spelled here: MCP is a
+    separate entry point into the same data, and §2.3 of the account-management
+    plan requires it to reuse the policy rather than define a second matrix.
+    Every MCP tool is read-only, so the set is ``roles_with(READ)`` — but a row
+    carrying an unrecognised role authorizes nothing, and if a future role
+    loses READ it loses MCP with it, in one edit.
     """
     return (
         select(WorkspaceMember.id)
@@ -71,6 +84,7 @@ def _caller_is_member_of(workspace_column: Any) -> Any:
         .where(
             WorkspaceMember.workspace_id == workspace_column,
             WorkspaceMember.user_id == current_user_id(),
+            WorkspaceMember.role.in_(_MCP_READER_ROLES),
             Workspace.is_system.is_(False),
         )
         .exists()

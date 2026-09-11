@@ -31,6 +31,7 @@ from app.domain.billing.service import (
     resolve_addon_intent,
     resolve_base_intent,
 )
+from tests.billing_settings_support import apply_billing_settings
 
 
 class _CatalogSession:
@@ -72,28 +73,30 @@ def _published_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _enable_checkout(monkeypatch, refs) -> None:
-    for name, value in (
-        ("checkout_enabled", True),
-        ("razorpay_mode", "test"),
-        ("razorpay_key_id", "rzp_test_fixture"),
-        ("razorpay_key_secret", SecretStr("synthetic-api")),
-        ("quote_signing_secret", SecretStr("synthetic-quote")),
-        ("razorpay_test_ready", True),
-        ("razorpay_test_international_ready", True),
-        ("razorpay_test_india_ready", True),
-        ("razorpay_live_ready", True),
-        ("razorpay_international_ready", True),
-        ("provider_price_refs", refs),
-        ("seller_legal_name", "CiteLadder Private Limited"),
-        ("seller_legal_address", "1 Seller Street, Mumbai"),
-        ("seller_email", "billing@example.test"),
-        ("seller_gstin", "27ABCDE1234F1Z5"),
-        ("seller_gst_state_code", "27"),
-        ("seller_gst_state_name", "Maharashtra"),
-        ("seller_sac", "998313"),
-        ("seller_lut_reference", "LUT/2026/001"),
-    ):
-        monkeypatch.setattr(billing_settings, name, value)
+    apply_billing_settings(
+        monkeypatch,
+        {
+            "checkout_enabled": True,
+            "razorpay_mode": "test",
+            "razorpay_key_id": "rzp_test_fixture",
+            "razorpay_key_secret": SecretStr("synthetic-api"),
+            "quote_signing_secret": SecretStr("synthetic-quote"),
+            "razorpay_test_ready": True,
+            "razorpay_test_international_ready": True,
+            "razorpay_test_india_ready": True,
+            "razorpay_live_ready": True,
+            "razorpay_international_ready": True,
+            "provider_price_refs": refs,
+            "seller_legal_name": "CiteLadder Private Limited",
+            "seller_legal_address": "1 Seller Street, Mumbai",
+            "seller_email": "billing@example.test",
+            "seller_gstin": "27ABCDE1234F1Z5",
+            "seller_gst_state_code": "27",
+            "seller_gst_state_name": "Maharashtra",
+            "seller_sac": "998313",
+            "seller_lut_reference": "LUT/2026/001",
+        },
+    )
 
 
 def _identity(

@@ -11,6 +11,7 @@ import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/comp
 import { Alert } from '@/components/ui/alert';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { visibilityApi } from '@/lib/api/visibility';
 import type { Project } from '@/lib/api/types';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
@@ -24,9 +25,14 @@ export function ProjectControls({
   onEditProject?: (project: Project) => void;
 }>) {
   const router = useRouter();
-  const { usage } = useEntitlement();
-  const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
-  const canAddProject = remainingProjectSlots !== undefined && remainingProjectSlots > 0;
+  const { entitlement } = useEntitlement();
+  const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
+  // Both must permit it: the caller's ROLE, and the workspace's remaining
+  // allowance. A Viewer is never offered the creation affordance, matching
+  // the switcher — and the backend refuses it either way.
+  const mayCreate = useWorkspaceCapability('write');
+  const canAddProject =
+    mayCreate && remainingProjectSlots !== undefined && remainingProjectSlots > 0;
   return (
     <Dropdown>
       <DropdownTrigger asChild>

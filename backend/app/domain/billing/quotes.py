@@ -69,11 +69,16 @@ class ResolvedIntent:
 
 
 def _quote_secret() -> bytes:
+    """The INDEPENDENT quote-signing secret, with no gateway fallback.
+
+    Separation is checked against every registered provider's secrets rather
+    than against whichever gateway is currently selected, so selecting a
+    different provider can never make a previously-rejected reuse look valid.
+    """
+    from app.connectors.billing.registry import provider_secret_values
+
     secret = billing_settings.quote_signing_secret.get_secret_value()
-    if not secret or secret in {
-        billing_settings.razorpay_webhook_secret.get_secret_value(),
-        billing_settings.razorpay_key_secret.get_secret_value(),
-    }:
+    if not secret or secret in set(provider_secret_values()):
         raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
     return secret.encode()
 

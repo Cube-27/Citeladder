@@ -54,6 +54,7 @@ from app.core.config.entitlements import (
     OCCUPANCY_LOCK_NAMESPACE,
     CapabilityType,
 )
+from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.occupancy import OCCUPANCY_COUNTERS
 from app.domain.entitlements.service import resolve_account_entitlement
 from app.domain.entitlements.types import (
@@ -61,7 +62,7 @@ from app.domain.entitlements.types import (
     STATUS_RESOLVED,
 )
 from app.models.audit import Audit
-from app.models.billing import WorkspaceBillingLink
+from app.models.billing import BillingAccount
 
 logger = logging.getLogger("app.billing")
 
@@ -191,20 +192,16 @@ async def lock_workspace_capacity(
 ) -> uuid.UUID:
     """Resolve a workspace's billing account and take its capacity lock.
 
-    The billing link is the ONLY legitimate boundary from workspace scope to
-    account scope (invariant 5); a workspace with no link fails closed.
-    Returns the account id for ``enforce_occupancy``.
+    ``BillingAccount.workspace_id`` is the ONLY legitimate boundary from
+    workspace scope to account scope (invariant 5); a workspace with no
+    account fails closed. Returns the account id for ``enforce_occupancy``.
     """
-    account_id = await session.scalar(
-        select(WorkspaceBillingLink.billing_account_id).where(
-            WorkspaceBillingLink.workspace_id == workspace_id
-        )
-    )
+    account_id = await billing_account_id_for(session, workspace_id)
     if account_id is None:
         logger.info(
             EVENT_OCCUPANCY_UNRESOLVED + " workspace_id=%s error=%s",
             workspace_id,
-            "workspace_billing_link_missing",
+            "workspace_billing_account_missing",
         )
         raise OccupancyUnresolvedError(
             "Billing entitlement is unavailable for this workspace"
@@ -373,11 +370,7 @@ async def evaluate_manual_run_admission(
     """
     if trigger != AUDIT_TRIGGER_MANUAL:
         return _rate_decision(trigger=trigger, allowed=True)
-    account_id = await session.scalar(
-        select(WorkspaceBillingLink.billing_account_id).where(
-            WorkspaceBillingLink.workspace_id == workspace_id
-        )
-    )
+    account_id = await billing_account_id_for(session, workspace_id)
     if account_id is None:
         return _rate_decision(trigger=trigger, allowed=True)
     await lock_billing_account_capacity(session, account_id)
@@ -402,11 +395,11 @@ async def evaluate_manual_run_admission(
     in_window = (
         select(Audit.created_at)
         .join(
-            WorkspaceBillingLink,
-            WorkspaceBillingLink.workspace_id == Audit.workspace_id,
+            BillingAccount,
+            BillingAccount.workspace_id == Audit.workspace_id,
         )
         .where(
-            WorkspaceBillingLink.billing_account_id == account_id,
+            BillingAccount.id == account_id,
             Audit.trigger == AUDIT_TRIGGER_MANUAL,
             Audit.created_at > at - window,
         )

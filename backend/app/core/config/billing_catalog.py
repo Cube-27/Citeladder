@@ -543,23 +543,35 @@ def commercial_catalog() -> CommercialCatalog:
     )
 
 
+def checkout_provider_mode() -> str | None:
+    """The environment the SELECTED new-checkout provider is configured in.
+
+    ``None`` when no provider is selected, registered, or configured. Never
+    raises and never falls back to another provider.
+    """
+    from app.connectors.billing.registry import (
+        ProviderUnavailableError,
+        resolve_binding,
+    )
+
+    try:
+        return resolve_binding(billing_settings.checkout_provider).provider_mode
+    except ProviderUnavailableError:
+        return None
+
+
 def region_checkout_ready(region: str) -> bool:
-    """Whether the operator has enabled checkout for a region at all."""
+    """Whether the operator has enabled checkout for a region at all.
+
+    Readiness is the SELECTED provider's own declaration, asked through the
+    registry, so this stays true when a different provider is selected instead
+    of silently reporting Razorpay's flags.
+    """
+    from app.connectors.billing.registry import region_ready
+
     if not billing_settings.checkout_enabled:
         return False
-    try:
-        mode = billing_settings.require_provider_mode()
-    except ValueError:
-        return False
-    if mode == "test":
-        return billing_settings.razorpay_test_ready and (
-            billing_settings.razorpay_test_international_ready
-            if region == REGION_INTERNATIONAL
-            else billing_settings.razorpay_test_india_ready
-        )
-    return billing_settings.razorpay_live_ready and (
-        region != REGION_INTERNATIONAL or billing_settings.razorpay_international_ready
-    )
+    return region_ready(billing_settings.checkout_provider, region)
 
 
 def plan_checkout_availability(
@@ -576,9 +588,10 @@ def plan_checkout_availability(
     price = plan.base_price(region)
     if price is None or not price.purchasable or not region_checkout_ready(region):
         return False, REASON_CHECKOUT_UNAVAILABLE
-    if price.provider_mode != billing_settings.razorpay_mode:
+    mode = checkout_provider_mode()
+    if mode is None or price.provider_mode != mode:
         return False, REASON_CHECKOUT_UNAVAILABLE
-    if price.synthetic and billing_settings.razorpay_mode == "live":
+    if price.synthetic and mode == "live":
         return False, REASON_CHECKOUT_UNAVAILABLE
     if price.tax_behavior == TAX_BEHAVIOR_EXCLUSIVE and not price.tax_verified:
         return False, REASON_CHECKOUT_UNAVAILABLE

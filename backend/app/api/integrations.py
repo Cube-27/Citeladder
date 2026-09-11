@@ -28,6 +28,9 @@ from app.api.deps import (
     WorkspaceContext,
     get_db,
     require_active_workspace,
+    require_active_workspace_credentials,
+    require_active_workspace_run,
+    require_active_workspace_write,
 )
 from app.connectors.integrations import IntegrationApiError
 from app.core.config.abuse import abuse_settings
@@ -101,6 +104,16 @@ from app.domain.projects.service import ProjectNotFoundError
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_CredentialDep = Annotated[
+    WorkspaceContext, Depends(require_active_workspace_credentials)
+]
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
+_WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 _RES_PROVIDER = "Integration provider"
@@ -165,7 +178,7 @@ def _oauth_callback_redirect(params: dict[str, str]) -> RedirectResponse:
 @router.get("/oauth/{provider}/start", status_code=status.HTTP_302_FOUND)
 async def integration_oauth_start(
     provider: str,
-    ctx: _WorkspaceDep,
+    ctx: _CredentialDep,
     session: _SessionDep,
 ) -> RedirectResponse:
     """Begin the OAuth connect flow: 302 to the provider consent screen."""
@@ -246,7 +259,7 @@ async def list_integrations_endpoint(
     response_model=IntegrationTestResponse,
 )
 async def test_integration_endpoint(
-    connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    connection_id: uuid.UUID, ctx: _CredentialDep, session: _SessionDep
 ) -> IntegrationTestResponse:
     """Cheap authenticated probe of the connection's grant (never the token)."""
     try:
@@ -309,7 +322,7 @@ async def list_properties_endpoint(
 
 @router.delete("/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_integration_endpoint(
-    connection_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    connection_id: uuid.UUID, ctx: _CredentialDep, session: _SessionDep
 ) -> None:
     """Disconnect a connection (last one on a grant also revokes the grant)."""
     try:
@@ -330,7 +343,7 @@ async def delete_integration_endpoint(
 )
 async def enqueue_sync_endpoint(
     connection_id: uuid.UUID,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
     payload: SyncWindowRequest | None = None,
 ) -> IntegrationSyncEnqueueResponse:
@@ -473,7 +486,7 @@ async def list_mappings_endpoint(
 async def create_mapping_endpoint(
     connection_id: uuid.UUID,
     payload: IntegrationPropertyMappingCreate,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> IntegrationPropertyMappingResponse:
     """Create one ACTIVE property→project mapping (write-time validated).
@@ -524,7 +537,7 @@ async def create_mapping_endpoint(
 
 @router.delete("/mappings/{mapping_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def disable_mapping_endpoint(
-    mapping_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    mapping_id: uuid.UUID, ctx: _WriteDep, session: _SessionDep
 ) -> None:
     """Disable a mapping (a status flip, never a row delete)."""
     try:

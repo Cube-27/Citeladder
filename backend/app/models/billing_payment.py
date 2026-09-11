@@ -30,9 +30,13 @@ class BillingPayment(Base):
 
     __tablename__ = "billing_payments"
     __table_args__ = (
+        # External payment/refund identity is namespaced by provider AND
+        # environment (plan §3.3): the same id string in a provider's test and
+        # live environments names two different transactions.
         Index(
             "uq_billing_payment_external",
             "provider",
+            "provider_mode",
             "external_payment_id",
             unique=True,
             postgresql_where=text("receipt_kind = 'payment'"),
@@ -40,6 +44,7 @@ class BillingPayment(Base):
         Index(
             "uq_billing_refund_external",
             "provider",
+            "provider_mode",
             "external_refund_id",
             unique=True,
             postgresql_where=text("external_refund_id IS NOT NULL"),

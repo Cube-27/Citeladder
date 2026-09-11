@@ -30,6 +30,14 @@ function workspace(id: string, name: string) {
     id,
     name,
     role: 'owner',
+    capabilities: [
+      'manage_billing',
+      'manage_credentials',
+      'manage_members',
+      'read',
+      'run',
+      'write',
+    ],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   };

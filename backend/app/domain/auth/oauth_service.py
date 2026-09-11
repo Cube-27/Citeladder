@@ -33,7 +33,7 @@ from app.core.security import (
     decode_oauth_state,
 )
 from app.domain.auth.service import get_user_by_email, provision_new_account
-from app.domain.billing.bootstrap import ensure_user_billing
+from app.domain.billing.bootstrap import ensure_billing_for_user_workspaces
 from app.models.user import User
 from app.models.user_identity import UserIdentity
 
@@ -214,7 +214,7 @@ async def complete_signin(
         raise SignInExchangeError(str(exc)) from exc
 
     user = await _resolve_account(session, provider=provider, identity=identity)
-    await ensure_user_billing(session, user)
+    await ensure_billing_for_user_workspaces(session, user)
     await session.commit()
     token = create_access_token(str(user.id), token_version=user.session_version)
     logger.info(

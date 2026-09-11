@@ -46,6 +46,7 @@ from app.core.config.billing_settings import (
     billing_settings,
 )
 from app.core.config.billing_tax import BillingIdentity
+from app.core.config.razorpay_settings import razorpay_settings
 from app.domain.billing import idempotency as idempotency_module
 from app.domain.billing.activations import activate_pending
 from app.domain.billing.idempotency import IntentResult, execute_intent
@@ -149,10 +150,10 @@ async def _post_webhook(
 
 def _enable_checkout(monkeypatch: pytest.MonkeyPatch, refs: dict[str, str]) -> None:
     monkeypatch.setattr(billing_settings, "checkout_enabled", True)
-    monkeypatch.setattr(billing_settings, "razorpay_live_ready", True)
-    monkeypatch.setattr(billing_settings, "razorpay_international_ready", True)
+    monkeypatch.setattr(razorpay_settings, "live_ready", True)
+    monkeypatch.setattr(razorpay_settings, "international_ready", True)
     monkeypatch.setattr(billing_settings, "provider_price_refs", refs)
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     for name, value in {
         "seller_legal_name": "CiteLadder Private Limited",
         "seller_legal_address": "1 Seller Street, Mumbai",
@@ -165,7 +166,7 @@ def _enable_checkout(monkeypatch: pytest.MonkeyPatch, refs: dict[str, str]) -> N
     }.items():
         monkeypatch.setattr(billing_settings, name, value)
     monkeypatch.setattr(
-        billing_api, "_purchase_identity", lambda _account: _billing_identity()
+        billing_api, "purchase_identity", lambda _account: _billing_identity()
     )
 
 
@@ -1036,7 +1037,7 @@ async def test_renewal_with_a_removed_catalog_key_logs_and_issues_nothing(
     nothing while the provider keeps charging: the renewal logs the safe
     catalog fields and writes no grants.
     """
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     await _register(client, "renew-removed@example.com")
     baseline_grants = await _total_grant_count(db_session)
     account = await _account(db_session)
@@ -1447,7 +1448,7 @@ async def test_reconciliation_settles_fails_and_abandons_from_provider_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(billing_settings, "topup_audit_credits_per_pack", 25)
-    monkeypatch.setattr(billing_settings, "razorpay_webhook_secret", SecretStr(_SECRET))
+    monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
     await _register(client, "sweep@example.com")
     account = await _account(db_session)
     await _seed_live_base(db_session, account)

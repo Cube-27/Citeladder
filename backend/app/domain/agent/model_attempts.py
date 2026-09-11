@@ -16,6 +16,7 @@ from app.connectors.app_model_config import AppModelRouteConfig
 from app.core.config.agent import default_agent_settings
 from app.core.config.app_models import APP_FEATURE_GROWTH_AGENT
 from app.core.config.entitlements import KEY_AI_CREDITS, KEY_GROWTH_AGENT
+from app.domain.billing.accounts import billing_account_id_for
 from app.domain.billing.catalog_revisions import (
     CatalogUnavailableError,
     ai_credit_policy_for_revision,
@@ -32,7 +33,6 @@ from app.domain.entitlements.metered import (
     settle_metered_usage,
 )
 from app.models.agent import AgentModelAttempt, AgentTaskRun
-from app.models.billing import WorkspaceBillingLink
 from app.models.provider import ProviderAppRoute, ProviderConnection
 
 
@@ -130,11 +130,7 @@ async def _platform_hold(
     except CatalogUnavailableError:
         return None
     rate = policy.rate(feature=APP_FEATURE_GROWTH_AGENT, model=gateway.model)
-    account_id = await session.scalar(
-        select(WorkspaceBillingLink.billing_account_id).where(
-            WorkspaceBillingLink.workspace_id == run.workspace_id
-        )
-    )
+    account_id = await billing_account_id_for(session, run.workspace_id)
     if rate is None or account_id is None:
         return None
     reservation = await reserve_metered_usage(

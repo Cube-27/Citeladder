@@ -33,43 +33,43 @@ from sqlalchemy import select
 
 from app.core.config.entitlements import KEY_MONITORED_URLS
 from app.core.database import SessionLocal, dispose_engine
+from app.domain.billing.accounts import billing_account_id_for
 from app.domain.entitlements.grants import issue_override_bundle
 from app.domain.entitlements.service import (
     refresh_site_health_runtime_for_account,
 )
 from app.domain.entitlements.types import GrantSpec
-from app.models.billing import BillingAccount, WorkspaceBillingLink
+from app.domain.workspaces.policy import WORKSPACE_ROLE_OWNER
 from app.models.user import User
+from app.models.workspace import WorkspaceMember
 
 logger = logging.getLogger("scripts.set_site_health_entitlement")
 
 
 async def _run(workspace_id: uuid.UUID, monitored_urls: int) -> None:
     async with SessionLocal() as session:
-        link = await session.scalar(
-            select(WorkspaceBillingLink).where(
-                WorkspaceBillingLink.workspace_id == workspace_id
-            )
-        )
-        if link is None:
-            raise RuntimeError(f"workspace {workspace_id} has no billing account link")
+        account_id = await billing_account_id_for(session, workspace_id)
+        if account_id is None:
+            raise RuntimeError(f"workspace {workspace_id} has no billing account")
+        # The workspace's designated Owner is the audited actor: the billing
+        # account's ``owner_user_id`` is provisioning metadata and may be null.
         owner = await session.scalar(
             select(User)
-            .join(
-                BillingAccount,
-                BillingAccount.owner_user_id == User.id,
+            .join(WorkspaceMember, WorkspaceMember.user_id == User.id)
+            .where(
+                WorkspaceMember.workspace_id == workspace_id,
+                WorkspaceMember.role == WORKSPACE_ROLE_OWNER,
             )
-            .where(BillingAccount.id == link.billing_account_id)
         )
         if owner is None:
             raise RuntimeError(
-                f"workspace {workspace_id} has no resolvable account owner"
+                f"workspace {workspace_id} has no resolvable workspace owner"
             )
         now = datetime.now(UTC)
         await issue_override_bundle(
             session,
             operator_user=owner,
-            account_id=link.billing_account_id,
+            account_id=account_id,
             grants=(GrantSpec(key=KEY_MONITORED_URLS, value=monitored_urls),),
             reason="operator monitored_urls grant (dev/operator command)",
             valid_from=now,
@@ -77,7 +77,7 @@ async def _run(workspace_id: uuid.UUID, monitored_urls: int) -> None:
             idempotency_key=f"operator:set-site-health:{workspace_id}:{now.isoformat()}",
         )
         row = await refresh_site_health_runtime_for_account(
-            session, account_id=link.billing_account_id, at=now
+            session, account_id=account_id, at=now
         )
         await session.commit()
         # Audit-safe log line: identifies the workspace, granted allowance,

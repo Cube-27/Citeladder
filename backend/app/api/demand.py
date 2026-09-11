@@ -9,7 +9,13 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import WorkspaceContext, get_db, require_active_workspace
+from app.api.deps import (
+    WorkspaceContext,
+    get_db,
+    require_active_workspace,
+    require_active_workspace_run,
+    require_active_workspace_write,
+)
 from app.core.config.demand import (
     ERROR_QUERY_EVIDENCE_CURSOR_INVALID,
     QUERY_EVIDENCE_DEFAULT_LIMIT,
@@ -45,6 +51,13 @@ from app.domain.projects.service import ProjectNotFoundError, get_project
 
 router = APIRouter(prefix="/projects", tags=["demand"])
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
+
+# Capability-gated variants of the router's workspace dependency. They apply the
+# ONE role policy (app/domain/workspaces/policy.py): Viewer is read-only, and
+# Member keeps every non-administrative product action. Nothing here spells a
+# role set of its own.
+_RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
+_WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -107,7 +120,7 @@ async def latest(
 async def recompute(
     project_id: uuid.UUID,
     payload: DemandRecomputeRequest,
-    ctx: _WorkspaceDep,
+    ctx: _RunDep,
     session: _SessionDep,
 ) -> DemandRecomputeResponse:
     await _authorize(session, ctx.workspace_id, project_id)
@@ -237,7 +250,7 @@ async def query_evidence_summary(
 async def create_query_classification_override(
     project_id: uuid.UUID,
     payload: BrandedQueryOverrideRequest,
-    ctx: _WorkspaceDep,
+    ctx: _WriteDep,
     session: _SessionDep,
 ) -> BrandedQueryClassificationView:
     await _authorize(session, ctx.workspace_id, project_id)
