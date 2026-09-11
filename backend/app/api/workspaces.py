@@ -23,6 +23,8 @@ from app.api.deps import (
 )
 from app.core.config.workspaces import (
     CODE_INVITATION_INVALID,
+    CODE_INVITATION_LIMIT_EXCEEDED,
+    CODE_MEMBER_NOT_FOUND,
     CODE_WORKSPACE_LIMIT_EXCEEDED,
     CODE_WORKSPACE_OWNER_REQUIRED,
 )
@@ -74,17 +76,38 @@ _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 _MemberDep = Annotated[WorkspaceContext, Depends(require_workspace_member)]
 _AdminDep = Annotated[WorkspaceContext, Depends(require_workspace_members_admin)]
 
-# Membership changes that would strand the workspace are refused with 409:
-# they are a state conflict, not a permission failure.
-_CONFLICT_CODES = {
-    "owner_cannot_be_removed",
-    "owner_cannot_leave",
-    "owner_role_requires_transfer",
-    "already_owner",
-    "already_a_member",
-    "invitation_already_pending",
-    "invitation_limit_exceeded",
-    "invitation_not_pending",
+# Every domain refusal, mapped ONCE to the status and the machine code a
+# client should see. A 409 is a state conflict the caller could resolve (the
+# workspace would be left ownerless, the address is already invited); a 404 is
+# a thing that is not there; anything else is a bad request.
+#
+# The code is not the same question as the status: "you have too many pending
+# invitations" and "that member does not exist" are both refusals, but a
+# client that switches on `workspace_owner_required` for both learns nothing.
+_REFUSALS: dict[str, tuple[int, str]] = {
+    "member_not_found": (status.HTTP_404_NOT_FOUND, CODE_MEMBER_NOT_FOUND),
+    "workspace_not_found": (status.HTTP_404_NOT_FOUND, CODE_MEMBER_NOT_FOUND),
+    "invitation_not_found": (status.HTTP_404_NOT_FOUND, CODE_INVITATION_INVALID),
+    "owner_cannot_be_removed": (
+        status.HTTP_409_CONFLICT,
+        CODE_WORKSPACE_OWNER_REQUIRED,
+    ),
+    "owner_cannot_leave": (status.HTTP_409_CONFLICT, CODE_WORKSPACE_OWNER_REQUIRED),
+    "owner_role_requires_transfer": (
+        status.HTTP_409_CONFLICT,
+        CODE_WORKSPACE_OWNER_REQUIRED,
+    ),
+    "already_owner": (status.HTTP_409_CONFLICT, CODE_WORKSPACE_OWNER_REQUIRED),
+    "already_a_member": (status.HTTP_409_CONFLICT, CODE_INVITATION_INVALID),
+    "invitation_already_pending": (
+        status.HTTP_409_CONFLICT,
+        CODE_INVITATION_INVALID,
+    ),
+    "invitation_not_pending": (status.HTTP_409_CONFLICT, CODE_INVITATION_INVALID),
+    "invitation_limit_exceeded": (
+        status.HTTP_409_CONFLICT,
+        CODE_INVITATION_LIMIT_EXCEEDED,
+    ),
 }
 
 
@@ -111,17 +134,11 @@ def _invitation_view(invitation: WorkspaceInvitation) -> WorkspaceInvitationResp
 
 
 def _raise_membership(exc: MembershipError | InvitationError) -> NoReturn:
-    if exc.code in {"member_not_found", "invitation_not_found", "workspace_not_found"}:
-        raise ApiException.coded(
-            status.HTTP_404_NOT_FOUND, CODE_INVITATION_INVALID, exc.code
-        ) from exc
-    if exc.code in _CONFLICT_CODES:
-        raise ApiException.coded(
-            status.HTTP_409_CONFLICT, CODE_WORKSPACE_OWNER_REQUIRED, exc.code
-        ) from exc
-    raise ApiException.coded(
-        status.HTTP_400_BAD_REQUEST, CODE_INVITATION_INVALID, exc.code
-    ) from exc
+    """Translate a domain refusal into its documented API shape."""
+    http_status, code = _REFUSALS.get(
+        exc.code, (status.HTTP_400_BAD_REQUEST, CODE_INVITATION_INVALID)
+    )
+    raise ApiException.coded(http_status, code, exc.code) from exc
 
 
 @router.get("", response_model=list[WorkspaceResponse])

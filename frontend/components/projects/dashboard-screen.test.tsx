@@ -125,6 +125,9 @@ vi.mock('@tanstack/react-query', () => ({
 }));
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  // `ProjectControls` gates the create affordance on the caller's role as
+  // well as on the remaining allowance; this fixture is an Owner.
+  useWorkspaceCapability: () => true,
   useActiveProject: () => project,
   useProjectContext: () => ({
     projects: [project],

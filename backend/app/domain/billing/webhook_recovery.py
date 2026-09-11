@@ -21,11 +21,10 @@ from app.connectors.billing.base import (
     BillingProviderError,
     ProviderPayment,
 )
-from app.connectors.billing.factory import provider_for_record
 from app.connectors.billing.registry import (
-    ProviderUnavailableError,
+    adapter_for_record,
+    configured_pairs,
     payment_event_predicate,
-    registrations,
 )
 from app.core.config.billing_settings import billing_settings
 from app.domain.billing.payments import PaymentReceiptConflictError
@@ -36,27 +35,6 @@ from app.domain.billing.webhooks import (
     _process_subscription_event,
 )
 from app.models.billing import BillingWebhookEvent
-
-
-def _recoverable_pairs() -> list[tuple[str, str]]:
-    """(provider, environment) pairs whose receipts may be replayed now."""
-    pairs: list[tuple[str, str]] = []
-    for registration in registrations().values():
-        mode = registration.configured_mode()
-        if mode:
-            pairs.append((registration.provider, mode))
-    return pairs
-
-
-def _receipt_adapter(
-    provider: str, provider_mode: str, override: BillingProvider | None
-) -> BillingProvider | None:
-    if override is not None:
-        return override
-    try:
-        return provider_for_record(provider, provider_mode)
-    except ProviderUnavailableError:
-        return None
 
 
 async def recover_webhook_receipts(
@@ -72,7 +50,7 @@ async def recover_webhook_receipts(
                     tuple_(
                         BillingWebhookEvent.provider,
                         BillingWebhookEvent.provider_mode,
-                    ).in_(_recoverable_pairs()),
+                    ).in_(configured_pairs()),
                     BillingWebhookEvent.attempt_count
                     < billing_settings.webhook_max_attempts,
                     (BillingWebhookEvent.next_attempt_at.is_(None))
@@ -108,7 +86,7 @@ async def recover_webhook_receipts(
         )
     await session.commit()
     for event_id, token, event_type, reference, name, mode in claims:
-        adapter = _receipt_adapter(name, mode, provider)
+        adapter = provider or adapter_for_record(name, mode)
         if adapter is None:
             # Leave the receipt pending rather than replaying it against a
             # provider that did not originate it.

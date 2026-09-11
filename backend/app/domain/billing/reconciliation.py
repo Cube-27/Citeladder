@@ -34,10 +34,9 @@ from app.connectors.billing.base import (
     BillingProviderError,
     ProviderPayment,
 )
-from app.connectors.billing.factory import provider_for_record
 from app.connectors.billing.registry import (
-    ProviderUnavailableError,
-    registrations,
+    adapter_for_record,
+    configured_pairs,
     status_normalizer,
 )
 from app.core.config.billing_contracts import (
@@ -148,7 +147,7 @@ async def _claim_batch(
                     # reconciled against somebody else's API.
                     tuple_(
                         PendingActivation.provider, PendingActivation.provider_mode
-                    ).in_(reconcilable_pairs()),
+                    ).in_(configured_pairs()),
                     (PendingActivation.created_at <= now - stale_after)
                     | (PendingActivation.reconciliation_next_at <= now),
                     (PendingActivation.reconciliation_next_at.is_(None))
@@ -322,35 +321,29 @@ async def _provider_failure(
     return ReconciliationSummary(claimed=1, still_pending=1)
 
 
-def reconcilable_pairs() -> list[tuple[str, str]]:
-    """(provider, environment) pairs a sweep may currently talk to.
+async def _settle_absent_record(
+    session: AsyncSession,
+    claim: _Claim,
+    *,
+    now: datetime,
+    abandon_after: timedelta,
+) -> ReconciliationSummary:
+    """The provider has no record of this intent.
 
-    Empty when nothing is configured, which makes the claim query select
-    nothing at all — a deployment with billing switched off reconciles nothing
-    rather than reconciling against the wrong gateway.
+    Abandon it once it has had long enough to appear; until then it stays
+    pending, because "not there yet" and "never existed" look identical from
+    here and only time tells them apart.
     """
-    pairs: list[tuple[str, str]] = []
-    for registration in registrations().values():
-        mode = registration.configured_mode()
-        if mode:
-            pairs.append((registration.provider, mode))
-    return pairs
-
-
-def _claim_adapter(
-    claim: _Claim, override: BillingProvider | None
-) -> BillingProvider | None:
-    """The adapter for this row's ORIGINATING provider/environment.
-
-    ``override`` is the injected test seam; production passes ``None`` and the
-    binding comes from the persisted pair.
-    """
-    if override is not None:
-        return override
-    try:
-        return provider_for_record(claim.provider, claim.provider_mode)
-    except ProviderUnavailableError:
-        return None
+    if claim.created_at <= now - abandon_after:
+        await _mark_terminal(
+            session,
+            claim.pending_id,
+            status=ACTIVATION_ABANDONED,
+            failure_code=REASON_ACTIVATION_EXPIRED,
+            now=now,
+        )
+        return ReconciliationSummary(claimed=1, abandoned=1)
+    return ReconciliationSummary(claimed=1, still_pending=1)
 
 
 async def _settle_claim(
@@ -362,7 +355,7 @@ async def _settle_claim(
     abandon_after: timedelta,
 ) -> ReconciliationSummary:
     """Settle ONE claimed row from its ORIGINATING provider's record."""
-    adapter = _claim_adapter(claim, provider)
+    adapter = provider or adapter_for_record(claim.provider, claim.provider_mode)
     if adapter is None:
         # The originating provider is no longer usable. Leave the row pending
         # for a later sweep rather than retrying it against another provider.
@@ -379,16 +372,9 @@ async def _settle_claim(
         await session.rollback()
         return ReconciliationSummary(claimed=1, still_pending=1)
     if record is None:
-        if claim.created_at <= now - abandon_after:
-            await _mark_terminal(
-                session,
-                claim.pending_id,
-                status=ACTIVATION_ABANDONED,
-                failure_code=REASON_ACTIVATION_EXPIRED,
-                now=now,
-            )
-            return ReconciliationSummary(claimed=1, abandoned=1)
-        return ReconciliationSummary(claimed=1, still_pending=1)
+        return await _settle_absent_record(
+            session, claim, now=now, abandon_after=abandon_after
+        )
     if not await _bind_creation_outcome(session, claim, record):
         return ReconciliationSummary(claimed=1, errors=1)
     status = _authoritative_status(record, claim.provider)

@@ -25,7 +25,6 @@ from pydantic import SecretStr
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import billing as billing_api
 from app.connectors.billing.base import ProviderSubscription
 from app.core.config.billing_settings import billing_settings
 from app.core.config.entitlements import (
@@ -33,6 +32,7 @@ from app.core.config.entitlements import (
     KEY_MONITORED_URLS,
 )
 from app.core.config.razorpay_settings import razorpay_settings
+from app.domain.billing import service as billing_service
 from app.models.billing import (
     AccountGrant,
     BillingAccount,
@@ -548,6 +548,10 @@ async def test_cancel_marks_cancel_at_period_end(
     now = datetime.now(UTC)
     subscription = BillingSubscription(
         billing_account_id=account.id,
+        # Cancellation resolves the adapter from the row's ORIGINATING pair,
+        # so the row has to name a real environment rather than the
+        # "disabled" default.
+        provider_mode="test",
         external_subscription_id="sub_cancel_me",
         external_price_id="plan_test",
         catalog_key="tier_1",
@@ -579,7 +583,11 @@ async def test_cancel_marks_cancel_at_period_end(
                 cancel_at_period_end=True,
             )
 
-    monkeypatch.setattr(billing_api, "get_billing_provider", FakeProvider)
+    # The injection point moved with the routing: cancellation no longer asks
+    # the new-checkout default, it asks the subscription's own provider.
+    monkeypatch.setattr(
+        billing_service, "adapter_for_record", lambda _provider, _mode: FakeProvider()
+    )
     response = await client.delete(
         "/api/v1/billing/subscription", headers={"Idempotency-Key": "cancel-key-2"}
     )

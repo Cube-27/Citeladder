@@ -77,12 +77,14 @@ from app.connectors.billing.base import (
     BillingProviderError,
 )
 from app.connectors.billing.factory import get_billing_provider
+from app.connectors.billing.registry import ProviderUnavailableError
 from app.core.config.billing_contracts import (
     ACTIVATION_PENDING,
     CREDENTIAL_MODE_BYOK,
     OPERATION_ADDON_ACTIVATE,
     OPERATION_SUBSCRIPTION_CREATE,
     OPERATION_TOPUP_PURCHASE,
+    REASON_CHECKOUT_UNAVAILABLE,
 )
 from app.core.config.billing_settings import (
     billing_settings,
@@ -189,6 +191,11 @@ def _safe_commercial_errors() -> Iterator[None]:
     """Map domain refusals onto safe HTTP statuses (never a provider message)."""
     try:
         yield
+    except ProviderUnavailableError as exc:
+        # No provider is configured, or not in this record's environment. That
+        # is a commercial refusal the caller can act on, not a server fault —
+        # and it is decided before any provider I/O.
+        raise_api_error(409, REASON_CHECKOUT_UNAVAILABLE, cause=exc)
     except (
         TrialUnavailableError,
         IdempotencyConflictError,
@@ -446,7 +453,6 @@ async def post_subscription(
     ``/billing/profile`` deleted this is the single writer of the persisted
     billing country.
     """
-    provider = get_billing_provider()
     with _safe_commercial_errors():
         reject_deferred_trial(payload.trial_requested)
         account = await _account(session, ctx)
@@ -485,6 +491,9 @@ async def post_subscription(
             at=datetime.now(UTC),
         )
         persist_billing_profile(account, payload.country_code, identity)
+        # Only now, past authorization, validation, the idempotent replay and
+        # the one-base state guard, does a NEW checkout need a provider.
+        provider = get_billing_provider()
         return await _run_intent(
             session,
             account=account,
@@ -511,7 +520,6 @@ async def post_addon(
     """Activate one add-on. A coming-soon add-on refuses with
     ``provider_unavailable`` before any provider I/O or grant issuance.
     """
-    provider = get_billing_provider()
     with _safe_commercial_errors():
         account = await _account(session, ctx)
         identity = purchase_identity(account)
@@ -532,6 +540,7 @@ async def post_addon(
         if replayed is not None:
             return replayed
         await reject_existing_addon(session, account, payload.catalog_key)
+        provider = get_billing_provider()
         intent = await resolve_addon_intent(
             session,
             catalog_key=payload.catalog_key,
@@ -568,7 +577,6 @@ async def post_topup(
     A top-up funds nothing without a readable live base subscription, so the
     purchase is refused here — before any provider I/O.
     """
-    provider = get_billing_provider()
     with _safe_commercial_errors():
         account = await _account(session, ctx)
         identity = purchase_identity(account)
@@ -589,6 +597,7 @@ async def post_topup(
         if replayed is not None:
             return replayed
         await require_live_base(session, account)
+        provider = get_billing_provider()
         intent = await resolve_topup_intent(
             session,
             catalog_key=payload.catalog_key,
@@ -624,11 +633,12 @@ async def delete_subscription(
     across every commercial mutation.
     """
     del idempotency_key
-    provider = get_billing_provider()
     with _safe_commercial_errors():
+        # No provider is resolved here: cancellation binds to the adapter that
+        # CREATED the subscription, which the domain reads off the row.
         account = await _account(session, ctx)
         catalog_key, change_status, effective_at = await schedule_base_cancellation(
-            session, provider, account_id=account.id
+            session, account_id=account.id
         )
         return SubscriptionChangeResponse(
             catalog_key=catalog_key, status=change_status, effective_at=effective_at
@@ -644,11 +654,10 @@ async def delete_addon(
 ) -> SubscriptionChangeResponse:
     """Schedule one add-on's PERIOD-END cancellation (grants untouched)."""
     del idempotency_key
-    provider = get_billing_provider()
     with _safe_commercial_errors():
         account = await _account(session, ctx)
         change_status, effective_at = await schedule_addon_cancellation(
-            session, provider, account_id=account.id, catalog_key=key
+            session, account_id=account.id, catalog_key=key
         )
         return SubscriptionChangeResponse(
             catalog_key=key, status=change_status, effective_at=effective_at

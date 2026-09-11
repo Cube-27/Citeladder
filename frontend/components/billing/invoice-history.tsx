@@ -12,6 +12,7 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { panelClasses } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 export function InvoiceHistory({
   invoices,
@@ -22,13 +23,17 @@ export function InvoiceHistory({
   loading: boolean;
   error: boolean;
 }>) {
+  // The receipt belongs to a workspace, so the download names one: the
+  // endpoint is workspace-scoped and would otherwise fall back to whatever
+  // the ambient selection happened to be.
+  const workspaceId = useActiveWorkspaceId();
   const [downloading, setDownloading] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState(false);
   const download = async (invoice: BillingInvoice) => {
     setDownloading(invoice.invoice_id);
     setDownloadError(false);
     try {
-      const blob = await billingApi.invoicePdf(invoice.invoice_id);
+      const blob = await billingApi.invoicePdf(invoice.invoice_id, { workspaceId });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;

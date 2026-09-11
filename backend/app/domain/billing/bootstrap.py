@@ -84,18 +84,29 @@ async def owned_workspace_account(
     need its account; ordinary request handling resolves the account from the
     REQUEST's workspace instead (``billing_account_for``), never from whoever
     is signed in.
+
+    A user owns exactly one workspace, so ambiguity here is a broken
+    invariant, not a choice to make: picking the oldest would silently point
+    an operator grant at one of several accounts. It refuses instead.
     """
-    workspace_id = await session.scalar(
-        select(WorkspaceMember.workspace_id)
-        .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
-        .where(
-            WorkspaceMember.user_id == user.id,
-            WorkspaceMember.role == WORKSPACE_ROLE_OWNER,
-            Workspace.is_system.is_(False),
-        )
-        .order_by(WorkspaceMember.created_at.asc())
-        .limit(1)
+    owned = list(
+        (
+            await session.scalars(
+                select(WorkspaceMember.workspace_id)
+                .join(Workspace, Workspace.id == WorkspaceMember.workspace_id)
+                .where(
+                    WorkspaceMember.user_id == user.id,
+                    WorkspaceMember.role == WORKSPACE_ROLE_OWNER,
+                    Workspace.is_system.is_(False),
+                )
+            )
+        ).all()
     )
+    if len(owned) > 1:
+        raise RuntimeError(
+            "user owns several workspaces; name the workspace explicitly"
+        )
+    workspace_id = owned[0] if owned else None
     if workspace_id is None:
         raise RuntimeError("user owns no workspace to provision billing for")
     return await ensure_workspace_billing(

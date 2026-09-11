@@ -102,7 +102,18 @@ function MemberRow({
             variant="ghost"
             size="sm"
             disabled={busy}
-            onClick={() => onTransfer(member.id)}
+            onClick={() => {
+              // Both are hard to undo from here — ownership only moves back by
+              // another transfer, and a removed member needs a fresh
+              // invitation — so each names the member it is about.
+              if (
+                window.confirm(
+                  `Make ${member.email} the owner of this workspace? You become an admin.`,
+                )
+              ) {
+                onTransfer(member.id);
+              }
+            }}
           >
             Make owner
           </Button>
@@ -111,7 +122,15 @@ function MemberRow({
             variant="ghost"
             size="sm"
             disabled={busy}
-            onClick={() => onRemove(member.id)}
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Remove ${member.email} from this workspace? They lose access immediately.`,
+                )
+              ) {
+                onRemove(member.id);
+              }
+            }}
           >
             Remove
           </Button>

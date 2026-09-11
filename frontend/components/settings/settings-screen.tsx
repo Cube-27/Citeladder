@@ -229,9 +229,13 @@ export function SettingsScreen() {
   const updatedLabel = formatTimestamp(user.updated_at);
   // Deep-linkable initial tab (`/settings?tab=providers` from the onboarding
   // card); invalid/absent values fall back to Account.
-  const [activeTab, setActiveTab] = useUrlState('tab', SETTINGS_TAB_CODEC);
+  const [requestedTab, setActiveTab] = useUrlState('tab', SETTINGS_TAB_CODEC);
   const mayManageMembers = useWorkspaceCapability('manage_members');
   const tabs = visibleTabs(mayManageMembers);
+  // `?tab=members` is deep-linkable, so a non-administrator can arrive asking
+  // for a tab that is not offered. Fall back to Account rather than selecting
+  // a tab that no longer exists, which would leave no panel visible at all.
+  const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'account';
 
   return (
     <div className="grid gap-[var(--workspace-gap)]">

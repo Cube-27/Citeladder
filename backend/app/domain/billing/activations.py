@@ -36,6 +36,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import ProviderPayment, ProviderSubscription
+from app.connectors.billing.registry import status_normalizer
 from app.core.config.billing_catalog import scale_grant_specs, topup_grant_specs
 from app.core.config.billing_contracts import (
     ACTIVATION_ACTIVATED,
@@ -45,7 +46,6 @@ from app.core.config.billing_contracts import (
     CADENCE_MONTHLY,
     IDEMPOTENCY_COMPLETED,
     PAYMENT_PAID,
-    RAZORPAY_STATUS_MAP,
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCEL_SCHEDULED,
     SUBSCRIPTION_KIND_ADDON,
@@ -139,7 +139,15 @@ def _verify_payment(pending: PendingActivation, record: ProviderPayment) -> date
 def _verify_subscription(
     pending: PendingActivation, record: ProviderSubscription
 ) -> None:
-    normalized = RAZORPAY_STATUS_MAP.get(record.status)
+    """The LAST gate before paid access: is this subscription really active?
+
+    The status arrives in the ORIGINATING provider's vocabulary, so it is
+    translated by that provider's own map. Reading every provider through
+    Razorpay's map was the one place a non-Razorpay "active" could have been
+    read as unsupported — or, worse, a foreign word could have collided with a
+    Razorpay one and granted access on a coincidence.
+    """
+    normalized = status_normalizer(pending.provider)(record.status)
     if normalized not in _ACTIVE_SUBSCRIPTION_STATUSES:
         raise ActivationRejectedError("subscription_not_active")
     if pending.external_price_id != record.price_ref:
@@ -184,10 +192,14 @@ async def _upsert_subscription(
         if pending.activation_kind == ACTIVATION_KIND_BASE
         else SUBSCRIPTION_KIND_ADDON
     )
+    # Identity is (provider, ENVIRONMENT, external id): the same id string in a
+    # provider's test and live environments names two different subscriptions,
+    # and the unique index now says so too.
     subscription = await session.scalar(
         select(BillingSubscription)
         .where(
             BillingSubscription.provider == pending.provider,
+            BillingSubscription.provider_mode == pending.provider_mode,
             BillingSubscription.external_subscription_id
             == record.external_subscription_id,
         )

@@ -86,12 +86,14 @@ def get_billing_provider(provider: str | None = None) -> BillingProvider:
 
     Kept as the historical import path so the commercial core's call sites did
     not have to change shape; what changed is that it now RESOLVES a provider
-    instead of always constructing Razorpay, and refuses safely when none is
-    configured.
+    instead of always constructing Razorpay.
+
+    Raises :class:`ProviderUnavailableError` when nothing is configured. The
+    API layer maps that to a safe commercial refusal; connectors deliberately
+    do not import the domain's error vocabulary to say so.
     """
-    if provider is None:
-        return new_checkout_binding().adapter()
-    return resolve_binding(provider).adapter()
+    binding = new_checkout_binding() if provider is None else resolve_binding(provider)
+    return binding.adapter()
 
 
 __all__ = [

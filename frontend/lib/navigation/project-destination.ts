@@ -7,6 +7,8 @@ import { useProjectContext } from '@/lib/project/project-context';
 
 const PROJECT_PARAM = 'project';
 const WORKSPACE_PARAM = 'workspace';
+/** The single-use invitation token. Never propagated to another URL. */
+const INVITATION_TOKEN_PARAM = 'token';
 
 /**
  * Build a destination that carries an explicit project.
@@ -41,6 +43,10 @@ export function workspaceDestination(
   const params = new URLSearchParams(search?.toString() ?? '');
   params.set(WORKSPACE_PARAM, workspaceId);
   params.delete(PROJECT_PARAM);
+  // A one-time invitation token is a credential, not a destination parameter.
+  // Carrying it forward would write it into the next URL and into browser
+  // history, where it long outlives the single use it was minted for.
+  params.delete(INVITATION_TOKEN_PARAM);
   return `${pathname}?${params.toString()}`;
 }
 

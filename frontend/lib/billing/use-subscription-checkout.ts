@@ -6,6 +6,7 @@ import { authApi } from '@/lib/api/auth';
 import { billingApi, type SubscriptionCheckoutInput } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { CHECKOUT_POLL_ATTEMPTS, CHECKOUT_POLL_INTERVAL_MS } from '@/lib/config/billing';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { checkoutAttempt, clearCheckoutAttempt } from './checkout-attempt';
 import { startCheckoutFlow } from './checkout-flow';
 
@@ -18,22 +19,32 @@ const INCOMPLETE_CHECKOUT: Record<string, string | null> = {
 
 export function useSubscriptionCheckout() {
   const queryClient = useQueryClient();
-  const attempt = useRef<{ fingerprint: string; key: string; userId: string } | null>(null);
+  // The workspace this purchase is FOR, captured when it starts. Everything
+  // that follows names it explicitly, so a switch mid-flow cannot re-point the
+  // purchase at another workspace's account.
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const attempt = useRef<{
+    fingerprint: string;
+    key: string;
+    userId: string;
+    workspaceId: string;
+  } | null>(null);
   const activationId = useRef<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [testMode, setTestMode] = useState(false);
 
   const refresh = async (signal?: AbortSignal) => {
-    if (!activationId.current) return;
+    if (!activationId.current || !attempt.current) return;
+    const workspaceId = attempt.current.workspaceId;
     let state;
     try {
-      state = await billingApi.activation(activationId.current, { signal });
+      state = await billingApi.activation(activationId.current, { signal, workspaceId });
     } catch {
       setNotice('Payment status is unavailable. Please refresh again.');
       return;
     }
     if (state.status !== 'pending' && attempt.current) {
-      clearCheckoutAttempt(attempt.current.userId);
+      clearCheckoutAttempt(attempt.current.userId, attempt.current.workspaceId);
       attempt.current = null;
     }
     if (state.status === 'activated') {
@@ -45,23 +56,47 @@ export function useSubscriptionCheckout() {
     return state;
   };
 
+  /**
+   * Reuse this purchase's idempotency key, or mint one for a new purchase.
+   *
+   * The identity is (user, WORKSPACE, submitted input): the same person
+   * buying the same plan for two workspaces is two purchases, and sharing a
+   * key across them would replay the first activation into the second.
+   */
+  const beginAttempt = (
+    userId: string,
+    workspaceId: string,
+    input: SubscriptionCheckoutInput,
+    proposed?: string,
+  ) => {
+    const fingerprint = JSON.stringify([userId, workspaceId, input]);
+    if (attempt.current?.fingerprint !== fingerprint) {
+      attempt.current = {
+        fingerprint,
+        key: checkoutAttempt(userId, workspaceId, input, proposed),
+        userId,
+        workspaceId,
+      };
+    }
+    return attempt.current;
+  };
+
   const mutation = useMutation({
     mutationFn: async ({ input, key }: { input: SubscriptionCheckoutInput; key?: string }) => {
+      const workspaceId = activeWorkspaceId;
+      if (!workspaceId) throw new Error('Select a workspace before starting checkout.');
       const user = await authApi.me();
-      const fingerprint = JSON.stringify([user.id, input]);
-      if (attempt.current?.fingerprint !== fingerprint) {
-        attempt.current = {
-          fingerprint,
-          key: checkoutAttempt(user.id, input, key),
-          userId: user.id,
-        };
-      }
-      const activation = await billingApi.createSubscription(input, attempt.current.key);
+      const started = beginAttempt(user.id, workspaceId, input, key);
+      const activation = await billingApi.createSubscription(input, started.key, {
+        workspaceId,
+      });
       activationId.current = activation.activation_id;
       const current = await refresh();
       if (!current) return activation;
       if (current.status !== 'pending') return current;
-      const checkout = await billingApi.checkout(activation.activation_id);
+      const checkout = await billingApi.checkout(activation.activation_id, {
+        workspaceId,
+      });
       setTestMode(checkout.provider_mode === 'test');
       const outcome = await startCheckoutFlow(checkout, user.email, setNotice);
       if (outcome.kind !== 'callback') {
@@ -73,7 +108,9 @@ export function useSubscriptionCheckout() {
       }
       setNotice('Payment verification pending');
       try {
-        await billingApi.verifyCheckout(activation.activation_id, outcome.callback);
+        await billingApi.verifyCheckout(activation.activation_id, outcome.callback, {
+          workspaceId,
+        });
       } catch {
         setNotice('Payment verification is uncertain. Refresh status before retrying.');
         return activation;

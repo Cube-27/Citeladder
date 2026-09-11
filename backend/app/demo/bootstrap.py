@@ -59,6 +59,10 @@ async def ensure_demo_account(
         user.is_active = True
         user.session_version += 1
 
+    # The workspace must exist before its account can be resolved. Registration
+    # provisions one for a fresh database, but a RESET reuses an existing user
+    # row, which may predate the workspace-owned billing account.
+    await ensure_personal_workspace(session, user)
     account = await owned_workspace_account(session, user, provision_access=False)
     expires_at = candidate.demo_expires_at
     if expires_at is None:  # validate_production_security rejects this first

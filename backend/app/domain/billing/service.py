@@ -23,7 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import BillingProvider
-from app.connectors.billing.registry import status_normalizer
+from app.connectors.billing.registry import adapter_for_record, status_normalizer
 from app.core.config.billing_catalog import plan_checkout_availability
 from app.core.config.billing_contracts import (
     ACTIVATION_KIND_ADDON,
@@ -34,6 +34,7 @@ from app.core.config.billing_contracts import (
     COUNTRY_VERIFICATION_DECLARED,
     LIVE_SUBSCRIPTION_STATUSES,
     REASON_BASE_SUBSCRIPTION_REQUIRED,
+    REASON_CHECKOUT_UNAVAILABLE,
     REASON_NO_CURRENT_SUBSCRIPTION,
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCEL_SCHEDULED,
@@ -508,32 +509,43 @@ async def _schedule_cancellation(
 
 
 async def schedule_base_cancellation(
-    session: AsyncSession,
-    provider: BillingProvider,
-    *,
-    account_id: uuid.UUID,
+    session: AsyncSession, *, account_id: uuid.UUID
 ) -> tuple[str, str, datetime]:
-    """Schedule the current base subscription's period-end cancellation."""
+    """Schedule the current base subscription's period-end cancellation.
+
+    The subscription is loaded FIRST and its adapter resolved from the
+    provider/environment persisted on it. Cancelling through the current
+    new-checkout default would ask the wrong provider to cancel an id it has
+    never heard of.
+    """
     subscription = await current_base_subscription(session, account_id)
     if subscription is None:
         raise BillingConflictError(REASON_NO_CURRENT_SUBSCRIPTION)
     catalog_key = subscription.catalog_key
-    status, effective_at = await _schedule_cancellation(session, provider, subscription)
+    status, effective_at = await _schedule_cancellation(
+        session, _originating_adapter(subscription), subscription
+    )
     return catalog_key, status, effective_at
 
 
 async def schedule_addon_cancellation(
-    session: AsyncSession,
-    provider: BillingProvider,
-    *,
-    account_id: uuid.UUID,
-    catalog_key: str,
+    session: AsyncSession, *, account_id: uuid.UUID, catalog_key: str
 ) -> tuple[str, datetime]:
-    """Schedule one add-on's period-end cancellation."""
+    """Schedule one add-on's period-end cancellation, on ITS own provider."""
     subscription = await current_addon_subscription(session, account_id, catalog_key)
     if subscription is None:
         raise BillingConflictError(REASON_NO_CURRENT_SUBSCRIPTION)
-    return await _schedule_cancellation(session, provider, subscription)
+    return await _schedule_cancellation(
+        session, _originating_adapter(subscription), subscription
+    )
+
+
+def _originating_adapter(subscription: BillingSubscription) -> BillingProvider:
+    """The adapter that CREATED this subscription, or a safe refusal."""
+    adapter = adapter_for_record(subscription.provider, subscription.provider_mode)
+    if adapter is None:
+        raise BillingConflictError(REASON_CHECKOUT_UNAVAILABLE)
+    return adapter
 
 
 __all__ = [

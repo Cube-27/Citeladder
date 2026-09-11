@@ -111,6 +111,15 @@ async def create_invitation(
     if not normalized or "@" not in normalized:
         raise InvitationError("email_invalid")
 
+    # Serialize invitation creation for this workspace. The budget check and
+    # the insert are otherwise a read-then-write: two concurrent requests for
+    # DIFFERENT addresses could both observe the same count and both commit,
+    # and two for the SAME expired address could both rotate it and each
+    # believe its own token is the live one. The lock is held to commit.
+    await session.execute(
+        select(Workspace.id).where(Workspace.id == workspace_id).with_for_update()
+    )
+
     already = await session.scalar(
         select(WorkspaceMember.id)
         .join(User, User.id == WorkspaceMember.user_id)
@@ -187,8 +196,9 @@ async def revoke_invitation(
     at: datetime | None = None,
 ) -> WorkspaceInvitation:
     """Mark one pending invitation revoked. Its token stops working at once."""
-    invitation = await _pending_invitation(session, workspace_id, invitation_id)
-    invitation.revoked_at = at or datetime.now(UTC)
+    now = at or datetime.now(UTC)
+    invitation = await _pending_invitation(session, workspace_id, invitation_id, at=now)
+    invitation.revoked_at = now
     await session.flush()
     return invitation
 
@@ -205,8 +215,8 @@ async def resend_invitation(
     Resending deliberately INVALIDATES the previous link rather than
     re-delivering it: only one acceptance link per address is ever live.
     """
-    invitation = await _pending_invitation(session, workspace_id, invitation_id)
     now = at or datetime.now(UTC)
+    invitation = await _pending_invitation(session, workspace_id, invitation_id, at=now)
     token, token_hash = _new_token()
     invitation.token_sha256 = token_hash
     invitation.expires_at = now + timedelta(hours=INVITATION_TTL_HOURS)
@@ -215,8 +225,19 @@ async def resend_invitation(
 
 
 async def _pending_invitation(
-    session: AsyncSession, workspace_id: uuid.UUID, invitation_id: uuid.UUID
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    invitation_id: uuid.UUID,
+    *,
+    at: datetime,
 ) -> WorkspaceInvitation:
+    """One invitation that can still be acted on, or a refusal.
+
+    EXPIRED counts as not pending, the same way the listing and the budget
+    treat it: revoking something already unusable is a no-op dressed as a
+    success, and resending would silently resurrect an invitation whose
+    acceptance window the workspace had already let lapse.
+    """
     invitation = await session.scalar(
         select(WorkspaceInvitation)
         .where(
@@ -227,7 +248,11 @@ async def _pending_invitation(
     )
     if invitation is None:
         raise InvitationError("invitation_not_found")
-    if invitation.accepted_at is not None or invitation.revoked_at is not None:
+    if (
+        invitation.accepted_at is not None
+        or invitation.revoked_at is not None
+        or invitation.expires_at <= at
+    ):
         raise InvitationError("invitation_not_pending")
     return invitation
 

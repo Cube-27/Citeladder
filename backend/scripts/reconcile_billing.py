@@ -14,7 +14,6 @@ import json
 import sys
 from datetime import UTC, datetime
 
-from app.connectors.billing.factory import get_billing_provider
 from app.connectors.billing.http_client import aclose_shared_billing_clients
 from app.core.config.billing_settings import billing_settings
 from app.core.database import SessionLocal
@@ -26,15 +25,13 @@ from app.domain.billing.webhook_recovery import recover_webhook_receipts
 async def _run(batch_size: int) -> dict[str, int]:
     try:
         async with SessionLocal() as session:
-            webhook_count = await recover_webhook_receipts(
-                session, get_billing_provider()
-            )
-            subscription_count = await reconcile_current_subscriptions(
-                session, get_billing_provider()
-            )
+            # No adapter is passed: every claimed row is settled against the
+            # provider and environment PERSISTED on it. Forcing one adapter
+            # here would send a second provider's records to the first.
+            webhook_count = await recover_webhook_receipts(session)
+            subscription_count = await reconcile_current_subscriptions(session)
         summary = await reconcile_pending_activations(
             SessionLocal,
-            get_billing_provider(),
             now=datetime.now(UTC),
             batch_size=batch_size,
         )

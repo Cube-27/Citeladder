@@ -11,11 +11,13 @@ surface. No auth bypass, and no admin tenancy shortcut.
 
 from __future__ import annotations
 
+import hashlib
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.billing.accounts import billing_account_for
@@ -115,8 +117,9 @@ def test_owner_is_never_an_assignable_role() -> None:
 # The matrix as the API actually enforces it
 # ---------------------------------------------------------------------------
 
-# (role, expected status) for each representative endpoint. 403 is a role
-# denial; anything else means the role passed the gate and the handler ran.
+# (role, permitted) for each representative endpoint. A permitted role must
+# reach its endpoint's REAL success status — "not 403" would also accept a 500,
+# which is how a role test quietly stops testing the endpoint.
 _BILLING_ROLES = [
     (WORKSPACE_ROLE_OWNER, True),
     (WORKSPACE_ROLE_ADMIN, True),
@@ -146,7 +149,7 @@ async def test_billing_usage_is_administrative(
     response = await client.get(
         "/api/v1/billing/usage", headers={"X-Workspace-Id": str(owned_workspace)}
     )
-    assert (response.status_code != 403) is permitted, response.text
+    assert response.status_code == (200 if permitted else 403), response.text
 
 
 @pytest.mark.asyncio
@@ -167,7 +170,7 @@ async def test_member_management_is_administrative(
         )
         await _login(client, email)
     response = await client.get(f"/api/v1/workspaces/{owned_workspace}/members")
-    assert (response.status_code != 403) is permitted, response.text
+    assert response.status_code == (200 if permitted else 403), response.text
 
 
 @pytest.mark.asyncio
@@ -197,7 +200,7 @@ async def test_project_creation_follows_the_write_capability(
         json={"name": "Role check"},
         headers={"X-Workspace-Id": str(owned_workspace)},
     )
-    assert (response.status_code != 403) is permitted, response.text
+    assert response.status_code == (201 if permitted else 403), response.text
 
 
 @pytest.mark.asyncio
@@ -220,10 +223,10 @@ async def test_provider_credentials_stay_administrative(
         await _login(client, email)
     response = await client.post(
         "/api/v1/provider-connections",
-        json={"engine": "chatgpt", "transport": "api", "api_key": "sk-test"},
+        json={"transport_provider": "openai", "api_key": "sk-role-test"},
         headers={"X-Workspace-Id": str(owned_workspace)},
     )
-    assert (response.status_code != 403) is permitted, response.text
+    assert response.status_code == (201 if permitted else 403), response.text
 
 
 @pytest.mark.asyncio
@@ -349,7 +352,10 @@ async def test_invitation_lifecycle_is_single_use_and_identity_bound(
             WorkspaceInvitation.id == uuid.UUID(invitation_id)
         )
     )
-    assert stored is not None and stored.token_sha256 != token
+    assert stored is not None
+    # Exactly the hash, not merely "something other than the token": a stored
+    # value that differed by encoding would also pass a not-equal check.
+    assert stored.token_sha256 == hashlib.sha256(token.encode()).hexdigest()
     listing = await client.get(f"/api/v1/workspaces/{owned_workspace}/invitations")
     assert token not in listing.text
 
@@ -574,7 +580,13 @@ async def test_a_workspace_can_never_be_left_ownerless(
 async def test_removal_takes_effect_on_the_next_request(
     client: httpx.AsyncClient, db_session: AsyncSession, owned_workspace: uuid.UUID
 ) -> None:
-    """A removed member loses server access immediately, not on re-login."""
+    """A removed member's EXISTING session loses access on its next request.
+
+    The member keeps the cookie it already holds: re-logging in afterwards
+    would prove something weaker, since a fresh sign-in has to re-read
+    membership anyway. What matters is that a session established while the
+    member was still in the workspace stops working the moment they are not.
+    """
     await _seed_role(
         db_session,
         client,
@@ -589,6 +601,7 @@ async def test_removal_takes_effect_on_the_next_request(
     )
 
     await _login(client, "removed@example.com")
+    member_cookies = httpx.Cookies(client.cookies)
     headers = {"X-Workspace-Id": str(owned_workspace)}
     assert (await client.get("/api/v1/projects", headers=headers)).status_code == 200
 
@@ -599,5 +612,107 @@ async def test_removal_takes_effect_on_the_next_request(
         )
     ).status_code == 204
 
-    await _login(client, "removed@example.com")
+    # The member's ORIGINAL session, unchanged, now sees nothing.
+    client.cookies = member_cookies
     assert (await client.get("/api/v1/projects", headers=headers)).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_an_expired_invitation_neither_blocks_nor_reactivates(
+    client: httpx.AsyncClient, db_session: AsyncSession, owned_workspace: uuid.UUID
+) -> None:
+    """Expired is not pending, consistently, everywhere it is asked.
+
+    It must not be listed, must not consume the workspace's invitation budget,
+    must not block a fresh invitation to the same address, and must not be
+    resurrected by a resend — the acceptance window the workspace let lapse is
+    lapsed.
+    """
+    created = await client.post(
+        f"/api/v1/workspaces/{owned_workspace}/invitations",
+        json={"email": "lapsed@example.com", "role": "member"},
+    )
+    assert created.status_code == 201
+    invitation_id = created.json()["invitation"]["id"]
+    stale_token = created.json()["token"]
+
+    await db_session.execute(
+        update(WorkspaceInvitation)
+        .where(WorkspaceInvitation.id == uuid.UUID(invitation_id))
+        .values(expires_at=datetime.now(UTC) - timedelta(hours=1))
+    )
+    await db_session.commit()
+
+    # Not listed, and not acceptable.
+    listed = await client.get(f"/api/v1/workspaces/{owned_workspace}/invitations")
+    assert listed.json() == []
+
+    # Neither resend nor revoke may act on it.
+    assert (
+        await client.post(
+            f"/api/v1/workspaces/{owned_workspace}/invitations/{invitation_id}/resend"
+        )
+    ).status_code == 409
+    assert (
+        await client.delete(
+            f"/api/v1/workspaces/{owned_workspace}/invitations/{invitation_id}"
+        )
+    ).status_code == 409
+
+    # A FRESH invitation to the same address succeeds, reusing the lapsed row's
+    # slot rather than colliding with the partial unique index.
+    reissued = await client.post(
+        f"/api/v1/workspaces/{owned_workspace}/invitations",
+        json={"email": "lapsed@example.com", "role": "viewer"},
+    )
+    assert reissued.status_code == 201, reissued.text
+    fresh_token = reissued.json()["token"]
+    assert fresh_token != stale_token
+
+    await register_and_login(client, "lapsed@example.com")
+    assert (
+        await client.post(
+            "/api/v1/workspaces/invitations/accept", json={"token": stale_token}
+        )
+    ).status_code == 400
+    accepted = await client.post(
+        "/api/v1/workspaces/invitations/accept", json={"token": fresh_token}
+    )
+    assert accepted.status_code == 200
+    assert accepted.json()["role"] == "viewer"
+
+
+@pytest.mark.asyncio
+async def test_a_spent_token_cannot_readmit_a_removed_member(
+    client: httpx.AsyncClient, db_session: AsyncSession, owned_workspace: uuid.UUID
+) -> None:
+    """Acceptance is single-use even after the membership it created is gone."""
+    created = await client.post(
+        f"/api/v1/workspaces/{owned_workspace}/invitations",
+        json={"email": "ejected@example.com", "role": "member"},
+    )
+    token = created.json()["token"]
+    await register_and_login(client, "ejected@example.com")
+    assert (
+        await client.post(
+            "/api/v1/workspaces/invitations/accept", json={"token": token}
+        )
+    ).status_code == 200
+
+    await _login(client, "role-owner@example.com")
+    roster = (await client.get(f"/api/v1/workspaces/{owned_workspace}/members")).json()
+    target = next(
+        member for member in roster if member["email"] == "ejected@example.com"
+    )
+    assert (
+        await client.delete(
+            f"/api/v1/workspaces/{owned_workspace}/members/{target['id']}"
+        )
+    ).status_code == 204
+
+    await _login(client, "ejected@example.com")
+    assert (
+        await client.post(
+            "/api/v1/workspaces/invitations/accept", json={"token": token}
+        )
+    ).status_code == 400

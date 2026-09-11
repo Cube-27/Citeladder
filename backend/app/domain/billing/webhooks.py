@@ -228,9 +228,10 @@ async def _process_subscription_event(
 
         pending = await session.scalar(
             select(PendingActivation).where(
+                PendingActivation.provider == subscription.provider,
+                PendingActivation.provider_mode == record.provider_mode,
                 PendingActivation.external_reference == record.external_subscription_id,
                 PendingActivation.billing_account_id == subscription.billing_account_id,
-                PendingActivation.provider_mode == record.provider_mode,
             )
         )
         if pending is not None:
@@ -268,7 +269,10 @@ def authenticate_webhook(
     except WebhookAuthenticationError as exc:
         raise InvalidWebhookError(exc.code) from exc
     except ValueError as exc:
-        raise InvalidWebhookError(str(exc) or "invalid_payload") from exc
+        # A FIXED code: a parse failure's message can carry payload-derived
+        # detail, and this one is rendered into an HTTP response body. The
+        # cause is chained for the logs, where that detail belongs.
+        raise InvalidWebhookError("invalid_payload") from exc
 
 
 async def process_webhook_envelope(

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterator, Mapping
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -59,8 +60,13 @@ from app.connectors.billing.registry import (
 from app.core.config.billing_contracts import (
     SUBSCRIPTION_ACTIVE,
     SUBSCRIPTION_CANCELLED,
+    SUBSCRIPTION_KIND_BASE,
 )
 from app.core.config.billing_settings import billing_settings
+from app.domain.billing.service import (
+    BillingConflictError,
+    schedule_base_cancellation,
+)
 from app.domain.billing.webhooks import (
     InvalidWebhookError,
     authenticate_webhook,
@@ -520,3 +526,102 @@ def test_payment_event_classification_is_per_provider(doubles: None) -> None:
     assert payment_event_predicate(ALPHA)("payment.captured") is True
     assert payment_event_predicate(ALPHA)("subscription.activated") is False
     assert payment_event_predicate("no_such_provider")("payment.captured") is False
+
+
+# ---------------------------------------------------------------------------
+# Existing records stay on the adapter that created them
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_cancellation_calls_the_subscriptions_own_provider(
+    db_session: AsyncSession, doubles: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cancelling asks the provider that CREATED the subscription.
+
+    The new-checkout default is deliberately pointed at BETA while the
+    subscription belongs to ALPHA. Resolving the adapter from the default
+    would ask BETA to cancel an id it has never issued.
+    """
+    monkeypatch.setattr(billing_settings, "checkout_provider", BETA)
+    cancelled: list[tuple[str, str]] = []
+
+    class _Cancelling(_Adapter):
+        async def cancel_subscription(
+            self, external_subscription_id: str, *, at_cycle_end: bool = True
+        ) -> ProviderSubscription:
+            cancelled.append((self.name, external_subscription_id))
+            now = int(datetime.now(UTC).timestamp())
+            return ProviderSubscription(
+                external_subscription_id=external_subscription_id,
+                status="live",
+                current_start=now,
+                current_end=now + 86_400,
+                updated_at=now,
+                cancel_at_period_end=True,
+                provider_mode="test",
+            )
+
+    register_provider(
+        replace(_registration(ALPHA, "test"), build=lambda: _Cancelling(ALPHA))
+    )
+
+    workspace = Workspace(name="Cancellation WS")
+    db_session.add(workspace)
+    await db_session.flush()
+    account = BillingAccount(workspace_id=workspace.id)
+    db_session.add(account)
+    await db_session.flush()
+    db_session.add(
+        BillingSubscription(
+            billing_account_id=account.id,
+            provider=ALPHA,
+            provider_mode="test",
+            external_subscription_id="sub_alpha_only",
+            external_price_id="ref",
+            currency="USD",
+            is_current=True,
+            subscription_kind=SUBSCRIPTION_KIND_BASE,
+            status=SUBSCRIPTION_ACTIVE,
+            current_period_end=datetime.now(UTC) + timedelta(days=1),
+        )
+    )
+    await db_session.commit()
+
+    await schedule_base_cancellation(db_session, account_id=account.id)
+
+    assert cancelled == [(ALPHA, "sub_alpha_only")]
+
+
+@pytest.mark.asyncio
+async def test_cancellation_refuses_when_the_originating_provider_is_gone(
+    db_session: AsyncSession, doubles: None
+) -> None:
+    """A subscription whose provider is no longer usable refuses safely.
+
+    It must not be cancelled through somebody else's adapter, and it must not
+    surface as a server fault either.
+    """
+    workspace = Workspace(name="Orphan WS")
+    db_session.add(workspace)
+    await db_session.flush()
+    account = BillingAccount(workspace_id=workspace.id)
+    db_session.add(account)
+    await db_session.flush()
+    db_session.add(
+        BillingSubscription(
+            billing_account_id=account.id,
+            provider="retired_provider",
+            provider_mode="live",
+            external_subscription_id="sub_orphan",
+            external_price_id="ref",
+            currency="USD",
+            is_current=True,
+            subscription_kind=SUBSCRIPTION_KIND_BASE,
+            status=SUBSCRIPTION_ACTIVE,
+        )
+    )
+    await db_session.commit()
+
+    with pytest.raises(BillingConflictError):
+        await schedule_base_cancellation(db_session, account_id=account.id)

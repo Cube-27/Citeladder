@@ -3,12 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
 import type { WorkspaceEntitlement } from '@/lib/api/billing';
+import { queryKeys } from '@/lib/api/query-keys';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
@@ -89,7 +91,26 @@ function noticeFor(
  */
 export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
-  const { status, errorScope, activeWorkspaceId, activeWorkspace, retry } = useProjectContext();
+  const {
+    status,
+    errorScope,
+    activeWorkspaceId,
+    activeWorkspace,
+    retry: retryContext,
+  } = useProjectContext();
+  const queryClient = useQueryClient();
+  /**
+   * Re-ask BOTH halves of the precondition.
+   *
+   * The notice can be standing because the allowance never resolved, and the
+   * project context does not own that read — retrying only the context left
+   * the entitlement exactly as unresolved as before, so the button did
+   * nothing the reader could see.
+   */
+  const retry = () => {
+    retryContext();
+    void queryClient.refetchQueries({ queryKey: queryKeys.billing.all });
+  };
   // Entitlement decides which controls the shell HAS — the Growth Agent
   // trigger, the capability-gated navigation rows — so waiting for it here is
   // what lets the shell paint complete instead of growing a button and a link
@@ -118,7 +139,15 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   // state covers both round trips. `redirecting` holds here too — the
   // redirect is already in flight, and drawing a workspace the visitor is
   // about to be taken out of would only be a flash of the wrong app.
-  if (status === 'resolving' || entitlementLoading || redirecting) return <ShellFallback />;
+  //
+  // A workspace-only route waits for NEITHER: an invitee arriving at an
+  // acceptance link may have no resolved workspace at all, which leaves the
+  // entitlement query disabled and therefore never settled. Blocking on it
+  // there would hold that route behind a loader forever.
+  if (redirecting) return <ShellFallback />;
+  if (projectRequired && (status === 'resolving' || entitlementLoading)) {
+    return <ShellFallback />;
+  }
 
   const notice = noticeFor(status, {
     projectRequired,

@@ -91,20 +91,22 @@ class ProviderBinding:
 
 
 _REGISTRY: dict[str, ProviderRegistration] = {}
-_bootstrapped = False
 
 
 def _ensure_registered() -> None:
-    """Import the module that registers the real adapters, once.
+    """Import the module that registers the real adapters.
 
-    Lazy rather than at import time so a reader of this registry never
-    has to import the factory itself, and so importing the registry can
-    never be ordered wrongly against it.
+    Lazy rather than at import time so a reader of this registry never has to
+    import the factory itself, and so importing the registry can never be
+    ordered wrongly against it.
+
+    The import statement IS the once-only guard: Python runs a module body
+    once and serializes concurrent imports on its own lock, so a second caller
+    either waits for the first to finish or gets a `sys.modules` hit. An
+    explicit "already bootstrapped" flag was worse on both counts — set before
+    the import, it let a racing thread read an empty registry, and it stayed
+    set if the import raised, so registration never happened at all.
     """
-    global _bootstrapped
-    if _bootstrapped:
-        return
-    _bootstrapped = True
     import app.connectors.billing.factory  # noqa: F401 - registers adapters
 
 
@@ -200,6 +202,34 @@ def checkout_adapter(provider: str, provider_mode: str) -> BillingCheckoutAdapte
     return binding_for_record(provider, provider_mode).registration.checkout
 
 
+def configured_pairs() -> list[tuple[str, str]]:
+    """Every (provider, environment) pair a sweep may currently talk to.
+
+    Empty when nothing is configured, which makes a claim query select nothing
+    at all — a deployment with billing switched off reconciles nothing rather
+    than reconciling against the wrong gateway.
+    """
+    _ensure_registered()
+    return [
+        (registration.provider, mode)
+        for registration in _REGISTRY.values()
+        if (mode := registration.configured_mode()) and mode != PROVIDER_MODE_DISABLED
+    ]
+
+
+def adapter_for_record(provider: str, provider_mode: str) -> BillingProvider | None:
+    """The adapter for a record's ORIGINATING pair, or ``None``.
+
+    The non-raising form the sweeps want: a row whose provider is no longer
+    usable is left for a later pass rather than being served by somebody
+    else's adapter.
+    """
+    try:
+        return binding_for_record(provider, provider_mode).adapter()
+    except ProviderUnavailableError:
+        return None
+
+
 def status_normalizer(provider: str) -> Callable[[str], str | None]:
     """This provider's subscription-status translation.
 
@@ -231,8 +261,10 @@ __all__ = [
     "ProviderBinding",
     "ProviderRegistration",
     "ProviderUnavailableError",
+    "adapter_for_record",
     "binding_for_record",
     "checkout_adapter",
+    "configured_pairs",
     "known_providers",
     "payment_event_predicate",
     "provider_secret_values",

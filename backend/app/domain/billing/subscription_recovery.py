@@ -10,24 +10,12 @@ from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.billing.base import BillingProvider, BillingProviderError
-from app.connectors.billing.factory import provider_for_record
-from app.connectors.billing.registry import ProviderUnavailableError
+from app.connectors.billing.registry import adapter_for_record, configured_pairs
 from app.core.config.billing_settings import billing_settings
 from app.domain.billing.payments import PaymentReceiptConflictError
 from app.domain.billing.service import BillingConflictError, apply_subscription_state
 from app.domain.billing.subscription_payments import record_subscription_payment
 from app.models.billing import BillingSubscription, PendingActivation
-
-
-def configured_provider_pairs() -> list[tuple[str, str]]:
-    """(provider, environment) pairs currently registered AND configured."""
-    from app.connectors.billing.registry import registrations
-
-    return [
-        (registration.provider, mode)
-        for registration in registrations().values()
-        if (mode := registration.configured_mode())
-    ]
 
 
 async def reconcile_current_subscriptions(
@@ -52,7 +40,7 @@ async def reconcile_current_subscriptions(
                     tuple_(
                         BillingSubscription.provider,
                         BillingSubscription.provider_mode,
-                    ).in_(configured_provider_pairs()),
+                    ).in_(configured_pairs()),
                     (BillingSubscription.reconciliation_next_at.is_(None))
                     | (BillingSubscription.reconciliation_next_at <= now),
                     (BillingSubscription.reconciliation_lease_expires_at.is_(None))
@@ -85,7 +73,7 @@ async def reconcile_current_subscriptions(
     await session.commit()
     claimed = 0
     for row_id, token, reference, name, mode in claims:
-        adapter = provider or _adapter_for(name, mode)
+        adapter = provider or adapter_for_record(name, mode)
         if adapter is None:
             # The originating provider is no longer usable. Leave the row for
             # a later sweep rather than reading it from another provider.
@@ -93,13 +81,6 @@ async def reconcile_current_subscriptions(
         claimed += 1
         await _recover(session, adapter, row_id, token, reference)
     return claimed
-
-
-def _adapter_for(provider: str, provider_mode: str) -> BillingProvider | None:
-    try:
-        return provider_for_record(provider, provider_mode)
-    except ProviderUnavailableError:
-        return None
 
 
 async def _recover(
@@ -125,9 +106,10 @@ async def _recover(
             return
         pending = await session.scalar(
             select(PendingActivation).where(
+                PendingActivation.provider == subscription.provider,
+                PendingActivation.provider_mode == subscription.provider_mode,
                 PendingActivation.external_reference == reference,
                 PendingActivation.billing_account_id == subscription.billing_account_id,
-                PendingActivation.provider_mode == subscription.provider_mode,
             )
         )
         if record.provider_mode != subscription.provider_mode:
