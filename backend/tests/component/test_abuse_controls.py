@@ -23,6 +23,17 @@ from tests.component.audit_helpers import seed_audit_fixtures
 async def test_usage_counter_is_atomic_across_api_sessions(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
+    """Concurrent consumers of ONE window never exceed its limit.
+
+    ``now`` is pinned. ``_window`` tumbles on epoch-aligned boundaries, so with
+    a 3600s window the boundary is the top of each hour; letting each of the
+    twelve attempts read its own clock meant a run straddling that instant
+    wrote to two different windows -- two rows, five each -- and the assertion
+    failed with 6. That is a property of the clock, not of the counter, and CI
+    hit it by starting this test 0.58s after the hour.
+    """
+    now = datetime(2026, 1, 1, 12, 30, tzinfo=UTC)
+
     async def attempt() -> bool:
         async with session_factory() as session:
             try:
@@ -33,6 +44,7 @@ async def test_usage_counter_is_atomic_across_api_sessions(
                     operation="expensive.operation",
                     limit=5,
                     window_seconds=3600,
+                    now=now,
                 )
             except UsageLimitExceededError:
                 await session.rollback()
