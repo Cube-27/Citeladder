@@ -75,9 +75,9 @@ Call `textRole(role, layoutClasses?)` from `components/ui/typography.tsx`; name 
 
 | Role | Job | Size / line height | Weight | Ink |
 | --- | --- | --- | --- | --- |
-| `pageTitle` | In-pane route H1 | 26/32px | 600 | `ink-strong` |
+| `pageTitle` | Reserved; no longer the route H1 | 26/32px | 600 | `ink-strong` |
 | `sectionTitle` | Section H2 | 16/24px | 600 | `ink-strong` |
-| `objectTitle` | Entity heading | 18/26px | 600 | `ink-strong` |
+| `objectTitle` | Entity heading; the in-pane route H1 | 18/26px | 600 | `ink-strong` |
 | `bodyStrong` | Leading copy | 14/20px | 500 | `ink` |
 | `body` | Reading copy, descriptions, cells | 14/20px | 400 | `ink` |
 | `label` | Field/column labels | 14/20px | 500 | `muted` |
@@ -138,22 +138,22 @@ Use sections, ledgers, tables, and split workspaces. Cards support architecture;
 
 The shell is neutral ground with an inset white `.app-pane`, not separately bordered chrome. Desktop sidebar paints no separate surface; document scrolling remains normal and workspace/content overflow stays unset. The pane meets the sidebar and right/bottom viewport edges: only its top corners round (`.app-pane-workspace`). Below 768px it is edge-to-edge without radius or lift. Ground/paper separates by tone and radius, not a rule; sections inside paper use space and hairlines.
 
-Overview sections, Website metric cards/page tables, Opportunities tables, and Prompts tables use the shared white panel role without added elevation. Compact screens use one 56px topbar and a focus-managed off-canvas drawer. Retain every critical mobile action; tables become labelled records, and filters/evidence use full-height sheets.
+Overview sections, Website metric cards/page tables, Opportunities tables, and Prompts tables use the shared white panel role without added elevation. The 56px topbar is present at every width: from 981px it carries only the account trigger, and below that it adds the menu trigger, the compact route title, and a focus-managed off-canvas drawer. Retain every critical mobile action; tables become labelled records, and filters/evidence use full-height sheets.
 
 #### Screen geometry and shell ownership
 
 | Region | Owns | Excludes |
 | --- | --- | --- |
-| Desktop sidebar | Brand, project switcher, Search, Agent, Overview/Analyze/Act/Track groups, Settings access, account | Duplicate navigation trees/registries |
-| Compact topbar | Menu, compact route title, Search, Agent, account trigger | Fixed bottom navigation |
-| Page header | One in-pane route H1, existing description, route actions; entity heading is the sole H1 on detail routes | Metrics or duplicate route H1 |
+| Desktop sidebar | Project switcher (first row), Search, Agent, Overview/Analyze/Act/Track groups, Settings access, brand lockup (foot) | Duplicate navigation trees/registries; the account trigger |
+| Topbar | Account trigger at every width; below 981px also Menu, compact route title, Agent | Fixed bottom navigation |
+| Page header | One in-pane route H1 at `objectTitle`, existing description, route actions on the same row; entity heading is the sole H1 on detail routes | Metrics or duplicate route H1 |
 | Metric row | Three to five headline values, each with its change when one is comparable | More than five, unsupported metrics, or run bookkeeping |
 | Analytical surface | The page's primary chart, table, or comparison | Competing equal-weight surfaces |
 | Insight list | Ranked shared insight objects | Feature-specific finding-card shapes |
 
 Keep date ranges and comparisons in their owning page, not the global shell. Align section tabs/actions on one row rather than adding an empty header row. Desktop and compact navigation reuse `nav-items.ts` destinations and capability resolution; hidden navigation never changes direct-route authorisation.
 
-Search's Command Palette and the Agent controller remain mounted once in the authenticated shell, not inside the drawer. Desktop triggers live in the sidebar; compact triggers live in the topbar. Escape closes overlays and focus returns to the visible trigger.
+Search's Command Palette and the Agent controller remain mounted once in the authenticated shell, not inside the drawer. Desktop Search/Agent triggers live in the sidebar; compact Search/Agent triggers live in the topbar. The account trigger is the topbar's at every width, and renders initials only. Escape closes overlays and focus returns to the visible trigger.
 
 #### Screen-specific contracts
 

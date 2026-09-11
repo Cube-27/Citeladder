@@ -40,8 +40,8 @@ export function InviteForm({
   const [role, setRole] = useState<AssignableWorkspaceRole>('member');
 
   return (
-    <section className="grid gap-3">
-      <h3 className={textRole('bodyStrong')}>Invite someone</h3>
+    <section className="grid max-w-[640px] gap-3">
+      <h3 className={textRole('sectionTitle')}>Invite someone</h3>
       <form
         className="flex flex-wrap items-end gap-2"
         onSubmit={(event) => {
@@ -53,7 +53,7 @@ export function InviteForm({
         }}
       >
         <div className="grid min-w-0 flex-1 gap-1">
-          <label htmlFor="invite-email" className={textRole('body')}>
+          <label htmlFor="invite-email" className={textRole('label')}>
             Email address
           </label>
           <Input
@@ -66,7 +66,7 @@ export function InviteForm({
           />
         </div>
         <div className="grid gap-1">
-          <label htmlFor="invite-role" className={textRole('body')}>
+          <label htmlFor="invite-role" className={textRole('label')}>
             Role
           </label>
           <Select
@@ -117,8 +117,8 @@ export function PendingInvitations({
   onRevoke: (invitationId: string) => void;
 }>) {
   return (
-    <section className="grid gap-3">
-      <h3 className={textRole('bodyStrong')}>Pending invitations</h3>
+    <section className="grid max-w-[640px] gap-3">
+      <h3 className={textRole('sectionTitle')}>Pending invitations</h3>
       {isLoading ? <Skeleton className="h-16 w-full" /> : null}
       {invitations.length === 0 && !isLoading ? (
         <p className="text-muted text-sm">No invitations are waiting to be accepted.</p>

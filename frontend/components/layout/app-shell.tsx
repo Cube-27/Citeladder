@@ -66,18 +66,14 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         <TooltipProvider>
           <div className="bg-shell relative flex min-h-dvh">
             <aside className="sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col min-[981px]:flex">
-              {/* Logo row — matches topbar height */}
+              {/* The project selector is the sidebar's first row, at the same
+                  height as the header beside it. The rail reads project →
+                  tools → destinations → brand: the switcher is the thing a
+                  reader changes most, and it sat below a logo that never
+                  changes. Identity moves to the foot of the rail, where the
+                  account row used to be — the account now lives in the header,
+                  so nothing is displaced. */}
               <div className="flex h-[var(--compact-topbar-height)] shrink-0 items-center px-[var(--sidebar-pad-x)]">
-                <Link
-                  href="/projects"
-                  className="focus-ring flex items-center rounded-xs px-2.5 transition-opacity hover:opacity-90"
-                  aria-label="CiteLadder command center"
-                >
-                  <LogoMark variant="sidebar" priority />
-                </Link>
-              </div>
-
-              <div className="px-[var(--sidebar-pad-x)] py-[var(--sidebar-pad-y)]">
                 <ProjectSwitcher />
               </div>
 
@@ -89,14 +85,25 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 </div>
               </div>
 
-              <div className="shrink-0 p-[var(--sidebar-pad-x)]">
-                <UserMenuTrigger presenter="sidebar" />
+              <div className="border-border-subtle shrink-0 border-t p-[var(--sidebar-pad-x)]">
+                <Link
+                  href="/projects"
+                  className="focus-ring flex items-center rounded-xs px-2.5 py-1 transition-opacity hover:opacity-90"
+                  aria-label="CiteLadder command center"
+                >
+                  <LogoMark variant="sidebar" priority />
+                </Link>
               </div>
             </aside>
 
             <div className="relative z-1 flex min-w-0 flex-1 flex-col">
-              <header className="bg-shell sticky top-0 z-20 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-[var(--content-gutter)] min-[981px]:hidden">
-                <div className="flex items-center">
+              {/* One header, two widths. Below 981px it carries the menu
+                  trigger and the route title, as before. From 981px the rail
+                  beside it already names the route, so the row keeps only the
+                  account — initials, no address — at the end. That is why the
+                  sidebar no longer spends a full row on the email. */}
+              <header className="bg-shell sticky top-0 z-20 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-[var(--content-gutter)]">
+                <div className="flex items-center min-[981px]:hidden">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -107,9 +114,11 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                     <Menu className="size-4" aria-hidden />
                   </Button>
                 </div>
-                <div className="text-secondary min-w-0 truncate text-sm">{compactTitle}</div>
-                <div className="flex items-center justify-end gap-2.5 justify-self-end">
-                  <AgentSheetTrigger />
+                <div className="text-secondary min-w-0 truncate text-sm min-[981px]:hidden">
+                  {compactTitle}
+                </div>
+                <div className="flex items-center justify-end gap-2.5 justify-self-end min-[981px]:col-start-3">
+                  <AgentSheetTrigger className="min-[981px]:hidden" />
                   <UserMenuTrigger presenter="compact" />
                 </div>
               </header>

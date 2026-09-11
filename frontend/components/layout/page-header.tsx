@@ -46,13 +46,20 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        'flex min-w-0 flex-col gap-[var(--page-header-gap)] pt-[var(--page-header-padding-top)] pb-[var(--page-header-padding-bottom)] min-[701px]:flex-row min-[701px]:items-start min-[701px]:justify-between',
+        'flex min-w-0 flex-col gap-[var(--page-header-gap)] pt-[var(--page-header-padding-top)] pb-[var(--page-header-padding-bottom)] min-[701px]:flex-row min-[701px]:items-center min-[701px]:justify-between',
         !description && !actions && 'max-[700px]:hidden',
         className,
       )}
     >
       <div className="min-w-0 flex-1 max-[700px]:sr-only">
-        <h1 className={textRole('pageTitle', 'min-w-0 [overflow-wrap:break-word]')}>{resolved}</h1>
+        {/* The route H1 sits at the object-title rung, not the 26px page-title
+            rung. At 26px it was the largest thing on every screen and competed
+            with the work below it for first read; the shell's rail and header
+            already say where the reader is, so the heading labels the pane
+            rather than announcing it. It stays the one H1 per route. */}
+        <h1 className={textRole('objectTitle', 'min-w-0 [overflow-wrap:break-word]')}>
+          {resolved}
+        </h1>
         {description ? (
           <div className="text-secondary mt-[var(--page-header-heading-gap)] max-w-[700px] text-sm leading-[22px]">
             {description}

@@ -37,8 +37,8 @@ export function MemberRoster({
   onRemove: (memberId: string) => void;
 }>) {
   return (
-    <section className="grid gap-3">
-      <h3 className={textRole('bodyStrong')}>Current members</h3>
+    <section className="grid max-w-[640px] gap-3">
+      <h3 className={textRole('sectionTitle')}>Current members</h3>
       {isLoading ? <Skeleton className="h-24 w-full" /> : null}
       {isError ? (
         <Alert tone="danger">

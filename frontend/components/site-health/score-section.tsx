@@ -64,7 +64,12 @@ export function ScoreSection({
             label="AEO Measurement Coverage"
             value={coverage}
             state={summary?.aeo_measurement_state}
-            sub="Determinate evidence across applicable pillars"
+            // "Determinate" is a claim about the evidence, so it cannot stand
+            // when the state says the evidence is limited or the pillar was
+            // excluded. Those states describe the same coverage figure without
+            // asserting determinacy, and keep this card's own wording rather
+            // than repeating the AEO card's sub-line verbatim.
+            sub={coverageSub(summary?.aeo_measurement_state)}
           />
         </div>
       </CardContent>
@@ -85,6 +90,17 @@ function measurementSub(state: string | undefined, coverage: number | null | und
   if (state === 'not_measured' || !state) return 'Not measured';
   if (state === 'excluded') return 'Excluded from this audit';
   return measured ?? 'Measured';
+}
+
+/**
+ * The coverage card's sub-line. Coverage is a proportion of applicable pillars
+ * either way; what changes is whether the evidence behind it can be called
+ * determinate.
+ */
+function coverageSub(state: string | undefined): string {
+  if (state === 'limited_evidence') return 'Partial evidence across applicable pillars';
+  if (state === 'excluded') return 'Excluded from this audit';
+  return 'Determinate evidence across applicable pillars';
 }
 
 function ScoreCard({
