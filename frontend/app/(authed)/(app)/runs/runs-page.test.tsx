@@ -18,9 +18,11 @@ const pushMock = vi.fn();
 
 // Route the F5 project context to a fixed active project, and stub the router.
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useActiveProject: () => ({ id: PROJECT_ID, workspace_id: WORKSPACE_ID, prompt_sets: [] }),
 }));
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: pushMock }),
   usePathname: () => '/runs',
 }));

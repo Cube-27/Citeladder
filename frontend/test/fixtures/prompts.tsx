@@ -9,7 +9,7 @@ import {
 } from '@/lib/api/schemas/project';
 import { visibilityExecutionEvidenceSchema } from '@/lib/api/schemas/visibility-evidence';
 import { ProjectProvider } from '@/lib/project/project-context';
-import PromptsPage from '@/app/(app)/prompts/page';
+import PromptsPage from '@/app/(authed)/(app)/prompts/page';
 import { setupMswPageTests } from '@/test/fixtures/msw-page-lifecycle';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';

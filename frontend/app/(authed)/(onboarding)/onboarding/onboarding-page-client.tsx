@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/api/query-keys';
 import { Suspense, type ReactNode } from 'react';
 
 import { OnboardingScreen } from '@/components/onboarding/onboarding-screen';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { queryKeys } from '@/lib/api/query-keys';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -15,39 +15,65 @@ import { useProjectContext } from '@/lib/project/project-context';
 export function OnboardingPageClient() {
   return (
     <Suspense fallback={null}>
-      <OnboardingGate />
+      <ProjectSetupGate />
     </Suspense>
   );
 }
 
-function OnboardingGate() {
+/**
+ * The creation screen's own precondition check.
+ *
+ * It asks about the WORKSPACE, not the account: whether this workspace is
+ * resolved, and whether its allowance leaves room for another project. A
+ * workspace with no projects is a normal starting point here, so an empty
+ * list is never an error.
+ */
+function ProjectSetupGate() {
   const queryClient = useQueryClient();
-  const retry = () => {
-    void Promise.all([
-      queryClient.refetchQueries({ queryKey: queryKeys.projects.list() }),
-      queryClient.refetchQueries({ queryKey: queryKeys.billing.usage() }),
-    ]);
-  };
-  const { isLoading, isError: projectsError } = useProjectContext();
+  const { status, activeWorkspaceId, retry: retryContext } = useProjectContext();
   const { usage, isLoading: entitlementLoading, usageIsLoading, usageIsError } = useEntitlement();
-  const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
-  const loading = isLoading || entitlementLoading || usageIsLoading;
-  const additionalProjectBlocked = !loading && remainingProjectSlots === 0;
 
-  if (loading) return null;
-  if (projectsError) {
+  const retry = () => {
+    retryContext();
+    void queryClient.refetchQueries({ queryKey: queryKeys.billing.allUsage() });
+  };
+
+  const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
+
+  // Every settled FAILURE is answered before the loading branch. A failed
+  // workspace read leaves `activeWorkspaceId` null forever, so testing for it
+  // first hid the retry behind a spinner that never resolved.
+  if (status === 'error') {
     return (
-      <ProjectSetupBlocked title="Projects could not be loaded" onRetry={retry}>
-        We could not load your existing projects. Retry to check them again.
+      <ProjectSetupBlocked title="Your workspace could not be loaded" onRetry={retry}>
+        We could not confirm which workspace to create this project in. Retry to load it again.
+      </ProjectSetupBlocked>
+    );
+  }
+  if (status === 'unavailable') {
+    // Reached by linking here with a `?project=` that is missing, unauthorized,
+    // or contradicts the workspace. Creating a project is not the answer to a
+    // request that named a different one.
+    return (
+      <ProjectSetupBlocked title="That project is unavailable">
+        The project this link names could not be opened. Go back to your projects to continue.
       </ProjectSetupBlocked>
     );
   }
   if (usageIsError) {
     return (
       <ProjectSetupBlocked title="Project allowance could not be loaded" onRetry={retry}>
-        We could not load your account usage. Retry to check your project allowance.
+        We could not load your workspace usage. Retry to check your project allowance.
       </ProjectSetupBlocked>
     );
+  }
+  if (
+    status === 'resolving' ||
+    activeWorkspaceId === null ||
+    entitlementLoading ||
+    usageIsLoading
+  ) {
+    return null;
   }
   if (remainingProjectSlots === undefined) {
     return (
@@ -56,7 +82,7 @@ function OnboardingGate() {
       </ProjectSetupBlocked>
     );
   }
-  if (additionalProjectBlocked) {
+  if (remainingProjectSlots === 0) {
     return (
       <ProjectSetupBlocked title="Project limit reached">
         Your current access does not include another project.

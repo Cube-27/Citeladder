@@ -73,7 +73,9 @@ for (const path of files(root)) {
     !label.startsWith('components/auth/') &&
     !label.startsWith('components/onboarding/') &&
     !label.startsWith('lib/marketing-content/') &&
-    (label.startsWith('app/(app)/') || label.startsWith('components/') || label.startsWith('lib/'));
+    (label.startsWith('app/(authed)/(app)/') ||
+      label.startsWith('components/') ||
+      label.startsWith('lib/'));
   // Applies to every source file, not just product UI: the ESLint rule this
   // replaced was repository-wide, and a text-ink background is wrong on a
   // marketing surface too.

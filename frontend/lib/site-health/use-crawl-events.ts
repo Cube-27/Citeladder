@@ -13,6 +13,7 @@ import {
 import { invalidateCrawlViews } from '@/lib/site-health/invalidate';
 import type { RawSseFrame } from '@/lib/sse/frames';
 import { useSseEventStream } from '@/lib/sse/use-event-stream';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 function shouldInvalidateCrawl(frame: RawSseFrame): boolean {
   if (!frame.data) return false;
@@ -35,6 +36,7 @@ export function useCrawlEvents(
   enabled: boolean,
 ): void {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const onInvalidate = useCallback(() => {
     if (!crawlId) return;
     if (projectId)
@@ -43,6 +45,7 @@ export function useCrawlEvents(
   }, [crawlId, projectId, queryClient]);
 
   useSseEventStream({
+    workspaceId,
     enabled: enabled && Boolean(crawlId),
     url: crawlId ? `${API_BASE_URL}/site-crawls/${crawlId}/events?stream=true` : null,
     invalidateDebounceMs: SITE_HEALTH_STREAM_INVALIDATE_DEBOUNCE_MS,

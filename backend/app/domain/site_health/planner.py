@@ -321,6 +321,19 @@ async def _locked_runtime(
     return runtime, sample_mode
 
 
+def _allowance_discovery_budget(
+    page_limit: int, *, runtime: WorkspaceSiteHealthRuntime
+) -> int:
+    """Narrow a validated page limit to the workspace's discovery cap.
+
+    Only ever narrows. A runtime row with no cap (an older projection that has
+    not been refreshed yet) leaves the operational limit in place rather than
+    guessing a smaller one.
+    """
+    cap = runtime.discovery_url_cap
+    return min(page_limit, int(cap)) if cap else page_limit
+
+
 def _add_initial_discovery_tasks(
     session: AsyncSession,
     *,
@@ -455,6 +468,19 @@ async def create_crawl(
     runtime, sample_mode = await _locked_runtime(
         session, workspace_id=workspace_id, mode=mode
     )
+
+    # Bind the discovery budget to what this workspace's allowance can actually
+    # analyze. ``resolve_controls`` only knows the operational ceiling, so
+    # without this every entitled workspace crawled the flat 500-page default
+    # while monitoring a fraction of it — the screen finished at the monitored
+    # limit and the crawler kept fetching for many more minutes.
+    #
+    # Clamped HERE, before the configuration is frozen, so
+    # ``discovery_requested_count`` and ``requested_page_limit`` both record
+    # the budget the crawl will really honour: coverage reports
+    # ``requested_page_limit_reached`` against the effective bound rather than
+    # against a 500 it was never going to reach.
+    page_limit = _allowance_discovery_budget(page_limit, runtime=runtime)
 
     profile = await _upsert_profile(
         session,

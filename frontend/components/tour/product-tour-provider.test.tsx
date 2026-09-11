@@ -54,6 +54,7 @@ vi.mock('@tanstack/react-query', () => ({
 }));
 
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     activeProject: { workspace_id: '00000000-0000-4000-8000-000000000002' },
   }),

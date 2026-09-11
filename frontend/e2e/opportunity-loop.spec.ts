@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { stubWorkspaceList } from './helpers/app-fixture';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';
@@ -194,6 +195,7 @@ test('earned opportunity handoff links generation and comparable verification', 
       },
     }),
   );
+  await stubWorkspaceList(page, WORKSPACE);
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
   await page.route(`**/api/v1/projects/${PROJECT}/logos/refresh`, (route) =>
     route.fulfill({ json: {} }),

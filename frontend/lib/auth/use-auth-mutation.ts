@@ -2,7 +2,6 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { SessionUser } from '@/lib/api/types';
 import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
@@ -11,14 +10,12 @@ import { PRICING_RESUME_QUERY_PARAM, PRICING_RETURN_PATH } from '@/lib/config/bi
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 
 /**
- * Login mutation wiring (F4): on success, prime the `me` cache
- * with the returned user and route directly to the right authed screen — no
- * marketing-landing bounce. The project list is fetched through the query
- * client and awaited, which keeps the mutation pending until the destination is
- * known: no projects yet → `/onboarding`, otherwise `/projects`. The confirmed
- * identity boundary uses a full-page navigation so the protected layout reads
- * the new cookie and session state from a clean document instead of reusing a
- * prefetched anonymous shell. A failed lookup falls back to the recoverable `/projects` state.
+ * Login mutation wiring (F4): on success, prime the `me` cache with the
+ * returned user and route straight into the app — no marketing-landing
+ * bounce. The confirmed identity boundary uses a full-page navigation so the
+ * protected layout reads the new cookie and session state from a clean
+ * document instead of reusing a prefetched anonymous shell; the shell's gate
+ * then decides whether this workspace needs onboarding.
  */
 export function useAuthMutation<TValues>(
   mutationFn: (values: TValues) => Promise<SessionUser>,
@@ -50,17 +47,14 @@ export function useAuthMutation<TValues>(
         return;
       }
 
-      let destination = '/projects';
-      try {
-        const projects = await queryClient.fetchQuery({
-          queryKey: queryKeys.projects.list(),
-          queryFn: ({ signal }) => projectsApi.listProjects({ signal }),
-        });
-        if (projects.length === 0) destination = '/onboarding';
-      } catch {
-        // Preserve the session; the projects gate offers recovery.
-      }
-      hardNavigate(destination);
+      // Straight to the app. Deciding between `/projects` and `/onboarding`
+      // here used to mean fetching the project list before navigating —
+      // unscoped, because no workspace is resolved yet, and therefore
+      // answering for whichever workspace the backend picked by default. The
+      // shell's own gate now makes that decision from the resolved workspace,
+      // so login neither pays that round trip nor risks routing on another
+      // workspace's answer.
+      hardNavigate('/projects');
     },
   });
 

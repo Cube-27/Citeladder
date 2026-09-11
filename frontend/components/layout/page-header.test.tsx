@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 const { pathname } = vi.hoisted(() => ({ pathname: { value: '/visibility' } }));
 
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
   usePathname: () => pathname.value,
 }));
 

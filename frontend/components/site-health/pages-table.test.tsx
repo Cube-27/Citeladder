@@ -8,6 +8,8 @@ import type { PageSummary } from '@/lib/api/types';
 // clickable-row test; vi.hoisted so the hoisted mock factory can reference it.
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/projects',
   useRouter: () => ({ push }),
 }));
 

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { stubWorkspaceList } from './helpers/app-fixture';
 
 /**
  * F10 Run/Executions explorer smoke: shell → open a run → open evidence.
@@ -143,6 +144,7 @@ test('shell → open run → open execution evidence', async ({ page }) => {
 
   await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
+  await stubWorkspaceList(page, WORKSPACE_ID);
   await page.route(/\/api\/v1\/audits(\?.*)?$/, (route) => route.fulfill({ json: [audit] }));
   await page.route(`**/api/v1/audits/${AUDIT_ID}`, (route) => route.fulfill({ json: audit }));
   await page.route(`**/api/v1/audits/${AUDIT_ID}/executions`, (route) =>

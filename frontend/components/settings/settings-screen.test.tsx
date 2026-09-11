@@ -13,6 +13,7 @@ const { replace, entitlementState } = vi.hoisted(() => ({
   entitlementState: { canDeleteProject: false },
 }));
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn(), replace, prefetch: vi.fn() }),
   usePathname: () => '/settings',
 }));
@@ -49,6 +50,7 @@ const nextProject = {
 } as unknown as Project;
 const setActiveProjectId = vi.fn();
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     projects: [activeProject],
     activeProject,
@@ -259,6 +261,10 @@ describe('SettingsScreen', () => {
     await ue.click(within(dialog).getByRole('button', { name: 'Delete project' }));
 
     await waitFor(() => expect(setActiveProjectId).toHaveBeenCalledWith(nextProject.id));
-    expect(replace).not.toHaveBeenCalled();
+    // REPLACE, not push: the entry left behind names the project that was just
+    // deleted, so Back must not return to it.
+    expect(replace).toHaveBeenCalledWith(`/settings?project=${nextProject.id}`, {
+      scroll: false,
+    });
   });
 });

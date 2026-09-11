@@ -12,6 +12,7 @@ import {
   DropdownTrigger,
 } from '@/components/ui/dropdown';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
@@ -20,12 +21,25 @@ import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 
 /**
  * ProjectSwitcher (F5) — brand avatar + active project name with a dropdown of
- * all projects in the workspace. Selecting one updates the project context
- * (which persists the choice and re-scopes the API client's workspace header).
+ * all projects in the workspace.
+ *
+ * Selection goes through the shared navigation owner so the context, the
+ * device storage and the URL cannot disagree: the destination NAMES the
+ * chosen project, which is what the arriving context resolves against. An
+ * additional project carries its target workspace for the same reason — a
+ * refresh of the creation route must not re-target it.
  */
+/** Where "New project" goes, carrying the workspace it will be created in. */
+function newProjectHref(workspaceId: string | null): string {
+  const params = new URLSearchParams({ new: '1' });
+  if (!workspaceId) return `/onboarding?${params.toString()}`;
+  return workspaceDestination('/onboarding', params, workspaceId);
+}
+
 export function ProjectSwitcher({ className }: Readonly<{ className?: string }>) {
   const router = useRouter();
-  const { projects, activeProject, activeProjectId, setActiveProjectId, isLoading, isError } =
+  const selectProject = useSelectProject();
+  const { projects, activeProject, activeProjectId, activeWorkspaceId, isLoading, isError } =
     useProjectContext();
   const { usage } = useEntitlement();
   const remainingProjectSlots = capabilityRemaining(usage, PROJECT_SLOTS_CAPABILITY);
@@ -64,7 +78,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
             <DropdownItem
               key={project.id}
               data-active={selected}
-              onSelect={() => setActiveProjectId(project.id)}
+              onSelect={() => selectProject(project.id)}
             >
               <BrandLogo
                 name={project.brand_name || project.name}
@@ -80,7 +94,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
         {canAddProject ? (
           <>
             <DropdownSeparator />
-            <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
+            <DropdownItem onSelect={() => router.push(newProjectHref(activeWorkspaceId))}>
               <span
                 aria-hidden
                 className="bg-accent-soft text-accent-text flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"

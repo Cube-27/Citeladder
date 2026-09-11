@@ -25,6 +25,7 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams('start=2026-08-01&end=2026-08-15&tab=pages'),
 }));
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({ activeProject }),
 }));
 vi.mock('@/lib/billing/entitlement-context', () => ({

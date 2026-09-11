@@ -13,6 +13,8 @@ import {
 } from '@/lib/api/brand-discoveries';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
+import type { Project } from '@/lib/api/types';
+import { projectDestination } from '@/lib/navigation/project-destination';
 import {
   brandStepSchema,
   emptyBrandStep,
@@ -38,6 +40,15 @@ function withBrandKnowledgeDefaults(profile: DiscoveryProfile): DiscoveryProfile
     products_services: products.length > 0 ? products : [category],
     market_scope: profile.market_scope === 'local' ? 'regional' : profile.market_scope,
   };
+}
+
+/** Insert or replace one project in a cached list, deduplicated by id. */
+function upsertProject(current: Project[], project: Project): Project[] {
+  const index = current.findIndex((candidate) => candidate.id === project.id);
+  if (index === -1) return [...current, project];
+  const next = [...current];
+  next[index] = project;
+  return next;
 }
 
 function selectedDomains(domains: ReviewDomain[]): string[] {
@@ -81,7 +92,7 @@ export function useOnboardingFlow() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const { setActiveProjectId } = useProjectContext();
+  const { activeWorkspaceId, setActiveProjectId } = useProjectContext();
   const isAdditional = searchParams?.get('new') === '1';
   const initialDiscoveryId = searchParams?.get('discovery') ?? null;
   const [step, setStep] = useState<OnboardingStep>(() =>
@@ -108,6 +119,7 @@ export function useOnboardingFlow() {
         }
       : null,
     resumeDiscoveryId,
+    activeWorkspaceId,
   );
   const catalog = useQuery({
     queryKey: ['brand-discovery-catalog'],
@@ -136,8 +148,17 @@ export function useOnboardingFlow() {
     setProfile(null);
     form.reset(emptyBrandStep);
     setStep(0);
-    router.replace('/onboarding?new=1', { scroll: false });
-  }, [form, orphanedCompletion, router]);
+    // Keep the workspace: a discarded draft still belongs to the workspace the
+    // reader was creating in, and dropping it here would silently re-target
+    // the retry at whichever workspace resolves by default.
+    const reset = new URLSearchParams({ new: '1' });
+    // The URL is the first authority, but an orphaned legacy completion link
+    // may carry no workspace at all — and the resolved one is still the
+    // workspace this draft belonged to.
+    const workspace = searchParams?.get('workspace') ?? activeWorkspaceId;
+    if (workspace) reset.set('workspace', workspace);
+    router.replace(`/onboarding?${reset.toString()}`, { scroll: false });
+  }, [activeWorkspaceId, form, orphanedCompletion, router, searchParams]);
 
   useEffect(() => {
     if (orphanedCompletion) return;
@@ -183,19 +204,53 @@ export function useOnboardingFlow() {
     );
   }, [discoveryState, maximumCompetitors]);
 
+  /**
+   * Hand a CONFIRMED creation over to the shell.
+   *
+   * The server's success is the source of truth here, not a later full-list
+   * fetch. The steps are ordered so that nothing in flight can undo it:
+   *
+   * 1. resolve the committed project through the authorizing detail read —
+   *    that read both seeds the cache the destination will mount against and
+   *    yields the workspace that owns the project;
+   * 2. cancel the workspace's list read before merging, so a PRE-CREATE list
+   *    already on the wire cannot land afterwards and erase the new project;
+   * 3. merge (never replace) the project into a list that already exists —
+   *    inserting one project does not turn an absent list into a complete
+   *    inventory, so an unfetched list is left unfetched;
+   * 4. navigate to a destination that NAMES the project, so the shell
+   *    resolves that exact id rather than inferring one from a list;
+   * 5. leave reconciliation to the background. Its failure is not allowed to
+   *    undo the creation or send the reader back through it.
+   */
   const openProject = useCallback(
     async (projectId: string) => {
-      setActiveProjectId(projectId);
-      void projectsApi
-        .refreshProjectLogos(projectId)
-        .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() }))
-        .catch(() => undefined);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
-      // No `?project=` hand-off. `setActiveProjectId` above persists the choice,
-      // and the provider `(app)` mounts seeds its pin from that same storage, so
-      // the selection crosses the route-group boundary without a query string
-      // that has to be shown and then scrubbed from the address bar.
-      router.replace('/projects');
+      let project: Project | null = null;
+      try {
+        project = await queryClient.fetchQuery({
+          queryKey: queryKeys.projects.detail(projectId),
+          queryFn: ({ signal }) => projectsApi.getProject(projectId, { signal, workspaceId: null }),
+        });
+      } catch {
+        // The project exists — the server said so. A failed read of it is a
+        // transport problem, and the destination below can resolve the id
+        // itself (with its own retry) rather than stranding the reader here.
+      }
+      setActiveProjectId(project?.id ?? projectId);
+      if (project) {
+        const listKey = queryKeys.projects.list(project.workspace_id);
+        await queryClient.cancelQueries({ queryKey: listKey });
+        const created = project;
+        queryClient.setQueryData<Project[]>(listKey, (current) =>
+          current === undefined ? current : upsertProject(current, created),
+        );
+        void projectsApi
+          .refreshProjectLogos(created.id, { workspaceId: created.workspace_id })
+          .then(() => queryClient.invalidateQueries({ queryKey: listKey }))
+          .catch(() => undefined);
+        void queryClient.invalidateQueries({ queryKey: listKey });
+      }
+      router.replace(projectDestination('/projects', null, project?.id ?? projectId));
     },
     [queryClient, router, setActiveProjectId],
   );
@@ -214,6 +269,7 @@ export function useOnboardingFlow() {
           competitors: selectedCompetitors(competitors),
         },
         `complete:${discoveryState.id}`,
+        { workspaceId: activeWorkspaceId },
       );
     },
     // The request only ACCEPTS the completion; the portfolio is generated on a

@@ -16,36 +16,51 @@ function operationKey() {
 export function useBrandDiscovery(
   input: BrandDiscoveryInput | null,
   resumeId: string | null = null,
+  workspaceId: string | null = null,
 ) {
-  const fingerprint = useMemo(() => JSON.stringify(input), [input]);
+  // The workspace is part of the operation's identity, not just its transport:
+  // a discovery belongs to ONE workspace, so switching workspace must start a
+  // new one rather than let `createdFor` suppress creation for the new one.
+  const fingerprint = useMemo(() => JSON.stringify({ input, workspaceId }), [input, workspaceId]);
   const createdFor = useRef<string | null>(null);
   const [responseFor, setResponseFor] = useState<string | null>(null);
   const create = useMutation({
+    // The fingerprint AND the workspace travel with the request, so the
+    // response is matched against the operation that actually produced it —
+    // not against whatever the hook happens to be rendering for now.
     mutationFn: ({
       payload,
       idempotencyKey,
+      workspace,
     }: {
       payload: BrandDiscoveryInput;
       idempotencyKey: string;
-    }) => brandDiscoveriesApi.create(payload, idempotencyKey),
-    onSuccess: (_data, { payload }) => {
-      setResponseFor(JSON.stringify(payload));
+      fingerprint: string;
+      workspace: string | null;
+    }) => brandDiscoveriesApi.create(payload, idempotencyKey, { workspaceId: workspace }),
+    onSuccess: (_data, variables) => {
+      setResponseFor(variables.fingerprint);
     },
   });
 
   useEffect(() => {
     if (resumeId || !input || createdFor.current === fingerprint) return;
     createdFor.current = fingerprint;
-    create.mutate({ payload: input, idempotencyKey: operationKey() });
-  }, [create, fingerprint, input, resumeId]);
+    create.mutate({
+      payload: input,
+      idempotencyKey: operationKey(),
+      fingerprint,
+      workspace: workspaceId,
+    });
+  }, [create, fingerprint, input, resumeId, workspaceId]);
 
   const createdDiscoveryId = responseFor === fingerprint ? create.data?.id : undefined;
   // A successful retry supersedes a resumed row. Until that response arrives,
   // the persisted resume id remains visible instead of blanking the timeline.
   const discoveryId = createdDiscoveryId ?? resumeId;
   const query = useQuery({
-    queryKey: ['brand-discovery', discoveryId],
-    queryFn: ({ signal }) => brandDiscoveriesApi.get(discoveryId!, { signal }),
+    queryKey: ['brand-discovery', workspaceId ?? 'unresolved', discoveryId],
+    queryFn: ({ signal }) => brandDiscoveriesApi.get(String(discoveryId), { signal, workspaceId }),
     enabled: Boolean(discoveryId),
     initialData: !createdDiscoveryId ? undefined : create.data,
     // `completing` is the portfolio generation the completion request queued.
@@ -62,7 +77,12 @@ export function useBrandDiscovery(
   const retry = () => {
     if (!input || create.isPending) return;
     createdFor.current = fingerprint;
-    create.mutate({ payload: input, idempotencyKey: operationKey() });
+    create.mutate({
+      payload: input,
+      idempotencyKey: operationKey(),
+      fingerprint,
+      workspace: workspaceId,
+    });
   };
   return {
     discovery,

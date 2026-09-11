@@ -24,13 +24,43 @@ let discoveryState: BrandDiscovery;
 // `ready` discovery to click through.
 let searchParams = '';
 
+const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+/** What `GET /projects/{id}` returns for the project the completion creates. */
+const createdProject = {
+  id: PROJECT_ID,
+  workspace_id: WORKSPACE_ID,
+  name: 'Acme',
+  brand_name: 'Acme',
+  website_url: 'https://example.com',
+  industry: 'General',
+  subindustry: '',
+  primary_market: 'US',
+  country_code: 'US',
+  language_code: 'en',
+  benchmark_mode: 'consumer_like',
+  default_repetitions: 3,
+  brand: { aliases: [] },
+  owned_domains: [],
+  unintended_domains: [],
+  competitors: [],
+  prompt_sets: [],
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+};
+
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/projects',
   useRouter: () => ({ push: vi.fn(), replace }),
   useSearchParams: () => new URLSearchParams(searchParams),
 }));
 
 vi.mock('@/lib/project/project-context', () => ({
-  useProjectContext: () => ({ setActiveProjectId }),
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  useProjectContext: () => ({
+    activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    setActiveProjectId,
+  }),
 }));
 
 vi.mock('@/lib/onboarding/use-brand-discovery', () => ({
@@ -221,7 +251,13 @@ describe('OnboardingScreen', () => {
           { status: 202 },
         );
       }),
-      http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () => HttpResponse.json({})),
+      // The committed creation is resolved through the project-detail read
+      // before the shell is navigated to, so the destination is usable on
+      // arrival rather than waiting on a list that predates the project.
+      http.get(`/api/v1/projects/${PROJECT_ID}`, () => HttpResponse.json(createdProject)),
+      http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () =>
+        HttpResponse.json(createdProject),
+      ),
     );
     renderWithProviders(<OnboardingScreen />);
 
@@ -243,10 +279,12 @@ describe('OnboardingScreen', () => {
       },
     });
     expect(JSON.stringify(completionBody)).not.toContain('prompt_groups');
-    // The project id crosses the route-group boundary through the provider
-    // (which persists it), never through the address bar.
+    // The destination NAMES the project. The shell resolves that exact id
+    // instead of inferring one from a list fetched before it existed — which
+    // is what used to land people on their previous project, or on an empty
+    // account that then refused to create the one they had just made.
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
-    expect(replace).toHaveBeenCalledWith('/projects');
+    expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`);
   });
 
   it('opens the committed project shell while its portfolio is queued', async () => {
@@ -267,7 +305,13 @@ describe('OnboardingScreen', () => {
           { status: 202 },
         ),
       ),
-      http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () => HttpResponse.json({})),
+      // The committed creation is resolved through the project-detail read
+      // before the shell is navigated to, so the destination is usable on
+      // arrival rather than waiting on a list that predates the project.
+      http.get(`/api/v1/projects/${PROJECT_ID}`, () => HttpResponse.json(createdProject)),
+      http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () =>
+        HttpResponse.json(createdProject),
+      ),
     );
     renderWithProviders(<OnboardingScreen />);
 
@@ -277,7 +321,7 @@ describe('OnboardingScreen', () => {
     await waitFor(() => expect(createProject).toBeEnabled());
     await user.click(createProject);
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/projects'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`));
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
   });
 
@@ -289,11 +333,17 @@ describe('OnboardingScreen', () => {
     };
     mswServer.use(
       catalogHandler(),
-      http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () => HttpResponse.json({})),
+      // The committed creation is resolved through the project-detail read
+      // before the shell is navigated to, so the destination is usable on
+      // arrival rather than waiting on a list that predates the project.
+      http.get(`/api/v1/projects/${PROJECT_ID}`, () => HttpResponse.json(createdProject)),
+      http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () =>
+        HttpResponse.json(createdProject),
+      ),
     );
     renderWithProviders(<OnboardingScreen />);
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/projects'));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`));
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
   });
 
@@ -303,8 +353,12 @@ describe('OnboardingScreen', () => {
     mswServer.use(catalogHandler());
     renderWithProviders(<OnboardingScreen />);
 
+    // The retry keeps the workspace the discarded draft belonged to, so it is
+    // not silently re-targeted at whichever workspace resolves by default.
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith('/onboarding?new=1', { scroll: false }),
+      expect(replace).toHaveBeenCalledWith(`/onboarding?new=1&workspace=${WORKSPACE_ID}`, {
+        scroll: false,
+      }),
     );
     expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
   });

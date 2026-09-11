@@ -11,6 +11,7 @@ import { EngineCard } from '@/components/providers/engine-card';
 import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
 import { buildEngineCards } from '@/lib/providers/catalog';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /**
  * BYOK Provider Settings panel (F8, v2 direct-provider retirement) — rendered
@@ -30,16 +31,22 @@ export function ProviderSettings() {
     queryFn: ({ signal }) => providersApi.getCatalog({ signal }),
   });
 
+  // Provider connections belong to the workspace, so the read is keyed and
+  // sent for one: without that, switching workspace showed the previous
+  // workspace's engines as configured.
+  const workspaceId = useActiveWorkspaceId();
   const connectionsQuery = useQuery({
-    queryKey: queryKeys.providers.connections(),
-    queryFn: ({ signal }) => providersApi.listConnections({ signal }),
+    queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
+    queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
+    enabled: workspaceId !== null,
   });
 
   // The AUTHENTICATED four-state projection. A failure here leaves every card
   // at its fail-closed default (`missing`) rather than implying `connected`.
   const statesQuery = useQuery({
-    queryKey: queryKeys.providers.states(),
-    queryFn: ({ signal }) => providersApi.getConnectionStates({ signal }),
+    queryKey: queryKeys.providers.states(workspaceId ?? 'unresolved'),
+    queryFn: ({ signal }) => providersApi.getConnectionStates({ signal, workspaceId }),
+    enabled: workspaceId !== null,
   });
 
   const cards = buildEngineCards(catalogQuery.data, statesQuery.data?.providers);

@@ -521,8 +521,21 @@ async def get_competitor_logo_endpoint(
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project_endpoint(
-    project_id: uuid.UUID, ctx: _WorkspaceDep, session: _SessionDep
+    project_id: uuid.UUID, ctx: _ProjectMemberDep, session: _SessionDep
 ) -> ProjectResponse:
+    """Resolve one authorized project, workspace derived FROM the project.
+
+    This is the shell's narrow resolution read: the client follows an explicit
+    ``?project=<id>`` before it knows which workspace owns it, so authorizing
+    through ``X-Workspace-Id`` made the answer depend on the very selection the
+    read exists to establish — a link into a second workspace 404ed until the
+    header happened to be right. ``require_project_member`` verifies the same
+    membership row from the path instead, so the response's ``workspace_id``
+    is usable as the workspace for everything that follows.
+
+    Invariant 5 is unchanged: a project in a workspace the caller does not
+    belong to stays indistinguishable from a missing one (404).
+    """
     project = await _get_project_or_404(session, ctx.workspace_id, project_id)
     return project_to_response(project)
 

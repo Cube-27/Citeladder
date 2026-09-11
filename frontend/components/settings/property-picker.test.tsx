@@ -20,6 +20,7 @@ const activeProject = {
 
 let hasProject = true;
 vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     projects: hasProject ? [activeProject] : [],
     activeProject: hasProject ? activeProject : null,

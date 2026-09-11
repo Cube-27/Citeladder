@@ -57,6 +57,20 @@ export function getActiveWorkspaceId() {
 export type ApiRequestOptions = {
   signal?: AbortSignal;
   headers?: HeadersInit;
+  /**
+   * The workspace this request is FOR, carried with the request itself.
+   *
+   * A request must be answered for the workspace it was issued for, even if
+   * the user selects a different one while it is in flight or it is retried
+   * afterwards. Reading the mutable module-level selection at send time made
+   * that untrue: a retry of a request issued for workspace A picked up B's
+   * header and returned B's data under A's cache key.
+   *
+   * `undefined` keeps the ambient selection (the compatibility path for
+   * callers not yet converted); an explicit `null` deliberately sends NO
+   * header, letting the backend resolve the caller's default workspace.
+   */
+  workspaceId?: string | null;
   requestId?: string;
   idempotencyKey?: string;
   retryNetworkFailures?: boolean;
@@ -78,6 +92,31 @@ function createRequestId() {
   );
 }
 
+/**
+ * Scope flat routes to the workspace this request was issued for.
+ *
+ * An explicit `workspaceId` is AUTHORITATIVE: it replaces any `X-Workspace-Id`
+ * the caller's own headers carried, and an explicit `null` removes the header
+ * entirely so the backend resolves access from the path or the caller's
+ * default workspace. Deferring to a copied header instead would let one reused
+ * header object silently decide the tenancy of a request that named its own
+ * workspace — the exact failure this option exists to remove.
+ *
+ * With no explicit value the ambient selection applies, and a caller-supplied
+ * header still wins: that is the un-converted compatibility path.
+ */
+function applyWorkspaceHeader(headers: Headers, workspaceId: string | null | undefined) {
+  if (workspaceId === undefined) {
+    if (activeWorkspaceId && !headers.has('X-Workspace-Id')) {
+      headers.set('X-Workspace-Id', activeWorkspaceId);
+    }
+  } else if (workspaceId) {
+    headers.set('X-Workspace-Id', workspaceId);
+  } else {
+    headers.delete('X-Workspace-Id');
+  }
+}
+
 function buildHeaders(options: InternalRequestOptions, requestId: string) {
   const headers = new Headers(options.headers);
   // Keep ordinary GETs "simple" (no custom header) to avoid a CORS preflight;
@@ -86,11 +125,7 @@ function buildHeaders(options: InternalRequestOptions, requestId: string) {
     headers.set('X-Request-ID', requestId);
   }
   if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey);
-  // Scope flat routes to the active workspace when one is selected; the backend
-  // falls back to the caller's default workspace when this header is absent.
-  if (activeWorkspaceId && !headers.has('X-Workspace-Id')) {
-    headers.set('X-Workspace-Id', activeWorkspaceId);
-  }
+  applyWorkspaceHeader(headers, options.workspaceId);
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }

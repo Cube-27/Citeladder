@@ -10,7 +10,7 @@ import {
 } from '@/lib/api/schemas/visibility-evidence';
 import { visibilityTrendPointSchema } from '@/lib/api/schemas/visibility-trends';
 import { ProjectProvider } from '@/lib/project/project-context';
-import VisibilityPage from '@/app/(app)/visibility/page';
+import VisibilityPage from '@/app/(authed)/(app)/visibility/page';
 import { setupMswPageTests } from '@/test/fixtures/msw-page-lifecycle';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';

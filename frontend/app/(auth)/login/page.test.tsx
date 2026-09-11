@@ -11,6 +11,7 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
 // the post-login document transition directly assertable.
 const searchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
+  usePathname: () => '/projects',
   useSearchParams: () => searchParams,
 }));
 vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
@@ -103,19 +104,19 @@ describe('LoginPage', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('logs in and routes to /onboarding when the workspace has no projects', async () => {
+  // Login routes into the app and lets the shell's gate decide whether this
+  // workspace needs onboarding; it no longer reads an unscoped project list to
+  // pick a destination before any workspace is resolved.
+  it('logs in and routes into the app', async () => {
     const user = userEvent.setup();
-    mswServer.use(
-      http.post('/api/v1/auth/login', () => HttpResponse.json({ user: sessionUser })),
-      http.get('/api/v1/projects', () => HttpResponse.json([])),
-    );
+    mswServer.use(http.post('/api/v1/auth/login', () => HttpResponse.json({ user: sessionUser })));
 
     renderWithProviders(<LoginPage />);
     await user.type(screen.getByLabelText(/email address/i), 'user@example.com');
     await user.type(screen.getByLabelText(/password/i, { selector: 'input' }), 'sup3rsecret');
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/onboarding'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
   });
 
   it('returns a successful MCP login to the bounded OAuth consent path', async () => {
@@ -154,17 +155,14 @@ describe('LoginPage', () => {
   it('ignores an external login return target', async () => {
     const user = userEvent.setup();
     searchParams.set('return_to', 'https://evil.example/steal');
-    mswServer.use(
-      http.post('/api/v1/auth/login', () => HttpResponse.json({ user: sessionUser })),
-      http.get('/api/v1/projects', () => HttpResponse.json([])),
-    );
+    mswServer.use(http.post('/api/v1/auth/login', () => HttpResponse.json({ user: sessionUser })));
 
     renderWithProviders(<LoginPage />);
     await user.type(screen.getByLabelText(/email address/i), 'user@example.com');
     await user.type(screen.getByLabelText(/password/i, { selector: 'input' }), 'sup3rsecret');
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/onboarding'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
   });
 
   it('surfaces the ApiError message inline on a 401', async () => {

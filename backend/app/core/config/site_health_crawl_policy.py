@@ -16,6 +16,23 @@ AUTOMATIC_MONITOR_LIMIT_KEY: Final = "automatic_monitor_limit"
 SAMPLE_URL_LIMIT: Final = 10
 SAMPLE_DISCOVERY_URL_CAP: Final = 200
 
+# How far a FULL crawl maps the site relative to what its allowance lets it
+# actually analyze. Sample mode has always had this bound
+# (``SAMPLE_DISCOVERY_URL_CAP`` over ``SAMPLE_URL_LIMIT``); full mode had
+# none, so every entitled workspace discovered the flat
+# ``automatic_page_limit`` of 500 pages no matter how few of them it could
+# monitor. On the free profile that is 500 fetches to analyze 20 URLs: the
+# screen settles at 20/20 while the crawler keeps working for many more
+# minutes, which reads as a crawl that never stops and gets cancelled by hand.
+#
+# Headroom, not equality: discovery has to see more than it analyzes so the
+# selection has something to rank, and a cap AT the allowance would spend a
+# small budget entirely on a site's navigation shell (the failure that set
+# ``automatic_page_limit`` to 500 in the first place). The floor keeps small
+# allowances mapping enough of the site to reach product/detail URLs.
+FULL_DISCOVERY_HEADROOM: Final = 5
+MIN_FULL_DISCOVERY_URL_CAP: Final = 100
+
 URL_ADMISSION_POLICY_VERSION: Final = "sh-url-admission-1"
 INPUT_MODE_AUTO: Final = "auto"
 INPUT_MODE_EXACT_URLS: Final = "exact_urls"
@@ -253,6 +270,7 @@ SELECTION_SOURCES: Final[frozenset[str]] = frozenset(
 
 
 class _RuntimeSettings(Protocol):
+    automatic_page_limit: int
     sample_discovery_url_cap: int
     sample_url_limit: int
 
@@ -287,6 +305,25 @@ class SiteHealthRuntimePolicy:
         self.count_disclosure = count_disclosure
 
 
+def full_discovery_url_cap(
+    monitored_urls_allowance: int, *, settings: _RuntimeSettings
+) -> int:
+    """How many URLs a full crawl on this allowance may discover.
+
+    Bounded above by the operational ``automatic_page_limit`` so no allowance
+    can widen the crawler past its configured ceiling, and below by
+    ``MIN_FULL_DISCOVERY_URL_CAP`` so a small allowance still maps past the
+    site's navigation shell.
+    """
+    return min(
+        int(settings.automatic_page_limit),
+        max(
+            MIN_FULL_DISCOVERY_URL_CAP,
+            int(monitored_urls_allowance) * FULL_DISCOVERY_HEADROOM,
+        ),
+    )
+
+
 def runtime_policy_for_allowance(
     monitored_urls_allowance: int, *, settings: _RuntimeSettings
 ) -> SiteHealthRuntimePolicy:
@@ -294,7 +331,9 @@ def runtime_policy_for_allowance(
     if monitored_urls_allowance > 0:
         return SiteHealthRuntimePolicy(
             discovery_mode=DISCOVERY_MODE_FULL,
-            discovery_url_cap=None,
+            discovery_url_cap=full_discovery_url_cap(
+                monitored_urls_allowance, settings=settings
+            ),
             sample_url_limit=0,
             monitored_url_limit=monitored_urls_allowance,
             allows_user_selection=True,

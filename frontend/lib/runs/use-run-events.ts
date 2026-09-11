@@ -12,6 +12,7 @@ import {
   RUN_STREAM_RECONNECT_MAX_MS,
 } from '@/lib/config/runs';
 import { useSseEventStream } from '@/lib/sse/use-event-stream';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /**
  * Subscribes to a run's audit-event stream while it is active. The stream only
@@ -23,6 +24,7 @@ export function useRunEvents(
   enabled: boolean,
 ): void {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const pending = useRef(new Set<ReturnType<typeof invalidationsFor>[number]>());
 
   const onFrame = useCallback((frame: RawSseFrame) => {
@@ -51,6 +53,7 @@ export function useRunEvents(
   }, [auditId, projectId, queryClient]);
 
   useSseEventStream({
+    workspaceId,
     enabled: enabled && Boolean(auditId),
     url: auditId ? `${API_BASE_URL}/audits/${auditId}/events?stream=true` : null,
     invalidateDebounceMs: RUN_STREAM_INVALIDATE_DEBOUNCE_MS,

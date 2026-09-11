@@ -1,17 +1,39 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { getActiveWorkspaceId, setActiveWorkspaceId } from '@/lib/api/client';
+import {
+  ACTIVE_PROJECT_STORAGE_KEY,
+  ACTIVE_WORKSPACE_STORAGE_KEY,
+} from '@/lib/project/active-project-storage';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+
+let search = new URLSearchParams();
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => search,
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  usePathname: () => '/projects',
+}));
 
 import { ProjectProvider, useProjectContext } from './project-context';
 
 const WORKSPACE_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const WORKSPACE_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const PROJECT_1 = '11111111-1111-4111-8111-111111111111';
 const PROJECT_2 = '22222222-2222-4222-8222-222222222222';
+
+function workspace(id: string, name: string) {
+  return {
+    id,
+    name,
+    role: 'owner',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
 
 function project(id: string, name: string, workspaceId = WORKSPACE_A) {
   return {
@@ -37,60 +59,55 @@ function project(id: string, name: string, workspaceId = WORKSPACE_A) {
   };
 }
 
+/** The default membership answer: one workspace, which is the shipped shape. */
+function workspaceList(...ids: string[]) {
+  return http.get('/api/v1/workspaces', () =>
+    HttpResponse.json((ids.length ? ids : [WORKSPACE_A]).map((id) => workspace(id, `WS ${id}`))),
+  );
+}
+
 function Harness() {
-  const { activeProject, activeProjectId, projects, setActiveProjectId, hasPendingSelection } =
-    useProjectContext();
+  const {
+    activeProject,
+    activeProjectId,
+    activeWorkspaceId,
+    projects,
+    status,
+    setActiveProjectId,
+  } = useProjectContext();
   return (
     <div>
       <div data-testid="active">{activeProject?.name ?? 'none'}</div>
       <div data-testid="active-id">{activeProjectId ?? 'none'}</div>
+      <div data-testid="workspace">{activeWorkspaceId ?? 'none'}</div>
       <div data-testid="count">{projects.length}</div>
-      <div data-testid="pending">{hasPendingSelection ? 'yes' : 'no'}</div>
-      {projects.map((p) => (
-        <button key={p.id} type="button" onClick={() => setActiveProjectId(p.id)}>
-          select {p.name}
+      <div data-testid="status">{status}</div>
+      {projects.map((item) => (
+        <button key={item.id} type="button" onClick={() => setActiveProjectId(item.id)}>
+          select {item.name}
         </button>
       ))}
     </div>
   );
 }
 
-/**
- * The route-group boundary. Onboarding lives in `(onboarding)` and the
- * workspace in `(app)`; each layout mounts its own `ProjectProvider`, so
- * crossing between them destroys one provider and builds another against the
- * same query cache. A changed `key` reproduces exactly that.
- */
-function Boundary({ side }: Readonly<{ side: 'onboarding' | 'app' }>) {
-  return (
-    <ProjectProvider key={side}>
+function renderProvider() {
+  return renderWithProviders(
+    <ProjectProvider>
       <Harness />
-    </ProjectProvider>
-  );
-}
-
-/** Selects an id that is not in the currently-loaded list (the onboarding case). */
-function SelectUnknownHarness() {
-  const { activeProject, activeProjectId, projects, setActiveProjectId } = useProjectContext();
-  return (
-    <div>
-      <div data-testid="active">{activeProject?.name ?? 'none'}</div>
-      <div data-testid="active-id">{activeProjectId ?? 'none'}</div>
-      <div data-testid="count">{projects.length}</div>
-      <button type="button" onClick={() => setActiveProjectId(PROJECT_2)}>
-        select unknown
-      </button>
-    </div>
+    </ProjectProvider>,
   );
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
+  search = new URLSearchParams();
   window.localStorage.clear();
   setActiveWorkspaceId(null);
   // The provider backfills logos for any project without one, which every
   // fixture here is. Tests that assert on the backfill override this.
   mswServer.use(
+    workspaceList(),
     http.post('/api/v1/projects/:id/logos/refresh', ({ params }) =>
       HttpResponse.json(project(String(params.id), 'Acme')),
     ),
@@ -107,15 +124,47 @@ describe('ProjectProvider', () => {
       ),
     );
 
-    renderWithProviders(
-      <ProjectProvider>
-        <Harness />
-      </ProjectProvider>,
-    );
+    renderProvider();
 
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
     expect(screen.getByTestId('active-id')).toHaveTextContent(PROJECT_1);
     expect(getActiveWorkspaceId()).toBe(WORKSPACE_A);
+  });
+
+  it('scopes the project list request to the resolved workspace', async () => {
+    const headers: (string | null)[] = [];
+    mswServer.use(
+      http.get('/api/v1/projects', ({ request }) => {
+        headers.push(request.headers.get('x-workspace-id'));
+        return HttpResponse.json([project(PROJECT_1, 'Acme')]);
+      }),
+    );
+
+    renderProvider();
+
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
+    // Carried ON the request, not read off a mutable global at send time — so a
+    // retry cannot pick up a workspace the reader has since left.
+    expect(headers).toContain(WORKSPACE_A);
+  });
+
+  it('resolves a workspace that owns no projects at all', async () => {
+    // The regression this whole change exists for: the workspace used to be
+    // derived from the active project, so a workspace with none had no
+    // identity — and every workspace-scoped read fell back to the backend's
+    // default, including the allowance check that decides whether the reader
+    // may create their FIRST project.
+    mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([])));
+
+    renderProvider();
+
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('empty'));
+    expect(screen.getByTestId('workspace')).toHaveTextContent(WORKSPACE_A);
+    expect(getActiveWorkspaceId()).toBe(WORKSPACE_A);
+    // Remembered so the next visit can scope its requests in the first render
+    // instead of waiting a round trip for the membership list. A convenience,
+    // never an authorization input — the backend still checks every request.
+    expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBe(WORKSPACE_A);
   });
 
   it('changes the active project on selection and persists it', async () => {
@@ -125,163 +174,119 @@ describe('ProjectProvider', () => {
       ),
     );
 
-    renderWithProviders(
-      <ProjectProvider>
-        <Harness />
-      </ProjectProvider>,
-    );
-
+    renderProvider();
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
 
     await userEvent.click(screen.getByRole('button', { name: 'select Globex' }));
 
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Globex'));
-    expect(screen.getByTestId('active-id')).toHaveTextContent(PROJECT_2);
-    expect(window.localStorage.getItem('citeladder.active-project-id')).toBe(PROJECT_2);
+    expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBe(PROJECT_2);
   });
 
   it('restores a persisted selection when it still exists', async () => {
-    window.localStorage.setItem('citeladder.active-project-id', PROJECT_2);
+    window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, PROJECT_2);
     mswServer.use(
       http.get('/api/v1/projects', () =>
         HttpResponse.json([project(PROJECT_1, 'Acme'), project(PROJECT_2, 'Globex')]),
       ),
     );
 
-    renderWithProviders(
-      <ProjectProvider>
-        <Harness />
-      </ProjectProvider>,
-    );
+    renderProvider();
 
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Globex'));
-  });
-
-  it('keeps a selection made before the new project appears in the list', async () => {
-    // Onboarding calls setActiveProjectId(newId) while the provider is still
-    // holding the pre-create list, then invalidates. The selection must survive
-    // that gap instead of being reset to projects[0].
-    let includeNew = false;
-    mswServer.use(
-      http.get('/api/v1/projects', () =>
-        HttpResponse.json(
-          includeNew
-            ? [project(PROJECT_1, 'Acme'), project(PROJECT_2, 'Globex')]
-            : [project(PROJECT_1, 'Acme')],
-        ),
-      ),
-    );
-
-    renderWithProviders(
-      <ProjectProvider>
-        <SelectUnknownHarness />
-      </ProjectProvider>,
-    );
-
-    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
-
-    // Select the not-yet-listed project. The provider must not stomp it back to
-    // projects[0] just because the list has not caught up yet.
-    await userEvent.click(screen.getByRole('button', { name: 'select unknown' }));
-    includeNew = true;
-
-    await waitFor(() =>
-      expect(window.localStorage.getItem('citeladder.active-project-id')).toBe(PROJECT_2),
-    );
   });
 
   /**
    * The bug that cost a user their first project.
    *
-   * Onboarding commits the project, persists the selection, and navigates to
-   * `/projects`. The provider that mounts there is BRAND NEW and its cached
-   * list can still be the pre-create one — settled, and empty. Resolving that
-   * to "no active project" is what let `OnboardingGate` read the account as
-   * having none and bounce the user back to a blank `/onboarding`; they filled
-   * it in again and the second completion was refused with "not allowed to
-   * create more projects", because the first project had been there all along.
+   * Onboarding commits the project and navigates to `/projects?project=<id>`.
+   * The list cached at that moment predates the project, so resolving the
+   * active project FROM the list produced either the previous project or, on
+   * a first project, nothing at all — which read as an empty account, bounced
+   * the reader back to a blank `/onboarding`, and then refused their second
+   * attempt because the first project had existed all along.
+   *
+   * The explicit id is now resolved directly, so a list that has not caught up
+   * cannot contradict it.
    */
-  it('carries a committed selection across a provider boundary on storage alone', async () => {
-    let created = false;
+  it('uses an explicit ?project= that the cached list does not contain yet', async () => {
+    search = new URLSearchParams({ project: PROJECT_2 });
     mswServer.use(
-      http.get('/api/v1/projects', () =>
-        HttpResponse.json(created ? [project(PROJECT_2, 'Globex')] : []),
+      // The pre-create list: settled, successful, and missing the new project.
+      http.get('/api/v1/projects', () => HttpResponse.json([project(PROJECT_1, 'Acme')])),
+      http.get(`/api/v1/projects/${PROJECT_2}`, () =>
+        HttpResponse.json(project(PROJECT_2, 'Globex')),
       ),
     );
 
-    const { queryClient, rerender } = renderWithProviders(<Boundary side="onboarding" />);
-    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('0'));
+    renderProvider();
 
-    // Completion: the project exists on the server and the selection is
-    // persisted. `refetchType: 'none'` is what makes this the RACE rather than
-    // the happy path — the list is stale but the re-read has not landed, which
-    // is the state a provider mounting on the far side of the boundary starts
-    // in whenever onboarding's own refetch did not beat the navigation.
-    created = true;
-    window.localStorage.setItem('citeladder.active-project-id', PROJECT_2);
-    await queryClient.invalidateQueries({
-      queryKey: ['projects', 'list'],
-      refetchType: 'none',
-    });
-
-    rerender(<Boundary side="app" />);
-
-    // Before its own list answers, the new provider still knows which project
-    // it is waiting for — and says so, so the gate holds rather than redirects.
-    expect(screen.getByTestId('active-id')).toHaveTextContent(PROJECT_2);
-    expect(screen.getByTestId('pending')).toHaveTextContent('yes');
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Globex'));
-    expect(screen.getByTestId('pending')).toHaveTextContent('no');
+    expect(screen.getByTestId('active-id')).toHaveTextContent(PROJECT_2);
+    expect(screen.getByTestId('status')).toHaveTextContent('ready');
   });
 
-  it('does not let a stale list resolve a stored selection to the wrong project', async () => {
-    let created = false;
+  it('reports an explicit project that is missing or unauthorized as unavailable', async () => {
+    search = new URLSearchParams({ project: PROJECT_2 });
     mswServer.use(
-      http.get('/api/v1/projects', () =>
-        HttpResponse.json(
-          created
-            ? [project(PROJECT_1, 'Acme'), project(PROJECT_2, 'Globex')]
-            : [project(PROJECT_1, 'Acme')],
-        ),
+      http.get('/api/v1/projects', () => HttpResponse.json([project(PROJECT_1, 'Acme')])),
+      http.get(`/api/v1/projects/${PROJECT_2}`, () =>
+        HttpResponse.json({ detail: 'Project not found' }, { status: 404 }),
       ),
     );
 
-    const { queryClient, rerender } = renderWithProviders(<Boundary side="onboarding" />);
-    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
+    renderProvider();
 
-    created = true;
-    window.localStorage.setItem('citeladder.active-project-id', PROJECT_2);
-    await queryClient.invalidateQueries({
-      queryKey: ['projects', 'list'],
-      refetchType: 'none',
-    });
-    rerender(<Boundary side="app" />);
-
-    // Falling back to projects[0] here was not a flicker: the promotion effect
-    // WRITES the resolved default back to storage, so the wrong project would
-    // stick for good.
-    expect(screen.getByTestId('active-id')).toHaveTextContent(PROJECT_2);
-    expect(window.localStorage.getItem('citeladder.active-project-id')).toBe(PROJECT_2);
-    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Globex'));
+    // Substituting `projects[0]` here would silently show a DIFFERENT project
+    // than the link asked for, which is how a shared link quietly lies.
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('unavailable'));
+    expect(screen.getByTestId('active')).toHaveTextContent('none');
   });
 
-  it('releases a stored selection whose project no longer exists', async () => {
-    // The bound on the seeded pin. Without it, a localStorage id left behind by
-    // a deleted project would hold the context on a dead id forever.
-    window.localStorage.setItem('citeladder.active-project-id', PROJECT_2);
+  it('rejects a URL naming a project from a different workspace', async () => {
+    search = new URLSearchParams({ project: PROJECT_2, workspace: WORKSPACE_B });
+    mswServer.use(
+      workspaceList(WORKSPACE_A, WORKSPACE_B),
+      http.get(`/api/v1/projects/${PROJECT_2}`, () =>
+        HttpResponse.json(project(PROJECT_2, 'Globex', WORKSPACE_A)),
+      ),
+    );
+
+    renderProvider();
+
+    // Combining one project's id with another workspace's limits is how a
+    // request ends up authorized against one tenancy and budgeted against
+    // another. It is rejected rather than reconciled.
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('unavailable'));
+  });
+
+  it('falls back to the first project when a settled list omits a stored one', async () => {
+    // The bound on device storage: an id left behind by a deleted project must
+    // not hold the context on a dead id forever.
+    window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, PROJECT_2);
     mswServer.use(
       http.get('/api/v1/projects', () => HttpResponse.json([project(PROJECT_1, 'Acme')])),
     );
 
-    renderWithProviders(
-      <ProjectProvider>
-        <Harness />
-      </ProjectProvider>,
-    );
+    renderProvider();
 
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
-    expect(screen.getByTestId('pending')).toHaveTextContent('no');
-    expect(window.localStorage.getItem('citeladder.active-project-id')).toBe(PROJECT_1);
+    expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBe(PROJECT_1);
+  });
+
+  it('offers a recoverable error rather than an empty account when a read fails', async () => {
+    mswServer.use(
+      http.get('/api/v1/workspaces', () => HttpResponse.error()),
+      http.get('/api/v1/projects', () => HttpResponse.json([])),
+    );
+
+    renderProvider();
+
+    // The shared retry policy makes two further attempts with backoff before
+    // the failure is final, so this waits past that rather than racing it.
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('error'), {
+      timeout: 10_000,
+    });
   });
 
   it('backfills logos for projects that have none, then re-reads the list once', async () => {
@@ -306,11 +311,7 @@ describe('ProjectProvider', () => {
       }),
     );
 
-    renderWithProviders(
-      <ProjectProvider>
-        <Harness />
-      </ProjectProvider>,
-    );
+    renderProvider();
 
     await waitFor(() => expect(refreshed).toEqual([PROJECT_1]));
     // The list is re-read so every BrandLogo picks up the new URL together.
@@ -330,30 +331,12 @@ describe('ProjectProvider', () => {
       }),
     );
 
-    const { queryClient } = renderWithProviders(
-      <ProjectProvider>
-        <Harness />
-      </ProjectProvider>,
-    );
+    const { queryClient } = renderProvider();
 
     await waitFor(() => expect(refreshed).toEqual([PROJECT_1]));
     // A refetch must not re-trigger the crawl: one attempt per project, period.
     await queryClient.invalidateQueries({ queryKey: ['projects', 'list'] });
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
     expect(refreshed).toEqual([PROJECT_1]);
-  });
-
-  it('is empty (no active project) when the workspace has none', async () => {
-    mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([])));
-
-    renderWithProviders(
-      <ProjectProvider>
-        <Harness />
-      </ProjectProvider>,
-    );
-
-    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('0'));
-    expect(screen.getByTestId('active')).toHaveTextContent('none');
-    expect(getActiveWorkspaceId()).toBeNull();
   });
 });

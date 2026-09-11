@@ -1,18 +1,10 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { setActiveWorkspaceId } from '@/lib/api/client';
+import { httpErrorStatus, setActiveWorkspaceId } from '@/lib/api/client';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsQueries } from '@/lib/api/runs';
@@ -20,183 +12,286 @@ import { siteHealthQueries } from '@/lib/api/site-health';
 import type { Project } from '@/lib/api/types';
 import {
   readStoredActiveProjectId,
+  readStoredActiveWorkspaceId,
   writeStoredActiveProjectId,
+  writeStoredActiveWorkspaceId,
 } from '@/lib/project/active-project-storage';
+import { ProjectSelectionProvider, type ProjectContextValue } from '@/lib/project/project-scope';
+import {
+  pickActiveProject,
+  resolveFailed,
+  resolveFailureScope,
+  resolveProjectId,
+  resolveStatus,
+  resolveWorkspaceId,
+} from '@/lib/project/selection';
 
-type ProjectContextValue = {
-  /** All projects the active workspace owns (empty while loading / none yet). */
-  projects: Project[];
-  /** The currently-selected project, or `null` when none is resolved. */
-  activeProject: Project | null;
-  /** The active project id, or `null`. Persisted to localStorage. */
-  activeProjectId: string | null;
-  /** Select a project by id (persists + stamps the workspace header). */
-  setActiveProjectId: (projectId: string) => void;
-  /**
-   * A selection is committed but the list has not confirmed it yet — the
-   * workspace is still resolving, and an empty `projects` here is not evidence
-   * that the account has none. `OnboardingGate` reads this.
-   */
-  hasPendingSelection: boolean;
-  /** True while the project list is loading. */
-  isLoading: boolean;
-  /** True when project ownership could not be resolved. */
-  isError: boolean;
-};
+export {
+  useActiveProject,
+  useActiveWorkspaceId,
+  useProjectContext,
+  type ProjectContextValue,
+} from '@/lib/project/project-scope';
 
-const ProjectContext = createContext<ProjectContextValue | null>(null);
+const isMissing = (error: unknown) => httpErrorStatus(error) === 404;
+
+/** The scope the URL is asking for, if any. */
+function useRequestedScope() {
+  const searchParams = useSearchParams();
+  return {
+    requestedProjectId: searchParams?.get('project') || null,
+    urlWorkspaceId: searchParams?.get('workspace') || null,
+  };
+}
+
+/** One workspace's projects, keyed by AND requested for that workspace. */
+function useWorkspaceProjects(workspaceId: string | null, allowed: boolean) {
+  return useQuery({
+    queryKey: queryKeys.projects.list(workspaceId ?? 'unresolved'),
+    queryFn: ({ signal }) => projectsApi.listProjects({ signal, workspaceId }),
+    enabled: workspaceId !== null && allowed,
+  });
+}
 
 /**
- * ProjectProvider (F5) — the active-project context consumed by every authed
- * screen (F6–F10).
+ * The authenticated shell's workspace + project context.
  *
- * It loads the workspace's projects via F2's `projects.ts`, tracks the selected
- * project id (persisted to localStorage so a reload keeps the selection), and
- * — critically — mirrors the active project's `workspace_id` into the API
- * client as the `X-Workspace-Id` header (see `lib/api/client.ts`). That header
- * is how the backend's `require_active_workspace` scopes flat routes to the
- * workspace the user is looking at; without it the backend falls back to the
- * user's default workspace.
+ * Three properties matter, and each replaces something that was load-bearing
+ * before:
  *
- * Selection resolution: a persisted id that still exists wins; otherwise the
- * first project is auto-selected. When there are no projects the context is
- * empty (the shell shows the Getting-Started card / setup flow).
+ * 1. **The workspace exists without a project.** It used to be derived in an
+ *    effect from `activeProject?.workspace_id`, so a workspace with zero
+ *    projects — a new account, or one mid-first-creation — had no identity at
+ *    all, and every workspace-scoped read fell back to whatever workspace the
+ *    backend picked by default.
+ *
+ * 2. **An explicit `?project=` is resolved directly**, through
+ *    `GET /projects/{id}` (authorized from the path, so it needs no prior
+ *    correct workspace header). A list that predates the project therefore
+ *    cannot contradict it. This is what lets a just-created project be
+ *    navigated to and be usable on arrival.
+ *
+ * 3. **Cache identity matches request identity.** Workspace-scoped reads are
+ *    keyed by workspace AND carry that workspace on the request itself, so a
+ *    retry or a late response cannot answer for a workspace the reader has
+ *    since left.
+ *
+ * The previous storage-seeded "pin" and its list-generation bookkeeping are
+ * gone: they existed only to smuggle a selection across the route-group
+ * boundary between `(onboarding)` and `(app)`, and there is no longer a
+ * boundary to cross (see `app/(authed)/layout.tsx`).
  */
 export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>) {
   const queryClient = useQueryClient();
-  const {
-    data: projects = [],
-    isLoading,
-    isError,
-    dataUpdatedAt,
-  } = useQuery({
-    queryKey: queryKeys.projects.list(),
-    queryFn: ({ signal }) => projectsApi.listProjects({ signal }),
+  const { requestedProjectId, urlWorkspaceId } = useRequestedScope();
+
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() =>
+    readStoredActiveProjectId(),
+  );
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(() =>
+    readStoredActiveWorkspaceId(),
+  );
+
+  // The membership authority. Needs only the session cookie, so it loads
+  // alongside `me` rather than after it, and it is deliberately NOT scoped by
+  // a workspace header — it is what decides which workspaces exist.
+  const workspacesQuery = useQuery({
+    queryKey: queryKeys.workspaces.list(),
+    queryFn: ({ signal }) => projectsApi.listWorkspaces({ signal, workspaceId: null }),
   });
 
-  const [selectedId, setSelectedId] = useState<string | null>(() => readStoredActiveProjectId());
-  // An explicit selection (onboarding's just-created project, the switcher) is
-  // authoritative even before the list refetch catches up. Without this, a
-  // selection whose project is not yet in `projects` fails the membership check
-  // below and gets reset to `projects[0]` — the "I added a project and landed on
-  // the first one" bug.
-  //
-  // The pin is SEEDED FROM STORAGE, which is what carries a selection across a
-  // route-group boundary. Onboarding lives in `(onboarding)` and the workspace
-  // in `(app)`; each layout mounts its own provider, so the pin that onboarding
-  // set dies with its provider and this one starts over from the stored id
-  // alone. Seeding only `selectedId` from storage was not enough: an id absent
-  // from a not-yet-refetched list fails the membership check, resolves to
-  // `projects[0]`, and the promotion effect below then WRITES that wrong id to
-  // storage — so the miss is permanent, not a flicker. (This is what the
-  // `?project=` hand-off in the URL was papering over, one effect-tick too
-  // late and only on `/projects`.)
-  //
-  // State rather than a ref because `activeProjectId` is derived from it during
-  // render: clearing the pin has to re-run that memo. It is released purely by
-  // derivation below (never by an effect).
-  const [pin, setPin] = useState<{ id: string; asOf: number } | null>(() => {
-    const stored = readStoredActiveProjectId();
-    // `dataUpdatedAt` here is the list generation this provider STARTED from —
-    // 0 with a cold cache, the cached timestamp when it inherits one from the
-    // provider it is replacing. Captured in the lazy initializer so it is the
-    // mount-time value, not whatever the current render sees.
-    return stored === null ? null : { id: stored, asOf: dataUpdatedAt };
+  // The narrow resolution read for an explicit id. Authorized from the path,
+  // so it answers before any workspace is known and its `workspace_id` is
+  // what establishes the workspace for everything that follows.
+  const detailQuery = useQuery({
+    queryKey: queryKeys.projects.detail(requestedProjectId ?? 'none'),
+    queryFn: ({ signal }) =>
+      projectsApi.getProject(String(requestedProjectId), { signal, workspaceId: null }),
+    enabled: requestedProjectId !== null,
   });
-  // `asOf` is the list's `dataUpdatedAt` when the pin was set, and the pin holds
-  // only until a list fetched AFTER that comes back. That bound is what keeps a
-  // stale localStorage id for a DELETED project from stranding the context on a
-  // dead id forever: one authoritative list without it releases the pin and the
-  // ordinary membership check takes over. It also releases the moment the list
-  // does contain it, which is the common case.
-  const pinApplies =
-    pin !== null &&
-    selectedId === pin.id &&
-    !projects.some((project) => project.id === pin.id) &&
-    dataUpdatedAt <= pin.asOf;
 
-  // Resolve the effective active id: keep a valid selection, else default to
-  // the first project, else null.
-  const activeProjectId = useMemo(() => {
-    if (pinApplies) return selectedId;
-    if (projects.length === 0) return null;
-    if (selectedId && projects.some((project) => project.id === selectedId)) {
-      return selectedId;
-    }
-    return projects[0].id;
-  }, [projects, selectedId, pinApplies]);
+  const resolvedProject = requestedProjectId === null ? null : (detailQuery.data ?? null);
+  // A URL naming both a workspace and a project from a DIFFERENT workspace is
+  // rejected rather than reconciled: combining one project's id with another
+  // workspace's limits is how a request ends up authorized against one
+  // tenancy and budgeted against another.
+  const contradictoryRequest = Boolean(
+    urlWorkspaceId && resolvedProject && resolvedProject.workspace_id !== urlWorkspaceId,
+  );
+
+  const workspaces = workspacesQuery.data;
+  const activeWorkspaceId = useMemo(
+    () =>
+      resolveWorkspaceId({
+        projectWorkspaceId: resolvedProject?.workspace_id ?? null,
+        urlWorkspaceId,
+        selectedWorkspaceId,
+        workspaces,
+      }),
+    [resolvedProject, urlWorkspaceId, selectedWorkspaceId, workspaces],
+  );
+
+  const projectsQuery = useWorkspaceProjects(activeWorkspaceId, !contradictoryRequest);
+  const projects = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
+  const listSettled = projectsQuery.isSuccess;
+
+  const activeProjectId = useMemo(
+    () =>
+      resolveProjectId({
+        requestedProjectId,
+        selectedProjectId,
+        projects,
+        listSettled,
+      }),
+    [requestedProjectId, selectedProjectId, projects, listSettled],
+  );
 
   const activeProject = useMemo(
-    () => projects.find((project) => project.id === activeProjectId) ?? null,
-    [projects, activeProjectId],
+    () => pickActiveProject(resolvedProject, projects, activeProjectId),
+    [resolvedProject, projects, activeProjectId],
   );
+
+  const requestedProjectMissing = isMissing(detailQuery.error);
+  const failures = {
+    detailFailed: detailQuery.isError && !requestedProjectMissing,
+    membershipFailed: workspacesQuery.isError,
+    listFailedWithNothingUsable: projectsQuery.isError && activeProject === null,
+  };
+  const failed = resolveFailed(failures);
+  const errorScope = failed ? resolveFailureScope(failures) : null;
+
+  const status = resolveStatus({
+    contradictoryRequest,
+    requestedProjectPending:
+      requestedProjectId !== null && activeProject === null && !requestedProjectMissing,
+    requestedProjectMissing,
+    failed,
+    workspaceId: activeWorkspaceId,
+    activeProjectId,
+    hasResolvedProject: activeProject !== null,
+    listSettled,
+  });
 
   const setActiveProjectId = useCallback(
     (projectId: string) => {
-      // The generation is read from the cache rather than closed over, so this
-      // callback stays referentially stable — every consumer holds it across
-      // renders — while still stamping the pin with the list the selection was
-      // actually made against.
-      const listGeneration =
-        queryClient.getQueryState(queryKeys.projects.list())?.dataUpdatedAt ?? 0;
-      setPin({ id: projectId, asOf: listGeneration });
-      setSelectedId(projectId);
+      setSelectedProjectId(projectId);
       writeStoredActiveProjectId(projectId);
     },
-    [queryClient],
+    [setSelectedProjectId],
   );
 
-  // Persist a resolved default (first project) so a reload is stable, and keep
-  // the API client's workspace header in sync with the active project.
+  const selectWorkspace = useCallback(
+    (workspaceId: string) => {
+      setSelectedWorkspaceId(workspaceId);
+      writeStoredActiveWorkspaceId(workspaceId);
+      // A different workspace owns a different project set, so the previous
+      // workspace's selection must not survive the switch and be resolved
+      // against the new list.
+      setSelectedProjectId(null);
+      writeStoredActiveProjectId(null);
+    },
+    [setSelectedProjectId, setSelectedWorkspaceId],
+  );
+
+  const retry = useCallback(() => {
+    void queryClient.refetchQueries({ queryKey: queryKeys.workspaces.list() });
+    void queryClient.refetchQueries({ queryKey: queryKeys.projects.all });
+  }, [queryClient]);
+
+  // Keep the ambient header in step with the RESOLVED workspace (not with a
+  // project, which may not exist yet). Converted callers pass the workspace
+  // explicitly; this remains for the ones that have not been converted, and
+  // it is no longer the correctness mechanism for any of them.
   useEffect(() => {
-    if (activeProjectId && activeProjectId !== selectedId) {
-      writeStoredActiveProjectId(activeProjectId);
-      // One-time promotion of the resolved default into state so a reload is
-      // stable; guarded above, so it cannot cascade.
-      // oxlint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedId(activeProjectId);
-    }
-  }, [activeProjectId, selectedId]);
+    setActiveWorkspaceId(activeWorkspaceId);
+    writeStoredActiveWorkspaceId(activeWorkspaceId);
+  }, [activeWorkspaceId]);
 
   useEffect(() => {
-    // While a just-selected project is pinned it is not in `projects` yet, so
-    // `activeProject` is momentarily null. Keep the current header rather than
-    // clearing it: dropping it mid-flight would send the refetch to the user's
-    // default workspace, which is the wrong one for a multi-workspace account.
-    if (activeProject === null && pinApplies) return;
-    setActiveWorkspaceId(activeProject?.workspace_id ?? null);
-    if (activeProject) {
-      // Warm the shared run list and latest-crawl dashboard only after the
-      // workspace header is installed. Visibility/Runs and Website/Issues then
-      // reuse these exact cache entries instead of starting cold per route.
-      void Promise.all([
-        queryClient.prefetchQuery(runsQueries.list(activeProject.id)),
-        queryClient.prefetchQuery(siteHealthQueries.dashboard(activeProject.id)),
-      ]);
-    }
-  }, [activeProject, pinApplies, queryClient]);
+    if (activeProjectId) writeStoredActiveProjectId(activeProjectId);
+  }, [activeProjectId]);
 
-  // Backfill missing brand logos. Onboarding kicks off a refresh for the project
-  // it creates, but that is the ONLY trigger: a project created before logos
-  // existed, or one whose crawl lost a race or failed transiently, would show
-  // initials forever. Hydrating from the provider covers every project on every
-  // authed screen instead of depending on how the project came to exist.
-  //
-  // Bounded and idempotent: one attempt per project per session (the ref), only
-  // for projects with no `logo_url`, and the backend answers from its own
-  // database cache — including a negative cache — so a domain with no findable
-  // icon is not re-crawled on the next mount.
-  const hydratedLogos = useRef(new Set<string>());
+  useProjectWarmup(activeProject, activeWorkspaceId);
+  useBrandLogoHydration(projects, activeWorkspaceId);
+
+  const value = useMemo<ProjectContextValue>(
+    () => ({
+      workspaces: workspaces ?? [],
+      activeWorkspaceId,
+      activeWorkspace: workspaces?.find((workspace) => workspace.id === activeWorkspaceId) ?? null,
+      setActiveWorkspaceId: selectWorkspace,
+      projects,
+      activeProject,
+      activeProjectId,
+      setActiveProjectId,
+      status,
+      errorScope,
+      retry,
+      isLoading: status === 'resolving',
+      isError: status === 'error',
+    }),
+    [
+      workspaces,
+      activeWorkspaceId,
+      selectWorkspace,
+      projects,
+      activeProject,
+      activeProjectId,
+      setActiveProjectId,
+      status,
+      errorScope,
+      retry,
+    ],
+  );
+
+  return <ProjectSelectionProvider value={value}>{children}</ProjectSelectionProvider>;
+}
+
+/**
+ * Warm the shared run list and latest-crawl dashboard for the active project.
+ *
+ * Visibility/Runs and Website/Issues then reuse these exact cache entries
+ * instead of starting cold per route.
+ */
+function useProjectWarmup(activeProject: Project | null, workspaceId: string | null) {
+  const queryClient = useQueryClient();
   useEffect(() => {
+    if (!activeProject || !workspaceId) return;
+    void Promise.all([
+      queryClient.prefetchQuery(runsQueries.list(activeProject.id)),
+      queryClient.prefetchQuery(siteHealthQueries.dashboard(activeProject.id)),
+    ]);
+  }, [activeProject, workspaceId, queryClient]);
+}
+
+/**
+ * Backfill missing brand logos.
+ *
+ * Onboarding kicks off a refresh for the project it creates, but that is the
+ * ONLY trigger: a project created before logos existed, or one whose crawl
+ * lost a race or failed transiently, would show initials forever. Hydrating
+ * from the provider covers every project on every authed screen instead of
+ * depending on how the project came to exist.
+ *
+ * Bounded and idempotent: one attempt per project per session, only for
+ * projects with no `logo_url`, and the backend answers from its own database
+ * cache — including a negative cache — so a domain with no findable icon is
+ * not re-crawled on the next mount.
+ */
+function useBrandLogoHydration(projects: readonly Project[], workspaceId: string | null) {
+  const queryClient = useQueryClient();
+  const hydrated = useRef(new Set<string>());
+  useEffect(() => {
+    if (!workspaceId) return;
     const pending = projects.filter(
-      (project) => !project.brand.logo_url && !hydratedLogos.current.has(project.id),
+      (project) => !project.brand.logo_url && !hydrated.current.has(project.id),
     );
     if (pending.length === 0) return;
-    for (const project of pending) hydratedLogos.current.add(project.id);
+    for (const project of pending) hydrated.current.add(project.id);
 
     let cancelled = false;
     void Promise.allSettled(
-      pending.map((project) => projectsApi.refreshProjectLogos(project.id)),
+      pending.map((project) => projectsApi.refreshProjectLogos(project.id, { workspaceId })),
     ).then((results) => {
       // Only re-read the list if something actually attached, so a workspace
       // where every domain lacks an icon settles instead of refetching forever.
@@ -204,40 +299,11 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
         (result) => result.status === 'fulfilled' && result.value.brand.logo_url,
       );
       if (!cancelled && attached) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.list(workspaceId) });
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [projects, queryClient]);
-
-  const value = useMemo<ProjectContextValue>(
-    () => ({
-      projects,
-      activeProject,
-      activeProjectId,
-      setActiveProjectId,
-      hasPendingSelection: pinApplies,
-      isLoading,
-      isError,
-    }),
-    [projects, activeProject, activeProjectId, setActiveProjectId, pinApplies, isLoading, isError],
-  );
-
-  return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
-}
-
-/** Access the active-project context. Throws if used outside `<ProjectProvider>`. */
-export function useProjectContext(): ProjectContextValue {
-  const context = useContext(ProjectContext);
-  if (!context) {
-    throw new Error('useProjectContext must be used within a <ProjectProvider>.');
-  }
-  return context;
-}
-
-/** Convenience accessor for just the active project (or null). */
-export function useActiveProject(): Project | null {
-  return useProjectContext().activeProject;
+  }, [projects, workspaceId, queryClient]);
 }

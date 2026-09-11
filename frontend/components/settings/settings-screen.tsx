@@ -21,6 +21,7 @@ import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_DELETION_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext } from '@/lib/project/project-context';
 import { emailInitials } from '@/lib/utils';
+import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
@@ -80,23 +81,34 @@ const SETTINGS_TAB_CODEC = stringUrlCodec(
 function ProjectDeletionControls() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { activeProject, setActiveProjectId } = useProjectContext();
+  const { activeProject, activeWorkspaceId } = useProjectContext();
+  const selectProject = useSelectProject();
   const { hasCapability } = useEntitlement();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const deleteMutation = useMutation({
-    mutationFn: (projectId: string) => projectsApi.deleteProject(projectId),
+    mutationFn: (projectId: string) =>
+      projectsApi.deleteProject(projectId, { workspaceId: activeWorkspaceId }),
     onSuccess: async (_data, deletedId) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       const refreshedProjects = await queryClient.fetchQuery({
-        queryKey: queryKeys.projects.list(),
-        queryFn: () => projectsApi.listProjects(),
+        queryKey: queryKeys.projects.list(String(activeWorkspaceId)),
+        queryFn: ({ signal }) =>
+          projectsApi.listProjects({ signal, workspaceId: activeWorkspaceId }),
       });
       const next = refreshedProjects.find((project) => project.id !== deletedId) ?? null;
       if (next) {
-        setActiveProjectId(next.id);
+        // Navigate, do not merely re-select: the deleted id may be the one in
+        // `?project=`, and leaving it there would resolve to a project that no
+        // longer exists and present as "that project is unavailable". Replace
+        // rather than push for the same reason — Back must not return to it.
+        selectProject(next.id, { replace: true });
         setConfirmOpen(false);
       } else {
-        router.replace('/onboarding');
+        router.replace(
+          activeWorkspaceId
+            ? workspaceDestination('/onboarding', null, activeWorkspaceId)
+            : '/onboarding',
+        );
       }
     },
   });

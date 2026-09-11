@@ -113,7 +113,7 @@ export function useEngineConnection({
     },
     onSuccess: async ({ verified }) => {
       setApiKey('');
-      await queryClient.invalidateQueries({ queryKey: queryKeys.providers.connections() });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.providers.allConnections() });
       if (verified?.status === 'ok') onSaved?.();
     },
   });
@@ -125,7 +125,8 @@ export function useEngineConnection({
     },
     // The probe denormalizes its outcome onto the connection, and that outcome
     // is what gates launching — so the connections query is stale afterwards.
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.providers.connections() }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.providers.allConnections() }),
     onError: (error) => setTestResult({ status: 'failed', message: errorMessage(error) }),
   });
 

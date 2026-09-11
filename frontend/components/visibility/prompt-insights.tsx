@@ -33,7 +33,7 @@ export function CompetitorSuggestions({
       void queryClient.invalidateQueries({
         queryKey: queryKeys.visibility.competitorSuggestions(projectId),
       });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       void queryClient.invalidateQueries({
         queryKey: queryKeys.projects.commandCenter(projectId),
       });

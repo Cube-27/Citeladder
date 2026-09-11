@@ -1,6 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -52,8 +51,7 @@ function setup(mutationFn: () => Promise<typeof sessionUser> = () => Promise.res
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  // The auth call itself is stubbed to resolve immediately — routing is driven
-  // by the mocked `/projects` response.
+  // The auth call itself is stubbed to resolve immediately.
   const hook = renderHook(() => useAuthMutation(mutationFn), { wrapper });
   return { queryClient, ...hook };
 }
@@ -69,20 +67,22 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('useAuthMutation', () => {
-  it('primes the me cache and routes to /onboarding when the workspace has no projects', async () => {
-    mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([])));
+  // Login no longer reads the project list to pick a destination. It could
+  // only have read it UNSCOPED — no workspace is resolved at this point — so
+  // the answer came from whichever workspace the backend defaulted to. The
+  // shell's gate makes that decision from the resolved workspace instead.
+  it('primes the me cache and routes into the app', async () => {
     const { result, queryClient } = setup();
 
     act(() => {
       void result.current.submit({});
     });
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/onboarding'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
     expect(queryClient.getQueryData(queryKeys.auth.me())).toMatchObject({ id: sessionUser.id });
   });
 
   it('cancels old-account queries and clears only account-scoped state before seeding login', async () => {
-    mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([])));
     const { result, queryClient } = setup();
     queryClient.setQueryData(['old-account', 'private'], { secret: 'stale' });
     window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, project.id);
@@ -117,7 +117,7 @@ describe('useAuthMutation', () => {
       void result.current.submit({});
     });
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/onboarding'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
     await oldRequest;
     expect(wasAborted).toBe(true);
     expect(queryClient.getQueryData(['old-account', 'private'])).toBeUndefined();
@@ -144,21 +144,9 @@ describe('useAuthMutation', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('routes to /projects when the workspace already has a project', async () => {
-    mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([project])));
-    const { result } = setup();
-
-    act(() => {
-      void result.current.submit({});
-    });
-
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
-  });
-
   // A pricing selection captured before signing in was the visitor's last
   // deliberate action; landing them on /projects would silently discard it.
   it('resumes a captured pricing intent instead of the normal destination', async () => {
-    mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([project])));
     globalThis.sessionStorage.setItem(
       'citeladder.pendingPricingIntent.v1',
       JSON.stringify({
@@ -188,7 +176,6 @@ describe('useAuthMutation', () => {
   });
 
   it('ignores a malformed stored intent and uses the normal destination', async () => {
-    mswServer.use(http.get('/api/v1/projects', () => HttpResponse.json([project])));
     globalThis.sessionStorage.setItem('citeladder.pendingPricingIntent.v1', '{"version":99}');
     const { result } = setup();
 
@@ -198,52 +185,5 @@ describe('useAuthMutation', () => {
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
     globalThis.sessionStorage.clear();
-  });
-
-  it('falls back to /projects when the projects lookup fails', async () => {
-    // 4xx: the shared retry policy never retries it, so the fallback is
-    // immediate.
-    mswServer.use(
-      http.get('/api/v1/projects', () =>
-        HttpResponse.json({ detail: 'forbidden' }, { status: 403 }),
-      ),
-    );
-    const { result } = setup();
-
-    act(() => {
-      void result.current.submit({});
-    });
-
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/projects'));
-    expect(result.current.mutation.isError).toBe(false);
-  });
-
-  it('stays pending until the projects lookup settles and the redirect fires', async () => {
-    let respond: ((response: Response) => void) | undefined;
-    mswServer.use(
-      http.get(
-        '/api/v1/projects',
-        () =>
-          new Promise<Response>((resolve) => {
-            respond = resolve;
-          }),
-      ),
-    );
-    const { result } = setup();
-
-    act(() => {
-      void result.current.submit({});
-    });
-
-    await waitFor(() => expect(result.current.mutation.isPending).toBe(true));
-    expect(navigate).not.toHaveBeenCalled();
-
-    // isPending flips before the MSW handler has necessarily assigned
-    // `respond` — wait for the request to actually arrive before resolving.
-    await waitFor(() => expect(respond).toBeTypeOf('function'));
-    if (!respond) throw new Error('Projects request did not start');
-    respond(HttpResponse.json([]));
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/onboarding'));
-    await waitFor(() => expect(result.current.mutation.isPending).toBe(false));
   });
 });
