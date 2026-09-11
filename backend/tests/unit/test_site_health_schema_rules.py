@@ -110,6 +110,67 @@ def test_one_entity_declaring_two_expected_types_is_not_ambiguous() -> None:
     assert evidence["candidate_count"] == 1
 
 
+def test_same_id_objects_are_one_entity_not_competing_candidates() -> None:
+    """`@id` IS identity in JSON-LD, so two objects sharing one are one entity.
+
+    A listing page whose `isPartOf` names itself is ordinary markup. Once
+    `Blog` became recognized, the nested object turned into a second
+    expected-type candidate and the primary-entity rules abstained on a page
+    that had been reading fine.
+    """
+    facts = _facts(
+        {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "@id": "https://acme.test/blog",
+            "url": "https://acme.test/blog",
+            "name": "Acme Blog",
+            "dateModified": "2026-09-09",
+            "isPartOf": {
+                "@type": "Blog",
+                "@id": "https://acme.test/blog",
+                "url": "https://acme.test/blog",
+                "name": "Acme Blog",
+            },
+        },
+        url="https://acme.test/blog",
+        page_kind=PAGE_KIND_CATEGORY,
+    )
+
+    assert _types(facts) == ["CollectionPage", "Blog"]
+    outcome, evidence = check_schema_expected_for_type(facts)
+    assert outcome == RULE_OUTCOME_SATISFIED
+    assert evidence["candidate_count"] == 1
+
+
+def test_the_satisfied_contract_wins_not_the_first_declared_type() -> None:
+    """Declaration order must not decide which contract an entity is held to.
+
+    `["ItemList", "Blog"]` on a container carrying `name` and no
+    `itemListElement` is valid AS A BLOG. Collapsing to whichever type the
+    author listed first reported a required property missing from an entity
+    that never claimed to be a bare list.
+    """
+    facts = _facts(
+        {
+            "@context": "https://schema.org",
+            "@type": ["ItemList", "Blog"],
+            "@id": "https://acme.test/blog",
+            "url": "https://acme.test/blog",
+            "name": "Acme Blog",
+            "dateModified": "2026-09-09",
+        },
+        url="https://acme.test/blog",
+        page_kind=PAGE_KIND_CATEGORY,
+    )
+
+    assert check_schema_expected_for_type(facts)[0] == RULE_OUTCOME_SATISFIED
+    outcome, evidence = check_schema_required_valid(facts)
+    assert outcome == RULE_OUTCOME_SATISFIED
+    assert evidence["schema_type"] == "Blog"
+    assert evidence["missing"] == []
+
+
 def test_a_nested_blog_reference_does_not_disturb_a_blog_post() -> None:
     """`isPartOf: {"@type": "Blog"}` is ordinary on a post and must stay inert.
 

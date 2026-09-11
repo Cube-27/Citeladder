@@ -20,17 +20,19 @@ from tests.component.audit_helpers import seed_audit_fixtures
 
 
 @pytest.mark.asyncio
-async def test_usage_counter_is_atomic_across_api_sessions(
+async def test_usage_counter_is_atomic_within_same_window_across_api_sessions(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     """Concurrent consumers of ONE window never exceed its limit.
 
-    ``now`` is pinned. ``_window`` tumbles on epoch-aligned boundaries, so with
-    a 3600s window the boundary is the top of each hour; letting each of the
-    twelve attempts read its own clock meant a run straddling that instant
-    wrote to two different windows -- two rows, five each -- and the assertion
-    failed with 6. That is a property of the clock, not of the counter, and CI
-    hit it by starting this test 0.58s after the hour.
+    ``now`` is pinned because this test is about database concurrency, not
+    about clock-boundary semantics. ``_window`` buckets on epoch-aligned
+    boundaries, so with a 3600s window the boundary is the top of each hour;
+    letting each of the twelve attempts read its own clock made the assertion
+    boundary-sensitive, because attempts landing either side of that instant
+    write to two different windows -- two rows, five each. Those semantics are
+    pinned deliberately by
+    ``test_fixed_window_admits_the_limit_again_after_a_boundary``.
     """
     now = datetime(2026, 1, 1, 12, 30, tzinfo=UTC)
 
@@ -54,6 +56,51 @@ async def test_usage_counter_is_atomic_across_api_sessions(
 
     results = await asyncio.gather(*(attempt() for _ in range(12)))
     assert sum(results) == 5
+
+
+@pytest.mark.asyncio
+async def test_fixed_window_admits_the_limit_again_after_a_boundary(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """`consume_usage` is a FIXED-window quota, and this pins what that means.
+
+    `_window` buckets on epoch-aligned boundaries, so each window admits the
+    limit independently and a burst straddling a boundary can consume up to
+    twice it. That is a property of fixed windows, not a defect here, but it
+    is a real property of every limit built on this primitive -- so it is
+    asserted rather than left to be rediscovered as a bug.
+
+    Anything needing "never more than N in ANY rolling interval" needs a
+    continuous limiter instead; this primitive does not provide it.
+    """
+    before = datetime(2026, 1, 1, 12, 59, 59, 950000, tzinfo=UTC)
+    after = datetime(2026, 1, 1, 13, 0, 0, 50000, tzinfo=UTC)
+
+    async def attempt(now: datetime) -> bool:
+        async with session_factory() as session:
+            try:
+                await consume_usage(
+                    session,
+                    subject_kind="workspace",
+                    subject="boundary-semantics",
+                    operation="expensive.operation",
+                    limit=5,
+                    window_seconds=3600,
+                    now=now,
+                )
+            except UsageLimitExceededError:
+                await session.rollback()
+                return False
+            await session.commit()
+            return True
+
+    admitted = await asyncio.gather(
+        *(attempt(before) for _ in range(6)),
+        *(attempt(after) for _ in range(6)),
+    )
+
+    # Five per window, not five overall: 100ms apart, twice the limit.
+    assert sum(admitted) == 10
 
 
 @pytest.mark.asyncio

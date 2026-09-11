@@ -108,31 +108,72 @@ def _document_urls(facts: dict) -> set[str]:
 def _expected_blocks(
     blocks: list[dict], expectation: PageKindSchemaExpectation
 ) -> list[dict]:
-    """The expected-type blocks, at most ONE per source entity.
+    """The expected-type blocks, at most ONE per entity.
 
-    A single JSON-LD object may declare several types, and the extractor emits
-    one block per type. When two of those types are both expected for the page
-    kind -- ``["CollectionPage", "Blog"]`` on a blog index, say -- the page has
-    one entity, not two, and collapsing them here is what stops the
-    primary-entity rules reporting valid markup as ambiguous. The first
-    declared type wins, which is the one the author put first.
+    Two things make several blocks describe a single entity, and both must
+    collapse or the primary-entity rules report valid markup as ambiguous:
 
-    Blocks with no ``entity_index`` (microdata, and any pre-existing persisted
-    facts) keep their identity, so nothing is merged on a guess.
+    * One JSON-LD object declaring several types. The extractor emits a block
+      per recognized type, so ``["CollectionPage", "Blog"]`` on a blog index
+      yields two -- same ``entity_index``.
+    * Separate objects carrying the same ``@id``. That is precisely what
+      ``@id`` means in JSON-LD, and a page whose ``isPartOf`` names itself is
+      ordinary markup.
+
+    Among the blocks of one entity the SATISFIED contract wins, not the type
+    the author happened to list first. A container declaring
+    ``["ItemList", "Blog"]`` with a ``name`` and no ``itemListElement`` is
+    valid as a ``Blog``; picking ``ItemList`` on declaration order alone would
+    report a required property missing from an entity that never claimed to be
+    a bare list.
+
+    Blocks with neither key (microdata, and any pre-existing persisted facts)
+    keep their identity, so nothing merges on a guess.
     """
     expected = set(expectation.expected_types)
-    seen_entities: set[int] = set()
-    candidates: list[dict] = []
+    grouped: dict[object, dict] = {}
+    ordered: list[object] = []
+    anonymous: list[dict] = []
     for block in blocks:
         if str(block.get("type") or "") not in expected:
             continue
-        entity = block.get("entity_index")
-        if isinstance(entity, int):
-            if entity in seen_entities:
-                continue
-            seen_entities.add(entity)
-        candidates.append(block)
-    return candidates
+        key = _entity_key(block)
+        if key is None:
+            anonymous.append(block)
+            continue
+        if key not in grouped:
+            grouped[key] = block
+            ordered.append(key)
+        elif _prefers(block, grouped[key], expectation):
+            grouped[key] = block
+    return [grouped[key] for key in ordered] + anonymous
+
+
+def _entity_key(block: dict) -> object | None:
+    """What identifies the entity a block describes, or ``None`` if nothing does."""
+    schema_id = str(block.get("schema_id") or "").strip()
+    if schema_id:
+        return ("id", schema_id)
+    entity = block.get("entity_index")
+    return ("object", entity) if isinstance(entity, int) else None
+
+
+def _prefers(
+    candidate: dict, incumbent: dict, expectation: PageKindSchemaExpectation
+) -> bool:
+    """Whether ``candidate`` is the better face of an entity than ``incumbent``.
+
+    Only a satisfied required contract displaces one that is not; otherwise
+    declaration order stands.
+    """
+    if not _satisfies_required(incumbent, expectation):
+        return _satisfies_required(candidate, expectation)
+    return False
+
+
+def _satisfies_required(block: dict, expectation: PageKindSchemaExpectation) -> bool:
+    paths = expectation.properties_for(str(block.get("type") or ""), recommended=False)
+    return not _missing_paths(block, paths)
 
 
 def _document_entity_references(
