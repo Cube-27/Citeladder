@@ -105,7 +105,7 @@ function ConnectCard({ family }: Readonly<{ family: GrantFamily }>) {
       <div>
         <GrantHeader family={family} grant={null} />
         <CardContent className="pt-4">
-          <p className="text-secondary text-sm">
+          <p className={textRole('body')}>
             Connect your {meta.title} account to automatically import traffic and search visibility
             metrics.
           </p>

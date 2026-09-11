@@ -94,7 +94,17 @@ export function IssueDetailRail({
             <p className="text-secondary text-sm whitespace-pre-line">{issue.description}</p>
           ) : null}
           {issue.remediation ? (
-            <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'grid gap-1')}>
+            // Guidance, not a field. The `well` tone is the recessed INPUT
+            // surface, so remediation copy inside it read as a disabled
+            // textarea the reader could not edit. Hung off an accent edge it
+            // reads as advice, and keeps the blue that marks helpful
+            // interaction everywhere else.
+            <div
+              className={panelClasses(
+                { tone: 'none', pad: 'none', edge: 'flush' },
+                'border-accent-border grid gap-1 border-s-2 ps-3',
+              )}
+            >
               <span className={textRole('label')}>How to fix</span>
               <p className="text-secondary text-sm whitespace-pre-line">{issue.remediation}</p>
             </div>
@@ -136,7 +146,7 @@ function OccurrenceList({
   // `detail` is populated once the screen has painted: no loading state here.
   if (isError) return <Alert tone="danger">Could not load affected URLs.</Alert>;
   if (!detail || detail.occurrences.length === 0)
-    return <p className="text-secondary text-sm">No affected URLs found.</p>;
+    return <p className={textRole('body')}>No affected URLs found.</p>;
   return (
     <ul className={ledgerClasses('ruled')}>
       {detail.occurrences.map((occurrence) => (

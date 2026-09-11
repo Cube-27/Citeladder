@@ -19,7 +19,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
   const keyOccurrences = new Map<string, number>();
   return (
     <div className="grid gap-2" data-testid="root-errors-block">
-      <p className="text-secondary text-sm">
+      <p className={textRole('body')}>
         The start URL could not be fetched — the crawl never reached any page. Each row is one
         network call the crawler made.
       </p>

@@ -223,7 +223,7 @@ function CheckLedger({ checks }: Readonly<{ checks: ReadinessCheck[] }>) {
     <section className="grid gap-2">
       <h3 className={textRole('objectTitle')}>Checks</h3>
       {checks.length === 0 ? (
-        <p className="text-secondary text-sm">No determinate checks were recorded.</p>
+        <p className={textRole('body')}>No determinate checks were recorded.</p>
       ) : (
         <ul className={ledgerClasses()}>
           {checks.map((check) => (
@@ -243,7 +243,7 @@ function CheckRow({ check }: Readonly<{ check: ReadinessCheck }>) {
         <span className={textRole('bodyStrong')}>{check.title}</span>
         <span className="text-secondary text-xs">{state}</span>
       </div>
-      <p className="text-secondary text-sm">
+      <p className={textRole('body')}>
         {check.remediation || 'No remediation guidance is recorded for this check.'}
       </p>
       <p className="text-muted text-xs tabular-nums">

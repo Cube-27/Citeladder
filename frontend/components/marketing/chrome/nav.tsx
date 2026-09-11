@@ -335,7 +335,7 @@ function AnonymousActions() {
       <Link
         href="/login"
         prefetch={false}
-        className="website-nav text-muted hover:text-foreground inline-flex px-4 transition-colors"
+        className="website-nav text-muted hover:text-accent-text inline-flex px-4 transition-colors"
       >
         Log in
       </Link>

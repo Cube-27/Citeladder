@@ -54,7 +54,7 @@ export function SiteHealthDashboardLayout({
               <h2 className={textRole('sectionTitle', 'tracking-[-0.02em]')}>
                 Run your first site crawl
               </h2>
-              <p className="text-secondary text-sm">
+              <p className={textRole('body')}>
                 Crawl your site to see page health, issues, and recommendations as results arrive.
               </p>
             </div>

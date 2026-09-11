@@ -68,7 +68,7 @@ export function AuditSchedules({
           </p>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-4">
+      <CardContent className="grid gap-3">
         {schedulesQuery.isError ? (
           <Alert tone="danger">Could not load scheduled audits.</Alert>
         ) : null}
@@ -102,7 +102,7 @@ export function AuditSchedules({
         {promptSets.length === 0 ? (
           <Alert tone="info">Add prompts before scheduling an audit.</Alert>
         ) : (
-          <div className="grid gap-3 pt-1 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className={textRole('label', 'grid gap-1')}>
               <span>Prompt set</span>
               <Select

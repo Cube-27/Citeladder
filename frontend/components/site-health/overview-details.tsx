@@ -188,7 +188,7 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
           <TableBody>
             {issues.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-secondary text-sm">
+                <TableCell colSpan={5} className={textRole('body')}>
                   No persisted issues.
                 </TableCell>
               </TableRow>
@@ -403,14 +403,14 @@ function WebFundamentalsDrawer({
                   {statusLabel(area.state)}
                 </Badge>
               </div>
-              <p className="text-secondary text-sm">
+              <p className={textRole('body')}>
                 {percent(area.coverage)} evidence coverage · {area.passed_count} passed ·{' '}
                 {area.missing_count} missing
               </p>
             </header>
             <div className="grid gap-3">
               {area.top_findings.length === 0 ? (
-                <p className="text-secondary text-sm">No missing HTTP-evidence checks.</p>
+                <p className={textRole('body')}>No missing HTTP-evidence checks.</p>
               ) : (
                 area.top_findings.map((finding) => (
                   <div key={finding.rule_id} className="grid gap-1">

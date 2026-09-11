@@ -137,8 +137,11 @@ function PromptRows({
   if (query.isError) return <Alert tone="danger">Buyer prompts could not be loaded.</Alert>;
   if (query.isPending) return <Skeleton className="h-24 w-full" />;
   if (!rows.length) {
+    // Left-hung and compactly padded, matching the shared empty-state shape.
+    // Centring one sentence inside full card padding made an absent list look
+    // like a large deliberate panel.
     return (
-      <p className="text-muted py-[var(--card-padding)] text-center text-sm">
+      <p className="text-muted py-3 text-sm">
         No prompts yet for this target. Generate a set, or add one manually.
       </p>
     );

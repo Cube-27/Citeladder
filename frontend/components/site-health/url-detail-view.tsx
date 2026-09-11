@@ -151,7 +151,7 @@ function IssuesList({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
           <span className="text-muted text-xs">Sorted by severity</span>
         </div>
         {ordered.length === 0 ? (
-          <p className="text-secondary text-sm">No issues detected on this page.</p>
+          <p className={textRole('body')}>No issues detected on this page.</p>
         ) : (
           <ol className={ledgerClasses()}>
             {ordered.map((issue, index) => (

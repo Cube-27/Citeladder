@@ -235,9 +235,7 @@ function ChangesTable({
               </TableBody>
             </Table>
           ) : (
-            <p className="text-secondary text-sm">
-              No changes were observed in this comparable pair.
-            </p>
+            <p className={textRole('body')}>No changes were observed in this comparable pair.</p>
           )}
           <CursorTableFooter
             {...pageRange(pager.page, pager.pageSize, rows.length)}

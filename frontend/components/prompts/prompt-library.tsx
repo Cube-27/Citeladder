@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { textRole } from '@/components/ui/typography';
 import { Skeleton } from '@/components/ui/skeleton';
 import { promptsApi, type PromptGenerateInput, type PromptInput } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -296,7 +297,12 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
           {!hasPrompts ? (
             <PromptEmptyState onAdd={openAdd} onImport={() => setImportOpen(true)} />
           ) : visible.length === 0 ? (
-            <p className="text-secondary px-[var(--card-padding)] py-[var(--empty-state-padding)] text-center text-sm">
+            <p
+              className={textRole(
+                'body',
+                'px-[var(--card-padding)] py-[var(--empty-state-padding)]',
+              )}
+            >
               No prompts match your search or filters.
             </p>
           ) : (

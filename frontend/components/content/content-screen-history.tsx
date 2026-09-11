@@ -120,7 +120,7 @@ function ClearHistoryDialog({
         </>
       }
     >
-      <p className="text-secondary text-sm">This action cannot be undone.</p>
+      <p className={textRole('body')}>This action cannot be undone.</p>
     </Dialog>
   );
 }
@@ -162,7 +162,7 @@ function DeleteGenerationDialog({
         </>
       }
     >
-      <p className="text-secondary text-sm">This action cannot be undone.</p>
+      <p className={textRole('body')}>This action cannot be undone.</p>
     </Dialog>
   );
 }

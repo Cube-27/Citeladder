@@ -173,6 +173,29 @@ export function GranularitySelect({
   );
 }
 
+/**
+ * The one sentence describing uncovered windows, or null when both are covered.
+ *
+ * Each case names the recovery that actually applies: an uncovered selected
+ * range is fixable by syncing or by picking a covered range, while an
+ * uncovered comparison only explains why that column reads as not measured.
+ */
+function missingCoverageNotice(
+  selectedMissing: boolean,
+  comparisonMissing: boolean,
+): string | null {
+  if (selectedMissing && comparisonMissing) {
+    return 'No imported data covers this range or its comparison period yet. Sync to import it, or choose a range inside the covered history.';
+  }
+  if (selectedMissing) {
+    return 'No imported data covers this range yet. Sync to import it, or choose a range inside the covered history.';
+  }
+  if (comparisonMissing) {
+    return 'The comparison period has no imported data, so its columns show as not measured.';
+  }
+  return null;
+}
+
 export function PerformanceNotices({
   sync,
   projecting,
@@ -184,6 +207,7 @@ export function PerformanceNotices({
   selectedMissing: boolean;
   comparisonMissing: boolean;
 }>) {
+  const coverageNotice = missingCoverageNotice(selectedMissing, comparisonMissing);
   return (
     <>
       {sync.syncing ? (
@@ -205,17 +229,13 @@ export function PerformanceNotices({
         </Alert>
       ) : null}
       {projecting ? <Alert tone="info">Building this range from imported data…</Alert> : null}
-      {!projecting && selectedMissing ? (
-        <Alert tone="info">
-          No imported data covers this range yet. Sync to import it, or choose a range inside the
-          covered history.
-        </Alert>
-      ) : null}
-      {!projecting && comparisonMissing ? (
-        <Alert tone="info">
-          The comparison period has no imported data, so its columns show as not measured.
-        </Alert>
-      ) : null}
+      {/* Coverage is ONE notice, not one per window. The selected and
+          comparison ranges are routinely both uncovered — a fresh connection
+          covers neither — and as two separate alerts that stacked into a wall
+          of blue saying the same thing twice. Which windows are affected is
+          the only part that actually differs, so that is the part the sentence
+          varies. */}
+      {!projecting && coverageNotice ? <Alert tone="info">{coverageNotice}</Alert> : null}
     </>
   );
 }

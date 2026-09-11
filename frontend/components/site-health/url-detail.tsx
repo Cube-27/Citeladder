@@ -163,7 +163,7 @@ function IssueHistory({ crawlId, siteUrlId }: Readonly<{ crawlId: string; siteUr
         {historyQuery.isError ? <Alert tone="danger">Could not load issue history.</Alert> : null}
         {historyQuery.isLoading ? <HistorySkeleton /> : null}
         {!historyQuery.isLoading && !historyQuery.isError && rows.length === 0 ? (
-          <p className="text-secondary text-sm">No prior issue records for this page.</p>
+          <p className={textRole('body')}>No prior issue records for this page.</p>
         ) : null}
         {rows.length > 0 ? <HistoryRows rows={rows} /> : null}
         {rows.length > 0 ? (

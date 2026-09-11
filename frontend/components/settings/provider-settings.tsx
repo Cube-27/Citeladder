@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
+import { textRole } from '@/components/ui/typography';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppModelCard } from '@/components/providers/app-model-card';
@@ -56,7 +57,7 @@ export function ProviderSettings() {
 
   return (
     <div className="grid gap-[var(--workspace-gap)]" data-tour="provider-settings">
-      <p className="text-secondary max-w-2xl text-sm">
+      <p className={textRole('body', 'max-w-2xl')}>
         Bring your own API keys — save one per engine, then run a connection test. Keys are
         write-only.
       </p>

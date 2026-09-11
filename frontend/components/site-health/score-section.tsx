@@ -110,12 +110,24 @@ function ScoreCard({
           )}
         </Stack>
       ) : (
-        <div className="flex h-full items-center gap-4">
-          <ScoreRing value={value} size={56} label={`${label} score: ${Math.round(value)}`} />
+        // The ring is a band indicator, not the value. It used to be 56px and
+        // print the score in its centre while the text beside it printed the
+        // same score again at 28px — the figure rendered twice, and the pair
+        // carried more weight than anything else on a page whose subject is
+        // the inventory below. The numeral is the metric role, and the ring
+        // shrinks to the compact arc that says which band it falls in.
+        <div className="flex h-full items-center gap-3">
+          <ScoreRing
+            value={value}
+            size={32}
+            strokeWidth={4}
+            showValue={false}
+            label={`${label} score: ${Math.round(value)}`}
+          />
           <Stack gap="tight">
             <p className={eyebrowClasses}>{label}</p>
             <span className={textRole('metric', 'leading-none')}>{formatScore(value)} / 100</span>
-            <span className={textRole('meta', 'leading-relaxed')}>{sub}</span>
+            <span className={textRole('meta')}>{sub}</span>
           </Stack>
         </div>
       )}

@@ -215,25 +215,25 @@ function DisconnectDialog({
       <div className="grid gap-2">
         {lastConnection ? (
           <>
-            <p className="text-secondary text-sm">
+            <p className={textRole('body')}>
               This is the <strong>last connection</strong> on the {familyTitle} OAuth grant, so
               disconnecting it also <strong>revokes the grant</strong>: CiteLadder&rsquo;s access at{' '}
               {familyTitle} is removed and the stored tokens are deleted. Previously imported{' '}
               {label} data is kept.
             </p>
-            <p className="text-secondary text-sm">
+            <p className={textRole('body')}>
               If {familyTitle}&nbsp;can&rsquo;t be reached to complete the revocation, the grant
               moves to <strong>pending revocation</strong> and CiteLadder retries in the background.
             </p>
           </>
         ) : (
           <>
-            <p className="text-secondary text-sm">
+            <p className={textRole('body')}>
               CiteLadder stops syncing {label} for{' '}
               <span className="font-mono text-xs">{connection.account_ref}</span> and removes this
               connection. Previously imported data is kept.
             </p>
-            <p className="text-secondary text-sm">
+            <p className={textRole('body')}>
               <strong>
                 {siblings.map((sibling) => PROVIDER_META[sibling.provider].label).join(' and ')}{' '}
                 stays connected

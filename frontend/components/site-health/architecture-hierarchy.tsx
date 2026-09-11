@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { textRole } from '@/components/ui/typography';
 import type { ArchitectureNode } from '@/lib/api/types';
 
 const PARENT_SOURCE_LABELS: Record<ArchitectureNode['parent_source'], string> = {
@@ -58,7 +59,7 @@ export function HierarchyCard({
       </CardHeader>
       <CardContent className="pt-0">
         {roots.length === 0 ? (
-          <p className="text-secondary text-sm">No hierarchy nodes were measured.</p>
+          <p className={textRole('body')}>No hierarchy nodes were measured.</p>
         ) : (
           <section
             className="content-scroll max-h-96 overflow-y-auto overscroll-contain pr-2"

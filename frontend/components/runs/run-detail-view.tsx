@@ -83,7 +83,7 @@ function ExecutionsSection({
   if (executions.length === 0) {
     return (
       <Card>
-        <CardContent className="text-secondary py-[var(--empty-state-padding)] text-center text-sm">
+        <CardContent className={textRole('body', 'py-[var(--empty-state-padding)]')}>
           No executions yet. They appear as the run is planned and processed.
         </CardContent>
       </Card>

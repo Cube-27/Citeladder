@@ -11,7 +11,7 @@ import { buttonVariants } from '@/components/ui/button-variants';
 import { Card, CardContent } from '@/components/ui/card';
 import { CsvImportTrigger } from '@/components/ui/csv-import';
 import { menuPanelClasses } from '@/components/ui/menu-variants';
-import { Label, Metric } from '@/components/ui/typography';
+import { Label, Metric, textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -186,7 +186,7 @@ export function CatalogHeader({
             {crawl ? 'Refresh from Site Health' : 'Run Site Health crawl'}
           </Button>
         </div>
-        {result ? <p className="text-secondary w-full text-sm">{result}</p> : null}
+        {result ? <p className={textRole('body', 'w-full')}>{result}</p> : null}
         {importCatalog.isError ? (
           <Alert className="w-full" tone="danger">
             The catalog import failed.

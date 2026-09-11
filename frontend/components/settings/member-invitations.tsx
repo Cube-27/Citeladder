@@ -53,7 +53,7 @@ export function InviteForm({
         }}
       >
         <div className="grid min-w-0 flex-1 gap-1">
-          <label htmlFor="invite-email" className="text-secondary text-sm">
+          <label htmlFor="invite-email" className={textRole('body')}>
             Email address
           </label>
           <Input
@@ -66,7 +66,7 @@ export function InviteForm({
           />
         </div>
         <div className="grid gap-1">
-          <label htmlFor="invite-role" className="text-secondary text-sm">
+          <label htmlFor="invite-role" className={textRole('body')}>
             Role
           </label>
           <Select

@@ -231,7 +231,7 @@ export function AppModelCard({ connections }: Readonly<{ connections: ProviderCo
           <h2 id="app-model-title" className={textRole('bodyStrong')}>
             Custom model (Content & Growth Agent)
           </h2>
-          <p className="text-secondary text-sm">
+          <p className={textRole('body')}>
             True BYOK is customer-funded and spends no platform AI credits.
           </p>
         </div>

@@ -15,7 +15,7 @@ export function CardTrialPanel() {
         <h2 id="future-trial-title" className={textRole('bodyStrong')}>
           Tier 1 card trial
         </h2>
-        <p className="text-secondary text-sm">
+        <p className={textRole('body')}>
           A 7-day trial would begin only after verified authorization in Razorpay hosted checkout.
           It is separate from no-card early access.
         </p>

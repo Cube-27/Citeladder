@@ -88,7 +88,7 @@ function NeighbourList({
     <section className="grid min-w-0 content-start gap-1.5 overflow-hidden">
       <Label>{heading}</Label>
       {neighbours.length === 0 ? (
-        <p className="text-secondary text-sm">{emptyMessage}</p>
+        <p className={textRole('body')}>{emptyMessage}</p>
       ) : (
         <ul className={ledgerClasses()}>
           {neighbours.map((neighbour) => (

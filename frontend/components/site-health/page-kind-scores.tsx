@@ -49,12 +49,12 @@ export function PageKindScores({
       <CardContent className="grid gap-3">
         <div className="grid gap-0.5">
           <Label>Scores by Page Kind</Label>
-          <span className="text-secondary text-sm">
+          <span className={textRole('body')}>
             Mean scores across the analyzed pages of each type.
           </span>
         </div>
         {rows.length === 0 ? (
-          <p className="text-secondary text-sm">
+          <p className={textRole('body')}>
             Per-page-kind scores appear once the analysis classifies your pages.
           </p>
         ) : (

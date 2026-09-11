@@ -7,6 +7,7 @@ import { useCallback } from 'react';
 
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
+import { textRole } from '@/components/ui/typography';
 import { prefetchRoute } from '@/lib/navigation/route-prefetch';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
@@ -18,7 +19,6 @@ import {
   type NavGroup,
   type NavItem,
 } from './nav-items';
-import { textRole } from '@/components/ui/typography';
 
 function NavLink({
   item,
@@ -45,15 +45,23 @@ function NavLink({
       aria-current={active ? 'page' : undefined}
       className={cn(
         'group relative flex h-[var(--nav-item-height)] items-center gap-2.5 rounded-[var(--radius-control)] border px-2.5 text-sm transition-colors duration-150',
+        // Navigation is a label, not reading copy, so both states sit at the
+        // shared label weight rather than body regular — the destinations stay
+        // scannable against the group titles above them. The role owns the
+        // weight; 600 stays reserved for headings, and the active row is
+        // already carried by the accent surface and ink.
         active
-          ? textRole('emphasis', 'border-transparent bg-accent-soft text-accent-text')
-          : 'border-transparent text-secondary hover:bg-panel hover:text-foreground',
+          ? textRole('label', 'border-transparent bg-accent-soft text-accent-text')
+          : textRole(
+              'label',
+              'border-transparent text-secondary hover:bg-accent-soft hover:text-accent-text',
+            ),
       )}
     >
       <Icon
         className={cn(
           'size-4 shrink-0 transition-colors duration-150',
-          active ? 'text-accent' : 'text-subtle group-hover:text-foreground',
+          active ? 'text-accent' : 'text-subtle group-hover:text-accent-text',
         )}
         aria-hidden
       />

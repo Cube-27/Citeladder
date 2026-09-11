@@ -139,7 +139,7 @@ export function IssueEvidence({ occurrence }: Readonly<{ occurrence: IssueOccurr
           ))}
         </ul>
       ) : (
-        <p className="text-secondary text-sm">No bounded evidence was recorded.</p>
+        <p className={textRole('body')}>No bounded evidence was recorded.</p>
       )}
     </div>
   );

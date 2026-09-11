@@ -38,10 +38,18 @@ function measured(key: PerformanceMetricKey, value: number | null | undefined): 
  *
  * The four render as ONE connected strip rather than four detached cards:
  * they are a single control group over one window, and gaps between them
- * read as unrelated panels. Each card is always filled with its metric's
- * colour — that colour IS the series identity on the chart — so the text is
- * always on-accent. Selection is carried by the check and a dimmed fill, not
- * by whether the card is coloured at all.
+ * read as unrelated panels.
+ *
+ * The cards are NEUTRAL surfaces. They were once filled edge to edge with
+ * their metric's colour, which made four saturated blue/purple/teal/orange
+ * tiles the loudest thing on the screen — an ordinary metric read as an alert,
+ * and the chart beneath, where the colours actually encode something, had to
+ * compete with them. The colour still identifies the series, but as a short
+ * rule under the value rather than as the whole card, so the hue stays a key
+ * to the plot instead of decoration.
+ *
+ * Selection is carried the way a selection normally is: a checkbox, an accent
+ * edge, and a quiet tinted surface.
  */
 /**
  * The internal seams of the four-card strip, by POSITION.
@@ -86,30 +94,25 @@ function MetricCardComparison({
   metricKey,
   comparison,
   comparisonValue,
-  isActive,
   compareLabel,
   loading,
 }: Readonly<{
   metricKey: PerformanceMetricKey;
   comparison: PerformanceWindow;
   comparisonValue: number | null | undefined;
-  isActive: boolean;
   compareLabel: string;
   loading: boolean;
 }>) {
   const statusLabel =
     comparison.evidence_state === 'not_run' ? `${compareLabel} — not imported` : compareLabel;
   return (
-    <div className="grid gap-0.5 border-t border-current/20 pt-1">
-      <span className={textRole('meta', isActive ? 'text-inverse/80' : undefined)}>
-        {statusLabel}
-      </span>
+    <div className="border-border-subtle grid gap-0.5 border-t pt-1">
+      <span className={textRole('meta')}>{statusLabel}</span>
       <MetricValue
         size="metricSm"
         value={measured(metricKey, comparisonValue)}
         label={NOT_MEASURED}
         loading={loading}
-        tone={isActive ? 'text-inverse' : undefined}
       />
     </div>
   );
@@ -148,19 +151,14 @@ function MetricCard({
       data-testid={`metric-card-${card.key}`}
       className={cn(
         panelClasses({ tone: 'panel', pad: 'compact', edge: 'flush' }),
-        'relative flex min-h-[96px] flex-col justify-between gap-1 p-3.5 text-left transition-colors',
+        'text-foreground relative flex min-h-[96px] flex-col justify-between gap-1 p-3.5 text-left transition-colors',
         index === 0 && 'rounded-tl-[var(--radius-card)]',
         seamClasses(index),
-        isActive ? 'text-inverse' : 'bg-panel hover:bg-panel-hover text-foreground',
+        // Selected is a quiet accent wash, not a filled tile. Unselected is
+        // plain paper, so the strip reads as four controls rather than four
+        // competing statements.
+        isActive ? 'bg-accent-soft' : 'bg-panel hover:bg-panel-hover',
       )}
-      style={
-        isActive
-          ? {
-              backgroundColor: color,
-              color: 'var(--color-inverse)',
-            }
-          : undefined
-      }
     >
       <div className="flex items-center gap-2">
         <span
@@ -168,14 +166,14 @@ function MetricCard({
           className={cn(
             'inline-flex size-4 shrink-0 items-center justify-center rounded-[3px] border transition-colors',
             isActive
-              ? 'border-inverse bg-inverse/20 text-inverse'
+              ? 'border-accent bg-accent text-inverse'
               : 'border-border-strong bg-panel text-transparent',
           )}
         >
-          {isActive ? <Check className="text-inverse size-3 stroke-[2.5]" /> : null}
+          {isActive ? <Check className="size-3 stroke-[2.5]" /> : null}
         </span>
         <span
-          className={cn('select-none', textRole('label', isActive ? 'text-inverse' : undefined))}
+          className={cn('select-none', textRole('label', isActive ? 'text-foreground' : undefined))}
         >
           {card.label}
         </span>
@@ -184,17 +182,16 @@ function MetricCard({
       {/* The period labels earn their place only when TWO values stack: with
           one number the range is already stated once in the toolbar, and
           repeating it on four cards is noise. */}
-      <div className="grid gap-0.5">
-        {comparison ? (
-          <span className={textRole('meta', isActive ? 'text-inverse/80' : undefined)}>
-            {selectedLabel}
-          </span>
-        ) : null}
-        <MetricValue
-          value={measured(card.key, value)}
-          label={NOT_MEASURED}
-          loading={loading}
-          tone={isActive ? 'text-inverse' : undefined}
+      <div className="grid gap-1">
+        {comparison ? <span className={textRole('meta')}>{selectedLabel}</span> : null}
+        <MetricValue value={measured(card.key, value)} label={NOT_MEASURED} loading={loading} />
+        {/* The series key: the metric's chart colour, shown only while the
+            metric is actually plotted. A colour chip on an unplotted metric
+            would point at a line that is not there. */}
+        <span
+          aria-hidden
+          className="h-0.5 w-7 rounded-full transition-opacity"
+          style={{ backgroundColor: color, opacity: isActive ? 1 : 0 }}
         />
       </div>
 
@@ -203,7 +200,6 @@ function MetricCard({
           metricKey={card.key}
           comparison={comparison}
           comparisonValue={comparisonValue}
-          isActive={isActive}
           compareLabel={compareLabel}
           loading={loading}
         />
@@ -212,10 +208,7 @@ function MetricCard({
       <div className="mt-auto flex justify-end pt-1">
         <Tooltip content={METRIC_HELP[card.key]}>
           <span
-            className={cn(
-              'inline-flex size-4 shrink-0 items-center justify-center rounded-full text-xs transition-opacity',
-              isActive ? 'text-inverse/70 hover:text-inverse' : 'text-muted hover:text-foreground',
-            )}
+            className="text-muted hover:text-foreground inline-flex size-4 shrink-0 items-center justify-center rounded-full text-xs transition-colors"
             aria-label={METRIC_HELP[card.key]}
           >
             <HelpCircle className="size-3.5" aria-hidden />

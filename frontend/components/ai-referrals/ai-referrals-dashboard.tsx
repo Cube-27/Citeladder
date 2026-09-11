@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { textRole } from '@/components/ui/typography';
 import {
   Table,
   TableBody,
@@ -144,7 +145,7 @@ function SourceTotals({ data }: Readonly<{ data: AiReferrals }>) {
         <SourceTotalsTable data={data} />
       ) : (
         <CardContent>
-          <p className="text-secondary text-sm">
+          <p className={textRole('body')}>
             {measured
               ? 'GA4 data was measured, but no sessions matched a known AI source in this window.'
               : 'AI-referral classification is not complete for this window, so source totals are unavailable.'}
