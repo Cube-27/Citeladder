@@ -6,6 +6,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Link2, ListTree } from 'lucide-react';
 
+import { HierarchyCard } from '@/components/site-health/architecture-hierarchy';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -38,19 +39,30 @@ const COVERAGE_LABELS: Record<CoverageState, string> = {
   unknown: 'Coverage unknown',
 };
 
+// The tokens `assess_coverage` freezes onto the crawl. Naming a coverage state
+// without naming its cause leaves the reader with a caveat they cannot act on.
+const COVERAGE_REASON_LABELS: Record<string, string> = {
+  requested_page_limit_reached: 'the crawl reached the page limit it was given',
+  frontier_limit_reached: 'the crawl reached its maximum queue size',
+  frontier_not_exhausted: 'the crawl finished with URLs still queued',
+  discovery_bounded_or_stopped: 'discovery was bounded or stopped early',
+  discovery_failed: 'a discovery request failed',
+  no_observed_urls: 'no URLs were observed',
+  discovery_not_completed: 'discovery did not finish',
+  frontier_exhausted: 'the crawl emptied its discovery queue',
+};
+
+// Scope, in the metric's own words. The count is a fact about the pages this
+// crawl fetched; it is not the stronger claim that nothing anywhere links to
+// them, which stays behind the coverage-gated rule.
+const ORPHAN_SCOPE_NOTE = 'not linked from any page this crawl fetched';
+
 const DEPTH_LABELS = {
   depth_0: 'Depth 0',
   depth_1: 'Depth 1',
   depth_2: 'Depth 2',
   depth_3_plus: 'Depth 3+',
 } as const;
-
-const PARENT_SOURCE_LABELS: Record<ArchitectureNode['parent_source'], string> = {
-  breadcrumb: 'Breadcrumb',
-  explicit_structure: 'Explicit structure',
-  url_parent: 'URL parent',
-  unknown: 'Root or unresolved',
-};
 
 function formatPercentage(value: number | null): string {
   return value === null ? PLACEHOLDER : `${Math.round(value * 100)}%`;
@@ -145,13 +157,16 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
             medianDepth={median(depths)}
             duplicatePages={duplicatePages}
             orphanCount={data.internal_linking.orphan_page_count}
-            coverageState={data.coverage_state}
           />
           {data.limitations.map((limitation) => (
             <Alert key={limitation} tone="info">
               {limitation}
             </Alert>
           ))}
+          {/* Independent of `limitations`, which the API empties for complete
+              coverage: nesting the reasons inside it meant a crawl could carry
+              persisted reasons that nothing ever rendered. */}
+          <CoverageReasons reasons={data.coverage_reasons} />
           {pageKinds.length === 0 ? (
             <p className="text-secondary text-sm">No page kinds were measured.</p>
           ) : (
@@ -164,44 +179,52 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
   );
 }
 
+function CoverageReasons({ reasons }: Readonly<{ reasons: readonly string[] }>) {
+  const named = reasons.filter((reason) => reason in COVERAGE_REASON_LABELS);
+  if (named.length === 0) return null;
+  return (
+    <p className="text-muted text-xs">
+      Why: {named.map((reason) => COVERAGE_REASON_LABELS[reason]).join('; ')}.
+    </p>
+  );
+}
+
 function ArchitectureMetrics({
   pageKinds,
   pages,
   medianDepth,
   duplicatePages,
   orphanCount,
-  coverageState,
 }: Readonly<{
   pageKinds: number;
   pages: number;
   medianDepth: number | null;
   duplicatePages: number;
   orphanCount: number | null;
-  coverageState: CoverageState;
 }>) {
-  const items = [
+  const items: readonly (readonly [string, string, string?])[] = [
     ['Page kinds', String(pageKinds)],
     ['Pages', String(pages)],
     ['Median depth', medianDepth === null ? PLACEHOLDER : String(medianDepth)],
     ['Duplicate metadata', String(duplicatePages)],
     [
       'Orphaned pages',
-      orphanCount === null ? orphanCoverageExplanation(coverageState) : String(orphanCount),
+      orphanCount === null ? PLACEHOLDER : String(orphanCount),
+      orphanCount === null ? undefined : ORPHAN_SCOPE_NOTE,
     ],
   ];
   return (
     <dl className="border-border-subtle grid grid-cols-2 border-y sm:grid-cols-3 lg:grid-cols-5">
-      {items.map(([label, value]) => (
+      {items.map(([label, value, supporting]) => (
         <div
           key={label}
           className="border-border-subtle grid gap-0.5 border-b px-3 py-2 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
         >
           <dt className={eyebrowClasses}>{label}</dt>
-          <dd
-            className={value.startsWith('Count withheld') ? textRole('meta') : textRole('metric')}
-          >
+          <dd className={textRole('metric')}>
             {value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : value}
           </dd>
+          {supporting ? <span className="text-muted text-xs">{supporting}</span> : null}
         </div>
       ))}
     </dl>
@@ -305,98 +328,6 @@ function PageKindPages({
   );
 }
 
-function nodesByParent(nodes: ArchitectureNode[]): Map<string | null, ArchitectureNode[]> {
-  const nodeIds = new Set(nodes.map((node) => node.site_url_id));
-  const grouped = new Map<string | null, ArchitectureNode[]>();
-  for (const node of nodes) {
-    const parentId =
-      node.parent_site_url_id &&
-      node.parent_site_url_id !== node.site_url_id &&
-      nodeIds.has(node.parent_site_url_id)
-        ? node.parent_site_url_id
-        : null;
-    const siblings = grouped.get(parentId);
-    if (siblings) siblings.push(node);
-    else grouped.set(parentId, [node]);
-  }
-  for (const siblings of grouped.values()) {
-    siblings.sort((left, right) => left.url.localeCompare(right.url));
-  }
-  return grouped;
-}
-
-function HierarchyCard({
-  nodes,
-  crawlId,
-}: Readonly<{ nodes: ArchitectureNode[]; crawlId: string | null }>) {
-  const grouped = useMemo(() => nodesByParent(nodes), [nodes]);
-  const roots = grouped.get(null) ?? [];
-  return (
-    <Card>
-      <CardHeader className="gap-1">
-        <CardTitle>Observed hierarchy</CardTitle>
-        <CardDescription>
-          Persisted parent relationships from breadcrumbs, explicit structure, or a safe URL parent.
-          Unresolved pages remain at the root.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {roots.length === 0 ? (
-          <p className="text-secondary text-sm">No hierarchy nodes were measured.</p>
-        ) : (
-          <section
-            className="content-scroll max-h-96 overflow-y-auto overscroll-contain pr-2"
-            aria-label="Observed hierarchy pages"
-          >
-            <HierarchyList nodes={roots} grouped={grouped} crawlId={crawlId} />
-          </section>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function HierarchyList({
-  nodes,
-  grouped,
-  crawlId,
-}: Readonly<{
-  nodes: ArchitectureNode[];
-  grouped: Map<string | null, ArchitectureNode[]>;
-  crawlId: string | null;
-}>) {
-  return (
-    <ul className="border-border-subtle grid gap-2 border-l pl-4">
-      {nodes.map((node) => {
-        const children = grouped.get(node.site_url_id) ?? [];
-        return (
-          <li key={node.site_url_id} className="grid min-w-0 gap-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              {crawlId ? (
-                <Link
-                  href={`/site/crawls/${crawlId}/pages/${node.site_url_id}`}
-                  className="text-accent-text min-w-0 text-sm [overflow-wrap:anywhere] hover:underline"
-                >
-                  {node.url}
-                </Link>
-              ) : (
-                <span className="text-foreground min-w-0 text-sm [overflow-wrap:anywhere]">
-                  {node.url}
-                </span>
-              )}
-              <PageKindBadge pageKind={node.page_kind} />
-              <span className="text-muted text-xs">{PARENT_SOURCE_LABELS[node.parent_source]}</span>
-            </div>
-            {children.length > 0 ? (
-              <HierarchyList nodes={children} grouped={grouped} crawlId={crawlId} />
-            ) : null}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
   const linking = data.internal_linking;
   return (
@@ -406,20 +337,26 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
           <Link2 className="text-accent-text size-4" aria-hidden />
           <CardTitle>Internal linking</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-3 gap-4 pt-2">
-          <EvidenceMetric label="Internal links" value={String(linking.internal_link_count)} />
-          <EvidenceMetric
-            label="Have incoming links"
-            value={formatPercentage(linking.pages_with_incoming_percentage)}
-            supporting={`${linking.pages_with_incoming_count} pages`}
-          />
-          <EvidenceMetric
-            label="Orphaned pages"
-            value={
-              linking.orphan_page_count === null
-                ? orphanCoverageExplanation(data.coverage_state)
-                : String(linking.orphan_page_count)
-            }
+        <CardContent className="grid gap-4 pt-2">
+          <div className="grid grid-cols-3 gap-4">
+            <EvidenceMetric label="Internal links" value={String(linking.internal_link_count)} />
+            <EvidenceMetric
+              label="Have incoming links"
+              value={formatPercentage(linking.pages_with_incoming_percentage)}
+              supporting={`${linking.pages_with_incoming_count} pages`}
+            />
+            <EvidenceMetric
+              label="Orphaned pages"
+              value={
+                linking.orphan_page_count === null ? PLACEHOLDER : String(linking.orphan_page_count)
+              }
+              supporting={linking.orphan_page_count === null ? undefined : ORPHAN_SCOPE_NOTE}
+            />
+          </div>
+          <OrphanPageList
+            pages={linking.orphan_pages}
+            total={linking.orphan_page_count}
+            crawlId={data.crawl_id}
           />
         </CardContent>
       </Card>
@@ -454,10 +391,42 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
   );
 }
 
-function orphanCoverageExplanation(coverageState: CoverageState): string {
-  return coverageState === 'partial'
-    ? 'Count withheld · partial coverage'
-    : 'Count withheld · coverage unknown';
+function OrphanPageList({
+  pages,
+  total,
+  crawlId,
+}: Readonly<{
+  pages: SiteArchitecture['internal_linking']['orphan_pages'];
+  total: number | null;
+  crawlId: string | null;
+}>) {
+  if (pages.length === 0) return null;
+  const undisclosed = (total ?? pages.length) - pages.length;
+  return (
+    <div className="grid gap-1.5">
+      <span className={eyebrowClasses}>Which pages</span>
+      <ul className="grid gap-1">
+        {pages.map((page) => (
+          <li key={page.site_url_id} className="grid min-w-0 gap-0.5">
+            {/* Openable, like every other page reference in this tab. A count
+                nobody can act on is the failure this whole change is undoing. */}
+            {crawlId ? (
+              <Link
+                href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
+                className="text-accent-text truncate text-sm hover:underline"
+              >
+                {page.title || page.url}
+              </Link>
+            ) : (
+              <span className="text-secondary truncate text-sm">{page.title || page.url}</span>
+            )}
+            <span className="text-muted truncate text-xs">{page.url}</span>
+          </li>
+        ))}
+      </ul>
+      {undisclosed > 0 ? <span className="text-muted text-xs">and {undisclosed} more</span> : null}
+    </div>
+  );
 }
 
 function EvidenceMetric({
@@ -470,8 +439,6 @@ function EvidenceMetric({
       <span className={eyebrowClasses}>{label}</span>
       {value === PLACEHOLDER ? (
         <UnavailableValue state="not_measured" />
-      ) : value.startsWith('Count withheld') ? (
-        <span className="text-muted text-xs leading-4">{value}</span>
       ) : (
         <span className={textRole('pageTitle', 'mono tracking-[-0.02em] tabular-nums')}>
           {value}

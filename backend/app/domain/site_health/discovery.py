@@ -22,6 +22,7 @@ from app.core.config.site_health_contracts import (
     OBSERVATION_SOURCE_ROOT,
 )
 from app.core.config.site_health_crawl_policy import (
+    NON_NAVIGABLE_HREF_PREFIXES,
     SELECTION_SOURCE_BOOTSTRAP,
 )
 from app.core.config.site_health_rules import (
@@ -114,7 +115,7 @@ def _admit_discovery_href(
     exclude_globs: list[str] | None,
     ordinal: int,
 ) -> DiscoveredLink | None:
-    if not href or href.startswith(("#", "javascript:", "mailto:", "tel:")):
+    if not href or href.casefold().startswith(NON_NAVIGABLE_HREF_PREFIXES):
         return None
     rewritten_href, rewrite_reason, rewrite_version = _rewrite_extracted_href(href)
     try:

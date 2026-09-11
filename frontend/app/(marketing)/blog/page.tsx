@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 
 import { BlogIndex } from '@/components/marketing/pages/blog';
+import { JsonLd } from '@/components/marketing/seo/json-ld';
+import { POSTS } from '@/lib/marketing-content/blog';
+import { toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+import { blogIndexJsonLd } from '@/lib/seo/json-ld';
 
 const DESCRIPTION =
   'Practical guides, frameworks, and lessons for finding content gaps, strengthening sources, and measuring AI visibility.';
@@ -36,8 +40,10 @@ export const metadata: Metadata = {
  * test can render it directly under Testing Library.
  */
 export default function BlogPage() {
+  const jsonLd = blogIndexJsonLd(POSTS.map(toBlogPostSummary));
   return (
     <main id="main">
+      {jsonLd ? <JsonLd id="blog-index-json-ld" data={jsonLd} /> : null}
       <BlogIndex />
     </main>
   );

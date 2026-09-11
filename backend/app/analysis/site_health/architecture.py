@@ -105,11 +105,17 @@ def _duplicate_metadata_count(members: list[ArchitecturePage]) -> int:
     return sum(count for count in signatures.values() if count > 1)
 
 
-def _page_kind_orphan_count(
-    members: list[ArchitecturePage], *, coverage_state: str
-) -> int | None:
-    if coverage_state != COVERAGE_STATE_COMPLETE:
-        return None
+def _page_kind_orphan_count(members: list[ArchitecturePage]) -> int:
+    """Observed non-home pages no page this crawl fetched links to.
+
+    Deliberately NOT gated on coverage. The number describes the observed
+    subgraph, which is a fact under any coverage state; only the site-wide
+    claim ("nothing anywhere links here") needs completeness, and that claim
+    stays where it belongs -- the ``architecture.orphan_pages`` rule, which
+    still abstains in ``_coverage_evaluation``. Withholding the metric bought
+    nothing anyway: the card printing it also prints the page count and the
+    share with inbound links, from which it is arithmetic.
+    """
     return sum(
         1
         for page in members
@@ -117,9 +123,7 @@ def _page_kind_orphan_count(
     )
 
 
-def _page_kind_row(
-    page_kind: str, members: list[ArchitecturePage], *, coverage_state: str
-) -> dict:
+def _page_kind_row(page_kind: str, members: list[ArchitecturePage]) -> dict:
     depths = [
         page.depth_from_home for page in members if page.depth_from_home is not None
     ]
@@ -130,14 +134,12 @@ def _page_kind_row(
         "median_depth": float(median(depths)) if depths else None,
         "indexable_count": sum(1 for page in members if page.indexable),
         "duplicate_metadata_count": duplicate_count,
-        "orphan_count": _page_kind_orphan_count(members, coverage_state=coverage_state),
+        "orphan_count": _page_kind_orphan_count(members),
         "site_url_ids": [str(page.site_url_id) for page in members],
     }
 
 
-def _page_kind_rows(
-    pages: list[ArchitecturePage], *, coverage_state: str
-) -> list[dict]:
+def _page_kind_rows(pages: list[ArchitecturePage]) -> list[dict]:
     grouped: dict[str, list[ArchitecturePage]] = defaultdict(list)
     for page in pages:
         grouped[page.page_kind].append(page)
@@ -146,28 +148,36 @@ def _page_kind_rows(
         members = sorted(
             grouped[page_kind], key=lambda item: (item.url, str(item.site_url_id))
         )
-        rows.append(_page_kind_row(page_kind, members, coverage_state=coverage_state))
+        rows.append(_page_kind_row(page_kind, members))
     return rows
 
 
-def _internal_linking_summary(
-    pages: list[ArchitecturePage], *, coverage_state: str
-) -> dict:
+def _internal_linking_summary(pages: list[ArchitecturePage]) -> dict:
     pages_with_incoming = sum(page.inbound_count > 0 for page in pages)
+    orphans = [
+        page
+        for page in pages
+        if page.page_kind != PAGE_KIND_HOMEPAGE and page.inbound_count == 0
+    ]
     return {
         "internal_link_count": sum(page.outbound_count for page in pages),
         "pages_with_incoming_count": pages_with_incoming,
         "pages_with_incoming_percentage": (
             round(pages_with_incoming / len(pages), 4) if pages else None
         ),
-        "orphan_page_count": (
-            sum(
-                page.page_kind != PAGE_KIND_HOMEPAGE and page.inbound_count == 0
-                for page in pages
-            )
-            if coverage_state == COVERAGE_STATE_COMPLETE
-            else None
-        ),
+        "orphan_page_count": len(orphans),
+        # The count alone is not openable evidence, and openable evidence is
+        # the product. Bounded by the shared evidence cap so a pathological
+        # site cannot inflate the persisted model.
+        "orphan_pages": [
+            {
+                "site_url_id": str(page.site_url_id),
+                "url": page.url,
+                "title": page.title,
+                "page_kind": page.page_kind,
+            }
+            for page in orphans[:ARCHITECTURE_MAX_EVIDENCE_ITEMS]
+        ],
     }
 
 
@@ -467,10 +477,8 @@ def build_observed_architecture(
     ]
     return ObservedArchitecture(
         pages=tuple(_hierarchy_rows(bounded)),
-        page_kinds=tuple(_page_kind_rows(bounded, coverage_state=coverage_state)),
-        internal_linking=_internal_linking_summary(
-            bounded, coverage_state=coverage_state
-        ),
+        page_kinds=tuple(_page_kind_rows(bounded)),
+        internal_linking=_internal_linking_summary(bounded),
         structure_depth=_structure_depth_summary(bounded),
         archetype=resolve_archetype(
             business_context=business_context,

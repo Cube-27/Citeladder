@@ -249,6 +249,21 @@ def test_is_admissible_combines_scope_and_narrowing():
         ),
         ("https://example.com/customer_identity/login", "hard_excluded_path"),
         ("https://example.com/account_login", "hard_excluded_path"),
+        # Cloudflare's own endpoints. `/cdn-cgi/l/email-protection#<hex>` is the
+        # costly one: it is what Cloudflare rewrites a `mailto:` into, the `#`
+        # sits mid-string so the non-navigable-href filter never saw it, and
+        # canonicalization then drops the fragment -- leaving a same-origin URL
+        # Cloudflare answers 404 to. Admitted, it spent a page of budget and was
+        # then booked as a broken internal link on every page of the site whose
+        # footer produced it.
+        ("https://example.com/cdn-cgi/l/email-protection", "hard_excluded_path"),
+        ("https://example.com/cdn-cgi/rum", "hard_excluded_path"),
+        ("https://example.com/cdn-cgi/trace", "hard_excluded_path"),
+        (
+            "https://example.com/cdn-cgi/challenge-platform/h/b/scripts/jsd/main.js",
+            "hard_excluded_path",
+        ),
+        ("https://example.com/cdn-cgi", "hard_excluded_path"),
     ],
 )
 def test_value_aware_admission_hard_exclusions_are_not_overridable(url, reason):
@@ -260,6 +275,25 @@ def test_value_aware_admission_hard_exclusions_are_not_overridable(url, reason):
     )
     assert not decision.accepted
     assert decision.reason_code == reason
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com/blog/cdn-cgi-explained",
+        "https://example.com/docs/how-cdn-cgi-works",
+        "https://example.com/cdn-cgifted",
+    ],
+)
+def test_cdn_cgi_exclusion_matches_the_path_segment_not_the_substring(url):
+    """A page ABOUT `/cdn-cgi/` is content and must still be crawled."""
+    decision = classify_url_admission(
+        url,
+        root_registrable_domain="example.com",
+        include_globs=["*"],
+        exclude_globs=[],
+    )
+    assert decision.accepted, decision.reason_code
 
 
 def test_admission_rejects_urls_too_long_for_persistence():

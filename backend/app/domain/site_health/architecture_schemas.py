@@ -19,6 +19,12 @@ class ArchitecturePageKindResponse(_Model):
     indexable_count: int
     duplicate_metadata_count: int
     orphan_count: int | None
+    """Observed orphans in this page kind.
+
+    ``None`` only for crawls persisted before orphan counts stopped being
+    withheld under partial coverage; those rows are re-derived on the next
+    crawl. New models always carry a number.
+    """
 
 
 class ArchitectureNodeResponse(_Model):
@@ -31,11 +37,19 @@ class ArchitectureNodeResponse(_Model):
     depth_from_home: int | None
 
 
+class ArchitectureOrphanPageResponse(_Model):
+    site_url_id: str
+    url: str
+    title: str
+    page_kind: str
+
+
 class ArchitectureInternalLinkingResponse(_Model):
     internal_link_count: int
     pages_with_incoming_count: int
     pages_with_incoming_percentage: float | None
     orphan_page_count: int | None
+    orphan_pages: list[ArchitectureOrphanPageResponse] = []
 
 
 class ArchitectureDepthBucketResponse(_Model):
@@ -61,3 +75,4 @@ class ArchitectureResponse(_Model):
     structure_depth: ArchitectureStructureDepthResponse
     architecture_formula_version: str
     limitations: list[str]
+    coverage_reasons: list[str] = []

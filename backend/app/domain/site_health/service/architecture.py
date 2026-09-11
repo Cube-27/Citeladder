@@ -16,6 +16,7 @@ from app.domain.site_health.service.common import (
 )
 from app.models.site_health.architecture import SiteObservedArchitecture
 from app.models.site_health.crawl import SiteCrawl
+from app.models.site_health.snapshot import SiteHealthSnapshot
 
 
 def _unavailable(reason: str, *, crawl_id: uuid.UUID | None = None) -> dict:
@@ -23,6 +24,7 @@ def _unavailable(reason: str, *, crawl_id: uuid.UUID | None = None) -> dict:
         "state": "unavailable",
         "crawl_id": crawl_id,
         "coverage_state": "unknown",
+        "coverage_reasons": [],
         "page_count": 0,
         "page_kinds": [],
         "nodes": [],
@@ -31,6 +33,7 @@ def _unavailable(reason: str, *, crawl_id: uuid.UUID | None = None) -> dict:
             "pages_with_incoming_count": 0,
             "pages_with_incoming_percentage": None,
             "orphan_page_count": None,
+            "orphan_pages": [],
         },
         "structure_depth": {
             "measured_page_count": 0,
@@ -100,8 +103,9 @@ def _limitations(coverage_state: str) -> list[str]:
     )
     return [
         f"{prefix}, so these are the pages CiteLadder observed — not the whole "
-        "site. Structures reported as missing are withheld, because a partial "
-        "crawl cannot prove absence."
+        "site. Counts describe what was crawled. Claims that a structure is "
+        "missing site-wide are withheld, because a partial crawl cannot prove "
+        "absence."
     ]
 
 
@@ -128,22 +132,77 @@ async def get_architecture(
             "the crawl finishes.",
             crawl_id=crawl.id,
         )
-    return _projection(model, crawl_id=crawl.id)
+    return _projection(
+        model,
+        crawl_id=crawl.id,
+        coverage_reasons=await _coverage_reasons(session, crawl=crawl),
+    )
 
 
-def _projection(model: SiteObservedArchitecture, *, crawl_id: uuid.UUID) -> dict:
+async def _coverage_reasons(session: AsyncSession, *, crawl: SiteCrawl) -> list[str]:
+    """Why this crawl's coverage is what it is, from the frozen snapshot.
+
+    The architecture row carries the coverage STATE but not the evidence that
+    produced it, so a tab that withholds or qualifies a number could never say
+    why. The reasons are already persisted and already projected by the
+    Overview service; this reads the same field rather than re-assessing, so
+    the two surfaces cannot disagree.
+    """
+    evidence = await session.scalar(
+        select(SiteHealthSnapshot.coverage_evidence).where(
+            SiteHealthSnapshot.workspace_id == crawl.workspace_id,
+            SiteHealthSnapshot.project_id == crawl.project_id,
+            SiteHealthSnapshot.crawl_id == crawl.id,
+        )
+    )
+    reasons = (evidence or {}).get("reasons") or []
+    return [str(reason) for reason in reasons if reason]
+
+
+def _orphan_page_count(internal_linking: dict, *, page_count: int) -> int | None:
+    """The persisted count, or the one the neighbouring metrics already prove.
+
+    Crawls persisted before the withholding was removed baked ``None`` into
+    JSONB and only a re-crawl re-derives them. When every observed page has an
+    inbound link the orphan count is zero no matter how it is computed, and
+    that is exactly the shape the tab was reporting as withheld while printing
+    its two inputs alongside. Any other legacy shape stays ``None`` rather than
+    guessing at a number.
+    """
+    stored = internal_linking.get("orphan_page_count")
+    if stored is not None:
+        return int(stored)
+    with_incoming = internal_linking.get("pages_with_incoming_count")
+    if with_incoming is not None and page_count and int(with_incoming) == page_count:
+        return 0
+    return None
+
+
+def _projection(
+    model: SiteObservedArchitecture,
+    *,
+    crawl_id: uuid.UUID,
+    coverage_reasons: list[str],
+) -> dict:
     nodes = [_node(row) for row in model.hierarchy or [] if isinstance(row, dict)]
     coverage_state = model.coverage_state or "unknown"
+    page_count = int(model.page_count or 0)
+    internal_linking = dict(model.internal_linking or {})
+    internal_linking["orphan_page_count"] = _orphan_page_count(
+        internal_linking, page_count=page_count
+    )
+    internal_linking.setdefault("orphan_pages", [])
     return {
         "state": "available",
         "crawl_id": crawl_id,
         "coverage_state": coverage_state,
-        "page_count": int(model.page_count or 0),
+        "coverage_reasons": coverage_reasons,
+        "page_count": page_count,
         "page_kinds": [
             _page_kind(row) for row in model.page_kinds or [] if isinstance(row, dict)
         ],
         "nodes": nodes,
-        "internal_linking": dict(model.internal_linking or {}),
+        "internal_linking": internal_linking,
         "structure_depth": dict(model.structure_depth or {}),
         "architecture_formula_version": model.architecture_formula_version,
         "limitations": _limitations(coverage_state),

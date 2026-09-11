@@ -23,11 +23,21 @@ export const architectureNodeSchema = responseObject({
   depth_from_home: z.number().int().nullable(),
 });
 
+export const architectureOrphanPageSchema = responseObject({
+  site_url_id: z.string(),
+  url: z.string(),
+  title: z.string(),
+  page_kind: z.string(),
+});
+
 export const architectureInternalLinkingSchema = responseObject({
   internal_link_count: z.number().int(),
   pages_with_incoming_count: z.number().int(),
   pages_with_incoming_percentage: z.number().nullable(),
+  // Null only on crawls persisted before orphan counts stopped being withheld
+  // under partial coverage; a re-crawl re-derives them.
   orphan_page_count: z.number().int().nullable(),
+  orphan_pages: z.array(architectureOrphanPageSchema).default([]),
 });
 
 export const architectureDepthBucketSchema = responseObject({
@@ -53,4 +63,5 @@ export const architectureSchema = responseObject({
   structure_depth: architectureStructureDepthSchema,
   architecture_formula_version: z.string(),
   limitations: z.array(z.string()),
+  coverage_reasons: z.array(z.string()).default([]),
 });

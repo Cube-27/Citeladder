@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 
 import { CompareIndex } from '@/components/marketing/pages/compare';
+import { JsonLd } from '@/components/marketing/seo/json-ld';
+import { COMPETITORS } from '@/lib/marketing-content/compare';
+import { compareIndexJsonLd } from '@/lib/seo/json-ld';
 
 const DESCRIPTION =
   'Side-by-side notes on CiteLadder versus Profound, Otterly AI, Scrunch AI, and Peec AI. Scoring, evidence, and keys.';
@@ -30,8 +33,10 @@ export const metadata: Metadata = {
  * LandingFooter) lives in the (marketing) route-group layout.
  */
 export default function ComparePage() {
+  const jsonLd = compareIndexJsonLd(COMPETITORS);
   return (
     <main id="main">
+      {jsonLd ? <JsonLd id="compare-index-json-ld" data={jsonLd} /> : null}
       <CompareIndex />
     </main>
   );

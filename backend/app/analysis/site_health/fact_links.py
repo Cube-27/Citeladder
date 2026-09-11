@@ -9,6 +9,7 @@ from app.analysis.site_health.dom import DOM_ERRORS, dom_failure
 from app.analysis.site_health.dom import node_text as _text
 from app.analysis.site_health.fact_regions import element_region, node_is_rendered
 from app.core.config import site_health_acquisition as config
+from app.core.config.site_health_crawl_policy import NON_NAVIGABLE_HREF_PREFIXES
 
 # These are immutable normalized-fact labels, not task kinds. They remain
 # available to downstream deterministic readers without reintroducing the
@@ -39,7 +40,12 @@ def _anchor_assets(
             if not node_is_rendered(anchor):
                 continue
             href = (anchor.get("href") or "").strip()
-            if not href or href.startswith(("#", "javascript:", "mailto:", "tel:")):
+            # Case-insensitively: URL schemes are case-insensitive per RFC 3986,
+            # so `MAILTO:` passed a case-sensitive check, was marked internal
+            # (no host), and entered the persisted anchor facts. Canonicalization
+            # rejects it later, but by then it has already inflated the
+            # internal-link counts these facts feed.
+            if not href or href.casefold().startswith(NON_NAVIGABLE_HREF_PREFIXES):
                 continue
             anchors.append(
                 {

@@ -497,3 +497,43 @@ def test_hreflang_conflict_fails_with_bounded_evidence():
     assert ev.evidence["alternate_count"] == 15
     assert ev.evidence["checked_count"] == 12
     assert ev.evidence["unchecked_count"] == 3
+
+
+def test_hard_excluded_paths_never_become_link_graph_edges():
+    """The frontier's exclusion catalog applies to the graph, not just the crawl.
+
+    `/cdn-cgi/l/email-protection#<hex>` is what Cloudflare rewrites a `mailto:`
+    into. Refusing it at admission stops it being fetched, so it can no longer
+    be reported broken -- but the anchor was still persisted as an edge, which
+    counted Cloudflare's endpoints as internal links the site does not have.
+    """
+    targets = _internal_link_targets(
+        [
+            (
+                "https://example.test/blog",
+                {
+                    "links": {
+                        "anchors": [
+                            {
+                                "url": "/cdn-cgi/l/email-protection#a1b2c3",
+                                "is_internal": True,
+                            },
+                            {
+                                "url": "/customer_authentication/redirect",
+                                "is_internal": True,
+                            },
+                            {"url": "/pricing", "is_internal": True},
+                            # A page ABOUT the excluded path is still content.
+                            {"url": "/blog/cdn-cgi-explained", "is_internal": True},
+                            {"url": "https://external.test/x", "is_internal": False},
+                        ]
+                    }
+                },
+            )
+        ]
+    )
+
+    assert targets == [
+        "https://example.test/blog/cdn-cgi-explained",
+        "https://example.test/pricing",
+    ]

@@ -82,6 +82,31 @@ URL_HARD_EXCLUSION_PATH_PATTERNS: Final[tuple[str, ...]] = (
     # Shopify storefront, which is what finished every such crawl one page
     # short of its own limit.
     r"(?:^|/)(?:customer_authentication|customer_identity|account_login)(?:/|$)",
+    # Cloudflare's own endpoints. These live on the customer's origin but are
+    # infrastructure, never content: `/cdn-cgi/l/email-protection#<hex>` (the
+    # rewritten mailto, whose address is entirely in the fragment), plus
+    # challenge-platform, rum, trace and speculation. The obfuscated mailto is
+    # the costly one -- it survives the non-navigable-href filter because its
+    # `#` is mid-string, and canonicalization then drops the fragment, leaving
+    # a bare path Cloudflare answers 404 to. Admitting it spent a page of the
+    # budget and booked that 404 as a broken internal link on EVERY page
+    # carrying the footer that produced it.
+    r"(?:^|/)cdn-cgi(?:/|$)",
+)
+# Href prefixes that never name a navigable page. One owner, because the same
+# tuple was independently spelled in the link-fact extractor, frontier
+# admission and brand evidence, so an addition reached one of the three.
+# `mailto:` and `data:` are also refused downstream by ALLOWED_URL_SCHEMES;
+# skipping them here keeps them out of the link graph as well as the frontier.
+NON_NAVIGABLE_HREF_PREFIXES: Final[tuple[str, ...]] = (
+    "#",
+    "about:",
+    "blob:",
+    "data:",
+    "javascript:",
+    "mailto:",
+    "sms:",
+    "tel:",
 )
 # The same non-content endpoints as the path patterns above, but named by
 # SUBDOMAIN instead of by path. Scope is the registrable domain plus every

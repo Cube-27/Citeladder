@@ -1,4 +1,5 @@
 import type { BlogPost } from '@/lib/marketing-content/blog';
+import { blogPostFreshness, type BlogPostSummary } from '@/lib/marketing-content/blog-index';
 import type { FaqGroup } from '@/lib/marketing-content/faq';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { FOUNDER, PRODUCT_HEAD } from '@/lib/marketing-content/people';
@@ -125,6 +126,114 @@ export function blogPostingJsonLd(post: BlogPost): JsonLdObject {
           },
         }
       : {}),
+  };
+}
+
+/**
+ * The blog index as a `Blog`, with its posts as an `ItemList`.
+ *
+ * `dateModified` is the load-bearing part: a listing page that never states
+ * when its collection last changed gives an answer engine no way to tell a
+ * current index from a stale one, and CiteLadder's own crawler reports exactly
+ * that absence. It is the newest REVISION date across the posts, not the
+ * newest publication date -- revising an older post changes what this page
+ * indexes, and reading only `date` would leave the signal stale.
+ */
+export function blogIndexJsonLd(posts: readonly BlogPostSummary[]): JsonLdObject | null {
+  const url = absoluteUrl('/blog');
+  if (!url) return null;
+  const dates = posts.flatMap((post) => {
+    const freshness = blogPostFreshness(post);
+    return freshness ? [freshness] : [];
+  });
+  const modified = dates.length > 0 ? dates.reduce((a, b) => (a > b ? a : b)) : null;
+  return {
+    '@context': 'https://schema.org',
+    // Both types, deliberately. `Blog` is the precise type for this page, but
+    // CiteLadder's own structured-data reader recognizes `CollectionPage` and
+    // NOT `Blog` (see STRUCTURED_DATA_RECOGNIZED_TYPES), so a bare `Blog` block
+    // would be skipped and its `dateModified` never read -- reinstating the
+    // very freshness gap this emits it to close.
+    '@type': ['CollectionPage', 'Blog'],
+    '@id': url,
+    url,
+    name: `${SITE_NAME} Blog`,
+    description: SITE_DESCRIPTION,
+    inLanguage: 'en',
+    ...(modified ? { dateModified: modified } : {}),
+    publisher: { '@type': 'Organization', name: SITE_NAME, url: absoluteUrl('/') ?? url },
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: posts.length,
+      itemListElement: posts.flatMap((post, index) => {
+        const postUrl = absoluteUrl(`/blog/${post.slug}`);
+        if (!postUrl) return [];
+        return [
+          {
+            '@type': 'ListItem',
+            position: index + 1,
+            url: postUrl,
+            name: post.title,
+          },
+        ];
+      }),
+    },
+  };
+}
+
+/** The comparison index, dated by the newest first-party review it rests on. */
+export function compareIndexJsonLd(
+  competitors: readonly { slug: string; name: string; lastReviewed: string }[],
+): JsonLdObject | null {
+  const url = absoluteUrl('/compare');
+  if (!url) return null;
+  const reviews = competitors.map((competitor) => competitor.lastReviewed).filter(Boolean);
+  const modified = reviews.length > 0 ? reviews.reduce((a, b) => (a > b ? a : b)) : null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': url,
+    url,
+    name: `${SITE_NAME} comparisons`,
+    inLanguage: 'en',
+    ...(modified ? { dateModified: modified } : {}),
+    publisher: { '@type': 'Organization', name: SITE_NAME, url: absoluteUrl('/') ?? url },
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: competitors.length,
+      itemListElement: competitors.flatMap((competitor, index) => {
+        const competitorUrl = absoluteUrl(`/compare/${competitor.slug}`);
+        if (!competitorUrl) return [];
+        return [
+          {
+            '@type': 'ListItem',
+            position: index + 1,
+            url: competitorUrl,
+            name: `${SITE_NAME} vs ${competitor.name}`,
+          },
+        ];
+      }),
+    },
+  };
+}
+
+/**
+ * A breadcrumb trail for the two nested routes. Every crumb is derived from the
+ * route itself, so unlike `offers` above there is nothing here we cannot
+ * substantiate.
+ */
+export function breadcrumbJsonLd(
+  crumbs: readonly { name: string; path: string }[],
+): JsonLdObject | null {
+  const items = crumbs.flatMap((crumb, index) => {
+    const url = absoluteUrl(crumb.path);
+    return url ? [{ '@type': 'ListItem', position: index + 1, name: crumb.name, item: url }] : [];
+  });
+  if (items.length !== crumbs.length) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items,
   };
 }
 

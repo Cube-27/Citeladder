@@ -11,7 +11,6 @@ import {
   legalDisplayName,
 } from '@/lib/marketing-content/legal';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
-import { CONTACT_EMAIL } from '@/lib/marketing-content/social';
 
 import { Container } from '../primitives/section';
 
@@ -64,7 +63,14 @@ const FOOTER_COLUMNS: readonly FooterColumn[] = [
     key: 'company',
     label: 'Company',
     links: [
-      ...(CONTACT_EMAIL ? [{ label: 'Contact', href: `mailto:${CONTACT_EMAIL}` }] : []),
+      // No `mailto:` here. Cloudflare's email obfuscation rewrites a raw
+      // address into `/cdn-cgi/l/email-protection#<hex>` and injects a decoder
+      // script: the link is dead without JS -- invisible to the AI crawlers
+      // this product exists to be read by -- and the rewritten URL 404s once
+      // its fragment is dropped, which a crawler then books as a broken
+      // internal link on every page carrying this footer. `DEMO_CTA` already
+      // reaches the parent company's contact form, which is where the address
+      // led anyway.
       { label: DEMO_CTA, href: DEMO_HREF, external: DEMO_EXTERNAL },
       { label: PARENT_COMPANY.name, href: PARENT_COMPANY.href, external: true },
       {

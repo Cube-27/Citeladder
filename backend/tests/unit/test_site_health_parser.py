@@ -712,6 +712,39 @@ def test_hidden_and_non_rendered_anchors_are_not_persisted() -> None:
     assert [anchor["url"] for anchor in facts["links"]["anchors"]] == ["/visible"]
 
 
+def test_non_navigable_hrefs_never_enter_the_link_graph() -> None:
+    """Schemes and fragments that name no page are not links to check.
+
+    `/cdn-cgi/l/email-protection#<hex>` is the one that cost: Cloudflare
+    rewrites a `mailto:` into it, the `#` is mid-string so the prefix filter
+    never matched, and dropping the fragment leaves a path Cloudflare answers
+    404 to -- reported as a broken internal link on every page with a footer.
+    It is refused at URL admission; the anchor itself is unremarkable, so this
+    pins the prefix list that guards the cheaper cases.
+    """
+    facts = _facts(
+        b"""<html><body><main>
+        <a href='/real'>Real</a>
+        <a href='#section'>Anchor</a>
+        <a href='mailto:hi@example.com'>Email</a>
+        <a href='tel:+15551234'>Phone</a>
+        <a href='sms:+15551234'>Text</a>
+        <a href='javascript:void(0)'>Script</a>
+        <a href='data:text/plain,hi'>Data</a>
+        <a href='about:blank'>About</a>
+        <a href='blob:https://example.com/x'>Blob</a>
+        <!-- Schemes are case-insensitive per RFC 3986. A case-sensitive
+             check let these through, and a host-less URI is then marked
+             internal, so they inflated the internal-link counts. -->
+        <a href='MAILTO:hi@example.com'>Mixed-case email</a>
+        <a href='JavaScript:void(0)'>Mixed-case script</a>
+        <a href='TEL:+15551234'>Mixed-case phone</a>
+        </main></body></html>"""
+    )
+
+    assert [anchor["url"] for anchor in facts["links"]["anchors"]] == ["/real"]
+
+
 def test_role_facts_are_empty_for_a_page_without_them():
     facts = _facts(b"<html><body><p>Just prose.</p></body></html>")
     assert facts["cta_text"] == []

@@ -312,11 +312,17 @@ function DiagramTaxonomy({
 function PostDiagram({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'diagram' }> }>) {
   return (
     <div className="border-border-subtle bg-panel my-8 rounded-[var(--radius-card)] border p-5 md:p-6">
-      {block.title && (
+      {/* The h3 is unconditional. Every diagram variant renders h4s inside it,
+          so making the h3 depend on a visible title left those h4s hanging
+          under the section's h2 -- a skipped level whenever a diagram is
+          declared without one, which the type permits. */}
+      {block.title ? (
         <div className="border-border-subtle mb-6 flex items-center justify-between border-b pb-3">
           <h3 className="website-small-heading text-foreground font-semibold">{block.title}</h3>
           <span className="website-label text-muted">System Model</span>
         </div>
+      ) : (
+        <h3 className="sr-only">System model</h3>
       )}
       {block.variant === 'architecture' && <DiagramArchitecture data={block.data} />}
       {block.variant === 'split' && <DiagramSplit data={block.data} />}
@@ -356,8 +362,13 @@ function PostCallout({
       <div className="flex items-start gap-3">
         <Icon className={cn('mt-0.5 size-5 shrink-0', mark)} aria-hidden="true" />
         <div className="min-w-0 flex-1">
+          {/* h3, not h4: a callout follows either a `heading` (h2) or a
+              `subheading` (h3), so h4 skipped a level whenever no subheading
+              stood between it and the section it belongs to -- which was the
+              case in three of the five posts. h3 is correct under a heading and
+              level-flat under a subheading; neither is a skip. */}
           {title && (
-            <h4 className="website-small-heading text-foreground mb-1.5 font-semibold">{title}</h4>
+            <h3 className="website-small-heading text-foreground mb-1.5 font-semibold">{title}</h3>
           )}
           <p className="website-body text-muted leading-relaxed">{text}</p>
         </div>

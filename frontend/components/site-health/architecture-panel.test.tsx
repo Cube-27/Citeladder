@@ -69,6 +69,14 @@ function architecture(overrides: Record<string, unknown> = {}) {
       pages_with_incoming_count: 2,
       pages_with_incoming_percentage: 0.6667,
       orphan_page_count: 1,
+      orphan_pages: [
+        {
+          site_url_id: BOOTS,
+          url: 'https://acme.test/shop/boots',
+          title: 'Boots',
+          page_kind: 'product',
+        },
+      ],
     },
     structure_depth: {
       measured_page_count: 3,
@@ -82,6 +90,7 @@ function architecture(overrides: Record<string, unknown> = {}) {
     },
     architecture_formula_version: 'sh-architecture-1',
     limitations: [],
+    coverage_reasons: [],
     ...overrides,
   };
 }
@@ -143,11 +152,9 @@ describe('Architecture panel', () => {
     expect(screen.getAllByRole('link', { name: 'https://acme.test/shop/boots' })).toHaveLength(2);
   });
 
-  it('withholds orphan counts when coverage is partial', async () => {
+  it('reports the orphan count under partial coverage, scoped to what was crawled', async () => {
     stubArchitecture({
       coverage_state: 'partial',
-      page_kinds: [{ ...architecture().page_kinds[0], orphan_count: null }],
-      internal_linking: { ...architecture().internal_linking, orphan_page_count: null },
       limitations: ['This crawl hit its page budget, so these are the pages observed.'],
     });
     renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
@@ -155,29 +162,59 @@ describe('Architecture panel', () => {
     expect(await screen.findByText('Partial coverage')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('page budget');
     const orphans = screen.getAllByText('Orphaned pages')[0]!.closest('div');
-    expect(within(orphans!).getByText('Count withheld · partial coverage')).toBeInTheDocument();
+    expect(within(orphans!).getByText('1')).toBeInTheDocument();
+    expect(screen.queryByText(/withheld/i)).toBeNull();
+    // The scope note is what keeps the number honest: it is a claim about the
+    // pages this crawl fetched, not about the whole site.
+    expect(
+      screen.getAllByText('not linked from any page this crawl fetched').length,
+    ).toBeGreaterThan(0);
   });
 
-  it('renders an observed zero only when coverage is complete', async () => {
+  it('renders an observed zero', async () => {
     stubArchitecture({
-      internal_linking: { ...architecture().internal_linking, orphan_page_count: 0 },
+      internal_linking: {
+        ...architecture().internal_linking,
+        orphan_page_count: 0,
+        orphan_pages: [],
+      },
     });
     renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
 
     const orphans = (await screen.findAllByText('Orphaned pages'))[0]!.closest('div');
     expect(within(orphans!).getByText('0')).toBeInTheDocument();
-    expect(within(orphans!).queryByText(/withheld/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/withheld/i)).toBeNull();
   });
 
-  it('names unknown coverage instead of calling the orphan count not measured', async () => {
+  it('names why coverage fell short instead of only that it did', async () => {
     stubArchitecture({
       coverage_state: 'unknown',
-      page_kinds: [{ ...architecture().page_kinds[0], orphan_count: null }],
-      internal_linking: { ...architecture().internal_linking, orphan_page_count: null },
+      limitations: ['This crawl could not prove it saw the whole site.'],
+      coverage_reasons: ['discovery_failed', 'frontier_not_exhausted'],
     });
     renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
 
-    expect(await screen.findAllByText('Count withheld · coverage unknown')).not.toHaveLength(0);
+    expect(await screen.findByText('Coverage unknown')).toBeInTheDocument();
+    expect(screen.getByText(/a discovery request failed/)).toBeInTheDocument();
+    expect(screen.getByText(/the crawl finished with URLs still queued/)).toBeInTheDocument();
+  });
+
+  it('renders coverage reasons even when there are no limitations', async () => {
+    // `limitations` is empty for complete coverage, so nesting the reasons
+    // inside it meant persisted reasons that nothing ever rendered.
+    stubArchitecture({ limitations: [], coverage_reasons: ['frontier_exhausted'] });
+    renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
+
+    expect(await screen.findByText(/the crawl emptied its discovery queue/)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('lists the pages the orphan count refers to', async () => {
+    stubArchitecture();
+    renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
+
+    expect(await screen.findByText('Which pages')).toBeInTheDocument();
+    expect(screen.getByText('Boots')).toBeInTheDocument();
   });
 
   it('explains when the persisted projection is unavailable', async () => {

@@ -11,7 +11,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import replace
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -24,7 +24,7 @@ from app.analysis.site_health.finalize import (
     evaluate_sitemap_url_unreachable,
 )
 from app.analysis.site_health.rules import RuleEvaluation, creates_issue
-from app.connectors.web_evidence.url_policy import UrlPolicyError
+from app.connectors.web_evidence.url_policy import UrlPolicyError, path_is_hard_excluded
 from app.core.config.site_health_contracts import (
     ANALYZER_VERSION,
     EXTRACTOR_VERSION,
@@ -105,7 +105,19 @@ def _canonical_internal_target(source_url: object, anchor: object) -> str:
     row = anchor if isinstance(anchor, dict) else {}
     if not bool(row.get("is_internal")):
         return ""
-    return canonical_or_empty(urljoin(str(source_url or ""), str(row.get("url") or "")))
+    canonical = canonical_or_empty(
+        urljoin(str(source_url or ""), str(row.get("url") or ""))
+    )
+    if not canonical:
+        return ""
+    # Apply the frontier's own exclusion catalog to the GRAPH as well. A path
+    # refused at admission is never fetched, so it can no longer be reported
+    # broken -- but the anchor pointing at it was still persisted as an edge,
+    # counting Cloudflare endpoints and customer-account redirectors as
+    # internal links the site does not have.
+    if path_is_hard_excluded(urlsplit(canonical).path):
+        return ""
+    return canonical
 
 
 def _pass_through_hreflang_evaluation() -> RuleEvaluation:

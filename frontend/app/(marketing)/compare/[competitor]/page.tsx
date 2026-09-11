@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { CompareDetailView } from '@/components/marketing/pages/compare-detail';
+import { JsonLd } from '@/components/marketing/seo/json-ld';
 import { COMPETITORS, type Competitor } from '@/lib/marketing-content/compare';
+import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
 
 type PageParams = { competitor: string };
 
@@ -61,8 +63,14 @@ export default async function CompareDetailPage({
   if (!competitor) {
     notFound();
   }
+  const breadcrumb = breadcrumbJsonLd([
+    { name: 'Home', path: '/' },
+    { name: 'Compare', path: '/compare' },
+    { name: `CiteLadder vs ${competitor.name}`, path: `/compare/${competitor.slug}` },
+  ]);
   return (
     <main id="main">
+      {breadcrumb ? <JsonLd id="compare-breadcrumb-json-ld" data={breadcrumb} /> : null}
       <CompareDetailView competitor={competitor} />
     </main>
   );

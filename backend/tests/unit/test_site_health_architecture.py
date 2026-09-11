@@ -96,6 +96,14 @@ def test_page_kinds_and_link_summaries_freeze_metrics_and_guard_absence() -> Non
         "pages_with_incoming_count": 3,
         "pages_with_incoming_percentage": 0.75,
         "orphan_page_count": 1,
+        "orphan_pages": [
+            {
+                "site_url_id": str(pages[1].site_url_id),
+                "url": "https://example.com/products/item-0",
+                "title": "Same product",
+                "page_kind": PAGE_KIND_PRODUCT,
+            }
+        ],
     }
     assert complete.structure_depth["measured_page_count"] == 4
     assert [row["page_count"] for row in complete.structure_depth["buckets"]] == [
@@ -105,14 +113,19 @@ def test_page_kinds_and_link_summaries_freeze_metrics_and_guard_absence() -> Non
         1,
     ]
 
+    # Partial coverage reports the same observed count. The number describes
+    # the crawled subgraph, which is a fact under any coverage state; only the
+    # site-wide absence CLAIM is gated, and that lives in the rule evaluation
+    # asserted by the structural-rules test below.
     partial = build_observed_architecture(
         pages=pages,
         coverage_state=COVERAGE_STATE_PARTIAL,
         business_context=_context(),
     )
     page_kind = next(row for row in partial.page_kinds if row["page_kind"] == "product")
-    assert page_kind["orphan_count"] is None
-    assert partial.internal_linking["orphan_page_count"] is None
+    assert page_kind["orphan_count"] == 1
+    assert partial.internal_linking["orphan_page_count"] == 1
+    assert len(partial.internal_linking["orphan_pages"]) == 1
 
 
 def test_hierarchy_uses_breadcrumb_then_explicit_then_safe_path_or_unknown() -> None:

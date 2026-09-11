@@ -104,6 +104,37 @@ describe('Blog index (public marketing `/blog`)', () => {
     // The page hero (and its single h1) still renders above the empty state.
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
+
+  it('emits Blog JSON-LD listing the posts and dating the collection', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://citeladder.example');
+    const { container } = render(<BlogPage />);
+
+    const script = container.querySelector('script[type="application/ld+json"]');
+    expect(script).not.toBeNull();
+    const data = JSON.parse(script?.textContent ?? '') as Record<string, never>;
+    // Both types: `Blog` is precise, `CollectionPage` is what CiteLadder's own
+    // structured-data reader recognizes, so a bare `Blog` would be skipped.
+    expect(data['@type']).toEqual(['CollectionPage', 'Blog']);
+    // The freshness signal: a listing page that never says when its collection
+    // last changed gives an answer engine no way to tell current from stale.
+    // REVISION dates, not publication dates: revising an older post changes
+    // what this index holds, so reading `date` alone reported it as stale.
+    const latest = (dates: readonly (string | undefined)[]) =>
+      dates
+        .flatMap((date) => (date ? [date] : []))
+        .reduce<string | null>(
+          (newest, date) => (newest === null || date > newest ? date : newest),
+          null,
+        );
+    expect(data.dateModified).toBe(latest(POSTS.map((post) => post.dateModified ?? post.date)));
+    // And it must NOT be the newest publication date, which is what the first
+    // cut reported -- every post here was revised after it was published.
+    expect(data.dateModified).not.toBe(latest(POSTS.map((post) => post.date)));
+    const list = data.mainEntity as unknown as Record<string, unknown>;
+    expect(list['@type']).toBe('ItemList');
+    expect(list.numberOfItems).toBe(POSTS.length);
+    expect((list.itemListElement as { url: string }[])[0]?.url).toContain(`/blog/${POSTS[0].slug}`);
+  });
 });
 
 describe('BlogPostView (`/blog/[slug]` sync view)', () => {

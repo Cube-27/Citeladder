@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { BlogPostView } from '@/components/marketing/pages/blog';
+import { JsonLd } from '@/components/marketing/seo/json-ld';
 import { POSTS } from '@/lib/marketing-content/blog';
+import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
 import { absoluteUrl } from '@/lib/seo/site';
 
 /**
@@ -63,8 +65,14 @@ export default async function BlogPostPage({
   const { slug } = await params;
   const post = POSTS.find((candidate) => candidate.slug === slug);
   if (!post) notFound();
+  const breadcrumb = breadcrumbJsonLd([
+    { name: 'Home', path: '/' },
+    { name: 'Blog', path: '/blog' },
+    { name: post.title, path: `/blog/${post.slug}` },
+  ]);
   return (
     <main id="main">
+      {breadcrumb ? <JsonLd id="blog-post-breadcrumb-json-ld" data={breadcrumb} /> : null}
       <BlogPostView post={post} />
     </main>
   );
