@@ -9,6 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { Pressable } from '@/components/ui/pressable';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { RankingRow } from '@/lib/api/types';
 import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
@@ -121,18 +122,17 @@ function BrandName({
   const name = <span className={textRole('emphasis')}>{row.name}</span>;
   if (!onSelect) return name;
   return (
-    <button
-      type="button"
+    <Pressable
       aria-pressed={selected}
       aria-label={selected ? `Stop plotting ${row.name} on its own` : `Plot ${row.name} on its own`}
-      className="focus-ring hover:text-accent-text rounded-xs text-left transition-colors"
+      className="hover:text-accent-text w-auto"
       onClick={(event) => {
         event.stopPropagation();
         onSelect(selected ? null : row.name);
       }}
     >
       {name}
-    </button>
+    </Pressable>
   );
 }
 

@@ -492,9 +492,13 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
 });
 
 for (const width of [1280, 375]) {
-  test(`older run and engine preserve context through gap evidence at ${width}px`, async ({
-    page,
-  }) => {
+  // Drills in through the engine comparison. This journey used to enter on the
+  // rankings table's "N answers naming X but not you" button, which is gone
+  // with the "Answers without you" column — the measure was undefined for the
+  // tracked brand and asymmetric with every other column in that table. What
+  // the test is really for survives the change: a selected run and engine must
+  // still be the run and engine the evidence request asks for.
+  test(`older run and engine preserve context through evidence at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     // The evidence answers for the run this journey SELECTED. Left at the
     // fixture's default the answer link would point at the latest run either
@@ -507,19 +511,17 @@ for (const width of [1280, 375]) {
       },
     });
     await page.goto(`/visibility?run=${AUDIT_EARLIER}&engine=gemini`);
-    await page.getByRole('button', { name: /answers naming .* but not you/ }).click();
+    await page.getByRole('button', { name: 'Gemini', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toBeVisible();
     const evidenceUrl = evidenceUrls.at(-1)!;
     expect(evidenceUrl.searchParams.get('audit_id')).toBe(AUDIT_EARLIER);
     expect(evidenceUrl.searchParams.get('engine')).toBe('gemini');
-    expect(evidenceUrl.searchParams.get('outcome')).toBe('competitor_gap');
     await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toHaveAttribute(
       'href',
       `/runs/${AUDIT_EARLIER}?execution=${TASK_A}`,
     );
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`run=${AUDIT_EARLIER}.*engine=gemini`));
-    await expect(page.getByRole('button', { name: /answers naming .* but not you/ })).toBeVisible();
     await page.screenshot({ path: `test-results/visibility-${width}.png`, fullPage: true });
   });
 }
