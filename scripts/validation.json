@@ -117,16 +117,16 @@
         "frontend/test/fixtures/msw-page-lifecycle.ts"
       ],
       "frontendTests": [
-        "app/(app)/prompts/page.test.tsx",
-        "app/(app)/prompts/page.manage.test.tsx",
-        "app/(app)/visibility/page.test.tsx",
-        "app/(app)/visibility/page.evidence.test.tsx",
+        "app/(authed)/(app)/prompts/page.test.tsx",
+        "app/(authed)/(app)/prompts/page.manage.test.tsx",
+        "app/(authed)/(app)/visibility/page.test.tsx",
+        "app/(authed)/(app)/visibility/page.evidence.test.tsx",
         "lib/runs/launch.test.ts"
       ]
     },
     {
       "sources": ["frontend/test/fixtures/visibility.tsx"],
-      "frontendTests": ["app/(app)/visibility/page.test.tsx", "app/(app)/visibility/page.evidence.test.tsx"]
+      "frontendTests": ["app/(authed)/(app)/visibility/page.test.tsx", "app/(authed)/(app)/visibility/page.evidence.test.tsx"]
     },
     {
       "sources": ["frontend/test/site-health-fixtures.ts"],
@@ -251,12 +251,14 @@
       "sources": [
         "backend/app/orchestration/**",
         "backend/app/models/queue_mixins.py",
-        "backend/app/workers/parent_reconcilers.py"
+        "backend/app/workers/parent_reconcilers.py",
+        "backend/app/workers/queue_sweeper.py"
       ],
       "backendTests": [
         "tests/unit/test_audit_state.py",
         "tests/unit/test_occupancy_enforcement.py",
         "tests/component/test_audit_queue.py",
+        "tests/component/test_integration_queue.py",
         "tests/component/test_provider_capacity.py",
         "tests/component/test_task_queue_content.py",
         "tests/component/test_entitlement_occupancy.py"
@@ -319,6 +321,8 @@
         "backend/app/analysis/scoring.py",
         "backend/app/analysis/position.py",
         "backend/app/analysis/service.py",
+        "backend/app/analysis/comparison.py",
+        "backend/app/analysis/coverage.py",
         "backend/app/analysis/costs.py",
         "backend/app/analysis/csv_cells.py",
         "backend/app/analysis/exports.py",
@@ -472,6 +476,7 @@
         "backend/app/domain/entitlements/**",
         "backend/app/connectors/billing/**",
         "backend/app/api/billing.py",
+        "backend/app/api/billing_guards.py",
         "backend/app/api/billing_checkout.py",
         "backend/app/api/billing_invoices.py",
         "backend/scripts/provision_razorpay_plans.py",
@@ -648,7 +653,7 @@
     },
     {
       "sources": [
-        "frontend/app/(onboarding)/**",
+        "frontend/app/(authed)/(onboarding)/**",
         "frontend/components/onboarding/**",
         "frontend/lib/onboarding/**",
         "frontend/lib/setup/**",
@@ -668,23 +673,24 @@
         "frontend/lib/navigation/**",
         "frontend/lib/navigate.ts",
         "frontend/app/layout.tsx",
-        "frontend/app/(app)/layout.tsx",
-        "frontend/app/(app)/loading.tsx",
-        "frontend/app/(app)/route-states.tsx",
-        "frontend/app/(app)/error.tsx",
-        "frontend/app/(app)/not-found.tsx"
+        "frontend/app/(authed)/layout.tsx",
+        "frontend/app/(authed)/(app)/layout.tsx",
+        "frontend/app/(authed)/(app)/loading.tsx",
+        "frontend/app/(authed)/(app)/route-states.tsx",
+        "frontend/app/(authed)/(app)/error.tsx",
+        "frontend/app/(authed)/(app)/not-found.tsx"
       ],
       "frontendTests": [
         "components/layout/*.test.tsx",
         "lib/navigation/*.test.ts",
-        "app/(app)/route-states.test.tsx"
+        "app/(authed)/(app)/route-states.test.tsx"
       ],
       "frontendE2E": ["e2e/shell.spec.ts"]
     },
     {
       "sources": [
-        "frontend/app/(app)/site/**",
-        "frontend/app/(app)/issues/**",
+        "frontend/app/(authed)/(app)/site/**",
+        "frontend/app/(authed)/(app)/issues/**",
         "frontend/components/site-health/**",
         "frontend/lib/site-health/**",
         "frontend/lib/api/schemas/site-health/**"
@@ -700,13 +706,13 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/visibility/**",
+        "frontend/app/(authed)/(app)/visibility/**",
         "frontend/components/visibility/**",
         "frontend/lib/visibility/**",
         "frontend/components/intelligence/**"
       ],
       "frontendTests": [
-        "app/(app)/visibility/*.test.tsx",
+        "app/(authed)/(app)/visibility/*.test.tsx",
         "components/visibility/*.test.tsx",
         "lib/visibility/*.test.ts",
         "components/intelligence/*.test.ts",
@@ -716,13 +722,13 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/runs/**",
+        "frontend/app/(authed)/(app)/runs/**",
         "frontend/components/runs/**",
         "frontend/lib/runs/**",
         "frontend/lib/sse/**"
       ],
       "frontendTests": [
-        "app/(app)/runs/**/*.test.tsx",
+        "app/(authed)/(app)/runs/**/*.test.tsx",
         "components/runs/*.test.tsx",
         "lib/runs/*.test.ts",
         "lib/runs/*.test.tsx",
@@ -732,13 +738,13 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/prompts/**",
+        "frontend/app/(authed)/(app)/prompts/**",
         "frontend/components/prompts/**",
         "frontend/lib/prompts/**",
         "frontend/lib/csv/**"
       ],
       "frontendTests": [
-        "app/(app)/prompts/*.test.tsx",
+        "app/(authed)/(app)/prompts/*.test.tsx",
         "components/prompts/*.test.ts",
         "components/prompts/*.test.tsx",
         "lib/prompts/*.test.ts",
@@ -747,7 +753,7 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/products/**",
+        "frontend/app/(authed)/(app)/products/**",
         "frontend/components/products/**",
         "frontend/lib/products/**",
         "frontend/lib/api/commerce.ts",
@@ -762,7 +768,7 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/opportunities/**",
+        "frontend/app/(authed)/(app)/opportunities/**",
         "frontend/components/opportunities/**",
         "frontend/lib/opportunities/**",
         "frontend/lib/api/opportunities.ts",
@@ -777,7 +783,7 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/content/**",
+        "frontend/app/(authed)/(app)/content/**",
         "frontend/components/content/**",
         "frontend/lib/content/**"
       ],
@@ -786,7 +792,7 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/demand/**",
+        "frontend/app/(authed)/(app)/demand/**",
         "frontend/components/demand/**",
         "frontend/lib/demand/**"
       ],
@@ -794,11 +800,11 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/performance/**",
+        "frontend/app/(authed)/(app)/performance/**",
         "frontend/components/performance/**",
         "frontend/lib/performance/**",
         "frontend/lib/table/**",
-        "frontend/app/(app)/traffic/**",
+        "frontend/app/(authed)/(app)/traffic/**",
         "frontend/components/traffic/**",
         "frontend/lib/traffic/**"
       ],
@@ -809,7 +815,7 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/ai-referrals/**",
+        "frontend/app/(authed)/(app)/ai-referrals/**",
         "frontend/components/ai-referrals/**",
         "frontend/lib/ai-referrals/**"
       ],
@@ -817,7 +823,7 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/projects/**",
+        "frontend/app/(authed)/(app)/projects/**",
         "frontend/components/projects/**",
         "frontend/lib/project/**",
         "frontend/components/knowledge-base/**",
@@ -832,7 +838,8 @@
     },
     {
       "sources": [
-        "frontend/app/(app)/settings/**",
+        "frontend/app/(authed)/(app)/settings/**",
+        "frontend/app/(authed)/(app)/invitations/**",
         "frontend/components/settings/**"
       ],
       "frontendTests": ["components/settings/*.test.tsx"]
@@ -876,7 +883,7 @@
         "frontend/app/manifest.ts",
         "frontend/app/robots.ts",
         "frontend/app/sitemap.ts",
-        "frontend/app/(app)/page.tsx"
+        "frontend/app/(authed)/(app)/page.tsx"
       ],
       "frontendTests": ["app/sitemap.test.ts"]
     },
