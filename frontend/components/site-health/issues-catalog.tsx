@@ -164,7 +164,7 @@ export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
       {issuesQuery.isError ? (
         <Alert tone="danger">Could not load issues for this crawl. Please refresh.</Alert>
       ) : rows.length === 0 ? (
-        <p className="text-secondary py-[var(--empty-state-padding)] text-center text-sm">
+        <p className="text-secondary py-[var(--empty-state-padding)] text-sm">
           No issues match this view.
         </p>
       ) : (

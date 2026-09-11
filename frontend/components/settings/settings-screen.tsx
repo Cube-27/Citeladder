@@ -195,7 +195,7 @@ function ProjectDeletionControls() {
           </>
         }
       >
-        <p className="text-secondary text-sm">
+        <p className={textRole('body')}>
           This permanently deletes the project and all of its prompts, topics, audits, visibility
           history, and generated content. This cannot be undone.
         </p>

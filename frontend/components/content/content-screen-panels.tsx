@@ -64,7 +64,12 @@ export function ContentComposer({
   onGenerate: () => void;
 }>) {
   return (
-    <section data-component-id="content-composer" className="max-w-[840px] min-w-0">
+    // A deliberate working width, rather than either a narrow column stranded
+    // in a wide canvas or a full-bleed row. The composer's controls are short
+    // and its instruction field is the only wide thing in it, so 840px left a
+    // visibly empty right half on a desktop pane while the fields themselves
+    // stayed cramped.
+    <section data-component-id="content-composer" className="max-w-[1040px] min-w-0">
       <div className="flex flex-col gap-[var(--workspace-gap)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-1">

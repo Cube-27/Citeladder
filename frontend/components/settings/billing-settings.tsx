@@ -280,8 +280,8 @@ function CurrentPlan({
   const subscription = entitlement?.subscription ?? null;
   const periodEnd = subscription?.current_period_end;
   return (
-    <div className={panelClasses({}, 'grid gap-4')}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className={panelClasses({}, 'grid gap-3')}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid min-w-0 gap-1">
           <p className={eyebrowClasses}>Current plan</p>
           <div className="flex items-center gap-2.5">
@@ -319,17 +319,11 @@ function CurrentPlan({
         </Alert>
       ) : null}
       {entitlement === null ? (
-        <div className="">
-          <Alert tone="warning">
-            Your entitlement could not be resolved. No paid capability is active until it does.
-          </Alert>
-        </div>
+        <Alert tone="warning">
+          Your entitlement could not be resolved. No paid capability is active until it does.
+        </Alert>
       ) : null}
-      {cancelError ? (
-        <div className="">
-          <Alert tone="danger">{message(cancelError)}</Alert>
-        </div>
-      ) : null}
+      {cancelError ? <Alert tone="danger">{message(cancelError)}</Alert> : null}
     </div>
   );
 }
@@ -432,7 +426,7 @@ function CancelDialog({
         </>
       }
     >
-      <p className="text-secondary text-sm">
+      <p className={textRole('body')}>
         Your current period runs to its end and no next bundle is issued. Completed audits and
         evidence are never deleted when a plan ends.
       </p>

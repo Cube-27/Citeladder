@@ -168,7 +168,7 @@ function ArchitectureLedger({ data }: Readonly<{ data: SiteArchitecture }>) {
               persisted reasons that nothing ever rendered. */}
           <CoverageReasons reasons={data.coverage_reasons} />
           {pageKinds.length === 0 ? (
-            <p className="text-secondary text-sm">No page kinds were measured.</p>
+            <p className={textRole('body')}>No page kinds were measured.</p>
           ) : (
             <PageKindTable pageKinds={pageKinds} grouped={grouped} crawlId={data.crawl_id} />
           )}
@@ -303,7 +303,7 @@ function PageKindPages({
     <TableRow className="bg-background-alt hover:bg-background-alt block h-auto md:table-row md:h-[var(--table-row-height)]">
       <TableCell colSpan={6} className="block py-3 md:table-cell">
         {pages.length === 0 ? (
-          <p className="text-secondary text-sm">No projected URLs are available for this kind.</p>
+          <p className={textRole('body')}>No projected URLs are available for this kind.</p>
         ) : (
           <ul className="content-scroll grid max-h-64 gap-1.5 overflow-y-auto overscroll-contain pr-2 pl-6">
             {pages.map((page) => (

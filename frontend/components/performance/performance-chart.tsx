@@ -123,10 +123,13 @@ export function PerformanceChart({
   const summary = chartSummary(series, columnCount);
 
   if (!series.length || columnCount === 0) {
+    // Nothing is plotted, so the plot's height is not reserved. Holding the
+    // full 220px for a single line of text left a tall empty box in the middle
+    // of the screen that read as a broken chart rather than an absent one.
+    // The region still states which absence this is, using the summary that
+    // already distinguishes "no metrics selected" from "nothing measured".
     return (
-      <div
-        className={cn('text-muted flex h-[220px] items-center justify-center text-sm', className)}
-      >
+      <div className={cn('text-muted flex min-h-[72px] items-center text-sm', className)}>
         {summary}
       </div>
     );

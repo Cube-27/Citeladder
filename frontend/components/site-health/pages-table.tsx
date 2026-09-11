@@ -187,7 +187,7 @@ export function PagesTable({
               event.preventDefault();
               openPage(page.site_url_id);
             }}
-            className="focus-visible:ring-accent/60 cursor-pointer focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-ring cursor-pointer"
           >
             <TableCell numeric className="mono text-muted text-xs">
               {index + 1}

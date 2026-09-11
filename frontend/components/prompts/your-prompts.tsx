@@ -156,7 +156,7 @@ export function YourPrompts() {
       ) : null}
 
       <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-y py-[var(--card-padding-compact)]">
-        <p className="text-secondary text-sm">
+        <p className={textRole('body')}>
           The {project?.brand_name ?? 'brand'} configuration includes{' '}
           <span className={textRole('emphasis', 'text-foreground')}>{activePrompts.length}</span>{' '}
           visibility {activePrompts.length === 1 ? 'prompt' : 'prompts'} across{' '}

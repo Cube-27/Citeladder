@@ -137,7 +137,7 @@ function LoadedEvidence({
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div className="grid gap-1">
           <CardTitle>{TITLE}</CardTitle>
-          <p className="text-secondary text-sm">
+          <p className={textRole('body')}>
             Persisted mentions and classified citations, grouped by execution.
           </p>
         </div>

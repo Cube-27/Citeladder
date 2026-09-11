@@ -94,7 +94,7 @@ function ActionHandoff({ detail }: Readonly<{ detail: OpportunityDetail }>) {
     <section className="grid gap-2">
       <Label>Action handoff</Label>
       <div className={panelClasses({ pad: 'compact' }, 'grid gap-2')}>
-        <p className="text-secondary text-sm">
+        <p className={textRole('body')}>
           {earned
             ? `Prepare a human-led earned asset for ${handoff.canonical_domain ?? 'the cited source'}.`
             : 'Create or improve content the brand controls.'}

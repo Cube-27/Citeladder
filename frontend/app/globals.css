@@ -677,6 +677,43 @@ body {
   outline: none;
 }
 
+/* The shared focus treatment for pressable things that are not text fields:
+   buttons, tabs, menu items, chips, sidebar rows, cards you can click. It was
+   consumed in ~40 places before it existed anywhere, so every one of those
+   fell back to the global `:focus-visible` outline with its 3px offset — a
+   detached ring that clipped inside scroll containers and overlapped
+   neighbours in dense rows. Defining it here is what makes the treatment
+   uniform rather than per-route.
+
+   The design contract asks for accent on the element's own border plus one
+   attached soft glow, with no gap and no second floating ring, so the offset
+   outline is pulled back to the edge and the glow is the same `--focus-ring`
+   token the field recipe above uses. Both are theme-scoped variables, so the
+   purple and teal section rebinds carry through untouched. */
+.focus-ring:focus-visible,
+.focus-ring:has(:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+  box-shadow: var(--focus-ring);
+}
+
+/* A focusable child inside a `focus-ring` wrapper would otherwise paint the
+   global outline as well, which is the "second floating ring" the contract
+   rules out. The wrapper already shows the state. */
+.focus-ring:has(:focus-visible) :focus-visible {
+  outline: none;
+}
+
+/* Forced-colours mode drops both the accent border and the glow, because
+   neither survives the system palette. `outline` is the one property the mode
+   keeps painting, so the state stays visible there on its own terms. */
+@media (forced-colors: active) {
+  .focus-ring:focus-visible,
+  .focus-ring:has(:focus-visible) {
+    outline: 2px solid Highlight;
+  }
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-selection-fg);

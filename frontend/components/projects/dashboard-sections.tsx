@@ -209,7 +209,7 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <Card
       tone="recommendation"
-      className="text-foreground flex flex-col justify-between gap-4 p-[var(--card-padding-large)]"
+      className="text-foreground flex flex-col justify-between gap-3 p-[var(--card-padding)]"
     >
       <Stack gap="compact">
         <div className="flex items-center justify-between">
@@ -223,7 +223,7 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
         </div>
         <Stack gap="tight">
           <p className={textRole('sectionTitle', 'leading-snug')}>{data.next_action.title}</p>
-          <p className={textRole('meta', 'leading-relaxed')}>
+          <p className={textRole('meta')}>
             Prioritized from deterministic evidence and current visibility coverage.
           </p>
         </Stack>
@@ -243,7 +243,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <Card
       aria-labelledby="citation-share-track"
-      className="flex flex-col justify-between gap-4 p-[var(--card-padding-large)]"
+      className="flex flex-col justify-between gap-3 p-[var(--card-padding)]"
     >
       <Stack gap="compact">
         <div className="flex items-center justify-between">
@@ -269,7 +269,7 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
               </span>
             ) : null}
           </div>
-          <p className={textRole('meta', 'leading-relaxed')}>
+          <p className={textRole('meta')}>
             {data.track.observed_at ? deltaLabel(delta) : data.track.limitations[0]}
           </p>
         </Stack>

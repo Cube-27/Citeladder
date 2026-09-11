@@ -141,9 +141,14 @@ function FeaturedRecommendation({
   const target = detail.target_label;
   return (
     <Card className="bg-accent-soft">
-      <CardContent className="grid gap-4">
+      {/* The panel keeps every part of the recommendation — title, status
+          metadata, the recommendation itself, its target, and the action — and
+          shortens by tightening the rungs between them rather than by dropping
+          any of them. It was four `gap-4` rows tall, which made the pale blue
+          rectangle, not the recommendation, the biggest thing on the screen. */}
+      <CardContent className="grid gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid min-w-0 gap-2">
+          <div className="grid min-w-0 gap-1.5">
             <AccentEyebrow>Next best action</AccentEyebrow>
             <h2 className={textRole('sectionTitle')}>{detail.title}</h2>
             <div className="flex flex-wrap items-center gap-1.5">

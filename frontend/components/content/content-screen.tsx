@@ -106,7 +106,7 @@ function NoProjectState() {
       <PageHeader />
       <Card>
         <CardContent className="flex flex-col items-start gap-3 py-[var(--empty-state-padding)]">
-          <p className="text-secondary text-sm">
+          <p className={textRole('body')}>
             Create a project first — content generation needs a project and its website.
           </p>
           <Link
