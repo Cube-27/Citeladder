@@ -56,11 +56,25 @@ export function ProjectSelectionProvider({
 
 /** Access the active-project context. Throws if used outside a provider. */
 export function useProjectContext(): ProjectContextValue {
-  const context = useContext(ProjectContext);
+  const context = useOptionalProjectContext();
   if (!context) {
     throw new Error('useProjectContext must be used within a <ProjectProvider>.');
   }
   return context;
+}
+
+/**
+ * The active-project context, or `null` when there is no provider above.
+ *
+ * For the few components that render on BOTH sides of the authenticated
+ * shell — the public pricing page renders the same checkout controller the
+ * account screens do — where "no selection exists" is a real, renderable
+ * state rather than a programming error. Everything inside the shell should
+ * use `useProjectContext`, whose throw is what keeps a missing provider from
+ * being mistaken for an unresolved one.
+ */
+export function useOptionalProjectContext(): ProjectContextValue | null {
+  return useContext(ProjectContext);
 }
 
 /** Convenience accessor for just the active project (or null). */

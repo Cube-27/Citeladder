@@ -62,8 +62,14 @@ export function testProjectSelection(
 }
 
 type ProvidersOptions = Omit<RenderOptions, 'wrapper'> & {
-  /** Override the resolved workspace/project context for this render. */
-  projectSelection?: Partial<ProjectContextValue>;
+  /**
+   * Override the resolved workspace/project context for this render, or pass
+   * `null` to render with NO provider at all — the public marketing routes,
+   * which mount outside the authenticated shell. Reach for `null` whenever a
+   * component renders on both sides of that boundary: the default context is
+   * what would otherwise hide a consumer that cannot survive without one.
+   */
+  projectSelection?: Partial<ProjectContextValue> | null;
 };
 
 /**
@@ -84,13 +90,17 @@ type ProvidersOptions = Omit<RenderOptions, 'wrapper'> & {
 export function renderWithProviders(ui: ReactElement, options?: ProvidersOptions) {
   const queryClient = createAppQueryClient();
   const { projectSelection, ...renderOptions } = options ?? {};
-  const selection = testProjectSelection(projectSelection);
+  const selection = projectSelection === null ? null : testProjectSelection(projectSelection);
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <ProjectSelectionProvider value={selection}>{children}</ProjectSelectionProvider>
+          {selection === null ? (
+            children
+          ) : (
+            <ProjectSelectionProvider value={selection}>{children}</ProjectSelectionProvider>
+          )}
         </TooltipProvider>
       </QueryClientProvider>
     );

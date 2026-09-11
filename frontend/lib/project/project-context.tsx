@@ -29,6 +29,7 @@ import {
 export {
   useActiveProject,
   useActiveWorkspaceId,
+  useOptionalProjectContext,
   useProjectContext,
   useWorkspaceCapability,
   type ProjectContextValue,

@@ -3,10 +3,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { authApi } from '@/lib/api/auth';
+import { getActiveWorkspaceId } from '@/lib/api/client';
 import { billingApi, type SubscriptionCheckoutInput } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { CHECKOUT_POLL_ATTEMPTS, CHECKOUT_POLL_INTERVAL_MS } from '@/lib/config/billing';
-import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { useOptionalProjectContext } from '@/lib/project/project-context';
 import { checkoutAttempt, clearCheckoutAttempt } from './checkout-attempt';
 import { startCheckoutFlow } from './checkout-flow';
 
@@ -17,17 +18,59 @@ const INCOMPLETE_CHECKOUT: Record<string, string | null> = {
   dismissed: 'Checkout closed. Retry to reopen the same subscription.',
 };
 
+/**
+ * The workspace a purchase belongs to.
+ *
+ * Two hosts start checkouts and they differ in kind, not in degree. The
+ * authenticated shell HAS a selection, so the purchase must name it and every
+ * call in the flow carries it — a switch mid-flow then cannot re-point the
+ * purchase at another workspace's account. The public pricing page has no
+ * such selection to read: no `ProjectProvider` renders above it, and asking
+ * for one would throw during the prerender of a page anonymous visitors are
+ * served. It falls back to the ambient selection, and to the server's default
+ * workspace when there is none.
+ *
+ * `unscoped` therefore means "no selection exists here", never "the
+ * selection has not arrived yet": a shell still resolving reports `pending`
+ * and refuses to buy, rather than quietly charging the default workspace
+ * while the reader is looking at another one.
+ */
+type CheckoutScope =
+  | { readonly kind: 'scoped'; readonly workspaceId: string }
+  | { readonly kind: 'unscoped' }
+  | { readonly kind: 'pending' };
+
+function useCheckoutScope(): CheckoutScope {
+  const context = useOptionalProjectContext();
+  if (!context) return { kind: 'unscoped' };
+  const workspaceId = context.activeWorkspaceId;
+  return workspaceId ? { kind: 'scoped', workspaceId } : { kind: 'pending' };
+}
+
+/**
+ * The workspace this purchase is FOR, resolved ONCE when it starts.
+ *
+ * Every call in the flow then names this value explicitly, so nothing that
+ * changes mid-flow — a workspace switch in the shell, the ambient selection a
+ * soft navigation left behind — can re-point the purchase at another account.
+ * Unscoped reads the ambient selection, so a purchase started from the
+ * pricing page lands on the same workspace as the add-on and top-up buttons
+ * beside it; `null` there is the explicit "send no workspace header", which
+ * the server answers with the buyer's default workspace.
+ */
+function purchaseWorkspace(scope: CheckoutScope): string | null {
+  if (scope.kind === 'pending') throw new Error('Select a workspace before starting checkout.');
+  return scope.kind === 'scoped' ? scope.workspaceId : getActiveWorkspaceId();
+}
+
 export function useSubscriptionCheckout() {
   const queryClient = useQueryClient();
-  // The workspace this purchase is FOR, captured when it starts. Everything
-  // that follows names it explicitly, so a switch mid-flow cannot re-point the
-  // purchase at another workspace's account.
-  const activeWorkspaceId = useActiveWorkspaceId();
+  const scope = useCheckoutScope();
   const attempt = useRef<{
     fingerprint: string;
     key: string;
     userId: string;
-    workspaceId: string;
+    workspaceId: string | null;
   } | null>(null);
   const activationId = useRef<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -65,7 +108,7 @@ export function useSubscriptionCheckout() {
    */
   const beginAttempt = (
     userId: string,
-    workspaceId: string,
+    workspaceId: string | null,
     input: SubscriptionCheckoutInput,
     proposed?: string,
   ) => {
@@ -83,8 +126,7 @@ export function useSubscriptionCheckout() {
 
   const mutation = useMutation({
     mutationFn: async ({ input, key }: { input: SubscriptionCheckoutInput; key?: string }) => {
-      const workspaceId = activeWorkspaceId;
-      if (!workspaceId) throw new Error('Select a workspace before starting checkout.');
+      const workspaceId = purchaseWorkspace(scope);
       const user = await authApi.me();
       const started = beginAttempt(user.id, workspaceId, input, key);
       const activation = await billingApi.createSubscription(input, started.key, {
