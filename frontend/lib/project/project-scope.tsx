@@ -3,7 +3,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 
 import type { Project, Workspace } from '@/lib/api/types';
-import type { SelectionStatus } from '@/lib/project/selection';
+import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
 
 /**
  * The context object and its consumers, kept apart from the provider that
@@ -34,6 +34,8 @@ export type ProjectContextValue = {
   setActiveProjectId: (projectId: string) => void;
   /** What the shell currently knows — read this, not the booleans below. */
   status: SelectionStatus;
+  /** Which read failed, when `status` is `error`. Null otherwise. */
+  errorScope: FailureScope;
   /** Retry every read this context owns. */
   retry: () => void;
   /** True while the context has no settled answer yet. */

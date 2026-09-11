@@ -2,7 +2,7 @@ import { renderWithProviders as render } from '@/test/render';
 import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SelectionStatus } from '@/lib/project/selection';
+import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
 
 const replace = vi.fn();
 let pathname = '/projects';
@@ -18,6 +18,7 @@ type Role = 'owner' | 'admin' | 'member' | 'viewer';
 
 let contextValue: {
   status: SelectionStatus;
+  errorScope: FailureScope;
   activeWorkspaceId: string | null;
   activeWorkspace: { id: string; role: Role } | null;
   retry: () => void;
@@ -45,9 +46,14 @@ function usage(remaining: number) {
   return { status: 'resolved', items: [{ key: 'project_slots', remaining }] };
 }
 
-function setContext(status: SelectionStatus, role: Role = 'owner') {
+function setContext(
+  status: SelectionStatus,
+  role: Role = 'owner',
+  errorScope: FailureScope = null,
+) {
   contextValue = {
     status,
+    errorScope,
     activeWorkspaceId: WORKSPACE,
     activeWorkspace: { id: WORKSPACE, role },
     retry: vi.fn(),
@@ -102,7 +108,7 @@ describe('OnboardingGate', () => {
   });
 
   it('offers a retry instead of onboarding when a read failed', () => {
-    setContext('error');
+    setContext('error', 'owner', 'workspace');
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -114,6 +120,25 @@ describe('OnboardingGate', () => {
     // present as a brand new account.
     expect(replace).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Your workspace could not be loaded' }),
+    ).toBeInTheDocument();
+  });
+
+  it('names the projects read when that is what failed', () => {
+    // The workspace resolved; only the project list did not. Reporting a
+    // workspace failure sends the reader after an access problem that is not
+    // there.
+    setContext('error', 'owner', 'projects');
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Projects could not be loaded' }),
+    ).toBeInTheDocument();
   });
 
   it('names a missing project rather than substituting another one', () => {
@@ -186,7 +211,9 @@ describe('OnboardingGate', () => {
     );
 
     expect(replace).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Projects could not be loaded' }),
+    ).toBeInTheDocument();
   });
 
   it('waits for entitlements so the shell paints complete', () => {

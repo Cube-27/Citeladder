@@ -4,6 +4,7 @@ import type { Project, Workspace } from '@/lib/api/types';
 
 import {
   pickActiveProject,
+  resolveFailureScope,
   resolveProjectId,
   resolveStatus,
   resolveWorkspaceId,
@@ -179,9 +180,38 @@ describe('resolveStatus', () => {
     ).toBe('resolving');
   });
 
+  it('fails safe to resolving for an id with no project behind it', () => {
+    expect(resolveStatus({ ...base, hasResolvedProject: false, activeProjectId: PROJECT_1 })).toBe(
+      'resolving',
+    );
+  });
+
   it('is empty only once a settled list says so', () => {
     expect(resolveStatus({ ...base, hasResolvedProject: false, activeProjectId: null })).toBe(
       'empty',
     );
+  });
+});
+
+describe('resolveFailureScope', () => {
+  const none = {
+    detailFailed: false,
+    membershipFailed: false,
+    listFailedWithNothingUsable: false,
+  };
+
+  it('blames membership first: without it the project reads never had a chance', () => {
+    expect(
+      resolveFailureScope({ ...none, membershipFailed: true, listFailedWithNothingUsable: true }),
+    ).toBe('workspace');
+  });
+
+  it('names the projects read when the workspace resolved fine', () => {
+    expect(resolveFailureScope({ ...none, listFailedWithNothingUsable: true })).toBe('projects');
+    expect(resolveFailureScope({ ...none, detailFailed: true })).toBe('projects');
+  });
+
+  it('is null when nothing failed', () => {
+    expect(resolveFailureScope(none)).toBeNull();
   });
 });

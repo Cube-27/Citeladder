@@ -20,6 +20,7 @@ import { ProjectSelectionProvider, type ProjectContextValue } from '@/lib/projec
 import {
   pickActiveProject,
   resolveFailed,
+  resolveFailureScope,
   resolveProjectId,
   resolveStatus,
   resolveWorkspaceId,
@@ -151,11 +152,13 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   );
 
   const requestedProjectMissing = isMissing(detailQuery.error);
-  const failed = resolveFailed({
+  const failures = {
     detailFailed: detailQuery.isError && !requestedProjectMissing,
     membershipFailed: workspacesQuery.isError,
     listFailedWithNothingUsable: projectsQuery.isError && activeProject === null,
-  });
+  };
+  const failed = resolveFailed(failures);
+  const errorScope = failed ? resolveFailureScope(failures) : null;
 
   const status = resolveStatus({
     contradictoryRequest,
@@ -222,6 +225,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
       activeProjectId,
       setActiveProjectId,
       status,
+      errorScope,
       retry,
       isLoading: status === 'resolving',
       isError: status === 'error',
@@ -235,6 +239,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
       activeProjectId,
       setActiveProjectId,
       status,
+      errorScope,
       retry,
     ],
   );

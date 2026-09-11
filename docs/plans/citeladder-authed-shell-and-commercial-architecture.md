@@ -188,7 +188,7 @@ The gate answers: **does this authorized workspace currently need project onboar
 | Workspace has zero projects but route is billing, members, workspace settings, or an invitation | Remain on that route. No project is required to manage the workspace. |
 | Viewer in an empty workspace | Read-only empty state, not a create-project loop. |
 
-Use the existing visual components. Account/workspace usage can resolve without a project. In Phase 2 permission-gate controls, while the backend remains authoritative. A real quota denial must remain a quota denial; do not bypass limits to mask selection bugs.
+Use the existing visual components. Account/workspace usage can resolve without a project. In Phase 2, add permission gating to these controls so a role that may not create a project is not offered the affordance — while the backend remains authoritative and enforces every denial itself. A real quota denial must remain a quota denial; do not bypass limits to mask selection bugs.
 
 ### 1.7 Navigation and completion
 

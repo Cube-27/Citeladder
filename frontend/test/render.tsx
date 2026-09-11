@@ -19,10 +19,20 @@ const TEST_WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 export function testProjectSelection(
   overrides: Partial<ProjectContextValue> = {},
 ): ProjectContextValue {
+  const workspace = {
+    id: TEST_WORKSPACE_ID,
+    name: 'Test Workspace',
+    role: 'owner',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
   return {
-    workspaces: [],
+    // The membership list, the resolved id and the resolved membership agree.
+    // Leaving `activeWorkspace` null while naming an id described a state the
+    // real provider never produces, and hid every consumer that reads the role.
+    workspaces: [workspace],
     activeWorkspaceId: TEST_WORKSPACE_ID,
-    activeWorkspace: null,
+    activeWorkspace: workspace,
     setActiveWorkspaceId: vi.fn(),
     projects: [],
     activeProject: null,
@@ -32,6 +42,7 @@ export function testProjectSelection(
     // `ready` here would let a test skip the very branch a consumer takes when
     // there is nothing selected.
     status: 'empty',
+    errorScope: null,
     retry: vi.fn(),
     isLoading: false,
     isError: false,

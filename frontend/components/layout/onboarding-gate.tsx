@@ -13,7 +13,7 @@ import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-c
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
-import type { SelectionStatus } from '@/lib/project/selection';
+import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
 
 /**
  * Routes that manage the WORKSPACE rather than work inside a project.
@@ -97,7 +97,7 @@ function noticeFor(
  */
 export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
-  const { status, activeWorkspaceId, activeWorkspace, retry } = useProjectContext();
+  const { status, errorScope, activeWorkspaceId, activeWorkspace, retry } = useProjectContext();
   // Entitlement decides which controls the shell HAS — the Growth Agent
   // trigger, the capability-gated navigation rows — so waiting for it here is
   // what lets the shell paint complete instead of growing a button and a link
@@ -123,6 +123,9 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
         kind={notice}
         mayCreate={mayCreate}
         workspaceId={activeWorkspaceId}
+        // An allowance failure is a projects-side failure: the workspace
+        // resolved, its remaining capacity did not.
+        errorScope={errorScope ?? 'projects'}
         onRetry={retry}
       />
     );
@@ -157,23 +160,16 @@ function GateNotice({
   kind,
   mayCreate,
   workspaceId,
+  errorScope,
   onRetry,
 }: Readonly<{
   kind: Exclude<NoticeKind, null>;
   mayCreate: boolean;
   workspaceId: string | null;
+  errorScope: FailureScope;
   onRetry: () => void;
 }>) {
-  if (kind === 'failed') {
-    return (
-      <NoticeShell title="Your workspace could not be loaded">
-        <p>Your session is active. Retry to load your workspace, projects and allowance.</p>
-        <Button variant="secondary" className="w-fit" onClick={onRetry}>
-          Retry
-        </Button>
-      </NoticeShell>
-    );
-  }
+  if (kind === 'failed') return <FailureNotice errorScope={errorScope} onRetry={onRetry} />;
   if (kind === 'missing-project') {
     return (
       <NoticeShell title="That project is unavailable">
@@ -193,6 +189,35 @@ function GateNotice({
           : 'You have read-only access to this workspace.'}
       </p>
       <NoticeLink href={noticeHref('/settings', workspaceId)}>Open workspace settings</NoticeLink>
+    </NoticeShell>
+  );
+}
+
+/**
+ * Say which read failed.
+ *
+ * Reporting a workspace failure when only the project list 403'd sent readers
+ * looking for an access problem that was not there — the workspace had
+ * resolved perfectly well.
+ */
+function FailureNotice({
+  errorScope,
+  onRetry,
+}: Readonly<{ errorScope: FailureScope; onRetry: () => void }>) {
+  const workspaceFailed = errorScope === 'workspace';
+  return (
+    <NoticeShell
+      title={
+        workspaceFailed ? 'Your workspace could not be loaded' : 'Projects could not be loaded'
+      }
+    >
+      <p>
+        Your session is active. Retry to load your{' '}
+        {workspaceFailed ? 'workspace and its projects' : 'projects and allowance'}.
+      </p>
+      <Button variant="secondary" className="w-fit" onClick={onRetry}>
+        Retry
+      </Button>
     </NoticeShell>
   );
 }

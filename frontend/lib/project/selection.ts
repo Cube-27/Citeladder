@@ -147,7 +147,11 @@ export function resolveStatus({
   if (hasResolvedProject) return 'ready';
   if (workspaceId === null || !listSettled) return 'resolving';
   if (activeProjectId === null) return 'empty';
-  return 'ready';
+  // An id with no project object behind it is not something a screen can
+  // render against. Reachable only if a caller's pending flag disagrees with
+  // its resolved project, so it fails safe to the loader rather than claiming
+  // a readiness nothing can satisfy.
+  return 'resolving';
 }
 
 /**
@@ -174,6 +178,27 @@ export type FailureInputs = {
   /** The project list failed AND left nothing usable behind. */
   listFailedWithNothingUsable: boolean;
 };
+
+/** Which read failed, so the reader can be told what actually went wrong. */
+export type FailureScope = 'workspace' | 'projects' | null;
+
+/**
+ * Name the failing read.
+ *
+ * Membership outranks the rest: with no workspace resolved, the project reads
+ * never had a chance. Saying "your workspace could not be loaded" when only
+ * the project list 403'd is simply false, and it sends the reader looking for
+ * an access problem that is not there.
+ */
+export function resolveFailureScope({
+  detailFailed,
+  membershipFailed,
+  listFailedWithNothingUsable,
+}: FailureInputs): FailureScope {
+  if (membershipFailed) return 'workspace';
+  if (detailFailed || listFailedWithNothingUsable) return 'projects';
+  return null;
+}
 
 /**
  * Whether a read failed in a way the reader can recover from by retrying.

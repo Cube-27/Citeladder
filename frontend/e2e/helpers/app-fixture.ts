@@ -24,7 +24,7 @@ const FIXTURE_USER = {
 } as const;
 
 /** The workspace every fixture account belongs to. */
-const FIXTURE_WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+export const FIXTURE_WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 const PROJECT_SLOTS_GRANT_ID = '33333333-3333-4333-8333-333333333333';
 const CONTENT_CREATION_GRANT_ID = '55555555-5555-4555-8555-555555555555';
