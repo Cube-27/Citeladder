@@ -279,12 +279,18 @@ def _product_enrichment(obj: dict) -> dict[str, Any]:
     }
 
 
-def _validate_objects(obj: dict) -> tuple[dict, ...]:
+def _validate_objects(obj: dict, *, entity_index: int = 0) -> tuple[dict, ...]:
     """Validate every recognized type declared by one JSON-LD object.
 
     Returns one bounded fact dict per recognized type (``type`` +
     required/present/missing property lists + a ``valid`` flag + enrichment),
     or an empty tuple when the object carries no recognized ``@type``.
+
+    Every fact carries ``entity_index``, the position of the OBJECT it came
+    from. One entity may declare several types -- ``["CollectionPage",
+    "Blog"]`` is ordinary, valid markup -- and without this marker the
+    resulting blocks are indistinguishable from separate entities, so a rule
+    asking "which single entity is this page about" saw two and abstained.
     """
     recognized = STRUCTURED_DATA_RECOGNIZED_TYPES | PRODUCT_RECOGNIZED_SCHEMA_TYPES
     facts: list[dict] = []
@@ -300,6 +306,7 @@ def _validate_objects(obj: dict) -> tuple[dict, ...]:
             {
                 "type": schema_type,
                 "syntax": "json-ld",
+                "entity_index": entity_index,
                 "required": list(required),
                 "present": present,
                 "missing": missing,
@@ -319,6 +326,7 @@ def parse_jsonld_blocks(raw_blocks: list[str], *, max_blocks: int) -> list[dict]
     capped at ``max_blocks`` (invariant 9: deterministic + bounded).
     """
     facts: list[dict] = []
+    entity_index = 0
     for body in raw_blocks:
         if len(facts) >= max_blocks:
             break
@@ -336,10 +344,11 @@ def parse_jsonld_blocks(raw_blocks: list[str], *, max_blocks: int) -> list[dict]
         for obj in _iter_jsonld_objects(parsed):
             if len(facts) >= max_blocks:
                 break
-            for fact in _validate_objects(obj):
+            for fact in _validate_objects(obj, entity_index=entity_index):
                 if len(facts) >= max_blocks:
                     break
                 facts.append(fact)
+            entity_index += 1
     return facts
 
 
