@@ -71,13 +71,10 @@ export function ContentComposer({
     // stayed cramped.
     <section data-component-id="content-composer" className="max-w-[1040px] min-w-0">
       <div className="flex flex-col gap-[var(--workspace-gap)]">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid gap-1">
-            <span className={eyebrowClasses}>New generation</span>
-            <h2 className={textRole('sectionTitle', 'tracking-tight')}>
-              What can I help you create?
-            </h2>
-          </div>
+        <div className="flex min-h-[var(--tab-height)] flex-wrap items-center justify-between gap-3">
+          <h2 className={textRole('sectionTitle', 'tracking-tight')}>
+            What can I help you create?
+          </h2>
         </div>
         {opportunity ? <OpportunityContext opportunity={opportunity} /> : null}
         <TargetPageSelect

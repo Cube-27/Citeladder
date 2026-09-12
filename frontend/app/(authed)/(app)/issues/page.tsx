@@ -12,9 +12,9 @@ import { PageHeader } from '@/components/layout/page-header';
  */
 export default function IssuesPage() {
   return (
-    <>
+    <div className="grid gap-[var(--workspace-gap)]">
       <PageHeader />
       <IssuesScreen />
-    </>
+    </div>
   );
 }

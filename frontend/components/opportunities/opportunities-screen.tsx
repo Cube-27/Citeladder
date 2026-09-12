@@ -22,7 +22,6 @@ import {
 import { queryKeys } from '@/lib/api/query-keys';
 import type { OpportunitySummary } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
-import { formatAudited } from '@/lib/site-health/status';
 import { cn } from '@/lib/utils';
 
 function preparationMessage(state: OpportunitySummary['activation_state']): string {
@@ -67,7 +66,7 @@ function OpportunitiesContent({
     summary,
   );
   return (
-    <div className="grid gap-[var(--page-section-gap)]">
+    <div className="grid gap-[var(--workspace-gap)]">
       <PageHeader
         actions={
           projectId && summary?.computed ? (
@@ -203,7 +202,6 @@ function SummaryStrip({ summary }: Readonly<{ summary: OpportunitySummary }>) {
         ) : null}
       </MetricGroup>
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-muted text-xs">Computed {formatAudited(summary.computed_at)}</p>
         {summary.stale ? (
           <Badge variant="status" value="warning">
             Newer evidence available

@@ -28,7 +28,7 @@ type UserMenuState = {
   setOpen: (presenter: UserMenuPresenter, open: boolean) => void;
 };
 
-type UserMenuPresenter = 'sidebar' | 'compact';
+type UserMenuPresenter = 'sidebar' | 'compact' | 'header';
 
 const UserMenuContext = createContext<UserMenuState | null>(null);
 
@@ -40,7 +40,7 @@ function useUserMenu() {
 
 function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter }>) {
   const { email, logout } = useUserMenu();
-  const compact = presenter === 'compact';
+  const compact = presenter !== 'sidebar';
   return (
     <DropdownContent
       align={compact ? 'end' : 'start'}
@@ -94,7 +94,7 @@ export function UserMenuTrigger({
 }: Readonly<{ className?: string; presenter: UserMenuPresenter }>) {
   const { activePresenter, email, setOpen } = useUserMenu();
   const open = activePresenter === presenter;
-  const compact = presenter === 'compact';
+  const compact = presenter !== 'sidebar';
   return (
     <div className={cn('flex items-center gap-1', className)}>
       <Dropdown open={open} onOpenChange={(next) => setOpen(presenter, next)}>
@@ -102,11 +102,17 @@ export function UserMenuTrigger({
           aria-label={compact ? `Account menu for ${email}` : undefined}
           className="focus-ring hover:bg-accent-soft hover:text-accent-text flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-2 py-1 text-left transition-colors"
         >
+          {/* A solid filled accent disc, not a tinted box. At 24px with two
+              letters in it the glyphs reached the edges and the shape read as
+              a square with rounded corners; 28px with the smaller numeral size
+              leaves the initials inside the circle. Accent fill with its own
+              foreground keeps one contrast pair rather than dark ink on a
+              near-neutral tint. */}
           <span
             aria-hidden
             className={textRole(
               'label',
-              'bg-background-alt flex size-6 shrink-0 items-center justify-center rounded-full uppercase',
+              'bg-accent text-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full text-xs uppercase',
             )}
           >
             {emailInitials(email)}

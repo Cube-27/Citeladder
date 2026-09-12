@@ -260,16 +260,16 @@ export function SettingsScreen() {
             pushed everything below the fold for no reason. */}
           <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
             <section className="grid gap-4">
-              <EditorialSectionHeader
-                title="Account"
-                description="Read-only — shown for reference."
-              />
               <div className="flex items-center gap-4">
                 <span
                   aria-hidden
+                  // The same solid accent disc as the topbar avatar, one size
+                  // up because this one identifies the account rather than
+                  // triggering a menu. A pale tint with accent ink read as a
+                  // disabled chip beside the address it belongs to.
                   className={textRole(
                     'bodyStrong',
-                    'bg-accent-soft text-accent-text flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
+                    'bg-accent text-accent-fg flex size-10 shrink-0 items-center justify-center rounded-full uppercase',
                   )}
                 >
                   {emailInitials(user.email)}

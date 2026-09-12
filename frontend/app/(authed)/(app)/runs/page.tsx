@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { FilterChip } from '@/components/ui/filter-chip';
+import { pageToolbarClasses } from '@/components/ui/workspace';
 import { RunsTable } from '@/components/runs/runs-table';
 import { AuditSchedules } from '@/components/runs/audit-schedules';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -86,17 +87,19 @@ export default function RunsPage() {
             </Button>
           }
         />
-        <fieldset className="flex flex-wrap items-center gap-2" aria-label="Filter by status">
-          {STATUS_FILTERS.map((filter) => (
-            <FilterChip
-              key={filter.id}
-              active={statusFilter === filter.id}
-              onClick={() => setStatusFilter(filter.id)}
-              count={audits.filter(filter.match).length}
-            >
-              {filter.label}
-            </FilterChip>
-          ))}
+        <fieldset aria-label="Filter by status">
+          <div className={pageToolbarClasses}>
+            {STATUS_FILTERS.map((filter) => (
+              <FilterChip
+                key={filter.id}
+                active={statusFilter === filter.id}
+                onClick={() => setStatusFilter(filter.id)}
+                count={audits.filter(filter.match).length}
+              >
+                {filter.label}
+              </FilterChip>
+            ))}
+          </div>
         </fieldset>
       </div>
 

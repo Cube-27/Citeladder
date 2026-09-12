@@ -46,13 +46,26 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        'flex min-w-0 flex-col gap-[var(--page-header-gap)] pt-[var(--page-header-padding-top)] pb-[var(--page-header-padding-bottom)] min-[701px]:flex-row min-[701px]:items-start min-[701px]:justify-between',
+        'flex min-w-0 flex-col gap-[var(--page-header-gap)] pt-[var(--page-header-padding-top)] pb-[var(--page-header-padding-bottom)] min-[701px]:flex-row min-[701px]:items-center min-[701px]:justify-between',
+        // Desktop: a 56px content band — the sidebar's first-row height — plus
+        // the sidebar's own row gap as padding below it. The title therefore
+        // centres on the project switcher's line, and whatever follows starts
+        // exactly where the sidebar's second row starts.
+        'min-[981px]:min-h-[var(--compact-topbar-height)] min-[981px]:py-0',
         !description && !actions && 'max-[700px]:hidden',
+
         className,
       )}
     >
       <div className="min-w-0 flex-1 max-[700px]:sr-only">
-        <h1 className={textRole('pageTitle', 'min-w-0 [overflow-wrap:break-word]')}>{resolved}</h1>
+        {/* The route H1 sits at the object-title rung, not the 26px page-title
+            rung. At 26px it was the largest thing on every screen and competed
+            with the work below it for first read; the shell's rail and header
+            already say where the reader is, so the heading labels the pane
+            rather than announcing it. It stays the one H1 per route. */}
+        <h1 className={textRole('objectTitle', 'min-w-0 [overflow-wrap:break-word]')}>
+          {resolved}
+        </h1>
         {description ? (
           <div className="text-secondary mt-[var(--page-header-heading-gap)] max-w-[700px] text-sm leading-[22px]">
             {description}
@@ -60,7 +73,11 @@ export function PageHeader({
         ) : null}
       </div>
       {actions ? (
-        <div className="flex min-h-[var(--control-height)] shrink-0 flex-wrap items-center gap-2">
+        // The shell paints the account glyph at the end of this same row, so
+        // route actions reserve its width instead of running underneath it.
+        // The reservation is desktop-only, because that is the only width the
+        // glyph appears at; the compact topbar owns it below 981px.
+        <div className="flex min-h-[var(--control-height)] shrink-0 flex-wrap items-center gap-2 min-[981px]:pe-[calc(var(--control-height)+0.75rem)]">
           {actions}
         </div>
       ) : null}

@@ -66,35 +66,45 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         <TooltipProvider>
           <div className="bg-shell relative flex min-h-dvh">
             <aside className="sticky top-0 z-1 hidden h-dvh w-[var(--sidebar-width)] shrink-0 flex-col min-[981px]:flex">
-              {/* Logo row — matches topbar height */}
+              {/* The project selector is the sidebar's first row, at the same
+                  height as the header beside it. The rail reads project →
+                  tools → destinations → brand: the switcher is the thing a
+                  reader changes most, and it sat below a logo that never
+                  changes. Identity moves to the foot of the rail, where the
+                  account row used to be — the account now lives in the header,
+                  so nothing is displaced. */}
               <div className="flex h-[var(--compact-topbar-height)] shrink-0 items-center px-[var(--sidebar-pad-x)]">
-                <Link
-                  href="/projects"
-                  className="focus-ring flex items-center rounded-xs px-2.5 transition-opacity hover:opacity-90"
-                  aria-label="CiteLadder command center"
-                >
-                  <LogoMark variant="sidebar" priority />
-                </Link>
-              </div>
-
-              <div className="px-[var(--sidebar-pad-x)] py-[var(--sidebar-pad-y)]">
                 <ProjectSwitcher />
               </div>
 
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-[var(--sidebar-pad-x)] py-[var(--sidebar-pad-y)]">
-                <CommandPaletteTrigger className="w-full" />
-                <AgentSheetTrigger className="w-full justify-start" />
+              {/* The first row below the switcher is offset by the same
+                  workspace gap the content pane puts between its header and
+                  its first section, so both second rows start at one line. */}
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-[var(--sidebar-pad-x)] pt-[var(--workspace-gap)] pb-[var(--sidebar-pad-y)]">
+                {/* Tab-height rows, so the sidebar's second row and the
+                    content's second row are the same band at the same offset. */}
+                <CommandPaletteTrigger className="h-[var(--tab-height)] w-full" />
+                <AgentSheetTrigger className="h-[var(--tab-height)] w-full justify-start" />
                 <div className="min-h-0 flex-1 overflow-y-auto">
                   <SidebarNav />
                 </div>
               </div>
 
-              <div className="shrink-0 p-[var(--sidebar-pad-x)]">
-                <UserMenuTrigger presenter="sidebar" />
+              <div className="border-border-subtle shrink-0 border-t p-[var(--sidebar-pad-x)]">
+                <Link
+                  href="/projects"
+                  className="focus-ring flex items-center rounded-xs px-2.5 py-1 transition-opacity hover:opacity-90"
+                  aria-label="CiteLadder command center"
+                >
+                  <LogoMark variant="sidebar" priority />
+                </Link>
               </div>
             </aside>
 
             <div className="relative z-1 flex min-w-0 flex-1 flex-col">
+              {/* Compact only, exactly as before. On desktop the account
+                  trigger rides the route's own header row instead, so the shell
+                  adds no second bar above the work. */}
               <header className="bg-shell sticky top-0 z-20 grid h-[var(--compact-topbar-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-[var(--content-gutter)] min-[981px]:hidden">
                 <div className="flex items-center">
                   <Button
@@ -114,7 +124,23 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 </div>
               </header>
 
-              <main id="main" className="app-pane app-pane-workspace flex-1">
+              <main id="main" className="app-pane app-pane-workspace relative flex-1">
+                {/* The account rides the route's own first row rather than a
+                    bar of its own, so the shell adds no second row above the
+                    work. It is positioned rather than placed in PageHeader
+                    because the account belongs to the shell: routes render
+                    their header on its own in tests and previews, and coupling
+                    every one of them to the account controller would make the
+                    header unmountable outside this provider.
+
+                    Desktop only — the compact topbar already carries it. The
+                    inline-size padding matches the pane's gutter so the glyph
+                    lines up with the actions beneath it. */}
+                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-[var(--compact-topbar-height)] items-center justify-end px-[var(--content-gutter)] min-[981px]:flex">
+                  <div className="pointer-events-auto">
+                    <UserMenuTrigger presenter="header" />
+                  </div>
+                </div>
                 <div className="mx-auto grid w-full max-w-[var(--content-max-width)] grid-cols-[minmax(0,1fr)] gap-0 px-[var(--content-gutter)] pb-[var(--content-gutter)]">
                   <div>{children}</div>
                 </div>

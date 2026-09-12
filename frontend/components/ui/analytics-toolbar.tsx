@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
+import { pageToolbarClasses } from '@/components/ui/workspace';
 
 const ACTIVE_CLASS =
   'border-accent-border bg-accent-soft text-accent-text hover:border-accent-border hover:bg-accent-soft hover:text-accent-text';
@@ -43,7 +44,7 @@ export function AnalyticsToolbar<Range extends string, Granularity extends strin
   trailing?: React.ReactNode;
 }>) {
   return (
-    <div className="flex flex-wrap items-center gap-2" data-testid={testId}>
+    <div className={pageToolbarClasses} data-testid={testId}>
       <Dropdown>
         <DropdownTrigger asChild>
           <Button

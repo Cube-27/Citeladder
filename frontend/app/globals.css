@@ -696,26 +696,25 @@ body {
    outline is pulled back to the edge and the glow is the same `--focus-ring`
    token the field recipe above uses. Both are theme-scoped variables, so the
    purple and teal section rebinds carry through untouched. */
-.focus-ring:focus-visible,
-.focus-ring:has(:focus-visible) {
+.focus-ring:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 0;
   box-shadow: var(--focus-ring);
 }
 
-/* A focusable child inside a `focus-ring` wrapper would otherwise paint the
-   global outline as well, which is the "second floating ring" the contract
-   rules out. The wrapper already shows the state. */
-.focus-ring:has(:focus-visible) :focus-visible {
-  outline: none;
-}
+/* Deliberately NOT `:has(:focus-visible)`. Several consumers are containers
+   that hold their own focusable controls — `TabPanel` carries this class and
+   wraps whole forms — so matching on a focused descendant would ring the
+   entire panel and, worse, suppress the outline on the input the reader is
+   actually typing in. The element that receives focus is the element that
+   shows it. Composed controls whose frame owns the ring use `.focus-frame`
+   above, which opts in explicitly. */
 
 /* Forced-colours mode drops both the accent border and the glow, because
    neither survives the system palette. `outline` is the one property the mode
    keeps painting, so the state stays visible there on its own terms. */
 @media (forced-colors: active) {
-  .focus-ring:focus-visible,
-  .focus-ring:has(:focus-visible) {
+  .focus-ring:focus-visible {
     outline: 2px solid Highlight;
   }
 }
