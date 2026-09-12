@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button, type ButtonProps } from '@/components/ui/button';
+import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useActiveProject } from '@/lib/project/project-context';
 
 import { LaunchDialog } from './launch-dialog';
@@ -16,6 +17,7 @@ export function LaunchAuditButton({
   ...buttonProps
 }: Readonly<ButtonProps & { showIcon?: boolean }>) {
   const project = useActiveProject();
+  const projectHref = useProjectHref();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -34,7 +36,7 @@ export function LaunchAuditButton({
           open={open}
           onOpenChange={setOpen}
           projectId={project.id}
-          onLaunched={(audit) => router.push(`/runs/${audit.id}`)}
+          onLaunched={(audit) => router.push(projectHref(`/runs/${audit.id}`))}
         />
       ) : null}
     </>

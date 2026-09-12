@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { buttonVariants } from '@/components/ui/button-variants';
 import { Card, CardContent } from '@/components/ui/card';
 import { CsvImportTrigger } from '@/components/ui/csv-import';
@@ -171,9 +172,9 @@ export function CatalogHeader({
                 onSelect={(file) => importCatalog.mutate(file)}
               />
               <Button asChild variant="ghost" className="justify-start">
-                <a href="/site" target="_blank" rel="noreferrer">
+                <ProjectLink href="/site" target="_blank" rel="noreferrer">
                   Open Site Health
-                </a>
+                </ProjectLink>
               </Button>
             </div>
           </details>

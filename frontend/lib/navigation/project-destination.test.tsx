@@ -18,7 +18,13 @@ vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeProjectId, setActiveProjectId }),
 }));
 
-import { projectDestination, useSelectProject, workspaceDestination } from './project-destination';
+import {
+  newProjectDestination,
+  projectDestination,
+  scopedNavigationDestination,
+  useSelectProject,
+  workspaceDestination,
+} from './project-destination';
 
 const PROJECT_1 = '11111111-1111-4111-8111-111111111111';
 const PROJECT_2 = '22222222-2222-4222-8222-222222222222';
@@ -51,6 +57,23 @@ describe('workspaceDestination', () => {
     expect(workspaceDestination('/onboarding', new URLSearchParams({ new: '1' }), WORKSPACE)).toBe(
       `/onboarding?new=1&workspace=${WORKSPACE}`,
     );
+  });
+});
+
+describe('newProjectDestination', () => {
+  it('keeps every additional-project flow in the active workspace', () => {
+    expect(newProjectDestination(WORKSPACE)).toBe(`/onboarding?new=1&workspace=${WORKSPACE}`);
+  });
+});
+
+describe('scopedNavigationDestination', () => {
+  it('adds project identity to project routes and workspace identity to shared routes', () => {
+    expect(scopedNavigationDestination('/runs', 'project', PROJECT_1, WORKSPACE)).toBe(
+      `/runs?project=${PROJECT_1}`,
+    );
+    expect(
+      scopedNavigationDestination('/settings?tab=providers', 'workspace', PROJECT_1, WORKSPACE),
+    ).toBe(`/settings?tab=providers&workspace=${WORKSPACE}`);
   });
 });
 

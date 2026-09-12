@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { Badge } from '@/components/ui/badge';
 import { Label, textRole } from '@/components/ui/typography';
@@ -99,13 +99,13 @@ function NeighbourList({
               {/* An off-crawl target is counted but was never a node, so it has
                   no detail route to link to. */}
               {neighbour.site_url_id ? (
-                <Link
+                <ProjectLink
                   href={`/site/crawls/${crawlId}/pages/${neighbour.site_url_id}`}
                   className="text-accent-text mono min-w-0 text-xs leading-4 break-all hover:underline"
                   title={neighbour.url}
                 >
                   {neighbour.url}
-                </Link>
+                </ProjectLink>
               ) : (
                 <span
                   className="mono text-secondary min-w-0 text-xs leading-4 break-all"

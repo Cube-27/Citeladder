@@ -1,7 +1,7 @@
 'use client';
 
 import { SearchX } from 'lucide-react';
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -27,7 +27,7 @@ export default function AppNotFound() {
       description="The page you are looking for does not exist or may have moved."
       action={
         <Button asChild>
-          <Link href="/visibility">Back to overview</Link>
+          <ProjectLink href="/visibility">Back to overview</ProjectLink>
         </Button>
       }
     />

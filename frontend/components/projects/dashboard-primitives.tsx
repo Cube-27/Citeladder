@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, GripVertical } from 'lucide-react';
 import { hairlineBandItemClasses } from '@/components/ui/workspace';
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -152,12 +152,12 @@ export function ActionRow({
       </div>
       <div className="grid min-w-0 gap-1">
         <div className="flex flex-wrap items-center gap-2">
-          <Link
+          <ProjectLink
             href={`/opportunities?selected=${action.id}`}
             className={textRole('bodyStrong', 'hover:text-accent-text transition-colors')}
           >
             {action.title}
-          </Link>
+          </ProjectLink>
           {action.severity === 'critical' ? (
             <Badge variant="status" value="danger">
               {action.severity}

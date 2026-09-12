@@ -14,6 +14,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
 import { shouldPollAudit } from '@/lib/runs/status';
+import { useProjectHref } from '@/lib/navigation/project-destination';
 
 /** Poll interval (ms) while a run is active. Polling is the baseline; SSE is optional. */
 // Cadences live in config, not here (invariant 1).
@@ -31,6 +32,7 @@ const POLL_INTERVAL_MS = RUN_ACTIVE_POLL_MS;
 export default function RunDetailPage() {
   const params = useParams<{ runId: string }>();
   const router = useRouter();
+  const projectHref = useProjectHref();
   const searchParams = useSearchParams();
   const runId = params.runId;
   const queryClient = useQueryClient();
@@ -73,7 +75,7 @@ export default function RunDetailPage() {
     mutationFn: () => runsApi.rerunFailures(runId),
     onSuccess: (repairAudit) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.runs.all });
-      router.push(`/runs/${repairAudit.id}`);
+      router.push(projectHref(`/runs/${repairAudit.id}`));
     },
   });
 
@@ -120,7 +122,7 @@ export default function RunDetailPage() {
         onOpenChange={(open) => {
           if (!open) {
             setSelectedExecutionId(null);
-            if (searchParams.has('execution')) router.replace(`/runs/${runId}`);
+            if (searchParams.has('execution')) router.replace(projectHref(`/runs/${runId}`));
           }
         }}
       />

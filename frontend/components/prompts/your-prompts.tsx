@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Search } from 'lucide-react';
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Fragment, useMemo, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
@@ -164,12 +164,12 @@ export function YourPrompts() {
           {topicCount === 1 ? 'topic' : 'topics'}, which are run on each audit.
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <Link
+          <ProjectLink
             href="/prompts?mode=manage"
             className={buttonVariants({ variant: 'secondary', size: 'sm' })}
           >
             Manage prompts
-          </Link>
+          </ProjectLink>
           <LaunchAuditButton size="sm" disabled={activePrompts.length === 0} />
         </div>
       </div>
@@ -197,12 +197,12 @@ export function YourPrompts() {
             Switch to manage mode to add prompts manually, import a CSV, or generate prompts and
             topics with AI.
           </p>
-          <Link
+          <ProjectLink
             href="/prompts?mode=manage"
             className={buttonVariants({ variant: 'secondary', size: 'md' })}
           >
             Manage prompts
-          </Link>
+          </ProjectLink>
         </div>
       ) : visiblePrompts.length === 0 ? (
         <p className={textRole('body', 'py-[var(--empty-state-padding)]')}>

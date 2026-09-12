@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { cn } from '@/lib/utils';
 import { hairlineBandClasses, hairlineBandItemClasses } from '@/components/ui/workspace';
 
@@ -223,7 +223,7 @@ function OverviewMetricCard({
         <p className="text-secondary text-xs">{detail}</p>
       </div>
       <Button asChild variant="ghost" size="sm" className="-ms-2.5 mt-auto justify-self-start">
-        <Link href={href}>View details</Link>
+        <ProjectLink href={href}>View details</ProjectLink>
       </Button>
     </div>
   );

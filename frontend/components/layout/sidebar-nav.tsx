@@ -9,6 +9,7 @@ import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 import { prefetchRoute } from '@/lib/navigation/route-prefetch';
+import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 
@@ -76,21 +77,30 @@ function StationLinks({
 }: Readonly<{ group: NavGroup; onNavigate?: () => void }>) {
   const pathname = usePathname() ?? '';
   const searchParams = useSearchParams();
+  const { activeProjectId, activeWorkspaceId } = useProjectContext();
   const onIntent = useRouteIntent();
   const { hasCapability } = useEntitlement();
   const items = resolveNavigationItems(group.items, hasCapability);
   return (
     <ul className="flex flex-col gap-[var(--sidebar-item-gap)]">
-      {items.map((item) => (
-        <li key={item.href}>
-          <NavLink
-            item={item}
-            active={isNavItemActive(pathname, searchParams, item)}
-            onIntent={onIntent}
-            onNavigate={onNavigate}
-          />
-        </li>
-      ))}
+      {items.map((item) => {
+        const href = scopedNavigationDestination(
+          item.href,
+          item.scope ?? 'project',
+          activeProjectId,
+          activeWorkspaceId,
+        );
+        return (
+          <li key={item.href}>
+            <NavLink
+              item={{ ...item, href }}
+              active={isNavItemActive(pathname, searchParams, item)}
+              onIntent={onIntent}
+              onNavigate={onNavigate}
+            />
+          </li>
+        );
+      })}
     </ul>
   );
 }

@@ -109,6 +109,45 @@ function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>
   );
 }
 
+/**
+ * Repair paragraph breaks introduced around inline citation annotations.
+ *
+ * Some answer transports persist a list item as several blank-line-separated
+ * fragments (including punctuation in a block of its own). Markdown correctly
+ * treats those as separate paragraphs, but the reader sees a sentence pulled
+ * apart vertically. This changes only the rendered copy: the persisted answer
+ * remains the immutable evidence and proper Markdown blocks remain untouched.
+ */
+export function normalizeEvidenceMarkdown(markdown: string): string {
+  const blocks = markdown.replace(/\r\n/g, '\n').split(/\n{2,}/);
+  const normalized: string[] = [];
+  const listItem = /^ {0,3}(?:[-*+] |\d+[.)] )/;
+  const structuralBlock = /^ {0,3}(?:#{1,6} |[-*+] |\d+[.)] |>|```|~~~|\|)/;
+  const sentenceEnd = /[.!?:;\])}"'…](?:[*_~]+)?$/;
+  const punctuationOnly = /^[,.;:!?)]/;
+
+  for (const rawBlock of blocks) {
+    const block = rawBlock.trim();
+    if (!block) continue;
+    const previous = normalized.at(-1);
+    if (!previous) {
+      normalized.push(block);
+      continue;
+    }
+    if (punctuationOnly.test(block)) {
+      normalized[normalized.length - 1] = `${previous}${block}`;
+      continue;
+    }
+    if (listItem.test(previous) && !structuralBlock.test(block) && !sentenceEnd.test(previous)) {
+      normalized[normalized.length - 1] = `${previous} ${block}`;
+      continue;
+    }
+    normalized.push(block);
+  }
+
+  return normalized.join('\n\n');
+}
+
 function EvidenceAnswer({ answerText }: Readonly<{ answerText?: string | null }>) {
   const trimmed = answerText?.trim();
   return (
@@ -116,7 +155,7 @@ function EvidenceAnswer({ answerText }: Readonly<{ answerText?: string | null }>
       <Label>Engine response</Label>
       <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'min-w-0 overflow-hidden')}>
         {trimmed ? (
-          <ContentMarkdown markdown={trimmed} density="compact" />
+          <ContentMarkdown markdown={normalizeEvidenceMarkdown(trimmed)} density="compact" />
         ) : (
           <span className="text-muted text-sm">
             No answer text was captured for this execution.

@@ -503,9 +503,9 @@ describe('OpportunitiesScreen', () => {
     ).not.toBeInTheDocument();
 
     const runLink = within(drawer).getByRole('link', { name: 'View result' });
-    expect(runLink).toHaveAttribute('href', `/runs/${RUN}`);
+    expect(runLink).toHaveAttribute('href', `/runs/${RUN}?project=${PROJECT}`);
     const promptLink = within(drawer).getByRole('link', { name: 'Open prompt library' });
-    expect(promptLink).toHaveAttribute('href', '/prompts');
+    expect(promptLink).toHaveAttribute('href', `/prompts?project=${PROJECT}`);
     expect(
       within(drawer).queryByText(/metric snapshot|formula|analyzer|rule version/i),
     ).not.toBeInTheDocument();
@@ -582,7 +582,10 @@ describe('OpportunitiesScreen', () => {
 
     const drawer = await screen.findByRole('dialog', { name: 'Opportunity detail' });
     const pageLink = within(drawer).getByRole('link', { name: 'View page' });
-    expect(pageLink).toHaveAttribute('href', `/site/crawls/${RUN}/pages/${SITE_URL}`);
+    expect(pageLink).toHaveAttribute(
+      'href',
+      `/site/crawls/${RUN}/pages/${SITE_URL}?project=${PROJECT}`,
+    );
     // No visibility-run or prompt link for a site-sourced row.
     expect(within(drawer).queryByRole('link', { name: 'View result' })).not.toBeInTheDocument();
     expect(

@@ -390,7 +390,7 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
     expect(await screen.findByText(/a run is in progress/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /watch live progress/i })).toHaveAttribute(
       'href',
-      `/runs/${AUDIT_LATEST}`,
+      `/runs/${AUDIT_LATEST}?project=${PROJECT_ID}`,
     );
     // The empty state acknowledges the active run instead of urging a launch.
     expect(
@@ -426,7 +426,7 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
     expect(screen.getByText(/a run is in progress/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /watch live progress/i })).toHaveAttribute(
       'href',
-      `/runs/${AUDIT_OLDER}`,
+      `/runs/${AUDIT_OLDER}?project=${PROJECT_ID}`,
     );
   });
 });

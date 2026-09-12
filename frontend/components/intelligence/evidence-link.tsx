@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 
@@ -30,7 +30,7 @@ export type EvidenceLinkProps = {
 
 export function EvidenceLink({ evidence, className }: Readonly<EvidenceLinkProps>) {
   return (
-    <Link
+    <ProjectLink
       href={evidence.href}
       className={cn(
         textRole(
@@ -45,6 +45,6 @@ export function EvidenceLink({ evidence, className }: Readonly<EvidenceLinkProps
         <span className={textRole('meta', 'shrink-0')}>· {evidence.observedAt}</span>
       ) : null}
       <ArrowUpRight aria-hidden className="mt-0.5 size-3 shrink-0" />
-    </Link>
+    </ProjectLink>
   );
 }

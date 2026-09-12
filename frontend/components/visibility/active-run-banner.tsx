@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { LoaderCircle } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -21,12 +21,12 @@ export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
           A run is in progress ({auditStatusLabel(run.status)}). Results appear here when it
           completes.
         </span>
-        <Link
+        <ProjectLink
           href={`/runs/${run.id}`}
           className={textRole('emphasis', 'text-accent-text whitespace-nowrap hover:underline')}
         >
           Watch live progress →
-        </Link>
+        </ProjectLink>
       </div>
     </Alert>
   );

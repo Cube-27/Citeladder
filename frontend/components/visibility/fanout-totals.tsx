@@ -35,17 +35,8 @@ export function selectionMatchedQueries(
   return isSelectionWide(summary, scopeNarrowed) ? summary.matchedQueries : null;
 }
 
-function Total({ label, value }: Readonly<{ label: string; value: number }>) {
-  return (
-    <div className="grid gap-0.5">
-      <span className={textRole('label')}>{label}</span>
-      <span className={textRole('metric')}>{value}</span>
-    </div>
-  );
-}
-
 /**
- * The two headline figures, and the scope they describe.
+ * Compact totals beside the grouping control, and the scope they describe.
  *
  * They come from the server's aggregation over the COMPLETE selection, so they
  * hold still while the reader pages and types. They used to be derived from
@@ -57,7 +48,7 @@ function Total({ label, value }: Readonly<{ label: string; value: number }>) {
  * changes with them. Selection labels over page numbers is the exact fault
  * this block was written to remove.
  */
-export function SelectionTotals({
+export function FanoutCounts({
   summary,
   fallback,
   selectionWide,
@@ -68,14 +59,17 @@ export function SelectionTotals({
 }>) {
   const distinct = selectionWide ? (summary.distinctQueries ?? 0) : fallback.distinct;
   const occurrences = selectionWide ? (summary.eventCount ?? 0) : fallback.occurrences;
+  const scope = selectionWide ? 'across the selected run set' : 'in the searches shown below';
   return (
-    <div className="flex flex-wrap items-end gap-x-10 gap-y-4 px-[var(--card-padding)] pb-4">
-      <Total label="Distinct searches" value={distinct} />
-      <Total label="Total occurrences" value={occurrences} />
-      <span className={textRole('label', 'text-secondary')}>
-        {selectionWide ? 'across the selected run set' : 'in the searches shown below'}
-      </span>
-    </div>
+    <span
+      className={textRole('label', 'text-secondary whitespace-nowrap')}
+      aria-label={`${distinct} distinct searches and ${occurrences} total occurrences ${scope}`}
+      title={scope}
+    >
+      <span className="mono text-foreground">{distinct}</span>{' '}
+      {distinct === 1 ? 'search' : 'searches'} ·{' '}
+      <span className="mono text-foreground">{occurrences}</span> occurrences
+    </span>
   );
 }
 

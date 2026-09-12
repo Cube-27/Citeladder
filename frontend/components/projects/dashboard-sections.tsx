@@ -5,7 +5,7 @@ import {
   hairlineBandItemClasses,
   ledgerClasses,
 } from '@/components/ui/workspace';
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { Badge } from '@/components/ui/badge';
 import { BrandLogo } from '@/components/ui/brand-logo';
@@ -229,10 +229,10 @@ function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
         </Stack>
       </Stack>
       <Button asChild variant="primary" size="md" className="self-start">
-        <Link href={data.next_action.href}>
+        <ProjectLink href={data.next_action.href}>
           {data.next_action.kind === 'monitor' ? 'View trends' : 'Continue'}
           <ArrowRight className="size-4" aria-hidden />
-        </Link>
+        </ProjectLink>
       </Button>
     </Card>
   );
@@ -276,9 +276,9 @@ function Track({ data }: Readonly<{ data: CommandCenter }>) {
       </Stack>
       <div className="flex justify-end">
         <Button asChild variant="ghost" size="sm">
-          <Link href="/visibility?tab=trends">
+          <ProjectLink href="/visibility?tab=trends">
             Open Trends <ArrowRight className="ms-1 size-3.5" aria-hidden />
-          </Link>
+          </ProjectLink>
         </Button>
       </div>
     </Card>
@@ -320,9 +320,9 @@ export function ActionsAndProof({
           ruled
           actions={
             <Button asChild variant="ghost" size="sm">
-              <Link href="/opportunities">
+              <ProjectLink href="/opportunities">
                 View all <ArrowRight className="ms-1 size-3.5" aria-hidden />
-              </Link>
+              </ProjectLink>
             </Button>
           }
         />

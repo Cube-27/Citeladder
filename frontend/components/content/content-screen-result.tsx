@@ -1,5 +1,5 @@
 import { Download, RefreshCw } from 'lucide-react';
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -141,9 +141,9 @@ function ResultActions({
       />
       {detail.opportunity_id ? (
         <Button asChild variant="secondary" size="md">
-          <Link href={`/opportunities?opportunity_id=${detail.opportunity_id}`}>
+          <ProjectLink href={`/opportunities?opportunity_id=${detail.opportunity_id}`}>
             Return to opportunity
-          </Link>
+          </ProjectLink>
         </Button>
       ) : null}
       <div className="ms-auto flex items-center gap-2">

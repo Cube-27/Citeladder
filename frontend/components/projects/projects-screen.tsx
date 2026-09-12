@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
+import { newProjectDestination } from '@/lib/navigation/project-destination';
 
 import { ProjectEditPanel } from './project-edit-panel';
 import { DashboardScreen } from './dashboard-screen';
@@ -26,7 +27,7 @@ import { DashboardScreen } from './dashboard-screen';
  * just as much as the first did.
  */
 export function ProjectsScreen() {
-  const { projects } = useProjectContext();
+  const { projects, activeWorkspaceId } = useProjectContext();
   const [editing, setEditing] = useState<Project | null>(null);
 
   // OnboardingGate (the layout wrapper) already gates on this exact
@@ -41,7 +42,7 @@ export function ProjectsScreen() {
         description="Add a brand to start tracking how AI answers describe it."
         action={
           <Button asChild>
-            <Link href="/onboarding?new=1">
+            <Link href={newProjectDestination(activeWorkspaceId)}>
               <Plus className="size-4" aria-hidden />
               Add project
             </Link>

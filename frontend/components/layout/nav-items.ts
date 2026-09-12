@@ -10,6 +10,8 @@ export type NavItem = {
   count?: number;
   queryMatch?: { key: string; values: readonly string[]; defaultValue?: string };
   requiredCapability?: string;
+  /** Project is the default; workspace destinations never inherit a project. */
+  scope?: 'project' | 'workspace';
 };
 
 export type NavGroup = {
@@ -76,9 +78,19 @@ export const NAV_GROUPS = [
 ] as const satisfies readonly NavGroup[];
 
 const SUPPORT_NAV_ITEMS = [
-  { label: 'Integrations', href: '/settings?tab=integrations', icon: ICONS.setup },
-  { label: 'Providers', href: '/settings?tab=providers', icon: ICONS.settings },
-  { label: 'Settings', href: '/settings', icon: ICONS.settings },
+  {
+    label: 'Integrations',
+    href: '/settings?tab=integrations',
+    icon: ICONS.setup,
+    scope: 'workspace',
+  },
+  {
+    label: 'Providers',
+    href: '/settings?tab=providers',
+    icon: ICONS.settings,
+    scope: 'workspace',
+  },
+  { label: 'Settings', href: '/settings', icon: ICONS.settings, scope: 'workspace' },
 ] as const satisfies readonly NavItem[];
 
 export type CapabilityResolver = (capability: string) => boolean;

@@ -151,7 +151,6 @@ function DashboardPanel({
           isFiltered={filters.isFiltered}
           onClearFilters={filters.clearEvidenceFilters}
           limit={EVIDENCE_LIMIT}
-          onNextPage={filters.nextPage}
         />
       </VisibilitySources>
     ),
@@ -161,7 +160,6 @@ function DashboardPanel({
         isFiltered={filters.isFiltered}
         onClearFilters={filters.clearEvidenceFilters}
         limit={EVIDENCE_LIMIT}
-        onNextPage={filters.nextPage}
         projectId={queries.projectId}
         runId={queries.activeRunId}
         scope={queries.evidenceScope}

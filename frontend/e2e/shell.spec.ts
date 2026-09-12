@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { instant } from '@next/playwright';
 
-import { FIXTURE_WORKSPACE_ID, stubAuthedShell } from './helpers/app-fixture';
+import { FIXTURE_WORKSPACE_ID, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
 /** Authenticated shell navigation and persistent launcher workflows. */
 test('authenticated shell exposes authorized navigation and search', async ({ page }) => {
@@ -10,7 +10,7 @@ test('authenticated shell exposes authorized navigation and search', async ({ pa
   // the live backend and bouncing the session to /login.
   await stubAuthedShell(page);
 
-  await page.goto('/visibility');
+  await page.goto(fixtureProjectPath('/visibility'));
 
   // The station list and its destinations are pinned against NAV_GROUPS in
   // components/layout/sidebar-nav.test.tsx. What that render cannot show is
@@ -27,7 +27,7 @@ test('authenticated shell exposes authorized navigation and search', async ({ pa
 
 test('primary navigation commits the destination shell instantly', async ({ page }) => {
   await stubAuthedShell(page);
-  await page.goto('/projects');
+  await page.goto(fixtureProjectPath('/projects'));
   await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
 
   await instant(page, async () => {
@@ -47,7 +47,7 @@ test('compact navigation hands focus to persistent tools and returns it on Escap
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await stubAuthedShell(page);
-  await page.goto('/projects');
+  await page.goto(fixtureProjectPath('/projects'));
   const menu = page.getByRole('button', { name: 'Open navigation' });
 
   for (const [trigger, title] of [

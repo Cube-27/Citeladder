@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
+import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
 /**
  * F10 Run/Executions explorer smoke: shell → open a run → open evidence.
@@ -108,14 +108,14 @@ test('shell → open run → open execution evidence', async ({ page }) => {
   );
   await page.route(`**/api/v1/executions/${EXEC_ID}`, (route) => route.fulfill({ json: evidence }));
 
-  await page.goto('/runs');
+  await page.goto(fixtureProjectPath('/runs'));
 
   // Runs list renders and the run links to its detail page.
   await expect(page.getByRole('heading', { level: 1, name: 'Runs' })).toBeVisible();
   await page.getByRole('table').getByRole('link', { name: 'View' }).first().click();
 
   // Run detail: progress panel + executions table.
-  await expect(page).toHaveURL(new RegExp(`/runs/${AUDIT_ID}$`));
+  await expect(page).toHaveURL(fixtureProjectPath(`/runs/${AUDIT_ID}`));
   await expect(page.getByText('Executions')).toBeVisible();
   await page.getByRole('button', { name: 'Evidence' }).first().click();
 

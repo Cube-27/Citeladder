@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
@@ -151,7 +151,7 @@ function OccurrenceList({
     <ul className={ledgerClasses('ruled')}>
       {detail.occurrences.map((occurrence) => (
         <li key={occurrence.occurrence_id} className="grid gap-3 p-3">
-          <Link
+          <ProjectLink
             href={`/site/crawls/${crawlId}/pages/${occurrence.site_url_id}`}
             className="hover:text-accent flex min-w-0 flex-col gap-0.5"
           >
@@ -168,7 +168,7 @@ function OccurrenceList({
             <span className="mono text-muted truncate text-xs" title={occurrence.display_url}>
               {occurrence.display_url}
             </span>
-          </Link>
+          </ProjectLink>
           <IssueEvidence occurrence={occurrence} />
         </li>
       ))}

@@ -179,6 +179,13 @@ export const FIXTURE_PROJECT = makeProject({
   primary_market: 'United States',
 });
 
+/** Build the canonical project-owned URL used by authenticated browser journeys. */
+export function fixtureProjectPath(href: string): string {
+  const target = new URL(href, 'https://citeladder.test');
+  target.searchParams.set('project', FIXTURE_PROJECT.id);
+  return `${target.pathname}?${target.searchParams.toString()}`;
+}
+
 /**
  * Stub the two shell endpoints, plus a 404 catch-all for everything else
  * under `/api/v1/`. The catch-all is what makes screenshots deterministic:

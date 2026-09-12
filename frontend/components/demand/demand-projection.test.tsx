@@ -10,13 +10,18 @@ import { DemandProjection } from './demand-projection';
 // legal inside the hoisted mock factory.
 const project = vi.hoisted(() => ({ id: '11111111-1111-4111-8111-111111111111' }));
 
-vi.mock('@/lib/project/project-context', () => ({
-  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  useProjectContext: () => ({
+vi.mock('@/lib/project/project-context', () => {
+  const context = () => ({
     activeProject: { id: project.id },
+    activeProjectId: project.id,
     isLoading: false,
-  }),
-}));
+  });
+  return {
+    useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    useOptionalProjectContext: context,
+    useProjectContext: context,
+  };
+});
 
 const snapshot = {
   id: '22222222-2222-4222-8222-222222222222',
