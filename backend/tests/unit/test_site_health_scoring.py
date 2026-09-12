@@ -117,6 +117,10 @@ def test_crawl_score_is_equal_mean_of_complete_page_scores() -> None:
 
     assert result.web_fundamentals_score == 50
     assert result.web_fundamentals_score != 10
+    assert all(
+        dimension["reason"] == "no_applicable_checks"
+        for dimension in result.readiness_dimensions
+    )
 
 
 def test_conflicting_duplicate_results_do_not_select_maximum_credit() -> None:

@@ -8,6 +8,7 @@ from app.core.config.site_health_contracts import (
     RULE_OUTCOME_MISSING,
     RULE_OUTCOME_NOT_APPLICABLE,
     RULE_OUTCOME_SATISFIED,
+    RULE_OUTCOME_UNKNOWN,
 )
 from app.core.config.site_health_rule_types import CompositeContract
 
@@ -139,12 +140,12 @@ def check_offer_freshness_signal(facts: dict) -> tuple[str, dict]:
         "timestamp_source": timestamp_source,
         "expiry_state": expiry_state,
     }
+    if _quote_led(facts):
+        return RULE_OUTCOME_NOT_APPLICABLE, {
+            **evidence,
+            "reason": "quote_led_offer",
+        }
     if not offer:
-        if _quote_led(facts):
-            return RULE_OUTCOME_NOT_APPLICABLE, {
-                **evidence,
-                "reason": "quote_led_offer",
-            }
         return RULE_OUTCOME_MISSING, {**evidence, "reason": "offer_state_missing"}
     if not currency:
         return RULE_OUTCOME_MISSING, {
@@ -157,7 +158,12 @@ def check_offer_freshness_signal(facts: dict) -> tuple[str, dict]:
             "reason": "expiry_not_declared",
         }
     if expiry_state != "current":
-        return RULE_OUTCOME_MISSING, {**evidence, "reason": expiry_state}
+        outcome = (
+            RULE_OUTCOME_UNKNOWN
+            if expiry_state == "audit_time_unavailable"
+            else RULE_OUTCOME_MISSING
+        )
+        return outcome, {**evidence, "reason": expiry_state}
     return RULE_OUTCOME_SATISFIED, evidence
 
 

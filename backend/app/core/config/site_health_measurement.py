@@ -183,6 +183,9 @@ WEB_FUNDAMENTALS_AREAS: Final[tuple[str, ...]] = (
 STRUCTURAL_NA_REASONS: Final[frozenset[str]] = frozenset(
     {
         "no_canonical",
+        "quote_led_offer",
+        "expiry_not_declared",
+        "explicit_empty_collection",
         "empty_title",
         "empty_meta_description",
         "no_product_schema",

@@ -847,10 +847,7 @@ async def test_analyze_persists_page_kind_classifier_and_current_versions(
         assert set(by_page_kind) == {"article"}
         assert by_page_kind["article"]["analyzed_count"] == 1
         assert by_page_kind["article"]["web_fundamentals_score"] is None
-        assert by_page_kind["article"]["web_fundamentals_state"] in {
-            "limited_evidence",
-            "not_measured",
-        }
+        assert by_page_kind["article"]["web_fundamentals_state"] == "not_measured"
 
 
 @pytest.mark.asyncio

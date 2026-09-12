@@ -26,7 +26,7 @@ def _rule_evaluation(row: SiteRuleEvaluation) -> RuleEvaluation:
         category=row.category,
         severity=row.severity,
         finding_class=row.finding_class,
-        weight=1.0,
+        weight=row.weight,
         outcome=row.outcome,
         evidence=dict(row.evidence or {}),
         display_applicability=row.display_applicability,
@@ -34,7 +34,7 @@ def _rule_evaluation(row: SiteRuleEvaluation) -> RuleEvaluation:
         reason_code=row.reason_code,
         score_roles=tuple(row.score_roles or ()),
         readiness_dimension=row.readiness_dimension,
-        readiness_weight=1.0 if row.readiness_dimension else 0.0,
+        readiness_weight=row.readiness_weight,
         scope=row.scope,
     )
 

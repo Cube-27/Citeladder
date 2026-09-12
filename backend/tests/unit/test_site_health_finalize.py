@@ -233,6 +233,24 @@ def test_rate_limited_canonical_target_is_unknown_with_attempt_provenance():
     assert ev.evidence["resolution_source_ids"] == [str(task_id), str(attempt_id)]
 
 
+@pytest.mark.parametrize(
+    "declarations", [[], [""], [" "], ["/a", "/b"], ["mailto:a@b.test"]]
+)
+def test_unresolved_canonical_declarations_do_not_borrow_page_fetch_evidence(
+    declarations,
+):
+    artifact_id, analysis_id = uuid.uuid4(), uuid.uuid4()
+    task_id, attempt_id = uuid.uuid4(), uuid.uuid4()
+    base = "https://example.test/page"
+    [(_, evaluation)] = canonical_resolution_evaluations(
+        [(artifact_id, base, {"canonical_declarations": declarations})],
+        analysis_ids_by_artifact={artifact_id: [analysis_id]},
+        resolutions={base: (200, "", False, task_id, attempt_id, None)},
+    )
+    assert evaluation.evidence["target_url"] == ""
+    assert evaluation.evidence["resolution_source_ids"] == []
+
+
 @pytest.mark.asyncio
 async def test_fetch_resolutions_keeps_latest_result_for_final_url():
     requested = "https://example.test/redirect"

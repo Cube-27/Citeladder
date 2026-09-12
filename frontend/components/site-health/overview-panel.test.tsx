@@ -60,6 +60,7 @@ describe('OverviewPanel', () => {
     );
 
     expect(screen.getByRole('img', { name: 'Web Fundamentals score: 81' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'AEO Checklist Completion: 50%' })).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Readiness of classified audited pages score: 62' }),
     ).toBeInTheDocument();

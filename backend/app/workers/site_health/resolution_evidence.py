@@ -155,9 +155,11 @@ def _canonical_declarations(facts: dict) -> list[str]:
 
 def _canonical_target(final_url: object, declarations: list[str]) -> str:
     declared = declarations[0] if len(declarations) == 1 else ""
+    if not declared.strip():
+        return ""
     base = str(final_url or "")
     try:
-        return canonical_or_empty(urljoin(base, declared)) or canonical_or_empty(base)
+        return canonical_or_empty(urljoin(base, declared))
     except ValueError:
         return ""
 

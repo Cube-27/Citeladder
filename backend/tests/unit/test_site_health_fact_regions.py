@@ -44,6 +44,7 @@ from app.core.config.site_health_contracts import (
     [
         '<section role="search"><p>No results found.</p></section>',
         '<section role="list" aria-label="Secondary"><p>No items found.</p></section>',
+        "<p>No items found.</p>",
     ],
 )
 def test_empty_state_from_another_collection_does_not_describe_selected_listing(
@@ -69,9 +70,9 @@ def test_empty_state_inside_selected_collection_is_preserved():
     assert extract_entity_signals(root)["listing"]["has_empty_state"] is True
 
 
-def test_outer_search_empty_state_does_not_describe_nested_catalog():
+def test_outer_collection_empty_state_does_not_describe_nested_catalog():
     root = lxml_html.fromstring(
-        '<main><section role="search"><p>No results found.</p>'
+        '<main><section role="list"><p>No results found.</p>'
         '<section role="list" aria-label="Catalog">'
         '<article><a href="/a">A</a></article>'
         '<article><a href="/b">B</a></article>'

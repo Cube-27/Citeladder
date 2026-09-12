@@ -443,7 +443,7 @@ def _empty_state_belongs_to(node: Any, container: Any, containers: list[Any]) ->
     current = node
     for _depth in range(_config.REGION_MAX_ANCESTOR_DEPTH):
         if current is None:
-            return True
+            return False
         if id(current) in container_ids:
             return current is container
         try:

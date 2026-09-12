@@ -125,6 +125,9 @@ def _dimension_payload(
             scores.append(score)
     applicable = expected > 0
     coverage = None if not applicable else len(scores) / expected
+    reason = "" if len(scores) == expected else "unresolved_checks"
+    if not applicable:
+        reason = "no_applicable_checks"
     return {
         "key": key,
         "dimension_applicability": (
@@ -137,7 +140,7 @@ def _dimension_payload(
         "determinate_points": float(len(scores)),
         "expected_points": float(expected),
         "determinate_checkpoint_ids": [],
-        "reason": "" if scores and len(scores) == expected else "unresolved_checks",
+        "reason": reason,
     }
 
 

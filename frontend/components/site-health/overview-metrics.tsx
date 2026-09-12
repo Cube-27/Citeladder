@@ -24,6 +24,7 @@ type MetricModel = {
   value: number | null;
   coverage: number | null;
   coverageUnit?: 'analyzed' | 'complete';
+  valueUnit?: 'score' | 'percent';
   completion: string;
   detail: string;
   href: string;
@@ -148,6 +149,7 @@ function measurementMetric(context: MetricContext): MetricModel {
   const state = source?.aeo_measurement_state;
   return {
     title: 'AEO Checklist Completion',
+    valueUnit: 'percent',
     value: percentRatio(coverage),
     coverage: coverage ?? null,
     completion: completion(state),
@@ -194,6 +196,7 @@ function OverviewMetricCard({
   value,
   coverage,
   coverageUnit = 'complete',
+  valueUnit = 'score',
   completion: completionLabel,
   detail,
   href,
@@ -213,7 +216,15 @@ function OverviewMetricCard({
         {value === null ? (
           <UnavailableValue state="not_measured" />
         ) : (
-          <ScoreRing value={value} size={64} label={`${title} score: ${Math.round(value)}`} />
+          <ScoreRing
+            value={value}
+            size={64}
+            label={
+              valueUnit === 'percent'
+                ? `${title}: ${Math.round(value)}%`
+                : `${title} score: ${Math.round(value)}`
+            }
+          />
         )}
       </div>
       <div className="grid gap-1">

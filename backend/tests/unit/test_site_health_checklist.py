@@ -6,6 +6,7 @@ import pytest
 
 from app.analysis.site_health.page_analysis import analyze_page
 from app.analysis.site_health.parser import extract_page_facts
+from app.analysis.site_health.product_rules import check_offer_freshness_signal
 from app.analysis.site_health.rules import creates_issue, rule_for
 from app.core.config.site_health_rule_types import SCORE_ROLE_WEB_FUNDAMENTALS
 
@@ -123,6 +124,47 @@ def test_empty_collection_differs_from_uncaptured_collection() -> None:
         atom for atom in empty.evidence["atoms"] if atom["name"] == "item_set"
     )
     assert item_set["evidence"]["empty_state"] is True
+    uncaptured = _evaluations(
+        b"<html><head><title>Products</title></head><body><main>"
+        b"<h1>Products</h1></main></body></html>",
+        url="https://example.test/collections/products",
+    )["aeo.listing_answer_set"]
+    uncaptured_items = next(
+        atom for atom in uncaptured.evidence["atoms"] if atom["name"] == "item_set"
+    )
+    assert uncaptured_items["evidence"]["empty_state"] is False
+    assert uncaptured_items["evidence"] != item_set["evidence"]
+
+
+@pytest.mark.parametrize(
+    ("expiry", "audit_time", "quote_led", "outcome", "reason"),
+    [
+        ("2026-10-01", None, False, "unknown", "audit_time_unavailable"),
+        ("bad-date", None, False, "missing", "invalid_expiry"),
+        ("2026-01-01", "2026-09-12T00:00:00Z", False, "missing", "expired"),
+        ("2026-10-01", "2026-09-12T00:00:00Z", False, "satisfied", ""),
+        ("", None, False, "not_applicable", "expiry_not_declared"),
+        ("bad-date", None, True, "not_applicable", "quote_led_offer"),
+    ],
+)
+def test_offer_freshness_distinguishes_authored_faults_from_unavailable_audit_time(
+    expiry, audit_time, quote_led, outcome, reason
+):
+    actual, evidence = check_offer_freshness_signal(
+        {
+            "structured_data": {
+                "product": {
+                    "price": ["100"],
+                    "price_currency": ["USD"],
+                    "price_valid_until": [expiry],
+                }
+            },
+            "audit_time": audit_time,
+            "cta_text": ["Request a quote"] if quote_led else [],
+        }
+    )
+    assert actual == outcome
+    assert evidence.get("reason", "") == reason
 
 
 def test_question_association_requires_available_answer_regions() -> None:
