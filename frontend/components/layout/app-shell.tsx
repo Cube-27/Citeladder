@@ -77,9 +77,14 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 <ProjectSwitcher />
               </div>
 
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-[var(--sidebar-pad-x)] py-[var(--sidebar-pad-y)]">
-                <CommandPaletteTrigger className="w-full" />
-                <AgentSheetTrigger className="w-full justify-start" />
+              {/* The first row below the switcher is offset by the same
+                  workspace gap the content pane puts between its header and
+                  its first section, so both second rows start at one line. */}
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-[var(--sidebar-pad-x)] pt-[var(--workspace-gap)] pb-[var(--sidebar-pad-y)]">
+                {/* Tab-height rows, so the sidebar's second row and the
+                    content's second row are the same band at the same offset. */}
+                <CommandPaletteTrigger className="h-[var(--tab-height)] w-full" />
+                <AgentSheetTrigger className="h-[var(--tab-height)] w-full justify-start" />
                 <div className="min-h-0 flex-1 overflow-y-auto">
                   <SidebarNav />
                 </div>

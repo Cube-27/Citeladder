@@ -47,10 +47,11 @@ export function PageHeader({
     <header
       className={cn(
         'flex min-w-0 flex-col gap-[var(--page-header-gap)] pt-[var(--page-header-padding-top)] pb-[var(--page-header-padding-bottom)] min-[701px]:flex-row min-[701px]:items-center min-[701px]:justify-between',
-        // Desktop: one 56px band, the same height as the sidebar's first row,
-        // so the route title sits on the project switcher's line instead of
-        // starting a row of its own below it.
-        'min-[981px]:min-h-[var(--compact-topbar-height)] min-[981px]:pt-0',
+        // Desktop: a 56px content band — the sidebar's first-row height — plus
+        // the sidebar's own row gap as padding below it. The title therefore
+        // centres on the project switcher's line, and whatever follows starts
+        // exactly where the sidebar's second row starts.
+        'min-[981px]:min-h-[var(--compact-topbar-height)] min-[981px]:py-0',
         !description && !actions && 'max-[700px]:hidden',
 
         className,
