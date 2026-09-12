@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { useMemo } from 'react';
 
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
@@ -90,12 +90,12 @@ function HierarchyList({
           <li key={node.site_url_id} className="grid min-w-0 gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               {crawlId ? (
-                <Link
+                <ProjectLink
                   href={`/site/crawls/${crawlId}/pages/${node.site_url_id}`}
                   className="text-accent-text min-w-0 text-sm [overflow-wrap:anywhere] hover:underline"
                 >
                   {node.url}
-                </Link>
+                </ProjectLink>
               ) : (
                 <span className="text-foreground min-w-0 text-sm [overflow-wrap:anywhere]">
                   {node.url}

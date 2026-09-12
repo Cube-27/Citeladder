@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import {
   ArrowUpRight,
@@ -379,17 +379,17 @@ export function DemandSignalCard({
           <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
             {signal.signal_type !== 'branded_query_performance' && (
               <Button variant="tonal" size="sm" asChild>
-                <Link href="/opportunities" className="inline-flex items-center">
+                <ProjectLink href="/opportunities" className="inline-flex items-center">
                   <span>Opportunities</span>
                   <ChevronRight className="ml-1 size-3" />
-                </Link>
+                </ProjectLink>
               </Button>
             )}
             <Button variant="tonal" size="sm" asChild>
-              <Link href={demandContentHref(signal)} className="inline-flex items-center">
+              <ProjectLink href={demandContentHref(signal)} className="inline-flex items-center">
                 <FileText className="mr-1 size-3" />
                 <span>Draft</span>
-              </Link>
+              </ProjectLink>
             </Button>
           </div>
         </div>

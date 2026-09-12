@@ -31,6 +31,58 @@ function setVisibilitySearch(search: string) {
 }
 
 describe('VisibilityPage — Mentions & Citations tab', () => {
+  it('uses the shared rows-per-page footer for source domains', async () => {
+    setVisibilitySearch('tab=mentions-citations');
+    const requests: URL[] = [];
+    useBaseVisibilityHandlers([
+      http.get(`/api/v1/projects/${PROJECT_ID}/visibility/sources`, ({ request }) => {
+        requests.push(new URL(request.url));
+        return HttpResponse.json({
+          total: 30,
+          responses: 4,
+          prompts: 2,
+          category_totals: { editorial: 1 },
+          next_offset: 10,
+          as_of: '2026-08-01T10:30:00Z',
+          comparison_status: 'not_requested',
+          items: [
+            {
+              key: 'example.com',
+              responses: 2,
+              prompts: 1,
+              annotations: 2,
+              urls: 1,
+              response_rate: 0.5,
+              prompt_coverage: 0.5,
+              ownership: ['third_party'],
+              categories: ['editorial'],
+              taxonomy_versions: ['1'],
+              category_unavailable: false,
+              response_delta: null,
+            },
+          ],
+        });
+      }),
+      http.get(`/api/v1/projects/${PROJECT_ID}/visibility/evidence`, () =>
+        HttpResponse.json(makeEvidenceResponse()),
+      ),
+    ]);
+    const user = userEvent.setup();
+    renderVisibilityPage();
+
+    expect(await screen.findByText('example.com', {}, { timeout: 5000 })).toBeInTheDocument();
+    await waitFor(() => expect(requests.at(-1)?.searchParams.get('limit')).toBe('10'), {
+      timeout: 5000,
+    });
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
+
+    await user.click(screen.getByRole('combobox', { name: 'Rows per page for domains' }));
+    await user.click(await screen.findByRole('option', { name: '25' }));
+
+    await waitFor(() => expect(requests.at(-1)?.searchParams.get('limit')).toBe('25'));
+  });
+
   it('renders persisted mentions, classified citations, and provenance', async () => {
     setVisibilitySearch('tab=mentions-citations&mode=answers');
     useBaseVisibilityHandlers([
@@ -74,9 +126,9 @@ describe('VisibilityPage — Mentions & Citations tab', () => {
     // different runs, which is exactly what has to reconcile.
     expect(captured!.searchParams.get('audit_id')).toBe(AUDIT_LATEST);
     expect(captured!.searchParams.get('limit')).toBe('100');
-    // The cap-and-notify behaviour became real pagination, so the reader can
-    // reach past the first page rather than being told results were cut off.
-    expect(screen.getByRole('button', { name: 'Next answers' })).toBeInTheDocument();
+    expect(screen.getByText(/Showing newest 100 executions/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'First answers' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next answers' })).not.toBeInTheDocument();
   });
 
   it('renders the empty state when there is no persisted evidence and no narrowing filter', async () => {
@@ -110,7 +162,9 @@ describe('VisibilityPage — Mentions & Citations tab', () => {
     ]);
     renderVisibilityPage();
 
-    expect(await screen.findByText('No results match these filters')).toBeInTheDocument();
+    expect(
+      await screen.findByText('No results match these filters', {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
   });
 
@@ -197,8 +251,10 @@ describe('VisibilityPage — Query fanouts tab', () => {
     expect(
       await screen.findByText('Best affordable clothing stores in Australia?'),
     ).toBeInTheDocument();
-    // Totals count what the loaded window observed, never a project-wide claim.
-    expect(screen.getByText('Distinct searches')).toBeInTheDocument();
+    // Compact totals sit beside the grouping control instead of occupying a
+    // separate summary section above the table.
+    const grouping = screen.getByRole('button', { name: 'Group searches by' });
+    expect(grouping.previousElementSibling).toHaveTextContent(/search.*occurrence/i);
   });
 });
 

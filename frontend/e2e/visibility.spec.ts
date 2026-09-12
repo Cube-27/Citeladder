@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
-import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
+import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
 /**
  * F9 four-tab Visibility workspace e2e (Task 4).
@@ -368,7 +368,7 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   const { requests, evidenceUrls } = await setup(page, {
     evidence: fanoutStatesResponse(),
   });
-  await page.goto('/visibility');
+  await page.goto(fixtureProjectPath('/visibility'));
 
   await expect(page.getByText('Over time', { exact: true })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
@@ -402,7 +402,7 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
 test('mobile viewport keeps the visibility tabs and one active panel usable', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 720 });
   await setup(page);
-  await page.goto('/visibility');
+  await page.goto(fixtureProjectPath('/visibility'));
 
   const tablist = page.getByRole('tablist', { name: 'Visibility views' });
   await expect(tablist).toBeVisible();
@@ -440,7 +440,7 @@ for (const width of [1280, 375]) {
         truncated: false,
       },
     });
-    await page.goto(`/visibility?run=${AUDIT_EARLIER}&engine=gemini`);
+    await page.goto(fixtureProjectPath(`/visibility?run=${AUDIT_EARLIER}&engine=gemini`));
     // The Next.js dev overlay is pinned bottom-left and, at 375px, sits over
     // the engine table at the bottom of this page — it swallowed the click
     // while the button underneath reported visible, enabled and stable. It
@@ -456,7 +456,7 @@ for (const width of [1280, 375]) {
     expect(evidenceUrl.searchParams.get('engine')).toBe('gemini');
     await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toHaveAttribute(
       'href',
-      `/runs/${AUDIT_EARLIER}?execution=${TASK_A}`,
+      fixtureProjectPath(`/runs/${AUDIT_EARLIER}?execution=${TASK_A}`),
     );
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`run=${AUDIT_EARLIER}.*engine=gemini`));

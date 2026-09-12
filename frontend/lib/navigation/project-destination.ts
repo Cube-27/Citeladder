@@ -1,9 +1,9 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
-import { useProjectContext } from '@/lib/project/project-context';
+import { useOptionalProjectContext, useProjectContext } from '@/lib/project/project-context';
 
 const PROJECT_PARAM = 'project';
 const WORKSPACE_PARAM = 'workspace';
@@ -48,6 +48,68 @@ export function workspaceDestination(
   // history, where it long outlives the single use it was minted for.
   params.delete(INVITATION_TOKEN_PARAM);
   return `${pathname}?${params.toString()}`;
+}
+
+/** The one workspace-bound destination for every additional-project entry point. */
+export function newProjectDestination(workspaceId: string | null): string {
+  const params = new URLSearchParams({ new: '1' });
+  return workspaceId
+    ? workspaceDestination('/onboarding', params, workspaceId)
+    : `/onboarding?${params.toString()}`;
+}
+
+/** Scope a registered shell destination before it is rendered or invoked. */
+export function scopedNavigationDestination(
+  href: string,
+  scope: 'project' | 'workspace',
+  projectId: string | null,
+  workspaceId: string | null,
+): string {
+  const hashIndex = href.indexOf('#');
+  const hash = hashIndex === -1 ? '' : href.slice(hashIndex);
+  const pathAndSearch = hashIndex === -1 ? href : href.slice(0, hashIndex);
+  const queryIndex = pathAndSearch.indexOf('?');
+  const pathname = queryIndex === -1 ? pathAndSearch : pathAndSearch.slice(0, queryIndex);
+  const search =
+    queryIndex === -1 ? null : new URLSearchParams(pathAndSearch.slice(queryIndex + 1));
+  if (scope === 'workspace') {
+    return workspaceId ? `${workspaceDestination(pathname, search, workspaceId)}${hash}` : href;
+  }
+  return projectId ? `${projectDestination(pathname, search, projectId)}${hash}` : href;
+}
+
+/** Return the canonical destination builder for links owned by the active project. */
+export function useProjectHref() {
+  const activeProjectId = useOptionalProjectContext()?.activeProjectId ?? null;
+  return useCallback(
+    (href: string, projectId: string | null = activeProjectId) =>
+      scopedNavigationDestination(href, 'project', projectId, null),
+    [activeProjectId],
+  );
+}
+
+/**
+ * Give a resolved project route one URL identity without remounting its shell.
+ *
+ * Bare app URLs may bootstrap from device selection, but once that selection
+ * is authorized the address is replaced with the explicit project destination.
+ * Replacement is bookkeeping, so it creates no duplicate Back entry.
+ */
+export function useCanonicalProjectUrl(enabled: boolean) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { activeProjectId } = useProjectContext();
+
+  useEffect(() => {
+    if (!enabled || !pathname || !activeProjectId || searchParams?.has(PROJECT_PARAM)) return;
+    router.replace(
+      `${projectDestination(pathname, searchParams, activeProjectId)}${window.location.hash}`,
+      {
+        scroll: false,
+      },
+    );
+  }, [activeProjectId, enabled, pathname, router, searchParams]);
 }
 
 export type SelectProjectOptions = {

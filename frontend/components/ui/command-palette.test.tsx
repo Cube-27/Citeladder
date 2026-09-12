@@ -5,11 +5,13 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 // Hoisted so the mock factories below — which vitest lifts above these
 // statements — can reference the state safely rather than relying on the
 // factories happening to run lazily.
-const { push, setActiveProjectId, projectContext } = vi.hoisted(() => {
+const { push, replace, setActiveProjectId, projectContext } = vi.hoisted(() => {
   const pushFn = vi.fn();
+  const replaceFn = vi.fn();
   const setActiveProjectIdFn = vi.fn();
   return {
     push: pushFn,
+    replace: replaceFn,
     setActiveProjectId: setActiveProjectIdFn,
     projectContext: {
       projects: [
@@ -17,6 +19,7 @@ const { push, setActiveProjectId, projectContext } = vi.hoisted(() => {
         { id: 'p2', brand_name: 'Orbit' },
       ],
       activeProjectId: 'p1',
+      activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       setActiveProjectId: setActiveProjectIdFn,
     },
   };
@@ -25,7 +28,7 @@ const { push, setActiveProjectId, projectContext } = vi.hoisted(() => {
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => '/projects',
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
 }));
 
 vi.mock('@/lib/project/project-context', () => ({
@@ -60,6 +63,7 @@ async function open() {
 describe('CommandPalette', () => {
   beforeEach(() => {
     push.mockClear();
+    replace.mockClear();
     setActiveProjectId.mockClear();
   });
 
@@ -106,14 +110,20 @@ describe('CommandPalette', () => {
   it('navigates to the highlighted route on Enter', async () => {
     const user = await open();
     await user.keyboard('demand{Enter}');
-    expect(push).toHaveBeenCalledWith('/demand');
+    expect(push).toHaveBeenCalledWith('/demand?project=p1');
   });
 
-  it('switches project rather than navigating', async () => {
+  it('keeps workspace commands out of project scope', async () => {
+    const user = await open();
+    await user.click(screen.getByRole('option', { name: /^settings$/i }));
+    expect(push).toHaveBeenCalledWith('/settings?workspace=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  });
+
+  it('switches project through the canonical project destination', async () => {
     const user = await open();
     await user.keyboard('orbit{Enter}');
     expect(setActiveProjectId).toHaveBeenCalledWith('p2');
-    expect(push).not.toHaveBeenCalled();
+    expect(push).toHaveBeenCalledWith('/projects?project=p2');
   });
 
   it('moves the selection with the arrow keys', async () => {

@@ -20,6 +20,7 @@ const pushMock = vi.fn();
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useActiveProject: () => ({ id: PROJECT_ID, workspace_id: WORKSPACE_ID, prompt_sets: [] }),
+  useOptionalProjectContext: () => ({ activeProjectId: PROJECT_ID }),
 }));
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
@@ -107,7 +108,7 @@ describe('RunsPage', () => {
     expect(within(row).getByText('6')).toBeInTheDocument();
     expect(within(row).getByRole('link', { name: 'View' })).toHaveAttribute(
       'href',
-      `/runs/${AUDIT_ID}`,
+      `/runs/${AUDIT_ID}?project=${PROJECT_ID}`,
     );
     // Mono page indicator on the pagination footer.
     expect(
@@ -147,7 +148,10 @@ describe('RunsPage', () => {
 
     const links = within(table).getAllByRole('link', { name: 'View' });
     expect(links).toHaveLength(1);
-    expect(links[0]).toHaveAttribute('href', '/runs/abababab-abab-4bab-8bab-abababababab');
+    expect(links[0]).toHaveAttribute(
+      'href',
+      `/runs/abababab-abab-4bab-8bab-abababababab?project=${PROJECT_ID}`,
+    );
     expect(
       screen.getByText(
         (_, el) =>
@@ -231,7 +235,9 @@ describe('RunsPage', () => {
       repetitions: 1,
       audit_scope: 'brand',
     });
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/runs/${AUDIT_ID}`));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/runs/${AUDIT_ID}?project=${PROJECT_ID}`),
+    );
     expect(queryClient.getQueryData(queryKeys.runs.detail(AUDIT_ID))).toMatchObject(
       audit({ status: 'queued' }),
     );

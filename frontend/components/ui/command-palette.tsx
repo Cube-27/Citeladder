@@ -11,6 +11,10 @@ import { Button } from '@/components/ui/button';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useProjectContext } from '@/lib/project/project-context';
+import {
+  scopedNavigationDestination,
+  useSelectProject,
+} from '@/lib/navigation/project-destination';
 import { cn } from '@/lib/utils';
 
 /**
@@ -102,7 +106,8 @@ function toSections(results: readonly Command[]) {
 
 export function CommandPalette() {
   const router = useRouter();
-  const { projects, activeProjectId, setActiveProjectId } = useProjectContext();
+  const { projects, activeProjectId, activeWorkspaceId } = useProjectContext();
+  const selectProject = useSelectProject();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
@@ -185,7 +190,15 @@ export function CommandPalette() {
         label: item.label,
         group: group.title,
         icon: item.icon,
-        run: () => router.push(item.href),
+        run: () =>
+          router.push(
+            scopedNavigationDestination(
+              item.href,
+              item.scope ?? 'project',
+              activeProjectId,
+              activeWorkspaceId,
+            ),
+          ),
       })),
     );
 
@@ -199,11 +212,11 @@ export function CommandPalette() {
       group: 'Switch project',
       logoUrl: project.brand?.logo_url,
       hint: project.id === activeProjectId ? 'Current' : undefined,
-      run: () => setActiveProjectId(project.id),
+      run: () => selectProject(project.id),
     }));
 
     return [...navigation, ...projectCommands];
-  }, [router, projects, activeProjectId, setActiveProjectId, hasCapability]);
+  }, [router, projects, activeProjectId, activeWorkspaceId, selectProject, hasCapability]);
 
   const results = useMemo(() => {
     const needle = query.trim().toLowerCase();

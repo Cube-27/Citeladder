@@ -20,7 +20,11 @@ vi.mock('@tanstack/react-query', () => ({
 
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  useProjectContext: () => ({ activeProject: { id: '11111111-1111-4111-8111-111111111111' } }),
+  useProjectContext: () => ({
+    activeProject: { id: '11111111-1111-4111-8111-111111111111' },
+    activeProjectId: '11111111-1111-4111-8111-111111111111',
+    activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  }),
 }));
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
@@ -58,17 +62,20 @@ describe('station navigation', () => {
     expect(NAV_GROUPS.map((group) => group.title)).toEqual(['Overview', 'Analyze', 'Act', 'Track']);
     expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute(
       'href',
-      '/site?tab=pages',
+      '/site?tab=pages&project=11111111-1111-4111-8111-111111111111',
     );
     expect(screen.getByRole('link', { name: 'Opportunities' })).toHaveAttribute(
       'href',
-      '/opportunities',
+      '/opportunities?project=11111111-1111-4111-8111-111111111111',
     );
     expect(screen.getByRole('link', { name: 'Commerce Suite' })).toHaveAttribute(
       'href',
-      '/products',
+      '/products?project=11111111-1111-4111-8111-111111111111',
     );
-    expect(screen.getByRole('link', { name: 'Prompts' })).toHaveAttribute('href', '/prompts');
+    expect(screen.getByRole('link', { name: 'Prompts' })).toHaveAttribute(
+      'href',
+      '/prompts?project=11111111-1111-4111-8111-111111111111',
+    );
     expect(screen.queryByRole('link', { name: 'Growth Agent' })).not.toBeInTheDocument();
   });
 

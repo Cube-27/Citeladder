@@ -13,7 +13,7 @@ import type { WorkspaceEntitlement } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
-import { workspaceDestination } from '@/lib/navigation/project-destination';
+import { useCanonicalProjectUrl, workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
 
@@ -26,7 +26,7 @@ import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
  * project creation answered a question nobody asked and made an empty
  * workspace unmanageable.
  */
-const WORKSPACE_ONLY_PREFIXES = ['/settings', '/invitations'] as const;
+const WORKSPACE_ONLY_PREFIXES = ['/onboarding', '/settings', '/invitations'] as const;
 
 function isWorkspaceOnlyRoute(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -129,6 +129,7 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   const redirecting = status === 'empty' && projectRequired && mayCreate && allowance === 'spare';
 
   useOnboardingRedirect(redirecting, activeWorkspaceId);
+  useCanonicalProjectUrl(status === 'ready' && projectRequired);
 
   // LOADING is answered before any notice. An entitlement still in flight
   // leaves the allowance 'unknown', which past this point means "settled and

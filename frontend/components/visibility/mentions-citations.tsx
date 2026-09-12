@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import {
   EvidenceEmpty,
-  EvidencePagination,
   EvidenceBusyBar,
   EvidenceError,
   EvidenceFilteredEmpty,
@@ -50,13 +49,7 @@ function safeUrl(value?: string): string | null {
  * States: skeleton, retryable error, empty (no persisted evidence), filtered
  * empty, and a truncation notice when the newest window overflowed.
  */
-export function MentionsCitations({
-  query,
-  isFiltered,
-  onClearFilters,
-  limit,
-  onNextPage,
-}: EvidenceTabProps) {
+export function MentionsCitations({ query, isFiltered, onClearFilters, limit }: EvidenceTabProps) {
   const items = query.data?.items ?? [];
   const truncated = query.data?.truncated ?? false;
   // Before the early returns: a hook cannot sit behind a conditional.
@@ -98,7 +91,6 @@ export function MentionsCitations({
       items={items}
       truncated={truncated}
       limit={limit}
-      onNextPage={onNextPage}
       paging={{ page, setPage, pageCount, from, to }}
     />
   );
@@ -117,14 +109,12 @@ function LoadedEvidence({
   items,
   truncated,
   limit,
-  onNextPage,
   paging,
 }: Readonly<{
   query: EvidenceTabProps['query'];
   items: readonly VisibilityExecutionEvidence[];
   truncated: boolean;
   limit: EvidenceTabProps['limit'];
-  onNextPage: EvidenceTabProps['onNextPage'];
   paging: ReturnType<typeof useTablePage>;
 }>) {
   const { page, setPage, pageCount, from, to } = paging;
@@ -163,15 +153,7 @@ function LoadedEvidence({
             onPageChange={setPage}
           />
         ) : null}
-        {onNextPage ? (
-          <EvidencePagination
-            nextCursor={query.data?.next_cursor ?? null}
-            asOf={query.data?.as_of ?? null}
-            onPage={onNextPage}
-          />
-        ) : truncated ? (
-          <TruncationNotice limit={limit} />
-        ) : null}
+        {truncated ? <TruncationNotice limit={limit} /> : null}
       </CardContent>
     </Card>
   );

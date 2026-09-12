@@ -221,7 +221,7 @@ describe('ContentScreen clean composer', () => {
     renderScreen();
     expect(await screen.findByRole('link', { name: /go to projects/i })).toHaveAttribute(
       'href',
-      '/projects',
+      '/projects?project=11111111-1111-4111-8111-111111111111',
     );
     expect(screen.queryByRole('button', { name: 'Generate' })).not.toBeInTheDocument();
   });

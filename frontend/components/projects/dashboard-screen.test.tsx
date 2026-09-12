@@ -123,20 +123,24 @@ vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
-vi.mock('@/lib/project/project-context', () => ({
-  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  // `ProjectControls` gates the create affordance on the caller's role as
-  // well as on the remaining allowance; this fixture is an Owner.
-  useWorkspaceCapability: () => true,
-  useActiveProject: () => project,
-  useProjectContext: () => ({
+vi.mock('@/lib/project/project-context', () => {
+  const context = () => ({
     projects: [project],
     activeProject: project,
     activeProjectId: project.id,
     setActiveProjectId: vi.fn(),
     isLoading: false,
-  }),
-}));
+  });
+  return {
+    useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    // `ProjectControls` gates the create affordance on the caller's role as
+    // well as on the remaining allowance; this fixture is an Owner.
+    useWorkspaceCapability: () => true,
+    useActiveProject: () => project,
+    useOptionalProjectContext: context,
+    useProjectContext: context,
+  };
+});
 vi.mock('@/lib/api/projects', () => ({
   projectsApi: { getCommandCenter: vi.fn(), downloadExecutiveReport },
 }));

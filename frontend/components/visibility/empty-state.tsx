@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Rocket } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
@@ -31,7 +31,7 @@ export function VisibilityEmptyState({
       action={
         hasActiveRun ? (
           <Button asChild variant="secondary" size="md">
-            <Link href="/runs">View runs</Link>
+            <ProjectLink href="/runs">View runs</ProjectLink>
           </Button>
         ) : (
           <LaunchAuditButton size="md">Launch your first audit</LaunchAuditButton>

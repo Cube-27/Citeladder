@@ -6,13 +6,15 @@ import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
 
 const replace = vi.fn();
 let pathname = '/projects';
+let search = new URLSearchParams();
 vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => search,
   useRouter: () => ({ replace, push: vi.fn() }),
   usePathname: () => pathname,
 }));
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const PROJECT = '11111111-1111-4111-8111-111111111111';
 
 type Role = 'owner' | 'admin' | 'member' | 'viewer';
 
@@ -21,6 +23,7 @@ let contextValue: {
   errorScope: FailureScope;
   activeWorkspaceId: string | null;
   activeWorkspace: { id: string; role: Role; capabilities: readonly string[] } | null;
+  activeProjectId: string | null;
   retry: () => void;
 };
 vi.mock('@/lib/project/project-context', () => ({
@@ -72,6 +75,7 @@ function setContext(
     errorScope,
     activeWorkspaceId: WORKSPACE,
     activeWorkspace: { id: WORKSPACE, role, capabilities: CAPABILITIES[role] },
+    activeProjectId: status === 'ready' ? PROJECT : null,
     retry: vi.fn(),
   };
 }
@@ -79,12 +83,27 @@ function setContext(
 beforeEach(() => {
   replace.mockClear();
   pathname = '/projects';
+  search = new URLSearchParams();
   setContext('ready');
   entitlement = { isLoading: false, entitlement: withSlots(1) };
 });
 
 describe('OnboardingGate', () => {
-  it('renders the app once the workspace and project are resolved', () => {
+  it('renders the app while replacing a bare project route with its canonical URL', async () => {
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    expect(screen.getByText('workspace')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT}`, { scroll: false }),
+    );
+  });
+
+  it('does not navigate when the URL already names the resolved project', () => {
+    search = new URLSearchParams({ project: PROJECT });
     render(
       <OnboardingGate>
         <p>workspace</p>
@@ -183,6 +202,20 @@ describe('OnboardingGate', () => {
 
     expect(replace).not.toHaveBeenCalled();
     expect(screen.getByText('settings')).toBeInTheDocument();
+  });
+
+  it('preserves the workspace-scoped additional-project onboarding URL', () => {
+    pathname = '/onboarding';
+    search = new URLSearchParams({ new: '1', workspace: WORKSPACE });
+
+    render(
+      <OnboardingGate>
+        <p>onboarding</p>
+      </OnboardingGate>,
+    );
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByText('onboarding')).toBeInTheDocument();
   });
 
   it('does not loop a Viewer through a creation flow that would refuse them', () => {

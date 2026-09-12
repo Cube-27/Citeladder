@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { z } from 'zod';
 import type { visibilitySourcesSchema } from '@/lib/api/schemas/visibility-evidence';
 import type { Visibility } from '@/lib/api/types';
@@ -21,8 +21,8 @@ import {
 } from '@/components/ui/table';
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { SOURCE_MODES } from '@/lib/config/visibility';
-import { EVIDENCE_LIMIT } from '@/lib/config/operational';
-import { TablePagination } from '@/components/ui/table-pagination';
+import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
+import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
@@ -68,6 +68,7 @@ export function VisibilitySources({
   const [domain] = useUrlState('source_domain', optionalStringUrlCodec);
   const [offset] = useUrlState('source_offset', optionalStringUrlCodec);
   const [asOf] = useUrlState('source_as_of', optionalStringUrlCodec);
+  const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   // A different type is a different result set, so its offset cursor cannot
   // carry over — page three of one filter is not page three of another.
   const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec, {
@@ -81,6 +82,7 @@ export function VisibilitySources({
     offset,
     asOf,
     sourceType,
+    pageSize,
   );
 
   return (
@@ -99,6 +101,11 @@ export function VisibilitySources({
           sourceQuery={sourceQuery}
           domain={domain}
           offset={params.offset}
+          pageSize={pageSize}
+          onPageSizeChange={(value) => {
+            setPageSize(isTablePageSize(value) ? value : TABLE_DEFAULT_PAGE_SIZE);
+            setUrlParams({ source_offset: null, source_as_of: null });
+          }}
           sourceType={sourceType}
           onChangeSourceType={setSourceType}
         />
@@ -114,6 +121,8 @@ function SourcesPanel({
   sourceQuery,
   domain,
   offset,
+  pageSize,
+  onPageSizeChange,
   sourceType,
   onChangeSourceType,
 }: Readonly<{
@@ -122,6 +131,8 @@ function SourcesPanel({
   sourceQuery: ReturnType<typeof useSourceAnalysis>['sourceQuery'];
   domain: string | null;
   offset: number;
+  pageSize: number;
+  onPageSizeChange: (value: number) => void;
   sourceType: string | null;
   onChangeSourceType: (value: string | null) => void;
 }>) {
@@ -193,7 +204,14 @@ function SourcesPanel({
                   : 'No cited sources in this selection.'}
               </p>
             ) : null}
-            <SourcePaging data={data} domain={domain} offset={offset} />
+            <SourcePaging
+              data={data}
+              domain={domain}
+              offset={offset}
+              pageSize={pageSize}
+              busy={sourceQuery.isFetching}
+              onPageSizeChange={onPageSizeChange}
+            />
           </CardContent>
         </Card>
         <SourceTypes types={types} selected={sourceType} />
@@ -342,26 +360,44 @@ function SourcePaging({
   data,
   domain,
   offset,
-}: Readonly<{ data?: SourceData; domain: string | null; offset: number }>) {
+  pageSize,
+  busy,
+  onPageSizeChange,
+}: Readonly<{
+  data?: SourceData;
+  domain: string | null;
+  offset: number;
+  pageSize: number;
+  busy: boolean;
+  onPageSizeChange: (value: number) => void;
+}>) {
   if (!data) return null;
   const total = data.total;
-  const page = Math.floor(offset / EVIDENCE_LIMIT) + 1;
-  const pageCount = Math.max(1, Math.ceil(total / EVIDENCE_LIMIT));
   const from = total === 0 ? 0 : offset + 1;
   const to = Math.min(total, offset + data.items.length);
   return (
-    <TablePagination
-      page={page}
-      pageCount={pageCount}
+    <CursorTableFooter
       from={from}
       to={to}
       total={total}
       noun={domain ? 'pages' : 'domains'}
-      onPageChange={(next) => {
-        const nextOffset = (next - 1) * EVIDENCE_LIMIT;
+      pageSize={pageSize}
+      onPageSizeChange={onPageSizeChange}
+      canPrev={offset > 0}
+      canNext={data.next_offset !== null}
+      busy={busy}
+      onPrev={() => {
+        const nextOffset = Math.max(0, offset - pageSize);
         setUrlParams({
           source_offset: nextOffset ? String(nextOffset) : null,
           source_as_of: nextOffset ? (data.as_of ?? null) : null,
+        });
+      }}
+      onNext={() => {
+        if (data.next_offset === null) return;
+        setUrlParams({
+          source_offset: String(data.next_offset),
+          source_as_of: data.as_of ?? null,
         });
       }}
     />
@@ -376,6 +412,7 @@ function useSourceAnalysis(
   offset: string | null,
   asOf: string | null,
   sourceType: string | null,
+  pageSize: number,
 ) {
   const comparison = queries.visibilityQuery.data?.comparison;
   const params = {
@@ -389,6 +426,7 @@ function useSourceAnalysis(
     source_type: set(sourceType),
     offset: Math.max(0, Number.parseInt(offset ?? '0', 10) || 0),
     as_of: set(asOf),
+    limit: pageSize,
   };
   const sourceQuery = useQuery({
     queryKey: queryKeys.visibility.sources(queries.projectId ?? '', params),

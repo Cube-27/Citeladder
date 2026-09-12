@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,7 @@ export function IssuesScreen() {
               will appear here once a crawl finishes.
             </p>
             <Button variant="secondary" asChild>
-              <Link href="/site">Go to Website</Link>
+              <ProjectLink href="/site">Go to Website</ProjectLink>
             </Button>
           </CardContent>
         </Card>

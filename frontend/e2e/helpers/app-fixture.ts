@@ -7,8 +7,9 @@ import { makeProject } from '../../test/fixtures/project';
  *
  * The app authenticates by cookie session: `SessionGuard` calls
  * `GET /api/v1/auth/me`, `ProjectProvider` calls `GET /api/v1/workspaces` and
- * `GET /api/v1/projects`, and `EntitlementProvider` calls the billing
- * entitlement and usage endpoints. The workspace list is what resolves the
+ * `GET /api/v1/projects` plus the selected project detail, and
+ * `EntitlementProvider` calls the billing entitlement and usage endpoints.
+ * The workspace list is what resolves the
  * shell's workspace — it is answered independently of any project, because a
  * workspace with none is still a workspace.
  * Stubbing those endpoints is the whole "logged in with one project" arrangement
@@ -179,6 +180,13 @@ export const FIXTURE_PROJECT = makeProject({
   primary_market: 'United States',
 });
 
+/** Build the canonical project-owned URL used by authenticated browser journeys. */
+export function fixtureProjectPath(href: string): string {
+  const target = new URL(href, 'https://citeladder.test');
+  target.searchParams.set('project', FIXTURE_PROJECT.id);
+  return `${target.pathname}?${target.searchParams.toString()}`;
+}
+
 /**
  * Stub the two shell endpoints, plus a 404 catch-all for everything else
  * under `/api/v1/`. The catch-all is what makes screenshots deterministic:
@@ -242,6 +250,11 @@ export async function stubAuthedShell(
     route.fulfill({ json: workspacesFor(projects) }),
   );
   await page.route('**/api/v1/projects', (route) => route.fulfill({ json: projects }));
+  for (const project of projects) {
+    await page.route(`**/api/v1/projects/${project.id}`, (route) =>
+      route.fulfill({ json: project }),
+    );
+  }
   await page.route('**/api/v1/billing/entitlement', (route) =>
     route.fulfill({ json: PERMITTED_ENTITLEMENT }),
   );

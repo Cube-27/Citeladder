@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
@@ -101,9 +101,13 @@ function ExecutionsSection({
 export function RunDetailView(props: RunDetailViewProps) {
   return (
     <div className="grid gap-[var(--workspace-gap)]">
-      <Link href="/runs" className={textRole('label', 'text-accent-text hover:underline')}>
+      <ProjectLink
+        href="/runs"
+        projectId={props.audit?.project_id}
+        className={textRole('label', 'text-accent-text hover:underline')}
+      >
         ← Back to runs
-      </Link>
+      </ProjectLink>
       <AuditSection {...props} />
       <div className="grid gap-3">
         <SectionTitle>Executions</SectionTitle>

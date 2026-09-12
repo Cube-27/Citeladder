@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { useRouter } from 'next/navigation';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
@@ -30,6 +30,7 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
+import { useProjectHref } from '@/lib/navigation/project-destination';
 
 /**
  * Analyzed-pages table (Slice 7, mockups 712 + 713).
@@ -111,9 +112,10 @@ export function PagesTable({
   onSortChange?: (sort: PagesSort) => void;
 }>) {
   const router = useRouter();
+  const projectHref = useProjectHref();
   const openPage = (siteUrlId: string) => {
     const page = pages.find((row) => row.site_url_id === siteUrlId);
-    router.push(`/site/crawls/${page?.crawl_id ?? crawlId}/pages/${siteUrlId}`);
+    router.push(projectHref(`/site/crawls/${page?.crawl_id ?? crawlId}/pages/${siteUrlId}`));
   };
   return (
     <Table className="min-w-[72rem]">
@@ -262,13 +264,13 @@ export function PagesTable({
               {formatAudited(page.last_audited)}
             </TableCell>
             <TableCell>
-              <Link
+              <ProjectLink
                 href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
                 onClick={(event) => event.stopPropagation()}
                 className={textRole('label', 'text-accent-text hover:underline')}
               >
                 View
-              </Link>
+              </ProjectLink>
             </TableCell>
           </TableRow>
         ))}

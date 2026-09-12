@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -284,12 +284,12 @@ function FailingPages({
       <ul className={ledgerClasses()}>
         {dimension.evidence_pages.map((page) => (
           <li key={page.site_url_id} className="grid gap-1.5 py-3 first:pt-0">
-            <Link
+            <ProjectLink
               className={textRole('bodyStrong', 'text-accent-text truncate hover:underline')}
               href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
             >
               {pageLabel(page.normalized_url)}
-            </Link>
+            </ProjectLink>
             <ul className="grid gap-1">
               {page.failed_checks.map((check) => (
                 <li key={check.rule_id} className="text-secondary flex items-start gap-2 text-xs">
@@ -302,9 +302,9 @@ function FailingPages({
             </ul>
             {page.failed_checks.some((check) => check.content_addressable) ? (
               <Button asChild size="sm" className="justify-self-start">
-                <Link href={contentHref(projectId, crawlId, dimension, page)}>
+                <ProjectLink href={contentHref(projectId, crawlId, dimension, page)}>
                   Improve in Content
-                </Link>
+                </ProjectLink>
               </Button>
             ) : null}
           </li>

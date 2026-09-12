@@ -1,7 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -72,12 +71,12 @@ export function RunsTable({ audits }: Readonly<{ audits: Audit[] }>) {
               </TableCell>
               <TableCell className="text-secondary">{formatDateTime(audit.created_at)}</TableCell>
               <TableCell>
-                <Link
+                <ProjectLink
                   href={`/runs/${audit.id}`}
                   className={textRole('bodyStrong', 'text-accent-text hover:underline')}
                 >
                   View
-                </Link>
+                </ProjectLink>
               </TableCell>
             </TableRow>
           ))}

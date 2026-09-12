@@ -145,7 +145,9 @@ describe('PromptsPage (Your Prompts)', () => {
       prompt_set_id: SET_ID,
       engines: ['chatgpt'],
     });
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/runs/${auditId}`));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(`/runs/${auditId}?project=${PROJECT_ID}`),
+    );
   });
 
   it('groups active prompts by topic with a summary banner and a manage link', async () => {
@@ -175,7 +177,7 @@ describe('PromptsPage (Your Prompts)', () => {
     // The banner's manage link enters the in-page manage mode deep link.
     expect(screen.getByRole('link', { name: 'Manage prompts' })).toHaveAttribute(
       'href',
-      '/prompts?mode=manage',
+      `/prompts?mode=manage&project=${PROJECT_ID}`,
     );
     // Topic group header + ungrouped bucket.
     expect(screen.getAllByText('Footwear').length).toBeGreaterThan(0);
@@ -261,7 +263,7 @@ describe('PromptsPage (Your Prompts)', () => {
     expect(screen.queryByRole('button', { name: 'Manage prompts' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Manage prompts' })).toHaveAttribute(
       'href',
-      '/prompts?mode=manage',
+      `/prompts?mode=manage&project=${PROJECT_ID}`,
     );
 
     const manageLink = screen.getByRole('link', { name: 'Manage prompts' });

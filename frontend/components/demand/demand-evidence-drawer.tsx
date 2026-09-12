@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { ArrowUpRight, ExternalLink, FileText, ShieldCheck, Split } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -54,16 +54,16 @@ function DemandEvidenceContent({
       footer={
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button variant="secondary" size="sm" asChild>
-            <Link href="/opportunities" className="inline-flex items-center">
+            <ProjectLink href="/opportunities" className="inline-flex items-center">
               <ArrowUpRight className="mr-1.5 size-3.5" />
               View in Opportunities
-            </Link>
+            </ProjectLink>
           </Button>
           <Button variant="primary" size="sm" asChild>
-            <Link href={demandContentHref(signal)} className="inline-flex items-center">
+            <ProjectLink href={demandContentHref(signal)} className="inline-flex items-center">
               <FileText className="mr-1.5 size-3.5" />
               Draft Content Brief
-            </Link>
+            </ProjectLink>
           </Button>
         </div>
       }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { CohortCompositionContext } from './cohort-composition-context';
 import { Alert } from '@/components/ui/alert';
@@ -98,7 +98,7 @@ function DimensionLedger({
             <CardTitle>AEO Readiness by pillar</CardTitle>
           </div>
           <Button asChild variant="secondary" size="sm">
-            <Link href="/site?tab=aeo-readiness">View details</Link>
+            <ProjectLink href="/site?tab=aeo-readiness">View details</ProjectLink>
           </Button>
         </div>
       </CardHeader>
@@ -170,7 +170,7 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
             <CardTitle>Top issues</CardTitle>
           </div>
           <Button asChild variant="secondary" size="sm">
-            <Link href="/issues">View all issues</Link>
+            <ProjectLink href="/issues">View all issues</ProjectLink>
           </Button>
         </div>
       </CardHeader>
@@ -201,12 +201,12 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Link
+                    <ProjectLink
                       className="underline decoration-transparent hover:decoration-current"
                       href={issueHref(issue.rule_id, issue.finding_class)}
                     >
                       {issue.description || issue.rule_id}
-                    </Link>
+                    </ProjectLink>
                   </TableCell>
                   <TableCell>{statusLabel(issue.finding_class)}</TableCell>
                   <TableCell numeric>{issue.affected_pages}</TableCell>

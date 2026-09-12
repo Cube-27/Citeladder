@@ -11,11 +11,12 @@ import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/comp
 import { Alert } from '@/components/ui/alert';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
-import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { visibilityApi } from '@/lib/api/visibility';
 import type { Project } from '@/lib/api/types';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
+import { newProjectDestination } from '@/lib/navigation/project-destination';
 
 export function ProjectControls({
   activeProject,
@@ -25,6 +26,7 @@ export function ProjectControls({
   onEditProject?: (project: Project) => void;
 }>) {
   const router = useRouter();
+  const { activeWorkspaceId } = useProjectContext();
   const { entitlement } = useEntitlement();
   const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
   // Both must permit it: the caller's ROLE, and the workspace's remaining
@@ -47,7 +49,7 @@ export function ProjectControls({
           </DropdownItem>
         ) : null}
         {canAddProject ? (
-          <DropdownItem onSelect={() => router.push('/onboarding?new=1')}>
+          <DropdownItem onSelect={() => router.push(newProjectDestination(activeWorkspaceId))}>
             <Plus className="size-4" aria-hidden /> Add project
           </DropdownItem>
         ) : null}

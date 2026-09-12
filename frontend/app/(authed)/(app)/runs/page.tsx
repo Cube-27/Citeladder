@@ -22,6 +22,7 @@ import { useActiveProject } from '@/lib/project/project-context';
 import { Stack } from '@/components/ui/layout';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/page-header';
+import { useProjectHref } from '@/lib/navigation/project-destination';
 
 /** Poll interval (ms) for the runs list while any run is active. */
 const POLL_INTERVAL_MS = 3_000;
@@ -52,6 +53,7 @@ export default function RunsPage() {
   const project = useActiveProject();
   const projectId = project?.id ?? null;
   const router = useRouter();
+  const projectHref = useProjectHref();
   const [launchOpen, setLaunchOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
@@ -167,7 +169,7 @@ export default function RunsPage() {
           open={launchOpen}
           onOpenChange={setLaunchOpen}
           projectId={projectId}
-          onLaunched={(audit) => router.push(`/runs/${audit.id}`)}
+          onLaunched={(audit) => router.push(projectHref(`/runs/${audit.id}`))}
         />
       ) : null}
     </Stack>

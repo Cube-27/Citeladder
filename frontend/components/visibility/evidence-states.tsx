@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { Info, Inbox, RefreshCw, SearchX } from 'lucide-react';
 
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,7 +30,6 @@ export type EvidenceTabProps = Readonly<{
   isFiltered: boolean;
   onClearFilters?: () => void;
   limit: number;
-  onNextPage?: (cursor: string | null, asOf: string | null) => void;
 }>;
 
 /**
@@ -112,7 +111,7 @@ export function EvidenceEmpty({
           <h3 className={textRole('sectionTitle')}>{heading}</h3>
           <p className="text-secondary max-w-sm text-sm">{body}</p>
           <Button asChild variant="ghost" size="sm">
-            <Link href="/runs">View Runs</Link>
+            <ProjectLink href="/runs">View Runs</ProjectLink>
           </Button>
         </div>
       </CardContent>
@@ -155,32 +154,6 @@ export function TruncationNotice({ limit }: Readonly<{ limit: number }>) {
   );
 }
 
-export function EvidencePagination({
-  nextCursor,
-  asOf,
-  onPage,
-}: Readonly<{
-  nextCursor: string | null;
-  asOf: string | null;
-  onPage: (cursor: string | null, asOf: string | null) => void;
-}>) {
-  return (
-    <div className="flex flex-wrap gap-2 p-[var(--card-padding)]">
-      <Button variant="secondary" size="sm" onClick={() => onPage(null, null)}>
-        First answers
-      </Button>
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={!nextCursor}
-        onClick={() => onPage(nextCursor, asOf)}
-      >
-        Next answers
-      </Button>
-    </div>
-  );
-}
-
 /**
  * Shared per-execution header for both evidence tabs.
  *
@@ -208,7 +181,9 @@ export function ExecutionHeader({
         <span>{item.transport_model}</span>
         {trailing}
         <Button asChild variant="ghost" size="sm">
-          <Link href={`/runs/${item.audit_id}?execution=${item.task_id}`}>Open answer</Link>
+          <ProjectLink href={`/runs/${item.audit_id}?execution=${item.task_id}`}>
+            Open answer
+          </ProjectLink>
         </Button>
       </span>
     </div>

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
+import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
 /**
  * Content screen stubbed e2e (Task 5).
@@ -102,11 +102,11 @@ test('content nav link is live and the enqueue → output flow renders sanitised
     }),
   );
 
-  await page.goto('/visibility');
+  await page.goto(fixtureProjectPath('/visibility'));
   const navLink = page.getByRole('link', { name: 'Content', exact: true });
   await expect(navLink).toBeVisible();
   await navLink.click();
-  await expect(page).toHaveURL(/\/content$/);
+  await expect(page).toHaveURL(fixtureProjectPath('/content'));
 
   const promptBox = page.getByRole('textbox', { name: 'Your instruction' });
   // One quiet summary of the server-built context; it may still be checking

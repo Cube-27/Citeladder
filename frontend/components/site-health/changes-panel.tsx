@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { cn } from '@/lib/utils';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
@@ -213,12 +213,12 @@ function ChangesTable({
                 {rows.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>
-                      <Link
+                      <ProjectLink
                         className={textRole('emphasis', 'text-accent-text hover:underline')}
                         href={`/site/crawls/${summary.crawl_b_id}/pages/${row.site_url_id}`}
                       >
                         {displayPath(row.normalized_url)}
-                      </Link>
+                      </ProjectLink>
                     </TableCell>
                     <TableCell>{row.field.replaceAll('_', ' ')}</TableCell>
                     <TableCell>

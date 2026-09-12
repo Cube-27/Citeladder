@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { History } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -109,12 +109,12 @@ function NoProjectState() {
           <p className={textRole('body')}>
             Create a project first — content generation needs a project and its website.
           </p>
-          <Link
+          <ProjectLink
             href="/projects"
             className={textRole('bodyStrong', 'text-accent-text underline underline-offset-4')}
           >
             Go to Projects
-          </Link>
+          </ProjectLink>
         </CardContent>
       </Card>
     </div>

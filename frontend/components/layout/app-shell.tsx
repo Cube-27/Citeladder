@@ -17,6 +17,8 @@ import { ProjectSwitcher } from './project-switcher';
 import { SidebarNav } from './sidebar-nav';
 import { UserMenuController, UserMenuTrigger } from './user-menu';
 import { resolveTitle } from './page-titles';
+import { projectDestination } from '@/lib/navigation/project-destination';
+import { useProjectContext } from '@/lib/project/project-context';
 
 /**
  * AppShell — the authenticated application chrome.
@@ -32,6 +34,10 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
     { kind: 'palette'; trigger: HTMLElement } | { kind: 'agent' } | null
   >(null);
   const pathname = usePathname() ?? '/projects';
+  const { activeProjectId } = useProjectContext();
+  const overviewHref = activeProjectId
+    ? projectDestination('/projects', null, activeProjectId)
+    : '/projects';
   const compactTitle = compactTitleOverride ?? resolveTitle(pathname);
 
   function openPaletteFromDrawer(trigger: HTMLElement) {
@@ -92,7 +98,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
 
               <div className="border-border-subtle shrink-0 border-t p-[var(--sidebar-pad-x)]">
                 <Link
-                  href="/projects"
+                  href={overviewHref}
                   className="focus-ring flex items-center rounded-xs px-2.5 py-1 transition-opacity hover:opacity-90"
                   aria-label="CiteLadder command center"
                 >
@@ -160,7 +166,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               >
                 <div className="grid gap-4">
                   <Link
-                    href="/projects"
+                    href={overviewHref}
                     className="focus-ring flex items-center rounded-[var(--radius-control)] px-2 py-1"
                     onClick={() => setNavigationOpen(false)}
                     aria-label="CiteLadder command center"

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-status-badge';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
@@ -137,9 +137,9 @@ function ImplementationState({
           ))
         : null}
       <GapChanges result={result} />
-      <Link className="focus-ring w-fit underline underline-offset-2" href="/runs">
+      <ProjectLink className="focus-ring w-fit underline underline-offset-2" href="/runs">
         Run a comparable audit
-      </Link>
+      </ProjectLink>
     </div>
   );
 }

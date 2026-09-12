@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Fragment, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -309,13 +309,13 @@ function PageKindPages({
             {pages.map((page) => (
               <li key={page.site_url_id} className="min-w-0">
                 {crawlId ? (
-                  <Link
+                  <ProjectLink
                     href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
                     className="text-accent-text min-w-0 truncate text-sm hover:underline"
                     title={page.url}
                   >
                     {page.url}
-                  </Link>
+                  </ProjectLink>
                 ) : (
                   <span className="text-foreground min-w-0 truncate text-sm">{page.url}</span>
                 )}
@@ -411,12 +411,12 @@ function OrphanPageList({
             {/* Openable, like every other page reference in this tab. A count
                 nobody can act on is the failure this whole change is undoing. */}
             {crawlId ? (
-              <Link
+              <ProjectLink
                 href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
                 className="text-accent-text truncate text-sm hover:underline"
               >
                 {page.title || page.url}
-              </Link>
+              </ProjectLink>
             ) : (
               <span className="text-secondary truncate text-sm">{page.title || page.url}</span>
             )}

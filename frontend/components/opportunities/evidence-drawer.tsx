@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
+import { ProjectLink } from '@/components/layout/scoped-link';
 
 import { OpportunityEvidenceSection } from '@/components/opportunities/opportunity-evidence-section';
 import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-status-badge';
@@ -105,9 +105,9 @@ function ActionHandoff({ detail }: Readonly<{ detail: OpportunityDetail }>) {
           </p>
         ))}
         <Button asChild size="sm" className="justify-self-start">
-          <Link href={`/content?opportunity_id=${detail.id}`}>
+          <ProjectLink href={`/content?opportunity_id=${detail.id}`}>
             {earned ? 'Prepare earned content' : 'Create owned content'}
-          </Link>
+          </ProjectLink>
         </Button>
         {detail.linked_generations.length > 0 ? (
           <p className="text-muted text-xs">

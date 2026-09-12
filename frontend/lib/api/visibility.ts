@@ -135,6 +135,7 @@ export const visibilityApi = {
       source_type?: string;
       offset?: number;
       as_of?: string;
+      limit?: number;
     },
     options?: ApiRequestOptions,
   ) => {

@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/table';
 import {
   EvidenceEmpty,
-  EvidencePagination,
   EvidenceBusyBar,
   EvidenceError,
   EvidenceFilteredEmpty,
@@ -44,7 +43,7 @@ import {
   selectionMatchedQueries,
   NoSearchMatch,
   SearchScopeNote,
-  SelectionTotals,
+  FanoutCounts,
 } from '@/components/visibility/fanout-totals';
 
 const TITLE = 'Query fanouts';
@@ -97,7 +96,6 @@ export function FanoutEvidence({
   isFiltered,
   onClearFilters,
   limit,
-  onNextPage,
   projectId,
   runId,
   scope,
@@ -159,7 +157,6 @@ export function FanoutEvidence({
         <CardTitle>{TITLE}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
-        <SelectionTotals summary={summary} fallback={totals} selectionWide={selectionWide} />
         <div className="border-border-subtle flex flex-wrap items-center gap-2 border-t px-[var(--card-padding)] py-3">
           <Input
             type="search"
@@ -172,6 +169,7 @@ export function FanoutEvidence({
           />
           <SearchScopeNote search={needle} matched={matched} />
           <span className="grow" />
+          <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
           <AnalysisChoice
             label="Group searches by"
             value={grouping}
@@ -210,15 +208,7 @@ export function FanoutEvidence({
             onPageChange={setPage}
           />
         ) : null}
-        {onNextPage ? (
-          <EvidencePagination
-            nextCursor={query.data?.next_cursor ?? null}
-            asOf={query.data?.as_of ?? null}
-            onPage={onNextPage}
-          />
-        ) : query.data?.truncated ? (
-          <TruncationNotice limit={limit} />
-        ) : null}
+        {query.data?.truncated ? <TruncationNotice limit={limit} /> : null}
       </CardContent>
     </Card>
   );

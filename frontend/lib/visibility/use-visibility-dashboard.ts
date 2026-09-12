@@ -92,8 +92,6 @@ export function useVisibilityFilters() {
     clearKeys: pageKeys,
   });
   const [baselineId, setBaselineId] = useUrlState('baseline', optionalStringUrlCodec);
-  const [cursor] = useUrlState('cursor', optionalStringUrlCodec);
-  const [asOf] = useUrlState('as_of', optionalStringUrlCodec);
   const [outcome, setOutcome] = useUrlState('outcome', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });
@@ -132,8 +130,6 @@ export function useVisibilityFilters() {
     setCohort,
     baselineId,
     setBaselineId,
-    cursor,
-    asOf,
     outcome,
     setOutcome,
     sourceMode,
@@ -182,8 +178,6 @@ export function useVisibilityFilters() {
         url: null,
         ...slice,
       }),
-    nextPage: (nextCursor: string | null, boundary: string | null) =>
-      setUrlParams({ cursor: nextCursor, as_of: boundary }),
   };
 }
 
@@ -384,8 +378,6 @@ function evidenceSelectionParams(
     cohort: filters.cohort,
     prompt_id: filters.promptId ?? undefined,
     limit: EVIDENCE_LIMIT,
-    cursor: filters.cursor ?? undefined,
-    as_of: filters.asOf ?? undefined,
     outcome: filters.outcome ?? undefined,
     competitor: filters.competitor ?? undefined,
     domain: filters.domain ?? undefined,

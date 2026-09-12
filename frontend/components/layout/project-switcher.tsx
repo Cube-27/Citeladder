@@ -13,9 +13,9 @@ import {
 } from '@/components/ui/dropdown';
 import { BrandLogo } from '@/components/ui/brand-logo';
 import {
+  newProjectDestination,
   useSelectProject,
   useSelectWorkspace,
-  workspaceDestination,
 } from '@/lib/navigation/project-destination';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
@@ -40,13 +40,6 @@ import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
  * choose between, so the ordinary single-workspace account sees exactly the
  * switcher it saw before.
  */
-/** Where "New project" goes, carrying the workspace it will be created in. */
-function newProjectHref(workspaceId: string | null): string {
-  const params = new URLSearchParams({ new: '1' });
-  if (!workspaceId) return `/onboarding?${params.toString()}`;
-  return workspaceDestination('/onboarding', params, workspaceId);
-}
-
 export function ProjectSwitcher({ className }: Readonly<{ className?: string }>) {
   const router = useRouter();
   const selectProject = useSelectProject();
@@ -144,7 +137,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
         {canAddProject ? (
           <>
             <DropdownSeparator />
-            <DropdownItem onSelect={() => router.push(newProjectHref(activeWorkspaceId))}>
+            <DropdownItem onSelect={() => router.push(newProjectDestination(activeWorkspaceId))}>
               <span
                 aria-hidden
                 className="bg-accent-soft text-accent-text flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"

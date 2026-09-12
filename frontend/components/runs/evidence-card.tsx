@@ -109,6 +109,71 @@ function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>
   );
 }
 
+const listItemBlock = /^ {0,3}(?:[-*+] |\d+[.)] )/;
+const structuralBlock = /^ {0,3}(?:#{1,6} |[-*+] |\d+[.)] |>|```|~~~|\|)/;
+const indentedBlock = /^(?: {4}|\t)/;
+const sentenceEnd = /[.!?:;\])}"'…](?:[*_~]+)?$/;
+const punctuationOnly = /^[,.;:!?)\]}]+(?:[*_~]+)?$/;
+const commaFragment = /^,\s/;
+const sentenceFragment = /^(?:\p{Ll}|\+\d)/u;
+
+function joinsWithoutSpace(previous: string, block: string, content: string): boolean {
+  return (
+    listItemBlock.test(previous) &&
+    !indentedBlock.test(block) &&
+    (punctuationOnly.test(content) || commaFragment.test(content))
+  );
+}
+
+function joinsWithSpace(previous: string, block: string, content: string): boolean {
+  return (
+    listItemBlock.test(previous) &&
+    !indentedBlock.test(block) &&
+    !structuralBlock.test(block) &&
+    !sentenceEnd.test(previous) &&
+    !sentenceEnd.test(content) &&
+    sentenceFragment.test(content)
+  );
+}
+
+/**
+ * Repair paragraph breaks introduced around inline citation annotations.
+ *
+ * Some answer transports persist a list item as several blank-line-separated
+ * fragments (including punctuation in a block of its own). Markdown correctly
+ * treats those as separate paragraphs, but the reader sees a sentence pulled
+ * apart vertically. This changes only the rendered copy: the persisted answer
+ * remains the immutable evidence and proper Markdown blocks remain untouched.
+ */
+export function normalizeEvidenceMarkdown(markdown: string): string {
+  const blocks = markdown
+    .replace(/\r\n/g, '\n')
+    .split(/\n{2,}/)
+    .map((block) => block.trimEnd())
+    .filter((block) => block.trim());
+  const normalized: string[] = [];
+
+  for (const block of blocks) {
+    const previous = normalized.at(-1);
+    if (!previous) {
+      normalized.push(block);
+      continue;
+    }
+    const blockContent = block.trimStart();
+    if (joinsWithoutSpace(previous, block, blockContent)) {
+      normalized[normalized.length - 1] = `${previous}${blockContent}`;
+      continue;
+    }
+    if (joinsWithSpace(previous, block, blockContent)) {
+      normalized[normalized.length - 1] = `${previous} ${blockContent}`;
+      continue;
+    }
+    normalized.push(block);
+  }
+
+  return normalized.join('\n\n');
+}
+
 function EvidenceAnswer({ answerText }: Readonly<{ answerText?: string | null }>) {
   const trimmed = answerText?.trim();
   return (
@@ -116,7 +181,7 @@ function EvidenceAnswer({ answerText }: Readonly<{ answerText?: string | null }>
       <Label>Engine response</Label>
       <div className={panelClasses({ tone: 'well', pad: 'compact' }, 'min-w-0 overflow-hidden')}>
         {trimmed ? (
-          <ContentMarkdown markdown={trimmed} density="compact" />
+          <ContentMarkdown markdown={normalizeEvidenceMarkdown(trimmed)} density="compact" />
         ) : (
           <span className="text-muted text-sm">
             No answer text was captured for this execution.
