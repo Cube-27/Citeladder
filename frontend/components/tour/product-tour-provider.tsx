@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { workspacesApi } from '@/lib/api/workspaces';
+import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { ProductTourStatus } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -19,6 +20,8 @@ type TourStep = {
   selector: string;
   title: string;
   description: string;
+  /** Which selection owns the destination. Project is the default. */
+  scope?: 'project' | 'workspace';
   /** Preferred popover placement relative to the highlighted target. */
   side?: 'top' | 'right' | 'bottom' | 'left';
   align?: 'start' | 'center' | 'end';
@@ -47,6 +50,7 @@ export const PRODUCT_TOUR_STEPS: readonly TourStep[] = [
   {
     id: 'provider-settings',
     path: '/settings?tab=providers',
+    scope: 'workspace',
     selector: '[data-tour="provider-settings"]',
     title: 'Connect answer engines',
     description: 'Add provider keys before launching an audit. Keys are write-only.',
@@ -59,9 +63,19 @@ function stepAt(id: string | null | undefined) {
   return PRODUCT_TOUR_STEPS.find((step) => step.id === id) ?? PRODUCT_TOUR_STEPS[0];
 }
 
+/**
+ * Is the reader already where this step lives?
+ *
+ * Only the parameters the STEP names are compared. The shell owns `?project=`
+ * and `?workspace=` and writes them into the address itself, so demanding an
+ * exact query match meant the tour pushed the bare path, the shell replaced it
+ * with the scoped one, and the two navigated against each other forever.
+ */
 function isCurrentStepLocation(pathname: string, search: string, stepPath: string) {
   const expected = new URL(stepPath, 'https://citeladder.local');
-  return pathname === expected.pathname && search === expected.search.slice(1);
+  if (pathname !== expected.pathname) return false;
+  const current = new URLSearchParams(search);
+  return [...expected.searchParams].every(([key, value]) => current.get(key) === value);
 }
 
 /** Persists product-tour progress and resumes it after each App Router transition. */
@@ -71,7 +85,7 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const queryClient = useQueryClient();
-  const { activeProject } = useProjectContext();
+  const { activeProject, activeProjectId, activeWorkspaceId } = useProjectContext();
   const workspaceId = activeProject?.workspace_id ?? null;
   const renderedStep = useRef<string | null>(null);
   const transitioning = useRef(false);
@@ -148,8 +162,17 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
     // so the tour only retried and then silently disappeared.
     if (!isCurrentStepLocation(pathname, search, step.path)) {
       // A tour step can target another client-routed screen; no content is shown meanwhile.
+      // Carry the selection so the destination is the one the shell would have
+      // rewritten to anyway, rather than a bare path it immediately replaces.
       // react-doctor-disable-next-line
-      router.push(step.path);
+      router.push(
+        scopedNavigationDestination(
+          step.path,
+          step.scope ?? 'project',
+          activeProjectId,
+          activeWorkspaceId,
+        ),
+      );
       return cleanup;
     }
     const target = document.querySelector<HTMLElement>(step.selector);
@@ -226,6 +249,8 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
     });
     return cleanup;
   }, [
+    activeProjectId,
+    activeWorkspaceId,
     pathname,
     persist,
     router,

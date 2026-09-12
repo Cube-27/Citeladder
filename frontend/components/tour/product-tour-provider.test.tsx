@@ -1,6 +1,8 @@
 import { act, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const PROJECT = '11111111-1111-4111-8111-111111111111';
+
 const state = vi.hoisted(() => ({
   pathname: '/projects',
   search: '',
@@ -57,6 +59,8 @@ vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     activeProject: { workspace_id: '00000000-0000-4000-8000-000000000002' },
+    activeProjectId: PROJECT,
+    activeWorkspaceId: '00000000-0000-4000-8000-000000000002',
   }),
 }));
 
@@ -178,6 +182,25 @@ describe('ProductTourProvider', () => {
     vi.unstubAllGlobals();
   });
 
+  it('stays put when the shell has scoped the step route to a project', async () => {
+    // The shell REPLACES a bare project route with `?project=<id>` the moment
+    // the selection resolves. Comparing the whole query string made the tour
+    // push the bare path straight back, the shell re-scope it, and the two
+    // navigate against each other forever — the app pinned on Overview with
+    // nothing clickable.
+    state.search = `project=${PROJECT}`;
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: false })),
+    );
+
+    renderTour();
+    await waitFor(() => expect(state.driverCalls).toHaveLength(1));
+
+    expect(state.push).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it('destroys an active overlay when unmounted', async () => {
     vi.stubGlobal(
       'matchMedia',
@@ -200,7 +223,11 @@ describe('ProductTourProvider', () => {
     );
 
     renderTour();
-    await waitFor(() => expect(state.push).toHaveBeenCalledWith('/settings?tab=providers'));
+    await waitFor(() =>
+      expect(state.push).toHaveBeenCalledWith(
+        '/settings?tab=providers&workspace=00000000-0000-4000-8000-000000000002',
+      ),
+    );
 
     expect(state.driverCalls).toHaveLength(0);
     expect(PRODUCT_TOUR_STEPS.find((step) => step.id === 'provider-settings')?.path).toBe(
