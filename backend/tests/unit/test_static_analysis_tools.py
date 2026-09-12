@@ -17,6 +17,8 @@ from pathlib import Path
 
 from vulture import Vulture
 
+from scripts.check_test_shape import _violations
+
 BACKEND = Path(__file__).resolve().parents[2]
 
 
@@ -161,6 +163,69 @@ class TestDependencyHygiene:
         ignored = config["tool"]["deptry"]["per_rule_ignores"]["DEP002"]
 
         assert {name.lower() for name in ignored} <= declared
+
+
+class TestTestShapePolicy:
+    def test_the_rule_is_use_the_parser_not_never_read_a_file(
+        self, tmp_path: Path
+    ) -> None:
+        """A substring check earns its place only where no parser exists.
+
+        YAML has one, so asserting against workflow text is a choice and is
+        rejected. Terraform and shell do not, so the same shape is the honest
+        option there and must keep passing -- otherwise the gate pushes real
+        infrastructure coverage out of the suite.
+        """
+        parseable = tmp_path / "test_parseable.py"
+        parseable.write_text(
+            "from pathlib import Path\n"
+            "def test_workflow() -> None:\n"
+            '    workflow = Path("ci.yml").read_text()\n'
+            '    assert "contents: read" in workflow\n',
+            encoding="utf-8",
+        )
+        unparseable = tmp_path / "test_unparseable.py"
+        unparseable.write_text(
+            "from pathlib import Path\n"
+            "def test_network() -> None:\n"
+            '    network = Path("network.tf").read_text()\n'
+            '    assert "0.0.0.0/0" not in network\n',
+            encoding="utf-8",
+        )
+
+        assert [line for line, _ in _violations(parseable)] == [4]
+        assert _violations(unparseable) == []
+
+    def test_a_parsed_structure_is_never_flagged(self, tmp_path: Path) -> None:
+        """The prescribed alternative has to survive the gate it satisfies."""
+        parsed = tmp_path / "test_parsed.py"
+        parsed.write_text(
+            "import tomllib\n"
+            "from pathlib import Path\n"
+            "def test_config() -> None:\n"
+            '    config = tomllib.loads(Path("pyproject.toml").read_text())\n'
+            '    assert "tool" in config\n'
+            '    assert "fail_under" not in config["tool"]\n',
+            encoding="utf-8",
+        )
+
+        assert _violations(parsed) == []
+
+    def test_normal_code_and_other_functions_are_not_assertions(
+        self, tmp_path: Path
+    ) -> None:
+        source = tmp_path / "test_scopes.py"
+        source.write_text(
+            "from pathlib import Path\n"
+            "def read_config():\n"
+            '    data = Path("config.json").read_text()\n'
+            '    return "field" in data\n'
+            "def test_data():\n"
+            '    data = {"field": True}\n'
+            '    assert "field" in data\n',
+            encoding="utf-8",
+        )
+        assert _violations(source) == []
 
 
 class TestCoverageIsNotAGate:

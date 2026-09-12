@@ -124,6 +124,12 @@ function backendChecks() {
     ['-m', 'scripts.check_complexity', ...policyDiffArgs().slice(1)],
     backendRoot,
   );
+  step(
+    'Test shape policy',
+    backendPython(),
+    ['-m', 'scripts.check_test_shape'],
+    backendRoot,
+  );
   step('Architecture policy', backendTool('lint-imports'), [], backendRoot);
   step(
     'Dead-code policy',

@@ -46,7 +46,8 @@
         "backend/tests/conftest.py",
         "backend/scripts/check_complexity.py",
         "backend/scripts/complexity_policy.json",
-        "backend/.importlinter"
+        "backend/.importlinter",
+        "backend/scripts/check_test_shape.py"
       ],
       "backendTests": [
         "tests/unit/test_check_complexity.py",

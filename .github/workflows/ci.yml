@@ -35,7 +35,7 @@ jobs:
       # The classifier decides every other job's scope, so prove it here rather
       # than on a second runner that checks out the same tree to do nothing else.
       - name: CI classifier tests
-        run: node --test scripts/ci-changes.test.mjs
+        run: node --test scripts/*.test.mjs
       - name: Select required owners
         id: classify
         env:

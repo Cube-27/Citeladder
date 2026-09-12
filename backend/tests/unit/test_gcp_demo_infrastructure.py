@@ -1,14 +1,66 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 GCP = ROOT / "infra" / "gcp"
 RUNTIME = GCP / "runtime"
 WORKFLOWS = ROOT / ".github" / "workflows"
+
+
+def _document(path: Path) -> Any:
+    """Parse a YAML file. Structure is the contract; its formatting is not."""
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def _values(node: Any) -> Iterator[str]:
+    """Every string value in a parsed document, mapping keys excluded.
+
+    Matching against these rather than the file text means a commented-out
+    line, or a key that happens to share a name, can no longer satisfy an
+    assertion about what the workflow actually does.
+    """
+    if isinstance(node, str):
+        yield node
+    elif isinstance(node, dict):
+        for value in node.values():
+            yield from _values(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _values(value)
+
+
+def _steps(workflow: dict) -> list[dict]:
+    return [
+        step
+        for job in workflow["jobs"].values()
+        for step in job.get("steps", [])
+        if isinstance(step, dict)
+    ]
+
+
+def _step(workflow: dict, name_fragment: str) -> dict:
+    """The one step whose name contains ``name_fragment``."""
+    matches = [
+        step for step in _steps(workflow) if name_fragment in (step.get("name") or "")
+    ]
+    assert len(matches) == 1, (name_fragment, [s.get("name") for s in matches])
+    return matches[0]
+
+
+def _shell(workflow: dict) -> str:
+    """Every ``run:`` body in a workflow.
+
+    Shell has no parser here, so these assertions stay textual -- but they are
+    scoped to the scripts the workflow actually executes.
+    """
+    return "\n".join(step["run"] for step in _steps(workflow) if "run" in step)
 
 
 def _read_tree(root: Path, pattern: str) -> str:
@@ -96,19 +148,27 @@ def test_bootstrap_uses_supported_billing_iam_flags() -> None:
 
 def test_secret_payloads_stay_out_of_terraform_and_arguments() -> None:
     terraform = _read_tree(GCP, "*.tf")
-    workflows = _read_tree(WORKFLOWS, "gcp-demo-*.yml")
     assert "google_secret_manager_secret_version" not in terraform
     assert "random_password" not in terraform
     assert "DEMO_LOGIN_PASSWORD" not in (GCP / "variables.tf").read_text(
         encoding="utf-8"
     )
-    assert "--data-file=-" in workflows
-    assert "--data-file=$" not in workflows
-    assert "GCP_SERVICE_ACCOUNT_KEY" not in workflows
+    scripts = "\n".join(
+        _shell(_document(path)) for path in sorted(WORKFLOWS.glob("gcp-demo-*.yml"))
+    )
+    assert "--data-file=-" in scripts
+    assert "--data-file=$" not in scripts
+    assert not any(
+        "GCP_SERVICE_ACCOUNT_KEY" in value
+        for path in sorted(WORKFLOWS.glob("gcp-demo-*.yml"))
+        for value in _values(_document(path))
+    )
 
 
 def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
-    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
+    deploy_workflow = _document(WORKFLOWS / "gcp-demo-deploy.yml")
+    references = set(_values(deploy_workflow))
+    workflow = _shell(deploy_workflow)
     locals_tf = (GCP / "locals.tf").read_text(encoding="utf-8")
     deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
     expected_secret_mappings = {
@@ -117,11 +177,13 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
         "CONTENT_API_KEY": "citeladder-content-api-key",
     }
     for variable, secret_id in expected_secret_mappings.items():
-        assert f"secrets.{variable}" in workflow
+        assert any(f"secrets.{variable}" in value for value in references)
         assert f'"{secret_id}"' in locals_tf
         assert f"sync_optional_value {secret_id}" in workflow
         assert f"write_env {variable}" in deploy
-    assert "secrets.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE" in workflow
+    assert any(
+        "secrets.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE" in value for value in references
+    )
     assert "--build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=" in workflow
     assert "citeladder-logo" not in locals_tf
     # An unwired Google pair leaves sign-in and the GSC/GA4 connect buttons
@@ -149,14 +211,14 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
         ),
     }
     for variable, (secret_id, runtime_var) in required_oauth_mappings.items():
-        assert f"secrets.{variable}" in workflow
+        assert any(f"secrets.{variable}" in value for value in references)
         assert f'"{secret_id}"' in locals_tf
         assert f"sync_value {secret_id}" in workflow
         # Read without a ``|| true`` fallback: a missing secret stops the deploy.
         assert f'secret {secret_id})"' in deploy
         assert f"write_env {runtime_var}" in deploy
     for variable, (secret_id, runtime_var) in optional_oauth_mappings.items():
-        assert f"secrets.{variable}" in workflow
+        assert any(f"secrets.{variable}" in value for value in references)
         assert f'"{secret_id}"' in locals_tf
         assert f"sync_optional_value {secret_id}" in workflow
         # Read behind ``|| true``: a missing secret must not stop the deploy.
@@ -174,7 +236,7 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
         "CONTENT_PROVIDER_ENDPOINT",
         "CONTENT_MODEL",
     ):
-        assert f"vars.{variable}" in workflow
+        assert any(f"vars.{variable}" in value for value in references)
         assert f"${{{variable}:?{variable} is required}}" in deploy
         assert f"write_env {variable}" in deploy
 
@@ -182,24 +244,31 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
 def test_public_access_is_the_default_and_demo_mode_stays_switchable() -> None:
     """``DEMO_MODE`` blocks registration and third-party sign-up, so it stays a
     switch that defaults to public rather than a hard-coded value."""
-    compose = (RUNTIME / "compose.gcp.yml").read_text(encoding="utf-8")
+    compose = _document(RUNTIME / "compose.gcp.yml")
     deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
-    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
-    assert 'DEMO_MODE: "true"' not in compose
-    assert "DEMO_MODE: ${DEMO_MODE:-false}" in compose
+    deploy_workflow = _document(WORKFLOWS / "gcp-demo-deploy.yml")
+    workflow = _shell(deploy_workflow)
+    services = compose["services"]
+    assert services["web"]["environment"]["DEMO_MODE"] == "${DEMO_MODE:-false}"
+    assert (
+        services["frontend"]["environment"]["NEXT_PUBLIC_DEMO_MODE"]
+        == "${DEMO_MODE:-false}"
+    )
     assert 'DEMO_MODE="${DEMO_MODE:-false}"' in deploy
     assert '[[ "$DEMO_MODE" =~ ^(true|false)$ ]]' in deploy
     assert "write_env DEMO_MODE" in deploy
-    assert "vars.DEMO_MODE || 'false'" in workflow
+    assert any("vars.DEMO_MODE || 'false'" in v for v in _values(deploy_workflow))
     assert '--build-arg NEXT_PUBLIC_DEMO_MODE="$DEMO_MODE"' in workflow
     # The bootstrap owns the single demo account or the configured public dev
     # account, depending on the explicit mode.
-    assert "alembic upgrade head && python -m app.demo.bootstrap" in compose
+    assert "alembic upgrade head && python -m app.demo.bootstrap" in " ".join(
+        _values(services["migrate"])
+    )
     assert 'write_env MCP_ALLOWED_ACCOUNT_EMAIL ""' in deploy
 
 
 def test_deploy_rotates_configured_secrets_and_verifies_dev_login() -> None:
-    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
+    workflow = _shell(_document(WORKFLOWS / "gcp-demo-deploy.yml"))
     assert "sync_value()" in workflow
     assert "gcloud secrets versions access latest" in workflow
     assert 'test "${#DEMO_LOGIN_PASSWORD}" -ge 8' in workflow
@@ -215,11 +284,12 @@ def test_deploy_rotates_configured_secrets_and_verifies_dev_login() -> None:
 
 
 def test_deploy_validates_the_latest_commit_as_a_full_diff() -> None:
-    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
+    deploy_workflow = _document(WORKFLOWS / "gcp-demo-deploy.yml")
+    workflow = _shell(deploy_workflow)
     assert "sudo apt-get install --yes --no-install-recommends ripgrep" in workflow
-    gate = workflow.split("- name: Run repository gates for the deployed commit", 1)[
-        1
-    ].split("- uses:", 1)[0]
+    # The step is located by name rather than by splitting the file, so an
+    # unrelated edit above it cannot silently empty the slice being asserted.
+    gate = _step(deploy_workflow, "Run repository gates for the deployed commit")["run"]
     assert 'git rev-parse "$env:GITHUB_SHA^"' in gate
     assert "git update-ref refs/remotes/origin/main $deployBase" in gate
     assert gate.index("git update-ref") < gate.index("./scripts/check.ps1")
@@ -237,17 +307,24 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     paths = sorted(WORKFLOWS.glob("gcp-demo-*.yml"))
     assert paths
     for path in paths:
-        text = path.read_text(encoding="utf-8")
-        assert "contents: read" in text
-        assert "id-token: write" in text
-        assert "environment: gcp-demo" in text
-        for action in re.findall(r"^\s*- uses: ([^\s]+)$", text, re.MULTILINE):
-            if action.startswith("./"):
+        workflow = _document(path)
+        # Read from the parsed tree, so a permission granted at job level no
+        # longer passes a check written for the workflow level.
+        assert workflow["permissions"] == {"contents": "read", "id-token": "write"}
+        for job in workflow["jobs"].values():
+            assert job["environment"] == "gcp-demo"
+        for step in _steps(workflow):
+            action = step.get("uses")
+            if action is None or action.startswith("./"):
                 continue
             assert re.search(r"@[0-9a-f]{40}$", action), (path.name, action)
-    deploy = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
-    assert "group: gcp-demo-deploy" in deploy
-    assert "cancel-in-progress: false" in deploy
+    deploy_workflow = _document(WORKFLOWS / "gcp-demo-deploy.yml")
+    # Declared per job, which the previous substring check could not tell apart
+    # from a workflow-level declaration.
+    assert [job.get("concurrency") for job in deploy_workflow["jobs"].values()] == [
+        {"group": "gcp-demo-deploy", "cancel-in-progress": False}
+    ]
+    deploy = _shell(deploy_workflow)
     # Both images are resolved to a digest before they are deployed, and a
     # lookup that returns nothing fails the job rather than building an
     # `image@` reference with an empty digest.
@@ -268,33 +345,64 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     assert "if grep -Fxq '0.0.0.0/0'" in deploy
     assert "if grep -Fxq '::/0'" in deploy
     assert "bash /tmp/citeladder-deploy/deploy-vm.sh" in deploy
-    destroy = (WORKFLOWS / "gcp-demo-destroy.yml").read_text(encoding="utf-8")
+    destroy = _shell(_document(WORKFLOWS / "gcp-demo-destroy.yml"))
     assert "labels.managed_by" in destroy
     assert "$'citeladder\\tdemo\\tterraform'" in destroy
 
 
 def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> None:
-    compose = (RUNTIME / "compose.gcp.yml").read_text(encoding="utf-8")
-    assert "network_mode: host" in compose
-    assert "listen_addresses=127.0.0.1" in compose
-    assert '"--host", "127.0.0.1"' in compose
-    assert "HOSTNAME: 127.0.0.1" in compose
-    assert "ssl=on" in compose
-    assert "DB_SSL_MODE: require" in compose
-    assert 'CITELADDER_TASK_LOCAL_BACKEND: "true"' in compose
-    assert "NEXT_PUBLIC_DEMO_MODE: ${DEMO_MODE:-false}" in compose
-    assert 'AUDIT_WORKER_CONCURRENCY: "2"' in compose
-    assert 'DB_POOL_SIZE: "8"' in compose
-    assert 'DB_MAX_OVERFLOW: "0"' in compose
-    assert 'DEMO_MONITORED_URL_LIMIT: "50000"' in compose
-    assert 'SITE_HEALTH_GLOBAL_CONCURRENCY: "8"' in compose
-    assert 'SITE_HEALTH_PER_HOST_CONCURRENCY: "6"' in compose
-    assert 'SITE_HEALTH_AUTOMATIC_PAGE_LIMIT: "200"' in compose
-    assert compose.count("app.workers.") == 10
-    assert "TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS" in compose
-    assert 'MCP_ENABLED: "true"' in compose
-    assert "MCP_PUBLIC_BASE_URL: https://${DOMAIN_NAME" in compose
-    assert "MCP_ALLOWED_ACCOUNT_EMAIL: ${MCP_ALLOWED_ACCOUNT_EMAIL-}" in compose
+    compose = _document(RUNTIME / "compose.gcp.yml")
+    services = compose["services"]
+    # Every service shares the host network, so "bound to loopback" is a
+    # property of each service's own command and environment rather than of a
+    # string appearing somewhere in the file.
+    assert {
+        name: service.get("network_mode") for name, service in services.items()
+    } == {name: "host" for name in services}
+    assert services["web"]["command"][:4] == [
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "127.0.0.1",
+    ]
+
+    db_command = " ".join(_values(services["db"].get("command", [])))
+    assert "listen_addresses=127.0.0.1" in db_command
+    assert "ssl=on" in db_command
+
+    web_environment = services["web"]["environment"]
+    assert web_environment["DB_SSL_MODE"] == "require"
+    assert web_environment["DB_POOL_SIZE"] == "8"
+    assert web_environment["DB_MAX_OVERFLOW"] == "0"
+    assert web_environment["MCP_ENABLED"] == "true"
+    assert web_environment["MCP_PUBLIC_BASE_URL"].startswith("https://${DOMAIN_NAME")
+    assert (
+        web_environment["MCP_ALLOWED_ACCOUNT_EMAIL"] == "${MCP_ALLOWED_ACCOUNT_EMAIL-}"
+    )
+    assert web_environment["TRUSTED_PROXY_CIDRS"].startswith("${TRUSTED_PROXY_CIDRS")
+
+    frontend_environment = services["frontend"]["environment"]
+    assert frontend_environment["HOSTNAME"] == "127.0.0.1"
+    assert frontend_environment["CITELADDER_TASK_LOCAL_BACKEND"] == "true"
+    assert frontend_environment["NEXT_PUBLIC_DEMO_MODE"] == "${DEMO_MODE:-false}"
+
+    settings = {
+        key: value
+        for service in services.values()
+        for key, value in (service.get("environment") or {}).items()
+    }
+    assert settings["AUDIT_WORKER_CONCURRENCY"] == "2"
+    assert settings["DEMO_MONITORED_URL_LIMIT"] == "50000"
+    assert settings["SITE_HEALTH_GLOBAL_CONCURRENCY"] == "8"
+    assert settings["SITE_HEALTH_PER_HOST_CONCURRENCY"] == "6"
+    assert settings["SITE_HEALTH_AUTOMATIC_PAGE_LIMIT"] == "200"
+
+    workers = [
+        name
+        for name, service in services.items()
+        if any("app.workers." in value for value in _values(service.get("command", [])))
+    ]
+    assert len(workers) == 10
     caddy = (RUNTIME / "Caddyfile").read_text(encoding="utf-8")
     assert "trusted_proxies static __CLOUDFLARE_CIDRS__" in caddy
     mcp_matcher = next(
@@ -313,10 +421,13 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
         "/.well-known/oauth-protected-resource/mcp",
     ]
     assert "reverse_proxy @mcp_protocol 127.0.0.1:8000" in caddy
-    frontend = compose.split("\n  frontend:", 1)[1].split("\n  audit-worker:", 1)[0]
-    assert "env_file:" not in frontend
-    assert "JWT_SECRET_KEY" not in frontend
-    assert "DEV_LOGIN_PASSWORD" not in frontend
+    # The frontend is a public surface: it gets no env_file and no backend
+    # secret. Reading the parsed service means a key added at the end of the
+    # block, past where the old text slice stopped, is still caught.
+    frontend = services["frontend"]
+    assert "env_file" not in frontend
+    assert "JWT_SECRET_KEY" not in frontend_environment
+    assert "DEV_LOGIN_PASSWORD" not in frontend_environment
     tls_init = (RUNTIME / "init-postgres-tls.sh").read_text(encoding="utf-8")
     assert "chown 70:70" in tls_init
 
@@ -324,8 +435,8 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
 def test_the_host_never_tears_itself_down() -> None:
     """Teardown is a deliberate act: the destroy workflow, nothing automatic."""
     deploy = (RUNTIME / "deploy-vm.sh").read_text(encoding="utf-8")
-    compose = (RUNTIME / "compose.gcp.yml").read_text(encoding="utf-8")
-    workflow = (WORKFLOWS / "gcp-demo-deploy.yml").read_text(encoding="utf-8")
+    compose = _document(RUNTIME / "compose.gcp.yml")
+    workflow = _shell(_document(WORKFLOWS / "gcp-demo-deploy.yml"))
     terraform = _read_tree(GCP, "*.tf")
     assert not (RUNTIME / "expire.sh").exists()
     assert not (WORKFLOWS / "gcp-demo-expiry.yml").exists()
@@ -341,7 +452,10 @@ def test_the_host_never_tears_itself_down() -> None:
     assert "/etc/systemd/system/citeladder-expiry.timer" in deploy
     # Demo mode still honours an expiry when one is configured.
     assert 'write_env DEMO_EXPIRES_AT "$DEMO_EXPIRES_AT"' in deploy
-    assert "DEMO_EXPIRES_AT:" not in compose
+    assert not any(
+        "DEMO_EXPIRES_AT" in (service.get("environment") or {})
+        for service in compose["services"].values()
+    )
 
 
 def test_backups_are_fixed_and_operational() -> None:

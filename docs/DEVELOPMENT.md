@@ -171,36 +171,49 @@ explicit release work.
 
 ### Repository validation harness
 
-`scripts/quality.mjs` owns the static sequence used by both local development
-and CI. `check.ps1` remains the PowerShell compatibility shim. Run the two
-completion commands from the repository root, in this order, once per task
-after the complete intended executable diff is finished. Documentation edits,
-commits, sub-phases, handoffs, and intermediate milestones never trigger these
-completion gates.
+Follow the risk levels in [AGENTS.md](../AGENTS.md#validation): minor changes
+need no tests or automatic gates; feature changes use targeted tests; risky
+changes use full affected owner suites, with release-wide validation in CI.
+Do not repeat a successful run simply because you are committing or shipping.
+
+`scripts/quality.mjs` owns static checks; `check.ps1` is its PowerShell shim.
+`test.ps1` owns local test selection and reuses successful unchanged evidence.
 
 ```powershell
-.\scripts\check.ps1     # read-only affected-owner static checks
-.\scripts\test.ps1      # affected tooling, backend, frontend, and mapped E2E tests
+.\scripts\check.ps1 -Scope Backend          # affected static owner, when needed
+.\scripts\test.ps1 -ChangedFiles backend/app/domain/example.py
+.\scripts\test.ps1 -PlanOnly                 # inspect selection without execution
+.\scripts\test.ps1 -Risk Risky -Owner Backend # full backend owner
+.\scripts\test.ps1 -Risk Risky -Owner Frontend
 ```
 
-Useful variants:
+Use real changed repository paths in `-ChangedFiles`. It works for initial
+targeted runs and retries, preserving failed or unexecuted selections from the
+same risk/owner scope. Unchanged successful paths do not rerun; unrelated dirty
+files do not widen an explicit selection. Unreadable or incompatible run records
+select the requested scope afresh. `-Risk Risky` runs all owner suites unless
+`-Owner` selects Backend, Frontend, Tool or E2E. Provider-backed Content browser
+integration remains a separate explicit workflow.
 
-```powershell
-.\scripts\check.ps1 -Fix                   # intentional formatter/lint fixes
-.\scripts\check.ps1 -CheckOnly             # compatibility spelling
-.\scripts\check.ps1 -Scope All              # explicit cross-system check
-.\scripts\test.ps1 -PlanOnly               # explain selection, do not execute
-.\scripts\test.ps1 -ChangedFiles a.py,b.py # retry after a failed/interrupted run
-```
+One OS-held worktree lock prevents overlapping harness runs and is released
+even on interruption. The runner never kills other Vitest processes. Vitest
+defaults to two workers. Suites run sequentially and fail fast; frontend batches
+stop immediately on failure. Successful output is retained in worktree-local
+Git logs; failures show a bounded tail and the full-log path.
 
 The direct cross-platform entry points are `pnpm quality:fix` and the
 non-mutating `pnpm quality:check`; like the root shim, they use affected-owner
 scope unless an explicit `--scope` is supplied.
 
-`test.ps1` compares the working tree against `origin/main`, maps every changed
-production file through `scripts/validation.json`, and fails if a changed file
-under `backend/app` or `frontend/{app,components,lib}` has no mapping. Add the
-missing mapping; never substitute a broad or full-suite fallback.
+`test.ps1` compares the working tree against `origin/main` and maps every
+changed production file through `scripts/validation.json`. A changed file under
+`backend/app` or `frontend/{app,components,lib}` with no mapping is reported as
+a warning, naming the nearest existing rule, and falls back to the tests named
+after the file's own feature (backend) or colocated in its own directory
+(frontend). That fallback is deliberately narrow and may resolve to nothing.
+Add a mapping when the change has a credible regression path; a file with no
+such path needs no mapping and no invented test. Never widen the fallback to a
+full-suite run.
 
 GitHub CI has one cheap classifier before the implementation jobs. On an
 initial pull-request run it classifies the complete PR diff. A later push uses
@@ -260,7 +273,7 @@ one reliably produces tests written to move the number rather than to describe
 behaviour.
 
 What must be tested is decided by `scripts/validation.json`, which maps every
-production file to the tests that have to run for it, and `test.ps1` fails when
+production file to the tests that have to run for it, and `test.ps1` warns when
 a changed file under `backend/app` has no mapping. That mapping is reviewable in
 a way a percentage is not. Changed root tooling tests run directly through Node;
 production scripts and migrations remain held by ruff, mypy, vulture,

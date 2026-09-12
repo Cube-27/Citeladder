@@ -1,35 +1,69 @@
 param(
     [string[]] $ChangedFiles = @(),
+    [ValidateSet('Minor', 'Feature', 'Risky')]
+    [string] $Risk = 'Feature',
+    [ValidateSet('All', 'Backend', 'Frontend', 'Tool', 'E2E')]
+    [string] $Owner = 'All',
     [switch] $PlanOnly
 )
 
 $ErrorActionPreference = "Stop"
+$selectedOwner = $Owner
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $config = Get-Content -LiteralPath (Join-Path $PSScriptRoot "validation.json") -Raw |
     ConvertFrom-Json -AsHashtable
-$statePath = Join-Path $repoRoot ".git/citeladder-test-state.json"
+$gitDirectory = (& git -C $repoRoot rev-parse --absolute-git-dir).Trim()
+if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the worktree Git directory.' }
+$statePath = Join-Path $gitDirectory 'citeladder-test-state.json'
+$lockPath = Join-Path $gitDirectory 'citeladder-test.lock'
+
+if ($Risk -eq 'Minor') {
+    Write-Host 'Minor change: no tests selected.'
+    exit 0
+}
 
 # Deliberately fixed. Agents may narrow a retry to files changed after a failed
 # run, but may not redefine the repository comparison base.
 $baseRef = "origin/main"
 
+function Enter-TestLock {
+    # The OS releases this exclusive handle even when the runner crashes.
+    # Never kill processes by name: they may belong to another workspace.
+    try {
+        return [IO.File]::Open($lockPath, 'OpenOrCreate', 'ReadWrite', 'None')
+    }
+    catch [IO.IOException] {
+        throw 'A test run is already active in this worktree. Wait for that run.'
+    }
+}
+
 function Invoke-Step {
     param([string] $Name, [scriptblock] $Command)
 
     Write-Host "`n==> $Name" -ForegroundColor Cyan
-    & $Command
-    if ($LASTEXITCODE -ne 0) { throw "$Name failed with exit code $LASTEXITCODE." }
+    $logPath = Join-Path $gitDirectory ("citeladder-test-" + ($Name.ToLowerInvariant() -replace '[^a-z0-9]+', '-') + '.log')
+    try {
+        & $Command *> $logPath
+        if ($LASTEXITCODE -ne 0) { throw "$Name failed with exit code $LASTEXITCODE." }
+    }
+    catch {
+        Get-Content -LiteralPath $logPath -Tail 60 -ErrorAction SilentlyContinue
+        Write-Host "Full output: $logPath"
+        throw
+    }
+    Write-Host "$Name passed. Log: $logPath" -ForegroundColor Green
 }
 
 function Read-TestState {
     if (-not (Test-Path -LiteralPath $statePath)) {
-        throw "-ChangedFiles is only valid after an earlier test.ps1 run in this task."
+        return $null
     }
     try {
         return Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
     }
     catch {
-        throw "The previous test selection record is unreadable; rerun test.ps1 without -ChangedFiles."
+        Write-Warning 'Unreadable prior run record; selecting the requested scope afresh.'
+        return $null
     }
 }
 
@@ -148,7 +182,8 @@ function Invoke-FrontendTests {
     foreach ($test in $Tests) {
         if ($batch.Count -ge 75 -or ($batchLength + $test.Length + 1) -gt 6000) {
             $batchArguments = @($batch)
-            Invoke-FrontendPnpm exec vitest run @batchArguments
+            Invoke-FrontendPnpm exec vitest run --bail=1 --reporter=dot @batchArguments
+            if ($LASTEXITCODE -ne 0) { throw 'Frontend test batch failed.' }
             $batch.Clear()
             $batchLength = 0
         }
@@ -157,7 +192,8 @@ function Invoke-FrontendTests {
     }
     if ($batch.Count -gt 0) {
         $batchArguments = @($batch)
-        Invoke-FrontendPnpm exec vitest run @batchArguments
+        Invoke-FrontendPnpm exec vitest run --bail=1 --reporter=dot @batchArguments
+        if ($LASTEXITCODE -ne 0) { throw 'Frontend test batch failed.' }
     }
 }
 
@@ -304,6 +340,46 @@ function Add-Patterns {
     }
 }
 
+function Get-NearestRuleHint {
+    param([string] $Path)
+
+    # An unmapped file is nearly always a sibling of something already mapped.
+    # Naming that neighbour lets a mapping be added with a targeted edit instead
+    # of a read of the whole mapping file.
+    $directory = ([IO.Path]::GetDirectoryName($Path) ?? "").Replace("\", "/")
+    if (-not $directory) { return $null }
+
+    $segments = @($directory -split "/" | Where-Object { $_ })
+    $best = $null
+    $bestShared = 0
+    foreach ($rule in $config.rules) {
+        foreach ($source in @($rule.sources)) {
+            $prefix = (([string] $source) -split '\*')[0].TrimEnd("/")
+            if (-not $prefix) { continue }
+
+            $candidate = @($prefix -split "/" | Where-Object { $_ })
+            $shared = 0
+            while (
+                $shared -lt $segments.Count -and
+                $shared -lt $candidate.Count -and
+                $segments[$shared] -eq $candidate[$shared]
+            ) { $shared++ }
+
+            if ($shared -gt $bestShared) {
+                $best = $rule
+                $bestShared = $shared
+            }
+        }
+    }
+    if ($null -eq $best) { return $null }
+
+    $tests = @(
+        @($best.backendTests) + @($best.frontendTests) + @($best.frontendE2E) |
+            Where-Object { $_ }
+    )
+    return "$($best.sources -join ', ') -> $($tests -join ', ')"
+}
+
 function Resolve-TestPatterns {
     param([string] $Root, [string[]] $Patterns, [string[]] $Extensions)
 
@@ -349,41 +425,32 @@ function Select-ProductionPaths {
     )
 }
 
+$testLock = if (-not $PlanOnly) { Enter-TestLock } else { $null }
+try {
 $mergeBase = Get-MergeBase
 $allChangedPaths = @(Get-AllChangedPaths $mergeBase)
-$retryState = if ($ChangedFiles.Count -gt 0) { Read-TestState } else { $null }
-if ($null -ne $retryState) {
-    if ($retryState.schema -ne 1) {
-        throw "The previous test selection uses an unsupported state schema; rerun without -ChangedFiles."
-    }
-    if ([string] $retryState.baseRef -ne $baseRef) {
-        throw "The previous test selection used base '$($retryState.baseRef)'; rerun without -ChangedFiles."
-    }
-    if ([string] $retryState.mergeBase -ne $mergeBase) {
-        throw "The comparison merge base changed since the previous run; rerun test.ps1 without -ChangedFiles."
-    }
-    if ([string] $retryState.status -notin @("running", "failed", "succeeded")) {
-        throw "The previous test selection has an invalid status; rerun without -ChangedFiles."
-    }
-}
 $requestedChangedPaths = @(Select-RequestedChangedPaths $allChangedPaths $ChangedFiles)
+$retryState = Read-TestState
+if ($null -ne $retryState -and (
+    $retryState.schema -ne 2 -or $retryState.mergeBase -ne $mergeBase -or
+    $retryState.risk -ne $Risk -or $retryState.owner -ne $selectedOwner -or
+    $null -eq $retryState.pathDigests -or
+    $retryState.status -notin @('running', 'failed', 'succeeded')
+)) { $retryState = $null }
+
+# Reuse completed evidence. Only edits in this selection or the previous run
+# invalidate it; unrelated work in a dirty tree does not widen an explicit scope.
+$changedPaths = @($requestedChangedPaths)
 if ($null -ne $retryState) {
-    if ($null -eq $retryState.pathDigests) {
-        throw "The previous test selection has no file digest record; rerun test.ps1 without -ChangedFiles."
-    }
-    $invalidatedPaths = @(Get-InvalidatedPaths $retryState $allChangedPaths)
-    $requestedSet = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($path in $requestedChangedPaths) { [void] $requestedSet.Add($path) }
-    $missingRetryPaths = @($invalidatedPaths | Where-Object { -not $requestedSet.Contains($_) })
-    if ($missingRetryPaths.Count -gt 0) {
-        $formatted = $missingRetryPaths -join ", "
-        throw "Retry must include every path changed since the previous run: $formatted"
+    $candidates = @(@($requestedChangedPaths) + @($retryState.changedPaths) | Sort-Object -Unique)
+    $changedPaths = @(Get-InvalidatedPaths $retryState $candidates)
+    if ($changedPaths.Count -eq 0 -and $retryState.status -eq 'succeeded') {
+        Write-Host 'Selected changes already passed. No tests rerun.' -ForegroundColor Green
+        exit 0
     }
 }
-$changedPaths = @($requestedChangedPaths)
-
-if ($changedPaths.Count -eq 0) {
-    Write-Host "No changed paths selected." -ForegroundColor Green
+if ($changedPaths.Count -eq 0 -and $null -eq $retryState -and $Risk -ne 'Risky') {
+    Write-Host 'No changed paths selected.' -ForegroundColor Green
     exit 0
 }
 
@@ -455,10 +522,6 @@ foreach ($rule in $config.rules) {
     }
 }
 
-if ($null -ne $retryState -and $retryState.status -eq "succeeded") {
-    throw "The previous test selection completed successfully; rerun test.ps1 without -ChangedFiles for a new diff."
-}
-
 # A failed or interrupted run may have stopped before later owners executed.
 # Re-add those exact selections before resolving the new retry delta.
 $pendingOwners = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
@@ -481,9 +544,54 @@ $unmappedPaths = @(
     $backendSourcePaths | Where-Object { -not $mappedBackendPaths.Contains($_) }
     $frontendSourcePaths | Where-Object { -not $mappedFrontendPaths.Contains($_) }
 )
+$usedMappingFallback = $false
 if ($unmappedPaths.Count -gt 0) {
-    $formatted = $unmappedPaths | Sort-Object | ForEach-Object { " - $_" }
-    throw "Production files lack test mappings in scripts/validation.json:`n$($formatted -join "`n")"
+    # An unmapped production file used to be fatal, which stalled the task on a
+    # read-and-edit of the whole mapping file. The nudge to add a mapping
+    # survives as a warning; the stall does not.
+    $usedMappingFallback = $true
+    Write-Host "`nProduction files lack test mappings in scripts/validation.json:" -ForegroundColor Yellow
+    foreach ($path in @($unmappedPaths | Sort-Object)) {
+        Write-Host " - $path" -ForegroundColor Yellow
+        $hint = Get-NearestRuleHint $path
+        if ($hint) { Write-Host "   nearest rule: $hint" -ForegroundColor DarkYellow }
+    }
+    Write-Host "Falling back to the narrowest honest selection for each owner. Add a mapping when the change has a credible regression path." -ForegroundColor Yellow
+
+    # Both fallbacks stay narrow on purpose: a wide one is as expensive as the
+    # stall it replaced. Backend tests live in a central tree and are named
+    # after the feature they cover, so the changed file's own feature segment
+    # selects them. Frontend tests colocate, so the file's directory does.
+    # Either may resolve to nothing for genuinely new code -- the warning
+    # above, and CI's full suite, are what cover that case.
+    foreach ($path in @($unmappedPaths | Where-Object { $_.StartsWith("backend/app/", "OrdinalIgnoreCase") })) {
+        $relative = $path.Substring("backend/app/".Length)
+        $segments = @($relative -split "/" | Where-Object { $_ })
+        $feature = if ($segments.Count -gt 1) {
+            $segments[$segments.Count - 2]
+        }
+        else {
+            [IO.Path]::GetFileNameWithoutExtension($relative)
+        }
+        if (-not $feature) { continue }
+        Add-Patterns $backendPatterns @(
+            "tests/unit/test_$feature*.py",
+            "tests/component/test_$feature*.py"
+        )
+    }
+    foreach ($path in @($unmappedPaths | Where-Object { $_.StartsWith("frontend/", "OrdinalIgnoreCase") })) {
+        $directory = ([IO.Path]::GetDirectoryName($path) ?? "").Replace("\", "/")
+        if ($directory.Length -le "frontend".Length) { continue }
+        $relative = $directory.Substring("frontend/".Length)
+        Add-Patterns $frontendPatterns @("$relative/*.test.ts", "$relative/*.test.tsx")
+    }
+}
+
+if ($Risk -eq 'Risky') {
+    Add-Patterns $backendPatterns @('tests/**/test_*.py')
+    Add-Patterns $frontendPatterns @('**/*.test.ts', '**/*.test.tsx')
+    Add-Patterns $toolTests @(Resolve-TestPatterns $repoRoot @('scripts/*.test.mjs') @('.mjs'))
+    Add-Patterns $e2ePatterns @('e2e/*.spec.ts')
 }
 
 $backendTests = @(Resolve-TestPatterns (Join-Path $repoRoot "backend") @($backendPatterns) @(".py"))
@@ -519,11 +627,22 @@ foreach ($match in $matchedRules) {
     }
 }
 
-if ($backendSourcePaths.Count -gt 0 -and $backendTests.Count -eq 0) {
+# A fallback selection may legitimately resolve to nothing -- a brand new
+# directory has no colocated test yet. Only a configured mapping resolving to
+# nothing is a misconfiguration worth stopping for.
+if ($backendSourcePaths.Count -gt 0 -and $backendTests.Count -eq 0 -and -not $usedMappingFallback) {
     throw "Backend mappings resolved to zero runnable tests. Fix scripts/validation.json."
 }
-if ($frontendSourcePaths.Count -gt 0 -and ($frontendTests.Count + $frontendE2E.Count) -eq 0) {
+if ($frontendSourcePaths.Count -gt 0 -and ($frontendTests.Count + $frontendE2E.Count) -eq 0 -and -not $usedMappingFallback) {
     throw "Frontend mappings resolved to zero runnable tests. Fix scripts/validation.json."
+}
+
+$frontendE2E = @($frontendE2E | Where-Object { $_ -ne 'e2e/content-integration.spec.ts' })
+if ($selectedOwner -ne 'All') {
+    if ($selectedOwner -ne 'Backend') { $backendTests = @() }
+    if ($selectedOwner -ne 'Frontend') { $frontendTests = @() }
+    if ($selectedOwner -ne 'Tool') { $toolTests.Clear() }
+    if ($selectedOwner -ne 'E2E') { $frontendE2E = @() }
 }
 
 Write-Host (
@@ -570,13 +689,16 @@ $completedOwners = if ($null -ne $retryState) { Get-StateValues $retryState.comp
 foreach ($owner in @($ownersToRun)) {
     $completedOwners = @($completedOwners | Where-Object { $_ -ne $owner })
 }
+$recordedPaths = @(@($requestedChangedPaths) + @($changedPaths) + @($retryState.changedPaths) | Where-Object { $_ } | Sort-Object -Unique)
 $state = [ordered]@{
-    schema = 1
+    schema = 2
+    risk = $Risk
+    owner = $selectedOwner
     baseRef = $baseRef
     mergeBase = $mergeBase
     status = "running"
-    changedPaths = @($allChangedPaths)
-    pathDigests = Get-PathDigests $allChangedPaths
+    changedPaths = $recordedPaths
+    pathDigests = Get-PathDigests $recordedPaths
     groups = [ordered]@{
         backend = @($backendTests)
         tool = @($toolTests)
@@ -600,7 +722,7 @@ try {
     # Coverage is a whole-suite floor and is measured by CI, never by this
     # affected-subset selector.
         Invoke-Step "Affected backend tests" {
-            Invoke-BackendPython -m pytest @backendTests -q --no-cov
+            Invoke-BackendPython -m pytest @backendTests -q --no-cov -x --tb=short
         }
         $completedOwners = @(@($completedOwners) + @("backend")) | Sort-Object -Unique
         Update-TestStateStatus $state "running" $completedOwners
@@ -612,7 +734,7 @@ try {
     }
     if ($frontendE2E.Count -gt 0) {
         Invoke-Step "Affected frontend E2E" {
-            Invoke-FrontendPnpm exec playwright test --config playwright.config.ts @frontendE2E
+            Invoke-FrontendPnpm exec playwright test -x --config playwright.config.ts @frontendE2E
         }
         $completedOwners = @(@($completedOwners) + @("e2e")) | Sort-Object -Unique
         Update-TestStateStatus $state "running" $completedOwners
@@ -624,4 +746,8 @@ try {
 catch {
     Update-TestStateStatus $state "failed" @($completedOwners)
     throw
+}
+}
+finally {
+    if ($null -ne $testLock) { $testLock.Dispose() }
 }

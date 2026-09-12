@@ -73,7 +73,8 @@ because a plan file mentions it.
 3. Implement one coherent slice in the existing owner and preserve unrelated
    work in a dirty tree.
 4. Add deterministic coverage at the lowest meaningful boundary. Persistence
-   changes require workspace-isolation and provenance coverage; concurrency
+   changes and other behaviour changes need coverage only for credible regressions;
+   persistence coverage includes workspace isolation and provenance; concurrency
    changes require the real PostgreSQL boundary.
 5. Update an owner document only when its shipped contract, setup command,
    procedure, or approved decision changes. Put routine evidence in the PR/CI
@@ -90,37 +91,63 @@ in the PR; there is no blanket multi-file documentation checklist per edit.
 
 ## Validation
 
-Repository completion gates run once per task, after the complete intended
-executable diff is finished. Documentation edits, commits, sub-phases,
-handoffs, and intermediate milestones never trigger completion gates. During
-implementation, run only a directly targeted test or command when you are
-debugging executable behavior currently being changed; otherwise do not run a
-test merely to prove progress or establish intermediate evidence.
+Choose validation from the behaviour at risk, not from the number of changed
+files. State the choice once and do not repeat gates at intermediate milestones.
 
-Before handoff, from the repository root, run once in order:
+- **Minor:** copy, cosmetic UI, comments or documentation with no changed
+  executable contract. Create and run no tests. Do not invoke the repository
+  check/test harness merely because a file changed.
+- **Feature:** changed behaviour with a bounded owner. Add or update a test only
+  for a credible regression; run the smallest relevant test selection and
+  affected static checks once when implementation is complete. Use explicit
+  changed paths when unrelated work is present.
+- **Risky:** authorization, persistence, concurrency, migrations, shared runtime
+  or cross-system contracts. Run the relevant full owner suites and stronger
+  boundary checks. CI owns full release validation; full suites may be split by
+  backend, frontend, tooling and browser owner.
 
-```powershell
-.\scripts\check.ps1
-.\scripts\test.ps1
-```
+`scripts/test.ps1` defaults to mapped feature tests. `-ChangedFiles` selects
+explicit paths on the first run as well as retries. `-Risk Minor` selects no
+tests; `-Risk Risky -Owner Backend` (or Frontend, Tool, E2E, All) selects full
+owner suites. `-PlanOnly` explains selection without running tests.
 
-`check.ps1` is read-only by default and checks affected quality owners. Use
-`-Scope All` only for an explicit cross-system/release check. Formatting is an
-intentional action with `-Fix`; `-CheckOnly` remains a compatibility spelling.
-`test.ps1 -PlanOnly` explains the comparison base, changed paths, matched
-mappings, broad selections, and resolved files without executing tests.
+The runner reuses successful evidence for unchanged paths. After edits or a
+failure, it selects the changed scope plus failed or unexecuted owners. Do not
+restart a successful run for a commit, handoff, documentation edit or PR.
+Do not launch overlapping test/check processes. Successful logs stay in `.git`;
+inspect the failure tail before reading the full log.
 
-`-ChangedFiles` is a retry delta only after an earlier `test.ps1` run in the
-same task. The runner records failed/interrupted selections in `.git` and a
-retry must include previously failed, previously unexecuted, and newly
-invalidated owners. An uncertain record requires a fresh full invocation.
+`check.ps1` is read-only by default. Use `-Scope All` only for an explicit
+cross-system/release check; `-Fix` is intentional formatting. For shipping an
+already-verified diff, reuse the existing results and let CI validate the PR.
 
-There is no test-by-default rule: changing a file does not itself require a
-test run or a new test. Select tests because the changed behavior creates a
-credible regression path, using the existing mapping and the lowest meaningful
-boundary. Documentation-only changes must never invoke backend, frontend,
-browser, build, migration, or application test suites unless the documentation
-is executable or packaged input, such as a production Content skill.
+## What earns a test
+
+A test earns its place by failing when a behaviour regresses and passing when
+the code is merely rewritten. Write one for a decision the code makes: a
+branch, a boundary, a transformation, a contract between two modules. Prefer
+one test that exercises a real path over several that each assert one field.
+
+Do not write a test that asserts:
+
+- the text of a source, config, workflow, or documentation file -- substring
+  presence, substring ordering, or formatting. It breaks on a reformat and
+  passes on a semantic break. Assert on the parsed structure instead, or make
+  it a policy check under `scripts/quality.mjs` where it belongs.
+- what the type checker already guarantees, such as a field's presence or type
+  on a typed model.
+- a constant against a copy of itself, or a mapping against a restatement of
+  the same mapping.
+- framework behaviour rather than our use of it.
+
+For UI, test user-visible behaviour and accessibility contracts, not incidental
+copy, utility classes, component nesting or snapshots of the entire markup.
+Do not multiply assertions for details already covered by one meaningful path.
+
+`backend/scripts/check_test_shape.py` catches direct raw-file assertions; it is
+a bounded guard, not a substitute for review. An added
+test that only restates the implementation is worse than no test: it costs a
+run on every change and defends nothing.
 
 Do not run the full backend suite locally as a substitute for the harness. CI
 runs full selected owner suites, contract/build/security checks, and the clean
