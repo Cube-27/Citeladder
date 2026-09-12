@@ -264,6 +264,7 @@ async def _load_visibility_evidence(
                 prompt_index=a.prompt_index,
                 logical_engine=a.logical_engine or "",
                 owned_citation_count=owned_counts.get(a.id, 0),
+                brand_mentioned=bool(a.brand_mentioned),
                 competitor_names=tuple(sorted(competitor_names.get(a.id, ()))),
                 citations=citation_evidence.get(a.id, ()),
                 artifact_id=a.artifact_id,

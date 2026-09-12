@@ -51,6 +51,12 @@ class AnalysisEvidence:
     logical_engine: str
     # Owned-classified citations on this repetition.
     owned_citation_count: int
+    # Whether the brand was NAMED in this answer. Absence and an uncited
+    # mention are different observations with different remediation, and
+    # only citation counts were available here before — so a brand the
+    # answer recommended by name, with no owned link, produced a
+    # high-severity "Brand absent" card.
+    brand_mentioned: bool
     # Competitor citation-or-mention names on this repetition (deduped later).
     competitor_names: tuple[str, ...]
     # The persisted citations behind this repetition, in ordinal order. Used
@@ -180,6 +186,26 @@ def _group_by_prompt_index(
     return groups
 
 
+def _observation_summary(analyses: list[AnalysisEvidence]) -> dict[str, Any]:
+    """What was actually OBSERVED behind a gap, separate from its score.
+
+    Successful observations only — ``ResponseAnalysis`` rows exist for
+    succeeded tasks. "1 engine answered, no owned citation" and "5 engines
+    answered, no owned citation" are different strengths of evidence, so the
+    engines behind the count travel with it.
+
+    ``brand_mentioned`` is whether ANY of them named the brand, which is what
+    separates a citation gap (named, not linked) from true absence.
+    """
+    return {
+        "repetitions": len(analyses),
+        "observed_engines": sorted(
+            {a.logical_engine for a in analyses if a.logical_engine}
+        ),
+        "brand_mentioned": any(a.brand_mentioned for a in analyses),
+    }
+
+
 def _gap_hit(
     *,
     evidence: VisibilityEvidence,
@@ -220,7 +246,7 @@ def _gap_hit(
             "new_prompt_intent": prompt_intent,
             "prompt_theme": snapshot.theme if snapshot is not None else "",
             "prompt_index": prompt_index,
-            "repetitions": len(analyses),
+            **_observation_summary(analyses),
             "owned_citation_count": 0,
             "source_pattern": _gap_source_pattern(analyses),
             **extras(analyses, competitor_names),
@@ -247,32 +273,64 @@ def _gap_hit(
     )
 
 
+def _gap_fires(
+    analyses: list[AnalysisEvidence],
+    competitor_names: list[str],
+    *,
+    require_competitor: bool,
+    require_brand_absent: bool,
+) -> bool:
+    """Whether one prompt's repetitions satisfy a visibility gap rule.
+
+    An owned citation anywhere closes both rules — the prompt is already
+    working. Beyond that the two rules ask different questions, and keeping
+    them as separate clauses is what stops a citation gap being read as
+    absence.
+    """
+    if any(a.owned_citation_count > 0 for a in analyses):
+        return False
+    if require_brand_absent and any(a.brand_mentioned for a in analyses):
+        return False
+    return bool(competitor_names) or not require_competitor
+
+
 def _visibility_gap_hits(
     evidence: VisibilityEvidence,
     *,
     rule: OpportunityRule,
     require_competitor: bool,
     extras: Callable[[list[AnalysisEvidence], list[str]], dict[str, Any]],
+    require_brand_absent: bool = False,
 ) -> list[DetectorHit]:
     """Per-prompt hits for the "zero owned citations" visibility rules.
 
-    Both visibility rules share the firing condition (NO repetition of the
-    prompt carries an owned citation), the ``prompt_index`` grouping, the
-    deterministic target identity, and the scoring inputs; they differ only
-    in whether a competitor must be present (``require_competitor``) and in
+    Both visibility rules share the ``prompt_index`` grouping, the
+    deterministic target identity, the scoring inputs, and the base condition
+    that NO repetition of the prompt carries an owned citation. They differ
+    in whether a competitor must be present (``require_competitor``), whether
+    the brand must be genuinely UNNAMED (``require_brand_absent``), and in
     the rule-specific evidence ``extras``.
+
+    ``require_brand_absent`` is what separates the two observations. Zero
+    owned citations says nothing about whether the answer NAMED the brand: an
+    answer can recommend a brand by name and still link nowhere it owns.
+    Calling that "absent" is false, and it carries the wrong remediation —
+    the page exists and is being talked about, it just is not citable.
     """
     snapshots = {s.prompt_index: s for s in evidence.prompt_snapshots}
     groups = _group_by_prompt_index(evidence.analyses)
     hits: list[DetectorHit] = []
     for prompt_index in sorted(groups):
         analyses = groups[prompt_index]
-        if any(a.owned_citation_count > 0 for a in analyses):
-            continue
         competitor_names = sorted(
             {name for a in analyses for name in a.competitor_names if name}
         )
-        if require_competitor and not competitor_names:
+        if not _gap_fires(
+            analyses,
+            competitor_names,
+            require_competitor=require_competitor,
+            require_brand_absent=require_brand_absent,
+        ):
             continue
         hits.append(
             _gap_hit(
@@ -291,10 +349,18 @@ def _visibility_gap_hits(
 def detect_brand_absent_high_value_prompt(
     evidence: VisibilityEvidence,
 ) -> list[DetectorHit]:
-    """Fire per prompt with no owned citation and >=1 competitor present.
+    """Fire per prompt where the brand is NOT NAMED and a competitor is.
 
-    A prompt fires when NO repetition carries an owned citation AND at least
-    one competitor citation-or-mention appears across the repetitions.
+    A prompt fires when NO repetition names the brand, none carries an owned
+    citation, and at least one competitor citation-or-mention appears across
+    the repetitions.
+
+    The brand-mention condition is the point of this rule. Without it the
+    condition was "zero owned citations + a competitor", which is a CITATION
+    gap, not absence — an answer that recommends the brand by name but links
+    to a review site fired a high-severity "Brand absent" card. That case is
+    ``owned_page_not_cited``, whose remediation (make the existing page
+    citable) is the one that actually applies.
     """
     rule = OPPORTUNITY_RULES_BY_ID[RULE_BRAND_ABSENT]
     if not rule.enabled:
@@ -303,6 +369,7 @@ def detect_brand_absent_high_value_prompt(
         evidence,
         rule=rule,
         require_competitor=True,
+        require_brand_absent=True,
         extras=lambda analyses, competitor_names: {
             "competitor_names": competitor_names,
             "engines": sorted({a.logical_engine for a in analyses if a.logical_engine}),

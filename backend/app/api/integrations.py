@@ -56,6 +56,7 @@ from app.core.config.integrations_transport import (
 from app.core.errors import ApiException
 from app.core.http_errors import raise_api_error, raise_not_found
 from app.domain.abuse.service import UsageLimitExceededError, enforce_and_commit
+from app.domain.integrations.backfill import get_backfill_progress
 from app.domain.integrations.errors import (
     IntegrationConnectionNotFoundError,
     IntegrationExchangeError,
@@ -98,7 +99,6 @@ from app.domain.integrations.sync import (
     SyncTargetUnmappedError,
     SyncWindowInvalidError,
     enqueue_sync_run,
-    get_backfill_progress,
     get_sync_run,
     list_sync_runs,
 )

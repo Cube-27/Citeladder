@@ -161,6 +161,8 @@ function DashboardPanel({
         onNextPage={filters.nextPage}
         projectId={queries.projectId}
         runId={queries.activeRunId}
+        scope={queries.evidenceScope}
+        scopeReady={queries.hasEvidenceScope}
       />
     ),
   };

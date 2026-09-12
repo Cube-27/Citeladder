@@ -31,16 +31,18 @@ from app.core.config.task_queue import (
     TASK_STATUS_QUEUED,
     TASK_STATUS_SUCCEEDED,
 )
+from app.domain.integrations.backfill import (
+    backfill_sync_windows,
+    enqueue_history_backfill,
+)
 from app.domain.integrations.errors import IntegrationConnectionNotFoundError
 from app.domain.integrations.sync import (
     ActiveWindowConflictError,
     SyncWindowInvalidError,
-    backfill_sync_windows,
     build_sync_idempotency_key,
     clamp_sync_window,
     connection_covered_through,
     default_sync_window,
-    enqueue_history_backfill,
     enqueue_sync_run,
     incremental_sync_window,
     resolve_sync_window,

@@ -274,6 +274,16 @@ export function useVisibilityQueries(
     visibilityQuery,
     trendQuery,
     evidenceQuery,
+    // The run/engine/cohort scope the evidence was read under. The fanout tab
+    // re-uses it to ask the server for SELECTION-wide totals, so its headline
+    // figures describe the same population the table is drawn from.
+    evidenceScope: {
+      audit_id: evidenceParams.audit_id,
+      audit_ids: evidenceParams.audit_ids,
+      engine: evidenceParams.engine,
+      cohort: evidenceParams.cohort,
+    },
+    hasEvidenceScope,
     promptOptions: evidenceQuery.data?.prompt_options ?? [],
     prefetchTab,
   };

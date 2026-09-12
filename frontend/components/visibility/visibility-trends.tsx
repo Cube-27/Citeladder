@@ -195,7 +195,7 @@ function HeadlineMetrics({ selected }: { selected: Visibility }) {
             <span className="inline-flex items-center gap-1.5">
               Average position
               <InfoHint label="Average position">
-                {`Where your brand tends to appear among the brands an answer names. Counted only over the answers that named you, and averaged to ${formatPositionExact(position)}.`}
+                {`Where your brand tends to appear among the brands you TRACK — you and your configured competitors. A brand an answer names that you do not track is not counted, so this is not a rank within the whole answer. Counted only over the answers that named you, and averaged to ${formatPositionExact(position)}.`}
               </InfoHint>
             </span>
           }

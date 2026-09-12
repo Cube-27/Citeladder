@@ -53,13 +53,11 @@ from app.core.config.integrations_transport import (
     is_ga4_property_ref,
     normalize_ga4_property_ref,
 )
+from app.domain.integrations.backfill import enqueue_history_backfill
 from app.domain.integrations.history_window import resolve_history_window_days
 from app.domain.integrations.schemas import IntegrationPropertyMappingResponse
 from app.domain.integrations.service import get_connection
-from app.domain.integrations.sync import (
-    enqueue_history_backfill,
-    integrity_constraint_name,
-)
+from app.domain.integrations.sync import integrity_constraint_name
 from app.domain.projects.service import get_project
 from app.models.integrations import IntegrationConnection, IntegrationPropertyMapping
 from app.models.project import Project

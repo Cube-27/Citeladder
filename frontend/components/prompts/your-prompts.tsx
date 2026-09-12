@@ -216,7 +216,6 @@ export function YourPrompts() {
               <TableHead>Prompt</TableHead>
               <TableHead numeric>Visibility Score</TableHead>
               <TableHead numeric>Avg Position</TableHead>
-              <TableHead numeric>Sentiment</TableHead>
               <TableHead>Topic</TableHead>
               <TableHead>Branded</TableHead>
             </TableRow>
@@ -257,9 +256,6 @@ export function YourPrompts() {
                     <TableCell numeric>
                       <UnavailableValue state="not_measured" />
                     </TableCell>
-                    <TableCell numeric>
-                      <UnavailableValue state="not_measured" />
-                    </TableCell>
                     <TableCell />
                     <TableCell />
                   </TableRow>
@@ -274,9 +270,6 @@ export function YourPrompts() {
                           </TableCell>
                           <TableCell numeric>
                             <ScoreCell score={scores.get(prompt.id) ?? null} />
-                          </TableCell>
-                          <TableCell numeric>
-                            <UnavailableValue state="not_measured" />
                           </TableCell>
                           <TableCell numeric>
                             <UnavailableValue state="not_measured" />

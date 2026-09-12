@@ -13,12 +13,15 @@ from app.analysis.opportunities.source_mix import build_source_projection
 from app.analysis.opportunities.source_patterns import CitationEvidence
 
 
-def _analysis(index: int, *citations: CitationEvidence) -> AnalysisEvidence:
+def _analysis(
+    index: int, *citations: CitationEvidence, brand_mentioned: bool = False
+) -> AnalysisEvidence:
     return AnalysisEvidence(
         analysis_id=uuid.uuid4(),
         prompt_index=index,
         logical_engine="chatgpt",
         owned_citation_count=0,
+        brand_mentioned=brand_mentioned,
         competitor_names=("Rival",),
         citations=tuple(citations),
         artifact_id=uuid.uuid4(),

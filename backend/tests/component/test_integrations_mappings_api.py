@@ -20,8 +20,8 @@ import pytest
 from sqlalchemy import select
 
 from app.core.config.integrations_contracts import SYNC_KIND_BACKFILL
+from app.domain.integrations.backfill import backfill_sync_windows
 from app.domain.integrations.history_window import FREE_HISTORY_WINDOW_DAYS
-from app.domain.integrations.sync import backfill_sync_windows
 from app.models.brand import OwnedDomain
 from app.models.integrations import (
     IntegrationConnection,

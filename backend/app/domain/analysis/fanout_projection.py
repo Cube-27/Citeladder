@@ -37,6 +37,7 @@ async def get_visibility_fanout(
     offset=0,
     limit=VISIBILITY_EVIDENCE_DEFAULT_LIMIT,
     query=None,
+    search=None,
     audit_ids=None,
 ):
     _validated_evidence_request(
@@ -98,17 +99,19 @@ async def get_visibility_fanout(
             total_answers += 1
         _record_queries(queries, events, analysis, prompt)
     ordered = sorted(queries.items(), key=lambda item: (-item[1].events, item[0]))
+    matched = _matching_queries(ordered, search)
     # `offset` pages whichever list the caller is reading. Drilling into one
     # query's answers must not also scroll the query table out from under it —
     # past the first page of answers the table came back empty, because the
     # same offset had been applied to a list that had nothing that far down.
-    query_rows = ordered[offset : offset + limit] if query is None else ordered[:limit]
+    query_rows = matched[offset : offset + limit] if query is None else matched[:limit]
     return FanoutResponse(
         event_count=total_events,
         distinct_queries=len(ordered),
+        matched_queries=len(matched),
         coverage=dict(states),
         next_offset=offset + limit
-        if offset + limit < (total_answers if query is not None else len(ordered))
+        if offset + limit < (total_answers if query is not None else len(matched))
         else None,
         answers=answers,
         total_answers=total_answers,
@@ -124,6 +127,21 @@ async def get_visibility_fanout(
             for text, item in query_rows
         ],
     )
+
+
+def _matching_queries(ordered, search):
+    """The query rows a ``search`` selects, in the caller's order.
+
+    ``search`` filters the ROWS only; it never narrows ``event_count`` or
+    ``distinct_queries``, which stay the totals for the whole selection so
+    they do not move as the reader types or pages. Filtering here rather than
+    in the client is what lets a query stored past the first page be found at
+    all — the browser could only ever search what it had loaded.
+    """
+    needle = (search or "").strip().casefold()
+    if not needle:
+        return ordered
+    return [row for row in ordered if needle in row[0].casefold()]
 
 
 def _record_queries(queries, events, analysis, prompt):

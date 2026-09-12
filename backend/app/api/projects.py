@@ -291,6 +291,7 @@ async def get_visibility_fanout_endpoint(
     engine: Annotated[str | None, Query()] = None,
     cohort: Annotated[Literal["core", "comparison"], Query()] = "core",
     query: Annotated[str | None, Query(max_length=8192)] = None,
+    search: Annotated[str | None, Query(max_length=512)] = None,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[
         int, Query(ge=1, le=VISIBILITY_EVIDENCE_MAX_LIMIT)
@@ -308,6 +309,7 @@ async def get_visibility_fanout_endpoint(
             offset=offset,
             limit=limit,
             query=query,
+            search=search,
             audit_ids=audit_ids,
         )
     except AnalysisNotFoundError as exc:

@@ -40,6 +40,14 @@ import { textRole } from '@/components/ui/typography';
 
 const TITLE = 'Query fanouts';
 
+/** The run/engine/cohort scope the evidence table was read under. */
+export type FanoutScope = Readonly<{
+  audit_id?: string;
+  audit_ids?: string[];
+  engine?: string;
+  cohort?: string;
+}>;
+
 /** Rows (or groups) per page, matching the shared table footer. */
 const PAGE_SIZE = 10;
 
@@ -83,7 +91,15 @@ export function FanoutEvidence({
   onNextPage,
   projectId,
   runId,
-}: EvidenceTabProps & Readonly<{ projectId: string | null; runId: string | null }>) {
+  scope,
+  scopeReady,
+}: EvidenceTabProps &
+  Readonly<{
+    projectId: string | null;
+    runId: string | null;
+    scope: FanoutScope;
+    scopeReady: boolean;
+  }>) {
   const {
     grouping,
     setGrouping,
@@ -100,6 +116,7 @@ export function FanoutEvidence({
     from,
     to,
   } = useSearchTable(query, projectId, runId);
+  const summary = useFanoutSummary(projectId, scope, scopeReady, search);
 
   if (query.isLoading) return <EvidenceSkeleton title={TITLE} />;
   if (query.isError) return <EvidenceError title={TITLE} onRetry={() => query.refetch()} />;
@@ -126,10 +143,7 @@ export function FanoutEvidence({
         <CardTitle>{TITLE}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
-        <div className="flex flex-wrap items-end gap-x-10 gap-y-4 px-[var(--card-padding)] pb-4">
-          <Total label="Distinct searches" value={totals.distinct} />
-          <Total label="Total occurrences" value={totals.occurrences} />
-        </div>
+        <SelectionTotals summary={summary} fallback={totals} />
         <div className="border-border-subtle flex flex-wrap items-center gap-2 border-t px-[var(--card-padding)] py-3">
           <Input
             type="search"
@@ -139,6 +153,7 @@ export function FanoutEvidence({
             aria-label="Filter searches by text"
             className="max-w-xs"
           />
+          <SearchScopeNote search={search} matched={summary.matchedQueries} />
           <span className="grow" />
           <AnalysisChoice
             label="Group searches by"
@@ -148,9 +163,7 @@ export function FanoutEvidence({
           />
         </div>
         {visible.length === 0 ? (
-          <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
-            No search matches “{search}”.
-          </p>
+          <NoSearchMatch search={search} matched={summary.matchedQueries} />
         ) : (
           <Table>
             <TableHeader>
@@ -333,6 +346,108 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
  * one per prompt, so the join happens here rather than being pushed into the
  * evidence endpoint. Only fetched when the reader actually groups by topic.
  */
+type FanoutSummary = Readonly<{
+  distinctQueries: number | null;
+  eventCount: number | null;
+  matchedQueries: number | null;
+}>;
+
+/**
+ * The two headline figures, and the scope they describe.
+ *
+ * They come from the server's aggregation over the COMPLETE selection, so
+ * they hold still while the reader pages and types. They used to be derived
+ * from whichever evidence window happened to be loaded and shown under these
+ * same labels, so they moved on every page. `fallback` is only for the first
+ * paint, before the summary lands.
+ */
+function SelectionTotals({
+  summary,
+  fallback,
+}: Readonly<{ summary: FanoutSummary; fallback: { distinct: number; occurrences: number } }>) {
+  return (
+    <div className="flex flex-wrap items-end gap-x-10 gap-y-4 px-[var(--card-padding)] pb-4">
+      <Total label="Distinct searches" value={summary.distinctQueries ?? fallback.distinct} />
+      <Total label="Total occurrences" value={summary.eventCount ?? fallback.occurrences} />
+      <span className={textRole('label', 'text-secondary')}>across the selected run set</span>
+    </div>
+  );
+}
+
+/** How many searches the typed filter matches across the whole run set. */
+function SearchScopeNote({
+  search,
+  matched,
+}: Readonly<{ search: string | null; matched: number | null }>) {
+  if (!search || matched == null) return null;
+  return (
+    <span className={textRole('label', 'text-secondary')}>
+      {matched === 0
+        ? 'No searches match in this run set'
+        : `${matched} matching ${matched === 1 ? 'search' : 'searches'} in this run set`}
+    </span>
+  );
+}
+
+/**
+ * Nothing on THIS page matched — which is not the same as nothing matching.
+ *
+ * The table renders one loaded window. When the server reports matches the
+ * window does not contain, say so and point at the pager, rather than
+ * claiming the query does not exist.
+ */
+function NoSearchMatch({
+  search,
+  matched,
+}: Readonly<{ search: string | null; matched: number | null }>) {
+  const elsewhere = matched
+    ? ` — ${matched} match further into the run set. Load more below.`
+    : '.';
+  return (
+    <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
+      {`No search matches “${search}” on this page${elsewhere}`}
+    </p>
+  );
+}
+
+/**
+ * Selection-wide fanout totals, straight from the server.
+ *
+ * The table below is one loaded evidence window, and deriving "Distinct
+ * searches" and "Total occurrences" from it meant both figures changed as the
+ * reader paged — they were page totals wearing selection labels. This asks the
+ * projection that already aggregates the COMPLETE selection
+ * (`domain/analysis/fanout_projection.py`), which it does with `limit=None`.
+ *
+ * `search` is sent too, so the count of matching queries covers the whole run
+ * set rather than whatever happens to be loaded: a query stored past the first
+ * page was previously unfindable.
+ */
+function useFanoutSummary(
+  projectId: string | null,
+  scope: FanoutScope,
+  scopeReady: boolean,
+  search: string | null,
+) {
+  const params = useMemo(
+    () => ({ ...scope, search: search?.trim() || undefined }),
+    [scope, search],
+  );
+  const result = useQuery({
+    queryKey: queryKeys.visibility.fanout(projectId ?? '', params),
+    queryFn: ({ signal }) => visibilityApi.getFanoutSummary(projectId ?? '', params, { signal }),
+    enabled: Boolean(projectId) && scopeReady,
+    // Totals for a selection do not change while the reader pages through it;
+    // keeping the previous values avoids the headline flickering to blank.
+    placeholderData: (previous) => previous,
+  });
+  return {
+    distinctQueries: result.data?.distinct_queries ?? null,
+    eventCount: result.data?.event_count ?? null,
+    matchedQueries: result.data?.matched_queries ?? null,
+  };
+}
+
 function usePromptTopics(projectId: string | null, runId: string | null, enabled: boolean) {
   const result = useQuery({
     queryKey: [...queryKeys.visibility.prompts(projectId ?? '', runId ?? undefined), 'topics'],

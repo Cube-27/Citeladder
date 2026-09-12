@@ -110,8 +110,12 @@ class FanoutAnswer(BaseModel):
 
 
 class FanoutResponse(BaseModel):
+    # Totals for the WHOLE selection: they do not move with paging or search.
     event_count: int = 0
     distinct_queries: int = 0
+    # Query rows matching the current ``search`` (== distinct_queries when
+    # there is no search). What the table is paging through.
+    matched_queries: int = 0
     coverage: dict[str, int] = Field(default_factory=dict)
     items: list[FanoutQueryRow] = Field(default_factory=list)
     next_offset: int | None = None
