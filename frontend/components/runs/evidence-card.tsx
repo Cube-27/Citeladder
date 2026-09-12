@@ -109,6 +109,33 @@ function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>
   );
 }
 
+const listItemBlock = /^ {0,3}(?:[-*+] |\d+[.)] )/;
+const structuralBlock = /^ {0,3}(?:#{1,6} |[-*+] |\d+[.)] |>|```|~~~|\|)/;
+const indentedBlock = /^(?: {4}|\t)/;
+const sentenceEnd = /[.!?:;\])}"'…](?:[*_~]+)?$/;
+const punctuationOnly = /^[,.;:!?)\]}]+(?:[*_~]+)?$/;
+const commaFragment = /^,\s/;
+const sentenceFragment = /^(?:\p{Ll}|\+\d)/u;
+
+function joinsWithoutSpace(previous: string, block: string, content: string): boolean {
+  return (
+    listItemBlock.test(previous) &&
+    !indentedBlock.test(block) &&
+    (punctuationOnly.test(content) || commaFragment.test(content))
+  );
+}
+
+function joinsWithSpace(previous: string, block: string, content: string): boolean {
+  return (
+    listItemBlock.test(previous) &&
+    !indentedBlock.test(block) &&
+    !structuralBlock.test(block) &&
+    !sentenceEnd.test(previous) &&
+    !sentenceEnd.test(content) &&
+    sentenceFragment.test(content)
+  );
+}
+
 /**
  * Repair paragraph breaks introduced around inline citation annotations.
  *
@@ -125,13 +152,6 @@ export function normalizeEvidenceMarkdown(markdown: string): string {
     .map((block) => block.trimEnd())
     .filter((block) => block.trim());
   const normalized: string[] = [];
-  const listItem = /^ {0,3}(?:[-*+] |\d+[.)] )/;
-  const structuralBlock = /^ {0,3}(?:#{1,6} |[-*+] |\d+[.)] |>|```|~~~|\|)/;
-  const indentedBlock = /^(?: {4}|\t)/;
-  const sentenceEnd = /[.!?:;\])}"'…](?:[*_~]+)?$/;
-  const punctuationOnly = /^[,.;:!?)\]}]+(?:[*_~]+)?$/;
-  const commaFragment = /^,\s/;
-  const sentenceFragment = /^(?:\p{Ll}|\+\d)/u;
 
   for (const block of blocks) {
     const previous = normalized.at(-1);
@@ -139,24 +159,12 @@ export function normalizeEvidenceMarkdown(markdown: string): string {
       normalized.push(block);
       continue;
     }
-    const previousIsListItem = listItem.test(previous);
     const blockContent = block.trimStart();
-    if (
-      previousIsListItem &&
-      !indentedBlock.test(block) &&
-      (punctuationOnly.test(blockContent) || commaFragment.test(blockContent))
-    ) {
+    if (joinsWithoutSpace(previous, block, blockContent)) {
       normalized[normalized.length - 1] = `${previous}${blockContent}`;
       continue;
     }
-    if (
-      previousIsListItem &&
-      !indentedBlock.test(block) &&
-      !structuralBlock.test(block) &&
-      !sentenceEnd.test(previous) &&
-      !sentenceEnd.test(blockContent) &&
-      sentenceFragment.test(blockContent)
-    ) {
+    if (joinsWithSpace(previous, block, blockContent)) {
       normalized[normalized.length - 1] = `${previous} ${blockContent}`;
       continue;
     }
