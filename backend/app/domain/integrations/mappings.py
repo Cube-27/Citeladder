@@ -201,8 +201,16 @@ async def create_mapping(
             domain, or a malformed GA4 property id (API: 422).
         MappingActiveOwnerConflictError: active-owner slot taken (API: 409).
     """
+    # Locked for the whole retire-and-insert below: the replacement is a
+    # read-decide-write over the project's active mappings, and two selections
+    # racing on one connection each retired a row the other had not inserted
+    # yet, leaving the project with TWO active mappings. Every later
+    # project-scoped resolve then refused as ambiguous.
     connection = await get_connection(
-        session, workspace_id=workspace_id, connection_id=connection_id
+        session,
+        workspace_id=workspace_id,
+        connection_id=connection_id,
+        for_update=True,
     )
     if provider != connection.provider:
         raise MappingProviderMismatchError(

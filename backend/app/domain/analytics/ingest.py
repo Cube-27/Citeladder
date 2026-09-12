@@ -215,12 +215,14 @@ def metric_row_not_superseded() -> ColumnElement[bool]:
     filtered out. On an OUTER join a NULL metric row passes (no row means
     no newer revision).
 
-    Scope limitation: ``resync_seq`` is allocated per (connection,
-    sync_kind, window), so "latest revision" is only meaningful within one
-    connection+kind chain. Disconnecting and re-connecting a provider
-    starts a NEW connection whose re-sync begins again at seq 0 and does
-    not supersede the old connection's rows — cross-connection duplicates
-    are a known, spec-sanctioned edge (docs/roadmap/integrations.md).
+    Deliberately NOT scoped to the importing connection. ``resync_seq`` is
+    allocated over the connection AND over the target's ``(project,
+    property)`` data identity (``sync._next_resync_seq``), so a property
+    re-mapped onto a new connection allocates revisions strictly above the
+    ones its old connection recorded. Comparing on the identity alone is
+    therefore what lets the new import supersede the old rows; adding the
+    connection would pin each connection to its own revision line and leave
+    both sets of rows standing as current evidence for the same day.
     """
     newer_rows = aliased(IntegrationMetricRow)
     return ~(

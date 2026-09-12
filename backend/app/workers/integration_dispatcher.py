@@ -5,9 +5,11 @@
 # scheduler; spec docs/roadmap/integrations.md §4 "Scheduling"). Every
 # ``sync_cadence_seconds`` tick it:
 #
-#   1. enqueues a ``scheduled`` IntegrationSyncRun per ACTIVE connection
-#      (its grant is ``connected``) for the default trailing window, via the
-#      I5 ``enqueue_sync_run`` service — an ``ActiveWindowConflictError``
+#   1. enqueues a ``scheduled`` IntegrationSyncRun per ACTIVE property
+#      MAPPING whose connection holds a ``connected`` grant — a connection is
+#      an authorization and can carry several mapped properties, each its own
+#      import — for the default trailing window, via the I5
+#      ``enqueue_sync_run`` service — an ``ActiveWindowConflictError``
 #      (the active-window partial unique index) means a run is already in
 #      flight and the tick SKIPS it, so a missed/duplicated tick never
 #      double-imports a window;
@@ -134,19 +136,23 @@ class IntegrationDispatcher:
     async def _enqueue_scheduled_runs(self, *, today: date | None) -> int:
         """Fan out over ACTIVE MAPPINGS, not connections.
 
-        A connection is an authorization and can carry one active mapping per
-        project; each of those is a distinct property with its own import
-        history. Iterating connections would enqueue one run for whichever
-        property the connection last pointed at and leave every other
-        project unsynced.
+        A connection is an authorization and can carry several active
+        mappings; each is a distinct property with its own import history.
+        Iterating connections would enqueue one run for whichever property the
+        connection last pointed at and leave the rest unsynced.
+
+        The mapping is named by ID, not by project: the active-owner index is
+        keyed on the PROPERTY, so one project can hold two mapped properties on
+        a connection and a project-scoped lookup would find both and refuse as
+        ambiguous, silently dropping that target from every tick.
         """
         async with self._session_factory() as session:
             rows = (
                 await session.execute(
                     select(
+                        IntegrationPropertyMapping.id,
                         IntegrationPropertyMapping.connection_id,
                         IntegrationPropertyMapping.workspace_id,
-                        IntegrationPropertyMapping.project_id,
                     )
                     .join(
                         IntegrationConnection,
@@ -168,11 +174,11 @@ class IntegrationDispatcher:
                 )
             ).all()
         enqueued = 0
-        for connection_id, workspace_id, project_id in rows:
+        for mapping_id, connection_id, workspace_id in rows:
             enqueued += await self._enqueue_for_connection(
                 workspace_id=workspace_id,
                 connection_id=connection_id,
-                project_id=project_id,
+                mapping_id=mapping_id,
                 today=today,
             )
         return enqueued
@@ -182,7 +188,7 @@ class IntegrationDispatcher:
         *,
         workspace_id: uuid.UUID,
         connection_id: uuid.UUID,
-        project_id: uuid.UUID,
+        mapping_id: uuid.UUID,
         label: str,
         window_start: date | None = None,
         window_end: date | None = None,
@@ -201,7 +207,7 @@ class IntegrationDispatcher:
                     session,
                     workspace_id=workspace_id,
                     connection_id=connection_id,
-                    project_id=project_id,
+                    mapping_id=mapping_id,
                     sync_kind=SYNC_KIND_SCHEDULED,
                     window_start=window_start,
                     window_end=window_end,
@@ -223,7 +229,7 @@ class IntegrationDispatcher:
         *,
         workspace_id: uuid.UUID,
         connection_id: uuid.UUID,
-        project_id: uuid.UUID,
+        mapping_id: uuid.UUID,
         today: date | None,
     ) -> int:
         """Trailing-window run + late-data revision re-sync for one target.
@@ -233,7 +239,7 @@ class IntegrationDispatcher:
         enqueued = await self._try_enqueue(
             workspace_id=workspace_id,
             connection_id=connection_id,
-            project_id=project_id,
+            mapping_id=mapping_id,
             label="scheduled sync enqueue",
         )
         # Late-data revision (spec §4): re-enqueue the trailing
@@ -250,7 +256,7 @@ class IntegrationDispatcher:
         enqueued += await self._try_enqueue(
             workspace_id=workspace_id,
             connection_id=connection_id,
-            project_id=project_id,
+            mapping_id=mapping_id,
             label="late-data revision enqueue",
             window_start=late_start,
             window_end=late_end,

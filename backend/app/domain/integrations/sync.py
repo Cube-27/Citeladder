@@ -17,10 +17,12 @@ its history is read back:
   no-double-enqueue guarantee (invariant 8).
 - **Atomic ``resync_seq`` allocation** — the connection row is locked
   ``SELECT ... FOR UPDATE`` and the next value is ``MAX(resync_seq) + 1``
-  over the CONNECTION; a unique-conflict retries with the next value (bounded
-  by ``sync_resync_alloc_max_attempts``). Allocating per connection rather
-  than per window is what makes revisions comparable where two windows
-  OVERLAP — see :func:`_next_resync_seq` (spec §3).
+  over the CONNECTION and over the target's ``(project, property)`` data
+  identity; a unique-conflict retries with the next value (bounded by
+  ``sync_resync_alloc_max_attempts``). Allocating per connection rather than
+  per window is what makes revisions comparable where two windows OVERLAP,
+  and the identity floor is what keeps a re-mapped property comparable across
+  connections — see :func:`_next_resync_seq` (spec §3).
 - **``ActiveWindowConflictError``** — raised when the partial active-window
   unique index rejects a duplicate in-flight run for the same window (the
   API maps it to 409); a COMPLETED window stays re-syncable because the
@@ -400,6 +402,8 @@ async def _next_resync_seq(
     session: AsyncSession,
     *,
     connection_id: uuid.UUID,
+    project_id: uuid.UUID,
+    property_ref: str,
 ) -> int:
     """``MAX(resync_seq) + 1`` across the CONNECTION (0 for its first run).
 
@@ -427,10 +431,24 @@ async def _next_resync_seq(
     Re-deriving the SAME run stays a no-op: the run owns its allocated
     ``resync_seq``, so a resume writes the identical row identity and the
     conflict clause absorbs it.
+
+    The floor is the higher of the connection's revisions and the ones already
+    recorded for this DATA IDENTITY ``(project, property)``. A property can be
+    re-mapped onto a different connection — retire the mapping, select it
+    again elsewhere — and the metric-row identity carries no connection, so a
+    fresh connection restarting at 0 would write rows that collide with the
+    retained ones and be discarded by the same conflict clause. Taking the
+    maximum over both keeps the per-connection value monotonic (so the
+    ``(connection, resync_seq)`` uniqueness still holds) while guaranteeing
+    the new import outranks every revision that property already has.
     """
     result = await session.execute(
         select(func.coalesce(func.max(IntegrationSyncRun.resync_seq), -1)).where(
-            IntegrationSyncRun.connection_id == connection_id,
+            (IntegrationSyncRun.connection_id == connection_id)
+            | (
+                (IntegrationSyncRun.project_id == project_id)
+                & (IntegrationSyncRun.property_ref == property_ref)
+            ),
         )
     )
     return result.scalar_one() + 1
@@ -471,6 +489,14 @@ async def enqueue_sync_run(
     """
     if sync_kind not in INTEGRATION_SYNC_KINDS:
         raise ValueError(f"unknown integration sync kind: {sync_kind!r}")
+    # Authorize FIRST. Target resolution reads mapping state, so running it
+    # before the workspace check answered a cross-workspace connection id with
+    # a target error (409) instead of a 404 — telling an outsider whether that
+    # connection has a property selected. ``_lock_connection`` re-checks inside
+    # the allocation loop; this is the cheap read that decides the error.
+    await get_connection(
+        session, workspace_id=workspace_id, connection_id=connection_id
+    )
     target = await resolve_sync_target(
         session,
         connection_id=connection_id,
@@ -491,7 +517,12 @@ async def enqueue_sync_run(
         locked_connection_id = await _lock_connection(
             session, workspace_id=workspace_id, connection_id=connection_id
         )
-        resync_seq = await _next_resync_seq(session, connection_id=locked_connection_id)
+        resync_seq = await _next_resync_seq(
+            session,
+            connection_id=locked_connection_id,
+            project_id=target.project_id,
+            property_ref=target.property_ref,
+        )
         run = IntegrationSyncRun(
             connection_id=locked_connection_id,
             workspace_id=workspace_id,

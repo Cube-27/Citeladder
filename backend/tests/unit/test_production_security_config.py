@@ -38,11 +38,33 @@ def test_a_loopback_frontend_url_is_refused_in_production() -> None:
     bounces every public user to their own machine. Providers match
     redirect_uri byte-for-byte, so it cannot be recovered at runtime.
     """
-    for url in ("http://127.0.0.1:3000", "http://localhost:3000", "http://[::1]:3000"):
+    for url in (
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        # A fully-qualified name carries the DNS root label and still means
+        # this machine.
+        "http://localhost.:3000",
+        "http://[::1]:3000",
+    ):
         issues = validate_production_security(_production_settings(frontend_url=url))
         assert "frontend_url must not be a loopback address outside development" in (
             issues
         ), url
+    # No scheme and no host is not "not loopback" — it builds the same
+    # unusable redirect URI, so it is refused on its own terms.
+    assert "frontend_url must be an absolute http(s) URL" in (
+        validate_production_security(_production_settings(frontend_url="not-a-url"))
+    )
+    # The rule is a PRODUCTION rule: the demo bootstrap runs this same
+    # validation locally, where the loopback default is the correct value.
+    assert (
+        validate_production_security(
+            _production_settings(
+                app_env="development", frontend_url="http://localhost:3000"
+            )
+        )
+        == []
+    )
 
 
 def test_valid_independent_production_secrets_pass() -> None:

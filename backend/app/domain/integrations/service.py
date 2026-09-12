@@ -364,13 +364,22 @@ async def get_connection(
     *,
     workspace_id: uuid.UUID,
     connection_id: uuid.UUID,
+    for_update: bool = False,
 ) -> IntegrationConnection:
-    result = await session.execute(
-        select(IntegrationConnection).where(
-            IntegrationConnection.id == connection_id,
-            IntegrationConnection.workspace_id == workspace_id,
-        )
+    """Workspace-authorize one connection (404 when missing or foreign).
+
+    ``for_update`` row-locks it, which is how a caller serializes the
+    read-decide-write sequences that hang off a connection — the mapping
+    replacement and the revision allocation both need the decision and the
+    write to be one step.
+    """
+    statement = select(IntegrationConnection).where(
+        IntegrationConnection.id == connection_id,
+        IntegrationConnection.workspace_id == workspace_id,
     )
+    if for_update:
+        statement = statement.with_for_update()
+    result = await session.execute(statement)
     connection = result.scalar_one_or_none()
     if connection is None:
         raise IntegrationConnectionNotFoundError(str(connection_id))

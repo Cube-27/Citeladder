@@ -56,6 +56,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.core.security import encrypt_secret
+from app.domain.analytics.ingest import metric_row_not_superseded
 from app.domain.integrations.derive import (
     UnmappedPropertyError,
     _parse_row_date,
@@ -565,9 +566,24 @@ async def test_overlapping_windows_supersede_instead_of_colliding(
     assert by_seq[wide.resync_seq].metrics["clicks"] == 3
     assert by_seq[narrow.resync_seq].metrics["clicks"] == 9
 
-    # ...and the current value is the later revision, counted exactly once.
-    current = max(rows, key=lambda row: row.resync_seq)
-    assert current.metrics == {
+    # ...and the READER — the same `metric_row_not_superseded` clause the
+    # ingest projection and the referrals drill-down apply — returns the later
+    # revision, exactly once. Recomputing "latest" in the test would assert the
+    # test's own rule rather than the one production actually uses.
+    current = list(
+        await db_session.scalars(
+            select(IntegrationMetricRow)
+            .where(
+                IntegrationMetricRow.project_id == project_id,
+                IntegrationMetricRow.dataset == DATASET_GSC_PAGE_DAILY,
+                IntegrationMetricRow.date == date(2026, 7, 21),
+            )
+            .where(metric_row_not_superseded())
+        )
+    )
+    assert len(current) == 1
+    assert current[0].resync_seq == narrow.resync_seq
+    assert current[0].metrics == {
         "clicks": 9,
         "impressions": 90,
         "ctr": 0.1,

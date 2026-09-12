@@ -132,6 +132,14 @@ class _FakeProvider:
             return httpx.Response(
                 self.probe_status, json=_fixture("bing_sites_response.json")
             )
+        # The GA4 probe lists properties through the admin API. Without this
+        # branch it fell through to the 404 below, so every GA4 probe test
+        # passed on the fallback instead of the status it configured.
+        if host == "analyticsadmin.googleapis.com":
+            return httpx.Response(
+                self.probe_status,
+                json=_fixture("ga4_account_summaries_response.json"),
+            )
         if host == "oauth2.googleapis.com" and request.url.path == "/revoke":
             return httpx.Response(self.revoke_status)
         if host == "www.bing.com" and request.url.path == "/webmasters/oauth/token":

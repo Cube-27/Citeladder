@@ -372,9 +372,16 @@ async def enqueue_sync_endpoint(
     except IntegrationConnectionNotFoundError as exc:
         raise_not_found(_RES_CONNECTION, cause=exc)
     except (SyncTargetUnmappedError, SyncTargetAmbiguousError) as exc:
+        # Both are "no single target", but the caller's remedy differs: pick a
+        # property, versus say WHICH project's property you meant.
+        message = (
+            "Name project_id: this connection serves several projects"
+            if isinstance(exc, SyncTargetAmbiguousError)
+            else "Select a property for this project before syncing"
+        )
         raise_api_error(
             status.HTTP_409_CONFLICT,
-            "Select a property for this project before syncing",
+            message,
             code=ERROR_SYNC_TARGET_UNRESOLVED,
             details={"error": ERROR_SYNC_TARGET_UNRESOLVED},
             detail={"error": ERROR_SYNC_TARGET_UNRESOLVED},

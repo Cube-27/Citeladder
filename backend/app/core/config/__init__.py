@@ -350,8 +350,8 @@ DEVELOPMENT_ENV_NAMES: frozenset[str] = frozenset(
     {"", "development", "dev", "local", "test", "testing"}
 )
 
-# Hosts that can only ever mean "this machine".
-_LOOPBACK_HOSTS: frozenset[str] = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
+# The only NON-address host that can mean "this machine".
+_LOOPBACK_HOSTNAMES: frozenset[str] = frozenset({"localhost"})
 
 
 def _is_development_env(candidate: Settings) -> bool:
@@ -477,11 +477,46 @@ def _frontend_url_problems(candidate: Settings) -> list[str]:
     every public user to their own machine. Providers match ``redirect_uri``
     byte-for-byte, so this is unrecoverable at runtime and worth refusing at
     boot.
+
+    Gated on the environment like the dev-gate check above, because
+    ``validate_production_security`` also runs for the DEMO bootstrap — which
+    is provisioned locally against the loopback default, and refusing that
+    would block the one setup this rule is not about.
+
+    A value that is not an absolute ``http(s)`` URL is refused for the same
+    reason: it has no hostname to be loopback, and every redirect built from
+    it is equally unusable.
     """
-    host = urlsplit(candidate.frontend_url.strip()).hostname or ""
-    if host in _LOOPBACK_HOSTS:
+    if _is_development_env(candidate):
+        return []
+    parts = urlsplit(candidate.frontend_url.strip())
+    if parts.scheme not in {"http", "https"} or not parts.hostname:
+        return ["frontend_url must be an absolute http(s) URL"]
+    if _is_loopback_host(parts.hostname):
         return ["frontend_url must not be a loopback address outside development"]
     return []
+
+
+def _is_loopback_host(host: str) -> bool:
+    """Whether ``host`` can only ever resolve to this machine.
+
+    Matching a fixed set of spellings missed most of them: the whole
+    ``127.0.0.0/8`` block is loopback, not just ``127.0.0.1``, and IPv6 has
+    ``::1`` alongside its expanded and zero-compressed forms. ``ipaddress``
+    already knows all of it, so the only literal left is the hostname.
+    ``urlsplit`` lowercases and strips IPv6 brackets; a fully-qualified
+    ``localhost.`` needs the root dot removed first.
+    """
+    candidate = host.strip().rstrip(".")
+    if not candidate:
+        return False
+    if candidate.casefold() in _LOOPBACK_HOSTNAMES:
+        return True
+    try:
+        return ipaddress.ip_address(candidate).is_loopback
+    except ValueError:
+        # A real hostname, not an address literal — nothing to decide here.
+        return False
 
 
 def _check_secret_defaults() -> None:

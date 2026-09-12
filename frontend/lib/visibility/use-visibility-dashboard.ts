@@ -70,7 +70,9 @@ export function useVisibilityFilters() {
   const [selectedRunId, setSelectedRunId] = useUrlState('run', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });
-  const [engine, setEngine] = useUrlState('engine', engineCodec, { clearKeys: pageKeys });
+  const [engine, setEngine] = useUrlState('engine', engineCodec, {
+    clearKeys: pageKeys,
+  });
   const [promptId, setPromptId] = useUrlState('prompt', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });
@@ -86,7 +88,9 @@ export function useVisibilityFilters() {
     clearKeys: pageKeys,
   });
   const [granularity, setGranularity] = useUrlState('granularity', granularityCodec);
-  const [cohort, setCohort] = useUrlState('cohort', cohortCodec, { clearKeys: pageKeys });
+  const [cohort, setCohort] = useUrlState('cohort', cohortCodec, {
+    clearKeys: pageKeys,
+  });
   const [baselineId, setBaselineId] = useUrlState('baseline', optionalStringUrlCodec);
   const [cursor] = useUrlState('cursor', optionalStringUrlCodec);
   const [asOf] = useUrlState('as_of', optionalStringUrlCodec);
@@ -192,7 +196,11 @@ export function useVisibilityFilters() {
  */
 function resolvedSelection(
   data:
-    | { audit_id?: string | null; selection_mode?: string; source_audit_ids?: string[] }
+    | {
+        audit_id?: string | null;
+        selection_mode?: string;
+        source_audit_ids?: string[];
+      }
     | undefined,
 ) {
   return {
@@ -215,7 +223,10 @@ export function useVisibilityQueries(
   const selectedParams = selectionParams(filters, from, engine);
   const projectionOptions = visibilityQueries.project(projectId ?? '', selectedParams);
   // Every tab resolves the same concrete run before dependent requests.
-  const visibilityQuery = useQuery({ ...projectionOptions, enabled: Boolean(projectId) });
+  const visibilityQuery = useQuery({
+    ...projectionOptions,
+    enabled: Boolean(projectId),
+  });
   const { activeRunId, selectedRunIds } = resolvedSelection(visibilityQuery.data);
   const trendParams = {
     engine,
@@ -242,7 +253,9 @@ export function useVisibilityQueries(
   const evidenceOptions = {
     queryKey: queryKeys.visibility.evidence(projectId ?? '', evidenceParams),
     queryFn: ({ signal }: { signal: AbortSignal }) =>
-      visibilityApi.getVisibilityEvidence(projectId!, evidenceParams, { signal }),
+      visibilityApi.getVisibilityEvidence(projectId!, evidenceParams, {
+        signal,
+      }),
   };
   const evidenceQuery = useQuery({
     ...evidenceOptions,
@@ -283,6 +296,7 @@ export function useVisibilityQueries(
       engine: evidenceParams.engine,
       cohort: evidenceParams.cohort,
     },
+    evidenceScopeNarrowed: isEvidenceScopeNarrowed(evidenceParams),
     hasEvidenceScope,
     promptOptions: evidenceQuery.data?.prompt_options ?? [],
     prefetchTab,
@@ -316,7 +330,9 @@ function useVisibilityRuns(projectId: string | null) {
     previousSignal.current = runSignal;
     // `undefined` is the first resolved list, not a transition to react to.
     if (previous !== undefined && previous !== runSignal) {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.visibility.all });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.visibility.all,
+      });
     }
   }, [auditsLoaded, runSignal, queryClient]);
 
@@ -339,6 +355,20 @@ function selectionParams(
     to: filters.selectionMode === 'range' ? (filters.toAt ?? undefined) : undefined,
     configuration_key: filters.configuration ?? undefined,
   };
+}
+
+/**
+ * Whether the evidence table is narrowed past what the summary endpoints take.
+ *
+ * They accept the run/engine/cohort scope and nothing else, while the evidence
+ * read also narrows by prompt, outcome, competitor, domain and URL. With one of
+ * those active a server-side total describes a LARGER population than the
+ * table, so a tab must stop presenting it as the table's own.
+ */
+function isEvidenceScopeNarrowed(params: ReturnType<typeof evidenceSelectionParams>): boolean {
+  return [params.prompt_id, params.outcome, params.competitor, params.domain, params.url].some(
+    Boolean,
+  );
 }
 
 function evidenceSelectionParams(

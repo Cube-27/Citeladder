@@ -202,6 +202,59 @@ async def test_active_window_partial_index_dedupes_inflight_runs(
 
 
 @pytest.mark.asyncio
+async def test_two_mappings_on_one_connection_share_a_window(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """In-flight dedup is per MAPPING, not per connection.
+
+    One authorization can carry several mapped properties, and they are
+    independent imports. Keying the active-window index on the connection made
+    the second property's run collide with the first's and never enqueue.
+    """
+    async with session_factory() as session:
+        ws_id, _, connection_id, target = await _seed_connection(session)
+        second_project = Project(workspace_id=ws_id, name="Second site")
+        session.add(second_project)
+        await session.flush()
+        second_mapping = IntegrationPropertyMapping(
+            workspace_id=ws_id,
+            connection_id=connection_id,
+            provider="gsc",
+            property_ref="gsc-account-2",
+            project_id=second_project.id,
+            status=MAPPING_STATUS_ACTIVE,
+        )
+        session.add(second_mapping)
+        await session.flush()
+        other = _Target(
+            mapping_id=second_mapping.id,
+            property_ref=second_mapping.property_ref,
+            project_id=second_project.id,
+        )
+        # Same kind, same window, both in flight — different properties.
+        session.add(_run(ws_id, connection_id, target, resync_seq=0))
+        session.add(_run(ws_id, connection_id, other, resync_seq=1))
+        await session.commit()
+
+    async with session_factory() as session:
+        runs = (
+            await session.scalars(
+                select(IntegrationSyncRun).where(
+                    IntegrationSyncRun.connection_id == connection_id
+                )
+            )
+        ).all()
+    assert len(runs) == 2
+    assert {run.mapping_id for run in runs} == {target.mapping_id, other.mapping_id}
+    assert {(run.window_start, run.window_end) for run in runs} == {_WINDOW}
+    # Within ONE mapping the window is still deduped.
+    with pytest.raises(IntegrityError):
+        async with session_factory() as session:
+            session.add(_run(ws_id, connection_id, other, resync_seq=2))
+            await session.commit()
+
+
+@pytest.mark.asyncio
 async def test_completed_window_frees_slot_and_resync_bumps_seq(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -350,9 +403,6 @@ async def test_metric_row_identity_and_resync_retention(
 ) -> None:
     async with session_factory() as session:
         ws_id, _, connection_id, target = await _seed_connection(session)
-        project = Project(workspace_id=ws_id, name="Metric project")
-        session.add(project)
-        await session.flush()
         run = _run(ws_id, connection_id, target)
         session.add(run)
         await session.flush()
@@ -369,7 +419,10 @@ async def test_metric_row_identity_and_resync_retention(
         )
         session.add(artifact)
         await session.flush()
-        project_id, artifact_id = project.id, artifact.id
+        # The rows below belong to the run's FROZEN target, not to some other
+        # project that happens to exist — that is the identity derivation
+        # stamps on them.
+        project_id, artifact_id = target.project_id, artifact.id
         await session.commit()
 
     def _row(resync_seq: int, artifact_id: uuid.UUID = artifact_id):

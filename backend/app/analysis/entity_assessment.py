@@ -87,7 +87,10 @@ def _assessment(
         default=None,
     )
     if match is None:
-        return _row(name, entity_kind, "absent", None, "Entity matching completed.")
+        # The same limitation as every other state: "absent" is what this
+        # English, explicit-language matcher did not find, not proof the
+        # answer never named the entity.
+        return _row(name, entity_kind, "absent", None, EXPLICIT_LANGUAGE_LIMITATION)
     start = max(0, match.start() - _SPAN_CHARS)
     end = min(len(answer), match.end() + _SPAN_CHARS)
     span = answer[start:end]

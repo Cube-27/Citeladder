@@ -626,6 +626,62 @@ async def test_history_backfill_runs_once_per_connection(db_session) -> None:
 
 
 @pytest.mark.asyncio
+async def test_history_backfill_is_once_per_target_not_per_connection(
+    db_session,
+) -> None:
+    """A second property on the same authorization buys its own history.
+
+    The once-only guard is keyed on the TARGET. Keyed on the connection, a
+    project mapped second would be told its history was already imported —
+    by an import of somebody else's property — and would never receive any.
+    """
+    workspace_id, connection, first_mapping = await _seed_connection(db_session)
+    first = await enqueue_history_backfill(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection.id,
+        project_id=first_mapping.project_id,
+    )
+    assert first
+    for run in first:
+        await _complete(db_session, run.id)
+
+    second_project = Project(workspace_id=workspace_id, name="Second site")
+    db_session.add(second_project)
+    await db_session.flush()
+    second_mapping = IntegrationPropertyMapping(
+        workspace_id=workspace_id,
+        connection_id=connection.id,
+        provider=connection.provider,
+        property_ref=f"{connection.provider}-second-property",
+        project_id=second_project.id,
+        status=MAPPING_STATUS_ACTIVE,
+    )
+    db_session.add(second_mapping)
+    await db_session.commit()
+
+    second = await enqueue_history_backfill(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection.id,
+        project_id=second_project.id,
+    )
+
+    # Its own chunks, frozen onto its own target — same windows as the first
+    # target's, which the per-mapping active-window index allows.
+    assert len(second) == len(first)
+    assert {run.mapping_id for run in second} == {second_mapping.id}
+    assert {run.project_id for run in second} == {second_project.id}
+    assert {run.property_ref for run in second} == {second_mapping.property_ref}
+    assert {(run.window_start, run.window_end) for run in second} == {
+        (run.window_start, run.window_end) for run in first
+    }
+    # Revisions stay distinct across the connection, so the two targets'
+    # imports can never collide on a shared row identity.
+    assert len({run.resync_seq for run in first + second}) == len(first) + len(second)
+
+
+@pytest.mark.asyncio
 async def test_history_backfill_never_raises_for_an_unknown_connection(
     db_session,
 ) -> None:

@@ -105,6 +105,7 @@ async def resolve_active_mapping(
     workspace_id: uuid.UUID,
     provider: str,
     property_ref: str,
+    for_update: bool = False,
 ) -> IntegrationPropertyMapping:
     """Resolve the ACTIVE mapping owning ``(workspace, provider, property)``.
 
@@ -115,17 +116,23 @@ async def resolve_active_mapping(
     first — mappings are stored canonical (``create_mapping``) while a
     connection's ``account_ref`` may carry the provider's
     ``properties/`` resource-name spelling.
+
+    ``for_update`` row-locks the owner. A derivation is a check-then-write
+    against a row someone else can retire: unlocked, a disconnect committing
+    between the check and the insert let the run write metric rows for a
+    property the workspace had just given up.
     """
     if provider == INTEGRATION_PROVIDER_GA4:
         property_ref = normalize_ga4_property_ref(property_ref)
-    result = await session.execute(
-        select(IntegrationPropertyMapping).where(
-            IntegrationPropertyMapping.workspace_id == workspace_id,
-            IntegrationPropertyMapping.provider == provider,
-            IntegrationPropertyMapping.property_ref == property_ref,
-            IntegrationPropertyMapping.status == MAPPING_STATUS_ACTIVE,
-        )
+    statement = select(IntegrationPropertyMapping).where(
+        IntegrationPropertyMapping.workspace_id == workspace_id,
+        IntegrationPropertyMapping.provider == provider,
+        IntegrationPropertyMapping.property_ref == property_ref,
+        IntegrationPropertyMapping.status == MAPPING_STATUS_ACTIVE,
     )
+    if for_update:
+        statement = statement.with_for_update()
+    result = await session.execute(statement)
     mapping = result.scalar_one_or_none()
     if mapping is None:
         raise UnmappedPropertyError(
@@ -244,6 +251,10 @@ async def derive_run(
         workspace_id=run.workspace_id,
         provider=connection.provider,
         property_ref=run.property_ref,
+        # Held for the rest of the caller's transaction, so a retirement
+        # committing mid-derivation cannot slip past the check below and
+        # leave rows attributed to a binding that no longer exists.
+        for_update=True,
     )
     if mapping.id != run.mapping_id or mapping.project_id != run.project_id:
         # The property is still mapped, but to a different owner than the one

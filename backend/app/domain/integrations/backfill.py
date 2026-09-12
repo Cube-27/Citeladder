@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 
@@ -163,34 +164,47 @@ async def enqueue_history_backfill(
         )
     ).all()
     if existing:
-        # This target already asked for its history. Re-derive the span it
-        # asked for FROM THE RECORDED RUNS rather than from today, so calling
-        # this again never re-imports a year just because the calendar moved
-        # — that is the whole point of the once-per-target rule. Only the
-        # chunks that are missing or dead get enqueued.
-        wanted = chunk_windows(
-            min(row.window_start for row in existing),
-            max(row.window_end for row in existing),
-        )
+        # This target already asked for its history, so calling this again is a
+        # RESUME, never a re-import — that is the once-per-target rule, and it
+        # must hold no matter how much the calendar has moved.
+        #
+        # The candidates are the windows actually ON RECORD, not a fresh
+        # chunking of their span: ``sync_default_window_days`` can differ from
+        # whatever it was when the backfill first fanned out, and re-chunking
+        # would then produce boundaries that match no recorded run — every one
+        # of them "missing", every one re-enqueued, overlapping the history
+        # already imported.
         alive = {
             (row.window_start, row.window_end)
             for row in existing
             if row.status not in _BACKFILL_FAILED_STATUSES
         }
+        # A window with both a dead run and a live one is covered; only the
+        # ones that ended failed with nothing else standing get another go.
+        wanted = sorted(
+            {
+                (row.window_start, row.window_end)
+                for row in existing
+                if row.status in _BACKFILL_FAILED_STATUSES
+            }
+            - alive,
+            reverse=True,
+        )
     else:
         wanted = backfill_sync_windows(window_days=window_days, today=today)
-        alive = set()
     runs: list[IntegrationSyncRun] = []
     for window_start, window_end in wanted:
-        if (window_start, window_end) in alive:
-            continue
         try:
             runs.append(
                 await enqueue_sync_run(
                     session,
                     workspace_id=workspace_id,
                     connection_id=connection_id,
-                    project_id=target.project_id,
+                    # The MAPPING, not merely its project: the chunks are
+                    # enqueued one at a time and each enqueue re-resolves,
+                    # so a re-selection partway through would hand the
+                    # remaining chunks to the replacement property.
+                    mapping_id=target.id,
                     sync_kind=SYNC_KIND_BACKFILL,
                     window_start=window_start,
                     window_end=window_end,
@@ -207,6 +221,13 @@ async def enqueue_history_backfill(
             # triggered the backfill, so failing now would report an error
             # for something that already succeeded. Chunks already queued
             # stay valid; the rest are simply not scheduled.
+            #
+            # ``enqueue_sync_run`` rolls back only the constraint violations
+            # it classifies, so any OTHER database fault leaves this session's
+            # transaction in a failed state — and the caller goes on using it.
+            # Roll back before returning so what follows is not refused for a
+            # fault it never saw.
+            await session.rollback()
             logger.warning(
                 "integrations.backfill_enqueue_incomplete",
                 extra={
@@ -255,6 +276,20 @@ def backfill_progress_rollup(
     Public because the readiness ladder rolls the SAME statuses up across a
     project's connections (invariant 2 — one owner of the rule, reused rather
     than restated).
+
+    Counted per ``(target, window)``, not per row. A failed chunk is retried
+    by a NEW run (the retained failure is history, invariant 3), so counting
+    rows reported a resumed backfill as both failed and complete: the import
+    stayed ``partial`` after every hole had been filled, and ``total_windows``
+    grew with each attempt. A window is complete when one of its own attempts
+    imported it, and failed only when every attempt for it ended failed or
+    cancelled.
+
+    The mapping is part of the key because these rows are a CONNECTION's, and
+    one connection can import for several properties over the very same
+    windows. Keyed on the window alone, one property's successful chunk
+    covered another property's failure of the same dates, and the rollup
+    reported history that target does not have.
     """
     if not rows:
         return IntegrationBackfillProgressResponse(
@@ -268,8 +303,19 @@ def backfill_progress_rollup(
             covered_through=None,
         )
     succeeded = [row for row in rows if row.status == TASK_STATUS_SUCCEEDED]
-    failed = [row for row in rows if row.status in _BACKFILL_FAILED_STATUSES]
-    pending = len(rows) - len(succeeded) - len(failed)
+    attempts: dict[tuple[uuid.UUID, date, date], set[str]] = defaultdict(set)
+    for row in rows:
+        attempts[(row.mapping_id, row.window_start, row.window_end)].add(row.status)
+    completed = sum(
+        1 for statuses in attempts.values() if TASK_STATUS_SUCCEEDED in statuses
+    )
+    failed = sum(
+        1
+        for statuses in attempts.values()
+        if TASK_STATUS_SUCCEEDED not in statuses
+        and statuses <= _BACKFILL_FAILED_STATUSES
+    )
+    pending = len(attempts) - completed - failed
     if pending > 0:
         state = BACKFILL_STATE_IMPORTING
     elif failed:
@@ -279,9 +325,9 @@ def backfill_progress_rollup(
     return IntegrationBackfillProgressResponse(
         connection_id=connection_id,
         state=state,
-        total_windows=len(rows),
-        completed_windows=len(succeeded),
-        failed_windows=len(failed),
+        total_windows=len(attempts),
+        completed_windows=completed,
+        failed_windows=failed,
         pending_windows=pending,
         **_covered_span(succeeded),
     )
