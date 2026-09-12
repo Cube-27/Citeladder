@@ -212,7 +212,10 @@ describe('SettingsScreen', () => {
     const ue = userEvent.setup();
     renderScreen();
 
-    expect(screen.getByTestId('integration-settings-panel')).not.toBeVisible();
+    // Not mounted until selected: the panel owns a connection list that fans
+    // out into per-connection queries and a 3s backfill poll, so mounting it
+    // behind every other tab issued those requests for a reader on Profile.
+    expect(screen.queryByTestId('integration-settings-panel')).toBeNull();
     await ue.click(screen.getByRole('tab', { name: 'Integrations' }));
     expect(screen.getByTestId('integration-settings-panel')).toBeVisible();
     expect(screen.getByRole('tab', { name: 'Integrations' })).toHaveAttribute(

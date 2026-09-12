@@ -23,7 +23,10 @@ import pytest
 from sqlalchemy import select
 
 from app.connectors.integrations import bing as bing_connector
+from app.connectors.integrations import ga4 as ga4_connector
+from app.connectors.integrations import gsc as gsc_connector
 from app.connectors.integrations import oauth as integration_oauth
+from app.core.config.integrations_clients import INTEGRATION_CLIENT_BUILDERS
 from app.core.security import decrypt_secret, encrypt_secret
 from app.models.integrations import (
     IntegrationConnection,
@@ -63,6 +66,16 @@ async def _workspace_id(db_session) -> uuid.UUID:
     return (await db_session.execute(select(Workspace))).scalars().first().id
 
 
+# The property each seeded connection points at, matching what the fake
+# provider lists. The connection test now checks the SELECTED property is
+# readable, so a placeholder ref would (correctly) fail it.
+_SEEDED_PROPERTY_REF = {
+    "gsc": "sc-domain:example.com",
+    "ga4": "123456789",
+    "bing": "https://example.com",
+}
+
+
 async def _seed_grant(
     db_session,
     *,
@@ -87,7 +100,7 @@ async def _seed_grant(
             grant_id=grant.id,
             provider=provider,
             label=f"{provider} label",
-            account_ref=f"{provider}-account-ref",
+            account_ref=_SEEDED_PROPERTY_REF[provider],
         )
         for provider in providers
     ]
@@ -118,6 +131,14 @@ class _FakeProvider:
         if host == "ssl.bing.com":
             return httpx.Response(
                 self.probe_status, json=_fixture("bing_sites_response.json")
+            )
+        # The GA4 probe lists properties through the admin API. Without this
+        # branch it fell through to the 404 below, so every GA4 probe test
+        # passed on the fallback instead of the status it configured.
+        if host == "analyticsadmin.googleapis.com":
+            return httpx.Response(
+                self.probe_status,
+                json=_fixture("ga4_account_summaries_response.json"),
             )
         if host == "oauth2.googleapis.com" and request.url.path == "/revoke":
             return httpx.Response(self.revoke_status)
@@ -153,6 +174,19 @@ def _fake_provider(monkeypatch: pytest.MonkeyPatch) -> _FakeProvider:
 
     monkeypatch.setattr(integration_oauth, "build_oauth_client", _build)
     monkeypatch.setattr(bing_connector, "build_bing_client", _build_bing)
+    # The connection test probes the connection's OWN provider through the
+    # config-owned client registry, so those builders need the fake too.
+    monkeypatch.setitem(
+        INTEGRATION_CLIENT_BUILDERS,
+        "gsc",
+        lambda **_: gsc_connector.GscClient(transport=fake.transport),
+    )
+    monkeypatch.setitem(
+        INTEGRATION_CLIENT_BUILDERS,
+        "ga4",
+        lambda **_: ga4_connector.Ga4Client(transport=fake.transport),
+    )
+    monkeypatch.setitem(INTEGRATION_CLIENT_BUILDERS, "bing", lambda **_: _build_bing())
     return fake
 
 
@@ -181,7 +215,7 @@ async def test_list_returns_grant_joined_dto_without_tokens(
         assert row["granted_scopes"] == ["scope-a", "scope-b"]
         assert row["grant_id"] == str(grant.id)
         assert row["last_synced_at"] is None
-    assert by_provider["gsc"]["account_ref"] == "gsc-account-ref"
+    assert by_provider["gsc"]["account_ref"] == _SEEDED_PROPERTY_REF["gsc"]
     # Invariant 6: neither token value nor any token-ish key on the wire.
     assert _FAKE_ACCESS not in resp.text
     assert _FAKE_REFRESH not in resp.text

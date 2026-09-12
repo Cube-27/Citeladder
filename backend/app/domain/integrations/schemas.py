@@ -51,10 +51,16 @@ class SyncWindowRequest(BaseModel):
 
     Both bounds absent → the config default trailing window; both present →
     validated + clamped by the sync service; exactly one present → 422.
+
+    ``project_id`` names which project's property to sync, and is required
+    only when the connection serves more than one — one authorization can
+    hold an active mapping per project, so "sync this connection" would
+    otherwise be ambiguous.
     """
 
     window_start: date | None = None
     window_end: date | None = None
+    project_id: uuid.UUID | None = None
 
 
 class IntegrationSyncEnqueueResponse(BaseModel):

@@ -20,8 +20,8 @@ import pytest
 from sqlalchemy import select
 
 from app.core.config.integrations_contracts import SYNC_KIND_BACKFILL
-from app.core.config.integrations_settings import integration_settings
-from app.domain.integrations.sync import backfill_sync_windows
+from app.domain.integrations.backfill import backfill_sync_windows
+from app.domain.integrations.history_window import FREE_HISTORY_WINDOW_DAYS
 from app.models.brand import OwnedDomain
 from app.models.integrations import (
     IntegrationConnection,
@@ -472,19 +472,30 @@ async def test_selecting_a_property_enqueues_the_history_backfill(
     assert backfills
     windows = sorted((run.window_start, run.window_end) for run in backfills)
     covered = (windows[-1][1] - windows[0][0]).days + 1
-    assert covered == integration_settings.sync_backfill_window_days
+    # A public signup holds no history_window grant, so it imports the free
+    # allowance rather than the configured ceiling.
+    assert covered == FREE_HISTORY_WINDOW_DAYS
+    # Every chunk froze the property it was enqueued for.
+    assert {run.property_ref for run in backfills} == {"sc-domain:acme.com"}
+    assert {run.project_id for run in backfills} == {project.id}
 
 
 @pytest.mark.asyncio
-async def test_changing_the_selected_property_does_not_re_backfill(
+async def test_re_selecting_the_same_property_does_not_re_backfill(
     client: httpx.AsyncClient, db_session
 ) -> None:
-    """A year of history is paid for once per connection, not per selection."""
+    """History is paid for once per (project, property).
+
+    A DIFFERENT property is different data and does get its own history —
+    otherwise correcting a wrong selection leaves the project empty. What must
+    never happen is buying the same property's history twice.
+    """
     _ws, gsc, _ga4, project = await _setup(
         client, db_session, "map-rebackfill@example.com"
     )
+    chunks = len(backfill_sync_windows(window_days=FREE_HISTORY_WINDOW_DAYS))
 
-    for property_ref in ("sc-domain:acme.com", "https://acme.com/"):
+    async def select(property_ref: str) -> None:
         resp = await client.post(
             f"{_BASE}/{gsc.id}/mappings",
             json={
@@ -495,6 +506,17 @@ async def test_changing_the_selected_property_does_not_re_backfill(
         )
         assert resp.status_code == 201
 
-    # Chunk count is an implementation detail; what matters is that the
-    # second selection added nothing.
-    assert len(await _backfills(db_session, gsc.id)) == len(backfill_sync_windows())
+    await select("sc-domain:acme.com")
+    assert len(await _backfills(db_session, gsc.id)) == chunks
+
+    # A different property: its own history.
+    await select("https://acme.com/")
+    assert len(await _backfills(db_session, gsc.id)) == chunks * 2
+
+    # Back to the first: already imported, so nothing new.
+    await select("sc-domain:acme.com")
+    assert len(await _backfills(db_session, gsc.id)) == chunks * 2
+    by_property: dict[str, int] = {}
+    for run in await _backfills(db_session, gsc.id):
+        by_property[run.property_ref] = by_property.get(run.property_ref, 0) + 1
+    assert by_property == {"sc-domain:acme.com": chunks, "https://acme.com/": chunks}

@@ -25,7 +25,7 @@ from pathlib import Path
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.core.config.integrations_contracts import (
     ERROR_UNMAPPED_PROPERTY,
@@ -56,6 +56,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.core.security import encrypt_secret
+from app.domain.analytics.ingest import metric_row_not_superseded
 from app.domain.integrations.derive import (
     UnmappedPropertyError,
     _parse_row_date,
@@ -110,7 +111,7 @@ _GSC_FAMILIES = len(
 )
 
 
-def _gsc_transport() -> httpx.MockTransport:
+def _gsc_transport(*, clicks: int = 3, impressions: int = 30) -> httpx.MockTransport:
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
         dimensions = tuple(body.get("dimensions") or ())
@@ -136,8 +137,8 @@ def _gsc_transport() -> httpx.MockTransport:
                 "rows": [
                     {
                         "keys": values[dimensions],
-                        "clicks": 3,
-                        "impressions": 30,
+                        "clicks": clicks,
+                        "impressions": impressions,
                         "ctr": 0.1,
                         "position": 4.5,
                     }
@@ -201,11 +202,13 @@ async def _enqueue_run(db_session, workspace_id, connection_id) -> IntegrationSy
     )
 
 
-async def _run_worker(session_factory) -> None:
+async def _run_worker(
+    session_factory, *, clicks: int = 3, impressions: int = 30
+) -> None:
     worker = IntegrationWorker(
         session_factory=session_factory,
         owner="derivation-test",
-        transport=_gsc_transport(),
+        transport=_gsc_transport(clicks=clicks, impressions=impressions),
     )
     await worker.run_until_idle()
 
@@ -290,10 +293,22 @@ async def test_derivation_provenance_on_every_row(session_factory, db_session) -
 
 @pytest.mark.asyncio
 async def test_unmapped_property_fails_run(session_factory, db_session) -> None:
-    workspace_id, _project_id, connection_id = await _seed_graph(
-        db_session, with_mapping=False
-    )
+    """A mapping retired while the run is in flight fails it, never relabels.
+
+    The run froze its target at enqueue, so the fetched rows belong to the
+    property that WAS selected. If that mapping is retired before derivation,
+    attributing the rows to whatever the connection points at now would be a
+    guess about someone else's data.
+    """
+    workspace_id, _project_id, connection_id = await _seed_graph(db_session)
     run = await _enqueue_run(db_session, workspace_id, connection_id)
+    # Retire the mapping after the run is queued and before it derives.
+    await db_session.execute(
+        update(IntegrationPropertyMapping)
+        .where(IntegrationPropertyMapping.connection_id == connection_id)
+        .values(status="disabled")
+    )
+    await db_session.commit()
 
     await _run_worker(session_factory)
 
@@ -489,3 +504,115 @@ def test_build_metric_row_values_pure_packing() -> None:
     assert row["importer_version"] == INTEGRATION_IMPORTER_VERSION
     assert row["source_artifact_id"] == artifact.id
     assert row["project_id"] == mapping.project_id
+
+
+@pytest.mark.asyncio
+async def test_overlapping_windows_supersede_instead_of_colliding(
+    session_factory, db_session
+) -> None:
+    """A revised day imported by an OVERLAPPING window must win.
+
+    The dispatcher enqueues a long trailing window and a short late-data
+    window every tick. They share their most recent days. While revisions were
+    allocated per window, both imports were revision 0, so the corrected rows
+    hit the metric-row unique identity and were thrown away by ON CONFLICT DO
+    NOTHING — Search Console's late-data correction never landed. Both
+    revisions must now be stored, and readers must see the later one.
+    """
+    workspace_id, project_id, connection_id = await _seed_graph(db_session)
+
+    # First import: a wide window, under-reported (the provider is still
+    # counting the most recent days).
+    wide = await enqueue_sync_run(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection_id,
+        window_start=date(2026, 7, 1),
+        window_end=date(2026, 7, 22),
+    )
+    await _run_worker(session_factory, clicks=3, impressions=30)
+    await db_session.refresh(wide)
+    assert wide.status == TASK_STATUS_SUCCEEDED
+
+    # Second import: a NARROWER, overlapping window with corrected values.
+    narrow = await enqueue_sync_run(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection_id,
+        window_start=date(2026, 7, 20),
+        window_end=date(2026, 7, 22),
+    )
+    assert (narrow.window_start, narrow.window_end) != (
+        wide.window_start,
+        wide.window_end,
+    )
+    assert narrow.resync_seq > wide.resync_seq
+    await _run_worker(session_factory, clicks=9, impressions=90)
+    await db_session.refresh(narrow)
+    assert narrow.status == TASK_STATUS_SUCCEEDED
+
+    # Both revisions are retained (immutable evidence, invariant 3)...
+    rows = list(
+        await db_session.scalars(
+            select(IntegrationMetricRow).where(
+                IntegrationMetricRow.project_id == project_id,
+                IntegrationMetricRow.dataset == DATASET_GSC_PAGE_DAILY,
+                IntegrationMetricRow.date == date(2026, 7, 21),
+            )
+        )
+    )
+    assert len(rows) == 2
+    by_seq = {row.resync_seq: row for row in rows}
+    assert by_seq[wide.resync_seq].metrics["clicks"] == 3
+    assert by_seq[narrow.resync_seq].metrics["clicks"] == 9
+
+    # ...and the READER — the same `metric_row_not_superseded` clause the
+    # ingest projection and the referrals drill-down apply — returns the later
+    # revision, exactly once. Recomputing "latest" in the test would assert the
+    # test's own rule rather than the one production actually uses.
+    current = list(
+        await db_session.scalars(
+            select(IntegrationMetricRow)
+            .where(
+                IntegrationMetricRow.project_id == project_id,
+                IntegrationMetricRow.dataset == DATASET_GSC_PAGE_DAILY,
+                IntegrationMetricRow.date == date(2026, 7, 21),
+            )
+            .where(metric_row_not_superseded())
+        )
+    )
+    assert len(current) == 1
+    assert current[0].resync_seq == narrow.resync_seq
+    assert current[0].metrics == {
+        "clicks": 9,
+        "impressions": 90,
+        "ctr": 0.1,
+        "position": 4.5,
+    }
+
+
+@pytest.mark.asyncio
+async def test_re_deriving_the_same_run_changes_nothing(
+    session_factory, db_session
+) -> None:
+    """Replay is a dedup no-op: the run owns its revision."""
+    workspace_id, project_id, connection_id = await _seed_graph(db_session)
+    run = await _enqueue_run(db_session, workspace_id, connection_id)
+    await _run_worker(session_factory)
+    await db_session.refresh(run)
+    before = await _run_metric_rows(db_session, run.id)
+    assert before
+
+    connection = await db_session.get(IntegrationConnection, connection_id)
+    artifacts = await _run_artifacts(db_session, run.id)
+    derived = await derive_run(
+        db_session, run=run, connection=connection, artifacts=artifacts
+    )
+    await db_session.commit()
+
+    after = await _run_metric_rows(db_session, run.id)
+    assert len(after) == len(before)
+    assert derived.project_id == project_id
+    assert {(row.id, row.resync_seq) for row in after} == {
+        (row.id, row.resync_seq) for row in before
+    }

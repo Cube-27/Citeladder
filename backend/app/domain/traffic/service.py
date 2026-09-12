@@ -62,7 +62,7 @@ from app.models.traffic import (
 )
 
 __all__ = [
-    "list_traffic_sync_connections",
+    "list_traffic_sync_targets",
     "performance_family_windows",
     "project_performance_range",
     "refresh_traffic_snapshot",
@@ -666,32 +666,33 @@ async def _enqueue_demand_refresh(
 # =========================================================================
 
 
-async def list_traffic_sync_connections(
+async def list_traffic_sync_targets(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-) -> list[IntegrationConnection]:
-    """The distinct ACTIVE mapped sync-provider connections of the project.
+) -> list[IntegrationPropertyMapping]:
+    """The ACTIVE sync targets of the project — one per mapped PROPERTY.
 
-    The "Sync now" fan-out set: every ACTIVE
-    ``IntegrationPropertyMapping`` of the project joined to its connection,
-    restricted to ``TRAFFIC_SYNC_PROVIDERS`` on a CONNECTED grant. One entry
-    per connection (a connection with several mapped properties gets ONE run
-    — sync runs are connection-scoped). Bing is in that set so a connected
-    Bing property keeps importing; whether a provider's rows feed the
-    Performance tables is a projection question, not a collection one.
-    Read-only; the enqueue per connection is owned by
+    The "Sync now" fan-out set: every ACTIVE ``IntegrationPropertyMapping``
+    of the project whose connection is a ``TRAFFIC_SYNC_PROVIDERS`` one on a
+    CONNECTED grant. One entry per PROPERTY, not per connection: a
+    connection with two mapped properties holds two independent imports, and
+    collapsing them to one run left whichever property the connection last
+    pointed at as the only one that ever synced. Bing is in that set so a
+    connected Bing property keeps importing; whether a provider's rows feed
+    the Performance tables is a projection question, not a collection one.
+    Read-only; the enqueue per target is owned by
     ``domain/integrations/sync.py`` (invariant 2).
     """
     stmt = (
-        select(IntegrationConnection)
+        select(IntegrationPropertyMapping)
         .join(
-            IntegrationPropertyMapping,
+            IntegrationConnection,
             and_(
-                IntegrationPropertyMapping.workspace_id
-                == IntegrationConnection.workspace_id,
-                IntegrationPropertyMapping.connection_id == IntegrationConnection.id,
+                IntegrationConnection.workspace_id
+                == IntegrationPropertyMapping.workspace_id,
+                IntegrationConnection.id == IntegrationPropertyMapping.connection_id,
             ),
         )
         .join(
@@ -708,8 +709,8 @@ async def list_traffic_sync_connections(
         .where(IntegrationConnection.provider.in_(sorted(TRAFFIC_SYNC_PROVIDERS)))
         .where(IntegrationOAuthGrant.status == GRANT_STATUS_CONNECTED)
         .order_by(
-            IntegrationConnection.created_at.asc(), IntegrationConnection.id.asc()
+            IntegrationPropertyMapping.created_at.asc(),
+            IntegrationPropertyMapping.id.asc(),
         )
-        .distinct()
     )
     return list((await session.scalars(stmt)).all())

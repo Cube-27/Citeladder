@@ -31,6 +31,10 @@ from app.core.config.prompts import (
 from app.core.config.visibility_prompts import BUYER_QUERY_POLICY_VERSION
 from app.domain.projects.knowledge_base import build_brand_knowledge_data
 from app.domain.projects.shim import project_scoring_identity
+from app.domain.prompts.demand_grounding import (
+    load_demand_grounding,
+    serialize_demand_signal,
+)
 from app.domain.prompts.generation_contract import (
     GenerationOutput,
     GenerationOutputError,
@@ -355,43 +359,6 @@ async def _insert_prompts_returning(
     return inserted_ids, len(rows) - len(inserted_ids)
 
 
-async def _load_demand_grounding(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    limit: int,
-) -> tuple[DemandSnapshot | None, list[DemandSignal]]:
-    snapshot = await session.scalar(
-        select(DemandSnapshot)
-        .where(
-            DemandSnapshot.workspace_id == workspace_id,
-            DemandSnapshot.project_id == project_id,
-        )
-        .order_by(DemandSnapshot.created_at.desc(), DemandSnapshot.id.desc())
-        .limit(1)
-    )
-    if snapshot is None:
-        return None, []
-    signals = list(
-        (
-            await session.scalars(
-                select(DemandSignal)
-                .where(
-                    DemandSignal.workspace_id == workspace_id,
-                    DemandSignal.project_id == project_id,
-                    DemandSignal.snapshot_id == snapshot.id,
-                )
-                .order_by(
-                    DemandSignal.priority_score.desc().nullslast(), DemandSignal.id
-                )
-                .limit(limit)
-            )
-        ).all()
-    )
-    return snapshot, signals
-
-
 def _project_business_context(project: Project) -> dict[str, Any]:
     """The confirmed business facets, which live on the brand profile.
 
@@ -404,20 +371,15 @@ def _project_business_context(project: Project) -> dict[str, Any]:
 
 
 def _generation_brand_context(
-    project: Project, demand_signals: list[DemandSignal]
+    project: Project,
+    demand_signals: list[DemandSignal],
+    demand_snapshot: DemandSnapshot | None = None,
 ) -> dict[str, Any]:
     context = project_scoring_identity(project)
     context["knowledge_base"] = build_brand_knowledge_data(project)
     context["business_context"] = _project_business_context(project)
     context["demand_signals"] = [
-        {
-            "id": str(signal.id),
-            "type": signal.signal_type,
-            "topic": signal.topic_cluster,
-            "page": signal.page_url,
-            "priority": signal.priority_score,
-            "limitations": list(signal.limitations or []),
-        }
+        serialize_demand_signal(signal, snapshot=demand_snapshot)
         for signal in demand_signals
     ]
     return context
@@ -560,13 +522,15 @@ async def _generate_suggestions(
     list[DemandSignal],
 ]:
     target_topic = _resolve_target_topic(prompt_set, payload)
-    demand_snapshot, demand_signals = await _load_demand_grounding(
+    demand_snapshot, demand_signals = await load_demand_grounding(
         session,
         workspace_id=workspace_id,
         project_id=prompt_set.project.id,
         limit=payload.count,
     )
-    brand_context = _generation_brand_context(prompt_set.project, demand_signals)
+    brand_context = _generation_brand_context(
+        prompt_set.project, demand_signals, demand_snapshot
+    )
     allowed_topics = _allowed_generation_topics(prompt_set.project, target_topic)
     planned_slots = build_prompt_slots(
         topics=allowed_topics,

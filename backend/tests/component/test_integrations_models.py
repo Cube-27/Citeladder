@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
@@ -26,6 +27,7 @@ from app.core.config.integrations_clients import (
 )
 from app.core.config.integrations_contracts import (
     GRANT_STATUS_CONNECTED,
+    MAPPING_STATUS_ACTIVE,
     MAPPING_STATUS_DISABLED,
     SYNC_KIND_ON_DEMAND,
     SYNC_KIND_SCHEDULED,
@@ -89,6 +91,7 @@ def _connection(
 def _run(
     workspace_id: uuid.UUID,
     connection_id: uuid.UUID,
+    target: _Target,
     *,
     window: tuple[date, date] = _WINDOW,
     resync_seq: int = 0,
@@ -99,6 +102,9 @@ def _run(
     return IntegrationSyncRun(
         workspace_id=workspace_id,
         connection_id=connection_id,
+        mapping_id=target.mapping_id,
+        property_ref=target.property_ref,
+        project_id=target.project_id,
         sync_kind=sync_kind,
         window_start=window[0],
         window_end=window[1],
@@ -108,17 +114,51 @@ def _run(
     )
 
 
+@dataclass(frozen=True)
+class _Target:
+    """The frozen sync target every run carries."""
+
+    mapping_id: uuid.UUID
+    property_ref: str
+    project_id: uuid.UUID
+
+
 async def _seed_connection(
     session: AsyncSession, provider: str = "gsc"
-) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
+) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID, _Target]:
     workspace = await _seed_workspace(session)
+    project = Project(
+        workspace_id=workspace.id,
+        name="Acme site",
+        website_url="https://acme.example",
+    )
+    session.add(project)
     grant = _grant(workspace.id)
     session.add(grant)
     await session.flush()
     connection = _connection(workspace.id, grant.id, provider)
     session.add(connection)
     await session.flush()
-    return workspace.id, grant.id, connection.id
+    mapping = IntegrationPropertyMapping(
+        workspace_id=workspace.id,
+        connection_id=connection.id,
+        provider=provider,
+        property_ref=f"{provider}-account-1",
+        project_id=project.id,
+        status=MAPPING_STATUS_ACTIVE,
+    )
+    session.add(mapping)
+    await session.flush()
+    return (
+        workspace.id,
+        grant.id,
+        connection.id,
+        _Target(
+            mapping_id=mapping.id,
+            property_ref=mapping.property_ref,
+            project_id=project.id,
+        ),
+    )
 
 
 @pytest.mark.asyncio
@@ -126,26 +166,35 @@ async def test_active_window_partial_index_dedupes_inflight_runs(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        ws_id, _, connection_id = await _seed_connection(session)
-        session.add(_run(ws_id, connection_id, resync_seq=0))
+        ws_id, _, connection_id, target = await _seed_connection(session)
+        session.add(_run(ws_id, connection_id, target, resync_seq=0))
         await session.commit()
 
     # A second ACTIVE run for the same (connection, kind, window) collides on
     # the partial unique index — even at a free resync_seq.
     with pytest.raises(IntegrityError):
         async with session_factory() as session:
-            session.add(_run(ws_id, connection_id, resync_seq=1))
+            session.add(_run(ws_id, connection_id, target, resync_seq=1))
             await session.commit()
 
     # A different kind or a different window is a different slot: allowed.
+    # Revisions stay distinct — they are unique per connection, not per slot.
     async with session_factory() as session:
         session.add(
-            _run(ws_id, connection_id, resync_seq=0, sync_kind=SYNC_KIND_SCHEDULED)
+            _run(
+                ws_id,
+                connection_id,
+                target,
+                resync_seq=2,
+                sync_kind=SYNC_KIND_SCHEDULED,
+            )
         )
         session.add(
             _run(
                 ws_id,
                 connection_id,
+                target,
+                resync_seq=3,
                 window=(date(2026, 7, 17), date(2026, 7, 19)),
             )
         )
@@ -153,12 +202,65 @@ async def test_active_window_partial_index_dedupes_inflight_runs(
 
 
 @pytest.mark.asyncio
+async def test_two_mappings_on_one_connection_share_a_window(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """In-flight dedup is per MAPPING, not per connection.
+
+    One authorization can carry several mapped properties, and they are
+    independent imports. Keying the active-window index on the connection made
+    the second property's run collide with the first's and never enqueue.
+    """
+    async with session_factory() as session:
+        ws_id, _, connection_id, target = await _seed_connection(session)
+        second_project = Project(workspace_id=ws_id, name="Second site")
+        session.add(second_project)
+        await session.flush()
+        second_mapping = IntegrationPropertyMapping(
+            workspace_id=ws_id,
+            connection_id=connection_id,
+            provider="gsc",
+            property_ref="gsc-account-2",
+            project_id=second_project.id,
+            status=MAPPING_STATUS_ACTIVE,
+        )
+        session.add(second_mapping)
+        await session.flush()
+        other = _Target(
+            mapping_id=second_mapping.id,
+            property_ref=second_mapping.property_ref,
+            project_id=second_project.id,
+        )
+        # Same kind, same window, both in flight — different properties.
+        session.add(_run(ws_id, connection_id, target, resync_seq=0))
+        session.add(_run(ws_id, connection_id, other, resync_seq=1))
+        await session.commit()
+
+    async with session_factory() as session:
+        runs = (
+            await session.scalars(
+                select(IntegrationSyncRun).where(
+                    IntegrationSyncRun.connection_id == connection_id
+                )
+            )
+        ).all()
+    assert len(runs) == 2
+    assert {run.mapping_id for run in runs} == {target.mapping_id, other.mapping_id}
+    assert {(run.window_start, run.window_end) for run in runs} == {_WINDOW}
+    # Within ONE mapping the window is still deduped.
+    with pytest.raises(IntegrityError):
+        async with session_factory() as session:
+            session.add(_run(ws_id, connection_id, other, resync_seq=2))
+            await session.commit()
+
+
+@pytest.mark.asyncio
 async def test_completed_window_frees_slot_and_resync_bumps_seq(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        ws_id, _, connection_id = await _seed_connection(session)
-        first = _run(ws_id, connection_id, resync_seq=0)
+        ws_id, _, connection_id, target = await _seed_connection(session)
+        first = _run(ws_id, connection_id, target, resync_seq=0)
         session.add(first)
         await session.flush()
         first.status = TASK_STATUS_SUCCEEDED
@@ -168,19 +270,19 @@ async def test_completed_window_frees_slot_and_resync_bumps_seq(
     # The completed run still owns the full (…, resync_seq=0) identity.
     with pytest.raises(IntegrityError):
         async with session_factory() as session:
-            session.add(_run(ws_id, connection_id, resync_seq=0))
+            session.add(_run(ws_id, connection_id, target, resync_seq=0))
             await session.commit()
 
     # Re-syncing the completed window with a bumped resync_seq is allowed —
     # the first run is terminal, so the active-window index does not fire.
     async with session_factory() as session:
-        session.add(_run(ws_id, connection_id, resync_seq=1))
+        session.add(_run(ws_id, connection_id, target, resync_seq=1))
         await session.commit()
 
     # But while that re-sync is in flight, the window is deduped again.
     with pytest.raises(IntegrityError):
         async with session_factory() as session:
-            session.add(_run(ws_id, connection_id, resync_seq=2))
+            session.add(_run(ws_id, connection_id, target, resync_seq=2))
             await session.commit()
 
 
@@ -189,8 +291,8 @@ async def test_sync_run_idempotency_key_unique(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        ws_id, _, connection_id = await _seed_connection(session)
-        session.add(_run(ws_id, connection_id, idempotency_key="dup-key"))
+        ws_id, _, connection_id, target = await _seed_connection(session)
+        session.add(_run(ws_id, connection_id, target, idempotency_key="dup-key"))
         await session.commit()
     with pytest.raises(IntegrityError):
         async with session_factory() as session:
@@ -198,6 +300,7 @@ async def test_sync_run_idempotency_key_unique(
                 _run(
                     ws_id,
                     connection_id,
+                    target,
                     window=(date(2026, 7, 17), date(2026, 7, 19)),
                     idempotency_key="dup-key",
                 )
@@ -231,7 +334,7 @@ async def test_connection_one_per_provider_per_grant(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        ws_id, grant_id, _ = await _seed_connection(session)
+        ws_id, grant_id, _, _target = await _seed_connection(session)
         await session.commit()
     # One Google consent attaches exactly one gsc + one ga4 row.
     with pytest.raises(IntegrityError):
@@ -248,7 +351,7 @@ async def test_one_active_mapping_per_property_across_connections(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        ws_id, grant_id, gsc_id = await _seed_connection(session)
+        ws_id, grant_id, gsc_id, _target = await _seed_connection(session)
         ga4 = _connection(ws_id, grant_id, "ga4")
         session.add(ga4)
         await session.flush()
@@ -299,11 +402,8 @@ async def test_metric_row_identity_and_resync_retention(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        ws_id, _, connection_id = await _seed_connection(session)
-        project = Project(workspace_id=ws_id, name="Metric project")
-        session.add(project)
-        await session.flush()
-        run = _run(ws_id, connection_id)
+        ws_id, _, connection_id, target = await _seed_connection(session)
+        run = _run(ws_id, connection_id, target)
         session.add(run)
         await session.flush()
         artifact = IntegrationImportArtifact(
@@ -319,7 +419,10 @@ async def test_metric_row_identity_and_resync_retention(
         )
         session.add(artifact)
         await session.flush()
-        project_id, artifact_id = project.id, artifact.id
+        # The rows below belong to the run's FROZEN target, not to some other
+        # project that happens to exist — that is the identity derivation
+        # stamps on them.
+        project_id, artifact_id = target.project_id, artifact.id
         await session.commit()
 
     def _row(resync_seq: int, artifact_id: uuid.UUID = artifact_id):
@@ -366,7 +469,7 @@ async def test_same_workspace_composite_fks_reject_cross_workspace_refs(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        ws_id, grant_id, connection_id = await _seed_connection(session)
+        ws_id, grant_id, connection_id, target = await _seed_connection(session)
         other = await _seed_workspace(session, name="Other WS")
         other_id = other.id
         await session.commit()
@@ -379,7 +482,7 @@ async def test_same_workspace_composite_fks_reject_cross_workspace_refs(
     # A sync run cannot point at a connection in another workspace.
     with pytest.raises(IntegrityError):
         async with session_factory() as session:
-            session.add(_run(other_id, connection_id))
+            session.add(_run(other_id, connection_id, target))
             await session.commit()
     # A mapping cannot point at a connection in another workspace.
     with pytest.raises(IntegrityError):
@@ -400,7 +503,7 @@ async def test_same_workspace_composite_fks_reject_cross_workspace_refs(
     # An artifact cannot point at a sync run in another workspace.
     with pytest.raises(IntegrityError):
         async with session_factory() as session:
-            run = _run(ws_id, connection_id)
+            run = _run(ws_id, connection_id, target)
             session.add(run)
             await session.flush()
             session.add(
@@ -448,7 +551,7 @@ async def test_event_survives_connection_delete_with_set_null(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        ws_id, grant_id, connection_id = await _seed_connection(session)
+        ws_id, grant_id, connection_id, _target = await _seed_connection(session)
         event = IntegrationEvent(
             workspace_id=ws_id,
             connection_id=connection_id,
@@ -480,8 +583,8 @@ async def test_workspace_delete_cascades_graph(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        ws_id, _grant_id, connection_id = await _seed_connection(session)
-        run = _run(ws_id, connection_id)
+        ws_id, _grant_id, connection_id, target = await _seed_connection(session)
+        run = _run(ws_id, connection_id, target)
         session.add(run)
         await session.flush()
         session.add(
@@ -520,13 +623,15 @@ async def test_integration_queue_claims_without_double_claim(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     async with session_factory() as session:
-        ws_id, _, connection_id = await _seed_connection(session)
+        ws_id, _, connection_id, target = await _seed_connection(session)
         ids = []
         for offset in range(6):
             # Distinct windows so the active-window index is not exercised.
             row = _run(
                 ws_id,
                 connection_id,
+                target,
+                resync_seq=offset,
                 window=(
                     date(2026, 7, 1) + timedelta(days=offset * 3),
                     date(2026, 7, 2) + timedelta(days=offset * 3),

@@ -1,4 +1,23 @@
-"""Deterministic entity-level recommendation assessment over one answer."""
+"""Deterministic entity-level recommendation assessment over one answer.
+
+This is EXPLICIT-LANGUAGE DETECTION, not sentiment analysis and not a
+calibrated judgement. It finds the first alias match for each tracked entity
+and reads a short fixed window of English either side of it for a handful of
+recommendation phrases. What that means, stated rather than implied:
+
+- English phrasing only, and only the phrasings enumerated below.
+- The FIRST mention decides. An answer that hedges early and recommends
+  later reads as hedged.
+- A fixed ``_WINDOW_CHARS`` window, so a recommendation expressed further
+  away than that is not seen.
+- Negation is only caught in the explicit forms listed; other constructions
+  fall through to ``mentioned``.
+
+Each row carries this as ``limitation`` so a consumer can say what the state
+does and does not establish. ``state`` scales opportunity priority via
+``recommendation_strength_factor``, which is exactly why the limits travel
+with it instead of being folded into a single number.
+"""
 
 from __future__ import annotations
 
@@ -15,6 +34,17 @@ _TOKEN_GAP = r"[^0-9A-Za-z]*"
 # Common semantic uses that must NOT count as a mention of an ambiguous,
 # ordinary-word brand alias (mirrors ``scoring._entity_alias_present``).
 _AMBIGUOUS_EXCLUSIONS = r"(?!\s+(?:audience|price|market|demographic))"
+# Characters read either side of the first match when classifying.
+_SPAN_CHARS = 60
+_WINDOW_CHARS = 45
+# What every classified state does NOT establish. Travels on the row so a
+# consumer never has to infer the method's reach from the state alone.
+EXPLICIT_LANGUAGE_LIMITATION = (
+    "Explicit-language detection over English phrasing in a "
+    f"{_WINDOW_CHARS}-character window around the entity's FIRST mention. "
+    "Not sentiment, not a calibrated judgement, and not a reading of the "
+    "whole answer."
+)
 
 
 def _alias_pattern(normalized_alias: str) -> str:
@@ -57,12 +87,15 @@ def _assessment(
         default=None,
     )
     if match is None:
-        return _row(name, entity_kind, "absent", None, "Entity matching completed.")
-    start = max(0, match.start() - 60)
-    end = min(len(answer), match.end() + 60)
+        # The same limitation as every other state: "absent" is what this
+        # English, explicit-language matcher did not find, not proof the
+        # answer never named the entity.
+        return _row(name, entity_kind, "absent", None, EXPLICIT_LANGUAGE_LIMITATION)
+    start = max(0, match.start() - _SPAN_CHARS)
+    end = min(len(answer), match.end() + _SPAN_CHARS)
     span = answer[start:end]
-    before = answer[max(0, match.start() - 45) : match.start()].lower()
-    after_text = answer[match.end() : match.end() + 45].lower()
+    before = answer[max(0, match.start() - _WINDOW_CHARS) : match.start()].lower()
+    after_text = answer[match.end() : match.end() + _WINDOW_CHARS].lower()
     if re.search(
         r"(?:avoid|do not recommend|not recommended|recommend against)"
         r"(?:\s+(?:the|a|an|this|that))*\s*$",
@@ -92,7 +125,11 @@ def _assessment(
     else:
         state = "mentioned"
     return _row(
-        name, entity_kind, state, {"start": start, "end": end, "text": span}, ""
+        name,
+        entity_kind,
+        state,
+        {"start": start, "end": end, "text": span},
+        EXPLICIT_LANGUAGE_LIMITATION,
     )
 
 
@@ -104,7 +141,11 @@ def _row(
         "entity_name": name,
         "entity_kind": entity_kind,
         "state": state,
-        "confidence": 1.0 if state in {"absent", "unavailable"} else 0.85,
+        # No confidence number. There was one — a hardcoded 0.85 on every
+        # non-absent state, regardless of match quality — which asserted a
+        # calibration this detector does not have. ``state`` plus
+        # ``limitation`` say exactly what was observed and what the method
+        # cannot see; a fabricated probability beside them says less.
         "evidence_spans": [span] if span else [],
         "method": "deterministic_explicit_language",
         "analyzer_version": ENTITY_ASSESSMENT_VERSION,

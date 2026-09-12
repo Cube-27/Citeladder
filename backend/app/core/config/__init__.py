@@ -5,6 +5,7 @@ import ipaddress
 import logging
 from datetime import UTC, datetime
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -149,16 +150,23 @@ class Settings(BaseSettings):
             "integration_google_client_secret",
         ),
     )
+    # ``BING_OAUTH_*`` is accepted too: the deploy workflow and both operator
+    # runbooks name the secrets that way, and without the alias Bing read as
+    # unconfigured in a correctly provisioned deployment — a 503 on Connect
+    # with nothing obviously wrong.
     integration_microsoft_client_id: str = Field(
         default="",
         validation_alias=AliasChoices(
-            "INTEGRATION_MICROSOFT_CLIENT_ID", "integration_microsoft_client_id"
+            "INTEGRATION_MICROSOFT_CLIENT_ID",
+            "BING_OAUTH_CLIENT_ID",
+            "integration_microsoft_client_id",
         ),
     )
     integration_microsoft_client_secret: str = Field(
         default="",
         validation_alias=AliasChoices(
             "INTEGRATION_MICROSOFT_CLIENT_SECRET",
+            "BING_OAUTH_CLIENT_SECRET",
             "integration_microsoft_client_secret",
         ),
     )
@@ -342,6 +350,9 @@ DEVELOPMENT_ENV_NAMES: frozenset[str] = frozenset(
     {"", "development", "dev", "local", "test", "testing"}
 )
 
+# The only NON-address host that can mean "this machine".
+_LOOPBACK_HOSTNAMES: frozenset[str] = frozenset({"localhost"})
+
 
 def _is_development_env(candidate: Settings) -> bool:
     env = str(candidate.app_env or "development").strip().lower()
@@ -453,7 +464,59 @@ def validate_production_security(candidate: Settings) -> list[str]:
     issues.extend(_trusted_proxy_problems(candidate.trusted_proxy_cidrs))
     issues.extend(_dev_gate_problems(candidate))
     issues.extend(_configured_login_problems(candidate))
+    issues.extend(_frontend_url_problems(candidate))
     return issues
+
+
+def _frontend_url_problems(candidate: Settings) -> list[str]:
+    """``frontend_url`` is the sole input to every OAuth redirect URI.
+
+    It defaults to loopback for local development, and a deployment that
+    forgets to set it does not fail loudly — it builds provider redirect URIs
+    and post-consent landing URLs pointing at 127.0.0.1, so Connect bounces
+    every public user to their own machine. Providers match ``redirect_uri``
+    byte-for-byte, so this is unrecoverable at runtime and worth refusing at
+    boot.
+
+    Gated on the environment like the dev-gate check above, because
+    ``validate_production_security`` also runs for the DEMO bootstrap — which
+    is provisioned locally against the loopback default, and refusing that
+    would block the one setup this rule is not about.
+
+    A value that is not an absolute ``http(s)`` URL is refused for the same
+    reason: it has no hostname to be loopback, and every redirect built from
+    it is equally unusable.
+    """
+    if _is_development_env(candidate):
+        return []
+    parts = urlsplit(candidate.frontend_url.strip())
+    if parts.scheme not in {"http", "https"} or not parts.hostname:
+        return ["frontend_url must be an absolute http(s) URL"]
+    if _is_loopback_host(parts.hostname):
+        return ["frontend_url must not be a loopback address outside development"]
+    return []
+
+
+def _is_loopback_host(host: str) -> bool:
+    """Whether ``host`` can only ever resolve to this machine.
+
+    Matching a fixed set of spellings missed most of them: the whole
+    ``127.0.0.0/8`` block is loopback, not just ``127.0.0.1``, and IPv6 has
+    ``::1`` alongside its expanded and zero-compressed forms. ``ipaddress``
+    already knows all of it, so the only literal left is the hostname.
+    ``urlsplit`` lowercases and strips IPv6 brackets; a fully-qualified
+    ``localhost.`` needs the root dot removed first.
+    """
+    candidate = host.strip().rstrip(".")
+    if not candidate:
+        return False
+    if candidate.casefold() in _LOOPBACK_HOSTNAMES:
+        return True
+    try:
+        return ipaddress.ip_address(candidate).is_loopback
+    except ValueError:
+        # A real hostname, not an address literal — nothing to decide here.
+        return False
 
 
 def _check_secret_defaults() -> None:

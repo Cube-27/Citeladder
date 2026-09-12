@@ -110,8 +110,12 @@ export const visibilitySourcesSchema = responseObject({
 });
 
 export const visibilityFanoutSummarySchema = responseObject({
+  // Totals over the WHOLE selected run set: unaffected by paging or search.
   event_count: z.number().int(),
   distinct_queries: z.number().int(),
+  // Query rows matching the current `search` (equal to `distinct_queries`
+  // when no search is applied). What the table pages through.
+  matched_queries: z.number().int(),
   coverage: z.record(z.string(), z.number().int()),
   next_offset: z.number().int().nullable(),
   total_answers: z.number().int(),

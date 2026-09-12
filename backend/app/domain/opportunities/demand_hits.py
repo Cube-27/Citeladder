@@ -13,6 +13,7 @@ from app.core.config.opportunities import (
     DEMAND_SIGNAL_GAP_FACTOR,
     DEMAND_SIGNAL_RULE_IDS,
 )
+from app.domain.demand.selection import current_demand_snapshot
 from app.models.demand import DemandSignal, DemandSnapshot
 
 
@@ -67,14 +68,8 @@ def _hit(snapshot: DemandSnapshot, signal: DemandSignal) -> DetectorHit | None:
 async def load_demand_hits(
     session: AsyncSession, *, workspace_id: uuid.UUID, project_id: uuid.UUID
 ) -> tuple[DemandSnapshot | None, list[DetectorHit]]:
-    snapshot = await session.scalar(
-        select(DemandSnapshot)
-        .where(
-            DemandSnapshot.workspace_id == workspace_id,
-            DemandSnapshot.project_id == project_id,
-        )
-        .order_by(DemandSnapshot.created_at.desc(), DemandSnapshot.id.desc())
-        .limit(1)
+    snapshot = await current_demand_snapshot(
+        session, workspace_id=workspace_id, project_id=project_id
     )
     if snapshot is None:
         return None, []

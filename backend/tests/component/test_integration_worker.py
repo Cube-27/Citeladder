@@ -44,7 +44,6 @@ from app.core.config.integrations_contracts import (
     ERROR_PROVIDER_API,
     ERROR_RATE_LIMITED,
     ERROR_TOKEN_REFRESH_FAILED,
-    ERROR_UNMAPPED_PROPERTY,
     EVENT_INTEGRATION_REAUTH_REQUIRED,
     EVENT_INTEGRATION_SYNC_FINISHED,
     EVENT_INTEGRATION_SYNC_STARTED,
@@ -78,7 +77,7 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
 )
 from app.core.security import decrypt_secret, encrypt_secret
-from app.domain.integrations.sync import enqueue_sync_run
+from app.domain.integrations.sync import SyncTargetUnmappedError, enqueue_sync_run
 from app.models.analytics import AnalyticsTask
 from app.models.brand import OwnedDomain
 from app.models.integrations import (
@@ -366,34 +365,31 @@ def _canonical_hash(payload: dict) -> str:
 
 
 @pytest.mark.asyncio
-async def test_run_without_a_selected_property_fails_fast(
+async def test_a_run_cannot_be_queued_without_a_selected_property(
     session_factory, db_session
 ) -> None:
-    """No property selected ⇒ terminal ``unmapped_property``, no provider call.
+    """No property selected ⇒ nothing is queued, and no provider is called.
 
     Regression guard: an empty ``account_ref`` was interpolated straight into
     the provider URL (``/webmasters/v3/sites//searchAnalytics/query``), so a
     connection that had simply never been pointed at a property failed with
     the provider's confusing 400 surfaced as a generic ``provider_api_error``
     — and burned the retry budget re-issuing a request that could never
-    succeed. The derivation-time guard cannot catch this: it only runs after
-    a SUCCESSFUL fetch.
+    succeed.
+
+    The guard now sits at the ENQUEUE: a run imports a selected property, so
+    a connection without one has no run to create. That is strictly stronger
+    than failing the run afterwards — the work never enters the queue.
     """
     seed = await _seed_graph(db_session, with_mapping=False, account_ref="")
-    run = await _enqueue_run(db_session, seed)
+
+    with pytest.raises(SyncTargetUnmappedError):
+        await _enqueue_run(db_session, seed)
+    await db_session.rollback()
+
     fake = _ProviderFake()
-
-    assert await _worker(session_factory, fake.mock_transport()).run_until_idle() == 1
-
-    await db_session.refresh(run)
-    assert run.status == TASK_STATUS_FAILED
-    assert run.error_code == ERROR_UNMAPPED_PROPERTY
-    assert run.completed_at is not None
-    # Terminal on the FIRST attempt — an unset property is not retryable.
-    assert run.attempt_count == 1
-    # Nothing was fetched: no provider page was requested, no artifact landed.
+    assert await _worker(session_factory, fake.mock_transport()).run_until_idle() == 0
     assert fake.gsc_pages == []
-    assert await _artifacts(db_session, run.id) == []
 
 
 @pytest.mark.asyncio

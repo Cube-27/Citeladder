@@ -10,6 +10,24 @@
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { groupByPrompt, queryTexts } from '@/lib/visibility/evidence';
 
+/** The `search` bound the fanout endpoint declares (`Query(max_length=512)`). */
+export const SEARCH_MAX_LENGTH = 512;
+
+/**
+ * The one search value every consumer uses.
+ *
+ * The table filters in the browser and the totals are counted by the server,
+ * and they must be asking the same question. A value past the endpoint's
+ * declared bound is rejected as a 422 before it can match anything, so it was
+ * truncated on the way to the server only — leaving the table filtering by the
+ * full typed string while the server answered about a shorter one, and the
+ * "matches elsewhere" note describing a search nobody ran. Normalized ONCE,
+ * here, so there is no second spelling to drift from.
+ */
+export function normalizeSearch(value: string | null): string {
+  return (value ?? '').trim().slice(0, SEARCH_MAX_LENGTH);
+}
+
 /** One search string, and what was observed running it. */
 type SearchRow = {
   query: string;
@@ -111,5 +129,9 @@ export function searchRowsByTopic(
   }
   return order
     .sort((a, b) => a.localeCompare(b))
-    .map((topic) => ({ ...foldRows(buckets.get(topic)!), key: topic, label: topic }));
+    .map((topic) => ({
+      ...foldRows(buckets.get(topic)!),
+      key: topic,
+      label: topic,
+    }));
 }

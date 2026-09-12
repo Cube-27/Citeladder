@@ -75,7 +75,10 @@ INTEGRATION_OAUTH_SCOPES: Final[dict[str, tuple[str, ...]]] = {
     # authorization-code exchange unconditionally. Sending either an Entra
     # resource-style scope or ``offline_access`` is an invalid request to this
     # server.
-    INTEGRATION_TRANSPORT_MICROSOFT: ("webmaster.manage",),
+    # ``read``, not ``manage``: every Bing call this product makes is a read
+    # (GetUserSites / GetQueryStats / GetPageStats). Asking for write access
+    # we never use is a consent-screen deterrent for no capability.
+    INTEGRATION_TRANSPORT_MICROSOFT: ("webmaster.read",),
 }
 
 INTEGRATION_OAUTH_CALLBACK_PATH: Final = (

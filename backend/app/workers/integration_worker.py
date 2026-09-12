@@ -228,7 +228,12 @@ class IntegrationWorker(DrainableWorkerMixin):
                 window_start=run.window_start,
                 window_end=run.window_end,
                 resync_seq=run.resync_seq,
-                property_ref=connection.account_ref,
+                # The run's FROZEN target, not the connection's current
+                # pointer: the property picker can move ``account_ref`` while
+                # this run is queued or mid-resume, and fetching the moved
+                # property would file another property's data under this
+                # run's identity.
+                property_ref=run.property_ref,
                 attempt_count=run.attempt_count,
                 max_attempts=run.max_attempts,
                 dataset_capabilities=dict(connection.dataset_capabilities or {}),

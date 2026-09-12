@@ -7,17 +7,22 @@ its history is read back:
   (``sync_default_window_days`` complete UTC days ending yesterday); an
   explicit caller window is validated (no inverted/half-specified ranges)
   and clamped to ``sync_backfill_max_days``.
+- **Target resolution** — a run imports one selected PROPERTY, so the enqueue
+  resolves the connection's ACTIVE mapping and FREEZES mapping/property/
+  project onto the run. One authorized connection can serve several projects;
+  ``project_id`` names which when there is more than one.
 - **Deterministic idempotency-key builder** — the same
-  ``(connection, kind, window, resync_seq)`` inputs always produce the same
-  key, so the unique ``idempotency_key`` column backs the queue's
+  ``(connection, mapping, kind, window, resync_seq)`` inputs always produce
+  the same key, so the unique ``idempotency_key`` column backs the queue's
   no-double-enqueue guarantee (invariant 8).
 - **Atomic ``resync_seq`` allocation** — the connection row is locked
   ``SELECT ... FOR UPDATE`` and the next value is ``MAX(resync_seq) + 1``
-  over the ``(connection_id, sync_kind, window_start, window_end)`` group;
-  a unique-conflict retries with the next value (bounded by
-  ``sync_resync_alloc_max_attempts``). Two concurrent re-syncs of one
-  completed window can therefore never pick the same value or break
-  monotonicity (spec §3).
+  over the CONNECTION and over the target's ``(project, property)`` data
+  identity; a unique-conflict retries with the next value (bounded by
+  ``sync_resync_alloc_max_attempts``). Allocating per connection rather than
+  per window is what makes revisions comparable where two windows OVERLAP,
+  and the identity floor is what keeps a re-mapped property comparable across
+  connections — see :func:`_next_resync_seq` (spec §3).
 - **``ActiveWindowConflictError``** — raised when the partial active-window
   unique index rejects a duplicate in-flight run for the same window (the
   API maps it to 409); a COMPLETED window stays re-syncable because the
@@ -40,16 +45,12 @@ from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.integrations_contracts import (
-    BACKFILL_STATE_COMPLETE,
-    BACKFILL_STATE_IMPORTING,
-    BACKFILL_STATE_NOT_STARTED,
-    BACKFILL_STATE_PARTIAL,
     INTEGRATION_SYNC_KINDS,
-    SYNC_KIND_BACKFILL,
+    MAPPING_STATUS_ACTIVE,
     SYNC_KIND_ON_DEMAND,
 )
 from app.core.config.integrations_settings import (
@@ -62,26 +63,26 @@ from app.core.config.task_queue import (
 )
 from app.domain.integrations.errors import IntegrationConnectionNotFoundError
 from app.domain.integrations.schemas import (
-    IntegrationBackfillProgressResponse,
     IntegrationSyncRunResponse,
 )
 from app.domain.integrations.service import get_connection
 from app.models.integrations import (
     IntegrationConnection,
     IntegrationImportArtifact,
+    IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
 
 # Schema-object names pinned in ``models/integrations.py`` — the partial
-# active-window unique index (409 path), the full re-sync identity unique
-# constraint, and the unique idempotency key (both retry-with-next-value).
+# active-window unique index (409 path), the per-connection revision identity,
+# and the unique idempotency key (the last two retry-with-next-value).
 logger = logging.getLogger("app.integrations")
 
 _ACTIVE_WINDOW_INDEX = "ix_integration_sync_runs_active_window"
-_WINDOW_SEQ_CONSTRAINT = "uq_integration_sync_run_window_seq"
+_CONNECTION_SEQ_CONSTRAINT = "uq_integration_sync_run_connection_seq"
 _IDEMPOTENCY_KEY_CONSTRAINT = "uq_integration_sync_run_idempotency_key"
 _RETRYABLE_CONSTRAINTS = frozenset(
-    {_WINDOW_SEQ_CONSTRAINT, _IDEMPOTENCY_KEY_CONSTRAINT}
+    {_CONNECTION_SEQ_CONSTRAINT, _IDEMPOTENCY_KEY_CONSTRAINT}
 )
 # Postgres reports unique violations as
 # ``duplicate key value violates unique constraint "<name>"`` (stable text).
@@ -94,6 +95,23 @@ class ActiveWindowConflictError(RuntimeError):
 
 class SyncWindowInvalidError(ValueError):
     """The requested window is inverted or only half-specified."""
+
+
+class SyncTargetUnmappedError(RuntimeError):
+    """The connection has no ACTIVE property mapping to import for.
+
+    A connection is an authorization; a mapping is the thing to import. Until
+    a property is selected there is nothing to fetch, so the enqueue refuses
+    rather than queueing a run that can only fail at derivation.
+    """
+
+
+class SyncTargetAmbiguousError(RuntimeError):
+    """The connection serves several projects and no target was named.
+
+    One authorized connection can hold an active mapping per project, so
+    "sync this connection" is under-specified. The caller names the project.
+    """
 
 
 class SyncRunNotFoundError(LookupError):
@@ -153,37 +171,6 @@ def default_sync_window(*, today: date | None = None) -> tuple[date, date]:
     return start, end
 
 
-def backfill_sync_windows(*, today: date | None = None) -> list[tuple[date, date]]:
-    """The one-time history import, split into rolling-window-sized chunks.
-
-    Covers ``sync_backfill_window_days`` ending yesterday — the same right
-    edge as every other window (the latest complete UTC day), so backfilled
-    history lines up with the rolling sync instead of forming a second,
-    offset timeline.
-
-    CHUNKED rather than one long run, because a sync window is also a
-    projection window: the post-sync hook enqueues one snapshot refresh per
-    imported window, and that refresh materializes every metric row in the
-    window in memory. A single 365-day run would therefore load a year of
-    rows at once. Chunking keeps each import and each refresh the same size
-    as a normal daily sync, and the queue's lease/retry machinery handles the
-    chunks independently — a failure re-runs one chunk, not the year.
-
-    Returned newest-first so the most useful history is imported first if the
-    worker is interrupted partway through.
-    """
-    end = (today or _utcnow().date()) - timedelta(days=1)
-    earliest = end - timedelta(days=integration_settings.sync_backfill_window_days - 1)
-    chunk = integration_settings.sync_default_window_days
-    windows: list[tuple[date, date]] = []
-    chunk_end = end
-    while chunk_end >= earliest:
-        chunk_start = max(earliest, chunk_end - timedelta(days=chunk - 1))
-        windows.append((chunk_start, chunk_end))
-        chunk_end = chunk_start - timedelta(days=1)
-    return windows
-
-
 def incremental_sync_window(
     covered_through: date | None, *, today: date | None = None
 ) -> tuple[date, date]:
@@ -194,8 +181,10 @@ def incremental_sync_window(
     yesterday (the latest complete UTC day), pulled back by
     ``sync_late_data_revision_days`` so the most recent days — which Search
     Console keeps revising for a few days after first publication — are
-    re-read at a bumped ``resync_seq`` rather than frozen at their
-    first-seen, under-reported values.
+    re-read at a higher ``resync_seq`` rather than frozen at their
+    first-seen, under-reported values. The bump is guaranteed because
+    ``_next_resync_seq`` allocates per CONNECTION: a re-read of days already
+    imported by some other window still outranks them.
 
     A connection that has imported nothing yet gets the default trailing
     window: there is no coverage to extend, and the caller wants a useful
@@ -220,9 +209,17 @@ def incremental_sync_window(
 
 
 async def connection_covered_through(
-    session: AsyncSession, *, connection_id: uuid.UUID
+    session: AsyncSession,
+    *,
+    connection_id: uuid.UUID,
+    mapping_id: uuid.UUID | None = None,
 ) -> date | None:
     """The last date covered by an UNBROKEN run of succeeded imports.
+
+    Scoped to ``mapping_id`` when given, because coverage belongs to the
+    TARGET, not the authorization: a second project mapped to the same
+    connection has imported nothing yet, and inheriting the first project's
+    coverage would make its incremental sync skip all of that history.
 
     Only succeeded runs count: a queued, active, or failed run imported
     nothing, and treating its window as covered would skip those dates
@@ -235,30 +232,48 @@ async def connection_covered_through(
     Walking the windows in order instead makes the next sync resume from the
     gap, and the ``sync_backfill_max_days`` clamp keeps that bounded.
     """
+    statement = select(
+        IntegrationSyncRun.window_start, IntegrationSyncRun.window_end
+    ).where(
+        IntegrationSyncRun.connection_id == connection_id,
+        IntegrationSyncRun.status == TASK_STATUS_SUCCEEDED,
+    )
+    if mapping_id is not None:
+        statement = statement.where(IntegrationSyncRun.mapping_id == mapping_id)
     windows = (
         await session.execute(
-            select(IntegrationSyncRun.window_start, IntegrationSyncRun.window_end)
-            .where(
-                IntegrationSyncRun.connection_id == connection_id,
-                IntegrationSyncRun.status == TASK_STATUS_SUCCEEDED,
-            )
-            .order_by(
+            statement.order_by(
                 IntegrationSyncRun.window_start.asc(),
                 IntegrationSyncRun.window_end.asc(),
             )
         )
     ).all()
-    covered: date | None = None
-    for window_start, window_end in windows:
-        if covered is None:
-            covered = window_end
-            continue
-        # A window starting more than one day after the covered edge leaves
-        # a hole; everything past it is unreachable coverage.
-        if window_start > covered + timedelta(days=1):
+    return contiguous_span([(start, end) for start, end in windows])[1]
+
+
+def contiguous_span(
+    windows: Sequence[tuple[date, date]],
+) -> tuple[date | None, date | None]:
+    """The unbroken ``[start, end]`` the given windows actually cover.
+
+    Walks them in order and stops at the FIRST gap: everything past a hole is
+    unreachable coverage. Taking ``MIN(start)``/``MAX(end)`` instead jumps
+    straight over a failed middle chunk and presents the result as continuous,
+    which both lets the next sync skip the hole forever and tells the reader
+    history reaches a date it does not.
+
+    Pure, and the single owner of that rule — the enqueue path needs the end,
+    the progress projection needs both ends, and they must not drift apart.
+    """
+    if not windows:
+        return None, None
+    ordered = sorted(windows)
+    covered_from, covered_through = ordered[0]
+    for window_start, window_end in ordered[1:]:
+        if window_start > covered_through + timedelta(days=1):
             break
-        covered = max(covered, window_end)
-    return covered
+        covered_through = max(covered_through, window_end)
+    return covered_from, covered_through
 
 
 def clamp_sync_window(window_start: date, window_end: date) -> tuple[date, date]:
@@ -296,14 +311,20 @@ def resolve_sync_window(
 def build_sync_idempotency_key(
     *,
     connection_id: uuid.UUID,
+    mapping_id: uuid.UUID,
     sync_kind: str,
     window_start: date,
     window_end: date,
     resync_seq: int,
 ) -> str:
-    """Deterministic idempotency key for one run identity (bounded < 160)."""
+    """Deterministic idempotency key for one run identity (bounded < 160).
+
+    Carries the mapping because one connection can import for several
+    projects: without it, two projects' runs of the same window and kind
+    would collide on the unique key.
+    """
     return (
-        f"sync:{connection_id}:{sync_kind}:"
+        f"sync:{connection_id}:{mapping_id}:{sync_kind}:"
         f"{window_start.isoformat()}:{window_end.isoformat()}:{resync_seq}"
     )
 
@@ -335,91 +356,102 @@ async def _lock_connection(
     return connection_id_locked
 
 
+async def resolve_sync_target(
+    session: AsyncSession,
+    *,
+    connection_id: uuid.UUID,
+    project_id: uuid.UUID | None = None,
+    mapping_id: uuid.UUID | None = None,
+) -> IntegrationPropertyMapping:
+    """The ACTIVE mapping this enqueue should import for.
+
+    ``mapping_id`` names the target exactly — the form a project-level
+    fan-out uses, since one connection can hold several mapped properties.
+    ``project_id`` narrows to one project. With neither, the connection must
+    have exactly one active mapping. Resolving HERE rather than at derivation
+    time is what lets the run freeze its target: the enqueue is the moment
+    the caller's intent is unambiguous, and everything downstream reads the
+    frozen columns.
+
+    Raises:
+        SyncTargetUnmappedError: no matching active mapping.
+        SyncTargetAmbiguousError: several match and none was named.
+    """
+    statement = select(IntegrationPropertyMapping).where(
+        IntegrationPropertyMapping.connection_id == connection_id,
+        IntegrationPropertyMapping.status == MAPPING_STATUS_ACTIVE,
+    )
+    if mapping_id is not None:
+        statement = statement.where(IntegrationPropertyMapping.id == mapping_id)
+    if project_id is not None:
+        statement = statement.where(IntegrationPropertyMapping.project_id == project_id)
+    mappings = (await session.execute(statement)).scalars().all()
+    if not mappings:
+        raise SyncTargetUnmappedError(
+            f"connection {connection_id} has no active property mapping"
+        )
+    if len(mappings) > 1:
+        raise SyncTargetAmbiguousError(
+            f"connection {connection_id} has {len(mappings)} active mappings; "
+            f"name a project_id"
+        )
+    return mappings[0]
+
+
 async def _next_resync_seq(
     session: AsyncSession,
     *,
     connection_id: uuid.UUID,
-    sync_kind: str,
-    window_start: date,
-    window_end: date,
+    project_id: uuid.UUID,
+    property_ref: str,
 ) -> int:
-    """``MAX(resync_seq) + 1`` for the window group (0 for a first run)."""
+    """``MAX(resync_seq) + 1`` across the CONNECTION (0 for its first run).
+
+    Scoped to the connection alone — deliberately NOT to the window group.
+    ``resync_seq`` is the data revision stamped onto every metric row the run
+    derives, and those rows collide on ``(project, property, provider,
+    dataset, date, dimension_key, resync_seq)``. Two runs whose windows merely
+    OVERLAP share the days in the overlap, so a window-scoped allocation hands
+    both of them revision 0 and the second import's values are silently
+    discarded by ``ON CONFLICT DO NOTHING``.
+
+    That is not hypothetical: the dispatcher enqueues a 28-day trailing window
+    and a 3-day late-data window on every tick. They are different
+    ``(window_start, window_end)`` pairs, so under a window-scoped allocation
+    both were revision 0 and the late-data revision — the entire point of the
+    second run — never landed.
+
+    A per-connection monotonic counter makes revisions comparable across
+    overlapping windows: later enqueue means strictly higher revision, and
+    every reader already resolves a metric identity by taking the row with the
+    highest ``resync_seq`` (``traffic.projection``, ``analytics.ingest``'s
+    ``metric_row_not_superseded``, ``demand.query_evidence``). Never a sum, so
+    distinct revisions of the same day cannot double-count.
+
+    Re-deriving the SAME run stays a no-op: the run owns its allocated
+    ``resync_seq``, so a resume writes the identical row identity and the
+    conflict clause absorbs it.
+
+    The floor is the higher of the connection's revisions and the ones already
+    recorded for this DATA IDENTITY ``(project, property)``. A property can be
+    re-mapped onto a different connection — retire the mapping, select it
+    again elsewhere — and the metric-row identity carries no connection, so a
+    fresh connection restarting at 0 would write rows that collide with the
+    retained ones and be discarded by the same conflict clause. Taking the
+    maximum over both keeps the per-connection value monotonic (so the
+    ``(connection, resync_seq)`` uniqueness still holds) while guaranteeing
+    the new import outranks every revision that property already has.
+    """
     result = await session.execute(
         select(func.coalesce(func.max(IntegrationSyncRun.resync_seq), -1)).where(
-            IntegrationSyncRun.connection_id == connection_id,
-            IntegrationSyncRun.sync_kind == sync_kind,
-            IntegrationSyncRun.window_start == window_start,
-            IntegrationSyncRun.window_end == window_end,
+            (IntegrationSyncRun.connection_id == connection_id)
+            | (
+                (IntegrationSyncRun.project_id == project_id)
+                & (IntegrationSyncRun.property_ref == property_ref)
+            ),
         )
     )
     return result.scalar_one() + 1
-
-
-async def enqueue_history_backfill(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    connection_id: uuid.UUID,
-    today: date | None = None,
-) -> list[IntegrationSyncRun]:
-    """Enqueue the one-time history import for a connection, or do nothing.
-
-    Called when a property is first selected: before that the connection has
-    no ``account_ref`` and a run would fetch nothing. Returns an empty list
-    when this connection already has a backfill run of ANY status — history
-    is paid for once per connection, and a re-selected property must not
-    re-import a year. A failed chunk is therefore not retried here; the
-    queue's own retry owns that, and a deliberate re-import is an explicit
-    on-demand sync with a window.
-
-    Never raises for an enqueue conflict: selecting a property must succeed
-    even when a chunk cannot start, and the rolling scheduled sync still
-    covers the recent window either way.
-    """
-    existing = await session.scalar(
-        select(IntegrationSyncRun.id)
-        .where(
-            IntegrationSyncRun.connection_id == connection_id,
-            IntegrationSyncRun.workspace_id == workspace_id,
-            IntegrationSyncRun.sync_kind == SYNC_KIND_BACKFILL,
-        )
-        .limit(1)
-    )
-    if existing is not None:
-        return []
-    runs: list[IntegrationSyncRun] = []
-    for window_start, window_end in backfill_sync_windows(today=today):
-        try:
-            runs.append(
-                await enqueue_sync_run(
-                    session,
-                    workspace_id=workspace_id,
-                    connection_id=connection_id,
-                    sync_kind=SYNC_KIND_BACKFILL,
-                    window_start=window_start,
-                    window_end=window_end,
-                )
-            )
-        except ActiveWindowConflictError:
-            # A concurrent caller raced past the guard above and queued this
-            # window first. The unique indexes are the real arbiter; this
-            # chunk is already covered.
-            continue
-        except (IntegrationConnectionNotFoundError, SQLAlchemyError):
-            # The connection vanished mid-enqueue, or the database refused a
-            # chunk. Callers reach here AFTER committing the work that
-            # triggered the backfill, so failing now would report an error
-            # for something that already succeeded. Chunks already queued
-            # stay valid; the rest are simply not scheduled.
-            logger.warning(
-                "integrations.backfill_enqueue_incomplete",
-                extra={
-                    "connection_id": str(connection_id),
-                    "queued_chunks": len(runs),
-                },
-            )
-            break
-    return runs
 
 
 async def enqueue_sync_run(
@@ -427,6 +459,8 @@ async def enqueue_sync_run(
     *,
     workspace_id: uuid.UUID,
     connection_id: uuid.UUID,
+    project_id: uuid.UUID | None = None,
+    mapping_id: uuid.UUID | None = None,
     sync_kind: str = SYNC_KIND_ON_DEMAND,
     window_start: date | None = None,
     window_end: date | None = None,
@@ -434,9 +468,12 @@ async def enqueue_sync_run(
     """Authorize, allocate, insert, and COMMIT one ``IntegrationSyncRun``.
 
     The one entry point every enqueue path uses (sync API, dispatcher,
-    ``performance/sync`` pass-through). Explicit bounds are validated and
-    clamped first. Absent bounds on an ON-DEMAND run resolve to the
-    INCREMENTAL window — what this connection has not covered yet, plus the
+    ``performance/sync`` pass-through). The run's TARGET — mapping, property,
+    project — is resolved and frozen here; ``mapping_id`` names it exactly,
+    ``project_id`` narrows it to one project, and with neither the connection
+    must hold exactly one active mapping. Explicit bounds are validated
+    and clamped next. Absent bounds on an ON-DEMAND run resolve to the
+    INCREMENTAL window — what this target has not covered yet, plus the
     late-data tail — so "Sync now" adds to the imported history instead of
     re-fetching the same trailing window every time. Every other kind keeps
     the default trailing window.
@@ -444,15 +481,33 @@ async def enqueue_sync_run(
     Raises:
         IntegrationConnectionNotFoundError: missing/cross-workspace
             connection (API: 404).
+        SyncTargetUnmappedError: no property selected yet (API: 409).
+        SyncTargetAmbiguousError: several projects, none named (API: 409).
         SyncWindowInvalidError: inverted or half-specified window (API: 422).
         ActiveWindowConflictError: an ACTIVE run already occupies the
-            ``(connection, sync_kind, window)`` slot (API: 409).
+            ``(mapping, sync_kind, window)`` slot (API: 409).
     """
     if sync_kind not in INTEGRATION_SYNC_KINDS:
         raise ValueError(f"unknown integration sync kind: {sync_kind!r}")
+    # Authorize FIRST. Target resolution reads mapping state, so running it
+    # before the workspace check answered a cross-workspace connection id with
+    # a target error (409) instead of a 404 — telling an outsider whether that
+    # connection has a property selected. ``_lock_connection`` re-checks inside
+    # the allocation loop; this is the cheap read that decides the error.
+    await get_connection(
+        session, workspace_id=workspace_id, connection_id=connection_id
+    )
+    target = await resolve_sync_target(
+        session,
+        connection_id=connection_id,
+        project_id=project_id,
+        mapping_id=mapping_id,
+    )
     if window_start is None and window_end is None and sync_kind == SYNC_KIND_ON_DEMAND:
         window_start, window_end = incremental_sync_window(
-            await connection_covered_through(session, connection_id=connection_id)
+            await connection_covered_through(
+                session, connection_id=connection_id, mapping_id=target.id
+            )
         )
     else:
         window_start, window_end = resolve_sync_window(window_start, window_end)
@@ -465,19 +520,22 @@ async def enqueue_sync_run(
         resync_seq = await _next_resync_seq(
             session,
             connection_id=locked_connection_id,
-            sync_kind=sync_kind,
-            window_start=window_start,
-            window_end=window_end,
+            project_id=target.project_id,
+            property_ref=target.property_ref,
         )
         run = IntegrationSyncRun(
             connection_id=locked_connection_id,
             workspace_id=workspace_id,
+            mapping_id=target.id,
+            property_ref=target.property_ref,
+            project_id=target.project_id,
             sync_kind=sync_kind,
             window_start=window_start,
             window_end=window_end,
             resync_seq=resync_seq,
             idempotency_key=build_sync_idempotency_key(
                 connection_id=locked_connection_id,
+                mapping_id=target.id,
                 sync_kind=sync_kind,
                 window_start=window_start,
                 window_end=window_end,
@@ -590,73 +648,3 @@ async def get_sync_run(
         raise SyncRunNotFoundError(str(sync_run_id))
     run, row_count = row
     return _to_run_response(run, int(row_count))
-
-
-async def get_backfill_progress(
-    session: AsyncSession, *, workspace_id: uuid.UUID, connection_id: uuid.UUID
-) -> IntegrationBackfillProgressResponse:
-    """Roll the connection's backfill runs up into one progress projection.
-
-    A pure projection over ``IntegrationSyncRun`` (invariant 7) — no new
-    table, no recomputation, no provider call. The history import is chunked
-    into rolling-window-sized runs (``backfill_sync_windows``), so counting
-    those rows by status is exactly "how far along is this import".
-
-    Coverage is bounded by the SUCCEEDED windows alone: a queued or failed
-    chunk has imported nothing, and letting it widen the covered range would
-    claim evidence that is not there.
-    """
-    connection = await get_connection(
-        session, workspace_id=workspace_id, connection_id=connection_id
-    )
-    rows = list(
-        (
-            await session.scalars(
-                select(IntegrationSyncRun)
-                .where(IntegrationSyncRun.connection_id == connection.id)
-                .where(IntegrationSyncRun.sync_kind == SYNC_KIND_BACKFILL)
-            )
-        ).all()
-    )
-    return backfill_progress_rollup(connection_id=connection.id, rows=rows)
-
-
-def backfill_progress_rollup(
-    *, connection_id: uuid.UUID, rows: Sequence[IntegrationSyncRun]
-) -> IntegrationBackfillProgressResponse:
-    """The pure rollup, split out so it is testable without a session.
-
-    Public because the readiness ladder rolls the SAME statuses up across a
-    project's connections (invariant 2 — one owner of the rule, reused rather
-    than restated).
-    """
-    if not rows:
-        return IntegrationBackfillProgressResponse(
-            connection_id=connection_id,
-            state=BACKFILL_STATE_NOT_STARTED,
-            total_windows=0,
-            completed_windows=0,
-            failed_windows=0,
-            pending_windows=0,
-            covered_from=None,
-            covered_through=None,
-        )
-    succeeded = [row for row in rows if row.status == TASK_STATUS_SUCCEEDED]
-    failed = [row for row in rows if row.status in _BACKFILL_FAILED_STATUSES]
-    pending = len(rows) - len(succeeded) - len(failed)
-    if pending > 0:
-        state = BACKFILL_STATE_IMPORTING
-    elif failed:
-        state = BACKFILL_STATE_PARTIAL
-    else:
-        state = BACKFILL_STATE_COMPLETE
-    return IntegrationBackfillProgressResponse(
-        connection_id=connection_id,
-        state=state,
-        total_windows=len(rows),
-        completed_windows=len(succeeded),
-        failed_windows=len(failed),
-        pending_windows=pending,
-        covered_from=min((row.window_start for row in succeeded), default=None),
-        covered_through=max((row.window_end for row in succeeded), default=None),
-    )

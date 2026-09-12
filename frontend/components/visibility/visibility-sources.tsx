@@ -221,19 +221,24 @@ function SourceTotals({
   if (!data) return null;
   return (
     <div className="bg-surface border-border-subtle grid gap-4 rounded-[var(--radius-card)] border p-[var(--card-padding)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      {/* Each label names exactly what its number counts. `data.total` is
+          distinct DOMAIN GROUPS on the current filter, `data.responses` is
+          every analyzed answer (cited or not), and `citations.citations` is
+          every citation in those answers including competitors' — the owned
+          subset is the tile below. */}
       <p className={textRole('objectTitle')}>
         {domain
           ? `${data.total} ${data.total === 1 ? 'page' : 'pages'} cited on ${domain}`
-          : `Your answers cited ${data.total} ${data.total === 1 ? 'source' : 'sources'}`}
+          : `${data.total} ${data.total === 1 ? 'source' : 'sources'} cited across these answers`}
       </p>
       <MetricGroup className="lg:w-auto">
         <MetricItem
-          label="Answers with a citation"
+          label="Answers analyzed"
           value={String(data.responses)}
           detail={`across ${data.prompts} ${data.prompts === 1 ? 'prompt' : 'prompts'}`}
         />
         {citations ? (
-          <MetricItem label="Citations earned" value={String(citations.citations)} />
+          <MetricItem label="Citations in answers" value={String(citations.citations)} />
         ) : null}
         {citations ? (
           <MetricItem

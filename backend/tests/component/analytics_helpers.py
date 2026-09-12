@@ -28,6 +28,7 @@ from app.core.config.analytics import (
 from app.core.config.audits import AUDIT_STATUS_COMPLETED
 from app.core.config.integrations_contracts import (
     GRANT_STATUS_CONNECTED,
+    MAPPING_STATUS_ACTIVE,
 )
 from app.core.config.integrations_datasets import (
     DATASET_GA4_REFERRER_DAILY,
@@ -54,6 +55,7 @@ from app.models.integrations import (
     IntegrationImportArtifact,
     IntegrationMetricRow,
     IntegrationOAuthGrant,
+    IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
 from app.models.project import Project
@@ -139,9 +141,45 @@ async def seed_ga4_import(
         grant_id = grant.id
     else:
         grant_id = connection.grant_id
+    # A run imports a selected PROPERTY, so the mapping is part of the graph.
+    mapping = (
+        await session.scalars(
+            # Match the ACTIVE-owner index: (workspace, provider, property).
+            # A caller that already mapped this property must be reused, not
+            # duplicated onto a second connection. ACTIVE only — a disabled
+            # row does not own the property and reusing it would build a run
+            # around a target nothing syncs.
+            select(IntegrationPropertyMapping).where(
+                IntegrationPropertyMapping.workspace_id == workspace_id,
+                IntegrationPropertyMapping.provider == provider,
+                IntegrationPropertyMapping.property_ref == property_ref,
+                IntegrationPropertyMapping.status == MAPPING_STATUS_ACTIVE,
+            )
+        )
+    ).first()
+    if mapping is None:
+        mapping = IntegrationPropertyMapping(
+            workspace_id=workspace_id,
+            connection_id=connection.id,
+            provider=provider,
+            property_ref=property_ref,
+            project_id=project_id,
+            status=MAPPING_STATUS_ACTIVE,
+        )
+        session.add(mapping)
+        await session.flush()
+    # Every target field comes from the MAPPING, so a reused one cannot be
+    # spliced onto a caller-supplied project or a second connection — the run
+    # would then carry a target triple that never existed.
+    connection_id = mapping.connection_id
+    property_ref = mapping.property_ref
+    project_id = mapping.project_id
     run = IntegrationSyncRun(
         workspace_id=workspace_id,
-        connection_id=connection.id,
+        connection_id=connection_id,
+        mapping_id=mapping.id,
+        property_ref=property_ref,
+        project_id=project_id,
         window_start=window[0],
         window_end=window[1],
         resync_seq=resync_seq,
@@ -153,7 +191,7 @@ async def seed_ga4_import(
     artifact = IntegrationImportArtifact(
         workspace_id=workspace_id,
         sync_run_id=run.id,
-        connection_id=connection.id,
+        connection_id=connection_id,
         provider=provider,
         dataset=dataset,
         query_snapshot={
@@ -170,7 +208,7 @@ async def seed_ga4_import(
         workspace_id=workspace_id,
         project_id=project_id,
         grant_id=grant_id,
-        connection_id=connection.id,
+        connection_id=connection_id,
         sync_run_id=run.id,
         artifact_id=artifact.id,
         property_ref=property_ref,

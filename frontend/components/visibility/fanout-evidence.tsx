@@ -30,6 +30,8 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
 import { engineLabel } from '@/lib/visibility/dashboard';
 import {
+  normalizeSearch,
+  SEARCH_MAX_LENGTH,
   searchRows,
   searchRowsByPrompt,
   searchRowsByTopic,
@@ -37,8 +39,23 @@ import {
 } from '@/lib/visibility/fanout-grouping';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
+import {
+  isSelectionWide,
+  selectionMatchedQueries,
+  NoSearchMatch,
+  SearchScopeNote,
+  SelectionTotals,
+} from '@/components/visibility/fanout-totals';
 
 const TITLE = 'Query fanouts';
+
+/** The run/engine/cohort scope the evidence table was read under. */
+export type FanoutScope = Readonly<{
+  audit_id?: string;
+  audit_ids?: string[];
+  engine?: string;
+  cohort?: string;
+}>;
 
 /** Rows (or groups) per page, matching the shared table footer. */
 const PAGE_SIZE = 10;
@@ -83,12 +100,23 @@ export function FanoutEvidence({
   onNextPage,
   projectId,
   runId,
-}: EvidenceTabProps & Readonly<{ projectId: string | null; runId: string | null }>) {
+  scope,
+  scopeReady,
+  scopeNarrowed,
+}: EvidenceTabProps &
+  Readonly<{
+    projectId: string | null;
+    runId: string | null;
+    scope: FanoutScope;
+    scopeReady: boolean;
+    scopeNarrowed: boolean;
+  }>) {
   const {
     grouping,
     setGrouping,
     search,
     setSearch,
+    needle,
     items,
     visible,
     paged,
@@ -100,6 +128,11 @@ export function FanoutEvidence({
     from,
     to,
   } = useSearchTable(query, projectId, runId);
+  const summary = useFanoutSummary(projectId, scope, scopeReady, needle);
+  // False whenever the server is counting a different population than the
+  // table shows; the headline then falls back to what the reader can see.
+  const selectionWide = isSelectionWide(summary, scopeNarrowed);
+  const matched = selectionMatchedQueries(summary, scopeNarrowed);
 
   if (query.isLoading) return <EvidenceSkeleton title={TITLE} />;
   if (query.isError) return <EvidenceError title={TITLE} onRetry={() => query.refetch()} />;
@@ -126,10 +159,7 @@ export function FanoutEvidence({
         <CardTitle>{TITLE}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-0 p-0">
-        <div className="flex flex-wrap items-end gap-x-10 gap-y-4 px-[var(--card-padding)] pb-4">
-          <Total label="Distinct searches" value={totals.distinct} />
-          <Total label="Total occurrences" value={totals.occurrences} />
-        </div>
+        <SelectionTotals summary={summary} fallback={totals} selectionWide={selectionWide} />
         <div className="border-border-subtle flex flex-wrap items-center gap-2 border-t px-[var(--card-padding)] py-3">
           <Input
             type="search"
@@ -137,8 +167,10 @@ export function FanoutEvidence({
             onChange={(event) => setSearch(event.target.value || null)}
             placeholder="Search queries…"
             aria-label="Filter searches by text"
+            maxLength={SEARCH_MAX_LENGTH}
             className="max-w-xs"
           />
+          <SearchScopeNote search={needle} matched={matched} />
           <span className="grow" />
           <AnalysisChoice
             label="Group searches by"
@@ -148,9 +180,7 @@ export function FanoutEvidence({
           />
         </div>
         {visible.length === 0 ? (
-          <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>
-            No search matches “{search}”.
-          </p>
+          <NoSearchMatch search={needle} matched={matched} />
         ) : (
           <Table>
             <TableHeader>
@@ -208,6 +238,10 @@ function useSearchTable(
 ) {
   const [grouping, setGrouping] = useUrlState('group', groupCodec);
   const [search, setSearch] = useUrlState('q', optionalStringUrlCodec);
+  // Trimmed and capped ONCE: the table filter, the server scope, the match
+  // count and the empty state all read this, so none of them can be asking
+  // about a different string than the others.
+  const needle = useMemo(() => normalizeSearch(search), [search]);
   const topicOf = usePromptTopics(projectId, runId, grouping === 'topic');
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
   const groups = useMemo(() => {
@@ -216,15 +250,15 @@ function useSearchTable(
     return searchRows(items);
   }, [items, grouping, topicOf]);
   const visible = useMemo(() => {
-    const needle = (search ?? '').trim().toLowerCase();
-    if (!needle) return groups;
+    const wanted = needle.toLowerCase();
+    if (!wanted) return groups;
     return groups
       .map((group) => ({
         ...group,
-        rows: group.rows.filter((row) => row.query.toLowerCase().includes(needle)),
+        rows: group.rows.filter((row) => row.query.toLowerCase().includes(wanted)),
       }))
       .filter((group) => group.rows.length);
-  }, [groups, search]);
+  }, [groups, needle]);
   // Totalled over what the reader can SEE. Counting `groups` reported every
   // search in the window while the table showed only the ones matching a
   // filter, so the two disagreed the moment anything was typed.
@@ -245,15 +279,19 @@ function useSearchTable(
   const { page, setPage, pageCount, from, to } = useTablePage(unit, PAGE_SIZE);
   // Regrouping or searching produces a different set; page 3 of the old set is
   // not page 3 of the new one.
-  useEffect(() => setPage(1), [grouping, search, setPage]);
+  useEffect(() => setPage(1), [grouping, needle, setPage]);
   const paged = grouped
     ? visible.slice(from - 1, to)
-    : visible.map((group) => ({ ...group, rows: group.rows.slice(from - 1, to) }));
+    : visible.map((group) => ({
+        ...group,
+        rows: group.rows.slice(from - 1, to),
+      }));
   return {
     grouping,
     setGrouping,
     search,
     setSearch,
+    needle,
     items,
     visible,
     paged,
@@ -265,15 +303,6 @@ function useSearchTable(
     from,
     to,
   };
-}
-
-function Total({ label, value }: Readonly<{ label: string; value: number }>) {
-  return (
-    <div className="grid gap-0.5">
-      <span className={textRole('label')}>{label}</span>
-      <span className={textRole('metric')}>{value}</span>
-    </div>
-  );
 }
 
 /**
@@ -327,6 +356,48 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
 }
 
 /**
+ * Selection-wide fanout totals, straight from the server.
+ *
+ * The table below is one loaded evidence window, and deriving "Distinct
+ * searches" and "Total occurrences" from it meant both figures changed as the
+ * reader paged — they were page totals wearing selection labels. This asks the
+ * projection that already aggregates the COMPLETE selection
+ * (`domain/analysis/fanout_projection.py`), which it does with `limit=None`.
+ *
+ * The normalized search is sent too, so the count of matching queries covers
+ * the whole run set rather than whatever happens to be loaded: a query stored
+ * past the first page was previously unfindable. It is the SAME value the
+ * table filters by, so the two can never disagree about what matched.
+ */
+function useFanoutSummary(
+  projectId: string | null,
+  scope: FanoutScope,
+  scopeReady: boolean,
+  needle: string,
+) {
+  const params = useMemo(
+    // Already normalized by `normalizeSearch`, which caps it at the bound the
+    // endpoint declares — a longer value is rejected as a 422 before it can
+    // match anything, turning a long paste into an error rather than a search.
+    () => ({ ...scope, search: needle || undefined }),
+    [scope, needle],
+  );
+  const result = useQuery({
+    queryKey: queryKeys.visibility.fanout(projectId ?? '', params),
+    queryFn: ({ signal }) => visibilityApi.getFanoutSummary(projectId ?? '', params, { signal }),
+    enabled: Boolean(projectId) && scopeReady,
+    // Totals for a selection do not change while the reader pages through it;
+    // keeping the previous values avoids the headline flickering to blank.
+    placeholderData: (previous) => previous,
+  });
+  return {
+    distinctQueries: result.data?.distinct_queries ?? null,
+    eventCount: result.data?.event_count ?? null,
+    matchedQueries: result.data?.matched_queries ?? null,
+  };
+}
+
+/**
  * Prompt-to-topic map for the topic grouping.
  *
  * Evidence rows carry no topic; the prompt metrics projection already publishes
@@ -337,7 +408,9 @@ function usePromptTopics(projectId: string | null, runId: string | null, enabled
   const result = useQuery({
     queryKey: [...queryKeys.visibility.prompts(projectId ?? '', runId ?? undefined), 'topics'],
     queryFn: ({ signal }) =>
-      visibilityApi.getPromptMetrics(projectId ?? '', runId ?? undefined, { signal }),
+      visibilityApi.getPromptMetrics(projectId ?? '', runId ?? undefined, {
+        signal,
+      }),
     enabled: enabled && Boolean(projectId && runId),
   });
   return useMemo(() => {

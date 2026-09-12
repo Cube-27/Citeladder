@@ -31,8 +31,8 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.connectors.integrations import bing as bing_connector
 from app.connectors.integrations import oauth as integration_oauth
+from app.connectors.integrations._http import IntegrationApiError
 from app.connectors.integrations.oauth import OAuthTokenBundle
 from app.core.config.integrations_clients import (
     INTEGRATION_CLIENT_BUILDERS,
@@ -69,6 +69,7 @@ from app.domain.integrations.errors import (
     IntegrationNotConfiguredError,
     IntegrationOAuthStart,
     PropertyDiscoveryUnsupportedError,
+    PropertyNotAccessibleError,
 )
 from app.domain.integrations.schemas import (
     IntegrationConnectionResponse,
@@ -363,13 +364,22 @@ async def get_connection(
     *,
     workspace_id: uuid.UUID,
     connection_id: uuid.UUID,
+    for_update: bool = False,
 ) -> IntegrationConnection:
-    result = await session.execute(
-        select(IntegrationConnection).where(
-            IntegrationConnection.id == connection_id,
-            IntegrationConnection.workspace_id == workspace_id,
-        )
+    """Workspace-authorize one connection (404 when missing or foreign).
+
+    ``for_update`` row-locks it, which is how a caller serializes the
+    read-decide-write sequences that hang off a connection — the mapping
+    replacement and the revision allocation both need the decision and the
+    write to be one step.
+    """
+    statement = select(IntegrationConnection).where(
+        IntegrationConnection.id == connection_id,
+        IntegrationConnection.workspace_id == workspace_id,
     )
+    if for_update:
+        statement = statement.with_for_update()
+    result = await session.execute(statement)
     connection = result.scalar_one_or_none()
     if connection is None:
         raise IntegrationConnectionNotFoundError(str(connection_id))
@@ -426,18 +436,57 @@ async def list_connections(
     ]
 
 
+async def _probe_connection(
+    *, provider: str, account_ref: str, access_token: str
+) -> str:
+    """One read-only call against the connection's OWN provider.
+
+    Returns the human-readable outcome. A grant that can enumerate the
+    account but cannot reach the SELECTED property is reported as such:
+    enumeration succeeding is not evidence that the property is readable,
+    and conflating the two is how an inaccessible property passed a test.
+    """
+    client = INTEGRATION_CLIENT_BUILDERS[provider]()
+    properties = await client.list_properties(access_token=access_token)
+    if not account_ref:
+        return "Authorization is valid. No property selected yet."
+    available = {prop.property_ref for prop in properties}
+    if account_ref in available:
+        return "Connection succeeded"
+    # The authorization works; this property is not among the ones it can
+    # read — revoked access, a removed site, or the wrong account.
+    raise PropertyNotAccessibleError(
+        f"The authorized account cannot read {account_ref!r}. "
+        f"Re-select a property, or reconnect with the account that owns it."
+    )
+
+
 async def run_connection_test(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
     connection_id: uuid.UUID,
 ) -> IntegrationTestResponse:
-    """Probe the provider with the grant's decrypted token (decrypt-in-place).
+    """Probe THIS connection's provider, refreshing the token first.
 
-    Mirrors ``domain/providers/service.py::run_connection_test``: the token
-    is decrypted only here, used for one cheap authenticated call, and never
-    logged or persisted anywhere but the encrypted grant columns. The outcome
-    is recorded as an append-only ``IntegrationEvent``.
+    Two things this deliberately does, because it used to do neither:
+
+    **It refreshes.** A stored Google access token lives about an hour, so
+    reading the encrypted column directly reported FAILED on a grant
+    connected yesterday that was perfectly healthy — while the property
+    picker beside it, which refreshes, worked. ``tokens.fresh_access_token``
+    names the connection test as a caller that must refresh; now it is one.
+
+    **It probes the right provider.** The dispatch was on the grant's
+    TRANSPORT, so testing a GA4 connection issued a Search Console
+    ``sites.list`` call: one Google consent can grant Search Console and
+    refuse Analytics, and that test passed regardless. Dispatching on the
+    CONNECTION's provider means a GA4 connection is answered by the
+    Analytics API.
+
+    The outcome distinguishes an unusable authorization from an inaccessible
+    property, and is recorded as an append-only ``IntegrationEvent``. The
+    token is used for one read-only call and never logged (invariant 6).
     """
     connection = await get_connection(
         session, workspace_id=workspace_id, connection_id=connection_id
@@ -446,25 +495,27 @@ async def run_connection_test(
         session, workspace_id=workspace_id, grant_id=connection.grant_id
     )
 
+    # Captured BEFORE the probe: refreshing a near-expiry token commits, which
+    # expires these ORM instances, and reading an id off one afterwards is a
+    # lazy reload in sync context.
+    connection_id_value = connection.id
+    grant_id_value = grant.id
+    provider = connection.provider
+
     status = TEST_STATUS_OK
     error_code = ""
     detail = "Connection succeeded"
     try:
-        access_token = decrypt_secret(grant.access_token_encrypted)
-        if grant.transport == INTEGRATION_TRANSPORT_GOOGLE:
-            client = integration_oauth.build_oauth_client(grant.transport)
-            await client.probe_access_token(access_token=access_token)
-        else:
-            # Real cheap authenticated probe against the pinned Bing host
-            # (I12, replacing the refresh round-trip placeholder): the
-            # ``GetUserSites`` verified-site list validates the Microsoft
-            # grant's access token. The grant is untouched — a probe is
-            # not a credential rotation.
-            bing_client = bing_connector.build_bing_client()
-            await bing_client.probe_access_token(access_token=access_token)
+        access_token = await fresh_access_token(session, grant=grant)
+        detail = await _probe_connection(
+            provider=provider,
+            account_ref=connection.account_ref,
+            access_token=access_token,
+        )
     except (
         integration_oauth.IntegrationOAuthError,
-        bing_connector.BingApiError,
+        IntegrationApiError,
+        PropertyNotAccessibleError,
     ) as exc:
         status = TEST_STATUS_FAILED
         error_code = exc.error_code
@@ -478,12 +529,12 @@ async def run_connection_test(
     session.add(
         IntegrationEvent(
             workspace_id=workspace_id,
-            connection_id=connection.id,
-            grant_id=grant.id,
+            connection_id=connection_id_value,
+            grant_id=grant_id_value,
             event_type=EVENT_INTEGRATION_TESTED,
             message=f"Connection test {status}",
             payload={
-                "provider": connection.provider,
+                "provider": provider,
                 "status": status,
                 "error_code": error_code,
             },
@@ -491,7 +542,7 @@ async def run_connection_test(
     )
     await session.commit()
     return IntegrationTestResponse(
-        connection_id=connection.id,
+        connection_id=connection_id_value,
         status=status,
         error_code=error_code,
         detail=detail,

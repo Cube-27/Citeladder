@@ -71,23 +71,23 @@ function CallbackNotice({
       return (
         <Alert tone="success">
           <strong>Google connected.</strong> Search Console and Analytics 4 are now linked on one
-          shared OAuth grant. Initial syncs are queued and will appear in Traffic and AI Referrals
-          once they complete.
+          shared OAuth grant. Select a property for each below to start importing — nothing syncs
+          until a property is chosen.
         </Alert>
       );
     }
     if (family === 'microsoft') {
       return (
         <Alert tone="success">
-          <strong>Bing connected.</strong> Bing Webmaster Tools is now linked. Initial syncs are
-          queued and will appear in Traffic once they complete.
+          <strong>Bing connected.</strong> Bing Webmaster Tools is now linked. Select a property
+          below to start importing — nothing syncs until a property is chosen.
         </Alert>
       );
     }
     return (
       <Alert tone="success">
-        <strong>Integration connected.</strong> Initial syncs are queued and will appear in Traffic
-        once they complete.
+        <strong>Integration connected.</strong> Select a property below to start importing — nothing
+        syncs until a property is chosen.
       </Alert>
     );
   }

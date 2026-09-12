@@ -5,16 +5,22 @@
 # scheduler; spec docs/roadmap/integrations.md §4 "Scheduling"). Every
 # ``sync_cadence_seconds`` tick it:
 #
-#   1. enqueues a ``scheduled`` IntegrationSyncRun per ACTIVE connection
-#      (its grant is ``connected``) for the default trailing window, via the
-#      I5 ``enqueue_sync_run`` service — an ``ActiveWindowConflictError``
+#   1. enqueues a ``scheduled`` IntegrationSyncRun per ACTIVE property
+#      MAPPING whose connection holds a ``connected`` grant — a connection is
+#      an authorization and can carry several mapped properties, each its own
+#      import — for the default trailing window, via the I5
+#      ``enqueue_sync_run`` service — an ``ActiveWindowConflictError``
 #      (the active-window partial unique index) means a run is already in
 #      flight and the tick SKIPS it, so a missed/duplicated tick never
 #      double-imports a window;
 #   2. re-syncs the trailing ``sync_late_data_revision_days`` window so
-#      late provider revisions land: once that window's previous run is
-#      terminal the enqueue allocates a bumped ``resync_seq`` (new run
-#      identity + new immutable artifacts, never an overwrite);
+#      late provider revisions land. This window is a strict subset of the
+#      trailing window above, so the two runs SHARE their most recent days.
+#      ``_next_resync_seq`` allocates per connection rather than per window
+#      precisely so the later enqueue outranks the earlier one on those
+#      shared days — a window-scoped allocation gave both revision 0 and the
+#      revision was dropped by the metric-row conflict clause. Each run still
+#      gets a new identity and new immutable artifacts, never an overwrite;
 #   3. retries the remote revoke of ``pending_revocation`` grants whose
 #      disconnect-time revoke failed (spec §5). Remote revoke exists only
 #      where the config pins a revoke URL (Google); a transport without one
@@ -42,6 +48,7 @@ from app.core.config.integrations_contracts import (
     GRANT_STATUS_CONNECTED,
     GRANT_STATUS_PENDING_REVOCATION,
     GRANT_STATUS_REVOKED,
+    MAPPING_STATUS_ACTIVE,
     SYNC_KIND_SCHEDULED,
 )
 from app.core.config.integrations_settings import (
@@ -56,6 +63,8 @@ from app.core.telemetry import configure_logging, instrument_worker
 from app.domain.integrations.errors import IntegrationConnectionNotFoundError
 from app.domain.integrations.sync import (
     ActiveWindowConflictError,
+    SyncTargetAmbiguousError,
+    SyncTargetUnmappedError,
     SyncWindowInvalidError,
     enqueue_sync_run,
 )
@@ -63,6 +72,7 @@ from app.models.integrations import (
     IntegrationConnection,
     IntegrationEvent,
     IntegrationOAuthGrant,
+    IntegrationPropertyMapping,
 )
 
 logger = logging.getLogger("app.workers.integration_dispatcher")
@@ -124,28 +134,52 @@ class IntegrationDispatcher:
     # --- Scheduled sync enqueues -------------------------------------------
 
     async def _enqueue_scheduled_runs(self, *, today: date | None) -> int:
+        """Fan out over ACTIVE MAPPINGS, not connections.
+
+        A connection is an authorization and can carry several active
+        mappings; each is a distinct property with its own import history.
+        Iterating connections would enqueue one run for whichever property the
+        connection last pointed at and leave the rest unsynced.
+
+        The mapping is named by ID, not by project: the active-owner index is
+        keyed on the PROPERTY, so one project can hold two mapped properties on
+        a connection and a project-scoped lookup would find both and refuse as
+        ambiguous, silently dropping that target from every tick.
+        """
         async with self._session_factory() as session:
             rows = (
                 await session.execute(
                     select(
-                        IntegrationConnection.id,
-                        IntegrationConnection.workspace_id,
+                        IntegrationPropertyMapping.id,
+                        IntegrationPropertyMapping.connection_id,
+                        IntegrationPropertyMapping.workspace_id,
+                    )
+                    .join(
+                        IntegrationConnection,
+                        IntegrationPropertyMapping.connection_id
+                        == IntegrationConnection.id,
                     )
                     .join(
                         IntegrationOAuthGrant,
                         IntegrationConnection.grant_id == IntegrationOAuthGrant.id,
                     )
-                    .where(IntegrationOAuthGrant.status == GRANT_STATUS_CONNECTED)
+                    .where(
+                        IntegrationOAuthGrant.status == GRANT_STATUS_CONNECTED,
+                        IntegrationPropertyMapping.status == MAPPING_STATUS_ACTIVE,
+                    )
                     .order_by(
-                        IntegrationConnection.created_at.asc(),
-                        IntegrationConnection.id.asc(),
+                        IntegrationPropertyMapping.created_at.asc(),
+                        IntegrationPropertyMapping.id.asc(),
                     )
                 )
             ).all()
         enqueued = 0
-        for connection_id, workspace_id in rows:
+        for mapping_id, connection_id, workspace_id in rows:
             enqueued += await self._enqueue_for_connection(
-                workspace_id=workspace_id, connection_id=connection_id, today=today
+                workspace_id=workspace_id,
+                connection_id=connection_id,
+                mapping_id=mapping_id,
+                today=today,
             )
         return enqueued
 
@@ -154,6 +188,7 @@ class IntegrationDispatcher:
         *,
         workspace_id: uuid.UUID,
         connection_id: uuid.UUID,
+        mapping_id: uuid.UUID,
         label: str,
         window_start: date | None = None,
         window_end: date | None = None,
@@ -162,7 +197,9 @@ class IntegrationDispatcher:
 
         An ``ActiveWindowConflictError`` is the dedup contract — an active
         run already covers the window, so the tick skips it; a validation
-        failure is logged and skipped.
+        failure is logged and skipped. A mapping retired between the fan-out
+        query and this enqueue raises a target error, which is also a skip:
+        the property is no longer ours to import.
         """
         async with self._session_factory() as session:
             try:
@@ -170,6 +207,7 @@ class IntegrationDispatcher:
                     session,
                     workspace_id=workspace_id,
                     connection_id=connection_id,
+                    mapping_id=mapping_id,
                     sync_kind=SYNC_KIND_SCHEDULED,
                     window_start=window_start,
                     window_end=window_end,
@@ -180,6 +218,8 @@ class IntegrationDispatcher:
             except (
                 IntegrationConnectionNotFoundError,
                 SyncWindowInvalidError,
+                SyncTargetUnmappedError,
+                SyncTargetAmbiguousError,
             ) as exc:
                 logger.warning("%s skipped: %s", label, exc)
                 return 0
@@ -189,22 +229,26 @@ class IntegrationDispatcher:
         *,
         workspace_id: uuid.UUID,
         connection_id: uuid.UUID,
+        mapping_id: uuid.UUID,
         today: date | None,
     ) -> int:
-        """Trailing-window run + late-data revision re-sync for one connection.
+        """Trailing-window run + late-data revision re-sync for one target.
 
         Both go through ``enqueue_sync_run`` (the one enqueue entry point).
         """
         enqueued = await self._try_enqueue(
             workspace_id=workspace_id,
             connection_id=connection_id,
+            mapping_id=mapping_id,
             label="scheduled sync enqueue",
         )
         # Late-data revision (spec §4): re-enqueue the trailing
         # ``sync_late_data_revision_days`` window (ends yesterday, the latest
         # complete UTC day — the same rule as the default trailing window).
-        # A terminal window re-syncs with a bumped resync_seq; an active one
-        # dedups to a skip.
+        # This window OVERLAPS the trailing window above, and the overlap is
+        # the point: those days get a second, later read at a higher
+        # resync_seq, which is what supersedes their first-seen under-reported
+        # values. An active window dedups to a skip.
         late_end = (today or _utcnow().date()) - timedelta(days=1)
         late_start = late_end - timedelta(
             days=integration_settings.sync_late_data_revision_days - 1
@@ -212,6 +256,7 @@ class IntegrationDispatcher:
         enqueued += await self._try_enqueue(
             workspace_id=workspace_id,
             connection_id=connection_id,
+            mapping_id=mapping_id,
             label="late-data revision enqueue",
             window_start=late_start,
             window_end=late_end,

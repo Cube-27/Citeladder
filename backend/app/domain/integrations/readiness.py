@@ -33,11 +33,11 @@ from app.core.config.integrations_contracts import (
     READINESS_NOT_CONNECTED,
     SYNC_KIND_BACKFILL,
 )
+from app.domain.integrations.backfill import backfill_progress_rollup
 from app.domain.integrations.schemas import (
     IntegrationBackfillProgressResponse,
     ProjectReadinessResponse,
 )
-from app.domain.integrations.sync import backfill_progress_rollup
 from app.models.demand import DemandSnapshot
 from app.models.integrations import (
     IntegrationConnection,

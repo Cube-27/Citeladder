@@ -244,35 +244,6 @@ async def test_revoke_microsoft_has_no_remote_endpoint() -> None:
 
 
 @pytest.mark.asyncio
-async def test_probe_access_token_sends_bearer_header() -> None:
-    captured: list[httpx.Request] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured.append(request)
-        return httpx.Response(200, json=_fixture("gsc_sites_response.json"))
-
-    client = build_oauth_client(
-        INTEGRATION_TRANSPORT_GOOGLE, transport=httpx.MockTransport(handler)
-    )
-    await client.probe_access_token(access_token="fake-probe-access-token")
-    (request,) = captured
-    assert str(request.url) == _GSC_SITES_URL
-    assert request.method == "GET"
-    assert request.headers["authorization"] == "Bearer fake-probe-access-token"
-
-
-@pytest.mark.asyncio
-async def test_probe_access_token_unauthorized() -> None:
-    client = build_oauth_client(
-        INTEGRATION_TRANSPORT_GOOGLE,
-        transport=httpx.MockTransport(lambda _request: httpx.Response(401)),
-    )
-    with pytest.raises(IntegrationOAuthError) as excinfo:
-        await client.probe_access_token(access_token="fake-expired-token")
-    assert excinfo.value.error_code == ERROR_GRANT_AUTH_FAILED
-
-
-@pytest.mark.asyncio
 async def test_unapproved_endpoint_host_rejected(
     _google_credentials: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -347,7 +318,7 @@ async def test_bing_grant_records_requested_scope_when_provider_omits_it(
     bundle = await client.exchange_code(
         code=_AUTH_CODE, redirect_uri="http://testserver/cb"
     )
-    assert bundle.granted_scopes == ("webmaster.manage",)
+    assert bundle.granted_scopes == ("webmaster.read",)
     assert bundle.refresh_token
 
 

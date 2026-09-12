@@ -576,7 +576,7 @@ async def test_microsoft_connect_attaches_bing_connection(
     query = parse_qs(urlsplit(location).query)
     assert query["client_id"] == [_MS_CLIENT_ID]
     # Bing's bare scope vocabulary — never an Entra resource URL.
-    assert query["scope"] == ["webmaster.manage"]
+    assert query["scope"] == ["webmaster.read"]
     # Google-only offline/consent params are not sent to Microsoft.
     assert "access_type" not in query
     assert _MS_CLIENT_SECRET not in location
@@ -590,7 +590,7 @@ async def test_microsoft_connect_attaches_bing_connection(
     expected = _fixture("microsoft_token_response.json")
     assert decrypt_secret(grant.access_token_encrypted) == expected["access_token"]
     assert decrypt_secret(grant.refresh_token_encrypted) == expected["refresh_token"]
-    assert set(grant.granted_scopes) == {"webmaster.manage"}
+    assert set(grant.granted_scopes) == {"webmaster.read"}
     connections = await _connections(db_session)
     assert [c.provider for c in connections] == ["bing"]
     assert connections[0].grant_id == grant.id

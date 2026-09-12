@@ -212,10 +212,15 @@ class IntegrationSyncRun(QueueLeaseStateMixin, Base):
 
     Window uniqueness is scoped so re-syncing a COMPLETED window stays
     possible (spec section 3/4): the partial unique index dedupes ACTIVE rows
-    over ``(connection_id, sync_kind, window_start, window_end)`` while the
-    full unique constraint on that tuple + ``resync_seq`` gives every re-sync
-    a distinct, monotonically allocated run identity (and, downstream, new
-    immutable artifacts + metric rows rather than overwrites).
+    over ``(mapping_id, sync_kind, window_start, window_end)``, while
+    ``(connection_id, resync_seq)`` gives every run a distinct, monotonically
+    allocated data revision (and, downstream, new immutable artifacts +
+    metric rows rather than overwrites).
+
+    A run's target — mapping, property, project — is FROZEN at enqueue. The
+    run is the unit of "import this property's data for this window", so the
+    property is part of its identity rather than something re-read from the
+    mutable connection when the work eventually executes.
     """
 
     __tablename__ = "integration_sync_runs"
@@ -223,15 +228,16 @@ class IntegrationSyncRun(QueueLeaseStateMixin, Base):
         UniqueConstraint(
             "idempotency_key", name="uq_integration_sync_run_idempotency_key"
         ),
-        # Full re-sync identity (…, resync_seq); ``resync_seq`` is allocated
-        # atomically by the enqueue service (spec section 3).
+        # Full re-sync identity. ``resync_seq`` is allocated atomically per
+        # CONNECTION (not per window) by the enqueue service, so the
+        # connection plus the revision IS the identity — and the constraint
+        # is what makes concurrent allocation safe, turning a lost race into
+        # a retry-with-the-next-value rather than two runs sharing a
+        # revision. See ``sync._next_resync_seq``.
         UniqueConstraint(
             "connection_id",
-            "sync_kind",
-            "window_start",
-            "window_end",
             "resync_seq",
-            name="uq_integration_sync_run_window_seq",
+            name="uq_integration_sync_run_connection_seq",
         ),
         # Backs the composite (workspace_id, sync_run_id) FK on artifacts.
         UniqueConstraint("workspace_id", "id", name="uq_integration_sync_runs_ws_id"),
@@ -241,11 +247,14 @@ class IntegrationSyncRun(QueueLeaseStateMixin, Base):
             ondelete=_ON_DELETE_CASCADE,
             name="fk_integration_sync_run_connection_scoped",
         ),
-        # One ACTIVE run per (connection, kind, window); terminal rows leave
-        # the window free to be re-synced.
+        # One ACTIVE run per (mapping, kind, window); terminal rows leave the
+        # window free to be re-synced. Keyed on the MAPPING rather than the
+        # connection: one authorized connection can serve several projects,
+        # each with its own property, and those are independent imports that
+        # must not dedup each other out of the same window.
         Index(
             "ix_integration_sync_runs_active_window",
-            "connection_id",
+            "mapping_id",
             "sync_kind",
             "window_start",
             "window_end",
@@ -267,12 +276,30 @@ class IntegrationSyncRun(QueueLeaseStateMixin, Base):
         ForeignKey(_FK_WORKSPACE, ondelete=_ON_DELETE_CASCADE),
         index=True,
     )
+    # --- Frozen sync target ----------------------------------------------
+    # WHAT this run imports, resolved once at enqueue and never re-read from
+    # the connection afterwards. ``connection.account_ref`` is mutable — the
+    # property picker repoints it — so a run that resolved its property at
+    # derivation time could fetch property A and store the rows as property
+    # B's after a mid-flight re-selection. Freezing the target here means the
+    # fetch, the resume, the artifacts, and the derivation all agree, and a
+    # retired mapping fails its in-flight runs instead of relabelling them.
+    mapping_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), index=True)
+    # Provider property id as selected (GSC site URL / canonical GA4 id).
+    property_ref: Mapped[str] = mapped_column(String(512))
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_PROJECT, ondelete=_ON_DELETE_CASCADE),
+        index=True,
+    )
     # scheduled | on_demand | backfill.
     sync_kind: Mapped[str] = mapped_column(String(16), default=SYNC_KIND_ON_DEMAND)
     # The requested date window (provider data is date-grained).
     window_start: Mapped[date] = mapped_column(Date)
     window_end: Mapped[date] = mapped_column(Date)
-    # Monotonic per-window re-sync revision (0 = first run of the window).
+    # Monotonic per-CONNECTION data revision (0 = the connection's first run).
+    # Stamped onto every metric row this run derives; the highest revision
+    # for a metric identity is the current value. See ``sync._next_resync_seq``.
     resync_seq: Mapped[int] = mapped_column(Integer, default=0)
     idempotency_key: Mapped[str] = mapped_column(String(160))
 

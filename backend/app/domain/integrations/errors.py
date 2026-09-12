@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.core.config.integrations_contracts import ERROR_PROPERTY_NOT_ACCESSIBLE
+
 
 class IntegrationNotConfiguredError(RuntimeError):
     """Raised when the transport's OAuth client credentials are not env-set."""
@@ -29,6 +31,19 @@ class IntegrationConnectionNotFoundError(LookupError):
 
 class PropertyDiscoveryUnsupportedError(RuntimeError):
     """Raised when a provider exposes no property listing to discover."""
+
+
+class PropertyNotAccessibleError(RuntimeError):
+    """The grant is healthy but cannot read the connection's property.
+
+    Carries an ``error_code`` so it classifies like a provider failure in the
+    connection test, while staying a distinct outcome: enumerating an account
+    successfully is not evidence that a particular property inside it is
+    readable, and reporting the two the same way is how an inaccessible
+    property passed a test.
+    """
+
+    error_code = ERROR_PROPERTY_NOT_ACCESSIBLE
 
 
 @dataclass(frozen=True)

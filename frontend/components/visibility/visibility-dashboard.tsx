@@ -80,7 +80,10 @@ function VisibilityWorkspace({
       <Tabs
         value={filters.activeTab}
         onValueChange={filters.selectTab}
-        items={VISIBILITY_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
+        items={VISIBILITY_TABS.map((tab) => ({
+          value: tab.id,
+          label: tab.label,
+        }))}
         ariaLabel="Visibility views"
         rootClassName="grid gap-[var(--workspace-gap)]"
         onIntent={queries.prefetchTab}
@@ -161,6 +164,9 @@ function DashboardPanel({
         onNextPage={filters.nextPage}
         projectId={queries.projectId}
         runId={queries.activeRunId}
+        scope={queries.evidenceScope}
+        scopeReady={queries.hasEvidenceScope}
+        scopeNarrowed={queries.evidenceScopeNarrowed}
       />
     ),
   };

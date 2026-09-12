@@ -99,6 +99,10 @@ ERROR_SYNC_WINDOW_INVALID: Final = "sync_window_invalid"
 
 ERROR_SYNC_ACTIVE_WINDOW_CONFLICT: Final = "sync_active_window_conflict"
 
+# No single property mapping to import for: none selected yet, or the
+# connection serves several projects and the caller named none.
+ERROR_SYNC_TARGET_UNRESOLVED: Final = "sync_target_unresolved"
+
 ERROR_PAYLOAD_TOO_LARGE: Final = "payload_too_large"
 
 ERROR_MAPPING_PROVIDER_MISMATCH: Final = "mapping_provider_mismatch"
@@ -108,6 +112,11 @@ ERROR_MAPPING_PROPERTY_NOT_OWNED: Final = "mapping_property_not_owned"
 ERROR_MAPPING_ACTIVE_OWNER_CONFLICT: Final = "mapping_active_owner_conflict"
 
 ERROR_PROPERTY_DISCOVERY_UNSUPPORTED: Final = "property_discovery_unsupported"
+
+# The grant works, but the SELECTED property is not one it can read. Distinct
+# from a failed authorization: reconnecting fixes the second, re-selecting (or
+# regaining access to the property) fixes this one.
+ERROR_PROPERTY_NOT_ACCESSIBLE: Final = "property_not_accessible"
 
 ERROR_GA4_DIMENSION_INCOMPATIBLE: Final = "ga4_dimension_incompatible"
 

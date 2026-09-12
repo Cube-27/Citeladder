@@ -35,6 +35,7 @@ from app.core.config.integrations_contracts import (
     GRANT_STATUS_NEEDS_REAUTH,
     GRANT_STATUS_PENDING_REVOCATION,
     GRANT_STATUS_REVOKED,
+    MAPPING_STATUS_ACTIVE,
     SYNC_KIND_SCHEDULED,
 )
 from app.core.config.integrations_settings import (
@@ -55,16 +56,25 @@ from app.models.integrations import (
     IntegrationConnection,
     IntegrationEvent,
     IntegrationOAuthGrant,
+    IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
+from app.models.project import Project
 from app.models.workspace import Workspace
 from app.workers.integration_dispatcher import IntegrationDispatcher
 
 
 class _Seed:
-    def __init__(self, *, workspace_id: uuid.UUID, connection_id: uuid.UUID) -> None:
+    def __init__(
+        self,
+        *,
+        workspace_id: uuid.UUID,
+        connection_id: uuid.UUID,
+        mapping_id: uuid.UUID | None = None,
+    ) -> None:
         self.workspace_id = workspace_id
         self.connection_id = connection_id
+        self.mapping_id = mapping_id
 
 
 async def _seed_connection(
@@ -73,10 +83,23 @@ async def _seed_connection(
     grant_status: str = GRANT_STATUS_CONNECTED,
     transport: str = INTEGRATION_TRANSPORT_GOOGLE,
     workspace_name: str = "Acme",
+    mapped: bool = True,
 ) -> tuple[_Seed, IntegrationOAuthGrant]:
+    """Seed a workspace, grant, connection and (by default) a mapping.
+
+    ``mapped=False`` leaves the connection authorized but with no property
+    selected — the dispatcher must enqueue nothing for it, because a run
+    imports a property and there is none.
+    """
     workspace = Workspace(name=workspace_name)
     db_session.add(workspace)
     await db_session.flush()
+    project = Project(
+        workspace_id=workspace.id,
+        name=f"{workspace_name} site",
+        website_url="https://example.com",
+    )
+    db_session.add(project)
     grant = IntegrationOAuthGrant(
         workspace_id=workspace.id,
         transport=transport,
@@ -95,9 +118,25 @@ async def _seed_connection(
         account_ref="https://example.com",
     )
     db_session.add(connection)
+    await db_session.flush()
+    mapping = None
+    if mapped:
+        mapping = IntegrationPropertyMapping(
+            workspace_id=workspace.id,
+            connection_id=connection.id,
+            provider=INTEGRATION_PROVIDER_GSC,
+            property_ref="https://example.com",
+            project_id=project.id,
+            status=MAPPING_STATUS_ACTIVE,
+        )
+        db_session.add(mapping)
     await db_session.commit()
     return (
-        _Seed(workspace_id=workspace.id, connection_id=connection.id),
+        _Seed(
+            workspace_id=workspace.id,
+            connection_id=connection.id,
+            mapping_id=mapping.id if mapping is not None else None,
+        ),
         grant,
     )
 
@@ -201,7 +240,13 @@ async def test_tick_dedups_on_active_window_conflict(
             run.resync_seq
         )
     assert len(by_window) == per_tick
-    assert all(sorted(seqs) == [0, 1] for seqs in by_window.values())
+    # Each window ran twice, and the re-sync outranks the original — that is
+    # what makes the second import's values supersede the first's.
+    assert all(len(seqs) == 2 for seqs in by_window.values())
+    assert all(max(seqs) > min(seqs) for seqs in by_window.values())
+    # Revisions are allocated per CONNECTION, so every run on it is distinct.
+    all_seqs = [seq for seqs in by_window.values() for seq in seqs]
+    assert sorted(all_seqs) == list(range(len(all_seqs)))
     # The trailing window is always one of them.
     assert default_sync_window() in by_window
 
@@ -222,7 +267,16 @@ async def test_late_data_revision_window_resyncs_with_bumped_seq(
     trailing = default_sync_window()
     late_end = datetime.now(UTC).date() - timedelta(days=1)
     late = (late_end - timedelta(days=1), late_end)
-    assert windows == {trailing: 0, late: 0}
+    assert set(windows) == {trailing, late}
+
+    # The late window is a strict SUBSET of the trailing window, so both runs
+    # import the same most-recent days. Their revisions must differ, or the
+    # late-data read collides with the trailing read on the metric-row
+    # identity and its corrected values are dropped by ON CONFLICT DO NOTHING.
+    # This is the regression that made the late-data pass a no-op.
+    assert late[0] >= trailing[0] and late[1] <= trailing[1]
+    assert windows[late] != windows[trailing]
+    assert windows[late] > windows[trailing]
 
     await _complete_all(db_session, seed.connection_id)
     assert await dispatcher.run_once() == 2
@@ -232,8 +286,76 @@ async def test_late_data_revision_window_resyncs_with_bumped_seq(
         by_window.setdefault((run.window_start, run.window_end), []).append(
             run.resync_seq
         )
-    assert by_window[trailing] == [0, 1]
-    assert by_window[late] == [0, 1]
+    # Every run on the connection holds a distinct revision, and each window's
+    # re-sync outranks its original.
+    assert sorted(seq for seqs in by_window.values() for seq in seqs) == [0, 1, 2, 3]
+    assert max(by_window[trailing]) > min(by_window[trailing])
+    assert max(by_window[late]) > min(by_window[late])
+
+
+@pytest.mark.asyncio
+async def test_tick_skips_a_connection_with_no_selected_property(
+    session_factory, db_session
+) -> None:
+    """An authorized connection with no mapping has nothing to import."""
+    seed, _grant = await _seed_connection(db_session, mapped=False)
+    dispatcher = _dispatcher(session_factory)
+
+    assert await dispatcher.run_once() == 0
+    assert await _runs(db_session, seed.connection_id) == []
+
+
+@pytest.mark.asyncio
+async def test_tick_enqueues_for_every_project_on_one_connection(
+    session_factory, db_session
+) -> None:
+    """Two projects sharing one authorization each get their own runs.
+
+    One Google consent can serve several projects, each mapped to its own
+    property. Fanning out over connections would sync whichever property the
+    connection last pointed at and silently leave the others behind.
+    """
+    seed, _grant = await _seed_connection(db_session)
+    second_project = Project(
+        workspace_id=seed.workspace_id,
+        name="Second site",
+        website_url="https://second.example",
+    )
+    db_session.add(second_project)
+    await db_session.flush()
+    db_session.add(
+        IntegrationPropertyMapping(
+            workspace_id=seed.workspace_id,
+            connection_id=seed.connection_id,
+            provider=INTEGRATION_PROVIDER_GSC,
+            property_ref="https://second.example",
+            project_id=second_project.id,
+            status=MAPPING_STATUS_ACTIVE,
+        )
+    )
+    await db_session.commit()
+
+    per_target = (
+        1
+        if integration_settings.sync_default_window_days
+        == integration_settings.sync_late_data_revision_days
+        else 2
+    )
+    assert await dispatcher_run(session_factory) == per_target * 2
+
+    runs = await _runs(db_session, seed.connection_id)
+    by_property: dict[str, list[uuid.UUID]] = {}
+    for run in runs:
+        by_property.setdefault(run.property_ref, []).append(run.mapping_id)
+    assert set(by_property) == {"https://example.com", "https://second.example"}
+    # Each run froze the target it was enqueued for.
+    assert all(len(set(ids)) == 1 for ids in by_property.values())
+    # Revisions stay unique across the whole connection.
+    assert len({run.resync_seq for run in runs}) == len(runs)
+
+
+async def dispatcher_run(session_factory) -> int:
+    return await _dispatcher(session_factory).run_once()
 
 
 # --- pending_revocation retries ----------------------------------------------
