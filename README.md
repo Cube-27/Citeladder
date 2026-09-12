@@ -185,60 +185,20 @@ backend/app/                           FastAPI modular monolith and workers
 backend/app/core/config/site_health_*.py focused page-kind, crawl, rule, and runtime policy
 migrations/versions/0001_initial.py    pre-launch canonical database baseline
 docs/README.md                         sole active documentation index
-docs/plans/                            bounded workstreams and historical records, routed by docs/README.md
+docs/plans/                            live plans, indexed by docs/plans/ACTIVE.md
+docs/decisions.md                      accepted cross-feature decisions and rationale
 docs/evaluations/                      evaluation corpora, provenance, and labels
+docs/archive/                          verified historical records; not implementation authority
 ```
 
 <a id="full-validation"></a>
-## Cross-system and CI validation
-
-The repository root carries a delegating `package.json` for explicit
-cross-system, CI, and release diagnostics. It declares no dependencies of its
-own — `pnpm --dir frontend` and `uv --directory backend` still do the real work.
-Ordinary local completion uses the affected-owner harness below; these commands
-intentionally run broad suites and are not required after every edit.
-
-```bash
-pnpm setup       # frozen installs: frontend (pnpm) + backend (uv)
-pnpm test        # vitest, then pytest
-pnpm lint        # oxlint, then ruff
-pnpm typecheck   # tsc --noEmit, then mypy
-pnpm build       # next build
-```
-
-Compose is deliberately absent from that list: the startup command carries a
-mandatory `env -u POSTGRES_…` prefix (gotcha 1) that a shortcut script cannot
-express portably, so use the [Quick start](#quick-start) command verbatim.
-
 <a id="focused-validation"></a>
-## Local completion and focused validation
+## Validation
 
-From the repository root, after the coherent change is complete:
-
-```powershell
-.\scripts\check.ps1       # read-only affected-owner static checks
-.\scripts\test.ps1 -PlanOnly
-.\scripts\test.ps1       # mapped affected tests
-```
-
-These are end-of-task completion commands, not per-edit or per-documentation
-checks. Documentation-only changes use cheap textual/reference checks unless
-the documentation is executable or packaged input.
-
-Use `-Fix` only for an intentional formatting/lint pass. Use
-`-ChangedFiles` only for a retry after an earlier `test.ps1` run; the runner
-retains failed and pending owner selections in `.git`.
-
-```bash
-# Backend, from backend/
-uv run pytest tests/unit/test_<area>.py tests/component/test_<area>.py -q
-uv run ruff check <changed paths>
-
-# Frontend, from frontend/ — pnpm only
-pnpm test -- <file>
-pnpm lint
-pnpm build
-```
+[Development](docs/DEVELOPMENT.md#repository-validation-harness) owns setup,
+affected-owner completion commands, retry semantics and CI/release diagnostics.
+Documentation-only work uses textual/reference checks unless a document is
+packaged or executable input. Do not run broad suites merely to validate prose.
 
 <a id="contributing"></a>
 ## Contributing
@@ -247,7 +207,7 @@ Read [`AGENTS.md`](AGENTS.md) and the owning architecture document before changi
 [`CONTRIBUTING.md`](CONTRIBUTING.md) covers workflow and ownership; [`Review.md`](Review.md) covers
 the review checklist and recurring anti-patterns.
 CiteLadder is a dirty, active, multi-workstream repository. Preserve unrelated user-owned changes
-and verify focused slices rather than rewriting other workstreams.
+and follow the repository's task-level validation policy.
 
 <a id="license"></a>
 ## License

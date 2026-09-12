@@ -1,166 +1,68 @@
 # CiteLadder architecture
 
-> **Status:** canonical product architecture
-> **Runtime:** FastAPI modular monolith and separate workers, Next.js frontend,
-> PostgreSQL durable state and queues; one Compose stack for local production-like execution
+CiteLadder connects owned-site, demand and answer-engine evidence through:
+Connect → Analyze → Act → Improve / Verify → Track → Analyze.
 
-CiteLadder is an evidence-grounded growth platform organized around one loop:
+The outcome is observed mention/citation share under comparable audits.
+Crawl health, demand coverage and AEO readiness are leading indicators, not
+proof that CiteLadder caused later movement. [Product](../PRODUCT.md) owns
+positioning; [the index](README.md) routes to substantive feature documents.
 
-```text
-Connect -> Analyze -> Act -> Improve / Verify -> Track -> recompute Analyze
-```
+## Cross-system ownership
 
-Its primary measured outcome is increased **observed** mention/citation share
-across a versioned prompt portfolio under comparable audit conditions. Crawl
-health, GSC demand coverage, and AEO readiness are leading indicators. They do
-not prove CiteLadder caused a later change.
-
-## Capabilities behind the loop
-
-### Site Health
-
-Site Health acquires and analyzes the owned website. It owns secure discovery
-and crawling, immutable artifacts, normalized facts, deterministic structural
-page types, page-type schema contracts, rule evaluations, scores, issues,
-snapshots, deterministic comparable-crawl changes, exports, and site-derived
-opportunities.
-
-Its existing Architecture tab is the single read surface for the persisted
-observed-architecture projection: a page-kind ledger plus the evidence-ordered
-parent hierarchy. It does not own a second workspace or an editable site model.
-
-Its product surface is deliberately limited to Site Health, Issues, and
-Opportunities. Detailed contracts live in [`site-health.md`](site-health.md).
-
-### Content Intelligence
-
-Content Intelligence owns website-grounded generation requests and attempts,
-history, retry and regeneration, cancellation, and feedback. The shipped
-runtime does not own validation state machines, user revisions, save decisions,
-publication claims, or later verification. Generated prose is never promoted
-to business truth automatically.
-
-Site Health, Opportunity, and Demand pass durable identifiers into Content's
-one canonical context builder. The browser never inserts generated task prose:
-the instruction is only the user's words. The builder authorizes and renders
-brand memory, an optional target page, page-specific evidence, and a bounded
-related-page set from persisted state. Successful generations can link back to
-an Opportunity, but only the user can declare an external change implemented.
-
-Each generation freezes that context, its numeric file-backed skill version,
-and message/provider provenance before provider I/O. Crawl and origin text is
-untrusted reference data in a separate message. Missing optional evidence is
-represented explicitly and never replaced with fabricated facts.
-
-### Demand Intelligence and Track
-
-Demand Intelligence owns GSC and Traffic observations, demand signals, prompt
-portfolios, schedules, answer-engine measurements, and AI Visibility. AI
-Visibility is the Track station: it measures observed mentions, citations,
-rankings, and share of voice under comparable conditions.
-
-Every manual, scheduled, repaired, brand, and Commerce audit uses one
-citation-capable execution policy. Users select logical engines and
-repetitions, never a measurement mode. Each engine resolves to one approved
-retrieval-enabled route, and the exact provider, transport model, retrieval
-state, reasoning policy, and request configuration are frozen as provenance.
-Trend comparability is separated by that frozen model/retrieval identity.
-
-`benchmark_mode` remains a project-owned prompt-framing choice only; it does
-not select a transport model or retrieval policy.
-
-### Growth Agent
-
-The Growth Agent is a shell-owned drawer orchestrating persisted Site Health,
-Content, and Demand projections, not a navigation station or a second copy of
-system data. Its desktop sidebar and compact topbar triggers open the one
-persistent controller with typed route context. It cannot publish content,
-activate prompts, or mutate an external system without an explicit user
-decision.
-
-The hosted MCP server is a second read interface over those same persisted
-owners. An OAuth grant is bound to one CiteLadder account, while each product
-read resolves that account's current workspace memberships before returning a
-project projection. MCP owns authorization records only: it does not copy
-business data, run providers, or expose a mutation tool.
-
-## Product stations
-
-| Station | User job | Primary capability owners |
+| Owner | Writes | Downstream contract |
 |---|---|---|
-| Overview | See loop state, company facts, and one next action | Cross-system persisted projections |
-| Connect | Establish authorized evidence and provider inputs | Projects and integrations |
-| Analyze | Inspect website, search demand, traffic, and gaps | Site Health and Demand |
-| Act | Prioritize and generate against one Opportunity | Opportunities and Content |
-| Track | Compare observed citation share and later evidence | AI Visibility and analytics |
+| Workspace/project access | Identity, membership and project boundaries | Every product action/read is authorized |
+| Onboarding | Research evidence and reviewed company/competitor context | Confirmed context and initial portfolio |
+| Site Health | Acquisition, normalized facts, classifications, findings and snapshots | Persisted site evidence and change observations |
+| Integrations / Demand | Imported observations, projections and demand signals | Exact-window/source evidence |
+| Prompts / Visibility | Portfolios, frozen audits, answer artifacts and measurements | Comparable observed mentions/citations |
+| Opportunities | Ranked actions, declarations and verification observations | One action and implementation record |
+| Content | Frozen generation context, attempts and draft history | Reviewable output; never automatic business truth |
+| Commerce | Catalog projections and target-specific shelf observations | Reuses acquisition, Prompt and audit owners |
+| Growth Agent | Bounded task/tool/model attempts and explanation | Orchestrates typed persisted readers |
+| MCP | OAuth authorization records | Read-only access to the same owners |
+| Billing / Entitlements | Commercial evidence, grants and ledger | Admission, availability and settlement |
 
-Improve / Verify is the transition after an explicit implementation declaration:
-recrawl, resync, or audit evidence is observed without making a causal claim.
+Site Health, Content Intelligence, Demand Intelligence and Growth Agent are the
+durable product capabilities; AI Visibility is Track. Commerce reuses the same
+evidence and measurement owners rather than owning another crawler or runner.
 
-## Evidence flow
+## Evidence and action flow
 
-```text
-external or owned source
-  -> immutable evidence / provider attempt
-  -> deterministic or bounded derived projection
-  -> persisted issue, signal, generation, measurement, or opportunity
-  -> user-visible evidence and explicit decisions
-```
+Sources become immutable evidence/provider attempts, then versioned derived
+projections, then user-visible findings, signals, drafts, opportunities and
+measurements. Exact source IDs and relevant processing versions make each
+derived result attributable. Persisted does not mean verified truth.
 
-Raw evidence is append-only. Derived rows carry exact source IDs and every
-relevant extractor, classifier, analyzer, rule, formula, template, or model
-version. Read APIs project persisted state and never perform acquisition or
-repair.
+Onboarding confirms business context before portfolio generation. Site Health
+and integrations acquire evidence within their configured bounds. Opportunities
+routes an action to Content using durable identifiers. Content freezes context
+and returns a draft. Only an explicit implementation declaration starts the
+Act → Verify record; later observations remain separate from that declaration.
 
-## Ownership boundaries
+Command Center composes these persisted owners into Facts, evidence-labelled
+loop states and one next action. Before an audit, measurement fields remain
+unavailable. Report reads return missing state rather than building a report.
+Growth Agent and MCP reuse these projections and own no second knowledge store.
 
-| Capability | Owner |
-|---|---|
-| Website discovery, acquisition, parsing, page kinds, rules, site snapshots | Site Health |
-| Grounded content generation, attempts, history, feedback | Content Intelligence |
-| GSC/Traffic demand signals, prompts, AI Visibility | Demand Intelligence |
-| Cross-system ranking, source routing, implementation, and verification | Opportunities |
-| Standalone explain/roadmap typed-tool tasks | Growth Agent |
-| Provider/OAuth configuration and secret storage | Integrations/providers |
+## Shared execution and automation
 
-An existing owner must be extended before adding a parallel crawler, parser,
-queue, snapshot, opportunity store, generation store, or memory system.
+PostgreSQL is durable state and queue. Workers claim with SKIP LOCKED, commit
+before I/O, maintain leases and terminalize idempotently. Reads never acquire,
+sync, score or repair. [Backend architecture](backend-architecture.md) owns
+shared worker/API mechanics; [frontend architecture](frontend-architecture.md)
+owns shell, query and URL state.
 
-## State and execution
+Acquisition and deterministic processing may progress automatically after their
+authorized initiation and within frozen bounds. Models may explain, classify
+bounded ambiguity, plan or generate; they do not change deterministic metrics.
+Publishing, prompt activation, external mutation, billing changes and future
+durable-memory promotion retain their explicit user-decision boundaries.
+[Invariants](invariants.md) is the correctness authority.
 
-PostgreSQL is both durable state and the task queue. Workers claim with
-`FOR UPDATE SKIP LOCKED`, commit before network I/O, use leases and heartbeats,
-and terminalize idempotently. Redis is not part of the architecture without a
-measured requirement.
-
-Project data is always workspace-authorized. Object IDs alone are never an
-authorization boundary. All product IDs are UUIDs and browser APIs stay under
-same-origin `/api/v1` routing.
-
-## Automation boundary
-
-Acquisition, deterministic classification, scoring, issue grouping, scheduled
-measurement, and persisted projections may run automatically within configured
-bounds. User decisions remain required for content save/publish claims,
-external mutations, prompt activation, billing changes, and any future durable
-memory promotion.
-
-Models may classify bounded ambiguity, explain evidence, plan, or generate.
-They may not overwrite raw truth, silently change deterministic metrics, or
-turn unsupported output into a verified fact.
-
-## Current implementation direction
-
-1. Keep Site Health crawl lifecycle and page-kind/schema analysis truthful.
-2. Re-establish content fact grounding only from an approved evidence source.
-3. Continue Demand joins and measurement coverage.
-4. Extend Growth Agent tools only over typed persisted owners.
-5. Verify changes through recrawl or aligned later observations where the
-   owning subsystem supports it.
-
-The completed cross-system rebuild is retained as historical evidence. Current
-bounded work and release gates are indexed in [`README.md`](README.md#active-work);
-runtime ownership remains in the documents above.
+Current work is only in [plan status](plans/ACTIVE.md); an architecture document
+does not assign a historical delivery wave.
 
 ## Combined transaction lock DAG
 

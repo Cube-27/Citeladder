@@ -32,6 +32,16 @@ and hierarchy only.
 
 ## Pipeline
 
+The [API](../backend/app/api/site_health/) separates mutation, page, projection
+and event/export endpoints. [Page analysis](../backend/app/analysis/site_health/page_analysis.py)
+is the pure page-understanding seam; the
+[worker](../backend/app/workers/site_health_worker.py) coordinates acquisition
+and persistence. [Terminal refresh](../backend/app/domain/site_health/terminal_refresh.py)
+orders change-intelligence and downstream Demand/Opportunity/verification work.
+The [screen](../frontend/components/site-health/site-health-screen.tsx) projects
+that lifecycle. Source-specific generated content and implementation records
+belong to [Content](content-generation.md) and [Opportunities](opportunities.md).
+
 ```text
 explicit user Run new crawl
   -> durable root acquisition ───────────────┐
@@ -421,11 +431,11 @@ renders persisted directional deltas and their comparability reason.
 
 ## Shipped measurement contract
 
-This section is the canonical logic for the active PR4 measurement contract.
-The reliability implementation contract and remaining completion gates live in
-[`plans/site-health-measurement-reliability-pr4.md`](plans/site-health-measurement-reliability-pr4.md);
-the PR1–PR3 cutover plan is a historical delivery record. This file owns shipped
-measurement meaning and formulas.
+This section owns shipped measurement meaning and formulas. The
+[reliability record](archive/plans/site-health-measurement-reliability-pr4.md)
+and PR1–PR3 cutover are historical delivery evidence. Remaining live-crawl
+acceptance is retained in [release readiness](release-checklist.md#outstanding-feature-acceptance),
+not an active implementation plan.
 
 **Development reset policy.** CiteLadder is pre-launch and does not preserve
 development database history. Schema changes are folded into

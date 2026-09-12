@@ -1,7 +1,11 @@
 # Commerce Suite atomic rebuild
 
+> Retired from the working queue by the owner. Historical scope and evidence
+> follow; imperatives below do not authorize execution or establish acceptance.
+> Current owners are listed in [the documentation index](../../README.md).
+
 > **Status:** implementation in progress; release and manual gates remain open
-> **Authority:** active delivery sequence. [`../commerce-intelligence.md`](../commerce-intelligence.md)
+> **Authority:** active delivery sequence. [`../commerce-intelligence.md`](../../commerce-intelligence.md)
 > describes the currently present runtime, not completion of the four PR gates.
 
 The four route tabs currently exist, but their presence is not a completion

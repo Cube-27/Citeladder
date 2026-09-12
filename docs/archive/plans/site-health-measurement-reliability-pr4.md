@@ -1,5 +1,9 @@
 # Site Health measurement reliability — PR4
 
+> Retired from the working queue by the owner. Historical scope and evidence
+> follow; imperatives below do not authorize execution or establish acceptance.
+> Current owners are listed in [the documentation index](../../README.md).
+
 > **Status:** implementation complete; remaining scope is release acceptance.
 > Repository gates, disposable-database migration verification, deterministic
 > calibration, and browser acceptance have been observed. Live Searchable and
@@ -8,7 +12,7 @@
 > sites.
 >
 > **Dependency:** implemented after the PR1–PR3 cutover in
-> [`site-health-measurement-cutover.md`](site-health-measurement-cutover.md).
+> [`../archive/plans/site-health-measurement-cutover.md`](../../archive/plans/site-health-measurement-cutover.md).
 > PR4 is not live-calibrated or releasable until the two named live crawls are
 > actually observed; offline labelled cases are not a substitute.
 >
@@ -16,17 +20,17 @@
 > The slices are implementation checkpoints, not independently shippable
 > contracts or partially enabled runtime modes.
 
-[`../site-health.md`](../site-health.md) is the authority for the implemented
+[`../site-health.md`](../../site-health.md) is the authority for the implemented
 Site Health runtime. This plan records the PR4 reliability contract and its
 remaining completion gates; it is not a second runtime scorer, projection, or
 presentation authority.
 
-The repository-wide rules in [`../../AGENTS.md`](../../AGENTS.md) and
-[`../invariants.md`](../invariants.md) apply. Backend ownership remains the
+The repository-wide rules in [`../../AGENTS.md`](../../../AGENTS.md) and
+[`../invariants.md`](../../invariants.md) apply. Backend ownership remains the
 single page-understanding seam described in
-[`../backend-architecture.md`](../backend-architecture.md); frontend work follows
-[`../frontend-architecture.md`](../frontend-architecture.md) and
-[`../design.md`](../design.md).
+[`../backend-architecture.md`](../../backend-architecture.md); frontend work follows
+[`../frontend-architecture.md`](../../frontend-architecture.md) and
+[`../design.md`](../../design.md).
 
 ## Decision
 

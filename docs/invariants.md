@@ -181,3 +181,24 @@ Before launch, schema changes are folded into
 with `alembic upgrade head` and `alembic check`; do not add `0002+` without an
 explicit policy change. All active development semantic versions remain `1`
 under the same reset policy.
+
+## 18. Input and extraction boundaries
+
+- Normalize and reject blank text at the request-schema boundary; bound headers
+  and query values to their persisted limits; reject malformed UTF-8 uploads
+  instead of replacing bytes silently.
+- Treat third-party numbers as untrusted: reject booleans, non-finite values,
+  overflow, and ambiguous currency notation rather than publishing a guess.
+- Preserve parser sanitization order where it affects observed text: closed
+  non-text subtrees, then comments, then unterminated subtrees. Bind extracted
+  facts through the page role's primary entity and identity key.
+- Scope mutation status to the active workspace/project. Global visual rules
+  belong to `frontend/app/globals.css`, and each rendered page has one `h1`.
+- Billing webhook conflicts must follow the owning idempotent settlement
+  contract rather than leaking an unhandled 500. Framework-required packages,
+  annotations, and CLI entry points count as dependency use even without a
+  direct import.
+
+Feature explanations and source entry points live in the canonical owners in
+[the documentation index](README.md). These constraints apply at the affected
+boundary; they are not a second feature implementation specification.

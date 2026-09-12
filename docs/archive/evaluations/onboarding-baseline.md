@@ -1,11 +1,14 @@
 # Onboarding baseline scorecard
 
+> Historical dated evaluation, not a current Phase 0 gate or provider-run
+> instruction. Current behavior is owned by [Onboarding](../../onboarding.md).
+
 Measured 2026-08-16 against `main` @ `278586d8`, before any product change.
 **Post-rebuild results are in [Results after the rebuild](#results-after-the-rebuild) at the
 end of this document.**
 
 This is the Phase 0 gate for the onboarding context rebuild. The corpus in
-[`evaluations/onboarding_cases.py`](../../backend/evaluations/onboarding_cases.py)
+[`evaluations/onboarding_cases.py`](../../../backend/evaluations/onboarding_cases.py)
 is the *specification*; this run measures how far today's pipeline is from it, so the rebuild
 can be derived backwards from real gaps rather than from assumption.
 
@@ -53,7 +56,7 @@ discrimination.
 ## Findings
 
 **1. The LLM never writes onboarding prompts.**
-[`service.py:560`](../../backend/app/domain/projects/onboarding/service.py) passes a hardcoded
+[`service.py:560`](../../../backend/app/domain/projects/onboarding/service.py) passes a hardcoded
 `[]` as `model_prompts`, which always fails the count gate, so the deterministic fallback is
 always what ships. Confirmed by direct execution, not inspection.
 

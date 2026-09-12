@@ -1,5 +1,9 @@
 # CiteLadder production hardening
 
+> Retired from the working queue by the owner. Historical scope and evidence
+> follow; imperatives below do not authorize execution or establish acceptance.
+> Current owners are listed in [the documentation index](../../README.md).
+
 **Status:** Phase 0 and the marketing-surface performance work (phases 1a–1c)
 are implemented. **Everything that remains is deployment and infrastructure:**
 the zone move (1d), durability and observability (phase 2), and deployment

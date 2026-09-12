@@ -1,5 +1,9 @@
 # CiteLadder billing consolidation and launch readiness
 
+> Retired from the working queue by the owner. Historical scope and evidence
+> follow; imperatives below do not authorize execution or establish acceptance.
+> Current owners are listed in [the documentation index](../../README.md).
+
 **Status:** active release-readiness plan. It owns remaining manual, provider,
 and launch acceptance only; shipped runtime behavior belongs to the billing,
 entitlement, provider, and ledger owners.
@@ -171,7 +175,7 @@ Existing coverage is code-inspected, **not freshly executed**. Relevant suites i
 | P2 | Terminal retry exhaustion and operator replay | Persisted reason, alert, bounded backoff and idempotent recovery. Coverage missing. |
 
 At a coherent phase boundary, use the repository validation policy in
-[`../DEVELOPMENT.md`](../DEVELOPMENT.md): focused feedback while working, then
+[`../DEVELOPMENT.md`](../../DEVELOPMENT.md): focused feedback while working, then
 one read-only affected-owner check and mapped test selection. Retries include
 failed, pending, and newly invalidated owners. No local full-backend-suite
 substitution or weakened gates. Schema changes retain the single baseline and

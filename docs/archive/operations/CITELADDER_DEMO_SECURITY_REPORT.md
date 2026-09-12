@@ -1,7 +1,7 @@
 # CiteLadder GCP demo launch report
 
 > **Status:** historical no-go assessment and external-acceptance record. The
-> current executable procedure is [`GCP_RUNBOOK.md`](GCP_RUNBOOK.md); this report
+> current executable procedure is [`GCP_RUNBOOK.md`](../../operations/GCP_RUNBOOK.md); this report
 > preserves the original verdict and unresolved evidence, not a live runtime
 > claim or ordinary implementation gate.
 

@@ -2,7 +2,7 @@
 
 > **Status:** historical research suggestions. They are not current product
 > requirements, site-type activation rules, or a validation gate. Shipped Site
-> Health behavior is owned by [`../site-health.md`](../site-health.md).
+> Health behavior is owned by [`../site-health.md`](../../site-health.md).
 
 ## Purpose
 

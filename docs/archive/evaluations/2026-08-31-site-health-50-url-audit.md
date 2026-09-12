@@ -1,5 +1,9 @@
 # Site Health 50-URL HTTP Audit (2026-08-31)
 
+> Historical frozen-response audit. Its fixture/label files remain in
+> docs/evaluations/ for existing consumers; this record is not live calibration
+> or a current execution instruction. See [Site Health](../../site-health.md).
+
 Run: `20260831T001500Z`
 
 ## Contract
