@@ -11,7 +11,6 @@ from app.analysis.site_health.rules import rule_for
 from app.core.config.site_health_contracts import (
     RULE_OUTCOME_MISSING,
     RULE_OUTCOME_NOT_APPLICABLE,
-    RULE_OUTCOME_PARTIAL,
     RULE_OUTCOME_SATISFIED,
 )
 from app.core.config.site_health_measurement import (
@@ -28,8 +27,7 @@ def _area_state(rows: list[SiteRuleEvaluation]) -> tuple[str, float | None]:
     determinate = [
         row
         for row in applicable
-        if row.outcome
-        in (RULE_OUTCOME_SATISFIED, RULE_OUTCOME_PARTIAL, RULE_OUTCOME_MISSING)
+        if row.outcome in (RULE_OUTCOME_SATISFIED, RULE_OUTCOME_MISSING)
     ]
     expected = len(applicable)
     coverage = round(len(determinate) / expected, 4) if expected else None

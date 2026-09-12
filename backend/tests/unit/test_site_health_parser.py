@@ -238,7 +238,7 @@ def test_accessible_names_include_directly_referenced_hidden_names() -> None:
         b"""
         <html><body>
           <button><span aria-hidden="true">Hidden button name</span></button>
-          <span id="hidden-label"><span hidden>Hidden label</span></span>
+          <span id="hidden-label" hidden><span hidden>Hidden label</span></span>
           <input aria-labelledby="hidden-label">
           <label for="field"><span inert>Hidden field label</span></label>
           <input id="field">

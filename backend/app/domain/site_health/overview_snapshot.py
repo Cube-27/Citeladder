@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.site_health_contracts import (
     RULE_OUTCOME_MISSING,
+    RULE_OUTCOME_NOT_APPLICABLE,
     RULE_OUTCOME_SATISFIED,
 )
 from app.core.config.site_health_link_metrics import COVERAGE_FORMULA_VERSION
@@ -37,7 +38,11 @@ _CHANGE_METRICS = (
 
 def measurement_check_counts(rows: Sequence[Row]) -> tuple[int, int]:
     """Count determinate and expected scored evaluations already being persisted."""
-    expected = [row for row in rows if bool(row.score_roles)]
+    expected = [
+        row
+        for row in rows
+        if row.score_roles and row.outcome != RULE_OUTCOME_NOT_APPLICABLE
+    ]
     measured = sum(row.outcome in _DETERMINATE_OUTCOMES for row in expected)
     return measured, len(expected)
 

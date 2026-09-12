@@ -12,6 +12,7 @@ from app.analysis.site_health.scoring import (
     score_analysis,
 )
 from app.domain.site_health.overview_snapshot import measurement_check_counts
+from app.domain.site_health.web_fundamentals_projection import _area_state
 
 
 def _evaluation(
@@ -54,6 +55,13 @@ def test_unknown_and_partial_never_earn_credit_or_publish_a_page_score() -> None
     assert scores.technical_determinate_weight == 1
     assert scores.technical_expected_weight == 3
     assert measurement_check_counts(rows) == (1, 3)
+    rows.append(
+        _evaluation(
+            "technical.canonical_integrity", "not_applicable", role="web_fundamentals"
+        )
+    )
+    assert measurement_check_counts(rows) == (1, 3)
+    assert _area_state(rows) == ("limited_evidence", pytest.approx(1 / 3, abs=0.0001))
 
 
 def test_binary_checks_use_equal_weight_and_complete_supported_aeo_pillars() -> None:
