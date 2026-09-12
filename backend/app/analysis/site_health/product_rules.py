@@ -140,6 +140,11 @@ def check_offer_freshness_signal(facts: dict) -> tuple[str, dict]:
         "expiry_state": expiry_state,
     }
     if not offer:
+        if _quote_led(facts):
+            return RULE_OUTCOME_NOT_APPLICABLE, {
+                **evidence,
+                "reason": "quote_led_offer",
+            }
         return RULE_OUTCOME_MISSING, {**evidence, "reason": "offer_state_missing"}
     if not currency:
         return RULE_OUTCOME_MISSING, {

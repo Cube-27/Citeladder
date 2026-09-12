@@ -263,7 +263,11 @@ async def _detail_analysis_sections(
         .join(SiteRuleEvaluation, SiteRuleEvaluation.id == SiteIssue.evaluation_id)
         .where(
             SiteIssue.workspace_id == analysis.workspace_id,
-            SiteIssue.evaluation_id.in_(analysis.source_evaluation_ids or []),
+            SiteIssue.evaluation_id.in_(analysis.source_evaluation_ids or [])
+            | (
+                (SiteIssue.analysis_id == analysis.id)
+                & SiteRuleEvaluation.source_architecture_id.is_not(None)
+            ),
         )
         .order_by(SiteIssue.created_at.asc(), SiteIssue.id.asc())
     )

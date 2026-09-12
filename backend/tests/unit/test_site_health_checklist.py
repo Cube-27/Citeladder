@@ -74,6 +74,7 @@ def test_quote_led_product_does_not_require_a_public_price() -> None:
     offer = next(atom for atom in answer.evidence["atoms"] if atom["name"] == "offer")
     assert offer["outcome"] == "satisfied"
     assert answer.evidence["quote_led"] is True
+    assert rows["aeo.offer_freshness_signal"].outcome == "not_applicable"
 
 
 @pytest.mark.parametrize(

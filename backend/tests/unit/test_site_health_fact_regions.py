@@ -69,6 +69,19 @@ def test_empty_state_inside_selected_collection_is_preserved():
     assert extract_entity_signals(root)["listing"]["has_empty_state"] is True
 
 
+def test_outer_search_empty_state_does_not_describe_nested_catalog():
+    root = lxml_html.fromstring(
+        '<main><section role="search"><p>No results found.</p>'
+        '<section role="list" aria-label="Catalog">'
+        '<article><a href="/a">A</a></article>'
+        '<article><a href="/b">B</a></article>'
+        "</section></section></main>"
+    )
+    listing = extract_entity_signals(root)["listing"]
+    assert listing["collection_evidence"]["container"]["label"] == "Catalog"
+    assert listing["has_empty_state"] is False
+
+
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "site_health"
 
 

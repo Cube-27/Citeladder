@@ -60,7 +60,7 @@ def _evaluation(rule: SiteHealthRule, outcome: str, evidence: dict) -> RuleEvalu
         display_applicability=outcome != RULE_OUTCOME_NOT_APPLICABLE,
         score_applicability=expected,
         reason_code=str(evidence.get("reason") or ""),
-        score_roles=score_roles if expected else (),
+        score_roles=score_roles,
     )
 
 

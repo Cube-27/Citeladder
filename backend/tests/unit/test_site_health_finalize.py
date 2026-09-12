@@ -107,13 +107,14 @@ def test_relationship_rules_carry_unscored_catalog_provenance():
     assert ev.remediation
 
 
-def test_finalize_membership_comes_from_the_public_checklist():
+@pytest.mark.parametrize("outcome", [RULE_OUTCOME_MISSING, RULE_OUTCOME_NOT_APPLICABLE])
+def test_finalize_membership_comes_from_the_public_checklist(outcome):
     rule = rule_for("technical.canonical_integrity")
     assert rule is not None
     generated_rule = copy(rule)
     generated_rule.score_roles = ()
-    evaluation = _evaluation(generated_rule, RULE_OUTCOME_MISSING, {})
-    assert evaluation.score_applicability is True
+    evaluation = _evaluation(generated_rule, outcome, {})
+    assert evaluation.score_applicability is (outcome != RULE_OUTCOME_NOT_APPLICABLE)
     assert evaluation.score_roles == (SCORE_ROLE_WEB_FUNDAMENTALS,)
 
 

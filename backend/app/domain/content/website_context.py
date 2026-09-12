@@ -445,6 +445,8 @@ async def _newest_usable_crawl(
             SiteFetchArtifact.id == SitePageAnalysis.artifact_id,
         )
         .where(SitePageAnalysis.crawl_id == SiteCrawl.id)
+        .where(SitePageAnalysis.workspace_id == workspace_id)
+        .where(SitePageAnalysis.project_id == project_id)
         .where(SitePageAnalysis.is_current.is_(True))
         .where(SitePageAnalysis.finalized_at.is_not(None))
         .where(_facts_usable())

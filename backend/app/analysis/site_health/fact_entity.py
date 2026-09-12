@@ -439,12 +439,19 @@ def _collection_observation(
 
 
 def _empty_state_belongs_to(node: Any, container: Any, containers: list[Any]) -> bool:
-    competing_ids = {
-        id(other)
-        for other in containers
-        if other is not container and node_outside_containers(container, {id(other)})
-    }
-    return node_outside_containers(node, competing_ids)
+    container_ids = {id(other) for other in containers}
+    current = node
+    for _depth in range(_config.REGION_MAX_ANCESTOR_DEPTH):
+        if current is None:
+            return True
+        if id(current) in container_ids:
+            return current is container
+        try:
+            current = current.getparent()
+        except DOM_ERRORS as exc:
+            dom_failure("_empty_state_belongs_to", exc)
+            return False
+    return False
 
 
 def _collection_affordance_nodes(region: Any) -> list[Any]:
