@@ -29,7 +29,6 @@ from app.core.config.prompts import (
     PROMPT_STATUS_ACTIVE,
     PROMPT_STATUS_ARCHIVED,
 )
-from app.domain.entitlements.cache import clear_cache
 from app.domain.entitlements.enforcement import (
     OccupancyLimitExceededError,
     OccupancyUnresolvedError,
@@ -60,13 +59,6 @@ from tests.component.occupancy_helpers import (
     seed_occupancy_grants,
 )
 from tests.fixtures.prompt_generation import labelled_row, slot_text
-
-
-@pytest.fixture(autouse=True)
-def _clear_cache():
-    clear_cache()
-    yield
-    clear_cache()
 
 
 async def _seed_project_set(

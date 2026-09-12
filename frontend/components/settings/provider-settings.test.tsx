@@ -5,45 +5,16 @@ import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
-import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
+import {
+  CHATGPT_MODEL,
+  CONNECTION_ID,
+  WORKSPACE_ID,
+  catalogHandler,
+  connection,
+  failedTestHandler,
+} from '@/test/provider-catalog-fixture';
 
 import { ProviderSettings } from './provider-settings';
-
-const CONNECTION_ID = '11111111-1111-4111-8111-111111111111';
-const WORKSPACE_ID = '22222222-2222-4222-8222-222222222222';
-
-const catalog = providerCatalogFixture;
-
-function connection(overrides: Record<string, unknown> = {}) {
-  return {
-    id: CONNECTION_ID,
-    workspace_id: WORKSPACE_ID,
-    label: 'chatgpt',
-    transport_provider: 'openai',
-    base_url: null,
-    active: true,
-    api_key_set: true,
-    last_tested_at: null,
-    last_test_status: '',
-    routes: [
-      {
-        id: '33333333-3333-4333-8333-333333333333',
-        logical_engine: 'chatgpt',
-        transport_provider: 'openai',
-        transport_model: 'gpt-5.4-nano-2026-03-17',
-        is_default: false,
-        active: true,
-      },
-    ],
-    created_at: '2026-07-15T00:00:00Z',
-    updated_at: '2026-07-15T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function catalogHandler() {
-  return http.get('/api/v1/provider-catalog', () => HttpResponse.json(catalog));
-}
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
@@ -93,6 +64,12 @@ describe('ProviderSettings', () => {
     // No route toggle / radios or alternate route copy.
     expect(utils.queryByRole('radio')).toBeNull();
     expect(utils.queryByText(/coming soon/i)).toBeNull();
+
+    // The other two direct engines carry their own transport labels.
+    expect(screen.getByRole('heading', { name: 'Gemini' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Claude' })).toBeInTheDocument();
+    expect(screen.getByText('Direct (Google)')).toBeInTheDocument();
+    expect(screen.getByText('Direct (Anthropic)')).toBeInTheDocument();
   });
 
   it('never renders an alternate transport control anywhere on the panel', async () => {
@@ -150,7 +127,7 @@ describe('ProviderSettings', () => {
           latency_ms: 42,
           logical_engine: 'chatgpt',
           transport_provider: 'openai',
-          transport_model: 'gpt-5.4-nano-2026-03-17',
+          transport_model: CHATGPT_MODEL,
           tested_at: '2026-07-15T00:00:00Z',
         });
       }),
@@ -180,19 +157,7 @@ describe('ProviderSettings', () => {
     mswServer.use(
       catalogHandler(),
       http.get('/api/v1/provider-connections', () => HttpResponse.json([connection()])),
-      http.post(`/api/v1/provider-connections/${CONNECTION_ID}/test`, () =>
-        HttpResponse.json({
-          connection_id: CONNECTION_ID,
-          status: 'failed',
-          error_code: 'auth_failure',
-          detail: 'Invalid API key',
-          latency_ms: 10,
-          logical_engine: 'chatgpt',
-          transport_provider: 'openai',
-          transport_model: 'gpt-5.4-nano-2026-03-17',
-          tested_at: '2026-07-15T00:00:00Z',
-        }),
-      ),
+      failedTestHandler(),
     );
 
     renderWithProviders(<ProviderSettings />);

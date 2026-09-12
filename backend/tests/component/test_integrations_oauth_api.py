@@ -41,6 +41,7 @@ from app.models.integrations import (
 from app.models.user import User
 from app.models.user_identity import UserIdentity
 from app.models.workspace import Workspace, WorkspaceMember
+from tests.component.auth_helpers import register_and_login as _register
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "integrations"
 _BASE = "/api/v1/integrations"
@@ -86,19 +87,6 @@ def _fixture(name: str) -> dict:
 
 def _google_tokens() -> dict:
     return _fixture("google_token_response.json")
-
-
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    resp = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert resp.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
 
 
 @pytest.fixture

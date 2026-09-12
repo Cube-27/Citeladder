@@ -13,8 +13,6 @@ The provider is ALWAYS a fake — no live-key test.
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import hmac
 import json
 import uuid
 from dataclasses import replace
@@ -61,10 +59,15 @@ from app.models.billing import (
     PendingActivation,
 )
 from tests.component.auth_helpers import register_and_login as _register
-from tests.component.billing_catalog_helpers import publish_test_catalog, tax_snapshot
+from tests.component.billing_catalog_helpers import (
+    apply_seller_settings,
+    publish_test_catalog,
+    tax_snapshot,
+)
 from tests.component.billing_provider_helpers import (
     configure_test_provider,
-    drain_webhook,
+    post_webhook,
+    sign_webhook,
 )
 from tests.component.log_capture import capture_log_messages
 
@@ -127,25 +130,13 @@ def _runtime_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _sign(raw: bytes) -> str:
-    return hmac.new(_SECRET.encode(), raw, hashlib.sha256).hexdigest()
+    return sign_webhook(raw, _SECRET)
 
 
 async def _post_webhook(
     client: httpx.AsyncClient, raw: bytes, *, event_id: str
 ) -> httpx.Response:
-    response = await client.post(
-        "/api/v1/billing/webhooks/razorpay",
-        content=raw,
-        headers={
-            "X-Razorpay-Signature": _sign(raw),
-            "X-Razorpay-Event-Id": event_id,
-            "Content-Type": "application/json",
-        },
-    )
-
-    if response.status_code == 204:
-        await drain_webhook(json.loads(raw))
-    return response
+    return await post_webhook(client, raw, event_id=event_id, secret=_SECRET)
 
 
 def _enable_checkout(monkeypatch: pytest.MonkeyPatch, refs: dict[str, str]) -> None:
@@ -154,17 +145,7 @@ def _enable_checkout(monkeypatch: pytest.MonkeyPatch, refs: dict[str, str]) -> N
     monkeypatch.setattr(razorpay_settings, "international_ready", True)
     monkeypatch.setattr(billing_settings, "provider_price_refs", refs)
     monkeypatch.setattr(razorpay_settings, "webhook_secret", SecretStr(_SECRET))
-    for name, value in {
-        "seller_legal_name": "CiteLadder Private Limited",
-        "seller_legal_address": "1 Seller Street, Mumbai",
-        "seller_email": "billing@citeladder.test",
-        "seller_gstin": "27ABCDE1234F1Z5",
-        "seller_gst_state_code": "27",
-        "seller_gst_state_name": "Maharashtra",
-        "seller_sac": "998313",
-        "seller_lut_reference": "LUT/2026/001",
-    }.items():
-        monkeypatch.setattr(billing_settings, name, value)
+    apply_seller_settings(monkeypatch)
     monkeypatch.setattr(
         billing_api, "purchase_identity", lambda _account: _billing_identity()
     )

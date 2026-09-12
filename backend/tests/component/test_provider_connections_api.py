@@ -26,21 +26,9 @@ from app.core.config.audits import POOL_KIND_CONNECTION
 from app.core.config.provider_catalog import PROBE_PROMPT, provider_catalog_settings
 from app.core.security import decrypt_secret
 from app.models.audit import ProviderCapacityBucket
+from tests.component.auth_helpers import register_and_login as _register
 
 _SECRET = "sk-test-fake-byok-value-123456"  # pragma: allowlist secret
-
-
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    resp = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert resp.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
 
 
 def _connection_payload(**overrides: object) -> dict:

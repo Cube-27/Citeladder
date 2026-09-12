@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createAppQueryClient } from '@/lib/api/query-client';
-import type { Project, SessionUser } from '@/lib/api/types';
+import type { SessionUser } from '@/lib/api/types';
+import { makeProject } from '@/test/fixtures/project';
 
 // Stub imperative navigation used by the delete-project flow. Shallow tab
 // state uses the browser History API, matching production.
@@ -37,17 +38,17 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
 }));
 
 // Active project context — the danger zone deletes the active project.
-const activeProject = {
+const activeProject = makeProject({
   id: '00000000-0000-4000-8000-0000000000p1',
   workspace_id: '00000000-0000-4000-8000-0000000000w1',
   name: 'Acme Storage',
   brand_name: 'Acme',
-} as unknown as Project;
+});
 const nextProject = {
   ...activeProject,
   id: '00000000-0000-4000-8000-0000000000p2',
   name: 'Beta Storage',
-} as unknown as Project;
+};
 const setActiveProjectId = vi.fn();
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',

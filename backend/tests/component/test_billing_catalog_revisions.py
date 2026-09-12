@@ -17,6 +17,7 @@ from app.domain.billing.catalog_revisions import (
 from app.domain.billing.service import resolve_base_intent
 from app.models.billing import AccountGrant, BillingCatalogRevision
 from app.models.user import User
+from tests.component.billing_catalog_helpers import apply_seller_settings
 
 
 async def _admin(
@@ -137,17 +138,7 @@ async def test_purchase_intent_reads_the_persisted_catalog_revision(
     monkeypatch.setattr(
         billing_settings, "quote_signing_secret", SecretStr("synthetic-quote")
     )
-    for name, value in (
-        ("seller_legal_name", "CiteLadder Private Limited"),
-        ("seller_legal_address", "1 Seller Street, Mumbai"),
-        ("seller_email", "billing@example.test"),
-        ("seller_gstin", "27ABCDE1234F1Z5"),
-        ("seller_gst_state_code", "27"),
-        ("seller_gst_state_name", "Maharashtra"),
-        ("seller_sac", "998313"),
-        ("seller_lut_reference", "LUT/2026/001"),
-    ):
-        monkeypatch.setattr(billing_settings, name, value)
+    apply_seller_settings(monkeypatch)
     intent = await resolve_base_intent(
         db_session,
         catalog_key="tier_1",

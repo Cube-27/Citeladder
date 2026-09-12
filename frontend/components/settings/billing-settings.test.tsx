@@ -1,10 +1,11 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { EXPORT_CHECKOUT_BODY, fillExportBillingDetails } from '@/test/fixtures/billing';
 
 const ACCOUNT = '11111111-1111-4111-8111-111111111111';
 
@@ -20,17 +21,6 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
 }));
 
 import { BillingSettings } from './billing-settings';
-
-function fillExportBillingDetails() {
-  fireEvent.change(screen.getByLabelText(/Billing country/i), { target: { value: 'US' } });
-  fireEvent.change(screen.getByLabelText('Billing name'), {
-    target: { value: 'CiteLadder' },
-  });
-  fireEvent.change(screen.getByLabelText('Address'), { target: { value: '1 Main Street' } });
-  fireEvent.change(screen.getByLabelText('City'), { target: { value: 'New York' } });
-  fireEvent.change(screen.getByLabelText('Postal code'), { target: { value: '10001' } });
-  fireEvent.click(screen.getByRole('checkbox', { name: /qualifies as an export/i }));
-}
 
 function resolvedEntitlement(subscription: unknown = null) {
   return {
@@ -258,19 +248,7 @@ describe('BillingSettings', () => {
     await userEvent.click(screen.getByRole('button', { name: /Choose Starter/ }));
 
     await waitFor(() => expect(bodies).toHaveLength(1));
-    expect(bodies[0]).toEqual({
-      catalog_key: 'tier_1',
-      credential_mode: 'byok',
-      country_code: 'US',
-      billing_name: 'CiteLadder',
-      billing_address_line1: '1 Main Street',
-      billing_city: 'New York',
-      billing_state_code: null,
-      billing_postal_code: '10001',
-      customer_gstin: null,
-      export_eligibility_attested: true,
-      trial_requested: false,
-    });
+    expect(bodies[0]).toEqual(EXPORT_CHECKOUT_BODY);
   });
 
   it('renders Enterprise as contact-only, with no checkout and no trial CTA', async () => {
@@ -373,15 +351,23 @@ describe('BillingSettings', () => {
     };
     const createObjectURL = vi.fn(() => 'blob:test');
     const revokeObjectURL = vi.fn();
-    Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, configurable: true });
-    Object.defineProperty(URL, 'revokeObjectURL', { value: revokeObjectURL, configurable: true });
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: createObjectURL,
+      configurable: true,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      value: revokeObjectURL,
+      configurable: true,
+    });
     mswServer.use(
       catalogHandler(),
       entitlementHandler(),
       usageHandler(),
       http.get('/api/v1/billing/invoices', () => HttpResponse.json({ invoices: [invoice] })),
       http.get(`/api/v1/billing/invoices/${ACCOUNT}/pdf`, () =>
-        HttpResponse.text('pdf', { headers: { 'Content-Type': 'application/pdf' } }),
+        HttpResponse.text('pdf', {
+          headers: { 'Content-Type': 'application/pdf' },
+        }),
       ),
     );
 

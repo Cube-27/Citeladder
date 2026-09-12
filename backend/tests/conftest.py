@@ -108,6 +108,7 @@ for _name in [
 
 from app.core.config import settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
+from app.domain.entitlements.cache import clear_cache  # noqa: E402
 from app.main import app  # noqa: E402
 
 _TEST_RUN_ID = uuid.uuid4().hex[:12]
@@ -162,6 +163,20 @@ _CLEANUP_SQL = "DO $$ BEGIN SET CONSTRAINTS ALL DEFERRED; {deletes} END $$;".for
         for table in _DELETE_ORDER
     )
 )
+
+
+@pytest.fixture(autouse=True)
+def _clear_entitlement_cache() -> Iterator[None]:
+    """Drop the process-wide entitlement cache around every test.
+
+    Six suites each declared this fixture locally, which meant cache hygiene
+    depended on remembering to copy it: a new entitlement-touching test that
+    forgot it would silently read another test's grants. Owning it here makes
+    the guarantee unconditional.
+    """
+    clear_cache()
+    yield
+    clear_cache()
 
 
 @pytest.fixture(autouse=True)

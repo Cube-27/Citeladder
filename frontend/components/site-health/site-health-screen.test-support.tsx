@@ -9,6 +9,7 @@ import {
   EMPTY_WEB_FUNDAMENTALS,
   UNCHANGED_COHORT_COMPOSITION,
 } from '@/test/site-health-fixtures';
+import { makeSiteCrawl, makeSiteHealthEntitlement } from '@/test/fixtures/site-health';
 import { ProjectProvider } from '@/lib/project/project-context';
 import type { SiteHealthDashboard } from '@/lib/api/types';
 import { SiteHealthScreen } from './site-health-screen';
@@ -29,55 +30,17 @@ const CRAWL = '22222222-2222-4222-8222-222222222222';
 
 const project = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
 
-const entitlement = {
-  workspace_id: WORKSPACE,
-  access_mode: 'full',
-  sample_url_limit: 10,
-  monitored_url_limit: 50,
-  count_disclosure: true,
-  resolver_status: 'resolved',
-  registry_revision: 'registry-v8',
-  entitlement_lifecycle_version: 1,
-  valid_until: null,
-  contributing_grant_ids: [],
-  advanced_controls_enabled: false,
-};
+const entitlement = makeSiteHealthEntitlement({ workspace_id: WORKSPACE });
 
-const siteFacts = {
-  robots: {
-    fetched: true,
-    url: 'https://acme.com/robots.txt',
-    status_code: 200,
-    ai_crawlers: {
-      GPTBot: 'block',
-      ClaudeBot: 'allow',
-      PerplexityBot: 'allow',
-      'Google-Extended': 'allow',
-    },
-    sitemaps: ['https://acme.com/sitemap.xml'],
-  },
-  llms_txt: { fetched: true, url: 'https://acme.com/llms.txt', status_code: 200, present: true },
-  sitemap: { fetched: false, files: [] },
-};
-
+/** A crawl that discovered its three pages but failed the analysis pass. */
 function crawl(overrides: Record<string, unknown> = {}) {
-  return {
+  return makeSiteCrawl({
     id: CRAWL,
     workspace_id: WORKSPACE,
     project_id: PROJECT,
-    profile_id: '55555555-5555-4555-8555-555555555555',
     status: 'failed',
-    discovery_status: 'completed',
     analysis_status: 'failed',
-    root_url: 'https://acme.com/',
-    sample_mode: false,
-    seed: '1',
-    inventory_complete: true,
-    partial_reason: '',
-    visible_url_count: 3,
     analyzed_count: 0,
-    failed_count: 0,
-    discovery_requested_count: 3,
     analysis_requested_count: 0,
     counters: {
       discovered: 3,
@@ -87,27 +50,22 @@ function crawl(overrides: Record<string, unknown> = {}) {
       analyzed: 0,
       errors: 0,
       blocked: 0,
-      failure_breakdown: { robots_denied: 0, http_4xx: 0, http_5xx: 0, timeout: 0 },
-      activity: { state: 'terminal', reason: 'terminal', queue_depth: 0, next_available_at: null },
+      failure_breakdown: {
+        robots_denied: 0,
+        http_4xx: 0,
+        http_5xx: 0,
+        timeout: 0,
+      },
+      activity: {
+        state: 'terminal',
+        reason: 'terminal',
+        queue_depth: 0,
+        next_available_at: null,
+      },
       by_page_kind: {},
     },
-    discovered_count: 3,
-    total_url_count: 3,
-    has_more_site_urls: false,
-    score_summary: null,
-    failure_summary: null,
-    site_facts: siteFacts,
-    extractor_version: 'e1',
-    analyzer_version: 'a1',
-    rule_version: 'r1',
-    scoring_version: 's1',
-    error_message: '',
-    created_at: '2026-07-16T00:00:00Z',
-    updated_at: '2026-07-16T00:00:00Z',
-    started_at: '2026-07-16T00:00:00Z',
-    completed_at: '2026-07-16T00:05:00Z',
     ...overrides,
-  };
+  });
 }
 
 function inventoryRow(id: string, url: string) {

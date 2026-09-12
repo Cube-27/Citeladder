@@ -13,8 +13,6 @@ path (subscriptions/add-ons/top-ups + activation) lives in
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import json
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -47,7 +45,8 @@ from tests.component.auth_helpers import register_and_login as _register
 from tests.component.billing_catalog_helpers import publish_test_catalog, tax_snapshot
 from tests.component.billing_provider_helpers import (
     configure_test_provider,
-    drain_webhook,
+    post_webhook,
+    sign_webhook,
 )
 from tests.component.occupancy_helpers import revoke_signup_baseline_grants
 
@@ -66,7 +65,7 @@ async def _published_catalog(db_session: AsyncSession) -> None:
 
 
 def _sign(raw: bytes) -> str:
-    return hmac.new(_SECRET.encode(), raw, hashlib.sha256).hexdigest()
+    return sign_webhook(raw, _SECRET)
 
 
 def _webhook_payload(
@@ -102,19 +101,7 @@ def _webhook_payload(
 async def _post_webhook(
     client: httpx.AsyncClient, raw: bytes, *, event_id: str
 ) -> httpx.Response:
-    response = await client.post(
-        "/api/v1/billing/webhooks/razorpay",
-        content=raw,
-        headers={
-            "X-Razorpay-Signature": _sign(raw),
-            "X-Razorpay-Event-Id": event_id,
-            "Content-Type": "application/json",
-        },
-    )
-
-    if response.status_code == 204:
-        await drain_webhook(json.loads(raw))
-    return response
+    return await post_webhook(client, raw, event_id=event_id, secret=_SECRET)
 
 
 async def _seed_subscription(

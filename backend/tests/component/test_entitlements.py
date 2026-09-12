@@ -23,7 +23,6 @@ from app.core.config.entitlements import (
     KEY_MONITORED_URLS,
     KEY_PROVIDER_COPILOT,
 )
-from app.domain.entitlements.cache import clear_cache
 from app.domain.entitlements.grants import (
     GrantWriteError,
     issue_grant_bundle,
@@ -45,13 +44,6 @@ from app.models.user import User
 from app.models.workspace import Workspace
 
 _NOW = datetime(2026, 7, 31, 12, 0, tzinfo=UTC)
-
-
-@pytest.fixture(autouse=True)
-def _clear_cache():
-    clear_cache()
-    yield
-    clear_cache()
 
 
 async def _account_with_workspace(

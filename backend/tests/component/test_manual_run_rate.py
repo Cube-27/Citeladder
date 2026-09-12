@@ -28,7 +28,6 @@ from app.core.config.entitlements import (
     KEY_MANUAL_RUNS_PER_DAY,
 )
 from app.domain.audits.creation import create_audit
-from app.domain.entitlements.cache import clear_cache
 from app.domain.entitlements.enforcement import (
     RateAdmissionDecision,
     evaluate_manual_run_admission,
@@ -44,13 +43,6 @@ from tests.component.occupancy_helpers import (
 )
 
 _AT = datetime.now(UTC)
-
-
-@pytest.fixture(autouse=True)
-def _clear_cache():
-    clear_cache()
-    yield
-    clear_cache()
 
 
 async def _separate_account_project(

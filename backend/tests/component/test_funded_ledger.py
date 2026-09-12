@@ -32,7 +32,6 @@ from app.core.config.entitlements import (
 )
 from app.core.config.provider_catalog import ENGINE_CLAUDE
 from app.domain.audits.creation import create_audit
-from app.domain.entitlements.cache import clear_cache
 from app.domain.entitlements.ledger import (
     FundedCreditsExhaustedError,
     Reservation,
@@ -51,13 +50,6 @@ from tests.component.log_capture import capture_log_messages
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
 _NOW = datetime.now(UTC)
-
-
-@pytest.fixture(autouse=True)
-def _clear_cache():
-    clear_cache()
-    yield
-    clear_cache()
 
 
 async def _seed(

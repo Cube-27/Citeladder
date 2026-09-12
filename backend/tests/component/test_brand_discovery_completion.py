@@ -38,20 +38,8 @@ from app.models.site_health.crawl import SiteCrawl
 from app.models.workspace import Workspace
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers import brand_discovery_worker
+from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import seed_occupancy_grants
-
-
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert response.status_code == 202, response.text
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
 
 
 def _completion_payload() -> dict:

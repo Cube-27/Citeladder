@@ -55,6 +55,7 @@ from app.models.integrations import (
     IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
+from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
 _SYNC_ENQUEUE_KEYS = {"sync_run_id", "connection_id", "status"}
@@ -63,19 +64,6 @@ _SYNC_ENQUEUE_KEYS = {"sync_run_id", "connection_id", "status"}
 # ---------------------------------------------------------------------------
 # API + seed helpers
 # ---------------------------------------------------------------------------
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    resp = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert resp.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
-
-
 async def _create_project(client: httpx.AsyncClient) -> tuple[str, str]:
     resp = await client.post("/api/v1/projects", json={"name": "Traffic Project"})
     assert resp.status_code == 201

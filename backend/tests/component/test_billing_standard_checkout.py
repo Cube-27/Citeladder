@@ -29,6 +29,7 @@ from app.models.billing_payment import BillingPayment
 from app.models.user import User
 from tests.billing_settings_support import apply_billing_settings
 from tests.component.auth_helpers import register_and_login
+from tests.component.billing_catalog_helpers import seller_settings
 
 pytestmark = pytest.mark.asyncio
 
@@ -62,14 +63,7 @@ async def checkout(client, db_session, monkeypatch):
             "checkout_enabled": True,
             "razorpay_test_ready": True,
             "razorpay_test_international_ready": True,
-            "seller_legal_name": "CiteLadder Private Limited",
-            "seller_legal_address": "1 Seller Street, Mumbai",
-            "seller_email": "billing@citeladder.test",
-            "seller_gstin": "27ABCDE1234F1Z5",
-            "seller_gst_state_code": "27",
-            "seller_gst_state_name": "Maharashtra",
-            "seller_sac": "998313",
-            "seller_lut_reference": "LUT/2026/001",
+            **seller_settings(),
         },
     )
     payload = _sandbox_payload()

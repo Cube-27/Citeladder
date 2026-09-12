@@ -38,17 +38,7 @@ from app.models.integrations import (
 )
 from app.models.project import Project
 from app.models.workspace import Workspace
-
-
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "correct-horse-battery-staple-1"},
-    )
-    await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "correct-horse-battery-staple-1"},
-    )
+from tests.component.auth_helpers import register_and_login as _register
 
 
 async def _readiness(client: httpx.AsyncClient, project_id: str) -> dict:

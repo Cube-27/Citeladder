@@ -1,51 +1,20 @@
 import { expect, test } from '@playwright/test';
 
-import { PERMITTED_ENTITLEMENT, permittedWorkspaceEntitlement } from './helpers/app-fixture';
-import { stubWorkspaceList } from './helpers/app-fixture';
+import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
 
 /**
  * Content screen stubbed e2e (Task 5).
  *
  * All backend calls are stubbed at the network layer (mirrors
  * `providers.spec.ts`) so the spec runs without a live backend. Covers: the
- * live "Content" nav link, the enqueue → poll → sanitised-Markdown-output
- * happy path, and the cancel flow. The real-stack integration (worker + mock
- * provider + disposable DB) lives in `content-integration.spec.ts`.
+ * live "Content" nav link, the enqueue → poll → rendered-Markdown happy path,
+ * and the cancel flow. Markdown SANITISATION is not proved here — the fixture
+ * output is benign; `lib/content/markdown.test.tsx` pins it against hostile
+ * input, and `content-integration.spec.ts` proves it end-to-end against a real
+ * worker + mock provider + disposable DB.
  */
-const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const PROJECT_ID = '22222222-2222-4222-8222-222222222222';
+const PROJECT_ID = FIXTURE_PROJECT.id;
 const GEN_ID = '33333333-3333-4333-8333-333333333333';
-
-const user = {
-  id: '44444444-4444-4444-8444-444444444444',
-  email: 'content@example.com',
-  role: 'owner',
-  is_active: true,
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
-
-const project = {
-  id: PROJECT_ID,
-  workspace_id: WORKSPACE_ID,
-  name: 'Acme',
-  brand_name: 'Acme',
-  website_url: 'https://acme.example',
-  industry: 'general',
-  subindustry: '',
-  primary_market: 'United States',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
 
 function generation(overrides: Record<string, unknown> = {}) {
   return {
@@ -107,26 +76,7 @@ test('content nav link is live and the enqueue → output flow renders sanitised
   let enqueued = false;
   let detailCalls = 0;
 
-  // 404 catch-all FIRST (reverse registration order means the specific stubs
-  // below still win) — keeps unstubbed downstream queries from 401-ing a live
-  // backend and tripping the session guard's any-401 → /login redirect.
-  await page.route('**/api/v1/**', (route) =>
-    route.fulfill({
-      status: 404,
-      contentType: 'application/json',
-      body: JSON.stringify({ detail: 'e2e fixture: endpoint not stubbed' }),
-    }),
-  );
-
-  await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
-  await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
-  await stubWorkspaceList(page, WORKSPACE_ID);
-  await page.route('**/api/v1/billing/entitlement', (route) =>
-    route.fulfill({ json: PERMITTED_ENTITLEMENT }),
-  );
-  await page.route(`**/api/v1/workspaces/${WORKSPACE_ID}/entitlements`, (route) =>
-    route.fulfill({ json: permittedWorkspaceEntitlement(WORKSPACE_ID) }),
-  );
+  await stubAuthedShell(page);
   await page.route('**/api/v1/content/generations?*', (route) =>
     route.fulfill({ json: enqueued ? [succeeded] : [] }),
   );
@@ -143,7 +93,12 @@ test('content nav link is live and the enqueue → output flow renders sanitised
   });
   await page.route('**/api/v1/content/context-preview?*', (route) =>
     route.fulfill({
-      json: { brand_memory: true, target_page: null, issue_count: 0, related_page_count: 3 },
+      json: {
+        brand_memory: true,
+        target_page: null,
+        issue_count: 0,
+        related_page_count: 3,
+      },
     }),
   );
 
@@ -164,7 +119,9 @@ test('content nav link is live and the enqueue → output flow renders sanitised
   await page.getByRole('button', { name: 'Generate' }).click();
 
   // The queued state may resolve before the browser paints; assert the durable result.
-  await expect(page.getByRole('heading', { name: 'About Acme' })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { name: 'About Acme' })).toBeVisible({
+    timeout: 10_000,
+  });
   // Model ids are provenance on the row, not something the writer needs on the
   // page; the footer now says only what the draft was grounded with.
   await expect(page.getByText(/returned model/i)).toHaveCount(0);

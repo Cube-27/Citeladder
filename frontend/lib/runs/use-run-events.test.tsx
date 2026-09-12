@@ -8,20 +8,10 @@ import { RUN_STREAM_RECONNECT_BASE_MS } from '@/lib/config/runs';
 import { useRunEvents } from './use-run-events';
 import { ProjectSelectionProvider } from '@/lib/project/project-scope';
 import { testProjectSelection } from '@/test/render';
+import { makeStreamResponse } from '@/test/sse';
 
 const AUDIT = '11111111-1111-4111-8111-111111111111';
 const PROJECT = '22222222-2222-4222-8222-222222222222';
-
-function streamResponse(chunks: string[]): Response {
-  const encoder = new TextEncoder();
-  const body = new ReadableStream<Uint8Array>({
-    start(controller) {
-      for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
-      controller.close();
-    },
-  });
-  return { ok: true, body } as unknown as Response;
-}
 
 /** The stream reads its workspace from the shared selection. */
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -56,7 +46,7 @@ describe('useRunEvents', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
-        streamResponse([
+        makeStreamResponse([
           'id: evt-9\ndata: {"id":"11111111-1111-4111-8111-111111111111","audit_id":"11111111-1111-4111-8111-111111111111","occurred_at":"2026-01-01T00:00:00Z","event_type":"audit.com',
           'pleted","payload":{"status":"completed","completed":1,"failed":0,"visibility_score":1}}\n\n',
         ]),
@@ -71,9 +61,15 @@ describe('useRunEvents', () => {
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     await vi.advanceTimersByTimeAsync(300);
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.runs.detail(AUDIT) });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.runs.executions(AUDIT) });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.visibility.all });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.runs.detail(AUDIT),
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.runs.executions(AUDIT),
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.visibility.all,
+    });
     unmount();
   });
 
@@ -81,8 +77,8 @@ describe('useRunEvents', () => {
     vi.useFakeTimers();
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(streamResponse(['id: evt-7\ndata: {"event_type":"unknown"}\n\n']))
-      .mockResolvedValue(streamResponse([]));
+      .mockResolvedValueOnce(makeStreamResponse(['id: evt-7\ndata: {"event_type":"unknown"}\n\n']))
+      .mockResolvedValue(makeStreamResponse([]));
     vi.stubGlobal('fetch', fetchMock);
     const client = new QueryClient();
     const { unmount } = renderHook(() => useRunEvents(AUDIT, PROJECT, true), {

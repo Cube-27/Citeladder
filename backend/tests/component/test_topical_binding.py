@@ -54,25 +54,13 @@ from tests.component.audit_helpers import (
     seed_audit_fixtures,
     seed_platform_connection,
 )
+from tests.component.auth_helpers import register_and_login as _register
 from tests.component.occupancy_helpers import seed_occupancy_grants
 
 # ---------------------------------------------------------------------------
 # Shared API seed helpers (project identity: Acme Corp / acme.com, competitor
 # Globex — never part of the positive vocabulary).
 # ---------------------------------------------------------------------------
-
-
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    resp = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert resp.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
 
 
 def _project_payload() -> dict:

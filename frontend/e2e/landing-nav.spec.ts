@@ -1,52 +1,42 @@
 import { expect, test } from '@playwright/test';
 
-/** Item counts come from lib/marketing-content/nav.ts. */
-const DROPS = [
-  { key: 'platform', count: 4 },
-  { key: 'solutions', count: 5 },
-  { key: 'resources', count: 3 },
-] as const;
+import { NAV_DROPS } from '@/lib/marketing-content/nav';
+
+/**
+ * Marketing navigation, real-engine claims ONLY.
+ *
+ * The per-dropdown interaction contract — hover/focus opens, Escape closes,
+ * truthful `aria-expanded`/`aria-controls`, one link per configured item — is
+ * pinned in jsdom by components/marketing/chrome/nav.test.tsx. The panel is
+ * rendered from React state (nav-desktop.tsx), not a CSS `:hover` rule, so
+ * re-running that matrix in a browser proves nothing new and costs a page load
+ * per dropdown. What a real engine DOES decide is which of the two navs the
+ * viewport gets (a `lg:` media query) and whether the page overflows.
+ */
+const DROP_KEYS = NAV_DROPS.map((drop) => drop.key);
 
 test.describe('marketing navigation (real-engine CSS contract)', () => {
-  test('desktop dropdowns open on hover and focus, then close with Escape', async ({ page }) => {
+  test('serves the desktop nav above the lg breakpoint and the mobile menu below it', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
+    await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open menu' })).toBeHidden();
 
-    for (const { key, count } of DROPS) {
-      // The top-level link IS the trigger — the separate chevron button is
-      // gone, so `aria-expanded`/`aria-controls` live on the link itself.
-      const directLink = page.getByRole('link', { name: new RegExp(`^${key}$`, 'i') }).first();
-      const panel = page.locator(`#desktop-nav-panel-${key}`);
-
-      await directLink.hover();
-      await expect(panel).toBeVisible();
-      await expect(directLink).toHaveAttribute('aria-expanded', 'true');
-      await expect(directLink).toHaveAttribute('aria-controls', `desktop-nav-panel-${key}`);
-      await expect(panel.getByRole('link')).toHaveCount(count);
-
-      await directLink.focus();
-      await expect(panel).toBeVisible();
-      await page.keyboard.press('Escape');
-      await expect(panel).toBeHidden();
-    }
-  });
-
-  test('mobile menu exposes all three accordions at 375px', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/');
+    const openMenu = page.getByRole('button', { name: 'Open menu' });
+    await expect(openMenu).toBeVisible();
+
+    // The accordions exist only inside the mobile menu, so opening it is the
+    // only way to prove the small-viewport nav is reachable at all.
     const menu = page.locator('#mobile-menu');
     await expect(menu).toBeHidden();
-    await page.getByRole('button', { name: 'Open menu' }).click();
+    await openMenu.click();
     await expect(menu).toBeVisible();
-
-    for (const { key, count } of DROPS) {
-      const trigger = page.locator(`button[aria-controls="acc-${key}"]`);
-      await trigger.click();
-      await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-      const links = page.locator(`#acc-${key}`).getByRole('link');
-      await expect(links).toHaveCount(count);
-      await expect(links.first()).toBeVisible();
+    for (const key of DROP_KEYS) {
+      await expect(page.locator(`button[aria-controls="acc-${key}"]`)).toBeVisible();
     }
-
     await page.getByRole('button', { name: 'Close menu' }).click();
     await expect(menu).toBeHidden();
   });

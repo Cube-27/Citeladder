@@ -1,7 +1,11 @@
 """Deterministic provider fixtures for durable webhook processing."""
 
+import hashlib
+import hmac
+import json
 from dataclasses import replace
 
+import httpx
 from pydantic import SecretStr
 from sqlalchemy import select
 
@@ -82,3 +86,32 @@ async def drain_webhook(payload: dict) -> None:
 
     async for session in app.dependency_overrides[get_session]():
         await recover_webhook_receipts(session, FixtureProvider())
+
+
+def sign_webhook(raw: bytes, secret: str) -> str:
+    """The provider's HMAC-SHA256 body signature."""
+    return hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+
+
+async def post_webhook(
+    client: httpx.AsyncClient, raw: bytes, *, event_id: str, secret: str
+) -> httpx.Response:
+    """POST a signed webhook and drain the receipt the endpoint enqueues.
+
+    Both billing suites used to carry a byte-identical copy of this, differing
+    only in the secret they signed with — so the drain-on-204 step (the part
+    that is easy to forget and silently leaves the receipt unprocessed) had two
+    places to go wrong.
+    """
+    response = await client.post(
+        "/api/v1/billing/webhooks/razorpay",
+        content=raw,
+        headers={
+            "X-Razorpay-Signature": sign_webhook(raw, secret),
+            "X-Razorpay-Event-Id": event_id,
+            "Content-Type": "application/json",
+        },
+    )
+    if response.status_code == 204:
+        await drain_webhook(json.loads(raw))
+    return response

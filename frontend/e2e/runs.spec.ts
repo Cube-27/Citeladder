@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { stubWorkspaceList } from './helpers/app-fixture';
+import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
 
 /**
  * F10 Run/Executions explorer smoke: shell → open a run → open evidence.
@@ -8,45 +8,14 @@ import { stubWorkspaceList } from './helpers/app-fixture';
  * at the network layer so the spec runs without a live backend. It exercises the
  * in-run evidence drawer flow (shell → Runs → open run → open evidence).
  *
- * Note: this requires a running dev server (playwright.config.ts starts one).
- * It is skipped automatically when no browser/dev server is available.
+ * playwright.config.ts starts (or reuses) the dev server; if it cannot come up
+ * the whole run fails to boot rather than skipping this spec.
  */
-const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
-const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const PROJECT_ID = FIXTURE_PROJECT.id;
+const WORKSPACE_ID = FIXTURE_PROJECT.workspace_id;
 const AUDIT_ID = '44444444-4444-4444-8444-444444444444';
 const EXEC_ID = '77777777-7777-4777-8777-777777777777';
 const ANALYSIS_ID = '88888888-8888-4888-8888-888888888888';
-
-const user = {
-  id: '22222222-2222-4222-8222-222222222222',
-  email: 'runs@example.com',
-  role: 'owner',
-  is_active: true,
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
-
-const project = {
-  id: PROJECT_ID,
-  workspace_id: WORKSPACE_ID,
-  name: 'Acme',
-  brand_name: 'Acme',
-  website_url: 'https://acme.example',
-  industry: 'general',
-  subindustry: '',
-  primary_market: 'United States',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
 
 const audit = {
   id: AUDIT_ID,
@@ -131,20 +100,7 @@ const evidence = {
 };
 
 test('shell → open run → open execution evidence', async ({ page }) => {
-  // 404 catch-all FIRST (reverse registration order means the specific stubs
-  // below still win) — keeps unstubbed downstream queries from 401-ing a live
-  // backend and tripping the session guard's any-401 → /login redirect.
-  await page.route('**/api/v1/**', (route) =>
-    route.fulfill({
-      status: 404,
-      contentType: 'application/json',
-      body: JSON.stringify({ detail: 'e2e fixture: endpoint not stubbed' }),
-    }),
-  );
-
-  await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
-  await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
-  await stubWorkspaceList(page, WORKSPACE_ID);
+  await stubAuthedShell(page);
   await page.route(/\/api\/v1\/audits(\?.*)?$/, (route) => route.fulfill({ json: [audit] }));
   await page.route(`**/api/v1/audits/${AUDIT_ID}`, (route) => route.fulfill({ json: audit }));
   await page.route(`**/api/v1/audits/${AUDIT_ID}/executions`, (route) =>
