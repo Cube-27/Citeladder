@@ -427,48 +427,11 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   assertSameOriginApi(requests, baseURL!);
 });
 
-test('keyboard navigation moves selection with focus transfer (WAI-ARIA)', async ({ page }) => {
-  await setup(page, { trends: [] });
-  await page.goto('/visibility');
-
-  const trends = page.getByRole('tab', { name: 'Trends' });
-  await expect(trends).toHaveAttribute('aria-selected', 'true');
-  await trends.focus();
-
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'Mentions & Citations' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-  await expect(page.getByRole('tab', { name: 'Mentions & Citations' })).toBeFocused();
-
-  await page.keyboard.press('End');
-  await expect(page.getByRole('tab', { name: 'Query fanouts' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-  await expect(page.getByRole('tab', { name: 'Query fanouts' })).toBeFocused();
-
-  // Wraps forward from the last tab back to the first.
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
-
-  await page.keyboard.press('End');
-  await expect(page.getByRole('tab', { name: 'Query fanouts' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-  await page.keyboard.press('ArrowLeft');
-  await expect(page.getByRole('tab', { name: 'Mentions & Citations' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-
-  await page.keyboard.press('Home');
-  await expect(page.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('tab', { name: 'Trends' })).toBeFocused();
-});
-
+// The roving-tablist keyboard contract (Arrow/Home/End selection AND focus
+// transfer) is asserted deterministically in
+// app/(authed)/(app)/visibility/page.test.tsx. Nothing in it was
+// browser-specific -- no real navigation, history, or cross-origin request --
+// so it does not earn a second run here.
 test('mobile viewport keeps the visibility tabs and one active panel usable', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 720 });
   await setup(page);

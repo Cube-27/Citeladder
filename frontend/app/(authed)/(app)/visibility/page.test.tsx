@@ -147,26 +147,35 @@ describe('VisibilityPage — tablist', () => {
     const user = userEvent.setup();
     renderVisibilityPage();
 
+    // Selection alone is not the WAI-ARIA contract: a roving tablist must move
+    // DOM focus with the selection, or the next Tab lands somewhere arbitrary.
+    // Both halves are asserted here so no browser-level case has to repeat it.
     const trendsTab = await screen.findByRole('tab', { name: 'Trends' });
     trendsTab.focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Mentions & Citations' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    const mentionsTab = screen.getByRole('tab', { name: 'Mentions & Citations' });
+    expect(mentionsTab).toHaveAttribute('aria-selected', 'true');
+    expect(mentionsTab).toHaveFocus();
 
     await user.keyboard('{End}');
-    expect(screen.getByRole('tab', { name: 'Query fanouts' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    const fanoutsTab = screen.getByRole('tab', { name: 'Query fanouts' });
+    expect(fanoutsTab).toHaveAttribute('aria-selected', 'true');
+    expect(fanoutsTab).toHaveFocus();
 
     // Wraps forward from the last tab back to the first.
     await user.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
 
+    await user.keyboard('{End}');
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('tab', { name: 'Mentions & Citations' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+
     await user.keyboard('{Home}');
     expect(screen.getByRole('tab', { name: 'Trends' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Trends' })).toHaveFocus();
   });
 
   it('exposes the visibility tabs on narrow viewports', async () => {

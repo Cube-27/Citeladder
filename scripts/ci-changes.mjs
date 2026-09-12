@@ -116,14 +116,29 @@ function isSecuritySensitive(path) {
   );
 }
 
+// What Compose uniquely proves: the images build, and a CLEAN database reaches a
+// serving stack. So the trigger is container-shaped changes only -- the images,
+// the stack definition, the schema, and anything that changes what gets
+// installed into a container. Ordinary application code is not on this list: it
+// is already covered by the backend, frontend and E2E owners, and across 60
+// Compose runs it never caught a failure main CI missed (the one failure, a Next
+// prerender error, failed the frontend CI job on the same commit). Note that
+// pushes to `main` and merge-queue runs classify as `full` and therefore always
+// smoke the stack regardless of this function -- narrowing applies to PR runs.
 function isComposeSensitive(path) {
   return (
     path === '.github/workflows/compose-smoke.yml' ||
     path === '.dockerignore' ||
     path === '.env.example' ||
+    // Both images. `frontend/Dockerfile` matched nothing here and reached
+    // Compose only via the old "first push of a PR" escalation, so it silently
+    // stopped selecting Compose on every later push of the same PR.
     path === 'Dockerfile' ||
+    path.endsWith('/Dockerfile') ||
     path.startsWith('docker-compose') ||
     path.startsWith('migrations/') ||
+    // The migrate service runs `alembic upgrade head`, and `up` blocks on it.
+    path === 'backend/alembic.ini' ||
     path === 'backend/pyproject.toml' ||
     path === 'backend/uv.lock' ||
     path === 'frontend/package.json' ||
@@ -132,7 +147,7 @@ function isComposeSensitive(path) {
   );
 }
 
-export function classifyPaths(paths, { full = false, initial = false } = {}) {
+export function classifyPaths(paths, { full = false } = {}) {
   if (full) {
     return {
       backend: true,
@@ -160,21 +175,19 @@ export function classifyPaths(paths, { full = false, initial = false } = {}) {
     contract,
     e2e: unowned.some((path) => !isNonBrowserTooling(path)) || e2eFiles.length > 0,
     security: shared || normalized.some(isSecuritySensitive),
-    compose:
-      normalized.some(isComposeSensitive) ||
-      (initial && normalized.some((path) => isBackend(path) || isFrontend(path) || !isDocumentation(path))),
+    compose: normalized.some(isComposeSensitive),
   };
 }
 
 export function selectDiff({ eventName, action, beforeSha, baseSha, headSha, previousRunTrusted = true }) {
-  if (eventName !== 'pull_request') return { full: true, initial: false, range: null };
+  if (eventName !== 'pull_request') return { full: true, range: null };
 
   const usableBefore = beforeSha && !/^0+$/.test(beforeSha);
   if (action === 'synchronize' && usableBefore && previousRunTrusted) {
-    return { full: false, initial: false, range: `${beforeSha}..${headSha}` };
+    return { full: false, range: `${beforeSha}..${headSha}` };
   }
   if (!baseSha) throw new Error('CI_BASE_SHA is required for the initial pull-request diff.');
-  return { full: false, initial: true, range: `${baseSha}...${headSha}` };
+  return { full: false, range: `${baseSha}...${headSha}` };
 }
 
 function changedPaths(range) {
@@ -194,7 +207,6 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
       ? ['Classify affected owners', 'Clean-clone Compose smoke', 'Required']
       : [
           'Classify affected owners',
-          'Common gates',
           'Backend (quality, pytest)',
           'Frontend (quality, coverage, build)',
           'API contract (backend to frontend)',

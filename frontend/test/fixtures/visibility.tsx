@@ -10,6 +10,7 @@ import {
 } from '@/lib/api/schemas/visibility-evidence';
 import { visibilityTrendPointSchema } from '@/lib/api/schemas/visibility-trends';
 import { ProjectProvider } from '@/lib/project/project-context';
+import { makeProject as makeProjectFixture } from '@/test/fixtures/project';
 import VisibilityPage from '@/app/(authed)/(app)/visibility/page';
 import { setupMswPageTests } from '@/test/fixtures/msw-page-lifecycle';
 import { mswServer } from '@/test/msw-server';
@@ -33,27 +34,7 @@ const PROMPT_A = '77777777-7777-4777-8777-777777777777';
 const SNAP_A = '88888888-8888-4888-8888-888888888888';
 
 export function makeProject(): Project {
-  return {
-    id: PROJECT_ID,
-    workspace_id: WORKSPACE_ID,
-    name: 'CiteLadder',
-    brand_name: 'Acme',
-    website_url: 'https://acme.com',
-    industry: 'General',
-    subindustry: '',
-    primary_market: 'US',
-    country_code: 'US',
-    language_code: 'en',
-    benchmark_mode: 'consumer_like',
-    default_repetitions: 3,
-    brand: { aliases: [] },
-    owned_domains: [],
-    unintended_domains: [],
-    competitors: [],
-    prompt_sets: [],
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
-  };
+  return makeProjectFixture({ id: PROJECT_ID, workspace_id: WORKSPACE_ID, name: 'CiteLadder' });
 }
 
 export function makeAudit(id: string, completedAt: string): Audit {

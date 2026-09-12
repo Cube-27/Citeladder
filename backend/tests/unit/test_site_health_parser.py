@@ -609,7 +609,7 @@ _V2_PAGE = b"""
 """
 
 
-def test_extractor_version_is_sh_extractor_13():
+def test_extractor_version_is_sh_extractor_1():
     # sh-extractor-1 includes targeted visible byline/date facts while retaining
     # the explicit breadcrumb relationship URLs of v12.
     assert EXTRACTOR_VERSION == "sh-extractor-1"

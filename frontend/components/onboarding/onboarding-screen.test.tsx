@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 
 import type { BrandDiscovery } from '@/lib/api/brand-discoveries';
 import { mswServer } from '@/test/msw-server';
+import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 import { OnboardingScreen } from './onboarding-screen';
@@ -27,27 +28,11 @@ let searchParams = '';
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 /** What `GET /projects/{id}` returns for the project the completion creates. */
-const createdProject = {
+const createdProject = makeProject({
   id: PROJECT_ID,
   workspace_id: WORKSPACE_ID,
-  name: 'Acme',
-  brand_name: 'Acme',
   website_url: 'https://example.com',
-  industry: 'General',
-  subindustry: '',
-  primary_market: 'US',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
+});
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/projects',

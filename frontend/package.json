@@ -77,7 +77,7 @@
     "vitest": "^4.1.11"
   },
   "engines": {
-    "node": ">=20.19"
+    "node": ">=22"
   },
   "browserslist": [
     "chrome >= 111",

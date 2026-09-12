@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+# See ci.yml: only pull-request runs are superseded.
+concurrency:
+  group: compose-smoke-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   changes:
     name: Classify affected owners
@@ -45,25 +50,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
-        with:
-          python-version: "3.12"
-
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-        with:
-          package_json_file: frontend/package.json
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Verify frozen dependency installs
-        run: |
-          uv sync --frozen --extra dev --no-install-project --no-build --directory backend
-          pnpm --dir frontend install --frozen-lockfile --ignore-scripts
+      # No host toolchain and no host dependency install. The images install
+      # their own dependencies frozen -- `uv sync --frozen` (Dockerfile) and
+      # `pnpm install --frozen-lockfile` (frontend/Dockerfile) -- so a stale
+      # lockfile fails the build below. The backend and frontend CI jobs
+      # additionally install frozen on the host, and both lockfiles classify as
+      # security- AND compose-sensitive, so they always select those jobs.
 
       - name: Create disposable Compose environment
         run: |
@@ -83,6 +75,11 @@ jobs:
           LOGFIRE_TOKEN=
           EOF
 
+      # Built cold on purpose, with no BuildKit layer cache. Measured over 60
+      # runs of this workflow the whole job is ~2 minutes and `next build` --
+      # its single most expensive layer -- takes 22 seconds. Cross-run caching
+      # would need the docker-container driver plus bake delegation to save
+      # seconds. Revisit if this job ever passes ~8 minutes.
       - name: Build and start empty-database stack
         run: |
           set -euo pipefail
@@ -130,13 +127,13 @@ jobs:
           for _ in $(seq 1 45); do
             if curl --fail --silent --show-error --output /var/tmp/catalog.json \
               http://127.0.0.1:3000/api/v1/brand-discovery-catalog; then
-              python -m json.tool /var/tmp/catalog.json > /dev/null && break
+              python3 -m json.tool /var/tmp/catalog.json > /dev/null && break
             fi
             sleep 2
           done
           curl --fail --silent --show-error --output /var/tmp/catalog.json \
             http://127.0.0.1:3000/api/v1/brand-discovery-catalog
-          python -m json.tool /var/tmp/catalog.json > /dev/null
+          python3 -m json.tool /var/tmp/catalog.json > /dev/null
 
           "${compose[@]}" down --volumes --remove-orphans
           trap - EXIT

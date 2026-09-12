@@ -9,6 +9,7 @@ import {
 } from '@/lib/api/schemas/project';
 import { visibilityExecutionEvidenceSchema } from '@/lib/api/schemas/visibility-evidence';
 import { ProjectProvider } from '@/lib/project/project-context';
+import { makeProject as makeProjectFixture } from '@/test/fixtures/project';
 import PromptsPage from '@/app/(authed)/(app)/prompts/page';
 import { setupMswPageTests } from '@/test/fixtures/msw-page-lifecycle';
 import { mswServer } from '@/test/msw-server';
@@ -113,27 +114,14 @@ export function makeSet(prompts: Prompt[]): PromptSet {
 }
 
 export function makeProject(promptSets: PromptSet[]): Project {
-  return {
+  return makeProjectFixture({
     id: PROJECT_ID,
     workspace_id: WORKSPACE_ID,
     name: 'CiteLadder',
     brand_name: 'CiteLadder',
     website_url: 'https://citeladder.com',
-    industry: 'General',
-    subindustry: '',
-    primary_market: 'US',
-    country_code: 'US',
-    language_code: 'en',
-    benchmark_mode: 'consumer_like',
-    default_repetitions: 3,
-    brand: { aliases: [] },
-    owned_domains: [],
-    unintended_domains: [],
-    competitors: [],
     prompt_sets: promptSets,
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
-  };
+  });
 }
 
 export function usePromptPageHandlers(
