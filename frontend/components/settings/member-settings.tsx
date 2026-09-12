@@ -70,7 +70,11 @@ export function MemberSettings() {
    * workspace we have left is dropped rather than rendered.
    */
   const keepToken = (issued: { token: string }, origin: string) => {
-    if (origin === workspaceId) setIssuedToken(issued.token);
+    if (origin !== workspaceId) return;
+    setIssuedToken(issued.token);
+    // The dialog is the only place the link is shown, and a resend from the
+    // pending table happens with it closed.
+    setInviteOpen(true);
     refresh();
   };
 

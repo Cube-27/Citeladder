@@ -100,6 +100,7 @@ function measurementSub(state: string | undefined, coverage: number | null | und
 function coverageSub(state: string | undefined): string {
   if (state === 'limited_evidence') return 'Partial evidence across applicable pillars';
   if (state === 'excluded') return 'Excluded from this audit';
+  if (state === 'not_measured' || !state) return 'Not measured';
   return 'Determinate evidence across applicable pillars';
 }
 

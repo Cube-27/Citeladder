@@ -17,8 +17,10 @@ import { PageHeader } from '@/components/layout/page-header';
 export default function SettingsPage() {
   return (
     <Suspense>
-      <PageHeader />
-      <SettingsScreen />
+      <div className="grid gap-[var(--workspace-gap)]">
+        <PageHeader />
+        <SettingsScreen />
+      </div>
     </Suspense>
   );
 }

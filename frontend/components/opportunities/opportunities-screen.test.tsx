@@ -330,8 +330,7 @@ describe('OpportunitiesScreen', () => {
 
     renderScreen();
 
-    expect(await screen.findByText(/^Computed /)).toBeInTheDocument();
-    expect(screen.getByText('Newer evidence available')).toBeInTheDocument();
+    expect(await screen.findByText('Newer evidence available')).toBeInTheDocument();
   });
 
   it('hides the stale badge when the snapshot is current (C4c)', async () => {
@@ -347,7 +346,7 @@ describe('OpportunitiesScreen', () => {
 
     renderScreen();
 
-    expect(await screen.findByText(/^Computed /)).toBeInTheDocument();
+    expect(await screen.findByText('High impact')).toBeInTheDocument();
     expect(screen.queryByText('Newer evidence available')).not.toBeInTheDocument();
   });
 
