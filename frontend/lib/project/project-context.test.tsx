@@ -162,6 +162,47 @@ describe('ProjectProvider', () => {
     expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBe(WORKSPACE_A);
   });
 
+  it('holds the URL workspace after the canonical replace stops naming it', async () => {
+    // `projectDestination` drops `?workspace=` when it writes `?project=`, and
+    // the shell does exactly that rewrite the moment a project resolves. With
+    // the workspace remembered only in the address, the render in between fell
+    // back to the FIRST membership and asked for its project list — a request
+    // against a workspace the reader is not looking at, and a loader flash
+    // before the project detail pulled it back.
+    const headers: (string | null)[] = [];
+    mswServer.use(
+      workspaceList(WORKSPACE_A, WORKSPACE_B),
+      http.get('/api/v1/projects', ({ request }) => {
+        const header = request.headers.get('x-workspace-id');
+        headers.push(header);
+        return HttpResponse.json(
+          header === WORKSPACE_B
+            ? [project(PROJECT_2, 'Beta', WORKSPACE_B)]
+            : [project(PROJECT_1, 'Acme')],
+        );
+      }),
+      http.get('/api/v1/projects/:id', () =>
+        HttpResponse.json(project(PROJECT_2, 'Beta', WORKSPACE_B)),
+      ),
+    );
+
+    search = new URLSearchParams({ workspace: WORKSPACE_B });
+    const view = renderProvider();
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Beta'));
+
+    // The rewrite the shell performs: `?workspace=` out, `?project=` in.
+    search = new URLSearchParams({ project: PROJECT_2 });
+    view.rerender(
+      <ProjectProvider>
+        <Harness />
+      </ProjectProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Beta'));
+    expect(screen.getByTestId('workspace')).toHaveTextContent(WORKSPACE_B);
+    expect(headers.every((header) => header === WORKSPACE_B)).toBe(true);
+  });
+
   it('changes the active project on selection and persists it', async () => {
     mswServer.use(
       http.get('/api/v1/projects', () =>
