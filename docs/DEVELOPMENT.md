@@ -11,7 +11,7 @@ environment gotchas that otherwise waste substantial time. Pair this with
 |------|---------|-------|
 | Python | 3.12+ | Backend |
 | [`uv`](https://docs.astral.sh/uv/) | latest | Backend dependency + venv manager |
-| Node.js | 22+ | Frontend |
+| Node.js | 22+ | Frontend. 22 is the SUPPORTED MINIMUM and the version CI validates; `engines.node` says `>=22` in both `package.json` files. The production frontend image pins Node 26 deliberately (`frontend/Dockerfile`) -- newer than CI, so treat a Node-26-only failure as a release-time finding, not a CI gap. Raise the minimum only by moving CI and both `engines` together. |
 | pnpm | 11.9+ | Frontend package manager; pinned in `frontend/package.json` |
 | PostgreSQL | 15+ | Via Docker or local |
 | Docker + Compose | latest | Local stack |

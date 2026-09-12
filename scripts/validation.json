@@ -101,7 +101,6 @@
       "sources": [
         "frontend/package.json",
         "frontend/pnpm-lock.yaml",
-        "frontend/knip.jsonc",
         "frontend/vitest.config.ts",
         "frontend/tsconfig.json"
       ],
@@ -117,6 +116,24 @@
         "frontend/test/fixtures/msw-page-lifecycle.ts"
       ],
       "frontendTests": [
+        "app/(authed)/(app)/prompts/page.test.tsx",
+        "app/(authed)/(app)/prompts/page.manage.test.tsx",
+        "app/(authed)/(app)/visibility/page.test.tsx",
+        "app/(authed)/(app)/visibility/page.evidence.test.tsx",
+        "lib/runs/launch.test.ts"
+      ]
+    },
+    {
+      "sources": ["frontend/test/fixtures/project.ts"],
+      "frontendTests": [
+        "components/content/content-screen.test.tsx",
+        "components/onboarding/onboarding-screen.test.tsx",
+        "components/opportunities/opportunities-screen.test.tsx",
+        "components/projects/project-edit-panel.test.tsx",
+        "components/site-health/site-health-screen.test.tsx",
+        "components/site-health/site-health-screen-terminal-states.test.tsx",
+        "lib/auth/use-auth-mutation.test.tsx",
+        "lib/project/project-context.test.tsx",
         "app/(authed)/(app)/prompts/page.test.tsx",
         "app/(authed)/(app)/prompts/page.manage.test.tsx",
         "app/(authed)/(app)/visibility/page.test.tsx",
@@ -496,41 +513,83 @@
     {
       "sources": [
         "backend/app/domain/mcp/**",
-        "backend/app/models/mcp.py",
-        "backend/tests/component/test_mcp.py"
+        "backend/app/models/mcp.py"
       ],
       "backendTests": ["tests/component/test_mcp.py"]
     },
     {
       "sources": [
-        "backend/app/demo/**",
         "backend/app/domain/auth/**",
-        "backend/app/domain/workspaces/**",
-        "backend/app/domain/projects/**",
-        "backend/app/connectors/keenable.py",
-        "backend/evaluations/onboarding_identity_competitor_cases.py",
-        "backend/app/domain/abuse/**",
         "backend/app/api/auth.py",
         "backend/app/api/oauth.py",
         "backend/app/api/rate_limit.py",
         "backend/app/connectors/auth_oauth.py",
-        "backend/app/models/user_identity.py",
-        "backend/app/api/projects.py",
-        "backend/app/api/workspaces.py",
         "backend/app/models/user.py",
-        "backend/app/models/workspace.py",
-        "backend/app/models/project.py",
-        "backend/app/models/abuse.py",
-        "backend/app/models/constants.py",
-        "backend/app/models/__init__.py"
+        "backend/app/models/user_identity.py"
       ],
+      "backendTests": [
+        "tests/unit/test_security.py",
+        "tests/unit/test_oauth_config.py",
+        "tests/unit/test_workspace_auth.py",
+        "tests/component/test_auth_api.py",
+        "tests/component/test_oauth_api.py",
+        "tests/component/test_abuse_controls.py"
+      ]
+    },
+    {
+      "sources": ["backend/app/domain/abuse/**", "backend/app/models/abuse.py"],
+      "backendTests": ["tests/component/test_abuse_controls.py"]
+    },
+    {
+      "sources": [
+        "backend/app/domain/workspaces/**",
+        "backend/app/api/workspaces.py",
+        "backend/app/models/workspace.py"
+      ],
+      "backendTests": [
+        "tests/unit/test_workspace_auth.py",
+        "tests/component/test_auth_api.py",
+        "tests/component/test_workspace_product_tour.py",
+        "tests/component/test_projects_prompts_api.py",
+        "tests/component/test_entitlement_occupancy.py"
+      ]
+    },
+    {
+      "sources": [
+        "backend/app/domain/projects/**",
+        "backend/app/api/projects.py",
+        "backend/app/models/project.py",
+        "backend/app/connectors/keenable.py",
+        "backend/evaluations/onboarding_identity_competitor_cases.py"
+      ],
+      "backendTests": [
+        "tests/unit/test_project_*.py",
+        "tests/unit/test_onboarding_*.py",
+        "tests/unit/test_business_context_profile.py",
+        "tests/unit/test_keenable.py",
+        "tests/component/test_command_center.py",
+        "tests/component/test_agent_worker.py",
+        "tests/component/test_entitlement_occupancy.py",
+        "tests/component/test_projects_prompts_api.py",
+        "tests/component/test_prompt_generation_api.py",
+        "tests/component/test_traffic_sync_api.py"
+      ]
+    },
+    {
+      "sources": ["backend/app/demo/**"],
+      "backendTests": [
+        "tests/component/test_demo_bootstrap.py",
+        "tests/component/test_auth_api.py"
+      ]
+    },
+    {
+      "sources": ["backend/app/models/__init__.py", "backend/app/models/constants.py"],
       "backendTests": [
         "tests/unit/test_workspace_auth.py",
         "tests/unit/test_project_*.py",
         "tests/unit/test_business_context_profile.py",
         "tests/unit/test_keenable.py",
         "tests/unit/test_onboarding_*.py",
-        "tests/unit/test_onboarding_research_helpers.py",
         "tests/unit/test_security.py",
         "tests/component/test_auth_api.py",
         "tests/component/test_abuse_controls.py",

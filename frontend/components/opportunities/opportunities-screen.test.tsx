@@ -4,6 +4,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
+import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 import { ProjectProvider, useProjectContext } from '@/lib/project/project-context';
 import { opportunitySummaryPollingInterval } from './opportunity-summary-polling';
@@ -33,27 +34,7 @@ it('stops summary polling after an uncached request error', () => {
   expect(opportunitySummaryPollingInterval({ status: 'error' })).toBe(false);
 });
 
-const project = {
-  id: PROJECT,
-  workspace_id: WORKSPACE,
-  name: 'Acme',
-  brand_name: 'Acme',
-  website_url: 'https://acme.com',
-  industry: 'General',
-  subindustry: '',
-  primary_market: 'US',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
+const project = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
 
 function opportunity(overrides: Record<string, unknown> = {}) {
   return {

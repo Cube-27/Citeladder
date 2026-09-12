@@ -9,6 +9,7 @@ import {
   ACTIVE_WORKSPACE_STORAGE_KEY,
 } from '@/lib/project/active-project-storage';
 import { mswServer } from '@/test/msw-server';
+import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 let search = new URLSearchParams();
@@ -44,27 +45,13 @@ function workspace(id: string, name: string) {
 }
 
 function project(id: string, name: string, workspaceId = WORKSPACE_A) {
-  return {
+  return makeProject({
     id,
     workspace_id: workspaceId,
     name,
     brand_name: name,
     website_url: 'https://example.com',
-    industry: 'General',
-    subindustry: '',
-    primary_market: 'US',
-    country_code: 'US',
-    language_code: 'en',
-    benchmark_mode: 'consumer_like',
-    default_repetitions: 3,
-    brand: { aliases: [] },
-    owned_domains: [],
-    unintended_domains: [],
-    competitors: [],
-    prompt_sets: [],
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
-  };
+  });
 }
 
 /** The default membership answer: one workspace, which is the shipped shape. */

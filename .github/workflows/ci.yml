@@ -6,6 +6,13 @@ on:
   pull_request:
   merge_group:
 
+# Supersede in-flight PR runs only. `main` and `merge_group` runs each get a
+# unique group (run_id), so a queued merge or a branch push is never cancelled
+# by a later one -- those results are the record, not a preview.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   changes:
     name: Classify affected owners
@@ -25,6 +32,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      # The classifier decides every other job's scope, so prove it here rather
+      # than on a second runner that checks out the same tree to do nothing else.
+      - name: CI classifier tests
+        run: node --test scripts/ci-changes.test.mjs
       - name: Select required owners
         id: classify
         env:
@@ -36,20 +47,6 @@ jobs:
           GITHUB_EVENT_ACTION: ${{ github.event.action }}
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/ci-changes.mjs
-
-  common:
-    name: Common gates
-    permissions:
-      contents: read
-    needs: changes
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: CI classifier tests
-        run: node --test scripts/ci-changes.test.mjs
 
   backend:
     name: Backend (quality, pytest)
@@ -218,6 +215,10 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+      # Not cached on purpose. Measured across recent runs this whole step is
+      # 20-32s, most of it the `--with-deps` apt install, which no browser
+      # cache can skip. A cache restore would save ~10s and cost its own
+      # restore time, so it does not pay for the extra moving part.
       - name: Install Playwright browser
         run: ./node_modules/.bin/playwright install --with-deps chromium
       - name: Playwright
@@ -266,13 +267,12 @@ jobs:
     name: Required
     permissions: {}
     if: always()
-    needs: [changes, common, backend, frontend, contract, e2e, security]
+    needs: [changes, backend, frontend, contract, e2e, security]
     runs-on: ubuntu-latest
     steps:
       - name: Require selected quality owners
         run: |
           test "${{ needs.changes.result }}" = "success"
-          test "${{ needs.common.result }}" = "success"
           for owner in backend frontend contract e2e security; do
             expected="${{ needs.changes.outputs.backend }}"
             result="${{ needs.backend.result }}"

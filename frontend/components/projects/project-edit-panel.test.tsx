@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Project } from '@/lib/api/types';
 import { mswServer } from '@/test/msw-server';
+import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 import { ProjectEditPanel } from './project-edit-panel';
@@ -32,27 +32,22 @@ afterAll(() => mswServer.close());
 
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 
-const project = {
+// The competitor carries its id, so the fixture satisfies Project outright; the
+// previous literal needed an `as unknown as Project` cast to hide its absence.
+const project = makeProject({
   id: PROJECT_ID,
   workspace_id: '22222222-2222-4222-8222-222222222222',
-  name: 'Acme',
-  brand_name: 'Acme',
-  website_url: 'https://acme.com',
-  industry: 'General',
-  subindustry: '',
-  primary_market: 'US',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
   brand: { aliases: ['Acme Inc'] },
   owned_domains: ['acme.com'],
-  unintended_domains: [],
-  competitors: [{ name: 'Globex', aliases: ['Globex Corp'], domains: ['globex.com'] }],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-} as unknown as Project;
+  competitors: [
+    {
+      id: '44444444-4444-4444-8444-444444444444',
+      name: 'Globex',
+      aliases: ['Globex Corp'],
+      domains: ['globex.com'],
+    },
+  ],
+});
 
 describe('ProjectEditPanel', () => {
   it('sends the edited fields and preserves competitor aliases it does not edit', async () => {

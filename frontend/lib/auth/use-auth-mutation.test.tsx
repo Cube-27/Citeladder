@@ -9,6 +9,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
 import { mswServer } from '@/test/msw-server';
+import { makeProject } from '@/test/fixtures/project';
 
 import { useAuthMutation } from './use-auth-mutation';
 
@@ -24,27 +25,10 @@ const sessionUser = {
   updated_at: '2026-01-01T00:00:00Z',
 };
 
-const project = {
+const project = makeProject({
   id: '22222222-2222-4222-8222-222222222222',
-  workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  name: 'Acme',
-  brand_name: 'Acme',
   website_url: 'https://example.com',
-  industry: 'General',
-  subindustry: '',
-  primary_market: 'US',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
+});
 
 function setup(mutationFn: () => Promise<typeof sessionUser> = () => Promise.resolve(sessionUser)) {
   const queryClient = createAppQueryClient();

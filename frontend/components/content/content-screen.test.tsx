@@ -5,6 +5,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 
 import { ProjectProvider } from '@/lib/project/project-context';
 import { mswServer } from '@/test/msw-server';
+import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 import { ContentScreen } from './content-screen';
@@ -14,27 +15,13 @@ const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const GENERATION = '33333333-3333-4333-8333-333333333333';
 
-const project = {
+const project = makeProject({
   id: PROJECT,
   workspace_id: WORKSPACE,
-  name: 'Acme',
-  brand_name: 'Acme',
   website_url: 'https://acme.test',
-  country_code: 'US',
-  language_code: 'en',
   industry: 'Software',
   subindustry: 'Analytics',
-  primary_market: 'US',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
+});
 
 function generation(overrides: Record<string, unknown> = {}) {
   return {

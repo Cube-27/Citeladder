@@ -16,12 +16,10 @@ trustPolicy: no-downgrade
 # widespread provenance publishing and trip the check for benign reasons.
 # Anything newer must keep (or strengthen) its trust evidence.
 trustPolicyIgnoreAfter: 525600
-# Pinned exceptions: recent versions that trip the downgrade check for benign
-# reasons (e.g. a release published without provenance while earlier ones had
-# it). Reviewed individually; keep this list short and exact.
-trustPolicyExclude:
-  - 'undici-types@6.21.0'
-  - 'eslint-import-resolver-typescript@3.10.1'
+# Pinned exceptions (currently none): recent versions that trip the downgrade
+# check for benign reasons, e.g. a release published without provenance while
+# earlier ones had it. Reviewed individually; keep this list short and exact,
+# and delete an entry as soon as the resolved tree no longer contains it.
 
 # Force the transitive postcss (Next pulls 8.4.31) up to a patched line
 # (CVE-2026-41305). pnpm 10+ reads overrides here, not from package.json.

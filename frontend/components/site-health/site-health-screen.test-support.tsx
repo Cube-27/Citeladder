@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 import { mswServer } from '@/test/msw-server';
+import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 import {
   COMPLETE_CLASSIFICATION_PROJECTION,
@@ -26,27 +27,7 @@ const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const CRAWL = '22222222-2222-4222-8222-222222222222';
 
-const project = {
-  id: PROJECT,
-  workspace_id: WORKSPACE,
-  name: 'Acme',
-  brand_name: 'Acme',
-  website_url: 'https://acme.com',
-  industry: 'General',
-  subindustry: '',
-  primary_market: 'US',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
+const project = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
 
 const entitlement = {
   workspace_id: WORKSPACE,
