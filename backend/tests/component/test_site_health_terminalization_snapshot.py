@@ -279,8 +279,19 @@ async def test_terminal_reconciliation_excludes_late_system_alias_only(
         assert crawl.status == CRAWL_STATUS_COMPLETED
         analyses = await _analyses_by_page_url(session, seed)
         assert analyses[canonical].is_current is True
-        assert analyses[system_alias].is_current is False
+        assert system_alias not in analyses
         assert analyses[user_alias].is_current is True
+        excluded_analysis = await session.scalar(
+            select(SitePageAnalysis)
+            .join(SiteUrl, SiteUrl.id == SitePageAnalysis.site_url_id)
+            .where(
+                SitePageAnalysis.crawl_id == seed.crawl_id,
+                SiteUrl.normalized_url == system_alias,
+            )
+            .order_by(SitePageAnalysis.created_at.desc())
+        )
+        assert excluded_analysis is not None
+        assert excluded_analysis.is_current is False
 
         url_rows = list(
             await session.scalars(
@@ -314,7 +325,7 @@ async def test_terminal_reconciliation_excludes_late_system_alias_only(
         alias_finalize_rules = list(
             await session.scalars(
                 select(SiteRuleEvaluation.rule_id).where(
-                    SiteRuleEvaluation.analysis_id == analyses[system_alias].id,
+                    SiteRuleEvaluation.analysis_id == excluded_analysis.id,
                     SiteRuleEvaluation.rule_id == "technical.hreflang_conflict",
                 )
             )
@@ -427,13 +438,12 @@ async def test_snapshot_uses_only_latest_completed_analysis_and_issues(
                 workspace_id=seed.workspace_id,
                 analysis_id=analysis.id,
                 source_artifact_id=artifact.id,
-                rule_id=("rule-0" if index == 0 else "technical.ttfb_band"),
+                rule_id=("rule-0" if index == 0 else "technical.title_present"),
                 dimension="technical",
                 category="stale" if index == 0 else "fresh",
                 severity="high",
                 weight=1.0,
                 outcome=RULE_OUTCOME_MISSING,
-                expected_profile_membership=True,
                 score_roles=["web_fundamentals"],
             )
             session.add(evaluation)
@@ -455,6 +465,8 @@ async def test_snapshot_uses_only_latest_completed_analysis_and_issues(
                     severity="high",
                 )
             )
+        analyses[1].source_evaluation_ids = [latest_evaluation_id]
+        analyses[1].finalized_at = same_created_at
         # This block stands in for the finalize-pass writer, so it flushes the
         # way that writer does: the snapshot aggregates issues with a SELECT,
         # and sessions here (like production's) do not autoflush.
@@ -465,8 +477,13 @@ async def test_snapshot_uses_only_latest_completed_analysis_and_issues(
         assert await refresh_live_score_summary(session, crawl=crawl)
         assert crawl.score_summary is not None
         assert crawl.score_summary["analyzed_count"] == 1
-        assert crawl.score_summary["web_fundamentals_score"] == 0.0
-        assert crawl.score_summary["web_fundamentals_state"] == "measured"
+        assert crawl.score_summary["issue_count"] == 1
+        assert crawl.score_summary["web_fundamentals_score"] is None
+        assert crawl.score_summary["web_fundamentals_state"] == "limited_evidence"
+        assert all(
+            row["web_fundamentals_score"] is None
+            for row in crawl.score_summary["by_page_kind"].values()
+        )
         # The same call the worker's terminalization makes (its
         # ``_persist_snapshot`` is a thin ``persist_empty=True`` delegation).
         await persist_crawl_snapshot(session, crawl=crawl, persist_empty=True)
@@ -530,16 +547,14 @@ async def test_snapshot_uses_only_latest_completed_analysis_and_issues(
             str(high_analysis_id)
         ]
         assert len(snapshot.aeo_readiness_diagnostic["dimensions"]) == 7
-        assert snapshot.web_fundamentals["state"] == "measured"
+        assert snapshot.web_fundamentals["state"] == "not_measured"
         assert snapshot.web_fundamentals["source_analysis_ids"] == [
             str(high_analysis_id)
         ]
         assert snapshot.web_fundamentals["source_artifact_ids"] == [
             str(latest_artifact_id)
         ]
-        assert snapshot.web_fundamentals["source_evaluation_ids"] == [
-            str(latest_evaluation_id)
-        ]
+        assert snapshot.web_fundamentals["source_evaluation_ids"] == []
 
     # A changed non-empty replay computes a different aggregate but loses the
     # immutable insert conflict. It must not overwrite the matching crawl
@@ -723,13 +738,10 @@ async def test_terminal_snapshot_freezes_classification_cohort_and_provenance(
         assert summary["scored_page_kind_set"] == ["article"]
         assert summary["scored_page_count_by_kind"] == {"article": 1}
         assert set(summary["by_page_kind"]) == {"article", "other"}
-        assert summary["by_page_kind"]["article"]["aeo_readiness_score"] is not None
+        assert summary["by_page_kind"]["article"]["aeo_readiness_score"] is None
         assert summary["by_page_kind"]["other"]["aeo_readiness_score"] is None
         assert snapshot.aeo_readiness_score == summary["aeo_readiness_score"]
-        assert (
-            snapshot.aeo_readiness_score
-            != summary["by_page_kind"]["article"]["aeo_readiness_score"]
-        )
+        assert snapshot.aeo_readiness_score is None
 
 
 @pytest.mark.asyncio
@@ -764,11 +776,15 @@ async def test_finalize_pass_hreflang_conflict_end_to_end(
         fr_analysis = by_url["https://example.com/fr"]
 
         async def _evals(analysis_id):
+            analysis = await session.get(SitePageAnalysis, analysis_id)
+            assert analysis is not None
             rows = (
                 (
                     await session.execute(
                         select(SiteRuleEvaluation).where(
-                            SiteRuleEvaluation.analysis_id == analysis_id
+                            SiteRuleEvaluation.id.in_(
+                                analysis.source_evaluation_ids or []
+                            )
                         )
                     )
                 )

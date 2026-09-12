@@ -11,7 +11,6 @@ from app.analysis.site_health.rules import rule_for
 from app.core.config.site_health_contracts import (
     RULE_OUTCOME_MISSING,
     RULE_OUTCOME_NOT_APPLICABLE,
-    RULE_OUTCOME_PARTIAL,
     RULE_OUTCOME_SATISFIED,
 )
 from app.core.config.site_health_measurement import (
@@ -28,8 +27,7 @@ def _area_state(rows: list[SiteRuleEvaluation]) -> tuple[str, float | None]:
     determinate = [
         row
         for row in applicable
-        if row.outcome
-        in (RULE_OUTCOME_SATISFIED, RULE_OUTCOME_PARTIAL, RULE_OUTCOME_MISSING)
+        if row.outcome in (RULE_OUTCOME_SATISFIED, RULE_OUTCOME_MISSING)
     ]
     expected = len(applicable)
     coverage = round(len(determinate) / expected, 4) if expected else None
@@ -90,6 +88,7 @@ async def web_fundamentals_projection(
     *,
     workspace_id: uuid.UUID,
     analysis_ids: list[uuid.UUID],
+    evaluation_ids: list[uuid.UUID],
     artifact_ids: list[uuid.UUID],
 ) -> dict:
     """Build the HTTP-evidence projection without acquisition or repair."""
@@ -99,12 +98,12 @@ async def web_fundamentals_projection(
                 select(SiteRuleEvaluation)
                 .where(
                     SiteRuleEvaluation.workspace_id == workspace_id,
-                    SiteRuleEvaluation.analysis_id.in_(analysis_ids),
+                    SiteRuleEvaluation.id.in_(evaluation_ids),
                 )
                 .order_by(SiteRuleEvaluation.id)
             )
         )
-        if analysis_ids
+        if evaluation_ids
         else []
     )
     by_area: dict[str, list[SiteRuleEvaluation]] = {

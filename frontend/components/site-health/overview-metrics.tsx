@@ -23,18 +23,19 @@ type MetricModel = {
   title: string;
   value: number | null;
   coverage: number | null;
-  coverageUnit?: 'analyzed' | 'measured';
-  confidence: string;
+  coverageUnit?: 'analyzed' | 'complete';
+  valueUnit?: 'score' | 'percent';
+  completion: string;
   detail: string;
   href: string;
   icon: typeof ICONS.site;
 };
 
-function confidence(state: string | undefined): string {
-  if (state === 'measured') return 'High confidence';
-  if (state === 'limited_evidence') return 'Moderate confidence';
+function completion(state: string | undefined): string {
+  if (state === 'measured') return 'Complete checklist';
+  if (state === 'limited_evidence') return 'Partial audit';
   if (state === 'excluded') return 'Excluded';
-  return 'Low confidence';
+  return 'Completion unavailable';
 }
 
 function percentRatio(value: number | null | undefined): number | null {
@@ -98,7 +99,7 @@ function technicalMetric(context: MetricContext): MetricModel {
     title: 'Web Fundamentals',
     value: score ?? null,
     coverage: coverage ?? null,
-    confidence: confidence(state),
+    completion: completion(state),
     detail: context.overview
       ? occurrenceDetail(
           context.overview.technical_defect_count,
@@ -123,7 +124,7 @@ function aeoMetric(context: MetricContext): MetricModel {
         : 'Readiness of classified audited pages',
     value: score ?? null,
     coverage: coverage ?? null,
-    confidence: confidence(state),
+    completion: completion(state),
     detail: context.overview
       ? occurrenceDetail(
           context.overview.aeo_readiness_gap_count,
@@ -147,13 +148,14 @@ function measurementMetric(context: MetricContext): MetricModel {
   const coverage = source?.aeo_measurement_coverage;
   const state = source?.aeo_measurement_state;
   return {
-    title: 'AEO Measurement Coverage',
+    title: 'AEO Checklist Completion',
+    valueUnit: 'percent',
     value: percentRatio(coverage),
     coverage: coverage ?? null,
-    confidence: confidence(state),
+    completion: completion(state),
     detail: context.overview
-      ? `${context.overview.measured_check_count} of ${context.overview.expected_check_count} checks measured`
-      : 'Determinate evidence across applicable pillars',
+      ? `${context.overview.measured_check_count} of ${context.overview.expected_check_count} checks completed`
+      : 'Completed checks across applicable pillars',
     href: '/site?tab=aeo-readiness',
     icon: ICONS.reports,
   };
@@ -167,7 +169,7 @@ function crawlMetric(context: MetricContext): MetricModel {
     value: progress,
     coverage: progress === null ? null : progress / 100,
     coverageUnit: 'analyzed',
-    confidence: terminalCoverage ? coverageStateLabel(terminalCoverage.state) : 'In progress',
+    completion: terminalCoverage ? coverageStateLabel(terminalCoverage.state) : 'In progress',
     detail: terminalCoverage
       ? `${context.analyzed} of ${context.selected || PLACEHOLDER} pages analyzed${coverageReason(terminalCoverage.evidence)}`
       : `${context.analyzed} of ${context.selected || PLACEHOLDER} pages analyzed`,
@@ -193,8 +195,9 @@ function OverviewMetricCard({
   title,
   value,
   coverage,
-  coverageUnit = 'measured',
-  confidence: confidenceLabel,
+  coverageUnit = 'complete',
+  valueUnit = 'score',
+  completion: completionLabel,
   detail,
   href,
   icon: Icon,
@@ -213,12 +216,20 @@ function OverviewMetricCard({
         {value === null ? (
           <UnavailableValue state="not_measured" />
         ) : (
-          <ScoreRing value={value} size={64} label={`${title} score: ${Math.round(value)}`} />
+          <ScoreRing
+            value={value}
+            size={64}
+            label={
+              valueUnit === 'percent'
+                ? `${title}: ${Math.round(value)}%`
+                : `${title} score: ${Math.round(value)}`
+            }
+          />
         )}
       </div>
       <div className="grid gap-1">
         <p className="text-muted text-xs">
-          {coverageLabel} · {confidenceLabel}
+          {coverageLabel} · {completionLabel}
         </p>
         <p className="text-secondary text-xs">{detail}</p>
       </div>

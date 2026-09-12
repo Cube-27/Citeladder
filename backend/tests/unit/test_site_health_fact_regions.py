@@ -33,7 +33,55 @@ from app.analysis.site_health.parser import extract_page_facts
 from app.analysis.site_health.rules import evaluate_rule, rule_for
 from app.core.config import site_health_taxonomy as config
 from app.core.config.site_health_acquisition import SITE_HEALTH_MAX_HEADING_CHARS
-from app.core.config.site_health_contracts import RULE_OUTCOME_MISSING
+from app.core.config.site_health_contracts import (
+    RULE_OUTCOME_MISSING,
+    RULE_OUTCOME_SATISFIED,
+)
+
+
+@pytest.mark.parametrize(
+    "secondary",
+    [
+        '<section role="search"><p>No results found.</p></section>',
+        '<section role="list" aria-label="Secondary"><p>No items found.</p></section>',
+        "<p>No items found.</p>",
+    ],
+)
+def test_empty_state_from_another_collection_does_not_describe_selected_listing(
+    secondary,
+):
+    root = lxml_html.fromstring(
+        '<main><section role="list" aria-label="Catalog">'
+        '<article><a href="/a">A</a></article>'
+        '<article><a href="/b">B</a></article>'
+        f"</section>{secondary}</main>"
+    )
+    listing = extract_entity_signals(root)["listing"]
+
+    assert listing["collection_evidence"]["container"]["label"] == "Catalog"
+    assert listing["has_empty_state"] is False
+
+
+def test_empty_state_inside_selected_collection_is_preserved():
+    root = lxml_html.fromstring(
+        '<main><section role="list" aria-label="Catalog">'
+        "<p>No products found.</p></section></main>"
+    )
+    assert extract_entity_signals(root)["listing"]["has_empty_state"] is True
+
+
+def test_outer_collection_empty_state_does_not_describe_nested_catalog():
+    root = lxml_html.fromstring(
+        '<main><section role="list"><p>No results found.</p>'
+        '<section role="list" aria-label="Catalog">'
+        '<article><a href="/a">A</a></article>'
+        '<article><a href="/b">B</a></article>'
+        "</section></section></main>"
+    )
+    listing = extract_entity_signals(root)["listing"]
+    assert listing["collection_evidence"]["container"]["label"] == "Catalog"
+    assert listing["has_empty_state"] is False
+
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "site_health"
 
@@ -246,8 +294,10 @@ def test_unanswered_observed_questions_stay_in_faq_evaluation() -> None:
     assert assessment.page_kind == "faq"
     facts["page_kind"] = assessment.page_kind
     evaluation = evaluate_rule(rule_for("aeo.question_headings"), facts)
-    assert evaluation.outcome == RULE_OUTCOME_MISSING
-    assert evaluation.evidence["reason"] == "question_answer_missing"
+    assert evaluation.outcome == RULE_OUTCOME_SATISFIED
+    answer = evaluate_rule(rule_for("aeo.answer_first"), facts)
+    assert answer.outcome == RULE_OUTCOME_MISSING
+    assert answer.evidence["reason"] == "question_answer_missing"
 
 
 def test_bare_auxiliary_heading_requires_question_mark() -> None:
@@ -514,6 +564,7 @@ def test_product_signals_ignore_the_recommendation_carousel() -> None:
         "has_purchase_control": False,
         "has_variant_control": False,
         "has_sku_marker": False,
+        "brand_names": [],
     }
 
 

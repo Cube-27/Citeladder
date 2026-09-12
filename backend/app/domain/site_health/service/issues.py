@@ -122,10 +122,8 @@ def _issue_filter_clause(
         # v2 P1: narrow to issues whose analysis classified as this page
         # type (ignore-unknown: an unrecognized value simply matches nothing).
         clauses.append(
-            SiteIssue.analysis_id.in_(
-                select(SitePageAnalysis.id).where(
-                    SitePageAnalysis.page_kind == page_kind
-                )
+            SiteIssue.evaluation_id.in_(
+                _current_evaluation_ids(crawl_id, page_kind=page_kind)
             )
         )
     if finding_class:
@@ -139,13 +137,19 @@ def _current_issue_clauses(crawl_id: uuid.UUID) -> tuple[Any, ...]:
     """Restrict a crawl projection to issues from its current analyses."""
     return (
         SiteIssue.crawl_id == crawl_id,
-        SiteIssue.analysis_id.in_(
-            select(SitePageAnalysis.id).where(
-                SitePageAnalysis.crawl_id == crawl_id,
-                SitePageAnalysis.is_current.is_(True),
-            )
-        ),
+        SiteIssue.evaluation_id.in_(_current_evaluation_ids(crawl_id)),
     )
+
+
+def _current_evaluation_ids(crawl_id: uuid.UUID, *, page_kind: str | None = None):
+    clauses = [
+        SitePageAnalysis.crawl_id == crawl_id,
+        SitePageAnalysis.is_current.is_(True),
+        SitePageAnalysis.finalized_at.is_not(None),
+    ]
+    if page_kind:
+        clauses.append(SitePageAnalysis.page_kind == page_kind)
+    return select(func.unnest(SitePageAnalysis.source_evaluation_ids)).where(*clauses)
 
 
 async def _load_issue_groups(
@@ -405,7 +409,12 @@ async def _page_kinds_for_rules(
             SiteIssue.rule_id,
             func.array_agg(func.distinct(SitePageAnalysis.page_kind)),
         )
-        .join(SitePageAnalysis, SitePageAnalysis.id == SiteIssue.analysis_id)
+        .join(
+            SitePageAnalysis,
+            (SitePageAnalysis.crawl_id == SiteIssue.crawl_id)
+            & (SitePageAnalysis.site_url_id == SiteIssue.site_url_id)
+            & (SitePageAnalysis.is_current.is_(True)),
+        )
         .where(
             *_current_issue_clauses(crawl_id),
             SiteIssue.rule_id.in_(rule_ids),
@@ -439,7 +448,12 @@ async def issue_group_page_kinds(
             SiteIssue.rule_id,
             func.array_agg(func.distinct(SitePageAnalysis.page_kind)),
         )
-        .join(SitePageAnalysis, SitePageAnalysis.id == SiteIssue.analysis_id)
+        .join(
+            SitePageAnalysis,
+            (SitePageAnalysis.crawl_id == SiteIssue.crawl_id)
+            & (SitePageAnalysis.site_url_id == SiteIssue.site_url_id)
+            & (SitePageAnalysis.is_current.is_(True)),
+        )
         .where(*_current_issue_clauses(crawl_id))
         .group_by(SiteIssue.rule_id)
     )
@@ -616,7 +630,12 @@ def _occurrence_statement(crawl_id: uuid.UUID, rule_id: str, finding_class: str)
             SiteRuleEvaluation.reason_code,
         )
         .join(SiteIssue, SiteIssue.site_url_id == SiteUrl.id)
-        .join(SitePageAnalysis, SitePageAnalysis.id == SiteIssue.analysis_id)
+        .join(
+            SitePageAnalysis,
+            (SitePageAnalysis.crawl_id == SiteIssue.crawl_id)
+            & (SitePageAnalysis.site_url_id == SiteIssue.site_url_id)
+            & (SitePageAnalysis.is_current.is_(True)),
+        )
         .join(SiteRuleEvaluation, SiteRuleEvaluation.id == SiteIssue.evaluation_id)
         .where(
             *_current_issue_clauses(crawl_id),

@@ -61,7 +61,7 @@ export function ScoreSection({
             sub={measurementSub(summary?.aeo_measurement_state, summary?.aeo_measurement_coverage)}
           />
           <ScoreCard
-            label="AEO Measurement Coverage"
+            label="AEO Checklist Completion"
             value={coverage}
             state={summary?.aeo_measurement_state}
             // "Determinate" is a claim about the evidence, so it cannot stand
@@ -83,13 +83,13 @@ function scoredValue(value: number | null | undefined): number | null {
 }
 
 function measurementSub(state: string | undefined, coverage: number | null | undefined): string {
-  const measured =
-    coverage === null || coverage === undefined ? null : `${Math.round(coverage * 100)}% measured`;
+  const completion =
+    coverage === null || coverage === undefined ? null : `${Math.round(coverage * 100)}% complete`;
   if (state === 'limited_evidence')
-    return measured ? `${measured} · Limited confidence` : 'Limited confidence';
-  if (state === 'not_measured' || !state) return 'Not measured';
+    return completion ? `${completion} · Partial audit` : 'Partial audit';
+  if (state === 'not_measured' || !state) return 'Completion unavailable';
   if (state === 'excluded') return 'Excluded from this audit';
-  return measured ?? 'Measured';
+  return completion ?? 'Complete checklist';
 }
 
 /**
@@ -98,10 +98,10 @@ function measurementSub(state: string | undefined, coverage: number | null | und
  * determinate.
  */
 function coverageSub(state: string | undefined): string {
-  if (state === 'limited_evidence') return 'Partial evidence across applicable pillars';
+  if (state === 'limited_evidence') return 'Partial audit';
   if (state === 'excluded') return 'Excluded from this audit';
-  if (state === 'not_measured' || !state) return 'Not measured';
-  return 'Determinate evidence across applicable pillars';
+  if (state === 'not_measured' || !state) return 'Completion unavailable';
+  return 'Complete applicable checklist';
 }
 
 function ScoreCard({

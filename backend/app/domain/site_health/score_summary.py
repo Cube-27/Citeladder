@@ -230,29 +230,37 @@ def _measurement_sources(
     list[AnalysisMeasurementInput],
     list[uuid.UUID],
     list[uuid.UUID],
-    dict[uuid.UUID, str],
+    dict[uuid.UUID, tuple[uuid.UUID, str]],
 ]:
     inputs = [
         AnalysisMeasurementInput(
             analysis_id=str(row.id),
             page_kind=row.page_kind,
             page_traits=tuple(row.page_traits or ()),
-            expected_family_profile=tuple(row.expected_checkpoint_profile or ()),
+            checklist_manifest=tuple(row.expected_checkpoint_profile or ()),
         )
         for row in rows
     ]
     return (
         inputs,
-        [row.id for row in rows],
+        [
+            evaluation_id
+            for row in rows
+            for evaluation_id in (row.source_evaluation_ids or ())
+        ],
         [row.artifact_id for row in rows],
-        {row.id: row.page_kind for row in rows},
+        {
+            evaluation_id: (row.id, row.page_kind)
+            for row in rows
+            for evaluation_id in (row.source_evaluation_ids or ())
+        },
     )
 
 
 async def _measurement_evaluations(
-    session: AsyncSession, *, workspace_id: uuid.UUID, analysis_ids: list[uuid.UUID]
+    session: AsyncSession, *, workspace_id: uuid.UUID, evaluation_ids: list[uuid.UUID]
 ) -> Sequence[Row]:
-    if not analysis_ids:
+    if not evaluation_ids:
         return []
     return (
         await session.execute(
@@ -262,18 +270,16 @@ async def _measurement_evaluations(
                 SiteRuleEvaluation.rule_id,
                 SiteRuleEvaluation.scope,
                 SiteRuleEvaluation.outcome,
-                SiteRuleEvaluation.expected_profile_membership,
                 SiteRuleEvaluation.score_roles,
                 SiteRuleEvaluation.weight,
                 SiteRuleEvaluation.severity,
-                SiteRuleEvaluation.checkpoint_family,
                 SiteRuleEvaluation.readiness_dimension,
                 SiteRuleEvaluation.readiness_weight,
                 SiteRuleEvaluation.evidence,
             )
             .where(
                 SiteRuleEvaluation.workspace_id == workspace_id,
-                SiteRuleEvaluation.analysis_id.in_(analysis_ids),
+                SiteRuleEvaluation.id.in_(evaluation_ids),
             )
             .order_by(SiteRuleEvaluation.id)
         )
@@ -281,20 +287,21 @@ async def _measurement_evaluations(
 
 
 def _rule_measurements(
-    rows: Sequence[Row], *, page_kind_by_analysis: dict[uuid.UUID, str]
+    rows: Sequence[Row],
+    *,
+    logical_analysis_by_evaluation: dict[uuid.UUID, tuple[uuid.UUID, str]],
 ) -> list[RuleMeasurementInput]:
     return [
         RuleMeasurementInput(
-            analysis_id=str(row.analysis_id),
-            page_kind=page_kind_by_analysis[row.analysis_id],
+            analysis_id=str(logical_analysis_by_evaluation[row.id][0]),
+            page_kind=logical_analysis_by_evaluation[row.id][1],
             rule_id=row.rule_id,
             scope=row.scope,
             outcome=row.outcome,
-            expected=row.expected_profile_membership,
+            expected=bool(row.score_roles),
             score_roles=tuple(row.score_roles or ()),
             weight=row.weight,
             severity=row.severity,
-            checkpoint_family=row.checkpoint_family,
             readiness_dimension=row.readiness_dimension,
             readiness_weight=row.readiness_weight,
             normalized_score=(row.evidence or {}).get("normalized_score"),
@@ -319,6 +326,7 @@ async def load_crawl_measurement_projection(
             SitePageAnalysis.expected_checkpoint_profile.label(
                 "expected_checkpoint_profile"
             ),
+            SitePageAnalysis.source_evaluation_ids.label("source_evaluation_ids"),
             SiteUrl.normalized_url.label("normalized_url"),
             func.row_number()
             .over(
@@ -361,6 +369,7 @@ async def load_crawl_measurement_projection(
                 ranked.c.page_kind_evidence,
                 ranked.c.page_traits,
                 ranked.c.expected_checkpoint_profile,
+                ranked.c.source_evaluation_ids,
                 ranked.c.normalized_url,
             )
             .where(ranked.c.latest_rank == 1)
@@ -384,19 +393,23 @@ async def load_crawl_measurement_projection(
         selected_ids=selected_ids,
         rows=rows,
     )
-    inputs, analysis_ids, artifact_ids, page_kind_by_analysis = _measurement_sources(
-        rows
-    )
+    (
+        inputs,
+        evaluation_ids,
+        artifact_ids,
+        logical_analysis_by_evaluation,
+    ) = _measurement_sources(rows)
     evaluation_rows = await _measurement_evaluations(
-        session, workspace_id=crawl.workspace_id, analysis_ids=analysis_ids
+        session, workspace_id=crawl.workspace_id, evaluation_ids=evaluation_ids
     )
     rules = _rule_measurements(
-        evaluation_rows, page_kind_by_analysis=page_kind_by_analysis
+        evaluation_rows,
+        logical_analysis_by_evaluation=logical_analysis_by_evaluation,
     )
     return CrawlMeasurementProjection(
         selected_ids=selected_ids,
         rows=rows,
-        analysis_ids=analysis_ids,
+        analysis_ids=[row.id for row in rows],
         artifact_ids=artifact_ids,
         evaluation_rows=evaluation_rows,
         classification=classification,
@@ -455,14 +468,27 @@ async def refresh_live_score_summary(
                 SiteIssue.workspace_id == crawl.workspace_id,
                 SiteIssue.project_id == crawl.project_id,
                 SiteIssue.crawl_id == crawl.id,
-                SiteIssue.analysis_id.in_(projection.analysis_ids),
+                SiteIssue.evaluation_id.in_(
+                    row.id for row in projection.evaluation_rows
+                ),
             )
         )
         or 0
     )
-    crawl.score_summary = score_summary_payload(
+    payload = score_summary_payload(
         projection, selected_count=selected_count, issue_count=issue_count
     )
+    if crawl_is_active(crawl):
+        for measurement in (payload, *payload["by_page_kind"].values()):
+            measurement.update(
+                {
+                    "web_fundamentals_score": None,
+                    "aeo_readiness_score": None,
+                    "web_fundamentals_state": "limited_evidence",
+                    "aeo_measurement_state": "limited_evidence",
+                }
+            )
+    crawl.score_summary = payload
     return True
 
 

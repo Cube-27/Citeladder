@@ -3765,10 +3765,16 @@ def upgrade() -> None:
         ),
         sa.Column("traits_version", sa.String(length=32), nullable=False),
         sa.Column("is_current", sa.Boolean(), nullable=False),
+        sa.Column("supersedes_analysis_id", sa.UUID(), nullable=True),
         sa.Column("source_evaluation_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
         sa.Column("source_artifact_ids", postgresql.ARRAY(sa.UUID()), nullable=True),
         sa.Column("finalized_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["supersedes_analysis_id"],
+            ["site_page_analyses.id"],
+            ondelete="RESTRICT",
+        ),
         sa.ForeignKeyConstraint(
             ["artifact_id"], ["site_fetch_artifacts.id"], ondelete="CASCADE"
         ),
@@ -3788,6 +3794,12 @@ def upgrade() -> None:
         ["crawl_id", "site_url_id"],
         unique=True,
         postgresql_where=sa.text("is_current"),
+    )
+    op.create_index(
+        op.f("ix_site_page_analyses_supersedes_analysis_id"),
+        "site_page_analyses",
+        ["supersedes_analysis_id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_site_page_analyses_artifact_id"),
@@ -4129,10 +4141,8 @@ def upgrade() -> None:
         sa.Column("outcome", sa.String(length=16), nullable=False),
         sa.Column("display_applicability", sa.Boolean(), nullable=False),
         sa.Column("score_applicability", sa.Boolean(), nullable=False),
-        sa.Column("expected_profile_membership", sa.Boolean(), nullable=False),
         sa.Column("reason_code", sa.String(length=64), nullable=False),
         sa.Column("score_roles", postgresql.ARRAY(sa.String(length=32)), nullable=True),
-        sa.Column("checkpoint_family", sa.String(length=48), nullable=False),
         sa.Column("readiness_dimension", sa.String(length=32), nullable=False),
         sa.Column("readiness_weight", sa.Float(), nullable=False),
         sa.Column("evidence", postgresql.JSONB(astext_type=Text()), nullable=True),

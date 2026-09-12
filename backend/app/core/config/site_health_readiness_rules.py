@@ -13,7 +13,6 @@ from app.core.config.site_health_contracts import (
     DIMENSION_TECHNICAL,
     RULE_CATALOG_VERSION,
     SEVERITY_HIGH,
-    SEVERITY_LOW,
     SEVERITY_MEDIUM,
 )
 from app.core.config.site_health_rule_types import (
@@ -43,10 +42,6 @@ from app.core.config.site_health_taxonomy import (
     PAGE_KIND_SERVICE,
     PAGE_KINDS,
     _page_kinds,
-)
-from app.core.config.site_health_traits import (
-    PAGE_TRAIT_COMPANY_PROFILE_INTENT,
-    _traits,
 )
 
 _EDITORIAL_KINDS: Final = (
@@ -165,60 +160,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         content_addressable=True,
     ),
     SiteHealthRule(
-        rule_id="aeo.editorial_lead_present",
-        rule_version=RULE_CATALOG_VERSION,
-        dimension=DIMENSION_AEO,
-        category=CATEGORY_CONTENT,
-        severity=SEVERITY_LOW,
-        weight=1.0,
-        applicability_key=_page_kinds(*_EDITORIAL_KINDS, reads_content=True),
-        description="Editorial content opens with a substantive lead paragraph.",
-        remediation="Add a concise lead that establishes the page topic.",
-        display_label="Editorial lead is absent or too short",
-        finding_class=FINDING_CLASS_ADVISORY,
-        score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
-    ),
-    SiteHealthRule(
-        rule_id="aeo.entity_value_proposition",
-        rule_version=RULE_CATALOG_VERSION,
-        dimension=DIMENSION_AEO,
-        category=CATEGORY_CONTENT,
-        severity=SEVERITY_LOW,
-        weight=1.0,
-        applicability_key=_page_kinds(*_ENTITY_KINDS, reads_content=True),
-        description="Entity pages name the entity and state a substantive proposition.",
-        remediation="Pair a clear H1 with a concise first explanatory paragraph.",
-        display_label="Entity or value proposition unclear",
-        score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
-        composite_contract=ENTITY_VALUE_PROPOSITION_CONTRACT,
-    ),
-    SiteHealthRule(
-        rule_id="aeo.company_entity_completeness",
-        rule_version=RULE_CATALOG_VERSION,
-        dimension=DIMENSION_AEO,
-        category=CATEGORY_CITABILITY,
-        severity=SEVERITY_MEDIUM,
-        weight=1.0,
-        applicability_key=_traits(
-            PAGE_TRAIT_COMPANY_PROFILE_INTENT,
-            reads_content=True,
-        ),
-        description=(
-            "Canonical About pages define the company, offering, audience, "
-            "specific value, and durable first-party proof."
-        ),
-        remediation=(
-            "Add the missing company entity signals, prioritizing the company "
-            "and offering definition before audience, value, and durable proof."
-        ),
-        display_label="Company entity information incomplete",
-        finding_class=FINDING_CLASS_ADVISORY,
-        score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
-    ),
-    SiteHealthRule(
         rule_id="aeo.product_answer_facts",
         rule_version=RULE_CATALOG_VERSION,
         dimension=DIMENSION_AEO,
@@ -309,20 +250,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         description="Category items expose crawlable labels and targets.",
         remediation="Render item names and crawlable product links in the collection.",
         display_label="Category item facts missing",
-        score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
-    ),
-    SiteHealthRule(
-        rule_id="aeo.assortment_freshness_signal",
-        rule_version=RULE_CATALOG_VERSION,
-        dimension=DIMENSION_AEO,
-        category=CATEGORY_CITABILITY,
-        severity=SEVERITY_MEDIUM,
-        weight=1.0,
-        applicability_key=_page_kinds(PAGE_KIND_CATEGORY, reads_content=True),
-        description="Category pages expose an updated timestamp for the assortment.",
-        remediation="Expose a publication or update timestamp for the assortment.",
-        display_label="Assortment freshness signal missing",
         score_roles=(SCORE_ROLE_AEO,),
         content_addressable=True,
     ),

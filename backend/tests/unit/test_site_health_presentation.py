@@ -267,10 +267,8 @@ def test_evaluation_row_titles_from_the_CURRENT_catalog() -> None:
                 outcome="missing",
                 display_applicability=True,
                 score_applicability=True,
-                expected_profile_membership=True,
                 reason_code="",
                 score_roles=["web_fundamentals"],
-                checkpoint_family="",
                 readiness_dimension="",
                 readiness_weight=0.0,
                 weight=1.0,
@@ -293,26 +291,10 @@ def test_evaluation_row_titles_from_the_CURRENT_catalog() -> None:
     assert row["created_at"] == _NOW.isoformat()
 
 
-def test_single_h1_title_names_which_side_of_the_rule_fired() -> None:
-    """``h1_count != 1`` covers opposite failures; the row must say which.
-
-    A shared title had to read "Multiple or missing H1", which tells a reader
-    neither what happened nor what to do about it.
-    """
+def test_retired_rule_labels_fall_back_to_the_stored_identifier() -> None:
     assert display_label_for("technical.single_h1", {"h1_count": 0}) == (
-        "Missing H1 heading"
+        "technical.single_h1"
     )
-    assert display_label_for("technical.single_h1", {"h1_count": 3}) == (
-        "More than one H1 heading"
-    )
-    # No evidence (grouped rows span both directions) keeps the neutral title.
-    neutral = SITE_HEALTH_RULES_BY_ID["technical.single_h1"].display_label
-    assert display_label_for("technical.single_h1") == neutral
-    assert display_label_for("technical.single_h1", {}) == neutral
-    # The PASSING count has no failure to name. Evaluations are projected for
-    # every outcome, so without this the healthy one-H1 row read "More than
-    # one H1 heading".
-    assert display_label_for("technical.single_h1", {"h1_count": 1}) == neutral
 
 
 def test_display_label_ignores_evidence_for_rules_without_variants() -> None:

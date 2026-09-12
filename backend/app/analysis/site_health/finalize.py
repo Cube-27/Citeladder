@@ -1,22 +1,11 @@
-# Cross-page / cross-time rule evaluation (v2 P2 — spec §5.3, crawl_finalize
-# scope).
-#
-# The two ``crawl_finalize`` rules cannot be evaluated at per-page time:
-# ``technical.sitemap_orphan`` needs the complete discovered-vs-sitemap set,
-# and ``technical.hreflang_conflict``
-# needs counterpart pages' facts. They run as a SECOND evaluation pass inside
-# the worker's ``_reconcile_crawl_status`` (after analysis terminalization,
-# before the snapshot), with the finalize-writer as the sole owner of their
-# rows (single-writer per rule scope; the analyze writer never persists
-# placeholder rows for them).
-#
-# PURE + deterministic (no I/O, no ORM — invariant 9): each evaluator takes
-# pre-normalized, bounded inputs the WORKER assembled from persisted rows
-# (URL normalization happens in the worker via ``canonical_identity`` — this
-# analysis layer never imports the domain layer). Outcomes reuse the
-# ``RuleEvaluation`` value type; weights come from the config catalog (0.0 —
-# these rules produce issues, never score denominators).
+"""Pure crawl-finalize checks over bounded persisted acquisition evidence.
+
+The worker owns persistence; public checklist policy owns score membership.
+"""
+
 from __future__ import annotations
+
+from urllib.parse import urljoin, urlsplit
 
 from app.analysis.site_health.rules import RuleEvaluation, rule_for
 from app.core.config import site_health_acquisition as site_health_config
@@ -31,6 +20,7 @@ from app.core.config.site_health_contracts import (
     RULE_OUTCOME_UNKNOWN,
 )
 from app.core.config.site_health_link_metrics import COVERAGE_STATE_COMPLETE
+from app.core.config.site_health_measurement import public_check_membership
 from app.core.config.site_health_rule_types import SiteHealthRule
 
 # Evidence lists are bounded so a pathological crawl can never bloat a row.
@@ -52,7 +42,8 @@ def _catalog_rule(rule_id: str) -> SiteHealthRule:
 
 def _evaluation(rule: SiteHealthRule, outcome: str, evidence: dict) -> RuleEvaluation:
     """Build the finalize-pass ``RuleEvaluation`` for one catalog rule."""
-    expected = bool(rule.score_roles) and outcome != RULE_OUTCOME_NOT_APPLICABLE
+    score_roles, _pillar = public_check_membership(rule.rule_id, "other")
+    expected = bool(score_roles) and outcome != RULE_OUTCOME_NOT_APPLICABLE
     return RuleEvaluation(
         rule_id=rule.rule_id,
         rule_version=rule.rule_version,
@@ -68,9 +59,8 @@ def _evaluation(rule: SiteHealthRule, outcome: str, evidence: dict) -> RuleEvalu
         remediation=rule.remediation,
         display_applicability=outcome != RULE_OUTCOME_NOT_APPLICABLE,
         score_applicability=expected,
-        expected_profile_membership=expected,
         reason_code=str(evidence.get("reason") or ""),
-        score_roles=rule.score_roles if expected else (),
+        score_roles=score_roles,
     )
 
 
@@ -109,7 +99,9 @@ def _entity_set_evaluation(
         )
     score = (checked - failures) / checked
     coverage = checked / total
-    if failures == 0:
+    if checked < total and failures == 0:
+        outcome = RULE_OUTCOME_UNKNOWN
+    elif failures == 0:
         outcome = RULE_OUTCOME_SATISFIED
     elif failures == checked:
         outcome = RULE_OUTCOME_MISSING
@@ -157,25 +149,76 @@ def evaluate_sitemap_url_unreachable(
     )
 
 
-def evaluate_canonical_resolvable(
-    *, target_url: str, checked: bool, status_code: int | None, redirected: bool
+def evaluate_canonical_integrity(
+    *,
+    declarations: list[str],
+    final_url: str,
+    target_url: str,
+    checked: bool,
+    status_code: int | None,
+    redirected: bool,
 ) -> RuleEvaluation:
-    rule = _catalog_rule("technical.canonical_resolvable")
+    rule = _catalog_rule("technical.canonical_integrity")
+    unique = list(
+        dict.fromkeys(value.strip() for value in declarations if value.strip())
+    )
+    evidence = {
+        "declarations": _bounded_urls(unique),
+        "final_url": final_url,
+        "target_url": target_url,
+        "redirected": redirected,
+    }
+    if not unique:
+        return _evaluation(
+            rule,
+            RULE_OUTCOME_NOT_APPLICABLE,
+            {**evidence, "reason": "no_canonical"},
+        )
+    if len(unique) != 1:
+        return _evaluation(
+            rule,
+            RULE_OUTCOME_MISSING,
+            {**evidence, "reason": "conflicting_declarations"},
+        )
+    try:
+        declared_origin = _canonical_origin(urljoin(final_url, unique[0]))
+        final_origin = _canonical_origin(final_url)
+    except ValueError:
+        return _evaluation(
+            rule,
+            RULE_OUTCOME_MISSING,
+            {**evidence, "reason": "invalid_canonical"},
+        )
+    if declared_origin != final_origin:
+        return _evaluation(
+            rule,
+            RULE_OUTCOME_MISSING,
+            {**evidence, "reason": "cross_origin_canonical"},
+        )
     if not checked or status_code is None:
         return _evaluation(
             rule,
             RULE_OUTCOME_UNKNOWN,
-            {"reason": "insufficient_evidence", "target_url": target_url},
+            {**evidence, "reason": "insufficient_evidence"},
         )
-    healthy = status_code < 400 and not redirected
+    healthy = status_code < 400
     return _evaluation(
         rule,
         RULE_OUTCOME_SATISFIED if healthy else RULE_OUTCOME_MISSING,
-        {
-            "target_url": target_url,
-            "status_code": status_code,
-            "redirected": redirected,
-        },
+        {**evidence, "status_code": status_code},
+    )
+
+
+def _canonical_origin(url: str) -> tuple[str, str, int]:
+    parts = urlsplit(url)
+    scheme = parts.scheme.casefold()
+    if scheme not in {"http", "https"} or not parts.hostname:
+        raise ValueError("Invalid canonical origin")
+    port = parts.port
+    return (
+        scheme,
+        parts.hostname.casefold(),
+        port if port is not None else (443 if scheme == "https" else 80),
     )
 
 

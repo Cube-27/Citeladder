@@ -42,7 +42,7 @@ class ReadinessCheckResponse(_Model):
     not_applicable_count: int
     error_count: int
     failing_entity_count: int
-    checkpoint_family: str
+    aeo_pillar: str
     content_addressable: bool
 
 
@@ -56,7 +56,6 @@ class ReadinessDimensionResponse(_Model):
     reason: str
     checkpoint_ids: list[str]
     determinate_checkpoint_ids: list[str]
-    checkpoint_families: list[str]
     earned_points: float
     determinate_points: float
     expected_points: float
@@ -144,7 +143,6 @@ class OverviewDimensionResponse(_Model):
     determinate_points: float
     expected_points: float
     determinate_checkpoint_ids: list[str]
-    checkpoint_families: list[str]
     reason: str
 
 
@@ -308,6 +306,10 @@ class SiteHealthContentHandoffResponse(_Model):
     suggested_skill_id: str
     finding_class: str
     observed_evidence: list[dict]
+    source_evaluation_ids: list[uuid.UUID]
+    source_artifact_ids: list[uuid.UUID]
+    target_fields: list[str]
+    captured_values: list[str]
     expected_capability: list[str]
     remediation: list[str]
     page_kind: str

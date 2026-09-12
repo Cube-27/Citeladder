@@ -346,7 +346,7 @@ def _conflicts(
 
 
 def _winning_signal(matched: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """The single signal that decides the type: highest tier, then priority."""
+    """Return a winner only when the strongest evidence agrees on one kind."""
     # Structured data remains evidence and a schema suggestion, but cannot
     # self-certify the page kind whose schema contract will then be validated.
     eligible = [
@@ -364,6 +364,8 @@ def _winning_signal(matched: list[dict[str, Any]]) -> dict[str, Any] | None:
         for signal in eligible
         if _config.PAGE_KIND_TIERS.index(str(signal["tier"])) == best_tier
     ]
+    if len({str(signal["page_kind"]) for signal in top_tier}) > 1:
+        return None
     return min(
         top_tier,
         key=lambda signal: (

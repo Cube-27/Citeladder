@@ -276,7 +276,27 @@ describe('UrlDetail', () => {
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
   });
 
-  it('renders limited-evidence scores with subordinate coverage and confidence', async () => {
+  it.each(['page_purpose_unresolved', 'unsupported_purpose_checklist'])(
+    'distinguishes unavailable purpose: %s',
+    async (reason) => {
+      mswServer.use(
+        ...handlers(
+          detail({
+            aeo_readiness_score: null,
+            aeo_measurement_coverage: null,
+            aeo_measurement_state: 'not_measured',
+            aeo_measurement_reason: reason,
+          }),
+        ),
+      );
+      renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+      await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+      const unsupported = screen.queryAllByText(/Unsupported purpose checklist/);
+      expect(unsupported).toHaveLength(reason === 'unsupported_purpose_checklist' ? 2 : 0);
+    },
+  );
+
+  it('renders partial scores with checklist completion', async () => {
     mswServer.use(
       ...handlers(
         detail({
@@ -295,8 +315,8 @@ describe('UrlDetail', () => {
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getByRole('img', { name: 'Web Fundamentals: 46' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'AEO Readiness: 64' })).toBeInTheDocument();
-    expect(screen.getByText('50% measured · Moderate confidence')).toBeInTheDocument();
-    expect(screen.getAllByText('75% measured · Moderate confidence')).toHaveLength(2);
+    expect(screen.getByText('50% complete · Partial audit')).toBeInTheDocument();
+    expect(screen.getAllByText('75% complete · Partial audit')).toHaveLength(2);
   });
 
   it('preserves the AEO state when measurement coverage is unavailable', async () => {

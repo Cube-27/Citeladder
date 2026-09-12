@@ -473,18 +473,19 @@ def test_content_heuristics_have_fixed_sub_order() -> None:
     assert classify("https://example.com/x", facts).page_kind == "faq"
 
 
-def test_conflicting_semantic_evidence_uses_priority_and_records_conflict() -> None:
+def test_conflicting_strongest_semantic_evidence_abstains() -> None:
     facts = _facts(
         question_answer_relationships=_question_relationships(3),
         title="Shipping policy questions and answers",
     )
     assessment = classify("https://example.com/x", facts)
-    assert assessment.page_kind == "faq"
-    assert assessment.classified_by == PAGE_KIND_SIGNAL_CONTENT_HEURISTIC
-    assert any(
-        conflict["conflicting_page_kind"] == "trust_policy"
-        for conflict in assessment.conflicts
-    )
+    assert assessment.page_kind == "other"
+    assert assessment.classified_by == "none"
+    assert assessment.other_reason == "conflicting_top_tier_evidence"
+    assert {item["page_kind"] for item in assessment.alternatives} == {
+        "faq",
+        "trust_policy",
+    }
 
 
 def test_content_heuristic_outranks_schema_on_conflict() -> None:

@@ -23,7 +23,7 @@ from app.core.config.site_health_taxonomy import (
     PageKindSchemaExpectation,
 )
 
-_TOKEN_RE = re.compile(r"[a-z0-9]+")
+_TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
 
 
 def normalized_tokens(value: str) -> set[str]:

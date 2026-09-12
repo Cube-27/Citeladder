@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import replace
 
 from app.analysis.site_health.measurement_aggregation import (
     AggregateMeasurements,
@@ -22,17 +21,6 @@ def _ordered_page_kinds(
 ) -> list[str]:
     known = [kind for kind in PAGE_KINDS if kind in grouped]
     return known + sorted(kind for kind in grouped if kind not in PAGE_KINDS)
-
-
-def _page_only_analysis(analysis: AnalysisMeasurementInput) -> AnalysisMeasurementInput:
-    return replace(
-        analysis,
-        expected_family_profile=tuple(
-            row
-            for row in analysis.expected_family_profile
-            if row.get("scope") == RULE_SCOPE_PAGE
-        ),
-    )
 
 
 def _page_kind_payload(
@@ -63,7 +51,7 @@ def aggregate_by_page_kind(
     ordered = _ordered_page_kinds(grouped)
     result: dict[str, dict[str, object]] = {}
     for page_kind in ordered:
-        kind_analyses = [_page_only_analysis(row) for row in grouped[page_kind]]
+        kind_analyses = grouped[page_kind]
         analysis_ids = {row.analysis_id for row in kind_analyses}
         aggregate = aggregate_measurements(
             kind_analyses,

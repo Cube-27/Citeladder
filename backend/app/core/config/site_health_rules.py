@@ -5,7 +5,6 @@ from typing import Final
 from app.core.config.site_health_architecture_rules import ARCHITECTURE_RULE_SPECS
 from app.core.config.site_health_contracts import (
     APPLICABILITY_CRAWL_FINALIZE,
-    APPLICABILITY_OBSERVED_CONTENT,
     CATEGORY_CITABILITY,
     CATEGORY_CONTENT,
     CATEGORY_INDEXABILITY,
@@ -20,10 +19,6 @@ from app.core.config.site_health_contracts import (
     SEVERITY_HIGH,
     SEVERITY_LOW,
     SEVERITY_MEDIUM,
-)
-from app.core.config.site_health_measurement import (
-    CHECKPOINT_FAMILY_BY_ID,
-    validate_measurement_profile,
 )
 from app.core.config.site_health_readiness_rules import READINESS_EXPANSION_RULES
 from app.core.config.site_health_rule_types import (
@@ -49,8 +44,6 @@ from app.core.config.site_health_taxonomy import (
     _page_kinds,
 )
 from app.core.config.site_health_web_fundamentals import WEB_FUNDAMENTALS_RULES
-
-_SCHEMA_EXPECTED_FOR_TYPE_RULE_ID: Final = "aeo.schema_expected_for_type"
 
 SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
     SiteHealthRule(
@@ -129,23 +122,6 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         score_roles=(SCORE_ROLE_WEB_FUNDAMENTALS,),
     ),
     SiteHealthRule(
-        rule_id="technical.single_h1",
-        rule_version=RULE_CATALOG_VERSION,
-        dimension=DIMENSION_TECHNICAL,
-        category=CATEGORY_CONTENT,
-        severity=SEVERITY_LOW,
-        weight=1.0,
-        applicability_key=APPLICABILITY_OBSERVED_CONTENT,
-        description="Page has exactly one <h1> heading.",
-        remediation="Use a single <h1> that describes the page's primary topic.",
-        display_label="Missing or duplicate H1",
-        display_label_variants={
-            "none": "Missing H1 heading",
-            "multiple": "More than one H1 heading",
-        },
-        finding_class=FINDING_CLASS_ADVISORY,
-    ),
-    SiteHealthRule(
         rule_id="aeo.structured_data_present",
         rule_version=RULE_CATALOG_VERSION,
         dimension=DIMENSION_AEO,
@@ -190,66 +166,23 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
     ),
     # --- v2 P2: hygiene (per-page) ----------------------------------------
     SiteHealthRule(
-        rule_id="technical.thin_content",
-        rule_version=RULE_CATALOG_VERSION,
-        dimension=DIMENSION_TECHNICAL,
-        category=CATEGORY_CONTENT,
-        severity=SEVERITY_MEDIUM,
-        weight=2.0,
-        applicability_key=APPLICABILITY_OBSERVED_CONTENT,
-        description="Page has too little page-owned content to evaluate reliably.",
-        remediation=(
-            "Add enough page-owned content to make the page purpose observable."
-        ),
-        display_label="Very little observable content",
-        finding_class=FINDING_CLASS_ADVISORY,
-    ),
-    SiteHealthRule(
-        rule_id="technical.canonical_conflict",
+        rule_id="technical.canonical_integrity",
         rule_version=RULE_CATALOG_VERSION,
         dimension=DIMENSION_TECHNICAL,
         category=CATEGORY_INDEXABILITY,
         severity=SEVERITY_MEDIUM,
         weight=1.5,
-        applicability_key="has_html",
+        applicability_key=APPLICABILITY_CRAWL_FINALIZE,
         description=(
-            "Declared canonical URL is a usable consolidation target "
-            "(absolute, same-origin, and not a different hreflang alternate)."
+            "Canonical declarations agree on a valid same-origin URL whose "
+            "target resolves successfully."
         ),
         remediation=(
-            "Point the canonical at an absolute same-origin URL. A page that "
-            "declares hreflang alternates must canonicalise to itself."
+            "Declare one canonical URL with the same scheme, host and effective "
+            "port as the page, and ensure its target is reachable."
         ),
         display_label="Canonical URL conflict",
         score_roles=(SCORE_ROLE_WEB_FUNDAMENTALS,),
-    ),
-    SiteHealthRule(
-        rule_id="technical.title_length_band",
-        rule_version=RULE_CATALOG_VERSION,
-        dimension=DIMENSION_TECHNICAL,
-        category=CATEGORY_METADATA,
-        severity=SEVERITY_LOW,
-        weight=1.0,
-        applicability_key="has_html",
-        description="Title length falls inside the recommended band (30-60 chars).",
-        remediation="Rewrite the <title> to roughly 30-60 characters.",
-        display_label="Title length outside recommended band",
-        finding_class=FINDING_CLASS_ADVISORY,
-    ),
-    SiteHealthRule(
-        rule_id="technical.meta_description_length_band",
-        rule_version=RULE_CATALOG_VERSION,
-        dimension=DIMENSION_TECHNICAL,
-        category=CATEGORY_METADATA,
-        severity=SEVERITY_LOW,
-        weight=1.0,
-        applicability_key="has_html",
-        description=(
-            "Meta description length falls inside the recommended band (70-160 chars)."
-        ),
-        remediation="Rewrite the meta description to roughly 70-160 characters.",
-        display_label="Meta description length outside recommended band",
-        finding_class=FINDING_CLASS_ADVISORY,
     ),
     SiteHealthRule(
         rule_id="technical.hsts_present",
@@ -301,37 +234,6 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
     *READINESS_EXPANSION_RULES,
     # --- v2 P2: per-type schema validity (per-page) -------------------------
     SiteHealthRule(
-        rule_id=_SCHEMA_EXPECTED_FOR_TYPE_RULE_ID,
-        rule_version=RULE_CATALOG_VERSION,
-        dimension=DIMENSION_AEO,
-        category=CATEGORY_STRUCTURED_DATA,
-        # ABSENT markup is an optimization opportunity, not a reproducible
-        # defect: a valid trust-policy page without a WebPage node is not
-        # broken. As a HIGH weight-3.0 defect this rule fired on every
-        # correctly classified page that simply had no markup yet, so
-        # improving the classifier would have LOWERED scores across a site
-        # for pages that had nothing wrong with them. Malformed or
-        # contradictory markup remains a defect -- see
-        # ``aeo.schema_required_valid``.
-        severity=SEVERITY_LOW,
-        finding_class=FINDING_CLASS_ADVISORY,
-        weight=0.5,
-        applicability_key=_page_kinds(
-            *PAGE_KIND_SCHEMA_ANALYSIS_KINDS,
-            requires_html=True,
-        ),
-        description=(
-            "Structured data includes a schema.org type expected for the "
-            "classified page type."
-        ),
-        remediation=(
-            "Add the expected schema.org type for this page type "
-            "(PAGE_KIND_EXPECTED_SCHEMA)."
-        ),
-        display_label="Missing expected schema type for page type",
-        score_roles=(SCORE_ROLE_AEO,),
-    ),
-    SiteHealthRule(
         rule_id="aeo.schema_required_valid",
         kind_evidence=KIND_EVIDENCE_TRIGGERED,
         rule_version=RULE_CATALOG_VERSION,
@@ -350,7 +252,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation="Add the missing required properties to the schema markup.",
         display_label="Required schema properties missing",
         score_roles=(SCORE_ROLE_AEO,),
-        triggered_by=_SCHEMA_EXPECTED_FOR_TYPE_RULE_ID,
+        triggered_by="aeo.structured_data_present",
     ),
     SiteHealthRule(
         rule_id="aeo.schema_recommended_present",
@@ -373,7 +275,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation=("Add the recommended properties to strengthen the schema markup."),
         display_label="Recommended schema properties missing",
         score_roles=(SCORE_ROLE_AEO,),
-        triggered_by=_SCHEMA_EXPECTED_FOR_TYPE_RULE_ID,
+        triggered_by="aeo.structured_data_present",
     ),
     SiteHealthRule(
         rule_id="aeo.schema_matches_content",
@@ -396,7 +298,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         ),
         display_label="Schema markup does not match visible content",
         score_roles=(SCORE_ROLE_AEO,),
-        triggered_by=_SCHEMA_EXPECTED_FOR_TYPE_RULE_ID,
+        triggered_by="aeo.structured_data_present",
     ),
     # --- v2 P2: citability (per-page) ---------------------------------------
     SiteHealthRule(
@@ -531,20 +433,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         description="Crawlable internal links resolve without an HTTP error.",
         remediation="Repair or remove internal links whose targets return errors.",
         display_label="Broken internal links",
-        score_roles=(SCORE_ROLE_WEB_FUNDAMENTALS,),
-    ),
-    SiteHealthRule(
-        rule_id="technical.canonical_resolvable",
-        rule_version=RULE_CATALOG_VERSION,
-        dimension=DIMENSION_TECHNICAL,
-        category=CATEGORY_INDEXABILITY,
-        severity=SEVERITY_HIGH,
-        weight=3.0,
-        applicability_key=APPLICABILITY_CRAWL_FINALIZE,
-        description="The declared or implicit canonical target resolves directly.",
-        remediation="Point the canonical at a fetched, non-error, non-redirecting URL.",
-        display_label="Canonical target does not resolve directly",
-        score_roles=(SCORE_ROLE_WEB_FUNDAMENTALS,),
+        score_roles=(),
     ),
     SiteHealthRule(
         rule_id="technical.sitemap_url_unreachable",
@@ -557,7 +446,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         description="Sitemap-listed URLs resolve without an HTTP error.",
         remediation="Remove unreachable sitemap URLs or restore their resources.",
         display_label="Unreachable sitemap URLs",
-        score_roles=(SCORE_ROLE_WEB_FUNDAMENTALS,),
+        score_roles=(),
     ),
     # --- crawl-finalize cluster rules --------------------------------------
     # These use cross-page evidence. Their rows stay root/page-anchored for
@@ -577,7 +466,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         ),
         remediation=("Link sitemap-listed pages from crawlable internal navigation."),
         display_label="Sitemap orphan URLs",
-        score_roles=(SCORE_ROLE_WEB_FUNDAMENTALS,),
+        score_roles=(),
     ),
     SiteHealthRule(
         rule_id="technical.hreflang_conflict",
@@ -594,7 +483,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
             "clusters are reciprocal."
         ),
         display_label="Hreflang return-tag conflict",
-        score_roles=(SCORE_ROLE_WEB_FUNDAMENTALS,),
+        score_roles=(),
     ),
     *(SiteHealthRule(**spec) for spec in ARCHITECTURE_RULE_SPECS),
 )
@@ -604,12 +493,7 @@ SITE_HEALTH_RULES_BY_ID: Final[dict[str, SiteHealthRule]] = {
 }
 
 
-validate_triggered_rule_links(
-    SITE_HEALTH_RULES,
-    SITE_HEALTH_RULES_BY_ID,
-    CHECKPOINT_FAMILY_BY_ID,
-)
-validate_measurement_profile(implemented_checkpoint_ids=tuple(SITE_HEALTH_RULES_BY_ID))
+validate_triggered_rule_links(SITE_HEALTH_RULES, SITE_HEALTH_RULES_BY_ID)
 
 TITLE_LENGTH_BAND: Final[tuple[int, int]] = (30, 60)
 

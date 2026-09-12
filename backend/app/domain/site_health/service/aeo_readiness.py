@@ -13,12 +13,10 @@ from app.core.config.site_health_contracts import (
     SCORING_VERSION,
 )
 from app.core.config.site_health_measurement import (
-    CHECKPOINT_DIMENSION_BY_ID,
     PRESENTATION_VERSION,
     PROFILE_VERSION,
     SCHEMA_CONTRACT_VERSION,
 )
-from app.core.config.site_health_rules import SITE_HEALTH_RULES_BY_ID
 from app.domain.site_health.aeo_readiness_projection import rule_guidance
 from app.domain.site_health.service.common import (
     SiteHealthNotFoundError,
@@ -74,13 +72,9 @@ async def get_aeo_readiness(
 
 
 def _allowed_content_checkpoints(dimension: str, checkpoint_ids: list[str]) -> set[str]:
-    allowed = {
-        checkpoint_id
-        for checkpoint_id in checkpoint_ids
-        if checkpoint_id in SITE_HEALTH_RULES_BY_ID
-        and SITE_HEALTH_RULES_BY_ID[checkpoint_id].content_addressable
-        and CHECKPOINT_DIMENSION_BY_ID.get(checkpoint_id) == dimension
-    }
+    del dimension
+    supported = {"technical.title_present", "technical.meta_description_present"}
+    allowed = set(checkpoint_ids) & supported
     if allowed and allowed == set(checkpoint_ids):
         return allowed
     raise SiteHealthNotFoundError("Content-addressable readiness gap not found")
@@ -105,6 +99,7 @@ async def _handoff_analysis(
             SitePageAnalysis.crawl_id == crawl_id,
             SitePageAnalysis.site_url_id == site_url_id,
             SitePageAnalysis.is_current.is_(True),
+            SitePageAnalysis.finalized_at.is_not(None),
         )
     )
     found = analysis_row.one_or_none()
@@ -118,17 +113,15 @@ async def _handoff_evaluations(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
-    source_analysis_id: uuid.UUID,
-    dimension: str,
     allowed: set[str],
+    source_evaluation_ids: list[uuid.UUID],
 ) -> list[SiteRuleEvaluation]:
     rows = list(
         await session.scalars(
             select(SiteRuleEvaluation)
             .where(
                 SiteRuleEvaluation.workspace_id == workspace_id,
-                SiteRuleEvaluation.analysis_id == source_analysis_id,
-                SiteRuleEvaluation.readiness_dimension == dimension,
+                SiteRuleEvaluation.id.in_(source_evaluation_ids),
                 SiteRuleEvaluation.rule_id.in_(allowed),
                 SiteRuleEvaluation.outcome.in_(
                     (RULE_OUTCOME_MISSING, RULE_OUTCOME_PARTIAL)
@@ -165,24 +158,57 @@ async def get_content_handoff(
     evaluations = await _handoff_evaluations(
         session,
         workspace_id=workspace_id,
+        allowed=allowed,
+        source_evaluation_ids=list(analysis.source_evaluation_ids or []),
+    )
+    return _content_handoff_payload(
+        analysis=analysis,
+        site_url=site_url,
+        evaluations=evaluations,
+        project_id=project_id,
+        crawl_id=crawl_id,
+        site_url_id=site_url_id,
         source_analysis_id=source_analysis_id,
-        dimension=dimension,
         allowed=allowed,
     )
+
+
+def _target_field(row: SiteRuleEvaluation) -> str:
+    if row.rule_id == "technical.title_present":
+        return "title"
+    return "meta_description"
+
+
+def _captured_value(row: SiteRuleEvaluation) -> str:
+    evidence = row.evidence or {}
+    return str(evidence.get("title") or evidence.get("meta_description") or "")
+
+
+def _content_handoff_payload(
+    *,
+    analysis: SitePageAnalysis,
+    site_url: SiteUrl,
+    evaluations: list[SiteRuleEvaluation],
+    project_id: uuid.UUID,
+    crawl_id: uuid.UUID,
+    site_url_id: uuid.UUID,
+    source_analysis_id: uuid.UUID,
+    allowed: set[str],
+) -> dict:
     return {
         "project_id": project_id,
         "crawl_id": crawl_id,
         "site_url_id": site_url_id,
         "source_analysis_id": source_analysis_id,
-        "dimension": dimension,
+        "dimension": "metadata",
         "checkpoint_ids": sorted(allowed),
-        "suggested_skill_id": (
-            "about_us"
-            if "aeo.company_entity_completeness" in allowed
-            else "content_page"
-        ),
+        "suggested_skill_id": "content_page",
         "finding_class": evaluations[0].finding_class,
         "observed_evidence": [row.evidence or {} for row in evaluations],
+        "source_evaluation_ids": [row.id for row in evaluations],
+        "source_artifact_ids": list(analysis.source_artifact_ids or []),
+        "target_fields": [_target_field(row) for row in evaluations],
+        "captured_values": [_captured_value(row) for row in evaluations],
         "expected_capability": [rule_guidance(row.rule_id)[0] for row in evaluations],
         "remediation": [rule_guidance(row.rule_id)[1] for row in evaluations],
         "page_kind": analysis.page_kind,

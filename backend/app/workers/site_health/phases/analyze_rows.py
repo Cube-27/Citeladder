@@ -31,7 +31,6 @@ from app.models.site_health.analysis import (
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.urls import SiteUrl, SiteUrlObservation
-from app.workers.site_health.helpers import _utcnow
 from app.workers.site_health.lifecycle_finalize import crawl_root_identity
 from app.workers.site_health.phases.contracts import PhaseContext
 
@@ -69,7 +68,13 @@ async def _write_page_analysis(
         )
     )
     site_facts = _root_site_facts(crawl, task)
-    result = analyze_page(facts, sitemap_member=sitemap_member, site_facts=site_facts)
+    audit_time = crawl.started_at or crawl.created_at
+    result = analyze_page(
+        facts,
+        sitemap_member=sitemap_member,
+        site_facts=site_facts,
+        audit_time=audit_time.isoformat() if audit_time else None,
+    )
     await _refresh_analyzed_url_state(
         session,
         crawl=crawl,
@@ -162,21 +167,19 @@ def _new_page_analysis(
         site_url_id=site_url_id,
         artifact_id=artifact_id,
         status=PAGE_ANALYSIS_STATUS_COMPLETED,
-        web_fundamentals_score=result.scores.web_fundamentals_score,
-        web_fundamentals_coverage=result.scores.web_fundamentals_coverage,
-        web_fundamentals_state=result.scores.web_fundamentals_state,
-        technical_earned_weight=result.scores.technical_earned_weight,
-        technical_determinate_weight=result.scores.technical_determinate_weight,
-        technical_expected_weight=result.scores.technical_expected_weight,
-        technical_critical_complete=result.scores.technical_critical_complete,
-        aeo_readiness_score=result.scores.aeo_readiness_score,
-        aeo_measurement_coverage=result.scores.aeo_measurement_coverage,
-        aeo_measurement_state=result.scores.aeo_measurement_state,
-        aeo_measurement_reason=result.scores.aeo_measurement_reason,
-        expected_checkpoint_profile=list(result.scores.expected_checkpoint_profile),
-        readiness_dimensions=[
-            item.to_dict() for item in result.scores.readiness_dimensions
-        ],
+        web_fundamentals_score=None,
+        web_fundamentals_coverage=None,
+        web_fundamentals_state="not_measured",
+        technical_earned_weight=0.0,
+        technical_determinate_weight=0.0,
+        technical_expected_weight=0.0,
+        technical_critical_complete=False,
+        aeo_readiness_score=None,
+        aeo_measurement_coverage=None,
+        aeo_measurement_state="not_measured",
+        aeo_measurement_reason="audit_not_terminal",
+        expected_checkpoint_profile=[],
+        readiness_dimensions=[],
         profile_version=PROFILE_VERSION,
         schema_contract_version=SCHEMA_CONTRACT_VERSION,
         presentation_version=PRESENTATION_VERSION,
@@ -191,7 +194,7 @@ def _new_page_analysis(
         page_traits=list(result.traits),
         traits_version=TRAITS_VERSION,
         source_artifact_ids=[artifact_id],
-        finalized_at=_utcnow(),
+        finalized_at=None,
     )
 
 
@@ -250,10 +253,8 @@ async def _persist_evaluations_and_issues(
             outcome=ev.outcome,
             display_applicability=ev.display_applicability,
             score_applicability=ev.score_applicability,
-            expected_profile_membership=ev.expected_profile_membership,
             reason_code=ev.reason_code,
             score_roles=list(ev.score_roles),
-            checkpoint_family=ev.checkpoint_family,
             readiness_dimension=ev.readiness_dimension,
             readiness_weight=ev.readiness_weight,
             evidence=ev.evidence,

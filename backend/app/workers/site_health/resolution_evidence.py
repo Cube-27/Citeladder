@@ -11,7 +11,7 @@ from urllib.parse import urljoin
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analysis.site_health.finalize import evaluate_canonical_resolvable
+from app.analysis.site_health.finalize import evaluate_canonical_integrity
 from app.analysis.site_health.rules import RuleEvaluation
 from app.core.config.site_health_acquisition import SITE_HEALTH_MAX_EVIDENCE_URLS
 from app.core.config.site_health_contracts import RULE_OUTCOME_UNKNOWN
@@ -127,40 +127,69 @@ def canonical_resolution_evaluations(
     """Evaluate each analyzed page's canonical target against fetch results."""
     evaluations: list[tuple[uuid.UUID, RuleEvaluation]] = []
     for artifact_id, final_url, facts in artifacts:
-        declared = str((facts or {}).get("canonical_url") or "")
-        target = canonical_or_empty(urljoin(str(final_url or ""), declared))
-        target = target or canonical_or_empty(str(final_url or ""))
-        resolution = resolutions.get(target)
-        rate_limited = _is_rate_limited(resolution)
-        evaluation = evaluate_canonical_resolvable(
-            target_url=target,
-            checked=resolution is not None and not rate_limited,
-            status_code=resolution[0] if resolution else None,
-            redirected=resolution[2] if resolution else False,
+        declarations = _canonical_declarations(facts or {})
+        target = _canonical_target(final_url, declarations)
+        evaluation = _canonical_target_evaluation(
+            declarations, final_url, target, resolutions.get(target)
         )
-        if rate_limited:
-            evaluation = replace(
-                evaluation,
-                reason_code="rate_limited",
-                evidence={
-                    **evaluation.evidence,
-                    "reason": "rate_limited",
-                    "status_code": 429,
-                },
-            )
         evaluations.extend(
             (
                 analysis_id,
                 replace(
                     evaluation,
                     evidence=_canonical_resolution_evidence(
-                        evaluation, target=target, resolution=resolution
+                        evaluation, target=target, resolution=resolutions.get(target)
                     ),
                 ),
             )
             for analysis_id in analysis_ids_by_artifact[artifact_id]
         )
     return evaluations
+
+
+def _canonical_declarations(facts: dict) -> list[str]:
+    declarations = list(facts.get("canonical_declarations") or [])
+    declared_single = str(facts.get("canonical_url") or "")
+    return declarations or ([declared_single] if declared_single else [])
+
+
+def _canonical_target(final_url: object, declarations: list[str]) -> str:
+    declared = declarations[0] if len(declarations) == 1 else ""
+    if not declared.strip():
+        return ""
+    base = str(final_url or "")
+    try:
+        return canonical_or_empty(urljoin(base, declared))
+    except ValueError:
+        return ""
+
+
+def _canonical_target_evaluation(
+    declarations: list[str],
+    final_url: object,
+    target: str,
+    resolution: Resolution | None,
+) -> RuleEvaluation:
+    rate_limited = _is_rate_limited(resolution)
+    evaluation = evaluate_canonical_integrity(
+        declarations=declarations,
+        final_url=str(final_url or ""),
+        target_url=target,
+        checked=resolution is not None and not rate_limited,
+        status_code=resolution[0] if resolution else None,
+        redirected=resolution[2] if resolution else False,
+    )
+    if not rate_limited or evaluation.outcome != RULE_OUTCOME_UNKNOWN:
+        return evaluation
+    return replace(
+        evaluation,
+        reason_code="rate_limited",
+        evidence={
+            **evaluation.evidence,
+            "reason": "rate_limited",
+            "status_code": 429,
+        },
+    )
 
 
 def _resolution_target_groups(

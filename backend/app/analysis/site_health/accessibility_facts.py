@@ -16,21 +16,25 @@ def _input_type(control: Any) -> str:
     return str(control.get("type") or "").strip().casefold()
 
 
-def _accessible_text(node: Any) -> str:
+def _accessible_text(node: Any, *, directly_referenced: bool = False) -> str:
     """Return bounded text alternatives contributed by one naming subtree."""
     try:
-        parts = [
-            str(value)
-            for value in node.xpath(
-                ".//text()[not(ancestor::template or ancestor::*[@hidden] "
-                "or ancestor::*[@inert] or ancestor::*[translate("
-                "normalize-space(@aria-hidden), 'TRUE', 'true')='true'])]"
+        hidden_predicate = (
+            "ancestor::template"
+            if directly_referenced
+            else (
+                "ancestor::template or ancestor::*[@hidden] or ancestor::*[@inert] "
+                "or ancestor::*[translate(normalize-space(@aria-hidden), "
+                "'TRUE', 'true')='true']"
             )
+        )
+        parts = [
+            str(value) for value in node.xpath(f".//text()[not({hidden_predicate})]")
         ]
         parts.extend(
             str(image.get("alt") or "")
-            for image in node.xpath(".//img[@alt]")
-            if not _is_excluded_control(image)
+            for image in node.xpath(".//img[@alt][not(ancestor::template)]")
+            if directly_referenced or not _is_excluded_control(image)
         )
         return " ".join(" ".join(parts).split())
     except DOM_ERRORS as exc:
@@ -135,7 +139,9 @@ def _label_indexes(root: Any, controls: list[Any]) -> tuple[set[str], dict[str, 
             if _accessible_text(label)
         }
         labelled = {
-            str(node.get("id") or "").strip(): bool(_accessible_text(node))
+            str(node.get("id") or "").strip(): bool(
+                _accessible_text(node, directly_referenced=True)
+            )
             for node in root.xpath("//*[@id]")
             if str(node.get("id") or "").strip() in referenced_ids
         }
@@ -182,7 +188,9 @@ def _controls(root: Any) -> tuple[int, int, list[dict[str, Any]]]:
 def _heading_levels(root: Any, *, limit: int) -> tuple[list[int], int]:
     try:
         levels = [
-            int(node.tag[1]) for node in root.xpath("//h1|//h2|//h3|//h4|//h5|//h6")
+            int(node.tag[1])
+            for node in root.xpath("//h1|//h2|//h3|//h4|//h5|//h6")
+            if not _is_excluded_control(node)
         ]
     except DOM_ERRORS as exc:
         dom_failure("extract_accessibility_facts", exc)

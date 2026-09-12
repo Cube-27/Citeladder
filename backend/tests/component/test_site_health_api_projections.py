@@ -493,6 +493,8 @@ async def test_issue_catalog_separates_defect_and_advisory_quantities(
             select(SitePageAnalysis).where(
                 SitePageAnalysis.crawl_id == scn.crawl_id,
                 SitePageAnalysis.site_url_id != issue.site_url_id,
+                SitePageAnalysis.is_current.is_(True),
+                SitePageAnalysis.finalized_at.is_not(None),
             )
         )
         assert defect_analysis is not None
@@ -513,6 +515,7 @@ async def test_issue_catalog_separates_defect_and_advisory_quantities(
         )
         session.add(defect_evaluation)
         await session.flush()
+        defect_analysis.source_evaluation_ids = [defect_evaluation.id]
         session.add(
             SiteIssue(
                 workspace_id=scn.workspace_id,

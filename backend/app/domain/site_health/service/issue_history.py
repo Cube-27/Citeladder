@@ -283,31 +283,38 @@ async def _history_observations(
     )
     if not crawl_ids:
         return []
-    rows = list(
+    analysis_rows = list(
         (
             await session.execute(
-                select(SiteCrawl, SitePageAnalysis, SiteRuleEvaluation)
+                select(SiteCrawl, SitePageAnalysis)
                 .join(SitePageAnalysis, SitePageAnalysis.crawl_id == SiteCrawl.id)
-                .join(
-                    SiteRuleEvaluation,
-                    SiteRuleEvaluation.analysis_id == SitePageAnalysis.id,
-                )
                 .where(
                     SiteCrawl.project_id == crawl.project_id,
                     SiteCrawl.workspace_id == workspace_id,
                     SiteCrawl.id.in_(crawl_ids),
                     SitePageAnalysis.site_url_id == site_url_id,
+                    SitePageAnalysis.is_current.is_(True),
+                    SitePageAnalysis.finalized_at.is_not(None),
                 )
-                .order_by(
-                    SiteCrawl.created_at.asc(),
-                    SiteCrawl.id.asc(),
-                    SitePageAnalysis.created_at.asc(),
-                    SitePageAnalysis.id.asc(),
-                )
+                .order_by(SiteCrawl.created_at.asc(), SiteCrawl.id.asc())
             )
         ).all()
     )
-    latest_analysis = {crawl_row.id: analysis.id for crawl_row, analysis, _ in rows}
+    evaluation_owner = {
+        evaluation_id: (crawl_row, analysis)
+        for crawl_row, analysis in analysis_rows
+        for evaluation_id in (analysis.source_evaluation_ids or ())
+    }
+    evaluations = list(
+        await session.scalars(
+            select(SiteRuleEvaluation)
+            .where(
+                SiteRuleEvaluation.workspace_id == workspace_id,
+                SiteRuleEvaluation.id.in_(evaluation_owner),
+            )
+            .order_by(SiteRuleEvaluation.rule_id, SiteRuleEvaluation.id)
+        )
+    )
     issue_rows = list(
         (
             await session.scalars(
@@ -315,7 +322,7 @@ async def _history_observations(
                     SiteIssue.project_id == crawl.project_id,
                     SiteIssue.site_url_id == site_url_id,
                     SiteIssue.crawl_id.in_(crawl_ids),
-                    SiteIssue.crawl_id.in_(latest_analysis),
+                    SiteIssue.evaluation_id.in_(evaluation_owner),
                 )
             )
         ).all()
@@ -339,8 +346,8 @@ async def _history_observations(
             description=copy_by_evaluation.get(evaluation.id, ("", ""))[0],
             remediation=copy_by_evaluation.get(evaluation.id, ("", ""))[1],
         )
-        for crawl_row, analysis, evaluation in rows
-        if latest_analysis.get(crawl_row.id) == analysis.id
+        for evaluation in evaluations
+        for crawl_row, _analysis in [evaluation_owner[evaluation.id]]
     ]
 
 

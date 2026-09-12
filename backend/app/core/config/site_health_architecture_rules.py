@@ -15,7 +15,6 @@ from app.core.config.site_health_contracts import (
 from app.core.config.site_health_rule_types import (
     RULE_SCOPE_CLUSTER,
     RULE_SCOPE_GRAPH,
-    SCORE_ROLE_WEB_FUNDAMENTALS,
 )
 
 _WEIGHTS = {SEVERITY_HIGH: 3.0, SEVERITY_MEDIUM: 2.0}
@@ -29,7 +28,7 @@ def _rule(
     remediation: str,
     display_label: str,
     scope: str = RULE_SCOPE_GRAPH,
-    scored: bool = True,
+    scored: bool = False,
 ) -> dict[str, Any]:
     return {
         "rule_id": rule_id,
@@ -43,7 +42,7 @@ def _rule(
         "description": description,
         "remediation": remediation,
         "display_label": display_label,
-        "score_roles": (SCORE_ROLE_WEB_FUNDAMENTALS,) if scored else (),
+        "score_roles": (),
     }
 
 

@@ -16,7 +16,6 @@ from app.core.config.site_health_contracts import (
 )
 from app.core.config.site_health_measurement import (
     CHECKPOINT_DIMENSION_BY_ID,
-    CHECKPOINT_FAMILY_BY_ID,
     CLASSIFICATION_FORMULA_VERSION,
     PRESENTATION_VERSION,
     PROFILE_VERSION,
@@ -38,7 +37,7 @@ pytestmark = pytest.mark.asyncio
 
 
 def _dimension(key: str) -> dict:
-    unmeasured = key in {"evidence", "freshness", "authority"}
+    unmeasured = key in {"evidence", "freshness", "provenance"}
     return {
         "key": key,
         "label": AEO_READINESS_DIMENSION_LABELS[key],
@@ -55,7 +54,6 @@ def _dimension(key: str) -> dict:
         "determinate_points": 0.0 if unmeasured else 1.0,
         "expected_points": 1.0,
         "determinate_checkpoint_ids": [],
-        "checkpoint_families": [],
         "reason": "no_expected_checkpoint_evaluator" if unmeasured else "",
     }
 
@@ -92,7 +90,7 @@ async def _seed_readiness(session: AsyncSession, *, email: str):
         ("aeo.answer_first", RULE_OUTCOME_MISSING, "advisory", {"opening": "context"}),
         ("aeo.question_headings", RULE_OUTCOME_SATISFIED, "defect", {"questions": 3}),
         (
-            "aeo.schema_expected_for_type",
+            "aeo.schema_required_valid",
             RULE_OUTCOME_SATISFIED,
             "advisory",
             {"schema_type": "FAQPage"},
@@ -114,9 +112,7 @@ async def _seed_readiness(session: AsyncSession, *, email: str):
             outcome=outcome,
             display_applicability=True,
             score_applicability=True,
-            expected_profile_membership=True,
             score_roles=["aeo_readiness"],
-            checkpoint_family=CHECKPOINT_FAMILY_BY_ID[rule_id],
             readiness_dimension=CHECKPOINT_DIMENSION_BY_ID[rule_id],
             readiness_weight=1.0,
             evidence=evidence,
@@ -126,7 +122,32 @@ async def _seed_readiness(session: AsyncSession, *, email: str):
         )
         session.add(evaluation)
         evaluations.append(evaluation)
+    metadata_gap = SiteRuleEvaluation(
+        workspace_id=scenario.workspace_id,
+        analysis_id=analysis.id,
+        source_artifact_id=analysis.artifact_id,
+        rule_id="technical.meta_description_present",
+        dimension="technical",
+        category="content",
+        severity="low",
+        finding_class="advisory",
+        weight=0.0,
+        outcome=RULE_OUTCOME_MISSING,
+        display_applicability=True,
+        score_applicability=False,
+        score_roles=[],
+        readiness_dimension="",
+        readiness_weight=0.0,
+        evidence={"meta_description": ""},
+        extractor_version="sh-extractor-1",
+        analyzer_version="sh-analyzer-1",
+        rule_version="sh-rules-1",
+    )
+    session.add(metadata_gap)
+    evaluations.append(metadata_gap)
     await session.flush()
+    analysis.finalized_at = datetime.now(UTC)
+    analysis.source_evaluation_ids = [row.id for row in evaluations]
 
     site_url = await session.get(SiteUrl, analysis.site_url_id)
     assert site_url is not None
@@ -613,17 +634,18 @@ async def test_content_handoff_returns_exact_authorized_gap(
             "crawl_id": scenario.crawl_id,
             "site_url_id": scenario.monitored_url_id,
             "source_analysis_id": analysis.id,
-            "dimension": "answerability",
-            "checkpoint_ids": ["aeo.answer_first"],
+            "dimension": "metadata",
+            "checkpoint_ids": ["technical.meta_description_present"],
         },
     )
 
     assert response.status_code == 200
     body = response.json()
     assert body["source_analysis_id"] == str(analysis.id)
-    assert body["checkpoint_ids"] == ["aeo.answer_first"]
+    assert body["checkpoint_ids"] == ["technical.meta_description_present"]
     assert body["suggested_skill_id"] == "content_page"
-    assert body["observed_evidence"] == [{"opening": "context"}]
+    assert body["observed_evidence"] == [{"meta_description": ""}]
+    assert body["target_fields"] == ["meta_description"]
     assert body["normalized_url"].endswith("/a")
     assert body["scoring_policy_version"] == "1"
 

@@ -32,6 +32,7 @@ def analyze_page(
     *,
     sitemap_member: bool = False,
     site_facts: dict[str, Any] | None = None,
+    audit_time: str | None = None,
 ) -> PageAnalysisResult:
     """Classify, evaluate, and score one page without mutating its facts.
 
@@ -51,6 +52,8 @@ def analyze_page(
     }
     if site_facts is not None:
         evaluation_facts["site"] = site_facts
+    if audit_time:
+        evaluation_facts["audit_time"] = audit_time
     evaluations = tuple(
         evaluate_rules(
             evaluation_facts,

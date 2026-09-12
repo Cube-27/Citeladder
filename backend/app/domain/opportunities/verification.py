@@ -88,7 +88,7 @@ async def _evaluate_site_rule(
     evaluation = await session.scalar(
         select(SiteRuleEvaluation).where(
             SiteRuleEvaluation.workspace_id == declaration.workspace_id,
-            SiteRuleEvaluation.analysis_id == analysis.id,
+            SiteRuleEvaluation.id.in_(analysis.source_evaluation_ids or []),
             SiteRuleEvaluation.rule_id == check.get("rule_id"),
         )
     )
@@ -157,6 +157,7 @@ async def _site_evidence(
                 SitePageAnalysis.crawl_id == crawl_id,
                 SitePageAnalysis.site_url_id == target_id,
                 SitePageAnalysis.is_current.is_(True),
+                SitePageAnalysis.finalized_at.is_not(None),
                 SiteFetchArtifact.fetched_at > declaration.declared_implemented_at,
             )
             .order_by(SitePageAnalysis.created_at.desc(), SitePageAnalysis.id.desc())

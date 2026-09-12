@@ -140,7 +140,7 @@ export const readinessCheckSchema = responseObject({
   not_applicable_count: z.number().int(),
   error_count: z.number().int(),
   failing_entity_count: z.number().int(),
-  checkpoint_family: z.string(),
+  aeo_pillar: z.string(),
   content_addressable: z.boolean(),
 });
 
@@ -150,7 +150,7 @@ export const readinessDimensionSchema = responseObject({
     'structure',
     'evidence',
     'machine-readability',
-    'authority',
+    'provenance',
     'freshness',
     'crawlability',
   ]),
@@ -162,7 +162,6 @@ export const readinessDimensionSchema = responseObject({
   reason: z.string(),
   checkpoint_ids: z.array(z.string()),
   determinate_checkpoint_ids: z.array(z.string()),
-  checkpoint_families: z.array(z.string()),
   earned_points: z.number(),
   determinate_points: z.number(),
   expected_points: z.number(),
@@ -237,7 +236,6 @@ const overviewDimensionSchema = responseObject({
   determinate_points: z.number(),
   expected_points: z.number(),
   determinate_checkpoint_ids: z.array(z.string()),
-  checkpoint_families: z.array(z.string()),
   reason: z.string(),
 });
 const overviewIssueSchema = responseObject({
@@ -386,6 +384,10 @@ export const siteHealthContentHandoffSchema = responseObject({
   suggested_skill_id: z.string(),
   finding_class: z.string(),
   observed_evidence: z.array(z.record(z.string(), z.unknown())),
+  source_evaluation_ids: z.array(uuid()),
+  source_artifact_ids: z.array(uuid()),
+  target_fields: z.array(z.string()),
+  captured_values: z.array(z.string()),
   expected_capability: z.array(z.string()),
   remediation: z.array(z.string()),
   page_kind: z.string(),

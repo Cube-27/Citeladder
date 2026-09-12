@@ -698,11 +698,16 @@ async def test_free_sample_stops_at_ten_across_two_projects(
         assert all(s == TASK_STATUS_SUCCEEDED for s in analyze_statuses)
         assert len(analyze_statuses) == 10
 
-        # Each executed analyze task produced a completed page analysis.
+        # Each executed analyze task produced one current terminal result. The
+        # initial immutable revisions remain reachable for provenance.
         analysis_count = await session.scalar(
             select(func.count())
             .select_from(SitePageAnalysis)
-            .where(SitePageAnalysis.workspace_id == seed_a.workspace_id)
+            .where(
+                SitePageAnalysis.workspace_id == seed_a.workspace_id,
+                SitePageAnalysis.is_current.is_(True),
+                SitePageAnalysis.finalized_at.is_not(None),
+            )
         )
         assert analysis_count == 10
 
@@ -1248,7 +1253,9 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
         analysis = (
             await session.execute(
                 select(SitePageAnalysis).where(
-                    SitePageAnalysis.crawl_id == seed.crawl_id
+                    SitePageAnalysis.crawl_id == seed.crawl_id,
+                    SitePageAnalysis.is_current.is_(True),
+                    SitePageAnalysis.finalized_at.is_not(None),
                 )
             )
         ).scalar_one()
@@ -1269,7 +1276,7 @@ async def test_discover_site_setup_llms_stance_sitemap_and_finalize_orphan(
             for row in (
                 await session.execute(
                     select(SiteRuleEvaluation).where(
-                        SiteRuleEvaluation.analysis_id == analysis.id
+                        SiteRuleEvaluation.id.in_(analysis.source_evaluation_ids)
                     )
                 )
             )

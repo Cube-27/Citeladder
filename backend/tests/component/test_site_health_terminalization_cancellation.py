@@ -362,7 +362,6 @@ async def test_cancel_crawl_persists_partial_snapshot_from_completed_analyses(
                 severity="critical",
                 weight=1.0,
                 outcome=RULE_OUTCOME_SATISFIED,
-                expected_profile_membership=True,
                 score_roles=["web_fundamentals", "aeo_readiness"],
             )
         )

@@ -48,7 +48,9 @@ export function OverviewPanel({
           analyzed.{' '}
           {data.search_eligibility === 'blocked'
             ? 'At least one selected page has a critical search eligibility blocker.'
-            : `Search eligibility: ${data.search_eligibility}.`}
+            : data.search_eligibility === 'eligible'
+              ? 'No observed blocker.'
+              : `Search access evidence: ${data.search_eligibility}.`}
         </Alert>
       ) : null}
       <OverviewMetricCards overview={data} dashboard={dashboard} crawl={crawl} />

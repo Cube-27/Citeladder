@@ -156,7 +156,7 @@ describe('PageKindScores', () => {
     );
 
     expect(screen.getByText('46')).toBeInTheDocument();
-    expect(screen.getByText('50% measured · Moderate confidence')).toBeInTheDocument();
+    expect(screen.getByText('50% complete · Partial audit')).toBeInTheDocument();
     expect(screen.getByText('Excluded')).toBeInTheDocument();
   });
 

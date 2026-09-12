@@ -225,27 +225,17 @@ class SiteHealthRule:
 def validate_triggered_rule_links(
     rules: tuple[SiteHealthRule, ...],
     by_id: Mapping[str, SiteHealthRule],
-    checkpoint_families: Mapping[str, str],
 ) -> None:
-    """Reject triggered checks without a same-role, same-family root check."""
+    """Reject triggered checks without a configured absence sibling."""
     for rule in rules:
         if rule.kind_evidence != KIND_EVIDENCE_TRIGGERED:
             continue
         sibling = by_id.get(rule.triggered_by)
-        family_id = checkpoint_families.get(rule.rule_id)
-        sibling_family_id = checkpoint_families.get(rule.triggered_by)
         if sibling is None:
             raise ValueError(
                 f"Triggered rule {rule.rule_id} requires an absence sibling"
             )
-        if (
-            not rule.score_roles
-            or sibling.kind_evidence == KIND_EVIDENCE_TRIGGERED
-            or not set(rule.score_roles).issubset(sibling.score_roles)
-            or not family_id
-            or family_id != sibling_family_id
-        ):
+        if sibling.kind_evidence == KIND_EVIDENCE_TRIGGERED:
             raise ValueError(
-                f"Triggered rule {rule.rule_id} must share role and family "
-                f"with {sibling.rule_id}"
+                f"Triggered rule {rule.rule_id} requires an expectation sibling"
             )

@@ -47,10 +47,8 @@ def _evaluation(rule_id: str, outcome: str) -> SimpleNamespace:
         outcome=outcome,
         display_applicability=True,
         score_applicability=True,
-        expected_profile_membership=True,
         reason_code="",
         score_roles=("web_fundamentals",),
-        checkpoint_family="",
         readiness_dimension="",
         readiness_weight=0.0,
         evidence={"rule": rule_id},
@@ -130,7 +128,7 @@ async def test_failed_diagnostic_persists_without_creating_an_issue() -> None:
 
 
 @pytest.mark.asyncio
-async def test_non_scoring_guidance_does_not_create_an_issue() -> None:
+async def test_evidence_backed_unscored_guidance_creates_an_issue() -> None:
     session = _RecordingSession()
     crawl = SimpleNamespace(
         id=uuid.uuid4(),
@@ -152,4 +150,4 @@ async def test_non_scoring_guidance_does_not_create_an_issue() -> None:
         evaluations=cast(Any, [guidance]),
     )
 
-    assert not [row for row in session.added if isinstance(row, SiteIssue)]
+    assert len([row for row in session.added if isinstance(row, SiteIssue)]) == 1

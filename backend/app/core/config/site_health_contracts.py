@@ -194,7 +194,7 @@ AEO_READINESS_DIMENSIONS: Final[tuple[str, ...]] = (
     "structure",
     "evidence",
     "machine-readability",
-    "authority",
+    "provenance",
     "freshness",
     "crawlability",
 )
@@ -204,7 +204,7 @@ AEO_READINESS_DIMENSION_LABELS: Final[dict[str, str]] = {
     "structure": "Structure",
     "evidence": "Evidence",
     "machine-readability": "Machine readability",
-    "authority": "Provenance & trust signals",
+    "provenance": "Provenance",
     "freshness": "Freshness",
     "crawlability": "Crawlability",
 }
@@ -226,7 +226,7 @@ AEO_READINESS_DIMENSION_DESCRIPTIONS: Final[dict[str, str]] = {
         "Whether the page states what it is in machine-readable form, rather "
         "than leaving an engine to infer it from prose."
     ),
-    "authority": "Whether it is clear who published the page and stands behind it.",
+    "provenance": "Whether a responsible creator or publisher is identified.",
     "freshness": "Whether the page says when it was written or last updated.",
     "crawlability": (
         "Whether an answer engine can reach and read the page at all — the "

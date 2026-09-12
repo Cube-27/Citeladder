@@ -9,6 +9,7 @@ Web Fundamentals, so a displayed issue can never coexist with an unaffected
 from __future__ import annotations
 
 import uuid
+from copy import copy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -16,12 +17,14 @@ import pytest
 
 from app.analysis.site_health.finalize import (
     _MAX_EVIDENCE_URLS,
+    _evaluation,
     evaluate_broken_internal_links,
-    evaluate_canonical_resolvable,
+    evaluate_canonical_integrity,
     evaluate_hreflang_conflict,
     evaluate_sitemap_orphan,
     evaluate_sitemap_url_unreachable,
 )
+from app.analysis.site_health.rules import rule_for
 from app.core.config.site_health_contracts import (
     DIMENSION_TECHNICAL,
     RULE_CATALOG_VERSION,
@@ -48,25 +51,80 @@ from app.workers.site_health.resolution_evidence import (
 )
 
 
-def test_finalize_rules_carry_scored_catalog_provenance():
+@pytest.mark.parametrize(
+    ("declared", "final_url", "outcome", "reason"),
+    [
+        ("https://EXAMPLE.test:443/p", "https://example.test/p", "satisfied", ""),
+        ("http://example.test:80/p", "http://example.test/p", "satisfied", ""),
+        (
+            "http://example.test/p",
+            "https://example.test/p",
+            "missing",
+            "cross_origin_canonical",
+        ),
+        (
+            "https://example.test:8443/p",
+            "https://example.test/p",
+            "missing",
+            "cross_origin_canonical",
+        ),
+        (
+            "https://example.test:bad/p",
+            "https://example.test/p",
+            "missing",
+            "invalid_canonical",
+        ),
+        ("/p", "https://example.test:99999/p", "missing", "invalid_canonical"),
+        ("https://[broken/p", "https://example.test/p", "missing", "invalid_canonical"),
+    ],
+)
+def test_canonical_integrity_compares_valid_normalized_origins(
+    declared, final_url, outcome, reason
+):
+    evaluation = evaluate_canonical_integrity(
+        declarations=[declared],
+        final_url=final_url,
+        target_url=declared,
+        checked=True,
+        status_code=200,
+        redirected=False,
+    )
+    assert evaluation.outcome == outcome
+    assert evaluation.reason_code == reason
+    assert evaluation.score_applicability is True
+    assert evaluation.score_roles == (SCORE_ROLE_WEB_FUNDAMENTALS,)
+
+
+def test_relationship_rules_carry_unscored_catalog_provenance():
     ev = evaluate_sitemap_orphan(
         sitemap_url_count=1, orphan_urls=[], coverage_state="complete"
     )
     assert ev.rule_id == "technical.sitemap_orphan"
     assert ev.rule_version == RULE_CATALOG_VERSION
     assert ev.dimension == DIMENSION_TECHNICAL
-    assert ev.weight == 1.0
-    assert ev.score_roles == (SCORE_ROLE_WEB_FUNDAMENTALS,)
+    assert ev.score_roles == ()
+    assert ev.score_applicability is False
     assert ev.remediation
 
 
-def _assert_technical_score_metadata(ev, *, scope: str) -> None:
+@pytest.mark.parametrize("outcome", [RULE_OUTCOME_MISSING, RULE_OUTCOME_NOT_APPLICABLE])
+def test_finalize_membership_comes_from_the_public_checklist(outcome):
+    rule = rule_for("technical.canonical_integrity")
+    assert rule is not None
+    generated_rule = copy(rule)
+    generated_rule.score_roles = ()
+    evaluation = _evaluation(generated_rule, outcome, {})
+    assert evaluation.score_applicability is (outcome != RULE_OUTCOME_NOT_APPLICABLE)
+    assert evaluation.score_roles == (SCORE_ROLE_WEB_FUNDAMENTALS,)
+
+
+def _assert_technical_score_metadata(ev, *, scope: str, scored: bool = False) -> None:
     assert ev.dimension == DIMENSION_TECHNICAL
     assert ev.scope == scope
-    assert ev.weight == 3.0
-    assert ev.score_roles == (SCORE_ROLE_WEB_FUNDAMENTALS,)
-    assert ev.score_applicability is True
-    assert ev.expected_profile_membership is True
+    assert ev.weight > 0
+    assert ev.score_roles == ((SCORE_ROLE_WEB_FUNDAMENTALS,) if scored else ())
+    assert ev.score_applicability is scored
+    assert bool(ev.score_roles) is scored
 
 
 # --- Technical crawl-finalize reachability ----------------------------------
@@ -173,6 +231,24 @@ def test_rate_limited_canonical_target_is_unknown_with_attempt_provenance():
     assert ev.reason_code == "rate_limited"
     assert ev.evidence["observed_status_code"] == 429
     assert ev.evidence["resolution_source_ids"] == [str(task_id), str(attempt_id)]
+
+
+@pytest.mark.parametrize(
+    "declarations", [[], [""], [" "], ["/a", "/b"], ["mailto:a@b.test"]]
+)
+def test_unresolved_canonical_declarations_do_not_borrow_page_fetch_evidence(
+    declarations,
+):
+    artifact_id, analysis_id = uuid.uuid4(), uuid.uuid4()
+    task_id, attempt_id = uuid.uuid4(), uuid.uuid4()
+    base = "https://example.test/page"
+    [(_, evaluation)] = canonical_resolution_evaluations(
+        [(artifact_id, base, {"canonical_declarations": declarations})],
+        analysis_ids_by_artifact={artifact_id: [analysis_id]},
+        resolutions={base: (200, "", False, task_id, attempt_id, None)},
+    )
+    assert evaluation.evidence["target_url"] == ""
+    assert evaluation.evidence["resolution_source_ids"] == []
 
 
 @pytest.mark.asyncio
@@ -294,7 +370,7 @@ def test_sitemap_url_unreachable_is_not_applicable_without_a_sitemap():
     assert ev.evidence == {"reason": "no_sitemap"}
     assert ev.score_roles == ()
     assert ev.score_applicability is False
-    assert ev.expected_profile_membership is False
+    assert not ev.score_roles
     assert ev.scope == RULE_SCOPE_PAGE
 
 
@@ -317,8 +393,10 @@ def test_sitemap_url_unreachable_reports_partial_and_unknown_evidence():
     _assert_technical_score_metadata(unknown, scope=RULE_SCOPE_PAGE)
 
 
-def test_canonical_resolvable_passes_fails_and_preserves_unknown():
-    satisfied = evaluate_canonical_resolvable(
+def test_canonical_integrity_passes_fails_and_preserves_unknown():
+    satisfied = evaluate_canonical_integrity(
+        declarations=["https://example.test/canonical"],
+        final_url="https://example.test/page",
         target_url="https://example.test/canonical",
         checked=True,
         status_code=200,
@@ -326,9 +404,11 @@ def test_canonical_resolvable_passes_fails_and_preserves_unknown():
     )
     assert satisfied.outcome == RULE_OUTCOME_SATISFIED
     assert satisfied.evidence["status_code"] == 200
-    _assert_technical_score_metadata(satisfied, scope=RULE_SCOPE_PAGE)
+    _assert_technical_score_metadata(satisfied, scope=RULE_SCOPE_PAGE, scored=True)
 
-    missing = evaluate_canonical_resolvable(
+    missing = evaluate_canonical_integrity(
+        declarations=["https://example.test/missing"],
+        final_url="https://example.test/page",
         target_url="https://example.test/missing",
         checked=True,
         status_code=404,
@@ -337,27 +417,29 @@ def test_canonical_resolvable_passes_fails_and_preserves_unknown():
     assert missing.outcome == RULE_OUTCOME_MISSING
     assert missing.evidence["status_code"] == 404
 
-    redirected = evaluate_canonical_resolvable(
+    redirected = evaluate_canonical_integrity(
+        declarations=["https://example.test/redirecting"],
+        final_url="https://example.test/page",
         target_url="https://example.test/redirecting",
         checked=True,
         status_code=200,
         redirected=True,
     )
-    assert redirected.outcome == RULE_OUTCOME_MISSING
+    assert redirected.outcome == RULE_OUTCOME_SATISFIED
     assert redirected.evidence["redirected"] is True
 
-    unknown = evaluate_canonical_resolvable(
+    unknown = evaluate_canonical_integrity(
+        declarations=["https://example.test/unverified"],
+        final_url="https://example.test/page",
         target_url="https://example.test/unverified",
         checked=False,
         status_code=None,
         redirected=False,
     )
     assert unknown.outcome == RULE_OUTCOME_UNKNOWN
-    assert unknown.evidence == {
-        "reason": "insufficient_evidence",
-        "target_url": "https://example.test/unverified",
-    }
-    _assert_technical_score_metadata(unknown, scope=RULE_SCOPE_PAGE)
+    assert unknown.evidence["reason"] == "insufficient_evidence"
+    assert unknown.evidence["target_url"] == "https://example.test/unverified"
+    _assert_technical_score_metadata(unknown, scope=RULE_SCOPE_PAGE, scored=True)
 
 
 # --- technical.sitemap_orphan ------------------------------------------------
