@@ -6,7 +6,6 @@ import hashlib
 import uuid
 from dataclasses import dataclass
 
-import httpx
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,6 +45,10 @@ from app.models.site_health.runtime import SiteHealthProfile
 from app.models.site_health.urls import MonitoredSiteUrl, SiteUrl, SiteUrlObservation
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
+from tests.component.auth_helpers import register_and_login
+
+# Re-exported: seven site-health suites import `_register` from here.
+_register = register_and_login
 
 pytestmark = pytest.mark.asyncio
 
@@ -62,19 +65,6 @@ class Scenario:
     monitored_url_id: uuid.UUID
     issue_url_id: uuid.UUID
     canonical_issue_id: uuid.UUID
-
-
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    reg = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert reg.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
 
 
 async def _seed_scenario(session: AsyncSession, *, email: str) -> Scenario:

@@ -3,29 +3,14 @@ import { render, screen, within } from '@testing-library/react';
 
 import { SiteFactsPanel } from './site-facts-panel';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
+import {
+  SITE_HEALTH_UUID as PROJECT,
+  makeSiteCrawl,
+  makeSiteFacts,
+} from '@/test/fixtures/site-health';
 
-const PROJECT = '11111111-1111-4111-8111-111111111111';
-const CRAWL = '22222222-2222-4222-8222-222222222222';
-
-// Bounded site-facts blob the worker persists (`_crawl_setup` in
-// backend/app/workers/site_health_worker.py); variant A — GPTBot blocked.
-const variantA = {
-  robots: {
-    fetched: true,
-    status: 'fetched',
-    url: 'https://acme.com/robots.txt',
-    status_code: 200,
-    ai_crawlers: {
-      GPTBot: 'block',
-      ClaudeBot: 'allow',
-      PerplexityBot: 'allow',
-      'Google-Extended': 'allow',
-    },
-    sitemaps: ['https://acme.com/sitemap.xml'],
-  },
-  llms_txt: { fetched: true, url: 'https://acme.com/llms.txt', status_code: 200, present: true },
-  sitemap: { fetched: false, files: [] },
-};
+/** Variant A — GPTBot blocked, everything else allowed. */
+const variantA = makeSiteFacts();
 
 const robotsUnfetched = {
   ...variantA,
@@ -42,7 +27,12 @@ const robotsUnfetched = {
       'Google-Extended': 'allow',
     },
   },
-  llms_txt: { fetched: true, url: 'https://acme.com/llms.txt', status_code: 404, present: false },
+  llms_txt: {
+    fetched: true,
+    url: 'https://acme.com/llms.txt',
+    status_code: 404,
+    present: false,
+  },
 };
 
 /** B2: the site HAS no robots.txt (HTTP 404) — a definitive default-allow. */
@@ -60,7 +50,12 @@ const robotsNotFound = {
       'Google-Extended': 'allow',
     },
   },
-  llms_txt: { fetched: true, url: 'https://acme.com/llms.txt', status_code: 404, present: false },
+  llms_txt: {
+    fetched: true,
+    url: 'https://acme.com/llms.txt',
+    status_code: 404,
+    present: false,
+  },
 };
 
 const allAllowed = {
@@ -77,52 +72,7 @@ const allAllowed = {
 };
 
 function crawl(siteFacts: SiteCrawl['site_facts']): SiteCrawl {
-  return {
-    id: CRAWL,
-    workspace_id: '33333333-3333-4333-8333-333333333333',
-    project_id: PROJECT,
-    profile_id: '55555555-5555-4555-8555-555555555555',
-    status: 'completed',
-    discovery_status: 'completed',
-    analysis_status: 'completed',
-    root_url: 'https://acme.com/',
-    sample_mode: false,
-    seed: '1',
-    inventory_complete: true,
-    partial_reason: '',
-    visible_url_count: 3,
-    analyzed_count: 3,
-    failed_count: 0,
-    discovery_requested_count: 3,
-    analysis_requested_count: 3,
-    counters: {
-      discovered: 3,
-      selected: 3,
-      queued: 0,
-      running: 0,
-      analyzed: 3,
-      errors: 0,
-      blocked: 0,
-      failure_breakdown: { robots_denied: 0, http_4xx: 0, http_5xx: 0, timeout: 0 },
-      activity: { state: 'terminal', reason: 'terminal', queue_depth: 0, next_available_at: null },
-      by_page_kind: {},
-    },
-    discovered_count: 3,
-    total_url_count: 3,
-    has_more_site_urls: false,
-    score_summary: null,
-    failure_summary: null,
-    site_facts: siteFacts,
-    extractor_version: 'e1',
-    analyzer_version: 'a1',
-    rule_version: 'r1',
-    scoring_version: 's1',
-    error_message: '',
-    created_at: '2026-07-16T00:00:00Z',
-    updated_at: '2026-07-16T00:00:00Z',
-    started_at: '2026-07-16T00:00:00Z',
-    completed_at: '2026-07-16T00:05:00Z',
-  };
+  return makeSiteCrawl({ site_facts: siteFacts });
 }
 
 function dashboard(crawlValue: SiteCrawl | null): SiteHealthDashboard {

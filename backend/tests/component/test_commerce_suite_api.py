@@ -19,21 +19,7 @@ from app.domain.prompts.topical_binding import binding_tokens
 from app.models.commerce import CommerceCategory
 from app.models.project import Project
 from app.models.prompt import Prompt, Topic
-
-
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    assert (
-        await client.post(
-            "/api/v1/auth/register",
-            json={"email": email, "password": "password123"},
-        )
-    ).status_code == 202
-    assert (
-        await client.post(
-            "/api/v1/auth/login",
-            json={"email": email, "password": "password123"},
-        )
-    ).status_code == 200
+from tests.component.auth_helpers import register_and_login as _register
 
 
 async def _project(client: httpx.AsyncClient) -> dict:

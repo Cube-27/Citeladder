@@ -62,7 +62,6 @@ from app.core.config.task_queue import (
 from app.domain.audits.cancellation import cancel_audit
 from app.domain.audits.creation import create_audit
 from app.domain.audits.errors import AuditValidationError
-from app.domain.entitlements.cache import clear_cache
 from app.domain.entitlements.ledger import (
     consumable_usage,
     record_billable_attempt,
@@ -86,13 +85,6 @@ from tests.component.audit_helpers import (
 from tests.component.audit_worker_helpers import _StubAdapter
 from tests.component.log_capture import capture_log_messages
 from tests.component.occupancy_helpers import seed_occupancy_grants
-
-
-@pytest.fixture(autouse=True)
-def _clear_cache():
-    clear_cache()
-    yield
-    clear_cache()
 
 
 async def _seed_funded(

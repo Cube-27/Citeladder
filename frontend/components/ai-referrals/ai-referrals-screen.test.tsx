@@ -3,15 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import type { Project } from '@/lib/api/types';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { makeProject } from '@/test/fixtures/project';
 
 const PROJECT = '88888888-8888-4888-8888-888888888888';
-const activeProject = {
+const activeProject = makeProject({
   id: PROJECT,
   workspace_id: '11111111-1111-4111-8111-111111111111',
-} as Project;
+});
 
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -69,8 +69,14 @@ describe('AiReferralsScreen', () => {
       http.get(endpoint, () =>
         HttpResponse.json({
           ...dashboard,
-          referral_volume: dashboard.referral_volume.map((point) => ({ ...point, value: 0 })),
-          referral_share: dashboard.referral_share.map((point) => ({ ...point, value: 0 })),
+          referral_volume: dashboard.referral_volume.map((point) => ({
+            ...point,
+            value: 0,
+          })),
+          referral_share: dashboard.referral_share.map((point) => ({
+            ...point,
+            value: 0,
+          })),
           sources: [],
         }),
       ),
@@ -88,8 +94,14 @@ describe('AiReferralsScreen', () => {
       http.get(endpoint, () =>
         HttpResponse.json({
           ...dashboard,
-          referral_volume: dashboard.referral_volume.map((point) => ({ ...point, value: null })),
-          referral_share: dashboard.referral_share.map((point) => ({ ...point, value: null })),
+          referral_volume: dashboard.referral_volume.map((point) => ({
+            ...point,
+            value: null,
+          })),
+          referral_share: dashboard.referral_share.map((point) => ({
+            ...point,
+            value: null,
+          })),
           sources: [],
         }),
       ),

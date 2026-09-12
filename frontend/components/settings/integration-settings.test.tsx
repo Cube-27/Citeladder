@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Project } from '@/lib/api/types';
 import { assignLocation } from '@/lib/navigate';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
+import { makeProject } from '@/test/fixtures/project';
 
 // Stub next/navigation (Link/useSearchParams in jsdom). `search` is mutable per
 // test so the C2 callback params (?connected= / ?error=) can be exercised.
@@ -35,12 +35,12 @@ const CONN_BING = '66666666-6666-4666-8666-666666666666';
 const SYNC = '77777777-7777-4777-8777-777777777777';
 const MAPPING_ID = '99999999-9999-4999-8999-999999999999';
 
-const activeProject = {
+const activeProject = makeProject({
   id: '88888888-8888-4888-8888-888888888888',
   workspace_id: WS,
   name: 'Example.com',
   brand_name: 'Example',
-} as unknown as Project;
+});
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
@@ -208,7 +208,9 @@ describe('IntegrationSettings — grant cards', () => {
     expect(within(msCard).getByText(/requires renewed consent/i)).toBeInTheDocument();
     expect(within(msCard).getByRole('button', { name: 'Sync now' })).toBeDisabled();
     expect(
-      within(screen.getByTestId('connection-row-gsc')).getByRole('button', { name: 'Sync now' }),
+      within(screen.getByTestId('connection-row-gsc')).getByRole('button', {
+        name: 'Sync now',
+      }),
     ).toBeEnabled();
   });
 

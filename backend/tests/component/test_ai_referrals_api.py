@@ -10,21 +10,9 @@ import pytest
 
 from app.core.config.analytics import ANALYTICS_DEFAULT_GRANULARITY
 from app.models.analytics import AiReferralsSnapshot
+from tests.component.auth_helpers import register_and_login as _register
 
 WINDOW = (date(2026, 7, 20), date(2026, 7, 22))
-
-
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    assert (
-        await client.post(
-            "/api/v1/auth/register", json={"email": email, "password": "password123"}
-        )
-    ).status_code == 202
-    assert (
-        await client.post(
-            "/api/v1/auth/login", json={"email": email, "password": "password123"}
-        )
-    ).status_code == 200
 
 
 async def _create_project(client: httpx.AsyncClient) -> tuple[str, str]:

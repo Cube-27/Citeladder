@@ -1,6 +1,6 @@
 import { expect, test, type Request } from '@playwright/test';
 import { providerCatalogFixture } from '../test/provider-catalog-fixture';
-import { stubWorkspaceList } from './helpers/app-fixture';
+import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
 
 /**
  * F8 direct-provider Provider Settings e2e (Task 4).
@@ -16,39 +16,7 @@ import { stubWorkspaceList } from './helpers/app-fixture';
  * same-origin with the page's baseURL — no cross-origin backend URL.
  */
 const CONNECTION_ID = '11111111-1111-4111-8111-111111111111';
-const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const PROJECT_ID = '22222222-2222-4222-8222-222222222222';
-
-const user = {
-  id: '33333333-3333-4333-8333-333333333333',
-  email: 'providers@example.com',
-  role: 'owner',
-  is_active: true,
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
-
-const project = {
-  id: PROJECT_ID,
-  workspace_id: WORKSPACE_ID,
-  name: 'Acme',
-  brand_name: 'Acme',
-  website_url: 'https://acme.example',
-  industry: 'general',
-  subindustry: '',
-  primary_market: 'United States',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
+const WORKSPACE_ID = FIXTURE_PROJECT.workspace_id;
 
 const catalog = providerCatalogFixture;
 
@@ -99,20 +67,7 @@ test('provider settings: available engines save and test an OpenAI key', async (
   // Connection list flips to "configured" once the OpenAI key is saved.
   let created = false;
 
-  // 404 catch-all FIRST (reverse registration order means the specific stubs
-  // below still win) — keeps unstubbed downstream queries from 401-ing a live
-  // backend and tripping the session guard's any-401 → /login redirect.
-  await page.route('**/api/v1/**', (route) =>
-    route.fulfill({
-      status: 404,
-      contentType: 'application/json',
-      body: JSON.stringify({ detail: 'e2e fixture: endpoint not stubbed' }),
-    }),
-  );
-
-  await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
-  await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
-  await stubWorkspaceList(page, WORKSPACE_ID);
+  await stubAuthedShell(page);
   await page.route('**/api/v1/provider-catalog', (route) => route.fulfill({ json: catalog }));
   await page.route('**/api/v1/provider-connections', (route) => {
     if (route.request().method() === 'POST') {
@@ -139,31 +94,24 @@ test('provider settings: available engines save and test an OpenAI key', async (
 
   await page.goto('/settings?tab=providers');
 
-  // The three directly configurable engine cards render.
-  await expect(page.getByRole('heading', { name: 'ChatGPT' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Gemini' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Claude' })).toBeVisible();
-
-  // Transport labels: Direct (OpenAI) / Direct (Google) / Direct (Anthropic).
-  await expect(page.getByText('Direct (OpenAI)')).toBeVisible();
-  await expect(page.getByText('Direct (Google)')).toBeVisible();
-  await expect(page.getByText('Direct (Anthropic)')).toBeVisible();
-
-  // No route toggle; six catalog engines are visibly planned but unavailable.
-  await expect(page.getByRole('radio')).toHaveCount(0);
-  await expect(page.getByText(/coming soon/i)).toHaveCount(6);
-
+  // The panel's static contract — three direct cards, their transport labels,
+  // no route radios, six "coming soon" engines, the Missing→succeeded status
+  // machine — is pinned in jsdom by components/settings/provider-settings.test.tsx.
+  // What only a real browser can show is that the save + probe round trip issues
+  // same-origin /api/ requests through the Next rewrite.
   // Exercise the ChatGPT card: fill the key, save, then test the connection.
   const chatgptCard = page.locator('section', {
     has: page.getByRole('heading', { name: 'ChatGPT' }),
   });
-  await expect(chatgptCard.getByText('Missing')).toBeVisible();
+  await expect(chatgptCard).toBeVisible();
 
   await chatgptCard.getByPlaceholder(/paste your api key/i).fill('sk-test-key');
   await chatgptCard.getByRole('button', { name: /save key/i }).click();
 
   // Saving enables verification; the status remains Missing until that succeeds.
-  const testConnection = chatgptCard.getByRole('button', { name: /test connection/i });
+  const testConnection = chatgptCard.getByRole('button', {
+    name: /test connection/i,
+  });
   await expect(testConnection).toBeEnabled();
   await testConnection.click();
   await expect(chatgptCard.getByText(/connection succeeded/i)).toBeVisible();

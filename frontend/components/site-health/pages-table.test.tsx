@@ -2,7 +2,15 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import { PagesTable } from './pages-table';
-import type { PageSummary } from '@/lib/api/types';
+import {
+  SITE_HEALTH_UUID as UUID,
+  SITE_HEALTH_UUID_2 as CRAWL,
+  makePageSummary as page,
+} from '@/test/fixtures/site-health';
+
+/** A DIFFERENT crawl than the table is rendering — the row must link back to
+ * the crawl that actually analyzed the page, not the one in view. */
+const SOURCE_CRAWL = '33333333-3333-4333-8333-333333333333';
 
 // Stub next/navigation (unavailable in jsdom). `push` is asserted by the
 // clickable-row test; vi.hoisted so the hoisted mock factory can reference it.
@@ -12,39 +20,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/projects',
   useRouter: () => ({ push }),
 }));
-
-const UUID = '11111111-1111-4111-8111-111111111111';
-const CRAWL = '22222222-2222-4222-8222-222222222222';
-const SOURCE_CRAWL = '33333333-3333-4333-8333-333333333333';
-
-function page(overrides: Partial<PageSummary> = {}): PageSummary {
-  return {
-    site_url_id: UUID,
-    crawl_id: CRAWL,
-    normalized_url: 'https://acme.com/',
-    display_url: 'https://acme.com/',
-    title: 'Homepage',
-    monitored: true,
-    analysis_status: 'completed',
-    error_code: '',
-    issue_count: 3,
-    web_fundamentals_score: 46,
-    web_fundamentals_coverage: 1,
-    web_fundamentals_state: 'measured',
-    aeo_readiness_score: 64,
-    aeo_measurement_coverage: 0.8,
-    aeo_measurement_state: 'measured',
-    aeo_measurement_reason: '',
-    main_content_indexable: true,
-    last_audited: '2026-07-16T00:00:00Z',
-    // Distinct from `title` so badge-text assertions stay unambiguous.
-    page_kind: 'article',
-    inbound_count: 12,
-    main_content_inbound_count: 4,
-    depth_from_home: 1,
-    ...overrides,
-  };
-}
 
 describe('PagesTable', () => {
   it('renders scores for a completed page', () => {

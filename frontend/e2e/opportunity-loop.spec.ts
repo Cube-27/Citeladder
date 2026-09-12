@@ -1,33 +1,19 @@
 import { expect, test } from '@playwright/test';
-import { stubWorkspaceList } from './helpers/app-fixture';
+import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
 
-const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const PROJECT = '11111111-1111-4111-8111-111111111111';
+const PROJECT = FIXTURE_PROJECT.id;
 const OPPORTUNITY = '22222222-2222-4222-8222-222222222222';
 const SNAPSHOT = '33333333-3333-4333-8333-333333333333';
 const GENERATION = '44444444-4444-4444-8444-444444444444';
 const IMPLEMENTATION = '55555555-5555-4555-8555-555555555555';
 
+/** The loop reads the project's industry into its brief, so those two fields
+ * are stated; everything else is the shared shell project. */
 const project = {
-  id: PROJECT,
-  workspace_id: WORKSPACE,
-  name: 'Acme',
-  brand_name: 'Acme',
-  website_url: 'https://acme.example',
+  ...FIXTURE_PROJECT,
   industry: 'Software',
   subindustry: 'Analytics',
   primary_market: 'US',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-08-28T00:00:00Z',
-  updated_at: '2026-08-28T00:00:00Z',
 };
 
 const mix = {
@@ -90,7 +76,10 @@ function detail(linked: boolean) {
   return {
     ...row,
     remediation: 'Prepare a transparent expert-contribution brief.',
-    evidence: { audit_id: SNAPSHOT, source_pattern: { source_class: 'editorial' } },
+    evidence: {
+      audit_id: SNAPSHOT,
+      source_pattern: { source_class: 'editorial' },
+    },
     source_analysis_ids: [SNAPSHOT],
     source_issue_ids: [],
     source_metric_ids: [SNAPSHOT],
@@ -178,25 +167,7 @@ test('earned opportunity handoff links generation and comparable verification', 
   let generated = false;
   let declarationBody: Record<string, unknown> | null = null;
 
-  await page.route('**/api/v1/**', (route) =>
-    route.fulfill({ status: 404, json: { detail: 'fixture endpoint not stubbed' } }),
-  );
-  await page.route('**/api/v1/auth/me', (route) =>
-    route.fulfill({
-      json: {
-        user: {
-          id: '66666666-6666-4666-8666-666666666666',
-          email: 'loop@example.com',
-          role: 'owner',
-          is_active: true,
-          created_at: '2026-08-28T00:00:00Z',
-          updated_at: '2026-08-28T00:00:00Z',
-        },
-      },
-    }),
-  );
-  await stubWorkspaceList(page, WORKSPACE);
-  await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
+  await stubAuthedShell(page, [], [project]);
   await page.route(`**/api/v1/projects/${PROJECT}/logos/refresh`, (route) =>
     route.fulfill({ json: {} }),
   );

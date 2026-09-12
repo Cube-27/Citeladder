@@ -1,24 +1,14 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { CONTACT_SALES_HREF, PENDING_PRICING_INTENT_KEY } from '@/lib/config/billing';
+import { EXPORT_CHECKOUT_BODY, fillExportBillingDetails } from '@/test/fixtures/billing';
 
 import { PricingCatalog } from './pricing-catalog';
-
-function fillExportBillingDetails() {
-  fireEvent.change(screen.getByLabelText(/Billing country/i), { target: { value: 'US' } });
-  fireEvent.change(screen.getByLabelText('Billing name'), {
-    target: { value: 'CiteLadder' },
-  });
-  fireEvent.change(screen.getByLabelText('Address'), { target: { value: '1 Main Street' } });
-  fireEvent.change(screen.getByLabelText('City'), { target: { value: 'New York' } });
-  fireEvent.change(screen.getByLabelText('Postal code'), { target: { value: '10001' } });
-  fireEvent.click(screen.getByRole('checkbox', { name: /qualifies as an export/i }));
-}
 
 const ACCOUNT = '11111111-1111-4111-8111-111111111111';
 const USER = {
@@ -55,8 +45,18 @@ function plan(key: string, name: string, overrides: Record<string, unknown> = {}
     checkout_available: true,
     unavailable_reason: 'funded_not_priced',
     capabilities: [
-      { key: 'project_slots', capability_type: 'counter.occupancy', value: 3, issuable: true },
-      { key: 'audit_cadence', capability_type: 'level', value: 'daily', issuable: true },
+      {
+        key: 'project_slots',
+        capability_type: 'counter.occupancy',
+        value: 3,
+        issuable: true,
+      },
+      {
+        key: 'audit_cadence',
+        capability_type: 'level',
+        value: 'daily',
+        issuable: true,
+      },
     ],
     trial_availability: 'unavailable',
     trial_unavailable_reason: 'trial_unavailable',
@@ -245,7 +245,9 @@ describe('PricingCatalog', () => {
     await userEvent.click(screen.getByRole('switch', { name: /use your own api keys/i }));
 
     expect(
-      screen.getByRole('button', { name: 'Choose Starter — checkout unavailable' }),
+      screen.getByRole('button', {
+        name: 'Choose Starter — checkout unavailable',
+      }),
     ).toBeDisabled();
   });
 
@@ -307,7 +309,10 @@ describe('PricingCatalog', () => {
       authenticated(),
       noOfferHandler(),
       http.get(`/api/v1/billing/activations/${ACCOUNT}`, () =>
-        HttpResponse.json({ ...activation('base', 'tier_1'), status: 'activated' }),
+        HttpResponse.json({
+          ...activation('base', 'tier_1'),
+          status: 'activated',
+        }),
       ),
       http.post('/api/v1/billing/subscriptions', async ({ request }) => {
         bodies.push(await request.json());
@@ -343,19 +348,7 @@ describe('PricingCatalog', () => {
     renderPricingPage();
 
     await waitFor(() => expect(bodies).toHaveLength(1));
-    expect(bodies[0]).toEqual({
-      catalog_key: 'tier_1',
-      credential_mode: 'byok',
-      country_code: 'US',
-      billing_name: 'CiteLadder',
-      billing_address_line1: '1 Main Street',
-      billing_city: 'New York',
-      billing_state_code: null,
-      billing_postal_code: '10001',
-      customer_gstin: null,
-      export_eligibility_attested: true,
-      trial_requested: false,
-    });
+    expect(bodies[0]).toEqual(EXPORT_CHECKOUT_BODY);
     // The stored key is REUSED so a first attempt that did reach the backend
     // replays instead of charging twice.
     expect(keys[0]).toBe('resume-key');

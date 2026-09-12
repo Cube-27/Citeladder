@@ -8,20 +8,10 @@ import { SITE_HEALTH_STREAM_RECONNECT_BASE_MS } from '@/lib/config/site-health';
 import { useCrawlEvents } from './use-crawl-events';
 import { ProjectSelectionProvider } from '@/lib/project/project-scope';
 import { testProjectSelection } from '@/test/render';
+import { makeStreamResponse } from '@/test/sse';
 
 const CRAWL = '11111111-1111-4111-8111-111111111111';
 const PROJECT = '22222222-2222-4222-8222-222222222222';
-
-function makeStreamResponse(chunks: string[]): Response {
-  const encoder = new TextEncoder();
-  const body = new ReadableStream<Uint8Array>({
-    start(controller) {
-      for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
-      controller.close();
-    },
-  });
-  return { ok: true, body } as unknown as Response;
-}
 
 /**
  * The stream reads its workspace from the shared selection rather than from
@@ -81,7 +71,9 @@ describe('useCrawlEvents', () => {
     // fingerprint owns the one downstream list invalidation round.
     await waitFor(() =>
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ queryKey: queryKeys.siteHealth.dashboard(PROJECT) }),
+        expect.objectContaining({
+          queryKey: queryKeys.siteHealth.dashboard(PROJECT),
+        }),
       ),
     );
     vi.unstubAllGlobals();
@@ -91,7 +83,9 @@ describe('useCrawlEvents', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     const client = new QueryClient();
-    renderHook(() => useCrawlEvents(CRAWL, PROJECT, false), { wrapper: wrapper(client) });
+    renderHook(() => useCrawlEvents(CRAWL, PROJECT, false), {
+      wrapper: wrapper(client),
+    });
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
@@ -117,7 +111,9 @@ describe('useCrawlEvents', () => {
 
     await waitFor(() =>
       expect(invalidateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ queryKey: queryKeys.siteHealth.dashboard(PROJECT) }),
+        expect.objectContaining({
+          queryKey: queryKeys.siteHealth.dashboard(PROJECT),
+        }),
       ),
     );
     // Tear the hook down BEFORE counting. This test runs on real timers, and
@@ -168,7 +164,9 @@ describe('useCrawlEvents', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const client = new QueryClient();
-    renderHook(() => useCrawlEvents(CRAWL, PROJECT, true), { wrapper: wrapper(client) });
+    renderHook(() => useCrawlEvents(CRAWL, PROJECT, true), {
+      wrapper: wrapper(client),
+    });
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     await vi.advanceTimersByTimeAsync(SITE_HEALTH_STREAM_RECONNECT_BASE_MS + 50);
@@ -237,7 +235,9 @@ describe('useCrawlEvents', () => {
     const client = new QueryClient();
     const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
 
-    renderHook(() => useCrawlEvents(CRAWL, PROJECT, true), { wrapper: wrapper(client) });
+    renderHook(() => useCrawlEvents(CRAWL, PROJECT, true), {
+      wrapper: wrapper(client),
+    });
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     // No throw, no invalidation from a dead stream.

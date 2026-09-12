@@ -6,7 +6,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
-import { providerCatalogFixture } from '@/test/provider-catalog-fixture';
+import {
+  CHATGPT_MODEL,
+  CONNECTION_ID,
+  catalogHandler,
+  connection,
+  failedTestHandler,
+} from '@/test/provider-catalog-fixture';
 
 import { ConnectProviderDialog } from './connect-provider-dialog';
 
@@ -14,43 +20,8 @@ beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-const CONNECTION_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_ID = '11111111-1111-4111-8111-111111111112';
 const THIRD_ID = '11111111-1111-4111-8111-111111111113';
-const WORKSPACE_ID = '22222222-2222-4222-8222-222222222222';
-
-const catalog = providerCatalogFixture;
-
-function connection(overrides: Record<string, unknown> = {}) {
-  return {
-    id: CONNECTION_ID,
-    workspace_id: WORKSPACE_ID,
-    label: 'chatgpt',
-    transport_provider: 'openai',
-    base_url: null,
-    active: true,
-    api_key_set: true,
-    last_tested_at: null,
-    last_test_status: '',
-    routes: [
-      {
-        id: '33333333-3333-4333-8333-333333333333',
-        logical_engine: 'chatgpt',
-        transport_provider: 'openai',
-        transport_model: 'gpt-5.5',
-        is_default: false,
-        active: true,
-      },
-    ],
-    created_at: '2026-07-15T00:00:00Z',
-    updated_at: '2026-07-15T00:00:00Z',
-    ...overrides,
-  };
-}
-
-function catalogHandler() {
-  return http.get('/api/v1/provider-catalog', () => HttpResponse.json(catalog));
-}
 
 /** Stateful host so the dialog really closes after a successful save. */
 function Harness({ onConnected }: { onConnected?: () => void }) {
@@ -73,7 +44,7 @@ function testHandler(status: 'ok' | 'failed', detail = 'Connection succeeded') {
       latency_ms: 42,
       logical_engine: 'chatgpt',
       transport_provider: 'openai',
-      transport_model: 'gpt-5.5',
+      transport_model: CHATGPT_MODEL,
       tested_at: '2026-07-15T00:00:00Z',
     }),
   );
@@ -229,19 +200,7 @@ describe('ConnectProviderDialog', () => {
     mswServer.use(
       catalogHandler(),
       http.get('/api/v1/provider-connections', () => HttpResponse.json([connection()])),
-      http.post(`/api/v1/provider-connections/${CONNECTION_ID}/test`, () =>
-        HttpResponse.json({
-          connection_id: CONNECTION_ID,
-          status: 'failed',
-          error_code: 'auth_failure',
-          detail: 'Invalid API key',
-          latency_ms: 10,
-          logical_engine: 'chatgpt',
-          transport_provider: 'openai',
-          transport_model: 'gpt-5.4-nano-2026-03-17',
-          tested_at: '2026-07-15T00:00:00Z',
-        }),
-      ),
+      failedTestHandler(),
     );
 
     renderWithProviders(<Harness />);
@@ -261,14 +220,25 @@ describe('ConnectProviderDialog', () => {
   it('never defaults to a planned provider when every shipped engine is configured', async () => {
     // All three VERIFIED, so no card is left needing attention and the default
     // falls through to the fallback this regression is about.
-    const verified = { last_test_status: 'ok', last_tested_at: '2026-07-15T00:00:00Z' };
+    const verified = {
+      last_test_status: 'ok',
+      last_tested_at: '2026-07-15T00:00:00Z',
+    };
     mswServer.use(
       catalogHandler(),
       http.get('/api/v1/provider-connections', () =>
         HttpResponse.json([
           connection({ transport_provider: 'openai', ...verified }),
-          connection({ id: OTHER_ID, transport_provider: 'google', ...verified }),
-          connection({ id: THIRD_ID, transport_provider: 'anthropic', ...verified }),
+          connection({
+            id: OTHER_ID,
+            transport_provider: 'google',
+            ...verified,
+          }),
+          connection({
+            id: THIRD_ID,
+            transport_provider: 'anthropic',
+            ...verified,
+          }),
         ]),
       ),
     );

@@ -63,6 +63,7 @@ from app.models.analytics import AnalyticsTask
 from app.models.integrations import IntegrationConnection
 from app.models.traffic import PerformanceDimensionStat, TrafficSnapshot
 from tests.component.analytics_helpers import seed_ga4_import, seed_metric_row
+from tests.component.auth_helpers import register_and_login as _register
 
 GSC_PROPERTY = "https://example.com/"
 GA4_PROPERTY = "properties/123456789"
@@ -107,17 +108,6 @@ _METRIC_KEYS = {"clicks", "impressions", "ctr", "position"}
 # ---------------------------------------------------------------------------
 # API + seed helpers
 # ---------------------------------------------------------------------------
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    resp = await client.post(
-        "/api/v1/auth/register", json={"email": email, "password": "password123"}
-    )
-    assert resp.status_code == 202
-    login = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "password123"}
-    )
-    assert login.status_code == 200
-
-
 async def _create_project(client: httpx.AsyncClient) -> tuple[str, str]:
     resp = await client.post("/api/v1/projects", json={"name": "Performance Project"})
     assert resp.status_code == 201

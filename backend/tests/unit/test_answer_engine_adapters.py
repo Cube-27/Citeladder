@@ -211,29 +211,21 @@ async def test_gemini_adapter_executes_and_records_provenance() -> None:
     assert result.search_used is True
 
 
-async def test_gemini_adapter_maps_http_error() -> None:
-    transport = _mock_transport({"error": {"status": "RESOURCE_EXHAUSTED"}}, 429)
-    adapter = GeminiAnswerEngineAdapter(
-        api_key="k", client=httpx.AsyncClient(transport=transport)
-    )
-    with pytest.raises(ProviderError) as excinfo:
-        await adapter.execute(
-            AnswerEngineRequest(
-                prompt="x",
-                system_instruction="",
-                model=measurement_route("gemini").transport_model,
-                timeout_seconds=5,
-                retrieval_enabled=False,
-                max_output_tokens=600,
-                reasoning_effort="minimal",
-            )
-        )
-    assert excinfo.value.error_code == "rate_limit"
-    assert excinfo.value.retryable is True
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param({"error": {"status": "RESOURCE_EXHAUSTED"}}, id="well-formed"),
+        pytest.param([], id="malformed"),
+    ],
+)
+async def test_gemini_adapter_maps_http_error_from_status_alone(body: object) -> None:
+    """The retry decision comes from the STATUS, never the error body.
 
-
-async def test_gemini_adapter_handles_malformed_error_payload() -> None:
-    transport = _mock_transport([], 429)
+    `classify_provider_status` reads only the status code, so a provider that
+    returns a shape the parser cannot read must still be retried as a rate
+    limit rather than degrading to a non-retryable client error.
+    """
+    transport = _mock_transport(body, 429)
     adapter = GeminiAnswerEngineAdapter(
         api_key="k", client=httpx.AsyncClient(transport=transport)
     )

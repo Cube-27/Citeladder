@@ -93,6 +93,15 @@ from app.models.project import Project
 from app.models.workspace import Workspace
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.integration_worker import IntegrationWorker
+from tests.component.integration_worker_helpers import (
+    artifacts_for_run as _artifacts,
+)
+from tests.component.integration_worker_helpers import (
+    build_worker,
+)
+from tests.component.integration_worker_helpers import (
+    metric_rows_for_run as _metric_rows,
+)
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "integrations"
 _WINDOW = (date(2026, 7, 20), date(2026, 7, 22))
@@ -307,34 +316,7 @@ def _worker(
     *,
     owner: str = "test-worker",
 ) -> IntegrationWorker:
-    return IntegrationWorker(
-        session_factory=session_factory, owner=owner, transport=transport
-    )
-
-
-async def _artifacts(db_session, run_id: uuid.UUID) -> list[IntegrationImportArtifact]:
-    result = await db_session.scalars(
-        select(IntegrationImportArtifact)
-        .where(IntegrationImportArtifact.sync_run_id == run_id)
-        .order_by(
-            IntegrationImportArtifact.dataset.asc(),
-            IntegrationImportArtifact.created_at.asc(),
-            IntegrationImportArtifact.id.asc(),
-        )
-    )
-    return list(result)
-
-
-async def _metric_rows(db_session, run_id: uuid.UUID) -> list[IntegrationMetricRow]:
-    artifact_ids = select(IntegrationImportArtifact.id).where(
-        IntegrationImportArtifact.sync_run_id == run_id
-    )
-    result = await db_session.scalars(
-        select(IntegrationMetricRow).where(
-            IntegrationMetricRow.source_artifact_id.in_(artifact_ids)
-        )
-    )
-    return list(result)
+    return build_worker(session_factory, transport, owner=owner)
 
 
 async def _events(db_session, workspace_id: uuid.UUID) -> list[IntegrationEvent]:

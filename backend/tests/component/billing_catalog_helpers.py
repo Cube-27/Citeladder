@@ -13,6 +13,31 @@ from app.domain.billing.catalog_revisions import (
 from app.models.billing import BillingCatalogRevision
 from app.models.user import User
 
+# The seller of record on every invoice the billing tests produce. Five
+# fixtures used to spell these nine values out; a GSTIN or SAC that disagrees
+# between two of them is a tax bug the suite cannot see.
+SELLER_SETTINGS: dict[str, str] = {
+    "seller_legal_name": "CiteLadder Private Limited",
+    "seller_legal_address": "1 Seller Street, Mumbai",
+    "seller_email": "billing@citeladder.test",
+    "seller_gstin": "27ABCDE1234F1Z5",
+    "seller_gst_state_code": "27",
+    "seller_gst_state_name": "Maharashtra",
+    "seller_sac": "998313",
+    "seller_lut_reference": "LUT/2026/001",
+}
+
+
+def seller_settings(**overrides: str) -> dict[str, str]:
+    """The seller settings block, for `apply_billing_settings` or setattr."""
+    return {**SELLER_SETTINGS, **overrides}
+
+
+def apply_seller_settings(monkeypatch, **overrides: str) -> None:
+    """Point `billing_settings` at the fixture seller."""
+    for name, value in seller_settings(**overrides).items():
+        monkeypatch.setattr(billing_settings, name, value)
+
 
 def tax_snapshot(total_minor: int) -> dict[str, object]:
     return {
@@ -26,14 +51,14 @@ def tax_snapshot(total_minor: int) -> dict[str, object]:
             "export_eligibility_attested": True,
         },
         "seller": {
-            "legal_name": "CiteLadder Private Limited",
-            "address": "1 Seller Street, Mumbai",
-            "email": "billing@citeladder.test",
-            "gstin": "27ABCDE1234F1Z5",
-            "state_code": "27",
-            "state_name": "Maharashtra",
-            "sac": "998313",
-            "lut_reference": "LUT/2026/001",
+            "legal_name": SELLER_SETTINGS["seller_legal_name"],
+            "address": SELLER_SETTINGS["seller_legal_address"],
+            "email": SELLER_SETTINGS["seller_email"],
+            "gstin": SELLER_SETTINGS["seller_gstin"],
+            "state_code": SELLER_SETTINGS["seller_gst_state_code"],
+            "state_name": SELLER_SETTINGS["seller_gst_state_name"],
+            "sac": SELLER_SETTINGS["seller_sac"],
+            "lut_reference": SELLER_SETTINGS["seller_lut_reference"],
             "invoice_prefix": "CL",
         },
         "tax": {

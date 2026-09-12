@@ -26,6 +26,7 @@ from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.runtime import SiteHealthProfile
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
+from tests.component.auth_helpers import register_and_login
 from tests.component.opportunity_helpers import (
     ROOT_URL,
     SCORE_BRAND_ABSENT,
@@ -40,16 +41,7 @@ _EMAIL = "opp@example.com"
 
 
 async def _register(client: httpx.AsyncClient, email: str = _EMAIL) -> None:
-    reg = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert reg.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
+    await register_and_login(client, email)
 
 
 def _headers(scn: Scenario) -> dict[str, str]:

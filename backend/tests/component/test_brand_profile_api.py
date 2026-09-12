@@ -5,18 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-
-async def _register(client: httpx.AsyncClient, email: str) -> None:
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert response.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
+from tests.component.auth_helpers import register_and_login as _register
 
 
 async def _create_project(client: httpx.AsyncClient, name: str = "Acme") -> dict:

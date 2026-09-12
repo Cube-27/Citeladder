@@ -38,7 +38,6 @@ from app.core.config.site_health_contracts import (
     TASK_KIND_CHANGE_INTEL,
     TASK_KIND_DISCOVER,
 )
-from app.core.config.site_health_crawl_policy import SELECTION_SOURCE_USER
 from app.core.config.task_queue import (
     TASK_STATUS_FAILED,
     TASK_STATUS_LEASED,
@@ -59,6 +58,7 @@ from app.workers.site_health.lifecycle import CrawlLifecycle
 from tests.component.site_health_helpers import seed_site_crawl
 from tests.component.site_health_worker_helpers import (
     DEFAULT_SEED_MONITORED_URLS,
+    _add_monitored_analyze_task,
     _configure_crawl,
     _html,
     _rich_html,
@@ -604,45 +604,8 @@ async def test_partial_analysis_failure_partially_completes(
             "count_disclosure": True,
         }
         for path in ("rich", "missing"):
-            url = f"https://example.com/{path}"
-            canonical, url_hash = canonical_identity(url)
-            site_url = SiteUrl(
-                workspace_id=seed.workspace_id,
-                project_id=seed.project_id,
-                normalized_url=canonical,
-                url_hash=url_hash,
-                display_url=canonical,
-                host="example.com",
-                depth=0,
-            )
-            session.add(site_url)
-            await session.flush()
-            session.add(
-                MonitoredSiteUrl(
-                    workspace_id=seed.workspace_id,
-                    project_id=seed.project_id,
-                    profile_id=seed.profile_id,
-                    site_url_id=site_url.id,
-                    active=True,
-                    selection_source=SELECTION_SOURCE_USER,
-                )
-            )
-            session.add(
-                SiteCrawlTask(
-                    crawl_id=seed.crawl_id,
-                    workspace_id=seed.workspace_id,
-                    site_url_id=site_url.id,
-                    task_kind=TASK_KIND_ANALYZE,
-                    requested_url=url,
-                    url_hash=url_hash,
-                    generation=0,
-                    idempotency_key=(
-                        f"{seed.crawl_id}:{TASK_KIND_ANALYZE}:{url_hash}:0"
-                    ),
-                    status=TASK_STATUS_QUEUED,
-                    priority=1,
-                    randomized_position=0,
-                )
+            await _add_monitored_analyze_task(
+                session, seed, f"https://example.com/{path}"
             )
         await session.commit()
 

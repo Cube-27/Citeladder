@@ -59,14 +59,11 @@ interface MockProviderState {
   requests: RecordedProviderRequest[];
   /** Delay (ms) applied to every provider response — used by the Cancel test. */
   delayMs: number;
-  /** One-shot HTTP status override — used to produce a terminal failure. */
-  failNextWithStatus: number | null;
 }
 
 export const mockProvider: MockProviderState = {
   requests: [],
   delayMs: 0,
-  failNextWithStatus: null,
 };
 
 export function setProviderDelay(ms: number): void {
@@ -206,7 +203,9 @@ function killTree(proc: ManagedProcess): void {
   const { child } = proc;
   if (child.pid === undefined || child.exitCode !== null) return;
   if (process.platform === 'win32') {
-    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { encoding: 'utf8' });
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+      encoding: 'utf8',
+    });
   } else {
     try {
       process.kill(-child.pid, 'SIGKILL');
@@ -269,13 +268,6 @@ function startMockProvider(): Promise<http.Server> {
           // The cancel test aborts mid-delay: writing to a dead socket after
           // the sleep throws ECONNRESET — bail out if the client is gone.
           if (req.destroyed || res.writableEnded || res.socket?.destroyed) return;
-          if (mockProvider.failNextWithStatus !== null) {
-            const status = mockProvider.failNextWithStatus;
-            mockProvider.failNextWithStatus = null;
-            res.writeHead(status, { 'content-type': 'application/json' });
-            res.end(JSON.stringify({ message: 'injected e2e failure' }));
-            return;
-          }
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(
             JSON.stringify({
@@ -289,13 +281,19 @@ function startMockProvider(): Promise<http.Server> {
                   finish_reason: 'stop',
                 },
               ],
-              usage: { prompt_tokens: 12, completion_tokens: 34, total_tokens: 46 },
+              usage: {
+                prompt_tokens: 12,
+                completion_tokens: 34,
+                total_tokens: 46,
+              },
             }),
           );
           return;
         }
         // Readiness probe / unknown route.
-        res.writeHead(req.method === 'GET' ? 200 : 404, { 'content-type': 'application/json' });
+        res.writeHead(req.method === 'GET' ? 200 : 404, {
+          'content-type': 'application/json',
+        });
         res.end(JSON.stringify({ ok: true }));
       })();
     });
@@ -317,7 +315,6 @@ export async function startRealStack(): Promise<RealStack> {
 
   mockProvider.requests = [];
   mockProvider.delayMs = 0;
-  mockProvider.failNextWithStatus = null;
 
   const procs: ManagedProcess[] = [];
   let mockServer: http.Server | null = null;
@@ -388,7 +385,10 @@ export async function startRealStack(): Promise<RealStack> {
           '-p',
           String(FRONTEND_PORT),
         ],
-        { cwd: frontendDir, env: { ...process.env, BACKEND_ORIGIN: API_ORIGIN } },
+        {
+          cwd: frontendDir,
+          env: { ...process.env, BACKEND_ORIGIN: API_ORIGIN },
+        },
       ),
     );
 

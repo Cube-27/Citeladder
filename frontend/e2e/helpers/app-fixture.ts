@@ -1,5 +1,7 @@
 import type { Page } from '@playwright/test';
 
+import { makeProject } from '../../test/fixtures/project';
+
 /**
  * Authed-shell network fixture for e2e + visual specs.
  *
@@ -35,7 +37,7 @@ const ENTITLEMENT_PERIOD_END = '2030-02-01T00:00:00Z';
 const PROJECT_SLOT_ALLOWANCE = 1;
 
 /** A bounded, resolved account state for feature-permitted shell flows. */
-export const PERMITTED_ENTITLEMENT = {
+const PERMITTED_ENTITLEMENT = {
   billing_account_id: '44444444-4444-4444-8444-444444444444',
   status: 'resolved',
   errors: [],
@@ -131,7 +133,7 @@ function permittedUsage(projectCount: number) {
   } as const;
 }
 
-export function permittedWorkspaceEntitlement(workspaceId: string, projectCount = 1) {
+function permittedWorkspaceEntitlement(workspaceId: string, projectCount = 1) {
   return {
     workspace_id: workspaceId,
     status: 'resolved',
@@ -161,27 +163,21 @@ export function permittedWorkspaceEntitlement(workspaceId: string, projectCount 
   } as const;
 }
 
-export const FIXTURE_PROJECT = {
-  id: '11111111-1111-4111-8111-111111111111',
-  workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  name: 'Acme',
-  brand_name: 'Acme',
+/**
+ * The shell's one project.
+ *
+ * Built from the vitest `makeProject` fixture so the `Project` SHAPE has a
+ * single definition across both suites: this file used to hand-write the same
+ * twenty fields and had already drifted from it on `website_url`, `industry`
+ * and `primary_market`. The overrides below are the values the e2e specs
+ * actually render, and are the only intentional differences.
+ */
+export const FIXTURE_PROJECT = makeProject({
+  workspace_id: FIXTURE_WORKSPACE_ID,
   website_url: 'https://acme.example',
   industry: 'general',
-  subindustry: '',
   primary_market: 'United States',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-} as const;
+});
 
 /**
  * Stub the two shell endpoints, plus a 404 catch-all for everything else
@@ -226,21 +222,6 @@ function membershipRows(ids: readonly string[]) {
   }));
 }
 
-/**
- * Answer the shell's membership read for a spec that builds its own network
- * fixture.
- *
- * `ProjectProvider` resolves its workspace from `GET /workspaces` before it
- * scopes a single request, so a spec that leaves this to a 404 catch-all never
- * reaches the shell at all — the workspace read fails and the gate shows its
- * recoverable error instead of the screen under test.
- */
-export async function stubWorkspaceList(page: Page, ...workspaceIds: string[]): Promise<void> {
-  await page.route('**/api/v1/workspaces', (route) =>
-    route.fulfill({ json: membershipRows(workspaceIds) }),
-  );
-}
-
 export async function stubAuthedShell(
   page: Page,
   stubs: ReadonlyArray<readonly [string | RegExp, unknown]> = [],
@@ -266,7 +247,9 @@ export async function stubAuthedShell(
   );
   for (const workspaceId of new Set(workspacesFor(projects).map((workspace) => workspace.id))) {
     await page.route(`**/api/v1/workspaces/${workspaceId}/entitlements`, (route) =>
-      route.fulfill({ json: permittedWorkspaceEntitlement(workspaceId, projects.length) }),
+      route.fulfill({
+        json: permittedWorkspaceEntitlement(workspaceId, projects.length),
+      }),
     );
   }
   await page.route('**/api/v1/billing/usage', (route) =>

@@ -12,15 +12,11 @@ test('authenticated shell exposes authorized navigation and search', async ({ pa
 
   await page.goto('/visibility');
 
-  // Sidebar groups + a nav item. Scoped to the primary nav landmark and
-  // exact-matched so page copy can't satisfy or trip the assertion.
+  // The station list and its destinations are pinned against NAV_GROUPS in
+  // components/layout/sidebar-nav.test.tsx. What that render cannot show is
+  // that the authed layout actually mounts the nav landmark around the page.
   const nav = page.getByRole('navigation', { name: 'Primary' });
-  await expect(nav.getByText('Analyze', { exact: true })).toBeVisible();
-  await expect(nav.getByText('Act', { exact: true })).toBeVisible();
-  await expect(nav.getByText('Track', { exact: true })).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Website', exact: true })).toBeVisible();
-  await expect(nav.getByRole('link', { name: 'Content', exact: true })).toBeVisible();
-  await expect(nav.getByRole('link', { name: 'Search Demand', exact: true })).toBeVisible();
 
   // Project switcher shows the active brand.
   await expect(page.getByText('Acme').first()).toBeVisible();

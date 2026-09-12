@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
-import { stubWorkspaceList } from './helpers/app-fixture';
+import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
 
 /**
  * F9 four-tab Visibility workspace e2e (Task 4).
@@ -16,8 +16,8 @@ import { stubWorkspaceList } from './helpers/app-fixture';
  * spec asserts every `/api/` request the browser issues is same-origin with the
  * page's baseURL — no cross-origin backend URL.
  */
-const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
+const WORKSPACE_ID = FIXTURE_PROJECT.workspace_id;
+const PROJECT_ID = FIXTURE_PROJECT.id;
 const AUDIT_LATEST = '22222222-2222-4222-8222-222222222222';
 const AUDIT_EARLIER = '22222222-2222-4222-8222-222222222221';
 const ANALYSIS_A = '44444444-4444-4444-8444-444444444444';
@@ -27,37 +27,6 @@ const PROMPT_A = '77777777-7777-4777-8777-777777777777';
 const SNAP_A = '88888888-8888-4888-8888-888888888888';
 const TASK_A = '99999999-9999-4999-8999-999999999999';
 const ARTIFACT_A = 'abababab-abab-4bab-8bab-abababababab';
-
-const user = {
-  id: '33333333-3333-4333-8333-333333333333',
-  email: 'visibility@example.com',
-  role: 'owner',
-  is_active: true,
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
-
-const project = {
-  id: PROJECT_ID,
-  workspace_id: WORKSPACE_ID,
-  name: 'CiteLadder',
-  brand_name: 'Acme',
-  website_url: 'https://acme.com',
-  industry: 'general',
-  subindustry: '',
-  primary_market: 'United States',
-  country_code: 'US',
-  language_code: 'en',
-  benchmark_mode: 'consumer_like',
-  default_repetitions: 3,
-  brand: { aliases: [] },
-  owned_domains: [],
-  unintended_domains: [],
-  competitors: [],
-  prompt_sets: [],
-  created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
-};
 
 const audit = {
   id: AUDIT_LATEST,
@@ -229,7 +198,13 @@ function evidenceItem(overrides: Record<string, unknown> = {}) {
     ],
     event_source: 'raw_artifact',
     mentions: [
-      { kind: 'brand', name: 'Acme', first_offset: 12, artifact_id: null, analyzer_version: 'v1' },
+      {
+        kind: 'brand',
+        name: 'Acme',
+        first_offset: 12,
+        artifact_id: null,
+        analyzer_version: 'v1',
+      },
       {
         kind: 'competitor',
         name: 'Globex',
@@ -299,22 +274,7 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
   const evidenceUrls: URL[] = [];
   page.on('request', (request) => requests.push(request));
 
-  // 404 catch-all FIRST (Playwright matches in reverse registration order, so
-  // the specific stubs below still win). Without it, an unstubbed downstream
-  // query (entitlements, GettingStartedCard's audits) falls through to a live
-  // backend, 401s, and the session guard bounces to /login. 4xx never retries
-  // (lib/api/query-client.ts), so unstubbed queries settle in one attempt.
-  await page.route('**/api/v1/**', (route) =>
-    route.fulfill({
-      status: 404,
-      contentType: 'application/json',
-      body: JSON.stringify({ detail: 'e2e fixture: endpoint not stubbed' }),
-    }),
-  );
-
-  await page.route('**/api/v1/auth/me', (route) => route.fulfill({ json: { user } }));
-  await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [project] }));
-  await stubWorkspaceList(page, WORKSPACE_ID);
+  await stubAuthedShell(page);
   // The visibility dashboard lists audits via the flat `/audits?project_id=` route.
   await page.route('**/api/v1/audits**', (route) =>
     route.fulfill({
@@ -353,7 +313,12 @@ async function setup(page: Page, bodies: RouteBodies = {}) {
     return route.fulfill(
       bodies.evidenceStatus
         ? { status: bodies.evidenceStatus, json: { detail: 'boom' } }
-        : { json: bodies.evidence ?? { items: [evidenceItem()], truncated: false } },
+        : {
+            json: bodies.evidence ?? {
+              items: [evidenceItem()],
+              truncated: false,
+            },
+          },
     );
   });
 
@@ -400,7 +365,9 @@ function assertSameOriginApi(requests: Request[], baseURL: string) {
 }
 
 test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseURL }) => {
-  const { requests, evidenceUrls } = await setup(page, { evidence: fanoutStatesResponse() });
+  const { requests, evidenceUrls } = await setup(page, {
+    evidence: fanoutStatesResponse(),
+  });
   await page.goto('/visibility');
 
   await expect(page.getByText('Over time', { exact: true })).toBeVisible();
@@ -479,7 +446,9 @@ for (const width of [1280, 375]) {
     // while the button underneath reported visible, enabled and stable. It
     // ships in dev only, so hiding it tests the product rather than the
     // toolchain; forcing the click would have hidden a real overlap instead.
-    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await page.addStyleTag({
+      content: 'nextjs-portal { display: none !important; }',
+    });
     await page.getByRole('button', { name: 'Gemini', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toBeVisible();
     const evidenceUrl = evidenceUrls.at(-1)!;
@@ -491,6 +460,9 @@ for (const width of [1280, 375]) {
     );
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`run=${AUDIT_EARLIER}.*engine=gemini`));
-    await page.screenshot({ path: `test-results/visibility-${width}.png`, fullPage: true });
+    await page.screenshot({
+      path: `test-results/visibility-${width}.png`,
+      fullPage: true,
+    });
   });
 }

@@ -14,7 +14,17 @@ const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const PROMPT_SET_ID = '22222222-2222-4222-8222-222222222222';
 const PROMPT_IDS = ['33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444'];
 
-function stubApis() {
+/** The `/estimate` projection the dialog summarises. The dialog reads only
+ * these five fields; the per-engine breakdown is the API layer's contract. */
+const ESTIMATE = {
+  execution_count: 14,
+  maximum_attempt_count: 42,
+  maximum_wall_clock_seconds: 900,
+  cost_status: 'complete',
+  estimated_total_cost_microusd: 123_400,
+};
+
+function stubApis(estimate: unknown = undefined) {
   vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue([
     { id: PROMPT_SET_ID, name: 'Brand portfolio', prompt_count: 7 },
   ] as never);
@@ -25,7 +35,7 @@ function stubApis() {
       routes: [{ logical_engine: 'chatgpt' }],
     },
   ] as never);
-  vi.spyOn(runsApi, 'estimateAudit').mockResolvedValue(undefined as never);
+  vi.spyOn(runsApi, 'estimateAudit').mockResolvedValue(estimate as never);
   return vi.spyOn(runsApi, 'launchAudit').mockResolvedValue({ id: 'audit' } as never);
 }
 
@@ -37,6 +47,55 @@ async function selectEngineAndLaunch() {
 
 describe('LaunchDialog fixed prompt selection', () => {
   afterEach(() => vi.restoreAllMocks());
+
+  it('summarises the estimate once it resolves', async () => {
+    // Every other test in this file stubs `estimateAudit` to resolve
+    // undefined, so the summary branch was only ever rendered by the two
+    // full-page suites that each re-declared this payload.
+    stubApis(ESTIMATE);
+
+    renderWithProviders(
+      <LaunchDialog
+        open
+        onOpenChange={() => undefined}
+        projectId={PROJECT_ID}
+        fixedPromptIds={PROMPT_IDS}
+        auditScope="commerce"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT' }));
+    expect(await screen.findByText('14 responses planned')).toBeInTheDocument();
+    // Cost is rendered from microUSD, so a formatting slip shows up as money.
+    expect(
+      screen.getByText(/Maximum wall-clock budget 900s · cost complete · ~\$0\.1234/),
+    ).toBeInTheDocument();
+  });
+
+  it('marks the cost unavailable rather than printing a fabricated zero', async () => {
+    stubApis({
+      ...ESTIMATE,
+      execution_count: 1,
+      cost_status: 'unpriced',
+      estimated_total_cost_microusd: null,
+    });
+
+    renderWithProviders(
+      <LaunchDialog
+        open
+        onOpenChange={() => undefined}
+        projectId={PROJECT_ID}
+        fixedPromptIds={PROMPT_IDS}
+        auditScope="commerce"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT' }));
+    // Singular, and never "~$0.0000".
+    expect(await screen.findByText('1 response planned')).toBeInTheDocument();
+    expect(screen.getByText(/cost unpriced · unavailable/)).toBeInTheDocument();
+    expect(screen.queryByText(/\$0\.0000/)).not.toBeInTheDocument();
+  });
 
   it('locks the field and shows the selection the prompt_ids payload uses', async () => {
     // `promptSetLocked` was derived from `fixedPromptSetId` alone, so a
@@ -110,7 +169,10 @@ describe('LaunchDialog fixed prompt selection', () => {
 
     await waitFor(() =>
       expect(launch).toHaveBeenCalledWith(
-        expect.objectContaining({ prompt_set_id: PROMPT_SET_ID, audit_scope: 'brand' }),
+        expect.objectContaining({
+          prompt_set_id: PROMPT_SET_ID,
+          audit_scope: 'brand',
+        }),
       ),
     );
   });

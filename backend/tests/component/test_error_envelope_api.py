@@ -35,6 +35,7 @@ from app.main import app
 from app.models.site_health.runtime import SiteHealthProfile
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
+from tests.component.auth_helpers import register_and_login
 from tests.component.opportunity_helpers import _seed_scenario
 from tests.component.site_health_helpers import seed_monitored_urls_allowance
 
@@ -44,16 +45,7 @@ _EMAIL = "envelope@example.com"
 
 
 async def _register(client: httpx.AsyncClient, email: str = _EMAIL) -> None:
-    resp = await client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": "password123"},
-    )
-    assert resp.status_code == 202
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "password123"},
-    )
-    assert login_response.status_code == 200
+    await register_and_login(client, email)
 
 
 async def _project(client: httpx.AsyncClient, name: str = "Envelope Co") -> dict:
