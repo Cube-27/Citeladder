@@ -4,7 +4,7 @@
 > follow; imperatives below do not authorize execution or establish acceptance.
 > Current owners are listed in [the documentation index](../../README.md).
 
-**Status:** bounded active follow-up: Slice 6 only. Slices 1-3 shipped
+**Historical status (retired):** bounded active follow-up: Slice 6 only. Slices 1-3 shipped
 2026-09-04 across PRs #22 (Bing OAuth) and #23 (the pipeline work) — together
 "PR 1" below. PR #24 followed with the AI
 Referrals preset family, chart granularity, and the Performance UI

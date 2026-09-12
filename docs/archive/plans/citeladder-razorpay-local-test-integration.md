@@ -4,8 +4,8 @@
 
 # Razorpay local test integration, onboarding fix, and owner runbooks
 
-> **Status:** active local/sandbox delivery plan. The prerequisite recovery
-> section below is historical and must not be rerun; current work begins with
+> **Historical status (superseded):** local/sandbox delivery plan. The prerequisite recovery
+> section below is historical and must not be rerun; the original work began with
 > the isolated local test integration sections. No live reset, deployment,
 > checkout, or provider mutation is authorized by this plan.
 

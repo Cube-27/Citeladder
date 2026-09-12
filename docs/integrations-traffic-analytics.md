@@ -84,7 +84,7 @@ to the immutable snapshot. Numeric limits live in owning configuration.
 cross-source URLs separately from crawler identity. Exact normalized matches
 are exact; persisted redirect/canonical evidence may prove resolved. Sitemap
 and preferred-origin hints rank candidates but do not prove a join. Heuristic-only
-matches remain ambiguous, and no candidate is unresolved. Every query is
+matches remain ambiguous; invalid URLs or absent candidates return unresolved. Every query is
 workspace/project-scoped.
 
 Detectors cover branded demand, striking distance, cannibalization,

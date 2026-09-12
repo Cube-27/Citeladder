@@ -51,8 +51,7 @@ An explicit "Generate prompts from selected search queries" action in the
 Performance/Demand flow, reusing the existing classification → generation →
 validation → editing path.
 
-**Already scoped as Slice 6 of `docs/plans/citeladder-data-pipeline-rebuild.md` —
-extend that plan, do not write a parallel one.** Half the groundwork landed with
+**Historically scoped as Slice 6 of `docs/archive/plans/citeladder-data-pipeline-rebuild.md`; that assignment is now retired.** Half the groundwork landed with
 DATA-01: the generator now receives observed query text, metrics and the
 observation period. What remains is the selection UI and carrying
 `QueryEvidenceRow` provenance onto the generated prompts.

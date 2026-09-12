@@ -9,7 +9,7 @@ Date: 11 September 2026
 Repository reviewed: `Cube-27/Citeladder`
 Static-review baseline: `98cfb2dfa369b541fbab882ba0b70ca3395b8f29`
 
-**Status: revised implementation handoff. All three phases below are in scope, in order.** Phase 1 fixes the reported customer-facing project-selection failure. Phase 2 implements the owner's workspace and role decisions. Phase 3 implements provider-neutral architecture, not an unfinished Razorpay integration or another vendor's integration.
+**Historical status: revised implementation handoff. All three phases below were in scope, in order.** The original scope was: Phase 1 fixes the reported customer-facing project-selection failure. Phase 2 implements the owner's workspace and role decisions. Phase 3 implements provider-neutral architecture, not an unfinished Razorpay integration or another vendor's integration.
 
 This replaces the earlier account-management plan and its review addendum for this scope. It specifically supersedes the previous Phase 2 decision hold, the Phase 3 documentation-only restriction, and instructions to finish or wait for pending Razorpay work. Retain the separate Razorpay plan only as a paused historical integration record; do not execute its remaining checklist.
 

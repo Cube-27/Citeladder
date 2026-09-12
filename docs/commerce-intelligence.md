@@ -1,6 +1,6 @@
 # Commerce Intelligence
 
-Commerce exposes four `/products` tabs: **Catalog**, **Competitors**, **Buyer Prompts**, and **AI Shelf**. Present runtime is not evidence that credentialed manual gates passed. Commerce reuses Site Health acquisition and the shared audit system; it does not own a crawler, response store, prompt store, or opportunity store.
+Commerce exposes one `/products` workspace. The catalog selects a target through `?target=`; its detail combines AI Shelf metrics, competitors and buyer prompts. Legacy `?tab=` values are ignored. Present runtime is not evidence that credentialed manual gates passed. Commerce reuses Site Health acquisition and the shared audit system; it does not own a crawler, response store, prompt store, or opportunity store.
 
 ## Catalog
 
