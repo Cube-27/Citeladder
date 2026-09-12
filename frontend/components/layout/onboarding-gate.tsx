@@ -26,7 +26,7 @@ import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
  * project creation answered a question nobody asked and made an empty
  * workspace unmanageable.
  */
-const WORKSPACE_ONLY_PREFIXES = ['/settings', '/invitations'] as const;
+const WORKSPACE_ONLY_PREFIXES = ['/onboarding', '/settings', '/invitations'] as const;
 
 function isWorkspaceOnlyRoute(pathname: string | null): boolean {
   if (!pathname) return false;

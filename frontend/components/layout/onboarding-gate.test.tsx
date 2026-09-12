@@ -204,6 +204,20 @@ describe('OnboardingGate', () => {
     expect(screen.getByText('settings')).toBeInTheDocument();
   });
 
+  it('preserves the workspace-scoped additional-project onboarding URL', () => {
+    pathname = '/onboarding';
+    search = new URLSearchParams({ new: '1', workspace: WORKSPACE });
+
+    render(
+      <OnboardingGate>
+        <p>onboarding</p>
+      </OnboardingGate>,
+    );
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByText('onboarding')).toBeInTheDocument();
+  });
+
   it('does not loop a Viewer through a creation flow that would refuse them', () => {
     setContext('empty', 'viewer');
     render(

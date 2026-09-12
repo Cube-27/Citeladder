@@ -24,4 +24,24 @@ describe('normalizeEvidenceMarkdown', () => {
       ].join('\n\n'),
     );
   });
+
+  it('keeps punctuation after a heading as a separate block', () => {
+    expect(normalizeEvidenceMarkdown('## Heading\n\n.')).toBe('## Heading\n\n.');
+  });
+
+  it('keeps an ordinary paragraph separate from an unfinished list item', () => {
+    const response = '- Deliberately unfinished\n\nA separate paragraph.';
+    expect(normalizeEvidenceMarkdown(response)).toBe(response);
+  });
+
+  it('keeps a punctuation-led paragraph separate', () => {
+    const response = '- Deliberately unfinished\n\n? What changed next?';
+    expect(normalizeEvidenceMarkdown(response)).toBe(response);
+  });
+
+  it('preserves nested-list and indented-code structure', () => {
+    const response = ['- Parent item', '  - Nested item', '', '    const answer = 42;'].join('\n');
+
+    expect(normalizeEvidenceMarkdown(response)).toBe(response);
+  });
 });

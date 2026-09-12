@@ -101,7 +101,11 @@ function ExecutionsSection({
 export function RunDetailView(props: RunDetailViewProps) {
   return (
     <div className="grid gap-[var(--workspace-gap)]">
-      <ProjectLink href="/runs" className={textRole('label', 'text-accent-text hover:underline')}>
+      <ProjectLink
+        href="/runs"
+        projectId={props.audit?.project_id}
+        className={textRole('label', 'text-accent-text hover:underline')}
+      >
         ← Back to runs
       </ProjectLink>
       <AuditSection {...props} />

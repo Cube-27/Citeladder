@@ -108,7 +108,7 @@ describe('RunsPage', () => {
     expect(within(row).getByText('6')).toBeInTheDocument();
     expect(within(row).getByRole('link', { name: 'View' })).toHaveAttribute(
       'href',
-      `/runs/${AUDIT_ID}`,
+      `/runs/${AUDIT_ID}?project=${PROJECT_ID}`,
     );
     // Mono page indicator on the pagination footer.
     expect(

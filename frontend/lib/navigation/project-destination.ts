@@ -65,20 +65,25 @@ export function scopedNavigationDestination(
   projectId: string | null,
   workspaceId: string | null,
 ): string {
-  const target = new URL(href, 'https://citeladder.local');
+  const hashIndex = href.indexOf('#');
+  const hash = hashIndex === -1 ? '' : href.slice(hashIndex);
+  const pathAndSearch = hashIndex === -1 ? href : href.slice(0, hashIndex);
+  const queryIndex = pathAndSearch.indexOf('?');
+  const pathname = queryIndex === -1 ? pathAndSearch : pathAndSearch.slice(0, queryIndex);
+  const search =
+    queryIndex === -1 ? null : new URLSearchParams(pathAndSearch.slice(queryIndex + 1));
   if (scope === 'workspace') {
-    return workspaceId
-      ? workspaceDestination(target.pathname, target.searchParams, workspaceId)
-      : href;
+    return workspaceId ? `${workspaceDestination(pathname, search, workspaceId)}${hash}` : href;
   }
-  return projectId ? projectDestination(target.pathname, target.searchParams, projectId) : href;
+  return projectId ? `${projectDestination(pathname, search, projectId)}${hash}` : href;
 }
 
 /** Return the canonical destination builder for links owned by the active project. */
 export function useProjectHref() {
   const activeProjectId = useOptionalProjectContext()?.activeProjectId ?? null;
   return useCallback(
-    (href: string) => scopedNavigationDestination(href, 'project', activeProjectId, null),
+    (href: string, projectId: string | null = activeProjectId) =>
+      scopedNavigationDestination(href, 'project', projectId, null),
     [activeProjectId],
   );
 }
@@ -98,7 +103,12 @@ export function useCanonicalProjectUrl(enabled: boolean) {
 
   useEffect(() => {
     if (!enabled || !pathname || !activeProjectId || searchParams?.has(PROJECT_PARAM)) return;
-    router.replace(projectDestination(pathname, searchParams, activeProjectId), { scroll: false });
+    router.replace(
+      `${projectDestination(pathname, searchParams, activeProjectId)}${window.location.hash}`,
+      {
+        scroll: false,
+      },
+    );
   }, [activeProjectId, enabled, pathname, router, searchParams]);
 }
 

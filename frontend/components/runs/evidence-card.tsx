@@ -119,27 +119,45 @@ function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>
  * remains the immutable evidence and proper Markdown blocks remain untouched.
  */
 export function normalizeEvidenceMarkdown(markdown: string): string {
-  const blocks = markdown.replace(/\r\n/g, '\n').split(/\n{2,}/);
+  const blocks = markdown
+    .replace(/\r\n/g, '\n')
+    .split(/\n{2,}/)
+    .map((block) => block.trimEnd())
+    .filter((block) => block.trim());
   const normalized: string[] = [];
   const listItem = /^ {0,3}(?:[-*+] |\d+[.)] )/;
   const structuralBlock = /^ {0,3}(?:#{1,6} |[-*+] |\d+[.)] |>|```|~~~|\|)/;
+  const indentedBlock = /^(?: {4}|\t)/;
   const sentenceEnd = /[.!?:;\])}"'…](?:[*_~]+)?$/;
-  const punctuationOnly = /^[,.;:!?)]/;
+  const punctuationOnly = /^[,.;:!?)\]}]+(?:[*_~]+)?$/;
+  const commaFragment = /^,\s/;
+  const sentenceFragment = /^(?:\p{Ll}|\+\d)/u;
 
-  for (const rawBlock of blocks) {
-    const block = rawBlock.trim();
-    if (!block) continue;
+  for (const block of blocks) {
     const previous = normalized.at(-1);
     if (!previous) {
       normalized.push(block);
       continue;
     }
-    if (punctuationOnly.test(block)) {
-      normalized[normalized.length - 1] = `${previous}${block}`;
+    const previousIsListItem = listItem.test(previous);
+    const blockContent = block.trimStart();
+    if (
+      previousIsListItem &&
+      !indentedBlock.test(block) &&
+      (punctuationOnly.test(blockContent) || commaFragment.test(blockContent))
+    ) {
+      normalized[normalized.length - 1] = `${previous}${blockContent}`;
       continue;
     }
-    if (listItem.test(previous) && !structuralBlock.test(block) && !sentenceEnd.test(previous)) {
-      normalized[normalized.length - 1] = `${previous} ${block}`;
+    if (
+      previousIsListItem &&
+      !indentedBlock.test(block) &&
+      !structuralBlock.test(block) &&
+      !sentenceEnd.test(previous) &&
+      !sentenceEnd.test(blockContent) &&
+      sentenceFragment.test(blockContent)
+    ) {
+      normalized[normalized.length - 1] = `${previous} ${blockContent}`;
       continue;
     }
     normalized.push(block);

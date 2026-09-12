@@ -68,12 +68,17 @@ describe('newProjectDestination', () => {
 
 describe('scopedNavigationDestination', () => {
   it('adds project identity to project routes and workspace identity to shared routes', () => {
-    expect(scopedNavigationDestination('/runs', 'project', PROJECT_1, WORKSPACE)).toBe(
-      `/runs?project=${PROJECT_1}`,
+    expect(scopedNavigationDestination('/runs#history', 'project', PROJECT_1, WORKSPACE)).toBe(
+      `/runs?project=${PROJECT_1}#history`,
     );
     expect(
-      scopedNavigationDestination('/settings?tab=providers', 'workspace', PROJECT_1, WORKSPACE),
-    ).toBe(`/settings?tab=providers&workspace=${WORKSPACE}`);
+      scopedNavigationDestination(
+        '/settings?tab=providers#credentials',
+        'workspace',
+        PROJECT_1,
+        WORKSPACE,
+      ),
+    ).toBe(`/settings?tab=providers&workspace=${WORKSPACE}#credentials`);
   });
 });
 
