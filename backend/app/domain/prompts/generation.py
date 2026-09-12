@@ -22,7 +22,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.connectors.agent.gateway import ModelGateway
-from app.core.config.demand import DEMAND_SIGNAL_STATE_ACTIVE
 from app.core.config.projects import PROMPT_ORIGIN_GENERATED
 from app.core.config.prompts import (
     GENERATOR_VERSION,
@@ -30,9 +29,12 @@ from app.core.config.prompts import (
     prompt_generation_settings,
 )
 from app.core.config.visibility_prompts import BUYER_QUERY_POLICY_VERSION
-from app.domain.demand.selection import current_demand_snapshot
 from app.domain.projects.knowledge_base import build_brand_knowledge_data
 from app.domain.projects.shim import project_scoring_identity
+from app.domain.prompts.demand_grounding import (
+    load_demand_grounding,
+    serialize_demand_signal,
+)
 from app.domain.prompts.generation_contract import (
     GenerationOutput,
     GenerationOutputError,
@@ -357,42 +359,6 @@ async def _insert_prompts_returning(
     return inserted_ids, len(rows) - len(inserted_ids)
 
 
-async def _load_demand_grounding(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    limit: int,
-) -> tuple[DemandSnapshot | None, list[DemandSignal]]:
-    snapshot = await current_demand_snapshot(
-        session, workspace_id=workspace_id, project_id=project_id
-    )
-    if snapshot is None:
-        return None, []
-    signals = list(
-        (
-            await session.scalars(
-                select(DemandSignal)
-                .where(
-                    DemandSignal.workspace_id == workspace_id,
-                    DemandSignal.project_id == project_id,
-                    DemandSignal.snapshot_id == snapshot.id,
-                    # Active only. A resolved signal describes a gap that has
-                    # since closed, and grounding new prompts in it asks the
-                    # model to chase something already handled. The Opportunity
-                    # adapter has always filtered this; generation did not.
-                    DemandSignal.state == DEMAND_SIGNAL_STATE_ACTIVE,
-                )
-                .order_by(
-                    DemandSignal.priority_score.desc().nullslast(), DemandSignal.id
-                )
-                .limit(limit)
-            )
-        ).all()
-    )
-    return snapshot, signals
-
-
 def _project_business_context(project: Project) -> dict[str, Any]:
     """The confirmed business facets, which live on the brand profile.
 
@@ -413,52 +379,10 @@ def _generation_brand_context(
     context["knowledge_base"] = build_brand_knowledge_data(project)
     context["business_context"] = _project_business_context(project)
     context["demand_signals"] = [
-        _serialize_demand_signal(signal, snapshot=demand_snapshot)
+        serialize_demand_signal(signal, snapshot=demand_snapshot)
         for signal in demand_signals
     ]
     return context
-
-
-def _serialize_demand_signal(
-    signal: DemandSignal, *, snapshot: DemandSnapshot | None
-) -> dict[str, Any]:
-    """One observed demand signal, as the generator should see it.
-
-    This used to carry type/topic/page/priority/limitations and nothing else,
-    which left the model inventing prompt wording from a topic-cluster label
-    while the actual observed QUERY sat unread in ``signal.evidence`` — the
-    single most useful thing about the signal. The observed metrics and the
-    period they were measured over were likewise omitted, so the model could
-    not tell a query with 40,000 impressions from one with 12, nor a reading
-    from last week from one from last year.
-
-    Everything here is an OBSERVATION, not an instruction: the contract
-    presents it as reference evidence, and structural validation still owns
-    what may become a tracked prompt.
-    """
-    evidence = signal.evidence or {}
-    metrics = signal.metrics or {}
-    row: dict[str, Any] = {
-        "id": str(signal.id),
-        "type": signal.signal_type,
-        "topic": signal.topic_cluster,
-        "page": signal.page_url,
-        "priority": signal.priority_score,
-        "limitations": list(signal.limitations or []),
-    }
-    # The observed query text, when this signal is about one. ``target`` is
-    # only a query when ``target_kind`` says so — a page target is a URL, and
-    # presenting it as a search someone typed would be a fabrication.
-    if evidence.get("target_kind") == "query":
-        row["observed_query"] = evidence.get("target")
-    if metrics:
-        row["observed_metrics"] = metrics
-    if snapshot is not None:
-        row["observed_period"] = {
-            "start": snapshot.window_start.isoformat(),
-            "end": snapshot.window_end.isoformat(),
-        }
-    return row
 
 
 def _generation_evidence(
@@ -598,7 +522,7 @@ async def _generate_suggestions(
     list[DemandSignal],
 ]:
     target_topic = _resolve_target_topic(prompt_set, payload)
-    demand_snapshot, demand_signals = await _load_demand_grounding(
+    demand_snapshot, demand_signals = await load_demand_grounding(
         session,
         workspace_id=workspace_id,
         project_id=prompt_set.project.id,

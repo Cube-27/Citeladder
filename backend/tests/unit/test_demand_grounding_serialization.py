@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from app.domain.prompts.generation import _serialize_demand_signal
+from app.domain.prompts.demand_grounding import serialize_demand_signal
 from app.models.demand import DemandSignal, DemandSnapshot
 
 
@@ -37,7 +37,7 @@ def _snapshot() -> DemandSnapshot:
 
 
 def test_an_observed_query_reaches_the_model() -> None:
-    row = _serialize_demand_signal(
+    row = serialize_demand_signal(
         _signal(
             evidence={"target_kind": "query", "target": "best crm for small teams"},
             metrics={"impressions": 41200, "clicks": 180, "position": 11.4},
@@ -56,7 +56,7 @@ def test_an_observed_query_reaches_the_model() -> None:
 
 def test_a_page_target_is_never_presented_as_a_search() -> None:
     """``target`` is only a query when ``target_kind`` says so."""
-    row = _serialize_demand_signal(
+    row = serialize_demand_signal(
         _signal(
             evidence={
                 "target_kind": "page",
@@ -70,7 +70,7 @@ def test_a_page_target_is_never_presented_as_a_search() -> None:
 
 def test_absent_observations_are_omitted_not_zeroed() -> None:
     """No metrics and no window are silence, not measurements of nothing."""
-    row = _serialize_demand_signal(_signal(), snapshot=None)
+    row = serialize_demand_signal(_signal(), snapshot=None)
     assert "observed_metrics" not in row
     assert "observed_period" not in row
     assert "observed_query" not in row

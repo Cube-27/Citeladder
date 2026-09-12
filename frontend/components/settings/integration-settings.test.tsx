@@ -446,7 +446,9 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Bing connected.');
-    expect(alert).toHaveTextContent(/appear in Traffic once/i);
+    // Connecting queues nothing — the import starts when a property is
+    // picked — so the notice says what the reader must do next.
+    expect(alert).toHaveTextContent(/select a property/i);
     expect(alert).not.toHaveTextContent('AI Referrals');
   });
 

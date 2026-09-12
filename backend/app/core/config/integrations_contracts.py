@@ -113,6 +113,11 @@ ERROR_MAPPING_ACTIVE_OWNER_CONFLICT: Final = "mapping_active_owner_conflict"
 
 ERROR_PROPERTY_DISCOVERY_UNSUPPORTED: Final = "property_discovery_unsupported"
 
+# The grant works, but the SELECTED property is not one it can read. Distinct
+# from a failed authorization: reconnecting fixes the second, re-selecting (or
+# regaining access to the property) fixes this one.
+ERROR_PROPERTY_NOT_ACCESSIBLE: Final = "property_not_accessible"
+
 ERROR_GA4_DIMENSION_INCOMPATIBLE: Final = "ga4_dimension_incompatible"
 
 INTEGRATION_IMPORTER_VERSION: Final = "integrations-importer-1"

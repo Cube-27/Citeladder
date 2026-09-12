@@ -19,9 +19,9 @@ and the sibling ``oauth.py``).
   (invariant 6): raised errors carry only HTTP status codes and
   config-owned error tokens, with provider error text length-capped.
 
-The cheap authenticated grant probe (``GET /webmasters/v3/sites``) already
-exists as ``IntegrationOAuthClient.probe_access_token`` (I3) and is
-deliberately NOT duplicated here (invariant 2).
+``list_properties`` (``GET /webmasters/v3/sites``) backs both the property
+picker and ``POST /integrations/{id}/test``, which reads the connection's own
+provider rather than a shared grant-level probe.
 """
 
 from __future__ import annotations

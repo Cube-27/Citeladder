@@ -41,6 +41,7 @@ from app.domain.integrations.sync import (
     ActiveWindowConflictError,
     SyncTargetAmbiguousError,
     SyncTargetUnmappedError,
+    contiguous_span,
     enqueue_sync_run,
     resolve_sync_target,
 )
@@ -282,6 +283,24 @@ def backfill_progress_rollup(
         completed_windows=len(succeeded),
         failed_windows=len(failed),
         pending_windows=pending,
-        covered_from=min((row.window_start for row in succeeded), default=None),
-        covered_through=max((row.window_end for row in succeeded), default=None),
+        **_covered_span(succeeded),
     )
+
+
+def _covered_span(succeeded: Sequence[IntegrationSyncRun]) -> dict[str, date | None]:
+    """The CONTIGUOUS span of imported history, stopping at the first gap.
+
+    Taking ``MAX(window_end)`` over succeeded chunks jumps straight over a
+    failed middle one and presents the result as a continuous range, so the
+    user was told history reached a date it does not cover — and ``readiness``
+    takes the minimum of these values across connections, so the
+    overstatement propagated. The walk itself lives in ``sync`` so the enqueue
+    path and this projection cannot drift apart.
+
+    ``state`` still reports ``partial`` when a chunk failed, so the hole is
+    visible as well as excluded.
+    """
+    covered_from, covered_through = contiguous_span(
+        [(row.window_start, row.window_end) for row in succeeded]
+    )
+    return {"covered_from": covered_from, "covered_through": covered_through}

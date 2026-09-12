@@ -158,7 +158,7 @@ async def _seed_graph(
         access_token_encrypted=encrypt_secret("ms-access-token-1"),
         refresh_token_encrypted=encrypt_secret("ms-refresh-token-1"),
         token_expires_at=token_expires_at or (datetime.now(UTC) + timedelta(hours=1)),
-        granted_scopes=["webmaster.manage"],
+        granted_scopes=["webmaster.read"],
         status=GRANT_STATUS_CONNECTED,
     )
     db_session.add(grant)
@@ -371,23 +371,6 @@ async def test_fresh_token_skips_refresh(session_factory, db_session) -> None:
     assert run.status == TASK_STATUS_SUCCEEDED
     assert fake.token_calls == []
     assert fake.bing_auth == ["Bearer ms-access-token-1"] * 2
-
-
-@pytest.mark.asyncio
-async def test_probe_ok_and_auth_failure() -> None:
-    """The cheap GetUserSites probe validates the token (I12 replacement)."""
-    fake = _ProviderFake()
-    client = build_bing_client(transport=fake.mock_transport())
-    await client.probe_access_token(access_token="ms-access-token-1")
-    assert fake.bing_calls == [(BING_SITES_PROBE_METHOD, "")]
-    assert fake.bing_auth == ["Bearer ms-access-token-1"]
-
-    failing = _ProviderFake(bing_status=401)
-    client = build_bing_client(transport=failing.mock_transport())
-    with pytest.raises(BingApiError) as excinfo:
-        await client.probe_access_token(access_token="ms-access-token-1")
-    assert excinfo.value.error_code == ERROR_GRANT_AUTH_FAILED
-    assert excinfo.value.retryable is False
 
 
 @pytest.mark.asyncio

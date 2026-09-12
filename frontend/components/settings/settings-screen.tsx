@@ -317,11 +317,12 @@ export function SettingsScreen() {
           <ProviderSettings />
         </TabPanel>
 
-        <TabPanel
-          value="integrations"
-          forceMount
-          className="focus-ring data-[state=inactive]:hidden"
-        >
+        {/* Not forceMount, unlike its siblings. This panel owns a connection
+            list that fans out into a mappings query and a 3s backfill poll per
+            connection, so mounting it behind every other tab meant opening
+            Profile issued five integration requests and then polled a backfill
+            the reader could not see. */}
+        <TabPanel value="integrations" className="focus-ring">
           <IntegrationSettings />
         </TabPanel>
       </Tabs>

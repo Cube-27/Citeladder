@@ -147,7 +147,7 @@ def test_google_grant_combines_gsc_and_ga4_scopes() -> None:
     # (its code exchange returns a refresh token unconditionally). Sending
     # either shape made the authorize request invalid before consent.
     microsoft_scopes = INTEGRATION_OAUTH_SCOPES[INTEGRATION_TRANSPORT_MICROSOFT]
-    assert microsoft_scopes == ("webmaster.manage",)
+    assert microsoft_scopes == ("webmaster.read",)
     # bingads.manage is the ADS API scope — never requested here.
     assert all("bingads" not in scope for scope in microsoft_scopes)
 

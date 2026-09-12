@@ -39,6 +39,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
@@ -71,15 +72,15 @@ from app.models.integrations import (
 )
 
 # Schema-object names pinned in ``models/integrations.py`` — the partial
-# active-window unique index (409 path), the full re-sync identity unique
-# constraint, and the unique idempotency key (both retry-with-next-value).
+# active-window unique index (409 path), the per-connection revision identity,
+# and the unique idempotency key (the last two retry-with-next-value).
 logger = logging.getLogger("app.integrations")
 
 _ACTIVE_WINDOW_INDEX = "ix_integration_sync_runs_active_window"
-_WINDOW_SEQ_CONSTRAINT = "uq_integration_sync_run_connection_seq"
+_CONNECTION_SEQ_CONSTRAINT = "uq_integration_sync_run_connection_seq"
 _IDEMPOTENCY_KEY_CONSTRAINT = "uq_integration_sync_run_idempotency_key"
 _RETRYABLE_CONSTRAINTS = frozenset(
-    {_WINDOW_SEQ_CONSTRAINT, _IDEMPOTENCY_KEY_CONSTRAINT}
+    {_CONNECTION_SEQ_CONSTRAINT, _IDEMPOTENCY_KEY_CONSTRAINT}
 )
 # Postgres reports unique violations as
 # ``duplicate key value violates unique constraint "<name>"`` (stable text).
@@ -245,17 +246,32 @@ async def connection_covered_through(
             )
         )
     ).all()
-    covered: date | None = None
-    for window_start, window_end in windows:
-        if covered is None:
-            covered = window_end
-            continue
-        # A window starting more than one day after the covered edge leaves
-        # a hole; everything past it is unreachable coverage.
-        if window_start > covered + timedelta(days=1):
+    return contiguous_span([(start, end) for start, end in windows])[1]
+
+
+def contiguous_span(
+    windows: Sequence[tuple[date, date]],
+) -> tuple[date | None, date | None]:
+    """The unbroken ``[start, end]`` the given windows actually cover.
+
+    Walks them in order and stops at the FIRST gap: everything past a hole is
+    unreachable coverage. Taking ``MIN(start)``/``MAX(end)`` instead jumps
+    straight over a failed middle chunk and presents the result as continuous,
+    which both lets the next sync skip the hole forever and tells the reader
+    history reaches a date it does not.
+
+    Pure, and the single owner of that rule — the enqueue path needs the end,
+    the progress projection needs both ends, and they must not drift apart.
+    """
+    if not windows:
+        return None, None
+    ordered = sorted(windows)
+    covered_from, covered_through = ordered[0]
+    for window_start, window_end in ordered[1:]:
+        if window_start > covered_through + timedelta(days=1):
             break
-        covered = max(covered, window_end)
-    return covered
+        covered_through = max(covered_through, window_end)
+    return covered_from, covered_through
 
 
 def clamp_sync_window(window_start: date, window_end: date) -> tuple[date, date]:

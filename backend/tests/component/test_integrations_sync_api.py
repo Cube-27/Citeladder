@@ -452,6 +452,44 @@ async def _seed_backfill_runs(
 
 
 @pytest.mark.asyncio
+async def test_backfill_coverage_stops_at_a_failed_middle_chunk(
+    client: httpx.AsyncClient, db_session
+) -> None:
+    """A hole in the middle must not be reported as imported history.
+
+    Taking MAX(window_end) over succeeded chunks jumps the gap and presents
+    the result as a continuous range, so the user is told history reaches a
+    date it does not cover — and readiness takes the minimum of these values
+    across connections, so the overstatement spreads.
+    """
+    await _register(client, "backfill-gap@example.com")
+    ws = await _workspace_id(db_session)
+    _grant, connections = await _seed_grant(db_session, workspace_id=ws)
+    gsc = next(c for c in connections if c.provider == "gsc")
+    # Newest first, as the enqueue fans them out: succeeded, FAILED, succeeded.
+    await _seed_backfill_runs(
+        db_session,
+        workspace_id=ws,
+        connection_id=gsc.id,
+        statuses=(TASK_STATUS_SUCCEEDED, "failed", TASK_STATUS_SUCCEEDED),
+    )
+
+    resp = await client.get(f"{_BASE}/{gsc.id}/syncs/progress")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    # Three 28-day windows back from 2026-07-31, the middle one failed.
+    # Coverage is the CONTIGUOUS run from the oldest import to the hole —
+    # the same first-gap rule `sync.connection_covered_through` applies when
+    # deciding what the next sync must go back for. Reporting the newest
+    # success (2026-07-31) would claim the hole is filled.
+    assert body["state"] == "partial"
+    assert body["failed_windows"] == 1
+    assert body["covered_from"] == "2026-05-09"
+    assert body["covered_through"] == "2026-06-05"
+
+
+@pytest.mark.asyncio
 async def test_backfill_progress_without_runs_is_not_started(
     client: httpx.AsyncClient, db_session
 ) -> None:

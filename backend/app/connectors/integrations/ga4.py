@@ -36,10 +36,10 @@ coerced to numbers deterministically (integer-valued → ``int``, else
 dropped, never guessed. Rows with no data simply omit the ``rows`` key
 (GA4 mirrors GSC's empty-result shape).
 
-The cheap authenticated grant probe already exists as
-``IntegrationOAuthClient.probe_access_token`` (I3 — the GSC site list
-validates the ONE shared Google grant behind either connection) and is
-deliberately NOT duplicated here (invariant 2).
+``list_properties`` is what ``POST /integrations/{id}/test`` reads for a GA4
+connection. It used to issue the shared Google grant probe — a Search Console
+call — so a consent that granted Search Console and refused Analytics still
+passed a GA4 test.
 """
 
 from __future__ import annotations

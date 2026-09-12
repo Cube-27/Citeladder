@@ -1,10 +1,14 @@
 """Integration OAuth transport client (spec: docs/roadmap/integrations.md §2).
 
-Performs the authorization-code exchange, refresh, remote revoke, and the
-cheap authenticated grant probe behind ``POST /integrations/{id}/test`` — per
+Performs the authorization-code exchange, refresh, and remote revoke — per
 OAuth transport (``google_oauth`` covering the shared GSC+GA4 grant;
 ``microsoft_oauth`` covering Bing) over httpx with an injected transport
 (test seam, mirroring ``connectors/discovery_models/factory.py``).
+
+This module no longer probes. ``POST /integrations/{id}/test`` reads the
+connection's OWN provider through the data clients, because a shared
+grant-level probe could not tell whether the Analytics half of one Google
+consent was actually granted, nor whether the SELECTED property is readable.
 
 Invariant 6: access/refresh tokens and the env-injected client secret pass
 through this module but are NEVER logged — error surfaces carry only HTTP
@@ -34,8 +38,6 @@ from app.core.config.integrations_settings import (
     integration_settings,
 )
 from app.core.config.integrations_transport import (
-    GSC_API_BASE_URL,
-    GSC_SITES_PATH,
     INTEGRATION_OAUTH_REVOKE_URLS,
     INTEGRATION_OAUTH_SCOPES,
     INTEGRATION_OAUTH_TOKEN_URLS,
@@ -43,14 +45,6 @@ from app.core.config.integrations_transport import (
     INTEGRATION_TRANSPORT_MICROSOFT,
     INTEGRATION_TRANSPORTS,
 )
-
-# Cheap, read-only, scope-minimal probe path validating a Google grant's
-# access token (the one shared Google grant carries ``webmasters.readonly``
-# for both the GSC and the GA4 connection, so the site list validates the
-# grant behind either connection). The host is config-owned
-# (``GSC_API_BASE_URL``) and allow-listed. The Microsoft-grant probe
-# (``GetUserSites``) lives with the Bing data-API client (I12).
-_GSC_SITES_PROBE_PATH = GSC_SITES_PATH
 
 
 class IntegrationOAuthError(IntegrationApiError):
@@ -306,33 +300,6 @@ class IntegrationOAuthClient:
             error_code, retryable = classify_status(response.status_code)
             raise IntegrationOAuthError(
                 f"OAuth revoke returned HTTP {response.status_code}",
-                error_code=error_code,
-                retryable=retryable,
-            )
-
-    async def probe_access_token(self, *, access_token: str) -> None:
-        """Cheap authenticated probe validating a Google grant's access token.
-
-        GETs the GSC site list with the Bearer token (never logged). Raises
-        ``IntegrationOAuthError`` on any failure.
-        """
-        url = f"{GSC_API_BASE_URL}{_GSC_SITES_PROBE_PATH}"
-        _assert_approved_url(url)
-        try:
-            async with self._http_client() as client:
-                response = await client.get(
-                    url, headers={"Authorization": f"Bearer {access_token}"}
-                )
-        except httpx.HTTPError as exc:
-            raise IntegrationOAuthError(
-                f"grant probe request failed: {type(exc).__name__}",
-                error_code=ERROR_PROVIDER_API,
-                retryable=True,
-            ) from exc
-        if response.status_code != 200:
-            error_code, retryable = classify_status(response.status_code)
-            raise IntegrationOAuthError(
-                f"grant probe returned HTTP {response.status_code}",
                 error_code=error_code,
                 retryable=retryable,
             )

@@ -20,14 +20,19 @@ OAuth client is always a fake, so nothing here reaches a provider.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.integrations import oauth as integration_oauth
+from app.connectors.integrations._http import IntegrationApiError
+from app.core.config.integrations_clients import INTEGRATION_CLIENT_BUILDERS
 from app.core.config.integrations_contracts import (
     ERROR_GRANT_AUTH_FAILED,
+    ERROR_PROPERTY_NOT_ACCESSIBLE,
     ERROR_PROVIDER_API,
     ERROR_TOKEN_REFRESH_FAILED,
     EVENT_INTEGRATION_DISCONNECTED,
@@ -70,23 +75,37 @@ _ACCESS_TOKEN = "access-token-value"  # pragma: allowlist secret
 _REFRESH_TOKEN = "refresh-token-value"  # pragma: allowlist secret
 
 
+# The property the seeded connections select, and which the fake provider
+# lists. The test now verifies the SELECTED property is readable.
+_PROBE_PROPERTY_REF = "sc-domain:example.com"
+
+
 class _FakeOAuthClient:
-    """Records probe/revoke calls; raises the fault a test asks for."""
+    """Records revoke calls; raises the fault a test asks for."""
 
     def __init__(self, *, fault: Exception | None = None) -> None:
         self.fault = fault
-        self.probed: list[str] = []
         self.revoked: list[str] = []
-
-    async def probe_access_token(self, *, access_token: str) -> None:
-        self.probed.append(access_token)
-        if self.fault is not None:
-            raise self.fault
 
     async def revoke(self, *, token: str) -> None:
         self.revoked.append(token)
         if self.fault is not None:
             raise self.fault
+
+
+class _FakeDataClient:
+    """Answers ``list_properties`` — what the connection test now probes."""
+
+    def __init__(self) -> None:
+        self.fault: Exception | None = None
+        self.listed: list[str] = []
+        self.properties: list[str] = [_PROBE_PROPERTY_REF]
+
+    async def list_properties(self, *, access_token: str):
+        self.listed.append(access_token)
+        if self.fault is not None:
+            raise self.fault
+        return [SimpleNamespace(property_ref=ref, label=ref) for ref in self.properties]
 
 
 @pytest.fixture
@@ -97,6 +116,22 @@ def fake_oauth_client(monkeypatch: pytest.MonkeyPatch) -> _FakeOAuthClient:
         "build_oauth_client",
         lambda *_args, **_kwargs: client,
     )
+    return client
+
+
+@pytest.fixture
+def fake_data_client(monkeypatch: pytest.MonkeyPatch) -> _FakeDataClient:
+    """The connection test reads the connection's OWN provider.
+
+    It used to issue the shared Google OAuth probe (a Search Console call)
+    whatever the connection was, so a GA4 connection was never actually
+    tested. The probe now goes through the config-owned client registry.
+    """
+    client = _FakeDataClient()
+    for provider in INTEGRATION_CLIENT_BUILDERS:
+        monkeypatch.setitem(
+            INTEGRATION_CLIENT_BUILDERS, provider, lambda **_kwargs: client
+        )
     return client
 
 
@@ -113,6 +148,7 @@ async def _grant(
     *,
     transport: str = INTEGRATION_TRANSPORT_GOOGLE,
     refresh_token: str | None = _REFRESH_TOKEN,
+    token_expires_at: datetime | None = None,
 ) -> IntegrationOAuthGrant:
     grant = IntegrationOAuthGrant(
         workspace_id=workspace_id,
@@ -123,6 +159,9 @@ async def _grant(
             encrypt_secret(refresh_token) if refresh_token else ""
         ),
         granted_scopes=["scope-a"],
+        # A live token by default. Callers that want the refresh path say so;
+        # leaving this null made EVERY caller take it.
+        token_expires_at=token_expires_at or datetime.now(UTC) + timedelta(hours=1),
     )
     session.add(grant)
     await session.flush()
@@ -134,11 +173,13 @@ async def _connection(
     grant: IntegrationOAuthGrant,
     *,
     provider: str = INTEGRATION_PROVIDER_GSC,
+    account_ref: str = _PROBE_PROPERTY_REF,
 ) -> IntegrationConnection:
     connection = IntegrationConnection(
         workspace_id=grant.workspace_id,
         grant_id=grant.id,
         provider=provider,
+        account_ref=account_ref,
     )
     session.add(connection)
     await session.flush()
@@ -228,7 +269,7 @@ async def test_list_connections_excludes_other_workspaces(
 @pytest.mark.asyncio
 async def test_a_successful_probe_records_an_append_only_ok_event(
     db_session: AsyncSession,
-    fake_oauth_client: _FakeOAuthClient,
+    fake_data_client: _FakeDataClient,
 ) -> None:
     mine = await _workspace(db_session, "Mine")
     grant = await _grant(db_session, mine)
@@ -239,10 +280,13 @@ async def test_a_successful_probe_records_an_append_only_ok_event(
         db_session, workspace_id=mine, connection_id=connection.id
     )
 
-    assert result.status == TEST_STATUS_OK
-    assert result.error_code == ""
-    # The token is decrypted in place for exactly one call and never persisted.
-    assert fake_oauth_client.probed == [_ACCESS_TOKEN]
+    assert (result.status, result.error_code, result.detail) == (
+        TEST_STATUS_OK,
+        "",
+        "Connection succeeded",
+    )
+    # One read against the connection's own provider, with a usable token.
+    assert fake_data_client.listed == [_ACCESS_TOKEN]
     events = await _events(db_session, grant.id)
     assert [event.event_type for event in events] == [EVENT_INTEGRATION_TESTED]
     assert _ACCESS_TOKEN not in str(events[0].payload)
@@ -251,13 +295,13 @@ async def test_a_successful_probe_records_an_append_only_ok_event(
 @pytest.mark.asyncio
 async def test_a_provider_fault_fails_the_probe_with_its_error_code(
     db_session: AsyncSession,
-    fake_oauth_client: _FakeOAuthClient,
+    fake_data_client: _FakeDataClient,
 ) -> None:
     mine = await _workspace(db_session, "Mine")
     grant = await _grant(db_session, mine)
     connection = await _connection(db_session, grant)
     await db_session.commit()
-    fake_oauth_client.fault = integration_oauth.IntegrationOAuthError(
+    fake_data_client.fault = IntegrationApiError(
         "provider said no", error_code=ERROR_GRANT_AUTH_FAILED
     )
 
@@ -266,7 +310,7 @@ async def test_a_provider_fault_fails_the_probe_with_its_error_code(
     )
 
     assert result.status == TEST_STATUS_FAILED
-    assert result.error_code == fake_oauth_client.fault.error_code
+    assert result.error_code == ERROR_GRANT_AUTH_FAILED
     assert "provider said no" in result.detail
     # A failed probe is NOT a rotation: the grant keeps its credentials.
     await db_session.refresh(grant)
@@ -277,13 +321,13 @@ async def test_a_provider_fault_fails_the_probe_with_its_error_code(
 @pytest.mark.asyncio
 async def test_an_unexpected_fault_fails_the_probe_without_leaking_its_message(
     db_session: AsyncSession,
-    fake_oauth_client: _FakeOAuthClient,
+    fake_data_client: _FakeDataClient,
 ) -> None:
     mine = await _workspace(db_session, "Mine")
     grant = await _grant(db_session, mine)
     connection = await _connection(db_session, grant)
     await db_session.commit()
-    fake_oauth_client.fault = RuntimeError(_ACCESS_TOKEN)
+    fake_data_client.fault = RuntimeError(_ACCESS_TOKEN)
 
     result = await run_connection_test(
         db_session, workspace_id=mine, connection_id=connection.id
@@ -295,6 +339,95 @@ async def test_an_unexpected_fault_fails_the_probe_without_leaking_its_message(
     # carry the credential that caused it.
     assert result.detail == "Unexpected error: RuntimeError"
     assert _ACCESS_TOKEN not in result.detail
+
+
+@pytest.mark.asyncio
+async def test_a_near_expiry_token_is_refreshed_before_the_probe(
+    db_session: AsyncSession,
+    fake_data_client: _FakeDataClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A healthy grant an hour old must not report FAILED.
+
+    The probe read the encrypted access token directly. Google's lives about
+    an hour, so "Test connection" failed on a grant connected yesterday while
+    the property picker beside it — which refreshes — worked fine.
+    """
+    mine = await _workspace(db_session, "Mine")
+    grant = await _grant(
+        db_session, mine, token_expires_at=datetime.now(UTC) - timedelta(minutes=5)
+    )
+    connection = await _connection(db_session, grant)
+    await db_session.commit()
+
+    refreshed_token = "refreshed-access-token"  # pragma: allowlist secret
+    calls: list[str] = []
+
+    async def _fake_refresh(session, *, grant, transport=None):
+        calls.append(decrypt_secret(grant.refresh_token_encrypted))
+        return refreshed_token
+
+    monkeypatch.setattr(
+        "app.domain.integrations.service.fresh_access_token", _fake_refresh
+    )
+
+    result = await run_connection_test(
+        db_session, workspace_id=mine, connection_id=connection.id
+    )
+
+    assert result.status == TEST_STATUS_OK
+    assert calls == [_REFRESH_TOKEN]
+    # The probe used the REFRESHED token, not the stale stored one.
+    assert fake_data_client.listed == [refreshed_token]
+
+
+@pytest.mark.asyncio
+async def test_an_inaccessible_property_does_not_pass(
+    db_session: AsyncSession,
+    fake_data_client: _FakeDataClient,
+) -> None:
+    """Enumerating the account is not evidence the property is readable.
+
+    The old probe only asked whether the token worked at all, so a connection
+    pointed at a property the account had lost access to still reported OK —
+    and the next sync failed with a confusing provider error instead.
+    """
+    mine = await _workspace(db_session, "Mine")
+    grant = await _grant(db_session, mine)
+    connection = await _connection(
+        db_session, grant, account_ref="sc-domain:not-mine.example"
+    )
+    await db_session.commit()
+
+    result = await run_connection_test(
+        db_session, workspace_id=mine, connection_id=connection.id
+    )
+
+    assert result.status == TEST_STATUS_FAILED
+    assert result.error_code == ERROR_PROPERTY_NOT_ACCESSIBLE
+    assert "not-mine.example" in result.detail
+    # The account listing itself succeeded — this is a property fault, not an
+    # authorization fault, and the two carry different remedies.
+    assert fake_data_client.listed == [_ACCESS_TOKEN]
+
+
+@pytest.mark.asyncio
+async def test_a_connection_with_no_property_reports_the_grant_is_valid(
+    db_session: AsyncSession,
+    fake_data_client: _FakeDataClient,
+) -> None:
+    """Nothing selected yet is not a failure."""
+    mine = await _workspace(db_session, "Mine")
+    grant = await _grant(db_session, mine)
+    connection = await _connection(db_session, grant, account_ref="")
+    await db_session.commit()
+
+    result = await run_connection_test(
+        db_session, workspace_id=mine, connection_id=connection.id
+    )
+
+    assert result.status == TEST_STATUS_OK
+    assert "No property selected" in result.detail
 
 
 # --- property discovery ---------------------------------------------------

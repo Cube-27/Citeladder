@@ -29,6 +29,9 @@ def _demo_settings() -> Settings:
         DATABASE_URL="postgresql+asyncpg://citeladder:database-independent-password-123456789@db/citeladder",
         DB_SSL_MODE="require",
         TRUSTED_PROXY_CIDRS="127.0.0.1/32",
+        # A deployed origin: every OAuth redirect URI is built from this, so
+        # production config refuses the loopback development default.
+        FRONTEND_URL="https://demo.example.com",
     )
 
 

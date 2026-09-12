@@ -5,6 +5,7 @@ import ipaddress
 import logging
 from datetime import UTC, datetime
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -149,16 +150,23 @@ class Settings(BaseSettings):
             "integration_google_client_secret",
         ),
     )
+    # ``BING_OAUTH_*`` is accepted too: the deploy workflow and both operator
+    # runbooks name the secrets that way, and without the alias Bing read as
+    # unconfigured in a correctly provisioned deployment — a 503 on Connect
+    # with nothing obviously wrong.
     integration_microsoft_client_id: str = Field(
         default="",
         validation_alias=AliasChoices(
-            "INTEGRATION_MICROSOFT_CLIENT_ID", "integration_microsoft_client_id"
+            "INTEGRATION_MICROSOFT_CLIENT_ID",
+            "BING_OAUTH_CLIENT_ID",
+            "integration_microsoft_client_id",
         ),
     )
     integration_microsoft_client_secret: str = Field(
         default="",
         validation_alias=AliasChoices(
             "INTEGRATION_MICROSOFT_CLIENT_SECRET",
+            "BING_OAUTH_CLIENT_SECRET",
             "integration_microsoft_client_secret",
         ),
     )
@@ -342,6 +350,9 @@ DEVELOPMENT_ENV_NAMES: frozenset[str] = frozenset(
     {"", "development", "dev", "local", "test", "testing"}
 )
 
+# Hosts that can only ever mean "this machine".
+_LOOPBACK_HOSTS: frozenset[str] = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
+
 
 def _is_development_env(candidate: Settings) -> bool:
     env = str(candidate.app_env or "development").strip().lower()
@@ -453,7 +464,24 @@ def validate_production_security(candidate: Settings) -> list[str]:
     issues.extend(_trusted_proxy_problems(candidate.trusted_proxy_cidrs))
     issues.extend(_dev_gate_problems(candidate))
     issues.extend(_configured_login_problems(candidate))
+    issues.extend(_frontend_url_problems(candidate))
     return issues
+
+
+def _frontend_url_problems(candidate: Settings) -> list[str]:
+    """``frontend_url`` is the sole input to every OAuth redirect URI.
+
+    It defaults to loopback for local development, and a deployment that
+    forgets to set it does not fail loudly — it builds provider redirect URIs
+    and post-consent landing URLs pointing at 127.0.0.1, so Connect bounces
+    every public user to their own machine. Providers match ``redirect_uri``
+    byte-for-byte, so this is unrecoverable at runtime and worth refusing at
+    boot.
+    """
+    host = urlsplit(candidate.frontend_url.strip()).hostname or ""
+    if host in _LOOPBACK_HOSTS:
+        return ["frontend_url must not be a loopback address outside development"]
+    return []
 
 
 def _check_secret_defaults() -> None:

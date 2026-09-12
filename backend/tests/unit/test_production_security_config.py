@@ -22,9 +22,27 @@ def _production_settings(**updates: object) -> Settings:
         "db_ssl_mode": "require",
         "trusted_proxy_cidrs": "10.0.0.0/16",
         "dev_login_password": "Shared-Gh9!",
+        # Every OAuth redirect URI is built from this, so a deployment that
+        # left it at the loopback default is refused.
+        "frontend_url": "https://app.example.com",
     }
     values.update(updates)
     return settings.model_copy(update=values)
+
+
+def test_a_loopback_frontend_url_is_refused_in_production() -> None:
+    """It is the sole input to every OAuth redirect URI.
+
+    Left at its development default, a deployment builds provider redirect
+    URIs and post-consent landing URLs pointing at 127.0.0.1, so Connect
+    bounces every public user to their own machine. Providers match
+    redirect_uri byte-for-byte, so it cannot be recovered at runtime.
+    """
+    for url in ("http://127.0.0.1:3000", "http://localhost:3000", "http://[::1]:3000"):
+        issues = validate_production_security(_production_settings(frontend_url=url))
+        assert "frontend_url must not be a loopback address outside development" in (
+            issues
+        ), url
 
 
 def test_valid_independent_production_secrets_pass() -> None:

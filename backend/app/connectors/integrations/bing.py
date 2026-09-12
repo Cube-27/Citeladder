@@ -37,11 +37,11 @@ The Bearer access token passes through this module but is NEVER logged
 (invariant 6): raised errors carry only HTTP status codes and
 config-owned error tokens, with provider error text length-capped.
 
-``BingClient.probe_access_token`` is the cheap authenticated grant probe
-behind ``POST /integrations/{id}/test`` for Microsoft grants (the I12
-replacement for the refresh round-trip placeholder): ``GetUserSites``
-returns the caller's verified-site list — the analogue of the GSC
-``GET /webmasters/v3/sites`` probe.
+``list_properties`` (``GetUserSites``) returns the caller's verified-site
+list. It backs both the property picker and ``POST /integrations/{id}/test``:
+the connection test reads its OWN provider rather than a shared grant-level
+probe, so it can tell an unusable authorization from an inaccessible
+property.
 """
 
 from __future__ import annotations
@@ -330,16 +330,6 @@ class BingClient:
                 continue
             properties.append(ProviderProperty(property_ref=site_url, label=site_url))
         return tuple(properties)
-
-    async def probe_access_token(self, *, access_token: str) -> None:
-        """Cheap authenticated probe validating a Microsoft grant's token.
-
-        GETs the caller's verified-site list (``GetUserSites``) with the
-        Bearer token (never logged) — the analogue of the GSC sites probe
-        on the shared Google grant. Raises ``BingApiError`` on any failure.
-        """
-        url = f"{BING_API_BASE_URL}{BING_API_JSON_ROOT}{BING_SITES_PROBE_METHOD}"
-        await self._get(url, access_token=access_token, params={}, action="probe")
 
 
 def build_bing_client(

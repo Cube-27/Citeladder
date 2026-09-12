@@ -53,6 +53,9 @@ owners above.
   — remaining Commerce release gates.
 - [`plans/site-health-measurement-reliability-pr4.md`](plans/site-health-measurement-reliability-pr4.md)
   — named live-crawl acceptance limits after implementation completion.
+- [`plans/citeladder-integrations-audit-followups.md`](plans/citeladder-integrations-audit-followups.md)
+  — what the September 2026 integrations/AI-visibility audit left open after its
+  correctness findings shipped, plus corrections to the audit itself.
 
 ## Historical evidence
 
