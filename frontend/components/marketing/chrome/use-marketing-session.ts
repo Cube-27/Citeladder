@@ -112,7 +112,7 @@ export function useMarketingSession() {
     // people the marketing site exists for. So the placeholder is shown only
     // when this browser still holds the backend's session hint cookie, which
     // is where the swap would actually have happened. Everyone else gets
-    // "Log in" and the demo CTA in the first paint.
+    // "Log in" and the sign-up CTA in the first paint.
     sessionPending: me.isPending,
     isAuthenticated: authenticated,
     dashboardHref: knownEmpty ? '/onboarding' : '/projects',

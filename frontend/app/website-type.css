@@ -318,6 +318,13 @@
   color: var(--color-foreground);
 }
 
+.flow-auth-switch-link,
+.flow-auth-switch-link:hover {
+  color: var(--color-foreground);
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+
 .flow-progress ol {
   display: flex;
   align-items: center;
@@ -691,8 +698,33 @@
    The shell remains the scroll owner; this only tightens its named rhythm. */
 @media (min-width: 981px) and (max-height: 800px) {
   [data-flow-surface] {
+    --flow-bar-height: 3.5rem;
     --flow-header-gap: 1.5rem;
     --flow-block: 1.5rem;
+  }
+
+  .flow-main[data-flow-measure='auth'] {
+    padding-block: 1rem;
+  }
+
+  .flow-content[data-flow-measure='auth'] {
+    padding-block: 1rem;
+  }
+
+  .auth-form-shell {
+    gap: 1rem;
+  }
+
+  .auth-form-body {
+    gap: 0.75rem;
+  }
+
+  .auth-email-form {
+    gap: 0.5rem;
+  }
+
+  .auth-form-submit {
+    margin-top: 0.25rem;
   }
 }
 

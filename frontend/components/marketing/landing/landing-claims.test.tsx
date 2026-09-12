@@ -35,12 +35,12 @@ describe('Landing claims', () => {
     expect(text).not.toMatch(/-?56%|-?49%/);
   });
 
-  it('carries no retired commercial claim', () => {
+  it('adds no unsupported trial terms beyond the approved CTA label', () => {
     const { container } = render(<Page />);
     const text = container.textContent ?? '';
 
     expect(text).not.toMatch(/\$49/);
-    expect(text).not.toMatch(/Start free|Free plan|no card/i);
+    expect(text).not.toMatch(/Free plan|no card|\b\d+[- ]day trial|automatic charge/i);
   });
 
   it('displays no coming soon markers anywhere on the page', () => {

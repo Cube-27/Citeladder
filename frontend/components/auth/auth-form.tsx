@@ -12,6 +12,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/errors';
 import { assignLocation } from '@/lib/navigate';
+import { cn } from '@/lib/utils';
 
 type InputProps = ComponentProps<typeof Input>;
 
@@ -116,6 +117,7 @@ export function AuthFormShell({
   footerPrompt,
   footerHref,
   footerLabel,
+  footerLinkVariant = 'default',
   showOAuth = true,
   showForm = true,
   showFooter = true,
@@ -131,6 +133,7 @@ export function AuthFormShell({
   footerPrompt: string;
   footerHref: string;
   footerLabel: string;
+  footerLinkVariant?: 'default' | 'emphasis';
   showOAuth?: boolean;
   showForm?: boolean;
   showFooter?: boolean;
@@ -162,13 +165,13 @@ export function AuthFormShell({
   }
 
   return (
-    <div className="grid w-full gap-6">
-      <div className="grid gap-1 text-center">
+    <div className="auth-form-shell grid w-full gap-6">
+      <div className="auth-form-heading grid gap-1 text-center">
         <h1 className="flow-title">{title}</h1>
         <p className="flow-help">{description}</p>
       </div>
 
-      <div className="space-y-4">
+      <div className="auth-form-body grid gap-4">
         {showOAuth && (
           <>
             <Button
@@ -184,7 +187,7 @@ export function AuthFormShell({
 
             {oauthNotice ? <MktAlert>{oauthNotice}</MktAlert> : null}
 
-            <div className="my-4 flex items-center gap-3">
+            <div className="auth-form-divider flex items-center gap-3">
               <span className="bg-border h-px flex-1" aria-hidden="true" />
               <span className="flow-meta">or</span>
               <span className="bg-border h-px flex-1" aria-hidden="true" />
@@ -195,10 +198,15 @@ export function AuthFormShell({
         {error ? <MktAlert>{error}</MktAlert> : null}
 
         {showForm ? (
-          <form noValidate onSubmit={onSubmit} className="space-y-3">
+          <form noValidate onSubmit={onSubmit} className="auth-email-form grid gap-3">
             {children}
 
-            <Button type="submit" size="lg" className="mt-2 w-full" disabled={pending}>
+            <Button
+              type="submit"
+              size="lg"
+              className="auth-form-submit mt-2 w-full"
+              disabled={pending}
+            >
               {pending ? pendingLabel : submitLabel}
             </Button>
           </form>
@@ -207,7 +215,13 @@ export function AuthFormShell({
         {showFooter ? (
           <p className="flow-help pt-1 text-center">
             {footerPrompt}{' '}
-            <Link href={footerHref} className="flow-exit">
+            <Link
+              href={footerHref}
+              className={cn(
+                'flow-exit',
+                footerLinkVariant === 'emphasis' && 'flow-auth-switch-link',
+              )}
+            >
               {footerLabel}
             </Link>
           </p>

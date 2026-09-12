@@ -6,10 +6,10 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
-import { DEMO_CTA, type NavDropKey } from '@/lib/marketing-content/nav';
+import { type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { ButtonLink } from '../primitives/button';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
 import { useMarketingSession } from './use-marketing-session';
@@ -328,7 +328,7 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
   );
 }
 
-/** Log in and the demo CTA: what a visitor with no session is offered. */
+/** Log in and sign up: what a visitor with no session is offered. */
 function AnonymousActions() {
   return (
     <>
@@ -339,9 +339,9 @@ function AnonymousActions() {
       >
         Log in
       </Link>
-      <DemoButtonLink variant="primary" className="hidden min-h-10 px-4 sm:inline-flex">
-        {DEMO_CTA}
-      </DemoButtonLink>
+      <ButtonLink href="/register" className="hidden min-h-10 px-4 sm:inline-flex">
+        Sign up
+      </ButtonLink>
     </>
   );
 }

@@ -38,7 +38,13 @@ export function FlowShell({
       className="bg-shell text-foreground relative grid h-dvh min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden antialiased"
     >
       <FlowBar steps={steps} currentStep={currentStep} exitHref={exitHref} />
-      <main id="main" aria-label={mainLabel} className="flow-main" data-flow-align={align}>
+      <main
+        id="main"
+        aria-label={mainLabel}
+        className="flow-main"
+        data-flow-align={align}
+        data-flow-measure={measure}
+      >
         <div className="flow-content app-pane" data-flow-measure={measure}>
           {children}
         </div>

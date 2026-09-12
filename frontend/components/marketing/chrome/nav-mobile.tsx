@@ -5,7 +5,7 @@ import { Fragment } from 'react';
 import { NAV_DROPS, NAV_LINKS, type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
-import { DemoButtonLink } from '../primitives/button';
+import { ButtonLink } from '../primitives/button';
 import { NavItemLink } from './nav-items';
 
 type MobileNavigationProps = {
@@ -91,9 +91,11 @@ export function MobileNavigation({
         ))}
         {!isAuthenticated &&
           !sessionPending && (
-            // The demo CTA leaves the topbar on phones; the sheet is where it
+            // The sign-up CTA leaves the topbar on phones; the sheet is where it
             // lives, pinned with the account links it accompanies.
-            <DemoButtonLink variant="primary" className="w-full" onClick={closeMenu} />
+            <ButtonLink href="/register" className="w-full" onClick={closeMenu}>
+              Sign up
+            </ButtonLink>
           )}
         {sessionPending ? (
           // Same rule as the header actions: a returning visitor waits rather

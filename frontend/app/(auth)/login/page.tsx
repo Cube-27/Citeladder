@@ -54,6 +54,7 @@ function LoginForm() {
       // registration, so the validated resume path travels with the link.
       footerHref={withMcpReturnPath('/register', returnTo)}
       footerLabel="Sign up"
+      footerLinkVariant="emphasis"
       showFooter={!demoMode}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />
