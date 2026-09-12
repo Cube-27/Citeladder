@@ -149,7 +149,9 @@ describe('LoginPage', () => {
   it('leaves the registration link bare without a handoff', () => {
     renderWithProviders(<LoginPage />);
 
-    expect(screen.getByRole('link', { name: /sign up/i })).toHaveAttribute('href', '/register');
+    const signup = screen.getByRole('link', { name: /sign up/i });
+    expect(signup).toHaveAttribute('href', '/register');
+    expect(signup).toHaveClass('flow-auth-switch-link');
   });
 
   it('ignores an external login return target', async () => {

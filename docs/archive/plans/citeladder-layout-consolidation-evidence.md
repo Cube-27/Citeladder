@@ -16,7 +16,7 @@ presentation/deletion work visible in the working tree. The final verification r
   `cce97c4530789223a272ace959486d0b3edff9b6`.
 - Clean-main precondition was verified before the implementation branch and frozen-input commit; no
   application behavior was changed during reconciliation.
-- Frozen visual reference: [`citeladder-refined.html`](citeladder-refined.html),
+- Frozen visual reference: `citeladder-refined.html` (historical artifact unavailable in this checkout),
   SHA-256 `EB766454CB5C4FE87D1B753BBFAC6825F37A62144A09706F146B8A46968B6B3A`.
   Identity: title `CiteLadder — Stripe-informed UI Reference 1.0`, canonical
   stylesheet `#citeladder-styles`, Geist stylesheet request, and the
@@ -66,7 +66,7 @@ requirements.
 ## Browser baseline
 
 `artifacts/layout-consolidation/before/` contains the deterministic captures
-and [`baseline.json`](../../artifacts/layout-consolidation/before/baseline.json).
+and `artifacts/layout-consolidation/before/baseline.json` (historical artifact unavailable in this checkout).
 The shell baseline run passed **2 tests** in `frontend/e2e/shell.spec.ts`; the
 capture run passed **1 test** (45.5s). Captures cover `/projects`, `/site`,
 `/issues`, `/content`, and `/prompts` at `1440x900`, `1280x720`, `768x1024`,
@@ -154,7 +154,7 @@ recorded below; intermediate screenshots are not evidence of the final geometry.
 
 ## Final consolidation and authority
 
-[`docs/design.md`](../design.md) owns the final semantic visual recipes, with the
+[`docs/design.md`](../../design.md) owns the final semantic visual recipes, with the
 unchanged frozen HTML as their visual source. Tests enforce shared-owner consistency,
 accessibility, data semantics and product outcomes. Removed checks asserted exact
 fonts, class lists, pixel coordinates, decorative variants or incidental placement.

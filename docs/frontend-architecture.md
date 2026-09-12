@@ -1,267 +1,51 @@
-# CiteLadder frontend architecture
+# Frontend architecture
 
-> **Status:** current frontend authority
-> **Framework:** Next.js App Router, TypeScript, TanStack Query, Zod
+The Next.js App Router frontend projects workspace-authorized backend
+contracts. It owns navigation, ephemeral state, accessible interactions and
+presentation; the backend owns authorization, measurement and lifecycle truth.
+[Design](design.md) is the sole visual contract. Feature behavior is routed
+through [the documentation index](README.md).
 
-The frontend projects workspace-scoped backend contracts. It owns navigation,
-interaction, accessibility, validation, and local ephemeral state; it does not
-own scoring, page classification, lifecycle truth, or authorization.
+## Routes and shared shell
 
-## Locked rebuild route contract
-
-Navigation is organized into four loop stations. This is the shipped contract;
-a replacement is complete only after every caller is migrated and the
-superseded path is deleted.
-
-| Station | Destination | Canonical browser location |
+| Surface | Browser location | Feature owner |
 |---|---|---|
-| Overview | Overview | `/projects` |
-| Analyze | Website | `/site?tab=pages` (navigation target and non-dashboard default); Overview becomes the default when the server phase is `dashboard`, with `architecture`, `aeo-readiness`, and `changes` also available |
-| Analyze | Issues / Search Demand / Performance | `/issues`, `/demand`, `/performance` |
-| Analyze | Commerce Suite | `/products` |
-| Act | Opportunities / Content | `/opportunities`, `/content` |
-| Track | Prompts / AI Visibility | `/prompts`, `/visibility?tab=trends` (default), `mentions-citations`, `query-fanout` |
-| Track | Runs / AI Referrals | `/runs`, `/runs/[runId]`, `/ai-referrals` |
-| Support | Integrations / Providers / Settings | `/settings`, `/settings?tab=integrations`, `/settings?tab=providers` |
+| Overview and company facts | /projects | [Onboarding](onboarding.md) |
+| Website and issues | /site, /issues | [Site Health](site-health.md) |
+| Search Demand, Performance, AI Referrals | /demand, /performance, /ai-referrals | [Connected data](integrations-traffic-analytics.md) |
+| Opportunities and Content | /opportunities, /content | [Opportunities](opportunities.md), [Content](content-generation.md) |
+| Prompts, Visibility and runs | /prompts, /visibility, /runs | [Visibility](visibility-prompt.md) |
+| Commerce | /products | [Commerce](commerce-intelligence.md) |
+| Settings and account management | /settings and account routes | [Workspace access](workspace-access.md), [Billing](billing-entitlements.md) |
+| Growth Agent drawer | Shell-owned sheet | [Growth Agent](growth-agent.md) |
+| Public MCP setup | /docs/mcp | [MCP](mcp.md) |
 
-The desktop sidebar has the four loop stations plus supporting Settings access.
-At compact widths one 56px topbar opens the same full navigation in a
-focus-managed off-canvas drawer. The shared navigation resolver applies the
-same capability filtering to sidebar, compact navigation, and Command Palette,
-and active state uses pathname plus recognized `tab`/`mode` values. The Growth
-Agent has one persistent shell-owned drawer, with desktop and compact triggers;
-it is not a sidebar destination. Retired internal routes receive no redirects.
-The compact account trigger remains in the mobile topbar, keeping Settings and
-Sign out reachable without the desktop sidebar.
+One authenticated layout retains the session, query client, workspace/project
+context and entitlement providers across app and onboarding navigation.
+[Workspace access](workspace-access.md) owns selection precedence and identity
+transitions. Navigation, compact navigation and Command Palette share the
+route/capability owner; UI visibility never replaces backend authorization.
 
-Desktop and mobile now consume that shared station owner. Commerce Suite is an
-Analyze destination for every project. Providers and Integrations are Settings
-tabs, and prompt read/manage modes live only under `/prompts`.
-Content, Growth Agent, and additional-project controls render from resolved
-capabilities. Direct onboarding navigation uses the same project allowance and
-shows an explicit blocked state when capacity is full; it never flashes the
-flow and redirects. Project deletion renders only from its resolved private
-capability. The backend remains the authoritative mutation gate for both.
+Cache Components and Partial Prefetching preserve the shell while route content
+resolves. The app segment has no separate loading boundary. PageLoading owns
+first-load presentation; shell-fallback handles session/workspace/entitlement
+waits. In-place refresh retains data with scoped progress rather than collapsing
+the surface. Intent prefetching reuses the destination's exact query key.
 
-Overview renders before any audit: canonical Facts with an editable drawer,
-competitor suggestions, four evidence-labelled loop states, one server-selected
-next action, and a Track summary whose missing audit values remain unavailable.
-The standalone Facts route is deleted; the reusable BrandProfile editor remains
-the only editor owner. Onboarding's confirmation step edits the discovered ICP
-fields and requires positioning, target audience, and products/services before
-completion can create prompts.
-The completion request returns the committed project shell rather than waiting
-for prompt generation. The review stage enters the project whenever the
-completion response or persisted discovery carries `project_id`; it does not
-wait for the background portfolio to reach `project_created`. A shell-less
-terminal completion failure remains visible instead of being presented as work
-that is still running.
-The prompt library's explicit generation dialog remains usable when onboarding
-left the project with no topics. It explains that confirmed offerings will become
-starting topics, omits the empty topic selector, and lets the backend create those
-topics before generating prompts.
+## Server, URL and local state
 
-## Core rules
+Browser APIs use relative /api/v1 through server-only BACKEND_ORIGIN rewriting.
+TanStack Query owns server records; shared Zod schemas validate their contract.
+Each domain has one API module and query-key owner. Workspace/project identity
+belongs in both requests and cache keys. Retained placeholder data may survive
+filter/pagination changes only within the same owning project/crawl.
 
-- Browser calls use relative `/api/*`; Next.js rewrites to server-only
-  `BACKEND_ORIGIN`. In Compose, that destination is `http://web:8000`; the browser-facing
-  frontend service listens on port 3000.
-- Server data uses TanStack Query and shared Zod response schemas.
-- Next.js Cache Components and Partial Prefetching produce one reusable App
-  Shell per route. The authenticated layout is instant-navigation validated;
-  its sidebar, compact topbar/drawer, query client, and project context remain mounted while
-  route-owned client content resolves. The `(app)` segment has no loading
-  boundary. One `components/layout/page-loading.tsx` is the only first-load
-  state a screen shows, and `shell-fallback.tsx` covers the session, workspace
-  and entitlement waits ahead of the shell, so a cold entry shows one loader
-  and the chrome that follows it is already complete. A section refreshing
-  inside an already-drawn page keeps an in-place treatment instead — retained
-  data with a positioned progress bar, never a placeholder that collapses the
-  surface. The loader itself is held back briefly, so a wait short enough to
-  go unnoticed passes without one. A focused Playwright `instant()` assertion
-  protects primary navigation.
-- Desktop and mobile navigation prefetch each data-heavy destination's primary
-  TanStack query on pointer hover or keyboard focus. Data tabs use the shared
-  `Tabs.onIntent` hook for the same purpose; inexpensive visited panels may stay
-  mounted so returning to them preserves interaction state.
-- Read-mostly queries are fresh for 60 seconds and retained for 30 minutes.
-  Explicit polling intervals remain the authority for active crawls, audits,
-  syncs, and other live workflows.
-- Retained TanStack Query placeholder data is owner-scoped: filter, sort, and
-  cursor changes may keep prior results mounted only while the project or
-  crawl identity is unchanged. A project/crawl switch returns to an explicit
-  loading state instead of temporarily relabelling prior persisted evidence.
-- IDs and active workspace/project context are explicit.
-- No production screen falls back to mock data or computes a backend metric.
-- Only live destinations render; future work is not shown as disabled UI.
-- Long-running state comes from persisted backend projections. Polling may be
-  accelerated by events but is never replaced by ephemeral client state.
-
-## Site surfaces
-
-The site area has exactly three destinations:
-
-| Route | Purpose |
-|---|---|
-| `/site` | Crawl lifecycle, readiness and three coverage projections, scores by page kind, URL inventory |
-| `/issues` | Grouped issue catalog with severity, affected pages, and unboxed page-kind scope metadata |
-| `/opportunities` | Persisted prioritized actions |
-
-The former multi-panel Site Intelligence workspace is removed. Do not nest a
-second site workspace, knowledge panel, journey panel, correction workflow, or
-comparison surface inside these routes.
-
-The persisted observed-architecture projection is presented as the
-**Architecture** tab of the existing Website tablist in
-`components/site-health/architecture-panel.tsx` — never a second site workspace
-and never its own route. The tab leads with the persisted Internal linking and
-Structure depth summaries, followed by Page kinds, Pages, Median depth,
-Duplicate metadata, and Orphaned pages and an always-visible page-kind ledger
-whose columns are page kind, pages, median depth, indexable, duplicate metadata,
-and orphaned. Only the URLs assigned to a page kind are disclosed on demand.
-A read-only Observed hierarchy follows the ledger and nests URLs only by the
-API's persisted `parent_site_url_id`, naming each returned `parent_source`;
-unresolved nodes remain roots and the browser never invents parentage. Expanded
-URL sets and the observed tree use bounded scroll regions so a
-large crawl cannot turn either card into an unbounded page. The tab
-renders no site-profile/archetype block. The browser renders the persisted
-coverage state and limitation once and leaves orphan absence unmeasured whenever
-coverage is not `complete`.
-
-The backend owns the current Site Health phase. The client renders the provided
-phase and action availability instead of reconstructing a cross-product of
-crawl, discovery, and analysis states. That includes why a crawl is
-partial: the client selects copy from the persisted `partial_reason` and never
-infers the cause from a counter. Links that could not be fetched are reported as
-an observation, not as an analysis failure.
-
-The same rule applies to live worker activity. The API supplies a persisted
-blocked/failure breakdown and an evidence-derived `working | waiting | stalled
-| terminal` activity projection. The browser renders host-gate and retry waits,
-continues polling through recovery, and calls a crawl stalled only when the
-backend reports an expired lease. It never infers failure from a quiet timer or
-from a completed counter that has stopped moving.
-
-Before the first crawl, `/site` renders one actionable empty placeholder
-with **Run new crawl**, rather than empty metrics or an intake workflow. After a
-crawl exists, its header has one contextual primary control: **Stop crawl** for
-an active persisted crawl, otherwise **Run new crawl**. **Export** is the
-secondary action. The client exposes no separate discovery or analysis buttons.
-
-Website uses one tablist on `/site`: **Overview**, **Pages**, **Architecture**,
-**AEO Readiness**, and **Changes**. Pages is the fallback outside the server's
-`dashboard` phase; Overview is the fallback in `dashboard`.
-
-Overview reads the backend's persisted measurement projection and presents four
-distinct facts: AEO Readiness is quality for classified audited pages, AEO
-Measurement Coverage is determinate expected evidence for that cohort,
-Classification Coverage is classified / classification-expected supported
-HTML, and Crawl Coverage is the selected discovery/acquisition/analysis
-boundary. The client never derives one from another or uses classification
-coverage to alter the score.
-
-When classification is incomplete, the headline is intrinsically qualified as
-**Readiness of classified audited pages**. Classification and measurement
-coverage are adjacent, above the fold, and never hidden in a tooltip. Incomplete
-crawl coverage adds its own visible audited-pages qualifier and crawl-coverage
-line. Any present score renders with its persisted measurement state and
-coverage; `limited_evidence` is never an unqualified number. A page whose
-persisted kind is `other` renders **Not measured** with no AEO number; the
-browser does not append the internal classification reason to that label.
-
-Overview shares the screen's single dashboard poll while a crawl is active and
-updates mounted metrics from the persisted `score_summary`. After
-terminalization it reads the immutable snapshot. The frontend neither merges
-those projections nor creates a second summary owner. The snapshot's seven
-dimension rows render persisted labels, family-normalized scores, coverage, and
-bounded evidence. Web Fundamentals opens its persisted Accessibility, Mobile,
-Security, and Lab HTTP-evidence areas. Browser-rendering checks and field Core
-Web Vitals are outside the product measurement surface and are not rendered as
-missing or unavailable UI states.
-
-The snapshot retains ten ranked issues while Overview projects five. Technical
-defect and AEO-gap cards render separate persisted role-aware counts. The
-Overview impact column maps the persisted impact band to **High**, **Medium**,
-or **Low** for every row; it never presents a readiness dimension as an impact
-label. Advisory bands remain derived from the persisted readiness dimension
-and family budget rather than borrowed defect severity. Trend uses only
-version- and projection-compatible snapshots. A scored-kind composition change
-retains its numeric comparison with reason `cohort_composition_changed`; a
-missing classification/scored-cohort projection is non-comparable.
-
-**Pages** retains crawl lifecycle and persisted per-URL metrics. Page and detail
-rows consume the server's score, measurement state, classification state, and
-reasons without remapping checkpoint outcomes. `other` rows never display a
-generic `WebPage` score. The default server-backed page order puts measured
-analyses first and terminal errors, blocked URLs, and unmeasured URLs last;
-cursor controls expose the current page, and URL, status, and link sorting
-restart pagination against the complete server result.
-
-**AEO Readiness** starts at the seven-dimension ledger. Aggregate readiness and
-the three coverage projections remain in Overview rather than a duplicate
-summary card. Evidence drawers name capability family, checkpoint, observed
-evidence, expectation, reason, and remediation; an internal rule ID is
-provenance, not primary copy. Content-addressable missing/partial checkpoints
-link to Content with stable project/crawl/URL/analysis/family/checkpoint
-references, which Content re-authorizes. The client never remaps families,
-recomputes score or coverage, guesses outcome buckets, or displays a Combined
-score.
-
-The shared response schemas accept exactly `satisfied`, `partial`, `missing`,
-`unknown`, `not_applicable`, and `error` as checkpoint outcomes. Unavailable,
-ambiguous, and conflicting evidence is displayed from bounded `unknown` reasons,
-never invented as an additional outcome bucket.
-
-**Changes** reads only persisted Change Intelligence summary and cursor pages.
-It shows the four classes, exact before/after values, analysis provenance, and
-an Expected marker only for an exact implementation-event link. Unavailable,
-non-comparable, partial, and observed-zero pairs have separate copy. Partial
-pairs explicitly state that added/removed URL claims were suppressed; the
-browser never computes a diff or turns a neutral/expected change into an action.
-
-The inventory remains mounted and progressive: discovery renders the first ten
-persisted rows as they arrive, and rows later receive their analysis status and
-scores in place. The Issues workspace renders a compact group list beside one
-sticky selected-detail rail. It owns one selected-group query and one
-occurrence cursor; filters and catalog pagination remain server-backed.
-Persisted remediation is distinct from the failure-specific description. The
-shared occurrence presenter renders the same direct evaluation evidence here
-and on URL detail, with no per-card query/expansion state and no browser-made
-recommendation copy.
-
-During an active recrawl, the first page tab is labelled **Audited so far** and
-reads only completed persisted page projections. This prevents the frozen
-monitored set from filling the first screen with pending rows before work has
-finished; **All Discovered** remains available for the full inventory. Once the
-crawl terminalizes, the first tab returns to the complete **Monitored** view.
-
-The Issues surface has separate server-backed **Defects** and **Advisories**
-views. Defects are the default and show severity as compact unboxed metadata. Its
-headline explicitly counts distinct defect issue types, while supporting
-labels name occurrences and affected URLs. Switching views changes the
-headline to distinct advisory issue types and labels the supporting quantities
-as advisory evidence. Advisory rows are labelled as advisories rather than
-borrowing defect severity semantics.
-Its rule, search, dimension/severity, finding-class, page-kind, and cursor state
-is URL-backed so Overview deep links and browser back/forward restore the same
-server query. Filter edits remove the filter-bound cursor, and unrelated query
-parameters are preserved.
-
-## Page-kind UX
-
-The API-contract schema owns the page-kind vocabulary. Shared helpers in
-`frontend/lib/site-health/page-kinds.ts` provide labels, stable ordering, and a
-defensive parser for classifier evidence.
-
-Pages and URL detail show the persisted structural kind. The detail disclosure
-may explain the winning signal, schema suggestion, alternatives, conflicts,
-confidence, and `other` reason. It never reclassifies in the browser.
-
-Issue groups show affected page kinds as compact unboxed metadata so a
-product-schema issue is visibly different from a universal title or delivery issue. Not-applicable evaluations
-do not appear as passes or issues. Catalog selection uses `group_id`; affected
-rows and URL detail use `occurrence_id` and the occurrence's persisted
-`evaluation_id`. The frontend never associates evidence by `rule_id`.
+Typed shareable tabs, filters, cursors and selected IDs belong to
+lib/navigation/url-state.ts, with explicit push/replace semantics. Component
+state owns ephemeral drafts and interactions. Read-mostly queries use the
+configured freshness/retention policy; explicit polling remains authoritative
+for active operations. Events accelerate projection invalidation, never replace
+persisted truth. No screen substitutes mock data or computes a backend metric.
 
 ## Component capability and technical ownership
 
@@ -269,22 +53,22 @@ Shared UI capabilities have one owner under `frontend/components/ui/`. Their
 technical contracts and state responsibilities live here; visual values and
 interaction recipes live only in [`design.md`](design.md).
 
-| Capability | Decision | Owner |
-|---|---|---|
-| Button, Card, Input, Textarea, Field | Deepen | `frontend/components/ui/` |
-| Dropdown Menu, Dialog, Drawer, Tooltip | Deepen | `frontend/components/ui/` Radix wrappers |
-| Table, Badge, Alert, Skeleton, progress, empty state, pagination, segmented control | Deepen | `frontend/components/ui/` |
-| Select, Search field, Tabs | Add | `frontend/components/ui/select.tsx`, `frontend/components/ui/search-field.tsx`, `frontend/components/ui/tabs.tsx` |
-| Checkbox and radio group | Deepen | `frontend/components/ui/checkbox.tsx`, `frontend/components/ui/radio-group.tsx` |
-| Toast, Pressable, Clipboard action | Add | `toast.tsx`, `pressable.tsx`, `copy-button.tsx` |
-| Text roles (`textRole`) | Add | `frontend/components/ui/typography.tsx` |
-| Stack | Add | `frontend/components/ui/layout.tsx` |
-| Panel (`panelClasses`) and flush card content | Add / deepen | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
-| Menu separator | Deepen | `frontend/components/ui/dropdown.tsx` |
-| Command palette, Market Select, CSV import | Specialized | Existing shared and feature owners |
-| Cursor/table pagination, resizable workspaces | Specialized | Existing feature owners |
-| Color controls, OTP, sliders, calendars/date pickers, avatars | Defer | No current product use |
-| Generic disclosure and donut | Removed | No production consumers |
+| Capability | Owner |
+|---|---|
+| Button, Card, Input, Textarea, Field | `frontend/components/ui/` |
+| Dropdown Menu, Dialog, Drawer, Tooltip | `frontend/components/ui/` Radix wrappers |
+| Table, Badge, Alert, Skeleton, progress, empty state, pagination, segmented control | `frontend/components/ui/` |
+| Select, Search field, Tabs | `frontend/components/ui/select.tsx`, `frontend/components/ui/search-field.tsx`, `frontend/components/ui/tabs.tsx` |
+| Checkbox and radio group | `frontend/components/ui/checkbox.tsx`, `frontend/components/ui/radio-group.tsx` |
+| Toast, Pressable, Clipboard action | `toast.tsx`, `pressable.tsx`, `copy-button.tsx` |
+| Text roles (`textRole`) | `frontend/components/ui/typography.tsx` |
+| Stack | `frontend/components/ui/layout.tsx` |
+| Panel (`panelClasses`) and flush card content | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
+| Menu separator | `frontend/components/ui/dropdown.tsx` |
+| Command palette, Market Select, CSV import | Existing shared and feature owners |
+| Cursor/table pagination, resizable workspaces | Existing feature owners |
+| Color controls, OTP, sliders, calendars/date pickers, avatars | No current product use |
+| Generic disclosure and donut | No production consumers |
 
 Shared primitives own geometry, accessibility, interaction states, and motion.
 Domain wrappers own business logic, factual copy, data translation, and
@@ -361,232 +145,9 @@ module, and 800 LOC per test module. The guard rejects relaxed defaults and
 new or increased policy exceptions. New and refactored owners must meet those
 defaults by decomposition; an exception is not an intended delivery outcome.
 
-## Other route ownership
-
-| Route family | Owner |
-|---|---|
-| `/content` | Content Intelligence; user instruction, canonical context summary, generation history |
-| `/demand`, `/performance`, `/ai-referrals` | Demand Intelligence |
-| `/prompts`, `/visibility`, `/runs` | Demand/Visibility workflows |
-| `/products` | Commerce: Catalog (default), Competitors, Buyer Prompts, AI Shelf |
-| `/settings` | Shared workspace/project configuration, including Integrations and Providers |
-| `/docs/mcp` | Public hosted-MCP setup, security boundary, tool catalog, and client instructions |
-
-The account dropdown links to `/docs/mcp` in a new tab with an external-link
-indicator. MCP has no Settings panel: connection instructions and the endpoint
-remain public documentation, while authorization uses the normal login route.
-
-Commerce AI Shelf requires a product or category target before reading its
-persisted projection. The four headline metrics, recommendation evidence, and
-immutable measurement history remain bound to that target. Buyer Prompts reuses
-the shared audit-launch dialog for target-filtered approved prompt IDs, provider
-selection, repetitions, estimates, and launch; Commerce owns no parallel runner.
-The Commerce catalog rail is a category tree: products appear beneath their
-projected categories, uncategorized products retain an explicit fallback group,
-and an opaque sticky search filters both levels without letting scrolled rows
-bleed above it. Categories begin collapsed, retain their product counts, and
-only categories with projected children render a disclosure control. Category
-bulk selection includes every child product without changing the target
-currently open in the detail pane.
-
-## Billing and provider UX
-
-Public pricing renders only the published catalog response; it has no hardcoded
-commercial fallback. Each self-serve plan shows BYOK and funded prices when
-present, Enterprise remains contact-only, and checkout controls truthfully stay
-disabled while backend checkout is unavailable. The future card-trial panel
-shows an unavailable state and contains no card fields.
-Billing country and invoice details are collected in a dialog after an available
-plan is selected, never as a standing form above the public pricing cards.
-Continuing requires valid billing details before checkout or anonymous intent capture.
-
-The no-card early-access journey is separate from checkout. Offer state comes
-from the backend's stable campaign identity and eligibility result. Claiming
-requires an explicit confirmation dialog, both consent checkboxes, and a fresh
-idempotency key; an optional operator code is write-only request input. The UI
-never implies eligibility or activation from registration alone, and the seeded
-campaign remains disabled by default.
-
-Settings deliberately separates owner-private billing from member-safe
-workspace-effective access. Billing account/grant/override/expiry/AI-credit
-state is owner-scoped; capability gating uses
-`GET /api/v1/workspaces/{workspace_id}/entitlements` and refreshes on workspace
-switch. Content and Growth Agent provider cards configure distinct feature
-routes over shared encrypted credential custody. Base URL, model, route status,
-funding mode, and no-fallback behavior are visible; API keys are write-only and
-are never echoed into query state, form defaults, or logs.
-
-## Authentication flow
-
-Registration consumes only the generic `RegistrationResponse` acknowledgement
-and redirects to `/login?registered=1`. It does not seed the authenticated-user
-cache or assume that registration created a session. Login remains the sole
-email/password flow that receives a session and performs the account-scoped
-cache transition. After the destination is resolved, login crosses the identity
-boundary with a full-document navigation so the protected layout reads the new
-session cookie and cannot reuse a prefetched anonymous shell.
-
-Login routes into `/projects` and lets the application gate decide whether the
-resolved workspace needs onboarding. It no longer reads the project list to
-pick a destination: no workspace is resolved at that moment, so the list could
-only be read unscoped and answered for whichever workspace the backend
-defaulted to. The gate shows a retryable loading error before interpreting an
-empty list, keeps an empty workspace on its own billing/members/settings
-routes, and redirects to creation only when role and allowance permit it.
-Onboarding distinguishes workspace-resolution failure, usage-fetch failure,
-unresolved allowance, and exhausted capacity; Retry re-asks both the workspace
-and the allowance without changing the session.
-
-An OAuth authorization handoff may supply a strictly validated internal
-`/mcp/oauth/consent?transaction=...` return path. Login preserves that one-time
-handoff through the same full-document navigation; arbitrary and external
-return URLs are ignored.
-
-### Workspace and project selection
-
-The workspace is resolved independently of any project, so a workspace with
-zero projects still has an identity for its scoped reads — including the
-allowance check that decides whether a first project may be created. An
-authorized project decides its own workspace; otherwise an explicit
-`?workspace=` wins, then this session's choice (seeded from device storage,
-which is a convenience and never an authorization input), then the first
-membership from `GET /workspaces`.
-
-An explicit `?project=<id>` is resolved directly through
-`GET /projects/{id}`, which authorizes from the path rather than the
-`X-Workspace-Id` header, and is never substituted — a list fetched before the
-project existed cannot contradict it. Onboarding therefore hands a committed
-creation to `/projects?project=<id>` after seeding that project's detail cache,
-and the destination is usable on arrival. A URL naming both a workspace and a
-project from a different workspace is rejected rather than reconciled.
-
-Workspace-scoped reads — project lists, provider connections and states,
-workspace usage and entitlements — carry the workspace in their query key AND
-on the request itself, so a retry or a late response cannot answer for a
-workspace the reader has since left. `lib/navigation/project-destination.ts`
-is the single owner of selection navigation: a deliberate switch pushes one
-history entry, filling an absent parameter for the current selection replaces,
-re-selecting the project already in the URL does nothing, and a caller whose
-previous entry is dead — the project it named was just deleted — asks for
-`replace` so Back cannot return to it.
-
-## Data and query ownership
-
-Each domain has one API module, one query-key owner, and shared schemas/types.
-Queries are enabled when their surface is visible or the user expresses route
-or tab intent. Intent prefetching reuses the destination's exact cache identity;
-a shared artifact uses the same server ID and cache identity everywhere.
-
-Unknown, unavailable, zero, historical, conflicting, excluded, and
-not-applicable states retain distinct labels and are never communicated by
-color alone.
-
-Authenticated interaction state has three owners. TanStack Query owns server
-records and retains prior data during paginated or filtered background work.
-`lib/navigation/url-state.ts` owns typed, shareable tabs, filters, cursors, and
-selected record IDs with explicit push/replace history. Component-local state
-owns only ephemeral drafts and interaction state. Visual values and interaction
-rules live in [`design.md`](design.md); the component capability and technical
-ownership map is the Component capability section above.
-
-Opportunities renders the backend's persisted three-way source mix and coverage,
-plus server-filtered Owned and Earned paths. Detail renders a typed Content
-handoff with bounded citations, coverage, limitations, suggested skill, and
-linked generations; the browser never reclassifies a domain or invents the
-handoff. Content passes its identifier to the backend, preselects a known target
-and suggested skill where available, and opens an empty focused user-instruction
-field. It never composes or seeds task prose. Source copy remains observational
-and never claims that a citation caused a recommendation.
-
-The Opportunity detail footer owns the explicit **I implemented this** action.
-It posts an idempotent declaration with resolved target IDs and expected
-checks projected by the server, optionally linking the latest successful
-generation. It renders the persisted lifecycle and independent visibility,
-AI-referral, and branded-demand verification legs, including unavailable and
-non-comparable states. Reloading reads
-the same state from the implementation-event projection; a workflow status
-such as Resolved neither creates nor replaces this action record.
-
-## Demand, performance, referrals, and agent UX
-
-`/demand` is the single **Search Demand** screen; it does not provide nested
-Overview/Search Demand/AI Visibility tabs. `/visibility` remains the standalone
-AI Visibility destination. Search Demand renders labelled GSC-backed signal
-rows, branded demand as a non-actionable cohort, and the honest no-snapshot,
-unavailable, observed-zero, partial, insufficient-history, and active states.
-Detector absence never becomes a fabricated zero or an intended-page mismatch
-placeholder.
-
-AI Visibility has exactly Trends, Mentions & Citations, and Query Fanout, with
-Trends as the default. Trends owns the selected measurement, a single competitor
-comparison, timestamp-based history, and prompt/model outcomes. Competitor
-suggestions remain in Overview's Facts drawer. The typed URL-state owner retains
-run/period, engine, cohort, baseline, history, chart metric and evidence filters.
-The server resolves Latest; dependent prompt, source, fanout and answer requests
-reuse the concrete run or configuration-specific run set. Historical windows
-remain separate from the selected measurement. Invalid explicit runs never fall
-back to Latest. The shared run list continues to warm in the project provider.
-
-Mentions & Citations contains Sources and Answers modes. Source totals are
-server aggregates over the full selection; answer pages use a filter-bound
-cursor and snapshot boundary with independent prompt options. Original-answer
-links reuse `/runs/{runId}?execution={taskId}`. Browser history preserves the
-analytical context. Rates and comparison decisions belong to backend projections;
-frontend code sorts, selects and formats them without recomputing aggregate SOV.
-
-`/performance` is the Search Console-aligned surface; `/traffic` is deleted
-and not redirected. Day/Week/Month/Custom are RANGE options, not chart
-intervals: every chart buckets by day, and the range is resolved server-side
-against the latest complete GSC date, so the screen always displays the window
-actually covered rather than one it computed. The dashboard response returns
-the resolved `snapshot_id`, and every table request carries it back, so a chart
-and its tables never read different projections.
-
-The date dialog has Filter and Compare tabs. A comparison is a SECOND persisted
-window rendered beside the first: cards show both absolute values, the chart
-draws the comparison dashed on a positional (day 1..N) x-axis, and each table
-widens to selected/comparison/difference columns per metric with the dimension
-column pinned during horizontal scroll. No percentage change is computed
-anywhere. Year over year renders disabled, with its reason, until more than a
-year of history is imported — never as an observed zero.
-
-A custom or comparison window with no persisted snapshot is materialized by the
-display-only `performance_range_projection` task, which the screen queues and
-polls; reads never build a projection. Selectable metrics are Clicks,
-Impressions, Average CTR, and Average position; Sessions and Conversions render
-as a compact non-interactive GA4 row, never as chart series.
-
-Tables use the shared cursor-table footer (`components/ui/cursor-table-footer.tsx`
-with `lib/table/use-cursor-table.ts`): config-owned rows-per-page, the visible
-range against a PERSISTED total, and compact previous/next arrows. Website
-Pages, Opportunities, and Website Changes use the same footer. Only a view with
-a persisted count states an exact total — the unfiltered page inventory reads
-the crawl's own count; filtered views show the range alone rather than issuing
-an unbounded live count. A cursor stack resets whenever its project,
-snapshot/range, tab, filters, sort, or page size changes, because the server
-binds every cursor to exactly those values and refuses a replay.
-
-`/ai-referrals` renders only referral volume, referral share, and AI-source
-totals, with their measurement context. It has no copied visibility, themes,
-correlation, or event surfaces. The empty Reports navigation item, route, and
-title mapping are absent; the persisted executive PDF remains an Overview
-download.
-
 ## Verification
 
-Use pnpm only:
-
-```bash
-pnpm test -- <file>
-pnpm lint
-pnpm build
-```
-
-
-Pricing and billing settings share the subscription checkout controller. It lazily
-loads the fixed Checkout.js URL, uses server-provided subscription identity and
-signed-in email, retains account-bound retry keys, and polls persisted activation
-status for at most one minute. Only server-confirmed activation invalidates
-billing/entitlement caches. Pricing remains accessible before creating a project.
-Checkout routes restrict script/frame/connect origins; inline Next.js hydration
-remains supported under the cached-page rendering model.
+Use the affected-owner workflow in [Development](DEVELOPMENT.md#repository-validation-harness).
+Preserve the feature's meaningful authorization, API, loading/error,
+accessibility and navigation coverage. Shared visual rules remain in
+[Design](design.md), not class/font/pixel snapshots.

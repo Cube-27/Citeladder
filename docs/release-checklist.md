@@ -65,6 +65,34 @@ partial gate recipe here.
       has entered the candidate.
 - [ ] Rollback owner, target, and verification steps are recorded for production changes.
 
+## Outstanding feature acceptance
+
+Retiring implementation plans from the working queue does not establish release
+acceptance. The following recorded requirements remain unresolved unless actual
+evidence for the release candidate satisfies them:
+
+- Site Health PR4: observed Searchable and Flourist live crawls; offline labelled
+  cases do not substitute for those observations. See the
+  [historical reliability record](archive/plans/site-health-measurement-reliability-pr4.md).
+- Commerce: disposable-database migration/crawl/CSV and 100-product reference
+  evaluation, a bounded credentialed Tavily check with call count, and
+  credentialed audit/schedule validation. See the
+  [historical rebuild](archive/plans/commerce-suite-atomic-rebuild.md).
+- Billing: commercial/tax confirmation, real provider test-mode acceptance,
+  separate live-readiness approval and observed production alert delivery.
+  [Provider readiness](billing-provider-readiness.md) and the
+  [operator guide](operations/billing-operator-guide.md) govern execution.
+- Infrastructure: durability, backup/restore, observability and deployment
+  acceptance remain operational requirements, not completed work inferred from
+  the retired [hardening proposal](archive/plans/citeladder-production-hardening.md).
+  [Google Cloud acceptance](operations/GOOGLE_CLOUD.md) and the
+  [runbook](operations/GCP_RUNBOOK.md) remain live procedures. The archived
+  [demo no-go assessment](archive/operations/CITELADDER_DEMO_SECURITY_REPORT.md)
+  is not a new go-live approval.
+
+These gates authorize no provider call, reset, deployment or payment. A separate
+operation must identify its target and scope explicitly.
+
 ## 4. Create the release only after approval
 
 - [ ] Obtain release-owner approval for the candidate commit, version, and final release notes.

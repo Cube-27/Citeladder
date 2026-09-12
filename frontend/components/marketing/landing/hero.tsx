@@ -2,7 +2,7 @@ import { ArrowRight } from 'lucide-react';
 
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
 
-import { DemoButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { Eyebrow } from '../primitives/label';
 import { Container } from '../primitives/section';
 import { HeroEntrance } from './hero-entrance';
@@ -38,11 +38,14 @@ export function Hero() {
             {hook.title} <em className="text-accent-text not-italic">{hook.titleAccent}</em>
           </h1>
           <p className="website-lead text-muted mx-auto mt-6 max-w-[58ch]">{hook.body}</p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3">
-            <DemoButtonLink className="w-full sm:w-auto">
+          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+            <DemoButtonLink variant="dark" className="w-full sm:w-auto">
+              {hook.secondaryCta}
+            </DemoButtonLink>
+            <ButtonLink href="/register" className="w-full sm:w-auto">
               {hook.primaryCta}
               <ArrowRight aria-hidden />
-            </DemoButtonLink>
+            </ButtonLink>
           </div>
           <RotatingEngineLogos className="mx-auto mt-10 w-full max-w-2xl" />
         </HeroEntrance>

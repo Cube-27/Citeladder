@@ -46,6 +46,11 @@ Canonical product and system truth lives in `AGENTS.md`, `docs/architecture.md`,
 - Require explicit user action for consequential external or publishing mutations.
 - Prefer one clear next action over a gallery of equal-weight product features.
 
-## Accessibility & Inclusion
+## Non-goals
 
-WCAG 2.1 AA is the minimum. Focus must remain visible, status cannot rely on colour alone, motion must stop under reduced-motion preferences, and keyboard, forced-colours, touch, loading, error, and mobile states must remain usable.
+CiteLadder does not promise causal attribution, guaranteed AI ranking, automatic
+publishing, or model-generated business truth. It is not a replacement CMS,
+payment provider, unrestricted agent or second knowledge store. Content outputs
+are drafts; unavailable evidence and unverified integrations stay explicit.
+
+The visual and accessibility contract lives in [docs/design.md](docs/design.md).

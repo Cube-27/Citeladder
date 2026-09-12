@@ -1,71 +1,57 @@
 # CiteLadder documentation
 
-This is the single active documentation index. Start with
-[`../AGENTS.md`](../AGENTS.md), then read only the owner required for the task.
-Code and current-runtime tests decide what is shipped.
+This is the single document-owner index. Current code and tests establish
+implemented behavior; accepted constraints remain binding when code disagrees.
+Historical records are evidence, not task authority.
 
-## Runtime authorities
+## Feature owners
 
-- [`architecture.md`](architecture.md) — product loop and system boundaries.
-- [`invariants.md`](invariants.md) — review-blocking safety and correctness rules.
-- [`site-health.md`](site-health.md) — acquisition, page kinds, rules, scoring,
-  lifecycle, issues, opportunities, and architecture projection.
-- [`backend-architecture.md`](backend-architecture.md) — backend layers and
-  ownership.
-- [`frontend-architecture.md`](frontend-architecture.md) — routes, state,
-  API integration, and composition.
-- [`design.md`](design.md) — the sole visual and interaction specification.
-- [`api-error-contract.md`](api-error-contract.md) — cross-stack error shapes.
-- [`visibility-prompt.md`](visibility-prompt.md) — prompts and Visibility
-  admission; [`integrations-traffic-analytics.md`](integrations-traffic-analytics.md)
-  — connected-data projections.
-- [`commerce-intelligence.md`](commerce-intelligence.md) — Commerce runtime.
-- Content generation is specified by the Content sections in
-  [`architecture.md`](architecture.md) and
-  [`backend-architecture.md`](backend-architecture.md).
-- Opportunity implementation and verification are specified by the Opportunity
-  sections in [`architecture.md`](architecture.md),
-  [`backend-architecture.md`](backend-architecture.md), and
-  [`frontend-architecture.md`](frontend-architecture.md).
+| Feature | Canonical document |
+|---|---|
+| Onboarding, company facts and competitor discovery | [Onboarding](onboarding.md) |
+| Prompt generation, audits and AI Visibility | [Prompts and Visibility](visibility-prompt.md) |
+| Crawl, page understanding, issues and measurement | [Site Health](site-health.md) |
+| Integrations, search, traffic, referrals and demand | [Connected data](integrations-traffic-analytics.md) |
+| Generation, context, runtime skills and history | [Content](content-generation.md) |
+| Ranked actions, implementation and verification | [Opportunities](opportunities.md) |
+| Commercial accounts, access and usage accounting | [Billing and entitlements](billing-entitlements.md) |
+| Catalog, competitors, buyer prompts and AI Shelf | [Commerce](commerce-intelligence.md) |
+| Bounded explain/roadmap tasks | [Growth Agent](growth-agent.md) |
+| Hosted read tools and OAuth grants | [MCP](mcp.md) |
+| Sessions, projects, memberships and roles | [Workspace access](workspace-access.md) |
 
-## Setup and operations
+## Shared contracts
 
-- [`DEVELOPMENT.md`](DEVELOPMENT.md) owns local setup, test isolation, the
-  existing validation harness, and troubleshooting.
-- [`operations/`](operations/) owns deployment, billing, provider, and recovery
-  procedures.
-- [`release-checklist.md`](release-checklist.md) owns release-only acceptance;
-  it does not authorize publishing or deployment.
+- [Product](../PRODUCT.md): users, purpose, positioning and non-goals.
+- [Architecture](architecture.md): cross-system ownership and evidence flow.
+- [Backend](backend-architecture.md) and [frontend](frontend-architecture.md):
+  shared layering, contracts, state and extension patterns.
+- [Design](design.md): visual and interaction rules.
+- [Invariants](invariants.md): durable correctness and safety constraints.
+- [API errors](api-error-contract.md): cross-stack error contract.
+- [Development](DEVELOPMENT.md): setup, isolation and validation commands.
+- [Review](../Review.md): compact review procedure.
 
-## Active work
+## Work and decisions
 
-These are the current bounded workstreams. Each plan declares its remaining
-scope and external acceptance limits; shipped behavior still belongs to runtime
-owners above.
+[Plan status](plans/ACTIVE.md) is the only current-work index.
+[Decisions](decisions.md) records accepted cross-feature choices and rationale.
+An indexed plan is not authorization to run it.
 
-- [`plans/citeladder-billing-launch-readiness.md`](plans/citeladder-billing-launch-readiness.md)
-  — billing release and manual/provider readiness.
-- [`plans/citeladder-razorpay-local-test-integration.md`](plans/citeladder-razorpay-local-test-integration.md)
-  — isolated local/provider test integration and runbooks.
-- [`plans/citeladder-data-pipeline-rebuild.md`](plans/citeladder-data-pipeline-rebuild.md)
-  — deferred connected-data follow-up, currently Slice 6 only.
-- [`plans/commerce-suite-atomic-rebuild.md`](plans/commerce-suite-atomic-rebuild.md)
-  — remaining Commerce release gates.
-- [`plans/site-health-measurement-reliability-pr4.md`](plans/site-health-measurement-reliability-pr4.md)
-  — named live-crawl acceptance limits after implementation completion.
-- [`plans/citeladder-integrations-audit-followups.md`](plans/citeladder-integrations-audit-followups.md)
-  — what the September 2026 integrations/AI-visibility audit left open after its
-  correctness findings shipped, plus corrections to the audit itself.
+## Operations and retained evidence
 
-## Historical evidence
+[Release acceptance](release-checklist.md) retains manual and external gates.
+[Billing provider readiness](billing-provider-readiness.md) separates implemented
+adapters from accepted payment operation.
+[Operations](operations/) contains live deployment, billing and recovery
+procedures; use the procedure relevant to the requested operation.
 
-Retained audits, evaluations, visual baselines, and cutover records under
-[`plans/`](plans/), [`audits/`](audits/), [`evaluations/`](evaluations/), and
-[`archive/`](archive/) preserve useful provenance but are not implementation
-authority or mandatory per-edit gates. Completed duplicate plans and incident
-checklists are removed once their durable contract and unresolved acceptance
-live in the owners above; Git history remains their delivery record.
+[Evaluation corpora](evaluations/README.md) and their fixtures remain live inputs
+where tooling uses them. [Archive](archive/) preserves retired plans, audits and
+dated evidence, including unresolved observations; relocation is not completion.
+Do not search the archive for ordinary implementation unless a specific
+historical question requires it.
 
-Published blog content is owned by the typed modules under
-[`frontend/lib/marketing-content/blog-posts/`](../frontend/lib/marketing-content/blog-posts/);
-there is no parallel documentation draft.
+Published blog content belongs to
+[the marketing content modules](../frontend/lib/marketing-content/blog-posts/),
+not a parallel documentation draft.

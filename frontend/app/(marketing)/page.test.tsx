@@ -66,19 +66,22 @@ describe('Landing page (public marketing `/`)', () => {
     expect(h1s[0]).toBeInTheDocument();
   });
 
-  it('uses the shared primary button for the hero action', () => {
+  it('orders the secondary demo action before the primary registration action', () => {
     stubAnonymous();
     const { container } = renderWithProviders(<Page />);
 
-    // The funnel leaves the site for the parent company's contact form, so the
-    // hero CTA must carry the external target and a safe `rel` alongside its
-    // destination — a bare href here would open cube27.com in this tab.
     const hero = container.querySelector('header');
-    const cta = hero?.querySelector(`a[href="${DEMO_HREF}"]`);
-    expect(cta).toHaveTextContent('Book a demo');
-    expect(cta).toHaveAttribute('target', '_blank');
-    expect(cta).toHaveAttribute('rel', 'noreferrer');
-    expect(cta?.querySelector('svg')).not.toBeNull();
+    const demo = within(hero!).getByRole('link', { name: /book a demo/i });
+    const signup = within(hero!).getByRole('link', { name: /start free trial/i });
+
+    expect(demo).toHaveAttribute('href', DEMO_HREF);
+    expect(demo).toHaveAttribute('target', '_blank');
+    expect(demo).toHaveAttribute('rel', 'noreferrer');
+    expect(demo).toHaveAttribute('data-button-variant', 'secondary');
+    expect(signup).toHaveAttribute('href', '/register');
+    expect(signup).toHaveAttribute('data-button-variant', 'primary');
+    expect(demo.compareDocumentPosition(signup) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(signup.querySelector('svg')).not.toBeNull();
   });
 
   it('exposes the section anchors the shared chrome links to', () => {
@@ -117,7 +120,7 @@ describe('Landing page (public marketing `/`)', () => {
     const main = container.querySelector('main');
     expect(hero).not.toBeNull();
     expect(hero).not.toHaveTextContent(/your ai visibility|tracking your brand/i);
-    // The hero carries no product UI: type, one action, and the rotating
+    // The hero carries no product UI: type, two focused actions, and the rotating
     // engine roster on the first screen. The reveal chapter follows it.
     expect(main?.children[0]).toBe(hero);
     expect(

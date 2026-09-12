@@ -369,17 +369,9 @@ playwright-cli kill-all
 
 ## Installation
 
-If global `playwright-cli` command is not available, try a local version via `npx playwright cli`:
-
-```bash
-npx --no-install playwright --version
-```
-
-When local version is available, use `npx playwright cli` in all commands. Otherwise, install `playwright-cli` as a global command:
-
-```bash
-npm install -g @playwright/cli@latest
-```
+Use the repository-pinned setup in `docs/DEVELOPMENT.md`. If the pinned CLI is
+missing, restore the declared dependencies through pnpm; do not install a global
+or latest replacement.
 
 ## Example: Form submission
 
@@ -427,7 +419,10 @@ playwright-cli close
 
 ## Example: Interactive session
 
-Ask the user for UI review or design feedback. The user draws boxes on the live page and types comments; you receive the annotated screenshot, the snapshot of the marked region, and the user's notes. Use this whenever the user asks for "UI review", "design feedback", or to "ask the user what they think / want / mean":
+Use annotation mode when the user asks to annotate the page together. An ordinary
+UI review or design-feedback request calls for an independent review, not a
+mandatory user-annotation handoff. In annotation mode the user draws boxes and
+adds comments, and the CLI returns the selected region and notes:
 
 ```bash
 playwright-cli open https://example.com

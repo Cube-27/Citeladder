@@ -24,8 +24,7 @@ code and tests for shipped behavior; archived material is historical only.
 |---|---|
 | Architecture and product loop | [`docs/architecture.md`](docs/architecture.md) |
 | Site Health crawl, classification, rules, and runtime | [`docs/site-health.md`](docs/site-health.md) |
-| Content generation contract | [`docs/architecture.md`](docs/architecture.md), [`docs/backend-architecture.md`](docs/backend-architecture.md) |
-| Opportunity and verification contract | [`docs/architecture.md`](docs/architecture.md), [`docs/backend-architecture.md`](docs/backend-architecture.md), [`docs/frontend-architecture.md`](docs/frontend-architecture.md) |
+| Feature behavior and dependencies | Feature owners in [`docs/README.md`](docs/README.md#feature-owners) |
 | Demand, integrations, and Visibility | [`docs/visibility-prompt.md`](docs/visibility-prompt.md), [`docs/integrations-traffic-analytics.md`](docs/integrations-traffic-analytics.md) |
 | Backend ownership | [`docs/backend-architecture.md`](docs/backend-architecture.md) |
 | Frontend routes, state, and composition | [`docs/frontend-architecture.md`](docs/frontend-architecture.md) |
@@ -34,7 +33,8 @@ code and tests for shipped behavior; archived material is historical only.
 | Review-blocking invariants | [`docs/invariants.md`](docs/invariants.md) |
 | Setup and validation | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) |
 | Operations and release acceptance | [`docs/operations/`](docs/operations/), [`docs/release-checklist.md`](docs/release-checklist.md) |
-| Current approved release work | [`docs/README.md`](docs/README.md#active-work) |
+| Current approved release work | [`docs/plans/ACTIVE.md`](docs/plans/ACTIVE.md) |
+| Accepted cross-feature decisions | [`docs/decisions.md`](docs/decisions.md) |
 
 Completed rebuild and cutover plans are evidence, not task instructions. Do
 not resume a historical wave, fresh-chat protocol, or delivery checkpoint
@@ -78,6 +78,15 @@ because a plan file mentions it.
 5. Update an owner document only when its shipped contract, setup command,
    procedure, or approved decision changes. Put routine evidence in the PR/CI
    record; do not create summary/progress/evidence sidecars for small tasks.
+
+Read an assigned plan only for work assigned to that plan; material under
+[`docs/archive/`](docs/archive/) is opt-in history, not task authority. Update a feature owner
+only when its contract or mental model changes; update
+[`docs/plans/ACTIVE.md`](docs/plans/ACTIVE.md) only when plan selection,
+queue, blocker, or completion state changes; update
+[`docs/decisions.md`](docs/decisions.md) only for a changed qualifying
+cross-feature decision. Routine implementation and validation history stays
+in the PR; there is no blanket multi-file documentation checklist per edit.
 
 ## Validation
 

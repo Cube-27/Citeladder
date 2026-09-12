@@ -12,15 +12,15 @@ This file preserves the PR1–PR3 cutover sequence. It makes no claim that the
 current PR4 repository gates, disposable-database verification, live
 calibration, or browser acceptance have passed.
 
-[../site-health.md](../site-health.md) is the canonical authority for shipped
+[../site-health.md](../../site-health.md) is the canonical authority for shipped
 Site Health runtime behavior. The PR4 plan owns the implemented reliability
 contract and its remaining completion gates. When historical PR1–PR3 prose
 differs from either authority, it describes only the state or decision at that
 earlier delivery point and must not be implemented or restored.
 
-The repository-wide invariants in [../../AGENTS.md](../../AGENTS.md) and
-[../invariants.md](../invariants.md) also apply. UI implementation follows
-[../design.md](../design.md). No archived plan is implementation authority.
+The repository-wide invariants in [../../AGENTS.md](../../../AGENTS.md) and
+[../invariants.md](../../invariants.md) also apply. UI implementation follows
+[../design.md](../../design.md). No archived plan is implementation authority.
 
 ## Delivery policy
 
@@ -35,7 +35,7 @@ paths.
 Each PR must:
 
 1. finish its complete gated slice before repository validation;
-2. update [../site-health.md](../site-health.md) from target to shipped truth for
+2. update [../site-health.md](../../site-health.md) from target to shipped truth for
    behavior that merged;
 3. remove superseded code, serializers, tests, flags, and active documentation;
 4. preserve same-origin `/api/v1`, workspace authorization, immutable source
@@ -197,7 +197,7 @@ proxy decisions is current post-PR4 scoring authority.
   route/tab and Content handoff remain absent.
 - The database is rebuilt from `0001_initial.py`; all active versions are `1`.
 - The PR atomically updates
-  [the canonical Site Health runtime](../site-health.md) for the new version-`1`
+  [the canonical Site Health runtime](../../site-health.md) for the new version-`1`
   identifiers, exact classifier/applicability behavior, and current AEO
   coverage/sufficiency guard. Obsolete pre-PR1 runtime statements do not remain
   as active truth.
@@ -207,7 +207,7 @@ proxy decisions is current post-PR4 scoring authority.
 PR2 is the single atomic measurement-contract cutover. It implements the score,
 coverage, applicability, persistence, aggregate, Overview, Pages-metric, AEO UI,
 and Content-handoff contracts defined in
-[the canonical Site Health logic](../site-health.md#shipped-measurement-contract).
+[the canonical Site Health logic](../../site-health.md#shipped-measurement-contract).
 It deletes the Combined score and superseded serializers/tests in the
 same PR; no compatibility scoring facade survives.
 
@@ -218,7 +218,7 @@ prose. PR4 replaced it with the config-owned 11-family fixed-budget manifest,
 the executable classified-kind/trait family profile, six-outcome contract, and
 equal page-kind macro scoring documented in
 [`site-health-measurement-reliability-pr4.md`](site-health-measurement-reliability-pr4.md)
-and [the canonical Site Health runtime](../site-health.md). No PR2 rule-level
+and [the canonical Site Health runtime](../../site-health.md). No PR2 rule-level
 weight, proxy, breadth threshold, or applicability map is runtime authority.
 
 ### PR2 measurement acceptance
@@ -436,7 +436,7 @@ apply.
 - The disposable database rebuilds from `0001_initial.py`; every active version
   is `1`; no Combined or compatibility scoring path remains.
 - The PR atomically updates
-  [the canonical Site Health runtime](../site-health.md): Web Fundamentals remains
+  [the canonical Site Health runtime](../../site-health.md): Web Fundamentals remains
   defect-only; declared applicable defects/advisories may score AEO; the AEO
   route exposes score/coverage/state; the tab list includes Overview; and the
   Content boundary records the typed Site Health handoff. Superseded pre-PR2
@@ -521,7 +521,7 @@ N/A/unknown behavior for every potentially relevant pillar. Coverage expansion
 must improve explainability and monotonicity; it is never tuned to manufacture
 a preferred score distribution. The PR also removes or rewrites each shipped
 known-analyzer-gap statement in
-[the canonical Site Health runtime](../site-health.md) that its new capability
+[the canonical Site Health runtime](../../site-health.md) that its new capability
 supersedes. The canonical document must describe the post-PR3 runtime rather
 than retain resolved limitations as active truth.
 

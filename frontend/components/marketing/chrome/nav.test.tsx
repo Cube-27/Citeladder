@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { DEMO_HREF, NAV_DROPS } from '@/lib/marketing-content/nav';
+import { NAV_DROPS } from '@/lib/marketing-content/nav';
 import { queryKeys } from '@/lib/api/query-keys';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
@@ -317,12 +317,12 @@ describe('MarketingNav', () => {
     expect(screen.getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
   });
 
-  it('shows the demo-first CTA and a login link to an anonymous visitor', async () => {
+  it('shows sign-up and login actions to an anonymous visitor', async () => {
     stubAnonymous();
     renderWithProviders(<MarketingNav />);
 
     await waitFor(() =>
-      expect(screen.getByRole('link', { name: /book a demo/i })).toHaveAttribute('href', DEMO_HREF),
+      expect(screen.getByRole('link', { name: /^sign up$/i })).toHaveAttribute('href', '/register'),
     );
     expect(screen.getByRole('link', { name: /log in/i })).toHaveAttribute('href', '/login');
     // Proof is a light-only identity — a theme toggle here would do nothing.
@@ -346,31 +346,32 @@ describe('MarketingNav', () => {
     expect(screen.getAllByRole('link', { name: /log in/i })).not.toHaveLength(0);
   });
 
-  it('keeps log in in the topbar at every width and puts the demo CTA in the mobile menu', async () => {
+  it('keeps log in in the topbar at every width and puts sign up in the mobile menu', async () => {
     stubAnonymous();
     const user = userEvent.setup();
     renderWithProviders(<MarketingNav />);
 
     // jsdom cannot evaluate media queries, so the responsive split is
     // asserted on the gating classes: the login link carries none, and the
-    // topbar demo CTA is gated to `sm` and above.
+    // topbar sign-up CTA is gated to `sm` and above.
     const login = await screen.findByRole('link', { name: /log in/i });
     expect(login).toHaveAttribute('href', '/login');
     expect(login.getAttribute('class') ?? '').not.toMatch(/\bhidden\b/);
 
-    const topbarDemo = screen.getByRole('link', { name: /book a demo/i });
-    expect(topbarDemo.getAttribute('class')?.includes('hidden')).toBe(true);
-    expect(topbarDemo.getAttribute('class')?.includes('sm:inline-flex')).toBe(true);
+    const topbarSignup = screen.getByRole('link', { name: /^sign up$/i });
+    expect(topbarSignup).toHaveAttribute('href', '/register');
+    expect(topbarSignup.getAttribute('class')?.includes('hidden')).toBe(true);
+    expect(topbarSignup.getAttribute('class')?.includes('sm:inline-flex')).toBe(true);
 
     await user.click(screen.getByRole('button', { name: 'Open menu' }));
     const menu = document.querySelector('#mobile-menu');
     expect(menu).not.toBeNull();
-    const menuDemo = within(menu as HTMLElement).getByRole('link', {
-      name: /book a demo/i,
+    const menuSignup = within(menu as HTMLElement).getByRole('link', {
+      name: /^sign up$/i,
     });
-    expect(menuDemo).toHaveAttribute('href', DEMO_HREF);
-    expect(menuDemo).toHaveAttribute('target', '_blank');
-    await user.click(menuDemo);
+    expect(menuSignup).toHaveAttribute('href', '/register');
+    expect(menuSignup).not.toHaveAttribute('target');
+    await user.click(menuSignup);
     await waitFor(() => expect(document.querySelector('#mobile-menu')).toBeNull());
   });
 

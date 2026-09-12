@@ -202,11 +202,13 @@ The same insight retains its server ID/cache identity everywhere. No resolvable 
 
 ### Marketing and auth
 
-Marketing is an editorial stack of full-width sections with centred content. The home hero is white, centred, and text-only: value proposition, one action, rotating engine roster on the first screen. Subpages use a white opener above a hairline. Preserve the real workspace canvas as the landing's product beat, not a reconstructed screenshot.
+Marketing is an editorial stack of full-width sections with centred content. The home hero is white, centred, and text-only: value proposition, one primary sign-up action, one secondary demo action, and the rotating engine roster on the first screen. Subpages use a white opener above a hairline. Preserve the real workspace canvas as the landing's product beat, not a reconstructed screenshot.
 
 Use optional eyebrow → heading → short lead → evidence/media or focused grid → at most one primary CTA per band. Secondary intents belong in navigation or another band. Allow at most one eyebrow per three sections, hero included. Prefer asymmetric text/media, proof ledgers, and concise grids over feature-card walls. The operating loop uses open numbered stages with quiet separators and named steps. Body measure is about 60–70 characters; one H1 per page; spacing uses the global section rhythm.
 
-Marketing navigation retains Log in at every width and Book a demo from `sm` up. On phones, demo/account links are pinned in the full-screen menu sheet. Navigation is transparent over the hero and frosted white on scroll, without shadow.
+Marketing navigation retains Log in at every width and Sign up from `sm` up. On phones, sign-up/account links are pinned in the full-screen menu sheet. Navigation is transparent over the hero and frosted white on scroll, without shadow.
+
+Cookie consent is a compact bottom-right floating panel with equal-width Reject and Accept actions. On phones it expands only to the viewport gutters and respects the bottom safe area; it never becomes a full-width page banner.
 
 Auth/onboarding use the website type ladder and shared focus treatment. Their flow/sticky action bars sit unfilled and unruled on the ground; the task column is an `.app-pane`, with unboxed internal groups separated by space/titles. Onboarding adds three-step progress. Review directly confirms category, buyer type, market scope, owned domains, and competitors; prompt generation starts only after confirmation of visible structured ICP facts. No new colour family, gradient, decorative glow, nested card, or competitor mutation. Blue marks the primary action, current step, and selected answer without changing font weight.
 

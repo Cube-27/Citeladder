@@ -1,5 +1,9 @@
 # CiteLadder frontend performance optimization
 
+> Retired from the working queue by the owner. Historical scope and evidence
+> follow; imperatives below do not authorize execution or establish acceptance.
+> Current owners are listed in [the documentation index](../../README.md).
+
 **Status:** Planned; application implementation is deferred. This document does
 not claim completed fixes or measured performance improvements.
 
@@ -71,12 +75,12 @@ artifacts in existing temporary/test-output locations.
 **Evidence status:** Code-supported hypothesis about user-visible delay;
 cache-key mismatch established by inspection.
 
-**Evidence:** [route-prefetch.ts](../../frontend/lib/navigation/route-prefetch.ts)
+**Evidence:** [route-prefetch.ts](../../../frontend/lib/navigation/route-prefetch.ts)
 requests `{ range: 'custom', compare: 'none' }` in its `/performance` prefetcher
 (line 41 at the inspected commit). The screen's initial selection in
-[date-range-dialog.tsx](../../frontend/components/performance/date-range-dialog.tsx)
+[date-range-dialog.tsx](../../../frontend/components/performance/date-range-dialog.tsx)
 is `last_synced`, with `granularity: 'day'` from
-[use-performance-selection.ts](../../frontend/components/performance/use-performance-selection.ts).
+[use-performance-selection.ts](../../../frontend/components/performance/use-performance-selection.ts).
 Its query key includes these parameters.
 
 **Causal explanation:** Hover/focus warms a different cache entry from the one
@@ -106,9 +110,9 @@ Compare destination meaningful-content readiness.
 **Evidence status:** Code-supported hypothesis; browser reproduction pending.
 
 **Evidence:** `useSiteHealthTabPrefetch` in
-[site-health-screen.tsx](../../frontend/components/site-health/site-health-screen.tsx)
+[site-health-screen.tsx](../../../frontend/components/site-health/site-health-screen.tsx)
 (line 110 at the inspected commit) and `prefetchTab` in
-[use-visibility-dashboard.ts](../../frontend/lib/visibility/use-visibility-dashboard.ts)
+[use-visibility-dashboard.ts](../../../frontend/lib/visibility/use-visibility-dashboard.ts)
 (line 275) call `prefetchQuery` directly. Shared Tabs invokes intent on
 hover/focus, including the selected tab. Route prefetch already guards failed
 cached queries.

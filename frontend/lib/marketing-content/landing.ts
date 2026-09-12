@@ -7,8 +7,8 @@ export const LANDING_CONTENT = {
     title: 'Your buyers stopped Googling you.',
     titleAccent: 'They ask AI instead.',
     body: 'See how often AI mentions, cites, or recommends your brand and whether your website supports it. CiteLadder turns AI answers into measurable visibility.',
-    primaryCta: 'Book a demo',
-    secondaryCta: 'See how it works',
+    primaryCta: 'Start Free Trial',
+    secondaryCta: 'Book a demo',
   },
 
   // NOTE: the prototype's "Trusted by …" logo strip is intentionally omitted —

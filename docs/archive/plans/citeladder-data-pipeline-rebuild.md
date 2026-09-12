@@ -1,6 +1,10 @@
 # Connected-data pipeline rebuild — GSC, GA4, and Bing
 
-**Status:** bounded active follow-up: Slice 6 only. Slices 1-3 shipped
+> Retired from the working queue by the owner. Historical scope and evidence
+> follow; imperatives below do not authorize execution or establish acceptance.
+> Current owners are listed in [the documentation index](../../README.md).
+
+**Historical status (retired):** bounded active follow-up: Slice 6 only. Slices 1-3 shipped
 2026-09-04 across PRs #22 (Bing OAuth) and #23 (the pipeline work) — together
 "PR 1" below. PR #24 followed with the AI
 Referrals preset family, chart granularity, and the Performance UI
@@ -15,8 +19,8 @@ deliberately rather than blocked. The shipped sections below are historical
 context; do not restart them when working on Slice 6.
 
 The shipped Performance alignment now belongs to
-[`../integrations-traffic-analytics.md`](../integrations-traffic-analytics.md)
-and [`../frontend-architecture.md`](../frontend-architecture.md). Traffic is the
+[`../integrations-traffic-analytics.md`](../../integrations-traffic-analytics.md)
+and [`../frontend-architecture.md`](../../frontend-architecture.md). Traffic is the
 Performance surface; defects 1–3 and 5's Traffic half are resolved differently
 than described below, and the sequencing notes at the end of each affected
 slice say what is left.
@@ -49,13 +53,13 @@ Each was confirmed by reading the shipped code, not inferred.
 
 | # | Defect | Evidence |
 |---|---|---|
-| 1 | ~~Reads require an **exact** window match~~ — **fixed** by the Performance alignment: presets resolve by window LENGTH (`resolve_preset_snapshot`), and an exact window is used only for a custom or comparison range | [query_support.py](../../backend/app/domain/traffic/query_support.py) |
-| 2 | ~~Snapshots are built **only for sync windows**~~ — **fixed**: `traffic_snapshot_refresh` also derives the preset family anchored at the latest complete GSC date, and `performance_range_projection` materializes any other requested window | [service.py](../../backend/app/domain/traffic/service.py) |
-| 3 | ~~Traffic offers 7d/28d/90d that can never match~~ — **fixed**: the surface is `/performance` with Day/Week/Month/Custom ranges resolved server-side | [performance.ts](../../frontend/lib/performance/performance.ts) |
-| 4 | ~~AI Referrals is **100% broken for every bounded range**~~ — **fixed in two halves.** PR 1 fixed the READ: a preset sends its `range` TOKEN and the server resolves the newest snapshot of that LENGTH (`ANALYTICS_PRESET_RANGE_DAYS`), with no date derived from the browser clock. That alone still resolved nothing, because no snapshot of a preset length was ever WRITTEN; PR #24 added the family (`ANALYTICS_SNAPSHOT_WINDOW_DAYS`) that gives those reads something to match | [options.ts](../../frontend/lib/ai-referrals/options.ts), [analytics/service.py](../../backend/app/domain/analytics/service.py), [ai_referrals_snapshot.py](../../backend/app/domain/analytics/ai_referrals_snapshot.py) |
-| 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection. Its *collection* was unblocked first (it joined `TRAFFIC_SYNC_PROVIDERS`, so "Sync now" no longer skips it); the DISPLAY half shipped in Slice 4.4 as its own panel rather than a column on a GSC table | [traffic.py](../../backend/app/core/config/traffic.py) |
-| 6 | ~~The projection **materializes every metric row in the window in memory**~~ — **fixed**: `TrafficProjectionBuilder` folds batch by batch and the executor streams into it, so memory bounds on distinct keys | [projection.py](../../backend/app/domain/traffic/projection.py), [streaming.py](../../backend/app/domain/traffic/streaming.py) |
-| 7 | MCP exposes Site Health, Demand, Opportunities, and Visibility — **no traffic, search, referral, or connection-status tool** | [server.py:110-230](../../backend/app/domain/mcp/server.py#L110-L230) |
+| 1 | ~~Reads require an **exact** window match~~ — **fixed** by the Performance alignment: presets resolve by window LENGTH (`resolve_preset_snapshot`), and an exact window is used only for a custom or comparison range | [query_support.py](../../../backend/app/domain/traffic/query_support.py) |
+| 2 | ~~Snapshots are built **only for sync windows**~~ — **fixed**: `traffic_snapshot_refresh` also derives the preset family anchored at the latest complete GSC date, and `performance_range_projection` materializes any other requested window | [service.py](../../../backend/app/domain/traffic/service.py) |
+| 3 | ~~Traffic offers 7d/28d/90d that can never match~~ — **fixed**: the surface is `/performance` with Day/Week/Month/Custom ranges resolved server-side | [performance.ts](../../../frontend/lib/performance/performance.ts) |
+| 4 | ~~AI Referrals is **100% broken for every bounded range**~~ — **fixed in two halves.** PR 1 fixed the READ: a preset sends its `range` TOKEN and the server resolves the newest snapshot of that LENGTH (`ANALYTICS_PRESET_RANGE_DAYS`), with no date derived from the browser clock. That alone still resolved nothing, because no snapshot of a preset length was ever WRITTEN; PR #24 added the family (`ANALYTICS_SNAPSHOT_WINDOW_DAYS`) that gives those reads something to match | [options.ts](../../../frontend/lib/ai-referrals/options.ts), [analytics/service.py](../../../backend/app/domain/analytics/service.py), [ai_referrals_snapshot.py](../../../backend/app/domain/analytics/ai_referrals_snapshot.py) |
+| 5 | Bing is collected and **never displayed** — absent from `TRAFFIC_CONSUMED_DATASETS` and from every other projection. Its *collection* was unblocked first (it joined `TRAFFIC_SYNC_PROVIDERS`, so "Sync now" no longer skips it); the DISPLAY half shipped in Slice 4.4 as its own panel rather than a column on a GSC table | [traffic.py](../../../backend/app/core/config/traffic.py) |
+| 6 | ~~The projection **materializes every metric row in the window in memory**~~ — **fixed**: `TrafficProjectionBuilder` folds batch by batch and the executor streams into it, so memory bounds on distinct keys | [projection.py](../../../backend/app/domain/traffic/projection.py), [streaming.py](../../../backend/app/domain/traffic/streaming.py) |
+| 7 | MCP exposes Site Health, Demand, Opportunities, and Visibility — **no traffic, search, referral, or connection-status tool** | [server.py:110-230](../../../backend/app/domain/mcp/server.py#L110-L230) |
 
 Every defect above is now closed: 1-4 and 6 by PRs #22-#24 (4 only as of #24
 — see its row above), 5's display half by Slice 4.4 and 7 by Slice 5, both in
@@ -66,7 +70,7 @@ PR #25. **Slice 6 is the only one left, and has no PR assigned.**
 - First-connect history import, `.env`-backed via
   `INTEGRATION_SYNC_BACKFILL_WINDOW_DAYS` (default 365), enqueued once per
   connection when a property is first selected
-  ([mappings.py](../../backend/app/domain/integrations/mappings.py)).
+  ([mappings.py](../../../backend/app/domain/integrations/mappings.py)).
 - That import is **chunked** into rolling-window-sized runs
   (`backfill_sync_windows`) precisely because of defect 6 — one 365-day run
   would trigger one 365-day in-memory projection.
@@ -213,7 +217,7 @@ dashboard that looks broken.
    post-sync chain — derivation → `traffic_snapshot_refresh` → demand refresh →
    opportunity recompute — actually completes for a fresh connection with no
    prior state, and fix what does not. Demand reads the *latest* snapshot
-   ([demand/service.py](../../backend/app/domain/demand/service.py)), so it is
+   ([demand/service.py](../../../backend/app/domain/demand/service.py)), so it is
    free of the exact-window defect, but it has never been exercised from a
    cold connect.
 4. **Bing as its own series** (decision taken: kept separate, never folded into
@@ -240,7 +244,7 @@ The MCP server already exposes `list_projects`, `get_project_business_context`,
 `read_visibility_audit`. Missing is the entire connected-data layer.
 
 1. **New agent tool executors** in
-   [agent/tools.py](../../backend/app/domain/agent/tools.py) `_EXECUTORS`,
+   [agent/tools.py](../../../backend/app/domain/agent/tools.py) `_EXECUTORS`,
    following the existing shape exactly:
    - `performance.read_snapshot` — headline totals + series for a range.
    - `performance.read_table` — the paged dimension tables (one executor for
@@ -250,10 +254,10 @@ The MCP server already exposes `list_projects`, `get_project_business_context`,
      progress, coverage window. This is the one that lets a client explain
      "why is this empty".
 2. **Register them** in `AGENT_TASK_POLICIES`
-   ([config/agent.py](../../backend/app/core/config/agent.py)) and in
-   `_CONTEXT_TOOLS` ([mcp/data.py](../../backend/app/domain/mcp/data.py)), then
+   ([config/agent.py](../../../backend/app/core/config/agent.py)) and in
+   `_CONTEXT_TOOLS` ([mcp/data.py](../../../backend/app/domain/mcp/data.py)), then
    add the thin `@_evidence_tool` wrappers in
-   [mcp/server.py](../../backend/app/domain/mcp/server.py).
+   [mcp/server.py](../../../backend/app/domain/mcp/server.py).
 3. **Every tool stays a projection.** Read-only annotations, no provider I/O,
    no recomputation — the same rule the existing evidence tools follow.
 4. **Workspace authorization is not optional.** Each tool resolves through

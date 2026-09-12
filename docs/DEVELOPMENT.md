@@ -391,8 +391,8 @@ separate audited operation.
 
 ## Gotchas runbook
 
-These two are environment-specific and will silently break the stack. The canonical
-versions live in [`invariants.md`](invariants.md) §11–12.
+These two environment-specific procedures are owned here. The correctness and
+secret-isolation requirements remain in [`invariants.md`](invariants.md).
 
 ### Gotcha 1 — shell secrets override Docker Compose `${VAR}`
 

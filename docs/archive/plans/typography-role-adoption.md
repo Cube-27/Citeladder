@@ -1,8 +1,12 @@
 # Typography role adoption — deferred debt
 
+> Retired from the working queue by the owner. Historical scope and evidence
+> follow; imperatives below do not authorize execution or establish acceptance.
+> Current owners are listed in [the documentation index](../../README.md).
+
 > Status: **not started — deliberately deferred.** Recorded during the UI
 > consolidation pass so the measurement is not lost. Nothing here is a shipped
-> contract; [`design.md`](../design.md) remains the visual authority.
+> contract; [`design.md`](../../design.md) remains the visual authority.
 
 ## The finding
 

@@ -12,8 +12,6 @@ import {
 } from '@/lib/consent/cookie-consent';
 import { cn } from '@/lib/utils';
 
-import { Container } from '../primitives/section';
-
 /**
  * The public website's outlined alternate action, matching `ButtonLink`'s
  * `dark`/`nav` treatment. The shared `secondary` fill is the authenticated
@@ -64,38 +62,40 @@ export function CookieBanner() {
       // A landmark `section`, not a `dialog`: this does not trap focus or
       // block the page, and announcing it as a dialog would imply both.
       aria-label="Cookie consent"
-      className="fixed inset-x-0 bottom-0 z-[var(--z-index-overlay)] print:hidden"
+      className="fixed right-4 bottom-0 left-4 z-[var(--z-index-overlay)] sm:right-6 sm:left-auto sm:w-[27rem] print:hidden"
     >
-      <Container className="pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="border-border-strong bg-panel flex flex-col gap-4 rounded-[var(--radius-card)] border p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5">
-          <p className="website-body text-muted max-w-[68ch]">
-            We use strictly necessary cookies to keep you signed in and secure the site. With your
-            consent we would also use non-essential cookies to understand how the site is used. See
-            our{' '}
-            <Link
-              href="/cookies"
-              className="text-foreground underline underline-offset-4 hover:no-underline"
-            >
-              Cookie Policy
-            </Link>
-            .
-          </p>
+      <div className="pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="border-border-strong bg-panel shadow-elevated grid gap-4 rounded-[var(--radius-card)] border p-5">
+          <div className="grid gap-2">
+            <h2 className="website-small-heading text-foreground">Cookie Settings</h2>
+            <p className="website-body text-muted">
+              We use essential cookies to keep you signed in and secure. With your permission,
+              non-essential cookies help us understand site usage. Read our{' '}
+              <Link
+                href="/cookies"
+                className="text-foreground underline underline-offset-4 hover:no-underline"
+              >
+                Cookie Policy
+              </Link>
+              .
+            </p>
+          </div>
           {/* Reject first in the DOM so it is the first tab stop, and visually
               equal in weight — neither choice is nudged. */}
-          <div className="flex shrink-0 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Button
               variant="secondary"
-              className={cn(MARKETING_SECONDARY)}
+              className={cn(MARKETING_SECONDARY, 'w-full')}
               onClick={() => decide('rejected')}
             >
               Reject
             </Button>
-            <Button variant="primary" onClick={() => decide('accepted')}>
+            <Button className="w-full" variant="primary" onClick={() => decide('accepted')}>
               Accept
             </Button>
           </div>
         </div>
-      </Container>
+      </div>
     </section>
   );
 }

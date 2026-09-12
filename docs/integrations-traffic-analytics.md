@@ -1,146 +1,122 @@
-# Integrations, Traffic, and Analytics
+# Integrations, search, traffic and demand
 
-> **Current role:** persisted first-party evidence and projections
-> **Target role:** source layer for Demand Intelligence
-> **Runtime authority:** this document. Completed delivery history is retained
-> in the plans and evaluations index; it is not an active implementation gate.
+## Responsibility
 
-The existing subsystem owns OAuth connections, property mapping, queued syncs, immutable import
-artifacts, normalized metric rows, and current Traffic/Analytics snapshots. Demand Intelligence
-extends these owners; reports and agent tasks never call Google or Bing directly.
+This owner turns authorized first-party provider observations into persisted
+Performance, AI Referrals, query evidence and Demand projections. Google Search
+Console, GA4 and Bing Webmaster Tools are implemented connectors. Shopify
+OAuth/product/order sync is retired; [Commerce](commerce-intelligence.md)
+uses Site Health and CSV. Reports, agents and reads never call these providers.
 
-The active provider set is Google Search Console, Google Analytics 4, and Bing
-Webmaster Tools. Shopify OAuth and product/order synchronization are retired;
-Commerce catalog evidence is owned by Site Health discovery and CSV import.
+## Consent and mapping
 
-## Consent boundaries
+Google Search Console and GA4 share one Google grant per workspace and the
+sign-in OAuth client, preserving incremental consent, login_hint and
+include_granted_scopes. Bing uses separate Microsoft consent even if the Bing
+account was created with a Google identity. Property discovery supplies verified
+sites or GA4 account summaries; users do not type a property reference.
 
-Google Search Console and Google Analytics 4 ride ONE Google grant per
-workspace, and that grant uses the same OAuth client as "Continue with
-Google" sign-in. Sharing the client is what allows incremental
-authorization: a Google-signed-in user connecting GSC/GA4 is sent with
-`login_hint` and `include_granted_scopes`, so the account chooser is skipped
-and the consent only adds the new scopes. Splitting the client would silently
-cost that.
+[Integration API](../backend/app/api/integrations.py) delegates to
+[the domain](../backend/app/domain/integrations/). Credentials remain encrypted
+and credential management is Owner/Admin-only. Product read/run permissions and
+entitlement limits are separate. A mapping binds an authorized connection,
+project and property. Retiring one project's mapping must not retire another's.
 
-Bing Webmaster Tools is a separate consent on the Microsoft transport and
-cannot be authorized by a Google grant. Its account may itself have been
-created with a Google ID, which is not the same thing; the UI says so rather
-than implying one click covers all three. All three providers now expose
-property discovery -- GSC and Bing from their verified-site lists, GA4 from
-account summaries -- so no property ref is ever hand-typed.
+## Sync and evidence
 
-## Current guarantees
+[Sync enqueue](../backend/app/domain/integrations/sync.py) freezes mapping_id,
+property_ref and project_id onto each IntegrationSyncRun. Dispatcher fan-out is
+per mapping. Fetch, resume and derivation use frozen identity, never the mutable
+connection pointer. A retired mapping fails its in-flight work rather than
+relabeling imported evidence.
 
-- encrypted OAuth credentials and provider allowlists;
-- queued, idempotent sync runs with append-only import artifacts;
-- versioned derivation into normalized metric rows;
-- project/workspace authorization and property mapping;
-- sync runs targeted at a property MAPPING, frozen at enqueue, so a property
-  re-selection can never relabel rows already fetched and two projects on one
-  authorized connection sync independently;
-- data revisions (`resync_seq`) allocated per connection, so OVERLAPPING import
-  windows produce comparable revisions and the later read of a shared day
-  supersedes the earlier one instead of colliding with it;
-- history bought once per (project, property), resumed rather than re-imported,
-  and bounded by the resolved `history_window` entitlement;
-- persisted Traffic, page/query, referral, and analytics projections;
-- revision-aware snapshots and explicit null/zero semantics;
-- read routes that do not perform provider I/O.
+[Integration workers](../backend/app/workers/integration_worker.py) claim leased
+PostgreSQL work, commit before I/O, persist append-only import artifacts and
+derive versioned metric rows. Dataset configuration owns provider report grains,
+compatibility, coverage and truncation. Provider errors, expired credentials and
+partial data remain distinguishable from an observed zero.
 
-## Required correctness work
+resync_seq increases across overlapping windows, with a target-identity floor
+so a remapped property remains comparable across connections. Readers select the
+latest revision per metric identity and never sum revisions. Missing rows in a
+later response do not mean zero. Incremental sync re-reads the configured late-data
+window. History is imported once per project/property and resumes missing/failed
+chunks, bounded by the resolved history_window allowance.
 
-Before creating Demand Signals:
+## Projection chain
 
-1. A project/window projection must include all contributing GSC and GA4 source revisions; source
-   identity must be part of refresh idempotency.
-2. GSC requires query × page × date evidence plus coverage/truncation metadata.
-3. GA4 report families must respect compatible scopes and use capability discovery.
-4. Relative landing paths must resolve through the same canonical page identity as Site/GSC.
-5. Engaged sessions and stable key events must be projected rather than discarded.
-6. Join coverage and unmatched reasons must be exposed.
-7. Unavailable measures remain null; observed zero is zero.
-8. Alternative-dimensional GA4 reports must not be summed as independent activity.
+Post-sync work uses existing analytics tasks to refresh Traffic, AI Referrals
+and Demand, then the appropriate Opportunity and verification successors.
+Source identity and contributing revisions belong in refresh idempotency.
+[Analytics worker](../backend/app/workers/analytics_worker.py) owns dispatch;
+each domain owns its derived projection.
 
-## Cross-source owned-page equivalence
+[Performance](../backend/app/domain/traffic/performance.py) reads persisted
+TrafficSnapshot and PerformanceDimensionStat rows. GSC date-only gsc_day_daily
+is the source of headline totals and daily series: dimensional datasets cannot
+be added together into a total because provider privacy filtering differs.
+Each dimension table reads its own dataset. No date-only evidence means null
+headline values, not a zero reconstructed from dimensions.
 
-Demand owns `resolve_owned_page` for mapping GSC/GA4 URL variants onto an
-existing workspace-owned `SiteUrl`. It is separate from crawler identity.
-Exact normalized URLs return `exact`; a non-exact variant returns `resolved`
-only when a persisted redirect or canonical declaration proves one target.
-Sitemap membership and the configured preferred origin rank candidates but do
-not prove equivalence. Heuristic-only candidates return `ambiguous`, including
-a single candidate, and no candidate returns `unresolved`.
+Refresh materializes configured presets anchored to the latest complete GSC
+date. A separate performance_range_projection task creates a custom/comparison
+display snapshot from stored evidence only; it does not sync providers, refresh
+Demand or enqueue verification. Exact windows cannot fall back to an unrelated
+snapshot.
 
-Every result includes the bounded candidate list, evidence kinds, and resolver
-version. Every query filters both `workspace_id` and `project_id`; ambiguity is
-never silently coerced into a join.
+[AI Referrals](../backend/app/domain/analytics/ai_referrals_snapshot.py) uses
+ga4_source_medium_daily as the canonical session grain. AI-source sessions are
+the numerator; all sessions of that same report are the denominator. Alternate
+referrer reports retain provenance but are not added again. Public rows show
+AI sources only. Formula changes require explicit derived rebuilds, never reads.
 
-## Traffic and AI Referrals projections
+## Query evidence and Demand
 
-Traffic headline totals describe the selected date window. **Day**, **Week**,
-and **Month** choose the returned chart interval only: they change chart buckets
-and prior-interval comparisons, not the selected window or headline totals. The
-projection returns its actual `granularity`; clients derive bucket labels,
-interval badges, and comparison wording from that value. Top pages and top
-queries are selected-window totals and are independent of chart interval.
+[Demand service](../backend/app/domain/demand/service.py) builds immutable,
+versioned QueryEvidenceSnapshot/Row projections from latest gsc_query_page_daily
+evidence before detector computation. Rows retain exact metric/artifact IDs,
+query, date, metrics, importer identity and owned-page resolution. Identical
+inputs converge idempotently; changed source/window/version appends and
+supersedes. Build bounds apply in SQL before materialization; read cursors bind
+to the immutable snapshot. Numeric limits live in owning configuration.
 
-Traffic reads resolve the exact `(window_start, window_end, granularity)` when
-dates are supplied. They use the newest snapshot only when the caller
-explicitly omits the window to request current/latest state. The wire-level
-`evidence_state` distinguishes `not_run`, `observed_zero`, and `available`, so
-an absent snapshot never masquerades as a measured zero.
+[Page equivalence](../backend/app/domain/demand/page_equivalence.py) resolves
+cross-source URLs separately from crawler identity. Exact normalized matches
+are exact; persisted redirect/canonical evidence may prove resolved. Sitemap
+and preferred-origin hints rank candidates but do not prove a join. Heuristic-only
+matches remain ambiguous; invalid URLs or absent candidates return unresolved. Every query is
+workspace/project-scoped.
 
-AI Referrals uses `ga4_source_medium_daily` as the canonical session grain.
-The deterministic referrer classification selects AI-source sessions for volume;
-all sessions from the same source/medium report form the referral-share and
-source-share denominator. Referrer-report rows are retained with their source
-artifacts and classifications for provenance, but are excluded from session
-sums so alternative GA4 dimensions cannot double count. Public rows contain AI
-sources only; `other` classifications remain available to the formula and audit
-trail. A referral analyzer or formula version bump is applied by an explicit
-rebuild of derived snapshots, never on a read.
+Detectors cover branded demand, striking distance, cannibalization,
+property-relative CTR gaps and coverage-qualified adjacent-window trends.
+Branded query classification uses canonical brand/alias/domain vocabulary;
+the newest append-only override for an exact normalized query wins.
+Detector availability and limitations persist with the snapshot.
+opportunities/demand_hits.py alone maps actionable signals to Opportunity rules;
+branded and ambiguous cohorts cannot become actionable hits.
 
-## Demand projections
+JourneyDefinition and reviewed conversion-journey mapping were proposed in older
+documentation but are not implemented persistence/API owners. Do not describe
+them as shipped, infer a conversion definition from GA4 events or interpret
+missing event configuration as zero. First-party generative-AI report ingestion
+is also unverified; [pending work](plans/citeladder-integrations-audit-followups.md)
+retains the evidence/authorization gate.
 
-Demand Intelligence creates versioned `DemandSignal` and `DemandSnapshot` projections over:
+## Read and UI
 
-- search query and query-page performance;
-- landing/acquisition/engagement observations;
-- configured journey/key-event observations;
-- AI referrals;
-- Site and Content coverage;
-- active prompt and Visibility evidence.
+The [Performance API client](../frontend/lib/api/performance.ts) renders
+Search Console-aligned ranges. Day/Week/Month/Custom select a range; chart
+buckets remain daily. The response supplies actual window and snapshot_id,
+and dimension tables use that ID so they cannot drift from the chart.
+Comparisons use a second persisted window with absolute differences, not
+client-generated percentage change. Year-over-year remains unavailable until
+sufficient history exists. Missing custom windows request the explicit projection
+action and show progress.
 
-For GSC query analysis, the integration owner remains the sole raw-truth owner:
-`gsc_query_page_daily` is immutable input. The Demand refresh selects the latest
-row per property/date/dimension key, then persists a separate bounded
-`QueryEvidenceSnapshot` before detector computation. Its rows retain exact
-metric-row and artifact IDs, importer version, query, page, date, metrics, and
-versioned owned-page resolution. Identical source/window/version input is
-idempotent; changed input appends and supersedes. The read-only query-evidence
-API requires an exact window and exposes 100 rows by default, at most 500, from
-a projection whose SQL latest-row selection is capped before materialization at
-5,000 rows (plus a truncation sentinel) and 100 artifacts. It never issues a provider
-request or duplicates normalized GSC metric truth.
-
-Each signal records window, source artifact/row IDs, identity joins, coverage, confidence,
-limitations, formula/analyzer version, and related page/entity/journey/question.
-
-## Journey configuration
-
-Analytics cannot define a conversion by itself. A reviewed `JourneyDefinition` maps conceptual
-stages, primary/secondary outcomes, relevant page roles, and compatible events. Industry profiles
-propose defaults; users confirm project mappings. Missing event configuration is a measurement
-gap—not evidence of zero conversion.
-
-## Future connectors
-
-Paid media, CRM/admissions, email, social, campaign, call-tracking, and other connectors join the
-same evidence and journey contracts. Provider-specific rows remain in the integration owner;
-Demand Intelligence consumes normalized observations and never makes one connector the universal
-business model.
-
-Detailed v1 sync and development notes are archived at
-`archive/subsystems/integrations-traffic-analytics-v1.md`. Verify provider grains and current code
-before reusing any historical implementation detail.
+Cursors bind project, snapshot, dimension, filters, sorting and page size.
+The browser resets cursor history when those inputs change.
+Search Demand is one /demand surface; AI Referrals exposes volume/share/source
+totals at /ai-referrals rather than copied Visibility metrics.
+[Sync tests](../backend/tests/component/test_integration_sync_enqueue.py) and
+[Performance tests](../backend/tests/component/test_performance_api.py) cover
+frozen targets and persisted reads. Live provider acceptance is separate.
