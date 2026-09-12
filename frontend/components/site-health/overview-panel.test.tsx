@@ -220,7 +220,7 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(await screen.findAllByText('60% measured · Moderate confidence')).toHaveLength(2);
+    expect(await screen.findAllByText('60% complete · Partial audit')).toHaveLength(2);
     expect(screen.getByText('100% analyzed · Partial coverage')).toBeInTheDocument();
     expect(screen.queryByText('100% analyzed · Complete coverage')).not.toBeInTheDocument();
     expect(screen.getByText(/requested page limit reached/)).toBeInTheDocument();

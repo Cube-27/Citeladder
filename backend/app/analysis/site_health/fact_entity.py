@@ -81,6 +81,7 @@ def empty_entity_signals() -> dict[str, Any]:
             "has_purchase_control": False,
             "has_variant_control": False,
             "has_sku_marker": False,
+            "brand_names": [],
         },
         "listing": {
             "largest_card_list_size": 0,
@@ -149,7 +150,19 @@ def _product_signals(region: Any, container_ids: set[int]) -> dict[str, Any]:
         "has_purchase_control": _has_purchase_control(region, container_ids),
         "has_variant_control": _has_variant_control(region, container_ids),
         "has_sku_marker": _has_sku_marker(region, container_ids),
+        "brand_names": _visible_brand_names(region, container_ids),
     }
+
+
+def _visible_brand_names(region: Any, container_ids: set[int]) -> list[str]:
+    names: list[str] = []
+    for node in _find(region, ".//*[@itemprop='brand'] | .//*[@data-brand]"):
+        if not node_outside_containers(node, container_ids):
+            continue
+        value = str(node.get("data-brand") or _text(node) or "").strip()
+        if value and value not in names:
+            names.append(value[:256])
+    return names[:8]
 
 
 def _has_product_detail_heading(region: Any, container_ids: set[int]) -> bool:
@@ -210,7 +223,8 @@ def _is_explicit_list_container(node: Any) -> bool:
 def _listing_signals(region: Any, containers: list[Any]) -> dict[str, Any]:
     affordance_nodes = _collection_affordance_nodes(region)
     observations = [
-        _collection_observation(item, affordance_nodes) for item in containers
+        _collection_observation(item, affordance_nodes, containers)
+        for item in containers
     ]
     largest = max(
         observations,
@@ -236,6 +250,10 @@ def _listing_signals(region: Any, containers: list[Any]) -> dict[str, Any]:
     affordance_classes = {
         str(item.get("class") or "") for item in evidence["affordances"]
     }
+    has_empty_state = "empty_state" in affordance_classes or (
+        not observations
+        and any(_affordance_class(node) == "empty_state" for node in affordance_nodes)
+    )
     largest_container = largest["container"] if largest is not None else {}
     return {
         "largest_card_list_size": int(largest_container.get("item_count", 0)),
@@ -245,7 +263,7 @@ def _listing_signals(region: Any, containers: list[Any]) -> dict[str, Any]:
         "has_filter_control": bool({"filter", "facet"} & affordance_classes),
         "has_facet_control": "facet" in affordance_classes,
         "has_pagination": "pagination" in affordance_classes,
-        "has_empty_state": "empty_state" in affordance_classes,
+        "has_empty_state": has_empty_state,
         "collection_evidence": evidence,
     }
 
@@ -378,7 +396,7 @@ def _sku_attribute(node: Any) -> bool:
 
 
 def _collection_observation(
-    container: Any, affordance_nodes: list[Any]
+    container: Any, affordance_nodes: list[Any], containers: list[Any]
 ) -> dict[str, Any]:
     item_count, distinct_targets = _card_list_observation(container)
     name = bounded_container_name(container)
@@ -395,6 +413,10 @@ def _collection_observation(
             continue
         relation = bounded_structural_relation(node, container)
         if not relation:
+            continue
+        if affordance_class == "empty_state" and not _empty_state_belongs_to(
+            node, container, containers
+        ):
             continue
         key = (affordance_class, relation)
         if key in seen:
@@ -414,6 +436,15 @@ def _collection_observation(
         "affordances": affordances,
         "_is_recommendation": _is_recommendation_container(container, name),
     }
+
+
+def _empty_state_belongs_to(node: Any, container: Any, containers: list[Any]) -> bool:
+    competing_ids = {
+        id(other)
+        for other in containers
+        if other is not container and node_outside_containers(container, {id(other)})
+    }
+    return node_outside_containers(node, competing_ids)
 
 
 def _collection_affordance_nodes(region: Any) -> list[Any]:
@@ -485,6 +516,7 @@ def _collection_ancestor_is_excluded(tag: str, role: str) -> bool:
         "complementary",
         "contentinfo",
         "navigation",
+        "search",
     }
 
 

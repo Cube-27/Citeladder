@@ -127,22 +127,26 @@ async def _architecture_pages(
             .order_by(SitePageAnalysis.site_url_id)
         )
     ).all()
-    analysis_ids = [analysis.id for analysis, *_rest in rows]
+    evaluation_owner = {
+        evaluation_id: analysis.id
+        for analysis, *_rest in rows
+        for evaluation_id in (analysis.source_evaluation_ids or ())
+    }
     indexability_rows = (
         await session.execute(
             select(
                 SiteRuleEvaluation.id,
-                SiteRuleEvaluation.analysis_id,
                 SiteRuleEvaluation.outcome,
             ).where(
                 SiteRuleEvaluation.workspace_id == crawl.workspace_id,
-                SiteRuleEvaluation.analysis_id.in_(analysis_ids),
+                SiteRuleEvaluation.id.in_(evaluation_owner),
                 SiteRuleEvaluation.rule_id == "technical.indexable",
             )
         )
     ).all()
     indexability = {
-        row.analysis_id: _indexability_outcome(row.outcome) for row in indexability_rows
+        evaluation_owner[row.id]: _indexability_outcome(row.outcome)
+        for row in indexability_rows
     }
     evaluation_ids = [row.id for row in indexability_rows]
     pages: list[ArchitecturePage] = []
@@ -213,10 +217,8 @@ async def _persist_rule_evaluations(
                 outcome=evaluation.outcome,
                 display_applicability=evaluation.display_applicability,
                 score_applicability=evaluation.score_applicability,
-                expected_profile_membership=evaluation.expected_profile_membership,
                 reason_code=evaluation.reason_code,
                 score_roles=list(evaluation.score_roles),
-                checkpoint_family=evaluation.checkpoint_family,
                 readiness_dimension=evaluation.readiness_dimension,
                 readiness_weight=evaluation.readiness_weight,
                 evidence=evaluation.evidence,

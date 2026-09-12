@@ -2,67 +2,116 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
 from typing import Final
 
-from app.core.config.site_health_family_profile import (
-    CAPABILITY_FAMILIES_BY_ID as CAPABILITY_FAMILIES_BY_ID,
+# Public checklist membership is declared directly, independently of outcomes.
+WEB_CHECK_IDS: Final[frozenset[str]] = frozenset(
+    {
+        "technical.title_present",
+        "technical.indexable",
+        "technical.https",
+        "technical.canonical_integrity",
+        "web.accessibility_image_alt",
+        "web.accessibility_form_names",
+        "web.accessibility_document_language",
+        "web.mobile_viewport",
+        "web.security_mixed_content",
+        "technical.soft_error",
+    }
 )
-from app.core.config.site_health_family_profile import (
-    CAPABILITY_FAMILY_MANIFEST as CAPABILITY_FAMILY_MANIFEST,
-)
-from app.core.config.site_health_family_profile import (
-    CHECKPOINT_DIMENSION_BY_ID as CHECKPOINT_DIMENSION_BY_ID,
-)
-from app.core.config.site_health_family_profile import (
-    CHECKPOINT_FAMILY_BY_ID as CHECKPOINT_FAMILY_BY_ID,
-)
-from app.core.config.site_health_family_profile import (
-    CLASSIFIED_KIND_FAMILY_PROFILE as CLASSIFIED_KIND_FAMILY_PROFILE,
-)
-from app.core.config.site_health_family_profile import (
-    PROFILE_STATUS_MEASURED as PROFILE_STATUS_MEASURED,
-)
-from app.core.config.site_health_family_profile import (
-    PROFILE_STATUS_NOT_APPLICABLE as PROFILE_STATUS_NOT_APPLICABLE,
-)
-from app.core.config.site_health_family_profile import (
-    CapabilityFamily as CapabilityFamily,
-)
-from app.core.config.site_health_family_profile import (
-    CheckpointExpression as CheckpointExpression,
-)
-from app.core.config.site_health_family_profile import (
-    FamilyProfileRow as FamilyProfileRow,
-)
-from app.core.config.site_health_family_profile import (
-    expected_checkpoint_expressions as _expected_checkpoint_expressions,
-)
-from app.core.config.site_health_family_profile import (
-    expected_checkpoints as _expected_checkpoints,
-)
-from app.core.config.site_health_family_profile import (
-    expected_families as _expected_families,
-)
-from app.core.config.site_health_family_profile import (
-    profile_rows as profile_rows,
-)
-from app.core.config.site_health_family_profile import (
-    relevant_dimensions as _relevant_dimensions,
-)
-from app.core.config.site_health_family_profile import (
-    site_checkpoint_expressions as _site_checkpoint_expressions,
-)
-from app.core.config.site_health_family_profile import (
-    validate_measurement_profile as validate_measurement_profile,
-)
-from app.core.config.site_health_family_profile_projection import (
-    measurement_gap_reasons as _measurement_gap_reasons,
-)
-from app.core.config.site_health_family_profile_projection import (
-    serialized_family_profile as serialized_family_profile,
-)
-from app.core.config.site_health_taxonomy import PAGE_KINDS
+
+AEO_CHECK_PILLAR: Final[dict[str, str]] = {
+    "technical.indexable": "crawlability",
+    "search.crawler_access": "crawlability",
+    "search.snippet_access": "crawlability",
+    "aeo.heading_hierarchy": "structure",
+    "aeo.content_date_present": "freshness",
+    "aeo.product_answer_facts": "answerability",
+    "aeo.product_brand_identity": "provenance",
+    "aeo.offer_freshness_signal": "freshness",
+    "aeo.listing_answer_set": "answerability",
+    "aeo.listing_item_facts": "structure",
+    "aeo.schema_required_valid": "machine-readability",
+    "aeo.schema_matches_content": "machine-readability",
+    "aeo.visible_attribution": "provenance",
+    "aeo.source_support_present": "evidence",
+    "aeo.answer_first": "answerability",
+    "aeo.question_headings": "structure",
+}
+
+SUPPORTED_AEO_CHECKS_BY_PAGE_KIND: Final[dict[str, frozenset[str]]] = {
+    "article": frozenset(
+        {
+            "technical.indexable",
+            "search.snippet_access",
+            "aeo.heading_hierarchy",
+            "aeo.content_date_present",
+            "aeo.visible_attribution",
+            "aeo.source_support_present",
+            "aeo.schema_required_valid",
+            "aeo.schema_matches_content",
+        }
+    ),
+    "product": frozenset(
+        {
+            "technical.indexable",
+            "search.snippet_access",
+            "aeo.product_answer_facts",
+            "aeo.product_brand_identity",
+            "aeo.offer_freshness_signal",
+            "aeo.schema_required_valid",
+            "aeo.schema_matches_content",
+        }
+    ),
+    "category": frozenset(
+        {
+            "technical.indexable",
+            "search.snippet_access",
+            "aeo.listing_answer_set",
+            "aeo.listing_item_facts",
+            "aeo.schema_required_valid",
+            "aeo.schema_matches_content",
+        }
+    ),
+    "faq": frozenset(
+        {
+            "technical.indexable",
+            "search.snippet_access",
+            "aeo.answer_first",
+            "aeo.question_headings",
+            "aeo.schema_required_valid",
+            "aeo.schema_matches_content",
+        }
+    ),
+    "docs": frozenset(
+        {
+            "technical.indexable",
+            "search.snippet_access",
+            "aeo.heading_hierarchy",
+            "aeo.content_date_present",
+            "aeo.source_support_present",
+            "aeo.schema_required_valid",
+            "aeo.schema_matches_content",
+        }
+    ),
+}
+
+
+def public_check_membership(
+    rule_id: str, page_kind: str
+) -> tuple[tuple[str, ...], str]:
+    """Return direct score roles and optional AEO pillar for one page check."""
+    roles: list[str] = []
+    if rule_id in WEB_CHECK_IDS:
+        roles.append("web_fundamentals")
+    supported = SUPPORTED_AEO_CHECKS_BY_PAGE_KIND.get(page_kind, frozenset())
+    pillar = AEO_CHECK_PILLAR.get(rule_id, "") if rule_id in supported else ""
+    if pillar:
+        roles.append("aeo_readiness")
+    return tuple(roles), pillar
+
+
+CHECKPOINT_DIMENSION_BY_ID: Final[dict[str, str]] = dict(AEO_CHECK_PILLAR)
 
 PROFILE_VERSION: Final = "sh-profiles-1"
 SCHEMA_CONTRACT_VERSION: Final = "sh-schema-1"
@@ -110,16 +159,10 @@ READINESS_DIMENSION_WEIGHTS: Final[dict[str, float]] = {
     "structure": 0.15,
     "evidence": 0.15,
     "machine-readability": 0.20,
-    "authority": 0.10,
+    "provenance": 0.10,
     "freshness": 0.05,
     "crawlability": 0.15,
 }
-
-# Site rollups are invariant to the page mix found by a crawl. Each relevant
-# page kind has one fixed vote within a page-scoped rule unless product policy
-# explicitly assigns a different config-owned weight later.
-PAGE_KIND_ROLLUP_WEIGHTS: Final[dict[str, float]] = dict.fromkeys(PAGE_KINDS, 1.0)
-
 
 # Search eligibility intentionally uses only the two determinate checks below.
 # Crawler and snippet observations remain supplemental until a later explicit
@@ -135,50 +178,6 @@ WEB_FUNDAMENTALS_AREAS: Final[tuple[str, ...]] = (
     "security",
     "lab",
 )
-
-
-def expected_checkpoint_expressions(
-    page_kind: str,
-    page_traits: Iterable[str] = (),
-    crawl_context: Mapping[str, object] | None = None,
-) -> tuple[tuple[str, str, float], ...]:
-    return _expected_checkpoint_expressions(page_kind, page_traits, crawl_context)
-
-
-def site_checkpoint_expressions() -> tuple[tuple[str, str, float], ...]:
-    return _site_checkpoint_expressions()
-
-
-def expected_checkpoints(
-    page_kind: str,
-    page_traits: Iterable[str] = (),
-    crawl_context: Mapping[str, object] | None = None,
-) -> tuple[str, ...]:
-    return _expected_checkpoints(page_kind, page_traits, crawl_context)
-
-
-def expected_families(
-    page_kind: str,
-    page_traits: Iterable[str] = (),
-    crawl_context: Mapping[str, object] | None = None,
-) -> tuple[str, ...]:
-    return _expected_families(page_kind, page_traits, crawl_context)
-
-
-def relevant_dimensions(
-    page_kind: str,
-    page_traits: Iterable[str] = (),
-    crawl_context: Mapping[str, object] | None = None,
-) -> tuple[str, ...]:
-    return _relevant_dimensions(page_kind, page_traits, crawl_context)
-
-
-def measurement_gap_reasons(
-    page_kind: str,
-    page_traits: Iterable[str] = (),
-    crawl_context: Mapping[str, object] | None = None,
-) -> dict[str, str]:
-    return _measurement_gap_reasons(page_kind, page_traits, crawl_context)
 
 
 STRUCTURAL_NA_REASONS: Final[frozenset[str]] = frozenset(

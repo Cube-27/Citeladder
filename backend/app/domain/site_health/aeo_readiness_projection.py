@@ -7,9 +7,7 @@ import uuid
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Protocol
-
-from sqlalchemy import Row
+from typing import Any, Protocol
 
 from app.analysis.site_health.rules import rule_for
 from app.core.config.site_health_contracts import (
@@ -57,14 +55,14 @@ class SnapshotReadinessAggregate(Protocol):
     def readiness_dimensions(self) -> tuple[dict, ...]: ...
 
 
-def _bounded_evaluations(rows: Sequence[Row]) -> tuple[list[Row], bool]:
+def _bounded_evaluations(rows: Sequence[Any]) -> tuple[list[Any], bool]:
     return (
         list(rows[:AEO_READINESS_MAX_EVALUATIONS]),
         len(rows) > AEO_READINESS_MAX_EVALUATIONS,
     )
 
 
-def _bounded_readiness_rows(evaluations: Sequence[Row]) -> tuple[list[Row], bool]:
+def _bounded_readiness_rows(evaluations: Sequence[Any]) -> tuple[list[Any], bool]:
     readiness_rows = [
         row
         for row in evaluations
@@ -75,7 +73,7 @@ def _bounded_readiness_rows(evaluations: Sequence[Row]) -> tuple[list[Row], bool
     return _bounded_evaluations(readiness_rows)
 
 
-def _failing_entity_count(scope: str, rows: Sequence[Row]) -> int:
+def _failing_entity_count(scope: str, rows: Sequence[Any]) -> int:
     failing = [row for row in rows if row.outcome in RULE_FAILING_OUTCOMES]
     if scope == "page":
         return len({row.analysis_id for row in failing})
@@ -98,7 +96,7 @@ def _failing_entity_count(scope: str, rows: Sequence[Row]) -> int:
     )
 
 
-def _check_projection(rule_id: str, rows: Sequence[Row]) -> dict | None:
+def _check_projection(rule_id: str, rows: Sequence[Any]) -> dict | None:
     rule = SITE_HEALTH_RULES_BY_ID.get(rule_id)
     if rule is None or not rows or not str(rows[0].readiness_dimension or ""):
         return None
@@ -116,7 +114,7 @@ def _check_projection(rule_id: str, rows: Sequence[Row]) -> dict | None:
         "not_applicable_count": counts[RULE_OUTCOME_NOT_APPLICABLE],
         "error_count": counts[RULE_OUTCOME_ERROR],
         "failing_entity_count": _failing_entity_count(first.scope, rows),
-        "checkpoint_family": str(first.checkpoint_family or ""),
+        "aeo_pillar": str(first.readiness_dimension or ""),
         "content_addressable": rule.content_addressable,
     }
 
@@ -128,10 +126,10 @@ def rule_guidance(rule_id: str) -> tuple[str, str]:
 
 def _page_evidence(
     dimension: str,
-    rows: Sequence[Row],
+    rows: Sequence[Any],
     pages: dict[uuid.UUID, ReadinessPage],
 ) -> list[dict]:
-    by_analysis: dict[uuid.UUID, list[Row]] = {}
+    by_analysis: dict[uuid.UUID, list[Any]] = {}
     for row in rows:
         if (
             row.rule_id in SITE_HEALTH_RULES_BY_ID
@@ -175,17 +173,17 @@ def _page_evidence(
     return evidence_pages
 
 
-def _failing_analysis_ids(rows: Sequence[Row]) -> set[uuid.UUID]:
+def _failing_analysis_ids(rows: Sequence[Any]) -> set[uuid.UUID]:
     return {row.analysis_id for row in rows if row.outcome in RULE_FAILING_OUTCOMES}
 
 
-def _outcome_page_count(rows: Sequence[Row], outcomes: frozenset[str]) -> int:
+def _outcome_page_count(rows: Sequence[Any], outcomes: frozenset[str]) -> int:
     return len({row.analysis_id for row in rows if row.outcome in outcomes})
 
 
 def _dimension_projection(
     persisted: dict,
-    rows: Sequence[Row],
+    rows: Sequence[Any],
     pages: dict[uuid.UUID, ReadinessPage],
 ) -> dict:
     key = str(persisted.get("key") or "")
@@ -209,7 +207,6 @@ def _dimension_projection(
         "reason": persisted.get("reason", ""),
         "checkpoint_ids": checkpoint_ids,
         "determinate_checkpoint_ids": persisted.get("determinate_checkpoint_ids", []),
-        "checkpoint_families": persisted.get("checkpoint_families", []),
         "earned_points": persisted.get("earned_points", 0.0),
         "determinate_points": persisted.get("determinate_points", 0.0),
         "expected_points": persisted.get("expected_points", 0.0),
@@ -270,7 +267,7 @@ def _readiness_limitations(
 
 def _readiness_dimension_projections(
     persisted_dimensions: Sequence[dict],
-    rows: Sequence[Row],
+    rows: Sequence[Any],
     pages: dict[uuid.UUID, ReadinessPage],
 ) -> list[dict]:
     persisted_by_key = {
@@ -290,7 +287,7 @@ def build_aeo_readiness_descriptor(
     state: str,
     coverage_state: str,
     readiness_dimensions: Sequence[dict],
-    evaluations: Sequence[Row],
+    evaluations: Sequence[Any],
     pages: dict[uuid.UUID, ReadinessPage],
     profile_version: str,
     schema_contract_version: str,
@@ -332,8 +329,8 @@ def build_snapshot_aeo_readiness_descriptor(
     crawl: SiteCrawl,
     aggregate: SnapshotReadinessAggregate,
     coverage_state: str,
-    evaluations: Sequence[Row],
-    analysis_rows: Sequence[Row],
+    evaluations: Sequence[Any],
+    analysis_rows: Sequence[Any],
     analyzer_version: str,
     scoring_version: str,
 ) -> dict:

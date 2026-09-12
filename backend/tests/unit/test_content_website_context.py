@@ -157,6 +157,8 @@ async def _seed_page(
             site_url_id=site_url.id,
             artifact_id=artifact.id,
             analyzer_version="an-v1",
+            finalized_at=_BASE_TIME,
+            source_artifact_ids=[artifact.id],
         )
     )
     if monitored and profile_id is not None:

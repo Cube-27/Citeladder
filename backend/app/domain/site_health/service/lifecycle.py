@@ -82,6 +82,7 @@ from app.domain.site_health.state_events import (
     apply_discovery_status,
     record_crawl_event,
 )
+from app.domain.site_health.terminal_analysis import publish_final_page_analyses
 from app.models.site_health.analysis import SitePageAnalysis
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.events import SiteCrawlEvent
@@ -470,6 +471,7 @@ async def _snapshot_cancelled_crawl_once(
     if crawl is None or crawl.status != CRAWL_STATUS_CANCELLED:
         await session.rollback()
         return
+    await publish_final_page_analyses(session, crawl=crawl)
     if await persist_crawl_snapshot(session, crawl=crawl):
         await enqueue_change_refresh(session, crawl=crawl)
         await enqueue_link_metric_refresh(session, crawl=crawl)

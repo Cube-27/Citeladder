@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -14,6 +15,29 @@ def test_numeric_state_preserves_unavailable_and_observed_zero() -> None:
     assert verification_result._state(None) == "unavailable"
     assert verification_result._state(0) == "observed_zero"
     assert verification_result._state(0.1) == "available"
+
+
+@pytest.mark.asyncio
+async def test_site_verification_selects_only_authorized_finalized_evidence():
+    session = AsyncMock()
+    session.scalar.return_value = None
+    declaration = SimpleNamespace(
+        workspace_id=uuid.uuid4(),
+        project_id=uuid.uuid4(),
+        target_site_url_ids=[uuid.uuid4()],
+        declared_implemented_at=datetime.now(UTC),
+        expected_checks=[{"kind": "site_rule", "rule_id": "technical.https"}],
+    )
+    result = await verification._site_evidence(
+        session, declaration=declaration, crawl_id=uuid.uuid4()
+    )
+    statement = session.scalar.await_args.args[0]
+    query = str(statement)
+    assert "site_page_analyses.finalized_at IS NOT NULL" in query
+    assert "site_page_analyses.is_current IS true" in query
+    assert declaration.workspace_id in statement.compile().params.values()
+    assert result.observed == 0
+    assert result.analysis_ids == set()
 
 
 @pytest.mark.asyncio
@@ -33,7 +57,7 @@ async def test_site_rule_verification_accepts_partial_outcomes() -> None:
     await verification._evaluate_site_rule(
         session,
         declaration=SimpleNamespace(workspace_id=uuid.uuid4()),
-        analysis=SimpleNamespace(id=analysis_id),
+        analysis=SimpleNamespace(id=analysis_id, source_evaluation_ids=[evaluation_id]),
         check={"rule_id": "aeo.example", "expected_outcome": "partial"},
         result=result,
     )

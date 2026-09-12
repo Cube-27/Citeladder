@@ -70,3 +70,29 @@ def check_question_answers(facts: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         return RULE_OUTCOME_SATISFIED, evidence
     evidence["reason"] = "question_answer_missing"
     return RULE_OUTCOME_MISSING, evidence
+
+
+def check_question_associations(facts: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Require identifiable questions with a supported answer-region association."""
+    raw_relationships = facts.get("question_answer_relationships")
+    if not isinstance(raw_relationships, list):
+        return RULE_OUTCOME_UNKNOWN, {"reason": "question_relationships_unavailable"}
+    relationships = _observed_relationships(raw_relationships)
+    if not relationships:
+        return RULE_OUTCOME_MISSING, {"reason": "no_question_answer_relationships"}
+    unavailable = [
+        item for item in relationships if item.get("answer_state") == "unavailable"
+    ]
+    evidence = {
+        "question_count": len(relationships),
+        "associated_region_count": len(relationships) - len(unavailable),
+        "relationship_sources": sorted(
+            {str(item.get("source") or "") for item in relationships}
+        ),
+    }
+    if unavailable:
+        return RULE_OUTCOME_UNKNOWN, {
+            **evidence,
+            "reason": "answer_regions_unavailable",
+        }
+    return RULE_OUTCOME_SATISFIED, evidence

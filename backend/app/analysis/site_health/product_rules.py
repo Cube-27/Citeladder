@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 
 from app.core.config.site_health_contracts import (
     RULE_OUTCOME_MISSING,
+    RULE_OUTCOME_NOT_APPLICABLE,
     RULE_OUTCOME_SATISFIED,
 )
 from app.core.config.site_health_rule_types import CompositeContract
@@ -39,45 +40,88 @@ def _availability(schema: dict, commerce: dict) -> list[str]:
     return list(dict.fromkeys(values))
 
 
+def _quote_led(facts: dict) -> bool:
+    phrases = [str(value) for value in facts.get("cta_text") or ()]
+    phrases.extend(
+        f"{item.get('anchor_text', '')} {item.get('url', '')}"
+        for item in (facts.get("links") or {}).get("anchors") or ()
+        if item.get("region") == "main"
+    )
+    return any(
+        any(
+            action in value.casefold()
+            for action in ("request a quote", "get a quote", "request pricing")
+        )
+        for value in phrases
+    )
+
+
+def _product_answer_observations(facts: dict) -> dict:
+    entity, schema, commerce = _product_signals(facts)
+    headings = facts.get("headings") or {}
+    price = bool(entity.get("has_primary_price") or schema.get("price"))
+    currency = bool(schema.get("price_currency")) or bool(
+        any(symbol in str(commerce.get("visible_price") or "") for symbol in "$€£¥")
+    )
+    quote_led = _quote_led(facts)
+    public_sale = bool(entity.get("has_purchase_control")) and not quote_led
+    return {
+        "identity": bool(headings.get("h1_texts") or schema.get("name")),
+        "price": price,
+        "currency": currency,
+        "quote_led": quote_led,
+        "public_sale": public_sale,
+        "offer": quote_led or (public_sale and price and currency),
+        "availability": _availability(schema, commerce),
+        "variants": bool(entity.get("has_variant_control") or schema.get("variants")),
+    }
+
+
 def check_product_answer_facts(
     facts: dict, *, contract: CompositeContract
 ) -> tuple[str, dict]:
     """Score required PDP facts and a trait-gated variants atom."""
-    entity, schema, commerce = _product_signals(facts)
-    headings = facts.get("headings") or {}
-    identity = bool(headings.get("h1_texts") or schema.get("name"))
-    offer = bool(entity.get("has_primary_price") or schema.get("price"))
-    availability = _availability(schema, commerce)
-    variants = bool(entity.get("has_variant_control") or schema.get("variants"))
+    observed = _product_answer_observations(facts)
     traits = facts.get("page_traits") or ()
     atoms = [
         contract.atom_detail(
-            "identity", satisfied=identity, evidence=identity, page_traits=traits
+            "identity",
+            satisfied=observed["identity"],
+            evidence=observed["identity"],
+            page_traits=traits,
         ),
         contract.atom_detail(
-            "offer", satisfied=offer, evidence=offer, page_traits=traits
+            "offer",
+            satisfied=observed["offer"],
+            evidence=observed["offer"],
+            page_traits=traits,
         ),
         contract.atom_detail(
             "availability",
-            satisfied=bool(availability),
-            evidence=availability[:8],
+            satisfied=observed["quote_led"] or bool(observed["availability"]),
+            evidence=observed["availability"][:8],
             page_traits=traits,
         ),
         contract.atom_detail(
             "variants",
-            satisfied=variants,
-            evidence=variants,
+            satisfied=observed["variants"],
+            evidence=observed["variants"],
             page_traits=traits,
         ),
     ]
     return contract.outcome_for(atoms), {
         "atoms": atoms,
         "threshold": contract.threshold,
+        "public_sale": observed["public_sale"],
+        "quote_led": observed["quote_led"],
+        "transaction_path": observed["public_sale"] or observed["quote_led"],
+        "price_observed": observed["price"],
+        "currency_observed": observed["currency"],
     }
 
 
 def check_offer_freshness_signal(facts: dict) -> tuple[str, dict]:
-    """Require dated, currency-qualified Offer evidence before claiming current."""
+    """Validate an applicable authored offer expiry at the frozen audit time."""
     entity, schema, commerce = _product_signals(facts)
     offer = bool(
         entity.get("has_primary_price")
@@ -85,12 +129,15 @@ def check_offer_freshness_signal(facts: dict) -> tuple[str, dict]:
         or commerce.get("visible_price")
     )
     currency = [str(value) for value in schema.get("price_currency") or () if value]
-    timestamp, timestamp_source = _offer_freshness_timestamp(facts, schema)
+    timestamp, timestamp_source, expiry_state = _offer_freshness_timestamp(
+        facts, schema
+    )
     evidence = {
         "offer": offer,
         "currency": list(dict.fromkeys(currency))[:8],
         "timestamp": timestamp,
         "timestamp_source": timestamp_source,
+        "expiry_state": expiry_state,
     }
     if not offer:
         return RULE_OUTCOME_MISSING, {**evidence, "reason": "offer_state_missing"}
@@ -99,11 +146,13 @@ def check_offer_freshness_signal(facts: dict) -> tuple[str, dict]:
             **evidence,
             "reason": "offer_currency_missing",
         }
-    if not timestamp:
-        return RULE_OUTCOME_MISSING, {
+    if expiry_state == "not_declared":
+        return RULE_OUTCOME_NOT_APPLICABLE, {
             **evidence,
-            "reason": "freshness_signal_missing",
+            "reason": "expiry_not_declared",
         }
+    if expiry_state != "current":
+        return RULE_OUTCOME_MISSING, {**evidence, "reason": expiry_state}
     return RULE_OUTCOME_SATISFIED, evidence
 
 
@@ -124,12 +173,14 @@ def check_product_evidence_facts(facts: dict) -> tuple[str, dict]:
 
 def check_product_brand_identity(facts: dict) -> tuple[str, dict]:
     """Require a product-owned brand or manufacturer identity."""
-    _entity, schema, _commerce = _product_signals(facts)
-    brands = [str(value) for value in schema.get("brand") or () if value]
-    return _present(brands), {"brands": brands[:8]}
+    entity, schema, _commerce = _product_signals(facts)
+    visible = [str(value) for value in entity.get("brand_names") or () if value]
+    declared = [str(value) for value in schema.get("brand") or () if value]
+    brands = list(dict.fromkeys([*visible, *declared]))
+    return _present(brands), {"brands": brands[:8], "visible_brands": visible[:8]}
 
 
-def _listing_signals(facts: dict) -> tuple[bool, int]:
+def _listing_signals(facts: dict) -> tuple[bool, int, bool]:
     headings = facts.get("headings") or {}
     entity = (facts.get("entity") or {}).get("listing") or {}
     commerce = facts.get("commerce") or {}
@@ -138,14 +189,14 @@ def _listing_signals(facts: dict) -> tuple[bool, int]:
         _count(entity.get("distinct_card_list_targets")),
         len(commerce.get("product_cards") or ()),
     )
-    return purpose, item_count
+    return purpose, item_count, bool(entity.get("has_empty_state"))
 
 
 def check_listing_answer_set(
     facts: dict, *, contract: CompositeContract
 ) -> tuple[str, dict]:
     """Require both a collection purpose and a crawlable item set."""
-    purpose, item_count = _listing_signals(facts)
+    purpose, item_count, empty_state = _listing_signals(facts)
     traits = facts.get("page_traits") or ()
     atoms = [
         contract.atom_detail(
@@ -156,8 +207,8 @@ def check_listing_answer_set(
         ),
         contract.atom_detail(
             "item_set",
-            satisfied=bool(item_count),
-            evidence=item_count,
+            satisfied=bool(item_count) or empty_state,
+            evidence={"item_count": item_count, "empty_state": empty_state},
             page_traits=traits,
         ),
     ]
@@ -191,7 +242,7 @@ def _freshness_timestamp(facts: dict) -> tuple[str, str]:
     return "", ""
 
 
-def _offer_freshness_timestamp(facts: dict, schema: dict) -> tuple[str, str]:
+def _offer_freshness_timestamp(facts: dict, schema: dict) -> tuple[str, str, str]:
     validity = next(
         (
             str(value).strip()
@@ -201,16 +252,23 @@ def _offer_freshness_timestamp(facts: dict, schema: dict) -> tuple[str, str]:
         "",
     )
     if validity:
-        return _current_offer_validity(validity), "offer_price_valid_until"
-    return _freshness_timestamp(facts)
+        state = _offer_validity_state(validity, facts.get("audit_time"))
+        return validity[:128], "offer_price_valid_until", state
+    return "", "", "not_declared"
 
 
-def _current_offer_validity(value: str) -> str:
+def _offer_validity_state(value: str, audit_time: object) -> str:
     try:
         valid_until = date.fromisoformat(value[:10])
     except ValueError:
-        return ""
-    return value[:128] if valid_until >= datetime.now(UTC).date() else ""
+        return "invalid_expiry"
+    try:
+        observed_at = datetime.fromisoformat(str(audit_time).replace("Z", "+00:00"))
+    except ValueError:
+        return "audit_time_unavailable"
+    if observed_at.tzinfo is None:
+        observed_at = observed_at.replace(tzinfo=UTC)
+    return "current" if valid_until >= observed_at.astimezone(UTC).date() else "expired"
 
 
 def check_listing_item_facts(facts: dict) -> tuple[str, dict]:
@@ -218,8 +276,14 @@ def check_listing_item_facts(facts: dict) -> tuple[str, dict]:
     cards = (facts.get("commerce") or {}).get("product_cards") or ()
     complete = list(filter(None, map(_listing_item_fact, cards)))
     listing = (facts.get("entity") or {}).get("listing") or {}
-    entity_count = _count(listing.get("distinct_card_list_targets"))
-    item_count = max(len(complete), entity_count)
+    empty_state = bool(listing.get("has_empty_state"))
+    if empty_state and not cards:
+        return RULE_OUTCOME_NOT_APPLICABLE, {
+            "reason": "explicit_empty_collection",
+            "item_fact_count": 0,
+            "items": [],
+        }
+    item_count = len(complete)
     return _present(item_count), {
         "item_fact_count": item_count,
         "items": complete[:12],

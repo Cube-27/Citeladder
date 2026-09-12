@@ -37,7 +37,7 @@ def test_issue_snapshot_separates_card_counts_and_readiness_impact() -> None:
             site_url_id=shared_page,
         ),
         _issue(
-            rule_id="aeo.editorial_lead_present",
+            rule_id="aeo.answer_first",
             finding_class="advisory",
             severity="critical",
             score_roles=["aeo_readiness"],
@@ -74,9 +74,7 @@ def test_issue_snapshot_separates_card_counts_and_readiness_impact() -> None:
     by_rule = {item["rule_id"]: item for item in projection.top_issues}
     assert by_rule["technical.title_present"]["impact_label"] == "High"
     assert by_rule["technical.title_present"]["impact_band"] == 3
-    assert by_rule["aeo.editorial_lead_present"]["impact_label"] == (
-        "Answerability · 20%"
-    )
-    assert by_rule["aeo.editorial_lead_present"]["impact_band"] == 2
+    assert by_rule["aeo.answer_first"]["impact_label"] == ("Answerability · 20%")
+    assert by_rule["aeo.answer_first"]["impact_band"] == 2
     assert by_rule["technical.meta_description_present"]["impact_label"] == ("Advisory")
     assert by_rule["technical.meta_description_present"]["impact_band"] == 0

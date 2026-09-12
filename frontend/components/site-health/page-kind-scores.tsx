@@ -115,12 +115,12 @@ function MeasurementValue({
 }: Readonly<{ score: number | null; coverage: number | null; state: string }>) {
   if (score !== null) {
     const coverageLabel =
-      coverage === null ? 'Coverage unavailable' : `${Math.round(coverage * 100)}% measured`;
+      coverage === null ? 'Completion unavailable' : `${Math.round(coverage * 100)}% complete`;
     return (
       <span className="grid gap-0.5">
         <span>{formatScore(score)}</span>
         <span className={textRole('meta', 'normal-case')}>
-          {coverageLabel} · {measurementConfidence(state)}
+          {coverageLabel} · {measurementCompletion(state)}
         </span>
       </span>
     );
@@ -130,9 +130,9 @@ function MeasurementValue({
   return <UnavailableValue state="not_measured" />;
 }
 
-function measurementConfidence(state: string): string {
-  if (state === 'measured') return 'High confidence';
-  if (state === 'limited_evidence') return 'Moderate confidence';
+function measurementCompletion(state: string): string {
+  if (state === 'measured') return 'Complete checklist';
+  if (state === 'limited_evidence') return 'Partial audit';
   if (state === 'excluded') return 'Excluded';
-  return 'Not measured';
+  return 'Completion unavailable';
 }

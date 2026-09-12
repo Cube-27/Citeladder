@@ -26,8 +26,10 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from types import SimpleNamespace
+from typing import Any
 
-from sqlalchemy import Row, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -69,7 +71,7 @@ from app.domain.site_health.web_fundamentals_projection import (
     web_fundamentals_projection,
 )
 from app.models.site_health.acquisition import SiteFetchAttempt
-from app.models.site_health.analysis import SitePageAnalysis, SiteRuleEvaluation
+from app.models.site_health.analysis import SiteRuleEvaluation
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
 from app.models.site_health.runtime import SiteHealthProfile
@@ -270,7 +272,7 @@ async def _eligibility_projection(
     *,
     crawl: SiteCrawl,
     selected_ids: list[uuid.UUID],
-    analysis_ids: list[uuid.UUID],
+    evaluation_site_url_ids: dict[uuid.UUID, uuid.UUID],
 ) -> tuple[
     str, dict[str, int], list[dict], list[uuid.UUID], list[uuid.UUID], dict[str, int]
 ]:
@@ -314,17 +316,14 @@ async def _eligibility_projection(
         else []
     )
     latest_attempts = _latest_attempt_map(attempts)
-    evaluation_rows: Sequence[Row[tuple[uuid.UUID, SiteRuleEvaluation]]] = ()
-    if analysis_ids:
-        evaluation_rows = (
-            await session.execute(
-                select(SitePageAnalysis.site_url_id, SiteRuleEvaluation)
-                .join(
-                    SiteRuleEvaluation,
-                    SiteRuleEvaluation.analysis_id == SitePageAnalysis.id,
-                )
+    evaluation_rows: list[tuple[uuid.UUID, SiteRuleEvaluation]] = []
+    if evaluation_site_url_ids:
+        source_evaluations = list(
+            await session.scalars(
+                select(SiteRuleEvaluation)
                 .where(
-                    SitePageAnalysis.id.in_(analysis_ids),
+                    SiteRuleEvaluation.workspace_id == crawl.workspace_id,
+                    SiteRuleEvaluation.id.in_(evaluation_site_url_ids),
                     SiteRuleEvaluation.rule_id.in_(
                         (
                             "technical.indexable",
@@ -333,9 +332,13 @@ async def _eligibility_projection(
                         )
                     ),
                 )
-                .order_by(SitePageAnalysis.site_url_id, SiteRuleEvaluation.id)
+                .order_by(SiteRuleEvaluation.id)
             )
-        ).all()
+        )
+        evaluation_rows = [
+            (evaluation_site_url_ids[evaluation.id], evaluation)
+            for evaluation in source_evaluations
+        ]
     indexability: dict[uuid.UUID, SiteRuleEvaluation] = {}
     snippet_access: dict[uuid.UUID, SiteRuleEvaluation] = {}
     crawler_access: SiteRuleEvaluation | None = None
@@ -357,6 +360,34 @@ async def _eligibility_projection(
     gate = _eligibility_gate(totals)
     attempt_ids = sorted((attempt.id for attempt in latest_attempts.values()), key=str)
     return gate, totals, reasons, task_ids, attempt_ids, status_counts
+
+
+def _evaluation_projection(
+    rows: Sequence[Any], evaluation_rows: Sequence[Any]
+) -> tuple[list[uuid.UUID], dict[uuid.UUID, uuid.UUID], list[SimpleNamespace]]:
+    evaluation_ids = [row.id for row in evaluation_rows]
+    evaluation_site_url_ids = {
+        evaluation_id: row.site_url_id
+        for row in rows
+        for evaluation_id in (row.source_evaluation_ids or ())
+    }
+    logical_analysis_by_evaluation = {
+        evaluation_id: row.id
+        for row in rows
+        for evaluation_id in (row.source_evaluation_ids or ())
+    }
+    projected_rows = [
+        SimpleNamespace(
+            **{
+                **dict(row._mapping),
+                "analysis_id": logical_analysis_by_evaluation.get(
+                    row.id, row.analysis_id
+                ),
+            }
+        )
+        for row in evaluation_rows
+    ]
+    return evaluation_ids, evaluation_site_url_ids, projected_rows
 
 
 async def persist_crawl_snapshot(
@@ -420,8 +451,12 @@ async def persist_crawl_snapshot(
         evaluation_rows
     )
     # Issue severity/category rollups for this crawl.
-    evaluation_ids = [row.id for row in evaluation_rows]
-    issues = await build_issue_snapshot(session, crawl=crawl, analysis_ids=analysis_ids)
+    evaluation_ids, evaluation_site_url_ids, projected_evaluation_rows = (
+        _evaluation_projection(rows, evaluation_rows)
+    )
+    issues = await build_issue_snapshot(
+        session, crawl=crawl, evaluation_ids=evaluation_ids
+    )
 
     selected_ids = projection.selected_ids
     selected_url_count = len(selected_ids)
@@ -447,19 +482,20 @@ async def persist_crawl_snapshot(
         session,
         crawl=crawl,
         selected_ids=selected_ids,
-        analysis_ids=analysis_ids,
+        evaluation_site_url_ids=evaluation_site_url_ids,
     )
     web_fundamentals = await web_fundamentals_projection(
         session,
         workspace_id=crawl.workspace_id,
-        analysis_ids=analysis_ids,
+        analysis_ids=[row.id for row in rows],
+        evaluation_ids=evaluation_ids,
         artifact_ids=artifact_ids,
     )
     aeo_readiness_diagnostic = build_snapshot_aeo_readiness_descriptor(
         crawl=crawl,
         aggregate=aggregate,
         coverage_state=coverage.state,
-        evaluations=evaluation_rows,
+        evaluations=projected_evaluation_rows,
         analysis_rows=rows,
         scoring_version=scoring_version,
         analyzer_version=analyzer_version,

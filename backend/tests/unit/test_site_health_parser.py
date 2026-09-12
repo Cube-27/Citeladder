@@ -233,7 +233,7 @@ def test_accessible_names_include_descendant_image_alternatives() -> None:
     assert facts["accessibility"]["controls_missing_accessible_name"] == 0
 
 
-def test_accessible_names_exclude_hidden_naming_descendants() -> None:
+def test_accessible_names_include_directly_referenced_hidden_names() -> None:
     facts = _facts(
         b"""
         <html><body>
@@ -248,7 +248,32 @@ def test_accessible_names_exclude_hidden_naming_descendants() -> None:
     )
 
     assert facts["accessibility"]["control_count"] == 4
-    assert facts["accessibility"]["controls_missing_accessible_name"] == 4
+    assert facts["accessibility"]["controls_missing_accessible_name"] == 3
+
+
+def test_hidden_unreferenced_text_does_not_name_a_control() -> None:
+    facts = _facts(
+        b"<html><body><span hidden>Search</span><input><button></button></body></html>"
+    )
+
+    assert facts["accessibility"]["controls_missing_accessible_name"] == 2
+
+
+def test_hidden_and_template_headings_do_not_enter_visible_outlines() -> None:
+    facts = _facts(
+        b"<html><body><h1>Visible</h1><div hidden><h2>Hidden</h2></div>"
+        b"<template><h3>Template</h3></template></body></html>"
+    )
+
+    assert facts["headings"]["counts"] == {
+        "h1": 1,
+        "h2": 0,
+        "h3": 0,
+        "h4": 0,
+        "h5": 0,
+        "h6": 0,
+    }
+    assert facts["accessibility"]["heading_levels"] == [1]
 
 
 def test_accessible_name_descriptors_are_bounded() -> None:

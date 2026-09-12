@@ -387,6 +387,9 @@ async def _add_issue(
     )
     session.add(evaluation)
     await session.flush()
+    analysis.source_evaluation_ids = [evaluation.id]
+    analysis.source_artifact_ids = [artifact.id]
+    analysis.finalized_at = datetime.now(UTC)
     issue = SiteIssue(
         workspace_id=workspace_id,
         project_id=project_id,

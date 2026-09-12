@@ -167,7 +167,10 @@ def _canonical_intent(
     )
     evidence["canonical_url"] = canonical[:2048]
     evidence["canonical_matches_final_url"] = same
-    return ("intended_index" if same else "intended_exclude"), "canonical_declaration"
+    if same:
+        return "intended_index", "self_canonical"
+    evidence["canonical_intent_ambiguous"] = True
+    return None
 
 
 def _resolve_intent(facts: dict[str, Any], evidence: dict[str, Any]) -> tuple[str, str]:
@@ -180,10 +183,6 @@ def _resolve_intent(facts: dict[str, Any], evidence: dict[str, Any]) -> tuple[st
         return canonical
     if facts.get("sitemap_member") is True:
         return "intended_index", "sitemap_membership"
-    robots = str(facts.get("robots_indexing_policy") or "").strip().lower()
-    if robots in {"index", "exclude"}:
-        intent = "intended_index" if robots == "index" else "intended_exclude"
-        return intent, "robots_evidence"
     return "unknown", "insufficient_evidence"
 
 

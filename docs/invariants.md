@@ -14,11 +14,12 @@ store, prompt resource, content queue, or memory store.
 ## 2. Product policy is configuration
 
 Thresholds, transports, limits, schemas, page kinds, classifier signals,
-capability families, family budgets, trait-conditioned profiles, rule
-applicability, context budgets, models, and templates live under
+public checklist membership, AEO pillar weights, rule applicability, context
+budgets, models, and templates live under
 `backend/app/core/config/*` or the owning frontend config. Services and workers
-do not embed alternate policy. AEO has exactly 11 config-owned families; rule
-count and page-kind cohort size cannot manufacture score influence.
+do not embed alternate policy. A public check has at most one AEO pillar and
+equal weight within that pillar. Rule count and page-kind cohort size cannot
+manufacture score influence.
 
 ## 3. Workspace authorization is mandatory
 
@@ -38,18 +39,22 @@ Analyses, rule evaluations, scores, demand signals, opportunities, briefs,
 prompts, validations, verifications, and agent results reference exact source
 IDs and every relevant extractor, classifier, analyzer, rule, scoring, formula,
 template, provider, and model version. During disposable pre-launch
-development, active semantic versions remain `1`; a semantic change resets the
-development database instead of preserving cross-version history.
+development, active semantic versions remain `1`; semantic changes use a fresh
+disposable database instead of preserving cross-version history. Resetting an
+existing database requires explicit authorization and confirmation that it is
+disposable pre-launch development data. Never reset non-disposable, shared,
+staging or production environments under this policy.
 
 ## 6. Reads are persisted projections
 
 Read endpoints never crawl, sync, classify, score, call a model/provider, or
 silently repair state. Missing evidence stays missing.
 
-Site Health has one active score-summary projection and one immutable terminal
-snapshot projection, both written by the same aggregation owner. Classification
-coverage, AEO measurement coverage, and crawl coverage are distinct persisted
-facts with exact provenance; clients never derive or substitute one for another.
+Site Health active summaries publish progress and completion counts without
+numeric scores. One locked terminalization owner appends the final current page
+analysis revisions and atomically persists the terminal score summary and
+snapshot. Classification coverage, checklist completion, scored-page coverage,
+and crawl coverage are distinct persisted facts with exact provenance.
 
 Measurement comparison requires compatible persisted classification and scored
 page-kind composition provenance. A changed kind set or count by kind remains
@@ -75,16 +80,17 @@ non-excluded supported HTML before page-understanding work begins. Terminal
 under the same denominator.
 
 `other` is classification abstention, not an inferred `WebPage`. It retains
-universal technical evidence but has null page-purpose AEO score and coverage,
-state `not_measured`, and reason `page_purpose_unresolved`. Classified page
-profiles enumerate every capability family as `measured`, `measurement_gap`, or
-`not_applicable`; omission never implies N/A.
+all independently applicable Web checks but has a null page-purpose AEO score
+and coverage with reason `page_purpose_unresolved`. Unsupported classified
+purposes use reason `unsupported_purpose_checklist`; evaluator absence is never
+reported as `not_applicable`.
 
 AEO checkpoint outcomes are exactly `satisfied`, `partial`, `missing`,
 `unknown`, `not_applicable`, or `error`. Unavailable, ambiguous, and conflicting
 evidence remain bounded reasons under `unknown`, not additional AEO outcomes.
 Content-reading expectations on a JS shell preserve this distinction while the
-rendering diagnostic owns the observable delivery limitation.
+rendering diagnostic owns the observable delivery limitation. Public scoring is
+binary: only `satisfied` and `missing` are determinate; `partial` earns no credit.
 
 ## 9. Deterministic code owns measurable facts
 

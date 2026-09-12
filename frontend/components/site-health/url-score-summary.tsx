@@ -18,14 +18,16 @@ export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
         value={detail.aeo_readiness_score}
         coverage={detail.aeo_measurement_coverage}
         state={detail.aeo_measurement_state}
+        reason={detail.aeo_measurement_reason}
       />
       <ScoreTile
-        label="AEO Measurement Coverage"
+        label="AEO Checklist Completion"
         value={
           detail.aeo_measurement_coverage === null ? null : detail.aeo_measurement_coverage * 100
         }
         coverage={detail.aeo_measurement_coverage}
         state={detail.aeo_measurement_state}
+        reason={detail.aeo_measurement_reason}
       />
     </div>
   );
@@ -36,9 +38,16 @@ function ScoreTile({
   value,
   coverage,
   state,
-}: Readonly<{ label: string; value: number | null; coverage: number | null; state: string }>) {
+  reason,
+}: Readonly<{
+  label: string;
+  value: number | null;
+  coverage: number | null;
+  state: string;
+  reason?: string;
+}>) {
   const coverageLabel =
-    coverage === null ? 'Coverage unavailable' : `${Math.round(coverage * 100)}% measured`;
+    coverage === null ? 'Completion unavailable' : `${Math.round(coverage * 100)}% complete`;
   return (
     <div className={`${hairlineBandItemClasses} flex min-h-20 items-center gap-3`}>
       {value === null ? (
@@ -49,7 +58,7 @@ function ScoreTile({
       <div className="grid min-w-0 gap-1">
         <Label>{label}</Label>
         <span className="text-muted text-xs">
-          {coverageLabel} · {scoreConfidenceLabel(state)}
+          {coverageLabel} · {scoreCompletionLabel(state, reason)}
         </span>
       </div>
     </div>
@@ -66,9 +75,10 @@ function scoreUnavailableState(state: string) {
   return <UnavailableValue state="not_measured" />;
 }
 
-function scoreConfidenceLabel(state: string): string {
-  if (state === 'measured') return 'High confidence';
-  if (state === 'limited_evidence') return 'Moderate confidence';
+function scoreCompletionLabel(state: string, reason?: string): string {
+  if (state === 'measured') return 'Complete checklist';
+  if (state === 'limited_evidence') return 'Partial audit';
   if (state === 'excluded') return 'Excluded';
-  return 'Not measured';
+  if (reason === 'unsupported_purpose_checklist') return 'Unsupported purpose checklist';
+  return 'Completion unavailable';
 }

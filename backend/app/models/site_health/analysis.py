@@ -151,6 +151,13 @@ class SitePageAnalysis(Base):
     # Exactly one live row per page within a crawl (see the partial index).
     is_current: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    supersedes_analysis_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey(_FK_SITE_PAGE_ANALYSIS, ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+
     # Source provenance arrays (evaluation + artifact IDs).
     source_evaluation_ids: Mapped[list | None] = mapped_column(
         ARRAY(PGUUID(as_uuid=True)), nullable=True
@@ -229,10 +236,8 @@ class SiteRuleEvaluation(Base):
     outcome: Mapped[str] = mapped_column(String(16), default="")
     display_applicability: Mapped[bool] = mapped_column(Boolean, default=True)
     score_applicability: Mapped[bool] = mapped_column(Boolean, default=False)
-    expected_profile_membership: Mapped[bool] = mapped_column(Boolean, default=False)
     reason_code: Mapped[str] = mapped_column(String(64), default="")
     score_roles: Mapped[list | None] = mapped_column(ARRAY(String(32)), nullable=True)
-    checkpoint_family: Mapped[str] = mapped_column(String(48), default="")
     readiness_dimension: Mapped[str] = mapped_column(String(32), default="")
     readiness_weight: Mapped[float] = mapped_column(Float, default=0.0)
     evidence: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

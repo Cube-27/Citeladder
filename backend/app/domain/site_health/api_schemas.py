@@ -509,12 +509,10 @@ class RuleEvaluation(_Model):
     outcome: RuleOutcome
     display_applicability: bool
     score_applicability: bool
-    expected_profile_membership: bool
+    checklist_membership: bool
     reason_code: str
     score_roles: list[str]
-    checkpoint_family: str
-    readiness_dimension: str
-    readiness_weight: float
+    aeo_pillar: str
     weight: float
     evidence: dict[str, object]
     analyzer_version: str

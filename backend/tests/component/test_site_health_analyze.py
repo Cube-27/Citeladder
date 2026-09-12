@@ -22,6 +22,7 @@ from app.core.config.site_health_acquisition import (
     ERROR_ROBOTS_DENIED,
     FETCH_PURPOSE_DISCOVER,
 )
+from app.core.config.site_health_architecture_rules import ARCHITECTURE_RULE_SPECS
 from app.core.config.site_health_contracts import (
     ANALYSIS_STATUS_CANCELLED,
     ANALYSIS_STATUS_COMPLETED,
@@ -44,9 +45,6 @@ from app.core.config.site_health_crawl_policy import (
 )
 from app.core.config.site_health_rules import SITE_HEALTH_RULES
 from app.core.config.site_health_runtime import site_health_settings
-from app.core.config.site_health_taxonomy import (
-    MIN_MEANINGFUL_WORDS,
-)
 from app.core.config.task_queue import (
     TASK_STATUS_CANCELLED,
     TASK_STATUS_FAILED,
@@ -585,7 +583,8 @@ async def test_cancelled_user_analysis_does_not_penalize_applicable_free_sample(
         assert crawl.analysis_status == ANALYSIS_STATUS_COMPLETED
         assert crawl.status == CRAWL_STATUS_COMPLETED
         assert snapshot.analyzed_url_count == 1
-        assert snapshot.web_fundamentals_score is not None
+        assert snapshot.web_fundamentals_score is None
+        assert snapshot.web_fundamentals_state == "not_measured"
 
 
 @pytest.mark.asyncio
@@ -707,7 +706,7 @@ async def test_reclaimed_analyze_acknowledges_already_persisted_analysis(
         )
         assert task.status == TASK_STATUS_SUCCEEDED
         assert artifacts == 1
-        assert analyses == 1
+        assert analyses == 2
         # The reclaimed analyze task itself must never refetch its own target.
         assert not any(
             req.method == "GET" and req.url.path == "/rich" for req in requests
@@ -727,7 +726,8 @@ async def test_analyze_task_persists_analysis_evaluations_issues_scores(
         analysis = (
             await session.execute(
                 select(SitePageAnalysis).where(
-                    SitePageAnalysis.crawl_id == seed.crawl_id
+                    SitePageAnalysis.crawl_id == seed.crawl_id,
+                    SitePageAnalysis.is_current.is_(True),
                 )
             )
         ).scalar_one()
@@ -745,12 +745,9 @@ async def test_analyze_task_persists_analysis_evaluations_issues_scores(
         eval_count = await session.scalar(
             select(func.count())
             .select_from(SiteRuleEvaluation)
-            .where(SiteRuleEvaluation.analysis_id == analysis.id)
+            .where(SiteRuleEvaluation.id.in_(analysis.source_evaluation_ids or []))
         )
-        # Every canonical catalog entry has exactly one owning phase; the
-        # combined page/finalize/architecture writers therefore emit one row
-        # per rule without a parallel Product catalog.
-        assert eval_count == len(SITE_HEALTH_RULES)
+        assert eval_count == len(SITE_HEALTH_RULES) - len(ARCHITECTURE_RULE_SPECS)
 
         # A rich page passes every rule, so no issues are snapshotted.
         issue_count = await session.scalar(
@@ -815,7 +812,8 @@ async def test_analyze_persists_page_kind_classifier_and_current_versions(
         analysis = (
             await session.execute(
                 select(SitePageAnalysis).where(
-                    SitePageAnalysis.crawl_id == seed.crawl_id
+                    SitePageAnalysis.crawl_id == seed.crawl_id,
+                    SitePageAnalysis.is_current.is_(True),
                 )
             )
         ).scalar_one()
@@ -837,23 +835,8 @@ async def test_analyze_persists_page_kind_classifier_and_current_versions(
         assert evidence["signals"][0]["signal"] == "path_pattern"
         assert evidence["signals"][0]["page_kind"] == "article"
 
-        # facts["page_kind"] reached rule evaluation: the thin-content check
-        # read the per-type (article) minimum, not the v1 global.
-        thin = (
-            await session.execute(
-                select(SiteRuleEvaluation).where(
-                    SiteRuleEvaluation.analysis_id == analysis.id,
-                    SiteRuleEvaluation.rule_id == "technical.thin_content",
-                )
-            )
-        ).scalar_one()
-        assert thin.evidence["page_kind"] == "article"
-        assert thin.evidence["minimum"] == MIN_MEANINGFUL_WORDS
-        # A 140-word article used to be "thin" against a 300-word floor. It is
-        # short, not defective, and the analyzer cannot tell the difference --
-        # so the only thing still reported here is an actually empty page.
-        assert thin.outcome == RULE_OUTCOME_SATISFIED
-        assert thin.evidence["word_count"] >= MIN_MEANINGFUL_WORDS
+        assert analysis.supersedes_analysis_id is not None
+        assert analysis.source_evaluation_ids
 
         # The crawl rollup carries the per-page-type breakdown.
         crawl = await session.get(SiteCrawl, seed.crawl_id)
@@ -863,7 +846,11 @@ async def test_analyze_persists_page_kind_classifier_and_current_versions(
         by_page_kind = summary.get("by_page_kind") or {}
         assert set(by_page_kind) == {"article"}
         assert by_page_kind["article"]["analyzed_count"] == 1
-        assert by_page_kind["article"]["web_fundamentals_score"] is not None
+        assert by_page_kind["article"]["web_fundamentals_score"] is None
+        assert by_page_kind["article"]["web_fundamentals_state"] in {
+            "limited_evidence",
+            "not_measured",
+        }
 
 
 @pytest.mark.asyncio
@@ -890,6 +877,9 @@ async def test_minimal_page_reports_only_observable_issues(
         # Missing optional metadata and merely short copy are advisory or
         # abstained signals. The observable document defects remain issues.
         assert set(issues) == {
+            "technical.canonical_present",
+            "technical.meta_description_present",
+            "aeo.open_graph_present",
             "web.accessibility_document_language",
             "web.mobile_viewport",
         }
@@ -976,9 +966,11 @@ async def test_analyze_injects_site_facts_on_root_analysis_only(
         other_analysis = by_url["https://example.com/a"]
 
         async def _eval(rule_id, analysis_id):
+            analysis = await session.get(SitePageAnalysis, analysis_id)
+            assert analysis is not None
             return await session.scalar(
                 select(SiteRuleEvaluation).where(
-                    SiteRuleEvaluation.analysis_id == analysis_id,
+                    SiteRuleEvaluation.id.in_(analysis.source_evaluation_ids or []),
                     SiteRuleEvaluation.rule_id == rule_id,
                 )
             )
@@ -1125,9 +1117,11 @@ async def test_rerun_from_completed_crawl_worker_analyzes_only_reran_url(
             .scalars()
             .all()
         )
-        assert len(analyses) == 1
-        assert analyses[0].site_url_id == site_url_id
-        assert analyses[0].status == ANALYSIS_STATUS_COMPLETED
+        assert len(analyses) == 2
+        current = next(row for row in analyses if row.is_current)
+        assert current.site_url_id == site_url_id
+        assert current.status == ANALYSIS_STATUS_COMPLETED
+        assert current.supersedes_analysis_id is not None
 
         new_crawl = await session.get(SiteCrawl, new_crawl_id)
         assert new_crawl is not None

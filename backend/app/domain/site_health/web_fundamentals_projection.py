@@ -90,6 +90,7 @@ async def web_fundamentals_projection(
     *,
     workspace_id: uuid.UUID,
     analysis_ids: list[uuid.UUID],
+    evaluation_ids: list[uuid.UUID],
     artifact_ids: list[uuid.UUID],
 ) -> dict:
     """Build the HTTP-evidence projection without acquisition or repair."""
@@ -99,12 +100,12 @@ async def web_fundamentals_projection(
                 select(SiteRuleEvaluation)
                 .where(
                     SiteRuleEvaluation.workspace_id == workspace_id,
-                    SiteRuleEvaluation.analysis_id.in_(analysis_ids),
+                    SiteRuleEvaluation.id.in_(evaluation_ids),
                 )
                 .order_by(SiteRuleEvaluation.id)
             )
         )
-        if analysis_ids
+        if evaluation_ids
         else []
     )
     by_area: dict[str, list[SiteRuleEvaluation]] = {

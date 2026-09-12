@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import select
@@ -299,7 +300,10 @@ async def _seed_scenario(session: AsyncSession, *, email: str) -> Scenario:
                 rule_version="v1",
             )
             session.add(issue)
-            await session.flush()
+            analysis.source_evaluation_ids = [evaluation.id]
+        analysis.source_artifact_ids = [artifact.id]
+        analysis.finalized_at = datetime.now(UTC)
+        await session.flush()
 
     session.add(
         SiteCrawlEvent(
@@ -485,6 +489,9 @@ async def _seed_issue_for_url(
         rule_version="v1",
     )
     session.add(issue)
+    analysis.source_evaluation_ids = [evaluation.id]
+    analysis.source_artifact_ids = [artifact.id]
+    analysis.finalized_at = datetime.now(UTC)
     await session.flush()
     return issue.id
 

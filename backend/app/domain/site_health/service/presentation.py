@@ -11,7 +11,6 @@ of only reachable through a component test with a database.
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable
 from datetime import datetime
 from typing import TypedDict, cast
 
@@ -69,58 +68,11 @@ def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value is not None else None
 
 
-# Rules whose single condition covers OPPOSITE failures need the persisted
-# evidence to say which one happened. Each entry maps a rule to the function
-# that picks its ``display_label_variants`` key; the copy itself stays in the
-# catalog (invariant 1) — only the choice lives here, because only the
-# projection has the evidence in hand.
-def _single_h1_variant(evidence: dict) -> str:
-    """``technical.single_h1`` fails on ``h1_count != 1`` — say which way.
-
-    Returns ``""`` for the PASSING count. Evaluations are projected for every
-    outcome, not just failures, so a selector that split the world into
-    "none"/"multiple" labelled a healthy one-H1 page "More than one H1
-    heading". No variant means the neutral catalog title stands.
-    """
-    count = int(evidence.get("h1_count", 0) or 0)
-    if count == 0:
-        return "none"
-    if count > 1:
-        return "multiple"
-    return ""
-
-
-_LABEL_VARIANT_KEY: dict[str, Callable[[dict], str]] = {
-    "technical.single_h1": _single_h1_variant,
-}
-
-
 def display_label_for(rule_id: str, evidence: dict | None = None) -> str:
-    """Current human-facing catalog title for a rule id (unknown -> rule_id).
-
-    With ``evidence``, a rule that declares ``display_label_variants`` resolves
-    to the variant its evidence selects, so a row reads "Missing H1 heading"
-    rather than the both-cases-at-once "Missing or duplicate H1". Without
-    evidence (or with an unmatched variant) the plain catalog title stands.
-    """
+    """Current catalog title, falling back to the ID for retired or unknown rules."""
+    del evidence
     rule = rule_for(rule_id)
-    if rule is None:
-        return rule_id
-    selector = _LABEL_VARIANT_KEY.get(rule_id)
-    if evidence and selector is not None:
-        try:
-            key = selector(evidence)
-        except (ValueError, TypeError):
-            # Malformed persisted evidence (a non-numeric ``h1_count`` from an
-            # older writer or a hand-edited row) must not decide a LABEL and
-            # must never fail the request: the selectors coerce evidence, and
-            # `int("abc")` raised straight out of a page-detail projection as a
-            # 500. An unreadable variant key is simply no variant.
-            key = ""
-        variant = rule.display_label_variants.get(key)
-        if variant:
-            return variant
-    return rule.display_label
+    return rule.display_label if rule is not None else rule_id
 
 
 # =========================================================================
@@ -536,12 +488,10 @@ def _evaluation_row(evaluation: SiteRuleEvaluation) -> dict:
         "outcome": evaluation.outcome,
         "display_applicability": evaluation.display_applicability,
         "score_applicability": evaluation.score_applicability,
-        "expected_profile_membership": evaluation.expected_profile_membership,
+        "checklist_membership": bool(evaluation.score_roles),
         "reason_code": evaluation.reason_code,
         "score_roles": evaluation.score_roles or [],
-        "checkpoint_family": evaluation.checkpoint_family,
-        "readiness_dimension": evaluation.readiness_dimension,
-        "readiness_weight": evaluation.readiness_weight,
+        "aeo_pillar": evaluation.readiness_dimension,
         "weight": evaluation.weight,
         "evidence": evaluation.evidence or {},
         "analyzer_version": evaluation.analyzer_version,

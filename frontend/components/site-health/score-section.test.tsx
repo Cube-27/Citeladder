@@ -41,7 +41,7 @@ describe('ScoreSection', () => {
     expect(screen.getAllByText(/Excluded/).length).toBeGreaterThan(0);
   });
 
-  it('shows observed scores with subordinate confidence when evidence is limited', () => {
+  it('shows observed scores with explicit checklist completion', () => {
     const dashboard = {
       score_summary: {
         web_fundamentals_score: 73,
@@ -57,8 +57,8 @@ describe('ScoreSection', () => {
 
     expect(screen.getByText('73 / 100')).toBeInTheDocument();
     expect(screen.getByText('61 / 100')).toBeInTheDocument();
-    expect(screen.getByText('60% measured · Limited confidence')).toBeInTheDocument();
-    expect(screen.getByText('70% measured · Limited confidence')).toBeInTheDocument();
+    expect(screen.getByText('60% complete · Partial audit')).toBeInTheDocument();
+    expect(screen.getByText('70% complete · Partial audit')).toBeInTheDocument();
     expect(screen.getByText('70 / 100')).toBeInTheDocument();
   });
 });

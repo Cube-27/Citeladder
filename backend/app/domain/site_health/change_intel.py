@@ -167,22 +167,27 @@ async def _rules(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
-    analysis_ids: list[uuid.UUID],
+    page_rows: list[_PageRow],
 ) -> dict[uuid.UUID, dict[str, SiteRuleEvaluation]]:
-    if not analysis_ids:
+    evaluation_owner = {
+        evaluation_id: row.analysis.id
+        for row in page_rows
+        for evaluation_id in (row.analysis.source_evaluation_ids or ())
+    }
+    if not evaluation_owner:
         return {}
     by_analysis: dict[uuid.UUID, dict[str, SiteRuleEvaluation]] = defaultdict(dict)
     rows = (
         await session.scalars(
             select(SiteRuleEvaluation).where(
                 SiteRuleEvaluation.workspace_id == workspace_id,
-                SiteRuleEvaluation.analysis_id.in_(analysis_ids),
+                SiteRuleEvaluation.id.in_(evaluation_owner),
                 SiteRuleEvaluation.rule_id.in_(set(CHANGE_FIELD_RULES.values())),
             )
         )
     ).all()
     for row in rows:
-        by_analysis[row.analysis_id][row.rule_id] = row
+        by_analysis[evaluation_owner[row.id]][row.rule_id] = row
     return by_analysis
 
 
@@ -247,10 +252,7 @@ async def _pages(
     session: AsyncSession, crawl: SiteCrawl
 ) -> tuple[list[ChangePage], bool]:
     rows, capped = await _page_rows(session, crawl)
-    analysis_ids = [row.analysis.id for row in rows]
-    evaluations = await _rules(
-        session, workspace_id=crawl.workspace_id, analysis_ids=analysis_ids
-    )
+    evaluations = await _rules(session, workspace_id=crawl.workspace_id, page_rows=rows)
     pages = [
         _change_page(
             row,

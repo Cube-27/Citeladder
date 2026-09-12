@@ -400,7 +400,8 @@ async def _analyses_by_page_url(
         (
             await session.execute(
                 select(SitePageAnalysis).where(
-                    SitePageAnalysis.crawl_id == seed.crawl_id
+                    SitePageAnalysis.crawl_id == seed.crawl_id,
+                    SitePageAnalysis.is_current.is_(True),
                 )
             )
         )

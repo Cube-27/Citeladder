@@ -43,6 +43,7 @@ from app.analysis.site_health.fact_source_support import (
     empty_source_support_facts,
     extract_source_support_facts,
 )
+from app.analysis.site_health.heading_facts import extract_heading_facts
 from app.analysis.site_health.robots_directives import (
     extract_robots_directives,
     merge_x_robots_tag,
@@ -157,7 +158,7 @@ def _meta_property_map(root: Any, *, prefix: str) -> dict[str, str]:
     return out
 
 
-def _canonical_href(root: Any) -> str:
+def _canonical_hrefs(root: Any) -> list[str]:
     try:
         nodes = root.xpath(
             "//link[translate(@rel,"
@@ -166,44 +167,14 @@ def _canonical_href(root: Any) -> str:
         )
     except DOM_ERRORS as exc:
         dom_failure("_canonical_href", exc)
-        return ""
+        return []
+    declarations: list[str] = []
     for node in nodes:
         href = (node.get("href") or "").strip()
-        if href:
-            return href[:_MAX_URL_CHARS]
-    return ""
-
-
-def _headings(root: Any) -> dict[str, Any]:
-    """Count h1..h6 and capture bounded h1/h2/h3 text (deterministic order)."""
-    counts: dict[str, int] = {}
-    h1_texts: list[str] = []
-    h2_texts: list[str] = []
-    h3_texts: list[str] = []
-    for level in range(1, 7):
-        tag = f"h{level}"
-        try:
-            nodes = root.xpath(f"//{tag}")
-        except DOM_ERRORS as exc:
-            dom_failure("_headings", exc)
-            nodes = []
-        counts[tag] = len(nodes)
-        if level == 1:
-            for node in nodes[:_MAX_HEADINGS_KEPT]:
-                h1_texts.append(_text(node)[:_MAX_HEADING_CHARS])
-        elif level == 2:
-            for node in nodes[:_MAX_HEADINGS_KEPT]:
-                h2_texts.append(_text(node)[:_MAX_HEADING_CHARS])
-        elif level == 3:
-            for node in nodes[:_MAX_HEADINGS_KEPT]:
-                h3_texts.append(_text(node)[:_MAX_HEADING_CHARS])
-    return {
-        "counts": counts,
-        "h1_count": counts.get("h1", 0),
-        "h1_texts": h1_texts,
-        "h2_texts": h2_texts,
-        "h3_texts": h3_texts,
-    }
+        bounded = href[:_MAX_URL_CHARS]
+        if bounded and bounded not in declarations:
+            declarations.append(bounded)
+    return declarations
 
 
 def _contact_points(root: Any) -> list[dict[str, str]]:
@@ -550,11 +521,17 @@ def _is_declared_non_html(content_type: str) -> bool:
 
 def _empty_facts() -> dict[str, Any]:
     return {
+        "extraction": {
+            "state": "unavailable",
+            "reason": "document_not_observed",
+            "truncated": False,
+        },
         "has_html": False,
         "title": "",
         "meta_description": "",
         "robots": {"noindex": False, "nofollow": False},
         "canonical_url": "",
+        "canonical_declarations": [],
         "open_graph": {},
         "twitter": {},
         "headings": {
@@ -646,6 +623,11 @@ def _blocking_scripts(root: Any) -> int:
 def _extract_document(root: Any, *, final_url: str, settings: Any) -> dict[str, Any]:
     facts = _empty_facts()
     facts["has_html"] = True
+    facts["extraction"] = {
+        "state": "available",
+        "reason": "",
+        "truncated": False,
+    }
     try:
         title_node = next(root.iter("title"), None)
         if title_node is not None:
@@ -654,11 +636,18 @@ def _extract_document(root: Any, *, final_url: str, settings: Any) -> dict[str, 
         dom_failure("_extract_document", exc)
     facts["meta_description"] = _meta_content(root, name="description")
     facts["robots"] = extract_robots_directives(root)
-    facts["canonical_url"] = _canonical_href(root)
+    facts["canonical_declarations"] = _canonical_hrefs(root)
+    facts["canonical_url"] = (
+        facts["canonical_declarations"][0]
+        if len(facts["canonical_declarations"]) == 1
+        else ""
+    )
     facts["open_graph"] = _meta_property_map(root, prefix="og:")
     facts["twitter"] = _meta_property_map(root, prefix="twitter:")
     article_meta = _meta_property_map(root, prefix="article:")
-    facts["headings"] = _headings(root)
+    facts["headings"] = extract_heading_facts(
+        root, max_headings=_MAX_HEADINGS_KEPT, max_chars=_MAX_HEADING_CHARS
+    )
     facts["freshness_context"] = freshness_context_facts(
         final_url=final_url,
         title=str(facts["title"]),
@@ -713,6 +702,11 @@ def _extract_document(root: Any, *, final_url: str, settings: Any) -> dict[str, 
         dom_failure("extract_commerce_facts", exc)
     if _is_js_shell(facts):
         _clear_page_owned_facts(facts)
+        facts["extraction"] = {
+            "state": "unavailable",
+            "reason": "client_rendering_required",
+            "truncated": bool(facts["extraction"].get("truncated")),
+        }
     return facts
 
 
@@ -760,12 +754,15 @@ def extract_page_facts(
     facts["robots"] = merge_x_robots_tag(facts["robots"], header_robots)
 
     if not body:
+        facts["extraction"]["reason"] = "empty_response_body"
         return facts
 
     root = _parse_root(body, charset=charset, settings=settings)
     if root is None:
+        facts["extraction"]["reason"] = "document_parse_failed"
         return facts
     facts.update(_extract_document(root, final_url=final_url, settings=settings))
+    facts["extraction"]["truncated"] = len(body) > settings.max_html_bytes
     facts["extractor_version"] = EXTRACTOR_VERSION
     facts["content_type"] = (content_type or "").strip().lower()
     facts["delivery"] = _delivery_facts(
@@ -784,4 +781,9 @@ def extract_page_facts(
     )
     if _is_declared_non_html(facts["content_type"]):
         _clear_page_owned_facts(facts)
+        facts["extraction"] = {
+            "state": "unavailable",
+            "reason": "unsupported_content_type",
+            "truncated": bool(facts["extraction"].get("truncated")),
+        }
     return facts

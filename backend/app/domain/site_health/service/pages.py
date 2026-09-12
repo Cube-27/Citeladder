@@ -261,7 +261,10 @@ async def _detail_analysis_sections(
     issue_rows = await session.execute(
         select(SiteIssue, SiteRuleEvaluation)
         .join(SiteRuleEvaluation, SiteRuleEvaluation.id == SiteIssue.evaluation_id)
-        .where(SiteIssue.analysis_id == analysis.id)
+        .where(
+            SiteIssue.workspace_id == analysis.workspace_id,
+            SiteIssue.evaluation_id.in_(analysis.source_evaluation_ids or []),
+        )
         .order_by(SiteIssue.created_at.asc(), SiteIssue.id.asc())
     )
     issues = [
@@ -278,7 +281,10 @@ async def _detail_analysis_sections(
     ]
     evaluation_rows = await session.execute(
         select(SiteRuleEvaluation)
-        .where(SiteRuleEvaluation.analysis_id == analysis.id)
+        .where(
+            SiteRuleEvaluation.workspace_id == analysis.workspace_id,
+            SiteRuleEvaluation.id.in_(analysis.source_evaluation_ids or []),
+        )
         .order_by(
             case(
                 _SEVERITY_RANK,

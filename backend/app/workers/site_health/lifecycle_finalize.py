@@ -34,6 +34,7 @@ from app.core.config.site_health_contracts import (
 from app.domain.site_health.coverage import crawl_coverage
 from app.domain.site_health.normalization import canonical_identity, canonical_or_empty
 from app.domain.site_health.snapshot import persist_crawl_snapshot
+from app.domain.site_health.terminal_analysis import publish_final_page_analyses
 from app.models.site_health.acquisition import SiteFetchArtifact
 from app.models.site_health.analysis import (
     SiteIssue,
@@ -301,6 +302,7 @@ class CrawlFinalizeMixin:
             artifact_by_analysis=artifact_by_analysis,
             site_url_by_analysis=site_url_by_analysis,
         )
+        await publish_final_page_analyses(session, crawl=crawl)
 
     async def _load_latest_analyses(
         self, session: AsyncSession, *, crawl: SiteCrawl
@@ -562,10 +564,8 @@ class CrawlFinalizeMixin:
                     outcome=ev.outcome,
                     display_applicability=ev.display_applicability,
                     score_applicability=ev.score_applicability,
-                    expected_profile_membership=ev.expected_profile_membership,
                     reason_code=ev.reason_code,
                     score_roles=list(ev.score_roles),
-                    checkpoint_family=ev.checkpoint_family,
                     readiness_dimension=ev.readiness_dimension,
                     readiness_weight=ev.readiness_weight,
                     evidence=ev.evidence,
