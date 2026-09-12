@@ -53,6 +53,7 @@ from app.core.config.integrations_transport import (
     is_ga4_property_ref,
     normalize_ga4_property_ref,
 )
+from app.domain.integrations.history_window import resolve_history_window_days
 from app.domain.integrations.schemas import IntegrationPropertyMappingResponse
 from app.domain.integrations.service import get_connection
 from app.domain.integrations.sync import (
@@ -222,28 +223,31 @@ async def create_mapping(
         project=project,
     )
     if provider in INTEGRATION_PROPERTY_DISCOVERY_PROVIDERS:
-        # Point the connection at the property this mapping selects. The
-        # sync worker fetches from ``connection.account_ref`` and derivation
-        # then resolves THAT ref back through this mapping, so the two must
-        # agree or the run either fetches nothing (an empty ref — the
-        # provider 400s) or lands rows derivation cannot attribute.
-        # Because the worker resolves exactly ONE property per connection,
-        # selecting a property REPLACES the previous one: any other active
-        # mapping on this connection is retired in the same transaction.
-        # The active-owner index is keyed on
-        # (workspace, provider, property_ref), so it does not enforce this
-        # cardinality — without the retirement a "Change" would leave the
-        # old mapping active while account_ref moved on, and that stale row
-        # claims to own a property nothing will ever sync again.
+        # Selecting a property REPLACES the previous one FOR THIS PROJECT:
+        # the other active mapping this project holds on this connection is
+        # retired in the same transaction. The active-owner index is keyed on
+        # (workspace, provider, property_ref), so it does not enforce that
+        # cardinality — without the retirement a "Change" would leave a stale
+        # row claiming to own a property nothing will ever sync again.
+        #
+        # Scoped by project_id: one authorized connection can serve several
+        # projects, each with its own property. Retiring by connection alone
+        # meant mapping project B's property silently disabled project A's
+        # mapping and stopped A syncing, with no error anywhere.
         await session.execute(
             update(IntegrationPropertyMapping)
             .where(
                 IntegrationPropertyMapping.connection_id == connection.id,
+                IntegrationPropertyMapping.project_id == project.id,
                 IntegrationPropertyMapping.status == MAPPING_STATUS_ACTIVE,
                 IntegrationPropertyMapping.property_ref != canonical_ref,
             )
             .values(status=MAPPING_STATUS_DISABLED)
         )
+        # ``account_ref`` is now only the most recently selected property,
+        # kept for display and for the property picker's default. The sync
+        # path reads each run's frozen ``property_ref`` instead, so this
+        # value moving no longer redirects anyone's import.
         connection.account_ref = canonical_ref
     mapping = IntegrationPropertyMapping(
         workspace_id=workspace_id,
@@ -269,7 +273,13 @@ async def create_mapping(
     # selecting a property fails, and it is a no-op when this connection has
     # been backfilled before.
     await enqueue_history_backfill(
-        session, workspace_id=workspace_id, connection_id=connection.id
+        session,
+        workspace_id=workspace_id,
+        connection_id=connection.id,
+        project_id=project.id,
+        window_days=await resolve_history_window_days(
+            session, workspace_id=workspace_id
+        ),
     )
     return _to_mapping_response(mapping)
 

@@ -156,10 +156,33 @@ over already-persisted evidence, is idempotent on `(project, window)`, skips a
 window already projected, and syncs no provider, refreshes no Demand snapshot,
 and enqueues no opportunity or verification work.
 
+A sync run targets a property MAPPING, not a connection. `enqueue_sync_run`
+resolves the active mapping and freezes `mapping_id`, `property_ref`, and
+`project_id` onto the run; the fetch, resume, artifacts, and derivation all
+read those frozen columns rather than the mutable `connection.account_ref`.
+A connection with no selected property has nothing to enqueue, and one
+authorized connection can carry an active mapping per project, so the
+dispatcher and the project-level fan-out iterate mappings. A mapping retired
+mid-flight fails its in-flight runs; it never relabels rows already fetched.
+
+`resync_seq` is the data revision stamped on every metric row a run derives,
+allocated monotonically per CONNECTION rather than per window. Window-scoped
+allocation gave overlapping windows the same revision, so their shared days
+collided on the metric-row identity and the later import was discarded — the
+trailing sync and the `sync_late_data_revision_days` pass overlap by
+construction, so Search Console's revisions never landed. Every reader
+resolves a metric identity by taking its highest `resync_seq` and never sums
+across revisions. A day the provider stops returning keeps its last observed
+value: absence from a later import is truncation, not a measurement of zero.
+
 On-demand sync windows are INCREMENTAL: `enqueue_sync_run` resolves an absent
-window from what the connection has already imported, pulled back by
-`sync_late_data_revision_days` so Search Console's revisions to recent days are
-re-read at a bumped `resync_seq` instead of frozen at first-seen values.
+window from what that TARGET has already imported, pulled back by
+`sync_late_data_revision_days` so revisions to recent days are re-read at a
+higher `resync_seq` instead of frozen at first-seen values. History is bought
+once per (project, property): a target with a prior backfill is resumed from
+the runs on record — only missing or failed chunks — while a different
+property gets its own history. How much history is the resolved
+`history_window` entitlement, defaulting to 30 days when no grant resolves.
 
 Demand owns the bounded query-evidence projection consumed by its detectors.
 The existing post-GSC Demand queue builds it before `DemandSignal` computation

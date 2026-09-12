@@ -36,6 +36,14 @@ account summaries -- so no property ref is ever hand-typed.
 - queued, idempotent sync runs with append-only import artifacts;
 - versioned derivation into normalized metric rows;
 - project/workspace authorization and property mapping;
+- sync runs targeted at a property MAPPING, frozen at enqueue, so a property
+  re-selection can never relabel rows already fetched and two projects on one
+  authorized connection sync independently;
+- data revisions (`resync_seq`) allocated per connection, so OVERLAPPING import
+  windows produce comparable revisions and the later read of a shared day
+  supersedes the earlier one instead of colliding with it;
+- history bought once per (project, property), resumed rather than re-imported,
+  and bounded by the resolved `history_window` entitlement;
 - persisted Traffic, page/query, referral, and analytics projections;
 - revision-aware snapshots and explicit null/zero semantics;
 - read routes that do not perform provider I/O.

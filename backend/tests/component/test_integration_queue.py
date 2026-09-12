@@ -12,6 +12,7 @@ extension, and the sweeper returning expired leases to ``retry_wait`` (or
 from __future__ import annotations
 
 import asyncio
+import itertools
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
@@ -21,6 +22,7 @@ from sqlalchemy import update
 from app.core.config.integrations_clients import (
     INTEGRATION_QUEUE_SPEC,
 )
+from app.core.config.integrations_contracts import MAPPING_STATUS_ACTIVE
 from app.core.config.integrations_settings import (
     integration_settings,
 )
@@ -39,18 +41,28 @@ from app.core.config.task_queue import (
 from app.models.integrations import (
     IntegrationConnection,
     IntegrationOAuthGrant,
+    IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
+from app.models.project import Project
 from app.models.workspace import Workspace
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 
 _WINDOW = (date(2026, 7, 20), date(2026, 7, 22))
+# Monotonic revision source for seeded rows (unique per connection).
+_SEQ = itertools.count()
 
 
 async def _seed_connection(db_session) -> tuple[uuid.UUID, IntegrationConnection]:
     workspace = Workspace(name="Acme")
     db_session.add(workspace)
     await db_session.flush()
+    project = Project(
+        workspace_id=workspace.id,
+        name="Acme site",
+        website_url="https://example.com",
+    )
+    db_session.add(project)
     grant = IntegrationOAuthGrant(
         workspace_id=workspace.id,
         transport=INTEGRATION_TRANSPORT_GOOGLE,
@@ -66,7 +78,20 @@ async def _seed_connection(db_session) -> tuple[uuid.UUID, IntegrationConnection
         account_ref="https://example.com",
     )
     db_session.add(connection)
+    await db_session.flush()
+    mapping = IntegrationPropertyMapping(
+        workspace_id=workspace.id,
+        connection_id=connection.id,
+        provider=INTEGRATION_PROVIDER_GSC,
+        property_ref="https://example.com",
+        project_id=project.id,
+        status=MAPPING_STATUS_ACTIVE,
+    )
+    db_session.add(mapping)
     await db_session.commit()
+    # The queue tests only care about lease/claim mechanics, but a run still
+    # carries its frozen target, so the factory needs one.
+    connection._test_mapping = mapping
     return workspace.id, connection
 
 
@@ -78,11 +103,19 @@ def _run_row(
     available_at: datetime | None = None,
     status: str = TASK_STATUS_QUEUED,
     window: tuple[date, date] = _WINDOW,
-    resync_seq: int = 0,
+    resync_seq: int | None = None,
 ) -> IntegrationSyncRun:
+    mapping = connection._test_mapping
+    if resync_seq is None:
+        # Revisions are unique per connection, so each seeded run takes the
+        # next one rather than every row claiming revision 0.
+        resync_seq = next(_SEQ)
     return IntegrationSyncRun(
         connection_id=connection.id,
         workspace_id=connection.workspace_id,
+        mapping_id=mapping.id,
+        property_ref=mapping.property_ref,
+        project_id=mapping.project_id,
         sync_kind="scheduled",
         window_start=window[0],
         window_end=window[1],

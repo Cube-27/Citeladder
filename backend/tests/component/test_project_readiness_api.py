@@ -13,6 +13,7 @@ from datetime import date
 
 import httpx
 import pytest
+from sqlalchemy import func, select
 
 from app.core.config.integrations_contracts import (
     BACKFILL_STATE_COMPLETE,
@@ -151,14 +152,33 @@ async def _seed_backfill_run(
     window: tuple[date, date],
     status: str,
 ) -> None:
+    mapping = (
+        await db_session.scalars(
+            select(IntegrationPropertyMapping).where(
+                IntegrationPropertyMapping.connection_id == connection_id,
+                IntegrationPropertyMapping.status == MAPPING_STATUS_ACTIVE,
+            )
+        )
+    ).one()
+    # Revisions are unique per connection.
+    next_seq = (
+        await db_session.scalar(
+            select(func.coalesce(func.max(IntegrationSyncRun.resync_seq), -1)).where(
+                IntegrationSyncRun.connection_id == connection_id
+            )
+        )
+    ) + 1
     db_session.add(
         IntegrationSyncRun(
             workspace_id=workspace_id,
             connection_id=connection_id,
+            mapping_id=mapping.id,
+            property_ref=mapping.property_ref,
+            project_id=mapping.project_id,
             sync_kind=SYNC_KIND_BACKFILL,
             window_start=window[0],
             window_end=window[1],
-            resync_seq=0,
+            resync_seq=next_seq,
             idempotency_key=uuid.uuid4().hex,
             status=status,
         )

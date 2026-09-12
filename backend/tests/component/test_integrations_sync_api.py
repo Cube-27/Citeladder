@@ -18,6 +18,7 @@ import httpx
 import pytest
 from sqlalchemy import select
 
+from app.core.config.integrations_contracts import MAPPING_STATUS_ACTIVE
 from app.core.config.integrations_settings import (
     integration_settings,
 )
@@ -26,8 +27,10 @@ from app.models.integrations import (
     IntegrationConnection,
     IntegrationImportArtifact,
     IntegrationOAuthGrant,
+    IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
+from app.models.project import Project
 from app.models.workspace import Workspace
 from tests.component.auth_helpers import register_and_login as _register
 
@@ -79,6 +82,12 @@ async def _seed_grant(
     )
     db_session.add(grant)
     await db_session.flush()
+    project = Project(
+        workspace_id=workspace_id,
+        name="Acme site",
+        website_url="https://acme.example",
+    )
+    db_session.add(project)
     connections = [
         IntegrationConnection(
             workspace_id=workspace_id,
@@ -90,8 +99,32 @@ async def _seed_grant(
         for provider in providers
     ]
     db_session.add_all(connections)
+    await db_session.flush()
+    # Each connection needs its selected property: a run imports a property,
+    # not a connection.
+    db_session.add_all(
+        IntegrationPropertyMapping(
+            workspace_id=workspace_id,
+            connection_id=connection.id,
+            provider=connection.provider,
+            property_ref=connection.account_ref,
+            project_id=project.id,
+            status=MAPPING_STATUS_ACTIVE,
+        )
+        for connection in connections
+    )
     await db_session.commit()
     return grant, connections
+
+
+async def _mapping_for(db_session, connection_id: uuid.UUID):
+    return (
+        await db_session.scalars(
+            select(IntegrationPropertyMapping).where(
+                IntegrationPropertyMapping.connection_id == connection_id
+            )
+        )
+    ).one()
 
 
 async def _complete_run(db_session, run_id: str) -> None:
@@ -396,17 +429,22 @@ async def _seed_backfill_runs(
 ) -> None:
     """One backfill run per status, each covering its own 28-day window."""
     end = date(2026, 7, 31)
+    mapping = await _mapping_for(db_session, connection_id)
     for index, status in enumerate(statuses):
         window_end = end - timedelta(days=28 * index)
         db_session.add(
             IntegrationSyncRun(
                 workspace_id=workspace_id,
                 connection_id=connection_id,
+                mapping_id=mapping.id,
+                property_ref=mapping.property_ref,
+                project_id=mapping.project_id,
                 sync_kind="backfill",
                 status=status,
                 window_start=window_end - timedelta(days=27),
                 window_end=window_end,
-                resync_seq=0,
+                # resync_seq is unique per connection.
+                resync_seq=index,
                 idempotency_key=f"backfill:{connection_id}:{window_end}",
             )
         )

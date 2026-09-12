@@ -99,6 +99,10 @@ ERROR_SYNC_WINDOW_INVALID: Final = "sync_window_invalid"
 
 ERROR_SYNC_ACTIVE_WINDOW_CONFLICT: Final = "sync_active_window_conflict"
 
+# No single property mapping to import for: none selected yet, or the
+# connection serves several projects and the caller named none.
+ERROR_SYNC_TARGET_UNRESOLVED: Final = "sync_target_unresolved"
+
 ERROR_PAYLOAD_TOO_LARGE: Final = "payload_too_large"
 
 ERROR_MAPPING_PROVIDER_MISMATCH: Final = "mapping_provider_mismatch"

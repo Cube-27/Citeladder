@@ -27,7 +27,6 @@ from app.domain.site_health.normalization import url_hash
 from app.models.demand import QueryEvidenceRow, QueryEvidenceSnapshot
 from app.models.integrations import (
     IntegrationImportArtifact,
-    IntegrationPropertyMapping,
 )
 from app.models.site_health.urls import SiteUrl
 from tests.component.analytics_helpers import (
@@ -205,15 +204,8 @@ async def test_zero_row_artifact_window_is_filtered_before_limit(
         "start_date": _WINDOW[0].isoformat(),
         "end_date": _WINDOW[1].isoformat(),
     }
-    db_session.add(
-        IntegrationPropertyMapping(
-            workspace_id=workspace_id,
-            connection_id=matching.connection_id,
-            provider=INTEGRATION_PROVIDER_GSC,
-            property_ref=seed.property_ref,
-            project_id=project_id,
-        )
-    )
+    # The import seeding already owns the ACTIVE mapping for this property
+    # (one owner per workspace/provider/property), so none is added here.
     db_session.add(
         IntegrationImportArtifact(
             workspace_id=workspace_id,

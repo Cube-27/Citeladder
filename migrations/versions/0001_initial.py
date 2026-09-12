@@ -1721,6 +1721,10 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("connection_id", sa.UUID(), nullable=False),
         sa.Column("workspace_id", sa.UUID(), nullable=False),
+        # Frozen sync target: what this run imports, captured at enqueue.
+        sa.Column("mapping_id", sa.UUID(), nullable=False),
+        sa.Column("property_ref", sa.String(length=512), nullable=False),
+        sa.Column("project_id", sa.UUID(), nullable=False),
         sa.Column("sync_kind", sa.String(length=16), nullable=False),
         sa.Column("window_start", sa.Date(), nullable=False),
         sa.Column("window_end", sa.Date(), nullable=False),
@@ -1746,17 +1750,17 @@ def upgrade() -> None:
             name="fk_integration_sync_run_connection_scoped",
             ondelete="CASCADE",
         ),
+        sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id"),
+        # resync_seq is allocated per CONNECTION (not per window), so the
+        # connection plus the revision is the run's data identity.
         sa.UniqueConstraint(
             "connection_id",
-            "sync_kind",
-            "window_start",
-            "window_end",
             "resync_seq",
-            name="uq_integration_sync_run_window_seq",
+            name="uq_integration_sync_run_connection_seq",
         ),
         sa.UniqueConstraint(
             "idempotency_key", name="uq_integration_sync_run_idempotency_key"
@@ -1765,14 +1769,28 @@ def upgrade() -> None:
             "workspace_id", "id", name="uq_integration_sync_runs_ws_id"
         ),
     )
+    # Keyed on the MAPPING: one connection can serve several projects, whose
+    # imports of the same window are independent and must not dedup together.
     op.create_index(
         "ix_integration_sync_runs_active_window",
         "integration_sync_runs",
-        ["connection_id", "sync_kind", "window_start", "window_end"],
+        ["mapping_id", "sync_kind", "window_start", "window_end"],
         unique=True,
         postgresql_where=sa.text(
             "status IN ('leased', 'queued', 'retry_wait', 'running')"
         ),
+    )
+    op.create_index(
+        op.f("ix_integration_sync_runs_mapping_id"),
+        "integration_sync_runs",
+        ["mapping_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_integration_sync_runs_project_id"),
+        "integration_sync_runs",
+        ["project_id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_integration_sync_runs_available_at"),

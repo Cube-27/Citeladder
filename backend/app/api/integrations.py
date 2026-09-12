@@ -43,6 +43,7 @@ from app.core.config.integrations_contracts import (
     ERROR_OAUTH_STATE_INVALID,
     ERROR_PROPERTY_DISCOVERY_UNSUPPORTED,
     ERROR_SYNC_ACTIVE_WINDOW_CONFLICT,
+    ERROR_SYNC_TARGET_UNRESOLVED,
     ERROR_SYNC_WINDOW_INVALID,
     SYNC_KIND_ON_DEMAND,
 )
@@ -93,6 +94,8 @@ from app.domain.integrations.service import (
 from app.domain.integrations.sync import (
     ActiveWindowConflictError,
     SyncRunNotFoundError,
+    SyncTargetAmbiguousError,
+    SyncTargetUnmappedError,
     SyncWindowInvalidError,
     enqueue_sync_run,
     get_backfill_progress,
@@ -352,19 +355,31 @@ async def enqueue_sync_endpoint(
     No body → the config default trailing window; an explicit window body is
     validated and clamped to the backfill budget. A run for the same window
     that is still active is a 409 (spec §5); a completed window re-syncs
-    with a bumped ``resync_seq``.
+    with a bumped ``resync_seq``. A connection with no selected property, or
+    one serving several projects without ``project_id``, is also a 409 —
+    there is no single target to import.
     """
     try:
         run = await enqueue_sync_run(
             session,
             workspace_id=ctx.workspace_id,
             connection_id=connection_id,
+            project_id=payload.project_id if payload else None,
             sync_kind=SYNC_KIND_ON_DEMAND,
             window_start=payload.window_start if payload else None,
             window_end=payload.window_end if payload else None,
         )
     except IntegrationConnectionNotFoundError as exc:
         raise_not_found(_RES_CONNECTION, cause=exc)
+    except (SyncTargetUnmappedError, SyncTargetAmbiguousError) as exc:
+        raise_api_error(
+            status.HTTP_409_CONFLICT,
+            "Select a property for this project before syncing",
+            code=ERROR_SYNC_TARGET_UNRESOLVED,
+            details={"error": ERROR_SYNC_TARGET_UNRESOLVED},
+            detail={"error": ERROR_SYNC_TARGET_UNRESOLVED},
+            cause=exc,
+        )
     except SyncWindowInvalidError as exc:
         raise_api_error(
             status.HTTP_422_UNPROCESSABLE_CONTENT,

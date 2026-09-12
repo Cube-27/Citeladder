@@ -4,11 +4,13 @@ A pure PROJECTION invoked by the integrations worker after the raw import
 lands — never a second provider fetch (invariant 7), and this module is the
 single writer of ``IntegrationMetricRow`` (invariant 3).
 
-- **Mapping resolution** — the run's property (the connection's
-  ``account_ref``) is resolved through the ACTIVE
-  ``IntegrationPropertyMapping`` to its ``project_id``; an unmapped property
-  fails the run with ``unmapped_property`` and is NEVER guessed
-  (spec §4 step 5).
+- **Mapping resolution** — the run's FROZEN ``property_ref`` (captured at
+  enqueue, never re-read from the mutable ``connection.account_ref``) is
+  resolved through the ACTIVE ``IntegrationPropertyMapping`` to its
+  ``project_id``; an unmapped property fails the run with
+  ``unmapped_property`` and is NEVER guessed (spec §4 step 5). Resolving from
+  the live connection instead would attribute rows fetched for property A to
+  property B whenever the picker moved the connection mid-flight.
 - **Transform** — every artifact payload row becomes one
   ``IntegrationMetricRow`` carrying the full provenance triple
   (invariant 4): ``source_artifact_id`` + ``INTEGRATION_IMPORTER_VERSION``
@@ -33,6 +35,17 @@ single writer of ``IntegrationMetricRow`` (invariant 3).
   identity tuple, so a retried derivation (resume-after-crash) is a dedup
   no-op, never an overwrite. A re-sync writes NEW rows at the higher
   ``resync_seq``; old revisions are retained.
+
+``resync_seq`` is allocated per CONNECTION (``sync._next_resync_seq``), not
+per window, so two runs whose windows overlap get comparable revisions on the
+days they share and the later import wins. Readers resolve an identity by
+taking its highest ``resync_seq`` and never sum across revisions.
+
+A day the provider stops returning KEEPS its last observed value. Absence
+from a later import is provider truncation, sampling, or a shortened
+retention window — it is not a claim that the day had no traffic, and this
+module will not manufacture one (invariant 4). Deleting or zeroing such a row
+would turn a gap in observation into a measurement.
 """
 
 from __future__ import annotations
@@ -215,18 +228,31 @@ async def derive_run(
 ) -> DerivedRun:
     """Derive one run's metric rows inside the caller's transaction.
 
-    Resolves the active property mapping (raising ``UnmappedPropertyError``
-    when absent), transforms every artifact's rows, and inserts them
-    conflict-safely on the identity tuple. The caller (the integrations
-    worker) owns the transaction boundary + the run-row lock and performs
-    the C5 ``enqueue_post_sync_projections`` call as the final step.
+    Resolves the run's FROZEN property to its active mapping (raising
+    ``UnmappedPropertyError`` when the mapping has since been retired),
+    transforms every artifact's rows, and inserts them conflict-safely on the
+    identity tuple. The caller (the integrations worker) owns the transaction
+    boundary + the run-row lock and performs the C5
+    ``enqueue_post_sync_projections`` call as the final step.
+
+    ``connection`` supplies only the provider. The property comes from the
+    run: a re-selection during the fetch must fail this run, never silently
+    re-attribute the rows it already fetched.
     """
     mapping = await resolve_active_mapping(
         session,
         workspace_id=run.workspace_id,
         provider=connection.provider,
-        property_ref=connection.account_ref,
+        property_ref=run.property_ref,
     )
+    if mapping.id != run.mapping_id or mapping.project_id != run.project_id:
+        # The property is still mapped, but to a different owner than the one
+        # this run was enqueued for. Attributing the rows to the new owner
+        # would be a guess about data fetched under the old binding.
+        raise UnmappedPropertyError(
+            f"run {run.id} targeted mapping {run.mapping_id}; "
+            f"{run.property_ref!r} is now owned by {mapping.id}"
+        )
     values: list[dict[str, Any]] = []
     for artifact in artifacts:
         template = INTEGRATION_DATASET_TEMPLATES.get(artifact.dataset)

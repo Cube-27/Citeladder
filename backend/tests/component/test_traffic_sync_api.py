@@ -188,7 +188,12 @@ async def test_sync_fans_out_one_run_per_active_mapped_connection(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """GSC (with TWO mapped properties) + GA4 -> exactly two runs (C3)."""
+    """GSC (with TWO mapped properties) + GA4 -> three runs, one per property.
+
+    A connection with two mapped properties holds two independent imports.
+    Collapsing them into one run left whichever property the connection last
+    pointed at as the only one that ever synced.
+    """
     await _register(client, "traffic-sync-fanout@example.com")
     project_id, workspace_id = await _create_project(client)
     async with session_factory() as session:
@@ -206,7 +211,7 @@ async def test_sync_fans_out_one_run_per_active_mapped_connection(
             provider=INTEGRATION_PROVIDER_GA4,
         )
         # Two ACTIVE mappings on the SAME GSC connection (different
-        # properties): the run fan-out is per CONNECTION, not per mapping.
+        # properties): the run fan-out is per MAPPED PROPERTY.
         await _seed_mapping(
             session,
             workspace_id=uuid.UUID(workspace_id),
@@ -233,21 +238,27 @@ async def test_sync_fans_out_one_run_per_active_mapped_connection(
     resp = await client.post(f"/api/v1/projects/{project_id}/performance/sync")
     assert resp.status_code == 202
     body = resp.json()
-    # The contract-C3 bare array: strict shape, one entry per connection.
+    # The contract-C3 bare array: strict shape, one entry per mapped property.
     assert isinstance(body, list)
-    assert len(body) == 2
+    assert len(body) == 3
     for item in body:
         assert set(item) == _SYNC_ENQUEUE_KEYS
         assert item["status"] == "queued"
     assert {item["connection_id"] for item in body} == {str(gsc.id), str(ga4.id)}
     sync_ids = {item["sync_run_id"] for item in body}
-    assert len(sync_ids) == 2
+    assert len(sync_ids) == 3
 
     # The runs are really queued: on-demand, workspace-scoped, default
     # trailing window (complete UTC days ending yesterday).
     async with session_factory() as session:
         runs = list((await session.scalars(select(IntegrationSyncRun))).all())
-    assert len(runs) == 2
+    assert len(runs) == 3
+    # Each run froze the distinct property it imports.
+    assert {run.property_ref for run in runs} == {
+        "https://example.com/",
+        "https://blog.example.com/",
+        "properties/123456789",
+    }
     expected_end = datetime.now(UTC).date() - timedelta(days=1)
     expected_start = expected_end - timedelta(
         days=integration_settings.sync_default_window_days - 1
@@ -426,7 +437,7 @@ async def test_sync_passes_through_to_integrations_enqueue(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The endpoint performs NO fetch itself: it calls the integrations
-    enqueue once per fanned-out connection with the pinned call contract."""
+    enqueue once per fanned-out TARGET with the pinned call contract."""
     await _register(client, "traffic-sync-passthrough@example.com")
     project_id, workspace_id = await _create_project(client)
     async with session_factory() as session:
@@ -476,14 +487,18 @@ async def test_sync_passes_through_to_integrations_enqueue(
     resp = await client.post(f"/api/v1/projects/{project_id}/performance/sync")
     assert resp.status_code == 202
     body = resp.json()
-    # One enqueue call per fanned-out connection, pinned call contract:
-    # workspace + connection + the on-demand kind, no explicit window.
+    # One enqueue call per fanned-out target, pinned call contract:
+    # workspace + connection + mapping + the on-demand kind, no window.
     assert len(calls) == 2
     for call in calls:
         assert call["workspace_id"] == uuid.UUID(workspace_id)
         assert call["sync_kind"] == SYNC_KIND_ON_DEMAND
-        assert call["extra"] == {}
+        # The target is named explicitly: one connection can hold several
+        # mapped properties, so the connection alone is not the target.
+        assert set(call["extra"]) == {"mapping_id"}
+        assert call["extra"]["mapping_id"] is not None
     assert {call["connection_id"] for call in calls} == {gsc.id, ga4.id}
+    assert len({call["extra"]["mapping_id"] for call in calls}) == 2
     # The exact bare-array C3 shape over the fake run identities.
     assert len(body) == 2
     for item in body:

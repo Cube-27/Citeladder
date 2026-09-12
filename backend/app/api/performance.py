@@ -47,6 +47,8 @@ from app.domain.integrations.schemas import (
 )
 from app.domain.integrations.sync import (
     ActiveWindowConflictError,
+    SyncTargetAmbiguousError,
+    SyncTargetUnmappedError,
     enqueue_sync_run,
 )
 from app.domain.projects.service import ProjectNotFoundError, get_project
@@ -64,7 +66,7 @@ from app.domain.traffic.schemas import (
     PerformanceRangeTaskResponse,
     PerformanceTablePage,
 )
-from app.domain.traffic.service import list_traffic_sync_connections
+from app.domain.traffic.service import list_traffic_sync_targets
 from app.models.analytics import AnalyticsTask
 
 router = APIRouter(prefix="/projects", tags=["performance"])
@@ -292,18 +294,23 @@ async def sync_performance_endpoint(
     fan-out is never invisible.
     """
     await _get_project_or_404(session, ctx.workspace_id, project_id)
-    connections = await list_traffic_sync_connections(
+    targets = await list_traffic_sync_targets(
         session, workspace_id=ctx.workspace_id, project_id=project_id
     )
     enqueued: list[IntegrationSyncEnqueueResponse] = []
-    for connection in connections:
+    for target in targets:
         try:
             run = await enqueue_sync_run(
                 session,
                 workspace_id=ctx.workspace_id,
-                connection_id=connection.id,
+                connection_id=target.connection_id,
+                mapping_id=target.id,
                 sync_kind=SYNC_KIND_ON_DEMAND,
             )
+        except (SyncTargetUnmappedError, SyncTargetAmbiguousError):
+            # Retired between the listing and the enqueue. Nothing to sync
+            # for it; the rest of the fan-out still runs.
+            continue
         except ActiveWindowConflictError as exc:
             conflict = {
                 "error": ERROR_SYNC_ACTIVE_WINDOW_CONFLICT,

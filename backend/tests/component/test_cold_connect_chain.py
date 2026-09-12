@@ -21,6 +21,7 @@ import uuid
 from datetime import date, timedelta
 
 import pytest
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config.integrations_contracts import (
@@ -86,8 +87,19 @@ async def _map_and_complete_backfill(
     property_ref: str,
 ) -> None:
     """What a finished first connect leaves behind: a mapping and a done import."""
-    session.add(
-        IntegrationPropertyMapping(
+    # One ACTIVE owner per (workspace, provider, property), so reuse the
+    # mapping the import seeding already created rather than duplicating it.
+    mapping = (
+        await session.scalars(
+            select(IntegrationPropertyMapping).where(
+                IntegrationPropertyMapping.workspace_id == workspace_id,
+                IntegrationPropertyMapping.provider == provider,
+                IntegrationPropertyMapping.property_ref == property_ref,
+            )
+        )
+    ).first()
+    if mapping is None:
+        mapping = IntegrationPropertyMapping(
             workspace_id=workspace_id,
             connection_id=connection_id,
             provider=provider,
@@ -95,15 +107,26 @@ async def _map_and_complete_backfill(
             project_id=project_id,
             status=MAPPING_STATUS_ACTIVE,
         )
-    )
+        session.add(mapping)
+        await session.flush()
+    next_seq = (
+        await session.scalar(
+            select(func.coalesce(func.max(IntegrationSyncRun.resync_seq), -1)).where(
+                IntegrationSyncRun.connection_id == connection_id
+            )
+        )
+    ) + 1
     session.add(
         IntegrationSyncRun(
             workspace_id=workspace_id,
             connection_id=connection_id,
+            mapping_id=mapping.id,
+            property_ref=mapping.property_ref,
+            project_id=mapping.project_id,
             sync_kind=SYNC_KIND_BACKFILL,
             window_start=WINDOW[0],
             window_end=WINDOW[1],
-            resync_seq=0,
+            resync_seq=next_seq,
             idempotency_key=uuid.uuid4().hex,
             status=TASK_STATUS_SUCCEEDED,
         )

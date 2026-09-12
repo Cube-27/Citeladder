@@ -19,6 +19,7 @@ import pytest
 from sqlalchemy import select
 
 from app.core.config.integrations_contracts import (
+    MAPPING_STATUS_ACTIVE,
     SYNC_KIND_BACKFILL,
     SYNC_KIND_ON_DEMAND,
 )
@@ -47,8 +48,10 @@ from app.domain.integrations.sync import (
 from app.models.integrations import (
     IntegrationConnection,
     IntegrationOAuthGrant,
+    IntegrationPropertyMapping,
     IntegrationSyncRun,
 )
+from app.models.project import Project
 from app.models.workspace import Workspace
 
 _WINDOW = (date(2026, 7, 1), date(2026, 7, 3))
@@ -56,10 +59,22 @@ _WINDOW = (date(2026, 7, 1), date(2026, 7, 3))
 
 async def _seed_connection(
     db_session, *, provider: str = "gsc"
-) -> tuple[uuid.UUID, IntegrationConnection]:
+) -> tuple[uuid.UUID, IntegrationConnection, IntegrationPropertyMapping]:
+    """Workspace + connected grant + connection + the ACTIVE mapping.
+
+    The mapping is part of the fixture because it is part of the enqueue
+    contract: a run imports a selected PROPERTY, so a connection with no
+    active mapping has nothing to enqueue.
+    """
     workspace = Workspace(name="Acme")
     db_session.add(workspace)
     await db_session.flush()
+    project = Project(
+        workspace_id=workspace.id,
+        name="Acme site",
+        website_url="https://acme.example",
+    )
+    db_session.add(project)
     grant = IntegrationOAuthGrant(
         workspace_id=workspace.id, transport="google_oauth", status="connected"
     )
@@ -73,8 +88,18 @@ async def _seed_connection(
         account_ref=f"{provider}-account-ref",
     )
     db_session.add(connection)
+    await db_session.flush()
+    mapping = IntegrationPropertyMapping(
+        workspace_id=workspace.id,
+        connection_id=connection.id,
+        provider=provider,
+        property_ref=f"{provider}-account-ref",
+        project_id=project.id,
+        status=MAPPING_STATUS_ACTIVE,
+    )
+    db_session.add(mapping)
     await db_session.commit()
-    return workspace.id, connection
+    return workspace.id, connection, mapping
 
 
 async def _complete(db_session, run_id: uuid.UUID) -> None:
@@ -95,7 +120,7 @@ async def _runs(db_session, connection_id: uuid.UUID) -> list[IntegrationSyncRun
 
 @pytest.mark.asyncio
 async def test_default_window_uses_config_trailing_days(db_session) -> None:
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, mapping = await _seed_connection(db_session)
 
     run = await enqueue_sync_run(
         db_session, workspace_id=workspace_id, connection_id=connection.id
@@ -116,6 +141,7 @@ async def test_default_window_uses_config_trailing_days(db_session) -> None:
     assert run.max_attempts == integration_settings.sync_max_attempts
     assert run.idempotency_key == build_sync_idempotency_key(
         connection_id=connection.id,
+        mapping_id=mapping.id,
         sync_kind=SYNC_KIND_ON_DEMAND,
         window_start=expected_start,
         window_end=expected_end,
@@ -126,7 +152,7 @@ async def test_default_window_uses_config_trailing_days(db_session) -> None:
 
 @pytest.mark.asyncio
 async def test_explicit_window_clamped_to_backfill_max(db_session) -> None:
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, _mapping = await _seed_connection(db_session)
     window_end = date(2026, 1, 1)
     window_start = window_end - timedelta(
         days=integration_settings.sync_backfill_max_days + 100
@@ -149,13 +175,16 @@ async def test_explicit_window_clamped_to_backfill_max(db_session) -> None:
 @pytest.mark.asyncio
 async def test_on_demand_window_extends_existing_coverage(db_session) -> None:
     """Sync now ADDS to the imported history instead of re-fetching it."""
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, mapping = await _seed_connection(db_session)
     today = datetime.now(UTC).date()
     covered_through = today - timedelta(days=5)
     db_session.add(
         IntegrationSyncRun(
             connection_id=connection.id,
             workspace_id=workspace_id,
+            mapping_id=mapping.id,
+            property_ref=mapping.property_ref,
+            project_id=mapping.project_id,
             sync_kind=SYNC_KIND_ON_DEMAND,
             window_start=covered_through - timedelta(days=6),
             window_end=covered_through,
@@ -186,12 +215,15 @@ async def test_on_demand_window_extends_existing_coverage(db_session) -> None:
 @pytest.mark.asyncio
 async def test_only_succeeded_runs_count_as_coverage(db_session) -> None:
     """A queued or failed run imported nothing, so its window is not covered."""
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, mapping = await _seed_connection(db_session)
     today = datetime.now(UTC).date()
     db_session.add(
         IntegrationSyncRun(
             connection_id=connection.id,
             workspace_id=workspace_id,
+            mapping_id=mapping.id,
+            property_ref=mapping.property_ref,
+            project_id=mapping.project_id,
             sync_kind=SYNC_KIND_ON_DEMAND,
             window_start=today - timedelta(days=9),
             window_end=today - timedelta(days=3),
@@ -218,22 +250,28 @@ async def test_coverage_stops_at_the_first_gap(db_session) -> None:
     taking MAX(window_end) would treat the hole as imported and no later
     sync would ever go back for it.
     """
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, mapping = await _seed_connection(db_session)
     today = datetime.now(UTC).date()
     # Succeeded: [-40, -34]. FAILED: [-33, -27] (the hole). Succeeded: [-26, -20].
-    for offset_start, offset_end, status in (
-        (40, 34, TASK_STATUS_SUCCEEDED),
-        (33, 27, TASK_STATUS_FAILED),
-        (26, 20, TASK_STATUS_SUCCEEDED),
+    for seq, (offset_start, offset_end, status) in enumerate(
+        (
+            (40, 34, TASK_STATUS_SUCCEEDED),
+            (33, 27, TASK_STATUS_FAILED),
+            (26, 20, TASK_STATUS_SUCCEEDED),
+        )
     ):
         db_session.add(
             IntegrationSyncRun(
                 connection_id=connection.id,
                 workspace_id=workspace_id,
+                mapping_id=mapping.id,
+                property_ref=mapping.property_ref,
+                project_id=mapping.project_id,
                 sync_kind=SYNC_KIND_ON_DEMAND,
                 window_start=today - timedelta(days=offset_start),
                 window_end=today - timedelta(days=offset_end),
-                resync_seq=0,
+                # Distinct revisions: resync_seq is unique per connection.
+                resync_seq=seq,
                 status=status,
                 idempotency_key=f"chunk-{offset_start}-{uuid.uuid4()}",
             )
@@ -290,8 +328,10 @@ def test_window_helpers_pure() -> None:
     assert resolve_sync_window(None, None) == default_sync_window()
     # The key builder is deterministic.
     connection_id = uuid.uuid4()
+    mapping_id = uuid.uuid4()
     key_a = build_sync_idempotency_key(
         connection_id=connection_id,
+        mapping_id=mapping_id,
         sync_kind=SYNC_KIND_ON_DEMAND,
         window_start=_WINDOW[0],
         window_end=_WINDOW[1],
@@ -299,17 +339,30 @@ def test_window_helpers_pure() -> None:
     )
     key_b = build_sync_idempotency_key(
         connection_id=connection_id,
+        mapping_id=mapping_id,
         sync_kind=SYNC_KIND_ON_DEMAND,
         window_start=_WINDOW[0],
         window_end=_WINDOW[1],
         resync_seq=2,
     )
     assert key_a == key_b
+    # ...and separates two projects importing the same window on one
+    # connection, which would otherwise collide on the unique key.
+    assert key_a != build_sync_idempotency_key(
+        connection_id=connection_id,
+        mapping_id=uuid.uuid4(),
+        sync_kind=SYNC_KIND_ON_DEMAND,
+        window_start=_WINDOW[0],
+        window_end=_WINDOW[1],
+        resync_seq=2,
+    )
+    # The key stays inside the column's 160-char bound.
+    assert len(key_a) < 160
 
 
 @pytest.mark.asyncio
 async def test_duplicate_active_window_rejected(db_session) -> None:
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, _mapping = await _seed_connection(db_session)
     connection_id = connection.id  # capture now: the conflict path rolls back
     first = await enqueue_sync_run(
         db_session,
@@ -336,7 +389,7 @@ async def test_duplicate_active_window_rejected(db_session) -> None:
 
 @pytest.mark.asyncio
 async def test_completed_window_resyncs_with_bumped_seq(db_session) -> None:
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, _mapping = await _seed_connection(db_session)
     run0 = await enqueue_sync_run(
         db_session,
         workspace_id=workspace_id,
@@ -378,7 +431,7 @@ async def test_completed_window_resyncs_with_bumped_seq(db_session) -> None:
 async def test_concurrent_allocators_get_distinct_monotonic_seqs(
     session_factory, db_session
 ) -> None:
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, _mapping = await _seed_connection(db_session)
 
     async def _enqueue() -> IntegrationSyncRun:
         async with session_factory() as session:
@@ -418,9 +471,14 @@ async def test_concurrent_allocators_get_distinct_monotonic_seqs(
 
 
 @pytest.mark.asyncio
-async def test_window_kind_groups_allocate_independently(db_session) -> None:
-    """The window-group identity includes sync_kind (spec §3)."""
-    workspace_id, connection = await _seed_connection(db_session)
+async def test_window_kind_groups_get_their_own_active_slot(db_session) -> None:
+    """sync_kind separates ACTIVE slots, but not data revisions.
+
+    Two kinds may hold the same window at once. They must NOT share a
+    ``resync_seq``: they import the same days, so equal revisions would make
+    the second import's rows collide with the first's and be discarded.
+    """
+    workspace_id, connection, _mapping = await _seed_connection(db_session)
     on_demand = await enqueue_sync_run(
         db_session,
         workspace_id=workspace_id,
@@ -436,14 +494,50 @@ async def test_window_kind_groups_allocate_independently(db_session) -> None:
         window_start=_WINDOW[0],
         window_end=_WINDOW[1],
     )
-    # Same window, different kind: a distinct active slot + its own seq 0.
-    assert (on_demand.resync_seq, backfill.resync_seq) == (0, 0)
     assert on_demand.sync_kind != backfill.sync_kind
+    assert backfill.resync_seq > on_demand.resync_seq
+
+
+@pytest.mark.asyncio
+async def test_overlapping_windows_get_distinct_revisions(db_session) -> None:
+    """Overlapping windows must not share a revision.
+
+    The dispatcher enqueues a long trailing window and a short late-data
+    window on every tick. They are different windows but share their most
+    recent days, so a window-scoped allocation gave both revision 0 and the
+    later, corrected values were silently dropped by the metric-row conflict
+    clause. Allocating per connection makes the later import outrank the
+    earlier one on the days they share.
+    """
+    workspace_id, connection, _mapping = await _seed_connection(db_session)
+    trailing = await enqueue_sync_run(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection.id,
+        window_start=date(2026, 7, 1),
+        window_end=date(2026, 7, 28),
+    )
+    await _complete(db_session, trailing.id)
+    late = await enqueue_sync_run(
+        db_session,
+        workspace_id=workspace_id,
+        connection_id=connection.id,
+        window_start=date(2026, 7, 26),
+        window_end=date(2026, 7, 28),
+    )
+
+    assert (trailing.window_start, trailing.window_end) != (
+        late.window_start,
+        late.window_end,
+    )
+    # The windows overlap on 26-28 July.
+    assert late.window_start <= trailing.window_end
+    assert late.resync_seq > trailing.resync_seq
 
 
 @pytest.mark.asyncio
 async def test_cross_workspace_connection_rejected(db_session) -> None:
-    _workspace_id, connection = await _seed_connection(db_session)
+    _workspace_id, connection, _mapping = await _seed_connection(db_session)
     with pytest.raises(IntegrationConnectionNotFoundError):
         await enqueue_sync_run(
             db_session, workspace_id=uuid.uuid4(), connection_id=connection.id
@@ -452,7 +546,7 @@ async def test_cross_workspace_connection_rejected(db_session) -> None:
 
 @pytest.mark.asyncio
 async def test_unknown_sync_kind_rejected(db_session) -> None:
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, _mapping = await _seed_connection(db_session)
     with pytest.raises(ValueError, match="unknown integration sync kind"):
         await enqueue_sync_run(
             db_session,
@@ -473,7 +567,7 @@ async def test_history_backfill_covers_a_year_in_contiguous_chunks(db_session) -
     refresh it triggers materializes every row in that window in memory. One
     365-day run would load a year at once.
     """
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, _mapping = await _seed_connection(db_session)
     today = date(2026, 3, 1)
 
     runs = await enqueue_history_backfill(
@@ -503,7 +597,7 @@ async def test_history_backfill_covers_a_year_in_contiguous_chunks(db_session) -
 @pytest.mark.asyncio
 async def test_history_backfill_runs_once_per_connection(db_session) -> None:
     """Re-selecting a property must not re-import a year of history."""
-    workspace_id, connection = await _seed_connection(db_session)
+    workspace_id, connection, _mapping = await _seed_connection(db_session)
     first = await enqueue_history_backfill(
         db_session, workspace_id=workspace_id, connection_id=connection.id
     )
@@ -534,7 +628,7 @@ async def test_history_backfill_never_raises_for_an_unknown_connection(
     db_session,
 ) -> None:
     """Selecting a property must succeed even if the backfill cannot start."""
-    workspace_id, _connection = await _seed_connection(db_session)
+    workspace_id, _connection, _mapping = await _seed_connection(db_session)
     assert (
         await enqueue_history_backfill(
             db_session, workspace_id=workspace_id, connection_id=uuid.uuid4()
