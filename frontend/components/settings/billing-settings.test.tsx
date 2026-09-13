@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -144,7 +144,13 @@ afterAll(() => mswServer.close());
 describe('BillingSettings', () => {
   it('uses the shared page loading state for the initial entitlement read', () => {
     entitlementLoading = true;
-    mswServer.use(catalogHandler());
+    mswServer.use(
+      catalogHandler(),
+      http.get('/api/v1/billing/entitlement', async () => {
+        await delay('infinite');
+        return HttpResponse.json(null);
+      }),
+    );
 
     renderWithProviders(<BillingSettings />);
 

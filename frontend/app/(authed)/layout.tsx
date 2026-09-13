@@ -37,7 +37,7 @@ export default function AuthedLayout({ children }: Readonly<{ children: ReactNod
   return (
     <Suspense fallback={<ShellFallback />}>
       <ProjectProvider>
-        <SessionGuard fallback={<ShellFallback />}>
+        <SessionGuard fallback={(content) => <ShellFallback>{content}</ShellFallback>}>
           <EntitlementProvider>{children}</EntitlementProvider>
         </SessionGuard>
       </ProjectProvider>

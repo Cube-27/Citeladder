@@ -71,23 +71,27 @@ function SiteHealthContent({
   );
   const [tab, selectTab] = useUrlState('tab', tabCodec, { clearKeys: ['cursor', 'sort'] });
   const blockingState = projectBlockingState(projectId, projectLoading, screen);
+  const mutationsAllowed = !entitlementQuery.isError;
   const refreshFailures = !blockingState ? <SiteHealthRefreshFailures screen={screen} /> : null;
-  const headerActions = crawl ? (
-    <CrawlActions
-      active={active}
-      exporting={exporting}
-      cancelPending={cancelMutation.isPending}
-      startPending={startPending}
-      onExport={() => runExport('csv', 'pages')}
-      onCancel={cancelCrawl}
-      onStart={startCrawl}
-    />
-  ) : undefined;
+  const headerActions =
+    crawl && mutationsAllowed ? (
+      <CrawlActions
+        active={active}
+        exporting={exporting}
+        cancelPending={cancelMutation.isPending}
+        startPending={startPending}
+        onExport={() => runExport('csv', 'pages')}
+        onCancel={cancelCrawl}
+        onStart={startCrawl}
+      />
+    ) : undefined;
   const prefetchTab = useSiteHealthTabPrefetch(workspaceId, projectId, crawl?.id, !active);
   return (
     <div className="grid min-w-0 gap-[var(--workspace-gap)]">
       <PageHeader actions={blockingState ? undefined : headerActions} />
-      {!blockingState ? <SiteHealthNotices screen={screen} /> : null}
+      {!blockingState ? (
+        <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
+      ) : null}
       {refreshFailures}
       {!blockingState ? <AnalysisTabs tab={tab} setTab={selectTab} onIntent={prefetchTab} /> : null}
       {blockingState ?? (
@@ -98,6 +102,7 @@ function SiteHealthContent({
           workspaceId={workspaceId!}
           screen={screen}
           entitlement={entitlementQuery.data!}
+          mutationsAllowed={mutationsAllowed}
         />
       )}
     </div>
@@ -184,17 +189,21 @@ function useSiteHealthTabPrefetch(
 
 function SiteHealthNotices({
   screen,
-}: Readonly<{ screen: ReturnType<typeof useSiteHealthScreen> }>) {
+  mutationsAllowed,
+}: Readonly<{
+  screen: ReturnType<typeof useSiteHealthScreen>;
+  mutationsAllowed: boolean;
+}>) {
   return (
     <>
       {screen.exportError ? <Alert tone="danger">{screen.exportError}</Alert> : null}
-      {screen.createMutation.isError ? (
+      {mutationsAllowed && screen.createMutation.isError ? (
         <MutationNotice
           notice={mutationNoticeForError(screen.createMutation.error, { action: 'start a crawl' })}
           onRetry={screen.startCrawl}
         />
       ) : null}
-      {screen.cancelMutation.isError ? (
+      {mutationsAllowed && screen.cancelMutation.isError ? (
         <MutationNotice
           notice={mutationNoticeForError(screen.cancelMutation.error, { action: 'stop the crawl' })}
           onRetry={screen.cancelCrawl}
@@ -254,6 +263,7 @@ function AnalysisPanel({
   workspaceId,
   screen,
   entitlement,
+  mutationsAllowed,
 }: Readonly<{
   tab: string;
   crawlId: string | undefined;
@@ -261,9 +271,16 @@ function AnalysisPanel({
   workspaceId: string;
   screen: ReturnType<typeof useSiteHealthScreen>;
   entitlement: NonNullable<ReturnType<typeof useSiteHealthScreen>['entitlementQuery']['data']>;
+  mutationsAllowed: boolean;
 }>) {
   if (tab === 'pages')
-    return <SiteHealthDashboardLayout screen={screen} entitlement={entitlement} />;
+    return (
+      <SiteHealthDashboardLayout
+        screen={screen}
+        entitlement={entitlement}
+        mutationsAllowed={mutationsAllowed}
+      />
+    );
   if (tab === 'overview' && crawlId)
     return (
       <OverviewPanel

@@ -50,7 +50,7 @@ persisted truth. No screen substitutes mock data or computes a backend metric.
 Opportunities owns its `type`, `severity`, `status`, `action_path`, and
 `selected` URL contract; default filters are omitted, filter commits clear the
 selection, and `opportunity` remains a read-only legacy alias normalized with
-replace.
+replace; `opportunity_id` is accepted and normalized the same way.
 
 ## Component capability and technical ownership
 

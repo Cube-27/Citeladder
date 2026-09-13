@@ -8,7 +8,7 @@ import { GranularitySelect, PerformanceNotices, PerformanceToolbar } from './per
 import { Ga4SummaryRow, MetricCards } from './metric-cards';
 import { PerformanceBreakdowns } from './performance-breakdowns';
 import { PerformanceChart, type ChartSeries } from './performance-chart';
-import { ReadinessLadder, useConnectedProviders } from './readiness-ladder';
+import { ReadinessLadder } from './readiness-ladder';
 import { usePerformanceSelection } from './use-performance-selection';
 import { usePerformanceSync } from './use-performance-sync';
 import { PageLoading } from '@/components/layout/page-loading';
@@ -81,16 +81,23 @@ function compareLabel(selection: RangeSelection): string {
   );
 }
 
-function evidenceAvailability(data: PerformanceDashboard, connectedProviders: readonly string[]) {
+function evidenceAvailability(data: PerformanceDashboard) {
   const { totals, snapshot_id: snapshotId } = data.selected;
-  const hasSearchConsole = totals.clicks !== null || totals.impressions !== null;
+  const hasSearchConsoleTotals = totals.clicks !== null || totals.impressions !== null;
+  const hasSearchConsoleDimensions = [
+    data.dimension_counts.query,
+    data.dimension_counts.page,
+    data.dimension_counts.country,
+    data.dimension_counts.device,
+    data.dimension_counts.search_appearance,
+    data.dimension_counts.day,
+  ].some((count) => count > 0);
+  const hasSearchConsoleBreakdowns = hasSearchConsoleTotals || hasSearchConsoleDimensions;
   const hasGa4 = totals.sessions !== null || totals.conversions !== null;
   const hasBing =
     snapshotId !== null &&
-    (connectedProviders.includes('bing') ||
-      data.dimension_counts.bing_query > 0 ||
-      data.dimension_counts.bing_page > 0);
-  return { hasSearchConsole, hasGa4, hasBing };
+    (data.dimension_counts.bing_query > 0 || data.dimension_counts.bing_page > 0);
+  return { hasSearchConsoleTotals, hasSearchConsoleBreakdowns, hasGa4, hasBing };
 }
 
 function PerformanceEmptyState({
@@ -228,7 +235,6 @@ export function PerformanceScreen() {
     queryFn: ({ signal }) => integrationsApi.list({ signal, workspaceId }),
     enabled: Boolean(workspaceId),
   });
-  const connectedProviders = useConnectedProviders(projectId);
   const sync = usePerformanceSync(projectId);
   const projection = useRangeProjection(scope, dashboard.data);
 
@@ -263,8 +269,8 @@ export function PerformanceScreen() {
   const selectedLabel = describeWindow(selectedWindow);
   const comparisonLabel = compareLabel(selection);
   const series = chartSeries(selectedWindow, comparisonWindow, activeMetrics);
-  const evidence = evidenceAvailability(data, connectedProviders);
-  const hasEvidence = evidence.hasSearchConsole || evidence.hasGa4 || evidence.hasBing;
+  const evidence = evidenceAvailability(data);
+  const hasEvidence = evidence.hasSearchConsoleBreakdowns || evidence.hasGa4 || evidence.hasBing;
 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
@@ -305,7 +311,7 @@ export function PerformanceScreen() {
           split a control from its own result. The strip sits flush with the
           granularity control aligned on the right of the header row. */}
           <SearchConsoleWorkspace
-            available={evidence.hasSearchConsole}
+            available={evidence.hasSearchConsoleTotals}
             selected={selectedWindow}
             comparison={comparisonWindow}
             selectedLabel={selectedLabel}
@@ -335,7 +341,7 @@ export function PerformanceScreen() {
             activeMetrics={activeMetrics}
             selectedLabel={selectedLabel}
             compareLabel={comparisonLabel}
-            hasSearchConsole={evidence.hasSearchConsole}
+            hasSearchConsole={evidence.hasSearchConsoleBreakdowns}
             // Only when a Bing connection exists: Bing's panel states "measured
             // nothing", which is not what an absent connection means.
             hasBing={evidence.hasBing}

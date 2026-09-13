@@ -23,15 +23,9 @@ export function AiReferralsContent({
   query: UseQueryResult<AiReferrals, Error>;
   toolbar: React.ReactNode;
 }>) {
-  const firstUseEmpty =
-    !projectLoading &&
-    Boolean(projectId) &&
-    query.isSuccess &&
-    range === 'latest' &&
-    isAiReferralsEmpty(query.data);
   return (
     <div className="grid gap-[var(--workspace-gap)]">
-      {firstUseEmpty ? null : toolbar}
+      {projectLoading || !projectId ? null : toolbar}
       <AiReferralsDataRegion
         projectId={projectId}
         projectLoading={projectLoading}

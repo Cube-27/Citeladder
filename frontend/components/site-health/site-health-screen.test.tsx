@@ -137,6 +137,30 @@ describe('SiteHealthScreen — loading failures', () => {
     expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
   });
 
+  it('keeps cached evidence but removes crawl mutations after entitlement refresh fails', async () => {
+    let entitlementAvailable = true;
+    mockRoutes();
+    mswServer.use(
+      http.get('/api/v1/entitlements', () =>
+        entitlementAvailable
+          ? HttpResponse.json(entitlement)
+          : HttpResponse.json({ detail: 'Entitlement refresh failed' }, { status: 404 }),
+      ),
+    );
+
+    const { queryClient } = renderScreen();
+    expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeEnabled();
+
+    entitlementAvailable = false;
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.siteHealth.entitlements(project.workspace_id),
+    });
+
+    expect(await screen.findByText('Entitlement refresh failed')).toBeVisible();
+    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Run new crawl' })).not.toBeInTheDocument();
+  });
+
   it('shows an error instead of an endless skeleton when entitlement loading fails', async () => {
     mockRoutes();
     mswServer.use(

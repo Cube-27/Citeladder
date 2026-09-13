@@ -32,4 +32,14 @@ describe('URL state codecs', () => {
     expect(push).toHaveBeenCalledOnce();
     push.mockRestore();
   });
+
+  it('does not add history for an equivalent query encoding', () => {
+    window.history.replaceState(null, '', '/opportunities?query=one%20two');
+    const push = vi.spyOn(window.history, 'pushState');
+
+    setUrlParams({ query: 'one two' });
+
+    expect(push).not.toHaveBeenCalled();
+    push.mockRestore();
+  });
 });

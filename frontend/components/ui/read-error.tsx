@@ -22,7 +22,8 @@ export function ReadError({
   className?: string;
 }>) {
   const detail = humanizeApiError(error, fallback);
-  const retryable = detail.retryable !== false && detail.status !== 401 && detail.status !== 403;
+  const accessFailure = detail.status === 401 || detail.status === 403;
+  const retryable = detail.retryable !== false && !accessFailure;
   return (
     <Alert tone="danger" className={className}>
       <div className="grid gap-3">
@@ -38,9 +39,9 @@ export function ReadError({
           >
             Retry
           </Button>
-        ) : (
+        ) : accessFailure ? (
           <p className="text-xs">Check your workspace access, then try again.</p>
-        )}
+        ) : null}
         {detail.requestId ? (
           <p className="text-muted text-xs">Reference: {detail.requestId}</p>
         ) : null}

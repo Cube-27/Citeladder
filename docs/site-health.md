@@ -206,9 +206,10 @@ read the same persisted final-result contract. Browser requests use same-origin
 
 Website and Issues distinguish initial read failure from a failed same-scope
 refresh. Initial failures expose an exact read retry; refresh failures retain
-the known crawl, catalog and tabs with an inline notice. A 401/403 removes
-protected evidence and mutation controls, and a project change never reuses the
-prior project's crawl identity.
+the known crawl, catalog and tabs with an inline notice. Any failed entitlement
+refresh withholds entitlement-dependent mutation controls until that read
+succeeds; a 401/403 also removes protected evidence. A project change never
+reuses the prior project's crawl identity.
 
 Content selects one current finalized analysis per URL from the explicit source
 crawl. A Site Health handoff carries exact analysis, evaluation and artifact

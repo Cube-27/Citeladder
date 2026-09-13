@@ -160,6 +160,19 @@ describe('OnboardingGate', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a project read failure while entitlement is still loading', () => {
+    setContext('error', 'owner', 'projects');
+    entitlement = { isLoading: true, entitlement: null };
+    render(
+      <OnboardingGate>
+        <p>workspace</p>
+      </OnboardingGate>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Projects could not be loaded' })).toBeVisible();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('names the projects read when that is what failed', () => {
     // The workspace resolved; only the project list did not. Reporting a
     // workspace failure sends the reader after an access problem that is not
@@ -178,6 +191,7 @@ describe('OnboardingGate', () => {
 
   it('names a missing project rather than substituting another one', () => {
     setContext('unavailable');
+    entitlement = { isLoading: true, entitlement: null };
     render(
       <OnboardingGate>
         <p>workspace</p>

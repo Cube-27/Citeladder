@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
-import { z } from 'zod';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +28,10 @@ import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-s
 import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
 import { OpportunityFilterMenu } from '@/components/opportunities/opportunity-filter-menu';
+import {
+  clearOpportunitySelection,
+  useOpportunityUrlSelection,
+} from '@/components/opportunities/use-opportunity-url-selection';
 import { opportunitiesQueries, type OpportunitiesParams } from '@/lib/api/opportunities';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import type {
@@ -114,12 +117,6 @@ const pathCodec = stringUrlCodec(
   PATH_FILTERS.map(({ key }) => key),
   'all',
 );
-const uuidSchema = z.uuid();
-const selectedCodec: UrlCodec<string | null> = {
-  parse: (raw) => (raw && uuidSchema.safeParse(raw).success ? raw : null),
-  serialize: (value) => value,
-};
-
 function FeaturedRecommendation({
   detail,
   onOpen,
@@ -197,24 +194,11 @@ function StatusControl({ row, projectId }: Readonly<{ row: Opportunity; projectI
 export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string }>) {
   const workspaceId = useActiveWorkspaceId() ?? '';
   const scopeKey = `${workspaceId}:${projectId}`;
-  const selectionScopeKey = useRef(scopeKey);
   const filters = useCatalogFilters(workspaceId, projectId);
   const listQuery = useQuery(opportunitiesQueries.list(workspaceId, projectId, filters.params));
   const rows = listQuery.data?.items ?? [];
   const featured = useFeaturedRecommendation(rows, filters.statusFilter, filters.pager.cursor);
-  const [selectedId, setSelectedId] = useUrlState('selected', selectedCodec);
-  const [legacySelection] = useUrlState('opportunity', selectedCodec);
-  // Existing inbound links used `opportunity`; accept them once, then leave a
-  // canonical URL without adding a history entry.
-  useEffect(() => {
-    if (!selectedId && legacySelection)
-      setUrlParams({ selected: legacySelection, opportunity: null }, 'replace');
-  }, [legacySelection, selectedId]);
-  useEffect(() => {
-    if (selectionScopeKey.current === scopeKey) return;
-    selectionScopeKey.current = scopeKey;
-    setUrlParams({ selected: null, opportunity: null }, 'replace');
-  }, [scopeKey]);
+  const { selectedId, visibleSelectedId, setSelectedId } = useOpportunityUrlSelection(scopeKey);
   return (
     <div className="grid gap-[var(--page-section-gap)]">
       <FeaturedSection
@@ -229,11 +213,11 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
         onOpen={(id) => setSelectedId(id, selectedId ? 'replace' : 'push')}
       />
       <EvidenceDrawer
-        opportunityId={selectedId}
+        opportunityId={visibleSelectedId}
         projectId={projectId}
-        open={selectedId !== null}
+        open={visibleSelectedId !== null}
         onOpenChange={(open) => {
-          if (!open) setSelectedId(null, 'replace');
+          if (!open) clearOpportunitySelection();
         }}
       />
     </div>
@@ -262,7 +246,15 @@ function useCatalogFilters(workspaceId: string, projectId: string) {
     [typeFilter, severityFilter, statusFilter, pathFilter, pager.cursor, pager.pageSize],
   );
   const update = <T extends string>(key: string, value: T, codec: UrlCodec<T>) => {
-    setUrlParams({ [key]: codec.serialize(value), selected: null, opportunity: null }, 'push');
+    setUrlParams(
+      {
+        [key]: codec.serialize(value),
+        selected: null,
+        opportunity: null,
+        opportunity_id: null,
+      },
+      'push',
+    );
     pager.reset();
   };
   return {

@@ -12,7 +12,6 @@ const PROJECT = '11111111-1111-4111-8111-111111111111';
 const SNAPSHOT = '22222222-2222-4222-8222-222222222222';
 const TASK = '33333333-3333-4333-8333-333333333333';
 const activeProject = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
-const readiness = vi.hoisted(() => ({ providers: [] as string[] }));
 
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => WORKSPACE,
@@ -21,7 +20,6 @@ vi.mock('@/lib/project/project-context', () => ({
 vi.mock('@/lib/api/integrations', () => ({ integrationsApi: { list: vi.fn(async () => []) } }));
 vi.mock('./readiness-ladder', () => ({
   ReadinessLadder: () => null,
-  useConnectedProviders: () => readiness.providers,
 }));
 vi.mock('./use-performance-sync', () => ({
   usePerformanceSync: () => ({
@@ -98,7 +96,6 @@ function tablePage(dimension: string) {
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
-  readiness.providers = [];
   mswServer.resetHandlers();
 });
 afterAll(() => mswServer.close());
@@ -171,9 +168,34 @@ describe('PerformanceScreen evidence states', () => {
     expect(tableDimensions).toEqual([]);
   });
 
+  it('renders persisted Search Console dimensions when headline totals are unavailable', async () => {
+    const tableDimensions: string[] = [];
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () =>
+        HttpResponse.json(
+          dashboard({
+            selected: { ...measuredWindow(emptyTotals), evidence_state: 'available' },
+            dimension_counts: { ...dimensionCounts, query: 1 },
+            coverage: { earliest_date: '2026-08-01', latest_date: '2026-08-28', covered_days: 28 },
+          }),
+        ),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/performance/table`, ({ request }) => {
+        const dimension = new URL(request.url).searchParams.get('dimension')!;
+        tableDimensions.push(dimension);
+        return HttpResponse.json(tablePage(dimension));
+      }),
+    );
+
+    renderWithProviders(<PerformanceScreen />);
+
+    expect(await screen.findByRole('tablist', { name: 'Performance breakdowns' })).toBeVisible();
+    await waitFor(() => expect(tableDimensions).toContain('query'));
+    expect(screen.queryByTestId('metric-card-strip')).not.toBeInTheDocument();
+  });
+
   it('keeps Bing-only evidence visible without empty GSC tables', async () => {
     const tableDimensions: string[] = [];
-    readiness.providers = ['bing'];
     const response = dashboard({
       selected: { ...measuredWindow(emptyTotals), evidence_state: 'not_run' },
       dimension_counts: { ...dimensionCounts, bing_query: 1 },
@@ -193,6 +215,17 @@ describe('PerformanceScreen evidence states', () => {
     expect(await screen.findByTestId('bing-panel')).toBeVisible();
     await waitFor(() => expect(tableDimensions).toContain('bing_query'));
     expect(tableDimensions).not.toContain('query');
+  });
+
+  it('does not present Bing without evidence in the selected snapshot', async () => {
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(dashboard())),
+    );
+
+    renderWithProviders(<PerformanceScreen />);
+
+    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(screen.queryByTestId('bing-panel')).not.toBeInTheDocument();
   });
 
   it('keeps range projection mounted through completion', async () => {

@@ -35,4 +35,17 @@ describe('ReadError', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     expect(screen.getByText(/check your workspace access/i)).toBeVisible();
   });
+
+  it('does not show access guidance for a non-access failure', () => {
+    render(
+      <ReadError
+        error={new ApiError('Invalid state', 422, '', undefined, { retryable: false })}
+        fallback="Could not load data."
+        onRetry={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/check your workspace access/i)).not.toBeInTheDocument();
+  });
 });

@@ -94,13 +94,21 @@ describe('SessionGuard', () => {
     );
 
     renderWithProviders(
-      <SessionGuard fallback={<div>loading</div>}>
+      <SessionGuard
+        fallback={(content) => (
+          <div>
+            <span>Neutral shell geometry</span>
+            {content ?? <span>loading</span>}
+          </div>
+        )}
+      >
         <Protected />
       </SessionGuard>,
     );
 
     // The guard explains the failed verification but never bounces to /login.
     await screen.findByRole('heading', { name: 'Your session could not be verified' });
+    expect(screen.getByText('Neutral shell geometry')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeVisible();
     expect(screen.queryByText(/signed in as/i)).not.toBeInTheDocument();
     await new Promise((resolve) => {

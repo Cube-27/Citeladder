@@ -16,7 +16,14 @@ function browserLocation(): string {
 }
 
 function commitUrl(href: string, history: UrlHistory): void {
-  if (href === browserLocation()) return;
+  const current = new URL(window.location.href);
+  const next = new URL(href, current);
+  if (
+    next.pathname === current.pathname &&
+    next.hash === current.hash &&
+    next.searchParams.toString() === current.searchParams.toString()
+  )
+    return;
   window.history[history === 'push' ? 'pushState' : 'replaceState'](window.history.state, '', href);
   window.dispatchEvent(new Event(URL_STATE_EVENT));
 }

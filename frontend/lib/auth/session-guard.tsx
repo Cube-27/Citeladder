@@ -30,6 +30,11 @@ type SessionContextValue = {
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
+type SessionFallback = ReactNode | ((content?: ReactNode) => ReactNode);
+
+function renderSessionFallback(fallback: SessionFallback, content?: ReactNode) {
+  return typeof fallback === 'function' ? fallback(content) : (content ?? fallback);
+}
 
 /**
  * SessionGuard (F4) — the authed-area gate + user context provider.
@@ -48,7 +53,7 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 export function SessionGuard({
   children,
   fallback = null,
-}: Readonly<{ children: ReactNode; fallback?: ReactNode }>) {
+}: Readonly<{ children: ReactNode; fallback?: SessionFallback }>) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const redirectingRef = useRef(false);
@@ -128,16 +133,16 @@ export function SessionGuard({
     // Loading, or unauthenticated and mid-redirect: never render protected UI.
     // Surface the underlying error only for debugging (kept out of the DOM).
     void error;
-    return <>{fallback}</>;
+    return <>{renderSessionFallback(fallback)}</>;
   }
 
   // oxlint-disable-next-line react-hooks/refs -- `clearSession` reads the ref only when invoked.
   if (!value) {
     // A non-401 failure is not an authentication decision. Keep protected
     // UI unmounted, explain the state, and retry only `auth.me`.
-    if (isError) {
-      return (
-        <div className="bg-shell grid min-h-dvh place-items-center p-[var(--page-section-gap)]">
+    if (isError && httpErrorStatus(error) !== 401) {
+      const notice = (
+        <div className="grid min-h-[60vh] place-items-center p-[var(--page-section-gap)]">
           <Alert tone="warning" className="max-w-lg">
             <div className="grid gap-4">
               <h1 className={textRole('sectionTitle')}>Your session could not be verified</h1>
@@ -155,8 +160,9 @@ export function SessionGuard({
           </Alert>
         </div>
       );
+      return <>{renderSessionFallback(fallback, notice)}</>;
     }
-    return <>{fallback}</>;
+    return <>{renderSessionFallback(fallback)}</>;
   }
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

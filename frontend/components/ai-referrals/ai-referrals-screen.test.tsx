@@ -49,7 +49,7 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('AiReferralsScreen', () => {
-  it('hides analytical controls before the first persisted referral snapshot', async () => {
+  it('keeps range controls available when the selected snapshot is empty', async () => {
     mswServer.use(
       http.get(endpoint, () =>
         HttpResponse.json({
@@ -63,7 +63,7 @@ describe('AiReferralsScreen', () => {
     renderWithProviders(<AiReferralsScreen />);
 
     expect(await screen.findByText('No AI-referral data yet')).toBeInTheDocument();
-    expect(screen.queryByTestId('ai-referrals-toolbar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('ai-referrals-toolbar')).toBeVisible();
   });
 
   it('renders only persisted referral measurement, without visibility or event drill-downs', async () => {

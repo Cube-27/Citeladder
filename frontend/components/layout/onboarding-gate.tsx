@@ -74,6 +74,10 @@ function noticeFor(
   return allowanceFailed ? 'failed' : 'no-projects';
 }
 
+function waitsForEntitlement(status: SelectionStatus, loading: boolean): boolean {
+  return loading && ['ready', 'empty'].includes(status);
+}
+
 /**
  * The project-route gate.
  *
@@ -146,7 +150,8 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   // entitlement query disabled and therefore never settled. Blocking on it
   // there would hold that route behind a loader forever.
   if (redirecting) return <PageLoading label="Opening project setup…" />;
-  if (projectRequired && (status === 'resolving' || entitlementLoading)) {
+  const waitingForEntitlement = waitsForEntitlement(status, entitlementLoading);
+  if (projectRequired && (status === 'resolving' || waitingForEntitlement)) {
     return <PageLoading label="Loading your workspace…" />;
   }
 
