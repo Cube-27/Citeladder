@@ -1,10 +1,11 @@
 'use client';
 
 import type { InputHTMLAttributes } from 'react';
-import { LoaderCircle, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 import { Input } from './input';
 import { Pressable } from './pressable';
+import { Spinner } from './spinner';
 
 export type SearchFieldProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -37,7 +38,7 @@ export function SearchField({
       className="[appearance:textfield] [&::-webkit-search-cancel-button]:hidden"
       startContent={
         pending ? (
-          <LoaderCircle className="text-muted size-4 shrink-0 animate-spin" aria-hidden />
+          <Spinner className="text-muted" />
         ) : (
           <Search className="text-muted size-4 shrink-0" aria-hidden />
         )

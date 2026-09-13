@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createAppQueryClient } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -11,8 +11,13 @@ import { mswServer } from '@/test/msw-server';
 import { isTerminalContentStatus, useContentGenerations } from './use-content-generations';
 
 const PROJECT = '22222222-2222-4222-8222-222222222222';
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const GEN = '11111111-1111-4111-8111-111111111111';
 const SECOND_GEN = '33333333-3333-4333-8333-333333333333';
+
+vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => WORKSPACE,
+}));
 
 const listItem = {
   id: GEN,

@@ -1,4 +1,4 @@
-import { ArrowRight, Download, ExternalLink, LoaderCircle } from 'lucide-react';
+import { ArrowRight, Download, ExternalLink } from 'lucide-react';
 import {
   EditorialSectionHeader,
   hairlineBandClasses,
@@ -172,12 +172,8 @@ function PdfButton({
       pendingLabel="Preparing…"
       className="gap-1.5"
     >
-      {downloading ? (
-        <LoaderCircle className="size-4 animate-spin" aria-hidden />
-      ) : (
-        <Download className="size-4" aria-hidden />
-      )}
-      {downloading ? 'Preparing…' : 'Executive PDF'}
+      <Download className="size-4" aria-hidden />
+      Executive PDF
     </Button>
   );
 }

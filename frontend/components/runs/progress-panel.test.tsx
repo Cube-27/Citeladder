@@ -115,14 +115,11 @@ describe('ProgressPanel', () => {
     },
   );
 
-  it('offers same-origin export links for both formats', () => {
+  it('offers authenticated export actions for both formats', () => {
     renderPanel();
 
     for (const name of ['Export CSV', 'Export MD']) {
-      const link = screen.getByRole('link', { name });
-      expect(link).toHaveAttribute('download');
-      // Invariant 12: browser calls stay same-origin through the proxy.
-      expect(link.getAttribute('href')).toMatch(/^\/api\/v1\//);
+      expect(screen.getByRole('button', { name })).toBeEnabled();
     }
   });
 

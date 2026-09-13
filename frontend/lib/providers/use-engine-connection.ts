@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { providersApi } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { ProviderConnection } from '@/lib/api/types';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import {
   connectionForTransport,
   isConnectable,
@@ -55,6 +56,7 @@ export function useEngineConnection({
   onSaved?: () => void;
 }>) {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
 
   const route = model.route;
   const transport = route?.transport_provider ?? null;
@@ -69,7 +71,7 @@ export function useEngineConnection({
    * the state so the save path can decide whether the connect flow is done.
    */
   const probe = async (connectionId: string): Promise<ConnectionTestState> => {
-    const result = await providersApi.testConnection(connectionId);
+    const result = await providersApi.testConnection(connectionId, { workspaceId });
     const state: ConnectionTestState =
       result.status === 'ok'
         ? { status: 'ok', message: `Connection succeeded (${result.transport_model || 'model'}).` }
@@ -89,15 +91,15 @@ export function useEngineConnection({
       }
       const routes = mergeRoutePayload(connection, model.logical_engine);
       const saved = connection
-        ? await providersApi.updateConnection(connection.id, {
-            api_key: apiKey || undefined,
-            routes,
-          })
-        : await providersApi.createConnection({
-            transport_provider: transport,
-            api_key: apiKey,
-            routes,
-          });
+        ? await providersApi.updateConnection(
+            connection.id,
+            { api_key: apiKey || undefined, routes },
+            { workspaceId },
+          )
+        : await providersApi.createConnection(
+            { transport_provider: transport, api_key: apiKey, routes },
+            { workspaceId },
+          );
       // The key IS stored at this point, so a probe fault is reported as a
       // failed test rather than a failed save — telling the user their key
       // did not save would be wrong, and would send them to rotate a key

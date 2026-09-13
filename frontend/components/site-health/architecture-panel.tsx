@@ -79,10 +79,11 @@ function median(values: number[]): number | null {
 }
 
 export function ArchitecturePanel({
+  workspaceId,
   projectId,
   crawlId,
-}: Readonly<{ projectId: string; crawlId?: string }>) {
-  const architecture = useQuery(siteHealthQueries.architecture(projectId, crawlId));
+}: Readonly<{ workspaceId: string; projectId: string; crawlId?: string }>) {
+  const architecture = useQuery(siteHealthQueries.architecture(workspaceId, projectId, crawlId));
 
   if (architecture.isLoading) {
     return (

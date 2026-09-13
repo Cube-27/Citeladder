@@ -6,9 +6,11 @@ import { useQuery, type QueryClient } from '@tanstack/react-query';
 
 import { ApiError } from '@/lib/api/errors';
 import { runsApi } from '@/lib/api/runs';
-import { getActiveWorkspaceId, setActiveWorkspaceId } from '@/lib/api/client';
 import { queryKeys } from '@/lib/api/query-keys';
-import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
+import {
+  ACTIVE_PROJECT_STORAGE_KEY,
+  ACTIVE_WORKSPACE_STORAGE_KEY,
+} from '@/lib/project/active-project-storage';
 import { ProjectProvider } from '@/lib/project/project-context';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
@@ -41,7 +43,6 @@ afterEach(() => {
   mswServer.resetHandlers();
   replace.mockReset();
   window.localStorage.clear();
-  setActiveWorkspaceId(null);
 });
 afterAll(() => mswServer.close());
 
@@ -125,7 +126,10 @@ describe('SessionGuard', () => {
 
     window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, 'old-project');
     window.localStorage.setItem('citeladder-theme', 'dark');
-    setActiveWorkspaceId('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    window.localStorage.setItem(
+      ACTIVE_WORKSPACE_STORAGE_KEY,
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    );
 
     const { queryClient } = renderWithProviders(
       <SessionGuard fallback={<div>loading</div>}>
@@ -138,7 +142,7 @@ describe('SessionGuard', () => {
     expect(queryClient.getQueryData(queryKeys.auth.me())).toBeUndefined();
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem('citeladder-theme')).toBe('dark');
-    expect(getActiveWorkspaceId()).toBeNull();
+    expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBeNull();
   });
 
   it('acts on a 401 reaching the cache directly, after the deferring microtask', async () => {

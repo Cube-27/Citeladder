@@ -94,12 +94,12 @@ export function LaunchDialog({
   auditScope?: 'brand' | 'commerce';
 }>) {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const promptSetsQuery = useQuery({
     queryKey: queryKeys.prompts.sets(projectId),
-    queryFn: ({ signal }) => promptsApi.listPromptSets(projectId, { signal }),
-    enabled: open,
+    queryFn: ({ signal }) => promptsApi.listPromptSets(projectId, { signal, workspaceId }),
+    enabled: open && workspaceId !== null,
   });
-  const workspaceId = useActiveWorkspaceId();
   const connectionsQuery = useQuery({
     queryKey: queryKeys.providers.connections(workspaceId ?? 'unresolved'),
     queryFn: ({ signal }) => providersApi.listConnections({ signal, workspaceId }),
@@ -156,8 +156,8 @@ export function LaunchDialog({
   const ready = canLaunch(selection);
   const estimateQuery = useQuery({
     queryKey: ['audit-estimate', selection],
-    queryFn: () => runsApi.estimateAudit(buildLaunchPayload(selection)),
-    enabled: open && ready,
+    queryFn: () => runsApi.estimateAudit(buildLaunchPayload(selection), { workspaceId }),
+    enabled: open && ready && workspaceId !== null,
   });
   const reset = () => {
     setEngines([]);
@@ -166,7 +166,7 @@ export function LaunchDialog({
     setBatchIndex(null);
   };
   const launchMutation = useMutation({
-    mutationFn: () => runsApi.launchAudit(buildLaunchPayload(selection)),
+    mutationFn: () => runsApi.launchAudit(buildLaunchPayload(selection), { workspaceId }),
     onSuccess: async (audit) => {
       queryClient.setQueryData(queryKeys.runs.detail(audit.id), audit);
       await queryClient.invalidateQueries({ queryKey: queryKeys.runs.all });

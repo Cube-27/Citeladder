@@ -5,13 +5,18 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
-import { ArchitecturePanel } from './architecture-panel';
+import { ArchitecturePanel as ScopedArchitecturePanel } from './architecture-panel';
 
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const CRAWL = '22222222-2222-4222-8222-222222222222';
 const HOME = '33333333-3333-4333-8333-333333333333';
 const BAGS = '44444444-4444-4444-8444-444444444444';
 const BOOTS = '55555555-5555-4555-8555-555555555555';
+
+function ArchitecturePanel(props: Readonly<{ projectId: string; crawlId?: string }>) {
+  return <ScopedArchitecturePanel workspaceId={WORKSPACE} {...props} />;
+}
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => mswServer.resetHandlers());

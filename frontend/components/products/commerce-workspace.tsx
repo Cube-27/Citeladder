@@ -21,6 +21,7 @@ import { CatalogList, catalogEntries } from './catalog-list';
 import { TargetDetail } from './target-detail';
 import { textRole } from '@/components/ui/typography';
 import { Stack } from '@/components/ui/layout';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /** Selection-only bulk actions, including stale keys that still need a clear path. */
 export function BulkActions({
@@ -121,6 +122,7 @@ function PaneResizer({ pane }: Readonly<{ pane: ResizablePane }>) {
 }
 
 export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>) {
+  const workspaceId = useActiveWorkspaceId();
   const { target, selectTarget } = useCommerceTarget();
   const queries = useCommerceQueries(projectId, target);
   const discovery = useCompetitorDiscovery(projectId);
@@ -144,7 +146,11 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
     });
   return (
     <Stack gap="workspace">
-      <CatalogHeader projectId={projectId} query={queries.catalog} />
+      <CatalogHeader
+        workspaceId={workspaceId ?? ''}
+        projectId={projectId}
+        query={queries.catalog}
+      />
       {checked.length ? (
         <BulkActions
           count={checkedTargets.length}

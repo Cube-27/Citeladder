@@ -3,7 +3,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { getActiveWorkspaceId, setActiveWorkspaceId } from '@/lib/api/client';
 import {
   ACTIVE_PROJECT_STORAGE_KEY,
   ACTIVE_WORKSPACE_STORAGE_KEY,
@@ -98,7 +97,6 @@ beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   search = new URLSearchParams();
   window.localStorage.clear();
-  setActiveWorkspaceId(null);
   // The provider backfills logos for any project without one, which every
   // fixture here is. Tests that assert on the backfill override this.
   mswServer.use(
@@ -123,7 +121,7 @@ describe('ProjectProvider', () => {
 
     await waitFor(() => expect(screen.getByTestId('active')).toHaveTextContent('Acme'));
     expect(screen.getByTestId('active-id')).toHaveTextContent(PROJECT_1);
-    expect(getActiveWorkspaceId()).toBe(WORKSPACE_A);
+    expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBe(WORKSPACE_A);
   });
 
   it('scopes the project list request to the resolved workspace', async () => {
@@ -155,7 +153,6 @@ describe('ProjectProvider', () => {
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('empty'));
     expect(screen.getByTestId('workspace')).toHaveTextContent(WORKSPACE_A);
-    expect(getActiveWorkspaceId()).toBe(WORKSPACE_A);
     // Remembered so the next visit can scope its requests in the first render
     // instead of waiting a round trip for the membership list. A convenience,
     // never an authorization input — the backend still checks every request.

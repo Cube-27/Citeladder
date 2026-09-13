@@ -22,18 +22,27 @@ import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 
 export function SiteHealthScreen() {
-  const { activeProject, isLoading } = useProjectContext();
+  const { activeProject, activeWorkspaceId, isLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
   const screen = useSiteHealthScreen(projectId);
-  return <SiteHealthContent projectId={projectId} projectLoading={isLoading} screen={screen} />;
+  return (
+    <SiteHealthContent
+      projectId={projectId}
+      workspaceId={activeWorkspaceId}
+      projectLoading={isLoading}
+      screen={screen}
+    />
+  );
 }
 
 function SiteHealthContent({
   projectId,
+  workspaceId,
   projectLoading,
   screen,
 }: Readonly<{
   projectId: string | null;
+  workspaceId: string | null;
   projectLoading: boolean;
   screen: ReturnType<typeof useSiteHealthScreen>;
 }>) {
@@ -71,7 +80,7 @@ function SiteHealthContent({
       onStart={startCrawl}
     />
   ) : undefined;
-  const prefetchTab = useSiteHealthTabPrefetch(projectId, crawl?.id, !active);
+  const prefetchTab = useSiteHealthTabPrefetch(workspaceId, projectId, crawl?.id, !active);
   return (
     <div className="grid min-w-0 gap-[var(--workspace-gap)]">
       <PageHeader actions={blockingState ? undefined : headerActions} />
@@ -82,6 +91,7 @@ function SiteHealthContent({
           tab={tab}
           crawlId={crawl?.id}
           projectId={projectId!}
+          workspaceId={workspaceId!}
           screen={screen}
           entitlement={entitlementQuery.data!}
         />
@@ -119,21 +129,23 @@ function projectBlockingState(
  * an error, so those stay warm at any point in the run.
  */
 function useSiteHealthTabPrefetch(
+  workspaceId: string | null,
   projectId: string | null,
   crawlId: string | undefined,
   terminal: boolean,
 ) {
   const queryClient = useQueryClient();
   return (nextTab: AnalysisTab) => {
-    if (!projectId) return;
+    if (!projectId || !workspaceId) return;
     if (nextTab === 'overview') {
-      if (terminal) warmQuery(queryClient, siteHealthQueries.overview(projectId, crawlId));
+      if (terminal)
+        warmQuery(queryClient, siteHealthQueries.overview(workspaceId, projectId, crawlId));
     } else if (nextTab === 'architecture') {
-      warmQuery(queryClient, siteHealthQueries.architecture(projectId, crawlId));
+      warmQuery(queryClient, siteHealthQueries.architecture(workspaceId, projectId, crawlId));
     } else if (nextTab === 'aeo-readiness') {
-      warmQuery(queryClient, siteHealthQueries.aeoReadiness(projectId, crawlId));
+      warmQuery(queryClient, siteHealthQueries.aeoReadiness(workspaceId, projectId, crawlId));
     } else if (nextTab === 'changes') {
-      warmQuery(queryClient, siteHealthQueries.changesSummary(projectId));
+      warmQuery(queryClient, siteHealthQueries.changesSummary(workspaceId, projectId));
     }
   };
 }
@@ -207,12 +219,14 @@ function AnalysisPanel({
   tab,
   crawlId,
   projectId,
+  workspaceId,
   screen,
   entitlement,
 }: Readonly<{
   tab: string;
   crawlId: string | undefined;
   projectId: string;
+  workspaceId: string;
   screen: ReturnType<typeof useSiteHealthScreen>;
   entitlement: NonNullable<ReturnType<typeof useSiteHealthScreen>['entitlementQuery']['data']>;
 }>) {
@@ -222,6 +236,7 @@ function AnalysisPanel({
     return (
       <OverviewPanel
         projectId={projectId}
+        workspaceId={workspaceId}
         crawlId={crawlId}
         crawl={screen.crawl}
         dashboard={screen.dashboardQuery.data}
@@ -230,10 +245,18 @@ function AnalysisPanel({
   // Architecture reads a project-scoped projection, so it renders its own
   // "derived after the crawl finishes" state rather than needing a crawl here.
   if (tab === 'architecture')
-    return <ArchitecturePanel key={projectId} projectId={projectId} crawlId={crawlId} />;
+    return (
+      <ArchitecturePanel
+        key={projectId}
+        projectId={projectId}
+        workspaceId={workspaceId}
+        crawlId={crawlId}
+      />
+    );
   if (tab === 'aeo-readiness' && crawlId)
-    return <AeoReadinessPanel projectId={projectId} crawlId={crawlId} />;
-  if (tab === 'changes') return <ChangesPanel key={projectId} projectId={projectId} />;
+    return <AeoReadinessPanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />;
+  if (tab === 'changes')
+    return <ChangesPanel key={projectId} projectId={projectId} workspaceId={workspaceId} />;
   return <Alert tone="info">Run a crawl before opening Website analysis.</Alert>;
 }
 

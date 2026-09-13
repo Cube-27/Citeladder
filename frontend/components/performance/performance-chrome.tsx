@@ -1,10 +1,11 @@
 'use client';
 
-import { ChevronDown, LoaderCircle, RefreshCw, RotateCcw } from 'lucide-react';
+import { ChevronDown, RefreshCw, RotateCcw } from 'lucide-react';
 
 import { INITIAL_SELECTION, type RangeSelection } from '@/lib/performance/performance';
 import type { usePerformanceSync } from './use-performance-sync';
 import { Alert } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { SegmentedAction, SegmentedControl } from '@/components/ui/segmented-control';
 import { Select } from '@/components/ui/select';
@@ -127,20 +128,13 @@ export function PerformanceToolbar({
           variant="secondary"
           size="sm"
           onClick={() => sync.mutation.mutate()}
-          disabled={!hasConnections || sync.syncing || sync.mutation.isPending}
+          disabled={!hasConnections}
+          pending={sync.syncing || sync.mutation.isPending}
+          pendingLabel="Syncing…"
           data-testid="sync-now-button"
         >
-          {sync.syncing || sync.mutation.isPending ? (
-            <>
-              <LoaderCircle className="size-4 animate-spin" aria-hidden />
-              Syncing…
-            </>
-          ) : (
-            <>
-              <RefreshCw className="size-4" aria-hidden />
-              Sync now
-            </>
-          )}
+          <RefreshCw className="size-4" aria-hidden />
+          Sync now
         </Button>
       </div>
     </div>
@@ -213,7 +207,7 @@ export function PerformanceNotices({
       {sync.syncing ? (
         <Alert tone="info" hideIcon>
           <span className="flex items-center gap-2" data-testid="sync-status-banner">
-            <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden />
+            <Spinner />
             <span>
               Sync in progress — importing the dates not yet covered. Charts and tables update when
               it completes.

@@ -2,13 +2,13 @@
 
 ## Active
 
-None established.
+- [Runtime correctness and continuity](citeladder-runtime-correctness-and-continuity.md)
+  — implementation is delivered through Slice 4. Authenticated local traces
+  still gate Slice 5 decisions, and deployed incident/SSE acceptance requires
+  separate deployment authorization.
 
 ## Queued
 
-- [Runtime correctness and continuity](citeladder-runtime-correctness-and-continuity.md)
-  — partially delivered; explicit workspace-scope cutover, loading-pattern
-  consolidation, and measure-gated follow-ups remain for a later assignment.
 - [Integrations and AI Visibility](citeladder-integrations-audit-followups.md)
   — pending; remaining evidence/action and selected-query generation work.
 - [Razorpay local test integration](citeladder-razorpay-local-test-integration.md)

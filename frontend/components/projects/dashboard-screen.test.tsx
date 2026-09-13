@@ -218,7 +218,9 @@ describe('DashboardScreen', () => {
     );
     expect(screen.getAllByRole('button', { name: /executive pdf/i })).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: /executive pdf/i }));
-    expect(downloadExecutiveReport).toHaveBeenCalledWith(project.id);
+    expect(downloadExecutiveReport).toHaveBeenCalledWith(project.id, {
+      workspaceId: project.workspace_id,
+    });
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(click).toHaveBeenCalledOnce();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:report');

@@ -23,6 +23,10 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { useProjectContext } from '@/lib/project/project-context';
 import {
+  resolveActiveProjectRequestScope,
+  type ProjectRequestScope,
+} from '@/lib/project/request-scope';
+import {
   COMPARE_OPTIONS,
   METRIC_CARDS,
   canCompareYearOverYear,
@@ -77,8 +81,8 @@ function compareLabel(selection: RangeSelection): string {
 
 export function PerformanceScreen() {
   const { activeProject, isLoading } = useProjectContext();
-  const projectId = activeProject?.id ?? null;
-  const workspaceId = activeProject?.workspace_id ?? null;
+  const scope = resolveActiveProjectRequestScope(activeProject);
+  const { projectId, workspaceId } = scope;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<'filter' | 'compare'>('filter');
   const {
@@ -94,19 +98,23 @@ export function PerformanceScreen() {
   } = usePerformanceSelection();
 
   const dashboard = useQuery({
-    ...performanceQueries.dashboard(projectId ?? '', dashboardParams(selection, granularity)),
-    enabled: Boolean(projectId),
+    ...performanceQueries.dashboard(
+      workspaceId,
+      projectId,
+      dashboardParams(selection, granularity),
+    ),
+    enabled: scope.enabled,
     placeholderData: (previousData, previousQuery) =>
       retainPreviousDataForScope(projectId!, previousData, previousQuery),
   });
   const connections = useQuery({
     queryKey: queryKeys.integrations.connections(workspaceId),
-    queryFn: ({ signal }) => integrationsApi.list({ signal }),
+    queryFn: ({ signal }) => integrationsApi.list({ signal, workspaceId }),
     enabled: Boolean(workspaceId),
   });
   const connectedProviders = useConnectedProviders(projectId);
   const sync = usePerformanceSync(projectId);
-  const projection = useRangeProjection(projectId, dashboard.data);
+  const projection = useRangeProjection(scope, dashboard.data);
 
   // No project yet is either "still resolving which one" or "there is none";
   // only the second is something to tell the reader about.
@@ -244,12 +252,13 @@ export function PerformanceScreen() {
  * once it completes. The task is idempotent on the window, so a re-render or
  * a second viewer joins the same work rather than duplicating it.
  */
-function useRangeProjection(projectId: string | null, data: PerformanceDashboard | undefined) {
+function useRangeProjection(scope: ProjectRequestScope, data: PerformanceDashboard | undefined) {
+  const { workspaceId, projectId } = scope;
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<string | null>(null);
   const mutation = useMutation({
     mutationFn: (window: { from: string; to: string }) =>
-      performanceApi.enqueueRange(projectId ?? '', window),
+      performanceApi.enqueueRange(projectId, window, { workspaceId }),
     onSuccess: (task) => setPending(task.task_id),
   });
 
@@ -263,10 +272,10 @@ function useRangeProjection(projectId: string | null, data: PerformanceDashboard
   }, [projectId, missing?.from, missing?.to]);
 
   const task = useQuery({
-    queryKey: queryKeys.performance.rangeTask(projectId ?? '', pending ?? ''),
+    queryKey: queryKeys.performance.rangeTask(projectId, pending ?? ''),
     queryFn: ({ signal }) =>
-      performanceApi.getRangeTask(projectId ?? '', pending ?? '', { signal }),
-    enabled: Boolean(projectId && pending),
+      performanceApi.getRangeTask(projectId, pending ?? '', { signal, workspaceId }),
+    enabled: scope.enabled && Boolean(pending),
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === 'succeeded' || status === 'failed' || status === 'cancelled' ? false : 1500;

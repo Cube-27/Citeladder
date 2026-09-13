@@ -6,6 +6,7 @@ import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import { integrationsApi, type IntegrationSyncRun } from '@/lib/api/integrations';
 import { performanceApi, type PerformanceSyncEnqueueResponse } from '@/lib/api/performance';
 import { queryKeys } from '@/lib/api/query-keys';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import {
   isActiveSyncRun,
   isSucceededSyncRun,
@@ -43,12 +44,13 @@ const PROJECTION_POLL_MS = 3_000;
  * terminal, and stops as soon as the projection lands.
  */
 export function usePerformanceSync(projectId: string | null) {
+  const workspaceId = useActiveWorkspaceId();
   const queryClient = useQueryClient();
   const [runs, setRuns] = useState<PerformanceSyncEnqueueResponse>([]);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: () => performanceApi.syncNow(projectId ?? ''),
+    mutationFn: () => performanceApi.syncNow(projectId ?? '', { workspaceId }),
     onSuccess: (enqueued) => {
       if (!enqueued.length) {
         setNotice(
@@ -65,7 +67,7 @@ export function usePerformanceSync(projectId: string | null) {
     queries: runs.map((run) => ({
       queryKey: queryKeys.integrations.sync(run.connection_id, run.sync_run_id),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        integrationsApi.getSync(run.connection_id, run.sync_run_id, { signal }),
+        integrationsApi.getSync(run.connection_id, run.sync_run_id, { signal, workspaceId }),
       refetchInterval: (query: { state: { data?: IntegrationSyncRun } }) => {
         const result = query.state.data;
         return !result || isActiveSyncRun(result.status) ? SYNC_RUN_POLL_MS : false;

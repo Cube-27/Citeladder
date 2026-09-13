@@ -29,7 +29,7 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
 export function ProviderSettings() {
   const catalogQuery = useQuery({
     queryKey: queryKeys.providers.catalog(),
-    queryFn: ({ signal }) => providersApi.getCatalog({ signal }),
+    queryFn: ({ signal }) => providersApi.getCatalog({ signal, workspaceId: null }),
   });
 
   // Provider connections belong to the workspace, so the read is keyed and

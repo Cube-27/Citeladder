@@ -97,7 +97,10 @@ function GrantHeader({
   );
 }
 
-function ConnectCard({ family }: Readonly<{ family: GrantFamily }>) {
+function ConnectCard({
+  workspaceId,
+  family,
+}: Readonly<{ workspaceId: string; family: GrantFamily }>) {
   const meta = FAMILY_META[family];
 
   return (
@@ -114,7 +117,9 @@ function ConnectCard({ family }: Readonly<{ family: GrantFamily }>) {
       <CardContent className="pt-0">
         <Button
           variant="secondary"
-          onClick={() => assignLocation(integrationsApi.oauthStartUrl(meta.connectProvider))}
+          onClick={() =>
+            assignLocation(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
+          }
         >
           Connect {meta.title}
         </Button>
@@ -123,7 +128,11 @@ function ConnectCard({ family }: Readonly<{ family: GrantFamily }>) {
   );
 }
 
-function ConnectedCard({ family, grant }: Readonly<{ family: GrantFamily; grant: GrantModel }>) {
+function ConnectedCard({
+  workspaceId,
+  family,
+  grant,
+}: Readonly<{ workspaceId: string; family: GrantFamily; grant: GrantModel }>) {
   const meta = FAMILY_META[family];
 
   return (
@@ -151,7 +160,9 @@ function ConnectedCard({ family, grant }: Readonly<{ family: GrantFamily; grant:
           <Button
             variant={grant.status === 'connected' ? 'secondary' : 'primary'}
             size="sm"
-            onClick={() => assignLocation(integrationsApi.oauthStartUrl(meta.connectProvider))}
+            onClick={() =>
+              assignLocation(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
+            }
           >
             Reconnect
           </Button>
@@ -165,8 +176,13 @@ function ConnectedCard({ family, grant }: Readonly<{ family: GrantFamily; grant:
 }
 
 export function IntegrationCardView({
+  workspaceId,
   family,
   grant,
-}: Readonly<{ family: GrantFamily; grant: GrantModel | null }>) {
-  return grant ? <ConnectedCard family={family} grant={grant} /> : <ConnectCard family={family} />;
+}: Readonly<{ workspaceId: string; family: GrantFamily; grant: GrantModel | null }>) {
+  return grant ? (
+    <ConnectedCard workspaceId={workspaceId} family={family} grant={grant} />
+  ) : (
+    <ConnectCard workspaceId={workspaceId} family={family} />
+  );
 }

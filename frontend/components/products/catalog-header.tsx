@@ -116,13 +116,14 @@ function CatalogStats({
  * leaving the entire right half of the card empty.
  */
 export function CatalogHeader({
+  workspaceId,
   projectId,
   query,
-}: Readonly<{ projectId: string; query: CommerceQueries['catalog'] }>) {
+}: Readonly<{ workspaceId: string; projectId: string; query: CommerceQueries['catalog'] }>) {
   const client = useQueryClient();
   const [result, setResult] = useState('');
   const dashboard = useQuery({
-    ...siteHealthQueries.dashboard(projectId),
+    ...siteHealthQueries.dashboard(workspaceId, projectId),
     refetchInterval: (state) => {
       const crawl = state.state.data?.crawl;
       return crawl ? crawlPollInterval(crawl) : false;
@@ -132,7 +133,7 @@ export function CatalogHeader({
     client.invalidateQueries({ queryKey: queryKeys.commerce.catalog(projectId) });
   const importCatalog = useMutation({
     mutationFn: async (file: File) =>
-      commerceApi.importCatalog(projectId, await file.text(), file.name),
+      commerceApi.importCatalog(projectId, await file.text(), file.name, { workspaceId }),
     onSuccess: async (data) => {
       setResult(
         `${data.created} created, ${data.updated} updated, ${data.unchanged} unchanged, ${data.rejected} rejected`,
@@ -141,7 +142,7 @@ export function CatalogHeader({
     },
   });
   const discover = useMutation({
-    mutationFn: () => siteHealthApi.createCrawl({ project_id: projectId }),
+    mutationFn: () => siteHealthApi.createCrawl({ project_id: projectId }, { workspaceId }),
     onSuccess: async () => {
       await Promise.all([dashboard.refetch(), query.refetch()]);
     },

@@ -27,8 +27,15 @@ export function AiReferralsScreen() {
   const dashboardQuery = useQuery({
     queryKey: queryKeys.aiReferrals.dashboard(projectId ?? '', { ...rangeParams, granularity }),
     queryFn: ({ signal }) =>
-      aiReferralsApi.getDashboard(projectId!, { ...rangeParams, granularity }, { signal }),
-    enabled: Boolean(projectId),
+      aiReferralsApi.getDashboard(
+        projectId!,
+        { ...rangeParams, granularity },
+        {
+          signal,
+          workspaceId: activeProject?.workspace_id,
+        },
+      ),
+    enabled: Boolean(projectId && activeProject?.workspace_id),
     placeholderData: (previousData, previousQuery) =>
       retainPreviousDataForScope(projectId!, previousData, previousQuery),
   });

@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import type { ContentTargetPage } from '@/lib/api/content';
 import { CONTENT_INSTRUCTION_MAX_LEN } from '@/lib/api/content';
@@ -318,7 +319,7 @@ export function GeneratingPanel({
     <Card data-component-id="content-generating-panel" className="p-[var(--card-padding-large)]">
       <CardContent className="flex items-center gap-4 p-0">
         <output aria-label="Generating content" className="flex items-center gap-3">
-          <ICONS.spinner className="text-accent size-5 animate-spin" aria-hidden />
+          <Spinner size="lg" className="text-accent" />
           <span className={textRole('bodyStrong')}>Generating your content…</span>
         </output>
         <div className="ml-auto">

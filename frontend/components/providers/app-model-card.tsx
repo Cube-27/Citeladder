@@ -14,6 +14,7 @@ import { textRole } from '@/components/ui/typography';
 import { providersApi, type ProviderAppRouteInput } from '@/lib/api/providers';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { ProviderConnection } from '@/lib/api/types';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 const CONNECTION_LABEL = 'Content and Growth Agent custom model';
 
@@ -48,21 +49,25 @@ function appRoutes(form: AppModelForm): ProviderAppRouteInput[] {
   ].filter((entry): entry is ProviderAppRouteInput => entry !== null);
 }
 
-function saveConnection(connection: ProviderConnection | undefined, form: AppModelForm) {
+function saveConnection(
+  connection: ProviderConnection | undefined,
+  form: AppModelForm,
+  workspaceId: string | null,
+) {
   const payload = {
     api_key: form.apiKey,
     app_routes: appRoutes(form),
     confirm_destination_change: true,
   };
-  if (connection) return providersApi.updateConnection(connection.id, payload);
-  return providersApi.createConnection({
-    transport_provider: 'openai',
-    label: CONNECTION_LABEL,
-    ...payload,
-  });
+  if (connection) return providersApi.updateConnection(connection.id, payload, { workspaceId });
+  return providersApi.createConnection(
+    { transport_provider: 'openai', label: CONNECTION_LABEL, ...payload },
+    { workspaceId },
+  );
 }
 
 function useAppModelForm(connections: ProviderConnection[]) {
+  const workspaceId = useActiveWorkspaceId();
   const queryClient = useQueryClient();
   const connection = useMemo(
     () => connections.find((entry) => (entry.app_routes?.length ?? 0) > 0),
@@ -72,14 +77,14 @@ function useAppModelForm(connections: ProviderConnection[]) {
   const update = <Key extends keyof AppModelForm>(key: Key, value: AppModelForm[Key]) =>
     setForm((current) => ({ ...current, [key]: value }));
   const save = useMutation({
-    mutationFn: () => saveConnection(connection, form),
+    mutationFn: () => saveConnection(connection, form, workspaceId),
     onSuccess: async () => {
       update('apiKey', '');
       await queryClient.invalidateQueries({ queryKey: queryKeys.providers.all });
     },
   });
   const test = useMutation({
-    mutationFn: () => providersApi.testConnection(connection!.id),
+    mutationFn: () => providersApi.testConnection(connection!.id, { workspaceId }),
   });
   const validDestination = form.baseUrl.startsWith('https://') && form.model.trim() !== '';
   return {

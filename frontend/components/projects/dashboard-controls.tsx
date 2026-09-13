@@ -13,6 +13,7 @@ import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { visibilityApi } from '@/lib/api/visibility';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import type { Project } from '@/lib/api/types';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
@@ -64,14 +65,16 @@ export function FactsDrawer({
 }: Readonly<{ projectId: string; competitors: Project['competitors'] }>) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const profile = useQuery({
     queryKey: queryKeys.projects.brandProfile(projectId),
-    queryFn: ({ signal }) => projectsApi.getBrandProfile(projectId, { signal }),
+    queryFn: ({ signal }) => projectsApi.getBrandProfile(projectId, { signal, workspaceId }),
     enabled: open,
   });
   const suggestions = useQuery({
     queryKey: queryKeys.visibility.competitorSuggestions(projectId),
-    queryFn: ({ signal }) => visibilityApi.listCompetitorSuggestions(projectId, { signal }),
+    queryFn: ({ signal }) =>
+      visibilityApi.listCompetitorSuggestions(projectId, { signal, workspaceId }),
     enabled: open,
   });
   return (

@@ -32,24 +32,6 @@ export type EvidenceTabProps = Readonly<{
   limit: number;
 }>;
 
-/**
- * A read in flight over a card that is ALREADY drawn.
- *
- * Positioned, not stacked: in the flow this 2px bar would push the rows below
- * it down and back up on every filter and every page. The evidence itself
- * stays on screen — retained until the next set arrives — so this is the only
- * thing that changes while the panel catches up.
- */
-export function EvidenceBusyBar({ active }: Readonly<{ active: boolean }>) {
-  if (!active) return null;
-  return (
-    <progress
-      className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent absolute inset-x-0 top-0 z-1 h-0.5 w-full appearance-none border-0"
-      aria-label="Updating evidence"
-    />
-  );
-}
-
 export function EvidenceSkeleton({ title }: Readonly<{ title: string }>) {
   return (
     <Card aria-hidden>

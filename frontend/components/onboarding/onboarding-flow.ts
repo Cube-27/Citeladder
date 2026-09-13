@@ -123,7 +123,8 @@ export function useOnboardingFlow() {
   );
   const catalog = useQuery({
     queryKey: ['brand-discovery-catalog'],
-    queryFn: ({ signal }) => brandDiscoveriesApi.catalog({ signal }),
+    queryFn: ({ signal }) =>
+      brandDiscoveriesApi.catalog({ signal, workspaceId: activeWorkspaceId }),
     staleTime: Number.POSITIVE_INFINITY,
   });
   const maximumCompetitors = catalog.data?.maximum_competitors;

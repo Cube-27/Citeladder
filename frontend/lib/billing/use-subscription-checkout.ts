@@ -3,7 +3,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { authApi } from '@/lib/api/auth';
-import { getActiveWorkspaceId } from '@/lib/api/client';
 import { billingApi, type SubscriptionCheckoutInput } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
 import { CHECKOUT_POLL_ATTEMPTS, CHECKOUT_POLL_INTERVAL_MS } from '@/lib/config/billing';
@@ -27,8 +26,7 @@ const INCOMPLETE_CHECKOUT: Record<string, string | null> = {
  * purchase at another workspace's account. The public pricing page has no
  * such selection to read: no `ProjectProvider` renders above it, and asking
  * for one would throw during the prerender of a page anonymous visitors are
- * served. It falls back to the ambient selection, and to the server's default
- * workspace when there is none.
+ * served. It explicitly asks the server for the buyer's default workspace.
  *
  * `unscoped` therefore means "no selection exists here", never "the
  * selection has not arrived yet": a shell still resolving reports `pending`
@@ -51,16 +49,14 @@ function useCheckoutScope(): CheckoutScope {
  * The workspace this purchase is FOR, resolved ONCE when it starts.
  *
  * Every call in the flow then names this value explicitly, so nothing that
- * changes mid-flow — a workspace switch in the shell, the ambient selection a
- * soft navigation left behind — can re-point the purchase at another account.
- * Unscoped reads the ambient selection, so a purchase started from the
- * pricing page lands on the same workspace as the add-on and top-up buttons
- * beside it; `null` there is the explicit "send no workspace header", which
- * the server answers with the buyer's default workspace.
+ * changes mid-flow — including a workspace switch in the shell — can re-point
+ * the purchase at another account. `null` is the explicit "send no workspace
+ * header" choice for the public pricing surface, which the server answers
+ * with the buyer's default workspace.
  */
 function purchaseWorkspace(scope: CheckoutScope): string | null {
   if (scope.kind === 'pending') throw new Error('Select a workspace before starting checkout.');
-  return scope.kind === 'scoped' ? scope.workspaceId : getActiveWorkspaceId();
+  return scope.kind === 'scoped' ? scope.workspaceId : null;
 }
 
 export function useSubscriptionCheckout() {

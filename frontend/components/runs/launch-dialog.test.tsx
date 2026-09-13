@@ -11,8 +11,13 @@ import { renderWithProviders } from '@/test/render';
 import { LaunchDialog } from './launch-dialog';
 
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
+const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROMPT_SET_ID = '22222222-2222-4222-8222-222222222222';
 const PROMPT_IDS = ['33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444'];
+
+vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => WORKSPACE_ID,
+}));
 
 /** The `/estimate` projection the dialog summarises. The dialog reads only
  * these five fields; the per-engine breakdown is the API layer's contract. */
@@ -118,13 +123,16 @@ describe('LaunchDialog fixed prompt selection', () => {
     await selectEngineAndLaunch();
 
     await waitFor(() =>
-      expect(launch).toHaveBeenCalledWith({
-        project_id: PROJECT_ID,
-        prompt_ids: PROMPT_IDS,
-        engines: ['chatgpt'],
-        repetitions: expect.any(Number),
-        audit_scope: 'commerce',
-      }),
+      expect(launch).toHaveBeenCalledWith(
+        {
+          project_id: PROJECT_ID,
+          prompt_ids: PROMPT_IDS,
+          engines: ['chatgpt'],
+          repetitions: expect.any(Number),
+          audit_scope: 'commerce',
+        },
+        { workspaceId: WORKSPACE_ID },
+      ),
     );
   });
 
@@ -146,7 +154,9 @@ describe('LaunchDialog fixed prompt selection', () => {
     await selectEngineAndLaunch();
 
     await waitFor(() =>
-      expect(launch).toHaveBeenCalledWith(expect.objectContaining({ prompt_ids: PROMPT_IDS })),
+      expect(launch).toHaveBeenCalledWith(expect.objectContaining({ prompt_ids: PROMPT_IDS }), {
+        workspaceId: WORKSPACE_ID,
+      }),
     );
   });
 
@@ -173,6 +183,7 @@ describe('LaunchDialog fixed prompt selection', () => {
           prompt_set_id: PROMPT_SET_ID,
           audit_scope: 'brand',
         }),
+        { workspaceId: WORKSPACE_ID },
       ),
     );
   });
@@ -222,6 +233,7 @@ describe('LaunchDialog prompt batching', () => {
         expect.objectContaining({
           prompt_ids: Array.from({ length: 10 }, (_, index) => `prompt-${index + 10}`),
         }),
+        { workspaceId: WORKSPACE_ID },
       ),
     );
     expect(launch.mock.calls[0][0]).not.toHaveProperty('prompt_set_id');
@@ -243,6 +255,7 @@ describe('LaunchDialog prompt batching', () => {
     await waitFor(() =>
       expect(launch).toHaveBeenCalledWith(
         expect.objectContaining({ prompt_set_id: PROMPT_SET_ID }),
+        { workspaceId: WORKSPACE_ID },
       ),
     );
   });
@@ -280,6 +293,7 @@ describe('LaunchDialog prompt batching', () => {
     await waitFor(() =>
       expect(launch).toHaveBeenCalledWith(
         expect.objectContaining({ prompt_set_id: PROMPT_SET_ID }),
+        { workspaceId: WORKSPACE_ID },
       ),
     );
   });

@@ -18,6 +18,7 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { formatUtcTimestamp } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -33,6 +34,7 @@ export function AuditSchedules({
   promptSets,
 }: Readonly<{ projectId: string; promptSets: PromptSet[] }>) {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const [promptSetId, setPromptSetId] = useState(promptSets[0]?.id ?? '');
   const [auditScope, setAuditScope] = useState<'brand' | 'commerce'>('brand');
   const [cadence, setCadence] = useState<AuditScheduleCadence>('weekly');
@@ -40,18 +42,22 @@ export function AuditSchedules({
   const [engines, setEngines] = useState<LogicalEngine[]>(['chatgpt']);
   const schedulesQuery = useQuery({
     queryKey: queryKeys.runs.schedules(projectId),
-    queryFn: ({ signal }) => runsApi.listSchedules(projectId, { signal }),
+    queryFn: ({ signal }) => runsApi.listSchedules(projectId, { signal, workspaceId }),
   });
   const createMutation = useMutation({
     mutationFn: () =>
-      runsApi.createSchedule(projectId, {
-        prompt_set_id: promptSetId,
-        audit_scope: auditScope,
-        cadence,
-        interval_minutes: cadence === 'every_n_minutes' ? Number(intervalMinutes) : undefined,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-        engines,
-      }),
+      runsApi.createSchedule(
+        projectId,
+        {
+          prompt_set_id: promptSetId,
+          audit_scope: auditScope,
+          cadence,
+          interval_minutes: cadence === 'every_n_minutes' ? Number(intervalMinutes) : undefined,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+          engines,
+        },
+        { workspaceId },
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.runs.schedules(projectId) });
     },

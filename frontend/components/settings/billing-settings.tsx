@@ -99,7 +99,8 @@ function useBillingReads({
   });
   const catalogQuery = useQuery({
     queryKey: queryKeys.billing.catalog(country || undefined),
-    queryFn: ({ signal }) => billingApi.catalog(country || undefined, { signal }),
+    queryFn: ({ signal }) =>
+      billingApi.catalog(country || undefined, { signal, workspaceId: null }),
     enabled,
     placeholderData: keepPreviousData,
   });

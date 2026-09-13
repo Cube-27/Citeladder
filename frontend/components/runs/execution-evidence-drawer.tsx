@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
 import type { Execution } from '@/lib/api/types';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /** Persisted execution evidence shown without leaving the run detail context. */
 export function ExecutionEvidenceDrawer({
@@ -20,10 +21,11 @@ export function ExecutionEvidenceDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
+  const workspaceId = useActiveWorkspaceId();
   const evidenceQuery = useQuery({
     queryKey: queryKeys.runs.execution(execution?.id ?? ''),
-    queryFn: ({ signal }) => runsApi.getExecution(execution?.id ?? '', { signal }),
-    enabled: open && execution !== null,
+    queryFn: ({ signal }) => runsApi.getExecution(execution?.id ?? '', { signal, workspaceId }),
+    enabled: open && execution !== null && workspaceId !== null,
   });
 
   return (

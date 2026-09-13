@@ -6,7 +6,7 @@ import { useCallback } from 'react';
 import { promptsApi } from '@/lib/api/prompts';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { PromptSet } from '@/lib/api/types';
-import { useActiveProject } from '@/lib/project/project-context';
+import { useActiveProject, useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /**
  * Resolve the active project's prompt set (F7).
@@ -19,13 +19,15 @@ import { useActiveProject } from '@/lib/project/project-context';
  */
 export function usePromptSet() {
   const project = useActiveProject();
+  const workspaceId = useActiveWorkspaceId();
   const projectId = project?.id ?? null;
   const queryClient = useQueryClient();
 
   const listQuery = useQuery({
     queryKey: projectId ? queryKeys.prompts.sets(projectId) : ['prompts', 'sets', 'none'],
-    queryFn: ({ signal }) => promptsApi.listPromptSets(projectId as string, { signal }),
-    enabled: Boolean(projectId),
+    queryFn: ({ signal }) =>
+      promptsApi.listPromptSets(projectId as string, { signal, workspaceId }),
+    enabled: Boolean(projectId && workspaceId),
     // Seed from the embedded prompt sets so the table can render immediately.
     initialData: project?.prompt_sets?.length ? project.prompt_sets : undefined,
   });
@@ -35,10 +37,10 @@ export function usePromptSet() {
 
   const createMutation = useMutation({
     mutationFn: () =>
-      promptsApi.createPromptSet({
-        project_id: projectId as string,
-        name: 'Default prompt set',
-      }),
+      promptsApi.createPromptSet(
+        { project_id: projectId as string, name: 'Default prompt set' },
+        { workspaceId },
+      ),
     onSuccess: async (created) => {
       if (projectId) {
         queryClient.setQueryData<PromptSet[]>(queryKeys.prompts.sets(projectId), (prev) =>

@@ -1,14 +1,18 @@
 'use client';
 
+import { useState } from 'react';
+
 import { Badge } from '@/components/ui/badge';
 import { MeasurementContext } from '@/components/runs/measurement-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Label, Metric, textRole } from '@/components/ui/typography';
+import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
+import { saveBlob } from '@/lib/site-health/download';
 import {
   auditBadgeValue,
   auditStatusLabel,
@@ -25,6 +29,8 @@ function ProgressHeader({
   onCancel,
   onRerunFailures,
   rerunPending,
+  onExport,
+  exporting,
 }: Readonly<{
   audit: Audit;
   polling: boolean;
@@ -33,6 +39,8 @@ function ProgressHeader({
   onCancel: () => void;
   onRerunFailures?: () => void;
   rerunPending: boolean;
+  onExport: (format: 'csv' | 'md') => void;
+  exporting: 'csv' | 'md' | null;
 }>) {
   return (
     <div className="border-border-subtle flex flex-wrap items-center justify-between gap-3 border-b pb-4">
@@ -46,24 +54,27 @@ function ProgressHeader({
             className="mono text-muted inline-flex items-center gap-1.5 text-xs"
             aria-live="polite"
           >
-            <span
-              className="bg-accent inline-block size-1.5 animate-pulse rounded-full"
-              aria-hidden
-            />
+            <span className="activity-dot bg-accent inline-block size-1.5" aria-hidden />
             Updating…
           </span>
         ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" size="sm" asChild>
-          <a href={runsApi.exportUrl(audit.id, 'csv')} download>
-            Export CSV
-          </a>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onExport('csv')}
+          disabled={exporting !== null}
+        >
+          {exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
         </Button>
-        <Button variant="secondary" size="sm" asChild>
-          <a href={runsApi.exportUrl(audit.id, 'md')} download>
-            Export MD
-          </a>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onExport('md')}
+          disabled={exporting !== null}
+        >
+          {exporting === 'md' ? 'Exporting…' : 'Export MD'}
         </Button>
         <Button
           variant="destructive"
@@ -161,9 +172,9 @@ function ProgressNotices({
  * Shows the audit's status badge, the requested/completed/failed mono counts,
  * the created + completed timestamps, a Cancel button (enabled only while the
  * backend still accepts a cooperative cancel — i.e. not `reporting`/terminal),
- * and same-origin CSV/MD export links. Progress is driven by
- * the parent's polling of `GET /audits/{id}`; this component is presentational
- * apart from firing the cancel callback.
+ * and authenticated CSV/MD exports. Progress is driven by the parent's polling
+ * of `GET /audits/{id}`; exports use the audit's persisted workspace identity
+ * rather than a headerless navigation that could resolve another workspace.
  */
 export function ProgressPanel({
   audit,
@@ -190,6 +201,23 @@ export function ProgressPanel({
 }>) {
   const polling = shouldPollAudit(audit.status);
   const cancelable = isAuditCancelable(audit.status);
+  const [exporting, setExporting] = useState<'csv' | 'md' | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function download(format: 'csv' | 'md') {
+    setExporting(format);
+    setExportError(null);
+    try {
+      const blob = await runsApi.downloadExport(audit.id, format, {
+        workspaceId: audit.workspace_id,
+      });
+      saveBlob(blob, `audit-${audit.id}.${format}`);
+    } catch (error) {
+      setExportError(humanizeApiError(error).message);
+    } finally {
+      setExporting(null);
+    }
+  }
 
   return (
     <Card>
@@ -202,6 +230,8 @@ export function ProgressPanel({
           onCancel={onCancel}
           onRerunFailures={onRerunFailures}
           rerunPending={rerunPending}
+          onExport={(format) => void download(format)}
+          exporting={exporting}
         />
 
         {polling && audit.requested_count > 0 ? (
@@ -211,7 +241,7 @@ export function ProgressPanel({
         <ProgressMetrics audit={audit} />
 
         <ProgressNotices
-          errorMessage={audit.error_message}
+          errorMessage={exportError ?? audit.error_message}
           cancelNotice={cancelNotice}
           onCancelRetry={onCancelRetry}
           rerunNotice={rerunNotice}

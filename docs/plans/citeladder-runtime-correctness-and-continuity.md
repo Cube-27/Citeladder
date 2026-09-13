@@ -1,4 +1,4 @@
-# Runtime correctness and continuity — partially delivered
+# Runtime correctness and continuity — implementation delivered through Slice 4
 
 Selected by the owner on 13 September 2026; the first delivery was paused for a
 bounded commit after Slices 0–2 and the logo-refresh ownership correction.
@@ -11,8 +11,11 @@ whenever they disagree.
 
 - **Delivered in the first bounded change:** Slice 0A, Slice 0B, Slice 1,
   Slice 2, and Slice 3 item 5.
-- **Pending:** Slice 3 items 1–4, Slice 4, and the measured decisions in
-  Slice 5.
+- **Delivered in the second bounded change:** Slice 3 items 1–4 and Slice 4.
+- **Measure-gated:** Slice 5 remains intentionally undecided. The local browser
+  probe on 13 September 2026 reached the sign-in boundary without an
+  authenticated measurement fixture, so it produced no trace that justifies
+  terminal-overview prefetching, retained tab panels, or transition work.
 - **External acceptance pending:** repeat the Site Health incident and SSE
   idle-timeout/disconnect checks after a separately authorized deployment.
 

@@ -16,6 +16,7 @@ import type { CommerceQueries } from './commerce-queries';
 import { competitorHost, competitorTone, discoveryMessage } from './commerce-format';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
 
@@ -39,9 +40,10 @@ export function TargetCompetitors({
   discovery: Discovery;
 }>) {
   const client = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const decide = useMutation({
     mutationFn: ({ id, decision }: { id: string; decision: 'approved' | 'rejected' }) =>
-      commerceApi.decideCompetitor(projectId, id, decision),
+      commerceApi.decideCompetitor(projectId, id, decision, { workspaceId }),
     onSuccess: () =>
       client.invalidateQueries({ queryKey: queryKeys.commerce.competitors(projectId) }),
   });

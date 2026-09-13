@@ -3,11 +3,11 @@
 import { useEffect } from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
 import {
   EvidenceEmpty,
-  EvidenceBusyBar,
   EvidenceError,
   EvidenceFilteredEmpty,
   EvidenceSkeleton,
@@ -123,7 +123,7 @@ function LoadedEvidence({
   const paged = items.slice(from - 1, to);
   return (
     <Card className="relative" aria-busy={query.isFetching}>
-      <EvidenceBusyBar active={query.isFetching} />
+      <BusyBar active={query.isFetching} label="Updating evidence" />
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div className="grid gap-1">
           <CardTitle>{TITLE}</CardTitle>

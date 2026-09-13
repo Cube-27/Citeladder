@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { performanceApi, type PerformanceDimension } from '@/lib/api/performance';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
@@ -158,6 +159,7 @@ export function DimensionTable({
   /** The provider report behind this table is never collected. */
   unavailable?: boolean;
 }>) {
+  const workspaceId = useActiveWorkspaceId();
   const tab = dimensionTab(dimension);
   const [sort, setSort] = useState(() => defaultSort(dimension));
   // Every value the server binds the cursor to participates, so switching
@@ -181,8 +183,8 @@ export function DimensionTable({
   };
   const query = useQuery({
     queryKey: queryKeys.performance.table(projectId, params),
-    queryFn: ({ signal }) => performanceApi.getTable(projectId, params, { signal }),
-    enabled: !unavailable,
+    queryFn: ({ signal }) => performanceApi.getTable(projectId, params, { signal, workspaceId }),
+    enabled: !unavailable && workspaceId !== null,
     placeholderData: (previousData, previousQuery) =>
       retainPreviousDataForScope(projectId, previousData, previousQuery),
   });

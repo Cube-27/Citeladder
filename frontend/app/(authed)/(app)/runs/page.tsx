@@ -19,6 +19,7 @@ import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@/lib/api/types';
 import { shouldPollAudit } from '@/lib/runs/status';
 import { useActiveProject } from '@/lib/project/project-context';
+import { resolveActiveProjectRequestScope } from '@/lib/project/request-scope';
 import { Stack } from '@/components/ui/layout';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/page-header';
@@ -51,16 +52,18 @@ const STATUS_FILTERS: { id: StatusFilter; label: string; match: (audit: Audit) =
  */
 export default function RunsPage() {
   const project = useActiveProject();
-  const projectId = project?.id ?? null;
+  const scope = resolveActiveProjectRequestScope(project);
+  const projectId = scope.projectId;
   const router = useRouter();
   const projectHref = useProjectHref();
   const [launchOpen, setLaunchOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const runsQuery = useQuery({
-    queryKey: queryKeys.runs.list({ project_id: projectId ?? '' }),
-    queryFn: ({ signal }) => runsApi.listAudits({ project_id: projectId as string }, { signal }),
-    enabled: Boolean(projectId),
+    queryKey: queryKeys.runs.list({ project_id: projectId }),
+    queryFn: ({ signal }) =>
+      runsApi.listAudits({ project_id: projectId }, { signal, workspaceId: scope.workspaceId }),
+    enabled: scope.enabled,
     // Keep statuses/counts live while any run is progressing; stop once all
     // runs are terminal.
     refetchInterval: (query) => {

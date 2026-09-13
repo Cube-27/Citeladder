@@ -31,29 +31,6 @@ import { ApiError, isAbortError, isTimeoutError } from './errors';
 /** Relative API base. Same-origin; proxied to BACKEND_ORIGIN by Next rewrites. */
 export { API_BASE_URL } from '@/lib/config/operational';
 
-/**
- * Active workspace id, stamped as `X-Workspace-Id` on every request when set.
- *
- * The backend's `require_active_workspace` (B3) reads this header to scope flat
- * (non-path) routes to the selected workspace, falling back to the caller's
- * default workspace when it is absent (deps.py). The shell's project context
- * (F5) calls `setActiveWorkspaceId(project.workspace_id)` whenever the active
- * project changes, so downstream project/prompt/provider/run queries are scoped
- * to the workspace the user is looking at. Same-origin proxy means a custom
- * header never triggers a CORS preflight.
- */
-let activeWorkspaceId: string | null = null;
-
-/** Set (or clear with `null`) the workspace id sent on subsequent requests. */
-export function setActiveWorkspaceId(workspaceId: string | null) {
-  activeWorkspaceId = workspaceId;
-}
-
-/** Current workspace id stamped on requests, or `null` (backend default). */
-export function getActiveWorkspaceId() {
-  return activeWorkspaceId;
-}
-
 export type ApiRequestOptions = {
   signal?: AbortSignal;
   headers?: HeadersInit;
@@ -66,9 +43,8 @@ export type ApiRequestOptions = {
    * that untrue: a retry of a request issued for workspace A picked up B's
    * header and returned B's data under A's cache key.
    *
-   * `undefined` keeps the ambient selection (the compatibility path for
-   * callers not yet converted); an explicit `null` deliberately sends NO
-   * header, letting the backend resolve the caller's default workspace.
+   * `undefined` and `null` both send no workspace header. There is
+   * deliberately no mutable ambient fallback.
    */
   workspaceId?: string | null;
   requestId?: string;
@@ -102,15 +78,11 @@ function createRequestId() {
  * header object silently decide the tenancy of a request that named its own
  * workspace — the exact failure this option exists to remove.
  *
- * With no explicit value the ambient selection applies, and a caller-supplied
- * header still wins: that is the un-converted compatibility path.
+ * With no explicit value the header is removed. Tenancy stays attached to the
+ * request options captured by its query or mutation owner.
  */
 function applyWorkspaceHeader(headers: Headers, workspaceId: string | null | undefined) {
-  if (workspaceId === undefined) {
-    if (activeWorkspaceId && !headers.has('X-Workspace-Id')) {
-      headers.set('X-Workspace-Id', activeWorkspaceId);
-    }
-  } else if (workspaceId) {
+  if (workspaceId) {
     headers.set('X-Workspace-Id', workspaceId);
   } else {
     headers.delete('X-Workspace-Id');

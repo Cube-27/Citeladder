@@ -14,10 +14,14 @@ export function useCommandCenterActions(data: CommandCenter, project: Project) {
   const queryKey = queryKeys.projects.commandCenter(project.id);
   const reorder = useMutation({
     mutationFn: (ordered: Opportunity[]) =>
-      opportunitiesApi.updateOrder(project.id, {
-        ordered_opportunity_ids: ordered.map((row) => row.id),
-        expected_version: orderVersion.current,
-      }),
+      opportunitiesApi.updateOrder(
+        project.id,
+        {
+          ordered_opportunity_ids: ordered.map((row) => row.id),
+          expected_version: orderVersion.current,
+        },
+        { workspaceId: project.workspace_id },
+      ),
     onMutate: async (ordered) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<CommandCenter>(queryKey);
@@ -80,7 +84,9 @@ async function downloadReport(
   setDownloading(true);
   setError(false);
   try {
-    const blob = await projectsApi.downloadExecutiveReport(project.id);
+    const blob = await projectsApi.downloadExecutiveReport(project.id, {
+      workspaceId: project.workspace_id,
+    });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;

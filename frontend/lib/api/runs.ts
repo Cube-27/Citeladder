@@ -126,9 +126,9 @@ export const runsApi = {
     const res = await apiClient.get<ExecutionEvidence>(`/executions/${executionId}`, options);
     return strictValidate(executionEvidenceSchema, res, 'runs.getExecution');
   },
-  /** Same-origin export URLs (browser navigation / download links). */
-  exportUrl: (auditId: string, format: 'csv' | 'md') =>
-    `${API_BASE_URL}/audits/${auditId}/export.${format}`,
+  /** Fetch an export through the authenticated client so workspace scope is explicit. */
+  downloadExport: (auditId: string, format: 'csv' | 'md', options: ApiRequestOptions) =>
+    apiClient.getBlob(`/audits/${auditId}/export.${format}`, options),
   /**
    * Same-origin SSE endpoint (optional; polling is the baseline). The backend
    * `/events` endpoint returns JSON by default and an SSE `text/event-stream`
@@ -139,9 +139,10 @@ export const runsApi = {
 
 /** Shared list options keep navigation, the app provider, and run screens on one cache identity. */
 export const runsQueries = {
-  list: (projectId: string) =>
+  list: (workspaceId: string, projectId: string) =>
     queryOptions({
       queryKey: queryKeys.runs.list({ project_id: projectId }),
-      queryFn: ({ signal }) => runsApi.listAudits({ project_id: projectId }, { signal }),
+      queryFn: ({ signal }) =>
+        runsApi.listAudits({ project_id: projectId }, { signal, workspaceId }),
     }),
 };

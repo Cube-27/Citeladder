@@ -31,6 +31,7 @@ export function EarlyAccessDialog({
           data_sharing_consent: dataConsent,
         },
         createIdempotencyKey(),
+        { workspaceId: null },
       ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });

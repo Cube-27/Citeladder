@@ -1,11 +1,12 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, LoaderCircle } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Dialog } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pressable } from '@/components/ui/pressable';
@@ -67,9 +68,7 @@ function PropertyOption({
         <span className={textRole('bodyStrong', 'block truncate')}>{property.label}</span>
         <span className="text-muted block truncate font-mono text-xs">{property.property_ref}</span>
       </span>
-      {pending ? (
-        <LoaderCircle className="text-muted size-4 shrink-0 animate-spin" aria-hidden />
-      ) : null}
+      {pending ? <Spinner className="text-muted" /> : null}
       {selected && !pending ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
     </Pressable>
   );
@@ -104,10 +103,10 @@ function PropertyOption({
  * Shared with `integration-card` so the row's Sync button and the picker
  * agree; react-query dedupes the two subscribers onto one request.
  */
-export function useActiveMapping(connectionId: string) {
+export function useActiveMapping(workspaceId: string, connectionId: string) {
   const query = useQuery({
     queryKey: queryKeys.integrations.mappings(connectionId),
-    queryFn: ({ signal }) => integrationsApi.listMappings(connectionId, { signal }),
+    queryFn: ({ signal }) => integrationsApi.listMappings(connectionId, { signal, workspaceId }),
     staleTime: 60 * 1000,
   });
   return query.data?.find((mapping) => mapping.status === 'active') ?? null;
@@ -119,13 +118,17 @@ export function PropertyPicker({
 }: Readonly<{ connection: IntegrationConnection; disabled?: boolean }>) {
   const queryClient = useQueryClient();
   const { activeProject } = useProjectContext();
-  const activeMapping = useActiveMapping(connection.id);
+  const activeMapping = useActiveMapping(connection.workspace_id, connection.id);
   const [open, setOpen] = useState(false);
   const [pendingRef, setPendingRef] = useState<string | null>(null);
 
   const propertiesQuery = useQuery({
     queryKey: queryKeys.integrations.properties(connection.id),
-    queryFn: ({ signal }) => integrationsApi.listProperties(connection.id, { signal }),
+    queryFn: ({ signal }) =>
+      integrationsApi.listProperties(connection.id, {
+        signal,
+        workspaceId: connection.workspace_id,
+      }),
     // Live provider call — only fetch once the picker is actually open.
     enabled: open,
     // Property lists barely change; don't re-hit Google on every reopen.
@@ -135,11 +138,15 @@ export function PropertyPicker({
   const selectMutation = useMutation({
     mutationFn: (propertyRef: string) => {
       if (!activeProject) throw new Error('Select a project first.');
-      return integrationsApi.createMapping(connection.id, {
-        provider: connection.provider,
-        property_ref: propertyRef,
-        project_id: activeProject.id,
-      });
+      return integrationsApi.createMapping(
+        connection.id,
+        {
+          provider: connection.provider,
+          property_ref: propertyRef,
+          project_id: activeProject.id,
+        },
+        { workspaceId: connection.workspace_id },
+      );
     },
     onSuccess: async () => {
       setOpen(false);

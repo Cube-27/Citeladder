@@ -12,6 +12,7 @@ import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { textRole } from '@/components/ui/typography';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import { useProjectContext } from '@/lib/project/project-context';
+import { resolveProjectRequestScope } from '@/lib/project/request-scope';
 
 /**
  * Issues screen container (Slice 8, mockup 710).
@@ -22,12 +23,13 @@ import { useProjectContext } from '@/lib/project/project-context';
  * Health first (the catalog is per-crawl and there is nothing to group).
  */
 export function IssuesScreen() {
-  const { activeProject, isLoading: projectLoading } = useProjectContext();
+  const { activeProject, activeWorkspaceId, isLoading: projectLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
+  const requestScope = resolveProjectRequestScope(activeWorkspaceId, projectId);
 
   const dashboardQuery = useQuery({
-    ...siteHealthQueries.dashboard(projectId ?? ''),
-    enabled: Boolean(projectId),
+    ...siteHealthQueries.dashboard(requestScope.workspaceId, requestScope.projectId),
+    enabled: requestScope.enabled,
   });
 
   const crawl = dashboardQuery.data?.crawl ?? null;
@@ -56,7 +58,7 @@ export function IssuesScreen() {
           </CardContent>
         </Card>
       ) : (
-        <IssuesCatalog crawlId={crawl.id} />
+        <IssuesCatalog workspaceId={activeWorkspaceId!} crawlId={crawl.id} />
       )}
     </div>
   );

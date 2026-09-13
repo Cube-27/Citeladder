@@ -140,7 +140,8 @@ export function IntegrationSettings() {
 
   const connectionsQuery = useQuery({
     queryKey: queryKeys.integrations.connections(workspaceId),
-    queryFn: ({ signal }) => integrationsApi.list({ signal }),
+    queryFn: ({ signal }) => integrationsApi.list({ signal, workspaceId }),
+    enabled: workspaceId !== null,
   });
 
   const connections = connectionsQuery.data ?? [];
@@ -171,13 +172,14 @@ export function IntegrationSettings() {
       ) : null}
 
       {!connectionsQuery.isLoading && !connectionsQuery.isError && connections.length === 0 ? (
-        <IntegrationsEmptyState />
+        <IntegrationsEmptyState workspaceId={workspaceId!} />
       ) : null}
 
       {!connectionsQuery.isLoading && !connectionsQuery.isError && connections.length > 0 ? (
         <div className="grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr))] gap-4">
           {FAMILY_ORDER.map((family) => (
             <IntegrationCard
+              workspaceId={workspaceId!}
               key={family}
               family={family}
               grant={grants.find((grant) => grant.family === family) ?? null}

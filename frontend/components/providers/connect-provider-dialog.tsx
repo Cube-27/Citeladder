@@ -53,7 +53,7 @@ export function ConnectProviderDialog({
 }>) {
   const catalogQuery = useQuery({
     queryKey: queryKeys.providers.catalog(),
-    queryFn: ({ signal }) => providersApi.getCatalog({ signal }),
+    queryFn: ({ signal }) => providersApi.getCatalog({ signal, workspaceId: null }),
     enabled: open,
   });
   const workspaceId = useActiveWorkspaceId();

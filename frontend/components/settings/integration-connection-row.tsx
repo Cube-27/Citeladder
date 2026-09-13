@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart3, Globe, LoaderCircle, Search, type LucideIcon } from 'lucide-react';
+import { BarChart3, Globe, Search, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { BackfillProgress } from '@/components/settings/backfill-progress';
@@ -103,15 +103,10 @@ function ConnectionActions({
           onClick={onSync}
           title={hasProperty ? undefined : 'Select a property first'}
           disabled={syncDisabled}
+          pending={syncPending}
+          pendingLabel="Syncing…"
         >
-          {syncPending ? (
-            <>
-              <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
-              Syncing…
-            </>
-          ) : (
-            'Sync now'
-          )}
+          Sync now
         </Button>
         <Button variant="destructiveGhost" size="sm" onClick={onDisconnect} disabled={busy}>
           Disconnect
@@ -139,7 +134,7 @@ function ConnectionMetadata({
             {connection.last_synced_at ? formatUtcTimestamp(connection.last_synced_at) : 'Never'}
           </span>
         </div>
-        <BackfillProgress connectionId={connection.id} />
+        <BackfillProgress workspaceId={connection.workspace_id} connectionId={connection.id} />
       </div>
       {runActive && activeRun ? (
         <div className="flex items-center gap-2">
@@ -333,7 +328,7 @@ export function ConnectionRow({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null);
   const testMutation = useMutation({
-    mutationFn: () => integrationsApi.test(connection.id),
+    mutationFn: () => integrationsApi.test(connection.id, { workspaceId: connection.workspace_id }),
     onSuccess: (result) => {
       setTestState(
         result.status === 'ok'
@@ -351,7 +346,8 @@ export function ConnectionRow({
   // The terminal sync poll invalidates integrations; enqueueing alone persists no projection.
   // react-doctor-disable-next-line
   const syncMutation = useMutation({
-    mutationFn: () => integrationsApi.sync(connection.id),
+    mutationFn: () =>
+      integrationsApi.sync(connection.id, {}, { workspaceId: connection.workspace_id }),
     onSuccess: (enqueued) => {
       setTestState(null);
       setActiveSyncId(enqueued.sync_run_id);
@@ -359,7 +355,11 @@ export function ConnectionRow({
   });
   const syncRunQuery = useQuery({
     queryKey: queryKeys.integrations.sync(connection.id, activeSyncId ?? ''),
-    queryFn: ({ signal }) => integrationsApi.getSync(connection.id, activeSyncId ?? '', { signal }),
+    queryFn: ({ signal }) =>
+      integrationsApi.getSync(connection.id, activeSyncId ?? '', {
+        signal,
+        workspaceId: connection.workspace_id,
+      }),
     enabled: activeSyncId !== null,
     refetchInterval: (query) => {
       const run = query.state.data;
@@ -377,14 +377,15 @@ export function ConnectionRow({
   }, [queryClient, runTerminal]);
 
   const deleteMutation = useMutation({
-    mutationFn: () => integrationsApi.delete(connection.id),
+    mutationFn: () =>
+      integrationsApi.delete(connection.id, { workspaceId: connection.workspace_id }),
     onSuccess: async () => {
       setConfirmOpen(false);
       await queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
     },
   });
   const busy = testMutation.isPending || syncMutation.isPending || deleteMutation.isPending;
-  const hasProperty = useActiveMapping(connection.id) !== null;
+  const hasProperty = useActiveMapping(connection.workspace_id, connection.id) !== null;
 
   return (
     <ConnectionRowView

@@ -430,7 +430,11 @@ function useSourceAnalysis(
   };
   const sourceQuery = useQuery({
     queryKey: queryKeys.visibility.sources(queries.projectId ?? '', params),
-    queryFn: ({ signal }) => visibilityApi.getSources(queries.projectId!, params, { signal }),
+    queryFn: ({ signal }) =>
+      visibilityApi.getSources(queries.projectId!, params, {
+        signal,
+        workspaceId: queries.workspaceId,
+      }),
     enabled: mode === 'sources' && Boolean(queries.projectId && queries.activeRunId),
     // Hold the page on screen while the next one loads: without it the header
     // fell back to "Unknown" and the table emptied on every offset change.

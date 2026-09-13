@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { httpErrorStatus, setActiveWorkspaceId } from '@/lib/api/client';
+import { httpErrorStatus } from '@/lib/api/client';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsQueries } from '@/lib/api/runs';
@@ -218,12 +218,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
     void queryClient.refetchQueries({ queryKey: queryKeys.projects.all });
   }, [queryClient]);
 
-  // Keep the ambient header in step with the RESOLVED workspace (not with a
-  // project, which may not exist yet). Converted callers pass the workspace
-  // explicitly; this remains for the ones that have not been converted, and
-  // it is no longer the correctness mechanism for any of them.
   useEffect(() => {
-    setActiveWorkspaceId(activeWorkspaceId);
     writeStoredActiveWorkspaceId(activeWorkspaceId);
   }, [activeWorkspaceId]);
 
@@ -296,8 +291,8 @@ function useProjectWarmup(activeProject: Project | null, workspaceId: string | n
   useEffect(() => {
     if (!activeProject || !workspaceId) return;
     void Promise.all([
-      queryClient.prefetchQuery(runsQueries.list(activeProject.id)),
-      queryClient.prefetchQuery(siteHealthQueries.dashboard(activeProject.id)),
+      queryClient.prefetchQuery(runsQueries.list(workspaceId, activeProject.id)),
+      queryClient.prefetchQuery(siteHealthQueries.dashboard(workspaceId, activeProject.id)),
     ]);
   }, [activeProject, workspaceId, queryClient]);
 }

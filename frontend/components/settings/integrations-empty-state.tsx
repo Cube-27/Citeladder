@@ -18,7 +18,7 @@ import { assignLocation } from '@/lib/navigate';
  * a Google token cannot authorize Bing Webmaster Tools (the Bing account
  * itself may still have been created with a Google ID).
  */
-export function IntegrationsEmptyState() {
+export function IntegrationsEmptyState({ workspaceId }: Readonly<{ workspaceId: string }>) {
   return (
     <div data-testid="integrations-empty-state">
       <EmptyState
@@ -27,13 +27,16 @@ export function IntegrationsEmptyState() {
         description="One Google consent connects Search Console and Analytics 4. Bing Webmaster Tools needs its own sign-in."
         action={
           <>
-            <Button size="md" onClick={() => assignLocation(integrationsApi.oauthStartUrl('gsc'))}>
+            <Button
+              size="md"
+              onClick={() => assignLocation(integrationsApi.oauthStartUrl('gsc', workspaceId))}
+            >
               Connect Google
             </Button>
             <Button
               variant="ghost"
               size="md"
-              onClick={() => assignLocation(integrationsApi.oauthStartUrl('bing'))}
+              onClick={() => assignLocation(integrationsApi.oauthStartUrl('bing', workspaceId))}
             >
               Connect Bing
             </Button>

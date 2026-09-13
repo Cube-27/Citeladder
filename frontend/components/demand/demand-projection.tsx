@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calendar, LoaderCircle, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { Calendar, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -58,10 +58,11 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
    */
   const recomputeMutation = useMutation({
     mutationFn: () =>
-      demandApi.recompute(activeProject!.id, {
-        window_start: snapshot.window_start,
-        window_end: snapshot.window_end,
-      }),
+      demandApi.recompute(
+        activeProject!.id,
+        { window_start: snapshot.window_start, window_end: snapshot.window_end },
+        { workspaceId: activeProject!.workspace_id },
+      ),
   });
 
   const refreshSnapshot = () =>
@@ -129,20 +130,12 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
             variant="secondary"
             size="sm"
             onClick={() => recomputeMutation.mutate()}
-            disabled={recomputeMutation.isPending}
+            pending={recomputeMutation.isPending}
+            pendingLabel="Queueing…"
             className="shrink-0 text-xs"
           >
-            {recomputeMutation.isPending ? (
-              <>
-                <LoaderCircle className="mr-1.5 size-3.5 animate-spin" />
-                Queueing…
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-1.5 size-3.5" />
-                Recompute Signals
-              </>
-            )}
+            <RefreshCw className="mr-1.5 size-3.5" />
+            Recompute Signals
           </Button>
         }
       />
@@ -267,7 +260,11 @@ export function DemandProjection() {
   const { activeProject, isLoading: projectLoading } = useProjectContext();
   const latest = useQuery({
     queryKey: queryKeys.demand.latest(activeProject?.id),
-    queryFn: ({ signal }) => demandApi.getLatest(activeProject!.id, { signal }),
+    queryFn: ({ signal }) =>
+      demandApi.getLatest(activeProject!.id, {
+        signal,
+        workspaceId: activeProject!.workspace_id,
+      }),
     enabled: Boolean(activeProject),
     // Deliberately NO `keepPreviousData`: the key's only variable is the
     // project, so keeping previous data would render the PREVIOUS project's

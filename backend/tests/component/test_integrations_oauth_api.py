@@ -427,8 +427,14 @@ async def test_workspace_comes_from_verified_state_not_client(
     await db_session.commit()
     ws2 = str(other.id)
 
-    # Start bound to the SECOND workspace via the active-workspace header.
-    start = await _start(client, "gsc", headers={"X-Workspace-Id": ws2})
+    # A full-page navigation cannot attach the active-workspace header, so the
+    # start URL names the workspace in its path. Even a stale copied header
+    # must not override that explicit scope.
+    start = await client.get(
+        f"{_BASE}/workspaces/{ws2}/oauth/gsc/start",
+        headers={"X-Workspace-Id": str(uuid.uuid4())},
+    )
+    assert start.status_code == 302
     state = _state_from_start(start)
 
     # The callback carries NO workspace selection: the grant must land on the

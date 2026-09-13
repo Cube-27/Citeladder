@@ -6,7 +6,13 @@ import userEvent from '@testing-library/user-event';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import type { IssueOccurrence, SiteIssue } from '@/lib/api/types';
-import { IssuesCatalog } from './issues-catalog';
+import { IssuesCatalog as ScopedIssuesCatalog } from './issues-catalog';
+
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+function IssuesCatalog(props: Readonly<{ crawlId: string }>) {
+  return <ScopedIssuesCatalog workspaceId={WORKSPACE} {...props} />;
+}
 
 const navigation = vi.hoisted(() => {
   let entries = [''];

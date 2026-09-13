@@ -137,7 +137,14 @@ function useRouteIntent() {
   const queryClient = useQueryClient();
   const { activeProject } = useProjectContext();
   return useCallback(
-    (href: string) => prefetchRoute(queryClient, href, activeProject?.id ?? null),
-    [activeProject?.id, queryClient],
+    (href: string) =>
+      prefetchRoute(
+        queryClient,
+        href,
+        activeProject
+          ? { projectId: activeProject.id, workspaceId: activeProject.workspace_id }
+          : null,
+      ),
+    [activeProject, queryClient],
   );
 }

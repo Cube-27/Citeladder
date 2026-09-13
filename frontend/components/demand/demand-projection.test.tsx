@@ -8,11 +8,14 @@ import { DemandProjection } from './demand-projection';
 
 // Mutable so a test can switch projects mid-render; `vi.hoisted` keeps it
 // legal inside the hoisted mock factory.
-const project = vi.hoisted(() => ({ id: '11111111-1111-4111-8111-111111111111' }));
+const project = vi.hoisted(() => ({
+  id: '11111111-1111-4111-8111-111111111111',
+  workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+}));
 
 vi.mock('@/lib/project/project-context', () => {
   const context = () => ({
-    activeProject: { id: project.id },
+    activeProject: { id: project.id, workspace_id: project.workspace_id },
     activeProjectId: project.id,
     isLoading: false,
   });
@@ -271,10 +274,14 @@ describe('DemandProjection', () => {
     fireEvent.click(screen.getByRole('button', { name: /Recompute Signals/i }));
 
     await waitFor(() => {
-      expect(demandApi.recompute).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111', {
-        window_start: '2026-07-01',
-        window_end: '2026-07-07',
-      });
+      expect(demandApi.recompute).toHaveBeenCalledWith(
+        '11111111-1111-4111-8111-111111111111',
+        {
+          window_start: '2026-07-01',
+          window_end: '2026-07-07',
+        },
+        { workspaceId: project.workspace_id },
+      );
     });
 
     // The worker has not run yet, so the UI must say the job is queued and

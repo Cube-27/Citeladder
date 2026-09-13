@@ -21,10 +21,14 @@ import { formatShortDate } from '@/lib/format';
  * the same as an import that has covered nothing yet. `partial` says so
  * explicitly instead of reporting the coverage as complete.
  */
-export function BackfillProgress({ connectionId }: Readonly<{ connectionId: string }>) {
+export function BackfillProgress({
+  workspaceId,
+  connectionId,
+}: Readonly<{ workspaceId: string; connectionId: string }>) {
   const progressQuery = useQuery({
     queryKey: queryKeys.integrations.backfillProgress(connectionId),
-    queryFn: ({ signal }) => integrationsApi.getBackfillProgress(connectionId, { signal }),
+    queryFn: ({ signal }) =>
+      integrationsApi.getBackfillProgress(connectionId, { signal, workspaceId }),
     // Poll only while windows are still draining; a settled import is static.
     refetchInterval: (query) =>
       query.state.data?.state === 'importing' ? SYNC_RUN_POLL_MS : false,
