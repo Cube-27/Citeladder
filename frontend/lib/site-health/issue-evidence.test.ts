@@ -32,9 +32,7 @@ describe('evidenceFacts', () => {
     ).toEqual(['dateModified']);
   });
 
-  it('reads an empty list as absent, not as a satisfied flag', () => {
-    // `currency: []` is truthy in JavaScript; read as a plain flag it hid the
-    // one property this check actually failed on.
+  it('names the missing currency without inventing an expiry requirement', () => {
     expect(
       evidenceFacts('aeo.offer_freshness_signal', {
         offer: true,
@@ -43,7 +41,38 @@ describe('evidenceFacts', () => {
         timestamp: '',
         expiry_state: 'not_declared',
       }),
-    ).toEqual(['priceCurrency', 'priceValidUntil']);
+    ).toEqual(['priceCurrency']);
+  });
+
+  it('distinguishes absent offers from an expired declared offer', () => {
+    expect(
+      evidenceFacts('aeo.offer_freshness_signal', {
+        offer: false,
+        currency: [],
+        timestamp: '',
+        reason: 'offer_state_missing',
+      }),
+    ).toEqual(['Offer']);
+    expect(
+      evidenceFacts('aeo.offer_freshness_signal', {
+        offer: true,
+        currency: ['USD'],
+        timestamp: '2025-01-01',
+        expiry_state: 'expired',
+      }),
+    ).toEqual(['priceValidUntil 2025-01-01 (expired)']);
+  });
+
+  it('reports incomplete structures only as precisely as the evidence allows', () => {
+    expect(
+      evidenceFacts('aeo.organization_identity', { has_organization: true, identities: [] }),
+    ).toEqual(['Organization identity incomplete (name and URL required)']);
+    expect(evidenceFacts('aeo.listing_item_facts', { item_fact_count: 0, items: [] })).toEqual([
+      'No listing item with both title and URL',
+    ]);
+    expect(evidenceFacts('aeo.heading_hierarchy', { section_count: 0, sections: [] })).toEqual([
+      'No primary-content heading sections',
+    ]);
   });
 
   it('identifies each offending control by selector, never by ordinal', () => {

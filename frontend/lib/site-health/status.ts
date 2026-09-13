@@ -364,7 +364,6 @@ export function measurementCaveat(
   }
   if (state === 'excluded') return 'Excluded from this audit';
   if (reason === 'unsupported_purpose_checklist') return 'Unsupported purpose checklist';
-  if (reason === 'page_purpose_unresolved') return 'Page purpose unresolved';
   return PLACEHOLDER;
 }
 

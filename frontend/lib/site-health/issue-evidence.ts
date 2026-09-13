@@ -166,6 +166,15 @@ function duplicateMetadataKinds(evidence: Evidence): string[] {
     .filter((kind) => kind.length > 0);
 }
 
+function offerFreshness(evidence: Evidence): string[] {
+  if (evidence.offer === false) return ['Offer'];
+  if (evidence.reason === 'offer_currency_missing') return ['priceCurrency'];
+  const timestamp = text(evidence.timestamp);
+  return timestamp
+    ? [`priceValidUntil ${timestamp} (${humanize(text(evidence.expiry_state))})`]
+    : reasonPhrase(evidence);
+}
+
 /**
  * Rules whose evidence has a native notation. Anything absent from this table
  * falls through to `reasonPhrase` and then to bounded scalars, so a new rule
@@ -190,7 +199,9 @@ const FACTS_BY_RULE: Readonly<Record<string, (evidence: Evidence) => string[]>> 
   'aeo.schema_recommended_present': schemaProperties,
   'aeo.schema_matches_content': schemaTypeMismatch,
   'aeo.organization_identity': (evidence) =>
-    evidence.has_organization ? ['Organization.name', 'Organization.url'] : ['Organization'],
+    evidence.has_organization
+      ? ['Organization identity incomplete (name and URL required)']
+      : ['Organization'],
   'aeo.trust_path_present': () => ['about', 'contact', 'privacy', 'terms'],
   'aeo.content_date_present': (evidence) =>
     absent(evidence, { has_published: 'datePublished', has_modified: 'dateModified' }),
@@ -200,12 +211,11 @@ const FACTS_BY_RULE: Readonly<Record<string, (evidence: Evidence) => string[]>> 
   'aeo.llms_txt_present': () => ['/llms.txt'],
   'aeo.product_brand_identity': () => ['brand'],
   'aeo.product_evidence_facts': () => ['gtin', 'mpn', 'sku'],
-  'aeo.offer_freshness_signal': (evidence) =>
-    absent(evidence, { currency: 'priceCurrency', timestamp: 'priceValidUntil' }),
+  'aeo.offer_freshness_signal': offerFreshness,
   'aeo.product_answer_facts': unmetAtoms,
   'aeo.listing_answer_set': unmetAtoms,
-  'aeo.listing_item_facts': () => ['name', 'url', 'offers'],
-  'aeo.heading_hierarchy': () => ['h2'],
+  'aeo.listing_item_facts': () => ['No listing item with both title and URL'],
+  'aeo.heading_hierarchy': () => ['No primary-content heading sections'],
   'aeo.server_rendered_content': () => ['server-rendered body'],
   'web.accessibility_heading_order': headingSkips,
   'web.accessibility_form_names': formControls,

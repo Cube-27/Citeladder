@@ -68,10 +68,8 @@ function dimensionState(dimension: ReadinessDimension): DimensionState {
   if (dimension.dimension_applicability === 'not_applicable') return 'Not applicable';
   if (dimension.dimension_measurement_state === 'excluded') return 'Excluded';
   if (dimension.score === null) return 'Not measured';
-  // Band the DISPLAYED score, not the raw one. The Score column rounds through
-  // `formatScore`, so comparing the unrounded value put a row reading "100"
-  // next to a "Nearly there" badge and a row reading "50" next to "Critical" —
-  // the exact contradiction this function exists to prevent.
+  // Round prioritization bands for display. Passing below still requires an
+  // actual perfect score over a complete measurement.
   const score = Math.round(dimension.score);
   if (score < 50) return 'Critical';
   if (score < 80) return 'Needs work';
