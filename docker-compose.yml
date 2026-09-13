@@ -105,6 +105,23 @@ services:
     ports:
       - "3000:3000"
 
+  # Opt-in Vite migration target. The current Next frontend keeps port 3000
+  # and remains authoritative unless this profile is explicitly enabled.
+  vite-app:
+    profiles: ["migration"]
+    build:
+      context: .
+      dockerfile: frontend/apps/app/Dockerfile
+    restart: unless-stopped
+    environment:
+      # Caddy consumes this only at runtime; it is never bundled for browsers.
+      BACKEND_ORIGIN: http://web:8000
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+
   worker:
     build:
       context: .

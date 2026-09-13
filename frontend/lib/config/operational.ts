@@ -43,24 +43,6 @@ export const API_RETRY_BACKOFF_MS = 150;
 // the API client's request timeout remains the network authority.
 export const WORKSPACE_LOADING_STALL_MS = 8_000;
 
-/**
- * Contract-drift guard (A5) knobs — the dev/CI tool that diffs the backend
- * OpenAPI response models against the zod contracts. `check:contract` reads
- * the live backend only as a last resort, so its origin and timeout are
- * tunable here rather than inline in the guard (invariant 1).
- */
-/**
- * Overridable via `CONTRACT_BACKEND_ORIGIN` so a non-default dev setup or a CI
- * job can point the guard at its own backend without editing code. The
- * localhost default keeps the common case zero-config. Read from `process.env`
- * directly (not `NEXT_PUBLIC_*`): this is a build-time/CLI tool that never runs
- * in the browser, so the value must not be inlined into the client bundle.
- */
-export const CONTRACT_BACKEND_ORIGIN =
-  process.env.CONTRACT_BACKEND_ORIGIN?.trim() || 'http://localhost:8000';
-export const CONTRACT_LIVE_FETCH_TIMEOUT_MS = 2_000;
-export const CONTRACT_CODEGEN_TIMEOUT_MS = 120_000;
-
 // Evidence request/display bounds.
 export const EVIDENCE_LIMIT = 100;
 export const FANOUT_SEARCH_DEBOUNCE_MS = 300;

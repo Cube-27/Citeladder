@@ -19,7 +19,15 @@ import {
 const root = resolve(import.meta.dirname, '..');
 const tokenOwner = join(root, 'app', 'globals.css');
 const sourceExtensions = new Set(['.css', '.ts', '.tsx', '.js', '.mjs']);
-const ignored = new Set(['node_modules', '.next', '.next-stale-codex', 'coverage', 'test-results']);
+const ignored = new Set([
+  'node_modules',
+  '.next',
+  '.next-stale-codex',
+  'build',
+  'dist',
+  'coverage',
+  'test-results',
+]);
 const violations = [];
 
 function files(directory) {

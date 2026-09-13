@@ -1,5 +1,6 @@
 import withBundleAnalyzer from '@next/bundle-analyzer';
 import type { NextConfig } from 'next';
+import { resolveBackendOrigin } from './lib/config/backend-origin';
 
 /**
  * Next.js config — same-origin API proxy (F2).
@@ -12,84 +13,13 @@ import type { NextConfig } from 'next';
  * avoids that entirely).
  *
  * Environment:
- *   BACKEND_ORIGIN — REQUIRED, server-only. The absolute origin of the FastAPI
- *     backend, e.g. `http://localhost:8000` in local dev or the internal
- *     service URL in production. It is read only in `next.config.ts` (build /
- *     server), is NOT prefixed with `NEXT_PUBLIC_`, and is therefore never
- *     exposed to the browser. Defaults to `http://localhost:8000` for local dev;
- *     production builds fail closed when it is absent or points at loopback.
+ *   BACKEND_ORIGIN — REQUIRED, server-only. The absolute origin of FastAPI,
+ *     e.g. `http://localhost:8000` locally or the internal service URL in production.
+ *     It is consumed only by server-side runtime configuration, is not prefixed
+ *     with `NEXT_PUBLIC_` or `VITE_`, and is therefore never exposed to the browser.
+ *     It defaults to `http://localhost:8000` for local development; production builds fail
+ *     closed when it is absent or points at loopback.
  */
-/**
- * True for an IPv4-mapped IPv6 literal (`::ffff:7f00:1`, `::ffff:127.0.0.1`, or
- * the uncompressed `0:0:0:0:0:ffff:…`).
- *
- * These defeat a naive loopback check: `http://[::ffff:127.0.0.1]` is
- * normalized by `URL` to `[::ffff:7f00:1]`, which is neither `::1` nor prefixed
- * `127.`, so it slipped through. Rather than decode the embedded address and
- * test it for 127/8, reject EVERY mapped IPv4 literal — there is no legitimate
- * reason to express a backend origin that way, and enumerating which mapped
- * ranges are loopback is exactly the kind of check that gets one case wrong.
- *
- * Written as a segment walk rather than a regex: the natural pattern for the
- * optional-zero-groups prefix nests quantifiers and backtracks super-linearly.
- */
-function isMappedIpv4Literal(host: string): boolean {
-  if (!host.includes(':')) return false;
-  const segments = host.split(':');
-  const marker = segments.findIndex((segment) => segment === 'ffff');
-  if (marker < 0) return false;
-  // Everything before the `ffff` marker must be the 80 leading zero bits,
-  // written either as empty (compressed) or explicit zero groups.
-  return segments.slice(0, marker).every((segment) => segment === '' || /^0+$/.test(segment));
-}
-
-function stripTrailingDots(value: string): string {
-  let end = value.length;
-  while (end > 0 && value.codePointAt(end - 1) === 46) {
-    end -= 1;
-  }
-  return value.slice(0, end);
-}
-
-export function resolveBackendOrigin(
-  configuredValue = process.env.BACKEND_ORIGIN,
-  production = process.env.NODE_ENV === 'production',
-  taskLocal = process.env.CITELADDER_TASK_LOCAL_BACKEND === 'true',
-) {
-  const configured = configuredValue?.trim();
-  if (!configured) {
-    if (production) throw new Error('BACKEND_ORIGIN is required for a production build.');
-    return 'http://localhost:8000';
-  }
-
-  let parsed: URL;
-  try {
-    parsed = new URL(configured);
-  } catch {
-    throw new Error('BACKEND_ORIGIN must be an absolute http(s) origin.');
-  }
-  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
-    throw new Error('BACKEND_ORIGIN must be a credential-free http(s) origin.');
-  }
-  if (parsed.pathname !== '/' || parsed.search || parsed.hash) {
-    throw new Error('BACKEND_ORIGIN must not include a path, query, or fragment.');
-  }
-  // `URL` keeps IPv6 literals bracketed; strip them so one set of comparisons
-  // covers both forms.
-  const host = stripTrailingDots(parsed.hostname.toLowerCase()).replace(/^\[|\]$/g, '');
-  const loopback =
-    host === 'localhost' ||
-    host === '0.0.0.0' ||
-    host === '::' ||
-    host === '::1' ||
-    host.startsWith('127.') ||
-    isMappedIpv4Literal(host);
-  const exactTaskLocalOrigin = parsed.origin === 'http://127.0.0.1:8000';
-  if (production && loopback && !(taskLocal && exactTaskLocalOrigin)) {
-    throw new Error('BACKEND_ORIGIN must not use a loopback host in production.');
-  }
-  return parsed.origin;
-}
 
 const BACKEND_ORIGIN = resolveBackendOrigin();
 

@@ -35,7 +35,7 @@ import {
   CONTRACT_BACKEND_ORIGIN,
   CONTRACT_CODEGEN_TIMEOUT_MS,
   CONTRACT_LIVE_FETCH_TIMEOUT_MS,
-} from '@/lib/config/operational';
+} from '@/lib/config/contract';
 import * as schemas from './schemas';
 
 /**

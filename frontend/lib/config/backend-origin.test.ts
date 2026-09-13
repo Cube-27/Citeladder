@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveBackendOrigin } from './next.config';
+import { resolveBackendOrigin } from './backend-origin';
 
 describe('resolveBackendOrigin', () => {
   it('rejects a trailing-dot loopback hostname in production', () => {

@@ -56,6 +56,20 @@ pnpm dev                    # http://127.0.0.1:3000
 `BACKEND_ORIGIN` is **server-only**. The browser calls relative `/api/*`; Next.js
 `rewrites()` proxy those to `BACKEND_ORIGIN` (see gotcha 2 below).
 
+The in-progress Vite application target shares the same dependencies, API client,
+styles, public assets, and server-only `BACKEND_ORIGIN`. It is deliberately
+non-authoritative while migration work continues:
+
+```bash
+pnpm dev:vite               # http://127.0.0.1:3001/__migration/app
+pnpm build:vite
+pnpm preview:vite           # production bundle preview on port 3001
+```
+
+Vite proxies `/api/*`, `/mcp`, `/mcp/*`, the OAuth protocol endpoints, and
+their well-known metadata paths. Browser `/register` stays in the SPA; dynamic
+MCP registration is `/mcp/register`.
+
 ## Browser automation for coding agents
 
 CiteLadder's pinned frontend Playwright dependency also provides the
@@ -96,6 +110,21 @@ env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
 curl -fsS http://localhost:3000/
 curl -fsS http://localhost:8000/health
 ```
+
+To run the opt-in Vite production container alongside the authoritative Next
+frontend, enable its migration profile:
+
+```bash
+env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
+  POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
+  docker compose --env-file .env -f docker-compose.yml \
+  --profile migration up -d --build vite-app
+curl -fsS http://localhost:3001/health
+```
+
+This starts the Vite/Caddy target on port 3001 without changing the Next service
+on port 3000. The Caddy runtime proxies the same browser and protocol paths to
+FastAPI and serves direct SPA route refreshes from the built `index.html`.
 
 The stack's frontend is at `http://localhost:3000`, and FastAPI is at
 `http://localhost:8000`. Inspect readiness with the same `env -u` wrapper (gotcha 1) —
@@ -159,6 +188,7 @@ pnpm check:policy     # architecture + design-token guards
 pnpm check:dead-code  # Knip module-graph/dependency gate
 pnpm exec tsc --noEmit # type check
 pnpm build            # next build
+pnpm build:vite       # Vite application target
 pnpm test:e2e         # Playwright (needs a browser + a running stack)
 ```
 

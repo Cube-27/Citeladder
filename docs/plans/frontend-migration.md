@@ -66,10 +66,10 @@
 
 ## Current phase
 
-**Phase 2 — Vite foundation.** The migration contract and bounded Next
-stabilization are committed. Next feature architecture is frozen: subsequent
-changes to authenticated product behavior belong to the Vite route migration,
-except for a source defect that independently blocks parity.
+**Phase 3 — critical Vite vertical.** The migration contract, bounded Next
+stabilization, and production-capable Vite foundation are complete. Next
+feature architecture is frozen: subsequent authenticated product behavior
+belongs to the Vite route migration except for an independent parity blocker.
 
 The ordered execution is:
 
@@ -111,6 +111,13 @@ The ordered execution is:
   request, worker, and route-handoff durations have separate observability; and
   Overview, Issues, and Demand reserve screen-shaped initial geometry. Focused
   frontend/backend tests and controlled Chromium acceptance passed.
+- **Phase 2 — Vite foundation (2026-09-13):** `frontend/apps/app/` now builds
+  a React Router application under the existing frontend dependency, API,
+  query, style, font, and asset owners. Development proxying and the opt-in
+  Caddy production container preserve same-origin API/session transport,
+  backend MCP/OAuth ownership, browser `/register`, direct SPA refreshes, and
+  a no-store `/health`. The temporary `/__migration/app` acceptance route is
+  removed when the real login/session/project route tree lands in Phase 3.
 
 ## Known unresolved issues
 
