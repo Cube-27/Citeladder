@@ -275,12 +275,17 @@ Reusable operator command (authenticated `gcloud` with IAP/SSH access):
 ```
 
 The root PowerShell script reads `PROJECT_ID` and `ZONE` from the repository
-`.env`, then calls the Python IAP/SSH wrapper. The underlying
-`infra/gcp/runtime/reset-db.sh` runs on the Linux VM and is not a Windows
-PowerShell script. Running the command irreversibly replaces the fixed
-`citeladder` database, including users and sessions, using the image baseline
-currently installed on the VM. It does not create a backup or deploy new images.
-It refuses a mismatched project or single-account demo mode, and the existing
-configured credentials provision the new dev account. After merging and syncing
-the intended `main`, run the normal **GCP Demo - Deploy** workflow to install that
-revision's images. Optional `-Instance` defaults to `citeladder-demo`.
+`.env`, uploads its embedded reset operation to the VM over IAP, and
+irreversibly replaces the fixed `citeladder` database, including users and
+sessions. It verifies that the local
+checkout is `main` synchronized with `origin/main`, verifies its backend image
+inputs have no local changes, resolves that commit's immutable backend image
+from Artifact Registry, and builds and pushes the image when it does not exist
+yet. The VM then rebuilds the database with that image's migration baseline and
+starts the application with the candidate
+backend and currently installed frontend. It does not create a backup. It
+refuses a mismatched project or single-account demo mode, and the existing
+configured credentials provision the new dev account. Run the normal **GCP Demo
+- Deploy** workflow immediately afterward to install the matching frontend and
+reconcile the complete runtime configuration. Optional `-Instance` defaults to
+`citeladder-demo`.
