@@ -49,7 +49,7 @@ export function DashboardScreen({
 
   return (
     <DashboardData
-      key={`${context.activeProject.id}:${commandCenter.data.action_order_version}`}
+      key={context.activeProject.id}
       data={commandCenter.data}
       activeProject={context.activeProject}
       onEditProject={onEditProject}

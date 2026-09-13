@@ -220,6 +220,7 @@ export function useVisibilityQueries(
   const visibilityQuery = useQuery({
     ...projectionOptions,
     enabled: Boolean(projectId),
+    placeholderData: (data, query) => retainPreviousDataForScope(projectId!, data, query),
   });
   const { activeRunId, selectedRunIds } = resolvedSelection(visibilityQuery.data);
   const trendParams = {

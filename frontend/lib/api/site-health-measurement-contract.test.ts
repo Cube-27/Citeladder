@@ -27,8 +27,8 @@ describe('siteScoreSummarySchema by_page_kind (v2 P1)', () => {
     classification_source_analysis_ids: [UUID],
     classification_source_artifact_ids: [UUID2],
     classification_source_task_ids: [UUID],
-    scored_page_kind_set: ['homepage', 'article'],
-    scored_page_count_by_kind: { homepage: 1, article: 2 },
+    scored_page_kind_set: ['homepage', 'article', 'other'],
+    scored_page_count_by_kind: { homepage: 1, article: 2, other: 1 },
     selected_count: 10,
     analyzed_count: 4,
     issue_count: 3,
@@ -85,21 +85,26 @@ describe('siteScoreSummarySchema by_page_kind (v2 P1)', () => {
       classification_expected_page_count: 4,
       classification_coverage: 0.75,
       classification_state: 'partial',
-      scored_page_kind_set: ['homepage', 'article'],
-      scored_page_count_by_kind: { homepage: 1, article: 2 },
+      scored_page_kind_set: ['homepage', 'article', 'other'],
+      scored_page_count_by_kind: { homepage: 1, article: 2, other: 1 },
     });
   });
 
-  it('rejects Other as a scored page kind', () => {
-    const invalid = {
+  it('accepts Other as a scored page kind when general checks produce a score', () => {
+    const withOtherOnly = {
       ...scoreSummary,
       scored_page_kind_set: ['other'],
       scored_page_count_by_kind: { other: 1 },
     };
 
-    expect(() =>
-      strictValidate(siteCrawlSchema, { ...crawl, score_summary: invalid }, 'crawl'),
-    ).toThrow();
+    const parsed = strictValidate(
+      siteCrawlSchema,
+      { ...crawl, score_summary: withOtherOnly },
+      'crawl',
+    );
+
+    expect(parsed.score_summary?.scored_page_kind_set).toEqual(['other']);
+    expect(parsed.score_summary?.scored_page_count_by_kind.other).toBe(1);
   });
   it('accepts an empty by_page_kind map (nothing classified yet)', () => {
     const parsed = strictValidate(
@@ -161,22 +166,24 @@ describe('siteHealthOverviewSchema scored-cohort movement', () => {
     expect(change.cohort_composition.previous_page_count_by_kind.article).toBe(3);
   });
 
-  it('rejects Other as part of the scored cohort composition', () => {
-    expect(() =>
-      strictValidate(
-        siteHealthOverviewSchema.shape.trend,
-        {
-          state: 'measured',
-          reason: 'cohort_composition_changed',
-          metric: 'aeo_readiness_score',
-          series: [],
-          cohort_composition: {
-            ...cohortComposition,
-            added_page_kinds: ['other'],
-          },
+  it('accepts Other as part of the scored cohort composition', () => {
+    const parsed = strictValidate(
+      siteHealthOverviewSchema.shape.trend,
+      {
+        state: 'measured',
+        reason: 'cohort_composition_changed',
+        metric: 'aeo_readiness_score',
+        series: [],
+        cohort_composition: {
+          ...cohortComposition,
+          added_page_kinds: ['other'],
+          current_page_count_by_kind: { homepage: 1, product: 2, other: 1 },
         },
-        'overview.trend',
-      ),
-    ).toThrow();
+      },
+      'overview.trend',
+    );
+
+    expect(parsed.cohort_composition.added_page_kinds).toEqual(['other']);
+    expect(parsed.cohort_composition.current_page_count_by_kind.other).toBe(1);
   });
 });

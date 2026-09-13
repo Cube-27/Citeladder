@@ -220,8 +220,8 @@ export function useOnboardingFlow() {
    *    inventory, so an unfetched list is left unfetched;
    * 4. navigate to a destination that NAMES the project, so the shell
    *    resolves that exact id rather than inferring one from a list;
-   * 5. leave reconciliation to the background. Its failure is not allowed to
-   *    undo the creation or send the reader back through it.
+   * 5. leave list and logo reconciliation to their existing background owner.
+   *    Its failure cannot undo creation or send the reader back through it.
    */
   const openProject = useCallback(
     async (projectId: string) => {
@@ -244,10 +244,6 @@ export function useOnboardingFlow() {
         queryClient.setQueryData<Project[]>(listKey, (current) =>
           current === undefined ? current : upsertProject(current, created),
         );
-        void projectsApi
-          .refreshProjectLogos(created.id, { workspaceId: created.workspace_id })
-          .then(() => queryClient.invalidateQueries({ queryKey: listKey }))
-          .catch(() => undefined);
         void queryClient.invalidateQueries({ queryKey: listKey });
       }
       router.replace(projectDestination('/projects', null, project?.id ?? projectId));

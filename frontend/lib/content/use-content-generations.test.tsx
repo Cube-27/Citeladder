@@ -180,6 +180,26 @@ describe('useContentGenerations', () => {
     await waitFor(() => expect(result.current.enqueueMutation.isError).toBe(true));
   });
 
+  it('stops detail polling after a terminal request error', async () => {
+    let detailCalls = 0;
+    mswServer.use(
+      http.get('/api/v1/content/generations', () => HttpResponse.json([listItem])),
+      http.get(`/api/v1/content/generations/${GEN}`, () => {
+        detailCalls += 1;
+        return HttpResponse.json({ detail: 'Generation not found' }, { status: 404 });
+      }),
+    );
+    const { result } = setup();
+    act(() => result.current.setSelectedId(GEN));
+
+    await waitFor(() => expect(result.current.detailQuery.isError).toBe(true));
+    expect(detailCalls).toBe(1);
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 2_200);
+    });
+    expect(detailCalls).toBe(1);
+  });
+
   it('clears selection after deleting the selected terminal generation', async () => {
     const terminal = { ...listItem, status: 'succeeded' as const };
     mswServer.use(

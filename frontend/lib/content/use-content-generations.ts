@@ -90,6 +90,7 @@ export function useContentGenerations(
     queryFn: ({ signal }) => contentApi.getGeneration(selectedId ?? '', { signal }),
     enabled: Boolean(selectedId),
     refetchInterval: (query) => {
+      if (query.state.status === 'error') return false;
       const record = query.state.data;
       if (!record) return CONTENT_DETAIL_POLL_MS;
       return isTerminalContentStatus(record.status) ? false : CONTENT_DETAIL_POLL_MS;

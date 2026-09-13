@@ -28,6 +28,7 @@ from app.analysis.site_health.exports import (
     rows_to_csv,
     rows_to_markdown,
 )
+from app.api.streaming import release_request_transaction
 from app.core.config.errors import CODE_VALIDATION_ERROR
 from app.core.config.site_health_contracts import CRAWL_TERMINAL_STATUSES
 from app.core.config.site_health_runtime import site_health_settings
@@ -63,9 +64,9 @@ async def _event_stream(
 ):  # pragma: no cover - streaming loop
     """Tail a crawl's redacted events until terminal grace or max duration.
 
-    Opens its own short-lived sessions (the request session is closed once the
-    handler returns the ``StreamingResponse``). Redacts every payload with the
-    crawl's frozen ``count_disclosure`` so a Free stream never leaks a total.
+    Opens its own short-lived sessions after the endpoint explicitly releases
+    its authorization transaction. Redacts every payload with the crawl's
+    frozen ``count_disclosure`` so a Free stream never leaks a total.
     """
     last_id = last_event_id
     terminal_polls = 0
@@ -120,6 +121,7 @@ async def get_events_endpoint(
         raise _not_found(str(exc)) from exc
 
     disclose = service.crawl_count_disclosure(crawl)
+    workspace_id = ctx.workspace_id
 
     # Resume from Last-Event-ID (header or query) so neither a reconnecting
     # stream NOR a JSON replay re-sends what the client already rendered.
@@ -154,8 +156,12 @@ async def get_events_endpoint(
         ]
         return JSONResponse(content=body)
 
+    # FastAPI retains yielded dependencies through the response body. Finish
+    # the read-only authorization transaction before the long-lived stream;
+    # the generator owns its own short sessions and only needs primitive IDs.
+    await release_request_transaction(session)
     return StreamingResponse(
-        _event_stream(ctx.workspace_id, crawl_id, last_event_id=last_event_id),
+        _event_stream(workspace_id, crawl_id, last_event_id=last_event_id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import {
   classificationProjectionFields,
-  scoredPageKindSchema,
+  pageKindSchema,
   siteCrawlSchema,
   siteScoreSummarySchema,
 } from './crawl';
@@ -265,13 +265,10 @@ const overviewIssueSchema = responseObject({
 });
 
 const cohortCompositionSchema = responseObject({
-  added_page_kinds: z.array(scoredPageKindSchema),
-  removed_page_kinds: z.array(scoredPageKindSchema),
-  previous_page_count_by_kind: z.partialRecord(
-    scoredPageKindSchema,
-    z.number().int().nonnegative(),
-  ),
-  current_page_count_by_kind: z.partialRecord(scoredPageKindSchema, z.number().int().nonnegative()),
+  added_page_kinds: z.array(pageKindSchema),
+  removed_page_kinds: z.array(pageKindSchema),
+  previous_page_count_by_kind: z.partialRecord(pageKindSchema, z.number().int().nonnegative()),
+  current_page_count_by_kind: z.partialRecord(pageKindSchema, z.number().int().nonnegative()),
 });
 
 export const siteHealthOverviewSchema = responseObject({

@@ -19,10 +19,10 @@ Covered here:
 - ``task.capacity_wait`` serializes through the SAME strict schema on the
   list and the stream.
 
-The SSE loop opens its own sessions via ``SessionLocal``; stream tests point
-it at the per-test schema (the ``client`` fixture only overrides the request
-dependency) and shrink the poll cadence so a terminal audit's stream closes
-immediately.
+The endpoint releases its request authorization transaction before the SSE
+loop opens its own sessions via ``SessionLocal``. Stream tests point those
+private sessions at the per-test schema and shrink the poll cadence so a
+terminal audit's stream closes immediately.
 """
 
 from __future__ import annotations

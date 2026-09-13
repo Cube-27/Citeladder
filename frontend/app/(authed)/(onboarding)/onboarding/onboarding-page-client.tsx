@@ -2,19 +2,22 @@
 
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { Suspense, type ReactNode } from 'react';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 
 import { OnboardingScreen } from '@/components/onboarding/onboarding-screen';
+import { PageLoading } from '@/components/layout/page-loading';
+import { ShellFallback } from '@/components/layout/shell-fallback';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/lib/api/query-keys';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
+import { WORKSPACE_LOADING_STALL_MS } from '@/lib/config/operational';
 import { useProjectContext } from '@/lib/project/project-context';
 
 export function OnboardingPageClient() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<ShellFallback />}>
       <ProjectSetupGate />
     </Suspense>
   );
@@ -61,7 +64,7 @@ function ProjectSetupGate() {
     );
   }
   if (status === 'resolving' || activeWorkspaceId === null || entitlementLoading) {
-    return null;
+    return <ProjectSetupLoading onRetry={retry} />;
   }
   if (remainingProjectSlots === undefined) {
     return (
@@ -78,6 +81,27 @@ function ProjectSetupGate() {
     );
   }
   return <OnboardingScreen />;
+}
+
+function ProjectSetupLoading({ onRetry }: Readonly<{ onRetry: () => void }>) {
+  const [stalled, setStalled] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setStalled(true), WORKSPACE_LOADING_STALL_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (!stalled) return <PageLoading label="Loading your workspace…" />;
+  return (
+    <ProjectSetupBlocked
+      title="Your workspace is taking longer to load"
+      onRetry={() => {
+        setStalled(false);
+        onRetry();
+      }}
+    >
+      Retry the workspace and project-access checks to continue.
+    </ProjectSetupBlocked>
+  );
 }
 
 function ProjectSetupBlocked({

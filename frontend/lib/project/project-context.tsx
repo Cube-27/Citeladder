@@ -305,11 +305,9 @@ function useProjectWarmup(activeProject: Project | null, workspaceId: string | n
 /**
  * Backfill missing brand logos.
  *
- * Onboarding kicks off a refresh for the project it creates, but that is the
- * ONLY trigger: a project created before logos existed, or one whose crawl
- * lost a race or failed transiently, would show initials forever. Hydrating
- * from the provider covers every project on every authed screen instead of
- * depending on how the project came to exist.
+ * This provider is the single refresh owner. It covers a newly created project
+ * as soon as that project enters the list, as well as projects created before
+ * logos existed or whose earlier lookup failed transiently.
  *
  * Bounded and idempotent: one attempt per project per session, only for
  * projects with no `logo_url`, and the backend answers from its own database

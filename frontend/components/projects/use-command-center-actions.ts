@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { opportunitiesApi } from '@/lib/api/opportunities';
 import { projectsApi } from '@/lib/api/projects';
@@ -35,6 +35,9 @@ export function useCommandCenterActions(data: CommandCenter, project: Project) {
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey }),
   });
+  useEffect(() => {
+    orderVersion.current = data.action_order_version;
+  }, [data.action_order_version]);
   return {
     actions: data.actions,
     downloadError,

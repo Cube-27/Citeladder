@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 
@@ -38,6 +38,7 @@ import {
 } from '@/lib/visibility/fanout-grouping';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
+import { FANOUT_SEARCH_DEBOUNCE_MS } from '@/lib/config/operational';
 import {
   isSelectionWide,
   selectionMatchedQueries,
@@ -126,11 +127,13 @@ export function FanoutEvidence({
     from,
     to,
   } = useSearchTable(query, projectId, runId);
-  const summary = useFanoutSummary(projectId, scope, scopeReady, needle);
+  const serverNeedle = useDebouncedNeedle(needle);
+  const summary = useFanoutSummary(projectId, scope, scopeReady, serverNeedle);
+  const summaryMatchesInput = serverNeedle === needle && !summary.isFetching;
   // False whenever the server is counting a different population than the
   // table shows; the headline then falls back to what the reader can see.
   const selectionWide = isSelectionWide(summary, scopeNarrowed);
-  const matched = selectionMatchedQueries(summary, scopeNarrowed);
+  const matched = summaryMatchesInput ? selectionMatchedQueries(summary, scopeNarrowed) : null;
 
   if (query.isLoading) return <EvidenceSkeleton title={TITLE} />;
   if (query.isError) return <EvidenceError title={TITLE} onRetry={() => query.refetch()} />;
@@ -169,7 +172,9 @@ export function FanoutEvidence({
           />
           <SearchScopeNote search={needle} matched={matched} />
           <span className="grow" />
-          <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
+          <span aria-busy={!summaryMatchesInput}>
+            <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
+          </span>
           <AnalysisChoice
             label="Group searches by"
             value={grouping}
@@ -227,7 +232,7 @@ function useSearchTable(
   runId: string | null,
 ) {
   const [grouping, setGrouping] = useUrlState('group', groupCodec);
-  const [search, setSearch] = useUrlState('q', optionalStringUrlCodec);
+  const [search, setSearch] = useUrlState('q', optionalStringUrlCodec, { history: 'replace' });
   // Trimmed and capped ONCE: the table filter, the server scope, the match
   // count and the empty state all read this, so none of them can be asking
   // about a different string than the others.
@@ -293,6 +298,15 @@ function useSearchTable(
     from,
     to,
   };
+}
+
+function useDebouncedNeedle(needle: string): string {
+  const [debounced, setDebounced] = useState(needle);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(needle), FANOUT_SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [needle]);
+  return debounced;
 }
 
 /**
@@ -384,6 +398,7 @@ function useFanoutSummary(
     distinctQueries: result.data?.distinct_queries ?? null,
     eventCount: result.data?.event_count ?? null,
     matchedQueries: result.data?.matched_queries ?? null,
+    isFetching: result.isFetching,
   };
 }
 

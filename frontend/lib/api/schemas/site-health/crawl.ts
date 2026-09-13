@@ -114,11 +114,10 @@ export const pageKindSchema = z.enum([
 ]);
 
 // Classification completeness is independent of crawl and AEO evidence
-// coverage. `other` is a terminal classifier abstention, but it remains
-// unclassified and does not enter the coverage numerator or scored cohort.
+// coverage. `other` is a terminal classifier abstention and does not enter the
+// classification coverage numerator. It can still enter the scored cohort
+// when independently applicable Web or AEO checks produce a score.
 export const classificationStateSchema = z.enum(['complete', 'partial', 'not_measured']);
-export const scoredPageKindSchema = pageKindSchema.exclude(['other']);
-
 export const classificationProjectionFields = {
   classified_page_count: z.number().int().nonnegative(),
   other_page_count: z.number().int().nonnegative(),
@@ -131,8 +130,8 @@ export const classificationProjectionFields = {
   classification_source_analysis_ids: z.array(uuid()),
   classification_source_artifact_ids: z.array(uuid()),
   classification_source_task_ids: z.array(uuid()),
-  scored_page_kind_set: z.array(scoredPageKindSchema),
-  scored_page_count_by_kind: z.partialRecord(scoredPageKindSchema, z.number().int().nonnegative()),
+  scored_page_kind_set: z.array(pageKindSchema),
+  scored_page_count_by_kind: z.partialRecord(pageKindSchema, z.number().int().nonnegative()),
 } as const;
 
 // One `score_summary.by_page_kind` bucket (site-health v2 P1): the analyzed
