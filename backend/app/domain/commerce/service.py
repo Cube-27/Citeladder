@@ -372,13 +372,13 @@ async def import_catalog(
                     row_number=row_number,
                     row=_clean_row(raw),
                 )
-        except (ValueError, CommerceConflictError) as exc:
+        except CommerceConflictError:
+            raise
+        except ValueError as exc:
             outcome = CatalogRowOutcome(
                 row_number=row_number,
                 status="rejected",
-                error_code="identity_conflict"
-                if isinstance(exc, CommerceConflictError)
-                else "invalid_row",
+                error_code="invalid_row",
                 detail=str(exc)[:500],
             )
         outcomes.append(outcome)

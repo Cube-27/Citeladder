@@ -8,8 +8,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from time import perf_counter
 
-from pydantic import ValidationError
-
 from app.connectors.agent.client import AgentNotConfiguredError
 from app.connectors.agent.factory import create_model_gateway
 from app.connectors.agent.gateway import ModelGateway
@@ -332,7 +330,7 @@ async def _run_identity_phase(
                 outcome="succeeded",
             )
         )
-    except (AgentNotConfiguredError, ProviderError, ValidationError, ValueError):
+    except (AgentNotConfiguredError, ProviderError, ValueError):
         if gateway is not None:
             model_calls.append(
                 _model_call(
@@ -476,7 +474,7 @@ async def _run_competitor_phase(
             )
         )
         return _CompetitorPhase(suggestions, verdicts, evidence, True)
-    except (ProviderError, ValidationError, ValueError):
+    except (ProviderError, ValueError):
         if gateway is not None and evidence:
             model_calls.append(
                 _model_call(

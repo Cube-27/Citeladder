@@ -104,7 +104,7 @@ def _campaign_status(
 
 
 async def offer_state(
-    session: AsyncSession, *, account: BillingAccount, user: User, now: datetime
+    session: AsyncSession, *, account: BillingAccount, now: datetime
 ) -> OfferState:
     campaign_id, payload, _revision = await _catalog(session)
     prior = await session.scalar(
@@ -231,7 +231,7 @@ async def _validate_claim_eligibility(
     actual_campaign_id, payload, revision = await _catalog(session)
     if actual_campaign_id != campaign_id:
         raise IntroductoryAccessError("campaign_identity_changed")
-    status = await offer_state(session, account=account, user=user, now=claimed_at)
+    status = await offer_state(session, account=account, now=claimed_at)
     if status.status != "available":
         raise IntroductoryAccessError(status.unavailable_reason or status.status)
     if await _has_disqualifying_access(session, account_id=account.id):

@@ -14,7 +14,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.connectors.agent.client import AgentNotConfiguredError
 from app.connectors.agent.factory import create_model_gateway
@@ -150,7 +150,6 @@ async def select_topics(
         # spent. Selection never raises: it degrades to an empty portfolio.
         RuntimeError,
         TimeoutError,
-        ValidationError,
         ValueError,
     ):
         return TopicSelectionResult(

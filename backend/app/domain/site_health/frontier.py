@@ -203,7 +203,7 @@ def _eligible_frontier_candidates(
     return [
         candidate
         for candidate in _ordered_unique_candidates(candidates)
-        if _candidate_allowed(crawl, candidate, configuration)
+        if _candidate_allowed(candidate, configuration)
     ]
 
 
@@ -332,7 +332,7 @@ async def _admission_batch(
         eligible = (
             candidate
             for candidate in _ordered_unique_candidates(candidates)
-            if _candidate_allowed(crawl, candidate, configuration)
+            if _candidate_allowed(candidate, configuration)
         )
         return [
             (None, candidate)

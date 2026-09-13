@@ -338,7 +338,7 @@ async def activate_pending(
             response=_settled_response(pending),
             already_settled=True,
         )
-    bundle_size = await _settle(session, pending, provider_record, at)
+    bundle_size = await _settle(session, pending, provider_record)
     pending.status = ACTIVATION_ACTIVATED
     pending.activated_at = at
     pending.checkout_url = None
@@ -363,7 +363,6 @@ async def _settle(
     session: AsyncSession,
     pending: PendingActivation,
     provider_record: ProviderRecord,
-    at: datetime,
 ) -> int:
     """Verify the record kind and write the subscription/grant side effects."""
     if pending.activation_kind == ACTIVATION_KIND_TOPUP:

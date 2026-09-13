@@ -159,10 +159,8 @@ async def _enqueue_window_snapshot_refresh(
     dedupes.
     """
     payload = _window_refresh_payload(
-        task_kind=task_kind,
         window_start=window_start,
         window_end=window_end,
-        resync_seq=resync_seq,
         source_revision=source_revision,
     )
     revision_parts = [source_revision] if source_revision is not None else []
@@ -186,10 +184,8 @@ async def _enqueue_window_snapshot_refresh(
 
 def _window_refresh_payload(
     *,
-    task_kind: str,
     window_start: date,
     window_end: date,
-    resync_seq: int,
     source_revision: str | None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {

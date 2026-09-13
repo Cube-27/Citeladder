@@ -531,7 +531,6 @@ async def _persist_analyze(
                     session,
                     crawl=crawl_hint,
                     task=task_hint,
-                    requested_url=requested_url,
                     outcome=outcome,
                 )
                 succeeded_artifact_id = artifact_id
@@ -616,7 +615,6 @@ async def _persist_successful_analysis(
     *,
     crawl: SiteCrawl,
     task: SiteCrawlTask,
-    requested_url: str,
     outcome: _AnalyzeOutcome,
 ) -> uuid.UUID:
     """Persist one successful fresh or artifact-reusing analysis."""

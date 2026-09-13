@@ -42,7 +42,7 @@ def _decline_is_confirmed(
     )
 
 
-def _prompt_trend_inputs(*, previous, row, engine_count, repetitions):
+def _prompt_trend_inputs(*, previous, row):
     current_score = float(row.get("composite_score") or 0.0)
     current_engines = {
         str(engine): round(float(score), 2)
@@ -84,8 +84,6 @@ def _prompt_trend_values(*, previous, row, repetitions, engine_count):
     ) = _prompt_trend_inputs(
         previous=previous,
         row=row,
-        engine_count=engine_count,
-        repetitions=repetitions,
     )
     repetition_agreement = float(row.get("mention_stability") or 0.0)
     evidence_coverage = _prompt_evidence_coverage(

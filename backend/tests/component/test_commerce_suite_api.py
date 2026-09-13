@@ -64,6 +64,43 @@ async def test_catalog_import_is_idempotent_with_row_outcomes(
 
 
 @pytest.mark.asyncio
+async def test_catalog_import_propagates_cross_product_identity_conflict(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "commerce-conflict@example.com")
+    project = await _project(client)
+    url = f"/api/v1/projects/{project['id']}/commerce/catalog/import"
+    seeded = await client.post(
+        url,
+        json={
+            "filename": "catalog.csv",
+            "content_type": "text/csv",
+            "content": (
+                "canonical_url,name,sku\n"
+                "https://shop.example/products/one,One,A-1\n"
+                "https://shop.example/products/two,Two,A-2\n"
+            ),
+        },
+    )
+    assert seeded.status_code == 201
+
+    conflict = await client.post(
+        url,
+        json={
+            "filename": "conflict.csv",
+            "content_type": "text/csv",
+            "content": (
+                "canonical_url,name,sku\n"
+                "https://shop.example/products/one,Conflict,A-2\n"
+            ),
+        },
+    )
+
+    assert conflict.status_code == 409
+    assert conflict.json()["error"]["code"] == "commerce_conflict"
+
+
+@pytest.mark.asyncio
 async def test_catalog_orders_categories_by_product_count_descending(
     client: httpx.AsyncClient,
 ) -> None:

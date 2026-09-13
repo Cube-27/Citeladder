@@ -476,7 +476,6 @@ async def _automatic_remaining(
 
 
 def _candidate_allowed(
-    crawl: SiteCrawl,
     candidate: FrontierCandidate,
     configuration: dict,
 ) -> bool:

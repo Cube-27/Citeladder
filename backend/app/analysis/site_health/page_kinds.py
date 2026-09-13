@@ -399,7 +399,7 @@ def _classification_signals(
         return matched, _schema_suggestion(facts)[0]
 
     route_signals = _route_signals(path)
-    matched.extend(_structural_signals(facts, route_signals, path=path))
+    matched.extend(_structural_signals(facts, route_signals))
     matched.extend(route_signals)
     matched.extend(_semantic_signals(final_url, path, facts))
     schema_page_kind, _schema_type = _schema_suggestion(facts)
@@ -407,7 +407,7 @@ def _classification_signals(
 
 
 def _structural_signals(
-    facts: dict, route_signals: list[dict[str, Any]], *, path: str
+    facts: dict, route_signals: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
     """Tier A — what the page's own primary content region contains."""
     entity = _mapping(facts.get("entity"))
