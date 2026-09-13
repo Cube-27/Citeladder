@@ -7,6 +7,7 @@ import {
   PrivateRouteLayout,
   ProjectsRoute,
 } from './private-routes';
+import { DemandRoute, PerformanceRoute } from './product-routes-demand-performance';
 import { IssuesRoute, WebsitePageDetailRoute, WebsiteRoute } from './product-routes-site-issues';
 
 export const router = createBrowserRouter([
@@ -43,6 +44,14 @@ export const router = createBrowserRouter([
           {
             path: '/issues',
             element: <IssuesRoute />,
+          },
+          {
+            path: '/demand',
+            element: <DemandRoute />,
+          },
+          {
+            path: '/performance',
+            element: <PerformanceRoute />,
           },
         ],
       },

@@ -1,7 +1,9 @@
 const VITE_ROUTES: Record<string, true> = {
+  '/demand': true,
   '/issues': true,
   '/login': true,
   '/onboarding': true,
+  '/performance': true,
   '/projects': true,
   '/register': true,
   '/site': true,

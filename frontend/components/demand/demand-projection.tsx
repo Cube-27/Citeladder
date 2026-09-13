@@ -57,7 +57,9 @@ const DEMAND_LOADING_SIGNAL_METRICS = [
 function DemandLoading() {
   return (
     <Stack gap="workspace" aria-busy="true">
-      <output className="sr-only">Loading search demand…</output>
+      <output aria-label="Loading search demand…" className="sr-only">
+        Loading search demand…
+      </output>
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid flex-1 gap-2">

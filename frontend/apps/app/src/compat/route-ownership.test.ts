@@ -13,6 +13,9 @@ describe('viteOwnedDestination', () => {
     expect(viteOwnedDestination('/issues?severity=high', CURRENT_PROJECT)).toBe(
       '/issues?severity=high',
     );
+    expect(viteOwnedDestination('/performance?range=90d', CURRENT_PROJECT)).toBe(
+      '/performance?range=90d',
+    );
   });
 
   it('recognizes only the shipped dynamic Website page route', () => {
