@@ -84,16 +84,14 @@ these completion gates. From the repository root:
 
 ```powershell
 .\scripts\check.ps1
-.\scripts\test.ps1
 ```
 
-`scripts/quality.mjs` owns the shared local/CI gate list; `check.ps1` is its
-PowerShell compatibility shim and is read-only by default. `test.ps1` selects
-affected tests from the working diff against `origin/main`; `-PlanOnly`
-explains the selection and `-ChangedFiles` is reserved for a recorded retry.
-A change is not ready for review until the two completion commands pass. See
-[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for variants and
-[`AGENTS.md`](AGENTS.md) for the non-weakening rules.
+`scripts/quality.mjs` owns the shared local/CI gate list. The PowerShell entry
+point runs all static and contract checks with formatting fixes; `-CheckOnly`
+is non-mutating. Run focused behavior tests directly with the native runner.
+Redirect test output to a log in the worktree Git directory and inspect only
+failure tails. See [Development](docs/DEVELOPMENT.md) for commands and
+[AGENTS.md](AGENTS.md) for validation rules.
 
 Documentation-only changes use cheap textual/reference checks. They do not invoke backend,
 frontend, browser, build, migration, or application test suites unless the documentation is

@@ -12,10 +12,14 @@ import { queryKeys } from '@/lib/api/query-keys';
  * counts all go stale together. Shared by the catalog row dropdown and the
  * evidence-drawer footer so the two controls can never drift.
  */
-export function useUpdateOpportunityStatus(projectId: string, opportunityId: string) {
+export function useUpdateOpportunityStatus(
+  workspaceId: string,
+  projectId: string,
+  opportunityId: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    ...opportunitiesMutations.updateStatus(),
+    ...opportunitiesMutations.updateStatus(workspaceId),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({

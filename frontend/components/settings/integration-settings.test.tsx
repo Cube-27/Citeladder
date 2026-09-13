@@ -42,7 +42,7 @@ const activeProject = makeProject({
   brand_name: 'Example',
 });
 vi.mock('@/lib/project/project-context', () => ({
-  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  useActiveWorkspaceId: () => WS,
   useProjectContext: () => ({
     projects: [activeProject],
     activeProject,
@@ -169,10 +169,14 @@ describe('IntegrationSettings — empty state + OAuth navigation', () => {
     expect(screen.getByText(/Search Console and Analytics 4/)).toBeInTheDocument();
 
     await ue.click(screen.getByRole('button', { name: 'Connect Google' }));
-    expect(assignMock).toHaveBeenCalledWith('/api/v1/integrations/oauth/gsc/start');
+    expect(assignMock).toHaveBeenCalledWith(
+      `/api/v1/integrations/workspaces/${WS}/oauth/gsc/start`,
+    );
 
     await ue.click(screen.getByRole('button', { name: 'Connect Bing' }));
-    expect(assignMock).toHaveBeenCalledWith('/api/v1/integrations/oauth/bing/start');
+    expect(assignMock).toHaveBeenCalledWith(
+      `/api/v1/integrations/workspaces/${WS}/oauth/bing/start`,
+    );
   });
 });
 
@@ -241,7 +245,9 @@ describe('IntegrationSettings — grant cards', () => {
     const msCard = await screen.findByTestId('grant-card-microsoft');
     expect(within(msCard).getByText('Not connected')).toBeInTheDocument();
     await ue.click(within(msCard).getByRole('button', { name: 'Connect Bing' }));
-    expect(assignMock).toHaveBeenCalledWith('/api/v1/integrations/oauth/bing/start');
+    expect(assignMock).toHaveBeenCalledWith(
+      `/api/v1/integrations/workspaces/${WS}/oauth/bing/start`,
+    );
   });
 
   it('Reconnect hard-navigates to the family OAuth start endpoint', async () => {
@@ -251,11 +257,15 @@ describe('IntegrationSettings — grant cards', () => {
 
     const googleCard = await screen.findByTestId('grant-card-google');
     await ue.click(within(googleCard).getByRole('button', { name: 'Reconnect' }));
-    expect(assignMock).toHaveBeenCalledWith('/api/v1/integrations/oauth/gsc/start');
+    expect(assignMock).toHaveBeenCalledWith(
+      `/api/v1/integrations/workspaces/${WS}/oauth/gsc/start`,
+    );
 
     const msCard = screen.getByTestId('grant-card-microsoft');
     await ue.click(within(msCard).getByRole('button', { name: 'Reconnect' }));
-    expect(assignMock).toHaveBeenCalledWith('/api/v1/integrations/oauth/bing/start');
+    expect(assignMock).toHaveBeenCalledWith(
+      `/api/v1/integrations/workspaces/${WS}/oauth/bing/start`,
+    );
   });
 
   it('Test runs the probe and shows the inline result', async () => {

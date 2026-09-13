@@ -323,48 +323,43 @@ export const siteHealthApi = {
  * place. Every `queryFn` forwards the abort signal.
  */
 export const siteHealthQueries = {
-  /**
-   * Site Health entitlement for ONE workspace.
-   *
-   * The workspace is a required argument, not a read of the ambient
-   * `getActiveWorkspaceId()`. That ambient value is a module variable set from
-   * an effect in the provider, so reading it here computed the query key from
-   * state React does not track: switching workspace changed the variable
-   * without re-rendering anything that had already keyed off it, and the
-   * screen kept serving the previous workspace's plan until something
-   * unrelated evicted the entry. A prop is reactive; a module global is not.
-   */
+  /** Site Health entitlement keyed and requested for one explicit workspace. */
   entitlements: (workspaceId: string | null) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.entitlements(workspaceId),
       queryFn: ({ signal }) => siteHealthApi.getEntitlements({ signal, workspaceId }),
     }),
-  dashboard: (projectId: string, crawlId?: string) =>
+  dashboard: (workspaceId: string, projectId: string, crawlId?: string) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.dashboard(projectId, crawlId),
-      queryFn: ({ signal }) => siteHealthApi.getDashboard(projectId, crawlId, { signal }),
+      queryFn: ({ signal }) =>
+        siteHealthApi.getDashboard(projectId, crawlId, { signal, workspaceId }),
     }),
-  aeoReadiness: (projectId: string, crawlId?: string) =>
+  aeoReadiness: (workspaceId: string, projectId: string, crawlId?: string) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.aeoReadiness(projectId, crawlId),
-      queryFn: ({ signal }) => siteHealthApi.getAeoReadiness(projectId, crawlId, { signal }),
+      queryFn: ({ signal }) =>
+        siteHealthApi.getAeoReadiness(projectId, crawlId, { signal, workspaceId }),
     }),
-  overview: (projectId: string, crawlId?: string) =>
+  overview: (workspaceId: string, projectId: string, crawlId?: string) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.overview(projectId, crawlId),
-      queryFn: ({ signal }) => siteHealthApi.getOverview(projectId, crawlId, { signal }),
+      queryFn: ({ signal }) =>
+        siteHealthApi.getOverview(projectId, crawlId, { signal, workspaceId }),
     }),
-  architecture: (projectId: string, crawlId?: string) =>
+  architecture: (workspaceId: string, projectId: string, crawlId?: string) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.architecture(projectId, crawlId),
-      queryFn: ({ signal }) => siteHealthApi.getArchitecture(projectId, crawlId, { signal }),
+      queryFn: ({ signal }) =>
+        siteHealthApi.getArchitecture(projectId, crawlId, { signal, workspaceId }),
     }),
-  changesSummary: (projectId: string) =>
+  changesSummary: (workspaceId: string, projectId: string) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.changesSummary(projectId),
-      queryFn: ({ signal }) => siteHealthApi.getChangesSummary(projectId, { signal }),
+      queryFn: ({ signal }) => siteHealthApi.getChangesSummary(projectId, { signal, workspaceId }),
     }),
   changes: (
+    workspaceId: string,
     projectId: string,
     crawlAId?: string,
     crawlBId?: string,
@@ -377,27 +372,28 @@ export const siteHealthQueries = {
         if (!crawlAId || !crawlBId) throw new Error('A persisted crawl pair is required');
         return siteHealthApi.getChanges(projectId, crawlAId, crawlBId, cursor, limit, {
           signal,
+          workspaceId,
         });
       },
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(projectId, previousData, previousQuery),
     }),
-  crawls: (params: CrawlListParams) =>
+  crawls: (workspaceId: string, params: CrawlListParams) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.crawls(params.project_id, {
         limit: params.limit ?? null,
         cursor: params.cursor ?? null,
       }),
-      queryFn: ({ signal }) => siteHealthApi.listCrawls(params, { signal }),
+      queryFn: ({ signal }) => siteHealthApi.listCrawls(params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(params.project_id, previousData, previousQuery),
     }),
-  crawl: (crawlId: string) =>
+  crawl: (workspaceId: string, crawlId: string) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.crawl(crawlId),
-      queryFn: ({ signal }) => siteHealthApi.getCrawl(crawlId, { signal }),
+      queryFn: ({ signal }) => siteHealthApi.getCrawl(crawlId, { signal, workspaceId }),
     }),
-  inventory: (crawlId: string, params?: InventoryParams) =>
+  inventory: (workspaceId: string, crawlId: string, params?: InventoryParams) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.inventory(crawlId, {
         cursor: params?.cursor ?? null,
@@ -407,16 +403,16 @@ export const siteHealthQueries = {
         monitored: params?.monitored ?? null,
         page_kind: params?.page_kind ?? null,
       }),
-      queryFn: ({ signal }) => siteHealthApi.getInventory(crawlId, params, { signal }),
+      queryFn: ({ signal }) => siteHealthApi.getInventory(crawlId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),
     }),
-  monitored: (projectId: string) =>
+  monitored: (workspaceId: string, projectId: string) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.monitored(projectId),
-      queryFn: ({ signal }) => siteHealthApi.getMonitoredUrls(projectId, { signal }),
+      queryFn: ({ signal }) => siteHealthApi.getMonitoredUrls(projectId, { signal, workspaceId }),
     }),
-  pages: (crawlId: string, params?: PagesParams) =>
+  pages: (workspaceId: string, crawlId: string, params?: PagesParams) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.pages(crawlId, {
         cursor: params?.cursor ?? null,
@@ -429,16 +425,16 @@ export const siteHealthQueries = {
         // renders the previous ordering's rows.
         sort: params?.sort ?? null,
       }),
-      queryFn: ({ signal }) => siteHealthApi.getPages(crawlId, params, { signal }),
+      queryFn: ({ signal }) => siteHealthApi.getPages(crawlId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),
     }),
-  page: (crawlId: string, siteUrlId: string) =>
+  page: (workspaceId: string, crawlId: string, siteUrlId: string) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.page(crawlId, siteUrlId),
-      queryFn: ({ signal }) => siteHealthApi.getPage(crawlId, siteUrlId, { signal }),
+      queryFn: ({ signal }) => siteHealthApi.getPage(crawlId, siteUrlId, { signal, workspaceId }),
     }),
-  issues: (crawlId: string, params?: IssuesParams) =>
+  issues: (workspaceId: string, crawlId: string, params?: IssuesParams) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.issues(crawlId, {
         cursor: params?.cursor ?? null,
@@ -452,45 +448,51 @@ export const siteHealthQueries = {
         finding_class: params?.finding_class ?? 'defect',
         page_kind: params?.page_kind ?? null,
       }),
-      queryFn: ({ signal }) => siteHealthApi.getIssues(crawlId, params, { signal }),
+      queryFn: ({ signal }) => siteHealthApi.getIssues(crawlId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),
     }),
-  issue: (crawlId: string, groupId: string, params?: IssueDetailParams) =>
+  issue: (workspaceId: string, crawlId: string, groupId: string, params?: IssueDetailParams) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.issue(crawlId, groupId, {
         cursor: params?.cursor ?? null,
         limit: params?.limit ?? null,
       }),
-      queryFn: ({ signal }) => siteHealthApi.getIssue(crawlId, groupId, params, { signal }),
+      queryFn: ({ signal }) =>
+        siteHealthApi.getIssue(crawlId, groupId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),
     }),
-  issueHistory: (crawlId: string, siteUrlId: string, params?: IssueHistoryParams) =>
+  issueHistory: (
+    workspaceId: string,
+    crawlId: string,
+    siteUrlId: string,
+    params?: IssueHistoryParams,
+  ) =>
     queryOptions({
       queryKey: queryKeys.siteHealth.issueHistory(crawlId, siteUrlId, {
         cursor: params?.cursor ?? null,
         limit: params?.limit ?? null,
       }),
       queryFn: ({ signal }) =>
-        siteHealthApi.getIssueHistory(crawlId, siteUrlId, params, { signal }),
+        siteHealthApi.getIssueHistory(crawlId, siteUrlId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),
     }),
 };
 
 export const siteHealthMutations = {
-  createCrawl: () =>
+  createCrawl: (workspaceId: string) =>
     mutationOptions({
-      mutationFn: (input: CreateCrawlInput) => siteHealthApi.createCrawl(input),
+      mutationFn: (input: CreateCrawlInput) => siteHealthApi.createCrawl(input, { workspaceId }),
     }),
-  cancelCrawl: () =>
+  cancelCrawl: (workspaceId: string) =>
     mutationOptions({
-      mutationFn: (crawlId: string) => siteHealthApi.cancelCrawl(crawlId),
+      mutationFn: (crawlId: string) => siteHealthApi.cancelCrawl(crawlId, { workspaceId }),
     }),
-  rerunPage: () =>
+  rerunPage: (workspaceId: string) =>
     mutationOptions({
       mutationFn: (vars: { crawlId: string; siteUrlId: string }) =>
-        siteHealthApi.rerunPage(vars.crawlId, vars.siteUrlId),
+        siteHealthApi.rerunPage(vars.crawlId, vars.siteUrlId, { workspaceId }),
     }),
 };

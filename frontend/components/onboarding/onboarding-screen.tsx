@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { FlowActions, FlowShell, type FlowStep } from '@/components/auth/flow-shell';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,15 @@ const STEPS: readonly FlowStep[] = [
 
 /** The onboarding transaction coordinator; each visual stage owns its own UI. */
 export function OnboardingScreen() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Cached routes may retain component state. A fresh Add project URL must
+  // start a fresh transaction, and a hidden route must not keep redirecting.
+  if (pathname !== '/onboarding') return null;
+  return <OnboardingTransaction key={searchParams?.get('discovery') ?? 'new'} />;
+}
+
+function OnboardingTransaction() {
   const flow = useOnboardingFlow();
   const stage =
     flow.step === 0 ? (

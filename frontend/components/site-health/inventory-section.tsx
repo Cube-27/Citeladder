@@ -85,7 +85,10 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   // cursor pages stay static either way, so the rows under review don't shift
   // as new URLs are discovered.
   const inventoryQuery = useQuery(
-    siteHealthQueries.inventory(crawl.id, { cursor: pager.cursor, limit: pager.pageSize }),
+    siteHealthQueries.inventory(crawl.workspace_id, crawl.id, {
+      cursor: pager.cursor,
+      limit: pager.pageSize,
+    }),
   );
   const rows = inventoryQuery.data?.items ?? [];
   const nextCursor = inventoryQuery.data?.next_cursor ?? null;
@@ -300,7 +303,7 @@ function ScoredInventoryState({
   // queued → running → completed in place. Deeper cursor pages stay static so
   // rows under review don't shift as more pages finish scoring.
   const pagesQuery = useQuery(
-    siteHealthQueries.pages(crawl.id, {
+    siteHealthQueries.pages(crawl.workspace_id, crawl.id, {
       ...activeTabParams,
       page_kind: pageKind || undefined,
       sort,
@@ -311,7 +314,7 @@ function ScoredInventoryState({
   const prefetchTab = (nextTab: (typeof TABS)[number]) => {
     warmQuery(
       queryClient,
-      siteHealthQueries.pages(crawl.id, {
+      siteHealthQueries.pages(crawl.workspace_id, crawl.id, {
         ...nextTab.params,
         page_kind: pageKind || undefined,
         sort,

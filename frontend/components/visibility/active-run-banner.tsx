@@ -1,7 +1,6 @@
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { LoaderCircle } from 'lucide-react';
-
 import { Alert } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
 import { auditStatusLabel } from '@/lib/runs/status';
 import type { ActiveRun } from '@/lib/visibility/dashboard';
 import { textRole } from '@/components/ui/typography';
@@ -16,7 +15,7 @@ export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
   return (
     <Alert tone="info" hideIcon>
       <div className="flex flex-wrap items-center gap-2">
-        <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden />
+        <Spinner />
         <span>
           A run is in progress ({auditStatusLabel(run.status)}). Results appear here when it
           completes.

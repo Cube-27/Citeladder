@@ -16,6 +16,7 @@ import type {
   ContentGenerationDetail,
   ContentGenerationStatus,
 } from '@/lib/api/types';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 const TERMINAL_STATUSES: ReadonlySet<ContentGenerationStatus> = new Set([
   'succeeded',
@@ -70,12 +71,14 @@ export function useContentGenerations(
   }: ContentGenerationsOptions = {},
 ) {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const listQuery = useQuery({
     queryKey: queryKeys.content.list(projectId ?? '', limit),
-    queryFn: ({ signal }) => contentApi.listGenerations(projectId ?? '', limit, { signal }),
-    enabled: Boolean(projectId),
+    queryFn: ({ signal }) =>
+      contentApi.listGenerations(projectId ?? '', limit, { signal, workspaceId }),
+    enabled: Boolean(projectId && workspaceId),
     refetchInterval: (query) => {
       const items = query.state.data;
       if (!items || items.length === 0) return false;
@@ -87,9 +90,10 @@ export function useContentGenerations(
 
   const detailQuery = useQuery({
     queryKey: queryKeys.content.detail(selectedId ?? ''),
-    queryFn: ({ signal }) => contentApi.getGeneration(selectedId ?? '', { signal }),
-    enabled: Boolean(selectedId),
+    queryFn: ({ signal }) => contentApi.getGeneration(selectedId ?? '', { signal, workspaceId }),
+    enabled: Boolean(selectedId && workspaceId),
     refetchInterval: (query) => {
+      if (query.state.status === 'error') return false;
       const record = query.state.data;
       if (!record) return CONTENT_DETAIL_POLL_MS;
       return isTerminalContentStatus(record.status) ? false : CONTENT_DETAIL_POLL_MS;
@@ -129,22 +133,26 @@ export function useContentGenerations(
           site_health_reference: siteHealthReference,
         },
         newIdempotencyKey(),
+        { workspaceId },
       ),
     onSuccess: followRecord,
   });
 
   const regenerateMutation = useMutation({
-    mutationFn: (generationId: string) => contentApi.regenerateGeneration(generationId),
+    mutationFn: (generationId: string) =>
+      contentApi.regenerateGeneration(generationId, { workspaceId }),
     onSuccess: followRecord,
   });
 
   const tryAgainMutation = useMutation({
-    mutationFn: (generationId: string) => contentApi.tryAgainGeneration(generationId),
+    mutationFn: (generationId: string) =>
+      contentApi.tryAgainGeneration(generationId, { workspaceId }),
     onSuccess: followRecord,
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (generationId: string) => contentApi.cancelGeneration(generationId),
+    mutationFn: (generationId: string) =>
+      contentApi.cancelGeneration(generationId, { workspaceId }),
     onSuccess: (record) => {
       queryClient.setQueryData(queryKeys.content.detail(record.id), record);
       invalidateList();
@@ -152,7 +160,8 @@ export function useContentGenerations(
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (generationId: string) => contentApi.deleteGeneration(generationId),
+    mutationFn: (generationId: string) =>
+      contentApi.deleteGeneration(generationId, { workspaceId }),
     onSuccess: (_result, generationId) => {
       queryClient.removeQueries({ queryKey: queryKeys.content.detail(generationId) });
       if (selectedId === generationId) setSelectedId(null);
@@ -161,7 +170,7 @@ export function useContentGenerations(
   });
 
   const clearHistoryMutation = useMutation({
-    mutationFn: () => contentApi.clearGenerationHistory(projectId ?? ''),
+    mutationFn: () => contentApi.clearGenerationHistory(projectId ?? '', { workspaceId }),
     onSuccess: () => {
       const selectedStatus =
         detailQuery.data?.status ?? listQuery.data?.find((item) => item.id === selectedId)?.status;
@@ -177,7 +186,8 @@ export function useContentGenerations(
       generationId: string;
       feedback: 'accepted' | 'rejected';
       reason?: ContentFeedbackReason;
-    }) => contentApi.recordFeedback(input.generationId, input.feedback, input.reason),
+    }) =>
+      contentApi.recordFeedback(input.generationId, input.feedback, input.reason, { workspaceId }),
     onSuccess: (record) => {
       queryClient.setQueryData(queryKeys.content.detail(record.id), record);
       invalidateList();

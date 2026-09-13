@@ -1,5 +1,5 @@
 import { renderWithProviders as render } from '@/test/render';
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -82,6 +82,32 @@ describe('OnboardingPageClient', () => {
     render(<OnboardingPageClient />);
 
     expect(screen.queryByText('Onboarding flow')).not.toBeInTheDocument();
+    expect(screen.getByTestId('page-loading')).toBeVisible();
+    expect(screen.getByLabelText('Loading your workspace…')).toBeVisible();
+  });
+
+  it('offers a working retry when workspace resolution stalls', () => {
+    vi.useFakeTimers();
+    try {
+      projectState.status = 'resolving';
+      projectState.activeWorkspaceId = null;
+      render(<OnboardingPageClient />);
+
+      act(() => vi.advanceTimersByTime(8_000));
+
+      expect(
+        screen.getByRole('heading', { name: 'Your workspace is taking longer to load' }),
+      ).toBeVisible();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(contextRetry).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('page-loading')).toBeVisible();
+      act(() => vi.advanceTimersByTime(8_000));
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(contextRetry).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId('page-loading')).toBeVisible();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('fails closed when the target workspace cannot be resolved', () => {

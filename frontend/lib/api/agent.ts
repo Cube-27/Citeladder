@@ -83,15 +83,16 @@ export const agentApi = {
         options,
       ),
     ),
-  submitTask: async (input: AgentTaskInput, idempotencyKey: string) =>
+  submitTask: async (input: AgentTaskInput, idempotencyKey: string, options?: ApiRequestOptions) =>
     agentTaskRunSchema.parse(
-      await apiClient.post<unknown>('/agent/tasks', input, { idempotencyKey }),
+      await apiClient.post<unknown>('/agent/tasks', input, { ...options, idempotencyKey }),
     ),
-  cancel: async (projectId: string, runId: string) =>
+  cancel: async (projectId: string, runId: string, options?: ApiRequestOptions) =>
     agentTaskRunSchema.parse(
       await apiClient.post<unknown>(
         `/agent/tasks/${encodeURIComponent(runId)}/cancel?project_id=${encodeURIComponent(projectId)}`,
-        {},
+        undefined,
+        options,
       ),
     ),
 };

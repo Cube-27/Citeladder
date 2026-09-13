@@ -147,9 +147,10 @@ export const performanceApi = {
  * SAME key from one definition instead of each assembling its own.
  */
 export const performanceQueries = {
-  dashboard: (projectId: string, params: PerformanceDashboardParams) =>
+  dashboard: (workspaceId: string, projectId: string, params: PerformanceDashboardParams) =>
     queryOptions({
       queryKey: queryKeys.performance.dashboard(projectId, params),
-      queryFn: ({ signal }) => performanceApi.getDashboard(projectId, params, { signal }),
+      queryFn: ({ signal }) =>
+        performanceApi.getDashboard(projectId, params, { signal, workspaceId }),
     }),
 };

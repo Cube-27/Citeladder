@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   billingApi,
   createIdempotencyKey,
@@ -108,12 +109,15 @@ export function PricingCatalog() {
   const catalogQuery = useQuery({
     queryKey: queryKeys.billing.catalog(country.length === 2 ? country : undefined),
     queryFn: ({ signal }) =>
-      billingApi.catalog(country.length === 2 ? country : undefined, { signal }),
+      billingApi.catalog(country.length === 2 ? country : undefined, {
+        signal,
+        workspaceId: null,
+      }),
   });
   const catalog = catalogQuery.data ?? null;
   const offerQuery = useQuery({
     queryKey: [...queryKeys.billing.all, 'early-access'],
-    queryFn: ({ signal }) => billingApi.noCardOffer({ signal }),
+    queryFn: ({ signal }) => billingApi.noCardOffer({ signal, workspaceId: null }),
     enabled: isAuthenticated,
     retry: false,
   });
@@ -128,6 +132,7 @@ export function PricingCatalog() {
           intent.catalog_key,
           intent.quantity,
           intent.idempotency_key,
+          { workspaceId: null },
         );
       }
       if (intent.kind === 'topup') {
@@ -135,6 +140,7 @@ export function PricingCatalog() {
           intent.catalog_key,
           intent.quantity,
           intent.idempotency_key,
+          { workspaceId: null },
         );
       }
       if (!isSelfServeKey(intent.catalog_key)) {
@@ -448,11 +454,7 @@ function LoadingCards() {
   return (
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4" aria-busy="true">
       {[0, 1, 2, 3].map((index) => (
-        <div
-          key={index}
-          data-loading-card
-          className="bg-well h-80 animate-pulse rounded-[var(--radius-card)]"
-        />
+        <Skeleton key={index} data-loading-card className="h-80 rounded-[var(--radius-card)]" />
       ))}
       <p className="sr-only">Loading plans…</p>
     </div>
@@ -461,7 +463,9 @@ function LoadingCards() {
 
 function LoadingShell() {
   return (
-    <div aria-busy="true" className="bg-panel h-48 animate-pulse rounded-[var(--radius-control)]" />
+    <div aria-busy="true">
+      <Skeleton className="h-48 rounded-[var(--radius-control)]" />
+    </div>
   );
 }
 

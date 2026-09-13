@@ -245,10 +245,10 @@ export const visibilityApi = {
  * the SAME key from one definition instead of each assembling its own.
  */
 export const visibilityQueries = {
-  project: (projectId: string, params: ProjectVisibilityParams) =>
+  project: (workspaceId: string, projectId: string, params: ProjectVisibilityParams) =>
     queryOptions({
       queryKey: queryKeys.visibility.project(projectId, params.audit_id, params),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
-        visibilityApi.getProjectVisibility(projectId, params, { signal }),
+        visibilityApi.getProjectVisibility(projectId, params, { signal, workspaceId }),
     }),
 };

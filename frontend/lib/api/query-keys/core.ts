@@ -93,7 +93,7 @@ export const contentKeys = {
   list: (projectId: string, limit: number) => ['content', 'list', projectId, limit] as const,
   detail: (generationId: string) => ['content', 'detail', generationId] as const,
   // Static server config — not invalidated by any generation mutation.
-  skills: () => ['content', 'skills'] as const,
+  skills: (workspaceId: string | null) => ['content', 'skills', workspaceId] as const,
   contextPreview: (projectId: string, inputs: object) =>
     ['content', 'context-preview', projectId, inputs] as const,
   targetPages: (projectId: string, query: string) =>

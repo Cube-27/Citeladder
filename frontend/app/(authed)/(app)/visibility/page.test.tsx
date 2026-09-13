@@ -275,6 +275,10 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
     await user.click(await screen.findByRole('menuitemradio', { name: olderLabel }));
 
     await waitFor(() => expect(releaseOlder).toBeTypeOf('function'));
+    // The prior selection stays readable while the same project's next
+    // projection is in flight; changing the filter must not blank the panel.
+    expect(screen.getByRole('heading', { name: 'Brand and competitors' })).toBeVisible();
+    expect(screen.queryByLabelText('Loading selected measurement')).not.toBeInTheDocument();
     releaseOlder?.();
     await waitFor(() => expect(seen).toContain(AUDIT_OLDER));
 
@@ -493,6 +497,24 @@ describe('VisibilityPage — per-tab query enablement + cache reuse', () => {
 });
 
 describe('VisibilityPage — Trends tab', () => {
+  it('reserves chart geometry while measurement history is pending', async () => {
+    let releaseHistory: (() => void) | undefined;
+    useBaseVisibilityHandlers([
+      http.get(`/api/v1/projects/${PROJECT_ID}/visibility/trends`, async () => {
+        await new Promise<void>((resolve) => {
+          releaseHistory = resolve;
+        });
+        return HttpResponse.json([]);
+      }),
+    ]);
+    renderVisibilityPage();
+
+    expect(await screen.findByRole('heading', { name: 'Over time' })).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent('Loading measurement history…');
+    expect(screen.queryByText('No measurements in this period yet.')).not.toBeInTheDocument();
+    releaseHistory?.();
+  });
+
   it('renders the trend charts and sends granularity + date bounds', async () => {
     vi.stubEnv('NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE', 'pk_test');
     setVisibilitySearch('tab=trends');

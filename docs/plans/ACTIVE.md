@@ -2,7 +2,10 @@
 
 ## Active
 
-None established.
+- [Runtime correctness and continuity](citeladder-runtime-correctness-and-continuity.md)
+  — implementation is delivered through Slice 4. Authenticated local traces
+  still gate Slice 5 decisions, and deployed incident/SSE acceptance requires
+  separate deployment authorization.
 
 ## Queued
 

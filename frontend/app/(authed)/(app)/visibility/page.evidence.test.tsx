@@ -183,6 +183,42 @@ describe('VisibilityPage — Mentions & Citations tab', () => {
 });
 
 describe('VisibilityPage — Query fanouts tab', () => {
+  it('replaces incremental search history and coalesces server summaries', async () => {
+    setVisibilitySearch('tab=query-fanout');
+    const searches: Array<string | null> = [];
+    const push = vi.spyOn(window.history, 'pushState');
+    const replace = vi.spyOn(window.history, 'replaceState');
+    useBaseVisibilityHandlers([
+      http.get(`/api/v1/projects/${PROJECT_ID}/visibility/evidence`, () =>
+        HttpResponse.json(makeEvidenceResponse()),
+      ),
+      http.get(`/api/v1/projects/${PROJECT_ID}/visibility/fanout`, ({ request }) => {
+        searches.push(new URL(request.url).searchParams.get('search'));
+        return HttpResponse.json({
+          event_count: 2,
+          distinct_queries: 2,
+          matched_queries: 1,
+          coverage: {},
+          next_offset: null,
+          total_answers: 1,
+          answers: [],
+          items: [],
+        });
+      }),
+    ]);
+    const user = userEvent.setup();
+    renderVisibilityPage();
+
+    const input = await screen.findByRole('searchbox', { name: 'Filter searches by text' });
+    await waitFor(() => expect(searches).toEqual([null]));
+    await user.type(input, 'family');
+
+    expect(input).toHaveValue('family');
+    expect(push).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalled();
+    await waitFor(() => expect(searches).toEqual([null, 'family']));
+  });
+
   it('renders actual query text, count-only, and no-search states distinctly', async () => {
     setVisibilitySearch('tab=query-fanout');
     useBaseVisibilityHandlers([

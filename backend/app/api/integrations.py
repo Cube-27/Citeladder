@@ -1,8 +1,9 @@
 # Integrations router: OAuth connect (real 302 flow) + connection management
 # (docs/roadmap/integrations.md section 5; invariant 5 + 6 + 12).
 #
-# Flat surface under /api/v1/integrations; the active workspace comes from
-# ``require_active_workspace`` EXCEPT at the OAuth callback, where the
+# Most routes are flat under /api/v1/integrations and take the active workspace
+# header. The full-page OAuth start instead names the workspace in its path;
+# its navigation cannot attach a custom header. At the OAuth callback, the
 # workspace and user come only from the verified, consumed, nonce-bound OAuth
 # transaction (spec section 2). The connect endpoints are full-page
 # 302 navigations through the same-origin proxy (never fetch/XHR) — including
@@ -31,6 +32,7 @@ from app.api.deps import (
     require_active_workspace_credentials,
     require_active_workspace_run,
     require_active_workspace_write,
+    require_workspace_member,
 )
 from app.connectors.integrations import IntegrationApiError
 from app.core.config.abuse import abuse_settings
@@ -103,6 +105,7 @@ from app.domain.integrations.sync import (
     list_sync_runs,
 )
 from app.domain.projects.service import ProjectNotFoundError
+from app.domain.workspaces.policy import WorkspaceCapability
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
@@ -114,6 +117,19 @@ _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 # role set of its own.
 _CredentialDep = Annotated[
     WorkspaceContext, Depends(require_active_workspace_credentials)
+]
+
+
+async def require_workspace_credentials_path(
+    ctx: Annotated[WorkspaceContext, Depends(require_workspace_member)],
+) -> WorkspaceContext:
+    """Authorize a full-page OAuth start from its explicit workspace path."""
+    ctx.require(WorkspaceCapability.MANAGE_CREDENTIALS)
+    return ctx
+
+
+_PathCredentialDep = Annotated[
+    WorkspaceContext, Depends(require_workspace_credentials_path)
 ]
 _RunDep = Annotated[WorkspaceContext, Depends(require_active_workspace_run)]
 _WriteDep = Annotated[WorkspaceContext, Depends(require_active_workspace_write)]
@@ -207,6 +223,19 @@ async def integration_oauth_start(
     )
     set_integration_oauth_cookie(response, oauth_start.session_nonce)
     return response
+
+
+@router.get(
+    "/workspaces/{workspace_id}/oauth/{provider}/start",
+    status_code=status.HTTP_302_FOUND,
+)
+async def scoped_integration_oauth_start(
+    provider: str,
+    ctx: _PathCredentialDep,
+    session: _SessionDep,
+) -> RedirectResponse:
+    """Begin OAuth for the workspace named by a headerless navigation."""
+    return await integration_oauth_start(provider, ctx, session)
 
 
 @router.get("/oauth/{provider}/callback", status_code=status.HTTP_302_FOUND)

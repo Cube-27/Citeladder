@@ -15,6 +15,7 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
 import { shouldPollAudit } from '@/lib/runs/status';
 import { useProjectHref } from '@/lib/navigation/project-destination';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /** Poll interval (ms) while a run is active. Polling is the baseline; SSE is optional. */
 // Cadences live in config, not here (invariant 1).
@@ -35,13 +36,15 @@ export default function RunDetailPage() {
   const projectHref = useProjectHref();
   const searchParams = useSearchParams();
   const runId = params.runId;
+  const workspaceId = useActiveWorkspaceId();
   const queryClient = useQueryClient();
   const executionParam = searchParams.get('execution');
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
 
   const auditQuery = useQuery({
     queryKey: queryKeys.runs.detail(runId),
-    queryFn: ({ signal }) => runsApi.getAudit(runId, { signal }),
+    queryFn: ({ signal }) => runsApi.getAudit(runId, { signal, workspaceId }),
+    enabled: workspaceId !== null,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status && shouldPollAudit(status) ? POLL_INTERVAL_MS : false;
@@ -52,7 +55,8 @@ export default function RunDetailPage() {
 
   const executionsQuery = useQuery({
     queryKey: queryKeys.runs.executions(runId),
-    queryFn: ({ signal }) => runsApi.listExecutions(runId, { signal }),
+    queryFn: ({ signal }) => runsApi.listExecutions(runId, { signal, workspaceId }),
+    enabled: workspaceId !== null,
     refetchInterval: active ? POLL_INTERVAL_MS : false,
   });
 
@@ -61,7 +65,7 @@ export default function RunDetailPage() {
   useRunEvents(runId, auditQuery.data?.project_id, active);
 
   const cancelMutation = useMutation({
-    mutationFn: () => runsApi.cancelAudit(runId),
+    mutationFn: () => runsApi.cancelAudit(runId, { workspaceId }),
     onSuccess: (audit) => {
       queryClient.setQueryData(queryKeys.runs.detail(runId), audit);
       queryClient.invalidateQueries({ queryKey: queryKeys.runs.executions(runId) });
@@ -72,7 +76,7 @@ export default function RunDetailPage() {
     },
   });
   const rerunFailuresMutation = useMutation({
-    mutationFn: () => runsApi.rerunFailures(runId),
+    mutationFn: () => runsApi.rerunFailures(runId, {}, { workspaceId }),
     onSuccess: (repairAudit) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.runs.all });
       router.push(projectHref(`/runs/${repairAudit.id}`));

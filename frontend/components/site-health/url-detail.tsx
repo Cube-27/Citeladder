@@ -27,6 +27,7 @@ import { UrlDetailView } from './url-detail-view';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { PageLoading } from '@/components/layout/page-loading';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 const HISTORY_LIMIT = 25;
 const RERUN_SEARCH_PARAM = 'rerun';
@@ -36,6 +37,7 @@ export function UrlDetail({
   crawlId,
   siteUrlId,
 }: Readonly<{ crawlId: string; siteUrlId: string }>) {
+  const workspaceId = useActiveWorkspaceId();
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -53,7 +55,8 @@ export function UrlDetail({
   const [rerunQueued, setRerunQueued] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
   const detailQuery = useQuery({
-    ...siteHealthQueries.page(crawlId, siteUrlId),
+    ...siteHealthQueries.page(workspaceId ?? '', crawlId, siteUrlId),
+    enabled: Boolean(workspaceId),
     refetchInterval: (query) =>
       rerunPollInterval(
         rerunPolling,
@@ -63,7 +66,7 @@ export function UrlDetail({
       ),
   });
   const rerun = useMutation({
-    ...siteHealthMutations.rerunPage(),
+    ...siteHealthMutations.rerunPage(workspaceId ?? ''),
     onSuccess: async (result) => {
       if (result.crawl_id === crawlId && result.site_url_id === siteUrlId) {
         // Invalidate before enabling polling: setting polling first can observe
@@ -111,6 +114,7 @@ export function UrlDetail({
       {rerunError ? <Alert tone="danger">{rerunError}</Alert> : null}
       <IssueHistory
         key={`history:${crawlId}:${siteUrlId}`}
+        workspaceId={workspaceId!}
         crawlId={crawlId}
         siteUrlId={siteUrlId}
       />
@@ -147,11 +151,18 @@ function rerunErrorMessage(error: unknown): string {
   return 'Could not re-audit this page. Please try again.';
 }
 
-function IssueHistory({ crawlId, siteUrlId }: Readonly<{ crawlId: string; siteUrlId: string }>) {
+function IssueHistory({
+  workspaceId,
+  crawlId,
+  siteUrlId,
+}: Readonly<{ workspaceId: string; crawlId: string; siteUrlId: string }>) {
   const [cursorStack, setCursorStack] = useState<string[]>([]);
   const cursor = cursorStack.at(-1);
   const historyQuery = useQuery(
-    siteHealthQueries.issueHistory(crawlId, siteUrlId, { cursor, limit: HISTORY_LIMIT }),
+    siteHealthQueries.issueHistory(workspaceId, crawlId, siteUrlId, {
+      cursor,
+      limit: HISTORY_LIMIT,
+    }),
   );
   const rows = historyQuery.data?.items ?? [];
   const nextCursor = historyQuery.data?.next_cursor ?? null;

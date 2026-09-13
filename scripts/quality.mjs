@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -22,7 +22,7 @@ function option(name, fallback) {
 const mode = option('--mode', 'check');
 if (!['fix', 'check'].includes(mode)) throw new Error(`Unknown quality mode: ${mode}`);
 
-const requestedScopes = option('--scope', 'changed')
+const requestedScopes = option('--scope', 'all')
   .split(',')
   .map((scope) => scope.trim().toLowerCase());
 const validScopes = new Set(['all', 'changed', 'backend', 'frontend', 'contract']);
@@ -84,15 +84,25 @@ function backendTool(name) {
   );
 }
 
+const logDirectory = join(gitPaths(['rev-parse', '--absolute-git-dir'])[0], 'quality-logs');
+mkdirSync(logDirectory, { recursive: true });
+const failedSteps = [];
+
 function step(name, command, commandArgs, cwd, env = process.env) {
-  process.stdout.write(`\n==> ${name}\n`);
-  const result = spawnSync(command, commandArgs, {
-    cwd,
-    env,
-    stdio: 'inherit',
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) process.exit(result.status ?? 1);
+  process.stdout.write(`${name}…\n`);
+  const logPath = join(logDirectory, `${name.toLowerCase().replaceAll(/[^a-z0-9]+/gu, '-')}.log`);
+  const log = openSync(logPath, 'w');
+  let result;
+  try {
+    result = spawnSync(command, commandArgs, { cwd, env, stdio: ['ignore', log, log] });
+  } finally {
+    closeSync(log);
+  }
+  if (!result.error && result.status === 0) return;
+  failedSteps.push(name);
+  process.stderr.write(`${name} failed. ${result.error?.message ?? ''}\n`);
+  process.stderr.write(`${readFileSync(logPath, 'utf8').split(/\r?\n/u).slice(-60).join('\n')}\n`);
+  process.stderr.write(`Full output: ${logPath}\n`);
 }
 
 function pnpm(name, commandArgs) {
@@ -156,4 +166,8 @@ if (scopes.has('backend')) backendChecks();
 if (scopes.has('frontend')) frontendChecks();
 if (scopes.has('contract')) pnpm('API contract policy', ['check:contract']);
 
-process.stdout.write(`\n${[...scopes].join(', ')} quality ${mode} passed.\n`);
+if (failedSteps.length) {
+  process.stderr.write(`\nFailed: ${failedSteps.join(', ')}. Logs: ${logDirectory}\n`);
+  process.exit(1);
+}
+process.stdout.write(`\n${[...scopes].join(', ')} quality ${mode} passed. Logs: ${logDirectory}\n`);

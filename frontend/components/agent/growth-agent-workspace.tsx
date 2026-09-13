@@ -34,18 +34,19 @@ export function GrowthAgentWorkspace({
   routeContext?: AgentRouteContext;
 }>) {
   const queryClient = useQueryClient();
-  const { activeProject, isLoading: projectLoading } = useProjectContext();
+  const { activeProject, activeWorkspaceId, isLoading: projectLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
   const [taskType, setTaskType] = useState(initialTask);
   const [objective, setObjective] = useState(initialObjective);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
   const [cancelError, setCancelError] = useState('');
-  const tasks = useTasksQuery(projectId);
+  const tasks = useTasksQuery(activeWorkspaceId, projectId);
   const resolvedRunId = selectedRunId ?? tasks.data?.[0]?.id ?? null;
-  const task = useTaskQuery(projectId, resolvedRunId);
+  const task = useTaskQuery(activeWorkspaceId, projectId, resolvedRunId);
   const submit = useSubmitTask({
     projectId,
+    workspaceId: activeWorkspaceId,
     taskType,
     objective,
     queryClient,
@@ -53,7 +54,7 @@ export function GrowthAgentWorkspace({
     setObjective,
     setSelectedRunId,
   });
-  const cancel = useCancelTask(queryClient, setCancelError);
+  const cancel = useCancelTask(activeWorkspaceId, queryClient, setCancelError);
 
   if (projectLoading) return <p className="text-muted text-sm">Loading project…</p>;
   if (!projectId)
@@ -100,21 +101,21 @@ export function GrowthAgentWorkspace({
   );
 }
 
-function useTasksQuery(projectId: string | null) {
+function useTasksQuery(workspaceId: string | null, projectId: string | null) {
   return useQuery({
     queryKey: queryKeys.agent.tasks(projectId ?? ''),
-    queryFn: ({ signal }) => agentApi.listTasks(projectId!, { signal }),
-    enabled: Boolean(projectId),
+    queryFn: ({ signal }) => agentApi.listTasks(projectId!, { signal, workspaceId }),
+    enabled: Boolean(projectId && workspaceId),
     refetchInterval: (query) =>
       (query.state.data ?? []).some((run) => ACTIVE_STATUSES.has(run.status)) ? 2_000 : false,
   });
 }
 
-function useTaskQuery(projectId: string | null, runId: string | null) {
+function useTaskQuery(workspaceId: string | null, projectId: string | null, runId: string | null) {
   return useQuery({
     queryKey: queryKeys.agent.task(projectId ?? '', runId ?? ''),
-    queryFn: ({ signal }) => agentApi.getTask(projectId!, runId!, { signal }),
-    enabled: Boolean(projectId && runId),
+    queryFn: ({ signal }) => agentApi.getTask(projectId!, runId!, { signal, workspaceId }),
+    enabled: Boolean(projectId && runId && workspaceId),
     refetchInterval: (query) =>
       query.state.data && ACTIVE_STATUSES.has(query.state.data.status) ? 2_000 : false,
   });
@@ -122,6 +123,7 @@ function useTaskQuery(projectId: string | null, runId: string | null) {
 
 function useSubmitTask({
   projectId,
+  workspaceId,
   taskType,
   objective,
   queryClient,
@@ -130,6 +132,7 @@ function useSubmitTask({
   setSelectedRunId,
 }: Readonly<{
   projectId: string | null;
+  workspaceId: string | null;
   taskType: AgentTaskType;
   objective: string;
   queryClient: ReturnType<typeof useQueryClient>;
@@ -145,6 +148,7 @@ function useSubmitTask({
       return agentApi.submitTask(
         { project_id: projectId, task_type: taskType, objective: nextObjective },
         crypto.randomUUID(),
+        { workspaceId },
       );
     },
     onSuccess: (run) => {
@@ -160,13 +164,14 @@ function useSubmitTask({
 }
 
 function useCancelTask(
+  workspaceId: string | null,
   queryClient: ReturnType<typeof useQueryClient>,
   setCancelError: (error: string) => void,
 ) {
   return useMutation({
     mutationFn: (run: AgentTaskRun) => {
       setCancelError('');
-      return agentApi.cancel(run.project_id, run.id);
+      return agentApi.cancel(run.project_id, run.id, { workspaceId });
     },
     onSuccess: (run) => {
       setCancelError('');

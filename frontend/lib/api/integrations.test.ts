@@ -206,12 +206,16 @@ describe('integrationsApi.delete + oauthStartUrl', () => {
   });
 
   it('builds the relative same-origin OAuth start URL for window navigation', () => {
-    const url = integrationsApi.oauthStartUrl('gsc');
-    expect(url).toBe('/api/v1/integrations/oauth/gsc/start');
+    const url = integrationsApi.oauthStartUrl('gsc', WS);
+    expect(url).toBe(`/api/v1/integrations/workspaces/${WS}/oauth/gsc/start`);
     // Never an absolute/cross-origin URL (invariant 12).
     expect(url.startsWith('/')).toBe(true);
-    expect(integrationsApi.oauthStartUrl('ga4')).toBe('/api/v1/integrations/oauth/ga4/start');
-    expect(integrationsApi.oauthStartUrl('bing')).toBe('/api/v1/integrations/oauth/bing/start');
+    expect(integrationsApi.oauthStartUrl('ga4', WS)).toBe(
+      `/api/v1/integrations/workspaces/${WS}/oauth/ga4/start`,
+    );
+    expect(integrationsApi.oauthStartUrl('bing', WS)).toBe(
+      `/api/v1/integrations/workspaces/${WS}/oauth/bing/start`,
+    );
   });
 });
 

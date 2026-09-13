@@ -142,6 +142,6 @@ export const integrationsApi = {
    * follows the redirect to the provider consent screen through the
    * same-origin proxy (invariant 12).
    */
-  oauthStartUrl: (provider: IntegrationProvider) =>
-    `${API_BASE_URL}/integrations/oauth/${provider}/start`,
+  oauthStartUrl: (provider: IntegrationProvider, workspaceId: string) =>
+    `${API_BASE_URL}/integrations/workspaces/${workspaceId}/oauth/${provider}/start`,
 };

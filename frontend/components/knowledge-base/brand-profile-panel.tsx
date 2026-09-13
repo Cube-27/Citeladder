@@ -16,6 +16,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import type { BrandProfile, BrandProfileDraft, Project } from '@/lib/api/types';
 import { formErrorMessage } from '@/lib/forms/error-message';
 import { textRole } from '@/components/ui/typography';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 const PROFILE_TABS = [
   { id: 'facts', label: 'Facts & Positioning' },
@@ -56,17 +57,21 @@ export function BrandProfilePanel({
   onSaved?: () => void;
 }>) {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const [draft, setDraft] = useState(() => profileDraft(profile));
   const [productsInput, setProductsInput] = useState(() => profile.products_services.join(', '));
   const [notice, setNotice] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProfileTab>('facts');
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      projectsApi.updateBrandProfile(projectId, {
-        ...draft,
-        products_services: parseProductsInput(productsInput),
-      }),
+    mutationFn: () => {
+      if (!workspaceId) throw new Error('Workspace is not available.');
+      return projectsApi.updateBrandProfile(
+        projectId,
+        { ...draft, products_services: parseProductsInput(productsInput) },
+        { workspaceId },
+      );
+    },
     onSuccess: (next) => {
       queryClient.setQueryData(queryKeys.projects.brandProfile(projectId), next);
       onSaved?.();
@@ -82,7 +87,7 @@ export function BrandProfilePanel({
         <Button
           variant="primary"
           onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
+          disabled={!workspaceId || saveMutation.isPending}
         >
           <Save className="size-4" aria-hidden />
           {saveMutation.isPending ? 'Saving…' : 'Save brand knowledge'}

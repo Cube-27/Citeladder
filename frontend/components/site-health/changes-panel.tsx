@@ -77,8 +77,11 @@ function Evidence({ row }: Readonly<{ row: ChangeObservation }>) {
   );
 }
 
-export function ChangesPanel({ projectId }: Readonly<{ projectId: string }>) {
-  const summary = useQuery(siteHealthQueries.changesSummary(projectId));
+export function ChangesPanel({
+  workspaceId,
+  projectId,
+}: Readonly<{ workspaceId: string; projectId: string }>) {
+  const summary = useQuery(siteHealthQueries.changesSummary(workspaceId, projectId));
   const crawlAId = summary.data?.crawl_a_id ?? undefined;
   const crawlBId = summary.data?.crawl_b_id ?? undefined;
   const pairAvailable = summary.data?.state === 'available' && Boolean(crawlAId && crawlBId);
@@ -86,7 +89,14 @@ export function ChangesPanel({ projectId }: Readonly<{ projectId: string }>) {
   // pair must restart paging rather than replay a refused cursor.
   const pager = useCursorTable(`changes|${projectId}|${crawlAId ?? ''}|${crawlBId ?? ''}`);
   const changes = useQuery({
-    ...siteHealthQueries.changes(projectId, crawlAId, crawlBId, pager.cursor, pager.pageSize),
+    ...siteHealthQueries.changes(
+      workspaceId,
+      projectId,
+      crawlAId,
+      crawlBId,
+      pager.cursor,
+      pager.pageSize,
+    ),
     enabled: pairAvailable,
   });
 

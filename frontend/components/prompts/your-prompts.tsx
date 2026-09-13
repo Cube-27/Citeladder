@@ -30,6 +30,7 @@ import { visibilityApi } from '@/lib/api/visibility';
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { useActiveProject } from '@/lib/project/project-context';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
+import { resolveActiveProjectRequestScope } from '@/lib/project/request-scope';
 import { cn } from '@/lib/utils';
 
 import { groupByTopic } from './topic-groups';
@@ -80,14 +81,16 @@ function ScoreCell({ score }: Readonly<{ score: number | null }>) {
  */
 export function YourPrompts() {
   const project = useActiveProject();
+  const requestScope = resolveActiveProjectRequestScope(project);
   const { projectId, prompts, isLoading, isError } = usePromptSet();
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const topicsQuery = useQuery({
     queryKey: projectId ? queryKeys.topics.list(projectId) : ['topics', 'list', 'none'],
-    queryFn: ({ signal }) => topicsApi.list(projectId as string, { signal }),
-    enabled: Boolean(projectId),
+    queryFn: ({ signal }) =>
+      topicsApi.list(projectId as string, { signal, workspaceId: requestScope.workspaceId }),
+    enabled: requestScope.enabled,
   });
 
   // Latest-audit evidence window; a project with no completed audits returns
@@ -97,8 +100,11 @@ export function YourPrompts() {
       ? queryKeys.visibility.evidence(projectId, {})
       : ['visibility', 'evidence', 'none'],
     queryFn: ({ signal }) =>
-      visibilityApi.getVisibilityEvidence(projectId as string, undefined, { signal }),
-    enabled: Boolean(projectId),
+      visibilityApi.getVisibilityEvidence(projectId as string, undefined, {
+        signal,
+        workspaceId: requestScope.workspaceId,
+      }),
+    enabled: requestScope.enabled,
     retry: false,
   });
 

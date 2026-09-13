@@ -17,6 +17,7 @@ import {
 } from '@/lib/site-health/download';
 import { invalidateCrawlViews, invalidateMonitoredProjection } from '@/lib/site-health/invalidate';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { resolveProjectRequestScope } from '@/lib/project/request-scope';
 import { useCrawlEvents } from '@/lib/site-health/use-crawl-events';
 import {
   crawlPollInterval,
@@ -37,6 +38,14 @@ function monitoredPagePreviewParams(active: boolean) {
   };
 }
 
+function canLoadPagePreview(
+  scopeEnabled: boolean,
+  crawlId: string | undefined,
+  phase: SiteHealthPhase,
+): boolean {
+  return scopeEnabled && Boolean(crawlId) && (phase === 'analyzing' || phase === 'dashboard');
+}
+
 /**
  * Data orchestration for the Site Health screen (Slice 7).
  *
@@ -55,14 +64,16 @@ function monitoredPagePreviewParams(active: boolean) {
  */
 export function useSiteHealthScreen(projectId: string | null) {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
+  const requestScope = resolveProjectRequestScope(workspaceId, projectId);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const entitlementQuery = useQuery(siteHealthQueries.entitlements(useActiveWorkspaceId()));
+  const entitlementQuery = useQuery(siteHealthQueries.entitlements(workspaceId));
 
   const dashboardQuery = useQuery({
-    ...siteHealthQueries.dashboard(projectId ?? ''),
-    enabled: Boolean(projectId),
+    ...siteHealthQueries.dashboard(requestScope.workspaceId, requestScope.projectId),
+    enabled: requestScope.enabled,
     // Backed off by crawl age, and stops entirely on a crawl that has gone
     // silent — an active-forever crawl must not pin the tab to a 4s poll of
     // five queries indefinitely.
@@ -105,8 +116,8 @@ export function useSiteHealthScreen(projectId: string | null) {
   // admission owns membership; this query is display-only and cannot change
   // the crawl phase.
   const monitoredQuery = useQuery({
-    ...siteHealthQueries.monitored(projectId ?? ''),
-    enabled: Boolean(projectId),
+    ...siteHealthQueries.monitored(requestScope.workspaceId, requestScope.projectId),
+    enabled: requestScope.enabled,
   });
   const projectSelectedTotal = useMemo(() => {
     const rows = monitoredQuery.data?.monitored_urls;
@@ -120,8 +131,12 @@ export function useSiteHealthScreen(projectId: string | null) {
   // pre-seeded pending set at once. Once terminal, it returns to the complete
   // monitored projection.
   const pagesQuery = useQuery({
-    ...siteHealthQueries.pages(crawl?.id ?? '', monitoredPagePreviewParams(active)),
-    enabled: Boolean(crawl?.id) && (phase === 'analyzing' || phase === 'dashboard'),
+    ...siteHealthQueries.pages(
+      requestScope.workspaceId,
+      crawl?.id ?? '',
+      monitoredPagePreviewParams(active),
+    ),
+    enabled: canLoadPagePreview(requestScope.enabled, crawl?.id, phase),
   });
 
   // The one thing still derived from the phase: what the always-mounted
@@ -135,7 +150,7 @@ export function useSiteHealthScreen(projectId: string | null) {
   const projectSelectedError = monitoredQuery.isError;
 
   const createMutation = useMutation({
-    ...siteHealthMutations.createCrawl(),
+    ...siteHealthMutations.createCrawl(requestScope.workspaceId),
     onSuccess: async (_crawl, variables) => {
       const targetProjectId = variables.project_id;
       // The create response is a crawl row, while this screen is driven by the
@@ -155,7 +170,7 @@ export function useSiteHealthScreen(projectId: string | null) {
     },
   });
   const cancelMutation = useMutation({
-    ...siteHealthMutations.cancelCrawl(),
+    ...siteHealthMutations.cancelCrawl(requestScope.workspaceId),
     onSuccess: async () => {
       if (!projectId) return;
       // Cancellation also changes the server-owned phase. Refresh the whole
@@ -167,7 +182,7 @@ export function useSiteHealthScreen(projectId: string | null) {
     },
   });
   const startCrawl = (input?: CreateCrawlInput) =>
-    projectId && createMutation.mutate(input ?? { project_id: projectId });
+    requestScope.enabled && createMutation.mutate(input ?? { project_id: requestScope.projectId });
   const cancelCrawl = () => crawl && cancelMutation.mutate(crawl.id);
 
   // A create is genuinely in flight: the button says "Starting…" and a second
@@ -184,7 +199,9 @@ export function useSiteHealthScreen(projectId: string | null) {
     setExportError(null);
     setExporting(true);
     try {
-      await downloadCrawlExport(crawl.id, format, view);
+      await downloadCrawlExport(crawl.id, format, view, {
+        workspaceId: requestScope.workspaceId,
+      });
     } catch {
       setExportError('Export failed. Please try again.');
     } finally {

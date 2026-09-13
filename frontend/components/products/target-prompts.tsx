@@ -15,6 +15,7 @@ import { LaunchDialog } from '@/components/runs/launch-dialog';
 
 import type { CommerceQueries } from './commerce-queries';
 import { ledgerClasses } from '@/components/ui/workspace';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 function forTarget(
   rows: NonNullable<CommerceQueries['buyerPrompts']['data']>,
@@ -35,16 +36,17 @@ export function TargetPrompts({
   query: CommerceQueries['buyerPrompts'];
 }>) {
   const client = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const [text, setText] = useState('');
   const [launchOpen, setLaunchOpen] = useState(false);
   const refresh = () =>
     client.invalidateQueries({ queryKey: queryKeys.commerce.buyerPrompts(projectId) });
   const generate = useMutation({
-    mutationFn: () => commerceApi.generateBuyerPrompts(projectId, [target], 5),
+    mutationFn: () => commerceApi.generateBuyerPrompts(projectId, [target], 5, { workspaceId }),
     onSuccess: refresh,
   });
   const manual = useMutation({
-    mutationFn: () => commerceApi.addBuyerPrompt(projectId, target, text),
+    mutationFn: () => commerceApi.addBuyerPrompt(projectId, target, text, { workspaceId }),
     onSuccess: async () => {
       setText('');
       await refresh();
@@ -52,7 +54,7 @@ export function TargetPrompts({
   });
   const decide = useMutation({
     mutationFn: ({ id, approved }: { id: string; approved: boolean }) =>
-      commerceApi.decideBuyerPrompt(projectId, id, approved),
+      commerceApi.decideBuyerPrompt(projectId, id, approved, { workspaceId }),
     onSuccess: refresh,
   });
   const rows = query.data ? forTarget(query.data, target) : [];

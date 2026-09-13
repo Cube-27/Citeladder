@@ -3,11 +3,13 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { getActiveWorkspaceId, setActiveWorkspaceId } from '@/lib/api/client';
 import { createAppQueryClient } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
-import { ACTIVE_PROJECT_STORAGE_KEY } from '@/lib/project/active-project-storage';
+import {
+  ACTIVE_PROJECT_STORAGE_KEY,
+  ACTIVE_WORKSPACE_STORAGE_KEY,
+} from '@/lib/project/active-project-storage';
 import { mswServer } from '@/test/msw-server';
 import { makeProject } from '@/test/fixtures/project';
 
@@ -46,7 +48,6 @@ afterEach(() => {
   navigate.mockReset();
   window.localStorage.clear();
   globalThis.sessionStorage.clear();
-  setActiveWorkspaceId(null);
 });
 afterAll(() => mswServer.close());
 
@@ -71,7 +72,7 @@ describe('useAuthMutation', () => {
     queryClient.setQueryData(['old-account', 'private'], { secret: 'stale' });
     window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, project.id);
     window.localStorage.setItem('citeladder-theme', 'dark');
-    setActiveWorkspaceId(project.workspace_id);
+    window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, project.workspace_id);
 
     let requestStarted: (() => void) | undefined;
     let wasAborted = false;
@@ -108,14 +109,14 @@ describe('useAuthMutation', () => {
     expect(queryClient.getQueryData(queryKeys.auth.me())).toMatchObject({ id: sessionUser.id });
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem('citeladder-theme')).toBe('dark');
-    expect(getActiveWorkspaceId()).toBeNull();
+    expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBeNull();
   });
 
   it('does not clear the existing account state when authentication fails', async () => {
     const { result, queryClient } = setup(() => Promise.reject(new Error('invalid credentials')));
     queryClient.setQueryData(['old-account', 'private'], { stays: true });
     window.localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, project.id);
-    setActiveWorkspaceId(project.workspace_id);
+    window.localStorage.setItem(ACTIVE_WORKSPACE_STORAGE_KEY, project.workspace_id);
 
     await act(async () => {
       await result.current.submit({});
@@ -124,7 +125,7 @@ describe('useAuthMutation', () => {
     await waitFor(() => expect(result.current.mutation.isError).toBe(true));
     expect(queryClient.getQueryData(['old-account', 'private'])).toEqual({ stays: true });
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBe(project.id);
-    expect(getActiveWorkspaceId()).toBe(project.workspace_id);
+    expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBe(project.workspace_id);
     expect(navigate).not.toHaveBeenCalled();
   });
 

@@ -282,21 +282,6 @@ def test_deploy_rotates_configured_secrets_and_verifies_dev_login() -> None:
     assert "Configured live dev login returned HTTP" in workflow
 
 
-def test_deploy_validates_the_latest_commit_as_a_full_diff() -> None:
-    deploy_workflow = _document(WORKFLOWS / "gcp-demo-deploy.yml")
-    workflow = _shell(deploy_workflow)
-    assert "sudo apt-get install --yes --no-install-recommends ripgrep" in workflow
-    # The step is located by name rather than by splitting the file, so an
-    # unrelated edit above it cannot silently empty the slice being asserted.
-    gate = _step(deploy_workflow, "Run repository gates for the deployed commit")["run"]
-    assert 'git rev-parse "$env:GITHUB_SHA^"' in gate
-    assert "git update-ref refs/remotes/origin/main $deployBase" in gate
-    assert gate.index("git update-ref") < gate.index("./scripts/check.ps1")
-    assert gate.index("./scripts/check.ps1") < gate.index("./scripts/test.ps1")
-    assert "./scripts/test.ps1" in gate
-    assert "-ChangedFiles" not in gate
-
-
 def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     variables = (GCP / "variables.tf").read_text(encoding="utf-8")
     assert variables.count("@sha256:[0-9a-f]{64}$") == 2

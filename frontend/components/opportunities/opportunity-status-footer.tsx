@@ -9,14 +9,38 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { opportunitiesMutations, opportunitiesQueries } from '@/lib/api/opportunities';
 import type { OpportunityDetail, OpportunityStatus } from '@/lib/api/types';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 export function OpportunityStatusFooter({
   detail,
   projectId,
 }: Readonly<{ detail: OpportunityDetail; projectId: string }>) {
-  const updateStatus = useUpdateOpportunityStatus(projectId, detail.id);
-  const declaration = useImplementationDeclaration(projectId, detail.id);
-  const declarations = useQuery(opportunitiesQueries.implementationEvents(projectId, detail.id));
+  const workspaceId = useActiveWorkspaceId();
+  if (!workspaceId) return null;
+  return (
+    <ScopedStatusFooter
+      key={`${workspaceId}:${projectId}:${detail.id}`}
+      workspaceId={workspaceId}
+      projectId={projectId}
+      detail={detail}
+    />
+  );
+}
+
+function ScopedStatusFooter({
+  workspaceId,
+  projectId,
+  detail,
+}: Readonly<{
+  workspaceId: string;
+  projectId: string;
+  detail: OpportunityDetail;
+}>) {
+  const updateStatus = useUpdateOpportunityStatus(workspaceId, projectId, detail.id);
+  const declaration = useImplementationDeclaration(workspaceId, projectId, detail.id);
+  const declarations = useQuery(
+    opportunitiesQueries.implementationEvents(workspaceId, projectId, detail.id),
+  );
   const [idempotencyKey] = useState(
     () => globalThis.crypto?.randomUUID?.() ?? `${detail.id}-${Date.now()}`,
   );
@@ -46,13 +70,18 @@ export function OpportunityStatusFooter({
   );
 }
 
-function useImplementationDeclaration(projectId: string, opportunityId: string) {
+function useImplementationDeclaration(
+  workspaceId: string,
+  projectId: string,
+  opportunityId: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    ...opportunitiesMutations.createImplementationEvent(),
+    ...opportunitiesMutations.createImplementationEvent(workspaceId),
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: opportunitiesQueries.implementationEvents(projectId, opportunityId).queryKey,
+        queryKey: opportunitiesQueries.implementationEvents(workspaceId, projectId, opportunityId)
+          .queryKey,
       }),
   });
 }

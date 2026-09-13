@@ -35,6 +35,7 @@ from app.api.deps import (
     require_active_workspace_run,
     require_active_workspace_write,
 )
+from app.api.streaming import release_request_transaction
 from app.core.config.audits import (
     AUDIT_TERMINAL_STATUSES,
     AUDIT_TRIGGER_MANUAL,
@@ -389,6 +390,9 @@ async def list_events_endpoint(
         await _authorize_resume_cursor(session, audit_id, last_event_id)
     if not stream:
         return await _list_event_responses(session, audit_id, after=last_event_id)
+    # The SSE generator uses private short sessions. Release the request's
+    # read-only authorization transaction before FastAPI begins streaming.
+    await release_request_transaction(session)
     return StreamingResponse(
         _event_stream(audit_id, last_event_id=last_event_id),
         media_type="text/event-stream",
@@ -501,12 +505,11 @@ async def _event_stream(
 ):
     """Tail an audit's events until it terminalizes.
 
-    Opens its own short-lived sessions (the request session is closed once the
-    handler returns the ``StreamingResponse``). Resumes strictly AFTER
-    ``last_event_id`` when given — the endpoint has already authorized the
-    cursor against this audit. Stops shortly after the audit reaches a
-    terminal status (config-owned grace, invariant 1) so the connection does
-    not hang forever.
+    Opens its own short-lived sessions after the endpoint explicitly releases
+    its authorization transaction. Resumes strictly AFTER ``last_event_id``
+    when given — the endpoint has already authorized the cursor against this
+    audit. Stops shortly after the audit reaches a terminal status
+    (config-owned grace, invariant 1) so the connection does not hang forever.
     """
     last_id = last_event_id
     terminal_polls = 0

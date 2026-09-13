@@ -11,7 +11,7 @@
  */
 import { mutationOptions, queryOptions } from '@tanstack/react-query';
 
-import { API_BASE_URL, apiClient, type ApiRequestOptions } from './client';
+import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
 import {
   implementationEventSchema,
@@ -165,15 +165,16 @@ export const opportunitiesApi = {
     );
     return strictValidate(implementationEventSchema, res, 'opportunities.implementation.get');
   },
-  /** Same-origin export URLs (browser navigation / download links). */
-  exportUrl: (
+  /** Fetch an export through the authenticated client so workspace scope is explicit. */
+  downloadExport: (
     projectId: string,
     format: 'csv' | 'md',
     filters?: Omit<OpportunitiesParams, 'cursor' | 'limit'>,
+    options?: ApiRequestOptions,
   ) =>
-    withQuery(
-      `${API_BASE_URL}/projects/${projectId}/opportunities/export.${format}`,
-      definedQuery(filters),
+    apiClient.getBlob(
+      withQuery(`/projects/${projectId}/opportunities/export.${format}`, definedQuery(filters)),
+      options,
     ),
 };
 
@@ -198,7 +199,7 @@ function isSameProjectQuery(
  * `queryFn` forwards the abort signal.
  */
 export const opportunitiesQueries = {
-  list: (projectId: string, params?: OpportunitiesParams) =>
+  list: (workspaceId: string, projectId: string, params?: OpportunitiesParams) =>
     queryOptions({
       queryKey: queryKeys.opportunities.list(projectId, {
         cursor: params?.cursor ?? null,
@@ -210,48 +211,58 @@ export const opportunitiesQueries = {
         min_priority: params?.min_priority ?? null,
         action_path: params?.action_path ?? null,
       }),
-      queryFn: ({ signal }) => opportunitiesApi.list(projectId, params, { signal }),
+      queryFn: ({ signal }) => opportunitiesApi.list(projectId, params, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         isSameProjectQuery(previousQuery, projectId) ? previousData : undefined,
     }),
-  detail: (opportunityId: string) =>
+  detail: (workspaceId: string, opportunityId: string) =>
     queryOptions({
       queryKey: queryKeys.opportunities.detail(opportunityId),
-      queryFn: ({ signal }) => opportunitiesApi.get(opportunityId, { signal }),
+      queryFn: ({ signal }) => opportunitiesApi.get(opportunityId, { signal, workspaceId }),
     }),
-  summary: (projectId: string) =>
+  summary: (workspaceId: string, projectId: string) =>
     queryOptions({
       queryKey: queryKeys.opportunities.summary(projectId),
-      queryFn: ({ signal }) => opportunitiesApi.summary(projectId, { signal }),
+      queryFn: ({ signal }) => opportunitiesApi.summary(projectId, { signal, workspaceId }),
       placeholderData: (previousData, previousQuery) =>
         isSameProjectQuery(previousQuery, projectId) ? previousData : undefined,
     }),
-  implementationEvents: (projectId: string, opportunityId?: string) =>
+  implementationEvents: (workspaceId: string, projectId: string, opportunityId?: string) =>
     queryOptions({
       queryKey: queryKeys.opportunities.implementationEvents(projectId, opportunityId),
       queryFn: ({ signal }) =>
-        opportunitiesApi.listImplementationEvents(projectId, opportunityId, { signal }),
+        opportunitiesApi.listImplementationEvents(projectId, opportunityId, {
+          signal,
+          workspaceId,
+        }),
     }),
 };
 
 export const opportunitiesMutations = {
-  updateStatus: () =>
+  updateStatus: (workspaceId: string) =>
     mutationOptions({
       mutationFn: (vars: { opportunityId: string; status: OpportunityStatus }) =>
-        opportunitiesApi.updateStatus(vars.opportunityId, vars.status),
+        opportunitiesApi.updateStatus(vars.opportunityId, vars.status, { workspaceId }),
     }),
-  recompute: () =>
+  recompute: (workspaceId: string) =>
     mutationOptions({
       mutationFn: (vars: { projectId: string; scope?: RecomputeScope }) =>
-        opportunitiesApi.recompute(vars.projectId, vars.scope),
+        opportunitiesApi.recompute(vars.projectId, vars.scope, { workspaceId }),
     }),
-  createImplementationEvent: () =>
+  createImplementationEvent: (workspaceId: string) =>
     mutationOptions({
       mutationFn: (vars: {
         projectId: string;
         input: ImplementationEventCreate;
         idempotencyKey: string;
       }) =>
-        opportunitiesApi.createImplementationEvent(vars.projectId, vars.input, vars.idempotencyKey),
+        opportunitiesApi.createImplementationEvent(
+          vars.projectId,
+          vars.input,
+          vars.idempotencyKey,
+          {
+            workspaceId,
+          },
+        ),
     }),
 };

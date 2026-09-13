@@ -12,6 +12,7 @@ vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     activeProject: { id: PROJECT_ID, name: 'Asian School' },
+    activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     isLoading: false,
   }),
 }));
@@ -70,6 +71,7 @@ describe('GrowthAgentWorkspace', () => {
       expect(agentApi.submitTask).toHaveBeenCalledWith(
         { project_id: PROJECT_ID, task_type: 'build_roadmap', objective: 'Prioritize admissions' },
         expect.any(String),
+        { workspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' },
       ),
     );
   });

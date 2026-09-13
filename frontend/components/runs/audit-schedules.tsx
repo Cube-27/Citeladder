@@ -18,6 +18,7 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { formatUtcTimestamp } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -32,6 +33,27 @@ export function AuditSchedules({
   projectId,
   promptSets,
 }: Readonly<{ projectId: string; promptSets: PromptSet[] }>) {
+  const workspaceId = useActiveWorkspaceId();
+  if (!workspaceId) return <Alert tone="info">Loading your workspace…</Alert>;
+  return (
+    <WorkspaceSchedules
+      key={`${workspaceId}:${projectId}`}
+      workspaceId={workspaceId}
+      projectId={projectId}
+      promptSets={promptSets}
+    />
+  );
+}
+
+function WorkspaceSchedules({
+  workspaceId,
+  projectId,
+  promptSets,
+}: Readonly<{
+  workspaceId: string;
+  projectId: string;
+  promptSets: PromptSet[];
+}>) {
   const queryClient = useQueryClient();
   const [promptSetId, setPromptSetId] = useState(promptSets[0]?.id ?? '');
   const [auditScope, setAuditScope] = useState<'brand' | 'commerce'>('brand');
@@ -40,18 +62,23 @@ export function AuditSchedules({
   const [engines, setEngines] = useState<LogicalEngine[]>(['chatgpt']);
   const schedulesQuery = useQuery({
     queryKey: queryKeys.runs.schedules(projectId),
-    queryFn: ({ signal }) => runsApi.listSchedules(projectId, { signal }),
+    queryFn: ({ signal }) => runsApi.listSchedules(projectId, { signal, workspaceId }),
   });
   const createMutation = useMutation({
-    mutationFn: () =>
-      runsApi.createSchedule(projectId, {
-        prompt_set_id: promptSetId,
-        audit_scope: auditScope,
-        cadence,
-        interval_minutes: cadence === 'every_n_minutes' ? Number(intervalMinutes) : undefined,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-        engines,
-      }),
+    mutationFn: () => {
+      return runsApi.createSchedule(
+        projectId,
+        {
+          prompt_set_id: promptSetId,
+          audit_scope: auditScope,
+          cadence,
+          interval_minutes: cadence === 'every_n_minutes' ? Number(intervalMinutes) : undefined,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+          engines,
+        },
+        { workspaceId },
+      );
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.runs.schedules(projectId) });
     },

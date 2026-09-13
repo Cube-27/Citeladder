@@ -116,7 +116,7 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
 // a separate unit with its own tests (components/intelligence); stub it out
 // rather than teaching this fixture two response shapes.
 vi.mock('@/components/intelligence/top-insights', () => ({
-  TopInsights: () => null,
+  TopInsights: () => <div data-testid="top-insights" />,
 }));
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => queryResult,
@@ -175,6 +175,23 @@ describe('DashboardScreen', () => {
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
     expect(screen.getByText('Monitor — no required action')).toBeVisible();
   });
+  it('does not remount unrelated dashboard state when the action order changes', () => {
+    const view = render(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    const topInsights = screen.getByTestId('top-insights');
+    queryResult.data = { ...commandCenter, action_order_version: 1 };
+
+    view.rerender(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByTestId('top-insights')).toBe(topInsights);
+  });
   it('does not expose additional project creation before billing is live', async () => {
     const user = userEvent.setup();
     render(
@@ -201,7 +218,9 @@ describe('DashboardScreen', () => {
     );
     expect(screen.getAllByRole('button', { name: /executive pdf/i })).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: /executive pdf/i }));
-    expect(downloadExecutiveReport).toHaveBeenCalledWith(project.id);
+    expect(downloadExecutiveReport).toHaveBeenCalledWith(project.id, {
+      workspaceId: project.workspace_id,
+    });
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(click).toHaveBeenCalledOnce();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:report');

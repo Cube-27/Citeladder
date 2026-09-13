@@ -27,11 +27,14 @@ import { textRole } from '@/components/ui/typography';
 const ELIGIBILITY_HEADROOM = 4;
 
 export function TopInsights({
+  workspaceId,
   projectId,
   limit = 5,
-}: Readonly<{ projectId: string; limit?: number }>) {
+}: Readonly<{ workspaceId: string; projectId: string; limit?: number }>) {
   const query = useQuery({
-    ...opportunitiesQueries.list(projectId, { limit: limit * ELIGIBILITY_HEADROOM }),
+    ...opportunitiesQueries.list(workspaceId, projectId, {
+      limit: limit * ELIGIBILITY_HEADROOM,
+    }),
     enabled: Boolean(projectId),
   });
 

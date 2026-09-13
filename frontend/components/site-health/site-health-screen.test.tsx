@@ -179,9 +179,20 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
       ...COMPLETE_CLASSIFICATION_PROJECTION,
       classified_page_count: 1,
       classification_expected_page_count: 1,
-      scored_page_kind_set: ['homepage'],
-      scored_page_count_by_kind: { homepage: 1 },
-      by_page_kind: {},
+      scored_page_kind_set: ['other'],
+      scored_page_count_by_kind: { other: 1 },
+      by_page_kind: {
+        other: {
+          analyzed_count: 1,
+          web_fundamentals_score: 80,
+          web_fundamentals_coverage: 1,
+          web_fundamentals_state: 'measured',
+          aeo_readiness_score: null,
+          aeo_measurement_coverage: null,
+          aeo_measurement_state: 'not_measured',
+          aeo_measurement_reason: 'page_purpose_unresolved',
+        },
+      },
     };
 
     let serverCrawl = crawl({
@@ -308,6 +319,9 @@ describe('SiteHealthScreen — canonical single-screen flow (regression)', () =>
     await queryClient.invalidateQueries();
 
     expect((await screen.findAllByText('80')).length).toBeGreaterThan(0);
+    expect(
+      screen.queryByText('Could not load Site Health. Please refresh.'),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeInTheDocument();
     expect(screen.getByTestId('site-health-overview')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');

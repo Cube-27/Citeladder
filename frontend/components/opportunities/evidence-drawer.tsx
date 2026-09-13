@@ -18,6 +18,7 @@ import { opportunitiesQueries } from '@/lib/api/opportunities';
 import type { OpportunityDetail } from '@/lib/api/types';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 import { panelClasses } from '@/components/ui/panel';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /** Recommendation detail drawer backed by the persisted detail projection. */
 export function EvidenceDrawer({
@@ -31,8 +32,9 @@ export function EvidenceDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
+  const workspaceId = useActiveWorkspaceId() ?? '';
   const detailQuery = useQuery({
-    ...opportunitiesQueries.detail(opportunityId ?? ''),
+    ...opportunitiesQueries.detail(workspaceId, opportunityId ?? ''),
     enabled: open && opportunityId !== null,
   });
   const detail = detailQuery.data ?? null;

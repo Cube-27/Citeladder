@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { prefetchRoute } from './route-prefetch';
 
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
+const PROJECT = {
+  projectId: PROJECT_ID,
+  workspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+};
 
 vi.mock('@/lib/api/demand', () => ({
   demandApi: { getLatest: vi.fn(async () => ({ id: 'snapshot' })) },
@@ -25,7 +29,7 @@ describe('prefetchRoute', () => {
   });
 
   it('warms the Search Demand snapshot on intent', async () => {
-    prefetchRoute(client, '/demand', PROJECT_ID);
+    prefetchRoute(client, '/demand', PROJECT);
     await vi.waitFor(() => expect(demandApi.getLatest).toHaveBeenCalledTimes(1));
   });
 
@@ -47,7 +51,7 @@ describe('prefetchRoute', () => {
     expect(query?.state.status).toBe('error');
     const callsAfterFailure = vi.mocked(demandApi.getLatest).mock.calls.length;
 
-    prefetchRoute(client, '/demand', PROJECT_ID);
+    prefetchRoute(client, '/demand', PROJECT);
     await Promise.resolve();
 
     expect(vi.mocked(demandApi.getLatest).mock.calls.length).toBe(callsAfterFailure);
@@ -59,7 +63,7 @@ describe('prefetchRoute', () => {
    * snapshot, so hovering it must not touch Search Demand's cache entry at all.
    */
   it('does not touch the demand snapshot when intent targets Content', async () => {
-    prefetchRoute(client, '/content', PROJECT_ID);
+    prefetchRoute(client, '/content', PROJECT);
     await Promise.resolve();
     expect(demandApi.getLatest).not.toHaveBeenCalled();
   });

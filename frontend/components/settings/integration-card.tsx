@@ -8,8 +8,9 @@ import { IntegrationCardView } from '@/components/settings/integration-card-view
  * `IntegrationConnectionRow`; card markup lives in `integration-card-view`.
  */
 export function IntegrationCard({
+  workspaceId,
   family,
   grant,
-}: Readonly<{ family: GrantFamily; grant: GrantModel | null }>) {
-  return <IntegrationCardView family={family} grant={grant} />;
+}: Readonly<{ workspaceId: string; family: GrantFamily; grant: GrantModel | null }>) {
+  return <IntegrationCardView workspaceId={workspaceId} family={family} grant={grant} />;
 }

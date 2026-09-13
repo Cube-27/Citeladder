@@ -64,6 +64,7 @@ function filterCount(filter: FilterKey, summary: IssuesSummary, view: FindingVie
 
 /** The issue page, then the occurrences of whichever issue the rail shows. */
 function useIssuesCatalogQueries(
+  workspaceId: string,
   crawlId: string,
   filters: IssueFilters,
   cursor: string | null,
@@ -71,12 +72,12 @@ function useIssuesCatalogQueries(
   occurrenceCursor: string | undefined,
 ) {
   const params = useMemo(() => toIssueParams(filters, cursor, ISSUE_LIMIT), [filters, cursor]);
-  const issuesQuery = useQuery(siteHealthQueries.issues(crawlId, params));
+  const issuesQuery = useQuery(siteHealthQueries.issues(workspaceId, crawlId, params));
   const summary = issuesQuery.data?.summary ?? null;
   const rows = issuesQuery.data?.items ?? [];
   const selected = rows.find((issue) => issue.group_id === selectedGroupId) ?? rows[0] ?? null;
   const detailQuery = useQuery({
-    ...siteHealthQueries.issue(crawlId, selected?.group_id ?? '', {
+    ...siteHealthQueries.issue(workspaceId, crawlId, selected?.group_id ?? '', {
       cursor: occurrenceCursor,
       limit: OCCURRENCE_LIMIT,
     }),
@@ -91,11 +92,15 @@ function useIssuesCatalogQueries(
   return { issuesQuery, detailQuery, summary, rows, selected, shown };
 }
 
-export function IssuesCatalog({ crawlId }: Readonly<{ crawlId: string }>) {
+export function IssuesCatalog({
+  workspaceId,
+  crawlId,
+}: Readonly<{ workspaceId: string; crawlId: string }>) {
   const { cursor, filters, selectedGroupId, navigate, selectIssue } = useIssuesCatalogUrlState();
   const [occurrenceCursors, setOccurrenceCursors] = useState<string[]>([]);
   const findingView: FindingView = filters.finding_class;
   const { issuesQuery, detailQuery, summary, rows, selected, shown } = useIssuesCatalogQueries(
+    workspaceId,
     crawlId,
     filters,
     cursor,

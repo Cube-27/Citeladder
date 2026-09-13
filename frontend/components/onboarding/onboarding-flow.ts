@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import {
@@ -93,6 +93,14 @@ export function useOnboardingFlow() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const { activeWorkspaceId, setActiveProjectId } = useProjectContext();
+  const openingProject = useRef<string | null>(null);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const isAdditional = searchParams?.get('new') === '1';
   const initialDiscoveryId = searchParams?.get('discovery') ?? null;
   const [step, setStep] = useState<OnboardingStep>(() =>
@@ -122,9 +130,11 @@ export function useOnboardingFlow() {
     activeWorkspaceId,
   );
   const catalog = useQuery({
-    queryKey: ['brand-discovery-catalog'],
-    queryFn: ({ signal }) => brandDiscoveriesApi.catalog({ signal }),
+    queryKey: ['brand-discovery-catalog', activeWorkspaceId],
+    queryFn: ({ signal }) =>
+      brandDiscoveriesApi.catalog({ signal, workspaceId: activeWorkspaceId }),
     staleTime: Number.POSITIVE_INFINITY,
+    enabled: activeWorkspaceId !== null,
   });
   const maximumCompetitors = catalog.data?.maximum_competitors;
   const discoveryState = discovery.discovery;
@@ -161,7 +171,7 @@ export function useOnboardingFlow() {
   }, [activeWorkspaceId, form, orphanedCompletion, router, searchParams]);
 
   useEffect(() => {
-    if (orphanedCompletion) return;
+    if (orphanedCompletion || openingProject.current) return;
     const discoveryId = discoveryState?.id ?? resumeDiscoveryId;
     if (!discoveryId) return;
     if (resumeDiscoveryId !== discoveryId) {
@@ -172,7 +182,8 @@ export function useOnboardingFlow() {
     params.set('discovery', discoveryId);
     params.set('step', stepQueryValue(step));
     const next = params.toString();
-    if (next !== searchParams?.toString()) router.replace(`/onboarding?${next}`, { scroll: false });
+    if (next !== searchParams?.toString())
+      window.history.replaceState(null, '', `/onboarding?${next}`);
   }, [discoveryState?.id, orphanedCompletion, resumeDiscoveryId, router, searchParams, step]);
 
   useEffect(() => {
@@ -204,27 +215,12 @@ export function useOnboardingFlow() {
     );
   }, [discoveryState, maximumCompetitors]);
 
-  /**
-   * Hand a CONFIRMED creation over to the shell.
-   *
-   * The server's success is the source of truth here, not a later full-list
-   * fetch. The steps are ordered so that nothing in flight can undo it:
-   *
-   * 1. resolve the committed project through the authorizing detail read —
-   *    that read both seeds the cache the destination will mount against and
-   *    yields the workspace that owns the project;
-   * 2. cancel the workspace's list read before merging, so a PRE-CREATE list
-   *    already on the wire cannot land afterwards and erase the new project;
-   * 3. merge (never replace) the project into a list that already exists —
-   *    inserting one project does not turn an absent list into a complete
-   *    inventory, so an unfetched list is left unfetched;
-   * 4. navigate to a destination that NAMES the project, so the shell
-   *    resolves that exact id rather than inferring one from a list;
-   * 5. leave reconciliation to the background. Its failure is not allowed to
-   *    undo the creation or send the reader back through it.
-   */
+  // Resolve the committed project and reconcile its list before navigating.
+  // Cancel older list reads so they cannot overwrite the creation hand-off.
   const openProject = useCallback(
     async (projectId: string) => {
+      if (!mounted.current || openingProject.current === projectId) return;
+      openingProject.current = projectId;
       let project: Project | null = null;
       try {
         project = await queryClient.fetchQuery({
@@ -236,20 +232,18 @@ export function useOnboardingFlow() {
         // transport problem, and the destination below can resolve the id
         // itself (with its own retry) rather than stranding the reader here.
       }
-      setActiveProjectId(project?.id ?? projectId);
+      if (!mounted.current) return;
       if (project) {
         const listKey = queryKeys.projects.list(project.workspace_id);
         await queryClient.cancelQueries({ queryKey: listKey });
+        if (!mounted.current) return;
         const created = project;
         queryClient.setQueryData<Project[]>(listKey, (current) =>
           current === undefined ? current : upsertProject(current, created),
         );
-        void projectsApi
-          .refreshProjectLogos(created.id, { workspaceId: created.workspace_id })
-          .then(() => queryClient.invalidateQueries({ queryKey: listKey }))
-          .catch(() => undefined);
         void queryClient.invalidateQueries({ queryKey: listKey });
       }
+      setActiveProjectId(project?.id ?? projectId);
       router.replace(projectDestination('/projects', null, project?.id ?? projectId));
     },
     [queryClient, router, setActiveProjectId],

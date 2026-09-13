@@ -7,6 +7,7 @@ import { commerceApi } from '@/lib/api/commerce';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { CommerceTarget, CompetitorDiscoveryTask } from '@/lib/api/schemas/commerce-suite';
 import { ACTIVE_RUN_POLL_MS } from '@/lib/config/operational';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 type Tasks = readonly CompetitorDiscoveryTask[];
 
@@ -42,6 +43,7 @@ export function discoverySettled(previous: Tasks | undefined, next: Tasks): bool
 /** Track competitor discovery for one project, from launch to terminal state. */
 export function useCompetitorDiscovery(projectId: string) {
   const client = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   // The ids the launch returned. They do not survive a reload, so an empty set
   // falls back to asking the server what is still in flight — the only form
   // reload recovery can take.
@@ -56,7 +58,7 @@ export function useCompetitorDiscovery(projectId: string) {
       const next = await commerceApi.competitorDiscoveries(
         projectId,
         trackedIds.length ? trackedIds : undefined,
-        { signal },
+        { signal, workspaceId },
       );
       if (discoverySettled(previous, next)) {
         void client.invalidateQueries({ queryKey: queryKeys.commerce.competitors(projectId) });
@@ -66,7 +68,8 @@ export function useCompetitorDiscovery(projectId: string) {
     refetchInterval: (result) => discoveryPollInterval(result.state.data),
   });
   const discover = useMutation({
-    mutationFn: (targets: CommerceTarget[]) => commerceApi.discoverCompetitors(projectId, targets),
+    mutationFn: (targets: CommerceTarget[]) =>
+      commerceApi.discoverCompetitors(projectId, targets, { workspaceId }),
     onSuccess: (data) => setTrackedIds(data.task_ids),
   });
 

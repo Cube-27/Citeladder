@@ -18,6 +18,7 @@ import {
 } from './schemas';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OPP = '22222222-2222-4222-8222-222222222222';
 const AUDIT = '33333333-3333-4333-8333-333333333333';
 const CRAWL = '44444444-4444-4444-8444-444444444444';
@@ -424,21 +425,30 @@ describe('opportunitiesApi transport', () => {
     expect('extra' in result).toBe(false);
   });
 
-  it('builds same-origin export URLs with optional filters', () => {
-    expect(opportunitiesApi.exportUrl(PROJECT, 'csv')).toBe(
-      `/api/v1/projects/${PROJECT}/opportunities/export.csv`,
+  it('downloads filtered exports with explicit workspace scope', async () => {
+    let seenWorkspace: string | null = null;
+    let seenParams = new URLSearchParams();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/opportunities/export.csv`, ({ request }) => {
+        seenWorkspace = request.headers.get('X-Workspace-Id');
+        seenParams = new URL(request.url).searchParams;
+        return new HttpResponse('id,title\n1,Example', {
+          headers: { 'content-type': 'text/csv' },
+        });
+      }),
     );
-    expect(opportunitiesApi.exportUrl(PROJECT, 'md')).toBe(
-      `/api/v1/projects/${PROJECT}/opportunities/export.md`,
+
+    const blob = await opportunitiesApi.downloadExport(
+      PROJECT,
+      'csv',
+      { type: 'site', severity: 'low' },
+      { workspaceId: WORKSPACE },
     );
-    const filtered = opportunitiesApi.exportUrl(PROJECT, 'csv', {
-      type: 'site',
-      severity: 'low',
-    });
-    expect(filtered.startsWith(`/api/v1/projects/${PROJECT}/opportunities/export.csv?`)).toBe(true);
-    const params = new URLSearchParams(filtered.split('?')[1]);
-    expect(params.get('type')).toBe('site');
-    expect(params.get('severity')).toBe('low');
+
+    expect(await blob.text()).toContain('Example');
+    expect(seenWorkspace).toBe(WORKSPACE);
+    expect(seenParams.get('type')).toBe('site');
+    expect(seenParams.get('severity')).toBe('low');
   });
 });
 
@@ -456,8 +466,14 @@ describe('opportunity query keys', () => {
   });
 
   it('separates owned and earned action paths for identical filters', () => {
-    const owned = opportunitiesQueries.list(PROJECT, { severity: 'high', action_path: 'owned' });
-    const earned = opportunitiesQueries.list(PROJECT, { severity: 'high', action_path: 'earned' });
+    const owned = opportunitiesQueries.list(WORKSPACE, PROJECT, {
+      severity: 'high',
+      action_path: 'owned',
+    });
+    const earned = opportunitiesQueries.list(WORKSPACE, PROJECT, {
+      severity: 'high',
+      action_path: 'earned',
+    });
     expect(owned.queryKey).not.toEqual(earned.queryKey);
     expect(owned.queryKey.at(-1)).toMatchObject({ action_path: 'owned' });
     expect(earned.queryKey.at(-1)).toMatchObject({ action_path: 'earned' });

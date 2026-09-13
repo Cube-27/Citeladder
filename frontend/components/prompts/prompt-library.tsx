@@ -27,6 +27,8 @@ import { PromptTable, type PromptMeasurement } from './prompt-table';
 import { PromptToolbar } from './prompt-toolbar';
 import { ResizablePromptWorkspace } from './resizable-prompt-workspace';
 import { TopicRail } from './topic-rail';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { resolveProjectRequestScope, type ProjectRequestScope } from '@/lib/project/request-scope';
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -57,7 +59,13 @@ const STATUS_TABS: { id: PromptStatus; label: string }[] = [
 // react-doctor-disable-next-line react-doctor/no-giant-component -- this component only orchestrates queries/mutations; toolbar, topic rail, table, empty state, and dialogs are extracted.
 export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: () => void }>) {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const { projectId, promptSet, prompts, isLoading, isError, ensurePromptSet } = usePromptSet();
+  const requestScope = resolveProjectRequestScope(workspaceId, projectId);
+  const requestOptions = () => {
+    if (!requestScope.enabled) throw new Error('Project is not available.');
+    return { workspaceId: requestScope.workspaceId };
+  };
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<PromptFilters>(emptyFilters);
@@ -71,12 +79,13 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const topicsQuery = useQuery({
-    queryKey: queryKeys.topics.list(projectId ?? ''),
-    queryFn: ({ signal }) => topicsApi.list(projectId as string, { signal }),
-    enabled: Boolean(projectId),
+    queryKey: queryKeys.topics.list(requestScope.projectId),
+    queryFn: ({ signal }) =>
+      topicsApi.list(requestScope.projectId, { signal, ...requestOptions() }),
+    enabled: requestScope.enabled,
   });
   const topics: Topic[] = useMemo(() => topicsQuery.data ?? [], [topicsQuery.data]);
-  const measurements = useLatestPromptMeasurements(projectId);
+  const measurements = useLatestPromptMeasurements(requestScope);
 
   const invalidate = async () => {
     if (projectId) {
@@ -93,8 +102,9 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
 
   const createMutation = useMutation({
     mutationFn: async (input: PromptInput) => {
+      const options = requestOptions();
       const set = await ensurePromptSet();
-      return promptsApi.createPrompt(set.id, input);
+      return promptsApi.createPrompt(set.id, input, options);
     },
     onSuccess: async () => {
       await invalidate();
@@ -105,7 +115,7 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
 
   const updateMutation = useMutation({
     mutationFn: (vars: { id: string; input: Partial<PromptInput> }) =>
-      promptsApi.updatePrompt(vars.id, vars.input),
+      promptsApi.updatePrompt(vars.id, vars.input, requestOptions()),
     onSuccess: async () => {
       await invalidate();
       setFormOpen(false);
@@ -114,29 +124,30 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => promptsApi.deletePrompt(id),
+    mutationFn: (id: string) => promptsApi.deletePrompt(id, requestOptions()),
     onSettled: () => setBusyId(null),
     onSuccess: invalidate,
   });
 
   const toggleMutation = useMutation({
     mutationFn: (prompt: Prompt) =>
-      promptsApi.updatePrompt(prompt.id, { enabled: !prompt.enabled }),
+      promptsApi.updatePrompt(prompt.id, { enabled: !prompt.enabled }, requestOptions()),
     onSettled: () => setBusyId(null),
     onSuccess: invalidate,
   });
 
   const statusMutation = useMutation({
     mutationFn: (vars: { prompt: Prompt; status: PromptStatus }) =>
-      promptsApi.updatePrompt(vars.prompt.id, { status: vars.status }),
+      promptsApi.updatePrompt(vars.prompt.id, { status: vars.status }, requestOptions()),
     onSettled: () => setBusyId(null),
     onSuccess: invalidate,
   });
 
   const importMutation = useMutation({
     mutationFn: async (rows: PromptInput[]): Promise<PromptSet> => {
+      const options = requestOptions();
       const set = await ensurePromptSet();
-      return promptsApi.importRows(set.id, rows);
+      return promptsApi.importRows(set.id, rows, options);
     },
     onSuccess: async () => {
       await invalidate();
@@ -146,8 +157,9 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
 
   const generateMutation = useMutation({
     mutationFn: async (input: PromptGenerateInput) => {
+      const options = requestOptions();
       const set = await ensurePromptSet();
-      return promptsApi.generate(set.id, input);
+      return promptsApi.generate(set.id, input, options);
     },
     // Clear any prior success summary before a new attempt so a stale result
     // can never render alongside a later retry's error.
@@ -164,12 +176,13 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
   });
 
   const createTopicMutation = useMutation({
-    mutationFn: (name: string) => topicsApi.create(projectId as string, { name }),
+    mutationFn: (name: string) =>
+      topicsApi.create(requestScope.projectId, { name }, requestOptions()),
     onSuccess: invalidate,
   });
 
   const deleteTopicMutation = useMutation({
-    mutationFn: (topic: Topic) => topicsApi.remove(topic.id),
+    mutationFn: (topic: Topic) => topicsApi.remove(topic.id, requestOptions()),
     onSuccess: async (_data, topic) => {
       if (selectedTopicId === topic.id) setSelectedTopicId(null);
       await invalidate();
@@ -214,7 +227,7 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
     else await createMutation.mutateAsync(input).catch(() => undefined);
   };
 
-  if (!projectId) {
+  if (!requestScope.enabled) {
     return (
       <Alert tone="info">
         Select or create a project first — prompts belong to a project&apos;s prompt set.
@@ -365,12 +378,13 @@ export function PromptLibrary({ onDoneManaging }: Readonly<{ onDoneManaging?: ()
  * A prompt added since the last run simply has no entry, which reads as
  * "Not measured" rather than a fabricated zero.
  */
-function useLatestPromptMeasurements(projectId: string | null) {
+function useLatestPromptMeasurements(scope: ProjectRequestScope) {
+  const { workspaceId, projectId } = scope;
   const result = useQuery({
-    queryKey: queryKeys.visibility.prompts(projectId ?? ''),
+    queryKey: queryKeys.visibility.prompts(projectId),
     queryFn: ({ signal }) =>
-      visibilityApi.getPromptMetrics(projectId as string, undefined, { signal }),
-    enabled: Boolean(projectId),
+      visibilityApi.getPromptMetrics(projectId, undefined, { signal, workspaceId }),
+    enabled: scope.enabled,
   });
   return useMemo(() => {
     const map = new Map<string, PromptMeasurement>();

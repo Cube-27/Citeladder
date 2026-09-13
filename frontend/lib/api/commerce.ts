@@ -24,14 +24,23 @@ export const commerceApi = {
       await apiClient.get(path(projectId, 'catalog'), options),
       'commerce.catalog',
     ),
-  importCatalog: async (projectId: string, content: string, filename = 'catalog.csv') =>
+  importCatalog: async (
+    projectId: string,
+    content: string,
+    filename = 'catalog.csv',
+    options?: ApiRequestOptions,
+  ) =>
     strictValidate(
       catalogImportSchema,
-      await apiClient.post(path(projectId, 'catalog/import'), {
-        filename,
-        content_type: 'text/csv',
-        content,
-      }),
+      await apiClient.post(
+        path(projectId, 'catalog/import'),
+        {
+          filename,
+          content_type: 'text/csv',
+          content,
+        },
+        options,
+      ),
       'commerce.importCatalog',
     ),
   competitors: async (projectId: string, options?: ApiRequestOptions) =>
@@ -40,10 +49,14 @@ export const commerceApi = {
       await apiClient.get(path(projectId, 'competitors'), options),
       'commerce.competitors',
     ),
-  discoverCompetitors: async (projectId: string, targets: CommerceTarget[]) =>
+  discoverCompetitors: async (
+    projectId: string,
+    targets: CommerceTarget[],
+    options?: ApiRequestOptions,
+  ) =>
     strictValidate(
       competitorDiscoverySchema,
-      await apiClient.post(path(projectId, 'competitors/discover'), { targets }),
+      await apiClient.post(path(projectId, 'competitors/discover'), { targets }, options),
       'commerce.discoverCompetitors',
     ),
   /**
@@ -70,10 +83,11 @@ export const commerceApi = {
     projectId: string,
     candidateId: string,
     decision: 'approved' | 'rejected',
+    options?: ApiRequestOptions,
   ) =>
     strictValidate(
       competitorCandidateSchema,
-      await apiClient.patch(path(projectId, `competitors/${candidateId}`), { decision }),
+      await apiClient.patch(path(projectId, `competitors/${candidateId}`), { decision }, options),
       'commerce.decideCompetitor',
     ),
   buyerPrompts: async (projectId: string, options?: ApiRequestOptions) =>
@@ -82,26 +96,41 @@ export const commerceApi = {
       await apiClient.get(path(projectId, 'buyer-prompts'), options),
       'commerce.buyerPrompts',
     ),
-  generateBuyerPrompts: async (projectId: string, targets: CommerceTarget[], count: number) =>
+  generateBuyerPrompts: async (
+    projectId: string,
+    targets: CommerceTarget[],
+    count: number,
+    options?: ApiRequestOptions,
+  ) =>
     strictValidate(
       z.array(buyerPromptSchema),
       await apiClient.post(
         path(projectId, 'buyer-prompts/generate'),
         { targets, count },
-        { timeoutMs: COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS },
+        { ...options, timeoutMs: COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS },
       ),
       'commerce.generateBuyerPrompts',
     ),
-  addBuyerPrompt: async (projectId: string, target: CommerceTarget, text: string) =>
+  addBuyerPrompt: async (
+    projectId: string,
+    target: CommerceTarget,
+    text: string,
+    options?: ApiRequestOptions,
+  ) =>
     strictValidate(
       buyerPromptSchema,
-      await apiClient.post(path(projectId, 'buyer-prompts/manual'), { target, text }),
+      await apiClient.post(path(projectId, 'buyer-prompts/manual'), { target, text }, options),
       'commerce.addBuyerPrompt',
     ),
-  decideBuyerPrompt: async (projectId: string, promptId: string, approved: boolean) =>
+  decideBuyerPrompt: async (
+    projectId: string,
+    promptId: string,
+    approved: boolean,
+    options?: ApiRequestOptions,
+  ) =>
     strictValidate(
       buyerPromptSchema,
-      await apiClient.patch(path(projectId, `buyer-prompts/${promptId}`), { approved }),
+      await apiClient.patch(path(projectId, `buyer-prompts/${promptId}`), { approved }, options),
       'commerce.decideBuyerPrompt',
     ),
   shelf: async (

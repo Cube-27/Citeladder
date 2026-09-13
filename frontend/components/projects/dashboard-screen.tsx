@@ -26,7 +26,11 @@ export function DashboardScreen({
   const context = useProjectContext();
   const commandCenter = useQuery({
     queryKey: queryKeys.projects.commandCenter(context.activeProject?.id ?? ''),
-    queryFn: ({ signal }) => projectsApi.getCommandCenter(context.activeProject!.id, { signal }),
+    queryFn: ({ signal }) =>
+      projectsApi.getCommandCenter(context.activeProject!.id, {
+        signal,
+        workspaceId: context.activeProject!.workspace_id,
+      }),
     enabled: Boolean(context.activeProject),
   });
 
@@ -49,7 +53,7 @@ export function DashboardScreen({
 
   return (
     <DashboardData
-      key={`${context.activeProject.id}:${commandCenter.data.action_order_version}`}
+      key={context.activeProject.id}
       data={commandCenter.data}
       activeProject={context.activeProject}
       onEditProject={onEditProject}
@@ -114,7 +118,7 @@ function DashboardData({
           onMove={actions.move}
         />
       </div>
-      <TopInsights projectId={activeProject.id} />
+      <TopInsights workspaceId={activeProject.workspace_id} projectId={activeProject.id} />
     </div>
   );
 }

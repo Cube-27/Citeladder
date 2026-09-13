@@ -61,8 +61,9 @@ export function ProjectEditPanel({
 }: Readonly<{ project: Project; open: boolean; onOpenChange: (open: boolean) => void }>) {
   const queryClient = useQueryClient();
   const discoveryCatalog = useQuery({
-    queryKey: ['brand-discovery-catalog'],
-    queryFn: ({ signal }) => brandDiscoveriesApi.catalog({ signal }),
+    queryKey: ['brand-discovery-catalog', project.workspace_id],
+    queryFn: ({ signal }) =>
+      brandDiscoveriesApi.catalog({ signal, workspaceId: project.workspace_id }),
     enabled: open,
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -92,31 +93,35 @@ export function ProjectEditPanel({
 
   const save = useMutation({
     mutationFn: () =>
-      projectsApi.updateProject(project.id, {
-        brand_name: brandName.trim(),
-        website_url: websiteUrl.trim(),
-        country_code: country.trim().toUpperCase(),
-        language_code: language.trim(),
-        brand: { aliases: splitList(aliases) },
-        owned_domains: splitList(ownedDomains),
-        unintended_domains: splitList(unintendedDomains),
-        competitors: competitors.flatMap((competitor) => {
-          const name = competitor.name.trim();
-          return name
-            ? [
-                {
-                  name,
-                  // Aliases are not edited here — preserve whatever the project
-                  // already had rather than silently clearing them on every save.
-                  aliases:
-                    project.competitors.find((existing) => existing.name === competitor.name)
-                      ?.aliases ?? [],
-                  domains: splitList(competitor.domains),
-                },
-              ]
-            : [];
-        }),
-      }),
+      projectsApi.updateProject(
+        project.id,
+        {
+          brand_name: brandName.trim(),
+          website_url: websiteUrl.trim(),
+          country_code: country.trim().toUpperCase(),
+          language_code: language.trim(),
+          brand: { aliases: splitList(aliases) },
+          owned_domains: splitList(ownedDomains),
+          unintended_domains: splitList(unintendedDomains),
+          competitors: competitors.flatMap((competitor) => {
+            const name = competitor.name.trim();
+            return name
+              ? [
+                  {
+                    name,
+                    // Aliases are not edited here — preserve whatever the project
+                    // already had rather than silently clearing them on every save.
+                    aliases:
+                      project.competitors.find((existing) => existing.name === competitor.name)
+                        ?.aliases ?? [],
+                    domains: splitList(competitor.domains),
+                  },
+                ]
+              : [];
+          }),
+        },
+        { workspaceId: project.workspace_id },
+      ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       onOpenChange(false);

@@ -16,11 +16,13 @@ import { shouldPollCrawl } from '@/lib/site-health/status';
  * Its immutable snapshot query is enabled only after the crawl terminalizes.
  */
 export function OverviewPanel({
+  workspaceId,
   projectId,
   crawlId,
   crawl,
   dashboard,
 }: Readonly<{
+  workspaceId: string;
   projectId: string;
   crawlId: string;
   crawl: SiteCrawl | null;
@@ -28,7 +30,7 @@ export function OverviewPanel({
 }>) {
   const terminal = crawl ? !shouldPollCrawl(crawl) : false;
   const overview = useQuery({
-    ...siteHealthQueries.overview(projectId, crawlId),
+    ...siteHealthQueries.overview(workspaceId, projectId, crawlId),
     enabled: terminal,
   });
   const data = overview.data;

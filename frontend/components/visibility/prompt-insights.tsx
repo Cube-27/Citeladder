@@ -9,6 +9,7 @@ import type { ObservedCompetitor } from '@/lib/api/types';
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /**
  * Competitors the runs observed but the project does not yet track, with the
@@ -26,9 +27,10 @@ export function CompetitorSuggestions({
   suggestionsQuery: UseQueryResult<ObservedCompetitor[], unknown>;
 }>) {
   const queryClient = useQueryClient();
+  const workspaceId = useActiveWorkspaceId();
   const acceptMutation = useMutation({
     mutationFn: (candidateId: string) =>
-      visibilityApi.acceptCompetitorSuggestion(projectId, candidateId),
+      visibilityApi.acceptCompetitorSuggestion(projectId, candidateId, { workspaceId }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.visibility.competitorSuggestions(projectId),

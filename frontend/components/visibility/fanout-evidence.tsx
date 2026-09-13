@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BusyBar } from '@/components/ui/busy-bar';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -16,7 +17,6 @@ import {
 } from '@/components/ui/table';
 import {
   EvidenceEmpty,
-  EvidenceBusyBar,
   EvidenceError,
   EvidenceFilteredEmpty,
   EvidenceSkeleton,
@@ -27,6 +27,7 @@ import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
 import { queryKeys } from '@/lib/api/query-keys';
 import { visibilityApi } from '@/lib/api/visibility';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { engineLabel } from '@/lib/visibility/dashboard';
 import {
   normalizeSearch,
@@ -38,6 +39,7 @@ import {
 } from '@/lib/visibility/fanout-grouping';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
+import { FANOUT_SEARCH_DEBOUNCE_MS } from '@/lib/config/operational';
 import {
   isSelectionWide,
   selectionMatchedQueries,
@@ -126,11 +128,13 @@ export function FanoutEvidence({
     from,
     to,
   } = useSearchTable(query, projectId, runId);
-  const summary = useFanoutSummary(projectId, scope, scopeReady, needle);
+  const serverNeedle = useDebouncedNeedle(needle);
+  const summary = useFanoutSummary(projectId, scope, scopeReady, serverNeedle);
+  const summaryMatchesInput = serverNeedle === needle && !summary.isFetching;
   // False whenever the server is counting a different population than the
   // table shows; the headline then falls back to what the reader can see.
   const selectionWide = isSelectionWide(summary, scopeNarrowed);
-  const matched = selectionMatchedQueries(summary, scopeNarrowed);
+  const matched = summaryMatchesInput ? selectionMatchedQueries(summary, scopeNarrowed) : null;
 
   if (query.isLoading) return <EvidenceSkeleton title={TITLE} />;
   if (query.isError) return <EvidenceError title={TITLE} onRetry={() => query.refetch()} />;
@@ -152,7 +156,7 @@ export function FanoutEvidence({
 
   return (
     <Card className="relative" aria-busy={query.isFetching}>
-      <EvidenceBusyBar active={query.isFetching} />
+      <BusyBar active={query.isFetching} label="Updating evidence" />
       <CardHeader className="grid gap-1">
         <CardTitle>{TITLE}</CardTitle>
       </CardHeader>
@@ -169,7 +173,9 @@ export function FanoutEvidence({
           />
           <SearchScopeNote search={needle} matched={matched} />
           <span className="grow" />
-          <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
+          <span aria-busy={!summaryMatchesInput}>
+            <FanoutCounts summary={summary} fallback={totals} selectionWide={selectionWide} />
+          </span>
           <AnalysisChoice
             label="Group searches by"
             value={grouping}
@@ -227,7 +233,7 @@ function useSearchTable(
   runId: string | null,
 ) {
   const [grouping, setGrouping] = useUrlState('group', groupCodec);
-  const [search, setSearch] = useUrlState('q', optionalStringUrlCodec);
+  const [search, setSearch] = useUrlState('q', optionalStringUrlCodec, { history: 'replace' });
   // Trimmed and capped ONCE: the table filter, the server scope, the match
   // count and the empty state all read this, so none of them can be asking
   // about a different string than the others.
@@ -293,6 +299,15 @@ function useSearchTable(
     from,
     to,
   };
+}
+
+function useDebouncedNeedle(needle: string): string {
+  const [debounced, setDebounced] = useState(needle);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(needle), FANOUT_SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [needle]);
+  return debounced;
 }
 
 /**
@@ -365,6 +380,7 @@ function useFanoutSummary(
   scopeReady: boolean,
   needle: string,
 ) {
+  const workspaceId = useActiveWorkspaceId();
   const params = useMemo(
     // Already normalized by `normalizeSearch`, which caps it at the bound the
     // endpoint declares — a longer value is rejected as a 422 before it can
@@ -374,8 +390,9 @@ function useFanoutSummary(
   );
   const result = useQuery({
     queryKey: queryKeys.visibility.fanout(projectId ?? '', params),
-    queryFn: ({ signal }) => visibilityApi.getFanoutSummary(projectId ?? '', params, { signal }),
-    enabled: Boolean(projectId) && scopeReady,
+    queryFn: ({ signal }) =>
+      visibilityApi.getFanoutSummary(projectId ?? '', params, { signal, workspaceId }),
+    enabled: Boolean(projectId && workspaceId) && scopeReady,
     // Totals for a selection do not change while the reader pages through it;
     // keeping the previous values avoids the headline flickering to blank.
     placeholderData: (previous) => previous,
@@ -384,6 +401,7 @@ function useFanoutSummary(
     distinctQueries: result.data?.distinct_queries ?? null,
     eventCount: result.data?.event_count ?? null,
     matchedQueries: result.data?.matched_queries ?? null,
+    isFetching: result.isFetching,
   };
 }
 
@@ -395,13 +413,15 @@ function useFanoutSummary(
  * evidence endpoint. Only fetched when the reader actually groups by topic.
  */
 function usePromptTopics(projectId: string | null, runId: string | null, enabled: boolean) {
+  const workspaceId = useActiveWorkspaceId();
   const result = useQuery({
     queryKey: [...queryKeys.visibility.prompts(projectId ?? '', runId ?? undefined), 'topics'],
     queryFn: ({ signal }) =>
       visibilityApi.getPromptMetrics(projectId ?? '', runId ?? undefined, {
         signal,
+        workspaceId,
       }),
-    enabled: enabled && Boolean(projectId && runId),
+    enabled: enabled && Boolean(projectId && runId && workspaceId),
   });
   return useMemo(() => {
     const map = new Map<string, string>();

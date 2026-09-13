@@ -38,6 +38,11 @@ export const COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS = 195_000;
  */
 export const API_RETRY_BACKOFF_MS = 150;
 
+// A blocking workspace precondition should not look frozen indefinitely.
+// This timer changes only the UI from passive loading to an explicit retry;
+// the API client's request timeout remains the network authority.
+export const WORKSPACE_LOADING_STALL_MS = 8_000;
+
 /**
  * Contract-drift guard (A5) knobs — the dev/CI tool that diffs the backend
  * OpenAPI response models against the zod contracts. `check:contract` reads
@@ -58,6 +63,7 @@ export const CONTRACT_CODEGEN_TIMEOUT_MS = 120_000;
 
 // Evidence request/display bounds.
 export const EVIDENCE_LIMIT = 100;
+export const FANOUT_SEARCH_DEBOUNCE_MS = 300;
 
 // Content request and list bounds.
 export const CONTENT_INSTRUCTION_MAX_LEN = 4_000;

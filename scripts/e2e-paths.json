@@ -1,0 +1,172 @@
+[
+  {
+    "sources": [
+      "frontend/app/globals.css",
+      "frontend/app/website-type.css"
+    ],
+    "frontendE2E": [
+      "e2e/shell.spec.ts",
+      "e2e/marketing-pages.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/components/ui/command-palette.tsx"
+    ],
+    "frontendE2E": [
+      "e2e/shell.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/test/provider-catalog-fixture.ts"
+    ],
+    "frontendE2E": [
+      "e2e/providers.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/playwright.config.ts"
+    ],
+    "frontendE2E": [
+      "e2e/billing.spec.ts",
+      "e2e/content.spec.ts",
+      "e2e/design-repair.spec.ts",
+      "e2e/landing-nav.spec.ts",
+      "e2e/marketing-pages.spec.ts",
+      "e2e/opportunity-loop.spec.ts",
+      "e2e/providers.spec.ts",
+      "e2e/runs.spec.ts",
+      "e2e/shell.spec.ts",
+      "e2e/smoke.spec.ts",
+      "e2e/visibility.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/e2e/helpers/app-fixture.ts"
+    ],
+    "frontendE2E": [
+      "e2e/content.spec.ts",
+      "e2e/design-repair.spec.ts",
+      "e2e/shell.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/app/(marketing)/**",
+      "frontend/app/llms.txt/**",
+      "frontend/components/marketing/**",
+      "frontend/lib/marketing-content/**",
+      "frontend/lib/consent/**",
+      "frontend/lib/seo/**"
+    ],
+    "frontendE2E": [
+      "e2e/marketing-pages.spec.ts",
+      "e2e/landing-nav.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/components/analytics/**",
+      "frontend/lib/consent/**"
+    ],
+    "frontendE2E": [
+      "e2e/marketing-pages.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/app/(authed)/(onboarding)/**",
+      "frontend/components/onboarding/**",
+      "frontend/lib/onboarding/**",
+      "frontend/lib/setup/**",
+      "frontend/components/tour/**"
+    ],
+    "frontendE2E": [
+      "e2e/design-repair.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/components/layout/**",
+      "frontend/lib/navigation/**",
+      "frontend/lib/navigate.ts",
+      "frontend/app/layout.tsx",
+      "frontend/app/(authed)/layout.tsx",
+      "frontend/app/(authed)/(app)/layout.tsx",
+      "frontend/app/(authed)/(app)/error.tsx",
+      "frontend/app/(authed)/(app)/not-found.tsx"
+    ],
+    "frontendE2E": [
+      "e2e/shell.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/app/(authed)/(app)/visibility/**",
+      "frontend/components/visibility/**",
+      "frontend/lib/visibility/**",
+      "frontend/components/intelligence/**"
+    ],
+    "frontendE2E": [
+      "e2e/visibility.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/app/(authed)/(app)/runs/**",
+      "frontend/components/runs/**",
+      "frontend/lib/runs/**",
+      "frontend/lib/sse/**"
+    ],
+    "frontendE2E": [
+      "e2e/runs.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/app/(authed)/(app)/opportunities/**",
+      "frontend/components/opportunities/**",
+      "frontend/lib/opportunities/**",
+      "frontend/lib/api/opportunities.ts",
+      "frontend/lib/api/schemas/opportunities.ts"
+    ],
+    "frontendE2E": [
+      "e2e/opportunity-loop.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/app/(authed)/(app)/content/**",
+      "frontend/components/content/**",
+      "frontend/lib/content/**"
+    ],
+    "frontendE2E": [
+      "e2e/content.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/components/providers/**",
+      "frontend/components/settings/provider-settings.tsx",
+      "frontend/lib/providers/**"
+    ],
+    "frontendE2E": [
+      "e2e/providers.spec.ts"
+    ]
+  },
+  {
+    "sources": [
+      "frontend/lib/billing/**",
+      "frontend/components/billing/**",
+      "frontend/components/settings/billing-settings.tsx",
+      "frontend/lib/api/billing.ts",
+      "frontend/components/marketing/pricing/**"
+    ],
+    "frontendE2E": [
+      "e2e/billing.spec.ts"
+    ]
+  }
+]

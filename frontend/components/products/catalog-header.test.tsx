@@ -5,6 +5,7 @@ import { renderWithProviders } from '@/test/render';
 
 import { CatalogHeader } from './catalog-header';
 
+const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const getDashboard = vi.fn();
 
 vi.mock('@/lib/api/site-health', async () => {
@@ -18,7 +19,7 @@ vi.mock('@/lib/api/site-health', async () => {
     // factory's own captured reference in place.
     siteHealthQueries: {
       ...actual.siteHealthQueries,
-      dashboard: (projectId: string) => ({
+      dashboard: (_workspaceId: string, projectId: string) => ({
         queryKey: ['site-health', 'dashboard', projectId],
         queryFn: () => getDashboard(),
       }),
@@ -59,7 +60,9 @@ describe('CatalogHeader', () => {
   });
 
   it('reads the catalog as metrics, not as prose', async () => {
-    renderWithProviders(<CatalogHeader projectId={PROJECT_ID} query={catalogQuery()} />);
+    renderWithProviders(
+      <CatalogHeader workspaceId={WORKSPACE_ID} projectId={PROJECT_ID} query={catalogQuery()} />,
+    );
 
     expect(screen.getByText('Products').nextSibling).toHaveTextContent('2');
     expect(screen.getByText('Categories').nextSibling).toHaveTextContent('1');
@@ -74,7 +77,9 @@ describe('CatalogHeader', () => {
     // header rendered as "49/1"). Analyzed pages are proof the inventory is at
     // least that large, so the denominator can never fall below them.
     getDashboard.mockResolvedValue(crawl({ total_url_count: 1, visible_url_count: 1 }));
-    renderWithProviders(<CatalogHeader projectId={PROJECT_ID} query={catalogQuery()} />);
+    renderWithProviders(
+      <CatalogHeader workspaceId={WORKSPACE_ID} projectId={PROJECT_ID} query={catalogQuery()} />,
+    );
 
     await waitFor(() => expect(screen.getByText('49/49')).toBeInTheDocument());
     expect(screen.queryByText('49/1')).not.toBeInTheDocument();
@@ -82,7 +87,9 @@ describe('CatalogHeader', () => {
 
   it('offers the crawl as the primary action until one exists', async () => {
     getDashboard.mockResolvedValue({ crawl: null });
-    renderWithProviders(<CatalogHeader projectId={PROJECT_ID} query={catalogQuery()} />);
+    renderWithProviders(
+      <CatalogHeader workspaceId={WORKSPACE_ID} projectId={PROJECT_ID} query={catalogQuery()} />,
+    );
 
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Run Site Health crawl' })).toBeInTheDocument(),

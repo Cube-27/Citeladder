@@ -36,6 +36,7 @@ import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-s
 import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
 import { opportunitiesQueries, type OpportunitiesParams } from '@/lib/api/opportunities';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import type {
   Opportunity,
   OpportunitiesPage,
@@ -177,7 +178,8 @@ function FeaturedRecommendation({
 
 /** Per-row status control (dropdown → updateStatus mutation). */
 function StatusControl({ row, projectId }: Readonly<{ row: Opportunity; projectId: string }>) {
-  const updateStatus = useUpdateOpportunityStatus(projectId, row.id);
+  const workspaceId = useActiveWorkspaceId() ?? '';
+  const updateStatus = useUpdateOpportunityStatus(workspaceId, projectId, row.id);
   return (
     <Dropdown>
       <DropdownTrigger asChild>
@@ -207,8 +209,9 @@ function StatusControl({ row, projectId }: Readonly<{ row: Opportunity; projectI
 }
 
 export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string }>) {
+  const workspaceId = useActiveWorkspaceId() ?? '';
   const filters = useCatalogFilters(projectId);
-  const listQuery = useQuery(opportunitiesQueries.list(projectId, filters.params));
+  const listQuery = useQuery(opportunitiesQueries.list(workspaceId, projectId, filters.params));
   const rows = listQuery.data?.items ?? [];
   const featured = useFeaturedRecommendation(rows, filters.statusFilter, filters.pager.cursor);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -280,9 +283,10 @@ function useFeaturedRecommendation(
   statusFilter: StatusFilter,
   cursor: string | undefined,
 ) {
+  const workspaceId = useActiveWorkspaceId() ?? '';
   const featuredId = statusFilter === 'active' && !cursor ? (rows[0]?.id ?? null) : null;
   const query = useQuery({
-    ...opportunitiesQueries.detail(featuredId ?? ''),
+    ...opportunitiesQueries.detail(workspaceId, featuredId ?? ''),
     enabled: featuredId !== null,
   });
   // A DISABLED query stays `pending` forever, so "is anything still coming?"

@@ -1,5 +1,3 @@
-import { setActiveWorkspaceId } from '@/lib/api/client';
-
 export const ACTIVE_PROJECT_STORAGE_KEY = 'citeladder.active-project-id';
 export const ACTIVE_WORKSPACE_STORAGE_KEY = 'citeladder.active-workspace-id';
 
@@ -53,5 +51,4 @@ export function writeStoredActiveWorkspaceId(workspaceId: string | null) {
 export function clearActiveProjectSelection() {
   writeStoredActiveProjectId(null);
   writeStoredActiveWorkspaceId(null);
-  setActiveWorkspaceId(null);
 }

@@ -330,7 +330,7 @@ describe('RunDetailPage', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /cancel run/i })).toBeDisabled());
   });
 
-  it('exposes CSV/MD export links', async () => {
+  it('exposes authenticated CSV/MD export actions', async () => {
     mswServer.use(
       http.get(`/api/v1/audits/${AUDIT_ID}`, () =>
         HttpResponse.json(audit({ status: 'completed' })),
@@ -340,11 +340,7 @@ describe('RunDetailPage', () => {
 
     renderWithProviders(<RunDetailPage />);
 
-    const csv = await screen.findByRole('link', { name: /export csv/i });
-    expect(csv).toHaveAttribute('href', `/api/v1/audits/${AUDIT_ID}/export.csv`);
-    expect(screen.getByRole('link', { name: /export md/i })).toHaveAttribute(
-      'href',
-      `/api/v1/audits/${AUDIT_ID}/export.md`,
-    );
+    expect(await screen.findByRole('button', { name: /export csv/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /export md/i })).toBeEnabled();
   });
 });

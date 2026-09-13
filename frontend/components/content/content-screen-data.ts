@@ -11,6 +11,7 @@ import { opportunitiesQueries } from '@/lib/api/opportunities';
 import { siteHealthApi } from '@/lib/api/site-health';
 import { queryKeys } from '@/lib/api/query-keys';
 import { ApiError, httpErrorStatus } from '@/lib/api/errors';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /** Map an action failure to its specific user-facing message when possible. */
 export function actionErrorMessage(error: unknown): string {
@@ -34,9 +35,11 @@ export function actionErrorMessage(error: unknown): string {
 
 /** The server-owned skill catalog. Static config, so it never refetches. */
 export function useSkillCatalog() {
+  const workspaceId = useActiveWorkspaceId();
   return useQuery({
-    queryKey: queryKeys.content.skills(),
-    queryFn: ({ signal }) => contentApi.listSkills({ signal }),
+    queryKey: queryKeys.content.skills(workspaceId),
+    queryFn: ({ signal }) => contentApi.listSkills({ signal, workspaceId }),
+    enabled: workspaceId !== null,
     staleTime: Infinity,
   });
 }
@@ -47,22 +50,28 @@ export function useSkillCatalog() {
  * project switch, stale-tolerant enough not to poll.
  */
 export function useContentContextPreview(projectId: string, input: ContentContextPreviewInput) {
+  const workspaceId = useActiveWorkspaceId();
   return useQuery({
     queryKey: queryKeys.content.contextPreview(projectId, input),
-    queryFn: ({ signal }) => contentApi.getContextPreview(projectId, input, { signal }),
+    queryFn: ({ signal }) =>
+      contentApi.getContextPreview(projectId, input, { signal, workspaceId }),
+    enabled: workspaceId !== null,
     staleTime: 60_000,
   });
 }
 
 export function useContentTargetPages(projectId: string, query: string) {
+  const workspaceId = useActiveWorkspaceId();
   return useQuery({
     queryKey: queryKeys.content.targetPages(projectId, query),
-    queryFn: ({ signal }) => contentApi.listTargetPages(projectId, query, { signal }),
+    queryFn: ({ signal }) => contentApi.listTargetPages(projectId, query, { signal, workspaceId }),
+    enabled: workspaceId !== null,
     staleTime: 60_000,
   });
 }
 
 export function useSiteHealthHandoff(reference?: SiteHealthReferenceInput) {
+  const workspaceId = useActiveWorkspaceId();
   return useQuery({
     queryKey: reference
       ? queryKeys.siteHealth.contentHandoff(
@@ -85,10 +94,10 @@ export function useSiteHealthHandoff(reference?: SiteHealthReferenceInput) {
           dimension: reference.dimension,
           checkpointIds: reference.checkpoint_ids,
         },
-        { signal },
+        { signal, workspaceId },
       );
     },
-    enabled: Boolean(reference),
+    enabled: Boolean(reference && workspaceId),
   });
 }
 
@@ -108,9 +117,10 @@ export type ContentOpportunityContext = {
 export function useOpportunityContext(
   opportunityId?: string | null,
 ): ContentOpportunityContext | null {
+  const workspaceId = useActiveWorkspaceId() ?? '';
   const query = useQuery({
-    ...opportunitiesQueries.detail(opportunityId ?? ''),
-    enabled: Boolean(opportunityId),
+    ...opportunitiesQueries.detail(workspaceId, opportunityId ?? ''),
+    enabled: Boolean(opportunityId && workspaceId),
   });
   const data = query.data;
   return useMemo(() => {

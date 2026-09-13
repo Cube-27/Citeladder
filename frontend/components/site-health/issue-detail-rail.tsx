@@ -6,6 +6,7 @@ import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { BusyBar } from '@/components/ui/busy-bar';
 import { CopyButton } from '@/components/ui/copy-button';
 import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
@@ -48,14 +49,7 @@ export function IssueDetailRail({
       aria-busy={detailQuery.isFetching}
     >
       <div className="relative flex flex-col min-[701px]:max-h-[calc(100dvh-2*var(--workspace-gap))]">
-        {detailQuery.isFetching ? (
-          // Positioned, not stacked: in the flow this 2px bar nudged the whole
-          // panel down and back up on every refetch.
-          <progress
-            className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent absolute inset-x-0 top-0 z-1 h-0.5 w-full appearance-none border-0"
-            aria-label="Updating issue evidence"
-          />
-        ) : null}
+        <BusyBar active={detailQuery.isFetching} label="Updating issue evidence" />
         <header className="border-border-subtle grid min-w-0 shrink-0 gap-3 border-b p-[var(--card-padding)]">
           <div className="flex min-w-0 items-start justify-between gap-[var(--workspace-gap)] max-[700px]:flex-col">
             <div className="grid min-w-0 gap-2">

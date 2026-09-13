@@ -6,6 +6,8 @@ import uuid
 from types import SimpleNamespace
 
 import pytest
+from starlette.requests import Request
+from starlette.responses import StreamingResponse
 
 from app.api.site_health import events_exports
 from app.domain.site_health.service import SiteHealthNotFoundError
@@ -17,6 +19,49 @@ class _Session:
 
     async def __aexit__(self, *_: object) -> None:
         return None
+
+
+class _RequestSession:
+    def __init__(self) -> None:
+        self.transaction_active = True
+        self.rollback_calls = 0
+
+    def in_transaction(self) -> bool:
+        return self.transaction_active
+
+    async def rollback(self) -> None:
+        self.rollback_calls += 1
+        self.transaction_active = False
+
+
+@pytest.mark.asyncio
+async def test_stream_releases_authorization_transaction_before_response(
+    monkeypatch,
+) -> None:
+    workspace_id = uuid.uuid4()
+    crawl_id = uuid.uuid4()
+    session = _RequestSession()
+
+    async def load_crawl(*_: object, **__: object) -> object:
+        assert session.transaction_active
+        return SimpleNamespace(status="running")
+
+    monkeypatch.setattr(events_exports.service, "load_crawl_for_stream", load_crawl)
+    monkeypatch.setattr(
+        events_exports.service, "crawl_count_disclosure", lambda _: True
+    )
+
+    response = await events_exports.get_events_endpoint(
+        crawl_id,
+        SimpleNamespace(workspace_id=workspace_id),
+        session,  # type: ignore[arg-type]
+        Request({"type": "http", "headers": [], "query_string": b""}),
+        stream=True,
+    )
+
+    assert isinstance(response, StreamingResponse)
+    assert session.rollback_calls == 1
+    assert session.transaction_active is False
 
 
 @pytest.mark.asyncio

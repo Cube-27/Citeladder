@@ -48,17 +48,15 @@ describe('apiClient', () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe('/api/v1/ping');
   });
 
-  it('scopes a request to the workspace it names, over the ambient selection', async () => {
+  it('scopes a request to the workspace it names', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}));
     vi.stubGlobal('fetch', fetchMock);
 
-    const { apiClient, setActiveWorkspaceId } = await import('./client');
-    setActiveWorkspaceId('ambient-workspace');
+    const { apiClient } = await import('./client');
     await apiClient.get('/projects', { workspaceId: 'requested-workspace' });
 
     const headers = new Headers(requestInitAt(fetchMock, 0).headers);
     expect(headers.get('X-Workspace-Id')).toBe('requested-workspace');
-    setActiveWorkspaceId(null);
   });
 
   it('replaces a workspace header the caller copied in', async () => {
@@ -78,14 +76,37 @@ describe('apiClient', () => {
     expect(headers.get('X-Workspace-Id')).toBe('requested-workspace');
   });
 
+  it('keeps delayed cross-workspace requests bound to their original scope', async () => {
+    let releaseFirst: ((response: Response) => void) | undefined;
+    const firstResponse = new Promise<Response>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const seenWorkspaces: Array<string | null> = [];
+    const fetchMock = vi.fn().mockImplementation((_path: string, init: RequestInit) => {
+      seenWorkspaces.push(new Headers(init.headers).get('X-Workspace-Id'));
+      return seenWorkspaces.length === 1
+        ? firstResponse
+        : Promise.resolve(jsonResponse({ id: 'b' }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { apiClient } = await import('./client');
+    const workspaceA = apiClient.get('/projects', { workspaceId: 'workspace-a' });
+    const workspaceB = apiClient.get('/projects', { workspaceId: 'workspace-b' });
+
+    await expect(workspaceB).resolves.toEqual({ id: 'b' });
+    releaseFirst?.(jsonResponse({ id: 'a' }));
+    await expect(workspaceA).resolves.toEqual({ id: 'a' });
+    expect(seenWorkspaces).toEqual(['workspace-a', 'workspace-b']);
+  });
+
   it('removes the workspace header entirely for an explicit null', async () => {
     // How a path-authorized read (`GET /projects/{id}`) asks the backend to
     // resolve access from the path instead of a header that may be wrong.
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}));
     vi.stubGlobal('fetch', fetchMock);
 
-    const { apiClient, setActiveWorkspaceId } = await import('./client');
-    setActiveWorkspaceId('ambient-workspace');
+    const { apiClient } = await import('./client');
     await apiClient.get('/projects/abc', {
       workspaceId: null,
       headers: { 'X-Workspace-Id': 'stale-workspace' },
@@ -93,7 +114,6 @@ describe('apiClient', () => {
 
     const headers = new Headers(requestInitAt(fetchMock, 0).headers);
     expect(headers.has('X-Workspace-Id')).toBe(false);
-    setActiveWorkspaceId(null);
   });
 
   it('throws ApiError with status and request id on 4xx', async () => {
@@ -263,26 +283,15 @@ describe('apiClient', () => {
     expect(httpErrorStatus(new Error('no'))).toBeUndefined();
   });
 
-  it('stamps X-Workspace-Id when an active workspace is set, and omits it otherwise', async () => {
+  it('does not carry workspace scope from one request into the next', async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse({})));
     vi.stubGlobal('fetch', fetchMock);
 
-    const { apiClient, setActiveWorkspaceId, getActiveWorkspaceId } = await import('./client');
-
-    // No active workspace → header absent (backend uses default workspace).
+    const { apiClient } = await import('./client');
+    await apiClient.get('/projects', { workspaceId: 'ws-123' });
     await apiClient.get('/projects');
-    expect(new Headers(requestInitAt(fetchMock, 0).headers).get('X-Workspace-Id')).toBeNull();
-
-    // Selecting a workspace stamps it on subsequent requests.
-    setActiveWorkspaceId('ws-123');
-    expect(getActiveWorkspaceId()).toBe('ws-123');
-    await apiClient.get('/projects');
-    expect(new Headers(requestInitAt(fetchMock, 1).headers).get('X-Workspace-Id')).toBe('ws-123');
-
-    // Clearing it removes the header again.
-    setActiveWorkspaceId(null);
-    await apiClient.get('/projects');
-    expect(new Headers(requestInitAt(fetchMock, 2).headers).get('X-Workspace-Id')).toBeNull();
+    expect(new Headers(requestInitAt(fetchMock, 0).headers).get('X-Workspace-Id')).toBe('ws-123');
+    expect(new Headers(requestInitAt(fetchMock, 1).headers).get('X-Workspace-Id')).toBeNull();
   });
 });
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import { BusyBar } from '@/components/ui/busy-bar';
 import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
 import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 
@@ -78,15 +79,7 @@ export function TargetDetail({
   const shown = useShownTarget(target, label, queries.shelf);
   return (
     <Stack gap="workspace" className="relative content-start" aria-busy={queries.shelf.isFetching}>
-      {queries.shelf.isFetching ? (
-        // Positioned, not stacked: in the flow this 2px bar would nudge the
-        // whole panel down and back up on every refetch, which is the same
-        // shift the skeleton-for-content swap below was causing.
-        <progress
-          className="bg-neutral-bg [&::-webkit-progress-bar]:bg-neutral-bg [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent absolute inset-x-0 top-0 z-1 h-0.5 w-full appearance-none border-0"
-          aria-label="Updating target detail"
-        />
-      ) : null}
+      <BusyBar active={queries.shelf.isFetching} label="Updating target detail" />
       <TargetShelfBand query={shown.shelf} />
       {hasShelfMeasurement(shown.shelf) ? null : (
         <Alert tone="info">

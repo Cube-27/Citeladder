@@ -66,7 +66,7 @@ export function VisibilityTrends({
       );
     return <Alert tone="danger">Could not load the selected measurement.</Alert>;
   }
-  if (!selected) return <p aria-busy="true">Loading selected measurement…</p>;
+  if (!selected) return <VisibilitySelectionLoading />;
   // A `brand` carried in from another run's URL may name nobody in THIS
   // selection. Plotting it anyway drew an empty chart captioned with a brand
   // the run never measured, which reads as "measured, scored zero". An
@@ -110,6 +110,18 @@ export function VisibilityTrends({
           onEvidence ? (engine) => onEvidence({ run: selected.audit_id, engine }) : undefined
         }
       />
+    </Stack>
+  );
+}
+
+function VisibilitySelectionLoading() {
+  return (
+    <Stack gap="workspace" aria-busy="true" aria-label="Loading selected measurement">
+      <div className="bg-surface-2 min-h-24 rounded-[var(--radius-card)]" />
+      <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-2">
+        <div className="bg-surface-2 min-h-72 rounded-[var(--radius-card)]" />
+        <div className="bg-surface-2 min-h-72 rounded-[var(--radius-card)]" />
+      </div>
     </Stack>
   );
 }
@@ -260,6 +272,10 @@ function MeasurementHistory({
       <CardContent>
         {query.isError ? (
           <Alert tone="danger">Could not load history.</Alert>
+        ) : query.isPending ? (
+          <output className="bg-surface-2 grid min-h-48 place-items-center rounded-[var(--radius-control)]">
+            <span className={textRole('body', 'text-secondary')}>Loading measurement history…</span>
+          </output>
         ) : !points.length ? (
           <p className={textRole('body', 'text-secondary')}>No measurements in this period yet.</p>
         ) : (

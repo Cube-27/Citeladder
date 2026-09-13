@@ -5,9 +5,14 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
-import { BackfillProgress } from './backfill-progress';
+import { BackfillProgress as ScopedBackfillProgress } from './backfill-progress';
 
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const CONNECTION = '33333333-3333-4333-8333-333333333333';
+
+function BackfillProgress(props: Readonly<{ connectionId: string }>) {
+  return <ScopedBackfillProgress workspaceId={WORKSPACE} {...props} />;
+}
 
 function progress(overrides: Record<string, unknown> = {}) {
   return {

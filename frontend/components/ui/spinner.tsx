@@ -12,9 +12,9 @@ import { cn } from '@/lib/utils';
  * and vanished. The spinner is what occupies that slot until the answer
  * arrives.
  *
- * Three hand-rolled `LoaderCircle animate-spin` recipes preceded this, each
- * with its own size and its own accessibility treatment. One owner (invariant
- * 2), so a loading state looks and announces the same everywhere.
+ * Hand-rolled `LoaderCircle animate-spin` recipes previously gave each caller
+ * its own size and accessibility treatment. One owner (invariant 2) keeps an
+ * in-place loading state visually and semantically consistent.
  */
 
 const SIZES = {

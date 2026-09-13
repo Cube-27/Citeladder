@@ -16,6 +16,11 @@ vi.mock('@/lib/api/runs', () => ({
 
 const createSchedule = vi.mocked(runsApi.createSchedule);
 const listSchedules = vi.mocked(runsApi.listSchedules);
+const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => WORKSPACE_ID,
+}));
 
 describe('AuditSchedules', () => {
   beforeEach(() => {
@@ -51,6 +56,7 @@ describe('AuditSchedules', () => {
           interval_minutes: 15,
           engines: ['chatgpt', 'gemini'],
         }),
+        { workspaceId: WORKSPACE_ID },
       ),
     );
   });

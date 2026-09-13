@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { stubAuthedShell } from './helpers/app-fixture';
+import { FIXTURE_PROJECT, stubAuthedShell } from './helpers/app-fixture';
 
 const DISCOVERY_ID = '33333333-3333-4333-8333-333333333333';
 
@@ -130,4 +130,56 @@ test('onboarding advances through a prompt-free review with sequential progress'
   await expect(page.getByText('theasianschool.net')).toBeVisible();
   await expect(page.getByText('The Doon School')).toBeVisible();
   await expect(page.getByText(/Starting Prompts/i)).toHaveCount(0);
+});
+
+test('first creation opens its project and repeated New project visits start fresh without refresh', async ({
+  page,
+}) => {
+  let created = false;
+  await stubAuthedShell(
+    page,
+    [
+      ['**/api/v1/brand-discovery-catalog', catalog],
+      ['**/api/v1/brand-discoveries', readyDiscovery],
+      [`**/api/v1/brand-discoveries/${DISCOVERY_ID}`, readyDiscovery],
+      [`**/api/v1/projects/${FIXTURE_PROJECT.id}`, FIXTURE_PROJECT],
+    ],
+    [],
+  );
+  await page.route('**/api/v1/projects', (route) =>
+    route.fulfill({ json: created ? [FIXTURE_PROJECT] : [] }),
+  );
+  await page.route(`**/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, (route) => {
+    created = true;
+    return route.fulfill({
+      json: {
+        discovery_id: DISCOVERY_ID,
+        status: 'completing',
+        project_id: FIXTURE_PROJECT.id,
+        crawl_id: null,
+        activation_state: 'queued',
+        page_limit: null,
+        warnings: [],
+      },
+    });
+  });
+  await page.goto('/projects');
+  await page.getByLabel(/^Brand name/).fill('The Asian School');
+  await page.getByLabel(/^Website/).fill('theasianschool.net');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Review', exact: true }).click();
+  await page.getByRole('radio', { name: 'Other', exact: true }).click();
+  await page.getByLabel(/describe what you sell/i).fill('boarding school');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page).toHaveURL(`/projects?project=${FIXTURE_PROJECT.id}`);
+  await expect(page.getByRole('heading', { name: 'No projects yet' })).toHaveCount(0);
+
+  for (let visit = 0; visit < 2; visit += 1) {
+    await page.getByRole('button', { name: FIXTURE_PROJECT.brand_name, exact: true }).click();
+    await page.getByRole('menuitem', { name: 'New project' }).click();
+    await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeVisible();
+    await expect(page.getByLabel(/^Brand name/)).toHaveValue('');
+    await page.getByRole('link', { name: 'Cancel', exact: true }).click();
+    await expect(page).toHaveURL(`/projects?project=${FIXTURE_PROJECT.id}`);
+  }
 });

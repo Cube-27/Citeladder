@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Download, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { PageHeader } from '@/components/layout/page-header';
@@ -19,10 +20,11 @@ import {
   opportunitiesMutations,
   opportunitiesQueries,
 } from '@/lib/api/opportunities';
+import { humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { OpportunitySummary } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
-import { cn } from '@/lib/utils';
+import { saveBlob } from '@/lib/site-health/download';
 
 function preparationMessage(state: OpportunitySummary['activation_state']): string {
   if (state === 'waiting_for_evidence') {
@@ -42,19 +44,24 @@ function preparationMessage(state: OpportunitySummary['activation_state']): stri
  * delayed terminal failure.
  */
 export function OpportunitiesScreen() {
-  const { activeProject, isLoading: projectLoading } = useProjectContext();
+  const { activeProject, activeWorkspaceId, isLoading: projectLoading } = useProjectContext();
   return (
-    <OpportunitiesContent projectId={activeProject?.id ?? null} projectLoading={projectLoading} />
+    <OpportunitiesContent
+      workspaceId={activeWorkspaceId}
+      projectId={activeProject?.id ?? null}
+      projectLoading={projectLoading}
+    />
   );
 }
 
 function OpportunitiesContent({
+  workspaceId,
   projectId,
   projectLoading,
-}: Readonly<{ projectId: string | null; projectLoading: boolean }>) {
+}: Readonly<{ workspaceId: string | null; projectId: string | null; projectLoading: boolean }>) {
   const summaryQuery = useQuery({
-    ...opportunitiesQueries.summary(projectId ?? ''),
-    enabled: Boolean(projectId),
+    ...opportunitiesQueries.summary(workspaceId ?? '', projectId ?? ''),
+    enabled: Boolean(projectId && workspaceId),
     refetchInterval: (query) => opportunitySummaryPollingInterval(query.state),
   });
   const summary = summaryQuery.data ?? null;
@@ -70,7 +77,7 @@ function OpportunitiesContent({
       <PageHeader
         actions={
           projectId && summary?.computed ? (
-            <SummaryActions projectId={projectId} summary={summary} />
+            <SummaryActions workspaceId={workspaceId!} projectId={projectId} summary={summary} />
           ) : undefined
         }
       />
@@ -123,9 +130,10 @@ function OpportunitiesScreenBody({
 
 /** Recompute mutation + invalidation shared by the strip and the empty state. */
 function useRecompute() {
+  const { activeWorkspaceId } = useProjectContext();
   const queryClient = useQueryClient();
   return useMutation({
-    ...opportunitiesMutations.recompute(),
+    ...opportunitiesMutations.recompute(activeWorkspaceId ?? ''),
     onSuccess: async () => {
       // A recompute supersedes the whole live set — the entire namespace
       // (summary, every list page/filter, details) is stale.
@@ -147,7 +155,7 @@ function RetryButton({
       pendingLabel="Trying again…"
       onClick={() => recompute.mutate({ projectId })}
     >
-      <RefreshCw className={cn('size-4', recompute.isPending && 'animate-spin')} aria-hidden />
+      <RefreshCw className="size-4" aria-hidden />
       Try recommendations again
     </Button>
   );
@@ -216,11 +224,30 @@ function SummaryStrip({ summary }: Readonly<{ summary: OpportunitySummary }>) {
 }
 
 function SummaryActions({
+  workspaceId,
   projectId,
   summary,
-}: Readonly<{ projectId: string; summary: OpportunitySummary }>) {
+}: Readonly<{ workspaceId: string; projectId: string; summary: OpportunitySummary }>) {
+  const [exporting, setExporting] = useState<'csv' | 'md' | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function download(format: 'csv' | 'md') {
+    setExporting(format);
+    setExportError(null);
+    try {
+      const blob = await opportunitiesApi.downloadExport(projectId, format, undefined, {
+        workspaceId,
+      });
+      saveBlob(blob, `opportunities-${projectId}.${format}`);
+    } catch (error) {
+      setExportError(humanizeApiError(error).message);
+    } finally {
+      setExporting(null);
+    }
+  }
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       <Dropdown>
         <DropdownTrigger asChild>
           <Button variant="secondary" size="sm">
@@ -230,19 +257,16 @@ function SummaryActions({
           </Button>
         </DropdownTrigger>
         <DropdownContent align="end">
-          <DropdownItem asChild>
-            <a href={opportunitiesApi.exportUrl(projectId, 'csv')} download>
-              Download CSV
-            </a>
+          <DropdownItem disabled={exporting !== null} onSelect={() => void download('csv')}>
+            Download CSV
           </DropdownItem>
-          <DropdownItem asChild>
-            <a href={opportunitiesApi.exportUrl(projectId, 'md')} download>
-              Download Markdown
-            </a>
+          <DropdownItem disabled={exporting !== null} onSelect={() => void download('md')}>
+            Download Markdown
           </DropdownItem>
         </DropdownContent>
       </Dropdown>
       {summary.activation_state === 'delayed' ? <RetryButton projectId={projectId} /> : null}
+      {exportError ? <span className="text-danger-text text-xs">{exportError}</span> : null}
     </div>
   );
 }

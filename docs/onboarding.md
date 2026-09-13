@@ -54,6 +54,9 @@ return the same shell; exhausted work has a completion-specific failure.
 The [onboarding screen](../frontend/components/onboarding/onboarding-screen.tsx)
 enters the project as soon as a committed project ID is available. It seeds the
 detail cache and navigates through the shared project destination owner.
+Draft URL updates use shallow history replacement so they cannot race completion
+navigation. Leaving onboarding discards retained transaction state; a fresh
+Add project URL starts at Basics, while a discovery URL resumes that draft.
 A shell-less terminal failure remains an error, not an endless progress state.
 A project with no topics can later use explicit prompt generation from its
 confirmed offerings.

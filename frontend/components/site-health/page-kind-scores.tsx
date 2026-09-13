@@ -23,8 +23,8 @@ import { formatScore, measurementCaveat } from '@/lib/site-health/status';
  * bucket with its analyzed count and mean Web Fundamentals and AEO scores.
  * The panel is data-driven and follows the same dashboard-then-crawl fallback
  * as the score cards. Classification completeness and the exact scored cohort
- * come from their own persisted fields; an `other` bucket remains visible but
- * never enters the AEO scored composition.
+ * come from their own persisted fields. An `other` bucket can be scored by
+ * independently applicable checks even though classification abstained.
  * Missing means render `Not measured`, never a fabricated zero.
  *
  * READ-ONLY by design. This used to expand each row into an accordion holding
