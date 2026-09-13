@@ -37,7 +37,7 @@ Cloudflare → Caddy → Next.js → FastAPI
   `abhineet.jain@cube27.com` only as Git commit identity; GitHub authentication
   continues through the authorized account/session.
 - Preserve full history and tags. In the Cube-27 clone, name the old repository `upstream` and Cube-27 `origin`; until the eventual ownership shift, bring application updates in through reviewed merges from `upstream/main`.
-- Remove the AWS-demo workflows, Terraform, tests, and active AWS runbooks from the Cube-27 copy. Replace them with GCP infrastructure, GCP deployment workflows, a GCP infrastructure test, and the owner runbook. Update `scripts/validation.json` so GCP infrastructure changes select the replacement test.
+- Remove the AWS-demo workflows, Terraform, tests, and active AWS runbooks from the Cube-27 copy. Replace them with GCP infrastructure, GCP deployment workflows, a GCP infrastructure test, and the owner runbook. Run the replacement infrastructure test directly after changes.
 - Add a protected GitHub environment named `gcp-demo`. Require `main`, successful CI, and owner approval for deploy and teardown.
 - Use Google Workload Identity Federation with exact claims for `Cube-27/Citeladder`, `main`, and `gcp-demo`. Store no GCP service-account keys in GitHub.
 - Provision with Terraform under a GCP-specific owner:
@@ -80,7 +80,7 @@ elsewhere in this repository.
 - `.github/workflows/gcp-demo-*.yml`: protected deployment, VM control, and
   authoritative project teardown.
 - `backend/tests/unit/test_gcp_demo_infrastructure.py`: deterministic security
-  and deployment-contract checks selected by `scripts/validation.json`.
+  and deployment-contract checks run through the native test runners.
 
 ### Protected GitHub environment values
 
@@ -165,7 +165,7 @@ JWT, encryption, and referral secrets directly in Secret Manager on first use.
   - no service-account key files or secret payloads in Git, Terraform, outputs, logs, or workflow arguments;
   - immutable image digests, Shielded VM controls, no self-teardown timer, and least-privilege service accounts.
 - Validate rendered Compose configuration, PostgreSQL TLS, demo-mode bootstrap idempotency, frontend secret isolation, and Caddy routing.
-- Run `.\scripts\check.ps1` followed by `.\scripts\test.ps1`.
+- Run `.\scripts\check.ps1` and focused native-runner tests; CI runs the full selected suites.
 - On the deployed stack, verify registration, Google sign-in, Search Console and Bing connect, persisted data after VM restart, two or more representative site crawls reaching terminal state, worker recovery, backup/restore, and spoofed forwarded-header handling.
 - Acceptance requires a successful fresh deployment and a successful disposable-project teardown rehearsal.
 

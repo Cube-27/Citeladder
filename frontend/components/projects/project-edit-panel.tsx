@@ -61,7 +61,7 @@ export function ProjectEditPanel({
 }: Readonly<{ project: Project; open: boolean; onOpenChange: (open: boolean) => void }>) {
   const queryClient = useQueryClient();
   const discoveryCatalog = useQuery({
-    queryKey: ['brand-discovery-catalog'],
+    queryKey: ['brand-discovery-catalog', project.workspace_id],
     queryFn: ({ signal }) =>
       brandDiscoveriesApi.catalog({ signal, workspaceId: project.workspace_id }),
     enabled: open,

@@ -146,11 +146,9 @@ export function CommerceWorkspace({ projectId }: Readonly<{ projectId: string }>
     });
   return (
     <Stack gap="workspace">
-      <CatalogHeader
-        workspaceId={workspaceId ?? ''}
-        projectId={projectId}
-        query={queries.catalog}
-      />
+      {workspaceId && (
+        <CatalogHeader workspaceId={workspaceId} projectId={projectId} query={queries.catalog} />
+      )}
       {checked.length ? (
         <BulkActions
           count={checkedTargets.length}

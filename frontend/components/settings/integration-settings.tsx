@@ -12,7 +12,7 @@ import { IntegrationCard } from '@/components/settings/integration-card';
 import { IntegrationsEmptyState } from '@/components/settings/integrations-empty-state';
 import { integrationsApi, type IntegrationConnection } from '@/lib/api/integrations';
 import { queryKeys } from '@/lib/api/query-keys';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /** Display order of connection sub-rows inside a grant card (gsc before ga4). */
 const PROVIDER_ORDER: Record<IntegrationConnection['provider'], number> = {
@@ -115,8 +115,7 @@ function CallbackNotice({
 export function IntegrationSettings() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const { activeProject } = useProjectContext();
-  const workspaceId = activeProject?.workspace_id ?? null;
+  const workspaceId = useActiveWorkspaceId();
 
   // C2 callback params — captured once (like the ?tab= deep link), then
   // cleaned from the URL so they don't linger across refresh/share.
@@ -147,6 +146,8 @@ export function IntegrationSettings() {
   const connections = connectionsQuery.data ?? [];
   const grants = groupIntoGrants(connections);
 
+  if (!workspaceId) return <Alert tone="info">Loading your workspace…</Alert>;
+
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       <CallbackNotice notice={notice} />
@@ -172,14 +173,14 @@ export function IntegrationSettings() {
       ) : null}
 
       {!connectionsQuery.isLoading && !connectionsQuery.isError && connections.length === 0 ? (
-        <IntegrationsEmptyState workspaceId={workspaceId!} />
+        <IntegrationsEmptyState workspaceId={workspaceId} />
       ) : null}
 
       {!connectionsQuery.isLoading && !connectionsQuery.isError && connections.length > 0 ? (
         <div className="grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr))] gap-4">
           {FAMILY_ORDER.map((family) => (
             <IntegrationCard
-              workspaceId={workspaceId!}
+              workspaceId={workspaceId}
               key={family}
               family={family}
               grant={grants.find((grant) => grant.family === family) ?? null}

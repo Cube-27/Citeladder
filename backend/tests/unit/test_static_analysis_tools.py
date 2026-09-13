@@ -233,12 +233,8 @@ class TestCoverageIsNotAGate:
         """Coverage is published, never enforced -- deliberately.
 
         A coverage ratio is a target you can move without improving anything,
-        so gating on it produces tests written to move the number. What must be
-        tested is decided by `scripts/validation.json`, which maps production
-        files to the tests that have to run for them.
-
-        This asserts the absence of a gate so that adding one back is a visible
-        decision rather than a quiet config edit.
+        so gating on it produces tests written to move the number.
+        Test selection follows credible regression paths and CI owner suites.
         """
         config = _pyproject()
 

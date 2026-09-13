@@ -42,8 +42,10 @@ export function TargetCompetitors({
   const client = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
   const decide = useMutation({
-    mutationFn: ({ id, decision }: { id: string; decision: 'approved' | 'rejected' }) =>
-      commerceApi.decideCompetitor(projectId, id, decision, { workspaceId }),
+    mutationFn: ({ id, decision }: { id: string; decision: 'approved' | 'rejected' }) => {
+      if (!workspaceId) throw new Error('Workspace is not available.');
+      return commerceApi.decideCompetitor(projectId, id, decision, { workspaceId });
+    },
     onSuccess: () =>
       client.invalidateQueries({ queryKey: queryKeys.commerce.competitors(projectId) }),
   });
@@ -65,7 +67,7 @@ export function TargetCompetitors({
           </div>
           <Button
             variant="secondary"
-            disabled={discovery.discover.isPending || running}
+            disabled={!workspaceId || discovery.discover.isPending || running}
             onClick={() => discovery.discover.mutate([target])}
           >
             {running ? 'Finding…' : 'Find competitors'}
@@ -85,7 +87,7 @@ export function TargetCompetitors({
           query={query}
           rows={rows}
           running={running}
-          pending={decide.isPending}
+          pending={!workspaceId || decide.isPending}
           onDecide={(id, decision) => decide.mutate({ id, decision })}
         />
       </CardContent>

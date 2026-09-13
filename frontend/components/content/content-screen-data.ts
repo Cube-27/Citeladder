@@ -37,7 +37,7 @@ export function actionErrorMessage(error: unknown): string {
 export function useSkillCatalog() {
   const workspaceId = useActiveWorkspaceId();
   return useQuery({
-    queryKey: queryKeys.content.skills(),
+    queryKey: queryKeys.content.skills(workspaceId),
     queryFn: ({ signal }) => contentApi.listSkills({ signal, workspaceId }),
     enabled: workspaceId !== null,
     staleTime: Infinity,

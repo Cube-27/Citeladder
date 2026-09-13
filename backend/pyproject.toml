@@ -153,9 +153,8 @@ asyncio_default_test_loop_scope = "session"
 # A coverage ratio is a target you can move without improving anything, so
 # gating on it reliably produces tests written to move the number rather than
 # to describe behaviour -- and the gate then protects those tests too. What
-# behaviour has to be covered is decided by `scripts/validation.json`, which
-# maps each production file to the tests that must run for it; that mapping is
-# reviewable, and a percentage is not.
+# behaviour needs coverage is decided from the changed owner's contracts and
+# credible regression paths. CI runs full selected owner suites.
 #
 # The comment that used to sit here claimed a `[tool.coverage.report]
 # fail_under` that was never set, so it described a gate that did not exist.

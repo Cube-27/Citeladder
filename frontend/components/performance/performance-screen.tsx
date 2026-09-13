@@ -105,7 +105,7 @@ export function PerformanceScreen() {
     ),
     enabled: scope.enabled,
     placeholderData: (previousData, previousQuery) =>
-      retainPreviousDataForScope(projectId!, previousData, previousQuery),
+      retainPreviousDataForScope(projectId, previousData, previousQuery),
   });
   const connections = useQuery({
     queryKey: queryKeys.integrations.connections(workspaceId),
@@ -255,21 +255,26 @@ export function PerformanceScreen() {
 function useRangeProjection(scope: ProjectRequestScope, data: PerformanceDashboard | undefined) {
   const { workspaceId, projectId } = scope;
   const queryClient = useQueryClient();
-  const [pending, setPending] = useState<string | null>(null);
+  const scopeKey = `${workspaceId}:${projectId}`;
+  const [queued, setQueued] = useState<{ scopeKey: string; taskId: string } | null>(null);
+  const pending = queued?.scopeKey === scopeKey ? queued.taskId : null;
   const mutation = useMutation({
-    mutationFn: (window: { from: string; to: string }) =>
-      performanceApi.enqueueRange(projectId, window, { workspaceId }),
-    onSuccess: (task) => setPending(task.task_id),
+    mutationFn: async (window: { from: string; to: string }) => {
+      if (!scope.enabled) throw new Error('Project is not available.');
+      const task = await performanceApi.enqueueRange(projectId, window, { workspaceId });
+      return { scopeKey, taskId: task.task_id };
+    },
+    onSuccess: setQueued,
   });
 
   const missing = missingWindow(data);
   useEffect(() => {
-    if (!projectId || !missing || mutation.isPending) return;
+    if (!scope.enabled || !missing) return;
     mutation.mutate(missing);
     // `missing` is a stable string pair derived from the response; re-running
     // on the mutation object itself would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, missing?.from, missing?.to]);
+  }, [scope.enabled, workspaceId, projectId, missing?.from, missing?.to]);
 
   const task = useQuery({
     queryKey: queryKeys.performance.rangeTask(projectId, pending ?? ''),
@@ -290,7 +295,7 @@ function useRangeProjection(scope: ProjectRequestScope, data: PerformanceDashboa
     // already stopped. Only a success changed a projection, so only a
     // success invalidates.
     if (!terminal) return;
-    setPending(null);
+    setQueued(null);
     if (status === 'succeeded') {
       void queryClient.invalidateQueries({ queryKey: queryKeys.performance.all });
     }

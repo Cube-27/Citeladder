@@ -8,7 +8,7 @@ const TRUE = 'true';
 const FALSE = 'false';
 const GIT_EXECUTABLE =
   process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
-const VALIDATION = JSON.parse(readFileSync(new URL('./validation.json', import.meta.url), 'utf8'));
+const E2E_RULES = JSON.parse(readFileSync(new URL('./e2e-paths.json', import.meta.url), 'utf8'));
 const DOC_FILES = new Set([
   'AGENTS.md',
   'CHANGELOG.md',
@@ -77,7 +77,7 @@ export function selectE2EFiles(paths) {
     ) {
       addTest(path.slice('frontend/'.length));
     }
-    for (const rule of VALIDATION.rules) {
+    for (const rule of E2E_RULES) {
       if (rule.frontendE2E && matchesAny(path, rule.sources)) {
         for (const test of rule.frontendE2E) addTest(test);
       }

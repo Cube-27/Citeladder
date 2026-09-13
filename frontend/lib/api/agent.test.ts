@@ -46,6 +46,18 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('Growth Agent task API', () => {
+  it('cancels in the requested workspace without sending request options as a body', async () => {
+    const workspaceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    let received: { workspace: string | null; body: string } | undefined;
+    mswServer.use(
+      http.post(`/api/v1/agent/tasks/${RUN_ID}/cancel`, async ({ request }) => {
+        received = { workspace: request.headers.get('X-Workspace-Id'), body: await request.text() };
+        return HttpResponse.json(detail);
+      }),
+    );
+    await agentApi.cancel(PROJECT_ID, RUN_ID, { workspaceId });
+    expect(received).toEqual({ workspace: workspaceId, body: '' });
+  });
   it('uses a compact history response and fetches typed results only by detail', async () => {
     mswServer.use(
       http.get('/api/v1/agent/tasks', () => HttpResponse.json([summary])),

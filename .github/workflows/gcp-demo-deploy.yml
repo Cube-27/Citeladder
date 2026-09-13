@@ -67,14 +67,19 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/citeladder # pragma: allowlist secret -- CI-only fixture
         run: |
-          $deployBase = (git rev-parse "$env:GITHUB_SHA^").Trim()
-          if ($LASTEXITCODE -ne 0 -or -not $deployBase) {
-            throw 'Deploy commit has no auditable parent'
-          }
-          git update-ref refs/remotes/origin/main $deployBase
-          if ($LASTEXITCODE -ne 0) { throw 'Could not establish the deploy comparison base' }
           ./scripts/check.ps1 -CheckOnly
-          ./scripts/test.ps1
+          $toolTests = @(Get-ChildItem scripts/*.test.mjs | ForEach-Object FullName)
+          node --test @toolTests
+          if ($LASTEXITCODE -ne 0) { throw 'Tooling tests failed' }
+          Push-Location backend
+          try {
+            .venv/bin/python -m pytest -q --no-cov -x --tb=short
+            if ($LASTEXITCODE -ne 0) { throw 'Backend tests failed' }
+          } finally { Pop-Location }
+          pnpm --dir frontend test
+          if ($LASTEXITCODE -ne 0) { throw 'Frontend tests failed' }
+          pnpm --dir frontend test:e2e
+          if ($LASTEXITCODE -ne 0) { throw 'Browser tests failed' }
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}

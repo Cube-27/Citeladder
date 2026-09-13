@@ -171,49 +171,28 @@ explicit release work.
 
 ### Repository validation harness
 
-Follow the risk levels in [AGENTS.md](../AGENTS.md#validation): minor changes
-need no tests or automatic gates; feature changes use targeted tests; risky
-changes use full affected owner suites, with release-wide validation in CI.
-Do not repeat a successful run simply because you are committing or shipping.
-
-`scripts/quality.mjs` owns static checks; `check.ps1` is its PowerShell shim.
-`test.ps1` owns local test selection and reuses successful unchanged evidence.
+Run all static checks and formatting fixes after executable changes:
 
 ```powershell
-.\scripts\check.ps1 -Scope Backend          # affected static owner, when needed
-.\scripts\test.ps1 -ChangedFiles backend/app/domain/example.py
-.\scripts\test.ps1 -PlanOnly                 # inspect selection without execution
-.\scripts\test.ps1 -Risk Risky -Owner Backend # full backend owner
-.\scripts\test.ps1 -Risk Risky -Owner Frontend
+.\scripts\check.ps1
+.\scripts\check.ps1 -CheckOnly # non-mutating, used by CI
 ```
 
-Use real changed repository paths in `-ChangedFiles`. It works for initial
-targeted runs and retries, preserving failed or unexecuted selections from the
-same risk/owner scope. Unchanged successful paths do not rerun; unrelated dirty
-files do not widen an explicit selection. Unreadable or incompatible run records
-select the requested scope afresh. `-Risk Risky` runs all owner suites unless
-`-Owner` selects Backend, Frontend, Tool or E2E. Provider-backed Content browser
-integration remains a separate explicit workflow.
+`scripts/quality.mjs` owns these checks. The PowerShell entry point always checks
+backend, frontend, and API contracts, holds a worktree lock, and stores full logs
+under the worktree Git directory. Output contains step names, the final result,
+and at most 60 lines per failure. Inspect failure tails before opening larger
+log sections. The cross-platform `pnpm quality:fix` and `pnpm quality:check`
+commands also default to all owners; CI may pass an explicit `--scope`.
 
-One OS-held worktree lock prevents overlapping harness runs and is released
-even on interruption. The runner never kills other Vitest processes. Vitest
-defaults to two workers. Suites run sequentially and fail fast; frontend batches
-stop immediately on failure. Successful output is retained in worktree-local
-Git logs; failures show a bounded tail and the full-log path.
-
-The direct cross-platform entry points are `pnpm quality:fix` and the
-non-mutating `pnpm quality:check`; like the root shim, they use affected-owner
-scope unless an explicit `--scope` is supplied.
-
-`test.ps1` compares the working tree against `origin/main` and maps every
-changed production file through `scripts/validation.json`. A changed file under
-`backend/app` or `frontend/{app,components,lib}` with no mapping is reported as
-a warning, naming the nearest existing rule, and falls back to the tests named
-after the file's own feature (backend) or colocated in its own directory
-(frontend). That fallback is deliberately narrow and may resolve to nothing.
-Add a mapping when the change has a credible regression path; a file with no
-such path needs no mapping and no invented test. Never widen the fallback to a
-full-suite run.
+Run focused behavior tests directly with the native runner: pytest from
+`backend/`, `pnpm exec vitest run <test-paths>` from `frontend/`, or
+`node --test <test-paths>` from the root. Browser checks use
+`pnpm exec playwright test --config playwright.config.ts <spec-paths>`.
+Redirect output to a log in the worktree Git directory and inspect only failures.
+Choose tests from the behavior at risk; there is no local test mapping or retry
+state. Do not overlap checks/tests or rerun successful evidence merely to commit.
+Provider-backed Content browser integration remains an explicit separate workflow.
 
 GitHub CI has one cheap classifier before the implementation jobs. On an
 initial pull-request run it classifies the complete PR diff. A later push uses
@@ -223,7 +202,7 @@ to the cumulative PR diff, which includes every failed or unexecuted owner from
 the PR. Backend-only and frontend-only pushes do not repeat unrelated
 successful suites, and ordinary frontend edits do not automatically launch
 browser E2E. Browser-sensitive paths run only the specs mapped in
-`scripts/validation.json`; the complete default Playwright suite is reserved
+`scripts/e2e-paths.json`; the complete default Playwright suite is reserved
 for `main`, merge-queue validation, unknown shared paths, and changes to
 Playwright's global configuration. Shared, configuration, and
 contract paths retain their broader owners. The clean-clone Compose smoke runs
@@ -272,12 +251,10 @@ coverage ratio is a target you can move without improving anything, so enforcing
 one reliably produces tests written to move the number rather than to describe
 behaviour.
 
-What must be tested is decided by `scripts/validation.json`, which maps every
-production file to the tests that have to run for it, and `test.ps1` warns when
-a changed file under `backend/app` has no mapping. That mapping is reviewable in
-a way a percentage is not. Changed root tooling tests run directly through Node;
-production scripts and migrations remain held by ruff, mypy, vulture,
-import-linter and the complexity policy.
+Choose tests from credible behavioral regressions in the changed owner's callers
+and contracts. CI runs full selected owner suites; `scripts/e2e-paths.json`
+only selects browser specs for browser-sensitive paths. Production scripts and
+migrations remain covered by static policy gates.
 
 ### Architecture policy
 

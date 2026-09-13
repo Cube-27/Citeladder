@@ -41,6 +41,12 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('BrandProfilePanel', () => {
+  it('keeps saving unavailable while the workspace is unresolved', () => {
+    renderWithProviders(<BrandProfilePanel projectId={projectId} profile={profile} />, {
+      projectSelection: { activeWorkspaceId: null },
+    });
+    expect(screen.getByRole('button', { name: 'Save brand knowledge' })).toBeDisabled();
+  });
   it('saves direct edits as manual knowledge', async () => {
     const user = userEvent.setup({ delay: null });
     const onSaved = vi.fn();

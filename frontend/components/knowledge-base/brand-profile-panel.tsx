@@ -64,12 +64,14 @@ export function BrandProfilePanel({
   const [activeTab, setActiveTab] = useState<ProfileTab>('facts');
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      projectsApi.updateBrandProfile(
+    mutationFn: () => {
+      if (!workspaceId) throw new Error('Workspace is not available.');
+      return projectsApi.updateBrandProfile(
         projectId,
         { ...draft, products_services: parseProductsInput(productsInput) },
         { workspaceId },
-      ),
+      );
+    },
     onSuccess: (next) => {
       queryClient.setQueryData(queryKeys.projects.brandProfile(projectId), next);
       onSaved?.();
@@ -85,7 +87,7 @@ export function BrandProfilePanel({
         <Button
           variant="primary"
           onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
+          disabled={!workspaceId || saveMutation.isPending}
         >
           <Save className="size-4" aria-hidden />
           {saveMutation.isPending ? 'Saving…' : 'Save brand knowledge'}

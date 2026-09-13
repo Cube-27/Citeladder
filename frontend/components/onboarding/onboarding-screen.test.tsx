@@ -24,6 +24,7 @@ let discoveryState: BrandDiscovery;
 // the review step, which is the only way to reach that screen without a
 // `ready` discovery to click through.
 let searchParams = '';
+let pathname = '/onboarding';
 
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
@@ -35,7 +36,7 @@ const createdProject = makeProject({
 });
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/projects',
+  usePathname: () => pathname,
   useRouter: () => ({ push: vi.fn(), replace }),
   useSearchParams: () => new URLSearchParams(searchParams),
 }));
@@ -178,10 +179,44 @@ afterEach(() => {
   mswServer.resetHandlers();
   vi.clearAllMocks();
   searchParams = '';
+  pathname = '/onboarding';
 });
 afterAll(() => mswServer.close());
 
 describe('OnboardingScreen', () => {
+  it('starts a fresh draft when Add project replaces a retained review URL', async () => {
+    discoveryState = discovery('ready', 'preparing_review');
+    searchParams = `new=1&discovery=${DISCOVERY_ID}&step=review`;
+    mswServer.use(catalogHandler());
+    const { rerender } = renderWithProviders(<OnboardingScreen />);
+    await screen.findByRole('button', { name: 'Create project' });
+
+    searchParams = `new=1&workspace=${WORKSPACE_ID}`;
+    rerender(<OnboardingScreen />);
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeVisible();
+    expect(screen.getByLabelText(/brand name/i)).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('discards a cached onboarding transaction when navigating away and back', async () => {
+    discoveryState = discovery('ready', 'preparing_review');
+    mswServer.use(catalogHandler());
+    const { rerender } = renderWithProviders(<OnboardingScreen />);
+    const user = await enterBrand();
+    await user.click(screen.getByRole('button', { name: 'Review' }));
+    await screen.findByRole('button', { name: 'Create project' });
+    expect(replace).not.toHaveBeenCalled();
+
+    pathname = '/projects';
+    rerender(<OnboardingScreen />);
+    pathname = '/onboarding';
+    searchParams = `new=1&workspace=${WORKSPACE_ID}`;
+    rerender(<OnboardingScreen />);
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeVisible();
+    expect(screen.getByLabelText(/brand name/i)).toHaveValue('');
+  });
+
   it('renders persisted discovery facts in human language without raw diagnostics', async () => {
     discoveryState = discovery('running', 'finding_competitors');
     mswServer.use(catalogHandler());

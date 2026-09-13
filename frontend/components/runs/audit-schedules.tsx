@@ -33,8 +33,28 @@ export function AuditSchedules({
   projectId,
   promptSets,
 }: Readonly<{ projectId: string; promptSets: PromptSet[] }>) {
-  const queryClient = useQueryClient();
   const workspaceId = useActiveWorkspaceId();
+  if (!workspaceId) return <Alert tone="info">Loading your workspace…</Alert>;
+  return (
+    <WorkspaceSchedules
+      key={`${workspaceId}:${projectId}`}
+      workspaceId={workspaceId}
+      projectId={projectId}
+      promptSets={promptSets}
+    />
+  );
+}
+
+function WorkspaceSchedules({
+  workspaceId,
+  projectId,
+  promptSets,
+}: Readonly<{
+  workspaceId: string;
+  projectId: string;
+  promptSets: PromptSet[];
+}>) {
+  const queryClient = useQueryClient();
   const [promptSetId, setPromptSetId] = useState(promptSets[0]?.id ?? '');
   const [auditScope, setAuditScope] = useState<'brand' | 'commerce'>('brand');
   const [cadence, setCadence] = useState<AuditScheduleCadence>('weekly');
@@ -45,8 +65,8 @@ export function AuditSchedules({
     queryFn: ({ signal }) => runsApi.listSchedules(projectId, { signal, workspaceId }),
   });
   const createMutation = useMutation({
-    mutationFn: () =>
-      runsApi.createSchedule(
+    mutationFn: () => {
+      return runsApi.createSchedule(
         projectId,
         {
           prompt_set_id: promptSetId,
@@ -57,7 +77,8 @@ export function AuditSchedules({
           engines,
         },
         { workspaceId },
-      ),
+      );
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.runs.schedules(projectId) });
     },

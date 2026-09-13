@@ -56,32 +56,9 @@ function useWorkspaceProjects(workspaceId: string | null, allowed: boolean) {
 }
 
 /**
- * The authenticated shell's workspace + project context.
- *
- * Three properties matter, and each replaces something that was load-bearing
- * before:
- *
- * 1. **The workspace exists without a project.** It used to be derived in an
- *    effect from `activeProject?.workspace_id`, so a workspace with zero
- *    projects — a new account, or one mid-first-creation — had no identity at
- *    all, and every workspace-scoped read fell back to whatever workspace the
- *    backend picked by default.
- *
- * 2. **An explicit `?project=` is resolved directly**, through
- *    `GET /projects/{id}` (authorized from the path, so it needs no prior
- *    correct workspace header). A list that predates the project therefore
- *    cannot contradict it. This is what lets a just-created project be
- *    navigated to and be usable on arrival.
- *
- * 3. **Cache identity matches request identity.** Workspace-scoped reads are
- *    keyed by workspace AND carry that workspace on the request itself, so a
- *    retry or a late response cannot answer for a workspace the reader has
- *    since left.
- *
- * The previous storage-seeded "pin" and its list-generation bookkeeping are
- * gone: they existed only to smuggle a selection across the route-group
- * boundary between `(onboarding)` and `(app)`, and there is no longer a
- * boundary to cross (see `app/(authed)/layout.tsx`).
+ * Resolve workspace membership independently of projects. An explicit project
+ * is authorized by its detail read, so a stale list cannot hide a new project.
+ * Cache keys and requests carry the same workspace identity.
  */
 export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>) {
   const queryClient = useQueryClient();
@@ -135,18 +112,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
 
   const projectsQuery = useWorkspaceProjects(activeWorkspaceId, !contradictoryRequest);
   const listSettled = projectsQuery.isSuccess;
-  /**
-   * The workspace's projects, including one resolved directly by id.
-   *
-   * `pickActiveProject` already refuses to let a list that PREDATES a project
-   * hide it — that is what makes a just-created project usable on arrival. The
-   * list itself got no such treatment, so after creating a project the shell
-   * held a resolved `activeProject` (the switcher showed its name) beside an
-   * empty `projects` (every list view read "No projects yet") until something
-   * refetched. `GET /projects/{id}` is authorized from the path and is
-   * authoritative for that id, so a project it returned belongs in the list
-   * whether or not the list has caught up.
-   */
+  // Include an authorized detail even if the list predates its creation.
   const projects = useMemo(() => {
     const listed = projectsQuery.data ?? [];
     // A project whose workspace contradicts the URL is rejected, not merged.

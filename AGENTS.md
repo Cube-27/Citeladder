@@ -91,35 +91,21 @@ in the PR; there is no blanket multi-file documentation checklist per edit.
 
 ## Validation
 
-Choose validation from the behaviour at risk, not from the number of changed
-files. State the choice once and do not repeat gates at intermediate milestones.
+Run `./scripts/check.ps1` once when executable changes are complete. It runs all
+backend/frontend static and contract checks and applies formatting fixes.
+Use `-CheckOnly` for non-mutating CI validation. Do not run checks for copy-only
+or documentation-only edits.
 
-- **Minor:** copy, cosmetic UI, comments or documentation with no changed
-  executable contract. Create and run no tests. Do not invoke the repository
-  check/test harness merely because a file changed.
-- **Feature:** changed behaviour with a bounded owner. Add or update a test only
-  for a credible regression; run the smallest relevant test selection and
-  affected static checks once when implementation is complete. Use explicit
-  changed paths when unrelated work is present.
-- **Risky:** authorization, persistence, concurrency, migrations, shared runtime
-  or cross-system contracts. Run the relevant full owner suites and stronger
-  boundary checks. CI owns full release validation; full suites may be split by
-  backend, frontend, tooling and browser owner.
+For behavior changes, add coverage only for credible regressions and run the
+smallest relevant tests directly with pytest, Vitest, Node, or Playwright.
+Authorization, persistence, concurrency, and shared runtime changes require
+stronger affected-owner coverage. CI owns full release validation.
 
-`scripts/test.ps1` defaults to mapped feature tests. `-ChangedFiles` selects
-explicit paths on the first run as well as retries. `-Risk Minor` selects no
-tests; `-Risk Risky -Owner Backend` (or Frontend, Tool, E2E, All) selects full
-owner suites. `-PlanOnly` explains selection without running tests.
-
-The runner reuses successful evidence for unchanged paths. After edits or a
-failure, it selects the changed scope plus failed or unexecuted owners. Do not
-restart a successful run for a commit, handoff, documentation edit or PR.
-Do not launch overlapping test/check processes. Successful logs stay in `.git`;
-inspect the failure tail before reading the full log.
-
-`check.ps1` is read-only by default. Use `-Scope All` only for an explicit
-cross-system/release check; `-Fix` is intentional formatting. For shipping an
-already-verified diff, reuse the existing results and let CI validate the PR.
+Do not launch overlapping test/check processes or repeat successful runs merely
+for a commit or handoff. Redirect test output to a log under the worktree's Git
+directory; report the exit status and read only the failure tail when a run
+fails. Read a larger log section only when the tail does not explain the failure.
+The check script already keeps full logs there and prints bounded failure tails.
 
 ## What earns a test
 
@@ -149,7 +135,7 @@ a bounded guard, not a substitute for review. An added
 test that only restates the implementation is worse than no test: it costs a
 run on every change and defends nothing.
 
-Do not run the full backend suite locally as a substitute for the harness. CI
+Do not run the full backend suite locally as a substitute for choosing relevant tests. CI
 runs full selected owner suites, contract/build/security checks, and the clean
 Compose validation required by the event. Never weaken a gate, add exclusions,
 skip/xfail a test, increase thresholds, or delete meaningful safety coverage to

@@ -1,20 +1,23 @@
-param(
-    [ValidateSet("Changed", "All", "Backend", "Frontend", "Contract")]
-    [string] $Scope = "Changed",
-    [switch] $Fix,
-    [switch] $CheckOnly
-)
+param([switch] $CheckOnly)
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-if ($Fix -and $CheckOnly) { throw "-Fix and -CheckOnly cannot be combined." }
-$mode = if ($Fix) { "fix" } else { "check" }
+$mode = if ($CheckOnly) { "check" } else { "fix" }
+$gitDirectory = (& git -C $repoRoot rev-parse --absolute-git-dir).Trim()
+if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the worktree Git directory.' }
+try {
+    $checkLock = [IO.File]::Open((Join-Path $gitDirectory 'citeladder-check.lock'), 'OpenOrCreate', 'ReadWrite', 'None')
+}
+catch [IO.IOException] {
+    throw 'A check is already running in this worktree. Wait for it to finish.'
+}
 
 Push-Location $repoRoot
 try {
-    & node scripts/quality.mjs --mode $mode --scope $Scope.ToLowerInvariant()
+    & node scripts/quality.mjs --mode $mode --scope all
     if ($LASTEXITCODE -ne 0) { throw "Quality gate failed with exit code $LASTEXITCODE." }
 }
 finally {
     Pop-Location
+    $checkLock.Dispose()
 }

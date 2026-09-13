@@ -45,23 +45,26 @@ const PROJECTION_POLL_MS = 3_000;
  */
 export function usePerformanceSync(projectId: string | null) {
   const workspaceId = useActiveWorkspaceId();
-  const queryClient = useQueryClient();
-  const [runs, setRuns] = useState<PerformanceSyncEnqueueResponse>([]);
-  const [startedAt, setStartedAt] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const scopeKey = `${workspaceId}:${projectId}`;
+  const [batch, setBatch] = useState<{
+    scopeKey: string;
+    runs: PerformanceSyncEnqueueResponse;
+    startedAt: string;
+  } | null>(null);
+  const currentBatch = batch?.scopeKey === scopeKey ? batch : null;
+  const runs = currentBatch?.runs ?? [];
+  const startedAt = currentBatch?.startedAt ?? null;
+  const notice =
+    currentBatch && !runs.length
+      ? 'No active mapped sync connection — connect and map one in Settings to start syncing.'
+      : null;
   const mutation = useMutation({
-    mutationFn: () => performanceApi.syncNow(projectId ?? '', { workspaceId }),
-    onSuccess: (enqueued) => {
-      if (!enqueued.length) {
-        setNotice(
-          'No active mapped sync connection — connect and map one in Settings to start syncing.',
-        );
-        return;
-      }
-      setNotice(null);
-      setRuns(enqueued);
-      setStartedAt(new Date().toISOString());
+    mutationFn: async () => {
+      if (!workspaceId || !projectId) throw new Error('Project is not available.');
+      const runs = await performanceApi.syncNow(projectId, { workspaceId });
+      return { scopeKey, runs, startedAt: new Date().toISOString() };
     },
+    onSuccess: setBatch,
   });
   const runQueries = useQueries({
     queries: runs.map((run) => ({
@@ -90,6 +93,12 @@ export function usePerformanceSync(projectId: string | null) {
   const anySucceeded = runQueries.some(
     (query) => query.data && isSucceededSyncRun(query.data.status),
   );
+  const projecting = useProjectionSettling(scopeKey, allTerminal, anySucceeded);
+  return { mutation, notice, outcome, startedAt, syncing: syncing || projecting };
+}
+
+function useProjectionSettling(scopeKey: string, allTerminal: boolean, anySucceeded: boolean) {
+  const queryClient = useQueryClient();
 
   // Refetch on the terminal edge, then keep polling while the projection
   // catches up. Bounded so a projection that never lands (a failed refresh
@@ -101,6 +110,12 @@ export function usePerformanceSync(projectId: string | null) {
   // polling started — the very lag this exists to remove.
   const [pollsLeft, setPollsLeft] = useState(0);
   const [wasTerminal, setWasTerminal] = useState(allTerminal);
+  const [pollScope, setPollScope] = useState(scopeKey);
+  if (pollScope !== scopeKey) {
+    setPollScope(scopeKey);
+    setPollsLeft(0);
+    setWasTerminal(false);
+  }
   if (allTerminal !== wasTerminal) {
     setWasTerminal(allTerminal);
     // A batch where EVERY run failed enqueues no projection, so there is
@@ -118,5 +133,5 @@ export function usePerformanceSync(projectId: string | null) {
     return () => clearTimeout(timer);
   }, [pollsLeft, queryClient]);
 
-  return { mutation, notice, outcome, startedAt, syncing: syncing || projecting };
+  return projecting;
 }

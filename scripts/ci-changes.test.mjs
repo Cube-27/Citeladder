@@ -43,7 +43,7 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   assert.deepEqual(selectE2EFiles(['frontend/e2e/billing.spec.ts']), ['e2e/billing.spec.ts']);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/billing.spec.mjs']), []);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/content-integration.spec.ts']), []);
-  assert.equal(classifyPaths(['scripts/test.ps1', '.github/workflows/ci.yml']).e2e, false);
+  assert.equal(classifyPaths(['scripts/check.ps1', '.github/workflows/ci.yml']).e2e, false);
 });
 
 test('contracts and shared configuration invalidate both sides', () => {

@@ -248,13 +248,14 @@ export function useVisibilityQueries(
   };
   const trendQuery = useQuery({
     ...trendOptions,
-    enabled: Boolean(projectId) && filters.activeTab === 'trends',
+    enabled: requestScope.enabled && filters.activeTab === 'trends',
     placeholderData: (data, query) => retainPreviousDataForScope(projectId!, data, query),
   });
   // A range that resolved to NO runs sends neither `audit_id` nor a usable
   // `audit_ids`, so the request would read the project unscoped and answer a
   // question nobody asked. An empty selection has empty evidence.
-  const hasEvidenceScope = Boolean(projectId && activeRunId) && selectedRunIds?.length !== 0;
+  const hasEvidenceScope =
+    requestScope.enabled && Boolean(activeRunId) && selectedRunIds?.length !== 0;
   const evidenceParams = evidenceSelectionParams(filters, activeRunId, selectedRunIds, engine);
   const evidenceOptions = {
     queryKey: queryKeys.visibility.evidence(projectId ?? '', evidenceParams),
@@ -275,11 +276,11 @@ export function useVisibilityQueries(
     enabled: hasEvidenceScope && isEvidenceTab(filters.activeTab),
   });
   const prefetchTab = (tab: VisibilityTab) => {
-    if (!projectId) return;
+    if (!requestScope.enabled) return;
     if (tab === 'trends') {
       warmQuery(queryClient, projectionOptions);
       warmQuery(queryClient, trendOptions);
-    } else if (activeRunId) {
+    } else if (hasEvidenceScope) {
       warmQuery(queryClient, evidenceOptions);
     }
   };

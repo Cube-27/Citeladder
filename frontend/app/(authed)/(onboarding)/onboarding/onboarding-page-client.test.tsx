@@ -101,6 +101,10 @@ describe('OnboardingPageClient', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
       expect(contextRetry).toHaveBeenCalledTimes(1);
       expect(screen.getByTestId('page-loading')).toBeVisible();
+      act(() => vi.advanceTimersByTime(8_000));
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(contextRetry).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId('page-loading')).toBeVisible();
     } finally {
       vi.useRealTimers();
     }

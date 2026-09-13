@@ -15,7 +15,27 @@ export function OpportunityStatusFooter({
   detail,
   projectId,
 }: Readonly<{ detail: OpportunityDetail; projectId: string }>) {
-  const workspaceId = useActiveWorkspaceId() ?? '';
+  const workspaceId = useActiveWorkspaceId();
+  if (!workspaceId) return null;
+  return (
+    <ScopedStatusFooter
+      key={`${workspaceId}:${projectId}:${detail.id}`}
+      workspaceId={workspaceId}
+      projectId={projectId}
+      detail={detail}
+    />
+  );
+}
+
+function ScopedStatusFooter({
+  workspaceId,
+  projectId,
+  detail,
+}: Readonly<{
+  workspaceId: string;
+  projectId: string;
+  detail: OpportunityDetail;
+}>) {
   const updateStatus = useUpdateOpportunityStatus(workspaceId, projectId, detail.id);
   const declaration = useImplementationDeclaration(workspaceId, projectId, detail.id);
   const declarations = useQuery(

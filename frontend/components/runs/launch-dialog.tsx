@@ -153,7 +153,7 @@ export function LaunchDialog({
     repetitions,
     auditScope,
   };
-  const ready = canLaunch(selection);
+  const ready = workspaceId !== null && canLaunch(selection);
   const estimateQuery = useQuery({
     queryKey: ['audit-estimate', selection],
     queryFn: () => runsApi.estimateAudit(buildLaunchPayload(selection), { workspaceId }),
@@ -166,7 +166,10 @@ export function LaunchDialog({
     setBatchIndex(null);
   };
   const launchMutation = useMutation({
-    mutationFn: () => runsApi.launchAudit(buildLaunchPayload(selection), { workspaceId }),
+    mutationFn: () => {
+      if (!workspaceId) throw new Error('Workspace is not available.');
+      return runsApi.launchAudit(buildLaunchPayload(selection), { workspaceId });
+    },
     onSuccess: async (audit) => {
       queryClient.setQueryData(queryKeys.runs.detail(audit.id), audit);
       await queryClient.invalidateQueries({ queryKey: queryKeys.runs.all });

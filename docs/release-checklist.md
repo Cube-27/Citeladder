@@ -51,12 +51,11 @@ curl -fsS http://localhost:8000/health
 
 Use the canonical repository completion and CI owners from
 [`DEVELOPMENT.md`](DEVELOPMENT.md). For an explicit local release diagnostic,
-run the affected-owner harness with the full scope; do not maintain a second
+run all static checks and use CI for full test suites; do not maintain a second
 partial gate recipe here.
 
 ```powershell
-.\scripts\check.ps1 -Scope All
-.\scripts\test.ps1
+.\scripts\check.ps1
 ```
 
 - [ ] Required backend, frontend, security, migration, and end-to-end checks pass.

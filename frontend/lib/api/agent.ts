@@ -91,6 +91,7 @@ export const agentApi = {
     agentTaskRunSchema.parse(
       await apiClient.post<unknown>(
         `/agent/tasks/${encodeURIComponent(runId)}/cancel?project_id=${encodeURIComponent(projectId)}`,
+        undefined,
         options,
       ),
     ),

@@ -46,7 +46,7 @@ or define a second authority.
   executable diff is finished. Documentation edits, commits, sub-phases,
   handoffs, and intermediate milestones never trigger them. During
   implementation, use only a directly targeted test to debug executable
-  behavior currently being changed; `scripts/test.ps1` selects the final
+  behavior currently being changed; native test runners execute the final
   affected tests. CI retains full owner suites and release/Compose acceptance.
 - Changing a file does not by itself require running or adding a test. Add or
   select tests only for a credible regression path at the lowest meaningful

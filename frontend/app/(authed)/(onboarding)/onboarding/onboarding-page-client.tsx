@@ -85,10 +85,11 @@ function ProjectSetupGate() {
 
 function ProjectSetupLoading({ onRetry }: Readonly<{ onRetry: () => void }>) {
   const [stalled, setStalled] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const timer = window.setTimeout(() => setStalled(true), WORKSPACE_LOADING_STALL_MS);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [attempt]);
 
   if (!stalled) return <PageLoading label="Loading your workspace…" />;
   return (
@@ -96,6 +97,7 @@ function ProjectSetupLoading({ onRetry }: Readonly<{ onRetry: () => void }>) {
       title="Your workspace is taking longer to load"
       onRetry={() => {
         setStalled(false);
+        setAttempt((current) => current + 1);
         onRetry();
       }}
     >

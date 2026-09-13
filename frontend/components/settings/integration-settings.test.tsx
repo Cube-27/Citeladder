@@ -42,7 +42,7 @@ const activeProject = makeProject({
   brand_name: 'Example',
 });
 vi.mock('@/lib/project/project-context', () => ({
-  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  useActiveWorkspaceId: () => WS,
   useProjectContext: () => ({
     projects: [activeProject],
     activeProject,
