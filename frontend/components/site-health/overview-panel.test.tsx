@@ -61,9 +61,7 @@ describe('OverviewPanel', () => {
 
     expect(screen.getByRole('img', { name: 'Web Fundamentals score: 81' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'AEO Checklist Completion: 50%' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: 'Readiness of classified audited pages score: 62' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'AEO Readiness score: 62' })).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
@@ -221,9 +219,11 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(await screen.findAllByText('60% complete · Partial audit')).toHaveLength(2);
-    expect(screen.getByText('100% analyzed · Partial coverage')).toBeInTheDocument();
-    expect(screen.queryByText('100% analyzed · Complete coverage')).not.toBeInTheDocument();
+    // A caveat only where the measurement is qualified: the partial audit and
+    // the partial crawl say so, and nothing prints a "complete" reassurance.
+    expect(await screen.findAllByText('Partial audit · 60% coverage')).toHaveLength(2);
+    expect(screen.getByText('Partial coverage')).toBeInTheDocument();
+    expect(screen.queryByText(/Complete checklist|Complete coverage/)).not.toBeInTheDocument();
     expect(screen.getByText(/requested page limit reached/)).toBeInTheDocument();
     expect(screen.getByText('1 defect occurrence · 1 page affected')).toBeInTheDocument();
     expect(screen.getByText('1 readiness gap occurrence · 1 page affected')).toBeInTheDocument();
@@ -249,5 +249,49 @@ describe('OverviewPanel', () => {
     expect(screen.getByRole('dialog')).not.toHaveTextContent('mobile_layout');
     expect(screen.getByRole('dialog')).not.toHaveTextContent('HTTP evidence only');
     expect(screen.getByRole('dialog')).not.toHaveTextContent('Core Web Vitals');
+  });
+
+  const ALERT = 'Could not load the persisted Site Health Overview.';
+
+  function renderTerminal() {
+    renderWithProviders(
+      <OverviewPanel
+        projectId={PROJECT}
+        crawlId={CRAWL}
+        crawl={{ status: 'completed', analyzed_count: 4, visible_url_count: 4 } as never}
+        dashboard={undefined}
+      />,
+    );
+  }
+
+  it('stays silent when the snapshot simply does not exist yet', async () => {
+    // Terminalization WRITES the snapshot, so 404 is this endpoint saying
+    // "not yet", not "something went wrong". It was reported as a red alert
+    // over a healthy run, because hovering the Overview tab warmed this key
+    // mid-crawl and the cached error outlived the disabled query.
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
+        HttpResponse.json({ detail: 'Site Health Overview is not available' }, { status: 404 }),
+      ),
+    );
+
+    renderTerminal();
+
+    expect(await screen.findByTestId('site-health-overview')).toBeInTheDocument();
+    expect(screen.queryByText(ALERT)).not.toBeInTheDocument();
+  });
+
+  it('still reports a snapshot read that genuinely failed', async () => {
+    // 403, not 500: the real retry policy applies in these tests, and a
+    // retried 5xx outlives the assertion's window rather than the condition.
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
+        HttpResponse.json({ detail: 'Forbidden' }, { status: 403 }),
+      ),
+    );
+
+    renderTerminal();
+
+    expect(await screen.findByText(ALERT)).toBeInTheDocument();
   });
 });

@@ -9,6 +9,8 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.site_health_measurement import REMEDIATION_ROUTE_CODE
+from app.core.config.site_health_rules import SITE_HEALTH_RULES_BY_ID
 from app.domain.site_health.normalization import (
     CursorScopeError,
     decode_keyset_cursor,
@@ -124,6 +126,12 @@ def page_issue_groups(
     return window, next_cursor
 
 
+def remediation_route_for(rule_id: str) -> str:
+    """The catalog's route for a rule id; unknown rules need a developer."""
+    rule = SITE_HEALTH_RULES_BY_ID.get(rule_id)
+    return rule.remediation_route if rule is not None else REMEDIATION_ROUTE_CODE
+
+
 def issue_items(
     window: Sequence[IssueGroupView],
     *,
@@ -144,6 +152,9 @@ def issue_items(
             "title": display_label_for(group.rule_id),
             "description": group.description,
             "remediation": group.remediation,
+            # Who can resolve it. Derived from the catalog so the Issues rail
+            # and the readiness panel offer the same next action for a rule.
+            "remediation_route": remediation_route_for(group.rule_id),
             "affected_url_count": group.affected_url_count,
             "analyzer_version": group.analyzer_version,
             "rule_version": group.rule_version,

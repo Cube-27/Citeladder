@@ -5,107 +5,147 @@ from __future__ import annotations
 from typing import Final
 
 # Public checklist membership is declared directly, independently of outcomes.
+#
+# MEMBERSHIP IS THE SCORE'S HONESTY. A check that runs, produces a determinate
+# verdict, and describes something the owner can change belongs in a score. The
+# first cut of this table held ten ids, which left the site score blind to the
+# failures the Issues tab was simultaneously reporting: a catalogue with no
+# canonical on any page, no Open Graph on any page, no structured data on 83%
+# of them and a missing meta description on half still scored 88.9 "Web
+# Fundamentals". A score that cannot move when the site is broken is not a
+# score. Every page-scope check whose outcome is determinate and actionable is
+# therefore a member; applicability (below) is what removes the ones that do
+# not apply to a given page, and that is the ONLY thing that removes them.
 WEB_CHECK_IDS: Final[frozenset[str]] = frozenset(
     {
+        # Retrieval and identity
         "technical.title_present",
-        "technical.indexable",
-        "technical.https",
+        "technical.meta_description_present",
+        "technical.canonical_present",
         "technical.canonical_integrity",
+        "technical.indexable",
+        "technical.soft_error",
+        # Transport and delivery
+        "technical.https",
+        "technical.hsts_present",
+        "technical.uncompressed_html",
+        "technical.ttfb_band",
+        "web.security_mixed_content",
+        # Accessibility and device reach
         "web.accessibility_image_alt",
         "web.accessibility_form_names",
         "web.accessibility_document_language",
+        "web.accessibility_heading_order",
         "web.mobile_viewport",
-        "web.security_mixed_content",
-        "technical.soft_error",
     }
 )
 
+#: The single AEO pillar a page check contributes to. A check absent here is
+#: evidence the panels can still show, but it earns no readiness credit.
 AEO_CHECK_PILLAR: Final[dict[str, str]] = {
+    # Can an engine reach and quote the page at all?
     "technical.indexable": "crawlability",
     "search.crawler_access": "crawlability",
     "search.snippet_access": "crawlability",
-    "aeo.heading_hierarchy": "structure",
-    "aeo.content_date_present": "freshness",
+    # Does the page answer the question it is for?
     "aeo.product_answer_facts": "answerability",
-    "aeo.product_brand_identity": "provenance",
-    "aeo.offer_freshness_signal": "freshness",
     "aeo.listing_answer_set": "answerability",
+    "aeo.answer_first": "answerability",
+    # Can an engine find the part that answers it?
+    "aeo.heading_hierarchy": "structure",
     "aeo.listing_item_facts": "structure",
+    "aeo.question_headings": "structure",
+    # Are the claims backed by something a reader can follow?
+    "aeo.source_support_present": "evidence",
+    "aeo.product_evidence_facts": "evidence",
+    # Does the page state what it is, in machine-readable form?
+    "aeo.structured_data_present": "machine-readability",
     "aeo.schema_required_valid": "machine-readability",
     "aeo.schema_matches_content": "machine-readability",
+    "aeo.open_graph_present": "machine-readability",
+    "aeo.server_rendered_content": "machine-readability",
+    # Who is responsible for it?
+    "aeo.product_brand_identity": "provenance",
     "aeo.visible_attribution": "provenance",
-    "aeo.source_support_present": "evidence",
-    "aeo.answer_first": "answerability",
-    "aeo.question_headings": "structure",
+    # When was it written or last true?
+    "aeo.content_date_present": "freshness",
+    "aeo.offer_freshness_signal": "freshness",
 }
 
-SUPPORTED_AEO_CHECKS_BY_PAGE_KIND: Final[dict[str, frozenset[str]]] = {
-    "article": frozenset(
-        {
-            "technical.indexable",
-            "search.snippet_access",
-            "aeo.heading_hierarchy",
-            "aeo.content_date_present",
-            "aeo.visible_attribution",
-            "aeo.source_support_present",
-            "aeo.schema_required_valid",
-            "aeo.schema_matches_content",
-        }
-    ),
-    "product": frozenset(
-        {
-            "technical.indexable",
-            "search.snippet_access",
-            "aeo.product_answer_facts",
-            "aeo.product_brand_identity",
-            "aeo.offer_freshness_signal",
-            "aeo.schema_required_valid",
-            "aeo.schema_matches_content",
-        }
-    ),
-    "category": frozenset(
-        {
-            "technical.indexable",
-            "search.snippet_access",
-            "aeo.listing_answer_set",
-            "aeo.listing_item_facts",
-            "aeo.schema_required_valid",
-            "aeo.schema_matches_content",
-        }
-    ),
-    "faq": frozenset(
-        {
-            "technical.indexable",
-            "search.snippet_access",
-            "aeo.answer_first",
-            "aeo.question_headings",
-            "aeo.schema_required_valid",
-            "aeo.schema_matches_content",
-        }
-    ),
-    "docs": frozenset(
-        {
-            "technical.indexable",
-            "search.snippet_access",
-            "aeo.heading_hierarchy",
-            "aeo.content_date_present",
-            "aeo.source_support_present",
-            "aeo.schema_required_valid",
-            "aeo.schema_matches_content",
-        }
-    ),
+#: Checks a Content draft can actually resolve, and the field each one writes.
+#:
+#: This is the ONE list behind the Site Health → Content hand-off: the rule
+#: catalog's ``content_addressable`` flag is projected from it, the readiness
+#: and issue surfaces render their "Improve with Content" action from it, and
+#: the hand-off endpoint authorizes against it. Holding it in three places is
+#: how every rendered hand-off button came to 404 — the catalog flagged AEO
+#: rules the endpoint had stopped serving.
+CONTENT_ADDRESSABLE_CHECK_FIELDS: Final[dict[str, str]] = {
+    "technical.title_present": "title",
+    "technical.meta_description_present": "meta_description",
 }
+CONTENT_ADDRESSABLE_CHECK_IDS: Final[frozenset[str]] = frozenset(
+    CONTENT_ADDRESSABLE_CHECK_FIELDS
+)
+
+#: Who can actually resolve a failing check.
+#:
+#: DERIVED from the catalog's own `dimension`, `category` and `scope`, because
+#: a hand-kept list of rule ids is a guess that rots: the first attempt routed
+#: `architecture.duplicate_metadata_in_page_kind` — a cluster-scope technical
+#: finding — to the editorial agent, and put template concerns like offer
+#: freshness beside genuinely editorial ones. The three routes are:
+#:
+#:   content — a Content draft writes the fix. The backend's own hand-off
+#:             allowlist decides this, so the UI cannot offer a draft the
+#:             endpoint would refuse.
+#:   agent   — the fix is a judgement about what the page SAYS. Page-scope AEO
+#:             checks in the content and citability categories: answers,
+#:             question structure, visible dates, attribution, sources, brand
+#:             and item facts. A developer cannot decide these.
+#:   code    — a template, header, markup or config change. Everything else,
+#:             including every `technical` check (accessibility markup,
+#:             indexability, security, performance), structured data, Open
+#:             Graph, and every site- or graph-scope finding.
+REMEDIATION_ROUTE_CONTENT: Final = "content"
+REMEDIATION_ROUTE_AGENT: Final = "agent"
+REMEDIATION_ROUTE_CODE: Final = "code"
+
+#: AEO categories whose remedy is editorial rather than structural.
+_EDITORIAL_AEO_CATEGORIES: Final[frozenset[str]] = frozenset({"content", "citability"})
+
+#: Page-scope AEO content checks that are nonetheless a BUILD concern. Server
+#: rendering is decided by the framework, not by an author, so it is named here
+#: rather than left to the category to imply.
+_BUILD_AEO_CHECK_IDS: Final[frozenset[str]] = frozenset({"aeo.server_rendered_content"})
+
+
+def remediation_route(
+    rule_id: str, *, dimension: str, category: str, scope: str
+) -> str:
+    """Return the route that can actually resolve ``rule_id``."""
+    if rule_id in CONTENT_ADDRESSABLE_CHECK_IDS:
+        return REMEDIATION_ROUTE_CONTENT
+    editorial = (
+        dimension == "aeo"
+        and category in _EDITORIAL_AEO_CATEGORIES
+        # A site- or graph-scope finding is about the SITE, not about what one
+        # page says, so it is never an editorial rewrite of a page.
+        and scope == "page"
+        and rule_id not in _BUILD_AEO_CHECK_IDS
+    )
+    return REMEDIATION_ROUTE_AGENT if editorial else REMEDIATION_ROUTE_CODE
 
 
 def public_check_membership(
     rule_id: str, page_kind: str
 ) -> tuple[tuple[str, ...], str]:
-    """Return direct score roles and optional AEO pillar for one page check."""
+    """Return configured roles and pillar; rules own page-kind applicability."""
+    del page_kind
     roles: list[str] = []
     if rule_id in WEB_CHECK_IDS:
         roles.append("web_fundamentals")
-    supported = SUPPORTED_AEO_CHECKS_BY_PAGE_KIND.get(page_kind, frozenset())
-    pillar = AEO_CHECK_PILLAR.get(rule_id, "") if rule_id in supported else ""
+    pillar = AEO_CHECK_PILLAR.get(rule_id, "")
     if pillar:
         roles.append("aeo_readiness")
     return tuple(roles), pillar

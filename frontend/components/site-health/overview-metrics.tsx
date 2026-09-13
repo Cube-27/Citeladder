@@ -8,7 +8,7 @@ import { ScoreRing } from '@/components/ui/score-ring';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@/lib/api/types';
-import { PLACEHOLDER } from '@/lib/site-health/status';
+import { PLACEHOLDER, measurementCaveat } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
 
 type Summary = SiteHealthDashboard['score_summary'];
@@ -17,26 +17,17 @@ type MetricContext = {
   summary: Summary;
   analyzed: number;
   selected: number;
-  classificationState: SiteHealthOverview['classification_state'] | undefined;
 };
 type MetricModel = {
   title: string;
   value: number | null;
-  coverage: number | null;
-  coverageUnit?: 'analyzed' | 'complete';
   valueUnit?: 'score' | 'percent';
-  completion: string;
+  /** Only when the measurement is qualified; null on the ordinary case. */
+  caveat: string | null;
   detail: string;
   href: string;
   icon: typeof ICONS.site;
 };
-
-function completion(state: string | undefined): string {
-  if (state === 'measured') return 'Complete checklist';
-  if (state === 'limited_evidence') return 'Partial audit';
-  if (state === 'excluded') return 'Excluded';
-  return 'Completion unavailable';
-}
 
 function percentRatio(value: number | null | undefined): number | null {
   return value === null || value === undefined ? null : value * 100;
@@ -86,7 +77,6 @@ function metricContext(
     analyzed: overview?.audited_page_count ?? summary?.analyzed_count ?? crawl?.analyzed_count ?? 0,
     selected:
       overview?.selected_page_count ?? summary?.selected_count ?? crawl?.visible_url_count ?? 0,
-    classificationState: overview?.classification_state ?? summary?.classification_state,
   };
 }
 
@@ -98,8 +88,7 @@ function technicalMetric(context: MetricContext): MetricModel {
   return {
     title: 'Web Fundamentals',
     value: score ?? null,
-    coverage: coverage ?? null,
-    completion: completion(state),
+    caveat: measurementCaveat(state, coverage),
     detail: context.overview
       ? occurrenceDetail(
           context.overview.technical_defect_count,
@@ -118,13 +107,9 @@ function aeoMetric(context: MetricContext): MetricModel {
   const coverage = source?.aeo_measurement_coverage;
   const state = source?.aeo_measurement_state;
   return {
-    title:
-      context.classificationState === 'complete'
-        ? 'AEO Readiness'
-        : 'Readiness of classified audited pages',
+    title: 'AEO Readiness',
     value: score ?? null,
-    coverage: coverage ?? null,
-    completion: completion(state),
+    caveat: measurementCaveat(state, coverage),
     detail: context.overview
       ? occurrenceDetail(
           context.overview.aeo_readiness_gap_count,
@@ -151,8 +136,7 @@ function measurementMetric(context: MetricContext): MetricModel {
     title: 'AEO Checklist Completion',
     valueUnit: 'percent',
     value: percentRatio(coverage),
-    coverage: coverage ?? null,
-    completion: completion(state),
+    caveat: measurementCaveat(state, coverage),
     detail: context.overview
       ? `${context.overview.measured_check_count} of ${context.overview.expected_check_count} checks completed`
       : 'Completed checks across applicable pillars',
@@ -167,9 +151,9 @@ function crawlMetric(context: MetricContext): MetricModel {
   return {
     title: 'Crawl Coverage',
     value: progress,
-    coverage: progress === null ? null : progress / 100,
-    coverageUnit: 'analyzed',
-    completion: terminalCoverage ? coverageStateLabel(terminalCoverage.state) : 'In progress',
+    // The ring already shows the share and `detail` already counts the pages;
+    // the only thing left worth saying is that the crawl did NOT finish.
+    caveat: coverageCaveat(terminalCoverage),
     detail: terminalCoverage
       ? `${context.analyzed} of ${context.selected || PLACEHOLDER} pages analyzed${coverageReason(terminalCoverage.evidence)}`
       : `${context.analyzed} of ${context.selected || PLACEHOLDER} pages analyzed`,
@@ -178,10 +162,10 @@ function crawlMetric(context: MetricContext): MetricModel {
   };
 }
 
-function coverageStateLabel(state: string): string {
-  if (state === 'complete') return 'Complete coverage';
-  if (state === 'partial') return 'Partial coverage';
-  return 'Coverage unknown';
+function coverageCaveat(coverage: SiteHealthOverview['crawl_coverage'] | undefined): string | null {
+  if (!coverage) return 'In progress';
+  if (coverage.state === 'complete') return null;
+  return coverage.state === 'partial' ? 'Partial coverage' : 'Coverage unknown';
 }
 
 function coverageReason(evidence: Record<string, unknown>): string {
@@ -194,16 +178,12 @@ function coverageReason(evidence: Record<string, unknown>): string {
 function OverviewMetricCard({
   title,
   value,
-  coverage,
-  coverageUnit = 'complete',
   valueUnit = 'score',
-  completion: completionLabel,
+  caveat,
   detail,
   href,
   icon: Icon,
 }: Readonly<MetricModel>) {
-  const coverageLabel =
-    coverage === null ? 'Not measured' : `${Math.round(coverage * 100)}% ${coverageUnit}`;
   return (
     <div
       className={cn(hairlineBandItemClasses, 'grid h-full gap-4 p-4 sm:first:ps-4 sm:last:pe-4')}
@@ -228,9 +208,7 @@ function OverviewMetricCard({
         )}
       </div>
       <div className="grid gap-1">
-        <p className="text-muted text-xs">
-          {coverageLabel} · {completionLabel}
-        </p>
+        {caveat ? <p className="text-muted text-xs">{caveat}</p> : null}
         <p className="text-secondary text-xs">{detail}</p>
       </div>
       <Button asChild variant="ghost" size="sm" className="-ms-2.5 mt-auto justify-self-start">

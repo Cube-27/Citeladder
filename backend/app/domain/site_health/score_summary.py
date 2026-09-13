@@ -118,6 +118,8 @@ def _classified_evidence(
         evidence.completed_site_url_ids.add(row.site_url_id)
         evidence.analysis_ids.append(row.id)
         evidence.artifact_ids.add(row.artifact_id)
+        # Unresolved-purpose pages now contribute scores and cohort provenance.
+        evidence.kind_counts[row.page_kind] += 1
         if row.page_kind == PAGE_KIND_OTHER:
             evidence.other_count += 1
             kind_evidence = row.page_kind_evidence or {}
@@ -125,7 +127,6 @@ def _classified_evidence(
             evidence.reasons[reason] += 1
             continue
         evidence.classified_count += 1
-        evidence.kind_counts[row.page_kind] += 1
     return evidence
 
 
@@ -478,12 +479,17 @@ async def refresh_live_score_summary(
     payload = score_summary_payload(
         projection, selected_count=selected_count, issue_count=issue_count
     )
+    # An ACTIVE crawl reports the running mean of the pages analyzed so far,
+    # not a blank. Nulling it here is what put "Limited evidence" in every
+    # summary card of a crawl that had already finished 89 of 200 pages and
+    # scored each of them. The cohort is genuinely partial, so the STATE says
+    # so — `limited_evidence` is the honest label for a mean over part of the
+    # selection, and the screen renders it as "Partial audit" — but the number
+    # is real evidence and withholding it tells the reader nothing.
     if crawl_is_active(crawl):
         for measurement in (payload, *payload["by_page_kind"].values()):
             measurement.update(
                 {
-                    "web_fundamentals_score": None,
-                    "aeo_readiness_score": None,
                     "web_fundamentals_state": "limited_evidence",
                     "aeo_measurement_state": "limited_evidence",
                 }

@@ -116,6 +116,10 @@ export const readinessFailingCheckSchema = responseObject({
   expected_capability: z.string(),
   remediation: z.string(),
   content_addressable: z.boolean(),
+  // Who can resolve it: `content`, `agent` or `code`. Derived by the backend
+  // from the rule catalog, so the panel offers the same action the Issues rail
+  // does and never one the hand-off endpoint would refuse.
+  remediation_route: z.string(),
 });
 
 // Evidence is one row per FAILING PAGE listing that page's failed checks —
@@ -142,6 +146,7 @@ export const readinessCheckSchema = responseObject({
   failing_entity_count: z.number().int(),
   aeo_pillar: z.string(),
   content_addressable: z.boolean(),
+  remediation_route: z.string(),
 });
 
 export const readinessDimensionSchema = responseObject({
@@ -162,6 +167,10 @@ export const readinessDimensionSchema = responseObject({
   reason: z.string(),
   checkpoint_ids: z.array(z.string()),
   determinate_checkpoint_ids: z.array(z.string()),
+  // Applicable checks that produced no determinate verdict. Stated as a count
+  // so a coverage shortfall reads as "3 checks unresolved" rather than as a
+  // withheld score.
+  unresolved_count: z.number().int(),
   earned_points: z.number(),
   determinate_points: z.number(),
   expected_points: z.number(),
@@ -236,6 +245,7 @@ const overviewDimensionSchema = responseObject({
   determinate_points: z.number(),
   expected_points: z.number(),
   determinate_checkpoint_ids: z.array(z.string()),
+  unresolved_count: z.number().int(),
   reason: z.string(),
 });
 const overviewIssueSchema = responseObject({

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+from copy import deepcopy
 from datetime import UTC, datetime
 
 import httpx
@@ -356,9 +358,14 @@ async def test_readiness_reconciles_persisted_measurement_and_page_evidence(
     assert answerability["failing_page_count"] == 1
     assert answerability["evidence_truncated"] is False
     assert answerability["evidence_pages"][0]["source_analysis_id"] == str(analysis.id)
+    # Answerability is an editorial gap, not one a Content draft can write.
+    # The flag now comes from the single config set the hand-off endpoint
+    # authorizes against, so a rendered "Improve with Content" action and a
+    # servable hand-off cannot disagree — which is what made every such button
+    # answer 404. These pages route to the Growth Agent instead.
     assert (
         answerability["evidence_pages"][0]["failed_checks"][0]["content_addressable"]
-        is True
+        is False
     )
 
 
@@ -648,6 +655,66 @@ async def test_content_handoff_returns_exact_authorized_gap(
     assert body["target_fields"] == ["meta_description"]
     assert body["normalized_url"].endswith("/a")
     assert body["scoring_policy_version"] == "1"
+
+    # Current-revision links omit the assertion and discard unsupported requests.
+    params = {
+        "crawl_id": scenario.crawl_id,
+        "site_url_id": scenario.monitored_url_id,
+        "dimension": "metadata",
+        "checkpoint_ids": ["technical.meta_description_present", "aeo.answer_first"],
+    }
+    current = await client.get(
+        f"/api/v1/projects/{scenario.project_id}/site-health/content-handoff",
+        headers={"X-Workspace-Id": str(scenario.workspace_id)},
+        params=params,
+    )
+    assert current.status_code == 200
+    assert current.json() == body
+    unrelated = await client.get(
+        f"/api/v1/projects/{scenario.project_id}/site-health/content-handoff",
+        headers={"X-Workspace-Id": str(scenario.workspace_id)},
+        params={**params, "source_analysis_id": str(uuid.uuid4())},
+    )
+    assert unrelated.status_code == 404
+
+
+async def test_legacy_readiness_refreshes_actions_without_rewriting_evidence(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await _register(client, "legacy-readiness@example.com")
+    async with session_factory() as session:
+        scenario, _analysis, snapshot = await _seed_readiness(
+            session, email="legacy-readiness@example.com"
+        )
+        legacy = deepcopy(snapshot.aeo_readiness_diagnostic)
+        for dimension in legacy["dimensions"]:
+            for check in dimension["checks"]:
+                check.pop("remediation_route", None)
+            for page in dimension["evidence_pages"]:
+                for check in page["failed_checks"]:
+                    check.pop("remediation_route", None)
+                    check["content_addressable"] = True
+        snapshot.aeo_readiness_diagnostic = legacy
+        await session.commit()
+
+    response = await client.get(
+        f"/api/v1/projects/{scenario.project_id}/site-health/aeo-readiness",
+        headers={"X-Workspace-Id": str(scenario.workspace_id)},
+        params={"crawl_id": scenario.crawl_id},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    answer = next(row for row in body["dimensions"] if row["key"] == "answerability")
+    check = answer["evidence_pages"][0]["failed_checks"][0]
+    assert check["remediation_route"] == "agent"
+    assert check["content_addressable"] is False
+    assert body["score"] == legacy["score"]
+    assert body["source_analysis_ids"] == legacy["source_analysis_ids"]
+    async with session_factory() as session:
+        stored = await session.get(SiteHealthSnapshot, snapshot.id)
+        assert stored is not None
+        assert stored.aeo_readiness_diagnostic == legacy
 
 
 async def test_measurement_reads_are_workspace_isolated(

@@ -71,7 +71,7 @@ function SiteHealthContent({
       onStart={startCrawl}
     />
   ) : undefined;
-  const prefetchTab = useSiteHealthTabPrefetch(projectId, crawl?.id);
+  const prefetchTab = useSiteHealthTabPrefetch(projectId, crawl?.id, !active);
   return (
     <div className="grid min-w-0 gap-[var(--workspace-gap)]">
       <PageHeader actions={blockingState ? undefined : headerActions} />
@@ -108,12 +108,26 @@ function projectBlockingState(
   });
 }
 
-function useSiteHealthTabPrefetch(projectId: string | null, crawlId: string | undefined) {
+/**
+ * Warm the tab the pointer is heading for.
+ *
+ * `terminal` gates the Overview alone, because the Overview snapshot does not
+ * EXIST until the crawl terminalizes — warming it mid-crawl fetched a 404 into
+ * the very cache entry the panel reads, and React Query keeps an error once it
+ * has one. Hovering a tab is not a request to report a failure. Every other
+ * projection here answers with its own "not available yet" payload instead of
+ * an error, so those stay warm at any point in the run.
+ */
+function useSiteHealthTabPrefetch(
+  projectId: string | null,
+  crawlId: string | undefined,
+  terminal: boolean,
+) {
   const queryClient = useQueryClient();
   return (nextTab: AnalysisTab) => {
     if (!projectId) return;
     if (nextTab === 'overview') {
-      warmQuery(queryClient, siteHealthQueries.overview(projectId, crawlId));
+      if (terminal) warmQuery(queryClient, siteHealthQueries.overview(projectId, crawlId));
     } else if (nextTab === 'architecture') {
       warmQuery(queryClient, siteHealthQueries.architecture(projectId, crawlId));
     } else if (nextTab === 'aeo-readiness') {

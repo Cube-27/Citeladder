@@ -21,6 +21,8 @@ class ReadinessFailingCheckResponse(_Model):
     expected_capability: str
     remediation: str
     content_addressable: bool
+    #: Who can resolve it: `content`, `agent` or `code`.
+    remediation_route: str
 
 
 class ReadinessEvidencePageResponse(_Model):
@@ -44,6 +46,9 @@ class ReadinessCheckResponse(_Model):
     failing_entity_count: int
     aeo_pillar: str
     content_addressable: bool
+    #: Who can resolve it: `content`, `agent` or `code`. Derived from the
+    #: catalog so every surface offers the same next action.
+    remediation_route: str
 
 
 class ReadinessDimensionResponse(_Model):
@@ -56,6 +61,9 @@ class ReadinessDimensionResponse(_Model):
     reason: str
     checkpoint_ids: list[str]
     determinate_checkpoint_ids: list[str]
+    #: Applicable checks with no determinate verdict. A shortfall is stated as
+    #: a count of checks, never as a withheld score.
+    unresolved_count: int = 0
     earned_points: float
     determinate_points: float
     expected_points: float
@@ -143,6 +151,7 @@ class OverviewDimensionResponse(_Model):
     determinate_points: float
     expected_points: float
     determinate_checkpoint_ids: list[str]
+    unresolved_count: int = 0
     reason: str
 
 

@@ -139,4 +139,53 @@ describe('useSelectProject', () => {
 
     expect(push).toHaveBeenCalledWith(`/settings?project=${PROJECT_1}`);
   });
+
+  it('leaves a path that names the outgoing project crawl', () => {
+    // The crawl in this path belongs to PROJECT_1. Carrying it into PROJECT_2
+    // asks that project for another project's crawl, which resolves to
+    // "unavailable" — the reader then has to navigate out by hand, which is
+    // what "I have to refresh to get data after switching" looks like.
+    activeProjectId = PROJECT_1;
+    pathname = '/site/crawls/22222222-2222-4222-8222-222222222222/pages/abc';
+    const { result } = renderHook(() => useSelectProject());
+
+    act(() => result.current(PROJECT_2));
+
+    expect(push).toHaveBeenCalledWith(`/site?project=${PROJECT_2}`);
+  });
+
+  it('keeps a path that names no project-owned resource', () => {
+    activeProjectId = PROJECT_1;
+    pathname = '/issues';
+    search = new URLSearchParams({ dimension: 'technical' });
+    const { result } = renderHook(() => useSelectProject());
+
+    act(() => result.current(PROJECT_2));
+
+    expect(push).toHaveBeenCalledWith(`/issues?dimension=technical&project=${PROJECT_2}`);
+  });
+
+  it('keeps a crawl detail path when the ACTIVE project is re-selected', () => {
+    // Re-picking the project already active is bookkeeping, not a switch.
+    // Redirecting it to /site would throw the reader off the page they are
+    // reading to protect them from a project change that is not happening.
+    activeProjectId = PROJECT_1;
+    pathname = '/site/crawls/22222222-2222-4222-8222-222222222222/pages/abc';
+    const { result } = renderHook(() => useSelectProject());
+
+    act(() => result.current(PROJECT_1));
+
+    expect(replace).toHaveBeenCalledWith(`${pathname}?project=${PROJECT_1}`, { scroll: false });
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('keeps an explicit destination even when leaving a crawl detail path', () => {
+    activeProjectId = PROJECT_1;
+    pathname = '/site/crawls/22222222-2222-4222-8222-222222222222/pages/abc';
+    const { result } = renderHook(() => useSelectProject());
+
+    act(() => result.current(PROJECT_2, { destination: '/settings' }));
+
+    expect(push).toHaveBeenCalledWith(`/settings?project=${PROJECT_2}`);
+  });
 });

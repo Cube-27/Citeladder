@@ -218,7 +218,10 @@ describe('UrlDetail', () => {
     const high = screen.getByText('WebSite schema is missing');
     const low = screen.getByText('FAQ schema not present');
     expect(high.compareDocumentPosition(low) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText('Expected WebSite; found Organization.')).toBeInTheDocument();
+    expect(
+      screen.getByText('expected types WebSite, found types Organization'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
   });
 
   it('keeps the header to concise persisted page metadata', async () => {

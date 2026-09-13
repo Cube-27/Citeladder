@@ -583,8 +583,10 @@ async def test_cancelled_user_analysis_does_not_penalize_applicable_free_sample(
         assert crawl.analysis_status == ANALYSIS_STATUS_COMPLETED
         assert crawl.status == CRAWL_STATUS_COMPLETED
         assert snapshot.analyzed_url_count == 1
-        assert snapshot.web_fundamentals_score is None
-        assert snapshot.web_fundamentals_state == "not_measured"
+        # The cancelled page is ABSENT from the mean, not a zero in it: the one
+        # page that was analyzed reports its own score unchanged.
+        assert snapshot.web_fundamentals_score is not None
+        assert snapshot.web_fundamentals_score > 0
 
 
 @pytest.mark.asyncio
@@ -733,13 +735,16 @@ async def test_analyze_task_persists_analysis_evaluations_issues_scores(
         ).scalar_one()
         assert analysis.status == PAGE_ANALYSIS_STATUS_COMPLETED
         assert analysis.web_fundamentals_score is not None
-        # `other` is classifier abstention, so AEO is unmeasured rather than a
-        # perfect score from the few universal rules that remain applicable.
+        # `other` is classifier ABSTENTION about purpose, not about evidence.
+        # The universal readiness checks still resolved on this page, and a
+        # page that passes every check that applies to it scores 100 — the
+        # previous null told the reader nothing was measured when everything
+        # measurable had been.
         assert analysis.page_kind == "other"
-        assert analysis.aeo_readiness_score is None
-        assert analysis.aeo_measurement_coverage is None
-        assert analysis.aeo_measurement_state == "not_measured"
-        assert analysis.aeo_measurement_reason == "page_purpose_unresolved"
+        assert analysis.aeo_readiness_score is not None
+        assert analysis.aeo_measurement_coverage is not None
+        assert analysis.aeo_measurement_state == "measured"
+        assert analysis.aeo_measurement_reason == ""
         assert analysis.site_url_id == site_url_id
 
         eval_count = await session.scalar(
@@ -846,8 +851,15 @@ async def test_analyze_persists_page_kind_classifier_and_current_versions(
         by_page_kind = summary.get("by_page_kind") or {}
         assert set(by_page_kind) == {"article"}
         assert by_page_kind["article"]["analyzed_count"] == 1
-        assert by_page_kind["article"]["web_fundamentals_score"] is None
-        assert by_page_kind["article"]["web_fundamentals_state"] == "not_measured"
+        # The crawl rollup agrees with the page row: one indeterminate check
+        # lowers coverage, it does not withhold the score.
+        assert by_page_kind["article"]["web_fundamentals_score"] == pytest.approx(
+            analysis.web_fundamentals_score
+        )
+        assert by_page_kind["article"]["web_fundamentals_state"] in {
+            "measured",
+            "limited_evidence",
+        }
 
 
 @pytest.mark.asyncio

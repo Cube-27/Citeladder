@@ -112,6 +112,26 @@ export function useCanonicalProjectUrl(enabled: boolean) {
   }, [activeProjectId, enabled, pathname, router, searchParams]);
 }
 
+/**
+ * Routes whose path carries a resource owned by ONE project.
+ *
+ * Keeping such a path across a project switch asks the new project for another
+ * project's crawl or run: the page resolves to "unavailable" and the reader
+ * has to navigate out by hand to see anything. Each entry names the section
+ * root to land on instead — the same treatment the workspace switcher already
+ * gives, for the same reason.
+ */
+const PROJECT_OWNED_PATH_ROOTS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^\/site\/crawls\//, '/site'],
+  [/^\/runs\/[^/]+/, '/runs'],
+];
+
+/** The path a project switch should land on, given where the reader is now. */
+function projectSwitchPathname(pathname: string): string {
+  const owned = PROJECT_OWNED_PATH_ROOTS.find(([pattern]) => pattern.test(pathname));
+  return owned ? owned[1] : pathname;
+}
+
 export type SelectProjectOptions = {
   /** Navigate to another route instead of the current one. */
   destination?: string;
@@ -150,9 +170,18 @@ export function useSelectProject() {
     (projectId: string, options: SelectProjectOptions = {}) => {
       const { destination, replace = false } = options;
       setActiveProjectId(projectId);
-      const target = projectDestination(destination ?? pathname, searchParams, projectId);
+      // A path naming the OUTGOING project's crawl or run cannot be carried
+      // over; land on that section's root instead of a guaranteed 404.
+      //
+      // Only when the project actually CHANGES. Re-selecting the project
+      // already active — the command palette, a canonical-URL fill-in — is
+      // bookkeeping, and redirecting it would throw the reader off the page
+      // detail they are reading to fix nothing.
+      const switching = projectId !== activeProjectId;
+      const landing = destination ?? (switching ? projectSwitchPathname(pathname) : pathname);
+      const target = projectDestination(landing, searchParams, projectId);
       const urlAlreadyNamesIt = searchParams?.get(PROJECT_PARAM) === projectId;
-      const samePage = destination === undefined || destination === pathname;
+      const samePage = landing === pathname;
       if (urlAlreadyNamesIt && samePage && !replace) return;
       // Replacing is correct when nothing the reader can usefully go BACK to is
       // being left behind: the same project with the parameter simply absent,

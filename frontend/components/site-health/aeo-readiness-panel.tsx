@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
 import { ScoreBar } from '@/components/ui/score-bar';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
@@ -22,7 +23,12 @@ import {
 } from '@/components/ui/table';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { ReadinessCheck, ReadinessDimension } from '@/lib/api/types';
-import { PLACEHOLDER } from '@/lib/site-health/status';
+import { formatScore, PLACEHOLDER } from '@/lib/site-health/status';
+import {
+  contentHandoffHref,
+  remediationRoute,
+  type RemediationRoute,
+} from '@/lib/site-health/remediation';
 import { textRole } from '@/components/ui/typography';
 import { Stack } from '@/components/ui/layout';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -41,28 +47,51 @@ function formatCoverage(coverage: number | null): string {
 }
 
 type DimensionState =
+  | 'Critical'
   | 'Needs work'
-  | 'Limited evidence'
-  | 'Incomplete'
+  | 'Nearly there'
   | 'Passing'
   | 'Not measured'
   | 'Not applicable'
   | 'Excluded';
 
+/**
+ * Say how the pillar SCORED, not whether any single check failed.
+ *
+ * The old rule flipped a pillar to red "Needs work" on one missing check
+ * anywhere in the crawl, which put a 98-scoring Structure pillar in the same
+ * state as a 0-scoring Evidence one and gave the reader nothing to prioritise
+ * by. Bands come off the score the table already shows, so the badge and the
+ * number can never contradict each other.
+ */
 function dimensionState(dimension: ReadinessDimension): DimensionState {
   if (dimension.dimension_applicability === 'not_applicable') return 'Not applicable';
   if (dimension.dimension_measurement_state === 'excluded') return 'Excluded';
-  if (dimension.dimension_measurement_state === 'not_measured') return 'Not measured';
-  if (dimension.unknown_count > 0 || dimension.error_count > 0) return 'Incomplete';
-  if (dimension.missing_count > 0 || dimension.partial_count > 0) return 'Needs work';
-  if (dimension.dimension_measurement_state === 'limited_evidence') return 'Limited evidence';
+  if (dimension.score === null) return 'Not measured';
+  // Band the DISPLAYED score, not the raw one. The Score column rounds through
+  // `formatScore`, so comparing the unrounded value put a row reading "100"
+  // next to a "Nearly there" badge and a row reading "50" next to "Critical" —
+  // the exact contradiction this function exists to prevent.
+  const score = Math.round(dimension.score);
+  if (score < 50) return 'Critical';
+  if (score < 80) return 'Needs work';
+  // A perfect score over an INCOMPLETE set is not a pass. Unresolved checks
+  // cap the badge one band below, so "Passing" only ever means every
+  // applicable check resolved and every one of them passed.
+  const unresolved =
+    dimension.dimension_measurement_state !== 'measured' ||
+    dimension.unresolved_count > 0 ||
+    dimension.unknown_count > 0 ||
+    dimension.error_count > 0 ||
+    dimension.partial_count > 0;
+  if (dimension.score < 100 || unresolved) return 'Nearly there';
   return 'Passing';
 }
 
 function stateBadgeValue(state: DimensionState) {
-  if (state === 'Needs work') return 'danger' as const;
-  if (state === 'Limited evidence') return 'warning' as const;
-  if (state === 'Incomplete') return 'warning' as const;
+  if (state === 'Critical') return 'danger' as const;
+  if (state === 'Needs work') return 'warning' as const;
+  if (state === 'Nearly there') return 'warning' as const;
   if (state === 'Passing') return 'success' as const;
   return 'info' as const;
 }
@@ -144,7 +173,7 @@ function ReadinessLedger({
                     </Stack>
                   </TableCell>
                   <TableRecordMetricCell label="Score">
-                    {dimension.score ?? <UnavailableValue state="not_measured" />}
+                    {formatScore(dimension.score)}
                   </TableRecordMetricCell>
                   <TableRecordMetricCell label="Quality" className="md:min-w-32">
                     {dimension.score === null ? (
@@ -300,13 +329,12 @@ function FailingPages({
                 </li>
               ))}
             </ul>
-            {page.failed_checks.some((check) => check.content_addressable) ? (
-              <Button asChild size="sm" className="justify-self-start">
-                <ProjectLink href={contentHref(projectId, crawlId, dimension, page)}>
-                  Improve in Content
-                </ProjectLink>
-              </Button>
-            ) : null}
+            <PageActions
+              projectId={projectId}
+              crawlId={crawlId}
+              page={page}
+              dimensionLabel={dimension.label}
+            />
           </li>
         ))}
       </ul>
@@ -314,21 +342,73 @@ function FailingPages({
   );
 }
 
-function contentHref(
-  projectId: string,
-  crawlId: string,
-  dimension: ReadinessDimension,
-  page: ReadinessDimension['evidence_pages'][number],
-): string {
-  const params = new URLSearchParams({
-    project_id: projectId,
-    site_health_crawl_id: crawlId,
-    site_url_id: page.site_url_id,
-    source_analysis_id: page.source_analysis_id,
-    dimension: dimension.key,
+/**
+ * The next action for one failing page, whatever kind of failure it is.
+ *
+ * Previously a single "Improve in Content" button appeared whenever any failed
+ * check carried the catalog's `content_addressable` flag, and it sent EVERY
+ * flagged rule id in the pillar to an endpoint that accepts only title and
+ * meta-description gaps — so every button 404'd. The backend now routes each
+ * check, the Content link carries only what Content can write, and everything
+ * else gets the prompt.
+ */
+function PageActions({
+  projectId,
+  crawlId,
+  page,
+  dimensionLabel,
+}: Readonly<{
+  projectId: string;
+  crawlId: string;
+  page: ReadinessDimension['evidence_pages'][number];
+  dimensionLabel: string;
+}>) {
+  // The SERVER routes every check, from the same catalog the hand-off endpoint
+  // authorizes against — so the panel cannot offer a draft that 404s, and the
+  // three buckets partition the failed checks with nothing falling through.
+  const byRoute = (route: RemediationRoute) =>
+    page.failed_checks.filter((check) => remediationRoute(check.remediation_route) === route);
+  const contentChecks = byRoute('content');
+  const href = contentHandoffHref({
+    projectId,
+    crawlId,
+    siteUrlId: page.site_url_id,
+    ruleIds: contentChecks.map((check) => check.rule_id),
   });
-  for (const check of page.failed_checks) {
-    if (check.content_addressable) params.append('checkpoint_ids', check.rule_id);
-  }
-  return `/content?${params.toString()}`;
+  // Everything Content cannot write gets the prompt instead. There is no
+  // per-row Growth Agent launcher here: the screen already has ONE agent entry
+  // point, and repeating it on every failing page turned a considered action
+  // into chrome. It also fires from inside this open drawer into a second
+  // modal drawer, which was never verified to work.
+  const promptChecks = page.failed_checks.filter(
+    (check) => remediationRoute(check.remediation_route) !== 'content',
+  );
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {href ? (
+        <Button asChild size="sm" className="justify-self-start">
+          <ProjectLink href={href}>Improve with Content</ProjectLink>
+        </Button>
+      ) : null}
+      {promptChecks.length > 0 ? (
+        <CopyButton
+          value={fixPrompt(dimensionLabel, page.normalized_url, promptChecks)}
+          size="sm"
+          variant="secondary"
+        >
+          Copy fix prompt
+        </CopyButton>
+      ) : null}
+    </div>
+  );
+}
+
+/** The failing checks for one page, in a form a developer or agent can act on. */
+function fixPrompt(
+  dimensionLabel: string,
+  url: string,
+  checks: ReadinessDimension['evidence_pages'][number]['failed_checks'],
+): string {
+  const lines = checks.map((check) => `- ${check.title}: ${check.remediation}`);
+  return [`Improve ${dimensionLabel} on ${url}.`, '', 'Failing checks:', ...lines].join('\n');
 }

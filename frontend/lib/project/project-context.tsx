@@ -134,8 +134,26 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   );
 
   const projectsQuery = useWorkspaceProjects(activeWorkspaceId, !contradictoryRequest);
-  const projects = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
   const listSettled = projectsQuery.isSuccess;
+  /**
+   * The workspace's projects, including one resolved directly by id.
+   *
+   * `pickActiveProject` already refuses to let a list that PREDATES a project
+   * hide it — that is what makes a just-created project usable on arrival. The
+   * list itself got no such treatment, so after creating a project the shell
+   * held a resolved `activeProject` (the switcher showed its name) beside an
+   * empty `projects` (every list view read "No projects yet") until something
+   * refetched. `GET /projects/{id}` is authorized from the path and is
+   * authoritative for that id, so a project it returned belongs in the list
+   * whether or not the list has caught up.
+   */
+  const projects = useMemo(() => {
+    const listed = projectsQuery.data ?? [];
+    // A project whose workspace contradicts the URL is rejected, not merged.
+    if (!resolvedProject || contradictoryRequest) return listed;
+    if (listed.some((project) => project.id === resolvedProject.id)) return listed;
+    return [...listed, resolvedProject];
+  }, [contradictoryRequest, projectsQuery.data, resolvedProject]);
 
   const activeProjectId = useMemo(
     () =>
@@ -239,6 +257,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
       activeWorkspace: workspaces?.find((workspace) => workspace.id === activeWorkspaceId) ?? null,
       setActiveWorkspaceId: selectWorkspace,
       projects,
+      projectsSettled: listSettled,
       activeProject,
       activeProjectId,
       setActiveProjectId,
@@ -253,6 +272,7 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
       activeWorkspaceId,
       selectWorkspace,
       projects,
+      listSettled,
       activeProject,
       activeProjectId,
       setActiveProjectId,

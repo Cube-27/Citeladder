@@ -168,8 +168,8 @@
       "id": "searchable_exact_blog_archive", "source_label": "Searchable sanitized blog archive pattern", "observation_date": "2026-08-30", "condition": "healthy",
       "url": "https://www.searchable.example.test/blog", "content_type": "text/html",
       "fixture": {"kind": "facts", "facts": {"entity": {"listing": {"largest_card_list_size": 8, "distinct_card_list_targets": 8, "has_result_count": false, "has_sort_control": false, "has_filter_control": false, "collection_evidence": {"container": {"tag": "section", "label": "Latest articles", "item_count": 8, "distinct_targets": 8}, "affordances": [{"class": "pagination", "relation": "adjacent", "text": "Next"}]}}}}},
-      "expected": {"page_kind": "category", "traits": ["listing"], "deciding_signal": "primary_listing_structure", "allowed_deciding_tiers": ["structural"], "allowed_confidence": ["medium"], "rejected_kinds": ["article"], "other_reason": null},
-      "deliberate_abstention": false, "structural_reason": "The exact blog archive is a category only because a bounded page-owned article collection corroborates it."
+      "expected": {"page_kind": "article", "traits": ["listing"], "deciding_signal": "path_pattern", "allowed_deciding_tiers": ["route"], "allowed_confidence": ["medium"], "rejected_kinds": ["category"], "other_reason": null},
+      "deliberate_abstention": false, "structural_reason": "A blog archive is an editorial index. A card list is what every index has; the route names the purpose, and the commerce category checklist does not apply to it."
     },
     {
       "id": "searchable_blog_root_without_collection", "source_label": "Searchable sanitized archive negative pattern", "observation_date": "2026-08-30", "condition": "broken",

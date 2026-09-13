@@ -327,10 +327,45 @@ export function statusLabel(status: string): string {
 /**
  * Format a 0–100 score for display. Null (not yet analysed) and NaN render the
  * `Not measured` placeholder — an error/blocked row is NEVER shown as 0.
+ *
+ * WHOLE NUMBERS. A score is the share of checks a page passed, and the decimal
+ * is an artefact of the division, not a measurement: 88.9 and 89 say the same
+ * thing about a site, and the tenth changes with one check on one page. Every
+ * score surface goes through here, so a raw `{score}` in JSX is a bug — that
+ * is how a readiness table came to print `27.210884353741495`.
  */
 export function formatScore(score: number | null): string {
   if (score === null || Number.isNaN(score)) return PLACEHOLDER;
-  return `${Math.round(score * 10) / 10}`;
+  return `${Math.round(score)}`;
+}
+
+/**
+ * The one thing worth saying about how complete a measurement was — or null.
+ *
+ * Every score surface used to carry "100% complete · Complete checklist" under
+ * it: two phrasings of the same fact, attached to the ordinary case, telling
+ * the reader nothing they could act on. Worse, printing a completeness note
+ * under EVERY number is exactly how the one that matters — the partial audit —
+ * stopped standing out. So the complete case says nothing at all, and this
+ * returns a line only when the measurement is qualified.
+ *
+ * Coverage retains the caller's denominator: checks, weighted pillars or pages.
+ */
+export function measurementCaveat(
+  state: string | undefined,
+  coverage?: number | null,
+  reason?: string,
+): string | null {
+  if (state === 'measured') return null;
+  if (state === 'limited_evidence') {
+    return coverage === null || coverage === undefined
+      ? 'Partial audit'
+      : `Partial audit · ${Math.round(coverage * 100)}% coverage`;
+  }
+  if (state === 'excluded') return 'Excluded from this audit';
+  if (reason === 'unsupported_purpose_checklist') return 'Unsupported purpose checklist';
+  if (reason === 'page_purpose_unresolved') return 'Page purpose unresolved';
+  return PLACEHOLDER;
 }
 
 /**

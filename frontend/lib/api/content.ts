@@ -47,7 +47,13 @@ export type SiteHealthReferenceInput = {
   project_id: string;
   crawl_id: string;
   site_url_id: string;
-  source_analysis_id: string;
+  /**
+   * Optional. Terminalization appends a NEW current analysis, so any revision
+   * id a surface captured while the crawl ran is stale by the time a reader
+   * clicks through. The crawl plus the URL name the page; the server resolves
+   * that page's current terminal analysis itself.
+   */
+  source_analysis_id?: string;
   dimension: string;
   checkpoint_ids: string[];
 };

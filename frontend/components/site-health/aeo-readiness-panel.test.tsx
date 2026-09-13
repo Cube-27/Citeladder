@@ -39,6 +39,7 @@ function dimension(key: string, label: string, failing: boolean) {
     reason: '',
     checkpoint_ids: [ruleId],
     determinate_checkpoint_ids: [ruleId],
+    unresolved_count: 0,
     earned_points: failing ? 3 : 5,
     determinate_points: 5,
     expected_points: 6,
@@ -66,6 +67,7 @@ function dimension(key: string, label: string, failing: boolean) {
         failing_entity_count: failing ? 2 : 0,
         aeo_pillar: key,
         content_addressable: true,
+        remediation_route: 'content',
       },
     ],
     evidence_pages: failing
@@ -82,6 +84,7 @@ function dimension(key: string, label: string, failing: boolean) {
                 expected_capability: 'State the answer first.',
                 remediation: 'Move the direct answer into the first paragraph.',
                 content_addressable: true,
+                remediation_route: 'content',
               },
               {
                 rule_id: `rule.${key}.1`,
@@ -90,6 +93,7 @@ function dimension(key: string, label: string, failing: boolean) {
                 expected_capability: 'Use question-shaped headings.',
                 remediation: 'Add question-shaped headings.',
                 content_addressable: true,
+                remediation_route: 'content',
               },
             ],
           },
@@ -105,6 +109,7 @@ function dimension(key: string, label: string, failing: boolean) {
                 expected_capability: 'State the answer first.',
                 remediation: 'Move the direct answer into the first paragraph.',
                 content_addressable: true,
+                remediation_route: 'content',
               },
             ],
           },
@@ -212,10 +217,13 @@ describe('AEO Readiness', () => {
     stubReadiness({ dimensions });
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
+    // The pillar still reports its number, but an unresolved check bars the
+    // top band: a perfect score over an incomplete set is not a pass.
     const row = (await screen.findByText('Answerability')).closest('tr');
-    expect(within(row!).getByText('Incomplete')).toBeInTheDocument();
+    expect(within(row!).queryByText('Passing')).toBeNull();
+    expect(within(row!).getByText('Nearly there')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'View details for Answerability' }));
-    expect(screen.getAllByText('Incomplete')).toHaveLength(2);
+    expect(screen.getAllByText('Incomplete')).toHaveLength(1);
   });
 
   it('labels unknown-only checks as incomplete rather than not applicable', async () => {
@@ -289,5 +297,86 @@ describe('AEO Readiness', () => {
     stubReadiness({ state: 'not_measured', crawl_id: null, limitations: ['Run a crawl first.'] });
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
     expect(await screen.findByRole('alert')).toHaveTextContent('Run a crawl first.');
+  });
+
+  it('does not turn a rounded score into a claim that every check passed', async () => {
+    stubReadiness({
+      dimensions: DIMENSIONS.map(([key, label], index) => {
+        const base = dimension(key, label, false);
+        return index === 0 ? { ...base, score: 99.6 } : base;
+      }),
+    });
+    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
+
+    const row = (await screen.findByText('Answerability')).closest('tr');
+    expect(within(row!).getByText('100')).toBeInTheDocument();
+    expect(within(row!).getByText('Nearly there')).toBeInTheDocument();
+  });
+
+  it('gives a code-only page the fix prompt rather than no action at all', async () => {
+    // Every finding names a next action. A page whose failures are all
+    // template or header changes cannot open a draft or a roadmap, but it must
+    // still hand the reader something to give a developer.
+    stubReadiness({
+      dimensions: DIMENSIONS.map(([key, label], index) => {
+        const base = dimension(key, label, index === 0);
+        if (index !== 0) return base;
+        return {
+          ...base,
+          evidence_pages: base.evidence_pages.map((page) => ({
+            ...page,
+            failed_checks: [
+              {
+                ...page.failed_checks[0],
+                rule_id: 'technical.hsts_present',
+                content_addressable: false,
+                remediation_route: 'code',
+              },
+            ],
+          })),
+        };
+      }),
+    });
+    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'View details for Answerability' }),
+    );
+    expect(screen.getAllByRole('button', { name: /Copy fix prompt/ }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: 'Improve with Content' })).toBeNull();
+  });
+
+  it('lets the server withdraw a check from the Content route', async () => {
+    // `technical.title_present` is in the frontend's fallback set, so a local
+    // lookup would offer a draft here. The SERVER says this check is not
+    // content-addressable, and the endpoint authorizes against that same
+    // config — so the panel must not render a hand-off it would refuse.
+    stubReadiness({
+      dimensions: DIMENSIONS.map(([key, label], index) => {
+        const base = dimension(key, label, index === 0);
+        if (index !== 0) return base;
+        return {
+          ...base,
+          evidence_pages: base.evidence_pages.map((page) => ({
+            ...page,
+            failed_checks: [
+              {
+                ...page.failed_checks[0],
+                rule_id: 'technical.title_present',
+                content_addressable: false,
+                remediation_route: 'code',
+              },
+            ],
+          })),
+        };
+      }),
+    });
+    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'View details for Answerability' }),
+    );
+    expect(screen.queryByRole('link', { name: 'Improve with Content' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: /Copy fix prompt/ }).length).toBeGreaterThan(0);
   });
 });

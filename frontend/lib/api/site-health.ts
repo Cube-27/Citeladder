@@ -13,7 +13,7 @@
  */
 import { mutationOptions, queryOptions } from '@tanstack/react-query';
 
-import { API_BASE_URL, apiClient, getActiveWorkspaceId, type ApiRequestOptions } from './client';
+import { API_BASE_URL, apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
 import { retainPreviousDataForScope } from './query-client';
 import {
@@ -255,7 +255,8 @@ export const siteHealthApi = {
       projectId: string;
       crawlId: string;
       siteUrlId: string;
-      sourceAnalysisId: string;
+      /** Optional assertion only — the server resolves the current revision. */
+      sourceAnalysisId?: string;
       dimension: string;
       checkpointIds: string[];
     },
@@ -322,10 +323,21 @@ export const siteHealthApi = {
  * place. Every `queryFn` forwards the abort signal.
  */
 export const siteHealthQueries = {
-  entitlements: () =>
+  /**
+   * Site Health entitlement for ONE workspace.
+   *
+   * The workspace is a required argument, not a read of the ambient
+   * `getActiveWorkspaceId()`. That ambient value is a module variable set from
+   * an effect in the provider, so reading it here computed the query key from
+   * state React does not track: switching workspace changed the variable
+   * without re-rendering anything that had already keyed off it, and the
+   * screen kept serving the previous workspace's plan until something
+   * unrelated evicted the entry. A prop is reactive; a module global is not.
+   */
+  entitlements: (workspaceId: string | null) =>
     queryOptions({
-      queryKey: queryKeys.siteHealth.entitlements(getActiveWorkspaceId()),
-      queryFn: ({ signal }) => siteHealthApi.getEntitlements({ signal }),
+      queryKey: queryKeys.siteHealth.entitlements(workspaceId),
+      queryFn: ({ signal }) => siteHealthApi.getEntitlements({ signal, workspaceId }),
     }),
   dashboard: (projectId: string, crawlId?: string) =>
     queryOptions({

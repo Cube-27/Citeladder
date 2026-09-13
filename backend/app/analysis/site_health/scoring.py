@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import Protocol
 
 from app.analysis.site_health.rules import RuleEvaluation
 from app.core.config.site_health_contracts import (
@@ -13,6 +14,7 @@ from app.core.config.site_health_contracts import (
     RULE_ID_TECHNICAL_INDEXABLE,
     RULE_OUTCOME_NOT_APPLICABLE,
     RULE_OUTCOME_SATISFIED,
+    RULE_OUTCOME_UNKNOWN,
     SCORING_VERSION,
 )
 from app.core.config.site_health_measurement import (
@@ -22,7 +24,6 @@ from app.core.config.site_health_measurement import (
     MEASUREMENT_STATE_MEASURED,
     MEASUREMENT_STATE_NOT_MEASURED,
     READINESS_DIMENSION_WEIGHTS,
-    SUPPORTED_AEO_CHECKS_BY_PAGE_KIND,
 )
 from app.core.config.site_health_rule_types import (
     RULE_SCOPE_PAGE,
@@ -46,6 +47,10 @@ class DimensionMeasurement:
     expected_points: float
     determinate_checkpoint_ids: tuple[str, ...]
     reason: str = ""
+    #: Applicable checks that produced no determinate verdict. Reported so a
+    #: coverage shortfall is stated as a number of checks rather than as a
+    #: withheld score.
+    unresolved_count: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -61,6 +66,7 @@ class DimensionMeasurement:
             "expected_points": self.expected_points,
             "determinate_checkpoint_ids": list(self.determinate_checkpoint_ids),
             "reason": self.reason,
+            "unresolved_count": self.unresolved_count,
         }
 
 
@@ -108,40 +114,114 @@ class RuleMeasurementInput:
     normalized_coverage: float | None = None
 
 
-def _applicable(rows: Iterable[RuleEvaluation], role: str) -> list[RuleEvaluation]:
+class _ScoredCheck(Protocol):
+    """Fields shared by analyzer evaluations and persisted measurement inputs."""
+
+    @property
+    def rule_id(self) -> str: ...
+
+    @property
+    def scope(self) -> str: ...
+
+    @property
+    def outcome(self) -> str: ...
+
+    @property
+    def score_roles(self) -> tuple[str, ...]: ...
+
+    @property
+    def readiness_dimension(self) -> str: ...
+
+
+def applicable_checks(rows: Iterable[_ScoredCheck], role: str) -> list[_ScoredCheck]:
+    """Select one applicable page check per rule ID; conflicts remain unknown."""
+    by_id: dict[str, _ScoredCheck] = {}
+    conflicted: set[str] = set()
+    for row in rows:
+        if (
+            row.scope != RULE_SCOPE_PAGE
+            or role not in row.score_roles
+            or row.outcome == RULE_OUTCOME_NOT_APPLICABLE
+        ):
+            continue
+        seen = by_id.get(row.rule_id)
+        if seen is None:
+            by_id[row.rule_id] = row
+        elif seen.outcome != row.outcome:
+            conflicted.add(row.rule_id)
     return [
-        row
-        for row in rows
-        if row.scope == RULE_SCOPE_PAGE
-        and role in row.score_roles
-        and row.outcome != RULE_OUTCOME_NOT_APPLICABLE
+        _Conflicted(row) if rule_id in conflicted else row
+        for rule_id, row in by_id.items()
     ]
 
 
-def _binary_result(
-    rows: list[RuleEvaluation],
+@dataclass(frozen=True)
+class _Conflicted:
+    """A duplicate check with conflicting outcomes, treated as unknown."""
+
+    row: _ScoredCheck
+
+    @property
+    def rule_id(self) -> str:
+        return self.row.rule_id
+
+    @property
+    def scope(self) -> str:
+        return self.row.scope
+
+    @property
+    def outcome(self) -> str:
+        return RULE_OUTCOME_UNKNOWN
+
+    @property
+    def score_roles(self) -> tuple[str, ...]:
+        return self.row.score_roles
+
+    @property
+    def readiness_dimension(self) -> str:
+        return self.row.readiness_dimension
+
+
+def measurement_state(*, determinate: int, expected: int) -> str:
+    """Classify measurement completeness independently of its score."""
+    if expected == 0 or determinate == 0:
+        return MEASUREMENT_STATE_NOT_MEASURED
+    return (
+        MEASUREMENT_STATE_MEASURED
+        if determinate == expected
+        else MEASUREMENT_STATE_LIMITED
+    )
+
+
+def role_result(
+    rows: Sequence[_ScoredCheck],
 ) -> tuple[float | None, float | None, str, int, int, int]:
+    """Score resolved checks and retain all applicable checks in coverage."""
     expected = len(rows)
     determinate = sum(row.outcome in _DETERMINATE for row in rows)
     passed = sum(row.outcome == RULE_OUTCOME_SATISFIED for row in rows)
-    if expected == 0:
-        return None, None, MEASUREMENT_STATE_NOT_MEASURED, passed, determinate, expected
-    coverage = determinate / expected
-    if determinate != expected:
-        return None, coverage, MEASUREMENT_STATE_LIMITED, passed, determinate, expected
+    state = measurement_state(determinate=determinate, expected=expected)
+    if expected == 0 or determinate == 0:
+        return (
+            None,
+            None if expected == 0 else 0.0,
+            state,
+            passed,
+            determinate,
+            expected,
+        )
     return (
-        100.0 * passed / expected,
-        1.0,
-        MEASUREMENT_STATE_MEASURED,
+        100.0 * passed / determinate,
+        determinate / expected,
+        state,
         passed,
         determinate,
         expected,
     )
 
 
-def _dimension(key: str, rows: list[RuleEvaluation]) -> DimensionMeasurement:
+def pillar_measurement(key: str, rows: Sequence[_ScoredCheck]) -> DimensionMeasurement:
     applicable = [row for row in rows if row.readiness_dimension == key]
-    score, coverage, state, passed, determinate, expected = _binary_result(applicable)
     if not applicable:
         return DimensionMeasurement(
             key,
@@ -155,6 +235,7 @@ def _dimension(key: str, rows: list[RuleEvaluation]) -> DimensionMeasurement:
             (),
             reason="no_applicable_checks",
         )
+    score, coverage, state, passed, determinate, expected = role_result(applicable)
     return DimensionMeasurement(
         key=key,
         applicability=DIMENSION_APPLICABLE,
@@ -168,54 +249,73 @@ def _dimension(key: str, rows: list[RuleEvaluation]) -> DimensionMeasurement:
             row.rule_id for row in applicable if row.outcome in _DETERMINATE
         ),
         reason="" if state == MEASUREMENT_STATE_MEASURED else "unresolved_checks",
+        unresolved_count=expected - determinate,
     )
 
 
-def _aeo_result(
+def weighted_aeo_result(
     dimensions: tuple[DimensionMeasurement, ...],
 ) -> tuple[float | None, float | None, str]:
-    applicable = [
-        row for row in dimensions if row.applicability == DIMENSION_APPLICABLE
-    ]
-    if not applicable:
-        return None, None, MEASUREMENT_STATE_NOT_MEASURED
-    expected_weight = sum(READINESS_DIMENSION_WEIGHTS[row.key] for row in applicable)
-    completed_weight = sum(
-        READINESS_DIMENSION_WEIGHTS[row.key]
-        for row in applicable
-        if row.measurement_state == MEASUREMENT_STATE_MEASURED
-    )
-    coverage = completed_weight / expected_weight if expected_weight else None
-    if any(row.measurement_state != MEASUREMENT_STATE_MEASURED for row in applicable):
-        return None, coverage, MEASUREMENT_STATE_LIMITED
-    weighted_score = 0.0
-    for row in applicable:
-        if row.score is None:
-            return None, coverage, MEASUREMENT_STATE_LIMITED
-        weighted_score += row.score * READINESS_DIMENSION_WEIGHTS[row.key]
-    score = weighted_score / expected_weight
-    return score, 1.0, MEASUREMENT_STATE_MEASURED
+    """Weight scored pillars; report incomplete checks separately in coverage."""
+    applicable_weight = scored_weight = weighted_score = weighted_coverage = 0.0
+    state = MEASUREMENT_STATE_MEASURED
+    for row in dimensions:
+        if row.applicability != DIMENSION_APPLICABLE:
+            continue
+        weight = READINESS_DIMENSION_WEIGHTS[row.key]
+        applicable_weight += weight
+        weighted_coverage += (row.coverage or 0.0) * weight
+        if row.measurement_state != MEASUREMENT_STATE_MEASURED:
+            state = MEASUREMENT_STATE_LIMITED
+        if row.score is not None:
+            scored_weight += weight
+            weighted_score += row.score * weight
+    coverage = weighted_coverage / applicable_weight if applicable_weight else None
+    if not scored_weight:
+        return None, coverage, MEASUREMENT_STATE_NOT_MEASURED
+    return weighted_score / scored_weight, coverage, state
 
 
 def _aeo_scores(
-    rows: list[RuleEvaluation], effective_kind: str
+    rows: Sequence[_ScoredCheck], effective_kind: str
 ) -> tuple[float | None, float | None, str, str, tuple[DimensionMeasurement, ...]]:
-    supported = effective_kind in SUPPORTED_AEO_CHECKS_BY_PAGE_KIND
-    aeo_rows = _applicable(rows, SCORE_ROLE_AEO) if supported else []
-    dimensions = tuple(_dimension(key, aeo_rows) for key in AEO_READINESS_DIMENSIONS)
-    if supported:
-        aeo_score, aeo_coverage, aeo_state = _aeo_result(dimensions)
-        aeo_reason = (
-            "" if aeo_state == MEASUREMENT_STATE_MEASURED else "unresolved_checks"
-        )
-    else:
-        aeo_score, aeo_coverage, aeo_state = None, None, MEASUREMENT_STATE_NOT_MEASURED
-        aeo_reason = (
-            "page_purpose_unresolved"
-            if effective_kind == PAGE_KIND_OTHER
-            else "unsupported_purpose_checklist"
-        )
-    return aeo_score, aeo_coverage, aeo_state, aeo_reason, dimensions
+    """Score applicable readiness evidence independently of page kind."""
+    aeo_rows = applicable_checks(rows, SCORE_ROLE_AEO)
+    dimensions = tuple(
+        pillar_measurement(key, aeo_rows) for key in AEO_READINESS_DIMENSIONS
+    )
+    aeo_score, aeo_coverage, aeo_state = weighted_aeo_result(dimensions)
+    return (
+        aeo_score,
+        aeo_coverage,
+        aeo_state,
+        readiness_reason(
+            score=aeo_score,
+            state=aeo_state,
+            has_applicable_pillar=any(
+                row.applicability == DIMENSION_APPLICABLE for row in dimensions
+            ),
+            effective_kind=effective_kind,
+        ),
+        dimensions,
+    )
+
+
+def readiness_reason(
+    *,
+    score: float | None,
+    state: str,
+    has_applicable_pillar: bool,
+    effective_kind: str,
+) -> str:
+    """Distinguish unresolved evidence, unresolved purpose and absent checks."""
+    if score is not None:
+        return "" if state == MEASUREMENT_STATE_MEASURED else "unresolved_checks"
+    if has_applicable_pillar:
+        return "unresolved_checks"
+    if effective_kind == PAGE_KIND_OTHER:
+        return "page_purpose_unresolved"
+    return "no_applicable_checks"
 
 
 def _checklist(rows: list[RuleEvaluation]) -> tuple[dict[str, object], ...]:
@@ -258,7 +358,7 @@ def score_analysis(
     del page_traits, crawl_context
     rows = list(evaluations)
     effective_kind = page_kind if page_kind in PAGE_KINDS else PAGE_KIND_OTHER
-    web_result = _binary_result(_applicable(rows, SCORE_ROLE_WEB_FUNDAMENTALS))
+    web_result = role_result(applicable_checks(rows, SCORE_ROLE_WEB_FUNDAMENTALS))
     web_score, web_coverage, web_state, web_passed, web_determinate, web_expected = (
         web_result
     )

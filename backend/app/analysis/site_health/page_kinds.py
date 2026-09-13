@@ -54,14 +54,8 @@ _PATH_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
     (page_kind, re.compile(pattern))
     for page_kind, pattern in _config.PAGE_KIND_PATH_PATTERNS
 )
-_ARCHIVE_PATH_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
-    re.compile(pattern) for pattern in _config.PAGE_KIND_ARCHIVE_PATH_PATTERNS
-)
-
 _DOCUMENTATION_CONTEXT_SIGNAL = "documentation_context"
 _SERVICE_EXPRESSION_SIGNAL = "service_capability_expression"
-_EXACT_ARCHIVE_ROOTS = frozenset({"/blog", "/blogs", "/news"})
-_EXACT_COMPARISON_HUB_ROOTS = frozenset({"/compare", "/comparisons"})
 _DECISIVE_LISTING_AFFORDANCE_CLASSES = frozenset(
     {"result_count", "sort", "filter", "facet", "empty_state"}
 )
@@ -428,9 +422,18 @@ def _structural_signals(
             )
         )
     listing = _mapping(entity.get("listing"))
+    # An EDITORIAL index is not a commerce category. `/blog` and `/compare`
+    # used to be upgraded here from "this route is a hub" plus "it links to
+    # several things" — evidence every index page in existence satisfies — and
+    # the upgrade outranked the route segment that actually names the page's
+    # purpose. A blog index then inherited the category checklist and was
+    # audited for listing answer sets and product item facts, which is how
+    # `citeladder.com/blog` came to be reported as a failing category page.
+    # A real collection still classifies through `_listing_evidence` below:
+    # result counts, sort and filter controls bound to the primary region.
+    # Without them, the route tier decides — `/blog` is an article route and
+    # `/compare` a comparison route, which is what each page is.
     listing_detail = _listing_evidence(listing)
-    if not listing_detail and _is_collection_hub_path(path):
-        listing_detail = _hub_listing_evidence(listing)
     if listing_detail:
         signals.append(
             _signal(
@@ -534,29 +537,6 @@ def _listing_evidence(listing: dict) -> str:
     if not classes:
         return ""
     return f"collection:{size} {'+'.join(classes)}"
-
-
-def _is_archive_path(path: str) -> bool:
-    return path in _EXACT_ARCHIVE_ROOTS or any(
-        pattern.match(path) is not None for pattern in _ARCHIVE_PATH_PATTERNS
-    )
-
-
-def _is_collection_hub_path(path: str) -> bool:
-    return path in _EXACT_COMPARISON_HUB_ROOTS or _is_archive_path(path)
-
-
-def _hub_listing_evidence(listing: dict) -> str:
-    """An exact hub route corroborated by one repeated linked collection."""
-    collection = _mapping(listing.get("collection_evidence"))
-    container = _mapping(collection.get("container"))
-    size = container.get("item_count")
-    targets = container.get("distinct_targets")
-    if not isinstance(size, int) or size < _config.CARD_LIST_MIN_ITEMS:
-        return ""
-    if not isinstance(targets, int) or targets < _config.CARD_LIST_MIN_ITEMS:
-        return ""
-    return f"hub_collection:{size}"
 
 
 def _location_evidence(location: dict, *, has_local_route: bool) -> str:

@@ -11,6 +11,10 @@ from app.core.config.site_health_contracts import (
     RULE_OUTCOME_PARTIAL,
     RULE_OUTCOME_SATISFIED,
 )
+from app.core.config.site_health_measurement import (
+    CONTENT_ADDRESSABLE_CHECK_IDS,
+    remediation_route,
+)
 
 SCORE_ROLE_WEB_FUNDAMENTALS: Final = "web_fundamentals"
 SCORE_ROLE_AEO: Final = "aeo_readiness"
@@ -158,6 +162,7 @@ class SiteHealthRule:
         "finding_class",
         "kind_evidence",
         "remediation",
+        "remediation_route",
         "rule_id",
         "rule_version",
         "scope",
@@ -185,7 +190,6 @@ class SiteHealthRule:
         finding_class: str = FINDING_CLASS_DEFECT,
         kind_evidence: str = KIND_EVIDENCE_EXPECTATION,
         composite_contract: CompositeContract | None = None,
-        content_addressable: bool = False,
         scope: str = RULE_SCOPE_PAGE,
         triggered_by: str = "",
         score_roles: tuple[str, ...] = (),
@@ -209,7 +213,6 @@ class SiteHealthRule:
         self.finding_class = finding_class
         self.kind_evidence = kind_evidence
         self.composite_contract = composite_contract
-        self.content_addressable = content_addressable
         self.scope = scope
         self.triggered_by = triggered_by
         self.score_roles = tuple(score_roles)
@@ -220,6 +223,15 @@ class SiteHealthRule:
         self.remediation = remediation
         self.display_label = display_label or rule_id
         self.display_label_variants = dict(display_label_variants or {})
+
+        # Catalog inputs are fixed; derive routing once from the shared policy.
+        self.content_addressable = self.rule_id in CONTENT_ADDRESSABLE_CHECK_IDS
+        self.remediation_route = remediation_route(
+            self.rule_id,
+            dimension=self.dimension,
+            category=self.category,
+            scope=self.scope,
+        )
 
 
 def validate_triggered_rule_links(

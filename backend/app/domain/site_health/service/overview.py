@@ -7,6 +7,10 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.site_health_contracts import (
+    AEO_READINESS_DIMENSION_DESCRIPTIONS,
+    AEO_READINESS_DIMENSION_LABELS,
+)
 from app.core.config.site_health_rules import SITE_HEALTH_RULES_BY_ID
 from app.domain.site_health.issue_snapshot import issue_impact
 from app.domain.site_health.service.common import (
@@ -18,6 +22,37 @@ from app.models.site_health.snapshot import SiteHealthSnapshot
 
 def _stored(value: object, fallback: object) -> object:
     return fallback if value is None else value
+
+
+def _aeo_dimensions(value: object) -> list:
+    """Backfill fields absent from pillar rows frozen by an earlier scorer.
+
+    Snapshots are IMMUTABLE, so a crawl that terminalized before the pillar
+    payload carried `label`, `description` and `unresolved_count` keeps those
+    rows forever — and the response model requires them, so the whole Overview
+    answered 500 for every such crawl until it was re-crawled. A snapshot is
+    evidence, not a migration target: fill the presentation fields from the
+    config that owns them, on the way out. The measurement itself is never
+    recomputed here; a legacy null score stays null and reads as not measured.
+    """
+    rows: list[dict] = []
+    for row in _stored_list(value):
+        if not isinstance(row, dict):
+            continue
+        key = str(row.get("key") or "")
+        if key not in AEO_READINESS_DIMENSION_LABELS:
+            continue
+        rows.append(
+            {
+                **row,
+                "label": row.get("label") or AEO_READINESS_DIMENSION_LABELS[key],
+                "description": (
+                    row.get("description") or AEO_READINESS_DIMENSION_DESCRIPTIONS[key]
+                ),
+                "unresolved_count": int(row.get("unresolved_count") or 0),
+            }
+        )
+    return rows
 
 
 def _top_issues(value: object) -> list:
@@ -149,7 +184,7 @@ async def get_overview(
         "category_counts": _stored(snapshot.category_counts, {}),
         "measured_check_count": _count(coverage_evidence, "measured_check_count"),
         "expected_check_count": _count(coverage_evidence, "expected_check_count"),
-        "aeo_dimensions": _stored(snapshot.readiness_dimensions, []),
+        "aeo_dimensions": _aeo_dimensions(snapshot.readiness_dimensions),
         "top_issues": _top_issues(snapshot.top_issues),
         "web_fundamentals": _stored(
             snapshot.web_fundamentals,

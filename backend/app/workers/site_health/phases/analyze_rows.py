@@ -158,7 +158,22 @@ def _new_page_analysis(
     artifact_id: uuid.UUID,
     result: PageAnalysisResult,
 ) -> SitePageAnalysis:
-    """Build the immutable analysis row before it becomes current."""
+    """Build the immutable analysis row before it becomes current.
+
+    The page's OWN result is persisted here, not withheld. `score_analysis` has
+    already run over this page's completed checks — the row previously threw
+    that away and stored nulls with `audit_not_terminal`, so a crawl in flight
+    showed every finished page as "Completed" beside "Not measured" in every
+    score column. A row that claims a page was analyzed and then declines to
+    say what it found is worse than no row.
+
+    This is a PROVISIONAL result, and terminalization still revises it: the
+    final revision folds in the cross-page checks (canonical resolution, broken
+    internal links, hreflang, sitemap) that no single page can decide, and
+    appends a new current row. Until then the reader sees what this page's own
+    evidence supports, and the crawl-level surface marks the audit partial.
+    """
+    scores = result.scores
     return SitePageAnalysis(
         id=uuid.uuid4(),
         workspace_id=crawl.workspace_id,
@@ -167,19 +182,19 @@ def _new_page_analysis(
         site_url_id=site_url_id,
         artifact_id=artifact_id,
         status=PAGE_ANALYSIS_STATUS_COMPLETED,
-        web_fundamentals_score=None,
-        web_fundamentals_coverage=None,
-        web_fundamentals_state="not_measured",
-        technical_earned_weight=0.0,
-        technical_determinate_weight=0.0,
-        technical_expected_weight=0.0,
-        technical_critical_complete=False,
-        aeo_readiness_score=None,
-        aeo_measurement_coverage=None,
-        aeo_measurement_state="not_measured",
-        aeo_measurement_reason="audit_not_terminal",
-        expected_checkpoint_profile=[],
-        readiness_dimensions=[],
+        web_fundamentals_score=scores.web_fundamentals_score,
+        web_fundamentals_coverage=scores.web_fundamentals_coverage,
+        web_fundamentals_state=scores.web_fundamentals_state,
+        technical_earned_weight=scores.technical_earned_weight,
+        technical_determinate_weight=scores.technical_determinate_weight,
+        technical_expected_weight=scores.technical_expected_weight,
+        technical_critical_complete=scores.technical_critical_complete,
+        aeo_readiness_score=scores.aeo_readiness_score,
+        aeo_measurement_coverage=scores.aeo_measurement_coverage,
+        aeo_measurement_state=scores.aeo_measurement_state,
+        aeo_measurement_reason=scores.aeo_measurement_reason,
+        expected_checkpoint_profile=list(scores.expected_checkpoint_profile),
+        readiness_dimensions=[item.to_dict() for item in scores.readiness_dimensions],
         profile_version=PROFILE_VERSION,
         schema_contract_version=SCHEMA_CONTRACT_VERSION,
         presentation_version=PRESENTATION_VERSION,

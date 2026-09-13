@@ -209,12 +209,18 @@ describe('Architecture panel', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('lists the pages the orphan count refers to', async () => {
+  it('opens the pages the orphan count refers to from the count itself', async () => {
     stubArchitecture();
     renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
 
-    expect(await screen.findByText('Which pages')).toBeInTheDocument();
-    expect(screen.getByText('Boots')).toBeInTheDocument();
+    // The card shows the number only; the evidence lives behind it. The
+    // control is named by what it DOES — "1" alone is not a reason to press it.
+    const orphanCount = await screen.findByRole('button', { name: 'View 1 orphaned page' });
+    expect(screen.queryByText('Boots')).toBeNull();
+
+    await userEvent.click(orphanCount);
+
+    expect(await screen.findByText('Boots')).toBeInTheDocument();
   });
 
   it('explains when the persisted projection is unavailable', async () => {

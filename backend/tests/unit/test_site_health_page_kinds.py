@@ -130,6 +130,35 @@ def _listing_grid(size: int = 24) -> dict:
     }
 
 
+def _pagination_listing(size: int = 8) -> dict:
+    """A linked collection whose only affordance is pagination.
+
+    Every blog index, docs index and comparison hub looks like this. It clears
+    the card-count floor but carries no decisive listing affordance, so it must
+    never classify as a commerce category on its own.
+    """
+    return {
+        "listing": {
+            "largest_card_list_size": size,
+            "distinct_card_list_targets": size,
+            "has_result_count": False,
+            "has_sort_control": False,
+            "has_filter_control": False,
+            "collection_evidence": {
+                "container": {
+                    "tag": "section",
+                    "label": "Latest",
+                    "item_count": size,
+                    "distinct_targets": size,
+                },
+                "affordances": [
+                    {"class": "pagination", "relation": "adjacent", "text": "Next"}
+                ],
+            },
+        }
+    }
+
+
 def _single_location() -> dict:
     return {
         "location": {
@@ -558,14 +587,23 @@ def test_article_with_related_item_list_stays_article() -> None:
         ),
     ],
 )
-def test_blog_archives_with_page_owned_card_lists_are_categories(
+def test_blog_archives_are_editorial_indexes_not_commerce_categories(
     fixture: str, url: str
 ) -> None:
+    """An index of posts is not a product collection.
+
+    "This route is a hub" plus "it links to several things" is evidence every
+    index page in existence satisfies, and it used to outrank the route segment
+    that actually names the page's purpose. A blog index then inherited the
+    category checklist and was audited for listing answer sets and product item
+    facts — `citeladder.com/blog` was reported as a failing category page. The
+    listing TRAIT still holds: the page does show a card list.
+    """
     facts = _fixture_facts(fixture, url)
     assessment = classify(url, facts)
 
-    assert assessment.page_kind == "category"
-    assert assessment.classified_by == PAGE_KIND_SIGNAL_PRIMARY_LISTING
+    assert assessment.page_kind == "article"
+    assert assessment.classified_by == PAGE_KIND_SIGNAL_PATH_PATTERN
     assert "listing" in derive_traits(url, facts)
 
 
@@ -717,13 +755,22 @@ def test_malformed_inputs_never_raise() -> None:
     assert assessment.page_kind == "article"
 
 
-def test_exact_comparison_hub_with_linked_children_is_a_category() -> None:
-    facts = _facts(entity=_listing_grid(size=4))
+def test_exact_comparison_hub_stays_a_comparison() -> None:
+    """A `/compare` index is a comparison hub, not a shop category.
+
+    The fixture is deliberately the shape the removed hub fallback fired on:
+    enough cards to clear `LISTING_MIN_CARD_ITEMS`, but PAGINATION only — no
+    result count, sort or filter bound to the container. `_listing_evidence`
+    rejects it because pagination is ordinary index navigation, and with the
+    hub fallback gone nothing promotes it to `category`. A four-card fixture
+    would prove nothing here: it fails the size floor whatever the affordances.
+    """
+    facts = _facts(entity=_pagination_listing(size=8))
 
     assessment = classify("https://example.com/compare", facts)
 
-    assert assessment.page_kind == "category"
-    assert assessment.classified_by == PAGE_KIND_SIGNAL_PRIMARY_LISTING
+    assert assessment.page_kind == "comparison"
+    assert assessment.classified_by == PAGE_KIND_SIGNAL_PATH_PATTERN
 
 
 def test_comparison_detail_with_related_children_stays_a_comparison() -> None:

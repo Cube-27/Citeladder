@@ -57,8 +57,10 @@ describe('ScoreSection', () => {
 
     expect(screen.getByText('73 / 100')).toBeInTheDocument();
     expect(screen.getByText('61 / 100')).toBeInTheDocument();
-    expect(screen.getByText('60% complete · Partial audit')).toBeInTheDocument();
-    expect(screen.getByText('70% complete · Partial audit')).toBeInTheDocument();
+    expect(screen.getByText('Partial audit · 60% coverage')).toBeInTheDocument();
+    expect(screen.getByText('Partial audit · 70% coverage')).toBeInTheDocument();
+    // The coverage card's value IS the coverage, so its caveat never repeats it.
+    expect(screen.getByText('Partial audit')).toBeInTheDocument();
     expect(screen.getByText('70 / 100')).toBeInTheDocument();
   });
 });
