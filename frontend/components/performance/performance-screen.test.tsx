@@ -1,0 +1,248 @@
+import { http, HttpResponse } from 'msw';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
+
+import { makeProject } from '@/test/fixtures/project';
+import { mswServer } from '@/test/msw-server';
+import { renderWithProviders } from '@/test/render';
+import type { PerformanceDashboard } from '@/lib/api/performance';
+
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const PROJECT = '11111111-1111-4111-8111-111111111111';
+const SNAPSHOT = '22222222-2222-4222-8222-222222222222';
+const TASK = '33333333-3333-4333-8333-333333333333';
+const activeProject = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
+const readiness = vi.hoisted(() => ({ providers: [] as string[] }));
+
+vi.mock('@/lib/project/project-context', () => ({
+  useActiveWorkspaceId: () => WORKSPACE,
+  useProjectContext: () => ({ activeProject, isLoading: false }),
+}));
+vi.mock('@/lib/api/integrations', () => ({ integrationsApi: { list: vi.fn(async () => []) } }));
+vi.mock('./readiness-ladder', () => ({
+  ReadinessLadder: () => null,
+  useConnectedProviders: () => readiness.providers,
+}));
+vi.mock('./use-performance-sync', () => ({
+  usePerformanceSync: () => ({
+    mutation: { mutate: vi.fn(), isPending: false },
+    notice: null,
+    outcome: null,
+    startedAt: null,
+    syncing: false,
+  }),
+}));
+
+import { PerformanceScreen } from './performance-screen';
+
+const emptyTotals: PerformanceDashboard['selected']['totals'] = {
+  clicks: null,
+  impressions: null,
+  ctr: null,
+  position: null,
+  sessions: null,
+  conversions: null,
+};
+const emptySeries = { clicks: [], impressions: [], ctr: [], position: [] };
+const dimensionCounts = {
+  query: 0,
+  page: 0,
+  country: 0,
+  device: 0,
+  search_appearance: 0,
+  day: 0,
+  bing_query: 0,
+  bing_page: 0,
+};
+
+function dashboard(overrides: Record<string, unknown> = {}) {
+  return {
+    project_id: PROJECT,
+    range: 'last_synced',
+    granularity: 'day',
+    compare: 'none',
+    selected: {
+      snapshot_id: null,
+      window_start: '',
+      window_end: '',
+      evidence_state: 'not_run',
+      totals: emptyTotals,
+      series: emptySeries,
+    },
+    comparison: null,
+    coverage: { earliest_date: null, latest_date: null, covered_days: 0 },
+    dimension_counts: dimensionCounts,
+    unavailable_dimensions: ['search_appearance'],
+    formula_version: 'traffic-formula-1',
+    normalization_version: 'traffic-normalization-1',
+    ...overrides,
+  };
+}
+
+function measuredWindow(totals: typeof emptyTotals) {
+  return {
+    snapshot_id: SNAPSHOT,
+    window_start: '2026-08-01',
+    window_end: '2026-08-28',
+    evidence_state: Object.values(totals).some((value) => value !== null && value !== 0)
+      ? 'available'
+      : 'observed_zero',
+    totals,
+    series: emptySeries,
+  };
+}
+
+function tablePage(dimension: string) {
+  return { dimension, items: [], next_cursor: null, total_count: 0, page_size: 25 };
+}
+
+beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => {
+  readiness.providers = [];
+  mswServer.resetHandlers();
+});
+afterAll(() => mswServer.close());
+
+describe('PerformanceScreen evidence states', () => {
+  it('shows first-use guidance without metric or table scaffolding', async () => {
+    let tableReads = 0;
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(dashboard())),
+      http.get(`/api/v1/projects/${PROJECT}/performance/table`, ({ request }) => {
+        tableReads += 1;
+        return HttpResponse.json(tablePage(new URL(request.url).searchParams.get('dimension')!));
+      }),
+    );
+
+    renderWithProviders(<PerformanceScreen />);
+
+    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(screen.queryByTestId('metric-card-strip')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('tablist', { name: 'Performance breakdowns' }),
+    ).not.toBeInTheDocument();
+    expect(tableReads).toBe(0);
+  });
+
+  it('renders measured zero and requests its exact Search Console snapshot', async () => {
+    let tableSnapshot: string | null = null;
+    const selected = measuredWindow({ ...emptyTotals, clicks: 0, impressions: 0 });
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () =>
+        HttpResponse.json(
+          dashboard({
+            selected,
+            coverage: { earliest_date: '2026-08-01', latest_date: '2026-08-28', covered_days: 28 },
+          }),
+        ),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/performance/table`, ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        tableSnapshot = params.get('snapshot_id');
+        return HttpResponse.json(tablePage(params.get('dimension')!));
+      }),
+    );
+
+    renderWithProviders(<PerformanceScreen />);
+
+    expect(await screen.findByTestId('metric-card-strip')).toBeVisible();
+    await waitFor(() => expect(tableSnapshot).toBe(SNAPSHOT));
+    expect(screen.queryByText('No search performance evidence yet')).not.toBeInTheDocument();
+  });
+
+  it('keeps GA4-only evidence visible without empty GSC tables', async () => {
+    const tableDimensions: string[] = [];
+    const response = dashboard({
+      selected: measuredWindow({ ...emptyTotals, sessions: 0, conversions: 0 }),
+      coverage: { earliest_date: '2026-08-01', latest_date: '2026-08-28', covered_days: 28 },
+    });
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(response)),
+      http.get(`/api/v1/projects/${PROJECT}/performance/table`, ({ request }) => {
+        const dimension = new URL(request.url).searchParams.get('dimension')!;
+        tableDimensions.push(dimension);
+        return HttpResponse.json(tablePage(dimension));
+      }),
+    );
+
+    renderWithProviders(<PerformanceScreen />);
+    expect(await screen.findByTestId('ga4-summary')).toBeVisible();
+    expect(screen.queryByTestId('metric-card-strip')).not.toBeInTheDocument();
+    expect(tableDimensions).toEqual([]);
+  });
+
+  it('keeps Bing-only evidence visible without empty GSC tables', async () => {
+    const tableDimensions: string[] = [];
+    readiness.providers = ['bing'];
+    const response = dashboard({
+      selected: { ...measuredWindow(emptyTotals), evidence_state: 'not_run' },
+      dimension_counts: { ...dimensionCounts, bing_query: 1 },
+      coverage: { earliest_date: null, latest_date: null, covered_days: 0 },
+    });
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(response)),
+      http.get(`/api/v1/projects/${PROJECT}/performance/table`, ({ request }) => {
+        const dimension = new URL(request.url).searchParams.get('dimension')!;
+        tableDimensions.push(dimension);
+        return HttpResponse.json(tablePage(dimension));
+      }),
+    );
+
+    renderWithProviders(<PerformanceScreen />);
+
+    expect(await screen.findByTestId('bing-panel')).toBeVisible();
+    await waitFor(() => expect(tableDimensions).toContain('bing_query'));
+    expect(tableDimensions).not.toContain('query');
+  });
+
+  it('keeps range projection mounted through completion', async () => {
+    let ready = false;
+    let enqueueCount = 0;
+    const missing = dashboard({
+      selected: {
+        snapshot_id: null,
+        window_start: '2026-08-01',
+        window_end: '2026-08-28',
+        evidence_state: 'not_run',
+        totals: emptyTotals,
+        series: emptySeries,
+      },
+      coverage: { earliest_date: '2026-08-01', latest_date: '2026-08-28', covered_days: 28 },
+    });
+    const complete = dashboard({
+      selected: measuredWindow({ ...emptyTotals, clicks: 0, impressions: 0 }),
+      coverage: { earliest_date: '2026-08-01', latest_date: '2026-08-28', covered_days: 28 },
+    });
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () =>
+        HttpResponse.json(ready ? complete : missing),
+      ),
+      http.post(`/api/v1/projects/${PROJECT}/performance/range`, () => {
+        enqueueCount += 1;
+        return HttpResponse.json({
+          task_id: TASK,
+          status: 'queued',
+          window_start: '2026-08-01',
+          window_end: '2026-08-28',
+        });
+      }),
+      http.get(`/api/v1/projects/${PROJECT}/performance/range/${TASK}`, () => {
+        ready = true;
+        return HttpResponse.json({
+          task_id: TASK,
+          status: 'succeeded',
+          window_start: '2026-08-01',
+          window_end: '2026-08-28',
+        });
+      }),
+      http.get(`/api/v1/projects/${PROJECT}/performance/table`, ({ request }) =>
+        HttpResponse.json(tablePage(new URL(request.url).searchParams.get('dimension')!)),
+      ),
+    );
+
+    renderWithProviders(<PerformanceScreen />);
+
+    expect(await screen.findByTestId('metric-card-strip')).toBeVisible();
+    expect(enqueueCount).toBe(1);
+  });
+});

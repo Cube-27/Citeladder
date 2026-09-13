@@ -59,6 +59,14 @@ observation status separately from workflow status, and preserves the causality
 notice. A positive movement does not prove that this action caused it; another
 action or changed measurement scope may overlap.
 
+The catalog's shareable URL state owns type, severity, workflow status, action
+path and a selected Opportunity UUID. Defaults are omitted; a committed filter
+change resets the local cursor and closes detail. Direct `selected` links load
+the authorized detail independently of the visible page. The historical
+`opportunity` parameter is accepted only as an inbound alias and replaced with
+the canonical spelling. Overview, Top Insights, and Content return links emit
+`selected` for their Opportunities destination.
+
 Declaration and verification rows are append-only. Deleting their owning
 workspace/project follows the baseline cascade; nullable crawl/audit references
 survive source retention through SET NULL. Content history actions retain

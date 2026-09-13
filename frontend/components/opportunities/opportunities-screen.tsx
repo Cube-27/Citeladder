@@ -123,7 +123,7 @@ function OpportunitiesScreenBody({
   return (
     <>
       <SummaryStrip summary={summary} />
-      <OpportunitiesCatalog key={projectId} projectId={projectId} />
+      <OpportunitiesCatalog projectId={projectId} />
     </>
   );
 }

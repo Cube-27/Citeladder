@@ -371,8 +371,8 @@ describe('VisibilityPage — retained capabilities in Trends', () => {
 
     expect(await screen.findByText('No completed runs yet')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /launch your first audit/i })).toBeInTheDocument();
-    // Navigation geometry stays mounted while the data region explains the empty state.
-    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    // Filters and result navigation have no meaning before the first completed run.
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   });
 
   it('shows the in-progress banner when the only run is still active', async () => {

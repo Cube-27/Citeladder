@@ -161,6 +161,32 @@ const verificationResult = {
   causality_notice: 'Later observations do not prove causality.',
 };
 
+const opportunitySummary = {
+  activation_state: 'ready',
+  computed: true,
+  run_id: SNAPSHOT,
+  audit_id: SNAPSHOT,
+  site_crawl_id: null,
+  demand_snapshot_id: null,
+  demand_source_revision: null,
+  coverage: {},
+  limitations: [],
+  source_mix: mix,
+  action_path_mix: mix,
+  domain_rollups: [],
+  counts_by_type: { visibility: 1 },
+  counts_by_severity: { high: 1 },
+  counts_by_status: { open: 1 },
+  total_count: 1,
+  median_priority: 140,
+  analyzer_version: 'opp-analyzer-7',
+  rule_version: 'opp-rules-8',
+  formula_version: 'opp-formula-3',
+  computed_at: '2026-08-28T00:00:00Z',
+  evidence_updated_at: '2026-08-28T00:00:00Z',
+  stale: false,
+};
+
 test('earned opportunity handoff links generation and comparable verification', async ({
   page,
 }) => {
@@ -172,33 +198,7 @@ test('earned opportunity handoff links generation and comparable verification', 
     route.fulfill({ json: {} }),
   );
   await page.route(`**/api/v1/projects/${PROJECT}/opportunities/summary`, (route) =>
-    route.fulfill({
-      json: {
-        activation_state: 'ready',
-        computed: true,
-        run_id: SNAPSHOT,
-        audit_id: SNAPSHOT,
-        site_crawl_id: null,
-        demand_snapshot_id: null,
-        demand_source_revision: null,
-        coverage: {},
-        limitations: [],
-        source_mix: mix,
-        action_path_mix: mix,
-        domain_rollups: [],
-        counts_by_type: { visibility: 1 },
-        counts_by_severity: { high: 1 },
-        counts_by_status: { open: 1 },
-        total_count: 1,
-        median_priority: 140,
-        analyzer_version: 'opp-analyzer-7',
-        rule_version: 'opp-rules-8',
-        formula_version: 'opp-formula-3',
-        computed_at: '2026-08-28T00:00:00Z',
-        evidence_updated_at: '2026-08-28T00:00:00Z',
-        stale: false,
-      },
-    }),
+    route.fulfill({ json: opportunitySummary }),
   );
   await page.route(`**/api/v1/projects/${PROJECT}/opportunities?*`, (route) =>
     route.fulfill({ json: { items: [row], next_cursor: null } }),
@@ -324,4 +324,41 @@ test('earned opportunity handoff links generation and comparable verification', 
     generation_id: GENERATION,
     expected_checks: [],
   });
+});
+
+test('opportunity filters and detail restore through URL history and reload', async ({ page }) => {
+  await stubAuthedShell(page, [], [project]);
+  await page.route(`**/api/v1/projects/${PROJECT}/opportunities/summary`, (route) =>
+    route.fulfill({ json: opportunitySummary }),
+  );
+  await page.route(`**/api/v1/projects/${PROJECT}/opportunities?*`, (route) =>
+    route.fulfill({ json: { items: [row], next_cursor: null } }),
+  );
+  await page.route(`**/api/v1/opportunities/${OPPORTUNITY}`, (route) =>
+    route.fulfill({ json: detail(false) }),
+  );
+
+  await page.goto(`/opportunities?project=${PROJECT}&opportunity=${OPPORTUNITY}&keep=1#evidence`);
+  await expect(page.getByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
+  await expect.poll(() => new URL(page.url()).searchParams.get('selected')).toBe(OPPORTUNITY);
+  expect(new URL(page.url()).searchParams.has('opportunity')).toBe(false);
+
+  await page.getByRole('button', { name: 'Close drawer' }).click();
+  await page.getByRole('button', { name: 'Review recommendation' }).click();
+  await page.goBack();
+  await expect(page.getByRole('dialog', { name: 'Opportunity detail' })).not.toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Close drawer' }).click();
+  await page.getByRole('button', { name: /Path:/ }).click();
+  await page.getByRole('menuitemradio', { name: 'Earned' }).click();
+  await expect(page.getByRole('dialog', { name: 'Opportunity detail' })).not.toBeVisible();
+  await expect
+    .poll(() => Object.fromEntries(new URL(page.url()).searchParams))
+    .toMatchObject({ project: PROJECT, keep: '1', action_path: 'earned' });
+  expect(new URL(page.url()).hash).toBe('#evidence');
+  expect(new URL(page.url()).searchParams.has('selected')).toBe(false);
 });

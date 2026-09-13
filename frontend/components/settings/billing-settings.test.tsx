@@ -10,11 +10,12 @@ import { EXPORT_CHECKOUT_BODY, fillExportBillingDetails } from '@/test/fixtures/
 const ACCOUNT = '11111111-1111-4111-8111-111111111111';
 
 let entitlementValue: unknown = null;
+let entitlementLoading = false;
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({
     entitlement: entitlementValue,
-    isLoading: false,
+    isLoading: entitlementLoading,
     hasCapability: () => false,
     canStartPaidWork: false,
   }),
@@ -136,10 +137,26 @@ beforeEach(() => mswServer.use(invoicesHandler()));
 afterEach(() => {
   mswServer.resetHandlers();
   entitlementValue = null;
+  entitlementLoading = false;
 });
 afterAll(() => mswServer.close());
 
 describe('BillingSettings', () => {
+  it('uses the shared page loading state for the initial entitlement read', () => {
+    entitlementLoading = true;
+    mswServer.use(catalogHandler());
+
+    renderWithProviders(<BillingSettings />);
+
+    expect(screen.getByRole('status')).toHaveAccessibleName('Loading billing…');
+  });
+
+  it('omits disabled billing instead of presenting a loading state', () => {
+    const { container } = renderWithProviders(<BillingSettings enabled={false} />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it('renders the plan from the catalog with no retired free/paid vocabulary', async () => {
     entitlementValue = resolvedEntitlement({
       catalog_key: 'tier_1',

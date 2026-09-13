@@ -113,10 +113,19 @@ client-generated percentage change. Year-over-year remains unavailable until
 sufficient history exists. Missing custom windows request the explicit projection
 action and show progress.
 
+With no imported source evidence, Performance keeps its scoped range controls
+and readiness path but does not reserve metric, chart, or dimension-table
+scaffolding. Persisted zero, partial-provider evidence, and an available
+selected window with a missing comparison remain measured states rather than
+the first-use empty state.
+
 Cursors bind project, snapshot, dimension, filters, sorting and page size.
 The browser resets cursor history when those inputs change.
 Search Demand is one /demand surface; AI Referrals exposes volume/share/source
 totals at /ai-referrals rather than copied Visibility metrics.
+Search Demand's missing-snapshot state links to the selected project's
+Performance setup. AI Referrals hides range controls only for a confirmed
+first-use empty result; measured zero and uncovered-range recovery retain them.
 [Sync tests](../backend/tests/component/test_integration_sync_enqueue.py) and
 [Performance tests](../backend/tests/component/test_performance_api.py) cover
 frozen targets and persisted reads. Live provider acceptance is separate.

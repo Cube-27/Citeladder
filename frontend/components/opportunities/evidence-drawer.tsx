@@ -12,6 +12,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
+import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label, textRole } from '@/components/ui/typography';
 import { opportunitiesQueries } from '@/lib/api/opportunities';
@@ -37,7 +38,7 @@ export function EvidenceDrawer({
     ...opportunitiesQueries.detail(workspaceId, opportunityId ?? ''),
     enabled: open && opportunityId !== null,
   });
-  const detail = detailQuery.data ?? null;
+  const detail = detailQuery.data?.project_id === projectId ? detailQuery.data : null;
 
   return (
     <Drawer
@@ -48,7 +49,17 @@ export function EvidenceDrawer({
       footer={detail ? <OpportunityStatusFooter detail={detail} projectId={projectId} /> : null}
     >
       {detailQuery.isError ? (
-        <Alert tone="danger">Could not load this opportunity. Please try again.</Alert>
+        <ReadError
+          error={detailQuery.error}
+          fallback="Could not load this opportunity."
+          onRetry={() => void detailQuery.refetch()}
+          pending={detailQuery.isFetching}
+        />
+      ) : detailQuery.data && !detail ? (
+        <Alert tone="danger">
+          This opportunity is unavailable in the selected project. Close this detail and choose a
+          recommendation from the current project.
+        </Alert>
       ) : detailQuery.isLoading || !detail ? (
         <div className="grid gap-3">
           <Skeleton className="h-8 w-3/4" />

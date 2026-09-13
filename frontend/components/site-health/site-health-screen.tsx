@@ -14,7 +14,9 @@ import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
 import { ChangesPanel } from '@/components/site-health/changes-panel';
 import { OverviewPanel } from '@/components/site-health/overview-panel';
 import { PageLoading } from '@/components/layout/page-loading';
+import { ReadError } from '@/components/ui/read-error';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -69,6 +71,7 @@ function SiteHealthContent({
   );
   const [tab, selectTab] = useUrlState('tab', tabCodec, { clearKeys: ['cursor', 'sort'] });
   const blockingState = projectBlockingState(projectId, projectLoading, screen);
+  const refreshFailures = !blockingState ? <SiteHealthRefreshFailures screen={screen} /> : null;
   const headerActions = crawl ? (
     <CrawlActions
       active={active}
@@ -85,6 +88,7 @@ function SiteHealthContent({
     <div className="grid min-w-0 gap-[var(--workspace-gap)]">
       <PageHeader actions={blockingState ? undefined : headerActions} />
       {!blockingState ? <SiteHealthNotices screen={screen} /> : null}
+      {refreshFailures}
       {!blockingState ? <AnalysisTabs tab={tab} setTab={selectTab} onIntent={prefetchTab} /> : null}
       {blockingState ?? (
         <AnalysisPanel
@@ -109,13 +113,41 @@ function projectBlockingState(
   if (!projectId)
     return <Alert tone="info">Select or create a project to analyze its site health.</Alert>;
   return screenBlockingState({
-    entitlementLoading: screen.entitlementQuery.isLoading,
-    dashboardLoading: screen.dashboardQuery.isLoading,
-    entitlementError: screen.entitlementQuery.isError,
-    dashboardError: screen.dashboardQuery.isError,
+    entitlement: screen.entitlementQuery,
+    dashboard: screen.dashboardQuery,
     resolverStatus: screen.entitlementQuery.data?.resolver_status,
     phase: screen.phase,
   });
+}
+
+function isAccessFailure(error: unknown): boolean {
+  const status = httpErrorStatus(error);
+  return status === 401 || status === 403;
+}
+
+function SiteHealthRefreshFailures({
+  screen,
+}: Readonly<{ screen: ReturnType<typeof useSiteHealthScreen> }>) {
+  return (
+    <>
+      {screen.dashboardQuery.isError && screen.dashboardQuery.data ? (
+        <ReadError
+          error={screen.dashboardQuery.error}
+          fallback="Could not refresh Site Health."
+          onRetry={() => void screen.dashboardQuery.refetch()}
+          pending={screen.dashboardQuery.isFetching}
+        />
+      ) : null}
+      {screen.entitlementQuery.isError && screen.entitlementQuery.data ? (
+        <ReadError
+          error={screen.entitlementQuery.error}
+          fallback="Could not refresh Site Health access."
+          onRetry={() => void screen.entitlementQuery.refetch()}
+          pending={screen.entitlementQuery.isFetching}
+        />
+      ) : null}
+    </>
+  );
 }
 
 /**
@@ -261,22 +293,34 @@ function AnalysisPanel({
 }
 
 function screenBlockingState({
-  entitlementLoading,
-  dashboardLoading,
-  entitlementError,
-  dashboardError,
+  entitlement,
+  dashboard,
   resolverStatus,
   phase,
 }: Readonly<{
-  entitlementLoading: boolean;
-  dashboardLoading: boolean;
-  entitlementError: boolean;
-  dashboardError: boolean;
+  entitlement: ReturnType<typeof useSiteHealthScreen>['entitlementQuery'];
+  dashboard: ReturnType<typeof useSiteHealthScreen>['dashboardQuery'];
   resolverStatus: string | undefined;
   phase: string;
 }>) {
-  if (entitlementError || dashboardError)
-    return <Alert tone="danger">Could not load Site Health. Please refresh.</Alert>;
+  if (dashboard.isError && (!dashboard.data || isAccessFailure(dashboard.error)))
+    return (
+      <ReadError
+        error={dashboard.error}
+        fallback="Could not load Site Health."
+        onRetry={() => void dashboard.refetch()}
+        pending={dashboard.isFetching}
+      />
+    );
+  if (entitlement.isError && (!entitlement.data || isAccessFailure(entitlement.error)))
+    return (
+      <ReadError
+        error={entitlement.error}
+        fallback="Could not load Site Health access."
+        onRetry={() => void entitlement.refetch()}
+        pending={entitlement.isFetching}
+      />
+    );
   if (resolverStatus === 'entitlement_unresolved')
     return (
       <Alert tone="warning">
@@ -284,11 +328,11 @@ function screenBlockingState({
         administrator if this continues.
       </Alert>
     );
-  if (entitlementLoading || dashboardLoading || phase === 'resolving')
+  if (entitlement.isLoading || dashboard.isLoading || phase === 'resolving')
     return (
       <PageLoading
         label={
-          entitlementLoading
+          entitlement.isLoading
             ? 'Checking Site Health access…'
             : 'Loading your latest Site Health crawl…'
         }

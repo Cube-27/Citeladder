@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { useQuery, type QueryClient } from '@tanstack/react-query';
 
@@ -98,12 +99,53 @@ describe('SessionGuard', () => {
       </SessionGuard>,
     );
 
-    // The guard stays on the fallback (no user) but never bounces to /login.
-    await screen.findByText('loading');
+    // The guard explains the failed verification but never bounces to /login.
+    await screen.findByRole('heading', { name: 'Your session could not be verified' });
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeVisible();
+    expect(screen.queryByText(/signed in as/i)).not.toBeInTheDocument();
     await new Promise((resolve) => {
       setTimeout(resolve, 50);
     });
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('retries only the session read and mounts protected content after recovery', async () => {
+    const user = userEvent.setup();
+    let available = false;
+    let requestCount = 0;
+    mswServer.use(
+      http.get('/api/v1/auth/me', () => {
+        requestCount += 1;
+        return available
+          ? HttpResponse.json({ user: sessionUser })
+          : HttpResponse.json(
+              {
+                error: {
+                  code: 'session_unavailable',
+                  message: 'Session service unavailable',
+                  retryable: false,
+                },
+              },
+              { status: 503 },
+            );
+      }),
+    );
+
+    renderWithProviders(
+      <SessionGuard fallback={<div>loading</div>}>
+        <Protected />
+      </SessionGuard>,
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Your session could not be verified' }),
+    ).toBeVisible();
+    expect(screen.queryByText(/signed in as/i)).not.toBeInTheDocument();
+    available = true;
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText(/signed in as guarded@example.com/i)).toBeVisible();
+    expect(requestCount).toBe(2);
   });
 
   it('clears the session and redirects when any query returns 401', async () => {

@@ -27,10 +27,11 @@ transitions. Navigation, compact navigation and Command Palette share the
 route/capability owner; UI visibility never replaces backend authorization.
 
 Cache Components and Partial Prefetching preserve the shell while route content
-resolves. The app segment has no separate loading boundary. PageLoading owns
-first-load presentation; shell-fallback handles session/workspace/entitlement
-waits. In-place refresh retains data with scoped progress rather than collapsing
-the surface. Intent prefetching reuses the destination's exact query key.
+resolves. The app segment has no separate loading boundary. `shell-fallback`
+is the neutral pre-session structure only; after authentication, PageLoading
+and recoverable gate notices render in the shell's content pane. In-place
+refresh retains data with scoped progress rather than collapsing the surface.
+Intent prefetching reuses the destination's exact query key.
 
 ## Server, URL and local state
 
@@ -46,6 +47,10 @@ state owns ephemeral drafts and interactions. Read-mostly queries use the
 configured freshness/retention policy; explicit polling remains authoritative
 for active operations. Events accelerate projection invalidation, never replace
 persisted truth. No screen substitutes mock data or computes a backend metric.
+Opportunities owns its `type`, `severity`, `status`, `action_path`, and
+`selected` URL contract; default filters are omitted, filter commits clear the
+selection, and `opportunity` remains a read-only legacy alias normalized with
+replace.
 
 ## Component capability and technical ownership
 
@@ -58,6 +63,7 @@ interaction recipes live only in [`design.md`](design.md).
 | Button, Card, Input, Textarea, Field | `frontend/components/ui/` |
 | Dropdown Menu, Dialog, Drawer, Tooltip | `frontend/components/ui/` Radix wrappers |
 | Table, Badge, Alert, Skeleton, progress, empty state, pagination, segmented control | `frontend/components/ui/` |
+| Recoverable persisted-read failure | `frontend/components/ui/read-error.tsx`; domain owners supply the exact read and decide whether cached content remains usable |
 | Select, Search field, Tabs | `frontend/components/ui/select.tsx`, `frontend/components/ui/search-field.tsx`, `frontend/components/ui/tabs.tsx` |
 | Checkbox and radio group | `frontend/components/ui/checkbox.tsx`, `frontend/components/ui/radio-group.tsx` |
 | Toast, Pressable, Clipboard action | `toast.tsx`, `pressable.tsx`, `copy-button.tsx` |
@@ -76,6 +82,11 @@ conditional behavior. A new shared module needs two production consumers unless
 it replaces an existing owner. Feature call sites do not import Radix directly,
 choose size-named radius tokens, add child margins for shared rhythm, or replace
 semantic control states with cosmetic overrides.
+
+An initial read failure replaces only its affected data region and exposes an
+exact retry. A transient same-scope refresh failure may retain persisted data
+with an inline notice; an access failure must remove protected evidence and
+mutation controls.
 
 ## Frontend owner boundaries and shared mechanics
 

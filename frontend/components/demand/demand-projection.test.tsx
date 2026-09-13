@@ -1,8 +1,10 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ApiError } from '@/lib/api/errors';
+import { createAppQueryClient } from '@/lib/api/query-client';
 
 import { DemandProjection } from './demand-projection';
 
@@ -116,7 +118,7 @@ describe('DemandProjection', () => {
   let client: QueryClient;
 
   function renderProjection() {
-    client = new QueryClient();
+    client = createAppQueryClient();
     return render(
       <QueryClientProvider client={client}>
         <TooltipProvider>
@@ -248,6 +250,17 @@ describe('DemandProjection', () => {
     renderProjection();
 
     expect(await screen.findByText(/no qualifying search gaps observed/i)).toBeInTheDocument();
+  });
+
+  it('routes first-use recovery through the selected project Performance screen', async () => {
+    vi.mocked(demandApi.getLatest).mockRejectedValue(new ApiError('No demand snapshot', 404, ''));
+    renderProjection();
+
+    expect(await screen.findByText('No Search Demand snapshot yet')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open Performance' })).toHaveAttribute(
+      'href',
+      `/performance?project=${project.id}`,
+    );
   });
 
   it('opens the evidence drawer with provenance and candidate breakdown when inspect is clicked', async () => {

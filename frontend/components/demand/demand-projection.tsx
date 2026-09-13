@@ -11,6 +11,7 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { PageLoading } from '@/components/layout/page-loading';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { DemandDetectorBar } from '@/components/demand/demand-detector-bar';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
 import { DemandSignalCard } from '@/components/demand/demand-signal-card';
@@ -280,9 +281,16 @@ export function DemandProjection() {
   }
   if (latest.isError && httpErrorStatus(latest.error) === 404) {
     return (
-      <Alert tone="info">
-        No Search Demand snapshot exists yet. Sync Traffic evidence, then recompute Search Demand.
-      </Alert>
+      <EmptyState
+        icon={Search}
+        heading="No Search Demand snapshot yet"
+        description="Connect and sync traffic evidence before Search Demand can identify opportunities."
+        action={
+          <Button asChild size="md">
+            <ProjectLink href="/performance">Open Performance</ProjectLink>
+          </Button>
+        }
+      />
     );
   }
   if (latest.isError) {

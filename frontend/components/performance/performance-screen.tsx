@@ -13,6 +13,8 @@ import { usePerformanceSelection } from './use-performance-selection';
 import { usePerformanceSync } from './use-performance-sync';
 import { PageLoading } from '@/components/layout/page-loading';
 import { Alert } from '@/components/ui/alert';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ChartNoAxesColumn } from 'lucide-react';
 import { integrationsApi } from '@/lib/api/integrations';
 import {
   performanceApi,
@@ -76,6 +78,120 @@ function chartSeries(
 function compareLabel(selection: RangeSelection): string {
   return (
     COMPARE_OPTIONS.find((option) => option.value === selection.compare)?.label ?? 'Comparison'
+  );
+}
+
+function evidenceAvailability(data: PerformanceDashboard, connectedProviders: readonly string[]) {
+  const { totals, snapshot_id: snapshotId } = data.selected;
+  const hasSearchConsole = totals.clicks !== null || totals.impressions !== null;
+  const hasGa4 = totals.sessions !== null || totals.conversions !== null;
+  const hasBing =
+    snapshotId !== null &&
+    (connectedProviders.includes('bing') ||
+      data.dimension_counts.bing_query > 0 ||
+      data.dimension_counts.bing_page > 0);
+  return { hasSearchConsole, hasGa4, hasBing };
+}
+
+function PerformanceEmptyState({
+  data,
+  projecting,
+}: Readonly<{ data: PerformanceDashboard; projecting: boolean }>) {
+  if (projecting) {
+    return (
+      <EmptyState
+        icon={ChartNoAxesColumn}
+        heading="Building this performance range"
+        description="CiteLadder is preparing this view from the traffic evidence already imported."
+      />
+    );
+  }
+  const firstUse = data.coverage.covered_days === 0 && data.selected.snapshot_id === null;
+  return (
+    <EmptyState
+      icon={ChartNoAxesColumn}
+      heading={firstUse ? 'No search performance evidence yet' : 'No performance evidence here'}
+      description={
+        firstUse
+          ? 'Connect and import a supported traffic source to measure this project’s performance.'
+          : 'Choose a range inside the imported history, or sync the missing dates.'
+      }
+    />
+  );
+}
+
+function SearchConsoleWorkspace({
+  available,
+  selected,
+  comparison,
+  selectedLabel,
+  compareLabel,
+  activeMetrics,
+  onToggleMetric,
+  series,
+  granularity,
+  onGranularityChange,
+  refreshing,
+}: Readonly<{
+  available: boolean;
+  selected: PerformanceDashboard['selected'];
+  comparison: PerformanceDashboard['comparison'];
+  selectedLabel: string;
+  compareLabel: string;
+  activeMetrics: ReadonlySet<PerformanceMetricKey>;
+  onToggleMetric: (metric: PerformanceMetricKey) => void;
+  series: ChartSeries[];
+  granularity: PerformanceDashboard['granularity'];
+  onGranularityChange: (value: PerformanceDashboard['granularity']) => void;
+  refreshing: boolean;
+}>) {
+  if (!available) return null;
+  return (
+    <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-panel)] border">
+      <div className="border-border-subtle flex flex-col border-b lg:flex-row lg:items-stretch lg:justify-between">
+        <MetricCards
+          selected={selected}
+          comparison={comparison}
+          compareLabel={compareLabel}
+          selectedLabel={selectedLabel}
+          active={activeMetrics}
+          onToggle={onToggleMetric}
+          colors={METRIC_COLORS}
+          loading={refreshing}
+          className="flex-1"
+        />
+        <div className="border-border-subtle flex shrink-0 items-center justify-end border-t px-3 py-2 lg:border-t-0 lg:border-l">
+          <GranularitySelect value={granularity} onChange={onGranularityChange} />
+        </div>
+      </div>
+      <div className="p-3">
+        <PerformanceChart series={series} />
+      </div>
+    </div>
+  );
+}
+
+function Ga4Workspace({
+  available,
+  selected,
+  comparison,
+  compareLabel,
+  refreshing,
+}: Readonly<{
+  available: boolean;
+  selected: PerformanceDashboard['selected'];
+  comparison: PerformanceDashboard['comparison'];
+  compareLabel: string;
+  refreshing: boolean;
+}>) {
+  if (!available) return null;
+  return (
+    <Ga4SummaryRow
+      selected={selected}
+      comparison={comparison}
+      compareLabel={compareLabel}
+      loading={refreshing}
+    />
   );
 }
 
@@ -147,6 +263,8 @@ export function PerformanceScreen() {
   const selectedLabel = describeWindow(selectedWindow);
   const comparisonLabel = compareLabel(selection);
   const series = chartSeries(selectedWindow, comparisonWindow, activeMetrics);
+  const evidence = evidenceAvailability(data, connectedProviders);
+  const hasEvidence = evidence.hasSearchConsole || evidence.hasGa4 || evidence.hasBing;
 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
@@ -178,53 +296,52 @@ export function PerformanceScreen() {
         comparisonMissing={comparisonWindow !== null && comparisonWindow.snapshot_id === null}
       />
 
-      {/* One card holds the strip and the plot it drives: selecting a card
+      {!hasEvidence ? (
+        <PerformanceEmptyState data={data} projecting={projection.projecting} />
+      ) : (
+        <>
+          {/* One card holds the strip and the plot it drives: selecting a card
           changes the lines directly beneath it, so a gap between them would
           split a control from its own result. The strip sits flush with the
           granularity control aligned on the right of the header row. */}
-      <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-panel)] border">
-        <div className="border-border-subtle flex flex-col border-b lg:flex-row lg:items-stretch lg:justify-between">
-          <MetricCards
+          <SearchConsoleWorkspace
+            available={evidence.hasSearchConsole}
+            selected={selectedWindow}
+            comparison={comparisonWindow}
+            selectedLabel={selectedLabel}
+            compareLabel={comparisonLabel}
+            activeMetrics={activeMetrics}
+            onToggleMetric={toggleMetric}
+            series={series}
+            granularity={granularity}
+            onGranularityChange={setGranularity}
+            refreshing={refreshing}
+          />
+          <Ga4Workspace
+            available={evidence.hasGa4}
             selected={selectedWindow}
             comparison={comparisonWindow}
             compareLabel={comparisonLabel}
-            selectedLabel={selectedLabel}
-            active={activeMetrics}
-            onToggle={toggleMetric}
-            colors={METRIC_COLORS}
-            loading={refreshing}
-            className="flex-1"
+            refreshing={refreshing}
           />
-          <div className="border-border-subtle flex shrink-0 items-center justify-end border-t px-3 py-2 lg:border-t-0 lg:border-l">
-            <GranularitySelect value={granularity} onChange={setGranularity} />
-          </div>
-        </div>
-        <div className="p-3">
-          <PerformanceChart series={series} />
-        </div>
-      </div>
-      <Ga4SummaryRow
-        selected={selectedWindow}
-        comparison={comparisonWindow}
-        compareLabel={comparisonLabel}
-        loading={refreshing}
-      />
 
-      <PerformanceBreakdowns
-        projectId={projectId}
-        dimension={dimension}
-        onDimensionChange={setDimension}
-        snapshotId={selectedWindow.snapshot_id}
-        compareSnapshotId={comparisonWindow?.snapshot_id ?? null}
-        unavailableDimensions={data.unavailable_dimensions}
-        activeMetrics={activeMetrics}
-        selectedLabel={selectedLabel}
-        compareLabel={comparisonLabel}
-        // Only when a Bing connection exists: Bing's panel states "measured
-        // nothing", which is not what an absent connection means.
-        hasBing={connectedProviders.includes('bing')}
-      />
-
+          <PerformanceBreakdowns
+            projectId={projectId}
+            dimension={dimension}
+            onDimensionChange={setDimension}
+            snapshotId={selectedWindow.snapshot_id}
+            compareSnapshotId={comparisonWindow?.snapshot_id ?? null}
+            unavailableDimensions={data.unavailable_dimensions}
+            activeMetrics={activeMetrics}
+            selectedLabel={selectedLabel}
+            compareLabel={comparisonLabel}
+            hasSearchConsole={evidence.hasSearchConsole}
+            // Only when a Bing connection exists: Bing's panel states "measured
+            // nothing", which is not what an absent connection means.
+            hasBing={evidence.hasBing}
+          />
+        </>
+      )}
       <DateRangeDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}

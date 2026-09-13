@@ -84,7 +84,7 @@ export function insightFromOpportunity(opportunity: Opportunity): InsightModel {
     // component drops it rather than showing an unbacked claim.
     evidence: hasEvidence
       ? {
-          href: `/opportunities?opportunity=${opportunity.id}`,
+          href: `/opportunities?selected=${opportunity.id}`,
           label: evidenceLabel(opportunity),
         }
       : null,

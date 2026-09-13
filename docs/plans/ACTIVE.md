@@ -21,6 +21,12 @@ additional queued assignment. Listed work is not authorization to execute it.
 
 ## Last completed
 
+[Design continuity and resource states](citeladder-design-continuity-and-resource-states.md)
+— completed on 13 September 2026. Safe shell/bootstrap recovery, Site Health
+read continuity, shareable Opportunities state, truthful analytical resource
+states, bounded loading/empty cleanup, and the Overview hierarchy are delivered
+with focused unit and controlled browser acceptance.
+
 [Site Health evidence, checklist and final-result rebuild](citeladder-site-health-rebuild.md)
 — completed on 12 September 2026. Secure acquisition and immutable evidence
 remain in place; direct checklist applicability, binary scoring, terminal page

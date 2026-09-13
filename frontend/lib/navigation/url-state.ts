@@ -11,6 +11,16 @@ export type UrlHistory = 'push' | 'replace';
 
 const URL_STATE_EVENT = 'citeladder:url-state';
 
+function browserLocation(): string {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+function commitUrl(href: string, history: UrlHistory): void {
+  if (href === browserLocation()) return;
+  window.history[history === 'push' ? 'pushState' : 'replaceState'](window.history.state, '', href);
+  window.dispatchEvent(new Event(URL_STATE_EVENT));
+}
+
 /** Atomically change related URL-owned filters with one history entry. */
 export function setUrlParams(
   values: Readonly<Record<string, string | null>>,
@@ -22,21 +32,18 @@ export function setUrlParams(
     else current.searchParams.set(key, value);
   }
   const href = `${current.pathname}${current.search}${current.hash}`;
-  window.history[history === 'push' ? 'pushState' : 'replaceState'](window.history.state, '', href);
-  window.dispatchEvent(new Event(URL_STATE_EVENT));
+  commitUrl(href, history);
 }
 
 function subscribe(listener: () => void): () => void {
   window.addEventListener('popstate', listener);
+  window.addEventListener('hashchange', listener);
   window.addEventListener(URL_STATE_EVENT, listener);
   return () => {
     window.removeEventListener('popstate', listener);
+    window.removeEventListener('hashchange', listener);
     window.removeEventListener(URL_STATE_EVENT, listener);
   };
-}
-
-function browserLocation(): string {
-  return `${window.location.pathname}${window.location.search}`;
 }
 
 export function useUrlState<T>(
@@ -48,7 +55,7 @@ export function useUrlState<T>(
   const currentUrl = useMemo(() => new URL(location, 'https://citeladder.local'), [location]);
   const value = useMemo(
     () => codec.parse(currentUrl.searchParams.get(key)),
-    [codec, currentUrl.searchParams, key],
+    [codec, currentUrl, key],
   );
 
   const setValue = useCallback(
@@ -58,12 +65,8 @@ export function useUrlState<T>(
       if (encoded === null) params.delete(key);
       else params.set(key, encoded);
       for (const ownedKey of options.clearKeys ?? []) params.delete(ownedKey);
-      const href = params.size
-        ? `${currentUrl.pathname}?${params.toString()}`
-        : currentUrl.pathname;
-      const method = history === 'push' ? 'pushState' : 'replaceState';
-      window.history[method](window.history.state, '', href);
-      window.dispatchEvent(new Event(URL_STATE_EVENT));
+      const href = `${params.size ? `${currentUrl.pathname}?${params.toString()}` : currentUrl.pathname}${currentUrl.hash}`;
+      commitUrl(href, history);
     },
     [codec, currentUrl, key, options.clearKeys, options.history],
   );

@@ -51,7 +51,7 @@ export function InvoiceHistory({
     <section className={panelClasses({}, 'grid gap-3')} aria-label="Payment history">
       <div>
         <p className={eyebrowClasses}>Payment history</p>
-        <h2 className={textRole('bodyStrong', 'tracking-tight')}>Paid receipts</h2>
+        <h2 className={textRole('sectionTitle')}>Paid receipts</h2>
       </div>
       {error ? <Alert tone="danger">Receipts could not be loaded.</Alert> : null}
       {downloadError ? <Alert tone="danger">Receipt download failed. Please retry.</Alert> : null}

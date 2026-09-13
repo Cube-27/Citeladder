@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -181,6 +181,7 @@ const detail = {
 };
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => window.history.replaceState(null, '', `/opportunities?project=${PROJECT}`));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
@@ -197,6 +198,18 @@ function mockBase() {
   const project2 = { ...project, id: PROJECT_2, name: 'Beta', brand_name: 'Beta' };
   mswServer.use(
     http.get('/api/v1/projects', () => HttpResponse.json([project, project2])),
+    http.get('/api/v1/audits', () => HttpResponse.json([])),
+    http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
+      HttpResponse.json({
+        project_id: PROJECT,
+        crawl: null,
+        score_summary: null,
+        phase: 'empty',
+        snapshot_id: null,
+        quota: { used: 0, limit: 50 },
+        root_errors: [],
+      }),
+    ),
     http.get(`/api/v1/projects/${PROJECT}/opportunities/implementation-events`, () =>
       HttpResponse.json({ items: [], next_cursor: null }),
     ),
@@ -348,6 +361,12 @@ describe('OpportunitiesScreen', () => {
     renderScreen();
     await screen.findByText('Thin content on an owned page');
 
+    await user.click(screen.getByRole('button', { name: /Path:/ }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Earned' }));
+    await waitFor(() =>
+      expect(seen.some((params) => params.get('action_path') === 'earned')).toBe(true),
+    );
+
     // Open the Area dropdown and select "Site".
     await user.click(screen.getByRole('button', { name: /Area:/ }));
     const areaGroup = await screen.findByRole('menu');
@@ -370,6 +389,92 @@ describe('OpportunitiesScreen', () => {
     await user.click(screen.getByRole('button', { name: /Impact:/ }));
     await user.click(await screen.findByRole('menuitemradio', { name: 'Low' }));
     await waitFor(() => expect(seen.some((params) => params.get('severity') === 'low')).toBe(true));
+    const params = new URLSearchParams(window.location.search);
+    expect(Object.fromEntries(params)).toMatchObject({
+      project: PROJECT,
+      action_path: 'earned',
+      type: 'site',
+      status: 'dismissed',
+      severity: 'low',
+    });
+  });
+
+  it('normalizes inbound selection and restores drawer state through browser history', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/opportunities?project=${PROJECT}&opportunity=${OPP_A}&keep=1#evidence`,
+    );
+    mockBase();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
+        HttpResponse.json(summary),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/opportunities`, () =>
+        HttpResponse.json({ items: [opportunity()], next_cursor: null }),
+      ),
+      http.get(`/api/v1/opportunities/${OPP_A}`, () => HttpResponse.json(detail)),
+    );
+
+    const user = userEvent.setup();
+    renderScreen();
+    expect(await screen.findByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get('selected')).toBe(OPP_A);
+      expect(params.has('opportunity')).toBe(false);
+      expect(params.get('keep')).toBe('1');
+      expect(window.location.hash).toBe('#evidence');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Close drawer' }));
+    await user.click(screen.getAllByRole('button', { name: /Review/ }).at(-1)!);
+    expect(new URLSearchParams(window.location.search).get('selected')).toBe(OPP_A);
+
+    window.history.back();
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Opportunity detail' })).not.toBeInTheDocument(),
+    );
+    window.history.forward();
+    expect(await screen.findByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Close drawer' }));
+    await user.click(screen.getByRole('button', { name: /Area:/ }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Site' }));
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get('type')).toBe('site');
+      expect(params.has('selected')).toBe(false);
+      expect(params.has('opportunity')).toBe(false);
+    });
+  });
+
+  it('rejects a malformed selected id before requesting detail', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/opportunities?project=${PROJECT}&status=dismissed&selected=not-a-uuid`,
+    );
+    let detailReads = 0;
+    mockBase();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
+        HttpResponse.json(summary),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/opportunities`, () =>
+        HttpResponse.json({ items: [], next_cursor: null }),
+      ),
+      http.get('/api/v1/opportunities/:id', () => {
+        detailReads += 1;
+        return HttpResponse.json(detail);
+      }),
+    );
+
+    renderScreen();
+    await screen.findByText(/No recommendations match/);
+
+    expect(detailReads).toBe(0);
+    expect(screen.queryByRole('dialog', { name: 'Opportunity detail' })).not.toBeInTheDocument();
   });
 
   it('offers retry only after recommendation preparation is delayed', async () => {

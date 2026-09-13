@@ -1,24 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { z } from 'zod';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
-import {
-  Dropdown,
-  DropdownContent,
-  DropdownItem,
-  DropdownLabel,
-  DropdownRadioGroup,
-  DropdownRadioItem,
-  DropdownTrigger,
-} from '@/components/ui/dropdown';
+import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pressable } from '@/components/ui/pressable';
@@ -35,6 +28,7 @@ import { OPPORTUNITY_STATUS_META } from '@/components/opportunities/opportunity-
 import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-status-badge';
 import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
+import { OpportunityFilterMenu } from '@/components/opportunities/opportunity-filter-menu';
 import { opportunitiesQueries, type OpportunitiesParams } from '@/lib/api/opportunities';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import type {
@@ -48,6 +42,12 @@ import type {
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
 import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
+import {
+  setUrlParams,
+  stringUrlCodec,
+  useUrlState,
+  type UrlCodec,
+} from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
 
 /**
@@ -98,41 +98,27 @@ const PATH_FILTERS: ReadonlyArray<{ key: PathFilter; label: string }> = [
   { key: 'owned', label: 'Owned' },
   { key: 'earned', label: 'Earned' },
 ];
-
-function FilterMenu<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-}: Readonly<{
-  label: string;
-  value: T;
-  options: ReadonlyArray<{ key: T; label: string }>;
-  onChange: (value: T) => void;
-}>) {
-  const selectedLabel = options.find((option) => option.key === value)?.label ?? value;
-  return (
-    <Dropdown>
-      <DropdownTrigger asChild>
-        <Button variant="secondary" size="sm" aria-label={`${label}: ${selectedLabel}`}>
-          <span className="text-muted">{label}</span>
-          <span>{selectedLabel}</span>
-          <ChevronDown className="size-4" aria-hidden />
-        </Button>
-      </DropdownTrigger>
-      <DropdownContent align="start" aria-label={label}>
-        <DropdownLabel>{label}</DropdownLabel>
-        <DropdownRadioGroup value={value} onValueChange={(next) => onChange(next as T)}>
-          {options.map((option) => (
-            <DropdownRadioItem key={option.key} value={option.key}>
-              {option.label}
-            </DropdownRadioItem>
-          ))}
-        </DropdownRadioGroup>
-      </DropdownContent>
-    </Dropdown>
-  );
-}
+const typeCodec = stringUrlCodec(
+  TYPE_FILTERS.map(({ key }) => key),
+  'all',
+);
+const severityCodec = stringUrlCodec(
+  SEVERITY_FILTERS.map(({ key }) => key),
+  'all',
+);
+const statusCodec = stringUrlCodec(
+  STATUS_FILTERS.map(({ key }) => key),
+  'active',
+);
+const pathCodec = stringUrlCodec(
+  PATH_FILTERS.map(({ key }) => key),
+  'all',
+);
+const uuidSchema = z.uuid();
+const selectedCodec: UrlCodec<string | null> = {
+  parse: (raw) => (raw && uuidSchema.safeParse(raw).success ? raw : null),
+  serialize: (value) => value,
+};
 
 function FeaturedRecommendation({
   detail,
@@ -210,42 +196,59 @@ function StatusControl({ row, projectId }: Readonly<{ row: Opportunity; projectI
 
 export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string }>) {
   const workspaceId = useActiveWorkspaceId() ?? '';
-  const filters = useCatalogFilters(projectId);
+  const scopeKey = `${workspaceId}:${projectId}`;
+  const selectionScopeKey = useRef(scopeKey);
+  const filters = useCatalogFilters(workspaceId, projectId);
   const listQuery = useQuery(opportunitiesQueries.list(workspaceId, projectId, filters.params));
   const rows = listQuery.data?.items ?? [];
   const featured = useFeaturedRecommendation(rows, filters.statusFilter, filters.pager.cursor);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useUrlState('selected', selectedCodec);
+  const [legacySelection] = useUrlState('opportunity', selectedCodec);
+  // Existing inbound links used `opportunity`; accept them once, then leave a
+  // canonical URL without adding a history entry.
+  useEffect(() => {
+    if (!selectedId && legacySelection)
+      setUrlParams({ selected: legacySelection, opportunity: null }, 'replace');
+  }, [legacySelection, selectedId]);
+  useEffect(() => {
+    if (selectionScopeKey.current === scopeKey) return;
+    selectionScopeKey.current = scopeKey;
+    setUrlParams({ selected: null, opportunity: null }, 'replace');
+  }, [scopeKey]);
   return (
     <div className="grid gap-[var(--page-section-gap)]">
-      <FeaturedSection featured={featured} onOpen={setSelectedId} />
+      <FeaturedSection
+        featured={featured}
+        onOpen={(id) => setSelectedId(id, selectedId ? 'replace' : 'push')}
+      />
       <RecommendationsSection
         projectId={projectId}
         filters={filters}
         listQuery={listQuery}
         rows={rows}
-        onOpen={setSelectedId}
+        onOpen={(id) => setSelectedId(id, selectedId ? 'replace' : 'push')}
       />
       <EvidenceDrawer
         opportunityId={selectedId}
         projectId={projectId}
         open={selectedId !== null}
         onOpenChange={(open) => {
-          if (!open) setSelectedId(null);
+          if (!open) setSelectedId(null, 'replace');
         }}
       />
     </div>
   );
 }
 
-function useCatalogFilters(projectId: string) {
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
-  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
-  const [pathFilter, setPathFilter] = useState<PathFilter>('all');
+function useCatalogFilters(workspaceId: string, projectId: string) {
+  const [typeFilter] = useUrlState('type', typeCodec);
+  const [severityFilter] = useUrlState('severity', severityCodec);
+  const [statusFilter] = useUrlState('status', statusCodec);
+  const [pathFilter] = useUrlState('action_path', pathCodec);
   // The project participates: cursors are project-bound server-side, so a
   // project switch must restart paging rather than replay a refused cursor.
   const pager = useCursorTable(
-    `opportunities|${projectId}|${typeFilter}|${severityFilter}|${statusFilter}|${pathFilter}`,
+    `opportunities|${workspaceId}|${projectId}|${typeFilter}|${severityFilter}|${statusFilter}|${pathFilter}`,
   );
   const params: OpportunitiesParams = useMemo(
     () => ({
@@ -258,21 +261,19 @@ function useCatalogFilters(projectId: string) {
     }),
     [typeFilter, severityFilter, statusFilter, pathFilter, pager.cursor, pager.pageSize],
   );
-  const reset =
-    <T,>(setter: (value: T) => void) =>
-    (value: T) => {
-      setter(value);
-      pager.reset();
-    };
+  const update = <T extends string>(key: string, value: T, codec: UrlCodec<T>) => {
+    setUrlParams({ [key]: codec.serialize(value), selected: null, opportunity: null }, 'push');
+    pager.reset();
+  };
   return {
     typeFilter,
-    setTypeFilter: reset(setTypeFilter),
+    setTypeFilter: (value: TypeFilter) => update('type', value, typeCodec),
     severityFilter,
-    setSeverityFilter: reset(setSeverityFilter),
+    setSeverityFilter: (value: SeverityFilter) => update('severity', value, severityCodec),
     statusFilter,
-    setStatusFilter: reset(setStatusFilter),
+    setStatusFilter: (value: StatusFilter) => update('status', value, statusCodec),
     pathFilter,
-    setPathFilter: reset(setPathFilter),
+    setPathFilter: (value: PathFilter) => update('action_path', value, pathCodec),
     pager,
     params,
   };
@@ -358,25 +359,25 @@ function RecommendationsHeader({
       description="Ordered by expected impact using your latest visibility and site evidence."
       actions={
         <fieldset className="flex flex-wrap items-center gap-2" aria-label="Recommendation filters">
-          <FilterMenu
+          <OpportunityFilterMenu
             label="Path"
             value={filters.pathFilter}
             options={PATH_FILTERS}
             onChange={filters.setPathFilter}
           />
-          <FilterMenu
+          <OpportunityFilterMenu
             label="Area"
             value={filters.typeFilter}
             options={TYPE_FILTERS}
             onChange={filters.setTypeFilter}
           />
-          <FilterMenu
+          <OpportunityFilterMenu
             label="Impact"
             value={filters.severityFilter}
             options={SEVERITY_FILTERS}
             onChange={filters.setSeverityFilter}
           />
-          <FilterMenu
+          <OpportunityFilterMenu
             label="Status"
             value={filters.statusFilter}
             options={STATUS_FILTERS}

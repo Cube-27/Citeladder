@@ -1,4 +1,5 @@
-import { ArrowDown, ArrowUp, GripVertical } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, TrendingUp } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { hairlineBandItemClasses } from '@/components/ui/workspace';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { useState } from 'react';
@@ -63,11 +64,11 @@ export function StateMetric({
 export function MovementChart({ movements }: Readonly<{ movements: CommandCenter['movements'] }>) {
   if (movements.length === 0)
     return (
-      <div className="border-border-subtle grid min-h-36 place-items-center border-y py-[var(--card-padding)] text-center">
-        <p className="text-muted max-w-md text-xs">
-          Movement appears after a run with the same prompts, engines, and measurement mode.
-        </p>
-      </div>
+      <EmptyState
+        icon={TrendingUp}
+        heading="No comparable measurement yet"
+        description="Movement appears after a run with the same prompts, engines, and measurement mode."
+      />
     );
   const ceiling = Math.max(...movements.flatMap((row) => [row.current ?? 0, row.previous ?? 0]), 1);
   return (

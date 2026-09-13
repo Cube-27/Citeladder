@@ -49,6 +49,23 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('AiReferralsScreen', () => {
+  it('hides analytical controls before the first persisted referral snapshot', async () => {
+    mswServer.use(
+      http.get(endpoint, () =>
+        HttpResponse.json({
+          ...dashboard,
+          referral_volume: [],
+          referral_share: [],
+          sources: [],
+        }),
+      ),
+    );
+    renderWithProviders(<AiReferralsScreen />);
+
+    expect(await screen.findByText('No AI-referral data yet')).toBeInTheDocument();
+    expect(screen.queryByTestId('ai-referrals-toolbar')).not.toBeInTheDocument();
+  });
+
   it('renders only persisted referral measurement, without visibility or event drill-downs', async () => {
     mswServer.use(http.get(endpoint, () => HttpResponse.json(dashboard)));
     renderWithProviders(<AiReferralsScreen />);
@@ -86,6 +103,7 @@ describe('AiReferralsScreen', () => {
     expect(
       await screen.findByText(/no sessions matched a known AI source in this window/i),
     ).toBeInTheDocument();
+    expect(screen.getByTestId('ai-referrals-toolbar')).toBeVisible();
     expect(screen.queryByText('Other')).not.toBeInTheDocument();
   });
 

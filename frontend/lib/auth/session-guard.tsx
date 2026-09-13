@@ -15,10 +15,13 @@ import {
 } from 'react';
 
 import { authApi } from '@/lib/api/auth';
-import { httpErrorStatus } from '@/lib/api/errors';
+import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { SessionUser } from '@/lib/api/types';
 import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { textRole } from '@/components/ui/typography';
 
 type SessionContextValue = {
   user: SessionUser;
@@ -56,6 +59,8 @@ export function SessionGuard({
     isLoading,
     isError,
     error,
+    isFetching,
+    refetch,
   } = useQuery({
     queryKey: queryKeys.auth.me(),
     queryFn: ({ signal }) => authApi.me({ signal }),
@@ -119,14 +124,38 @@ export function SessionGuard({
     [user, clearSession],
   );
 
-  // False positive: `clearSession` reads `redirectingRef` only when *invoked*
-  // (from effects/events), never during render — but the memoized `value`
-  // captures it, so the taint analysis flags this render-time null check.
-  // oxlint-disable-next-line react-hooks/refs
-  if (isLoading || isRedirecting || !value) {
+  if (isLoading || isRedirecting) {
     // Loading, or unauthenticated and mid-redirect: never render protected UI.
     // Surface the underlying error only for debugging (kept out of the DOM).
     void error;
+    return <>{fallback}</>;
+  }
+
+  // oxlint-disable-next-line react-hooks/refs -- `clearSession` reads the ref only when invoked.
+  if (!value) {
+    // A non-401 failure is not an authentication decision. Keep protected
+    // UI unmounted, explain the state, and retry only `auth.me`.
+    if (isError) {
+      return (
+        <div className="bg-shell grid min-h-dvh place-items-center p-[var(--page-section-gap)]">
+          <Alert tone="warning" className="max-w-lg">
+            <div className="grid gap-4">
+              <h1 className={textRole('sectionTitle')}>Your session could not be verified</h1>
+              <p>{humanizeApiError(error, 'Please try again.').message}</p>
+              <Button
+                variant="secondary"
+                className="w-fit"
+                onClick={() => void refetch()}
+                pending={isFetching}
+                pendingLabel="Retrying…"
+              >
+                Retry
+              </Button>
+            </div>
+          </Alert>
+        </div>
+      );
+    }
     return <>{fallback}</>;
   }
 
