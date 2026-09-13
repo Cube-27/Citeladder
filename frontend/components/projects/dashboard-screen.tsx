@@ -14,6 +14,7 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { PageLoading } from '@/components/layout/page-loading';
 import {
   ActionsAndProof,
+  CompanyFacts,
   DashboardActions,
   DashboardHeader,
   SummarySections,
@@ -119,6 +120,7 @@ function DashboardData({
         />
       </div>
       <TopInsights workspaceId={activeProject.workspace_id} projectId={activeProject.id} />
+      <CompanyFacts data={data} />
     </div>
   );
 }

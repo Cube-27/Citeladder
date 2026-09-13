@@ -1,12 +1,15 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 
 import { mswServer } from '@/test/msw-server';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
-import { ProjectProvider, useProjectContext } from '@/lib/project/project-context';
+import { ProjectProvider } from '@/lib/project/project-context';
+import { setUrlParams } from '@/lib/navigation/url-state';
+import { OpportunitiesCatalog } from './opportunities-catalog';
 import { opportunitySummaryPollingInterval } from './opportunity-summary-polling';
 import { OpportunitiesScreen } from './opportunities-screen';
 
@@ -181,6 +184,7 @@ const detail = {
 };
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => window.history.replaceState(null, '', `/opportunities?project=${PROJECT}`));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
@@ -197,6 +201,18 @@ function mockBase() {
   const project2 = { ...project, id: PROJECT_2, name: 'Beta', brand_name: 'Beta' };
   mswServer.use(
     http.get('/api/v1/projects', () => HttpResponse.json([project, project2])),
+    http.get('/api/v1/audits', () => HttpResponse.json([])),
+    http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
+      HttpResponse.json({
+        project_id: PROJECT,
+        crawl: null,
+        score_summary: null,
+        phase: 'empty',
+        snapshot_id: null,
+        quota: { used: 0, limit: 50 },
+        root_errors: [],
+      }),
+    ),
     http.get(`/api/v1/projects/${PROJECT}/opportunities/implementation-events`, () =>
       HttpResponse.json({ items: [], next_cursor: null }),
     ),
@@ -348,6 +364,12 @@ describe('OpportunitiesScreen', () => {
     renderScreen();
     await screen.findByText('Thin content on an owned page');
 
+    await user.click(screen.getByRole('button', { name: /Path:/ }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Earned' }));
+    await waitFor(() =>
+      expect(seen.some((params) => params.get('action_path') === 'earned')).toBe(true),
+    );
+
     // Open the Area dropdown and select "Site".
     await user.click(screen.getByRole('button', { name: /Area:/ }));
     const areaGroup = await screen.findByRole('menu');
@@ -370,6 +392,99 @@ describe('OpportunitiesScreen', () => {
     await user.click(screen.getByRole('button', { name: /Impact:/ }));
     await user.click(await screen.findByRole('menuitemradio', { name: 'Low' }));
     await waitFor(() => expect(seen.some((params) => params.get('severity') === 'low')).toBe(true));
+    const params = new URLSearchParams(window.location.search);
+    expect(Object.fromEntries(params)).toMatchObject({
+      project: PROJECT,
+      action_path: 'earned',
+      type: 'site',
+      status: 'dismissed',
+      severity: 'low',
+    });
+  });
+
+  it.each(['opportunity', 'opportunity_id'] as const)(
+    'normalizes inbound %s selection and restores drawer state through browser history',
+    async (alias) => {
+      window.history.replaceState(
+        null,
+        '',
+        `/opportunities?project=${PROJECT}&${alias}=${OPP_A}&keep=1#evidence`,
+      );
+      mockBase();
+      mswServer.use(
+        http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
+          HttpResponse.json(summary),
+        ),
+        http.get(`/api/v1/projects/${PROJECT}/opportunities`, () =>
+          HttpResponse.json({ items: [opportunity()], next_cursor: null }),
+        ),
+        http.get(`/api/v1/opportunities/${OPP_A}`, () => HttpResponse.json(detail)),
+      );
+
+      const user = userEvent.setup();
+      renderScreen();
+      expect(await screen.findByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
+      await waitFor(() => {
+        const params = new URLSearchParams(window.location.search);
+        expect(params.get('selected')).toBe(OPP_A);
+        expect(params.has('opportunity')).toBe(false);
+        expect(params.has('opportunity_id')).toBe(false);
+        expect(params.get('keep')).toBe('1');
+        expect(window.location.hash).toBe('#evidence');
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Close drawer' }));
+      await user.click(screen.getAllByRole('button', { name: /Review/ }).at(-1)!);
+      expect(new URLSearchParams(window.location.search).get('selected')).toBe(OPP_A);
+
+      window.history.back();
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('dialog', { name: 'Opportunity detail' }),
+        ).not.toBeInTheDocument(),
+      );
+      window.history.forward();
+      expect(await screen.findByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
+
+      await user.click(screen.getByRole('button', { name: 'Close drawer' }));
+      await user.click(screen.getByRole('button', { name: /Area:/ }));
+      await user.click(await screen.findByRole('menuitemradio', { name: 'Site' }));
+      await waitFor(() => {
+        const params = new URLSearchParams(window.location.search);
+        expect(params.get('type')).toBe('site');
+        expect(params.has('selected')).toBe(false);
+        expect(params.has('opportunity')).toBe(false);
+        expect(params.has('opportunity_id')).toBe(false);
+      });
+    },
+  );
+
+  it('rejects a malformed selected id before requesting detail', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/opportunities?project=${PROJECT}&status=dismissed&selected=not-a-uuid`,
+    );
+    let detailReads = 0;
+    mockBase();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
+        HttpResponse.json(summary),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/opportunities`, () =>
+        HttpResponse.json({ items: [], next_cursor: null }),
+      ),
+      http.get('/api/v1/opportunities/:id', () => {
+        detailReads += 1;
+        return HttpResponse.json(detail);
+      }),
+    );
+
+    renderScreen();
+    await screen.findByText(/No recommendations match/);
+
+    expect(detailReads).toBe(0);
+    expect(screen.queryByRole('dialog', { name: 'Opportunity detail' })).not.toBeInTheDocument();
   });
 
   it('offers retry only after recommendation preparation is delayed', async () => {
@@ -599,22 +714,30 @@ describe('OpportunitiesScreen', () => {
   it('clears prior project data and selections during project switch', async () => {
     const PROJECT_2 = '55555555-5555-4555-8555-555555555555';
     const OPP_BETA = '66666666-6666-4666-8666-666666666666';
-    const project2 = { ...project, id: PROJECT_2, name: 'Beta', brand_name: 'Beta' };
 
     function SwitcherTest() {
-      const { setActiveProjectId } = useProjectContext();
+      const [projectId, setProjectId] = useState(PROJECT);
+      const switchTo = (nextProjectId: string, selection?: string) => {
+        setUrlParams(
+          selection === undefined
+            ? { project: nextProjectId }
+            : { project: nextProjectId, selected: selection },
+          'replace',
+        );
+        setProjectId(nextProjectId);
+      };
       return (
         <div>
-          <button onClick={() => setActiveProjectId(PROJECT_2)}>Switch Project</button>
-          <OpportunitiesScreen />
+          <button onClick={() => switchTo(PROJECT_2)}>Switch Project</button>
+          <button onClick={() => switchTo(PROJECT)}>Switch Back</button>
+          <button onClick={() => switchTo(PROJECT_2, OPP_BETA)}>Open Beta detail</button>
+          <OpportunitiesCatalog projectId={projectId} />
         </div>
       );
     }
 
     mswServer.use(
-      http.get('/api/v1/projects', () => HttpResponse.json([project, project2])),
-      http.post(`/api/v1/projects/${PROJECT}/logos/refresh`, () => HttpResponse.json({})),
-      http.post(`/api/v1/projects/${PROJECT_2}/logos/refresh`, () => HttpResponse.json({})),
+      http.get(`/api/v1/opportunities/${OPP_A}`, () => HttpResponse.json(detail)),
       http.get(`/api/v1/opportunities/${OPP_BETA}`, () =>
         HttpResponse.json({
           ...detail,
@@ -623,12 +746,9 @@ describe('OpportunitiesScreen', () => {
           title: 'Beta recommendation',
         }),
       ),
-      http.get('/api/v1/projects/:projectId/opportunities/summary', ({ params }) => {
-        if (params.projectId === PROJECT_2) {
-          return HttpResponse.json({ ...summary, counts_by_status: { open: 10 } });
-        }
-        return HttpResponse.json(summary);
-      }),
+      http.get('/api/v1/projects/:projectId/opportunities/implementation-events', () =>
+        HttpResponse.json({ items: [], next_cursor: null }),
+      ),
       http.get('/api/v1/projects/:projectId/opportunities', ({ params }) => {
         if (params.projectId === PROJECT_2) {
           return HttpResponse.json({
@@ -643,22 +763,26 @@ describe('OpportunitiesScreen', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(
-      <ProjectProvider>
-        <SwitcherTest />
-      </ProjectProvider>,
-    );
+    renderWithProviders(<SwitcherTest />);
 
-    // Initial render shows Project 1 recommendation
     expect(await screen.findByText('Brand absent from high-value prompt')).toBeInTheDocument();
+    const switchProject = screen.getByRole('button', { name: 'Switch Project' });
+    await user.click(screen.getAllByRole('button', { name: /Review/ }).at(-1)!);
+    expect(await screen.findByRole('dialog', { name: 'Opportunity detail' })).toBeVisible();
 
-    // Click to switch active project to Project 2
-    await user.click(screen.getByRole('button', { name: 'Switch Project' }));
-
-    // Verify Project 2 recommendation loads and Project 1 recommendation is no longer present
+    fireEvent.click(switchProject);
     expect(
       await screen.findByText('Beta recommendation', {}, { timeout: 3000 }),
     ).toBeInTheDocument();
     expect(screen.queryByText('Brand absent from high-value prompt')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Opportunity detail' })).not.toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).has('selected')).toBe(false);
+
+    await user.click(screen.getByRole('button', { name: 'Switch Back' }));
+    expect(await screen.findAllByText('Brand absent from high-value prompt')).not.toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: 'Open Beta detail' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Opportunity detail' });
+    expect(within(drawer).getByText('Beta recommendation')).toBeVisible();
+    expect(new URLSearchParams(window.location.search).get('selected')).toBe(OPP_BETA);
   });
 });

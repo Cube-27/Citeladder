@@ -30,6 +30,7 @@ export function PerformanceBreakdowns({
   activeMetrics,
   selectedLabel,
   compareLabel,
+  hasSearchConsole,
   hasBing,
 }: Readonly<{
   projectId: string;
@@ -47,44 +48,51 @@ export function PerformanceBreakdowns({
   activeMetrics: ReadonlySet<PerformanceMetricKey>;
   selectedLabel: string;
   compareLabel: string;
+  /** Whether this snapshot contains Search Console totals for the selected window. */
+  hasSearchConsole: boolean;
   /** Whether the project actually has a Bing connection at all. */
   hasBing: boolean;
 }>) {
+  // A missing snapshot is a prerequisite or a range projection, not six empty
+  // tables. The owner stays mounted above us to continue the projection task.
+  if (!snapshotId || (!hasSearchConsole && !hasBing)) return null;
   return (
     <>
-      <Tabs
-        value={dimension}
-        onValueChange={onDimensionChange}
-        items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
-        ariaLabel="Performance breakdowns"
-        rootClassName="grid gap-3 min-h-[560px]"
-        // The tab row heads the table card, so it spans the full width
-        // rather than hugging six labels and leaving dead space to the right.
-        fill
-      >
-        {DIMENSION_TABS.map((tab) => (
-          <TabPanel key={tab.value} value={tab.value} className="focus-ring min-h-[520px]">
-            {dimension === tab.value && snapshotId ? (
-              <DimensionTable
-                projectId={projectId}
-                dimension={tab.value}
-                snapshotId={snapshotId}
-                compareSnapshotId={compareSnapshotId}
-                activeMetrics={activeMetrics}
-                unavailable={unavailableDimensions.includes(tab.value)}
-                selectedLabel={selectedLabel}
-                compareLabel={compareLabel}
-              />
-            ) : null}
-          </TabPanel>
-        ))}
-      </Tabs>
+      {hasSearchConsole ? (
+        <Tabs
+          value={dimension}
+          onValueChange={onDimensionChange}
+          items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
+          ariaLabel="Performance breakdowns"
+          rootClassName="grid gap-3 min-h-[560px]"
+          // The tab row heads the table card, so it spans the full width
+          // rather than hugging six labels and leaving dead space to the right.
+          fill
+        >
+          {DIMENSION_TABS.map((tab) => (
+            <TabPanel key={tab.value} value={tab.value} className="focus-ring min-h-[520px]">
+              {dimension === tab.value ? (
+                <DimensionTable
+                  projectId={projectId}
+                  dimension={tab.value}
+                  snapshotId={snapshotId}
+                  compareSnapshotId={compareSnapshotId}
+                  activeMetrics={activeMetrics}
+                  unavailable={unavailableDimensions.includes(tab.value)}
+                  selectedLabel={selectedLabel}
+                  compareLabel={compareLabel}
+                />
+              ) : null}
+            </TabPanel>
+          ))}
+        </Tabs>
+      ) : null}
 
       {/* Bing rides BELOW the Search Console tables, never among them, and
           only when the project has a Bing connection: "never imported" and
           "measured nothing" are different answers, and an always-present
           empty panel would state the second while meaning the first. */}
-      {hasBing && snapshotId ? (
+      {hasBing ? (
         <BingPanel
           projectId={projectId}
           snapshotId={snapshotId}

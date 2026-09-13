@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageLoading } from '@/components/layout/page-loading';
 import { UsageMeters } from '@/components/billing/usage-meters';
 import { BillingDetailsForm } from '@/components/billing/billing-details-form';
 import {
@@ -137,7 +138,9 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
     },
   });
 
-  if (!enabled || entitlementLoading || entitlementQuery.isLoading) return <BillingSkeleton />;
+  if (!enabled) return null;
+  if (entitlementLoading || entitlementQuery.isLoading)
+    return <PageLoading label="Loading billing…" />;
 
   return (
     <>
@@ -175,15 +178,6 @@ export function BillingSettings({ enabled = true }: Readonly<{ enabled?: boolean
         invoicesError={invoiceQuery.isError}
       />
     </>
-  );
-}
-
-function BillingSkeleton() {
-  return (
-    <div className={panelClasses({}, 'grid gap-3')}>
-      <Skeleton className="h-6 w-40" />
-      <Skeleton className="h-20 w-full" />
-    </div>
   );
 }
 

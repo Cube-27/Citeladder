@@ -20,6 +20,8 @@ import {
   useVisibilityQueries,
 } from '@/lib/visibility/use-visibility-dashboard';
 
+type VisibilityDashboardState = 'loading' | 'missing-project' | 'error' | 'empty' | null;
+
 export function VisibilityDashboard() {
   const { activeProject, isLoading: projectLoading } = useProjectContext();
   const projectId = activeProject?.id ?? null;
@@ -41,7 +43,7 @@ function dashboardState(
   auditsLoading: boolean,
   auditsError: boolean,
   hasRuns: boolean,
-) {
+): VisibilityDashboardState {
   if (projectLoading || (Boolean(projectId) && auditsLoading)) return 'loading';
   if (!projectId) return 'missing-project';
   if (auditsError) return 'error';
@@ -51,8 +53,7 @@ function dashboardState(
 
 function DashboardState({
   state,
-  hasActiveRun,
-}: Readonly<{ state: string; hasActiveRun: boolean }>) {
+}: Readonly<{ state: Exclude<VisibilityDashboardState, 'empty' | null> }>) {
   if (state === 'loading') return <PageLoading label="Loading visibility…" />;
   if (state === 'missing-project')
     return <Alert tone="info">Select or create a project to see its AI-visibility results.</Alert>;
@@ -62,7 +63,7 @@ function DashboardState({
         Could not load this project&apos;s runs. Check your connection and try again.
       </Alert>
     );
-  return <VisibilityEmptyState hasActiveRun={hasActiveRun} />;
+  return null;
 }
 
 function VisibilityWorkspace({
@@ -72,8 +73,16 @@ function VisibilityWorkspace({
 }: Readonly<{
   filters: ReturnType<typeof useVisibilityFilters>;
   queries: ReturnType<typeof useVisibilityQueries>;
-  state: string | null;
+  state: VisibilityDashboardState;
 }>) {
+  if (state === 'empty') {
+    return (
+      <div className="grid gap-[var(--workspace-gap)]">
+        {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
+        <VisibilityEmptyState hasActiveRun={Boolean(queries.activeRun)} />
+      </div>
+    );
+  }
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
@@ -116,7 +125,7 @@ function VisibilityWorkspace({
         </div>
         <TabPanel value={filters.activeTab} className="focus-ring">
           {state ? (
-            <DashboardState state={state} hasActiveRun={Boolean(queries.activeRun)} />
+            <DashboardState state={state} />
           ) : (
             <DashboardPanel filters={filters} queries={queries} />
           )}

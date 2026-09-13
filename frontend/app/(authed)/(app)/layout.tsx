@@ -16,18 +16,17 @@ export const instant = true;
  * here is the chrome that only the application has: the tour, toasts, the
  * project-route gate, and the shell itself.
  *
- * The gate sits outside the SHELL so the session wait and the workspace wait
- * are covered by the same loader in the same place: the reader sees one
- * loader rather than a viewport loader replaced by a content-pane loader a
- * moment later, and what follows it is the finished shell.
+ * The shell mounts as soon as the session is authenticated. Project and
+ * entitlement resolution then happens in its content pane, keeping the
+ * account and workspace recovery controls stable through that transition.
  */
 export default function AppLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <ProductTourProvider>
       <ToastProvider>
-        <OnboardingGate>
-          <AppShell>{children}</AppShell>
-        </OnboardingGate>
+        <AppShell>
+          <OnboardingGate>{children}</OnboardingGate>
+        </AppShell>
       </ToastProvider>
     </ProductTourProvider>
   );

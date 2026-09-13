@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { ShellFallback } from '@/components/layout/shell-fallback';
+import { PageLoading } from '@/components/layout/page-loading';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
@@ -72,6 +72,10 @@ function noticeFor(
   // allowance. With the allowance read failed it is not a claim we can make,
   // so offer the retry instead of asserting a limit that may not exist.
   return allowanceFailed ? 'failed' : 'no-projects';
+}
+
+function waitsForEntitlement(status: SelectionStatus, loading: boolean): boolean {
+  return loading && ['ready', 'empty'].includes(status);
 }
 
 /**
@@ -145,9 +149,10 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   // acceptance link may have no resolved workspace at all, which leaves the
   // entitlement query disabled and therefore never settled. Blocking on it
   // there would hold that route behind a loader forever.
-  if (redirecting) return <ShellFallback />;
-  if (projectRequired && (status === 'resolving' || entitlementLoading)) {
-    return <ShellFallback />;
+  if (redirecting) return <PageLoading label="Opening project setup…" />;
+  const waitingForEntitlement = waitsForEntitlement(status, entitlementLoading);
+  if (projectRequired && (status === 'resolving' || waitingForEntitlement)) {
+    return <PageLoading label="Loading your workspace…" />;
   }
 
   const notice = noticeFor(status, {
@@ -275,16 +280,13 @@ function NoticeLink({ href, children }: Readonly<{ href: string; children: React
 
 function NoticeShell({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
-    <main
-      id="main"
-      className="bg-shell grid min-h-dvh place-items-center p-[var(--page-section-gap)]"
-    >
+    <section className="grid min-h-[60vh] place-items-center py-[var(--page-section-gap)]">
       <Alert tone="warning" className="max-w-lg">
         <div className="grid gap-4">
           <h1 className={textRole('sectionTitle')}>{title}</h1>
           {children}
         </div>
       </Alert>
-    </main>
+    </section>
   );
 }

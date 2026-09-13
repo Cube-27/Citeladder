@@ -204,6 +204,13 @@ Page detail, Issues, history, Changes, snapshots, exports, Growth Agent and MCP
 read the same persisted final-result contract. Browser requests use same-origin
 `/api/v1` through the frontend proxy.
 
+Website and Issues distinguish initial read failure from a failed same-scope
+refresh. Initial failures expose an exact read retry; refresh failures retain
+the known crawl, catalog and tabs with an inline notice. Any failed entitlement
+refresh withholds entitlement-dependent mutation controls until that read
+succeeds; a 401/403 also removes protected evidence. A project change never
+reuses the prior project's crawl identity.
+
 Content selects one current finalized analysis per URL from the explicit source
 crawl. A Site Health handoff carries exact analysis, evaluation and artifact
 IDs, target field, captured value, expected condition and limitations. Initial

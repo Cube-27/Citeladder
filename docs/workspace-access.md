@@ -54,6 +54,12 @@ membership model itself is absent.
 
 One authenticated layout owns session, project/workspace context and entitlement
 provider lifetime across app and onboarding routes.
+Before session identity resolves, the layout shows only neutral shell geometry.
+After authentication, the real shell mounts once and project/entitlement gates
+resolve inside its content pane, leaving account and workspace recovery
+available. A non-401 session read failure keeps protected content unmounted and
+offers an exact `auth.me` retry inside the caller-provided neutral shell
+geometry; only a confirmed 401 clears session state and redirects to sign-in.
 [Project context](../frontend/lib/project/project-context.tsx) and
 [selection](../frontend/lib/project/selection.ts) resolve an explicit project
 directly. Otherwise explicit workspace selection wins, then session/device

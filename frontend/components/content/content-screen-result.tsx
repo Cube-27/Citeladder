@@ -141,7 +141,7 @@ function ResultActions({
       />
       {detail.opportunity_id ? (
         <Button asChild variant="secondary" size="md">
-          <ProjectLink href={`/opportunities?opportunity_id=${detail.opportunity_id}`}>
+          <ProjectLink href={`/opportunities?selected=${detail.opportunity_id}`}>
             Return to opportunity
           </ProjectLink>
         </Button>

@@ -7,7 +7,6 @@ import { Alert } from '@/components/ui/alert';
 import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
-import type { IntegrationProvider } from '@/lib/api/integrations';
 import { performanceApi, type ProjectReadinessStage } from '@/lib/api/performance';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -49,9 +48,6 @@ const EXPLANATION: Record<ProjectReadinessStage, string> = {
     'Your Search Console and Analytics numbers are ready. CiteLadder’s own analysis is still computing.',
   analysis_ready: 'Everything is ready.',
 };
-
-/** Stable identity so an unknown answer never re-renders its readers. */
-const EMPTY_PROVIDERS: readonly IntegrationProvider[] = [];
 
 /**
  * Stages nothing will advance on its own.
@@ -118,18 +114,6 @@ function useProjectReadiness(projectId: string | null) {
       return SETTLED_STAGES.has(stage) ? false : 15_000;
     },
   });
-}
-
-/**
- * The engines actually connected to this project, or an empty list until the
- * answer is known.
- *
- * Empty means "we do not know of a connection", never "this engine measured
- * nothing" — a surface uses it to decide whether an engine's panel belongs on
- * screen at all, and the two must not render alike.
- */
-export function useConnectedProviders(projectId: string | null) {
-  return useProjectReadiness(projectId).data?.providers ?? EMPTY_PROVIDERS;
 }
 
 export function ReadinessLadder({ projectId }: Readonly<{ projectId: string }>) {

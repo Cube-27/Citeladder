@@ -37,7 +37,6 @@ export function DashboardHeader({
   activeProject: Project;
 }>) {
   const website = data.project.website_url;
-  const facts = data.facts;
   return (
     <section className="grid gap-[var(--workspace-gap)]">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -80,28 +79,34 @@ export function DashboardHeader({
           </div>
         </div>
       </div>
-      <div className="grid gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <SectionTitle id="company-facts">Company facts</SectionTitle>
-          <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
-        </div>
-        <div
-          className={cn(hairlineBandClasses, 'border-y-0 sm:grid-cols-3')}
-          aria-labelledby="company-facts"
-        >
-          <FactSummary
-            label="Positioning"
-            value={facts.positioning || facts.description}
-            emptyState="not_set"
-          />
-          <FactSummary label="Target audience" value={facts.target_audience} emptyState="not_set" />
-          <FactSummary
-            label="Offerings & competitors"
-            value={facts.products_services.join(', ')}
-            emptyState="not_set"
-            supporting={`${facts.competitors.length} tracked competitor${facts.competitors.length === 1 ? '' : 's'}`}
-          />
-        </div>
+    </section>
+  );
+}
+
+export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
+  const facts = data.facts;
+  return (
+    <section className="grid gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <SectionTitle id="company-facts">Company facts</SectionTitle>
+        <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
+      </div>
+      <div
+        className={cn(hairlineBandClasses, 'border-y-0 sm:grid-cols-3')}
+        aria-labelledby="company-facts"
+      >
+        <FactSummary
+          label="Positioning"
+          value={facts.positioning || facts.description}
+          emptyState="not_set"
+        />
+        <FactSummary label="Target audience" value={facts.target_audience} emptyState="not_set" />
+        <FactSummary
+          label="Offerings & competitors"
+          value={facts.products_services.join(', ')}
+          emptyState="not_set"
+          supporting={`${facts.competitors.length} tracked competitor${facts.competitors.length === 1 ? '' : 's'}`}
+        />
       </div>
     </section>
   );
@@ -182,21 +187,21 @@ export function SummarySections({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <>
       <div className="grid gap-[var(--workspace-gap)] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <NextAction data={data} />
+        <section aria-labelledby="project-state" className="grid content-start gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <SectionTitle id="project-state">Project state</SectionTitle>
+            <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
+          </div>
+          <div className={cn(hairlineBandClasses, 'sm:grid-cols-3')}>
+            <StateMetric label="Visibility" {...data.state.visibility} />
+            <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
+            <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
+          </div>
+        </section>
         <Track data={data} />
       </div>
-      <section aria-labelledby="project-state" className="grid gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <SectionTitle id="project-state">Project state</SectionTitle>
-          <Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>
-        </div>
-        <div className={cn(hairlineBandClasses, 'sm:grid-cols-3')}>
-          <StateMetric label="Visibility" {...data.state.visibility} />
-          <StateMetric label="Share of voice" {...data.state.share_of_voice} suffix="%" />
-          <StateMetric label="Brand rank" {...data.state.brand_rank} inverse />
-        </div>
-      </section>
       <Movement data={data} />
+      <NextAction data={data} />
     </>
   );
 }

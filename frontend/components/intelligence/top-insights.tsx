@@ -49,7 +49,7 @@ export function TopInsights({
 
   return (
     <section aria-label="Top insights" className="flex flex-col gap-3">
-      <h2 className={textRole('bodyStrong')}>Top insights</h2>
+      <h2 className={textRole('sectionTitle')}>Top insights</h2>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {insights.map((insight) => (
           <Insight key={insight.id} insight={insight} hideWhyThisMatters />

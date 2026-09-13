@@ -54,7 +54,7 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
   return (
     <div className={panelClasses({}, 'grid gap-3')}>
       <div className="grid gap-0.5">
-        <h2 className={textRole('bodyStrong', 'tracking-tight')}>Usage</h2>
+        <h2 className={textRole('sectionTitle')}>Usage</h2>
         <p className="text-muted text-xs">
           Measured against the allowances your active grants provide.
         </p>

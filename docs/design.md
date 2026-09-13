@@ -157,7 +157,7 @@ Search's Command Palette and the Agent controller remain mounted once in the aut
 
 #### Screen-specific contracts
 
-**Overview.** Keep the page useful before any audit. Preserve reading order: project identity + Facts; one next action + Track; Project State; Movement; ranked actions; report proof; Top Insights. The top card leads with identity/actions, then simultaneously visible tonal summaries for Positioning, Target Audience, and Offerings & Competitors; stack them on compact screens. The shared editor drawer has Facts & Positioning, Audience & Offerings, and Competitors tabs, one save action above the tablist, full available editing height, and shared brand logos beside tracked competitors. Do not restore a Product loop station strip. Track uses explicit availability labels; report actions require a persisted audit/report. Citation share uses separate shared heading/value roles, not an oversized combined sentence.
+**Overview.** Keep the page useful before any audit. Preserve reading order: compact project identity; warnings; Project State with Track context; Movement; one Next action; ranked actions and report proof; Top Insights; Company facts. Use the same DOM order at desktop and compact widths. The shared editor drawer has Facts & Positioning, Audience & Offerings, and Competitors tabs, one save action above the tablist, full available editing height, and shared brand logos beside tracked competitors. Do not restore a Product loop station strip. Track uses explicit availability labels; report actions require a persisted audit/report. Citation share uses separate shared heading/value roles, not an oversized combined sentence.
 
 **AI Visibility.** Exactly three tabs: Trends (default), Mentions & Citations, Query fanouts; no parallel Overview or page-local project switcher.
 
@@ -229,6 +229,8 @@ Structural sections remain open or tonal. `Card` is a real white semantic object
 For a bordered, filled, padded box inside a card/section, use `panelClasses({ tone, pad })` from `components/ui/panel.tsx`. Drawer field groups/lists use unboxed sections/rows. Multi-category editors use shared underline tabs and one linear field flow, not dashboard grids.
 
 Badges pair labels with state marks. Evidence rows identify source, measurement context, and an action opening the persisted record. Loading/empty states preserve layout and explain absence through the availability vocabulary.
+
+Confirmed first-use analytical states omit filters, charts, and table reservations that cannot change or explain the result. Keep controls that can recover a filtered or uncovered state, and render persisted measured zero or partial-provider evidence through its normal measurement surface.
 
 ### Navigation and overlays
 

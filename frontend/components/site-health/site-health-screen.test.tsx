@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { mswServer } from '@/test/msw-server';
 import { COMPLETE_CLASSIFICATION_PROJECTION } from '@/test/site-health-fixtures';
 import type { SiteHealthDashboard } from '@/lib/api/types';
+import { queryKeys } from '@/lib/api/query-keys';
 import {
   CRAWL,
   PROJECT,
@@ -74,6 +75,92 @@ describe('SiteHealthScreen — Website tab deep links', () => {
 });
 
 describe('SiteHealthScreen — loading failures', () => {
+  it('retries an initial dashboard read without starting a crawl', async () => {
+    const user = userEvent.setup();
+    let available = false;
+    let reads = 0;
+    mockRoutes();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/site-health`, () => {
+        reads += 1;
+        return available
+          ? HttpResponse.json({
+              project_id: PROJECT,
+              crawl: crawl(),
+              score_summary: null,
+              phase: 'dashboard',
+              snapshot_id: null,
+              quota: { used: 3, limit: 50 },
+              root_errors: [],
+            })
+          : HttpResponse.json({ detail: 'Dashboard unavailable' }, { status: 404 });
+      }),
+    );
+
+    renderScreen();
+
+    expect(await screen.findByText('Dashboard unavailable')).toBeVisible();
+    expect(screen.queryByRole('tablist', { name: 'Website analysis' })).not.toBeInTheDocument();
+    available = true;
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(reads).toBe(2);
+  });
+
+  it('keeps same-project evidence visible when a background refresh fails', async () => {
+    let available = true;
+    mockRoutes();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
+        available
+          ? HttpResponse.json({
+              project_id: PROJECT,
+              crawl: crawl(),
+              score_summary: null,
+              phase: 'dashboard',
+              snapshot_id: null,
+              quota: { used: 3, limit: 50 },
+              root_errors: [],
+            })
+          : HttpResponse.json({ detail: 'Dashboard refresh failed' }, { status: 404 }),
+      ),
+    );
+
+    const { queryClient } = renderScreen();
+    expect(await screen.findByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+
+    available = false;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.siteHealth.dashboard(PROJECT) });
+
+    expect(await screen.findByText('Dashboard refresh failed')).toBeVisible();
+    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+  });
+
+  it('keeps cached evidence but removes crawl mutations after entitlement refresh fails', async () => {
+    let entitlementAvailable = true;
+    mockRoutes();
+    mswServer.use(
+      http.get('/api/v1/entitlements', () =>
+        entitlementAvailable
+          ? HttpResponse.json(entitlement)
+          : HttpResponse.json({ detail: 'Entitlement refresh failed' }, { status: 404 }),
+      ),
+    );
+
+    const { queryClient } = renderScreen();
+    expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeEnabled();
+
+    entitlementAvailable = false;
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.siteHealth.entitlements(project.workspace_id),
+    });
+
+    expect(await screen.findByText('Entitlement refresh failed')).toBeVisible();
+    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Run new crawl' })).not.toBeInTheDocument();
+  });
+
   it('shows an error instead of an endless skeleton when entitlement loading fails', async () => {
     mockRoutes();
     mswServer.use(
@@ -84,7 +171,7 @@ describe('SiteHealthScreen — loading failures', () => {
 
     renderScreen();
 
-    expect(await screen.findByText('Could not load Site Health. Please refresh.')).toBeVisible();
+    expect(await screen.findByText('Access unavailable')).toBeVisible();
     expect(screen.queryByRole('tablist', { name: 'Website analysis' })).not.toBeInTheDocument();
   });
 

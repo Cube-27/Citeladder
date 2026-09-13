@@ -25,7 +25,7 @@ export function AiReferralsContent({
 }>) {
   return (
     <div className="grid gap-[var(--workspace-gap)]">
-      {toolbar}
+      {projectLoading || !projectId ? null : toolbar}
       <AiReferralsDataRegion
         projectId={projectId}
         projectLoading={projectLoading}

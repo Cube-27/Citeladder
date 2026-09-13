@@ -25,9 +25,11 @@ import { textRole } from '@/components/ui/typography';
 export function SiteHealthDashboardLayout({
   screen,
   entitlement,
+  mutationsAllowed = true,
 }: Readonly<{
   screen: ReturnType<typeof useSiteHealthScreen>;
   entitlement: SiteHealthEntitlement;
+  mutationsAllowed?: boolean;
 }>) {
   const {
     phase,
@@ -58,7 +60,7 @@ export function SiteHealthDashboardLayout({
                 Crawl your site to see page health, issues, and recommendations as results arrive.
               </p>
             </div>
-            <Button onClick={() => startCrawl()} disabled={startPending}>
+            <Button onClick={() => startCrawl()} disabled={startPending || !mutationsAllowed}>
               {startPending ? 'Starting…' : 'Run new crawl'}
             </Button>
           </CardContent>
