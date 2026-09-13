@@ -9,8 +9,9 @@ set -a
 set +a
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 tmp="$(mktemp --tmpdir citeladder-backup.XXXXXX.sql.gz)"
+object_name="${timestamp}-$(basename "$tmp")"
 trap 'rm -f "$tmp"' EXIT
 docker compose --env-file runtime.env -f compose.gcp.yml exec -T db \
   pg_dump -U citeladder -d citeladder | gzip -9 > "$tmp"
 test -s "$tmp"
-gcloud storage cp "$tmp" "gs://${BACKUP_BUCKET}/${mode}/${timestamp}.sql.gz" --quiet
+gcloud storage cp "$tmp" "gs://${BACKUP_BUCKET}/${mode}/${object_name}" --quiet
