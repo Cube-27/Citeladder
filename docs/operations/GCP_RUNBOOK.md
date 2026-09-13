@@ -254,16 +254,16 @@ values, and provider keys.
 The deployment checks the candidate image with `alembic check` before stopping
 an existing revision. A stamped `0001_initial` database does not receive later
 edits folded into that baseline. Schema drift therefore blocks rollout and
-requires an explicit, backed-up rebuild of the disposable pre-launch database;
-never add a second migration or silently reset a database during deployment.
+requires an explicit rebuild of the disposable pre-launch database; never add a
+second migration or silently reset a database during deployment. The reset
+command below intentionally creates no backup.
 
 The 2026-09-08 failed rollout reached dev-account bootstrap with a missing
 `billing_accounts.registration_cohort_at` column. Rollback encountered the same
-schema mismatch. Before recovery, confirm the exact database and account/project/
-subscription counts, run `backup.sh login-recovery`, obtain approval for replacing
-the account/session identities, then rebuild from the current baseline and run
-the configured dev bootstrap. Verify `alembic check`, the serving source commit,
-public health, password login, Google sign-in configuration, and numeric
+schema mismatch. Before recovery, confirm the selected project and VM are the
+disposable pre-launch environment, then rebuild from the installed baseline and
+run the configured dev bootstrap. Verify `alembic check`, the serving source
+commit, public health, password login, Google sign-in configuration, and numeric
 `project_slots.remaining` through the integrated API. Never expose credentials
 in terminal output or bypass Google consent to claim a completed Google login.
 
@@ -272,15 +272,15 @@ Reusable operator command (authenticated `gcloud` with IAP/SSH access):
 
 ```powershell
 .\reset-gcp-db.ps1
-.\reset-gcp-db.ps1 -Reset -ConfirmProject project-setup-20260711
 ```
 
-The root PowerShell script calls the Python IAP/SSH wrapper; the underlying
+The root PowerShell script reads `PROJECT_ID` and `ZONE` from the repository
+`.env`, then calls the Python IAP/SSH wrapper. The underlying
 `infra/gcp/runtime/reset-db.sh` runs on the Linux VM and is not a Windows
-PowerShell script. The first command previews counts and installed source revision. The second
-irreversibly replaces the fixed `citeladder` database, including users and
-sessions, using the installed image baseline; it does not back up data or deploy
-new images. It refuses a mismatched project or single-account demo mode. Existing
-configured credentials provision the new dev account. Optional `--instance`
-defaults to `citeladder-demo`; the zone is resolved from the running instance,
-so pass `-Zone` only when the VM cannot be listed.
+PowerShell script. Running the command irreversibly replaces the fixed
+`citeladder` database, including users and sessions, using the image baseline
+currently installed on the VM. It does not create a backup or deploy new images.
+It refuses a mismatched project or single-account demo mode, and the existing
+configured credentials provision the new dev account. After merging and syncing
+the intended `main`, run the normal **GCP Demo - Deploy** workflow to install that
+revision's images. Optional `-Instance` defaults to `citeladder-demo`.
