@@ -23,7 +23,6 @@ from fastapi import (
     UploadFile,
     status,
 )
-from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
@@ -389,7 +388,7 @@ async def import_prompts_endpoint(
     )
     try:
         rows = await _resolve_import_rows(request, file)
-    except (ValueError, ValidationError) as exc:
+    except ValueError as exc:
         raise_api_error(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Invalid prompt import payload",

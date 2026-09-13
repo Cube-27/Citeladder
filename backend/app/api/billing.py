@@ -371,9 +371,7 @@ async def get_early_access(
     ctx: BillingWorkspace, session: Session
 ) -> NoCardOfferResponse:
     account = await _account(session, ctx)
-    state = await offer_state(
-        session, account=account, user=ctx.user, now=datetime.now(UTC)
-    )
+    state = await offer_state(session, account=account, now=datetime.now(UTC))
     return NoCardOfferResponse(
         campaign_id=state.campaign_id,
         status=state.status,

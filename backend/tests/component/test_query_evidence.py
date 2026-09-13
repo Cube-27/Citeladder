@@ -285,7 +285,9 @@ async def test_api_requires_window_rejects_bad_cursor_and_is_workspace_safe(
         params={
             "window_start": _WINDOW[0].isoformat(),
             "window_end": _WINDOW[1].isoformat(),
-            "cursor": "not-a-cursor",
+            # One encoded symbol remains an invalid base64 length after the
+            # decoder adds padding and must still map to the public 422.
+            "cursor": "A",
         },
     )
     assert response.status_code == 422

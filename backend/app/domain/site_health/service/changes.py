@@ -14,7 +14,6 @@ from app.core.config.site_change_intel import (
     CHANGE_STATE_UNAVAILABLE,
 )
 from app.domain.site_health.normalization import (
-    CursorScopeError,
     decode_keyset_cursor,
     encode_keyset_cursor,
 )
@@ -198,7 +197,7 @@ async def list_changes(
                 cursor, scope=_CURSOR_SCOPE, filters=filters
             )
             parsed_id = uuid.UUID(row_id)
-        except (CursorScopeError, ValueError) as exc:
+        except ValueError as exc:
             raise InvalidCursorError(str(exc)) from exc
         statement = statement.where(
             or_(

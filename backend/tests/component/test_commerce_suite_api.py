@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import httpx
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.connectors.agent.gateway import FakeModelGateway
+from app.connectors.answer_engines.errors import ProviderError
+from app.core.config.provider_catalog import ERROR_SERVER
 from app.domain.commerce.prompts import (
     _project_with_brand,
     _target_context,
@@ -61,6 +65,43 @@ async def test_catalog_import_is_idempotent_with_row_outcomes(
         "https://shop.example/products/one"
     )
     assert catalog.json()["products"][0]["field_sources"]["name"]["kind"] == "csv"
+
+
+@pytest.mark.asyncio
+async def test_catalog_import_propagates_cross_product_identity_conflict(
+    client: httpx.AsyncClient,
+) -> None:
+    await _register(client, "commerce-conflict@example.com")
+    project = await _project(client)
+    url = f"/api/v1/projects/{project['id']}/commerce/catalog/import"
+    seeded = await client.post(
+        url,
+        json={
+            "filename": "catalog.csv",
+            "content_type": "text/csv",
+            "content": (
+                "canonical_url,name,sku\n"
+                "https://shop.example/products/one,One,A-1\n"
+                "https://shop.example/products/two,Two,A-2\n"
+            ),
+        },
+    )
+    assert seeded.status_code == 201
+
+    conflict = await client.post(
+        url,
+        json={
+            "filename": "conflict.csv",
+            "content_type": "text/csv",
+            "content": (
+                "canonical_url,name,sku\n"
+                "https://shop.example/products/one,Conflict,A-2\n"
+            ),
+        },
+    )
+
+    assert conflict.status_code == 409
+    assert conflict.json()["error"]["code"] == "commerce_conflict"
 
 
 @pytest.mark.asyncio
@@ -321,3 +362,56 @@ async def test_a_manual_buyer_prompt_rejects_an_unknown_target(
                 target=CommerceTarget(kind="category", id=uuid.uuid4()),
                 text="linen midi dress for a beach wedding",
             )
+
+
+@pytest.mark.asyncio
+async def test_buyer_prompt_provider_failure_is_service_unavailable(
+    client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class UnavailableGateway(FakeModelGateway):
+        async def complete_structured_json(
+            self,
+            *,
+            system: str,
+            user: str,
+            schema_name: str,
+            schema: dict[str, Any],
+        ) -> str:
+            self.calls.append(
+                {
+                    "system": system,
+                    "user": user,
+                    "schema_name": schema_name,
+                    "schema": schema,
+                }
+            )
+            raise ProviderError(
+                "provider unavailable", error_code=ERROR_SERVER, retryable=True
+            )
+
+    await _register(client, "commerce-provider-error@example.com")
+    project = await _project(client)
+    imported = await client.post(
+        f"/api/v1/projects/{project['id']}/commerce/catalog/import",
+        json={
+            "filename": "catalog.csv",
+            "content_type": "text/csv",
+            "content": (
+                "canonical_url,name,brand,category\n"
+                "https://shop.example/products/one,Acme One,Acme,Shoes\n"
+            ),
+        },
+    )
+    assert imported.status_code == 201
+    product_id = imported.json()["row_outcomes"][0]["product_id"]
+    monkeypatch.setattr(
+        "app.api.commerce.create_model_gateway", lambda: UnavailableGateway()
+    )
+
+    response = await client.post(
+        f"/api/v1/projects/{project['id']}/commerce/buyer-prompts/generate",
+        json={"targets": [{"kind": "product", "id": product_id}], "count": 2},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "commerce_prompt_generation_unavailable"

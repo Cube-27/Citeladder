@@ -17,8 +17,13 @@ resource "google_secret_manager_secret_iam_member" "vm_secret_reader" {
   member    = "serviceAccount:${google_service_account.vm.email}"
 }
 
-resource "google_storage_bucket_iam_member" "vm_backup_writer" {
+resource "google_storage_bucket_iam_member" "vm_backup_access" {
+  for_each = toset([
+    "roles/storage.objectCreator",
+    "roles/storage.objectViewer",
+  ])
+
   bucket = google_storage_bucket.backups.name
-  role   = "roles/storage.objectAdmin"
+  role   = each.value
   member = "serviceAccount:${google_service_account.vm.email}"
 }

@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.billing import commercial_journeys
 from app.domain.billing.catalog_revisions import (
     approved_phase1_payload,
     create_draft,
@@ -69,7 +70,7 @@ async def test_seeded_campaign_is_unavailable_and_cannot_be_claimed(
 
 @pytest.mark.asyncio
 async def test_enabled_fixture_claim_is_atomic_idempotent_and_lifetime_bounded(
-    client, db_session: AsyncSession
+    client, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     actor = await _admin(db_session)
     cohort_start = datetime.now(UTC) - timedelta(minutes=1)
@@ -111,6 +112,15 @@ async def test_enabled_fixture_claim_is_atomic_idempotent_and_lifetime_bounded(
     offer = await client.get("/api/v1/billing/early-access")
     assert offer.status_code == 200
     assert offer.json()["status"] == "available"
+    original_catalog = commercial_journeys._catalog
+    catalog_reads = 0
+
+    async def count_catalog_reads(session: AsyncSession):
+        nonlocal catalog_reads
+        catalog_reads += 1
+        return await original_catalog(session)
+
+    monkeypatch.setattr(commercial_journeys, "_catalog", count_catalog_reads)
     request = {
         "campaign_id": offer.json()["campaign_id"],
         "terms_consent": True,
@@ -125,6 +135,7 @@ async def test_enabled_fixture_claim_is_atomic_idempotent_and_lifetime_bounded(
     )
     assert first.status_code == replay.status_code == 200
     assert first.json() == replay.json()
+    assert catalog_reads == 1
     assert first.json()["charged"] is False
     assert first.json()["renews"] is False
 

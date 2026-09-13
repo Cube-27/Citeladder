@@ -47,7 +47,7 @@ async def complete_validated_envelope[EnvelopeT: BaseModel](
             delay = brand_discovery_settings.synthesis_retry_delay(
                 attempt, retry_after_seconds=exc.retry_after_seconds
             )
-        except (ValidationError, ValueError) as exc:
+        except ValueError as exc:
             if attempt + 1 >= maximum_attempts:
                 raise
             attempt_user = _repair_request(user, exc)

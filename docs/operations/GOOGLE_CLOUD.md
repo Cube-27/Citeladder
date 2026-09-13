@@ -43,6 +43,7 @@ Cloudflare → Caddy → Next.js → FastAPI
 - Provision with Terraform under a GCP-specific owner:
   - dedicated VPC, static IPv4, Cloudflare-only ports 80/443, and SSH only through IAP;
   - Shielded VM with Secure Boot, vTPM, integrity monitoring, OS Login, and no default broad service account;
+  - a user-managed VM identity with the recommended `cloud-platform` access scope, constrained by resource-specific IAM roles;
   - Artifact Registry, Secret Manager, private backup bucket, budget alerts, and the VM;
   - Terraform state in a versioned, uniform-access GCS bucket within the disposable project.
 - Add a production Compose overlay that:
@@ -58,7 +59,7 @@ Cloudflare → Caddy → Next.js → FastAPI
     on Next.js.
 - Build backend and frontend images in GitHub Actions, push immutable digests to Artifact Registry, deploy those exact digests over IAP, and record the source commit and digests in the GitHub deployment summary.
 - Keep core credentials, database password, demo password, provider keys, and Cloudflare origin private key in Secret Manager. The frontend receives only public/demo configuration.
-- Create a nightly compressed PostgreSQL dump with a ten-day bucket lifecycle. Before each update, take an additional pre-deploy dump.
+- Create a nightly compressed PostgreSQL dump with a ten-day bucket lifecycle. Before each update, take an additional pre-deploy dump. The VM can create, list, and read backup objects for monitoring and restore, but cannot delete or overwrite them; lifecycle policy owns routine deletion.
 - Do not install any self-teardown timer. Stopping and destroying the host are deliberate acts run through the protected control and destroy workflows.
 
 The baseline schema includes MCP OAuth clients, one-time authorization state,

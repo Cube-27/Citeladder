@@ -24,6 +24,9 @@ resource "google_compute_instance" "demo" {
 
   network_interface {
     subnetwork = google_compute_subnetwork.demo.id
+    # The static external address is the origin for the proxied Cloudflare A
+    # record. Ingress remains limited to Cloudflare web CIDRs and IAP SSH by
+    # network.tf; removing this address would remove the single-VM origin.
     access_config {
       nat_ip       = google_compute_address.demo.address
       network_tier = "PREMIUM"
@@ -31,7 +34,11 @@ resource "google_compute_instance" "demo" {
   }
 
   service_account {
-    email  = google_service_account.vm.email
+    email = google_service_account.vm.email
+    # Google recommends the cloud-platform access scope for a user-managed VM
+    # identity, with effective access constrained by the IAM roles in
+    # identity.tf. The runtime needs Artifact Registry, Secret Manager, and
+    # bucket-scoped backup access.
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
 

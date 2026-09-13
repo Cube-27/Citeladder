@@ -135,7 +135,9 @@ class BillingSettings(BaseSettings):
     @classmethod
     def validate_seller_email(cls, value: str) -> str:
         normalized = value.strip()
-        if normalized and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", normalized):
+        if normalized and not re.fullmatch(
+            r"[^@\s]+@[^@.\s]+(?:\.[^@.\s]+)+", normalized
+        ):
             raise ValueError("seller_email must be an email address")
         return normalized
 

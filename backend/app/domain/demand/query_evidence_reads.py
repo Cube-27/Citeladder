@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import binascii
 import json
 import uuid
 from dataclasses import dataclass
@@ -71,7 +70,7 @@ def _decode_cursor(value: str) -> tuple[uuid.UUID, date, uuid.UUID]:
             date.fromisoformat(str(raw[1])),
             uuid.UUID(str(raw[2])),
         )
-    except (ValueError, TypeError, json.JSONDecodeError, binascii.Error) as exc:
+    except (ValueError, TypeError) as exc:
         raise QueryEvidenceCursorError(ERROR_QUERY_EVIDENCE_CURSOR_INVALID) from exc
 
 

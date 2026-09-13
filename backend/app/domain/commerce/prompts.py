@@ -7,12 +7,13 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.connectors.agent.gateway import ModelGateway
+from app.connectors.answer_engines.errors import ProviderError
 from app.core.config.commerce_catalog import (
     COMMERCE_PROMPT_CONTEXT_PRODUCT_LIMIT,
     COMMERCE_PROMPT_CONTEXT_TERM_LIMIT,
@@ -284,7 +285,7 @@ async def _generate_target_texts(
             schema=_GeneratedBatch.model_json_schema(),
         )
         batch = _GeneratedBatch.model_validate_json(raw)
-    except (ValidationError, ValueError, TypeError) as exc:
+    except (ProviderError, ValueError, TypeError) as exc:
         raise BuyerPromptGenerationUnavailable(
             "The configured model returned unusable buyer prompts"
         ) from exc

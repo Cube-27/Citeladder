@@ -160,6 +160,7 @@ asyncio_default_test_loop_scope = "session"
 # fail_under` that was never set, so it described a gate that did not exist.
 [tool.coverage.run]
 source = ["app"]
+relative_files = true
 branch = true
 omit = [
   # Not runtime code: the offline eval corpus, one-shot scripts, and the
