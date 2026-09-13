@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageLoading } from '@/components/layout/page-loading';
 import type { Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 import { newProjectDestination } from '@/lib/navigation/project-destination';
@@ -27,12 +28,18 @@ import { DashboardScreen } from './dashboard-screen';
  * just as much as the first did.
  */
 export function ProjectsScreen() {
-  const { projects, activeWorkspaceId } = useProjectContext();
+  const { projects, projectsSettled, activeWorkspaceId } = useProjectContext();
   const [editing, setEditing] = useState<Project | null>(null);
 
-  // OnboardingGate (the layout wrapper) already gates on this exact
-  // useProjectContext().isLoading and shows PageLoading, so by the time this
-  // screen mounts the project list has settled.
+  // "No projects yet" is a CLAIM about the workspace, so it needs a settled
+  // answer. The gate does not supply one: its `ready` state is reached by a
+  // directly-resolved project alone, deliberately, so a brand-new project is
+  // usable before the list reconciles — and the list is `[]` while it loads.
+  // Reading that as "no projects" is what showed this empty state to someone
+  // who had just created their first project, until they refreshed.
+  if (projects.length === 0 && !projectsSettled) {
+    return <PageLoading label="Loading your projects…" />;
+  }
   if (projects.length === 0) {
     return (
       <EmptyState

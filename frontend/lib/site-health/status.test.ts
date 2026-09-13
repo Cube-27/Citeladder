@@ -426,7 +426,10 @@ describe('score / count / date placeholders', () => {
     expect(formatScore(null)).toBe(PLACEHOLDER);
     expect(formatScore(Number.NaN)).toBe(PLACEHOLDER);
     expect(formatScore(0)).toBe('0');
-    expect(formatScore(88.25)).toBe('88.3');
+    // Whole numbers: the tenth is an artefact of the division, not a
+    // measurement, and it changes with one check on one page.
+    expect(formatScore(88.25)).toBe('88');
+    expect(formatScore(27.210884353741495)).toBe('27');
   });
 
   it('renders not measured for a null issue count', () => {

@@ -26,6 +26,16 @@ export type ProjectContextValue = {
   setActiveWorkspaceId: (workspaceId: string) => void;
   /** The active workspace's projects (empty while loading / none yet). */
   projects: Project[];
+  /**
+   * Whether `projects` is a SETTLED answer rather than a loading placeholder.
+   *
+   * `status` describes the selection, and it reaches `ready` on a directly
+   * resolved project alone — deliberately, so a brand-new project is usable
+   * before the list reconciles. A screen that reads `projects.length === 0` as
+   * "this workspace has no projects" must therefore check this first, or it
+   * renders "No projects yet" over a project that exists.
+   */
+  projectsSettled: boolean;
   /** The currently-selected project, or `null` when none is resolved. */
   activeProject: Project | null;
   /** The active project id, or `null`. */

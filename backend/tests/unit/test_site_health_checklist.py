@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from app.analysis.site_health.page_analysis import analyze_page
@@ -40,14 +42,37 @@ def test_other_pages_keep_independently_applicable_web_checks() -> None:
 
 
 def test_unscored_finding_is_still_admitted() -> None:
+    """A confirmed defect remains actionable outside a public score."""
     rows = _evaluations(
         b"<html><head><title>Page</title></head><body><main>"
         b"<a href='/missing'>Missing</a></main></body></html>"
     )
-    description = rows["technical.meta_description_present"]
-    assert description.score_roles == ()
-    assert description.outcome == "missing"
-    assert creates_issue(description) is True
+    unscored = replace(
+        rows["technical.meta_description_present"],
+        score_roles=(),
+        score_applicability=False,
+    )
+    assert unscored.scope == "page"
+    assert unscored.outcome == "missing"
+    assert creates_issue(unscored) is True
+
+
+def test_reported_failures_reach_the_score_that_reports_them() -> None:
+    """A score blind to the Issues tab cannot move when the site is broken.
+
+    Every one of these failed on all 200 pages of a real crawl while the site
+    still scored 88.9 Web Fundamentals, because none of them was a member.
+    """
+    rows = _evaluations(
+        b"<html><head><title>Page</title></head><body><main>"
+        b"<a href='/missing'>Missing</a></main></body></html>"
+    )
+    for rule_id in (
+        "technical.meta_description_present",
+        "technical.canonical_present",
+        "web.accessibility_heading_order",
+    ):
+        assert SCORE_ROLE_WEB_FUNDAMENTALS in rows[rule_id].score_roles
 
 
 def test_public_sale_price_remains_applicable_when_price_is_absent() -> None:

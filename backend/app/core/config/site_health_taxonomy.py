@@ -151,16 +151,6 @@ PAGE_KIND_PATH_PATTERNS: Final[tuple[tuple[str, str], ...]] = (
     ),
 )
 
-# Blog/news archive routes need page-owned repeated-card evidence before they
-# override the ordinary article route. Exact archive shapes keep an individual
-# post such as /blogs/news/story on the article path.
-PAGE_KIND_ARCHIVE_PATH_PATTERNS: Final[tuple[str, ...]] = (
-    r"^/news/?$",
-    r"^/(?:[^/]+/)*?blogs?/(?:news|stories|journal|articles)/?$",
-    r"^/(?:[^/]+/)*?blogs?/news/?$",
-    r"^/(?:[^/]+/)*?blogs?/(?:category|categories|topics?|tags?)/[^/]+/?$",
-)
-
 PAGE_KIND_FAQ_MIN_HEADINGS: Final = 3
 
 PAGE_KIND_PRICE_PATTERN: Final = (

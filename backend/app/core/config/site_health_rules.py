@@ -323,7 +323,6 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         ),
         display_label="Visible creator attribution incomplete",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
     ),
     SiteHealthRule(
         rule_id="aeo.source_support_present",
@@ -351,7 +350,6 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         ),
         display_label="Claim support sources missing",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
         finding_class=FINDING_CLASS_ADVISORY,
     ),
     # --- v2 P2: extractability (per-page) -----------------------------------
@@ -376,7 +374,6 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation=("Open each section with a direct answer before elaborating."),
         display_label="No answer-first content structure",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
         finding_class=FINDING_CLASS_ADVISORY,
     ),
     SiteHealthRule(
@@ -399,7 +396,6 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         ),
         display_label="FAQ question-answer structure is incomplete",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
     ),
     SiteHealthRule(
         rule_id="aeo.server_rendered_content",

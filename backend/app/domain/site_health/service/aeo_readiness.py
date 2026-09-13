@@ -13,6 +13,8 @@ from app.core.config.site_health_contracts import (
     SCORING_VERSION,
 )
 from app.core.config.site_health_measurement import (
+    CONTENT_ADDRESSABLE_CHECK_FIELDS,
+    CONTENT_ADDRESSABLE_CHECK_IDS,
     PRESENTATION_VERSION,
     PROFILE_VERSION,
     SCHEMA_CONTRACT_VERSION,
@@ -22,6 +24,7 @@ from app.domain.site_health.service.common import (
     SiteHealthNotFoundError,
     resolve_usable_crawl,
 )
+from app.domain.site_health.service.issue_listing import remediation_route_for
 from app.models.site_health.analysis import SitePageAnalysis, SiteRuleEvaluation
 from app.models.site_health.snapshot import SiteHealthSnapshot
 from app.models.site_health.urls import SiteUrl
@@ -67,15 +70,54 @@ async def get_aeo_readiness(
         )
     )
     if isinstance(descriptor, dict) and descriptor:
-        return descriptor
+        return _current_actions(descriptor)
     return _unavailable(crawl.id)
 
 
+def _current_actions(descriptor: dict) -> dict:
+    """Refresh action availability without changing the frozen measurements."""
+
+    def action(check: dict) -> dict:
+        rule_id = check["rule_id"]
+        return {
+            **check,
+            "content_addressable": rule_id in CONTENT_ADDRESSABLE_CHECK_IDS,
+            "remediation_route": remediation_route_for(rule_id),
+        }
+
+    return {
+        **descriptor,
+        "dimensions": [
+            {
+                **dimension,
+                "checks": [action(check) for check in dimension["checks"]],
+                "evidence_pages": [
+                    {
+                        **page,
+                        "failed_checks": [
+                            action(check) for check in page["failed_checks"]
+                        ],
+                    }
+                    for page in dimension["evidence_pages"]
+                ],
+            }
+            for dimension in descriptor["dimensions"]
+        ],
+    }
+
+
 def _allowed_content_checkpoints(dimension: str, checkpoint_ids: list[str]) -> set[str]:
+    """The requested checks a Content draft can resolve.
+
+    Two rules used to be spelled here as a literal, which put a tunable set in
+    service code and let it drift from the catalog flag the UI rendered links
+    from. The set now comes from config, and an unsupported id is DROPPED
+    rather than failing the whole request: a page missing its title and three
+    things Content cannot write should still open a title draft.
+    """
     del dimension
-    supported = {"technical.title_present", "technical.meta_description_present"}
-    allowed = set(checkpoint_ids) & supported
-    if allowed and allowed == set(checkpoint_ids):
+    allowed = set(checkpoint_ids) & CONTENT_ADDRESSABLE_CHECK_IDS
+    if allowed:
         return allowed
     raise SiteHealthNotFoundError("Content-addressable readiness gap not found")
 
@@ -87,13 +129,19 @@ async def _handoff_analysis(
     project_id: uuid.UUID,
     crawl_id: uuid.UUID,
     site_url_id: uuid.UUID,
-    source_analysis_id: uuid.UUID,
+    source_analysis_id: uuid.UUID | None,
 ) -> tuple[SitePageAnalysis, SiteUrl]:
+    """The page's CURRENT terminal analysis for this crawl.
+
+    Addressed by crawl and URL, not by a revision id. Terminalization appends
+    a new current analysis, so an id a surface captured while the crawl was
+    running names a superseded row — and the hand-off answered 404 for it. A
+    supplied ``source_analysis_id`` is honoured only as an assertion.
+    """
     analysis_row = await session.execute(
         select(SitePageAnalysis, SiteUrl)
         .join(SiteUrl, SiteUrl.id == SitePageAnalysis.site_url_id)
         .where(
-            SitePageAnalysis.id == source_analysis_id,
             SitePageAnalysis.workspace_id == workspace_id,
             SitePageAnalysis.project_id == project_id,
             SitePageAnalysis.crawl_id == crawl_id,
@@ -103,6 +151,13 @@ async def _handoff_analysis(
         )
     )
     found = analysis_row.one_or_none()
+    if (
+        found is not None
+        and source_analysis_id is not None
+        and found[0].id != source_analysis_id
+        and found[0].supersedes_analysis_id != source_analysis_id
+    ):
+        found = None
     if found is None:
         raise SiteHealthNotFoundError("Site Health handoff evidence not found")
     analysis, site_url = found
@@ -130,7 +185,7 @@ async def _handoff_evaluations(
             .order_by(SiteRuleEvaluation.rule_id)
         )
     )
-    if rows and {row.rule_id for row in rows} == allowed:
+    if rows:
         return rows
     raise SiteHealthNotFoundError("Content-addressable readiness gap not found")
 
@@ -142,9 +197,9 @@ async def get_content_handoff(
     project_id: uuid.UUID,
     crawl_id: uuid.UUID,
     site_url_id: uuid.UUID,
-    source_analysis_id: uuid.UUID,
     dimension: str,
     checkpoint_ids: list[str],
+    source_analysis_id: uuid.UUID | None = None,
 ) -> dict:
     analysis, site_url = await _handoff_analysis(
         session,
@@ -168,15 +223,12 @@ async def get_content_handoff(
         project_id=project_id,
         crawl_id=crawl_id,
         site_url_id=site_url_id,
-        source_analysis_id=source_analysis_id,
-        allowed=allowed,
+        source_analysis_id=analysis.id,
     )
 
 
 def _target_field(row: SiteRuleEvaluation) -> str:
-    if row.rule_id == "technical.title_present":
-        return "title"
-    return "meta_description"
+    return CONTENT_ADDRESSABLE_CHECK_FIELDS.get(row.rule_id, "")
 
 
 def _captured_value(row: SiteRuleEvaluation) -> str:
@@ -193,7 +245,6 @@ def _content_handoff_payload(
     crawl_id: uuid.UUID,
     site_url_id: uuid.UUID,
     source_analysis_id: uuid.UUID,
-    allowed: set[str],
 ) -> dict:
     return {
         "project_id": project_id,
@@ -201,7 +252,7 @@ def _content_handoff_payload(
         "site_url_id": site_url_id,
         "source_analysis_id": source_analysis_id,
         "dimension": "metadata",
-        "checkpoint_ids": sorted(allowed),
+        "checkpoint_ids": sorted({row.rule_id for row in evaluations}),
         "suggested_skill_id": "content_page",
         "finding_class": evaluations[0].finding_class,
         "observed_evidence": [row.evidence or {} for row in evaluations],

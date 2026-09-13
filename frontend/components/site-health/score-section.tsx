@@ -6,7 +6,7 @@ import { hairlineBandClasses, hairlineBandItemClasses } from '@/components/ui/wo
 import { ScoreRing } from '@/components/ui/score-ring';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
-import { formatScore } from '@/lib/site-health/status';
+import { formatScore, measurementCaveat } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
 import { Card, CardContent } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
@@ -49,7 +49,7 @@ export function ScoreSection({
             label="Web Fundamentals"
             value={technical}
             state={summary?.web_fundamentals_state}
-            sub={measurementSub(
+            sub={measurementCaveat(
               summary?.web_fundamentals_state,
               summary?.web_fundamentals_coverage,
             )}
@@ -58,18 +58,19 @@ export function ScoreSection({
             label="AEO Readiness"
             value={aeo}
             state={summary?.aeo_measurement_state}
-            sub={measurementSub(summary?.aeo_measurement_state, summary?.aeo_measurement_coverage)}
+            sub={measurementCaveat(
+              summary?.aeo_measurement_state,
+              summary?.aeo_measurement_coverage,
+            )}
           />
           <ScoreCard
             label="AEO Checklist Completion"
             value={coverage}
             state={summary?.aeo_measurement_state}
-            // "Determinate" is a claim about the evidence, so it cannot stand
-            // when the state says the evidence is limited or the pillar was
-            // excluded. Those states describe the same coverage figure without
-            // asserting determinacy, and keep this card's own wording rather
-            // than repeating the AEO card's sub-line verbatim.
-            sub={coverageSub(summary?.aeo_measurement_state)}
+            // The value IS the coverage here, so a sub-line restating it would
+            // print the same fact twice. Only the qualified states say
+            // anything, and they say it once.
+            sub={measurementCaveat(summary?.aeo_measurement_state)}
           />
         </div>
       </CardContent>
@@ -82,34 +83,17 @@ function scoredValue(value: number | null | undefined): number | null {
   return value;
 }
 
-function measurementSub(state: string | undefined, coverage: number | null | undefined): string {
-  const completion =
-    coverage === null || coverage === undefined ? null : `${Math.round(coverage * 100)}% complete`;
-  if (state === 'limited_evidence')
-    return completion ? `${completion} · Partial audit` : 'Partial audit';
-  if (state === 'not_measured' || !state) return 'Completion unavailable';
-  if (state === 'excluded') return 'Excluded from this audit';
-  return completion ?? 'Complete checklist';
-}
-
-/**
- * The coverage card's sub-line. Coverage is a proportion of applicable pillars
- * either way; what changes is whether the evidence behind it can be called
- * determinate.
- */
-function coverageSub(state: string | undefined): string {
-  if (state === 'limited_evidence') return 'Partial audit';
-  if (state === 'excluded') return 'Excluded from this audit';
-  if (state === 'not_measured' || !state) return 'Completion unavailable';
-  return 'Complete applicable checklist';
-}
-
 function ScoreCard({
   label,
   value,
   state,
   sub,
-}: Readonly<{ label: string; value: number | null; state: string | undefined; sub: string }>) {
+}: Readonly<{
+  label: string;
+  value: number | null;
+  state: string | undefined;
+  sub: string | null;
+}>) {
   return (
     <div className={hairlineBandItemClasses}>
       {value === null ? (
@@ -144,7 +128,7 @@ function ScoreCard({
           <Stack gap="tight">
             <p className={eyebrowClasses}>{label}</p>
             <span className={textRole('metric', 'leading-none')}>{formatScore(value)} / 100</span>
-            <span className={textRole('meta')}>{sub}</span>
+            {sub ? <span className={textRole('meta')}>{sub}</span> : null}
           </Stack>
         </div>
       )}

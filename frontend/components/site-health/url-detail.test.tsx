@@ -218,7 +218,10 @@ describe('UrlDetail', () => {
     const high = screen.getByText('WebSite schema is missing');
     const low = screen.getByText('FAQ schema not present');
     expect(high.compareDocumentPosition(low) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText('Expected WebSite; found Organization.')).toBeInTheDocument();
+    expect(
+      screen.getByText('expected types WebSite, found types Organization'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
   });
 
   it('keeps the header to concise persisted page metadata', async () => {
@@ -315,8 +318,8 @@ describe('UrlDetail', () => {
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getByRole('img', { name: 'Web Fundamentals: 46' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'AEO Readiness: 64' })).toBeInTheDocument();
-    expect(screen.getByText('50% complete · Partial audit')).toBeInTheDocument();
-    expect(screen.getAllByText('75% complete · Partial audit')).toHaveLength(2);
+    expect(screen.getByText('Partial audit · 50% coverage')).toBeInTheDocument();
+    expect(screen.getAllByText('Partial audit · 75% coverage')).toHaveLength(2);
   });
 
   it('preserves the AEO state when measurement coverage is unavailable', async () => {

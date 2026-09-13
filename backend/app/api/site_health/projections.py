@@ -197,9 +197,14 @@ async def get_content_handoff_endpoint(
     session: _SessionDep,
     crawl_id: Annotated[uuid.UUID, Query()],
     site_url_id: Annotated[uuid.UUID, Query()],
-    source_analysis_id: Annotated[uuid.UUID, Query()],
     dimension: Annotated[str, Query(min_length=1, max_length=32)],
     checkpoint_ids: Annotated[list[str], Query(min_length=1)],
+    # Optional, and only ever an assertion. The caller should not have to know
+    # which analysis revision is current: terminalization appends a new one,
+    # so any id a surface captured earlier is stale by the time the reader
+    # clicks. The crawl and the URL identify the page; the service resolves
+    # the page's own current terminal analysis from them.
+    source_analysis_id: Annotated[uuid.UUID | None, Query()] = None,
 ) -> SiteHealthContentHandoffResponse:
     try:
         result = await service.get_content_handoff(

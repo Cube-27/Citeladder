@@ -15,7 +15,7 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import { byPageKindRows } from '@/lib/site-health/page-kinds';
-import { formatScore } from '@/lib/site-health/status';
+import { formatScore, measurementCaveat } from '@/lib/site-health/status';
 
 /**
  * Dashboard per-page-kind score breakdown.
@@ -114,25 +114,19 @@ function MeasurementValue({
   state,
 }: Readonly<{ score: number | null; coverage: number | null; state: string }>) {
   if (score !== null) {
-    const coverageLabel =
-      coverage === null ? 'Completion unavailable' : `${Math.round(coverage * 100)}% complete`;
+    // A caveat only when there is one. This cell used to carry
+    // "100% complete · Complete checklist" under every score in the table —
+    // two spellings of the ordinary case, repeated once per page kind, which
+    // is precisely what buried the rows that WERE partial.
+    const caveat = measurementCaveat(state, coverage);
     return (
       <span className="grid gap-0.5">
         <span>{formatScore(score)}</span>
-        <span className={textRole('meta', 'normal-case')}>
-          {coverageLabel} · {measurementCompletion(state)}
-        </span>
+        {caveat ? <span className={textRole('meta', 'normal-case')}>{caveat}</span> : null}
       </span>
     );
   }
   if (state === 'limited_evidence') return 'Limited evidence';
   if (state === 'excluded') return 'Excluded';
   return <UnavailableValue state="not_measured" />;
-}
-
-function measurementCompletion(state: string): string {
-  if (state === 'measured') return 'Complete checklist';
-  if (state === 'limited_evidence') return 'Partial audit';
-  if (state === 'excluded') return 'Excluded';
-  return 'Completion unavailable';
 }

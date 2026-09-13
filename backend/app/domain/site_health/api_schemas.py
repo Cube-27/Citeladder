@@ -455,6 +455,9 @@ class SiteIssueGroup(_Model):
     title: str
     description: str
     remediation: str
+    #: Who can resolve it: `content`, `agent` or `code`. Derived from the
+    #: catalog so every surface offers the same next action for a rule.
+    remediation_route: str = "code"
     affected_url_count: int
     analyzer_version: str
     rule_version: str
@@ -627,6 +630,7 @@ class SiteIssueDetail(_Model):
     title: str
     description: str
     remediation: str
+    remediation_route: str = "code"
     occurrences: list[IssueOccurrence]
     occurrence_count: int
     affected_url_count: int

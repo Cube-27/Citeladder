@@ -116,6 +116,7 @@ def _check_projection(rule_id: str, rows: Sequence[Any]) -> dict | None:
         "failing_entity_count": _failing_entity_count(first.scope, rows),
         "aeo_pillar": str(first.readiness_dimension or ""),
         "content_addressable": rule.content_addressable,
+        "remediation_route": rule.remediation_route,
     }
 
 
@@ -149,25 +150,26 @@ def _page_evidence(
     ]:
         page = pages[analysis_id]
         failures.sort(key=lambda row: row.rule_id)
-        guidance = {row.rule_id: rule_guidance(row.rule_id) for row in failures}
+        failed_checks = []
+        for row in failures:
+            rule = SITE_HEALTH_RULES_BY_ID[row.rule_id]
+            failed_checks.append(
+                {
+                    "rule_id": row.rule_id,
+                    "title": rule.display_label,
+                    "observed_evidence": row.evidence or {},
+                    "expected_capability": rule.description,
+                    "remediation": rule.remediation,
+                    "content_addressable": rule.content_addressable,
+                    "remediation_route": rule.remediation_route,
+                }
+            )
         evidence_pages.append(
             {
                 "site_url_id": str(page.site_url_id),
                 "source_analysis_id": str(page.analysis_id),
                 "normalized_url": page.normalized_url,
-                "failed_checks": [
-                    {
-                        "rule_id": row.rule_id,
-                        "title": SITE_HEALTH_RULES_BY_ID[row.rule_id].display_label,
-                        "observed_evidence": row.evidence or {},
-                        "expected_capability": guidance[row.rule_id][0],
-                        "remediation": guidance[row.rule_id][1],
-                        "content_addressable": SITE_HEALTH_RULES_BY_ID[
-                            row.rule_id
-                        ].content_addressable,
-                    }
-                    for row in failures
-                ],
+                "failed_checks": failed_checks,
             }
         )
     return evidence_pages
@@ -179,6 +181,31 @@ def _failing_analysis_ids(rows: Sequence[Any]) -> set[uuid.UUID]:
 
 def _outcome_page_count(rows: Sequence[Any], outcomes: frozenset[str]) -> int:
     return len({row.analysis_id for row in rows if row.outcome in outcomes})
+
+
+def _persisted_measurement(persisted: dict) -> dict:
+    """The frozen arithmetic this projection reports but never recomputes.
+
+    Split out so the projection stays a presentation concern: it counts
+    outcomes and gathers evidence, while every number here was decided once by
+    the scorer and is passed through verbatim.
+    """
+    return {
+        "dimension_applicability": persisted.get(
+            "dimension_applicability", "applicable"
+        ),
+        "dimension_measurement_state": persisted.get(
+            "dimension_measurement_state", "not_measured"
+        ),
+        "score": persisted.get("score"),
+        "coverage": persisted.get("coverage"),
+        "reason": persisted.get("reason", ""),
+        "determinate_checkpoint_ids": persisted.get("determinate_checkpoint_ids", []),
+        "unresolved_count": int(persisted.get("unresolved_count", 0) or 0),
+        "earned_points": persisted.get("earned_points", 0.0),
+        "determinate_points": persisted.get("determinate_points", 0.0),
+        "expected_points": persisted.get("expected_points", 0.0),
+    }
 
 
 def _dimension_projection(
@@ -197,26 +224,14 @@ def _dimension_projection(
         "key": key,
         "label": AEO_READINESS_DIMENSION_LABELS[key],
         "description": AEO_READINESS_DIMENSION_DESCRIPTIONS[key],
-        "dimension_applicability": persisted.get(
-            "dimension_applicability", "applicable"
-        ),
-        "dimension_measurement_state": persisted.get(
-            "dimension_measurement_state", "not_measured"
-        ),
-        "score": persisted.get("score"),
-        "reason": persisted.get("reason", ""),
+        **_persisted_measurement(persisted),
         "checkpoint_ids": checkpoint_ids,
-        "determinate_checkpoint_ids": persisted.get("determinate_checkpoint_ids", []),
-        "earned_points": persisted.get("earned_points", 0.0),
-        "determinate_points": persisted.get("determinate_points", 0.0),
-        "expected_points": persisted.get("expected_points", 0.0),
         "satisfied_count": counts[RULE_OUTCOME_SATISFIED],
         "partial_count": counts[RULE_OUTCOME_PARTIAL],
         "missing_count": counts[RULE_OUTCOME_MISSING],
         "unknown_count": counts[RULE_OUTCOME_UNKNOWN],
         "not_applicable_count": counts[RULE_OUTCOME_NOT_APPLICABLE],
         "error_count": counts[RULE_OUTCOME_ERROR],
-        "coverage": persisted.get("coverage"),
         "checked_page_count": _outcome_page_count(
             page_rows,
             frozenset(

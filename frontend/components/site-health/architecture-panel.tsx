@@ -7,12 +7,18 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Link2, ListTree } from 'lucide-react';
 
 import { HierarchyCard } from '@/components/site-health/architecture-hierarchy';
+import {
+  EvidenceMetric,
+  ORPHAN_SCOPE_NOTE,
+  OrphanMetric,
+  OrphanPageDrawer,
+} from '@/components/site-health/architecture-orphans';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Pressable } from '@/components/ui/pressable';
+import { Skeleton } from '@/components/ui/skeleton';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import {
   Table,
@@ -51,11 +57,6 @@ const COVERAGE_REASON_LABELS: Record<string, string> = {
   discovery_not_completed: 'discovery did not finish',
   frontier_exhausted: 'the crawl emptied its discovery queue',
 };
-
-// Scope, in the metric's own words. The count is a fact about the pages this
-// crawl fetched; it is not the stronger claim that nothing anywhere links to
-// them, which stays behind the coverage-gated rule.
-const ORPHAN_SCOPE_NOTE = 'not linked from any page this crawl fetched';
 
 const DEPTH_LABELS = {
   depth_0: 'Depth 0',
@@ -330,6 +331,7 @@ function PageKindPages({
 
 function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
   const linking = data.internal_linking;
+  const [orphansOpen, setOrphansOpen] = useState(false);
   return (
     <div className="grid gap-[var(--workspace-gap)] md:grid-cols-2">
       <Card>
@@ -345,18 +347,18 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
               value={formatPercentage(linking.pages_with_incoming_percentage)}
               supporting={`${linking.pages_with_incoming_count} pages`}
             />
-            <EvidenceMetric
-              label="Orphaned pages"
-              value={
-                linking.orphan_page_count === null ? PLACEHOLDER : String(linking.orphan_page_count)
-              }
-              supporting={linking.orphan_page_count === null ? undefined : ORPHAN_SCOPE_NOTE}
+            <OrphanMetric
+              pages={linking.orphan_pages}
+              total={linking.orphan_page_count}
+              onOpen={() => setOrphansOpen(true)}
             />
           </div>
-          <OrphanPageList
+          <OrphanPageDrawer
             pages={linking.orphan_pages}
             total={linking.orphan_page_count}
             crawlId={data.crawl_id}
+            open={orphansOpen}
+            onOpenChange={setOrphansOpen}
           />
         </CardContent>
       </Card>
@@ -387,64 +389,6 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
           ) : null}
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-function OrphanPageList({
-  pages,
-  total,
-  crawlId,
-}: Readonly<{
-  pages: SiteArchitecture['internal_linking']['orphan_pages'];
-  total: number | null;
-  crawlId: string | null;
-}>) {
-  if (pages.length === 0) return null;
-  const undisclosed = (total ?? pages.length) - pages.length;
-  return (
-    <div className="grid gap-1.5">
-      <span className={eyebrowClasses}>Which pages</span>
-      <ul className="grid gap-1">
-        {pages.map((page) => (
-          <li key={page.site_url_id} className="grid min-w-0 gap-0.5">
-            {/* Openable, like every other page reference in this tab. A count
-                nobody can act on is the failure this whole change is undoing. */}
-            {crawlId ? (
-              <ProjectLink
-                href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
-                className="text-accent-text truncate text-sm hover:underline"
-              >
-                {page.title || page.url}
-              </ProjectLink>
-            ) : (
-              <span className="text-secondary truncate text-sm">{page.title || page.url}</span>
-            )}
-            <span className="text-muted truncate text-xs">{page.url}</span>
-          </li>
-        ))}
-      </ul>
-      {undisclosed > 0 ? <span className="text-muted text-xs">and {undisclosed} more</span> : null}
-    </div>
-  );
-}
-
-function EvidenceMetric({
-  label,
-  value,
-  supporting,
-}: Readonly<{ label: string; value: string; supporting?: string }>) {
-  return (
-    <div className="grid content-start gap-1">
-      <span className={eyebrowClasses}>{label}</span>
-      {value === PLACEHOLDER ? (
-        <UnavailableValue state="not_measured" />
-      ) : (
-        <span className={textRole('pageTitle', 'mono tracking-[-0.02em] tabular-nums')}>
-          {value}
-        </span>
-      )}
-      {supporting ? <span className="text-muted text-xs">{supporting}</span> : null}
     </div>
   );
 }

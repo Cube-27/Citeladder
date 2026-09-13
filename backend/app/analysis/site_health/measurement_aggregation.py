@@ -1,4 +1,4 @@
-"""Equal-page aggregation for finalized Site Health checklist results."""
+"""Equal-page crawl aggregation using the page scorer's checklist arithmetic."""
 
 from __future__ import annotations
 
@@ -7,7 +7,13 @@ from dataclasses import dataclass
 
 from app.analysis.site_health.scoring import (
     AnalysisMeasurementInput,
+    DimensionMeasurement,
     RuleMeasurementInput,
+    applicable_checks,
+    measurement_state,
+    pillar_measurement,
+    role_result,
+    weighted_aeo_result,
 )
 from app.core.config.site_health_contracts import (
     AEO_READINESS_DIMENSIONS,
@@ -15,19 +21,13 @@ from app.core.config.site_health_contracts import (
 )
 from app.core.config.site_health_measurement import (
     DIMENSION_APPLICABLE,
-    DIMENSION_NOT_APPLICABLE,
     MEASUREMENT_STATE_LIMITED,
     MEASUREMENT_STATE_MEASURED,
-    MEASUREMENT_STATE_NOT_MEASURED,
-    READINESS_DIMENSION_WEIGHTS,
-    SUPPORTED_AEO_CHECKS_BY_PAGE_KIND,
 )
 from app.core.config.site_health_rule_types import (
     SCORE_ROLE_AEO,
     SCORE_ROLE_WEB_FUNDAMENTALS,
 )
-
-_DETERMINATE = frozenset({"satisfied", "missing"})
 
 
 @dataclass(frozen=True)
@@ -43,105 +43,55 @@ class AggregateMeasurements:
     scoring_version: str = SCORING_VERSION
 
 
-def _deduplicated(
+def _page_pillars(
     rows: list[RuleMeasurementInput],
-) -> list[RuleMeasurementInput] | None:
-    by_id: dict[str, RuleMeasurementInput] = {}
-    for row in rows:
-        previous = by_id.get(row.rule_id)
-        if previous is not None and previous.outcome != row.outcome:
-            return None
-        by_id.setdefault(row.rule_id, row)
-    return list(by_id.values())
-
-
-def _page_score(rows: list[RuleMeasurementInput], role: str) -> float | None:
-    candidates = [row for row in rows if row.expected and role in row.score_roles]
-    unique = _deduplicated(candidates)
-    if not unique or any(row.outcome not in _DETERMINATE for row in unique):
-        return None
-    return 100.0 * sum(row.outcome == "satisfied" for row in unique) / len(unique)
-
-
-def _page_aeo(rows: list[RuleMeasurementInput], page_kind: str) -> float | None:
-    if page_kind not in SUPPORTED_AEO_CHECKS_BY_PAGE_KIND:
-        return None
-    by_pillar: dict[str, list[RuleMeasurementInput]] = {}
-    for row in rows:
-        if (
-            row.expected
-            and SCORE_ROLE_AEO in row.score_roles
-            and row.readiness_dimension
-        ):
-            by_pillar.setdefault(row.readiness_dimension, []).append(row)
-    if not by_pillar:
-        return None
-    scores: dict[str, float] = {}
-    for pillar, pillar_rows in by_pillar.items():
-        score = _page_score(pillar_rows, SCORE_ROLE_AEO)
-        if score is None:
-            return None
-        scores[pillar] = score
-    denominator = sum(READINESS_DIMENSION_WEIGHTS[key] for key in scores)
-    return (
-        sum(scores[key] * READINESS_DIMENSION_WEIGHTS[key] for key in scores)
-        / denominator
-    )
+) -> tuple[DimensionMeasurement, ...]:
+    """Measure each page's pillars once for both page and crawl scores."""
+    aeo_rows = applicable_checks(rows, SCORE_ROLE_AEO)
+    return tuple(pillar_measurement(key, aeo_rows) for key in AEO_READINESS_DIMENSIONS)
 
 
 def _mean(values: list[float]) -> float | None:
     return None if not values else sum(values) / len(values)
 
 
-def _state(*, scored: int, expected: int) -> str:
-    if expected == 0 or scored == 0:
-        return MEASUREMENT_STATE_NOT_MEASURED
-    return (
-        MEASUREMENT_STATE_MEASURED if scored == expected else MEASUREMENT_STATE_LIMITED
-    )
-
-
 def _dimension_payload(
-    key: str,
-    *,
-    analyses: list[AnalysisMeasurementInput],
-    rows_by_analysis: dict[str, list[RuleMeasurementInput]],
+    index: int, pages: list[tuple[DimensionMeasurement, ...]]
 ) -> dict:
-    scores: list[float] = []
-    expected = 0
-    for analysis in analyses:
-        rows = [
-            row
-            for row in rows_by_analysis.get(analysis.analysis_id, [])
-            if row.expected
-            and row.readiness_dimension == key
-            and SCORE_ROLE_AEO in row.score_roles
-        ]
-        if not rows:
-            continue
-        expected += 1
-        score = _page_score(rows, SCORE_ROLE_AEO)
-        if score is not None:
-            scores.append(score)
-    applicable = expected > 0
-    coverage = None if not applicable else len(scores) / expected
-    reason = "" if len(scores) == expected else "unresolved_checks"
+    """Average scored pages using the shared pillar payload shape."""
+    key = AEO_READINESS_DIMENSIONS[index]
+    applicable = [
+        page[index]
+        for page in pages
+        if page[index].applicability == DIMENSION_APPLICABLE
+    ]
     if not applicable:
-        reason = "no_applicable_checks"
-    return {
-        "key": key,
-        "dimension_applicability": (
-            DIMENSION_APPLICABLE if applicable else DIMENSION_NOT_APPLICABLE
-        ),
-        "dimension_measurement_state": _state(scored=len(scores), expected=expected),
-        "score": _mean(scores),
-        "coverage": coverage,
-        "earned_points": sum(scores) / 100.0,
-        "determinate_points": float(len(scores)),
-        "expected_points": float(expected),
-        "determinate_checkpoint_ids": [],
-        "reason": reason,
+        return pillar_measurement(key, ()).to_dict()
+    scores = [pillar.score for pillar in applicable if pillar.score is not None]
+    determinate_ids = {
+        rule_id
+        for pillar in applicable
+        for rule_id in pillar.determinate_checkpoint_ids
     }
+    unresolved_count = sum(pillar.unresolved_count for pillar in applicable)
+    state = measurement_state(determinate=len(scores), expected=len(applicable))
+    if scores and unresolved_count:
+        state = MEASUREMENT_STATE_LIMITED
+    return DimensionMeasurement(
+        key=key,
+        applicability=DIMENSION_APPLICABLE,
+        measurement_state=state,
+        score=_mean(scores),
+        coverage=len(scores) / len(applicable),
+        # Crawl level counts PAGES, not checks: a page that produced a pillar
+        # score is one determinate point out of one expected point.
+        earned_points=sum(scores) / 100.0,
+        determinate_points=float(len(scores)),
+        expected_points=float(len(applicable)),
+        determinate_checkpoint_ids=tuple(sorted(determinate_ids)),
+        reason="" if state == MEASUREMENT_STATE_MEASURED else "unresolved_checks",
+        unresolved_count=unresolved_count,
+    ).to_dict()
 
 
 def aggregate_measurements(
@@ -152,46 +102,45 @@ def aggregate_measurements(
     rows_by_analysis: dict[str, list[RuleMeasurementInput]] = {}
     for row in evaluations:
         rows_by_analysis.setdefault(row.analysis_id, []).append(row)
-    web_scores = [
-        score
-        for analysis in analysis_rows
-        if (
-            score := _page_score(
+    web_results = [
+        role_result(
+            applicable_checks(
                 rows_by_analysis.get(analysis.analysis_id, []),
                 SCORE_ROLE_WEB_FUNDAMENTALS,
             )
         )
-        is not None
-    ]
-    supported = [
-        analysis
         for analysis in analysis_rows
-        if analysis.page_kind in SUPPORTED_AEO_CHECKS_BY_PAGE_KIND
     ]
-    aeo_scores = [
-        score
-        for analysis in supported
-        if (
-            score := _page_aeo(
-                rows_by_analysis.get(analysis.analysis_id, []), analysis.page_kind
-            )
-        )
-        is not None
+    web_scores = [result[0] for result in web_results if result[0] is not None]
+    page_pillars = [
+        _page_pillars(rows_by_analysis.get(analysis.analysis_id, []))
+        for analysis in analysis_rows
     ]
+    aeo_results = [weighted_aeo_result(pillars) for pillars in page_pillars]
+    aeo_scores = [result[0] for result in aeo_results if result[0] is not None]
     dimensions = tuple(
-        _dimension_payload(key, analyses=supported, rows_by_analysis=rows_by_analysis)
-        for key in AEO_READINESS_DIMENSIONS
+        _dimension_payload(index, page_pillars)
+        for index in range(len(AEO_READINESS_DIMENSIONS))
     )
     total = len(analysis_rows)
     return AggregateMeasurements(
         web_fundamentals_score=_mean(web_scores),
         web_fundamentals_coverage=None if total == 0 else len(web_scores) / total,
-        web_fundamentals_state=_state(scored=len(web_scores), expected=total),
+        web_fundamentals_state=_aggregate_state(web_results),
         aeo_readiness_score=_mean(aeo_scores),
-        aeo_measurement_coverage=(
-            None if not supported else len(aeo_scores) / len(supported)
-        ),
-        aeo_measurement_state=_state(scored=len(aeo_scores), expected=len(supported)),
+        aeo_measurement_coverage=None if total == 0 else len(aeo_scores) / total,
+        aeo_measurement_state=_aggregate_state(aeo_results),
         readiness_dimensions=dimensions,
         analyzed_url_count=total,
     )
+
+
+def _aggregate_state(
+    results: list[tuple[float | None, float | None, str]]
+    | list[tuple[float | None, float | None, str, int, int, int]],
+) -> str:
+    """Scored-page coverage does not imply that every page's checks resolved."""
+    scored = sum(result[0] is not None for result in results)
+    if scored and any(result[2] != MEASUREMENT_STATE_MEASURED for result in results):
+        return MEASUREMENT_STATE_LIMITED
+    return measurement_state(determinate=scored, expected=len(results))

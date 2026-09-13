@@ -47,6 +47,8 @@ export const siteIssueSchema = responseObject({
   title: z.string(),
   description: z.string(),
   remediation: z.string(),
+  // Who can resolve it: `content`, `agent` or `code`.
+  remediation_route: z.string(),
   affected_url_count: z.number().int(),
   analyzer_version: z.string(),
   rule_version: z.string(),
@@ -80,6 +82,7 @@ export const siteIssueDetailSchema = responseObject({
   title: z.string(),
   description: z.string(),
   remediation: z.string(),
+  remediation_route: z.string(),
   occurrences: z.array(issueOccurrenceSchema),
   occurrence_count: z.number().int(),
   affected_url_count: z.number().int(),

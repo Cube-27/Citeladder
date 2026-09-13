@@ -16,6 +16,7 @@ import {
   type ExportView,
 } from '@/lib/site-health/download';
 import { invalidateCrawlViews, invalidateMonitoredProjection } from '@/lib/site-health/invalidate';
+import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { useCrawlEvents } from '@/lib/site-health/use-crawl-events';
 import {
   crawlPollInterval,
@@ -57,7 +58,7 @@ export function useSiteHealthScreen(projectId: string | null) {
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const entitlementQuery = useQuery(siteHealthQueries.entitlements());
+  const entitlementQuery = useQuery(siteHealthQueries.entitlements(useActiveWorkspaceId()));
 
   const dashboardQuery = useQuery({
     ...siteHealthQueries.dashboard(projectId ?? ''),

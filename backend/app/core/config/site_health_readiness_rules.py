@@ -113,7 +113,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation="Use sequential heading levels to express content hierarchy.",
         display_label="Primary-content heading hierarchy",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
     ),
     SiteHealthRule(
         rule_id="aeo.organization_identity",
@@ -128,7 +127,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation="Add Organization name and URL on the site root.",
         display_label="Organization identity incomplete",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
     ),
     SiteHealthRule(
         rule_id="aeo.trust_path_present",
@@ -157,7 +155,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         display_label="Missing content date",
         finding_class=FINDING_CLASS_ADVISORY,
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
     ),
     SiteHealthRule(
         rule_id="aeo.product_answer_facts",
@@ -177,7 +174,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         ),
         display_label="Critical product answer facts missing",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
         composite_contract=PRODUCT_ANSWER_FACTS_CONTRACT,
     ),
     SiteHealthRule(
@@ -192,7 +188,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation="Expose a stable product identifier visibly or in Product markup.",
         display_label="Product identifier missing",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
     ),
     SiteHealthRule(
         rule_id="aeo.product_brand_identity",
@@ -206,7 +201,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation="Expose the product brand or manufacturer in Product markup.",
         display_label="Product brand identity missing",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
     ),
     SiteHealthRule(
         rule_id="aeo.offer_freshness_signal",
@@ -220,7 +214,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation="Expose a currency and an updated timestamp with Offer data.",
         display_label="Offer freshness signal missing",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
     ),
     SiteHealthRule(
         rule_id="aeo.listing_answer_set",
@@ -236,7 +229,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation="Add a clear H1 and crawlable links to collection items.",
         display_label="Collection answer set incomplete",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
         composite_contract=LISTING_ANSWER_SET_CONTRACT,
     ),
     SiteHealthRule(
@@ -251,7 +243,6 @@ READINESS_EXPANSION_RULES: Final[tuple[SiteHealthRule, ...]] = (
         remediation="Render item names and crawlable product links in the collection.",
         display_label="Category item facts missing",
         score_roles=(SCORE_ROLE_AEO,),
-        content_addressable=True,
     ),
     SiteHealthRule(
         rule_id="technical.soft_error",

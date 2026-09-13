@@ -72,18 +72,15 @@ procedural pages without multiplying kinds. Route/title evidence may suggest
 inventory classification but cannot by itself activate a mandatory purpose
 penalty.
 
-Completed AEO checklists are supported for:
+Any page kind can receive a score from independently applicable checks.
+Rule applicability still requires the relevant structural evidence; route-only
+classification cannot activate a mandatory purpose penalty. Repeated cards
+and pagination alone do not promote editorial or comparison indexes to a
+category; decisive collection affordances remain structural evidence.
 
-- editorial articles;
-- public-sale and affirmative quote-led products;
-- commerce collections and editorial/docs hubs;
-- FAQs with identifiable question/answer relationships;
-- non-procedural concept documentation.
-
-Other purposes retain applicable Web checks, present-artifact validation and
-findings but have a null AEO score with `unsupported_purpose_checklist`.
-Unresolved purpose uses `page_purpose_unresolved`. Procedural and API-reference
-docs are unsupported in this cutover.
+Without applicable AEO checks, unresolved purpose uses
+`page_purpose_unresolved` and other kinds use `no_applicable_checks`.
+Applicable checks with no determinate verdict use `unresolved_checks`.
 
 ## Public checks and findings
 
@@ -102,20 +99,21 @@ generator. Diagnostics describe limitations and do not assert defects. Grouping
 occurrences never multiplies score influence or claims a shared template fix
 without template evidence.
 
-The Web checklist initially uses equal-weight checks for title presence,
-indexability intent/blocker evidence, HTTPS, declared-canonical integrity,
-bounded image alternatives, form names, document language, viewport, mixed
-content and strong page-owned soft-error evidence.
+The config-owned Web checklist uses equal-weight checks for title and meta
+description presence, canonical presence/integrity, indexability, soft errors,
+HTTPS, HSTS, compression, TTFB, mixed content, image alternatives, form names,
+document language, heading order and viewport.
 
 Canonical integrity merges declaration conflict and target resolution. All
 bounded declarations are preserved. No declaration is N/A. Multiple or invalid
 declarations fail. An unavailable target is unresolved. A healthy redirect can
 be consolidation guidance and does not automatically fail.
 
-Lengths, heading outline, H1 counts, HSTS, TTFB, compression, `llms.txt`, Open
-Graph, initial-HTML rendering and optional schema presence remain facts,
-diagnostics or improvements. They do not claim Google limits, Core Web Vitals,
-general security, indexability or general AI readiness.
+The AEO catalog also includes Open Graph, structured-data presence and initial
+HTML rendering. Score membership is separate from finding class. These checks
+do not establish Google limits, Core Web Vitals, general security, actual
+indexing or citation eligibility. Lengths, H1 counts and `llms.txt` remain
+unscored facts, diagnostics or improvements.
 
 Broken links, hreflang and sitemap relationships retain checked, unchecked and
 rate-limited counts and remain unscored. Incomplete target resolution cannot
@@ -140,16 +138,20 @@ The AEO pillars and baseline weights are:
 Checks are binary and equal weight inside their role/pillar.
 
 ```text
-Web = 100 * passed applicable checks / applicable checks
-Pillar = 100 * passed applicable checks / applicable checks
-AEO = sum(completed applicable pillar score * pillar weight)
-      / sum(applicable pillar weights)
+Web = 100 * satisfied checks / determinate applicable checks
+Pillar = 100 * satisfied checks / determinate applicable checks
+AEO = sum(scored pillar score * pillar weight) / sum(scored pillar weights)
 ```
 
-A page role publishes a score only when every applicable public check for that
-role is `satisfied` or `missing`. Unknown/error/partial checks remain in exact
-completion counts and make the role score null. A pillar can complete while the
-overall AEO checklist remains partial. Zero applicable checks is null.
+A page role publishes a score when at least one applicable check is
+`satisfied` or `missing`. Unknown/error/partial checks earn no credit and
+remain in completion counts. No determinate checks means a null score.
+Duplicate rule IDs count once; disagreeing outcomes remain unknown.
+
+Web and pillar completion count determinate checks over applicable checks.
+Page AEO completion is the weighted mean of applicable pillar completion.
+No applicable checks gives null coverage; applicable but entirely unresolved
+checks give zero coverage. A scored but incomplete result remains partial.
 
 Crawl Web and AEO results are separate equal means of finalized page scores in
 the selected crawl cohort. A page with 1/1 and a page with 0/9 average to 50;
@@ -157,9 +159,12 @@ the implementation does not pool them to 10. Page-kind means use the same page
 arithmetic and reconcile to the cohort when weighted by scored-page count.
 Full precision is persisted and display rounding happens at the edge.
 
-Check completion, scored-page coverage, classification coverage and discovery
-limits are separate. The UI uses **Complete checklist**, **Partial audit** and
-**Unsupported purpose checklist**; it does not infer confidence from coverage.
+Crawl and page-kind coverage count pages with a score, while their state also
+retains incomplete checks within scored pages. Pillar rollups likewise count
+scored pages and retain unresolved-check counts. Check completion, scored-page
+coverage, classification coverage and discovery limits remain separate.
+The UI rounds scores to whole numbers and shows **Partial audit** caveats
+without inferring confidence from coverage.
 The positive access-gate label is **No observed blocker**, which does not claim
 actual indexing or engine eligibility.
 
@@ -183,8 +188,9 @@ Once work drains, the existing crawl lock owns the only publication sequence:
 
 Evaluations and issues are never cloned or reparented. Consumers resolve the
 final manifest's evaluation UUIDs. Workspace authorization is required for
-every source UUID, including supersession. Active summaries expose progress and
-completion without numeric scores. Terminal cancellation/partial completion
+every source UUID, including supersession. Initial analyses persist provisional
+page scores; active summaries expose their running means as a partial audit
+alongside progress. Terminal cancellation/partial completion
 still writes a null or partial snapshot; retry cannot create a second current
 row or snapshot.
 
@@ -205,6 +211,16 @@ grounded drafts are limited to missing title and meta description. Accessible
 names, indexing, canonicals, price/stock, legal text, broken links and uncertain
 template changes remain manual or investigation actions. Draft generation,
 review or export never resolves the live finding or changes a score.
+
+The rule catalog derives Content eligibility and remediation routing from one
+config policy. Content links identify crawl and URL; an optional analysis ID
+must match the current finalized revision or its direct predecessor. The
+handoff returns only requested, supported gaps in that revision's source
+manifest. Other findings offer a copyable fix prompt.
+
+Historical snapshots retain frozen measurements. Read projections supply
+missing pillar labels and current action routing from the catalog without
+rescoring or rewriting evidence.
 
 Opportunities keeps explicit implementation declarations and append-only
 verification events. Verification needs evidence captured after implementation,

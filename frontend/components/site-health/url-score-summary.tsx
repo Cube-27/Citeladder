@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { hairlineBandClasses, hairlineBandItemClasses } from '@/components/ui/workspace';
 import type { PageDetail } from '@/lib/api/types';
+import { measurementCaveat } from '@/lib/site-health/status';
 
 export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
   return (
@@ -15,19 +16,19 @@ export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
       />
       <ScoreTile
         label="AEO Readiness"
+        reason={detail.aeo_measurement_reason}
         value={detail.aeo_readiness_score}
         coverage={detail.aeo_measurement_coverage}
         state={detail.aeo_measurement_state}
-        reason={detail.aeo_measurement_reason}
       />
       <ScoreTile
         label="AEO Checklist Completion"
+        reason={detail.aeo_measurement_reason}
         value={
           detail.aeo_measurement_coverage === null ? null : detail.aeo_measurement_coverage * 100
         }
         coverage={detail.aeo_measurement_coverage}
         state={detail.aeo_measurement_state}
-        reason={detail.aeo_measurement_reason}
       />
     </div>
   );
@@ -46,8 +47,10 @@ function ScoreTile({
   state: string;
   reason?: string;
 }>) {
-  const coverageLabel =
-    coverage === null ? 'Completion unavailable' : `${Math.round(coverage * 100)}% complete`;
+  // The fourth surface that carried "100% complete · Complete checklist" under
+  // a score. Same rule as the others now: a complete measurement says nothing,
+  // and only a qualified one gets a line.
+  const caveat = measurementCaveat(state, coverage, reason);
   return (
     <div className={`${hairlineBandItemClasses} flex min-h-20 items-center gap-3`}>
       {value === null ? (
@@ -57,9 +60,7 @@ function ScoreTile({
       )}
       <div className="grid min-w-0 gap-1">
         <Label>{label}</Label>
-        <span className="text-muted text-xs">
-          {coverageLabel} · {scoreCompletionLabel(state, reason)}
-        </span>
+        {caveat ? <span className="text-muted text-xs">{caveat}</span> : null}
       </div>
     </div>
   );
@@ -73,12 +74,4 @@ function scoreUnavailableState(state: string) {
     return <span className="text-muted text-xs">Excluded</span>;
   }
   return <UnavailableValue state="not_measured" />;
-}
-
-function scoreCompletionLabel(state: string, reason?: string): string {
-  if (state === 'measured') return 'Complete checklist';
-  if (state === 'limited_evidence') return 'Partial audit';
-  if (state === 'excluded') return 'Excluded';
-  if (reason === 'unsupported_purpose_checklist') return 'Unsupported purpose checklist';
-  return 'Completion unavailable';
 }

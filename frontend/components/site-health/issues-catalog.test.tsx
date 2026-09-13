@@ -76,6 +76,7 @@ function issue(overrides: Partial<SiteIssue> = {}): SiteIssue {
     title: 'WebSite schema is missing',
     description: 'Search engines cannot find WebSite structured data on this page.',
     remediation: 'Add a JSON-LD WebSite schema.',
+    remediation_route: 'code',
     affected_url_count: 32,
     analyzer_version: 'a1',
     rule_version: 'r1',
@@ -123,6 +124,7 @@ function issueDetail(overrides: Record<string, unknown> = {}) {
     title: 'WebSite schema is missing',
     description: 'Search engines cannot find WebSite structured data on this page.',
     remediation: 'Add a JSON-LD WebSite schema.',
+    remediation_route: 'code',
     occurrences: [occurrence()],
     occurrence_count: 1,
     affected_url_count: 1,
@@ -366,7 +368,12 @@ describe('IssuesCatalog', () => {
     expect(
       screen.getAllByText('Search engines cannot find WebSite structured data on this page.'),
     ).toHaveLength(2);
-    expect(await screen.findByText('Expected WebSite; found Organization.')).toBeInTheDocument();
+    // Evidence is the notation of the fix, with no "Observed evidence" label
+    // and no restatement of the title above it.
+    expect(
+      await screen.findByText('expected types WebSite, found types Organization'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Observed evidence')).not.toBeInTheDocument();
     expect(screen.queryByText('Reason: expected_schema_absent')).not.toBeInTheDocument();
     expect(screen.getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
     // No unsupported "mark reviewed/resolved" action is rendered.

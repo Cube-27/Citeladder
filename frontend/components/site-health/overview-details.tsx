@@ -22,7 +22,7 @@ import {
 import { TrendChart } from '@/components/ui/trend-chart';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { SiteHealthOverview } from '@/lib/api/types';
-import { PLACEHOLDER, statusLabel } from '@/lib/site-health/status';
+import { formatScore, PLACEHOLDER, statusLabel } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
 import { ledgerClasses } from '@/components/ui/workspace';
@@ -131,9 +131,7 @@ function DimensionLedger({
                     ) : null}
                   </div>
                 </TableCell>
-                <TableCell numeric>
-                  {dimension.score ?? <UnavailableValue state="not_measured" />}
-                </TableCell>
+                <TableCell numeric>{formatScore(dimension.score)}</TableCell>
                 <TableCell className="min-w-32">
                   {dimension.score === null ? (
                     <span className="text-muted text-xs">

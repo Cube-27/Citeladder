@@ -478,10 +478,14 @@ async def test_snapshot_uses_only_latest_completed_analysis_and_issues(
         assert crawl.score_summary is not None
         assert crawl.score_summary["analyzed_count"] == 1
         assert crawl.score_summary["issue_count"] == 1
-        assert crawl.score_summary["web_fundamentals_score"] is None
+        # An ACTIVE crawl reports the running mean of what it has scored so
+        # far. Blanking it put "Limited evidence" on a crawl that had already
+        # analyzed and scored pages, which reports our progress as the site's
+        # fault. The STATE still says the cohort is partial.
+        assert crawl.score_summary["web_fundamentals_score"] is not None
         assert crawl.score_summary["web_fundamentals_state"] == "limited_evidence"
         assert all(
-            row["web_fundamentals_score"] is None
+            row["web_fundamentals_score"] is not None
             for row in crawl.score_summary["by_page_kind"].values()
         )
         # The same call the worker's terminalization makes (its
@@ -710,8 +714,8 @@ async def test_terminal_snapshot_freezes_classification_cohort_and_provenance(
         assert snapshot.classification_source_analysis_ids == expected_analysis_ids
         assert snapshot.classification_source_artifact_ids == expected_artifact_ids
         assert snapshot.classification_source_task_ids == expected_task_ids
-        assert snapshot.scored_page_kind_set == ["article"]
-        assert snapshot.scored_page_count_by_kind == {"article": 1}
+        assert snapshot.scored_page_kind_set == ["article", "other"]
+        assert snapshot.scored_page_count_by_kind == {"article": 1, "other": 1}
 
         summary = crawl.score_summary
         assert summary is not None
@@ -735,13 +739,17 @@ async def test_terminal_snapshot_freezes_classification_cohort_and_provenance(
         assert summary["classification_source_task_ids"] == [
             str(value) for value in expected_task_ids
         ]
-        assert summary["scored_page_kind_set"] == ["article"]
-        assert summary["scored_page_count_by_kind"] == {"article": 1}
+        assert summary["scored_page_kind_set"] == ["article", "other"]
+        assert summary["scored_page_count_by_kind"] == {"article": 1, "other": 1}
+        # A page that FAILED to be analyzed is absent from the cohort; the two
+        # that were analyzed are scored on the checks that resolved for them,
+        # `other` included. Withholding readiness because one page of three
+        # crashed reported our failure as the site's.
         assert set(summary["by_page_kind"]) == {"article", "other"}
-        assert summary["by_page_kind"]["article"]["aeo_readiness_score"] is None
-        assert summary["by_page_kind"]["other"]["aeo_readiness_score"] is None
+        assert summary["by_page_kind"]["article"]["aeo_readiness_score"] is not None
+        assert summary["by_page_kind"]["other"]["aeo_readiness_score"] is not None
         assert snapshot.aeo_readiness_score == summary["aeo_readiness_score"]
-        assert snapshot.aeo_readiness_score is None
+        assert snapshot.aeo_readiness_score is not None
 
 
 @pytest.mark.asyncio

@@ -46,6 +46,9 @@ export function testProjectSelection(
     activeWorkspace: workspace,
     setActiveWorkspaceId: vi.fn(),
     projects: [],
+    // The harness publishes a SETTLED empty list: a screen under test should
+    // render its empty state, not a loading placeholder, unless it opts in.
+    projectsSettled: true,
     activeProject: null,
     activeProjectId: null,
     setActiveProjectId: vi.fn(),

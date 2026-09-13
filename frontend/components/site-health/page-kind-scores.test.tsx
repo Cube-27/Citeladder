@@ -96,7 +96,8 @@ describe('PageKindScores', () => {
     expect(screen.getByText('1')).toBeInTheDocument();
     // Mean scores formatted like every other score cell.
     expect(screen.getByText('80')).toBeInTheDocument();
-    expect(screen.getByText('90.5')).toBeInTheDocument();
+    // Scores render as whole numbers everywhere.
+    expect(screen.getByText('91')).toBeInTheDocument();
     // PAGE_KINDS display order: Homepage row precedes the Article row.
     const homepage = screen.getByText('Homepage');
     const article = screen.getByText('Article');
@@ -156,7 +157,7 @@ describe('PageKindScores', () => {
     );
 
     expect(screen.getByText('46')).toBeInTheDocument();
-    expect(screen.getByText('50% complete · Partial audit')).toBeInTheDocument();
+    expect(screen.getByText('Partial audit · 50% coverage')).toBeInTheDocument();
     expect(screen.getByText('Excluded')).toBeInTheDocument();
   });
 

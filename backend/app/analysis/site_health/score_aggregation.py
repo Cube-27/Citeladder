@@ -11,9 +11,11 @@ from app.analysis.site_health.measurement_aggregation import (
 from app.analysis.site_health.scoring import (
     AnalysisMeasurementInput,
     RuleMeasurementInput,
+    readiness_reason,
 )
+from app.core.config.site_health_measurement import DIMENSION_APPLICABLE
 from app.core.config.site_health_rule_types import RULE_SCOPE_PAGE
-from app.core.config.site_health_taxonomy import PAGE_KIND_OTHER, PAGE_KINDS
+from app.core.config.site_health_taxonomy import PAGE_KINDS
 
 
 def _ordered_page_kinds(
@@ -34,10 +36,26 @@ def _page_kind_payload(
         "aeo_readiness_score": aggregate.aeo_readiness_score,
         "aeo_measurement_coverage": aggregate.aeo_measurement_coverage,
         "aeo_measurement_state": aggregate.aeo_measurement_state,
-        "aeo_measurement_reason": (
-            "page_purpose_unresolved" if page_kind == PAGE_KIND_OTHER else ""
-        ),
+        # `other` no longer means "unscoreable". An unresolved purpose limits
+        # which checks APPLY; it does not stop the ones that did apply from
+        # producing a readiness number, and stamping every such bucket
+        # `page_purpose_unresolved` hid a real score behind a classifier
+        # caveat. The reason now describes the measurement, not the kind.
+        "aeo_measurement_reason": _reason(page_kind, aggregate),
     }
+
+
+def _reason(page_kind: str, aggregate: AggregateMeasurements) -> str:
+    """Apply the page scorer's reason policy to the cohort result."""
+    return readiness_reason(
+        score=aggregate.aeo_readiness_score,
+        state=aggregate.aeo_measurement_state,
+        has_applicable_pillar=any(
+            row.get("dimension_applicability") == DIMENSION_APPLICABLE
+            for row in aggregate.readiness_dimensions
+        ),
+        effective_kind=page_kind,
+    )
 
 
 def aggregate_by_page_kind(

@@ -8,6 +8,8 @@ from typing import Any, cast
 
 import pytest
 
+from app.analysis.site_health.page_analysis import analyze_page
+from app.analysis.site_health.parser import extract_page_facts
 from app.core.config.site_health_contracts import (
     RULE_OUTCOME_MISSING,
     RULE_OUTCOME_SATISFIED,
@@ -18,6 +20,7 @@ from app.models.site_health.analysis import (
     SiteRuleEvaluation,
 )
 from app.workers.site_health.phases.analyze_rows import (
+    _new_page_analysis,
     _persist_evaluations_and_issues,
 )
 
@@ -151,3 +154,48 @@ async def test_evidence_backed_unscored_guidance_creates_an_issue() -> None:
     )
 
     assert len([row for row in session.added if isinstance(row, SiteIssue)]) == 1
+
+
+def test_a_page_row_reports_its_own_result_before_the_crawl_ends() -> None:
+    """A finished page must say what it found, not wait for the whole crawl.
+
+    Scores used to be written only at terminalization, so a crawl in flight
+    showed every completed page as "Completed" beside "Not measured" in every
+    score column — 89 of 200 pages analyzed and nothing said about any of them.
+    The result is PROVISIONAL (terminalization revises it with the cross-page
+    checks), but it is the page's own evidence and it is real.
+    """
+    facts = extract_page_facts(
+        b"<html lang='en'><head><title>Widget</title>"
+        b"<meta name='viewport' content='width=device-width'></head>"
+        b"<body><main><h1>Widget</h1><p>A widget.</p></main></body></html>",
+        final_url="https://example.test/widget",
+        content_type="text/html",
+    )
+    result = analyze_page(facts)
+    crawl = cast(
+        Any,
+        SimpleNamespace(
+            id=uuid.uuid4(),
+            workspace_id=uuid.uuid4(),
+            project_id=uuid.uuid4(),
+            analyzer_version="",
+            scoring_version="",
+        ),
+    )
+
+    row = _new_page_analysis(
+        crawl=crawl,
+        site_url_id=uuid.uuid4(),
+        artifact_id=uuid.uuid4(),
+        result=result,
+    )
+
+    assert row.web_fundamentals_score == result.scores.web_fundamentals_score
+    assert row.web_fundamentals_score is not None
+    assert row.web_fundamentals_state == result.scores.web_fundamentals_state
+    assert row.web_fundamentals_state != "not_measured"
+    assert row.aeo_measurement_reason != "audit_not_terminal"
+    assert row.expected_checkpoint_profile
+    # Still provisional: terminalization appends the final revision.
+    assert row.finalized_at is None

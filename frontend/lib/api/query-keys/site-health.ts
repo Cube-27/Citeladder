@@ -21,7 +21,7 @@ export const siteHealthKeys = {
     projectId: string,
     crawlId: string,
     siteUrlId: string,
-    sourceAnalysisId: string,
+    sourceAnalysisId: string | undefined,
     dimension: string,
     checkpointIds: string[],
   ) =>
@@ -31,7 +31,7 @@ export const siteHealthKeys = {
       projectId,
       crawlId,
       siteUrlId,
-      sourceAnalysisId,
+      sourceAnalysisId ?? 'current',
       dimension,
       [...checkpointIds].sort((left, right) => left.localeCompare(right)),
     ] as const,

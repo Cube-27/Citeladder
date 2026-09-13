@@ -50,8 +50,9 @@ staging or production environments under this policy.
 Read endpoints never crawl, sync, classify, score, call a model/provider, or
 silently repair state. Missing evidence stays missing.
 
-Site Health active summaries publish progress and completion counts without
-numeric scores. One locked terminalization owner appends the final current page
+Site Health active summaries publish provisional scores from analyzed pages,
+marked as a partial audit, alongside progress and completion counts.
+One locked terminalization owner appends the final current page
 analysis revisions and atomically persists the terminal score summary and
 snapshot. Classification coverage, checklist completion, scored-page coverage,
 and crawl coverage are distinct persisted facts with exact provenance.
@@ -79,11 +80,12 @@ non-excluded supported HTML before page-understanding work begins. Terminal
 `other` and post-assignment page-understanding failure remain separate counts
 under the same denominator.
 
-`other` is classification abstention, not an inferred `WebPage`. It retains
-all independently applicable Web checks but has a null page-purpose AEO score
-and coverage with reason `page_purpose_unresolved`. Unsupported classified
-purposes use reason `unsupported_purpose_checklist`; evaluator absence is never
-reported as `not_applicable`.
+`other` is classification abstention, not an inferred `WebPage`. Page kind
+governs rule applicability, not score eligibility: independently applicable
+Web and AEO checks can score any kind. When no AEO checks apply, unresolved
+purpose uses `page_purpose_unresolved` and other kinds use
+`no_applicable_checks`. Evaluator absence remains unresolved evidence,
+never `not_applicable`.
 
 AEO checkpoint outcomes are exactly `satisfied`, `partial`, `missing`,
 `unknown`, `not_applicable`, or `error`. Unavailable, ambiguous, and conflicting
@@ -91,6 +93,8 @@ evidence remain bounded reasons under `unknown`, not additional AEO outcomes.
 Content-reading expectations on a JS shell preserve this distinction while the
 rendering diagnostic owns the observable delivery limitation. Public scoring is
 binary: only `satisfied` and `missing` are determinate; `partial` earns no credit.
+Scores use determinate checks only. Unresolved checks remain in coverage and
+keep page, pillar and crawl measurement states partial even when a score exists.
 
 ## 9. Deterministic code owns measurable facts
 

@@ -38,6 +38,7 @@ from app.domain.site_health.service.issue_listing import (
     issue_query_state,
     issue_summary_for_filters,
     page_issue_groups,
+    remediation_route_for,
 )
 from app.domain.site_health.service.presentation import (
     _SEVERITY_ORDER,
@@ -552,6 +553,7 @@ async def get_issue_detail(
         "title": display_label_for(canonical.rule_id),
         "description": canonical.description or "",
         "remediation": canonical.remediation or "",
+        "remediation_route": remediation_route_for(canonical.rule_id),
         "occurrences": occurrences,
         "occurrence_count": int(occurrence_count),
         "affected_url_count": int(total),

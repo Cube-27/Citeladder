@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { OverviewDetails, OverviewDetailsSkeleton } from './overview-details';
 import { OverviewMetricCards } from './overview-metrics';
 import { Alert } from '@/components/ui/alert';
+import { httpErrorStatus } from '@/lib/api/client';
 import { siteHealthQueries } from '@/lib/api/site-health';
 import type { SiteCrawl, SiteHealthDashboard } from '@/lib/api/types';
 import { shouldPollCrawl } from '@/lib/site-health/status';
@@ -32,7 +33,14 @@ export function OverviewPanel({
   });
   const data = overview.data;
   let overviewBody: ReactNode = null;
-  if (overview.isError) {
+  // The snapshot is WRITTEN at terminalization, so before then the endpoint
+  // answers 404 by design — an absence, not a failure. Two things used to turn
+  // that into a red alert over a perfectly healthy running crawl: hovering the
+  // Overview tab warmed this exact query key regardless of the crawl's state,
+  // and `isError` is sticky, so the 404 it cached stayed on screen long after
+  // `enabled` went false. Report only a failure this query is actually making
+  // now, and never the expected absence.
+  if (terminal && overview.isError && httpErrorStatus(overview.error) !== 404) {
     overviewBody = <Alert tone="danger">Could not load the persisted Site Health Overview.</Alert>;
   } else if (data) {
     overviewBody = <OverviewDetails data={data} />;
