@@ -66,10 +66,10 @@
 
 ## Current phase
 
-**Phase 3 — critical Vite vertical.** The migration contract, bounded Next
-stabilization, and production-capable Vite foundation are complete. Next
-feature architecture is frozen: subsequent authenticated product behavior
-belongs to the Vite route migration except for an independent parity blocker.
+**Phase 4 — product route batches.** The critical Vite vertical is complete.
+Next feature architecture remains frozen: subsequent authenticated product
+behavior belongs to Vite except for an independent parity blocker. The next
+review boundary is Website plus Issues.
 
 The ordered execution is:
 
@@ -118,6 +118,14 @@ The ordered execution is:
   backend MCP/OAuth ownership, browser `/register`, direct SPA refreshes, and
   a no-store `/health`. The temporary `/__migration/app` acceptance route is
   removed when the real login/session/project route tree lands in Phase 3.
+- **Phase 3 — critical Vite vertical (2026-09-14):** real `/login`, `/register`,
+  `/projects`, and `/onboarding` routes replaced the temporary acceptance page.
+  Auth and onboarding implementations now have shared owners; the Vite route
+  tree preserves the single QueryClient, parallel project/session bootstrap,
+  private-content gate, shell-free onboarding, application shell, project URL
+  state, and exact persisted creation handoff. The focused critical suite
+  passed 100 tests, the production Vite build passed, and controlled Chromium
+  observed the real login-to-project-Overview path.
 
 ## Known unresolved issues
 
@@ -136,9 +144,11 @@ The ordered execution is:
 - Cold direct entries have no in-memory prefetch cache. Issues and Opportunities
   intentionally retain dependent first-paint request chains; flatten them only
   if post-migration traces show material cost without breaking coherence.
-- Current full-auth Suspense exists for Next `useSearchParams`. Vite must keep
-  structural private-content protection without translating that framework
-  bailout into a second shell or blank fallback.
+- Vite currently aliases exactly `next/link`, `next/navigation`, and
+  `next/image` to scoped client adapters while Next coexists. Product route
+  migration may consume only that listed surface. Phase 5 must migrate the
+  remaining imports to router/browser-native owners and delete all three
+  aliases before authenticated cutover.
 - Production route ownership is split between current Next rewrites and GCP
   Caddy. Root `/register` is a browser signup route in production even though
   Next currently also declares a backend rewrite; the cutover must keep browser

@@ -61,7 +61,7 @@ styles, public assets, and server-only `BACKEND_ORIGIN`. It is deliberately
 non-authoritative while migration work continues:
 
 ```bash
-pnpm dev:vite               # http://127.0.0.1:3001/__migration/app
+pnpm dev:vite               # http://127.0.0.1:3001/login
 pnpm build:vite
 pnpm preview:vite           # production bundle preview on port 3001
 ```

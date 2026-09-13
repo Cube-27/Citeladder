@@ -25,11 +25,17 @@ export default defineConfig(({ command, mode }) => {
       'process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE': publicValue(
         'NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE',
       ),
+      'process.env.NEXT_PUBLIC_DEMO_MODE': publicValue('NEXT_PUBLIC_DEMO_MODE'),
       'process.env.NEXT_PUBLIC_SITE_URL': publicValue('NEXT_PUBLIC_SITE_URL'),
     },
     resolve: {
       alias: {
         '@': frontendRoot,
+        'next/image': fileURLToPath(new URL('./src/compat/next-image.tsx', import.meta.url)),
+        'next/link': fileURLToPath(new URL('./src/compat/next-link.tsx', import.meta.url)),
+        'next/navigation': fileURLToPath(
+          new URL('./src/compat/next-navigation.ts', import.meta.url),
+        ),
       },
     },
     css: {
