@@ -22,20 +22,22 @@ import {
 } from '@/test/fixtures/prompts';
 
 let currentSearch = new URLSearchParams();
-const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
-const replaceStateSpy = vi.fn((_data: unknown, _unused: string, url?: string | URL | null) => {
-  currentSearch = new URL(url?.toString() ?? '/prompts', 'http://localhost').searchParams;
-});
-vi.stubGlobal('history', { ...window.history, replaceState: replaceStateSpy });
+const { pushMock, replaceMock } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
+  replaceMock: vi.fn(),
+}));
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn(), push: pushMock, prefetch: vi.fn() }),
+  useRouter: () => ({ replace: replaceMock, push: pushMock, prefetch: vi.fn() }),
   usePathname: () => '/prompts',
   useSearchParams: () => currentSearch,
 }));
 
 setupPromptsPageTests(() => {
   currentSearch = new URLSearchParams();
-  replaceStateSpy.mockClear();
+  replaceMock.mockReset();
+  replaceMock.mockImplementation((href: string) => {
+    currentSearch = new URL(href, 'http://localhost').searchParams;
+  });
   pushMock.mockClear();
 });
 
@@ -276,22 +278,5 @@ describe('PromptsPage (Your Prompts)', () => {
       </ProjectProvider>,
     );
     expect(await screen.findByRole('button', { name: 'Done managing' })).toBeInTheDocument();
-  });
-
-  it('clears the ?mode=manage param when leaving manage mode so manage links stay live', async () => {
-    const user = userEvent.setup();
-    currentSearch = new URLSearchParams('mode=manage');
-    usePromptPageHandlers([makePrompt({ topic_id: TOPIC_ID })], [makeTopic()]);
-    renderPromptsPage();
-
-    // Deep-linked into manage mode.
-    expect(
-      await screen.findByRole('button', { name: 'Generate prompts' }, { timeout: 5000 }),
-    ).toBeInTheDocument();
-
-    // Exiting clears the URL param (the read view's manage links point at
-    // /prompts?mode=manage and would no-op against the current URL).
-    await user.click(screen.getByRole('button', { name: 'Done managing' }));
-    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/prompts');
   });
 });

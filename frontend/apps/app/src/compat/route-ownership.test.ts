@@ -19,6 +19,9 @@ describe('viteOwnedDestination', () => {
     expect(viteOwnedDestination('/visibility?tab=trends', CURRENT_PROJECT)).toBe(
       '/visibility?tab=trends',
     );
+    expect(viteOwnedDestination('/prompts?mode=manage', CURRENT_PROJECT)).toBe(
+      '/prompts?mode=manage',
+    );
   });
 
   it('recognizes the shipped dynamic product routes', () => {

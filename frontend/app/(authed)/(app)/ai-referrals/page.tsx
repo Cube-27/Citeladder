@@ -1,13 +1,5 @@
-'use client';
-
-import { AiReferralsScreen } from '@/components/ai-referrals/ai-referrals-screen';
-import { PageHeader } from '@/components/layout/page-header';
+import { AiReferralsRouteContent } from '@/components/ai-referrals/ai-referrals-route-content';
 
 export default function AiReferralsPage() {
-  return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      <PageHeader />
-      <AiReferralsScreen />
-    </div>
-  );
+  return <AiReferralsRouteContent />;
 }

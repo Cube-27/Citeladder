@@ -14,6 +14,12 @@ import {
   RunsRouteElement,
   VisibilityRouteElement,
 } from './product-routes-opportunity-visibility-runs';
+import {
+  AiReferralsRouteElement,
+  ContentRouteElement,
+  ProductsRouteElement,
+  PromptsRouteElement,
+} from './product-routes-prompts-content-commerce-referrals';
 import { IssuesRoute, WebsitePageDetailRoute, WebsiteRoute } from './product-routes-site-issues';
 
 export const router = createBrowserRouter([
@@ -74,6 +80,22 @@ export const router = createBrowserRouter([
           {
             path: '/runs/:runId',
             element: <RunDetailRouteElement />,
+          },
+          {
+            path: '/prompts',
+            element: <PromptsRouteElement />,
+          },
+          {
+            path: '/content',
+            element: <ContentRouteElement />,
+          },
+          {
+            path: '/products',
+            element: <ProductsRouteElement />,
+          },
+          {
+            path: '/ai-referrals',
+            element: <AiReferralsRouteElement />,
           },
         ],
       },

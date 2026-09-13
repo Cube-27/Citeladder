@@ -1,4 +1,6 @@
 const VITE_ROUTES: Record<string, true> = {
+  '/ai-referrals': true,
+  '/content': true,
   '/demand': true,
   '/issues': true,
   '/login': true,
@@ -6,6 +8,8 @@ const VITE_ROUTES: Record<string, true> = {
   '/opportunities': true,
   '/performance': true,
   '/projects': true,
+  '/products': true,
+  '/prompts': true,
   '/register': true,
   '/runs': true,
   '/site': true,
