@@ -97,7 +97,24 @@ describe('evidenceFacts', () => {
           { tag: 'textarea', id: '', name: '', type: 'textarea' },
         ],
       }),
-    ).toEqual(['input#search', 'input[type="email"]', 'textarea']);
+    ).toEqual(['input[id="search"]', 'input[type="email"]', 'textarea']);
+  });
+
+  it('produces selectors that locate controls with CSS-special attribute values', () => {
+    const root = document.createElement('div');
+    const identified = document.createElement('input');
+    identified.id = 'search:input';
+    const named = document.createElement('input');
+    named.name = 'a"b\\c\nd';
+    root.append(identified, named);
+    const selectors = evidenceFacts('web.accessibility_form_names', {
+      missing_control_descriptors: [
+        { tag: 'input', id: identified.id },
+        { tag: 'input', name: named.name },
+      ],
+    });
+    expect(root.querySelector(selectors[0]!)).toBe(identified);
+    expect(root.querySelector(selectors[1]!)).toBe(named);
   });
 
   it('tallies a repeated heading skip instead of repeating the line', () => {

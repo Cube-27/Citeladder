@@ -279,6 +279,8 @@ describe('OverviewPanel', () => {
 
     expect(await screen.findByTestId('site-health-overview')).toBeInTheDocument();
     expect(screen.queryByText(ALERT)).not.toBeInTheDocument();
+    expect(screen.getByText('Coverage unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('In progress')).not.toBeInTheDocument();
   });
 
   it('still reports a snapshot read that genuinely failed', async () => {

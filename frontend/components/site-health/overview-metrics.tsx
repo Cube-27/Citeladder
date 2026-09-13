@@ -8,7 +8,7 @@ import { ScoreRing } from '@/components/ui/score-ring';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@/lib/api/types';
-import { PLACEHOLDER, measurementCaveat } from '@/lib/site-health/status';
+import { PLACEHOLDER, measurementCaveat, shouldPollCrawl } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
 
 type Summary = SiteHealthDashboard['score_summary'];
@@ -17,6 +17,7 @@ type MetricContext = {
   summary: Summary;
   analyzed: number;
   selected: number;
+  active: boolean;
 };
 type MetricModel = {
   title: string;
@@ -77,6 +78,7 @@ function metricContext(
     analyzed: overview?.audited_page_count ?? summary?.analyzed_count ?? crawl?.analyzed_count ?? 0,
     selected:
       overview?.selected_page_count ?? summary?.selected_count ?? crawl?.visible_url_count ?? 0,
+    active: crawl !== null && shouldPollCrawl(crawl),
   };
 }
 
@@ -153,7 +155,7 @@ function crawlMetric(context: MetricContext): MetricModel {
     value: progress,
     // The ring already shows the share and `detail` already counts the pages;
     // the only thing left worth saying is that the crawl did NOT finish.
-    caveat: coverageCaveat(terminalCoverage),
+    caveat: coverageCaveat(terminalCoverage, context.active),
     detail: terminalCoverage
       ? `${context.analyzed} of ${context.selected || PLACEHOLDER} pages analyzed${coverageReason(terminalCoverage.evidence)}`
       : `${context.analyzed} of ${context.selected || PLACEHOLDER} pages analyzed`,
@@ -162,8 +164,11 @@ function crawlMetric(context: MetricContext): MetricModel {
   };
 }
 
-function coverageCaveat(coverage: SiteHealthOverview['crawl_coverage'] | undefined): string | null {
-  if (!coverage) return 'In progress';
+function coverageCaveat(
+  coverage: SiteHealthOverview['crawl_coverage'] | undefined,
+  active: boolean,
+): string | null {
+  if (!coverage) return active ? 'In progress' : 'Coverage unavailable';
   if (coverage.state === 'complete') return null;
   return coverage.state === 'partial' ? 'Partial coverage' : 'Coverage unknown';
 }

@@ -85,20 +85,24 @@ function headingSkips(evidence: Evidence): string[] {
   );
 }
 
-/**
- * One offending form control as a selector the reader can paste into devtools.
- * Preference order is how a person actually finds an element: its id, then its
- * name, then its type. The persisted ordinal is deliberately never used.
- */
+/** Escape quoted CSS attribute values without browser globals. */
+function cssAttribute(value: string): string {
+  return value.replace(
+    /["\\\n\r\f]/gu,
+    (character) => `\\${character.charCodeAt(0).toString(16)} `,
+  );
+}
+
+/** Prefer IDs, names, then types; never expose persisted ordinals. */
 function controlSelector(control: Evidence): string {
   const tag = text(control.tag).toLowerCase();
   if (!tag) return '';
   const id = text(control.id);
-  if (id) return `${tag}#${id}`;
+  if (id) return `${tag}[id="${cssAttribute(id)}"]`;
   const name = text(control.name);
-  if (name) return `${tag}[name="${name}"]`;
+  if (name) return `${tag}[name="${cssAttribute(name)}"]`;
   const type = text(control.type).toLowerCase();
-  return type && type !== tag ? `${tag}[type="${type}"]` : tag;
+  return type && type !== tag ? `${tag}[type="${cssAttribute(type)}"]` : tag;
 }
 
 function formControls(evidence: Evidence): string[] {
