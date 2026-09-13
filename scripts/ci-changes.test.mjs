@@ -132,11 +132,10 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
   }
 });
 
-test('previous CI evidence requires a complete successful required aggregator', () => {
+test('previous CI evidence requires every owner to be successful or intentionally skipped', () => {
   const complete = [
-    { name: 'Required', status: 'completed', conclusion: 'success' },
+    { name: 'Classify affected owners', status: 'completed', conclusion: 'success' },
     ...[
-      'Classify affected owners',
       'Backend (quality, pytest)',
       'Frontend (quality, coverage, build)',
       'API contract (backend to frontend)',
@@ -147,7 +146,11 @@ test('previous CI evidence requires a complete successful required aggregator', 
   assert.equal(hasTrustworthyJobEvidence(complete, 'ci.yml'), true);
   assert.equal(
     hasTrustworthyJobEvidence(
-      complete.map((job) => (job.name === 'Required' ? { ...job, conclusion: 'failure' } : job)),
+      complete.map((job) =>
+        job.name === 'Frontend (quality, coverage, build)'
+          ? { ...job, conclusion: 'failure' }
+          : job,
+      ),
       'ci.yml',
     ),
     false,
@@ -155,7 +158,7 @@ test('previous CI evidence requires a complete successful required aggregator', 
   assert.equal(hasTrustworthyJobEvidence(complete.slice(0, -1), 'ci.yml'), false);
   assert.equal(
     hasTrustworthyJobEvidence(
-      [...complete, { name: 'Legacy permissive gate', status: 'completed', conclusion: 'success' }],
+      [...complete, { name: 'Legacy aggregate gate', status: 'completed', conclusion: 'success' }],
       'ci.yml',
     ),
     false,

@@ -230,12 +230,12 @@ contract paths retain their broader owners. The clean-clone Compose smoke runs
 on application/Compose-sensitive PR
 changes, merge queue validation, and every push to `main`.
 
-Only the main workflow’s `CI / Required` and the Compose workflow’s
-`Compose smoke / Required` should be required statuses. Each requires every
-owner selected by the classifier to succeed; an owner may be skipped only when
-the classifier explicitly left it unselected. Do not add workflow-level `paths`
-filters to required workflows; a skipped workflow can leave a required status
-pending.
+Require every job status from the `CI` and `Compose smoke` workflows. The
+classifier jobs must pass; each selected owner must pass; and GitHub reports an
+owner skipped by its job-level condition as successful. Requiring the jobs
+directly avoids a final runner-only aggregation job after all useful work has
+finished. Do not add workflow-level `paths` filters to required workflows; a
+skipped workflow can leave its required statuses pending.
 
 Static-analysis commands, pinned by the frozen locks:
 

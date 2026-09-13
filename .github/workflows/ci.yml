@@ -19,7 +19,9 @@ jobs:
     permissions:
       actions: read
       contents: read
-    runs-on: ubuntu-latest
+    # This is a short Node/Git/API task. The container-based slim runner avoids
+    # provisioning a full CI VM before owner jobs can be selected.
+    runs-on: ubuntu-slim
     outputs:
       backend: ${{ steps.classify.outputs.backend }}
       frontend: ${{ steps.classify.outputs.frontend }}
@@ -262,29 +264,3 @@ jobs:
         run: |
           uvx detect-secrets scan --baseline .secrets.baseline \
             --exclude-files 'uv\.lock|pnpm-lock\.yaml|\.secrets\.baseline'
-
-  required-quality:
-    name: Required
-    permissions: {}
-    if: always()
-    needs: [changes, backend, frontend, contract, e2e, security]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require selected quality owners
-        run: |
-          test "${{ needs.changes.result }}" = "success"
-          for owner in backend frontend contract e2e security; do
-            expected="${{ needs.changes.outputs.backend }}"
-            result="${{ needs.backend.result }}"
-            case "$owner" in
-              frontend) expected="${{ needs.changes.outputs.frontend }}"; result="${{ needs.frontend.result }}" ;;
-              contract) expected="${{ needs.changes.outputs.contract }}"; result="${{ needs.contract.result }}" ;;
-              e2e) expected="${{ needs.changes.outputs.e2e }}"; result="${{ needs.e2e.result }}" ;;
-              security) expected="${{ needs.changes.outputs.security }}"; result="${{ needs.security.result }}" ;;
-            esac
-            if [ "$expected" = "true" ]; then
-              test "$result" = "success"
-            else
-              test "$result" = "skipped"
-            fi
-          done

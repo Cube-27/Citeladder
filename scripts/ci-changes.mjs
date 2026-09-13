@@ -204,7 +204,7 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
   if (!Array.isArray(jobs)) return false;
   const expectedNames =
     workflowFile === 'compose-smoke.yml'
-      ? ['Classify affected owners', 'Clean-clone Compose smoke', 'Required']
+      ? ['Classify affected owners', 'Clean-clone Compose smoke']
       : [
           'Classify affected owners',
           'Backend (quality, pytest)',
@@ -212,17 +212,16 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
           'API contract (backend to frontend)',
           'E2E (playwright)',
           'Security (pip-audit, detect-secrets)',
-          'Required',
         ];
   const jobsByName = new Map(jobs.map((job) => [job.name, job]));
-  const required = jobsByName.get('Required');
+  const classifier = jobsByName.get('Classify affected owners');
   return (
     jobs.length === expectedNames.length &&
     jobsByName.size === expectedNames.length &&
-    required?.conclusion === 'success' &&
+    classifier?.conclusion === 'success' &&
     expectedNames.every((name) => {
       const job = jobsByName.get(name);
-      return job?.status === 'completed' && Boolean(job.conclusion);
+      return job?.status === 'completed' && ['success', 'skipped'].includes(job.conclusion);
     })
   );
 }
