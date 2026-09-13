@@ -8,6 +8,12 @@ import {
   ProjectsRoute,
 } from './private-routes';
 import { DemandRoute, PerformanceRoute } from './product-routes-demand-performance';
+import {
+  OpportunitiesRouteElement,
+  RunDetailRouteElement,
+  RunsRouteElement,
+  VisibilityRouteElement,
+} from './product-routes-opportunity-visibility-runs';
 import { IssuesRoute, WebsitePageDetailRoute, WebsiteRoute } from './product-routes-site-issues';
 
 export const router = createBrowserRouter([
@@ -52,6 +58,22 @@ export const router = createBrowserRouter([
           {
             path: '/performance',
             element: <PerformanceRoute />,
+          },
+          {
+            path: '/opportunities',
+            element: <OpportunitiesRouteElement />,
+          },
+          {
+            path: '/visibility',
+            element: <VisibilityRouteElement />,
+          },
+          {
+            path: '/runs',
+            element: <RunsRouteElement />,
+          },
+          {
+            path: '/runs/:runId',
+            element: <RunDetailRouteElement />,
           },
         ],
       },

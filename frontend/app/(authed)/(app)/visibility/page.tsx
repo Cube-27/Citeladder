@@ -1,32 +1,7 @@
 'use client';
 
-import { VisibilityDashboard } from '@/components/visibility/visibility-dashboard';
-import { PageHeader } from '@/components/layout/page-header';
+import { VisibilityScreen } from '@/components/visibility/visibility-screen';
 
-/**
- * Visibility workspace screen (three-tab IA).
- *
- * One workspace shell with an accessible tablist above the shared filters and
- * exactly three focused panels:
- *   - **Trends** (default): cross-run Visibility Score, Share of Voice, ranking
- *     movement, latest model comparison, and prompt movement, from
- *     `GET /projects/{id}/visibility/trends`.
- *   - **Mentions & Citations**: persisted brand/competitor mentions and
- *     classified citation records with task/analysis/artifact provenance.
- *   - **Query Fanout**: frozen prompts, provider-generated search queries, and
- *     search-count / text-availability states.
- * The two evidence tabs share the persisted
- * `GET /projects/{id}/visibility/evidence` dataset. Sentiment + Avg Position
- * stay explicitly not measured (decision B-2). There are no
- * Sources, Topics, or Sentiment tabs. All endpoints go through `visibility.ts`,
- * scoped to the active project from the F5 context. The page title renders in
- * the top bar (F5), so there is no in-page header block.
- */
 export default function VisibilityPage() {
-  return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      <PageHeader />
-      <VisibilityDashboard />
-    </div>
-  );
+  return <VisibilityScreen />;
 }

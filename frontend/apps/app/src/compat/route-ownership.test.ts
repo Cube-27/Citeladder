@@ -16,9 +16,13 @@ describe('viteOwnedDestination', () => {
     expect(viteOwnedDestination('/performance?range=90d', CURRENT_PROJECT)).toBe(
       '/performance?range=90d',
     );
+    expect(viteOwnedDestination('/visibility?tab=trends', CURRENT_PROJECT)).toBe(
+      '/visibility?tab=trends',
+    );
   });
 
-  it('recognizes only the shipped dynamic Website page route', () => {
+  it('recognizes the shipped dynamic product routes', () => {
+    expect(viteOwnedDestination('/runs/run-id', CURRENT_PROJECT)).toBe('/runs/run-id');
     expect(viteOwnedDestination('/site/crawls/crawl-id/pages/page-id', CURRENT_PROJECT)).toBe(
       '/site/crawls/crawl-id/pages/page-id',
     );

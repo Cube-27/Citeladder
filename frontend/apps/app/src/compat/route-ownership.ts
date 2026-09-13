@@ -3,10 +3,13 @@ const VITE_ROUTES: Record<string, true> = {
   '/issues': true,
   '/login': true,
   '/onboarding': true,
+  '/opportunities': true,
   '/performance': true,
   '/projects': true,
   '/register': true,
+  '/runs': true,
   '/site': true,
+  '/visibility': true,
 };
 
 /**
@@ -22,6 +25,7 @@ export function viteOwnedDestination(
   const destination = new URL(href, current);
   const viteOwnsPath =
     VITE_ROUTES[destination.pathname] === true ||
+    /^\/runs\/[^/]+$/.test(destination.pathname) ||
     /^\/site\/crawls\/[^/]+\/pages\/[^/]+$/.test(destination.pathname);
   if (destination.origin !== current.origin || !viteOwnsPath) return null;
   return `${destination.pathname}${destination.search}${destination.hash}`;
