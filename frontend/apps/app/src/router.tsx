@@ -7,6 +7,7 @@ import {
   PrivateRouteLayout,
   ProjectsRoute,
 } from './private-routes';
+import { IssuesRoute, WebsitePageDetailRoute, WebsiteRoute } from './product-routes-site-issues';
 
 export const router = createBrowserRouter([
   {
@@ -30,6 +31,18 @@ export const router = createBrowserRouter([
           {
             path: '/projects',
             element: <ProjectsRoute />,
+          },
+          {
+            path: '/site',
+            element: <WebsiteRoute />,
+          },
+          {
+            path: '/site/crawls/:crawlId/pages/:siteUrlId',
+            element: <WebsitePageDetailRoute />,
+          },
+          {
+            path: '/issues',
+            element: <IssuesRoute />,
           },
         ],
       },

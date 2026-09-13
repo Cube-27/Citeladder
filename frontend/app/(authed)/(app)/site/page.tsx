@@ -1,24 +1,8 @@
 'use client';
 
-import { SiteHealthScreen } from '@/components/site-health/site-health-screen';
-import { AgentLauncher } from '@/components/layout/agent-sheet';
-import { textRole } from '@/components/ui/typography';
+import { WebsiteRouteContent } from '@/components/site-health/site-health-route-content';
 
-/** Canonical Website surface backed by the retained Site Health capability. */
+/** Next entry for the shared Website route content. */
 export default function SitePage() {
-  return (
-    <div className="flex flex-col gap-[var(--page-section-gap)]">
-      <SiteHealthScreen />
-      <AgentLauncher
-        taskType="build_roadmap"
-        objective="Build a roadmap from the current Website evidence."
-        className={textRole(
-          'bodyStrong',
-          'text-accent-text self-start underline-offset-2 hover:underline',
-        )}
-      >
-        Build a roadmap with the Growth Agent
-      </AgentLauncher>
-    </div>
-  );
+  return <WebsiteRouteContent />;
 }

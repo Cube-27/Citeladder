@@ -10,6 +10,16 @@ describe('viteOwnedDestination', () => {
       '/onboarding?workspace=abc#step',
     );
     expect(viteOwnedDestination('?project=next', CURRENT_PROJECT)).toBe('/projects?project=next');
+    expect(viteOwnedDestination('/issues?severity=high', CURRENT_PROJECT)).toBe(
+      '/issues?severity=high',
+    );
+  });
+
+  it('recognizes only the shipped dynamic Website page route', () => {
+    expect(viteOwnedDestination('/site/crawls/crawl-id/pages/page-id', CURRENT_PROJECT)).toBe(
+      '/site/crawls/crawl-id/pages/page-id',
+    );
+    expect(viteOwnedDestination('/site/crawls/crawl-id', CURRENT_PROJECT)).toBeNull();
   });
 
   it('hands not-yet-migrated and cross-origin routes to the production ingress', () => {
