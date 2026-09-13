@@ -6,7 +6,7 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { PageLoading } from '@/components/layout/page-loading';
+import { IssuesLoading } from '@/components/site-health/issues-loading';
 import { ReadError } from '@/components/ui/read-error';
 import { IssuesCatalog } from '@/components/site-health/issues-catalog';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
@@ -60,7 +60,7 @@ function IssuesDataRegion({
 }>) {
   if (!projectId && !projectLoading)
     return <Alert tone="info">Select or create a project to view its Site Health issues.</Alert>;
-  if (projectLoading || dashboard.isLoading) return <PageLoading label="Loading issues…" />;
+  if (projectLoading || dashboard.isLoading) return <IssuesLoading />;
 
   const status = httpErrorStatus(dashboard.error);
   const accessDenied = status === 401 || status === 403;

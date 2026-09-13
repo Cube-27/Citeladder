@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -307,12 +307,17 @@ describe('OnboardingScreen', () => {
     expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`);
   });
 
-  it('opens the committed project shell while its portfolio is queued', async () => {
+  it('shows page-level creation progress before opening the queued project', async () => {
     discoveryState = discovery('ready', 'preparing_review');
+    let releaseCompletion!: () => void;
+    const completionSettled = new Promise<void>((resolve) => {
+      releaseCompletion = resolve;
+    });
     mswServer.use(
       catalogHandler(),
-      http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, () =>
-        HttpResponse.json(
+      http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, async () => {
+        await completionSettled;
+        return HttpResponse.json(
           {
             discovery_id: DISCOVERY_ID,
             status: 'completing',
@@ -323,8 +328,8 @@ describe('OnboardingScreen', () => {
             warnings: [],
           },
           { status: 202 },
-        ),
-      ),
+        );
+      }),
       // The committed creation is resolved through the project-detail read
       // before the shell is navigated to, so the destination is usable on
       // arrival rather than waiting on a list that predates the project.
@@ -341,6 +346,14 @@ describe('OnboardingScreen', () => {
     await waitFor(() => expect(createProject).toBeEnabled());
     await user.click(createProject);
 
+    expect(await screen.findByRole('heading', { name: 'Creating your project' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Does this look right?' })).toBeNull();
+    expect(
+      screen.getByText('Starting topics can continue in the background after you arrive.'),
+    ).toBeVisible();
+
+    act(() => releaseCompletion());
     await waitFor(() => expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`));
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
   });

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 
 import { hasConfirmedIcp } from './icp-confirmation';
 import { useOnboardingFlow } from './onboarding-flow';
-import { BrandStage, DiscoveryStage, ReviewStage } from './onboarding-stages';
+import { BrandStage, CreationStage, DiscoveryStage, ReviewStage } from './onboarding-stages';
 
 const STEPS: readonly FlowStep[] = [
   { id: 'brand', label: 'Basics' },
@@ -28,18 +28,19 @@ export function OnboardingScreen() {
 
 function OnboardingTransaction() {
   const flow = useOnboardingFlow();
-  const stage =
-    flow.step === 0 ? (
-      <BrandStage form={flow.form} isAdditional={flow.isAdditional} onSubmit={flow.submitBrand} />
-    ) : flow.step === 1 ? (
-      <DiscoveryStage
-        brandName={flow.brand?.brand_name}
-        discovery={flow.discovery}
-        onEdit={() => flow.setStep(0)}
-      />
-    ) : (
-      <ReviewStage flow={flow} />
-    );
+  const stage = flow.isCompleting ? (
+    <CreationStage committedProjectId={flow.completedProjectId} />
+  ) : flow.step === 0 ? (
+    <BrandStage form={flow.form} isAdditional={flow.isAdditional} onSubmit={flow.submitBrand} />
+  ) : flow.step === 1 ? (
+    <DiscoveryStage
+      brandName={flow.brand?.brand_name}
+      discovery={flow.discovery}
+      onEdit={() => flow.setStep(0)}
+    />
+  ) : (
+    <ReviewStage flow={flow} />
+  );
 
   return (
     <FlowShell
@@ -47,8 +48,9 @@ function OnboardingTransaction() {
       steps={STEPS}
       currentStep={flow.step}
       exitHref={flow.isAdditional ? '/projects' : '/'}
-      measure={flow.step === 2 ? 'wide' : 'default'}
-      actions={<OnboardingActions flow={flow} />}
+      align={flow.isCompleting ? 'center' : 'start'}
+      measure={flow.isCompleting ? 'default' : flow.step === 2 ? 'wide' : 'default'}
+      actions={flow.isCompleting ? undefined : <OnboardingActions flow={flow} />}
     >
       {stage}
     </FlowShell>

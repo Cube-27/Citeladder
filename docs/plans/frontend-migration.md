@@ -66,13 +66,10 @@
 
 ## Current phase
 
-**Phase 1 — Next stabilization.** Phase 0 repository mapping is complete.
-Current code already contains the project-creation seed-before-navigation fix,
-one authenticated provider lifetime, recoverable shell/bootstrap errors, the
-bounded stalled-loading retry, and truthful continuity states for Site Health,
-Issues, Demand, Opportunities, and Projects. Phase 1 must reproduce the named
-browser paths and change only gaps that remain, rather than reimplementing
-those shipped contracts.
+**Phase 2 — Vite foundation.** The migration contract and bounded Next
+stabilization are committed. Next feature architecture is frozen: subsequent
+changes to authenticated product behavior belong to the Vite route migration,
+except for a source defect that independently blocks parity.
 
 The ordered execution is:
 
@@ -108,19 +105,27 @@ The ordered execution is:
   loading/performance, framework, deployment, metadata, and endpoint ownership
   mapped from code and tests. The target ownership and cutover order above are
   authoritative.
+- **Phase 1 — Next stabilization (2026-09-13):** confirmed session expiry now
+  clears account state before full-document sign-in navigation; confirmed
+  project creation immediately shows page-level persisted progress; completion
+  request, worker, and route-handoff durations have separate observability; and
+  Overview, Issues, and Demand reserve screen-shaped initial geometry. Focused
+  frontend/backend tests and controlled Chromium acceptance passed.
 
 ## Known unresolved issues
 
-- Browser coverage does not currently prove login success, logout
-  success/failure, global downstream-401 expiry, or cookie/cache/storage
-  destruction end to end. The mocked browser fixture converts unstubbed APIs to
-  404, so broad shell tests do not prove the 401 watchdog.
-- Session expiry currently uses client-router replacement while successful
-  login uses a full-document navigation. Phase 1 must reproduce the reported
-  `/projects` URL/content mismatch and choose the smallest source fix.
-- The project-creation continuity race is fixed, but actual `POST /complete`,
-  worker completion, and navigation-handoff durations are not separately
-  measured. Immediate progress and refresh recovery require browser evidence.
+- Controlled Chromium now proves cold login, confirmed-401 navigation,
+  recoverable non-401 session verification, delayed project creation, exact
+  created-project handoff, direct Overview loading, and delayed Issues/Demand
+  loading. Logout success/failure and browser-observed cookie/cache/storage
+  destruction remain part of the authenticated cutover matrix; component tests
+  currently own those transitions.
+- Completion request and navigation-handoff durations are available as bounded
+  User Timing entries; terminal completion attempts and queue-to-terminal
+  completion durations are structured worker-log fields. Retry attempts never
+  emit a falsely terminal duration. Fixture delays prove boundary separation,
+  not production latency; real before/after values remain a Phase 5 cutover
+  measurement.
 - Cold direct entries have no in-memory prefetch cache. Issues and Opportunities
   intentionally retain dependent first-paint request chains; flatten them only
   if post-migration traces show material cost without breaking coherence.

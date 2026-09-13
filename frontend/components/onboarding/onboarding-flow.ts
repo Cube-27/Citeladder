@@ -23,6 +23,11 @@ import {
   type ReviewCompetitor,
   type ReviewDomain,
 } from '@/lib/onboarding/forms';
+import {
+  finishOnboardingCompletionRequest,
+  startOnboardingCompletionRequest,
+  startOnboardingNavigationHandoff,
+} from '@/lib/onboarding/timing';
 import { useBrandDiscovery } from '@/lib/onboarding/use-brand-discovery';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -243,8 +248,10 @@ export function useOnboardingFlow() {
         );
         void queryClient.invalidateQueries({ queryKey: listKey });
       }
-      setActiveProjectId(project?.id ?? projectId);
-      router.replace(projectDestination('/projects', null, project?.id ?? projectId));
+      const targetProjectId = project?.id ?? projectId;
+      setActiveProjectId(targetProjectId);
+      startOnboardingNavigationHandoff(targetProjectId);
+      router.replace(projectDestination('/projects', null, targetProjectId));
     },
     [queryClient, router, setActiveProjectId],
   );
@@ -254,30 +261,37 @@ export function useOnboardingFlow() {
       if (!brand || !discoveryState || !hasConfirmedIcp(profile)) {
         throw new Error('Confirm the required ICP fields before creating the project.');
       }
-      return brandDiscoveriesApi.complete(
-        discoveryState.id,
-        {
-          name: brand.brand_name.trim(),
-          profile: withBrandKnowledgeDefaults(profile),
-          domains: selectedDomains(domains),
-          competitors: selectedCompetitors(competitors),
-        },
-        `complete:${discoveryState.id}`,
-        { workspaceId: activeWorkspaceId },
-      );
+      const timingStarted = startOnboardingCompletionRequest();
+      try {
+        return await brandDiscoveriesApi.complete(
+          discoveryState.id,
+          {
+            name: brand.brand_name.trim(),
+            profile: withBrandKnowledgeDefaults(profile),
+            domains: selectedDomains(domains),
+            competitors: selectedCompetitors(competitors),
+          },
+          `complete:${discoveryState.id}`,
+          { workspaceId: activeWorkspaceId },
+        );
+      } finally {
+        finishOnboardingCompletionRequest(timingStarted);
+      }
     },
     // The request only ACCEPTS the completion; the portfolio is generated on a
     // worker because it takes minutes and the client abandons a request after
     // 30s. A replayed completion already carries its project id and skips
     // straight through; otherwise the discovery poll below finishes the job.
     onSuccess: async (result) => {
+      if (result.status === 'failed') return;
       if (result.project_id) await openProject(result.project_id);
       else await queryClient.invalidateQueries({ queryKey: ['brand-discovery'] });
     },
   });
 
-  const completedProjectId = discoveryState?.project_id ?? null;
-  const completionFailed = discoveryState?.status === 'failed';
+  const completedProjectId = complete.data?.project_id ?? discoveryState?.project_id ?? null;
+  const completionFailed =
+    complete.data?.status === 'failed' || discoveryState?.status === 'failed';
   useEffect(() => {
     if (!completedProjectId || completionFailed) return;
     void openProject(completedProjectId);
@@ -313,6 +327,7 @@ export function useOnboardingFlow() {
     catalog,
     competitors,
     complete,
+    completedProjectId,
     completionFailed,
     // Hold the action through navigation to the committed shell. Persisted
     // `completing` still protects a resumed legacy/shell-less response from a

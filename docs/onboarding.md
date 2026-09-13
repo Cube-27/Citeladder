@@ -54,6 +54,12 @@ return the same shell; exhausted work has a completion-specific failure.
 The [onboarding screen](../frontend/components/onboarding/onboarding-screen.tsx)
 enters the project as soon as a committed project ID is available. It seeds the
 detail cache and navigates through the shared project destination owner.
+After confirmation, the review controls are replaced immediately by page-level
+creation progress. A retryable completion failure returns to the recoverable
+review surface; a persisted terminal failure remains visible rather than
+spinning. The accepted request, terminal worker attempt, queue-to-terminal
+completion, and route handoff expose separate timing boundaries without
+delaying entry to the committed project.
 Draft URL updates use shallow history replacement so they cannot race completion
 navigation. Leaving onboarding discards retained transaction state; a fresh
 Add project URL starts at Basics, while a discovery URL resumes that draft.

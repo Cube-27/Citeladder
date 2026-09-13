@@ -16,12 +16,16 @@ import { ProjectProvider } from '@/lib/project/project-context';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
-const replace = vi.fn();
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
+
+const routerReplace = vi.fn();
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => '/projects',
-  useRouter: () => ({ replace, push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ replace: routerReplace, push: vi.fn(), refresh: vi.fn() }),
 }));
+vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
+const navigate = vi.mocked(hardNavigate);
 
 import { SessionGuard, useSessionUser } from './session-guard';
 
@@ -42,7 +46,8 @@ function Protected() {
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
-  replace.mockReset();
+  navigate.mockReset();
+  routerReplace.mockReset();
   window.localStorage.clear();
 });
 afterAll(() => mswServer.close());
@@ -58,10 +63,10 @@ describe('SessionGuard', () => {
     );
 
     expect(await screen.findByText(/signed in as guarded@example.com/i)).toBeInTheDocument();
-    expect(replace).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('redirects unauthenticated visitors to /login', async () => {
+  it('leaves the protected document when an unauthenticated visitor is sent to /login', async () => {
     let requestCount = 0;
     mswServer.use(
       http.get('/api/v1/auth/me', () => {
@@ -76,12 +81,14 @@ describe('SessionGuard', () => {
       </SessionGuard>,
     );
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/login'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login'));
+    expect(navigate).toHaveBeenCalledTimes(1);
     await new Promise((resolve) => {
       setTimeout(resolve, 50);
     });
     expect(requestCount).toBe(1);
     expect(screen.queryByText(/signed in as/i)).not.toBeInTheDocument();
+    expect(routerReplace).not.toHaveBeenCalled();
   });
 
   it('does not log the user out when /auth/me fails with a non-401 error', async () => {
@@ -114,7 +121,7 @@ describe('SessionGuard', () => {
     await new Promise((resolve) => {
       setTimeout(resolve, 50);
     });
-    expect(replace).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('retries only the session read and mounts protected content after recovery', async () => {
@@ -156,7 +163,7 @@ describe('SessionGuard', () => {
     expect(requestCount).toBe(2);
   });
 
-  it('clears the session and redirects when any query returns 401', async () => {
+  it('clears account state and leaves the protected document when any query returns 401', async () => {
     // `me` succeeds so protected content mounts, then a downstream query 401s
     // (an expired cookie mid-session) — the guard's watchdog must clear + bounce.
     mswServer.use(
@@ -187,12 +194,14 @@ describe('SessionGuard', () => {
       </SessionGuard>,
     );
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/login'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login'));
+    expect(navigate).toHaveBeenCalledTimes(1);
     // Session cache was cleared.
     expect(queryClient.getQueryData(queryKeys.auth.me())).toBeUndefined();
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem('citeladder-theme')).toBe('dark');
     expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBeNull();
+    expect(routerReplace).not.toHaveBeenCalled();
   });
 
   it('acts on a 401 reaching the cache directly, after the deferring microtask', async () => {
@@ -210,7 +219,7 @@ describe('SessionGuard', () => {
     await screen.findByText(/signed in as guarded@example.com/i);
 
     await expect(reject401(queryClient, 'while-mounted')).rejects.toThrow();
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/login'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login'));
   });
 
   it('drops a 401 already queued when the guard unmounts mid-notify', async () => {
@@ -243,7 +252,7 @@ describe('SessionGuard', () => {
     });
 
     expect(unmountedMidNotify).toBe(true);
-    expect(replace).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('stops acting on cache 401s once unmounted', async () => {
@@ -272,7 +281,7 @@ describe('SessionGuard', () => {
     await new Promise((resolve) => {
       setTimeout(resolve, 50);
     });
-    expect(replace).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   /**

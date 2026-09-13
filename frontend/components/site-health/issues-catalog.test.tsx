@@ -171,9 +171,9 @@ describe('IssuesCatalog', () => {
    * The list and the auto-selected issue's occurrences are two requests, and
    * the rail is the second one. Painting after the first left the rail short
    * and then growing under the reader's first click, so both are held behind
-   * the one loader and the finished view is drawn once.
+   * one stable loading presentation and the finished view is drawn once.
    */
-  it('holds one loader until the list and the first issue detail have both landed', async () => {
+  it('holds one busy, screen-shaped loading presentation until the list and first detail land', async () => {
     let releaseDetail!: () => void;
     const detailSettled = new Promise<void>((resolve) => {
       releaseDetail = resolve;
@@ -190,13 +190,14 @@ describe('IssuesCatalog', () => {
 
     renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
 
-    expect(await screen.findByTestId('page-loading')).toBeInTheDocument();
+    const loadingStatus = await screen.findByRole('status', { name: 'Loading issues…' });
+    expect(loadingStatus.closest('[aria-busy="true"]')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'WebSite schema is missing' })).toBeNull();
 
     act(() => releaseDetail());
 
     expect(await screen.findByRole('link', { name: /Homepage/ })).toBeInTheDocument();
-    expect(screen.queryByTestId('page-loading')).toBeNull();
+    expect(screen.queryByRole('status', { name: 'Loading issues…' })).toBeNull();
   });
 
   /**
@@ -204,9 +205,10 @@ describe('IssuesCatalog', () => {
    * second issue re-keys the detail query, and `siteHealthQueries.issue`
    * retains the previous crawl-scoped occurrences across that change, so the
    * catalog stays on screen and the rail marks itself busy instead of the
-   * whole view dropping back to the loader. The rail keeps the previous issue
-   * AND its pages together until the new pair arrives — a new title over the
-   * old issue's URLs would be a caption for pages it does not describe.
+   * whole view dropping back to its loading presentation. The rail keeps the
+   * previous issue AND its pages together until the new pair arrives — a new
+   * title over the old issue's URLs would be a caption for pages it does not
+   * describe.
    */
   it('keeps the catalog drawn, and the rail coherent, while a later selection loads', async () => {
     const user = userEvent.setup();
@@ -239,7 +241,7 @@ describe('IssuesCatalog', () => {
     await user.click(screen.getByRole('button', { name: /Canonical tag is missing/ }));
 
     await waitFor(() => expect(holdSecond).toBe(true));
-    expect(screen.queryByTestId('page-loading')).toBeNull();
+    expect(screen.queryByRole('status', { name: 'Loading issues…' })).toBeNull();
     expect(screen.getByRole('link', { name: /Homepage/ })).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'WebSite schema is missing', level: 2 }),

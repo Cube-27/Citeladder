@@ -10,7 +10,7 @@ import { FilterChip } from '@/components/ui/filter-chip';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
-import { PageLoading } from '@/components/layout/page-loading';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { DemandDetectorBar } from '@/components/demand/demand-detector-bar';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
@@ -38,6 +38,101 @@ const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
   'all' as FilterTab,
 );
+
+const DEMAND_LOADING_METRICS = [
+  'latent-demand',
+  'striking-distance',
+  'cannibalization',
+  'ctr-gap',
+  'detector-health',
+] as const;
+const DEMAND_LOADING_SIGNALS = ['signal-a', 'signal-b'] as const;
+const DEMAND_LOADING_SIGNAL_METRICS = [
+  'signal-impressions',
+  'signal-clicks',
+  'signal-ctr',
+  'signal-position',
+] as const;
+
+function DemandLoading() {
+  return (
+    <Stack gap="workspace" aria-busy="true">
+      <output className="sr-only">Loading search demand…</output>
+
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="grid flex-1 gap-2">
+          <Skeleton className="h-6 w-72 max-w-full" />
+          <Skeleton className="h-4 w-48 max-w-full" />
+        </div>
+        <Skeleton className="h-8 w-40 rounded-[var(--radius-control)]" />
+      </div>
+
+      <Card>
+        <CardContent>
+          <Stack gap="workspace">
+            <div className="divide-border-subtle grid divide-y sm:grid-cols-2 sm:divide-x-0 sm:divide-y-0 lg:grid-cols-5 lg:divide-x">
+              {DEMAND_LOADING_METRICS.map((placeholder) => (
+                <div
+                  key={placeholder}
+                  className="grid gap-2 px-0 py-2.5 sm:px-4 lg:first:ps-0 lg:last:pe-0"
+                >
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-9 w-20" />
+                  <Skeleton className="h-3 w-32 max-w-full" />
+                </div>
+              ))}
+            </div>
+            <div className="border-border-subtle grid gap-3 border-t pt-4">
+              <Skeleton className="h-4 w-36" />
+              <div className="flex flex-wrap gap-2">
+                <Skeleton className="h-7 w-28 rounded-full" />
+                <Skeleton className="h-7 w-32 rounded-full" />
+                <Skeleton className="h-7 w-24 rounded-full" />
+              </div>
+            </div>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          <Skeleton className="h-8 w-24 rounded-full" />
+          <Skeleton className="h-8 w-32 rounded-full" />
+          <Skeleton className="h-8 w-28 rounded-full" />
+        </div>
+        <Skeleton className="h-9 w-full rounded-[var(--radius-control)] sm:w-64" />
+      </div>
+
+      <div className="grid gap-3">
+        {DEMAND_LOADING_SIGNALS.map((placeholder) => (
+          <Card key={placeholder}>
+            <CardContent className="grid gap-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="grid min-w-0 flex-1 gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-5 w-28 rounded-full" />
+                  </div>
+                  <Skeleton className="h-6 w-2/3" />
+                </div>
+                <Skeleton className="h-8 w-28 rounded-[var(--radius-control)]" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-4">
+                {DEMAND_LOADING_SIGNAL_METRICS.map((metric) => (
+                  <div key={metric} className="grid gap-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
+                ))}
+              </div>
+              <Skeleton className="h-16 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </Stack>
+  );
+}
 
 function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) {
   const { activeProject } = useProjectContext();
@@ -274,7 +369,7 @@ export function DemandProjection() {
   });
 
   if (projectLoading || latest.isLoading) {
-    return <PageLoading label="Loading search demand…" />;
+    return <DemandLoading />;
   }
   if (!activeProject) {
     return <Alert tone="info">Select a project to inspect search demand.</Alert>;

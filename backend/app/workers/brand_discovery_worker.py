@@ -9,6 +9,7 @@ import signal
 import socket
 import uuid
 from datetime import UTC, datetime, timedelta
+from time import perf_counter
 
 from app.core.config.brand_discovery import (
     BRAND_DISCOVERY_QUEUE_SPEC,
@@ -69,14 +70,14 @@ def _retry_error_code(task_kind: str) -> str:
 
 async def _finalize(
     task_id, *, worker_id: str, error: Exception | None
-) -> uuid.UUID | None:
+) -> tuple[str | None, uuid.UUID | None]:
     now = datetime.now(UTC)
     async with SessionLocal() as session:
         task = await session.get(BrandDiscoveryTask, task_id, with_for_update=True)
         if task is None or task.lease_owner != worker_id:
-            return None
+            return None, None
         if task.status in TASK_TERMINAL_STATUSES:
-            return None
+            return None, None
         task.attempt_count += 1
         if error is None:
             task.status = TASK_STATUS_SUCCEEDED
@@ -98,7 +99,10 @@ async def _finalize(
         task.lease_owner = None
         task.lease_expires_at = None
         await session.commit()
-        return task.discovery_id if task.status == TASK_STATUS_FAILED else None
+        failed_discovery_id = (
+            task.discovery_id if task.status == TASK_STATUS_FAILED else None
+        )
+        return task.status, failed_discovery_id
 
 
 async def run_once(worker_id: str, *, reap: bool = False) -> bool:
@@ -161,6 +165,9 @@ async def _run_completion(session, discovery, *, task_id) -> None:
 
 
 async def _process_claimed_task(task, worker_id: str) -> None:
+    completion_started = (
+        perf_counter() if task.task_kind == TASK_KIND_BRAND_COMPLETION else None
+    )
     heartbeat = asyncio.create_task(_heartbeat(task.id, worker_id))
     error: Exception | None = None
     try:
@@ -178,11 +185,29 @@ async def _process_claimed_task(task, worker_id: str) -> None:
         try:
             await _stop_heartbeat(heartbeat)
         finally:
-            failed_discovery_id = await _finalize(
+            final_status, failed_discovery_id = await _finalize(
                 task.id, worker_id=worker_id, error=error
             )
             if failed_discovery_id is not None:
                 await reconcile_brand_discoveries(SessionLocal, [failed_discovery_id])
+            if (
+                completion_started is not None
+                and final_status in TASK_TERMINAL_STATUSES
+            ):
+                logger.info(
+                    "brand completion task finished",
+                    extra={
+                        "discovery_id": str(task.discovery_id),
+                        "task_id": str(task.id),
+                        "outcome": final_status,
+                        "terminal_attempt_duration_ms": int(
+                            (perf_counter() - completion_started) * 1000
+                        ),
+                        "queue_to_completion_ms": int(
+                            (datetime.now(UTC) - task.created_at).total_seconds() * 1000
+                        ),
+                    },
+                )
 
 
 def _set_fallback_signal(

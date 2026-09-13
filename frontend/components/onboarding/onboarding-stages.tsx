@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
-import { ActivityProgress } from '@/components/ui/activity-progress';
+import { ActivityProgress, type ActivityStep } from '@/components/ui/activity-progress';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -177,6 +177,38 @@ export function DiscoveryStage({
           </Alert>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+export function CreationStage({
+  committedProjectId,
+}: Readonly<{ committedProjectId: string | null }>) {
+  const projectCommitted = committedProjectId !== null;
+  const steps: ActivityStep[] = [
+    {
+      id: 'save',
+      label: 'Saving your project',
+      detail: projectCommitted
+        ? 'Your confirmed details are saved.'
+        : 'Your confirmed draft remains recoverable.',
+      state: projectCommitted ? 'complete' : 'active',
+    },
+    {
+      id: 'open',
+      label: 'Opening your workspace',
+      detail: 'Starting topics can continue in the background after you arrive.',
+      state: projectCommitted ? 'active' : 'pending',
+    },
+  ];
+
+  return (
+    <div aria-busy="true">
+      <StageHeader title="Creating your project">
+        We&apos;re saving your confirmed details and will open the project as soon as it is
+        committed.
+      </StageHeader>
+      <ActivityProgress label="Project creation progress" steps={steps} appearance="flow" />
     </div>
   );
 }

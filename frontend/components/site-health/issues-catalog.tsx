@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { PageLoading } from '@/components/layout/page-loading';
+import { IssuesLoading } from '@/components/site-health/issues-loading';
 import { IssueDetailRail } from '@/components/site-health/issue-detail-rail';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import {
@@ -118,13 +118,13 @@ export function IssuesCatalog({
     setOccurrenceCursors([]);
   };
 
-  // One loader, then the finished view, drawn once. Painting on the list alone
-  // shoved everything down when the summary band arrived, and left the rail
-  // short until the occurrences did — the panel growing under the first click.
+  // Hold one screen-shaped loading presentation until the finished view can be
+  // drawn once. Painting on the list alone shoved everything down when the
+  // summary band arrived and left the rail short until the occurrences did.
   // Only this FIRST detail can be empty: later selections keep the previous
   // crawl-scoped occurrences while the next set loads.
   if ((issuesQuery.isPending && !issuesQuery.data) || detailQuery.isLoading)
-    return <PageLoading label="Loading issues…" />;
+    return <IssuesLoading />;
 
   return (
     <div className="grid min-w-0 gap-[var(--page-section-gap)]">

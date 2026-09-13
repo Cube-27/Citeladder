@@ -2,13 +2,15 @@
 
 import { FolderOpen, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageLoading } from '@/components/layout/page-loading';
 import type { Project } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
+import { finishOnboardingNavigationHandoff } from '@/lib/onboarding/timing';
 import { newProjectDestination } from '@/lib/navigation/project-destination';
 
 import { ProjectEditPanel } from './project-edit-panel';
@@ -28,8 +30,19 @@ import { DashboardScreen } from './dashboard-screen';
  * just as much as the first did.
  */
 export function ProjectsScreen() {
-  const { projects, projectsSettled, activeWorkspaceId } = useProjectContext();
+  const { projects, projectsSettled, activeWorkspaceId, activeProject, status } =
+    useProjectContext();
+  const searchParams = useSearchParams();
+  const requestedProjectId = searchParams?.get('project') ?? null;
   const [editing, setEditing] = useState<Project | null>(null);
+
+  // The source mark carries the committed UUID. Close it after this route has
+  // committed with that same authorized project, never for a fallback project.
+  useEffect(() => {
+    if (requestedProjectId && status === 'ready' && activeProject?.id === requestedProjectId) {
+      finishOnboardingNavigationHandoff(requestedProjectId);
+    }
+  }, [activeProject?.id, requestedProjectId, status]);
 
   // "No projects yet" is a CLAIM about the workspace, so it needs a settled
   // answer. The gate does not supply one: its `ready` state is reached by a
