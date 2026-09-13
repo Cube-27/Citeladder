@@ -2,6 +2,11 @@
 
 ## Active
 
+- [Frontend migration — Next.js to Vite and Astro](frontend-migration.md)
+  — active; Phase 0 contract and repository mapping completed on 13 September
+  2026. Phase 1 is the verified-gap-only Next stabilization gate before the
+  Vite application foundation.
+
 - [Runtime correctness and continuity](citeladder-runtime-correctness-and-continuity.md)
   — implementation is delivered through Slice 4. Authenticated local traces
   still gate Slice 5 decisions, and deployed incident/SSE acceptance requires
