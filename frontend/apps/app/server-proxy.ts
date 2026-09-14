@@ -1,5 +1,5 @@
 import type { ProxyOptions } from 'vite';
-import { resolveBackendOrigin } from '../../lib/config/backend-origin';
+import { resolveBackendOrigin } from '../../lib/config/backend-origin.ts';
 
 /**
  * Build Vite's development-only same-origin proxy table. BACKEND_ORIGIN stays

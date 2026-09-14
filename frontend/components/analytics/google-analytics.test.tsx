@@ -36,7 +36,7 @@ describe('GoogleAnalytics', () => {
     await user.click(await screen.findByRole('button', { name: 'Accept' }));
 
     expect(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).toBe('accepted');
-    expect(screen.getByTestId('external-script')).toHaveAttribute(
+    expect(await screen.findByTestId('external-script')).toHaveAttribute(
       'src',
       'https://www.googletagmanager.com/gtag/js?id=G-TEST',
     );
@@ -59,7 +59,7 @@ describe('GoogleAnalytics', () => {
       await user.click(await screen.findByRole('button', { name: 'Accept' }));
 
       expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
-      expect(screen.getByTestId('external-script')).toBeInTheDocument();
+      expect(await screen.findByTestId('external-script')).toBeInTheDocument();
     } finally {
       setItem.mockRestore();
       writeConsent('rejected');

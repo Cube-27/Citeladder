@@ -27,7 +27,7 @@ type Policy = {
 
 const basePolicy = (): Policy => ({
   format_version: 1,
-  roots: ['app', 'components', 'lib'],
+  roots: ['apps/app', 'components', 'lib'],
   defaults: { max_function_cc: 12, max_production_loc: 500, max_test_loc: 800 },
   exceptions: { functions: {}, modules: {} },
 });
