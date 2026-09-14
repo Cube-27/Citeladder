@@ -13,6 +13,7 @@ const POLICY_REPOSITORY_PATH = 'frontend/scripts/frontend_complexity_policy.json
 const GIT_EXECUTABLE =
   process.platform === 'win32' ? 'C:\\Program Files\\Git\\cmd\\git.exe' : '/usr/bin/git';
 const EXPECTED_ROOTS = ['apps/app', 'components', 'lib'];
+const ROOT_RENAMES = new Map([['app', 'apps/app']]);
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;
 // ESTree names for the kinds the TypeScript walk counted. Accessors and
 // constructors are `MethodDefinition` wrappers around a FunctionExpression
@@ -198,13 +199,15 @@ function validateExceptions(exceptions, defaults) {
     }
 }
 
-export function validatePolicy(policy) {
+export function validatePolicy(policy, expectedRoots = EXPECTED_ROOTS) {
   if (
     !hasExactKeys(policy, 'defaults,exceptions,format_version,roots') ||
-    policy.format_version !== 1
+    policy.format_version !== 1 ||
+    !Array.isArray(policy.roots) ||
+    !policy.roots.every((root) => typeof root === 'string' && root.length > 0)
   )
     throw new Error('invalid frontend complexity policy shape');
-  if (JSON.stringify(policy.roots) !== JSON.stringify(EXPECTED_ROOTS))
+  if (JSON.stringify(policy.roots) !== JSON.stringify(expectedRoots))
     throw new Error('policy roots must remain apps/app, components, lib');
   const defaults = policy.defaults;
   validateDefaults(defaults);
@@ -261,10 +264,11 @@ export function staleExceptionFailures(measurements, policy) {
   return failures;
 }
 export function policyDiffFailures(base, current) {
-  validatePolicy(base);
+  validatePolicy(base, base.roots);
   validatePolicy(current);
   const failures = [];
-  if (JSON.stringify(base.roots) !== JSON.stringify(current.roots))
+  const normalizedBaseRoots = base.roots.map((root) => ROOT_RENAMES.get(root) ?? root);
+  if (JSON.stringify(normalizedBaseRoots) !== JSON.stringify(current.roots))
     failures.push('application roots changed');
   for (const key of ['max_function_cc', 'max_production_loc', 'max_test_loc'])
     if (current.defaults[key] > base.defaults[key])

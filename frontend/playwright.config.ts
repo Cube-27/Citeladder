@@ -2,7 +2,12 @@ import { defineConfig } from '@playwright/test';
 
 const e2ePort = 3100;
 const marketingPort = 3101;
-const marketingSpecs = ['**/marketing-pages.spec.ts', '**/landing-nav.spec.ts', '**/smoke.spec.ts'];
+const marketingSpecs = [
+  '**/billing.spec.ts',
+  '**/marketing-pages.spec.ts',
+  '**/landing-nav.spec.ts',
+  '**/smoke.spec.ts',
+];
 
 export default defineConfig({
   testDir: './e2e',

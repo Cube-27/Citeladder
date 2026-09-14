@@ -98,6 +98,11 @@ describe('frontend complexity checker', () => {
     expect(() => validatePolicy(relaxedDefaults)).toThrow(/defaults/);
   });
 
+  it('compares the retired Next root with its Vite replacement', () => {
+    const legacy = { ...basePolicy(), roots: ['app', 'components', 'lib'] };
+    expect(policyDiffFailures(legacy, basePolicy())).toEqual([]);
+  });
+
   it('gives anonymous callbacks position-qualified identities', () => {
     const file = fixture(
       'const callbacks = [() => 1, () => 2];\nconst objects = [{ handler: () => 3 }, { handler: () => 4 }];\n',
