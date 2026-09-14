@@ -20,6 +20,10 @@ import {
   ProductsRouteElement,
   PromptsRouteElement,
 } from './product-routes-prompts-content-commerce-referrals';
+import {
+  AcceptInvitationRouteElement,
+  SettingsRouteElement,
+} from './product-routes-settings-invitations';
 import { IssuesRoute, WebsitePageDetailRoute, WebsiteRoute } from './product-routes-site-issues';
 
 export const router = createBrowserRouter([
@@ -96,6 +100,14 @@ export const router = createBrowserRouter([
           {
             path: '/ai-referrals',
             element: <AiReferralsRouteElement />,
+          },
+          {
+            path: '/settings',
+            element: <SettingsRouteElement />,
+          },
+          {
+            path: '/invitations/accept',
+            element: <AcceptInvitationRouteElement />,
           },
         ],
       },

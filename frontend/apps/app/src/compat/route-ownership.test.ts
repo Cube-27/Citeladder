@@ -22,6 +22,12 @@ describe('viteOwnedDestination', () => {
     expect(viteOwnedDestination('/prompts?mode=manage', CURRENT_PROJECT)).toBe(
       '/prompts?mode=manage',
     );
+    expect(viteOwnedDestination('/settings?tab=providers', CURRENT_PROJECT)).toBe(
+      '/settings?tab=providers',
+    );
+    expect(viteOwnedDestination('/invitations/accept?token=invite', CURRENT_PROJECT)).toBe(
+      '/invitations/accept?token=invite',
+    );
   });
 
   it('recognizes the shipped dynamic product routes', () => {
@@ -33,7 +39,6 @@ describe('viteOwnedDestination', () => {
   });
 
   it('hands not-yet-migrated and cross-origin routes to the production ingress', () => {
-    expect(viteOwnedDestination('/settings?tab=providers', CURRENT_PROJECT)).toBeNull();
     expect(viteOwnedDestination('/', CURRENT_PROJECT)).toBeNull();
     expect(viteOwnedDestination('https://docs.example/guide', CURRENT_PROJECT)).toBeNull();
   });
