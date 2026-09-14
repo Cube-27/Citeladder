@@ -135,7 +135,8 @@ describe('PerformanceScreen evidence states', () => {
     );
     renderWithProviders(<PerformanceScreen />);
     await waitFor(() => expect(dashboardRead && readinessRead).toBe(true));
-    expect(screen.getByRole('status', { name: 'Loading performance…' })).toBeInTheDocument();
+    // The `status` announcement is held back until the spinner becomes visible.
+    expect(await screen.findByRole('status', { name: 'Loading performance…' })).toBeInTheDocument();
     expect(screen.queryByText('No search performance evidence yet')).not.toBeInTheDocument();
     act(() => release());
     expect(await screen.findByText('No search performance evidence yet')).toBeVisible();

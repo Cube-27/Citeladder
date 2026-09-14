@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 import { Spinner } from '@/components/ui/spinner';
 
 /**
@@ -31,10 +33,18 @@ export function PageLoading({
   /** What is loading, announced to assistive technology. */
   label?: string;
 }>) {
+  // The spinner stays invisible for a beat (`loading-delayed`); hold the
+  // `status` announcement with it, so assistive technology never announces a
+  // loading state nothing on screen shows yet.
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setRevealed(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
   return (
     <div className="grid min-h-[60vh] place-items-center" data-testid="page-loading">
       <span className="loading-delayed">
-        <Spinner size="lg" label={label} className="text-muted" />
+        <Spinner size="lg" label={revealed ? label : undefined} className="text-muted" />
       </span>
     </div>
   );

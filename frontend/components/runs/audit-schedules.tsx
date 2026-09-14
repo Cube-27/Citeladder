@@ -28,7 +28,7 @@ const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   weekly: 'Weekly',
 };
 
-export function useAuditSchedules(projectId: string | null) {
+function useAuditSchedules(projectId: string | null) {
   const workspaceId = useActiveWorkspaceId();
   return useQuery({
     queryKey: queryKeys.runs.schedules(workspaceId, projectId ?? ''),

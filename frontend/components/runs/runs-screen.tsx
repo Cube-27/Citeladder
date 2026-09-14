@@ -5,7 +5,7 @@ import { Play } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { AuditSchedules, useAuditSchedules } from '@/components/runs/audit-schedules';
+import { AuditSchedules } from '@/components/runs/audit-schedules';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { RunsTable } from '@/components/runs/runs-table';
 import { PageHeader } from '@/components/layout/page-header';
@@ -67,9 +67,11 @@ export function RunsScreen() {
     [audits, statusFilter],
   );
   const anyActive = audits.some((audit) => shouldPollAudit(audit.status));
-  const schedulesQuery = useAuditSchedules(projectId);
 
-  if (runsQuery.isLoading || schedulesQuery.isLoading) {
+  // Gate only on the runs list: the schedules query errors independently
+  // (and refetches whenever its card remounts onto the errored cache entry),
+  // so gating the whole screen on it would pin the page on a spinner forever.
+  if (runsQuery.isLoading) {
     return (
       <Stack gap="section">
         <PageHeader />

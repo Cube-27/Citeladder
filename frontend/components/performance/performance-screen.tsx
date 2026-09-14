@@ -307,7 +307,13 @@ export function PerformanceScreen() {
         onReset={resetFilters}
       />
 
-      <ReadinessLadder data={readiness.data} hideDisconnected={coverage.firstUse} />
+      {readiness.isError ? (
+        <Alert tone="warning">
+          Could not load data readiness. Check your connection and try again.
+        </Alert>
+      ) : (
+        <ReadinessLadder data={readiness.data} hideDisconnected={coverage.firstUse} />
+      )}
 
       <PerformanceNotices
         sync={sync}
