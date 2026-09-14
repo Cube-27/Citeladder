@@ -1,5 +1,4 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
 
 import type { Competitor } from '@/lib/marketing-content/compare';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
@@ -23,13 +22,13 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
       <header className="border-border-subtle border-b pt-16 pb-6 md:pb-8">
         <Container dense>
           <Reveal className="max-w-5xl">
-            <Link
+            <a
               href="/compare"
               className="text-muted hover:text-foreground mb-5 flex w-fit items-center gap-2 text-sm font-medium transition-colors"
             >
               <ArrowLeft className="size-4" aria-hidden />
               All comparisons
-            </Link>
+            </a>
             <Eyebrow>Comparison · {competitor.lastReviewed}</Eyebrow>
             <h1 className="website-page-title text-foreground mt-4 max-w-[28ch] text-balance">
               CiteLadder vs <em className="text-accent-text not-italic">{competitor.name}</em>

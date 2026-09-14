@@ -180,9 +180,7 @@ def test_demo_provider_configuration_reaches_its_runtime_owner() -> None:
         assert f'"{secret_id}"' in locals_tf
         assert f"sync_optional_value {secret_id}" in workflow
         assert f"write_env {variable}" in deploy
-    assert any(
-        "secrets.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE" in value for value in references
-    )
+    assert any("vars.LOGO_DEV_PUBLISHABLE" in value for value in references)
     assert "--build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE=" in workflow
     assert "citeladder-logo" not in locals_tf
     # An unwired Google pair leaves sign-in and the GSC/GA4 connect buttons
@@ -249,10 +247,6 @@ def test_public_access_is_the_default_and_demo_mode_stays_switchable() -> None:
     workflow = _shell(deploy_workflow)
     services = compose["services"]
     assert services["web"]["environment"]["DEMO_MODE"] == "${DEMO_MODE:-false}"
-    assert (
-        services["frontend"]["environment"]["NEXT_PUBLIC_DEMO_MODE"]
-        == "${DEMO_MODE:-false}"
-    )
     assert 'DEMO_MODE="${DEMO_MODE:-false}"' in deploy
     assert '[[ "$DEMO_MODE" =~ ^(true|false)$ ]]' in deploy
     assert "write_env DEMO_MODE" in deploy
@@ -284,9 +278,10 @@ def test_deploy_rotates_configured_secrets_and_verifies_dev_login() -> None:
 
 def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     variables = (GCP / "variables.tf").read_text(encoding="utf-8")
-    assert variables.count("@sha256:[0-9a-f]{64}$") == 2
+    assert variables.count("@sha256:[0-9a-f]{64}$") == 3
     assert variables.count("citeladder-demo/backend@sha256:") == 1
     assert variables.count("citeladder-demo/frontend@sha256:") == 1
+    assert variables.count("citeladder-demo/vite-app@sha256:") == 1
     assert "immutable_tags = true" in (GCP / "storage.tf").read_text(encoding="utf-8")
     paths = sorted(WORKFLOWS.glob("gcp-demo-*.yml"))
     assert paths
@@ -309,7 +304,7 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
         {"group": "gcp-demo-deploy", "cancel-in-progress": False}
     ]
     deploy = _shell(deploy_workflow)
-    # Both images are resolved to a digest before they are deployed, and a
+    # All three images are resolved to a digest before they are deployed, and a
     # lookup that returns nothing fails the job rather than building an
     # `image@` reference with an empty digest.
     #
@@ -323,8 +318,10 @@ def test_images_are_digest_only_and_privileged_actions_are_pinned() -> None:
     assert '--filter="tags:$GITHUB_SHA"' in deploy
     assert deploy.count("image_digest backend") >= 1
     assert deploy.count("image_digest frontend") >= 1
+    assert deploy.count("image_digest vite-app") >= 1
     assert 'test -n "$backend_digest"' in deploy
     assert 'test -n "$frontend_digest"' in deploy
+    assert 'test -n "$vite_app_digest"' in deploy
     assert 'test "$backend_digest" != "$frontend_digest"' in deploy
     assert "if grep -Fxq '0.0.0.0/0'" in deploy
     assert "if grep -Fxq '::/0'" in deploy
@@ -366,9 +363,11 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert web_environment["TRUSTED_PROXY_CIDRS"].startswith("${TRUSTED_PROXY_CIDRS")
 
     frontend_environment = services["frontend"]["environment"]
-    assert frontend_environment["HOSTNAME"] == "127.0.0.1"
+    assert frontend_environment["HOST"] == "127.0.0.1"
     assert frontend_environment["CITELADDER_TASK_LOCAL_BACKEND"] == "true"
-    assert frontend_environment["NEXT_PUBLIC_DEMO_MODE"] == "${DEMO_MODE:-false}"
+
+    vite_environment = services["vite-app"]["environment"]
+    assert vite_environment["BACKEND_ORIGIN"] == "http://127.0.0.1:8000"
 
     settings = {
         key: value
@@ -389,13 +388,16 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert len(workers) == 10
     caddy = (RUNTIME / "Caddyfile").read_text(encoding="utf-8")
     assert "trusted_proxies static __CLOUDFLARE_CIDRS__" in caddy
-    mcp_matcher = next(
-        line for line in caddy.splitlines() if "@mcp_protocol path" in line
+    routing = (RUNTIME / "frontend-routes.caddy").read_text(encoding="utf-8")
+    backend_matcher = next(
+        line for line in routing.splitlines() if line.startswith("@backend path ")
     )
     # /register is absent on purpose: it is the frontend's signup page, and
     # proxying it to the backend 405s every GET. MCP's RFC 7591 registration
     # endpoint moved to /mcp/register, which /mcp/* already covers.
-    assert mcp_matcher.split()[2:] == [
+    assert backend_matcher.split()[2:] == [
+        "/api",
+        "/api/*",
         "/mcp",
         "/mcp/*",
         "/authorize",
@@ -404,7 +406,7 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
         "/.well-known/oauth-authorization-server",
         "/.well-known/oauth-protected-resource/mcp",
     ]
-    assert "reverse_proxy @mcp_protocol 127.0.0.1:8000" in caddy
+    assert "reverse_proxy @backend {$BACKEND_ORIGIN:127.0.0.1:8000}" in routing
     # The frontend is a public surface: it gets no env_file and no backend
     # secret. Reading the parsed service means a key added at the end of the
     # block, past where the old text slice stopped, is still caught.

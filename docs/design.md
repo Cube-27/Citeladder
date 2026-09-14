@@ -19,9 +19,9 @@ CiteLadder (`citeladder.com`) is a light-only, evidence-led enterprise system. I
 
 | Owner | Responsibility |
 | --- | --- |
-| `frontend/app/globals.css` | Global tokens, font binding, shared geometry, interaction rules, animations, and the single `@theme` definition |
-| `frontend/app/layout.tsx` | Existing `next/font/local` Geist loading, with swap display |
-| `frontend/app/website-type.css` | Imported public/auth/onboarding type roles and focused-flow geometry; same font and semantic palette |
+| `frontend/apps/app/src/globals.css` | Global tokens, shared geometry, interaction rules, animations, and the single `@theme` definition |
+| `frontend/apps/app/src/runtime.css` and `frontend/apps/marketing/src/layouts/MarketingLayout.astro` | Self-hosted Geist loading with swap display in each runtime |
+| `frontend/apps/app/src/website-type.css` | Imported public/auth/onboarding type roles and focused-flow geometry; same font and semantic palette |
 | `frontend/components/ui/` | Shared controls, typography, layout, panels, and overlays |
 | `frontend/components/marketing/` | Existing marketing primitives |
 | `frontend/components/layout/nav-items.ts` | The shared navigation registry |
@@ -247,6 +247,9 @@ HeroUI is a reference for state completeness, not an installed dependency.
 Authenticated and marketing routes use shared CSS feedback without a general-purpose animation runtime. Pointer-opened menus use a 150–180ms fade/shift; keyboard command interfaces open immediately. Drawers use interruptible 220–260ms right-side transitions; press feedback begins on pointer-down. Authenticated route content and tab indicators update immediately without opacity transitions.
 
 Sanctioned explanatory motion: rotating answer-engine wordmarks; product-window walkthrough; native CSS scroll fade/rise reveals that never hide server-rendered content after hydration; master-detail continuity/domain-owned measured expansion; onboarding research results resolving below factual activity with a 220ms fade/rise and 60ms stagger.
+
+Answer-engine rotors pause outside the viewport and in hidden tabs. Static product
+preview bars render complete on the server without a hydration-time collapse or replay.
 
 All motion stops under `prefers-reduced-motion: reduce`: global CSS animations/transitions are neutralised and SMIL pipeline dots are hidden. WCAG 2.1 AA is the minimum. Preserve visible focus, non-colour-only meaning, usable keyboard/touch interactions, forced-colours, and print.
 

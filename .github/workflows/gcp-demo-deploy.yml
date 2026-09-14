@@ -42,6 +42,7 @@ jobs:
       # 'true' restores the single-account demo (no public sign-up).
       DEMO_MODE: ${{ vars.DEMO_MODE || 'false' }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+      LOGO_DEV_PUBLISHABLE: ${{ vars.LOGO_DEV_PUBLISHABLE }}
       DEMO_LOGIN_EMAIL: ${{ vars.DEMO_LOGIN_EMAIL }}
       DEV_LOGIN_COUNTER_ALLOWANCE: ${{ vars.DEV_LOGIN_COUNTER_ALLOWANCE || '200' }}
     steps:
@@ -122,11 +123,12 @@ jobs:
             --arg region "$REGION" --arg zone "$ZONE" --arg domain "$DOMAIN_NAME" \
             --arg backend "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/backend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
             --arg frontend "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" \
+            --arg vite_app "${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/vite-app@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" \
             --argjson v4 "$(jq -Rsc 'split("\n")|map(select(length>0))' /tmp/cf-v4)" \
             --argjson v6 "$(jq -Rsc 'split("\n")|map(select(length>0))' /tmp/cf-v6)" \
             '{project_id:$project,billing_account:$billing,budget_currency_code:$budget_currency,
               budget_units:$budget_units,region:$region,zone:$zone,domain_name:$domain,
-              backend_image:$backend,frontend_image:$frontend,
+              backend_image:$backend,frontend_image:$frontend,vite_app_image:$vite_app,
               cloudflare_ipv4_cidrs:$v4,cloudflare_ipv6_cidrs:$v6}' > demo.auto.tfvars.json
           terraform apply -input=false -auto-approve \
             -target=google_artifact_registry_repository.images \
@@ -136,8 +138,6 @@ jobs:
         id: images
         working-directory: infra/gcp
         shell: bash
-        env:
-          NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE: ${{ secrets.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE }}
         run: |
           set -euo pipefail
           registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
@@ -158,26 +158,33 @@ jobs:
           fi
           if [ -z "$(image_digest frontend)" ]; then
             docker build --build-arg BUILD_REVISION="$GITHUB_SHA" \
-              --build-arg BACKEND_ORIGIN=http://127.0.0.1:8000 \
-              --build-arg CITELADDER_TASK_LOCAL_BACKEND=true \
-              --build-arg NEXT_PUBLIC_DEMO_MODE="$DEMO_MODE" \
-              --build-arg NEXT_PUBLIC_SITE_URL="https://$DOMAIN_NAME" \
-              --build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE="$NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE" \
               -t "$registry/frontend:$GITHUB_SHA" -f ../../frontend/Dockerfile ../..
             docker push "$registry/frontend:$GITHUB_SHA"
           fi
+          if [ -z "$(image_digest vite-app)" ]; then
+            docker build \
+              --build-arg NEXT_PUBLIC_DEMO_MODE="$DEMO_MODE" \
+              --build-arg NEXT_PUBLIC_SITE_URL="https://$DOMAIN_NAME" \
+              --build-arg NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE="$LOGO_DEV_PUBLISHABLE" \
+              -t "$registry/vite-app:$GITHUB_SHA" -f ../../frontend/apps/app/Dockerfile ../..
+            docker push "$registry/vite-app:$GITHUB_SHA"
+          fi
           backend_digest="$(image_digest backend)"
           frontend_digest="$(image_digest frontend)"
+          vite_app_digest="$(image_digest vite-app)"
           test -n "$backend_digest"
           test -n "$frontend_digest"
+          test -n "$vite_app_digest"
           test "$backend_digest" != "$frontend_digest"
           backend="$registry/backend@$backend_digest"
           frontend="$registry/frontend@$frontend_digest"
-          jq --arg backend "$backend" --arg frontend "$frontend" \
-            '.backend_image=$backend|.frontend_image=$frontend' demo.auto.tfvars.json > /tmp/tfvars
+          vite_app="$registry/vite-app@$vite_app_digest"
+          jq --arg backend "$backend" --arg frontend "$frontend" --arg vite_app "$vite_app" \
+            '.backend_image=$backend|.frontend_image=$frontend|.vite_app_image=$vite_app' demo.auto.tfvars.json > /tmp/tfvars
           mv /tmp/tfvars demo.auto.tfvars.json
           echo "backend=$backend" >> "$GITHUB_OUTPUT"
           echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "vite_app=$vite_app" >> "$GITHUB_OUTPUT"
       - name: Synchronize runtime secret versions
         shell: bash
         env:
@@ -295,6 +302,7 @@ jobs:
           BACKUP_BUCKET: ${{ steps.terraform.outputs.backup_bucket }}
           BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
           FRONTEND_IMAGE: ${{ steps.images.outputs.frontend }}
+          VITE_APP_IMAGE: ${{ steps.images.outputs.vite_app }}
           DEFAULT_AGENT_BASE_URL: ${{ vars.DEFAULT_AGENT_BASE_URL }}
           DEFAULT_AGENT_MODEL: ${{ vars.DEFAULT_AGENT_MODEL }}
           CONTENT_PROVIDER: ${{ vars.CONTENT_PROVIDER }}
@@ -312,8 +320,8 @@ jobs:
             --quiet --command='rm -rf /tmp/citeladder-deploy && mkdir -m 700 /tmp/citeladder-deploy'
           gcloud compute scp infra/gcp/runtime/* /tmp/cf-v4 /tmp/cf-v6 "$VM_NAME:/tmp/citeladder-deploy/" \
             --project "$PROJECT_ID" --zone "$ZONE" --tunnel-through-iap --quiet
-          printf -v remote 'sudo env PROJECT_ID=%q REGION=%q BACKEND_IMAGE=%q FRONTEND_IMAGE=%q BACKUP_BUCKET=%q DOMAIN_NAME=%q SOURCE_COMMIT=%q DEMO_MODE=%q DEMO_EXPIRES_AT=%q DEV_LOGIN_EMAIL=%q DEV_LOGIN_COUNTER_ALLOWANCE=%q DEFAULT_AGENT_BASE_URL=%q DEFAULT_AGENT_MODEL=%q CONTENT_PROVIDER=%q CONTENT_PROVIDER_ENDPOINT=%q CONTENT_MODEL=%q bash /tmp/citeladder-deploy/deploy-vm.sh' \
-            "$PROJECT_ID" "$REGION" "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$BACKUP_BUCKET" \
+          printf -v remote 'sudo env PROJECT_ID=%q REGION=%q BACKEND_IMAGE=%q FRONTEND_IMAGE=%q VITE_APP_IMAGE=%q BACKUP_BUCKET=%q DOMAIN_NAME=%q SOURCE_COMMIT=%q DEMO_MODE=%q DEMO_EXPIRES_AT=%q DEV_LOGIN_EMAIL=%q DEV_LOGIN_COUNTER_ALLOWANCE=%q DEFAULT_AGENT_BASE_URL=%q DEFAULT_AGENT_MODEL=%q CONTENT_PROVIDER=%q CONTENT_PROVIDER_ENDPOINT=%q CONTENT_MODEL=%q bash /tmp/citeladder-deploy/deploy-vm.sh' \
+            "$PROJECT_ID" "$REGION" "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$VITE_APP_IMAGE" "$BACKUP_BUCKET" \
             "$DOMAIN_NAME" "$GITHUB_SHA" "$DEMO_MODE" "$DEMO_EXPIRES_AT" \
             "${DEMO_LOGIN_EMAIL:-dev@citeladder.com}" \
             "$DEV_LOGIN_COUNTER_ALLOWANCE" \
@@ -325,6 +333,7 @@ jobs:
         env:
           BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
           FRONTEND_IMAGE: ${{ steps.images.outputs.frontend }}
+          VITE_APP_IMAGE: ${{ steps.images.outputs.vite_app }}
           STATIC_IP: ${{ steps.terraform.outputs.static_ip }}
           DEMO_LOGIN_PASSWORD: ${{ secrets.DEMO_LOGIN_PASSWORD }}
         run: |
@@ -342,9 +351,9 @@ jobs:
           # deploy, so assert the catalog reports Google usable.
           curl --fail --silent --show-error "https://$DOMAIN_NAME/api/v1/auth/oauth/providers" \
             | jq -e '[.providers[] | select(.provider == "google" and .configured)] | length == 1' >/dev/null
-          # Read the page rather than POSTing, which would squat an address.
-          # Also catches an image cached with the old NEXT_PUBLIC_DEMO_MODE.
+          # The Vite document is client-rendered; verify the deploy serves its shell.
           register_page="$(curl --fail --silent --show-error "https://$DOMAIN_NAME/register")"
+          grep -q '<div id="root"></div>' <<<"$register_page"
           if test "$DEMO_MODE" = "true"; then
             registration_payload="$(jq -nc --arg email "$DEMO_LOGIN_EMAIL" --arg password "$(openssl rand -hex 16)" \
               '{email:$email,password:$password}')"
@@ -352,9 +361,6 @@ jobs:
               -X POST -H 'content-type: application/json' --data "$registration_payload" \
               "https://$DOMAIN_NAME/api/v1/auth/register")
             test "$status" = 403
-            grep -q 'Registration unavailable' <<<"$register_page"
-          else
-            ! grep -q 'Registration unavailable' <<<"$register_page"
           fi
           {
             echo '### GCP demo deployment'

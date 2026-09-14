@@ -1,5 +1,4 @@
 import { ArrowUpRight } from 'lucide-react';
-import Link from 'next/link';
 
 import { LogoMark } from '@/components/ui/logo-mark';
 
@@ -95,11 +94,7 @@ function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
       </a>
     );
   }
-  return link.href.startsWith('/') ? (
-    <Link className={LINK} href={link.href} prefetch={link.href === '/login' ? false : undefined}>
-      {link.label}
-    </Link>
-  ) : (
+  return (
     <a className={LINK} href={link.href}>
       {link.label}
     </a>
@@ -118,9 +113,9 @@ function LegalStripLink({ link }: Readonly<{ link: LegalLink }>) {
     );
   }
   return (
-    <Link className={LEGAL_STRIP_LINK} href={link.href}>
+    <a className={LEGAL_STRIP_LINK} href={link.href}>
       {link.label}
-    </Link>
+    </a>
   );
 }
 
@@ -144,9 +139,9 @@ export async function MarketingFooter() {
           className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.5fr_repeat(5,minmax(0,1fr))]"
         >
           <div className="col-span-2 space-y-5 sm:col-span-3 lg:col-span-1">
-            <Link href="/" aria-label="CiteLadder home" className="inline-block">
+            <a href="/" aria-label="CiteLadder home" className="inline-block">
               <LogoMark />
-            </Link>
+            </a>
 
             <p className="website-body text-muted max-w-[28ch]">
               Verifiable AI visibility. Every metric opens to the answer it came from.

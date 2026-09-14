@@ -22,7 +22,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   fullyParallel: false,
-  // Stack boot (uv + uvicorn + worker + next dev) dominates; give each test
+  // Stack boot (uv + uvicorn + worker + Vite) dominates; give each test
   // room since the first one pays the whole boot cost in beforeAll.
   timeout: 300_000,
   use: {

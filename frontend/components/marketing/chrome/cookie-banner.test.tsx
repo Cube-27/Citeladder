@@ -24,7 +24,10 @@ describe('CookieBanner', () => {
     expect(region).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accept' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Cookie Policy' })).toHaveAttribute('href', '/cookies');
+    expect(screen.getByRole('link', { name: 'Cookie Policy.' })).toHaveAttribute(
+      'href',
+      '/cookies',
+    );
   });
 
   it('grants consent on accept and dismisses', async () => {

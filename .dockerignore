@@ -16,7 +16,6 @@
 **/.venv
 **/venv
 **/node_modules
-**/.next
 **/.pytest_cache
 **/.ruff_cache
 **/__pycache__
@@ -25,6 +24,8 @@
 **/coverage
 **/test-results
 **/playwright-report
+**/dist
+**/.astro
 
 docs
 frontend/e2e

@@ -1,5 +1,7 @@
 import { http, HttpResponse } from 'msw';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
+import { useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -10,13 +12,13 @@ import { renderWithProviders } from '@/test/render';
 
 import { OnboardingScreen } from './onboarding-screen';
 
-const { replace, setActiveProjectId } = vi.hoisted(() => ({
-  replace: vi.fn(),
+const { setActiveProjectId } = vi.hoisted(() => ({
   setActiveProjectId: vi.fn(),
 }));
 
 const DISCOVERY_ID = '11111111-1111-4111-8111-111111111111';
 const PROJECT_ID = '22222222-2222-4222-8222-222222222222';
+const ACTIVE_PROJECT_ID = '55555555-5555-4555-8555-555555555555';
 const CRAWL_ID = '33333333-3333-4333-8333-333333333333';
 
 let discoveryState: BrandDiscovery;
@@ -24,7 +26,6 @@ let discoveryState: BrandDiscovery;
 // the review step, which is the only way to reach that screen without a
 // `ready` discovery to click through.
 let searchParams = '';
-let pathname = '/onboarding';
 
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
@@ -35,16 +36,11 @@ const createdProject = makeProject({
   website_url: 'https://example.com',
 });
 
-vi.mock('next/navigation', () => ({
-  usePathname: () => pathname,
-  useRouter: () => ({ push: vi.fn(), replace }),
-  useSearchParams: () => new URLSearchParams(searchParams),
-}));
-
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    activeProjectId: '55555555-5555-4555-8555-555555555555',
     setActiveProjectId,
   }),
 }));
@@ -166,11 +162,42 @@ function catalogHandler() {
   );
 }
 
+function onboardingUrl() {
+  return `/onboarding${searchParams ? `?${searchParams}` : ''}`;
+}
+
+function RouterProbe({ destination }: Readonly<{ destination: string }>) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const lastDestination = useRef<string>(destination);
+  useEffect(() => {
+    if (lastDestination.current === destination) return;
+    lastDestination.current = destination;
+    navigate(destination);
+  }, [destination, navigate]);
+  return <output data-testid="location">{location.pathname + location.search}</output>;
+}
+
+function renderOnboarding(destination = onboardingUrl()) {
+  return renderWithProviders(
+    <>
+      <RouterProbe destination={destination} />
+      <OnboardingScreen />
+    </>,
+    { initialEntries: [destination] },
+  );
+}
+
 async function enterBrand() {
   const user = userEvent.setup();
   await user.type(screen.getByLabelText(/^Brand name/), 'Acme');
   await user.type(screen.getByLabelText(/^Website/), 'acme.example');
   await user.click(screen.getByRole('button', { name: 'Continue' }));
+  await waitFor(() =>
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      `/onboarding?discovery=${DISCOVERY_ID}&step=discovery`,
+    ),
+  );
   return user;
 }
 
@@ -179,48 +206,85 @@ afterEach(() => {
   mswServer.resetHandlers();
   vi.clearAllMocks();
   searchParams = '';
-  pathname = '/onboarding';
 });
 afterAll(() => mswServer.close());
 
 describe('OnboardingScreen', () => {
+  it('treats a trailing slash as the onboarding route', async () => {
+    mswServer.use(catalogHandler());
+    renderOnboarding('/onboarding/');
+
+    expect(await screen.findByLabelText(/^Brand name/)).toBeInTheDocument();
+  });
+
+  it('does not render onboarding content on an unrelated route', () => {
+    renderOnboarding('/projects');
+
+    expect(screen.queryByLabelText(/^Brand name/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the active project in an additional-project cancellation URL', async () => {
+    searchParams = `new=1&workspace=${WORKSPACE_ID}`;
+    mswServer.use(catalogHandler());
+    renderOnboarding();
+
+    expect(await screen.findByRole('link', { name: 'Cancel' })).toHaveAttribute(
+      'href',
+      `/projects?project=${ACTIVE_PROJECT_ID}`,
+    );
+  });
+
   it('starts a fresh draft when Add project replaces a retained review URL', async () => {
     discoveryState = discovery('ready', 'preparing_review');
     searchParams = `new=1&discovery=${DISCOVERY_ID}&step=review`;
     mswServer.use(catalogHandler());
-    const { rerender } = renderWithProviders(<OnboardingScreen />);
+    const { rerender } = renderOnboarding();
     await screen.findByRole('button', { name: 'Create project' });
 
     searchParams = `new=1&workspace=${WORKSPACE_ID}`;
-    rerender(<OnboardingScreen />);
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeVisible();
+    rerender(
+      <>
+        <RouterProbe destination={onboardingUrl()} />
+        <OnboardingScreen />
+      </>,
+    );
+    expect(await screen.findByRole('button', { name: 'Continue' })).toBeVisible();
     expect(screen.getByLabelText(/brand name/i)).toHaveValue('');
     expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
-    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByTestId('location')).toHaveTextContent(onboardingUrl());
   });
 
   it('discards a cached onboarding transaction when navigating away and back', async () => {
     discoveryState = discovery('ready', 'preparing_review');
     mswServer.use(catalogHandler());
-    const { rerender } = renderWithProviders(<OnboardingScreen />);
+    const { rerender } = renderOnboarding();
     const user = await enterBrand();
     await user.click(screen.getByRole('button', { name: 'Review' }));
     await screen.findByRole('button', { name: 'Create project' });
-    expect(replace).not.toHaveBeenCalled();
 
-    pathname = '/projects';
-    rerender(<OnboardingScreen />);
-    pathname = '/onboarding';
+    rerender(
+      <>
+        <RouterProbe destination="/projects" />
+        <OnboardingScreen />
+      </>,
+    );
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/projects'));
+
     searchParams = `new=1&workspace=${WORKSPACE_ID}`;
-    rerender(<OnboardingScreen />);
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeVisible();
+    rerender(
+      <>
+        <RouterProbe destination={onboardingUrl()} />
+        <OnboardingScreen />
+      </>,
+    );
+    expect(await screen.findByRole('button', { name: 'Continue' })).toBeVisible();
     expect(screen.getByLabelText(/brand name/i)).toHaveValue('');
   });
 
   it('renders persisted discovery facts in human language without raw diagnostics', async () => {
     discoveryState = discovery('running', 'finding_competitors');
     mswServer.use(catalogHandler());
-    renderWithProviders(<OnboardingScreen />);
+    renderOnboarding();
 
     await enterBrand();
 
@@ -239,7 +303,7 @@ describe('OnboardingScreen', () => {
       warnings: ['topic_selection_unavailable'],
     };
     mswServer.use(catalogHandler());
-    renderWithProviders(<OnboardingScreen />);
+    renderOnboarding();
 
     await enterBrand();
 
@@ -279,7 +343,7 @@ describe('OnboardingScreen', () => {
         HttpResponse.json(createdProject),
       ),
     );
-    renderWithProviders(<OnboardingScreen />);
+    renderOnboarding();
 
     const user = await enterBrand();
     await user.click(screen.getByRole('button', { name: 'Review' }));
@@ -304,15 +368,22 @@ describe('OnboardingScreen', () => {
     // is what used to land people on their previous project, or on an empty
     // account that then refused to create the one they had just made.
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
-    expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`);
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(`/projects?project=${PROJECT_ID}`),
+    );
   });
 
-  it('opens the committed project shell while its portfolio is queued', async () => {
+  it('shows page-level creation progress before opening the queued project', async () => {
     discoveryState = discovery('ready', 'preparing_review');
+    let releaseCompletion!: () => void;
+    const completionSettled = new Promise<void>((resolve) => {
+      releaseCompletion = resolve;
+    });
     mswServer.use(
       catalogHandler(),
-      http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, () =>
-        HttpResponse.json(
+      http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, async () => {
+        await completionSettled;
+        return HttpResponse.json(
           {
             discovery_id: DISCOVERY_ID,
             status: 'completing',
@@ -323,8 +394,8 @@ describe('OnboardingScreen', () => {
             warnings: [],
           },
           { status: 202 },
-        ),
-      ),
+        );
+      }),
       // The committed creation is resolved through the project-detail read
       // before the shell is navigated to, so the destination is usable on
       // arrival rather than waiting on a list that predates the project.
@@ -333,7 +404,7 @@ describe('OnboardingScreen', () => {
         HttpResponse.json(createdProject),
       ),
     );
-    renderWithProviders(<OnboardingScreen />);
+    renderOnboarding();
 
     const user = await enterBrand();
     await user.click(screen.getByRole('button', { name: 'Review' }));
@@ -341,7 +412,17 @@ describe('OnboardingScreen', () => {
     await waitFor(() => expect(createProject).toBeEnabled());
     await user.click(createProject);
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`));
+    expect(await screen.findByRole('heading', { name: 'Creating your project' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Does this look right?' })).toBeNull();
+    expect(
+      screen.getByText('Starting topics can continue in the background after you arrive.'),
+    ).toBeVisible();
+
+    act(() => releaseCompletion());
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(`/projects?project=${PROJECT_ID}`),
+    );
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
   });
 
@@ -361,9 +442,11 @@ describe('OnboardingScreen', () => {
         HttpResponse.json(createdProject),
       ),
     );
-    renderWithProviders(<OnboardingScreen />);
+    renderOnboarding();
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_ID}`));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(`/projects?project=${PROJECT_ID}`),
+    );
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
   });
 
@@ -371,14 +454,14 @@ describe('OnboardingScreen', () => {
     searchParams = `discovery=${DISCOVERY_ID}&step=review`;
     discoveryState = discovery('completing', 'preparing_review');
     mswServer.use(catalogHandler());
-    renderWithProviders(<OnboardingScreen />);
+    renderOnboarding();
 
     // The retry keeps the workspace the discarded draft belonged to, so it is
     // not silently re-targeted at whichever workspace resolves by default.
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith(`/onboarding?new=1&workspace=${WORKSPACE_ID}`, {
-        scroll: false,
-      }),
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        `/onboarding?new=1&workspace=${WORKSPACE_ID}`,
+      ),
     );
     expect(screen.queryByRole('button', { name: 'Create project' })).not.toBeInTheDocument();
   });
@@ -390,11 +473,11 @@ describe('OnboardingScreen', () => {
       project_id: PROJECT_ID,
     };
     mswServer.use(catalogHandler());
-    renderWithProviders(<OnboardingScreen />);
+    renderOnboarding();
 
     expect(await screen.findByText(/project creation did not finish/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create project' })).toBeDisabled();
-    expect(replace).not.toHaveBeenCalled();
+    expect(screen.getByTestId('location')).toHaveTextContent(onboardingUrl());
   });
 
   it('gates creation on the one thing the confirm screen asks for', async () => {
@@ -406,7 +489,7 @@ describe('OnboardingScreen', () => {
       profile: { ...ready.profile, category: '', category_options: [], category_aliases: [] },
     };
     mswServer.use(catalogHandler());
-    renderWithProviders(<OnboardingScreen />);
+    renderOnboarding();
 
     const user = await enterBrand();
     await user.click(screen.getByRole('button', { name: 'Review' }));
@@ -420,7 +503,7 @@ describe('OnboardingScreen', () => {
 
   it('never asks the user to write brand prose', async () => {
     mswServer.use(catalogHandler());
-    renderWithProviders(<OnboardingScreen />);
+    renderOnboarding();
 
     const user = await enterBrand();
     await user.click(screen.getByRole('button', { name: 'Review' }));
@@ -444,7 +527,7 @@ describe('OnboardingScreen', () => {
       })),
     };
     mswServer.use(catalogHandler());
-    renderWithProviders(<OnboardingScreen />);
+    renderOnboarding();
 
     const user = await enterBrand();
     await user.click(screen.getByRole('button', { name: 'Review' }));

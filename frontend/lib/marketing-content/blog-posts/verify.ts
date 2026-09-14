@@ -10,6 +10,7 @@ export const POST_VERIFY: BlogPost = {
   excerpt:
     'Use fixed prompts, repeated baselines, documented page changes, controls, raw responses, and explicit uncertainty to test AI visibility work.',
   image: '/blog/editorial/article-verify.png',
+  cardImage: '/blog/editorial/article-verify.svg',
   date: '2026-09-03',
   dateModified: '2026-09-09',
   readTime: '7 min read',

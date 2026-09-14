@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { useId, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -54,6 +54,14 @@ export function FlowShell({
   );
 }
 
+function MarketingExitLink() {
+  return (
+    <a href="/" className="flow-exit">
+      Exit
+    </a>
+  );
+}
+
 function FlowBar({
   steps,
   currentStep,
@@ -63,18 +71,21 @@ function FlowBar({
   currentStep: number;
   exitHref?: string;
 }>) {
+  let exit: ReactNode = <span />;
+  if (exitHref === '/') exit = <MarketingExitLink />;
+  else if (exitHref) {
+    exit = (
+      <Link to={exitHref} className="flow-exit">
+        Exit
+      </Link>
+    );
+  }
   return (
     <header className="flow-bar">
       <div className="flow-bar-content">
         <AuthWordmark />
         {steps ? <FlowProgress steps={steps} currentStep={currentStep} /> : <span />}
-        {exitHref ? (
-          <Link href={exitHref} className="flow-exit">
-            Exit
-          </Link>
-        ) : (
-          <span />
-        )}
+        {exit}
       </div>
       {steps ? (
         <div className="flow-progress-rule" aria-hidden="true">

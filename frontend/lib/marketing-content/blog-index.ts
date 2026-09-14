@@ -2,14 +2,24 @@ import type { BlogPost } from './blog';
 
 export type BlogPostSummary = Pick<
   BlogPost,
-  'slug' | 'title' | 'excerpt' | 'image' | 'date' | 'dateModified' | 'readTime' | 'author' | 'tags'
+  | 'slug'
+  | 'title'
+  | 'excerpt'
+  | 'image'
+  | 'cardImage'
+  | 'date'
+  | 'dateModified'
+  | 'readTime'
+  | 'author'
+  | 'tags'
 >;
 
 export type BlogSort = 'latest' | 'oldest';
 
 export function toBlogPostSummary(post: BlogPost): BlogPostSummary {
-  const { slug, title, excerpt, image, date, dateModified, readTime, author, tags } = post;
-  return { slug, title, excerpt, image, date, dateModified, readTime, author, tags };
+  const { slug, title, excerpt, image, cardImage, date, dateModified, readTime, author, tags } =
+    post;
+  return { slug, title, excerpt, image, cardImage, date, dateModified, readTime, author, tags };
 }
 
 /**

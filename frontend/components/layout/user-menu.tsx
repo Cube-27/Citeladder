@@ -2,7 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { ArrowUpRight, LogOut, Map } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import {
@@ -16,6 +16,8 @@ import {
 import { authApi } from '@/lib/api/auth';
 import { useSession } from '@/lib/auth/session-guard';
 import { ICONS } from '@/lib/icons';
+import { workspaceDestination } from '@/lib/navigation/project-destination';
+import { useProjectContext } from '@/lib/project/project-context';
 import { cn, emailInitials } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 
@@ -40,7 +42,11 @@ function useUserMenu() {
 
 function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter }>) {
   const { email, logout } = useUserMenu();
+  const { activeWorkspaceId } = useProjectContext();
   const compact = presenter !== 'sidebar';
+  const settingsHref = activeWorkspaceId
+    ? workspaceDestination('/settings', null, activeWorkspaceId)
+    : '/settings';
   return (
     <DropdownContent
       align={compact ? 'end' : 'start'}
@@ -50,16 +56,16 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
       <DropdownLabel>{email}</DropdownLabel>
       <DropdownSeparator />
       <DropdownItem asChild>
-        <Link href="/settings">
+        <Link to={settingsHref}>
           <SettingsIcon className="size-4 shrink-0" aria-hidden />
           <span>Settings</span>
         </Link>
       </DropdownItem>
       <DropdownItem asChild>
-        <Link href="/docs/mcp" target="_blank">
+        <a href="/docs/mcp" target="_blank">
           <ArrowUpRight className="size-4 shrink-0" aria-hidden />
           <span>MCP</span>
-        </Link>
+        </a>
       </DropdownItem>
       <DropdownItem
         onSelect={() => {

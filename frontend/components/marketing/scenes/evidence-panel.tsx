@@ -1,5 +1,4 @@
 import { Download, FileSpreadsheet } from 'lucide-react';
-import Image from 'next/image';
 
 import type { SolutionScene } from '@/lib/marketing-content/solutions';
 import { cn } from '@/lib/utils';
@@ -63,9 +62,10 @@ function PlatformChip({ name }: Readonly<{ name: string }>) {
   return (
     <span className="text-muted inline-flex items-center gap-1.5 text-xs font-medium">
       {PLATFORM_LOGOS[name] ? (
-        <Image
+        <img
           src={PLATFORM_LOGOS[name]}
           alt=""
+          loading="lazy"
           width={14}
           height={14}
           className="size-3.5 shrink-0 object-contain"

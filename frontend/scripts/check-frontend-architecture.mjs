@@ -22,11 +22,8 @@ for (const owner of [
   }
 }
 
-// Hard navigation is a two-module seam. The linter used to carry a related
-// guard -- `@next/next/no-location-assign-relative-destination` -- which oxlint
-// does not implement; this is the stricter replacement, because it also keeps
-// untestable direct calls out of components (see the header comments on both
-// owners for why the seam exists at all).
+// Hard navigation is a two-module seam. The policy keeps direct location
+// mutations in the dedicated, testable navigation owner.
 const NAVIGATION_OWNERS = new Set(['lib/navigate.ts', 'lib/navigation/hard-navigate.ts']);
 const HARD_NAVIGATION = /location\s*\.\s*(?:assign|replace)\s*\(|location\s*\.\s*href\s*=[^=]/;
 

@@ -41,7 +41,7 @@ import {
  * per pair so call sites stay consistent and grep-able.
  *
  * Visual contract (applies to every lucide glyph, not just the ones mapped
- * here — see the icon stroke ladder in `app/globals.css` and docs/design.md):
+ * here — see the icon stroke ladder in `apps/app/src/globals.css` and docs/design.md):
  * - Size is the only thing a call site picks. `size-3`/`size-3.5` for dense
  *   tables, toolbars, and inline chips; `size-4` for chrome; `size-5` for
  *   empty states and marketing wells; larger only for decorative marks.

@@ -1,5 +1,4 @@
 import { ChevronDown } from 'lucide-react';
-import Link from 'next/link';
 import { Fragment } from 'react';
 
 import { NAV_DROPS, NAV_LINKS, type NavDropKey } from '@/lib/marketing-content/nav';
@@ -39,13 +38,13 @@ export function MobileNavigation({
       {NAV_DROPS.map(({ key, label, href, groups }) => (
         <div key={key} className="border-border-subtle border-b last:border-b-0">
           <div className="flex items-center">
-            <Link
+            <a
               href={href}
               className="text-foreground flex-1 py-3.5 text-lg font-medium tracking-[-0.02em]"
               onClick={closeMenu}
             >
               {label}
-            </Link>
+            </a>
             <button
               type="button"
               className="text-foreground grid size-10 place-items-center"
@@ -80,14 +79,14 @@ export function MobileNavigation({
 
       <div className="border-border-subtle mt-auto grid border-t pt-2">
         {NAV_LINKS.map(({ label, href }) => (
-          <Link
+          <a
             key={href}
             href={href}
             className="text-foreground py-3.5 text-lg font-medium tracking-[-0.02em]"
             onClick={closeMenu}
           >
             {label}
-          </Link>
+          </a>
         ))}
         {!isAuthenticated &&
           !sessionPending && (
@@ -105,14 +104,13 @@ export function MobileNavigation({
             className="bg-background-alt my-3.5 h-5 w-24 animate-pulse rounded-[var(--radius-control)]"
           />
         ) : (
-          <Link
+          <a
             href={isAuthenticated ? dashboardHref : '/login'}
-            prefetch={isAuthenticated ? undefined : false}
             className="text-muted py-3.5 text-lg font-medium"
             onClick={closeMenu}
           >
             {isAuthenticated ? 'Dashboard' : 'Log in'}
-          </Link>
+          </a>
         )}
       </div>
     </div>

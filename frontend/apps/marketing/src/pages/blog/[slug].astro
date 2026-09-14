@@ -1,0 +1,42 @@
+---
+import { BlogPostView } from '@/components/marketing/pages/blog';
+import { POSTS } from '@/lib/marketing-content/blog';
+import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
+
+const post = POSTS.find((candidate) => candidate.slug === Astro.params.slug);
+if (!post) Astro.response.status = 404;
+const breadcrumb = post
+  ? breadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Blog', path: '/blog' },
+      { name: post.title, path: `/blog/${post.slug}` },
+    ])
+  : null;
+const title = post ? `${post.seoTitle} · CiteLadder` : 'Post not found · CiteLadder';
+const description = post?.seoDescription ?? 'The requested CiteLadder resource does not exist.';
+---
+
+<MarketingLayout
+  title={title}
+  description={description}
+  canonical={post ? `/blog/${post.slug}` : undefined}
+  keywords={post ? [...post.tags, 'AI visibility', 'AEO'] : []}
+  openGraphType={post ? 'article' : 'website'}
+  image={post?.image}
+  publishedTime={post?.date}
+  modifiedTime={post ? post.dateModified ?? post.date : undefined}
+  author={post?.author}
+  tags={post?.tags}
+  twitterCard={post ? 'summary_large_image' : undefined}
+  robots={post ? undefined : 'noindex'}
+  jsonLd={breadcrumb ? [breadcrumb] : []}
+>
+  {post ? (
+    <main id="main">
+      <BlogPostView post={post} />
+    </main>
+  ) : (
+    <main id="main"><h1>Post not found</h1></main>
+  )}
+</MarketingLayout>

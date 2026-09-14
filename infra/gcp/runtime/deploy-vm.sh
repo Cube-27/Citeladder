@@ -5,6 +5,7 @@ set -euo pipefail
 : "${REGION:?REGION is required}"
 : "${BACKEND_IMAGE:?BACKEND_IMAGE is required}"
 : "${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}"
+: "${VITE_APP_IMAGE:?VITE_APP_IMAGE is required}"
 : "${BACKUP_BUCKET:?BACKUP_BUCKET is required}"
 : "${DOMAIN_NAME:?DOMAIN_NAME is required}"
 : "${SOURCE_COMMIT:?SOURCE_COMMIT is required}"
@@ -24,10 +25,11 @@ DEMO_MODE="${DEMO_MODE:-false}"
 [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
 [[ "$BACKEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
 [[ "$FRONTEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
+[[ "$VITE_APP_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
 expected_registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
 [[ "$BACKEND_IMAGE" == "$expected_registry/backend@sha256:"* ]]
 [[ "$FRONTEND_IMAGE" == "$expected_registry/frontend@sha256:"* ]]
-
+[[ "$VITE_APP_IMAGE" == "$expected_registry/vite-app@sha256:"* ]]
 had_previous=false
 running_services=""
 if test -f /opt/citeladder/runtime.env && test -f /opt/citeladder/compose.gcp.yml; then
@@ -52,6 +54,7 @@ rm -f /etc/systemd/system/citeladder-idle.timer \
 
 install -d -m 0750 /opt/citeladder /opt/citeladder/tls
 install -m 0644 /tmp/citeladder-deploy/compose.gcp.yml /opt/citeladder/compose.gcp.yml
+install -m 0644 /tmp/citeladder-deploy/frontend-routes.caddy /opt/citeladder/frontend-routes.caddy
 install -m 0755 /tmp/citeladder-deploy/init-postgres-tls.sh /opt/citeladder/init-postgres-tls.sh
 install -m 0750 /tmp/citeladder-deploy/backup.sh /opt/citeladder/backup.sh
 
@@ -120,6 +123,7 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env REGION "$REGION"
   write_env BACKEND_IMAGE "$BACKEND_IMAGE"
   write_env FRONTEND_IMAGE "$FRONTEND_IMAGE"
+  write_env VITE_APP_IMAGE "$VITE_APP_IMAGE"
   write_env BACKUP_BUCKET "$BACKUP_BUCKET"
   write_env DOMAIN_NAME "$DOMAIN_NAME"
   write_env SOURCE_COMMIT "$SOURCE_COMMIT"
@@ -160,7 +164,7 @@ mv /opt/citeladder/runtime.env.new /opt/citeladder/runtime.env
 
 cd /opt/citeladder
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-stopped_services=(caddy frontend web audit-worker audit-scheduler site-health-worker \
+stopped_services=(caddy frontend vite-app web audit-worker audit-scheduler site-health-worker \
   brand-discovery-worker content-worker agent-worker analytics-worker \
   queue-sweeper integration-worker integration-dispatcher)
 restore_previous_deployment() {
@@ -217,6 +221,43 @@ for attempt in $(seq 1 30); do
   sleep 5
 done
 curl --fail --silent http://127.0.0.1:3000/health >/dev/null
+# A running static server is insufficient: prove the application document and
+# its emitted JavaScript are both available before accepting the deployment.
+python3 - <<'PY'
+from html.parser import HTMLParser
+from urllib.request import urlopen
+
+
+class ApplicationDocument(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.has_root = False
+        self.scripts = []
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        if tag == "div" and attributes.get("id") == "root":
+            self.has_root = True
+        if tag == "script" and attributes.get("type") == "module":
+            self.scripts.append(attributes.get("src", ""))
+
+
+origin = "http://127.0.0.1:3001"
+with urlopen(f"{origin}/login", timeout=10) as response:
+    assert response.status == 200
+    assert response.headers.get_content_type() == "text/html"
+    document = ApplicationDocument()
+    document.feed(response.read().decode("utf-8"))
+assert document.has_root and document.scripts, "Vite application document is missing"
+for script in document.scripts:
+    assert script.startswith("/app-assets/"), "Unexpected application asset path"
+    with urlopen(f"{origin}{script}", timeout=10) as response:
+        assert response.status == 200
+        assert response.headers.get_content_type() in (
+            "text/javascript", "application/javascript"
+        ), "Application asset did not return JavaScript"
+        assert response.read(1), "Application asset is empty"
+PY
 for service in "${stopped_services[@]}" db; do
   container_id="$(docker compose --env-file runtime.env -f compose.gcp.yml ps -q "$service")"
   test -n "$container_id"

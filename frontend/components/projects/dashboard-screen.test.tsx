@@ -1,4 +1,6 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render as raw, screen, waitFor, within } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { project, downloadExecutiveReport, queryResult } = vi.hoisted(() => ({
@@ -97,11 +99,7 @@ const commandCenter = {
   report_available: true,
   stale: false,
 };
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ push: vi.fn() }),
-  usePathname: () => '/projects',
-}));
+
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({
     entitlement: {
@@ -149,6 +147,14 @@ vi.mock('@/lib/api/opportunities', () => ({
 }));
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { DashboardScreen } from './dashboard-screen';
+
+function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return <MemoryRouter initialEntries={['/projects']}>{children}</MemoryRouter>;
+}
+
+function renderDashboard(ui: ReactElement) {
+  return raw(ui, { wrapper: RouterTestWrapper });
+}
 describe('DashboardScreen', () => {
   beforeEach(() => {
     queryResult.data = commandCenter;
@@ -158,7 +164,7 @@ describe('DashboardScreen', () => {
     queryResult.refetch.mockReset();
   });
   it('renders state, comparable movement, actions, and report proof', () => {
-    render(
+    renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
@@ -176,7 +182,7 @@ describe('DashboardScreen', () => {
     expect(screen.getByText('Monitor — no required action')).toBeVisible();
   });
   it('does not remount unrelated dashboard state when the action order changes', () => {
-    const view = render(
+    const view = renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
@@ -194,7 +200,7 @@ describe('DashboardScreen', () => {
   });
   it('does not expose additional project creation before billing is live', async () => {
     const user = userEvent.setup();
-    render(
+    renderDashboard(
       <TooltipProvider>
         <DashboardScreen onEditProject={vi.fn()} />
       </TooltipProvider>,
@@ -211,7 +217,7 @@ describe('DashboardScreen', () => {
     const click = vi
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
-    render(
+    renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
@@ -234,7 +240,7 @@ describe('DashboardScreen', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
     const user = userEvent.setup();
-    render(
+    renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
@@ -278,7 +284,7 @@ describe('DashboardScreen', () => {
         opportunity_id: null,
       },
     };
-    render(
+    renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
@@ -302,7 +308,7 @@ describe('DashboardScreen', () => {
         limitations: ['The completed audit did not produce a citation-share value.'],
       },
     };
-    render(
+    renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
@@ -319,7 +325,7 @@ describe('DashboardScreen', () => {
         citation_share: { value: 0, delta: 0 },
       },
     };
-    render(
+    renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,

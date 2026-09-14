@@ -81,29 +81,57 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        # Server-only Next rewrite destination. Browser requests stay relative
-        # to the frontend origin and are proxied across the Compose network.
-        BACKEND_ORIGIN: http://web:8000
-        # Build-time because `next build` inlines NEXT_PUBLIC_* into the client
-        # bundle. All three are optional; unset means the feature is simply not
-        # configured. Changing one requires a rebuild, not a restart.
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
-        NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE: ${NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE:-}
         NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS: ${NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS:-}
     restart: unless-stopped
     environment:
-      # Read per request on the server: NEXT_PUBLIC_SITE_URL by sitemap/robots/OG
-      # metadata, and the demo pair by the /demo funnel. These are NOT baked into
-      # the image, so they take effect on restart. The frontend deliberately has
-      # no `env_file: .env` — it must not receive backend secrets.
+      # Astro reads the canonical origin on every request so metadata, robots,
+      # and the sitemap remain correct after a restart without an image rebuild.
+      # BACKEND_ORIGIN stays server-only and lets the local marketing server
+      # preserve the same-origin API proxy. No env_file: the service must not
+      # receive backend secrets.
+      BACKEND_ORIGIN: http://web:8000
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
       DEMO_BOOKING_URL: ${DEMO_BOOKING_URL:-}
       PUBLIC_SALES_EMAIL: ${PUBLIC_SALES_EMAIL:-}
     depends_on:
       web:
         condition: service_healthy
+  # One browser origin for marketing, account/product routes, and API requests.
+  # Reuse the production route table so a local login exercises the same split.
+  ingress:
+    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    restart: unless-stopped
+    environment:
+      BACKEND_ORIGIN: web:8000
+      VITE_ORIGIN: vite-app:3001
+      MARKETING_ORIGIN: frontend:3000
+    volumes:
+      - ./frontend/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/gcp/runtime/frontend-routes.caddy:/etc/caddy/frontend-routes.caddy:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      vite-app:
+        condition: service_healthy
     ports:
       - "3000:3000"
+
+  # Authenticated Vite application is required by the default stack.
+  vite-app:
+    build:
+      context: .
+      dockerfile: frontend/apps/app/Dockerfile
+      args:
+        NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS: ${NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS:-}
+        NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE: ${NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+    restart: unless-stopped
+    environment:
+      # Caddy consumes this only at runtime; it is never bundled for browsers.
+      BACKEND_ORIGIN: http://web:8000
+    depends_on:
+      web:
+        condition: service_healthy
 
   worker:
     build:

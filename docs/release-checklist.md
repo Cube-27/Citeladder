@@ -34,12 +34,14 @@ env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
   POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
   docker compose --env-file .env -f docker-compose.yml ps
 curl -fsS http://localhost:3000/
+node scripts/frontend-ingress-smoke.mjs http://localhost:3000
 curl -fsS http://localhost:8000/health
 ```
 
 - [ ] Compose reports the migration job completed successfully and the API/frontend services are
       healthy or running as designed.
-- [ ] The frontend loads at port 3000 and its browser requests use relative `/api/*` routes.
+- [ ] Marketing, `/login`, direct app refreshes, and their CSS/JS load through port 3000;
+      missing routes/assets return 404. Browser requests use relative `/api/*` routes.
 - [ ] The API health endpoint responds at port 8000.
 - [ ] Smoke-test the appropriate authenticated and worker-backed flows with non-production data.
 - [ ] Stop the evidence stack when finished: `env -u POSTGRES_PASSWORD -u POSTGRES_USER

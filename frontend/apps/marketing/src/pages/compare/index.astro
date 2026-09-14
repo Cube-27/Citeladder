@@ -1,0 +1,21 @@
+---
+import { CompareIndex } from '@/components/marketing/pages/compare';
+import { COMPETITORS } from '@/lib/marketing-content/compare';
+import { compareIndexJsonLd } from '@/lib/seo/json-ld';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
+
+const description =
+  'Side-by-side notes on CiteLadder versus Profound, Otterly AI, Scrunch AI, and Peec AI. Scoring, evidence, and keys.';
+const jsonLd = compareIndexJsonLd(COMPETITORS);
+---
+
+<MarketingLayout
+  title="How CiteLadder compares · CiteLadder"
+  description={description}
+  canonical="/compare"
+  jsonLd={jsonLd ? [jsonLd] : []}
+>
+  <main id="main">
+    <CompareIndex />
+  </main>
+</MarketingLayout>

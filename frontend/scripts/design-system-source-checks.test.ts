@@ -53,8 +53,8 @@ function websiteRoot(mutate: (css: string) => string = (css) => css) {
   ${extra}
 }`,
   ).join('\n');
-  fs.mkdirSync(path.join(directory, 'app'), { recursive: true });
-  fs.writeFileSync(path.join(directory, 'app', 'website-type.css'), mutate(css));
+  fs.mkdirSync(path.join(directory, 'apps', 'app', 'src'), { recursive: true });
+  fs.writeFileSync(path.join(directory, 'apps', 'app', 'src', 'website-type.css'), mutate(css));
   return directory;
 }
 
@@ -269,7 +269,7 @@ describe('textRoleBackgroundViolations', () => {
     expect(
       textRoleBackgroundViolations(`// never paint with ${banned('subtle')}`, 'lib/x.ts'),
     ).toEqual([]);
-    expect(textRoleBackgroundViolations(banned('subtle'), 'app/globals.css')).toEqual([]);
+    expect(textRoleBackgroundViolations(banned('subtle'), 'apps/app/src/globals.css')).toEqual([]);
   });
 });
 

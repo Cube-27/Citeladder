@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { instant } from '@next/playwright';
 
 import { FIXTURE_WORKSPACE_ID, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
@@ -25,20 +24,16 @@ test('authenticated shell exposes authorized navigation and search', async ({ pa
   await expect(page.getByRole('button', { name: /search or jump to/i })).toBeVisible();
 });
 
-test('primary navigation commits the destination shell instantly', async ({ page }) => {
+test('primary navigation loads the destination route', async ({ page }) => {
   await stubAuthedShell(page);
   await page.goto(fixtureProjectPath('/projects'));
   await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
 
-  await instant(page, async () => {
-    await page
-      .getByRole('navigation', { name: 'Primary' })
-      .getByRole('link', { name: 'Performance', exact: true })
-      .click();
-    await page.waitForURL((url) => url.pathname === '/performance');
-    await expect(page.getByRole('heading', { level: 1, name: 'Performance' })).toBeVisible();
-  });
-
+  await page
+    .getByRole('navigation', { name: 'Primary' })
+    .getByRole('link', { name: 'Performance', exact: true })
+    .click();
+  await page.waitForURL((url) => url.pathname === '/performance');
   await expect(page.getByRole('heading', { level: 1, name: 'Performance' })).toBeVisible();
 });
 

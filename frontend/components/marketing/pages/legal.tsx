@@ -1,5 +1,4 @@
 import { ArrowUpRight } from 'lucide-react';
-import Link from 'next/link';
 
 import {
   FOOTER_LEGAL_LINKS,
@@ -113,13 +112,13 @@ export function LegalDocumentView({ document }: Readonly<{ document: LegalDocume
                     <ArrowUpRight className="size-3.5" aria-hidden />
                   </a>
                 ) : (
-                  <Link
+                  <a
                     key={link.href}
                     href={link.href}
                     className="text-accent-text hover:text-accent-hover text-sm font-medium"
                   >
                     {link.label}
-                  </Link>
+                  </a>
                 ),
               )}
             </nav>

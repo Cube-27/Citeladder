@@ -11,7 +11,7 @@
  *     `CONTENT_PROVIDER_ENDPOINT`; the real connector + parsing run end to
  *     end);
  *   - the FastAPI app (uvicorn), the content worker
- *     (`python -m app.workers.content_worker`) and the Next.js dev server,
+ *     (`python -m app.workers.content_worker`) and the Vite product-app dev server,
  *     all sharing the disposable `DATABASE_URL`.
  *
  * The mock server runs inside the Playwright worker process (the spec's
@@ -380,9 +380,10 @@ export async function startRealStack(): Promise<RealStack> {
         'frontend',
         process.execPath,
         [
-          path.join(frontendDir, 'node_modules', 'next', 'dist', 'bin', 'next'),
-          'dev',
-          '-p',
+          path.join(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js'),
+          '--config',
+          path.join(frontendDir, 'apps', 'app', 'vite.config.ts'),
+          '--port',
           String(FRONTEND_PORT),
         ],
         {

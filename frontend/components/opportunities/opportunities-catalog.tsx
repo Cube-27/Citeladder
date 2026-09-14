@@ -197,7 +197,12 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
   const filters = useCatalogFilters(workspaceId, projectId);
   const listQuery = useQuery(opportunitiesQueries.list(workspaceId, projectId, filters.params));
   const rows = listQuery.data?.items ?? [];
-  const featured = useFeaturedRecommendation(rows, filters.statusFilter, filters.pager.cursor);
+  const featured = useFeaturedRecommendation(
+    rows,
+    filters.statusFilter,
+    filters.pager.cursor,
+    listQuery.isPending,
+  );
   const { selectedId, visibleSelectedId, setSelectedId } = useOpportunityUrlSelection(scopeKey);
   return (
     <div className="grid gap-[var(--page-section-gap)]">
@@ -275,6 +280,7 @@ function useFeaturedRecommendation(
   rows: Opportunity[],
   statusFilter: StatusFilter,
   cursor: string | undefined,
+  listPending: boolean,
 ) {
   const workspaceId = useActiveWorkspaceId() ?? '';
   const featuredId = statusFilter === 'active' && !cursor ? (rows[0]?.id ?? null) : null;
@@ -286,7 +292,12 @@ function useFeaturedRecommendation(
   // cannot be read off the query alone. A project with no recommendations yet
   // — the common first run — has nothing to feature, and the section used to
   // hold a placeholder for it that could never resolve.
-  return { detail: query.data ?? null, isLoading: featuredId !== null && query.isPending };
+  return {
+    detail: query.data ?? null,
+    isLoading:
+      (statusFilter === 'active' && !cursor && listPending) ||
+      (featuredId !== null && query.isPending),
+  };
 }
 
 function FeaturedSection({
@@ -297,9 +308,16 @@ function FeaturedSection({
   onOpen: (id: string) => void;
 }>) {
   const { detail, isLoading } = featured;
-  if (isLoading) return <Skeleton className="h-44 w-full" />;
-  if (!detail) return null;
-  return <FeaturedRecommendation detail={detail} onOpen={() => onOpen(detail.id)} />;
+  if (!isLoading && !detail) return null;
+  return (
+    <section aria-label="Next best action" aria-busy={isLoading} className="min-h-44">
+      {detail ? (
+        <FeaturedRecommendation detail={detail} onOpen={() => onOpen(detail.id)} />
+      ) : (
+        <Skeleton className="h-44 w-full" />
+      )}
+    </section>
+  );
 }
 
 function RecommendationsSection({

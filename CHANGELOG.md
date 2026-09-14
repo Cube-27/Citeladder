@@ -15,6 +15,11 @@ All notable changes to CiteLadder are documented in this file. The project follo
 
 ### Changed
 
+- Frontend runtime ownership moved from Next.js to Astro marketing SSR and the
+  Vite authenticated SPA. Caddy routes public, application, and backend paths
+  at one origin; the two frontend containers replace the Next runtime and
+  migration compatibility layer. Implementation is complete, but final
+  engineering validation has not run and migration acceptance is unrecorded.
 - Active documentation now identifies `docs/site-health.md` as the Site Health authority instead
   of linking to a removed archive directory.
 - **Site Health extraction now reports its own failures.** DOM traversal catches are narrowed to a

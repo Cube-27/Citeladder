@@ -8,19 +8,9 @@ import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 
-// Stub next/navigation (Link/useSearchParams in jsdom). `search` is mutable per
-// test so the C2 callback params (?connected= / ?error=) can be exercised.
+// Callback routes are mounted at their actual query-bearing React Router locations.
 let search = '';
-// The panel strips the C2 callback params with `history.replaceState` — shallow
-// URL bookkeeping, not an App Router navigation — so the spy stands in for that.
-const replaceState = vi.fn();
-vi.stubGlobal('history', { ...window.history, replaceState });
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
-  usePathname: () => '/settings',
-  useSearchParams: () => new URLSearchParams(search),
-}));
-
+const replaceState = vi.spyOn(window.history, 'replaceState');
 // Connect/Reconnect hard-navigates to the OAuth start 302 endpoint through the
 // lib/navigate seam (jsdom can't stub Location#assign).
 vi.mock('@/lib/navigate', () => ({ assignLocation: vi.fn() }));
@@ -51,6 +41,12 @@ vi.mock('@/lib/project/project-context', () => ({
     isLoading: false,
   }),
 }));
+
+function renderSettings() {
+  return renderWithProviders(<IntegrationSettings />, {
+    initialEntries: [`/settings${search ? `?${search}` : ''}`],
+  });
+}
 
 import { IntegrationSettings } from './integration-settings';
 
@@ -163,7 +159,7 @@ describe('IntegrationSettings — empty state + OAuth navigation', () => {
   it('renders the empty state and Connect CTAs hard-navigate to the OAuth start endpoints', async () => {
     const ue = userEvent.setup();
     mockList([]);
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     expect(await screen.findByText('No integrations connected')).toBeInTheDocument();
     expect(screen.getByText(/Search Console and Analytics 4/)).toBeInTheDocument();
@@ -189,7 +185,7 @@ describe('IntegrationSettings — grant cards', () => {
 
   it('groups connections onto one card per grant with sub-rows and mono last-synced', async () => {
     mockList([gscConnection, ga4Connection, bingConnection]);
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     const googleCard = await screen.findByTestId('grant-card-google');
     // Both Google connections ride one shared grant.
@@ -240,7 +236,7 @@ describe('IntegrationSettings — grant cards', () => {
     assignMock.mockClear();
     const ue = userEvent.setup();
     mockList([gscConnection, ga4Connection]);
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     const msCard = await screen.findByTestId('grant-card-microsoft');
     expect(within(msCard).getByText('Not connected')).toBeInTheDocument();
@@ -253,7 +249,7 @@ describe('IntegrationSettings — grant cards', () => {
   it('Reconnect hard-navigates to the family OAuth start endpoint', async () => {
     const ue = userEvent.setup();
     mockList([gscConnection, ga4Connection, bingConnection]);
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     const googleCard = await screen.findByTestId('grant-card-google');
     await ue.click(within(googleCard).getByRole('button', { name: 'Reconnect' }));
@@ -282,7 +278,7 @@ describe('IntegrationSettings — grant cards', () => {
         }),
       ),
     );
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     const row = await screen.findByTestId('connection-row-gsc');
     await ue.click(within(row).getByRole('button', { name: 'Test' }));
@@ -307,7 +303,7 @@ describe('IntegrationSettings — disconnect dialog (shared-grant semantics)', (
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     const row = await screen.findByTestId('connection-row-gsc');
     await ue.click(within(row).getByRole('button', { name: 'Disconnect' }));
@@ -339,7 +335,7 @@ describe('IntegrationSettings — disconnect dialog (shared-grant semantics)', (
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     const row = await screen.findByTestId('connection-row-bing');
     await ue.click(within(row).getByRole('button', { name: 'Disconnect' }));
@@ -363,7 +359,7 @@ describe('IntegrationSettings — disconnect dialog (shared-grant semantics)', (
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     const row = await screen.findByTestId('connection-row-gsc');
     await ue.click(within(row).getByRole('button', { name: 'Disconnect' }));
@@ -441,7 +437,7 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
   it('shows the success notice for ?connected= and strips the params from the URL', async () => {
     search = 'tab=integrations&connected=gsc';
     mockList([gscConnection, ga4Connection]);
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Google connected.');
@@ -454,7 +450,7 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
   it('does not attribute AI Referrals to a Microsoft connection', async () => {
     search = 'tab=integrations&connected=bing';
     mockList([]);
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Bing connected.');
@@ -467,7 +463,7 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
   it('shows the failure notice for ?error= with the provider code in mono', async () => {
     search = 'tab=integrations&error=oauth_exchange_failed';
     mockList([]);
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Connection failed.');
@@ -482,7 +478,7 @@ describe('IntegrationSettings — OAuth callback notice (C2)', () => {
   it('renders no notice and does not touch the URL without callback params', async () => {
     search = 'tab=integrations';
     mockList([gscConnection, ga4Connection]);
-    renderWithProviders(<IntegrationSettings />);
+    renderSettings();
 
     await screen.findByTestId('grant-card-google');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();

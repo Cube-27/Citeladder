@@ -1,7 +1,7 @@
 'use client';
 
 import { Rocket } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 import { Button, type ButtonProps } from '@/components/ui/button';
@@ -18,7 +18,7 @@ export function LaunchAuditButton({
 }: Readonly<ButtonProps & { showIcon?: boolean }>) {
   const project = useActiveProject();
   const projectHref = useProjectHref();
-  const router = useRouter();
+  const router = useNavigate();
   const [open, setOpen] = useState(false);
 
   return (
@@ -36,7 +36,7 @@ export function LaunchAuditButton({
           open={open}
           onOpenChange={setOpen}
           projectId={project.id}
-          onLaunched={(audit) => router.push(projectHref(`/runs/${audit.id}`))}
+          onLaunched={(audit) => router(projectHref(`/runs/${audit.id}`))}
         />
       ) : null}
     </>

@@ -128,6 +128,9 @@ function isSecuritySensitive(path) {
 function isComposeSensitive(path) {
   return (
     path === '.github/workflows/compose-smoke.yml' ||
+    path === 'scripts/frontend-ingress-smoke.mjs' ||
+    path === 'frontend/Caddyfile' ||
+    path === 'infra/gcp/runtime/frontend-routes.caddy' ||
     path === '.dockerignore' ||
     path === '.env.example' ||
     // Both images. `frontend/Dockerfile` matched nothing here and reached
@@ -143,7 +146,8 @@ function isComposeSensitive(path) {
     path === 'backend/uv.lock' ||
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
-    path === 'frontend/next.config.ts'
+    path.startsWith('frontend/apps/app/') ||
+    path.startsWith('frontend/apps/marketing/')
   );
 }
 

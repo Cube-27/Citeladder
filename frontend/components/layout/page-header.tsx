@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { useLocation } from 'react-router-dom';
 import { useContext, useLayoutEffect, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -31,7 +31,7 @@ export function PageHeader({
   actions?: ReactNode;
   className?: string;
 }>) {
-  const pathname = usePathname() ?? '';
+  const pathname = useLocation().pathname ?? '';
   const resolved = title ?? resolveTitle(pathname);
   const setCompactTitle = useContext(CompactPageTitleContext);
 

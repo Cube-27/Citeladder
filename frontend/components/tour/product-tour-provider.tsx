@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { workspacesApi } from '@/lib/api/workspaces';
@@ -80,9 +80,9 @@ function isCurrentStepLocation(pathname: string, search: string, stepPath: strin
 
 /** Persists product-tour progress and resumes it after each App Router transition. */
 export function ProductTourProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const router = useRouter();
-  const pathname = usePathname() ?? '';
-  const searchParams = useSearchParams();
+  const router = useNavigate();
+  const pathname = useLocation().pathname ?? '';
+  const searchParams = useSearchParams()[0];
   const search = searchParams.toString();
   const queryClient = useQueryClient();
   const { activeProject, activeProjectId, activeWorkspaceId } = useProjectContext();
@@ -165,7 +165,7 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
       // Carry the selection so the destination is the one the shell would have
       // rewritten to anyway, rather than a bare path it immediately replaces.
       // react-doctor-disable-next-line
-      router.push(
+      router(
         scopedNavigationDestination(
           step.path,
           step.scope ?? 'project',

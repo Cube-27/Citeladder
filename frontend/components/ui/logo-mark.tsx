@@ -1,5 +1,3 @@
-import Image from 'next/image';
-
 import { cn } from '@/lib/utils';
 
 /**
@@ -78,12 +76,12 @@ export function LogoMark({
       className={cn('inline-flex shrink-0 items-center select-none', className)}
       aria-hidden={alt ? undefined : 'true'}
     >
-      <Image
+      <img
         src={LOGO_SRC}
         alt={alt}
         width={width}
         height={resolvedSize}
-        priority={priority}
+        fetchPriority={priority ? 'high' : undefined}
         className="block h-auto w-auto object-contain"
         style={{ height: `${resolvedSize}px` }}
       />

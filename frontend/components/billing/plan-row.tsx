@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { CreditCard, ExternalLink } from 'lucide-react';
 
 import {
@@ -59,9 +58,9 @@ export function PlanRow({
       <div className="shrink-0">
         {plan.contact_only ? (
           <Button asChild variant="secondary" size="sm">
-            <Link href={plan.contact_url ?? CONTACT_SALES_HREF} target="_blank" rel="noreferrer">
+            <a href={plan.contact_url ?? CONTACT_SALES_HREF} target="_blank" rel="noreferrer">
               Contact sales <ExternalLink className="size-3.5" aria-hidden />
-            </Link>
+            </a>
           </Button>
         ) : (
           <Button

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { SearchField } from '@/components/ui/search-field';
 import {
@@ -12,9 +12,9 @@ import {
 } from '@/lib/site-health/filters';
 
 export function useIssuesCatalogUrlState() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const router = useNavigate();
+  const pathname = useLocation().pathname;
+  const searchParams = useSearchParams()[0];
   const searchParamString = searchParams.toString();
   const urlParams = useMemo(() => new URLSearchParams(searchParamString), [searchParamString]);
   const filters = useMemo(() => parseIssueFilters(urlParams), [urlParams]);
@@ -27,13 +27,13 @@ export function useIssuesCatalogUrlState() {
     const nextQuery = nextParams.toString();
     const href = nextQuery ? `${pathname}?${nextQuery}` : pathname;
     const currentHref = searchParamString ? `${pathname}?${searchParamString}` : pathname;
-    if (href !== currentHref) router.push(href, { scroll: false });
+    if (href !== currentHref) router(href, { preventScrollReset: true });
   };
 
   const selectIssue = (groupId: string) => {
     const nextParams = new URLSearchParams(urlParams);
     nextParams.set('issue', groupId);
-    router.push(`${pathname}?${nextParams.toString()}`, { scroll: false });
+    router(`${pathname}?${nextParams.toString()}`, { preventScrollReset: true });
   };
 
   return { cursor, filters, selectedGroupId, navigate, selectIssue };

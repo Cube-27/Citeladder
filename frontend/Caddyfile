@@ -1,0 +1,9 @@
+{
+  admin off
+  auto_https off
+}
+
+:3000 {
+  encode zstd gzip
+  import /etc/caddy/frontend-routes.caddy
+}

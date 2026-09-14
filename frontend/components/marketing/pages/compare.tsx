@@ -1,5 +1,4 @@
 import { ArrowRight, Check } from 'lucide-react';
-import Link from 'next/link';
 
 import { COMPETITORS, FACT_ROWS, FAIRNESS_POINTS } from '@/lib/marketing-content/compare';
 import { DEMO_CTA } from '@/lib/marketing-content/nav';
@@ -40,7 +39,7 @@ export function CompareIndex() {
           <StaggerGroup className="border-border-subtle divide-border-subtle bg-panel divide-y overflow-hidden rounded-[var(--radius-card)] border">
             {COMPETITORS.map((competitor) => (
               <StaggerItem key={competitor.slug}>
-                <Link
+                <a
                   href={`/compare/${competitor.slug}`}
                   className="hover:bg-accent-soft group flex items-center gap-5 px-5 py-4 transition-colors duration-200 md:px-6 md:py-5"
                 >
@@ -64,7 +63,7 @@ export function CompareIndex() {
                     />
                   </span>
                   <ArrowRight className="text-accent-text size-4 shrink-0 sm:hidden" aria-hidden />
-                </Link>
+                </a>
               </StaggerItem>
             ))}
           </StaggerGroup>

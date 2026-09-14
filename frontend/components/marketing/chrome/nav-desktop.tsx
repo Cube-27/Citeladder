@@ -1,5 +1,4 @@
 import { ChevronDown } from 'lucide-react';
-import Link from 'next/link';
 import type { RefObject } from 'react';
 
 import { NAV_DROPS, NAV_LINKS, type NavDropKey } from '@/lib/marketing-content/nav';
@@ -88,7 +87,7 @@ export function DesktopNavigation({
           onMouseEnter={(event) => openDropAt(key, event.currentTarget)}
           onMouseLeave={() => releaseSuppression(key)}
         >
-          <Link
+          <a
             href={href}
             className={NAV_LINK}
             aria-haspopup="true"
@@ -107,12 +106,12 @@ export function DesktopNavigation({
               aria-hidden
               className="text-muted size-3.5 transition-transform duration-200 group-hover/drop:rotate-180"
             />
-          </Link>
+          </a>
         </div>
       ))}
 
       {NAV_LINKS.map(({ label, href }) => (
-        <Link
+        <a
           key={href}
           href={href}
           className={NAV_LINK}
@@ -129,7 +128,7 @@ export function DesktopNavigation({
           }}
         >
           {label}
-        </Link>
+        </a>
       ))}
 
       {openDrop !== null && (

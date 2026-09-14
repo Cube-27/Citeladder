@@ -1,7 +1,7 @@
 'use client';
 
 import { Building2, Check, ChevronsUpDown, Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 import {
   Dropdown,
@@ -41,7 +41,7 @@ import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
  * switcher it saw before.
  */
 export function ProjectSwitcher({ className }: Readonly<{ className?: string }>) {
-  const router = useRouter();
+  const router = useNavigate();
   const selectProject = useSelectProject();
   const selectWorkspace = useSelectWorkspace();
   const {
@@ -143,7 +143,7 @@ export function ProjectSwitcher({ className }: Readonly<{ className?: string }>)
         {canAddProject ? (
           <>
             <DropdownSeparator />
-            <DropdownItem onSelect={() => router.push(newProjectDestination(activeWorkspaceId))}>
+            <DropdownItem onSelect={() => router(newProjectDestination(activeWorkspaceId))}>
               <span
                 aria-hidden
                 className="bg-accent-soft text-accent-text flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-control)]"

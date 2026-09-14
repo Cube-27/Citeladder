@@ -1,8 +1,8 @@
 [
   {
     "sources": [
-      "frontend/app/globals.css",
-      "frontend/app/website-type.css"
+      "frontend/apps/app/src/globals.css",
+      "frontend/apps/app/src/website-type.css"
     ],
     "frontendE2E": [
       "e2e/shell.spec.ts",
@@ -55,8 +55,8 @@
   },
   {
     "sources": [
-      "frontend/app/(marketing)/**",
-      "frontend/app/llms.txt/**",
+      "frontend/apps/marketing/**",
+      "frontend/apps/app/src/globals.css",
       "frontend/components/marketing/**",
       "frontend/lib/marketing-content/**",
       "frontend/lib/consent/**",
@@ -78,7 +78,7 @@
   },
   {
     "sources": [
-      "frontend/app/(authed)/(onboarding)/**",
+      "frontend/apps/app/src/auth-routes.tsx",
       "frontend/components/onboarding/**",
       "frontend/lib/onboarding/**",
       "frontend/lib/setup/**",
@@ -93,11 +93,10 @@
       "frontend/components/layout/**",
       "frontend/lib/navigation/**",
       "frontend/lib/navigate.ts",
-      "frontend/app/layout.tsx",
-      "frontend/app/(authed)/layout.tsx",
-      "frontend/app/(authed)/(app)/layout.tsx",
-      "frontend/app/(authed)/(app)/error.tsx",
-      "frontend/app/(authed)/(app)/not-found.tsx"
+      "frontend/apps/app/src/main.tsx",
+      "frontend/apps/app/src/router.tsx",
+      "frontend/apps/app/src/private-routes.tsx",
+      "frontend/apps/app/src/auth-routes.tsx"
     ],
     "frontendE2E": [
       "e2e/shell.spec.ts"
@@ -105,7 +104,7 @@
   },
   {
     "sources": [
-      "frontend/app/(authed)/(app)/visibility/**",
+      "frontend/apps/app/src/product-routes-opportunity-visibility-runs.tsx",
       "frontend/components/visibility/**",
       "frontend/lib/visibility/**",
       "frontend/components/intelligence/**"
@@ -116,7 +115,7 @@
   },
   {
     "sources": [
-      "frontend/app/(authed)/(app)/runs/**",
+      "frontend/apps/app/src/product-routes-opportunity-visibility-runs.tsx",
       "frontend/components/runs/**",
       "frontend/lib/runs/**",
       "frontend/lib/sse/**"
@@ -127,7 +126,7 @@
   },
   {
     "sources": [
-      "frontend/app/(authed)/(app)/opportunities/**",
+      "frontend/apps/app/src/product-routes-opportunity-visibility-runs.tsx",
       "frontend/components/opportunities/**",
       "frontend/lib/opportunities/**",
       "frontend/lib/api/opportunities.ts",
@@ -139,7 +138,7 @@
   },
   {
     "sources": [
-      "frontend/app/(authed)/(app)/content/**",
+      "frontend/apps/app/src/product-routes-prompts-content-commerce-referrals.tsx",
       "frontend/components/content/**",
       "frontend/lib/content/**"
     ],

@@ -151,6 +151,8 @@ function backendChecks() {
 }
 
 function frontendChecks() {
+  pnpm('Astro marketing build', ['build']);
+  pnpm('Vite product-app build', ['build:vite']);
   pnpm(mode === 'check' ? 'Oxfmt format' : 'Oxfmt format fixes', [
     mode === 'check' ? 'format:check' : 'format',
   ]);

@@ -1,7 +1,7 @@
 'use client';
 
 import { ProjectLink } from '@/components/layout/scoped-link';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -111,11 +111,11 @@ export function PagesTable({
   /** Omitted where the table is read-only; the link headers then render plain. */
   onSortChange?: (sort: PagesSort) => void;
 }>) {
-  const router = useRouter();
+  const router = useNavigate();
   const projectHref = useProjectHref();
   const openPage = (siteUrlId: string) => {
     const page = pages.find((row) => row.site_url_id === siteUrlId);
-    router.push(projectHref(`/site/crawls/${page?.crawl_id ?? crawlId}/pages/${siteUrlId}`));
+    router(projectHref(`/site/crawls/${page?.crawl_id ?? crawlId}/pages/${siteUrlId}`));
   };
   return (
     <Table className="min-w-[72rem]">

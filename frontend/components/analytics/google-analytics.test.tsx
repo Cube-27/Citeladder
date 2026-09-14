@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,12 +6,6 @@ import { COOKIE_CONSENT_STORAGE_KEY, writeConsent } from '@/lib/consent/cookie-c
 
 import { CookieBanner } from '../marketing/chrome/cookie-banner';
 import { GoogleAnalytics } from './google-analytics';
-
-vi.mock('next/script', () => ({
-  default: ({ id, src }: { id?: string; src?: string }) => (
-    <script data-testid={id ?? 'external-script'} data-src={src} />
-  ),
-}));
 
 describe('GoogleAnalytics', () => {
   beforeEach(() => window.localStorage.clear());
@@ -30,7 +24,7 @@ describe('GoogleAnalytics', () => {
     expect(screen.queryByTestId('external-script')).not.toBeInTheDocument();
   });
 
-  it('loads the tag lazily after acceptance in the same tab', async () => {
+  it('loads the tag after acceptance in the same tab', async () => {
     const user = userEvent.setup();
     render(
       <>
@@ -42,11 +36,12 @@ describe('GoogleAnalytics', () => {
     await user.click(await screen.findByRole('button', { name: 'Accept' }));
 
     expect(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).toBe('accepted');
-    expect(screen.getByTestId('external-script')).toHaveAttribute(
-      'data-src',
+    const documentQueries = within(document.documentElement);
+    expect(await documentQueries.findByTestId('external-script')).toHaveAttribute(
+      'src',
       'https://www.googletagmanager.com/gtag/js?id=G-TEST',
     );
-    expect(screen.getByTestId('google-analytics')).toBeInTheDocument();
+    expect(documentQueries.getByTestId('google-analytics')).toBeInTheDocument();
   });
 
   it('keeps the accepted decision for this page when storage is unavailable', async () => {
@@ -65,7 +60,9 @@ describe('GoogleAnalytics', () => {
       await user.click(await screen.findByRole('button', { name: 'Accept' }));
 
       expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
-      expect(screen.getByTestId('external-script')).toBeInTheDocument();
+      expect(
+        await within(document.documentElement).findByTestId('external-script'),
+      ).toBeInTheDocument();
     } finally {
       setItem.mockRestore();
       writeConsent('rejected');

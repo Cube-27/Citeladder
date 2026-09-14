@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -91,7 +91,7 @@ const SETTINGS_TAB_CODEC = stringUrlCodec(
 );
 
 function ProjectDeletionControls() {
-  const router = useRouter();
+  const router = useNavigate();
   const queryClient = useQueryClient();
   const { activeProject, activeWorkspaceId } = useProjectContext();
   const selectProject = useSelectProject();
@@ -116,10 +116,11 @@ function ProjectDeletionControls() {
         selectProject(next.id, { replace: true });
         setConfirmOpen(false);
       } else {
-        router.replace(
+        router(
           activeWorkspaceId
             ? workspaceDestination('/onboarding', null, activeWorkspaceId)
             : '/onboarding',
+          { replace: true },
         );
       }
     },

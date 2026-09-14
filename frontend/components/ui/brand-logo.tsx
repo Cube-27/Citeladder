@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useState } from 'react';
 
 import { logoDevUrl } from '@/lib/brand/logo-dev';
@@ -59,7 +58,7 @@ export function BrandLogo({
       )}
     >
       {src ? (
-        <Image
+        <img
           // Keyed by src so swapping sources remounts the element; without it
           // React reuses the <img> and a cached error state can suppress the
           // load event for the replacement.
@@ -68,7 +67,6 @@ export function BrandLogo({
           alt=""
           width={spec.pixels}
           height={spec.pixels}
-          unoptimized
           // The plate stays: fetched marks are frequently transparent with dark
           // glyphs, and the app-shell rows these sit in are tonal, not white.
           className="bg-panel size-full object-contain p-[2px]"

@@ -87,9 +87,13 @@ function blockText(block: BlogBlock): string {
   }
 }
 
-function marketingRouteFile(href: string): string {
+function marketingRouteExists(href: string): boolean {
   const pathname = href.split('#', 1)[0].replace(/^\//, '');
-  return resolve(import.meta.dirname, '../../app/(marketing)', pathname, 'page.tsx');
+  const pages = resolve(import.meta.dirname, '../../apps/marketing/src/pages');
+  const candidates = pathname
+    ? [resolve(pages, `${pathname}.astro`), resolve(pages, pathname, 'index.astro')]
+    : [resolve(pages, 'index.astro')];
+  return candidates.some((candidate) => existsSync(candidate));
 }
 
 function stringsIn(value: unknown): string[] {
@@ -105,7 +109,7 @@ describe('marketing navigation', () => {
     // not only from `/`.
     for (const href of internalHrefs()) {
       expect(href, href).toMatch(/^\/(?:$|[a-z0-9#/-])/);
-      expect(existsSync(marketingRouteFile(href)), href).toBe(true);
+      expect(marketingRouteExists(href), href).toBe(true);
     }
   });
 

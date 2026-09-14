@@ -1,0 +1,27 @@
+---
+import { FaqGroups } from '@/components/marketing/pages/faq';
+import { PageHero } from '@/components/marketing/primitives/page-hero';
+import { FAQ_GROUPS } from '@/lib/marketing-content/faq';
+import { faqPageJsonLd } from '@/lib/seo/json-ld';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+
+const description =
+  'What AEO is, how AI visibility is measured, which engines CiteLadder audits, and how BYOK, data isolation, and billing work.';
+---
+
+<MarketingLayout
+  title="AEO and AI visibility FAQ · CiteLadder"
+  description={description}
+  canonical="/faq"
+  jsonLd={[faqPageJsonLd(FAQ_GROUPS)]}
+>
+  <main id="main">
+    <PageHero
+      eyebrow="FAQ"
+      title="Frequently asked"
+      accent="questions."
+      lead="Short answers on AEO, AI visibility, evidence, security, and billing. Written by the product team at Cube27."
+    />
+    <FaqGroups />
+  </main>
+</MarketingLayout>

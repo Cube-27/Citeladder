@@ -27,7 +27,7 @@ type Policy = {
 
 const basePolicy = (): Policy => ({
   format_version: 1,
-  roots: ['app', 'components', 'lib'],
+  roots: ['apps/app', 'components', 'lib'],
   defaults: { max_function_cc: 12, max_production_loc: 500, max_test_loc: 800 },
   exceptions: { functions: {}, modules: {} },
 });
@@ -96,6 +96,11 @@ describe('frontend complexity checker', () => {
     const relaxedDefaults = basePolicy();
     relaxedDefaults.defaults.max_function_cc = 13;
     expect(() => validatePolicy(relaxedDefaults)).toThrow(/defaults/);
+  });
+
+  it('compares the retired Next root with its Vite replacement', () => {
+    const legacy = { ...basePolicy(), roots: ['app', 'components', 'lib'] };
+    expect(policyDiffFailures(legacy, basePolicy())).toEqual([]);
   });
 
   it('gives anonymous callbacks position-qualified identities', () => {

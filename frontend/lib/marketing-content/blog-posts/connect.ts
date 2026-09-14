@@ -10,6 +10,7 @@ export const POST_CONNECT: BlogPost = {
   excerpt:
     'Connect crawl evidence, search demand, referral traffic, crawler policy, and controlled answer observations without pretending they measure the same thing.',
   image: '/blog/editorial/article-connect.png',
+  cardImage: '/blog/editorial/article-connect.svg',
   date: '2026-09-03',
   dateModified: '2026-09-09',
   readTime: '6 min read',

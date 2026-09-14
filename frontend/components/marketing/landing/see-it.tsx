@@ -1,5 +1,4 @@
 import { ArrowRight } from 'lucide-react';
-import Image from 'next/image';
 
 import { LogoMark } from '@/components/ui/logo-mark';
 import { LANDING_CONTENT } from '@/lib/marketing-content/landing';
@@ -129,9 +128,10 @@ export function SeeIt() {
                         </span>
                         <span className="text-secondary flex items-center gap-2 text-sm font-medium">
                           {PLATFORM_LOGOS[row.platform] ? (
-                            <Image
+                            <img
                               src={PLATFORM_LOGOS[row.platform]}
                               alt=""
+                              loading="lazy"
                               width={16}
                               height={16}
                               className="size-4 shrink-0 object-contain"

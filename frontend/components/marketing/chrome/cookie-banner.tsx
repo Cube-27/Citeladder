@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useSyncExternalStore } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -71,13 +70,12 @@ export function CookieBanner() {
             <p className="website-body text-muted">
               We use essential cookies to keep you signed in and secure. With your permission,
               non-essential cookies help us understand site usage. Read our{' '}
-              <Link
+              <a
                 href="/cookies"
                 className="text-foreground underline underline-offset-4 hover:no-underline"
               >
-                Cookie Policy
-              </Link>
-              .
+                Cookie Policy.
+              </a>
             </p>
           </div>
           {/* Reject first in the DOM so it is the first tab stop, and visually

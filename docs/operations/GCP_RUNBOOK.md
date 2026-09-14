@@ -151,7 +151,7 @@ curl.exe --fail --show-error https://citeladder.com/api/v1/auth/oauth/providers
 
 Health must succeed and the provider catalog must report Google as
 `configured`. Register a throwaway account, sign in with Google, connect Search
-Console and Bing end to end, then confirm ports 22, 3000, 5432, and 8000 are
+Console and Bing end to end, then confirm ports 22, 3000, 3001, 5432, and 8000 are
 not publicly reachable. Only Cloudflare may reach origin 80/443; use
 IAP for administration. After deployment and review, make the repository
 private as planned and recheck environment reviewers and the WIF claim.
@@ -203,7 +203,7 @@ Example database restore on the VM (replace the object exactly):
 
 ```bash
 cd /opt/citeladder
-services=(caddy frontend web audit-worker audit-scheduler site-health-worker brand-discovery-worker content-worker agent-worker analytics-worker queue-sweeper integration-worker integration-dispatcher)
+services=(caddy frontend vite-app web audit-worker audit-scheduler site-health-worker brand-discovery-worker content-worker agent-worker analytics-worker queue-sweeper integration-worker integration-dispatcher)
 sudo docker compose --env-file runtime.env -f compose.gcp.yml stop "${services[@]}"
 bucket=$(sudo sed -n "s/^BACKUP_BUCKET='\(.*\)'$/\1/p" runtime.env)
 gcloud storage cp "gs://${bucket}/predeploy/<TIMESTAMP>.sql.gz" /tmp/citeladder-restore.sql.gz

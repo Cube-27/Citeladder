@@ -21,8 +21,8 @@ trustPolicyIgnoreAfter: 525600
 # earlier ones had it. Reviewed individually; keep this list short and exact,
 # and delete an entry as soon as the resolved tree no longer contains it.
 
-# Force the transitive postcss (Next pulls 8.4.31) up to a patched line
-# (CVE-2026-41305). pnpm 10+ reads overrides here, not from package.json.
+# Keep transitive PostCSS consumers on the patched line for CVE-2026-41305.
+# pnpm 10+ reads overrides here, not from package.json.
 overrides:
   postcss: '>=8.5.10'
   # Migrated from the `pnpm.overrides` field in package.json, which pnpm 11 no
@@ -30,10 +30,7 @@ overrides:
   # pinned to a single version across the tree.
   '@types/react': '19.2.18'
   '@types/react-dom': '19.2.5'
-  # Force sharp up off the vulnerable libvips line (GHSA-f88m-g3jw-g9cj:
-  # CVE-2026-33327/33328/35590/35591, fixed in sharp 0.35.0). sharp reaches us
-  # only as an OPTIONAL dependency of next, which still declares '^0.34.5' as
-  # of next@16.2.11 (= current `latest`), so the range cannot resolve to a
-  # patched version on its own and no next upgrade is available to do it.
-  # Remove this override once next's own floor moves to >=0.35.
+  # Force Astro's transitive sharp off the vulnerable libvips line
+  # (GHSA-f88m-g3jw-g9cj: CVE-2026-33327/33328/35590/35591, fixed in sharp
+  # 0.35.0). Remove this override once every owning range requires >=0.35.
   sharp: '^0.35.3'

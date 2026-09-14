@@ -12,7 +12,8 @@ const POLICY_PATH = path.join(FRONTEND, 'scripts', 'frontend_complexity_policy.j
 const POLICY_REPOSITORY_PATH = 'frontend/scripts/frontend_complexity_policy.json';
 const GIT_EXECUTABLE =
   process.platform === 'win32' ? 'C:\\Program Files\\Git\\cmd\\git.exe' : '/usr/bin/git';
-const EXPECTED_ROOTS = ['app', 'components', 'lib'];
+const EXPECTED_ROOTS = ['apps/app', 'components', 'lib'];
+const ROOT_RENAMES = new Map([['app', 'apps/app']]);
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;
 // ESTree names for the kinds the TypeScript walk counted. Accessors and
 // constructors are `MethodDefinition` wrappers around a FunctionExpression
@@ -94,9 +95,15 @@ function filesUnder(root) {
   function visit(directory) {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       if (
-        ['node_modules', '.next', 'out', 'coverage', 'playwright-report', 'test-results'].includes(
-          entry.name,
-        )
+        [
+          'node_modules',
+          '.next',
+          'dist',
+          'out',
+          'coverage',
+          'playwright-report',
+          'test-results',
+        ].includes(entry.name)
       )
         continue;
       const absolute = path.join(directory, entry.name);
@@ -192,14 +199,16 @@ function validateExceptions(exceptions, defaults) {
     }
 }
 
-export function validatePolicy(policy) {
+export function validatePolicy(policy, expectedRoots = EXPECTED_ROOTS) {
   if (
     !hasExactKeys(policy, 'defaults,exceptions,format_version,roots') ||
-    policy.format_version !== 1
+    policy.format_version !== 1 ||
+    !Array.isArray(policy.roots) ||
+    !policy.roots.every((root) => typeof root === 'string' && root.length > 0)
   )
     throw new Error('invalid frontend complexity policy shape');
-  if (JSON.stringify(policy.roots) !== JSON.stringify(EXPECTED_ROOTS))
-    throw new Error('policy roots must remain app, components, lib');
+  if (JSON.stringify(policy.roots) !== JSON.stringify(expectedRoots))
+    throw new Error('policy roots must remain apps/app, components, lib');
   const defaults = policy.defaults;
   validateDefaults(defaults);
   validateExceptions(policy.exceptions, defaults);
@@ -255,10 +264,11 @@ export function staleExceptionFailures(measurements, policy) {
   return failures;
 }
 export function policyDiffFailures(base, current) {
-  validatePolicy(base);
+  validatePolicy(base, base.roots);
   validatePolicy(current);
   const failures = [];
-  if (JSON.stringify(base.roots) !== JSON.stringify(current.roots))
+  const normalizedBaseRoots = base.roots.map((root) => ROOT_RENAMES.get(root) ?? root);
+  if (JSON.stringify(normalizedBaseRoots) !== JSON.stringify(current.roots))
     failures.push('application roots changed');
   for (const key of ['max_function_cc', 'max_production_loc', 'max_test_loc'])
     if (current.defaults[key] > base.defaults[key])

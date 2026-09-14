@@ -1,5 +1,4 @@
 import { AlertTriangle, ArrowDown, Check, CheckCircle2, Info } from 'lucide-react';
-import Link from 'next/link';
 
 import type { BlogBlock, BlogDiagram, BlogSource } from '@/lib/marketing-content/blog';
 import { cn } from '@/lib/utils';
@@ -105,7 +104,7 @@ function PostTable({
             </tr>
           </thead>
           <tbody className="divide-border-subtle divide-y">
-            {withOccurrenceKeys(rows, (row) => row.join('')).map(({ key: rowKey, value: row }) => (
+            {withOccurrenceKeys(rows, (row) => row.join('')).map(({ key: rowKey, value: row }) => (
               <tr key={rowKey} className="hover:bg-accent-soft/30 transition-colors">
                 {withOccurrenceKeys(row, (cell) => cell).map(
                   ({ key: cellKey, value: cell }, cIdx) => {
@@ -390,13 +389,13 @@ function RichParagraph({
         if (typeof part === 'string') return <span key={`${part}:${index}`}>{part}</span>;
         if (part.type === 'link') {
           return (
-            <Link
+            <a
               key={`${part.href}:${index}`}
               href={part.href}
               className="text-accent-text decoration-accent-border underline underline-offset-4 hover:decoration-current"
             >
               {part.text}
-            </Link>
+            </a>
           );
         }
         const sourceIndex = sources.findIndex((source) => source.id === part.sourceId);

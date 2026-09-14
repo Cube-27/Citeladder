@@ -1,13 +1,14 @@
 # dependencies
 /node_modules
 
-# next.js
-/.next/
+# build output
 /out/
 
 # production
 /build
 /dist
+/apps/*/dist/
+/apps/*/.astro/
 
 # testing
 /coverage
@@ -18,7 +19,6 @@
 # misc
 .DS_Store
 *.pem
-next-env.d.ts
 
 # debug
 pnpm-debug.log*

@@ -1,22 +1,13 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
-import { renderWithProviders } from '@/test/render';
+import { renderWithProviders as raw } from '@/test/render';
+import type { ReactElement } from 'react';
+import { useLocation } from 'react-router-dom';
 import type { PageDetail } from '@/lib/api/types';
-
-// Stub next/navigation (unavailable in jsdom). `push` is asserted by the
-// created-new-crawl identity-transition test; `searchParams` is mutable so a
-// test can simulate landing on `?rerun=1` after that navigation.
-const push = vi.fn();
-let searchParamsValue = new URLSearchParams();
-vi.mock('next/navigation', () => ({
-  usePathname: () => `/site/crawls/${CRAWL}/pages/${URL_ID}`,
-  useRouter: () => ({ push, replace: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
-  useSearchParams: () => searchParamsValue,
-}));
 
 import { UrlDetail } from './url-detail';
 
@@ -26,6 +17,24 @@ const TASK_ID = '66666666-6666-4666-8666-666666666666';
 const URL_ID = 'cccccccc-1111-4111-8111-111111111111';
 const ISSUE_H = 'aaaaaaaa-1111-4111-8111-111111111111';
 const ISSUE_L = 'bbbbbbbb-1111-4111-8111-111111111111';
+
+function LocationDisplay() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="location">{pathname + search}</output>;
+}
+
+function renderUrlDetail(
+  ui: ReactElement,
+  initialLocation = `/site/crawls/${CRAWL}/pages/${URL_ID}`,
+) {
+  window.history.replaceState(null, '', initialLocation);
+  return raw(
+    <>
+      {ui}
+      <LocationDisplay />
+    </>,
+  );
+}
 
 function detail(overrides: Partial<PageDetail> = {}): PageDetail {
   return {
@@ -182,8 +191,6 @@ function detail(overrides: Partial<PageDetail> = {}): PageDetail {
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
-  push.mockClear();
-  searchParamsValue = new URLSearchParams();
 });
 afterAll(() => mswServer.close());
 
@@ -200,7 +207,7 @@ describe('UrlDetail', () => {
   it('renders scores, delivery metrics, and severity-ordered issues', async () => {
     mswServer.use(...handlers(detail()));
 
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     expect(
       await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 }),
@@ -226,7 +233,7 @@ describe('UrlDetail', () => {
 
   it('keeps the header to concise persisted page metadata', async () => {
     mswServer.use(...handlers(detail()));
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getByText('Page Kind')).toBeInTheDocument();
@@ -251,7 +258,7 @@ describe('UrlDetail', () => {
       ),
     );
 
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
@@ -273,7 +280,7 @@ describe('UrlDetail', () => {
       ),
     );
 
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
@@ -292,7 +299,7 @@ describe('UrlDetail', () => {
           }),
         ),
       );
-      renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+      renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
       await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
       const unsupported = screen.queryAllByText(/Unsupported purpose checklist/);
       expect(unsupported).toHaveLength(reason === 'unsupported_purpose_checklist' ? 2 : 0);
@@ -313,7 +320,7 @@ describe('UrlDetail', () => {
       ),
     );
 
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getByRole('img', { name: 'Web Fundamentals: 46' })).toBeInTheDocument();
@@ -333,7 +340,7 @@ describe('UrlDetail', () => {
       ),
     );
 
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getAllByText('Excluded')).toHaveLength(2);
@@ -359,7 +366,7 @@ describe('UrlDetail', () => {
       ),
     );
 
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.queryByText('no-cache')).not.toBeInTheDocument();
@@ -386,7 +393,7 @@ describe('UrlDetail', () => {
       ),
     );
 
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     // A 0 ms reading is an unmeasured hop, never an instant response.
@@ -447,7 +454,7 @@ describe('UrlDetail', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     // Initial fetch observes the prior run's terminal 'completed' snapshot.
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
@@ -480,7 +487,9 @@ describe('UrlDetail', () => {
     );
 
     // A same-crawl rerun never navigates.
-    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      `/site/crawls/${CRAWL}/pages/${URL_ID}`,
+    );
   }, 20_000);
 
   it('created_new_crawl rerun: navigates to the fresh crawl identity detail route with ?rerun=1', async () => {
@@ -501,7 +510,7 @@ describe('UrlDetail', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     await user.click(screen.getByRole('button', { name: 'Re-audit this page' }));
@@ -510,9 +519,10 @@ describe('UrlDetail', () => {
     // identity's canonical detail route (with ?rerun=1 to auto-start polling
     // on the new mount) rather than continuing to poll the terminal source.
     await waitFor(() =>
-      expect(push).toHaveBeenCalledWith(`/site/crawls/${NEW_CRAWL}/pages/${URL_ID}?rerun=1`),
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        `/site/crawls/${NEW_CRAWL}/pages/${URL_ID}?rerun=1`,
+      ),
     );
-    expect(push).toHaveBeenCalledTimes(1);
   });
 
   it('shows a helpful alert when rerun is rejected for an unmonitored page', async () => {
@@ -524,7 +534,7 @@ describe('UrlDetail', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     await user.click(screen.getByRole('button', { name: 'Re-audit this page' }));
@@ -538,8 +548,6 @@ describe('UrlDetail', () => {
   });
 
   it('landing on a fresh rerun crawl with ?rerun=1 begins polling immediately', async () => {
-    searchParamsValue = new URLSearchParams('rerun=1');
-
     const statuses: PageDetail['analysis_status'][] = ['pending', 'running', 'completed'];
     let getCallCount = 0;
 
@@ -554,7 +562,10 @@ describe('UrlDetail', () => {
       ),
     );
 
-    renderWithProviders(<UrlDetail crawlId={NEW_CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(
+      <UrlDetail crawlId={NEW_CRAWL} siteUrlId={URL_ID} />,
+      `/site/crawls/${NEW_CRAWL}/pages/${URL_ID}?rerun=1`,
+    );
 
     // No button click: `?rerun=1` seeds polling on mount, so the fresh run's
     // progress advances to its terminal snapshot on its own.
@@ -568,7 +579,7 @@ describe('UrlDetail', () => {
   it('renders the internal-links section with linked neighbours', async () => {
     mswServer.use(...handlers(detail()));
 
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getByRole('heading', { name: 'Internal Links' })).toBeInTheDocument();
@@ -585,7 +596,7 @@ describe('UrlDetail', () => {
   it('omits the internal-links section entirely when the crawl measured none', async () => {
     mswServer.use(...handlers(detail({ internal_links: null })));
 
-    renderWithProviders(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     // Absent, not zeroed: "not measured" and "nothing links here" differ.

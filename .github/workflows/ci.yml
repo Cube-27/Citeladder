@@ -152,10 +152,6 @@ jobs:
           retention-days: 7
       - name: Test duplication advisory
         run: pnpm report:duplicates:tests
-      - name: Build
-        env:
-          BACKEND_ORIGIN: https://backend.ci.invalid
-        run: pnpm build
 
   contract:
     name: API contract (backend to frontend)

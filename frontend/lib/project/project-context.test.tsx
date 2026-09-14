@@ -1,7 +1,9 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import {
   ACTIVE_PROJECT_STORAGE_KEY,
@@ -12,12 +14,6 @@ import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 let search = new URLSearchParams();
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => search,
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
-  usePathname: () => '/projects',
-}));
-
 import { ProjectProvider, useProjectContext } from './project-context';
 
 const WORKSPACE_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -85,11 +81,24 @@ function Harness() {
   );
 }
 
-function renderProvider() {
+function RouterProbe({ destination }: Readonly<{ destination: string }>) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  useEffect(() => {
+    navigate(destination);
+  }, [destination, navigate]);
+  return <output data-testid="location">{location.pathname + location.search}</output>;
+}
+
+function renderProvider(destination = `/projects${search.size ? `?${search}` : ''}`) {
   return renderWithProviders(
-    <ProjectProvider>
-      <Harness />
-    </ProjectProvider>,
+    <>
+      <RouterProbe destination={destination} />
+      <ProjectProvider>
+        <Harness />
+      </ProjectProvider>
+    </>,
+    { initialEntries: [destination] },
   );
 }
 

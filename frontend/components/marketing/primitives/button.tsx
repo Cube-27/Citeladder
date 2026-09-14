@@ -1,5 +1,4 @@
 import { ArrowRight } from 'lucide-react';
-import Link from 'next/link';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { Button as SharedButton } from '@/components/ui/button';
@@ -29,9 +28,9 @@ export function ButtonLink({
       size="lg"
       className={cn('[&_svg]:size-4 [&_svg]:shrink-0', className)}
     >
-      <Link href={href} {...rest}>
+      <a href={href} {...rest}>
         {children}
-      </Link>
+      </a>
     </SharedButton>
   );
 }
@@ -102,7 +101,7 @@ export function TextLink({
   'href' | 'className' | 'children'
 >) {
   return (
-    <Link
+    <a
       href={href}
       className={cn(
         'group text-foreground inline-flex items-center gap-1.5 font-medium',
@@ -113,7 +112,7 @@ export function TextLink({
       {...rest}
     >
       {children}
-    </Link>
+    </a>
   );
 }
 
@@ -153,11 +152,11 @@ export function IconButtonLink({
       size="lg"
       className={className}
     >
-      <Link href={href} {...targetProps} {...rest}>
+      <a href={href} {...targetProps} {...rest}>
         {side === 'left' ? arrow : null}
         <span>{title}</span>
         {side === 'right' ? arrow : null}
-      </Link>
+      </a>
     </SharedButton>
   );
 }

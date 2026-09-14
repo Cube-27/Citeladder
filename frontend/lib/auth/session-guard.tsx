@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import {
   createContext,
   useCallback,
@@ -19,6 +18,7 @@ import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { SessionUser } from '@/lib/api/types';
 import { clearAccountScopedClientState } from '@/lib/auth/account-transition';
+import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
@@ -54,7 +54,6 @@ export function SessionGuard({
   children,
   fallback = null,
 }: Readonly<{ children: ReactNode; fallback?: SessionFallback }>) {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const redirectingRef = useRef(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -75,13 +74,13 @@ export function SessionGuard({
   const clearSession = useCallback(async () => {
     // Clearing the cache removes the active `me` query. Without this latch,
     // the still-mounted guard immediately recreates it and can hammer the
-    // backend with 401s until the router finishes navigating.
+    // backend with 401s until the browser leaves this document.
     if (redirectingRef.current) return;
     redirectingRef.current = true;
     setIsRedirecting(true);
     await clearAccountScopedClientState(queryClient);
-    router.replace('/login');
-  }, [queryClient, router]);
+    hardNavigate('/login');
+  }, [queryClient]);
 
   // Redirect only a genuinely unauthenticated visitor: a 401 from `me` means
   // the session is gone → clear + bounce to /login. A non-401 error (network

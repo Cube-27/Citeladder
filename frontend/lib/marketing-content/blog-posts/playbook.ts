@@ -10,6 +10,7 @@ export const POST_PLAYBOOK: BlogPost = {
   excerpt:
     'Turn an evidence-backed content gap into a clear, sourced page improvement—and test the result without promising citations.',
   image: '/blog/editorial/article-playbook.png',
+  cardImage: '/blog/editorial/article-playbook.svg',
   date: '2026-09-03',
   dateModified: '2026-09-09',
   readTime: '8 min read',

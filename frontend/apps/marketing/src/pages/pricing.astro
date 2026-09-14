@@ -1,0 +1,32 @@
+---
+import { PricingCta } from '@/components/marketing/pages/pricing';
+import { PricingComingSoonStrip } from '@/components/marketing/pricing/pricing-coming-soon-strip';
+import { PageHero } from '@/components/marketing/primitives/page-hero';
+import { TrustStrip } from '@/components/marketing/primitives/trust-strip';
+import { PricingCatalogIsland } from '../components/pricing-catalog-island';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+
+const description =
+  'Self-serve CiteLadder plans plus Enterprise. You pay for the workspace and the evidence. Model usage bills to your own provider keys, never marked up.';
+---
+
+<MarketingLayout
+  title="CiteLadder pricing for AI visibility · CiteLadder"
+  description={description}
+  canonical="/pricing"
+>
+  <main id="main" class="w-full max-w-full min-w-0 overflow-x-clip">
+    <PageHero
+      eyebrow="Pricing"
+      title="Pay for the intelligence."
+      accent="Not the API markup."
+      lead="Model calls run on your own provider keys. Usage bills straight to your accounts at provider rates. CiteLadder charges for the workspace, the intelligence, and the evidence behind every recommendation."
+      centered
+    >
+      <TrustStrip className="mt-8 justify-center" />
+    </PageHero>
+    <PricingComingSoonStrip />
+    <PricingCatalogIsland client:visible />
+    <PricingCta />
+  </main>
+</MarketingLayout>

@@ -1,14 +1,10 @@
 import { render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 
-// Stub next/navigation (Link uses it in jsdom).
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
-  usePathname: () => '/visibility',
-}));
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 const { clearSession, logoutMock } = vi.hoisted(() => ({
   clearSession: vi.fn().mockResolvedValue(undefined),
@@ -32,6 +28,12 @@ vi.mock('@/lib/api/auth', () => ({
   authApi: { logout: logoutMock },
 }));
 
+vi.mock('@/lib/project/project-context', () => ({
+  useProjectContext: () => ({
+    activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  }),
+}));
+
 import { QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 
@@ -41,28 +43,32 @@ import { UserMenuController, UserMenuTrigger } from './user-menu';
 
 function renderMenu(compact = false) {
   return render(
-    <QueryClientProvider client={createAppQueryClient()}>
-      <TooltipProvider>
-        <UserMenuController>
-          <UserMenuTrigger presenter={compact ? 'compact' : 'sidebar'} />
-        </UserMenuController>
-      </TooltipProvider>
-    </QueryClientProvider>,
+    <MemoryRouter initialEntries={['/visibility']}>
+      <QueryClientProvider client={createAppQueryClient()}>
+        <TooltipProvider>
+          <UserMenuController>
+            <UserMenuTrigger presenter={compact ? 'compact' : 'sidebar'} />
+          </UserMenuController>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
 function renderSplitMenu() {
   return render(
-    <QueryClientProvider client={createAppQueryClient()}>
-      <TooltipProvider>
-        <UserMenuController>
-          <>
-            <UserMenuTrigger presenter="sidebar" />
-            <UserMenuTrigger presenter="compact" />
-          </>
-        </UserMenuController>
-      </TooltipProvider>
-    </QueryClientProvider>,
+    <MemoryRouter initialEntries={['/visibility']}>
+      <QueryClientProvider client={createAppQueryClient()}>
+        <TooltipProvider>
+          <UserMenuController>
+            <>
+              <UserMenuTrigger presenter="sidebar" />
+              <UserMenuTrigger presenter="compact" />
+            </>
+          </UserMenuController>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -94,7 +100,7 @@ describe('UserMenu', () => {
     expect(signOutIndex).toBe(replayIndex + 1);
 
     // asChild renders the menuitem as the Link anchor itself.
-    expect(items[settingsIndex]).toHaveAttribute('href', '/settings');
+    expect(items[settingsIndex]).toHaveAttribute('href', `/settings?workspace=${WORKSPACE}`);
     expect(items[mcpIndex]).toHaveAttribute('href', '/docs/mcp');
     expect(items[mcpIndex]).toHaveAttribute('target', '_blank');
   });
