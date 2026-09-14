@@ -39,7 +39,7 @@ function StepPreview({ index }: Readonly<{ index: number }>) {
         </div>
         <div className="text-preview-caption relative z-1 mt-3 flex items-center justify-between">
           <div className="text-muted flex items-center gap-1.5 font-medium">
-            <span className="bg-preview-success-dot size-2 animate-pulse rounded-full" />
+            <span className="bg-preview-success-dot size-2 rounded-full" />
             <span>4 engines polled</span>
           </div>
           <span className="text-accent-text font-semibold">+5 Citations</span>

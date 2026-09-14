@@ -1248,21 +1248,15 @@ samp {
   height: 100%;
   transform-style: preserve-3d;
   animation: citeladder-engine-flip 8s cubic-bezier(0.5, 0, 0, 0.75) infinite;
-  /* Promote the rotor to its own layer and tell the compositor the transform
-     is the only thing changing. Without it the flip repaints the logos and
-     their text on every frame — Lighthouse's "non-composited animation", and
-     an infinite one directly above the fold, so it competes with hydration
-     during exactly the window TBT measures. */
-  will-change: transform;
+  animation-play-state: paused;
 }
 
-/* The rotor stays a time-based infinite animation on purpose. Pausing it off
-   screen was tried via `animation-timeline: view()` and reverted: attaching a
-   view timeline makes the flip SCRUB with scroll position instead of running
-   on its own clock, which is a different design. Genuine off-screen pausing
-   needs an IntersectionObserver toggling `animation-play-state`, and that
-   trades JavaScript on the marketing bundle — the thing this pass is removing
-   — for frames the compositor now handles on its own layer. */
+/* The Astro homepage starts the clock only while the roster is visible in
+   an active tab. Without JavaScript the primary faces remain readable. */
+.engine-roster[data-motion='running'] .engine-rotor-inner {
+  animation-play-state: running;
+  will-change: transform;
+}
 
 .engine-rotor-face {
   position: absolute;

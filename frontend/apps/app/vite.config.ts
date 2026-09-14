@@ -12,7 +12,8 @@ export default defineConfig(({ command, isPreview, mode }) => {
   const environment = loadEnv(mode, frontendRoot, '');
   const publicValue = (name: string) =>
     JSON.stringify(process.env[name] ?? environment[name] ?? '');
-  const proxy = command === 'serve' && !isPreview ? createServerProxy(environment.BACKEND_ORIGIN) : undefined;
+  const proxy =
+    command === 'serve' && !isPreview ? createServerProxy(environment.BACKEND_ORIGIN) : undefined;
 
   return {
     root: appRoot,

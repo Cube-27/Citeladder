@@ -30,6 +30,7 @@
 
   handle {
     root * /srv
+    header Cache-Control "no-store"
     try_files {path} /index.html
     file_server
   }

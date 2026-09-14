@@ -97,7 +97,7 @@ from, and does not replace, the Playwright Test runner used by `pnpm test:e2e`.
 
 The Compose path is the clean-clone workflow. From the repository root, it builds and starts
 PostgreSQL, applies the migration baseline once, then starts FastAPI, the
-Astro marketing frontend, and the workers. Do not run host-side migrations or
+Astro marketing frontend, Vite application, Caddy ingress, and the workers. Do not run host-side migrations or
 `pnpm dev` alongside this stack.
 
 ```bash
@@ -114,21 +114,13 @@ curl -fsS http://localhost:3000/
 curl -fsS http://localhost:8000/health
 ```
 
-The authenticated Vite container runs beside Astro in the production topology:
-
-```bash
-env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
-  POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)" \
-  docker compose --env-file .env -f docker-compose.yml \
-  --profile migration up -d --build vite-app
-curl -fsS http://localhost:3001/health
-```
-
-This starts the Vite/Caddy target on port 3001 beside Astro on port 3000. In
-production, Caddy is the same-origin ingress: it sends explicit authenticated
-SPA paths and `/app-assets/*` to Vite, backend API/MCP/OAuth paths to FastAPI,
-and all remaining public routes to Astro. The Vite runtime serves direct SPA
-route refreshes from the built `index.html`.
+The default stack includes both frontend runtimes; no migration profile is needed.
+Only Caddy ingress exposes browser port 3000. It shares the production route table
+in `infra/gcp/runtime/frontend-routes.caddy`: account/product routes (including
+`/login`) and `/app-assets/*` go to Vite, backend API/MCP/OAuth paths go to FastAPI,
+and public routes go to Astro. The internal Vite and Astro ports are not published.
+The Vite runtime serves direct SPA refreshes from its built `index.html` with
+`no-store`; missing chunks return 404 instead of application HTML.
 
 The stack's frontend is at `http://localhost:3000`, and FastAPI is at
 `http://localhost:8000`. Inspect readiness with the same `env -u` wrapper (gotcha 1) —
@@ -196,8 +188,8 @@ pnpm build:vite       # Vite authenticated SPA build
 pnpm test:e2e         # Playwright (needs a browser + a running stack)
 ```
 
-The default Playwright suite uses the existing mocked browser fixtures and the
-frontend development servers. The real-stack Content integration has a separate
+The default Playwright suite uses mocked browser fixtures. Its `app` project
+targets Vite on 3100; its `marketing` project targets Astro on 3101. The real-stack Content integration has a separate
 configuration and lifecycle: run it explicitly with
 `pnpm exec playwright test --config e2e/content-integration.config.ts`.
 Neither mode is evidence of live provider acceptance; those checks remain

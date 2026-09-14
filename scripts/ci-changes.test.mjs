@@ -125,7 +125,11 @@ test('Compose selects container-shaped changes only, on every push of a PR', () 
     'backend/uv.lock',
     'frontend/package.json',
     'frontend/pnpm-lock.yaml',
-    'frontend/next.config.ts',
+    'frontend/apps/app/vite.config.ts',
+    'frontend/apps/marketing/astro.config.mjs',
+    'frontend/Caddyfile',
+    'infra/gcp/runtime/frontend-routes.caddy',
+    'scripts/frontend-ingress-smoke.mjs',
     '.github/workflows/compose-smoke.yml',
   ]) {
     assert.equal(classifyPaths([path]).compose, true, path);

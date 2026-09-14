@@ -1,4 +1,4 @@
-import { defineMiddleware } from 'astro:middleware';
+import type { MiddlewareHandler } from 'astro';
 
 import { resolveBackendOrigin } from '@/lib/config/backend-origin';
 
@@ -6,7 +6,7 @@ const BACKEND_PATH =
   /^(?:\/api(?:\/|$)|\/mcp(?:\/|$)|\/(?:authorize|token|revoke)(?:$|\/)|\/.well-known\/(?:oauth-authorization-server|oauth-protected-resource\/mcp)$)/;
 
 /** Keep local marketing API calls same-origin without exposing BACKEND_ORIGIN. */
-export const onRequest = defineMiddleware(async ({ request, url }, next) => {
+export const onRequest: MiddlewareHandler = async ({ request, url }, next) => {
   if (!BACKEND_PATH.test(url.pathname)) {
     const response = await next();
     if (!response.headers.has('Cache-Control')) {
@@ -23,9 +23,11 @@ export const onRequest = defineMiddleware(async ({ request, url }, next) => {
   return fetch(destination, {
     method: request.method,
     headers,
+    // OAuth redirects and their cookies must reach the browser unchanged.
+    redirect: 'manual',
     body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
     // Node's Fetch requires this when forwarding a streaming request body.
     // @ts-expect-error Node-specific RequestInit extension.
     duplex: 'half',
   });
-});
+};

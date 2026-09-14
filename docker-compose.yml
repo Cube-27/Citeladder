@@ -96,17 +96,35 @@ services:
     depends_on:
       web:
         condition: service_healthy
+  # One browser origin for marketing, account/product routes, and API requests.
+  # Reuse the production route table so a local login exercises the same split.
+  ingress:
+    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    restart: unless-stopped
+    environment:
+      BACKEND_ORIGIN: web:8000
+      VITE_ORIGIN: vite-app:3001
+      MARKETING_ORIGIN: frontend:3000
+    volumes:
+      - ./frontend/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/gcp/runtime/frontend-routes.caddy:/etc/caddy/frontend-routes.caddy:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      vite-app:
+        condition: service_healthy
     ports:
       - "3000:3000"
 
-  # Authenticated Vite application. Production ingress owns the explicit
-  # account/product route table; exposing this port keeps local direct-refresh
-  # smoke checks available beside the Astro marketing server on port 3000.
+  # Authenticated Vite application is required by the default stack.
   vite-app:
-    profiles: ["migration"]
     build:
       context: .
       dockerfile: frontend/apps/app/Dockerfile
+      args:
+        NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS: ${NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS:-}
+        NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE: ${NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
     restart: unless-stopped
     environment:
       # Caddy consumes this only at runtime; it is never bundled for browsers.
@@ -114,8 +132,6 @@ services:
     depends_on:
       web:
         condition: service_healthy
-    ports:
-      - "3001:3001"
 
   worker:
     build:

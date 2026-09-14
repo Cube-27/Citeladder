@@ -1,15 +1,16 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 import './globals.css';
 import { createAppQueryClient } from '@/lib/api/query-client';
 
-import { router } from './router';
+import { appRoutes } from './router';
 import './runtime.css';
 
 const queryClient = createAppQueryClient();
+const router = createBrowserRouter(appRoutes);
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {

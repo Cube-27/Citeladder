@@ -196,11 +196,14 @@ services:
     restart: unless-stopped
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend-routes.caddy:/etc/caddy/frontend-routes.caddy:ro
       - ./tls:/etc/caddy/tls:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       frontend:
+        condition: service_healthy
+      vite-app:
         condition: service_healthy
 
 volumes:

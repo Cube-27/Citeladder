@@ -76,11 +76,7 @@ jobs:
           LOGFIRE_TOKEN=
           EOF
 
-      # Built cold on purpose, with no BuildKit layer cache. Measured over 60
-      # runs of this workflow the whole job is ~2 minutes and `next build` --
-      # its single most expensive layer -- takes 22 seconds. Cross-run caching
-      # would need the docker-container driver plus bake delegation to save
-      # seconds. Revisit if this job ever passes ~8 minutes.
+      # Build both frontend runtimes cold to verify clean-clone delivery.
       - name: Build and start empty-database stack
         run: |
           set -euo pipefail
@@ -124,6 +120,7 @@ jobs:
             sleep 2
           done
           curl --fail --silent --show-error http://127.0.0.1:3000/ >/dev/null
+          node scripts/frontend-ingress-smoke.mjs http://127.0.0.1:3000
 
           for _ in $(seq 1 45); do
             if curl --fail --silent --show-error --output /var/tmp/catalog.json \

@@ -17,7 +17,8 @@ export type BlogPostSummary = Pick<
 export type BlogSort = 'latest' | 'oldest';
 
 export function toBlogPostSummary(post: BlogPost): BlogPostSummary {
-  const { slug, title, excerpt, image, cardImage, date, dateModified, readTime, author, tags } = post;
+  const { slug, title, excerpt, image, cardImage, date, dateModified, readTime, author, tags } =
+    post;
   return { slug, title, excerpt, image, cardImage, date, dateModified, readTime, author, tags };
 }
 

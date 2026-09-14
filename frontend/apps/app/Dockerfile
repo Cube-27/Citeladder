@@ -26,7 +26,7 @@ WORKDIR /app
 RUN npm install --global --ignore-scripts pnpm@11.25.0
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
-RUN pnpm exec vite build apps/app
+RUN pnpm build:vite
 
 FROM caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648 AS runtime
 

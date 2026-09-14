@@ -294,24 +294,34 @@ describe('OpportunitiesScreen', () => {
 
   it('renders the featured card with the API target label (C1)', async () => {
     mockBase();
+    let releaseList!: () => void;
+    const listReady = new Promise<void>((resolve) => {
+      releaseList = resolve;
+    });
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/opportunities/summary`, () =>
         HttpResponse.json(summary),
       ),
-      http.get(`/api/v1/projects/${PROJECT}/opportunities`, () =>
-        HttpResponse.json({ items: [opportunity(), siteRow], next_cursor: null }),
-      ),
+      http.get(`/api/v1/projects/${PROJECT}/opportunities`, async () => {
+        await listReady;
+        return HttpResponse.json({ items: [opportunity(), siteRow], next_cursor: null });
+      }),
       http.get(`/api/v1/opportunities/${OPP_A}`, () => HttpResponse.json(detail)),
     );
 
     renderScreen();
 
-    // The detail-backed featured card takes its "Applies to" line from the
-    // API target_label (no client-side derivation). The card renders after a
-    // three-fetch chain (projects -> list -> detail), so allow a longer wait.
+    // Preserve the featured region across list and detail reads.
+    const featured = await screen.findByRole('region', { name: 'Next best action' });
+    expect(featured).toHaveAttribute('aria-busy', 'true');
+    releaseList();
+
+    // The API detail owns both the target label and remediation.
     expect(await screen.findByText('Next best action', {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByText('Applies to best crm for small teams')).toBeInTheDocument();
     expect(screen.getByText(detail.remediation)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Next best action' })).toBe(featured);
+    expect(featured).toHaveAttribute('aria-busy', 'false');
   });
 
   it('shows the stale badge only when newer evidence exists (C4c)', async () => {

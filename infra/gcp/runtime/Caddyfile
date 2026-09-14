@@ -21,41 +21,5 @@ https://__DOMAIN_NAME__ {
     -Server
   }
 
-  # Backend protocol and browser API endpoints bypass the frontend servers.
-  # /register remains a Vite browser route; RFC 7591 registration is /mcp/register.
-  @backend path /api /api/* /mcp /mcp/* /authorize /token /revoke /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource/mcp
-  reverse_proxy @backend 127.0.0.1:8000 {
-    header_up X-Forwarded-Host {host}
-    header_up X-Forwarded-Proto https
-  }
-
-  # Vite content-hashed assets may be cached forever.
-  @vite_assets path /app-assets/*
-  header @vite_assets Cache-Control "public, max-age=31536000, immutable"
-  reverse_proxy @vite_assets 127.0.0.1:3001
-
-  # Astro content-hashed client assets may be cached forever.
-  @astro_assets path /_astro/*
-  header @astro_assets Cache-Control "public, max-age=31536000, immutable"
-  reverse_proxy @astro_assets 127.0.0.1:3000
-
-  # Exact application paths and the two bounded dynamic routes retain Vite ownership.
-  # Unknown descendants fall through to Astro instead of rendering an unmatched SPA.
-  @vite_exact path /login /login/ /register /register/ /projects /projects/ /onboarding /onboarding/ /site /site/ /issues /issues/ /demand /demand/ /performance /performance/ /opportunities /opportunities/ /visibility /visibility/ /runs /runs/ /prompts /prompts/ /content /content/ /products /products/ /ai-referrals /ai-referrals/ /settings /settings/ /invitations/accept /invitations/accept/
-  reverse_proxy @vite_exact 127.0.0.1:3001 {
-    header_down Cache-Control "no-store"
-    header_up X-Forwarded-Host {host}
-    header_up X-Forwarded-Proto https
-  }
-  @vite_dynamic path_regexp vite_dynamic ^/(?:runs/[^/]+|site/crawls/[^/]+/pages/[^/]+)/?$
-  reverse_proxy @vite_dynamic 127.0.0.1:3001 {
-    header_down Cache-Control "no-store"
-    header_up X-Forwarded-Host {host}
-    header_up X-Forwarded-Proto https
-  }
-
-  reverse_proxy 127.0.0.1:3000 {
-    header_up X-Forwarded-Host {host}
-    header_up X-Forwarded-Proto https
-  }
+  import /etc/caddy/frontend-routes.caddy
 }

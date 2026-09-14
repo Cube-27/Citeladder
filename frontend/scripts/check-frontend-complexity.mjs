@@ -94,9 +94,15 @@ function filesUnder(root) {
   function visit(directory) {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       if (
-        ['node_modules', '.next', 'dist', 'out', 'coverage', 'playwright-report', 'test-results'].includes(
-          entry.name,
-        )
+        [
+          'node_modules',
+          '.next',
+          'dist',
+          'out',
+          'coverage',
+          'playwright-report',
+          'test-results',
+        ].includes(entry.name)
       )
         continue;
       const absolute = path.join(directory, entry.name);

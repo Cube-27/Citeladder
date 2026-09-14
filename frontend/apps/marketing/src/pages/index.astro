@@ -20,10 +20,26 @@ const description =
   <main id="main">
     <Hero />
     <Shift />
-    <SeeIt client:visible />
+    <SeeIt />
     <Workflow />
     <Packs />
     <Trust />
     <FinalCta />
   </main>
 </MarketingLayout>
+
+<script>
+  const roster = document.querySelector<HTMLElement>('.engine-roster');
+  if (roster && 'IntersectionObserver' in window) {
+    let visible = false;
+    const updateMotion = () => {
+      roster.dataset.motion = visible && !document.hidden ? 'running' : 'paused';
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      updateMotion();
+    });
+    observer.observe(roster);
+    document.addEventListener('visibilitychange', updateMotion);
+  }
+</script>

@@ -52,30 +52,30 @@ function resolveAllowance(entitlement: WorkspaceEntitlement | null): Allowance {
 }
 
 /** Which standing notice, if any, this state owes the reader. */
-type NoticeKind = 'failed' | 'missing-project' | 'no-projects' | null;
+type NoticeKind = 'failed' | 'missing-project' | 'no-projects';
+type GateState = NoticeKind | 'ready' | 'loading' | 'redirecting';
 
-type NoticeInputs = {
+type GateInputs = {
   projectRequired: boolean;
-  redirecting: boolean;
-  /** The allowance read failed, so no statement about capacity is truthful. */
-  allowanceFailed: boolean;
+  mayCreate: boolean;
+  allowance: Allowance;
+  entitlementLoading: boolean;
 };
 
-function noticeFor(
+/** Resolve routing, loading and recovery together so their precedence cannot drift. */
+function resolveGate(
   status: SelectionStatus,
-  { projectRequired, redirecting, allowanceFailed }: NoticeInputs,
-): NoticeKind {
+  { projectRequired, mayCreate, allowance, entitlementLoading }: GateInputs,
+): GateState {
   if (status === 'error') return 'failed';
   if (status === 'unavailable') return 'missing-project';
-  if (status !== 'empty' || !projectRequired || redirecting) return null;
-  // "Your access does not include another project" is a claim about the
-  // allowance. With the allowance read failed it is not a claim we can make,
-  // so offer the retry instead of asserting a limit that may not exist.
-  return allowanceFailed ? 'failed' : 'no-projects';
-}
-
-function waitsForEntitlement(status: SelectionStatus, loading: boolean): boolean {
-  return loading && ['ready', 'empty'].includes(status);
+  if (!projectRequired) return 'ready';
+  if (status === 'resolving') return 'loading';
+  if (status !== 'empty') return 'ready';
+  if (mayCreate && allowance === 'spare') return 'redirecting';
+  if (entitlementLoading) return 'loading';
+  // An unread allowance cannot justify claiming that the workspace is full.
+  return allowance === 'unknown' ? 'failed' : 'no-projects';
 }
 
 /**
@@ -115,10 +115,9 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
     retryContext();
     void queryClient.refetchQueries({ queryKey: queryKeys.billing.all });
   };
-  // Entitlement decides which controls the shell HAS — the Growth Agent
-  // trigger, the capability-gated navigation rows — so waiting for it here is
-  // what lets the shell paint complete instead of growing a button and a link
-  // a round trip later. It resolves to a settled answer either way.
+  // Only an empty workspace needs an allowance decision before routing.
+  // Existing projects can start their reads while entitlement resolves;
+  // capability-specific controls own their pending and denied states.
   const { isLoading: entitlementLoading, entitlement } = useEntitlement();
 
   // A role that may not create a project is not offered the affordance. This
@@ -130,40 +129,22 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   // reading the workspace's private finances.
   const allowance = resolveAllowance(entitlement);
   const projectRequired = !isWorkspaceOnlyRoute(pathname);
-  const redirecting = status === 'empty' && projectRequired && mayCreate && allowance === 'spare';
+  const state = resolveGate(status, {
+    projectRequired,
+    mayCreate,
+    allowance,
+    entitlementLoading,
+  });
 
-  useOnboardingRedirect(redirecting, activeWorkspaceId);
+  useOnboardingRedirect(state === 'redirecting', activeWorkspaceId);
   useCanonicalProjectUrl(status === 'ready' && projectRequired);
 
-  // LOADING is answered before any notice. An entitlement still in flight
-  // leaves the allowance 'unknown', which past this point means "settled and
-  // unresolved" — a real failure the reader can retry. Reading it while the
-  // request was still running turned every cold start into a failure notice.
-  //
-  // Deliberately the SAME loader the session wait showed: one uninterrupted
-  // state covers both round trips. `redirecting` holds here too — the
-  // redirect is already in flight, and drawing a workspace the visitor is
-  // about to be taken out of would only be a flash of the wrong app.
-  //
-  // A workspace-only route waits for NEITHER: an invitee arriving at an
-  // acceptance link may have no resolved workspace at all, which leaves the
-  // entitlement query disabled and therefore never settled. Blocking on it
-  // there would hold that route behind a loader forever.
-  if (redirecting) return <PageLoading label="Opening project setup…" />;
-  const waitingForEntitlement = waitsForEntitlement(status, entitlementLoading);
-  if (projectRequired && (status === 'resolving' || waitingForEntitlement)) {
-    return <PageLoading label="Loading your workspace…" />;
-  }
-
-  const notice = noticeFor(status, {
-    projectRequired,
-    redirecting,
-    allowanceFailed: allowance === 'unknown',
-  });
-  if (notice) {
+  if (state === 'redirecting') return <PageLoading label="Opening project setup…" />;
+  if (state === 'loading') return <PageLoading label="Loading your workspace…" />;
+  if (state !== 'ready') {
     return (
       <GateNotice
-        kind={notice}
+        kind={state}
         mayCreate={mayCreate}
         workspaceId={activeWorkspaceId}
         // An allowance failure is a projects-side failure: the workspace
@@ -199,7 +180,7 @@ function GateNotice({
   errorScope,
   onRetry,
 }: Readonly<{
-  kind: Exclude<NoticeKind, null>;
+  kind: NoticeKind;
   mayCreate: boolean;
   workspaceId: string | null;
   errorScope: FailureScope;

@@ -284,7 +284,7 @@ describe('OnboardingGate', () => {
     ).toBeInTheDocument();
   });
 
-  it('waits for entitlements so the shell paints complete', () => {
+  it('renders an authorized project while its entitlement is still loading', () => {
     entitlement = { isLoading: true, entitlement: null };
     render(
       <OnboardingGate>
@@ -292,6 +292,7 @@ describe('OnboardingGate', () => {
       </OnboardingGate>,
     );
 
-    expect(screen.queryByText('workspace')).toBeNull();
+    expect(screen.getByText('workspace')).toBeInTheDocument();
+    expect(screen.queryByTestId('page-loading')).not.toBeInTheDocument();
   });
 });
