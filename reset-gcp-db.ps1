@@ -165,8 +165,26 @@ expected_backend_prefix="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/
 [[ "$candidate_backend_image" == "$expected_backend_prefix"* ]]
 [[ "${candidate_backend_image#"$expected_backend_prefix"}" =~ ^[0-9a-f]{64}$ ]]
 
+# The database reset reuses the installed frontend images. Refuse a host that
+# has not received the Astro/Vite runtime rather than dropping its database and
+# reporting a legacy frontend as healthy.
+if [[ -z "${VITE_APP_IMAGE:-}" ]]; then
+  echo 'Installed runtime has no VITE_APP_IMAGE. Run GCP Demo - Deploy before resetting the database.' >&2
+  exit 1
+fi
+expected_frontend_prefix="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/frontend@sha256:"
+expected_vite_app_prefix="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo/vite-app@sha256:"
+[[ "$FRONTEND_IMAGE" == "$expected_frontend_prefix"* ]]
+[[ "${FRONTEND_IMAGE#"$expected_frontend_prefix"}" =~ ^[0-9a-f]{64}$ ]]
+[[ "$VITE_APP_IMAGE" == "$expected_vite_app_prefix"* ]]
+[[ "${VITE_APP_IMAGE#"$expected_vite_app_prefix"}" =~ ^[0-9a-f]{64}$ ]]
+
 compose=(docker compose --env-file runtime.env -f compose.gcp.yml)
 reset_compose=(env BACKEND_IMAGE="$candidate_backend_image" "${compose[@]}")
+if ! "${compose[@]}" config --services | grep -qx 'vite-app'; then
+  echo 'Installed Compose runtime has no vite-app service. Run GCP Demo - Deploy before resetting the database.' >&2
+  exit 1
+fi
 db_id="$("${compose[@]}" ps -q db)"
 test -n "$db_id"
 "${compose[@]}" exec -T db psql -v ON_ERROR_STOP=1 -U citeladder -d citeladder -c \
@@ -175,20 +193,28 @@ printf 'Installed source commit: %s\n' "$SOURCE_COMMIT"
 printf 'Reset source commit: %s\n' "$candidate_source_commit"
 
 docker pull "$candidate_backend_image"
-docker image inspect "$candidate_backend_image" "$FRONTEND_IMAGE" >/dev/null
+docker image inspect "$candidate_backend_image" "$FRONTEND_IMAGE" "$VITE_APP_IMAGE" >/dev/null
 services=()
 while IFS= read -r service; do
   case "$service" in db|db-tls-init) ;; *) services+=("$service") ;; esac
 done < <("${compose[@]}" config --services)
 
 wait_for_health() {
-  for attempt in $(seq 1 30); do
-    if curl --fail --silent http://127.0.0.1:3000/health >/dev/null; then
+  for attempt in $(seq 1 60); do
+    if
+      curl --fail --silent http://127.0.0.1:3000/health >/dev/null &&
+      curl --fail --silent http://127.0.0.1:3001/health >/dev/null; then
       return 0
     fi
+    echo "Application health probe attempt $attempt failed" >&2
     sleep 5
   done
   return 1
+}
+
+start_application() {
+  "${compose[@]}" up -d --wait --wait-timeout 300
+  wait_for_health
 }
 
 persist_candidate() {
@@ -222,7 +248,7 @@ SQL
     fi
     persist_candidate
   fi
-  if "${compose[@]}" up -d && wait_for_health; then
+  if start_application; then
     echo 'Application recovered. The original reset failure is reported by the exit status.' >&2
   else
     echo 'Application recovery failed; inspect Docker Compose status and logs.' >&2
@@ -239,8 +265,7 @@ reset_started=true
 "${reset_compose[@]}" run --rm --no-deps migrate
 "${reset_compose[@]}" run --rm --no-deps migrate alembic check
 persist_candidate
-"${compose[@]}" up -d
-wait_for_health
+start_application
 trap - ERR
 echo 'Database rebuilt from latest main, development login provisioned, application healthy.'
 '@

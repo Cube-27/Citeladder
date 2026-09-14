@@ -281,11 +281,15 @@ sessions. It verifies that the local
 checkout is `main` synchronized with `origin/main`, verifies its backend image
 inputs have no local changes, resolves that commit's immutable backend image
 from Artifact Registry, and builds and pushes the image when it does not exist
-yet. The VM then rebuilds the database with that image's migration baseline and
-starts the application with the candidate
-backend and currently installed frontend. It does not create a backup. It
-refuses a mismatched project or single-account demo mode, and the existing
-configured credentials provision the new dev account. Run the normal **GCP Demo
-- Deploy** workflow immediately afterward to install the matching frontend and
+yet. It requires an already deployed Astro/Vite runtime with immutable
+marketing and Vite application images; if either the `VITE_APP_IMAGE` setting
+or `vite-app` Compose service is absent, it stops before changing the database.
+The VM then rebuilds the database with that image's migration baseline, starts
+the application with the candidate backend and currently installed frontend
+images, and verifies both the marketing (`:3000`) and Vite application (`:3001`)
+health endpoints. It does not create a backup. It refuses a mismatched project
+or single-account demo mode, and the existing configured credentials provision
+the new dev account. Run the normal **GCP Demo - Deploy** workflow immediately
+afterward to install the frontend images that match the reset backend and
 reconcile the complete runtime configuration. Optional `-Instance` defaults to
 `citeladder-demo`.
