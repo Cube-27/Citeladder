@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -36,11 +36,12 @@ describe('GoogleAnalytics', () => {
     await user.click(await screen.findByRole('button', { name: 'Accept' }));
 
     expect(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).toBe('accepted');
-    expect(await screen.findByTestId('external-script')).toHaveAttribute(
+    const documentQueries = within(document.documentElement);
+    expect(await documentQueries.findByTestId('external-script')).toHaveAttribute(
       'src',
       'https://www.googletagmanager.com/gtag/js?id=G-TEST',
     );
-    expect(screen.getByTestId('google-analytics')).toBeInTheDocument();
+    expect(documentQueries.getByTestId('google-analytics')).toBeInTheDocument();
   });
 
   it('keeps the accepted decision for this page when storage is unavailable', async () => {
@@ -59,7 +60,9 @@ describe('GoogleAnalytics', () => {
       await user.click(await screen.findByRole('button', { name: 'Accept' }));
 
       expect(screen.queryByRole('region', { name: 'Cookie consent' })).not.toBeInTheDocument();
-      expect(await screen.findByTestId('external-script')).toBeInTheDocument();
+      expect(
+        await within(document.documentElement).findByTestId('external-script'),
+      ).toBeInTheDocument();
     } finally {
       setItem.mockRestore();
       writeConsent('rejected');
