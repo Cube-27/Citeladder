@@ -66,10 +66,11 @@
 
 ## Current phase
 
-**Phase 4 — product route batches.** The critical Vite vertical is complete.
-Next feature architecture remains frozen: subsequent authenticated product
-behavior belongs to Vite except for an independent parity blocker. The next
-review boundary is Website plus Issues.
+**Phase 5 — authenticated application cutover.** Every authenticated product,
+account, and invitation route now has a Vite owner. The next boundary removes
+the three temporary Next compatibility aliases and authenticated Next route
+ownership, then runs the engineering, browser, and performance-comparison
+gates before traffic ownership changes.
 
 The ordered execution is:
 
@@ -126,6 +127,13 @@ The ordered execution is:
   state, and exact persisted creation handoff. The focused critical suite
   passed 100 tests, the production Vite build passed, and controlled Chromium
   observed the real login-to-project-Overview path.
+- **Phase 4 — product route batches (2026-09-14):** Vite now owns Website,
+  Issues, Demand, Performance, Opportunities, Visibility, Runs, Prompts,
+  Content, Commerce, AI Referrals, Settings, and invitation acceptance. Each
+  batch retained its existing shared behavior owner and thin coexistence Next
+  wrapper, passed focused owner coverage plus production Vite builds, and
+  received an independent review. The product-phase repository quality gate
+  passed.
 
 ## Known unresolved issues
 
