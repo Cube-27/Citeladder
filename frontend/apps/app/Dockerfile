@@ -33,7 +33,7 @@ FROM caddy@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d586
 COPY frontend/apps/app/Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /app/apps/app/dist /srv
 
-USER caddy
+USER 1000:1000
 
 EXPOSE 3001
 
