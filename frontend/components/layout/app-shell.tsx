@@ -2,8 +2,7 @@
 
 import { Menu } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { CommandPalette, CommandPaletteTrigger } from '@/components/ui/command-palette';
 import { Button } from '@/components/ui/button';

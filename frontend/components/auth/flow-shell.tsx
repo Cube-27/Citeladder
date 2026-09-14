@@ -71,22 +71,21 @@ function FlowBar({
   currentStep: number;
   exitHref?: string;
 }>) {
+  let exit: ReactNode = <span />;
+  if (exitHref === '/') exit = <MarketingExitLink />;
+  else if (exitHref) {
+    exit = (
+      <Link to={exitHref} className="flow-exit">
+        Exit
+      </Link>
+    );
+  }
   return (
     <header className="flow-bar">
       <div className="flow-bar-content">
         <AuthWordmark />
         {steps ? <FlowProgress steps={steps} currentStep={currentStep} /> : <span />}
-        {exitHref ? (
-          exitHref === '/' ? (
-            <MarketingExitLink />
-          ) : (
-            <Link to={exitHref} className="flow-exit">
-              Exit
-            </Link>
-          )
-        ) : (
-          <span />
-        )}
+        {exit}
       </div>
       {steps ? (
         <div className="flow-progress-rule" aria-hidden="true">

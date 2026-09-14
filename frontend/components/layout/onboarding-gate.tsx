@@ -1,7 +1,6 @@
 'use client';
 
-import { Link } from 'react-router-dom';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 

@@ -94,11 +94,7 @@ function FooterColumnLink({ link }: Readonly<{ link: FooterLink }>) {
       </a>
     );
   }
-  return link.href.startsWith('/') ? (
-    <a className={LINK} href={link.href}>
-      {link.label}
-    </a>
-  ) : (
+  return (
     <a className={LINK} href={link.href}>
       {link.label}
     </a>

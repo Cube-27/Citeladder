@@ -94,60 +94,16 @@ export function RunsScreen() {
         </fieldset>
       </div>
 
-      {!projectId ? (
-        <Alert tone="info">Select or create a project to launch runs.</Alert>
-      ) : runsQuery.isError ? (
-        <Alert tone="danger">Could not load runs. Check your connection and try again.</Alert>
-      ) : runsQuery.isLoading ? (
-        <Card>
-          <CardContent className="grid gap-3">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-          </CardContent>
-        </Card>
-      ) : audits.length === 0 ? (
-        <Card>
-          <CardContent>
-            <EmptyState
-              icon={Play}
-              heading="No runs yet"
-              description="Launch your first audit to measure how AI engines answer questions about your brand."
-              action={
-                <Button variant="ghost" onClick={() => setLaunchOpen(true)}>
-                  Launch your first audit
-                </Button>
-              }
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="overflow-hidden">
-          <CardHeader className="flex-row flex-wrap items-baseline justify-between gap-2 border-b-0 pb-3">
-            <CardTitle>All runs</CardTitle>
-            {anyActive ? (
-              <span className="mono text-muted inline-flex items-center gap-1.5 text-xs">
-                <span
-                  className="bg-accent inline-block size-1.5 animate-pulse rounded-full"
-                  aria-hidden
-                />
-                polling every 3s while a run is active
-              </span>
-            ) : null}
-          </CardHeader>
-          <CardContent className="p-0">
-            {filteredAudits.length === 0 ? (
-              <p className="text-secondary border-border-subtle border-t px-[var(--card-padding)] py-10 text-center text-sm">
-                No{' '}
-                {STATUS_FILTERS.find((filter) => filter.id === statusFilter)?.label.toLowerCase()}{' '}
-                runs.
-              </p>
-            ) : (
-              <RunsTable audits={filteredAudits} />
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <RunsContent
+        projectId={projectId}
+        isError={runsQuery.isError}
+        isLoading={runsQuery.isLoading}
+        audits={audits}
+        filteredAudits={filteredAudits}
+        statusFilter={statusFilter}
+        anyActive={anyActive}
+        onLaunch={() => setLaunchOpen(true)}
+      />
 
       {projectId && project ? (
         <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
@@ -162,5 +118,88 @@ export function RunsScreen() {
         />
       ) : null}
     </Stack>
+  );
+}
+
+function RunsContent({
+  projectId,
+  isError,
+  isLoading,
+  audits,
+  filteredAudits,
+  statusFilter,
+  anyActive,
+  onLaunch,
+}: Readonly<{
+  projectId: string | null;
+  isError: boolean;
+  isLoading: boolean;
+  audits: Audit[];
+  filteredAudits: Audit[];
+  statusFilter: StatusFilter;
+  anyActive: boolean;
+  onLaunch: () => void;
+}>) {
+  if (!projectId) return <Alert tone="info">Select or create a project to launch runs.</Alert>;
+  if (isError) {
+    return <Alert tone="danger">Could not load runs. Check your connection and try again.</Alert>;
+  }
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="grid gap-3">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+  if (audits.length === 0) {
+    return (
+      <Card>
+        <CardContent>
+          <EmptyState
+            icon={Play}
+            heading="No runs yet"
+            description="Launch your first audit to measure how AI engines answer questions about your brand."
+            action={
+              <Button variant="ghost" onClick={onLaunch}>
+                Launch your first audit
+              </Button>
+            }
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const filterLabel = STATUS_FILTERS.find(
+    (filter) => filter.id === statusFilter,
+  )?.label.toLowerCase();
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="flex-row flex-wrap items-baseline justify-between gap-2 border-b-0 pb-3">
+        <CardTitle>All runs</CardTitle>
+        {anyActive ? (
+          <span className="mono text-muted inline-flex items-center gap-1.5 text-xs">
+            <span
+              className="bg-accent inline-block size-1.5 animate-pulse rounded-full"
+              aria-hidden
+            />
+            polling every 3s while a run is active
+          </span>
+        ) : null}
+      </CardHeader>
+      <CardContent className="p-0">
+        {filteredAudits.length === 0 ? (
+          <p className="text-secondary border-border-subtle border-t px-[var(--card-padding)] py-10 text-center text-sm">
+            {`No ${filterLabel} runs.`}
+          </p>
+        ) : (
+          <RunsTable audits={filteredAudits} />
+        )}
+      </CardContent>
+    </Card>
   );
 }

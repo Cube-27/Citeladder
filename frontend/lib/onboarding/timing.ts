@@ -62,7 +62,7 @@ export function finishOnboardingNavigationHandoff(projectId: string) {
   const performanceApi = globalThis.performance;
   if (typeof performanceApi?.getEntriesByName !== 'function') return;
   const marks = performanceApi.getEntriesByName(NAVIGATION_HANDOFF.start, 'mark');
-  const activeMark = marks[marks.length - 1] as PerformanceMark | undefined;
+  const activeMark = marks.at(-1) as PerformanceMark | undefined;
   if (activeMark?.detail !== projectId) return;
   finishTiming(NAVIGATION_HANDOFF, true);
 }

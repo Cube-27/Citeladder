@@ -1,8 +1,7 @@
 'use client';
 
 import { FolderOpen, Plus } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';

@@ -1,7 +1,6 @@
 'use client';
 
-import { Link } from 'react-router-dom';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 

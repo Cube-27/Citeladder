@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 
 import { OnboardingPageClient } from '@/components/onboarding/onboarding-page-client';
@@ -23,7 +23,7 @@ export function PrivateRouteLayout() {
   return (
     <Suspense fallback={<ShellFallback />}>
       <ProjectProvider>
-        <SessionGuard fallback={(content) => <ShellFallback>{content}</ShellFallback>}>
+        <SessionGuard fallback={sessionFallback}>
           <EntitlementProvider>
             <Outlet />
           </EntitlementProvider>
@@ -31,6 +31,10 @@ export function PrivateRouteLayout() {
       </ProjectProvider>
     </Suspense>
   );
+}
+
+function sessionFallback(content: ReactNode) {
+  return <ShellFallback>{content}</ShellFallback>;
 }
 
 /** Authenticated application chrome and its project-route recovery gate. */

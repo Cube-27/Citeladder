@@ -14,7 +14,7 @@ const TASK_LOCAL_ORIGIN = 'http://127.0.0.1:8000';
 function isMappedIpv4Literal(host: string): boolean {
   if (!host.includes(':')) return false;
   const segments = host.split(':');
-  const marker = segments.findIndex((segment) => segment === 'ffff');
+  const marker = segments.indexOf('ffff');
   if (marker < 0) return false;
   return segments.slice(0, marker).every((segment) => segment === '' || /^0+$/.test(segment));
 }

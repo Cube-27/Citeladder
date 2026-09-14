@@ -21,7 +21,11 @@ const staticRoutes: readonly RouteEntry[] = [
 ];
 
 const escapeXml = (value: string) =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
 
 export function GET() {
   const routes: RouteEntry[] = [

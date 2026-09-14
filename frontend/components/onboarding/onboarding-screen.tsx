@@ -1,7 +1,6 @@
 'use client';
 
-import { Link } from 'react-router-dom';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 
 import { FlowActions, FlowShell, type FlowStep } from '@/components/auth/flow-shell';
 import { Button } from '@/components/ui/button';
@@ -24,7 +23,7 @@ export function OnboardingScreen() {
   const searchParams = useSearchParams()[0];
   // Cached routes may retain component state. A fresh Add project URL must
   // start a fresh transaction, and a hidden route must not keep redirecting.
-  if (pathname.replace(/\/+$/, '') !== '/onboarding') return null;
+  if (stripTrailingSlashes(pathname) !== '/onboarding') return null;
   return <OnboardingTransaction key={searchParams?.get('discovery') ?? 'new'} />;
 }
 
@@ -34,19 +33,8 @@ function OnboardingTransaction() {
   const projectsHref = activeProjectId
     ? projectDestination('/projects', null, activeProjectId)
     : '/projects';
-  const stage = flow.isCompleting ? (
-    <CreationStage committedProjectId={flow.completedProjectId} />
-  ) : flow.step === 0 ? (
-    <BrandStage form={flow.form} isAdditional={flow.isAdditional} onSubmit={flow.submitBrand} />
-  ) : flow.step === 1 ? (
-    <DiscoveryStage
-      brandName={flow.brand?.brand_name}
-      discovery={flow.discovery}
-      onEdit={() => flow.setStep(0)}
-    />
-  ) : (
-    <ReviewStage flow={flow} />
-  );
+  const stage = onboardingStage(flow);
+  const measure = !flow.isCompleting && flow.step === 2 ? 'wide' : 'default';
 
   return (
     <FlowShell
@@ -55,7 +43,7 @@ function OnboardingTransaction() {
       currentStep={flow.step}
       exitHref={flow.isAdditional ? projectsHref : '/'}
       align={flow.isCompleting ? 'center' : 'start'}
-      measure={flow.isCompleting ? 'default' : flow.step === 2 ? 'wide' : 'default'}
+      measure={measure}
       actions={
         flow.isCompleting ? undefined : (
           <OnboardingActions flow={flow} projectsHref={projectsHref} />
@@ -65,6 +53,33 @@ function OnboardingTransaction() {
       {stage}
     </FlowShell>
   );
+}
+
+function stripTrailingSlashes(pathname: string): string {
+  let end = pathname.length;
+  while (end > 1 && pathname[end - 1] === '/') end -= 1;
+  return pathname.slice(0, end);
+}
+
+function onboardingStage(flow: ReturnType<typeof useOnboardingFlow>) {
+  if (flow.isCompleting) {
+    return <CreationStage committedProjectId={flow.completedProjectId} />;
+  }
+  if (flow.step === 0) {
+    return (
+      <BrandStage form={flow.form} isAdditional={flow.isAdditional} onSubmit={flow.submitBrand} />
+    );
+  }
+  if (flow.step === 1) {
+    return (
+      <DiscoveryStage
+        brandName={flow.brand?.brand_name}
+        discovery={flow.discovery}
+        onEdit={() => flow.setStep(0)}
+      />
+    );
+  }
+  return <ReviewStage flow={flow} />;
 }
 
 function OnboardingActions({
