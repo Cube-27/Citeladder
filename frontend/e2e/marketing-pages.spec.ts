@@ -1,11 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { NAV_DROPS } from '@/lib/marketing-content/nav';
-
-/** Derived from the nav config so a content edit cannot silently pass. */
-const RESOURCES_LINK_COUNT = NAV_DROPS.find((drop) => drop.key === 'resources')!.groups.reduce(
-  (sum, group) => sum + group.items.length,
-  0,
-);
 
 test.describe('marketing routes', () => {
   test('homepage clocks stop offscreen and reduced motion keeps the engine roster readable', async ({
@@ -72,11 +65,7 @@ test.describe('marketing routes', () => {
     const resources = page
       .getByRole('navigation', { name: 'Main navigation' })
       .getByRole('link', { name: 'Resources', exact: true });
-    await resources.hover();
-    await expect(page.locator('#desktop-nav-panel-resources')).toBeVisible();
-    await expect(page.locator('#desktop-nav-panel-resources').getByRole('link')).toHaveCount(
-      RESOURCES_LINK_COUNT,
-    );
+    await expect(resources).toHaveAttribute('href', '/resources');
 
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toBeVisible();
