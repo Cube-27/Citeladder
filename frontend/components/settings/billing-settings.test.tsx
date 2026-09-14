@@ -142,7 +142,7 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('BillingSettings', () => {
-  it('uses the shared page loading state for the initial entitlement read', () => {
+  it('uses the shared page loading state for the initial entitlement read', async () => {
     entitlementLoading = true;
     mswServer.use(
       catalogHandler(),
@@ -154,7 +154,8 @@ describe('BillingSettings', () => {
 
     renderWithProviders(<BillingSettings />);
 
-    expect(screen.getByRole('status')).toHaveAccessibleName('Loading billing…');
+    // The `status` announcement is held back until the spinner becomes visible.
+    expect(await screen.findByRole('status')).toHaveAccessibleName('Loading billing…');
   });
 
   it('omits disabled billing instead of presenting a loading state', () => {

@@ -62,7 +62,9 @@ test('primary navigation loads the destination route', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Performance' })).toBeVisible();
 });
 
-test('runs and schedules appear together after their initial reads', async ({ page }) => {
+test('runs resolve on their own while the schedules empty state waits for its read', async ({
+  page,
+}) => {
   await stubAuthedShell(page);
   let release!: () => void;
   const pending = new Promise<void>((resolve) => {
@@ -75,14 +77,17 @@ test('runs and schedules appear together after their initial reads', async ({ pa
   });
   await page.goto(fixtureProjectPath('/runs'));
   try {
-    await expect(page.getByRole('status', { name: 'Loading runs…' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'No runs yet' })).toHaveCount(0);
+    // The runs list owns its first paint: an empty read is shown as soon as it
+    // settles. The schedules card must not pre-announce emptiness while its
+    // read is still in flight — that state belongs to the settled answer.
+    await expect(page.getByRole('heading', { name: 'No runs yet' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Scheduled audits' })).toBeVisible();
     await expect(page.getByText('No scheduled audits yet.')).toHaveCount(0);
   } finally {
     release();
   }
-  await expect(page.getByRole('heading', { name: 'No runs yet' })).toBeVisible();
   await expect(page.getByText('No scheduled audits yet.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No runs yet' })).toBeVisible();
 });
 
 test('compact navigation hands focus to persistent tools and returns it on Escape', async ({

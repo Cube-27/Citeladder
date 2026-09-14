@@ -49,7 +49,8 @@ describe('application route recovery', () => {
     render(<RouterProvider router={router} />);
 
     await screen.findByRole('button', { name: 'Finish session' });
-    expect(bootstrap).toHaveBeenCalledTimes(1);
+    // The bootstrap effect flushes asynchronously after the button paints.
+    await waitFor(() => expect(bootstrap).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole('heading', { name: 'Issues' })).not.toBeInTheDocument();
 
