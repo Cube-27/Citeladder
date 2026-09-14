@@ -74,8 +74,8 @@ export function CookieBanner() {
                 href="/cookies"
                 className="text-foreground underline underline-offset-4 hover:no-underline"
               >
-                Cookie Policy
-              </a>{'.'}
+                Cookie Policy.
+              </a>
             </p>
           </div>
           {/* Reject first in the DOM so it is the first tab stop, and visually
