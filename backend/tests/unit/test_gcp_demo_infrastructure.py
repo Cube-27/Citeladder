@@ -388,13 +388,16 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
     assert len(workers) == 10
     caddy = (RUNTIME / "Caddyfile").read_text(encoding="utf-8")
     assert "trusted_proxies static __CLOUDFLARE_CIDRS__" in caddy
-    mcp_matcher = next(
-        line for line in caddy.splitlines() if "@mcp_protocol path" in line
+    routing = (RUNTIME / "frontend-routes.caddy").read_text(encoding="utf-8")
+    backend_matcher = next(
+        line for line in routing.splitlines() if line.startswith("@backend path ")
     )
     # /register is absent on purpose: it is the frontend's signup page, and
     # proxying it to the backend 405s every GET. MCP's RFC 7591 registration
     # endpoint moved to /mcp/register, which /mcp/* already covers.
-    assert mcp_matcher.split()[2:] == [
+    assert backend_matcher.split()[2:] == [
+        "/api",
+        "/api/*",
         "/mcp",
         "/mcp/*",
         "/authorize",
@@ -403,7 +406,7 @@ def test_compose_binds_internal_services_to_loopback_and_runs_all_workers() -> N
         "/.well-known/oauth-authorization-server",
         "/.well-known/oauth-protected-resource/mcp",
     ]
-    assert "reverse_proxy @mcp_protocol 127.0.0.1:8000" in caddy
+    assert "reverse_proxy @backend {$BACKEND_ORIGIN:127.0.0.1:8000}" in routing
     # The frontend is a public surface: it gets no env_file and no backend
     # secret. Reading the parsed service means a key added at the end of the
     # block, past where the old text slice stopped, is still caught.
