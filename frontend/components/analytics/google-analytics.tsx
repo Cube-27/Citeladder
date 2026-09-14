@@ -1,6 +1,5 @@
 'use client';
 
-import Script from 'next/script';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 import { hasAnalyticsConsent, subscribeToConsent } from '@/lib/consent/cookie-consent';
@@ -20,11 +19,11 @@ export function GoogleAnalytics({ measurementId }: Readonly<{ measurementId: str
   const wasAllowed = useRef(false);
 
   /**
-   * Unmounting the two `Script` tags is not a revocation. By the time consent
-   * is withdrawn `gtag.js` has already executed, and it keeps its own timers
-   * and `dataLayer` queue that no longer belong to React — removing the
-   * elements leaves it collecting. Consent Mode is the only channel the tag
-   * itself listens on, so tell it, then drop the elements.
+   * Unmounting the two script tags is not a revocation. By the time consent is
+   * withdrawn `gtag.js` has already executed, and it keeps its own timers and
+   * `dataLayer` queue that no longer belong to React — removing the elements
+   * leaves it collecting. Consent Mode is the only channel the tag itself
+   * listens on, so tell it, then drop the elements.
    */
   useEffect(() => {
     if (allowed) {
@@ -41,19 +40,23 @@ export function GoogleAnalytics({ measurementId }: Readonly<{ measurementId: str
 
   return (
     <>
-      <Script
+      <script
+        async
+        data-testid="external-script"
         src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
-        strategy="lazyOnload"
       />
-      <Script id="google-analytics" strategy="lazyOnload">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          window.gtag = gtag;
-          gtag('js', new Date());
-          gtag('config', '${measurementId}');
-        `}
-      </Script>
+      <script
+        data-testid="google-analytics"
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            window.gtag = gtag;
+            gtag('js', new Date());
+            gtag('config', '${measurementId}');
+          `,
+        }}
+      />
     </>
   );
 }

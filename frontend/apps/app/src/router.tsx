@@ -7,24 +7,6 @@ import {
   PrivateRouteLayout,
   ProjectsRoute,
 } from './private-routes';
-import { DemandRoute, PerformanceRoute } from './product-routes-demand-performance';
-import {
-  OpportunitiesRouteElement,
-  RunDetailRouteElement,
-  RunsRouteElement,
-  VisibilityRouteElement,
-} from './product-routes-opportunity-visibility-runs';
-import {
-  AiReferralsRouteElement,
-  ContentRouteElement,
-  ProductsRouteElement,
-  PromptsRouteElement,
-} from './product-routes-prompts-content-commerce-referrals';
-import {
-  AcceptInvitationRouteElement,
-  SettingsRouteElement,
-} from './product-routes-settings-invitations';
-import { IssuesRoute, WebsitePageDetailRoute, WebsiteRoute } from './product-routes-site-issues';
 
 export const router = createBrowserRouter([
   {
@@ -51,63 +33,126 @@ export const router = createBrowserRouter([
           },
           {
             path: '/site',
-            element: <WebsiteRoute />,
+            lazy: () =>
+              import('./product-routes-site-issues').then(({ WebsiteRoute }) => ({
+                Component: WebsiteRoute,
+              })),
           },
           {
             path: '/site/crawls/:crawlId/pages/:siteUrlId',
-            element: <WebsitePageDetailRoute />,
+            lazy: () =>
+              import('./product-routes-site-issues').then(({ WebsitePageDetailRoute }) => ({
+                Component: WebsitePageDetailRoute,
+              })),
           },
           {
             path: '/issues',
-            element: <IssuesRoute />,
+            lazy: () =>
+              import('./product-routes-site-issues').then(({ IssuesRoute }) => ({
+                Component: IssuesRoute,
+              })),
           },
           {
             path: '/demand',
-            element: <DemandRoute />,
+            lazy: () =>
+              import('./product-routes-demand-performance').then(({ DemandRoute }) => ({
+                Component: DemandRoute,
+              })),
           },
           {
             path: '/performance',
-            element: <PerformanceRoute />,
+            lazy: () =>
+              import('./product-routes-demand-performance').then(({ PerformanceRoute }) => ({
+                Component: PerformanceRoute,
+              })),
           },
           {
             path: '/opportunities',
-            element: <OpportunitiesRouteElement />,
+            lazy: () =>
+              import('./product-routes-opportunity-visibility-runs').then(
+                ({ OpportunitiesRouteElement }) => ({
+                  Component: OpportunitiesRouteElement,
+                }),
+              ),
           },
           {
             path: '/visibility',
-            element: <VisibilityRouteElement />,
+            lazy: () =>
+              import('./product-routes-opportunity-visibility-runs').then(
+                ({ VisibilityRouteElement }) => ({
+                  Component: VisibilityRouteElement,
+                }),
+              ),
           },
           {
             path: '/runs',
-            element: <RunsRouteElement />,
+            lazy: () =>
+              import('./product-routes-opportunity-visibility-runs').then(
+                ({ RunsRouteElement }) => ({
+                  Component: RunsRouteElement,
+                }),
+              ),
           },
           {
             path: '/runs/:runId',
-            element: <RunDetailRouteElement />,
+            lazy: () =>
+              import('./product-routes-opportunity-visibility-runs').then(
+                ({ RunDetailRouteElement }) => ({
+                  Component: RunDetailRouteElement,
+                }),
+              ),
           },
           {
             path: '/prompts',
-            element: <PromptsRouteElement />,
+            lazy: () =>
+              import('./product-routes-prompts-content-commerce-referrals').then(
+                ({ PromptsRouteElement }) => ({
+                  Component: PromptsRouteElement,
+                }),
+              ),
           },
           {
             path: '/content',
-            element: <ContentRouteElement />,
+            lazy: () =>
+              import('./product-routes-prompts-content-commerce-referrals').then(
+                ({ ContentRouteElement }) => ({
+                  Component: ContentRouteElement,
+                }),
+              ),
           },
           {
             path: '/products',
-            element: <ProductsRouteElement />,
+            lazy: () =>
+              import('./product-routes-prompts-content-commerce-referrals').then(
+                ({ ProductsRouteElement }) => ({
+                  Component: ProductsRouteElement,
+                }),
+              ),
           },
           {
             path: '/ai-referrals',
-            element: <AiReferralsRouteElement />,
+            lazy: () =>
+              import('./product-routes-prompts-content-commerce-referrals').then(
+                ({ AiReferralsRouteElement }) => ({
+                  Component: AiReferralsRouteElement,
+                }),
+              ),
           },
           {
             path: '/settings',
-            element: <SettingsRouteElement />,
+            lazy: () =>
+              import('./product-routes-settings-invitations').then(({ SettingsRouteElement }) => ({
+                Component: SettingsRouteElement,
+              })),
           },
           {
             path: '/invitations/accept',
-            element: <AcceptInvitationRouteElement />,
+            lazy: () =>
+              import('./product-routes-settings-invitations').then(
+                ({ AcceptInvitationRouteElement }) => ({
+                  Component: AcceptInvitationRouteElement,
+                }),
+              ),
           },
         ],
       },

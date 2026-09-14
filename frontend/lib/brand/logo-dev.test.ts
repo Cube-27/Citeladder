@@ -33,6 +33,7 @@ describe('logoDevUrl', () => {
   }
 
   it('is disabled when no token is configured', async () => {
+    delete process.env.NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE;
     const { logoDevUrl } = await load();
     expect(logoDevUrl('https://acme.com', 24)).toBeNull();
   });

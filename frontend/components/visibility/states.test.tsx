@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ActiveRun } from '@/lib/visibility/dashboard';
+import { renderWithProviders as render } from '@/test/render';
 
 import { ActiveRunBanner } from './active-run-banner';
 import { VisibilityEmptyState } from './empty-state';

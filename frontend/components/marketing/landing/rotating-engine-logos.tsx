@@ -1,5 +1,3 @@
-import Image from 'next/image';
-
 import { ENGINE_ROTOR_STAGGER_MS } from '@/lib/config/marketing';
 import { cn } from '@/lib/utils';
 
@@ -53,11 +51,12 @@ function ProviderLogo({ logo }: Readonly<{ logo: LogoKey }>) {
   }
   if (logo === 'grok') {
     return (
-      <Image
+      <img
         src="/brand/grok.webp"
         alt=""
         width={30}
         height={30}
+        loading="lazy"
         className="size-7 shrink-0 object-contain"
       />
     );

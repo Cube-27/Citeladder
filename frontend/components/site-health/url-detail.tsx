@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type MutableRefObject } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
@@ -38,9 +38,9 @@ export function UrlDetail({
   siteUrlId,
 }: Readonly<{ crawlId: string; siteUrlId: string }>) {
   const workspaceId = useActiveWorkspaceId();
-  const router = useRouter();
+  const router = useNavigate();
   const queryClient = useQueryClient();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams()[0];
   // A rerun that minted a NEW crawl navigates here with `?rerun=1`; start
   // polling on mount so the fresh run's queued/running progress is observed
   // without a manual reload.
@@ -88,9 +88,7 @@ export function UrlDetail({
             ? { ...previous, crawl_id: result.crawl_id, analysis_status: result.analysis_status }
             : previous,
       );
-      router.push(
-        `/site/crawls/${result.crawl_id}/pages/${result.site_url_id}?${RERUN_SEARCH_PARAM}=1`,
-      );
+      router(`/site/crawls/${result.crawl_id}/pages/${result.site_url_id}?${RERUN_SEARCH_PARAM}=1`);
     },
     onError: (error) => setRerunError(rerunErrorMessage(error)),
   });

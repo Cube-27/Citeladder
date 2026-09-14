@@ -5,6 +5,7 @@ set -euo pipefail
 : "${REGION:?REGION is required}"
 : "${BACKEND_IMAGE:?BACKEND_IMAGE is required}"
 : "${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}"
+: "${VITE_APP_IMAGE:?VITE_APP_IMAGE is required}"
 : "${BACKUP_BUCKET:?BACKUP_BUCKET is required}"
 : "${DOMAIN_NAME:?DOMAIN_NAME is required}"
 : "${SOURCE_COMMIT:?SOURCE_COMMIT is required}"
@@ -24,10 +25,11 @@ DEMO_MODE="${DEMO_MODE:-false}"
 [[ "$DEMO_MODE" =~ ^(true|false)$ ]]
 [[ "$BACKEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
 [[ "$FRONTEND_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
+[[ "$VITE_APP_IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]
 expected_registry="${REGION}-docker.pkg.dev/${PROJECT_ID}/citeladder-demo"
 [[ "$BACKEND_IMAGE" == "$expected_registry/backend@sha256:"* ]]
 [[ "$FRONTEND_IMAGE" == "$expected_registry/frontend@sha256:"* ]]
-
+[[ "$VITE_APP_IMAGE" == "$expected_registry/vite-app@sha256:"* ]]
 had_previous=false
 running_services=""
 if test -f /opt/citeladder/runtime.env && test -f /opt/citeladder/compose.gcp.yml; then
@@ -120,6 +122,7 @@ printf '%s\n' "$origin_key" > /opt/citeladder/tls/origin.key
   write_env REGION "$REGION"
   write_env BACKEND_IMAGE "$BACKEND_IMAGE"
   write_env FRONTEND_IMAGE "$FRONTEND_IMAGE"
+  write_env VITE_APP_IMAGE "$VITE_APP_IMAGE"
   write_env BACKUP_BUCKET "$BACKUP_BUCKET"
   write_env DOMAIN_NAME "$DOMAIN_NAME"
   write_env SOURCE_COMMIT "$SOURCE_COMMIT"
@@ -160,7 +163,7 @@ mv /opt/citeladder/runtime.env.new /opt/citeladder/runtime.env
 
 cd /opt/citeladder
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-stopped_services=(caddy frontend web audit-worker audit-scheduler site-health-worker \
+stopped_services=(caddy frontend vite-app web audit-worker audit-scheduler site-health-worker \
   brand-discovery-worker content-worker agent-worker analytics-worker \
   queue-sweeper integration-worker integration-dispatcher)
 restore_previous_deployment() {

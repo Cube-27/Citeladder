@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 /**
@@ -39,9 +38,9 @@ export function Linkify({ text }: Readonly<{ text: string }>) {
     // only an absolute URL leaves the site and needs the new-tab treatment.
     nodes.push(
       href.startsWith('/') ? (
-        <Link key={key} href={href} className={LINK}>
+        <a key={key} href={href} className={LINK}>
           {href}
-        </Link>
+        </a>
       ) : (
         <a key={key} href={href} target="_blank" rel="noreferrer" className={LINK}>
           {href}

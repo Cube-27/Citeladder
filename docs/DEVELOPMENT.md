@@ -11,7 +11,7 @@ environment gotchas that otherwise waste substantial time. Pair this with
 |------|---------|-------|
 | Python | 3.12+ | Backend |
 | [`uv`](https://docs.astral.sh/uv/) | latest | Backend dependency + venv manager |
-| Node.js | 22+ | Frontend. 22 is the SUPPORTED MINIMUM and the version CI validates; `engines.node` says `>=22` in both `package.json` files. The production frontend image pins Node 26 deliberately (`frontend/Dockerfile`) -- newer than CI, so treat a Node-26-only failure as a release-time finding, not a CI gap. Raise the minimum only by moving CI and both `engines` together. |
+| Node.js | 22+ | Frontend. 22 is the SUPPORTED MINIMUM and the version CI validates; `engines.node` says `>=22` in `frontend/package.json`. The production frontend images pin Node 26 deliberately (`frontend/Dockerfile`, `frontend/apps/app/Dockerfile`) -- newer than CI, so treat a Node-26-only failure as a release-time finding, not a CI gap. Raise the minimum only by moving CI and `engines` together. |
 | pnpm | 11.9+ | Frontend package manager; pinned in `frontend/package.json` |
 | PostgreSQL | 15+ | Via Docker or local |
 | Docker + Compose | latest | Local stack |
@@ -50,19 +50,21 @@ configuration/secrets required by its owner.
 cd frontend
 echo "BACKEND_ORIGIN=http://localhost:8000" > .env.local
 pnpm install
-pnpm dev                    # http://127.0.0.1:3000
+pnpm dev                    # Astro marketing SSR: http://127.0.0.1:3000
+pnpm dev:vite               # Vite authenticated SPA: http://127.0.0.1:3001/login
 ```
 
-`BACKEND_ORIGIN` is **server-only**. The browser calls relative `/api/*`; Next.js
-`rewrites()` proxy those to `BACKEND_ORIGIN` (see gotcha 2 below).
+`BACKEND_ORIGIN` is **server-only**. The browser calls relative `/api/*`.
+Astro and Vite development proxies keep those requests same-origin (see gotcha
+2 below).
 
-The in-progress Vite application target shares the same dependencies, API client,
-styles, public assets, and server-only `BACKEND_ORIGIN`. It is deliberately
-non-authoritative while migration work continues:
+Astro owns marketing and public routes; Vite owns authenticated product routes.
+They share dependencies, API client, styles, public assets, and the server-only
+`BACKEND_ORIGIN`:
 
 ```bash
-pnpm dev:vite               # http://127.0.0.1:3001/login
-pnpm build:vite
+pnpm build                  # Astro marketing SSR build
+pnpm build:vite             # Vite authenticated SPA build
 pnpm preview:vite           # production bundle preview on port 3001
 ```
 
@@ -94,8 +96,9 @@ from, and does not replace, the Playwright Test runner used by `pnpm test:e2e`.
 ## Running the full stack with Docker Compose
 
 The Compose path is the clean-clone workflow. From the repository root, it builds and starts
-PostgreSQL, applies the migration baseline once, then starts FastAPI, the browser-facing Next.js
-frontend, and the workers. Do not run host-side migrations or `pnpm dev` alongside this stack.
+PostgreSQL, applies the migration baseline once, then starts FastAPI, the
+Astro marketing frontend, and the workers. Do not run host-side migrations or
+`pnpm dev` alongside this stack.
 
 ```bash
 cp .env.example .env
@@ -111,8 +114,7 @@ curl -fsS http://localhost:3000/
 curl -fsS http://localhost:8000/health
 ```
 
-To run the opt-in Vite production container alongside the authoritative Next
-frontend, enable its migration profile:
+The authenticated Vite container runs beside Astro in the production topology:
 
 ```bash
 env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
@@ -122,9 +124,11 @@ env -u POSTGRES_PASSWORD -u POSTGRES_USER -u POSTGRES_DB -u DATABASE_URL \
 curl -fsS http://localhost:3001/health
 ```
 
-This starts the Vite/Caddy target on port 3001 without changing the Next service
-on port 3000. The Caddy runtime proxies the same browser and protocol paths to
-FastAPI and serves direct SPA route refreshes from the built `index.html`.
+This starts the Vite/Caddy target on port 3001 beside Astro on port 3000. In
+production, Caddy is the same-origin ingress: it sends explicit authenticated
+SPA paths and `/app-assets/*` to Vite, backend API/MCP/OAuth paths to FastAPI,
+and all remaining public routes to Astro. The Vite runtime serves direct SPA
+route refreshes from the built `index.html`.
 
 The stack's frontend is at `http://localhost:3000`, and FastAPI is at
 `http://localhost:8000`. Inspect readiness with the same `env -u` wrapper (gotcha 1) —
@@ -183,17 +187,17 @@ uv run ruff check .
 ```bash
 cd frontend
 pnpm test             # Vitest (network mocked with MSW)
-pnpm lint             # Oxlint (React/Next/TypeScript/a11y rules)
+pnpm lint             # Oxlint (React/Astro/TypeScript/a11y rules)
 pnpm check:policy     # architecture + design-token guards
 pnpm check:dead-code  # Knip module-graph/dependency gate
 pnpm exec tsc --noEmit # type check
-pnpm build            # next build
-pnpm build:vite       # Vite application target
+pnpm build            # Astro marketing SSR build
+pnpm build:vite       # Vite authenticated SPA build
 pnpm test:e2e         # Playwright (needs a browser + a running stack)
 ```
 
-The default Playwright suite uses the existing mocked browser fixtures and its
-Next development server. The real-stack Content integration has a separate
+The default Playwright suite uses the existing mocked browser fixtures and the
+frontend development servers. The real-stack Content integration has a separate
 configuration and lifecycle: run it explicitly with
 `pnpm exec playwright test --config e2e/content-integration.config.ts`.
 Neither mode is evidence of live provider acceptance; those checks remain
@@ -440,7 +444,7 @@ explicitly. `docker-compose.yml` carries this note as a baked-in comment.
 (This gotcha applies to the recommended Compose stack. Native development and tests use
 their own configured PostgreSQL connection.)
 
-### Gotcha 2 — tunnel double CORS header → same-origin rewrites
+### Gotcha 2 — tunnel double CORS header → same-origin proxying
 
 **Symptom:** frontend network calls fail in the browser with a CORS error about **duplicate**
 `Access-Control-Allow-Origin` headers — but `curl` against the same backend succeeds.
@@ -450,17 +454,11 @@ FastAPI backend that also sets a specific ACAO (required when `allow_credentials
 produces **two** ACAO headers, which browsers reject. `curl` does not enforce CORS, so it
 cannot reproduce the failure.
 
-**Fix:** the browser never talks cross-origin to the backend. Next.js `rewrites()` proxy
-`/api/:path*` → the server-only `BACKEND_ORIGIN`, so all browser calls are **same-origin**
-(`/api/...` relative). The API client uses a relative base (`/api/v1`), `cache: 'no-store'`,
-and `credentials: 'include'`.
-
-```ts
-// frontend/next.config.ts
-async rewrites() {
-  return [{ source: '/api/:path*', destination: `${process.env.BACKEND_ORIGIN}/api/:path*` }];
-}
-```
+**Fix:** the browser never talks cross-origin to the backend. Astro and Vite
+development proxies, and production Caddy, proxy relative `/api/*` to the
+server-only `BACKEND_ORIGIN`, so all browser calls are **same-origin**. The API
+client uses a relative base (`/api/v1`), `cache: 'no-store'`, and
+`credentials: 'include'`.
 
 **Always test this in a real browser, not curl.**
 
@@ -469,7 +467,7 @@ async rewrites() {
 When previewing the app behind a tunnel/proxy:
 
 1. Point the frontend's `BACKEND_ORIGIN` at the running backend.
-2. Ensure the dev server accepts the proxied host (Next.js `allowedDevOrigins` / equivalent
-   blocked-host config) so the preview host isn't rejected.
+2. Ensure the Astro or Vite dev server accepts the proxied host so the preview
+   host isn't rejected.
 3. Confirm every browser network call hits relative `/api/*` (same-origin) — not a
    cross-origin backend URL. This is what avoids the gotcha-2 double-CORS failure.

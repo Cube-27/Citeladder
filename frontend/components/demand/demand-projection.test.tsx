@@ -1,5 +1,7 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -7,6 +9,10 @@ import { ApiError } from '@/lib/api/errors';
 import { createAppQueryClient } from '@/lib/api/query-client';
 
 import { DemandProjection } from './demand-projection';
+
+function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return <MemoryRouter initialEntries={['/demand']}>{children}</MemoryRouter>;
+}
 
 // Mutable so a test can switch projects mid-render; `vi.hoisted` keeps it
 // legal inside the hoisted mock factory.
@@ -125,6 +131,7 @@ describe('DemandProjection', () => {
           <DemandProjection />
         </TooltipProvider>
       </QueryClientProvider>,
+      { wrapper: RouterTestWrapper },
     );
   }
 

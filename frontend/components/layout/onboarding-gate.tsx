@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -94,7 +94,7 @@ function waitsForEntitlement(status: SelectionStatus, loading: boolean): boolean
  * reader to onboarding.
  */
 export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) {
-  const pathname = usePathname();
+  const pathname = useLocation().pathname;
   const {
     status,
     errorScope,
@@ -185,10 +185,10 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
  * up in.
  */
 function useOnboardingRedirect(redirecting: boolean, workspaceId: string | null) {
-  const router = useRouter();
+  const router = useNavigate();
   useEffect(() => {
     if (!redirecting || !workspaceId) return;
-    router.replace(workspaceDestination('/onboarding', null, workspaceId));
+    router(workspaceDestination('/onboarding', null, workspaceId), { replace: true });
   }, [redirecting, workspaceId, router]);
 }
 
@@ -273,7 +273,7 @@ function noticeHref(pathname: string, workspaceId: string | null): string {
 function NoticeLink({ href, children }: Readonly<{ href: string; children: ReactNode }>) {
   return (
     <Button asChild variant="secondary" className="w-fit">
-      <Link href={href}>{children}</Link>
+      <Link to={href}>{children}</Link>
     </Button>
   );
 }

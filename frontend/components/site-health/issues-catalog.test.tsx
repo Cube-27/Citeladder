@@ -1,6 +1,8 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { act, screen, waitFor, within } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
@@ -14,56 +16,40 @@ function IssuesCatalog(props: Readonly<{ crawlId: string }>) {
   return <ScopedIssuesCatalog workspaceId={WORKSPACE} {...props} />;
 }
 
-const navigation = vi.hoisted(() => {
-  let entries = [''];
-  let index = 0;
-  const listeners = new Set<() => void>();
-  const notify = () => listeners.forEach((listener) => listener());
-  const set = (search: string) => {
-    entries = [search.replace(/^\?/, '')];
-    index = 0;
-    notify();
-  };
-  const push = vi.fn((href: string) => {
-    const search = href.split('?')[1] ?? '';
-    entries = [...entries.slice(0, index + 1), search];
-    index += 1;
-    notify();
-  });
-  return {
-    back: () => {
-      if (index > 0) index -= 1;
-      notify();
-    },
-    forward: () => {
-      if (index < entries.length - 1) index += 1;
-      notify();
-    },
-    get: () => entries[index] ?? '',
-    listeners,
-    push,
-    set,
-  };
-});
+function RouterControls() {
+  const navigate = useNavigate();
+  const { pathname, search } = useLocation();
+  return (
+    <>
+      <button
+        aria-label="History back"
+        data-testid="history-back"
+        type="button"
+        onClick={() => navigate(-1)}
+      />
+      <button
+        aria-label="History forward"
+        data-testid="history-forward"
+        type="button"
+        onClick={() => navigate(1)}
+      />
+      <output data-testid="location">{pathname + search}</output>
+    </>
+  );
+}
 
-vi.mock('next/navigation', async () => {
-  const { useSyncExternalStore } = await import('react');
-  return {
-    usePathname: () => '/issues',
-    useRouter: () => ({ push: navigation.push }),
-    useSearchParams: () => {
-      const search = useSyncExternalStore(
-        (listener) => {
-          navigation.listeners.add(listener);
-          return () => navigation.listeners.delete(listener);
-        },
-        navigation.get,
-        navigation.get,
-      );
-      return new URLSearchParams(search);
-    },
-  };
-});
+function renderIssues(
+  ui: ReactElement,
+  initialLocation = window.location.pathname + window.location.search,
+) {
+  window.history.replaceState(null, '', initialLocation);
+  return renderWithProviders(
+    <>
+      {ui}
+      <RouterControls />
+    </>,
+  );
+}
 
 const CRAWL = '44444444-4444-4444-8444-444444444444';
 const ISSUE_A = 'aaaaaaaa-1111-4111-8111-111111111111';
@@ -155,8 +141,8 @@ const summary = {
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
-  navigation.set('');
-  navigation.push.mockClear();
+  window.history.replaceState(null, '', '/issues');
+
   mswServer.use(
     http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () =>
       HttpResponse.json(issueDetail()),
@@ -188,7 +174,7 @@ describe('IssuesCatalog', () => {
       }),
     );
 
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     const loadingStatus = await screen.findByRole('status', { name: 'Loading issues…' });
     expect(loadingStatus.closest('[aria-busy="true"]')).toBeInTheDocument();
@@ -235,7 +221,7 @@ describe('IssuesCatalog', () => {
       }),
     );
 
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findByRole('link', { name: /Homepage/ });
 
     await user.click(screen.getByRole('button', { name: /Canonical tag is missing/ }));
@@ -266,7 +252,7 @@ describe('IssuesCatalog', () => {
       ),
     );
 
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     // Anchor on the DETAIL response, not the catalog row: the row renders
     // first, so asserting here would pass even if the detail pager arrived.
     await screen.findByRole('link', { name: /Homepage/ });
@@ -278,8 +264,10 @@ describe('IssuesCatalog', () => {
 
   it('seeds the server query from an Overview rule deep link', async () => {
     const seen: URLSearchParams[] = [];
-    navigation.set(
-      'rule=aeo.website_schema&dimension=aeo&query=schema&page_kind=article&cursor=page-two&campaign=overview',
+    window.history.replaceState(
+      null,
+      '',
+      '/issues?rule=aeo.website_schema&dimension=aeo&query=schema&page_kind=article&cursor=page-two&campaign=overview',
     );
     mswServer.use(
       http.get(`/api/v1/site-crawls/${CRAWL}/issues`, ({ request }) => {
@@ -288,7 +276,7 @@ describe('IssuesCatalog', () => {
       }),
     );
 
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     expect(await screen.findAllByText('WebSite schema is missing')).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: 'First page' })).not.toBeDisabled();
@@ -302,31 +290,33 @@ describe('IssuesCatalog', () => {
   });
 
   it('writes filters to history and reflects back/forward navigation', async () => {
-    navigation.set('rule=aeo.website_schema&campaign=overview');
+    window.history.replaceState(null, '', '/issues?rule=aeo.website_schema&campaign=overview');
     mswServer.use(
       http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
         HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
       ),
     );
     const user = userEvent.setup();
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findAllByText('WebSite schema is missing');
 
     await user.click(screen.getByRole('radio', { name: 'Medium (23)' }));
-    await waitFor(() => expect(navigation.get()).toContain('severity=medium'));
-    expect(navigation.get()).toContain('rule=aeo.website_schema');
-    expect(navigation.get()).toContain('campaign=overview');
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('severity=medium'),
+    );
+    expect(screen.getByTestId('location')).toHaveTextContent('rule=aeo.website_schema');
+    expect(screen.getByTestId('location')).toHaveTextContent('campaign=overview');
 
-    act(() => navigation.back());
+    await user.click(screen.getByTestId('history-back'));
     await waitFor(() =>
       expect(screen.getByRole('radio', { name: 'All (47)' })).toHaveAttribute(
         'aria-checked',
         'true',
       ),
     );
-    expect(navigation.get()).not.toContain('severity=medium');
+    expect(screen.getByTestId('location')).not.toHaveTextContent('severity=medium');
 
-    act(() => navigation.forward());
+    await user.click(screen.getByTestId('history-forward'));
     await waitFor(() =>
       expect(screen.getByRole('radio', { name: 'Medium (23)' })).toHaveAttribute(
         'aria-checked',
@@ -336,22 +326,24 @@ describe('IssuesCatalog', () => {
   });
 
   it('drops a filter-bound cursor while preserving unknown URL params', async () => {
-    navigation.set('cursor=page-two&campaign=overview');
+    window.history.replaceState(null, '', '/issues?cursor=page-two&campaign=overview');
     mswServer.use(
       http.get(`/api/v1/site-crawls/${CRAWL}/issues`, () =>
         HttpResponse.json({ items: [issue()], next_cursor: null, summary }),
       ),
     );
     const user = userEvent.setup();
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     const trigger = await screen.findByRole('button', { name: 'Filter by page kind' });
 
     await user.click(trigger);
     await user.click(await screen.findByRole('menuitemradio', { name: 'Article' }));
 
-    await waitFor(() => expect(navigation.get()).toContain('page_kind=article'));
-    expect(navigation.get()).not.toContain('cursor=');
-    expect(navigation.get()).toContain('campaign=overview');
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('page_kind=article'),
+    );
+    expect(screen.getByTestId('location')).not.toHaveTextContent('cursor=');
+    expect(screen.getByTestId('location')).toHaveTextContent('campaign=overview');
   });
 
   it('renders the API-owned summary and grouped issue rows', async () => {
@@ -361,7 +353,7 @@ describe('IssuesCatalog', () => {
       ),
     );
 
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     expect(await screen.findAllByText('WebSite schema is missing')).not.toHaveLength(0);
     // Chip counts (tiles removed): All (47), Medium (23), AEO (17). The counts
@@ -400,7 +392,7 @@ describe('IssuesCatalog', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findAllByText('WebSite schema is missing');
 
     await user.click(screen.getByRole('radio', { name: 'Medium (23)' }));
@@ -432,7 +424,7 @@ describe('IssuesCatalog', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     expect(
       await screen.findByText((_, element) => element?.textContent === '47 defect issue types'),
     ).toBeInTheDocument();
@@ -466,7 +458,7 @@ describe('IssuesCatalog', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     const trigger = await screen.findByRole('button', { name: 'Filter by page kind' });
     // The initial unfiltered request carries no page-kind param.
     await screen.findAllByText('WebSite schema is missing');
@@ -496,11 +488,13 @@ describe('IssuesCatalog', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findAllByText('WebSite schema is missing');
 
     await user.click(screen.getByRole('button', { name: /WebSite schema is missing/ }));
-    await waitFor(() => expect(navigation.get()).toContain(`issue=${ISSUE_A}`));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(`issue=${ISSUE_A}`),
+    );
 
     expect(await screen.findByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
     const link = await screen.findByRole('link', { name: /Homepage/ });
@@ -543,7 +537,7 @@ describe('IssuesCatalog', () => {
     );
 
     const user = userEvent.setup();
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findAllByText('WebSite schema is missing');
 
     await screen.findByRole('link', { name: /Homepage/ });
@@ -571,13 +565,15 @@ describe('IssuesCatalog', () => {
     await user.click(screen.getAllByRole('button', { name: 'Next' })[0]!);
     await screen.findByRole('link', { name: /Page Two/ });
     await user.click(screen.getAllByRole('button', { name: 'Next' })[1]!);
-    await waitFor(() => expect(navigation.get()).toContain('cursor=catalog-page-2'));
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('cursor=catalog-page-2'),
+    );
     expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
 
     await user.click(screen.getAllByRole('button', { name: 'Next' })[0]!);
     await screen.findByRole('link', { name: /Page Two/ });
     await user.click(screen.getByRole('button', { name: 'First page' }));
-    await waitFor(() => expect(navigation.get()).not.toContain('cursor='));
+    await waitFor(() => expect(screen.getByTestId('location')).not.toHaveTextContent('cursor='));
     expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
   });
 
@@ -595,7 +591,7 @@ describe('IssuesCatalog', () => {
       ),
     );
 
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     // Scoped to the badge row: the page-kind filter <select> also lists every
     // type label as an <option>.
@@ -611,7 +607,7 @@ describe('IssuesCatalog', () => {
       ),
     );
 
-    renderWithProviders(<IssuesCatalog crawlId={CRAWL} />);
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     expect(await screen.findAllByText('WebSite schema is missing')).not.toHaveLength(0);
     expect(screen.queryByText('Affects')).not.toBeInTheDocument();

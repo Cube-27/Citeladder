@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect } from 'react';
 
 import { useOptionalProjectContext, useProjectContext } from '@/lib/project/project-context';
@@ -96,17 +96,18 @@ export function useProjectHref() {
  * Replacement is bookkeeping, so it creates no duplicate Back entry.
  */
 export function useCanonicalProjectUrl(enabled: boolean) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const router = useNavigate();
+  const pathname = useLocation().pathname;
+  const searchParams = useSearchParams()[0];
   const { activeProjectId } = useProjectContext();
 
   useEffect(() => {
     if (!enabled || !pathname || !activeProjectId || searchParams?.has(PROJECT_PARAM)) return;
-    router.replace(
+    router(
       `${projectDestination(pathname, searchParams, activeProjectId)}${window.location.hash}`,
       {
-        scroll: false,
+        replace: true,
+        preventScrollReset: true,
       },
     );
   }, [activeProjectId, enabled, pathname, router, searchParams]);
@@ -161,9 +162,9 @@ export type SelectProjectOptions = {
  * - choosing the project already in the URL does nothing at all.
  */
 export function useSelectProject() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const router = useNavigate();
+  const pathname = useLocation().pathname;
+  const searchParams = useSearchParams()[0];
   const { activeProjectId, setActiveProjectId } = useProjectContext();
 
   return useCallback(
@@ -187,9 +188,9 @@ export function useSelectProject() {
       // being left behind: the same project with the parameter simply absent,
       // or an entry the caller knows is now dead (a deleted project).
       if (replace || (samePage && projectId === activeProjectId)) {
-        router.replace(target, { scroll: false });
+        router(target, { replace: true, preventScrollReset: true });
       } else {
-        router.push(target);
+        router(target);
       }
     },
     [activeProjectId, pathname, router, searchParams, setActiveProjectId],
@@ -209,9 +210,9 @@ export function useSelectProject() {
  * selecting the one already active does nothing.
  */
 export function useSelectWorkspace() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const router = useNavigate();
+  const pathname = useLocation().pathname;
+  const searchParams = useSearchParams()[0];
   const { activeWorkspaceId, setActiveWorkspaceId } = useProjectContext();
 
   return useCallback(
@@ -219,7 +220,7 @@ export function useSelectWorkspace() {
       const samePage = destination === undefined || destination === pathname;
       if (workspaceId === activeWorkspaceId && samePage) return;
       setActiveWorkspaceId(workspaceId);
-      router.push(workspaceDestination(destination ?? pathname, searchParams, workspaceId));
+      router(workspaceDestination(destination ?? pathname, searchParams, workspaceId));
     },
     [activeWorkspaceId, pathname, router, searchParams, setActiveWorkspaceId],
   );

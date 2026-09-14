@@ -15,7 +15,11 @@ const activeProject = makeProject({
 
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  useProjectContext: () => ({ activeProject, isLoading: false }),
+  useProjectContext: () => ({
+    activeProject,
+    activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    isLoading: false,
+  }),
 }));
 
 import { AiReferralsScreen } from './ai-referrals-screen';
@@ -63,6 +67,10 @@ describe('AiReferralsScreen', () => {
     renderWithProviders(<AiReferralsScreen />);
 
     expect(await screen.findByText('No AI-referral data yet')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open integration settings' })).toHaveAttribute(
+      'href',
+      '/settings?tab=integrations&workspace=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    );
     expect(screen.getByTestId('ai-referrals-toolbar')).toBeVisible();
   });
 

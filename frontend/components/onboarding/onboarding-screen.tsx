@@ -1,10 +1,12 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 
 import { FlowActions, FlowShell, type FlowStep } from '@/components/auth/flow-shell';
 import { Button } from '@/components/ui/button';
+import { projectDestination } from '@/lib/navigation/project-destination';
+import { useProjectContext } from '@/lib/project/project-context';
 
 import { hasConfirmedIcp } from './icp-confirmation';
 import { useOnboardingFlow } from './onboarding-flow';
@@ -18,16 +20,20 @@ const STEPS: readonly FlowStep[] = [
 
 /** The onboarding transaction coordinator; each visual stage owns its own UI. */
 export function OnboardingScreen() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const pathname = useLocation().pathname;
+  const searchParams = useSearchParams()[0];
   // Cached routes may retain component state. A fresh Add project URL must
   // start a fresh transaction, and a hidden route must not keep redirecting.
-  if (pathname !== '/onboarding') return null;
+  if (pathname.replace(/\/+$/, '') !== '/onboarding') return null;
   return <OnboardingTransaction key={searchParams?.get('discovery') ?? 'new'} />;
 }
 
 function OnboardingTransaction() {
   const flow = useOnboardingFlow();
+  const { activeProjectId } = useProjectContext();
+  const projectsHref = activeProjectId
+    ? projectDestination('/projects', null, activeProjectId)
+    : '/projects';
   const stage = flow.isCompleting ? (
     <CreationStage committedProjectId={flow.completedProjectId} />
   ) : flow.step === 0 ? (
@@ -47,24 +53,31 @@ function OnboardingTransaction() {
       mainLabel="Project setup"
       steps={STEPS}
       currentStep={flow.step}
-      exitHref={flow.isAdditional ? '/projects' : '/'}
+      exitHref={flow.isAdditional ? projectsHref : '/'}
       align={flow.isCompleting ? 'center' : 'start'}
       measure={flow.isCompleting ? 'default' : flow.step === 2 ? 'wide' : 'default'}
-      actions={flow.isCompleting ? undefined : <OnboardingActions flow={flow} />}
+      actions={
+        flow.isCompleting ? undefined : (
+          <OnboardingActions flow={flow} projectsHref={projectsHref} />
+        )
+      }
     >
       {stage}
     </FlowShell>
   );
 }
 
-function OnboardingActions({ flow }: Readonly<{ flow: ReturnType<typeof useOnboardingFlow> }>) {
+function OnboardingActions({
+  flow,
+  projectsHref,
+}: Readonly<{ flow: ReturnType<typeof useOnboardingFlow>; projectsHref: string }>) {
   if (flow.step === 0) {
     return (
       <FlowActions
         secondary={
           flow.isAdditional ? (
             <Button asChild variant="ghost" size="md">
-              <Link href="/projects">Cancel</Link>
+              <Link to={projectsHref}>Cancel</Link>
             </Button>
           ) : undefined
         }

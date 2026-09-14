@@ -1,4 +1,4 @@
-import { useParams } from 'next/navigation';
+import { useParams } from 'react-router-dom';
 
 import {
   IssuesRouteContent,
@@ -14,6 +14,7 @@ export function WebsiteRoute() {
 /** `/site/crawls/:crawlId/pages/:siteUrlId` — one crawl-bounded page detail. */
 export function WebsitePageDetailRoute() {
   const { crawlId, siteUrlId } = useParams<{ crawlId: string; siteUrlId: string }>();
+  if (!crawlId || !siteUrlId) return null;
   return <WebsitePageDetailRouteContent crawlId={crawlId} siteUrlId={siteUrlId} />;
 }
 

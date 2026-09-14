@@ -143,7 +143,8 @@ function isComposeSensitive(path) {
     path === 'backend/uv.lock' ||
     path === 'frontend/package.json' ||
     path === 'frontend/pnpm-lock.yaml' ||
-    path === 'frontend/next.config.ts'
+    path.startsWith('frontend/apps/app/') ||
+    path.startsWith('frontend/apps/marketing/')
   );
 }
 

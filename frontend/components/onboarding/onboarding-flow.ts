@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -94,9 +94,9 @@ function isOrphanedCompletion(
 }
 
 export function useOnboardingFlow() {
-  const router = useRouter();
+  const router = useNavigate();
   const queryClient = useQueryClient();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams()[0];
   const { activeWorkspaceId, setActiveProjectId } = useProjectContext();
   const openingProject = useRef<string | null>(null);
   const mounted = useRef(false);
@@ -172,7 +172,7 @@ export function useOnboardingFlow() {
     // workspace this draft belonged to.
     const workspace = searchParams?.get('workspace') ?? activeWorkspaceId;
     if (workspace) reset.set('workspace', workspace);
-    router.replace(`/onboarding?${reset.toString()}`, { scroll: false });
+    router(`/onboarding?${reset.toString()}`, { replace: true, preventScrollReset: true });
   }, [activeWorkspaceId, form, orphanedCompletion, router, searchParams]);
 
   useEffect(() => {
@@ -188,7 +188,7 @@ export function useOnboardingFlow() {
     params.set('step', stepQueryValue(step));
     const next = params.toString();
     if (next !== searchParams?.toString())
-      window.history.replaceState(null, '', `/onboarding?${next}`);
+      router(`/onboarding?${next}`, { replace: true, preventScrollReset: true });
   }, [discoveryState?.id, orphanedCompletion, resumeDiscoveryId, router, searchParams, step]);
 
   useEffect(() => {
@@ -251,7 +251,7 @@ export function useOnboardingFlow() {
       const targetProjectId = project?.id ?? projectId;
       setActiveProjectId(targetProjectId);
       startOnboardingNavigationHandoff(targetProjectId);
-      router.replace(projectDestination('/projects', null, targetProjectId));
+      router(projectDestination('/projects', null, targetProjectId), { replace: true });
     },
     [queryClient, router, setActiveProjectId],
   );

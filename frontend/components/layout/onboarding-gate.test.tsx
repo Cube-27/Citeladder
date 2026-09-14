@@ -7,10 +7,11 @@ import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
 const replace = vi.fn();
 let pathname = '/projects';
 let search = new URLSearchParams();
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => search,
-  useRouter: () => ({ replace, push: vi.fn() }),
-  usePathname: () => pathname,
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useLocation: () => ({ pathname }),
+  useNavigate: () => replace,
+  useSearchParams: () => [search],
 }));
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -98,7 +99,10 @@ describe('OnboardingGate', () => {
 
     expect(screen.getByText('workspace')).toBeInTheDocument();
     await waitFor(() =>
-      expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT}`, { scroll: false }),
+      expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT}`, {
+        replace: true,
+        preventScrollReset: true,
+      }),
     );
   });
 
@@ -124,7 +128,9 @@ describe('OnboardingGate', () => {
 
     // The workspace travels with the redirect: refreshing the creation route
     // must not silently change which workspace the project is created in.
-    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/onboarding?workspace=${WORKSPACE}`));
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(`/onboarding?workspace=${WORKSPACE}`, { replace: true }),
+    );
     expect(screen.queryByText('workspace')).toBeNull();
   });
 

@@ -8,11 +8,11 @@ import { createServerProxy } from './server-proxy';
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
-export default defineConfig(({ command, mode }) => {
+export default defineConfig(({ command, isPreview, mode }) => {
   const environment = loadEnv(mode, frontendRoot, '');
   const publicValue = (name: string) =>
     JSON.stringify(process.env[name] ?? environment[name] ?? '');
-  const proxy = command === 'serve' ? createServerProxy(environment.BACKEND_ORIGIN) : undefined;
+  const proxy = command === 'serve' && !isPreview ? createServerProxy(environment.BACKEND_ORIGIN) : undefined;
 
   return {
     root: appRoot,
@@ -31,11 +31,6 @@ export default defineConfig(({ command, mode }) => {
     resolve: {
       alias: {
         '@': frontendRoot,
-        'next/image': fileURLToPath(new URL('./src/compat/next-image.tsx', import.meta.url)),
-        'next/link': fileURLToPath(new URL('./src/compat/next-link.tsx', import.meta.url)),
-        'next/navigation': fileURLToPath(
-          new URL('./src/compat/next-navigation.ts', import.meta.url),
-        ),
       },
     },
     css: {
@@ -57,6 +52,7 @@ export default defineConfig(({ command, mode }) => {
       strictPort: true,
     },
     build: {
+      assetsDir: 'app-assets',
       outDir: fileURLToPath(new URL('./dist', import.meta.url)),
       emptyOutDir: true,
     },

@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { Alert } from '@/components/ui/alert';
@@ -114,7 +114,7 @@ function CallbackNotice({
  */
 export function IntegrationSettings() {
   const queryClient = useQueryClient();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams()[0];
   const workspaceId = useActiveWorkspaceId();
 
   // C2 callback params — captured once (like the ?tab= deep link), then
@@ -131,9 +131,8 @@ export function IntegrationSettings() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all });
     }
     // Shallow URL cleanup, NOT a redirect: the params have already been captured
-    // into `notice`, so this only rewrites the address bar. `router.replace`
-    // pushed the whole settings route through the App Router on arrival from the
-    // OAuth callback, which re-rendered every mounted panel for nothing.
+    // into `notice`, so this only rewrites the address bar. A route navigation
+    // would re-render every mounted settings panel for nothing.
     window.history.replaceState(null, '', '/settings?tab=integrations');
   }, [hasCallbackParams, notice.connected, queryClient]);
 

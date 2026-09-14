@@ -24,10 +24,11 @@ const state = vi.hoisted(() => ({
   failUpdate: false,
 }));
 
-vi.mock('next/navigation', () => ({
-  usePathname: () => state.pathname,
-  useRouter: () => ({ push: state.push }),
-  useSearchParams: () => new URLSearchParams(state.search),
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useLocation: () => ({ pathname: state.pathname }),
+  useNavigate: () => state.push,
+  useSearchParams: () => [new URLSearchParams(state.search)],
 }));
 
 vi.mock('@tanstack/react-query', () => ({

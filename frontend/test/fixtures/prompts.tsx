@@ -1,30 +1,11 @@
-import { http, HttpResponse } from 'msw';
 import type { z } from 'zod';
 
-import {
-  projectSchema,
-  promptSchema,
-  promptSetSchema,
-  topicSchema,
-} from '@/lib/api/schemas/project';
-import { visibilityExecutionEvidenceSchema } from '@/lib/api/schemas/visibility-evidence';
-import { ProjectProvider } from '@/lib/project/project-context';
-import { makeProject as makeProjectFixture } from '@/test/fixtures/project';
-import PromptsPage from '@/app/(authed)/(app)/prompts/page';
-import { setupMswPageTests } from '@/test/fixtures/msw-page-lifecycle';
-import { mswServer } from '@/test/msw-server';
-import { renderWithProviders } from '@/test/render';
+import { promptSchema, promptSetSchema } from '@/lib/api/schemas/project';
 
-type Project = z.infer<typeof projectSchema>;
 type Prompt = z.infer<typeof promptSchema>;
 type PromptSet = z.infer<typeof promptSetSchema>;
-type Topic = z.infer<typeof topicSchema>;
-type VisibilityExecutionEvidence = z.infer<typeof visibilityExecutionEvidenceSchema>;
 
-export const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-export const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
-export const SET_ID = '22222222-2222-4222-8222-222222222222';
-export const TOPIC_ID = '55555555-5555-4555-8555-555555555555';
+const SET_ID = '22222222-2222-4222-8222-222222222222';
 
 export function makePrompt(overrides: Partial<Prompt> = {}): Prompt {
   return {
@@ -44,66 +25,10 @@ export function makePrompt(overrides: Partial<Prompt> = {}): Prompt {
   };
 }
 
-export function makeTopic(overrides: Partial<Topic> = {}): Topic {
-  return {
-    id: TOPIC_ID,
-    project_id: PROJECT_ID,
-    name: 'Footwear',
-    description: '',
-    origin: 'manual',
-    active_count: 1,
-    proposed_count: 0,
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
-
-export function makeEvidenceItem(
-  promptId: string,
-  brandMentioned: boolean,
-  taskId: string,
-): VisibilityExecutionEvidence {
-  return {
-    audit_id: '99999999-9999-4999-8999-999999999999',
-    task_id: taskId,
-    analysis_id: taskId,
-    artifact_id: null,
-    prompt_snapshot_id: taskId,
-    prompt_id: promptId,
-    prompt_index: 0,
-    prompt_text: 'Best running shoes?',
-    repetition: 1,
-    completed_at: '2026-01-02T00:00:00Z',
-    logical_engine: 'chatgpt',
-    transport_provider: 'openai',
-    transport_model: 'gpt-test',
-    retrieval_enabled: null,
-    search_used: false,
-    search_query_count: 0,
-    query_text_available: false,
-    state: 'count_only',
-    search_events: [],
-    event_source: 'none',
-    mentions: brandMentioned
-      ? [
-          {
-            kind: 'brand',
-            name: 'CiteLadder',
-            first_offset: 0,
-            artifact_id: null,
-            analyzer_version: 'v1',
-          },
-        ]
-      : [],
-    citations: [],
-  };
-}
-
 export function makeSet(prompts: Prompt[]): PromptSet {
   return {
     id: SET_ID,
-    project_id: PROJECT_ID,
+    project_id: '11111111-1111-4111-8111-111111111111',
     name: 'Default prompt set',
     description: '',
     prompt_count: prompts.length,
@@ -111,47 +36,4 @@ export function makeSet(prompts: Prompt[]): PromptSet {
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   };
-}
-
-export function makeProject(promptSets: PromptSet[]): Project {
-  return makeProjectFixture({
-    id: PROJECT_ID,
-    workspace_id: WORKSPACE_ID,
-    name: 'CiteLadder',
-    brand_name: 'CiteLadder',
-    website_url: 'https://citeladder.com',
-    prompt_sets: promptSets,
-  });
-}
-
-export function usePromptPageHandlers(
-  prompts: Prompt[],
-  topics: Topic[] = [],
-  evidenceItems: VisibilityExecutionEvidence[] = [],
-): PromptSet {
-  const set = makeSet(prompts);
-  mswServer.use(
-    http.get('/api/v1/projects', () => HttpResponse.json([makeProject([set])])),
-    http.post(`/api/v1/projects/${PROJECT_ID}/logos/refresh`, () =>
-      HttpResponse.json(makeProject([set])),
-    ),
-    http.get('/api/v1/prompt-sets', () => HttpResponse.json([set])),
-    http.get(`/api/v1/projects/${PROJECT_ID}/topics`, () => HttpResponse.json(topics)),
-    http.get(`/api/v1/projects/${PROJECT_ID}/visibility/evidence`, () =>
-      HttpResponse.json({ items: evidenceItems, truncated: false }),
-    ),
-  );
-  return set;
-}
-
-export function renderPromptsPage() {
-  return renderWithProviders(
-    <ProjectProvider>
-      <PromptsPage />
-    </ProjectProvider>,
-  );
-}
-
-export function setupPromptsPageTests(resetNavigation: () => void) {
-  setupMswPageTests(resetNavigation);
 }

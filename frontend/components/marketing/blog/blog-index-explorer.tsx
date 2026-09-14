@@ -1,8 +1,6 @@
 'use client';
 
 import { ArrowRight, RotateCcw } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -28,28 +26,26 @@ function CompactMeta({ post }: Readonly<{ post: BlogPostSummary }>) {
   return <p className="website-label text-muted mt-4">{values.join(' · ')}</p>;
 }
 
-function ArticleCard({
-  post,
-  priority = false,
-}: Readonly<{ post: BlogPostSummary; priority?: boolean }>) {
+function ArticleCard({ post }: Readonly<{ post: BlogPostSummary }>) {
   return (
     <article className="border-border-subtle bg-panel hover:border-accent-border overflow-hidden rounded-[var(--radius-card)] border transition-colors">
       <div className="flex flex-col sm:flex-row">
-        <Link
+        <a
           href={`/blog/${post.slug}`}
           tabIndex={-1}
           aria-hidden="true"
           className="bg-panel-tonal relative aspect-[12/7] shrink-0 sm:w-[15rem] lg:w-[16rem]"
         >
-          <Image
-            src={post.image}
+          <img
+            src={post.cardImage ?? post.image}
             alt=""
-            fill
-            priority={priority}
-            sizes="(max-width: 640px) calc(100vw - 3rem), (max-width: 1024px) 240px, 256px"
-            className="object-contain"
+            width={1080}
+            height={630}
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 size-full object-contain"
           />
-        </Link>
+        </a>
         <div className="min-w-0 flex-1 p-5 sm:p-6">
           {post.tags[0] ? (
             <span className="bg-accent-soft text-accent-text inline-flex rounded-full px-3 py-1 text-xs font-medium">
@@ -57,21 +53,21 @@ function ArticleCard({
             </span>
           ) : null}
           <h2 className="website-feature-heading text-foreground mt-3">
-            <Link
+            <a
               href={`/blog/${post.slug}`}
               className="hover:text-accent-text focus-ring rounded-xs transition-colors"
             >
               {post.title}
-            </Link>
+            </a>
           </h2>
           <p className="website-body text-muted mt-2 sm:line-clamp-2">{post.excerpt}</p>
           <CompactMeta post={post} />
-          <Link
+          <a
             href={`/blog/${post.slug}`}
             className="text-accent-text focus-ring mt-4 inline-flex items-center gap-2 rounded-xs text-sm font-medium"
           >
             Read article <ArrowRight className="size-4" aria-hidden />
-          </Link>
+          </a>
         </div>
       </div>
     </article>
@@ -86,20 +82,20 @@ function ReadingSidebar({ posts }: Readonly<{ posts: readonly BlogPostSummary[] 
       <div className="border-border-subtle bg-panel rounded-[var(--radius-card)] border p-5">
         <p className="website-eyebrow text-accent-text">Featured</p>
         <h2 className="website-small-heading text-foreground mt-3">
-          <Link
+          <a
             href={`/blog/${featured.slug}`}
             className="hover:text-accent-text focus-ring rounded-xs transition-colors"
           >
             {featured.title}
-          </Link>
+          </a>
         </h2>
         <p className="website-body text-muted mt-3 line-clamp-3">{featured.excerpt}</p>
-        <Link
+        <a
           href={`/blog/${featured.slug}`}
           className="text-accent-text focus-ring mt-4 inline-flex items-center gap-2 rounded-xs text-sm font-medium"
         >
           Read article <ArrowRight className="size-4" aria-hidden />
-        </Link>
+        </a>
       </div>
       {posts.length > 1 ? (
         <div className="border-border-subtle bg-panel rounded-[var(--radius-card)] border p-5">
@@ -107,12 +103,12 @@ function ReadingSidebar({ posts }: Readonly<{ posts: readonly BlogPostSummary[] 
           <ol className="divide-border-subtle mt-2 divide-y">
             {posts.slice(1, 5).map((post) => (
               <li key={post.slug} className="py-4">
-                <Link
+                <a
                   href={`/blog/${post.slug}`}
                   className="text-foreground hover:text-accent-text focus-ring rounded-xs text-sm leading-snug font-medium transition-colors"
                 >
                   {post.title}
-                </Link>
+                </a>
               </li>
             ))}
           </ol>
@@ -168,9 +164,7 @@ export function BlogIndexExplorer({ posts }: Readonly<{ posts: readonly BlogPost
       <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="grid content-start gap-5" aria-live="polite">
           {visiblePosts.length ? (
-            visiblePosts.map((post, index) => (
-              <ArticleCard key={post.slug} post={post} priority={index === 0} />
-            ))
+            visiblePosts.map((post) => <ArticleCard key={post.slug} post={post} />)
           ) : (
             <div className="border-border-subtle bg-panel rounded-[var(--radius-card)] border border-dashed p-8 text-center">
               <h2 className="website-feature-heading text-foreground">

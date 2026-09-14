@@ -2,21 +2,14 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BrowserRouter } from 'react-router-dom';
 
 import { createAppQueryClient } from '@/lib/api/query-client';
 import type { SessionUser } from '@/lib/api/types';
 import { makeProject } from '@/test/fixtures/project';
 
-// Stub imperative navigation used by the delete-project flow. Shallow tab
-// state uses the browser History API, matching production.
-const { replace, entitlementState } = vi.hoisted(() => ({
-  replace: vi.fn(),
+const { entitlementState } = vi.hoisted(() => ({
   entitlementState: { canDeleteProject: false },
-}));
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ push: vi.fn(), replace, prefetch: vi.fn() }),
-  usePathname: () => '/settings',
 }));
 
 // Session is mocked per test so the screen renders without a real SessionGuard.
@@ -100,9 +93,11 @@ import { SettingsScreen } from './settings-screen';
 
 function renderScreen() {
   return render(
-    <QueryClientProvider client={createAppQueryClient()}>
-      <SettingsScreen />
-    </QueryClientProvider>,
+    <BrowserRouter>
+      <QueryClientProvider client={createAppQueryClient()}>
+        <SettingsScreen />
+      </QueryClientProvider>
+    </BrowserRouter>,
   );
 }
 
@@ -111,7 +106,6 @@ describe('SettingsScreen', () => {
     deleteProject.mockClear();
     listProjects.mockReset();
     listProjects.mockResolvedValue([]);
-    replace.mockClear();
     setActiveProjectId.mockClear();
     entitlementState.canDeleteProject = false;
     window.history.replaceState(null, '', '/settings');
@@ -277,10 +271,11 @@ describe('SettingsScreen', () => {
     await ue.click(within(dialog).getByRole('button', { name: 'Delete project' }));
 
     await waitFor(() => expect(setActiveProjectId).toHaveBeenCalledWith(nextProject.id));
-    // REPLACE, not push: the entry left behind names the project that was just
-    // deleted, so Back must not return to it.
-    expect(replace).toHaveBeenCalledWith(`/settings?project=${nextProject.id}`, {
-      scroll: false,
-    });
+    // The deleted project is replaced in-place, so Back cannot return to it.
+    await waitFor(() =>
+      expect(window.location.pathname + window.location.search).toBe(
+        `/settings?project=${nextProject.id}`,
+      ),
+    );
   });
 });

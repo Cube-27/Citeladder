@@ -1,5 +1,5 @@
 import { ChevronDown, Pencil, Plus, BookOpen } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -26,7 +26,7 @@ export function ProjectControls({
   activeProject: Project;
   onEditProject?: (project: Project) => void;
 }>) {
-  const router = useRouter();
+  const router = useNavigate();
   const { activeWorkspaceId } = useProjectContext();
   const { entitlement } = useEntitlement();
   const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
@@ -50,7 +50,7 @@ export function ProjectControls({
           </DropdownItem>
         ) : null}
         {canAddProject ? (
-          <DropdownItem onSelect={() => router.push(newProjectDestination(activeWorkspaceId))}>
+          <DropdownItem onSelect={() => router(newProjectDestination(activeWorkspaceId))}>
             <Plus className="size-4" aria-hidden /> Add project
           </DropdownItem>
         ) : null}

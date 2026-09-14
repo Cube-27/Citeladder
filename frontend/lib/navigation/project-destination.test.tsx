@@ -2,14 +2,13 @@ import { renderHook } from '@testing-library/react';
 import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const push = vi.fn();
-const replace = vi.fn();
+const navigate = vi.fn();
 let pathname = '/projects';
 let search = new URLSearchParams();
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push, replace }),
-  usePathname: () => pathname,
-  useSearchParams: () => search,
+vi.mock('react-router-dom', () => ({
+  useLocation: () => ({ pathname }),
+  useNavigate: () => navigate,
+  useSearchParams: () => [search, vi.fn()],
 }));
 
 const setActiveProjectId = vi.fn();
@@ -31,8 +30,7 @@ const PROJECT_2 = '22222222-2222-4222-8222-222222222222';
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 beforeEach(() => {
-  push.mockClear();
-  replace.mockClear();
+  navigate.mockClear();
   setActiveProjectId.mockClear();
   pathname = '/projects';
   search = new URLSearchParams();
@@ -91,8 +89,7 @@ describe('useSelectProject', () => {
     act(() => result.current(PROJECT_2));
 
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_2);
-    expect(push).toHaveBeenCalledWith(`/projects?project=${PROJECT_2}`);
-    expect(replace).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(`/projects?project=${PROJECT_2}`);
   });
 
   it('replaces when it is only filling in an absent parameter', () => {
@@ -103,8 +100,10 @@ describe('useSelectProject', () => {
 
     act(() => result.current(PROJECT_1));
 
-    expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_1}`, { scroll: false });
-    expect(push).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(`/projects?project=${PROJECT_1}`, {
+      replace: true,
+      preventScrollReset: true,
+    });
   });
 
   it('adds no history entry for the project already in the URL', () => {
@@ -114,8 +113,8 @@ describe('useSelectProject', () => {
 
     act(() => result.current(PROJECT_1));
 
-    expect(push).not.toHaveBeenCalled();
-    expect(replace).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('replaces when the entry being left behind is dead', () => {
@@ -127,8 +126,10 @@ describe('useSelectProject', () => {
 
     act(() => result.current(PROJECT_2, { replace: true }));
 
-    expect(replace).toHaveBeenCalledWith(`/projects?project=${PROJECT_2}`, { scroll: false });
-    expect(push).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(`/projects?project=${PROJECT_2}`, {
+      replace: true,
+      preventScrollReset: true,
+    });
   });
 
   it('pushes when the selection also changes page', () => {
@@ -137,7 +138,7 @@ describe('useSelectProject', () => {
 
     act(() => result.current(PROJECT_1, { destination: '/settings' }));
 
-    expect(push).toHaveBeenCalledWith(`/settings?project=${PROJECT_1}`);
+    expect(navigate).toHaveBeenCalledWith(`/settings?project=${PROJECT_1}`);
   });
 
   it('leaves a path that names the outgoing project crawl', () => {
@@ -151,7 +152,7 @@ describe('useSelectProject', () => {
 
     act(() => result.current(PROJECT_2));
 
-    expect(push).toHaveBeenCalledWith(`/site?project=${PROJECT_2}`);
+    expect(navigate).toHaveBeenCalledWith(`/site?project=${PROJECT_2}`);
   });
 
   it('keeps a path that names no project-owned resource', () => {
@@ -162,7 +163,7 @@ describe('useSelectProject', () => {
 
     act(() => result.current(PROJECT_2));
 
-    expect(push).toHaveBeenCalledWith(`/issues?dimension=technical&project=${PROJECT_2}`);
+    expect(navigate).toHaveBeenCalledWith(`/issues?dimension=technical&project=${PROJECT_2}`);
   });
 
   it('keeps a crawl detail path when the ACTIVE project is re-selected', () => {
@@ -175,8 +176,10 @@ describe('useSelectProject', () => {
 
     act(() => result.current(PROJECT_1));
 
-    expect(replace).toHaveBeenCalledWith(`${pathname}?project=${PROJECT_1}`, { scroll: false });
-    expect(push).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(`${pathname}?project=${PROJECT_1}`, {
+      replace: true,
+      preventScrollReset: true,
+    });
   });
 
   it('keeps an explicit destination even when leaving a crawl detail path', () => {
@@ -186,6 +189,6 @@ describe('useSelectProject', () => {
 
     act(() => result.current(PROJECT_2, { destination: '/settings' }));
 
-    expect(push).toHaveBeenCalledWith(`/settings?project=${PROJECT_2}`);
+    expect(navigate).toHaveBeenCalledWith(`/settings?project=${PROJECT_2}`);
   });
 });

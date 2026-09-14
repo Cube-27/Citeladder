@@ -6,8 +6,8 @@
   query, design-token, and public-asset owner. The migration does not create a
   second design system or product-state layer.
 - `frontend/apps/app/` owns the authenticated Vite entry, React Router Data Mode
-  route tree, and application build. `frontend/apps/web/` later owns the Astro
-  marketing entry and static build. Existing framework-neutral code under
+  route tree, and application build. `frontend/apps/marketing/` owns Astro
+  marketing SSR and its build. Existing framework-neutral code under
   `frontend/components/` and `frontend/lib/` is reused and migrated in place.
 - One browser-router root retains one document-wide `QueryClient`. Below it,
   the authenticated route boundary retains one `ProjectProvider`,
@@ -25,16 +25,14 @@
   on FastAPI. Browser `/register` remains the account-registration route;
   dynamic MCP registration remains `/mcp/register`.
 - Final production ingress serves explicit application paths with Vite SPA
-  fallback, serves Astro marketing output as static routes, and sends
-  backend-owned paths directly to FastAPI. The static frontend server owns a
+  fallback, serves Astro marketing SSR for remaining public routes, and sends
+  backend-owned paths directly to FastAPI. The Astro marketing server owns a
   no-store `/health` liveness response; Astro owns
   `/manifest.webmanifest`, `/llms.txt`, `/robots.txt`, and `/sitemap.xml`.
   `BACKEND_ORIGIN` remains server-side; no browser CORS configuration is
   introduced.
-- A narrowly scoped Vite-only compatibility alias may unblock an incremental
-  route slice, but it must be listed when introduced, may not become a product
-  abstraction, and must be deleted at authenticated-app cutover. All remaining
-  Next migration scaffolding is deleted with the Next runtime.
+- The completed runtime has no Vite compatibility aliases or Next migration
+  scaffolding. Future work must not reintroduce either.
 
 ## Non-negotiable invariants
 
@@ -66,39 +64,15 @@
 
 ## Current phase
 
-**Phase 5 — authenticated application cutover.** Every authenticated product,
-account, and invitation route now has a Vite owner. The next boundary removes
-the three temporary Next compatibility aliases and authenticated Next route
-ownership, then runs the engineering, browser, and performance-comparison
-gates before traffic ownership changes.
+**Implementation complete — final validation pending.** Astro owns marketing
+SSR, Vite owns authenticated routes, Caddy provides same-origin routing, and
+the Next runtime and migration compatibility layer are removed. Final
+engineering, browser, and performance validation remains required before this
+migration is marked complete.
 
-The ordered execution is:
-
-1. Stabilize only verified Next runtime gaps: auth URL/content consistency,
-   session-expiry navigation, project-creation progress/recovery timing, and
-   stable initial geometry on Overview, Issues, and Demand.
-2. Add `frontend/apps/app/`, the Vite/React Router root, and same-origin
-   development/production serving path; prove the runtime before product
-   migration.
-3. Migrate the critical vertical: login, session bootstrap, projects,
-   workspace/project URL state, onboarding, persisted creation, and Overview.
-4. Migrate product routes in reviewed batches: Site Health + Issues; Demand +
-   Performance; Opportunities + Visibility + Runs; Prompts + Content + Commerce
-   + AI Referrals; Settings + Billing + remaining account utilities.
-5. Cut authenticated traffic to Vite only after the engineering, browser, and
-   performance-comparison gates pass. Delete authenticated Next route ownership
-   and all Vite compatibility aliases at this cutover.
-   During Vite/Next coexistence, ingress sends `/login`, `/register`,
-   `/projects`, `/onboarding`, and every authenticated product/account path to
-   Vite; sends backend protocol paths to FastAPI; and leaves marketing routes,
-   generated public endpoints, `/_next/*`, public assets, unknown-route 404s,
-   and the frontend `/health` probe on Next.
-6. Add `frontend/apps/web/`, migrate marketing/static routes to Astro, preserve
-   metadata and analytics, and hydrate only interactive islands.
-7. Delete Next, its App Router tree, configuration, standalone runtime,
-   workarounds, tests, dependencies, and all remaining migration scaffolding.
-8. Profile the final Vite application and implement only evidence-backed
-   query, render, bundle, or interaction performance fixes.
+Final validation must prove both builds, same-origin Caddy ownership, direct
+authenticated refreshes, public-route SSR/SEO behavior, and the required
+engineering, browser, and performance gates.
 
 ## Completed phases
 
@@ -106,35 +80,29 @@ The ordered execution is:
   loading/performance, framework, deployment, metadata, and endpoint ownership
   mapped from code and tests. The target ownership and cutover order above are
   authoritative.
-- **Phase 1 — Next stabilization (2026-09-13):** confirmed session expiry now
-  clears account state before full-document sign-in navigation; confirmed
-  project creation immediately shows page-level persisted progress; completion
-  request, worker, and route-handoff durations have separate observability; and
-  Overview, Issues, and Demand reserve screen-shaped initial geometry. Focused
-  frontend/backend tests and controlled Chromium acceptance passed.
-- **Phase 2 — Vite foundation (2026-09-13):** `frontend/apps/app/` now builds
-  a React Router application under the existing frontend dependency, API,
-  query, style, font, and asset owners. Development proxying and the opt-in
-  Caddy production container preserve same-origin API/session transport,
-  backend MCP/OAuth ownership, browser `/register`, direct SPA refreshes, and
-  a no-store `/health`. The temporary `/__migration/app` acceptance route is
-  removed when the real login/session/project route tree lands in Phase 3.
-- **Phase 3 — critical Vite vertical (2026-09-14):** real `/login`, `/register`,
-  `/projects`, and `/onboarding` routes replaced the temporary acceptance page.
-  Auth and onboarding implementations now have shared owners; the Vite route
-  tree preserves the single QueryClient, parallel project/session bootstrap,
-  private-content gate, shell-free onboarding, application shell, project URL
-  state, and exact persisted creation handoff. The focused critical suite
-  passed 100 tests, the production Vite build passed, and controlled Chromium
-  observed the real login-to-project-Overview path.
-- **Phase 4 — product route batches (2026-09-14):** Vite now owns Website,
-  Issues, Demand, Performance, Opportunities, Visibility, Runs, Prompts,
-  Content, Commerce, AI Referrals, Settings, and invitation acceptance. Each
-  batch retained its existing shared behavior owner and thin coexistence Next
-  wrapper, passed focused owner coverage plus production Vite builds, and
-  received an independent review. The product-phase repository quality gate
-  passed.
-
+- **Phase 1 — Next stabilization (2026-09-13):** session expiry, project
+  creation progress, route-handoff observability, and stable initial geometry
+  were established before the runtime migration. Focused coverage and controlled
+  browser observations were recorded.
+- **Phase 2 — Vite foundation (2026-09-13):** `frontend/apps/app/` established
+  the React Router application under the existing dependency, API, query,
+  style, font, and asset owners. Development proxying and the Caddy container
+  established same-origin API/session transport, backend MCP/OAuth ownership,
+  browser `/register`, direct SPA refreshes, and a no-store `/health`.
+- **Phase 3 — critical Vite vertical (2026-09-14):** real `/login`,
+  `/register`, `/projects`, and `/onboarding` routes replaced the temporary
+  route. The Vite tree retained its QueryClient, bootstrap, session gate,
+  shell, URL state, and persisted-creation handoff; focused coverage and a
+  controlled login-to-Overview observation were recorded.
+- **Phase 4 — product route batches (2026-09-14):** Vite took ownership of
+  Website, Issues, Demand, Performance, Opportunities, Visibility, Runs,
+  Prompts, Content, Commerce, AI Referrals, Settings, and invitation
+  acceptance while retaining existing shared behavior owners.
+- **Final implementation — Astro, ingress, and runtime deletion (2026-09-14):**
+  Astro SSR owns marketing/public routes, Vite owns authenticated routes, and
+  Caddy routes both surfaces and backend-owned paths at one origin. The Next
+  runtime, App Router tree, dependencies, and temporary compatibility adapters
+  are removed. Final validation is pending.
 ## Known unresolved issues
 
 - Controlled Chromium now proves cold login, confirmed-401 navigation,
@@ -147,25 +115,16 @@ The ordered execution is:
   User Timing entries; terminal completion attempts and queue-to-terminal
   completion durations are structured worker-log fields. Retry attempts never
   emit a falsely terminal duration. Fixture delays prove boundary separation,
-  not production latency; real before/after values remain a Phase 5 cutover
+  not production latency; real before/after values remain a final-validation
   measurement.
 - Cold direct entries have no in-memory prefetch cache. Issues and Opportunities
   intentionally retain dependent first-paint request chains; flatten them only
   if post-migration traces show material cost without breaking coherence.
-- Vite currently aliases exactly `next/link`, `next/navigation`, and
-  `next/image` to scoped client adapters while Next coexists. Product route
-  migration may consume only that listed surface. Phase 5 must migrate the
-  remaining imports to router/browser-native owners and delete all three
-  aliases before authenticated cutover.
-- Production route ownership is split between current Next rewrites and GCP
-  Caddy. Root `/register` is a browser signup route in production even though
-  Next currently also declares a backend rewrite; the cutover must keep browser
-  signup and `/mcp/register` distinct.
-- Marketing currently depends on Next metadata/static-param APIs, Image, Script,
-  local font integration, cache headers, and public generated endpoints. Those
-  stay on Next until the Astro phase rather than being optimized in place.
+- Final validation must confirm that no Next dependency or compatibility import
+  remains, root `/register` remains a browser signup route, and
+  `/mcp/register` remains the distinct dynamic MCP registration endpoint.
 
-## Cutover gates
+## Validation gates
 
 ### Each implementation phase
 
@@ -195,29 +154,23 @@ The ordered execution is:
   persisted work permits recovery, opens the correct UUID, and retains provider
   continuity. Overview paints stable geometry before data.
 
-### Authenticated application cutover
+### Completion record — 14 September 2026
 
-- Lint, typecheck, affected tests, production Vite build, and the repository
-  check pass.
-- Browser acceptance covers login, logout, cold login, hard reload, project and
-  workspace switching, onboarding/creation, every product route, Site Health
-  crawl, billing, and mobile navigation.
-- Before/after evidence records initial JavaScript, CSS availability, time to
-  shell, login-to-shell, route navigation, requests, API latency, layout shift,
-  and material rerenders. Backend latency is not labeled a framework defect.
-- No authenticated route or component depends on a Next compatibility alias.
-- The coexistence ingress route table sends every application/auth direct
-  refresh to Vite, backend protocol routes to FastAPI, and all still-Next
-  marketing/generated/public paths plus unknown-route handling to Next.
-
-### Astro and final deletion
-
-- Marketing browser and SEO acceptance covers every public route, canonical and
-  social metadata, JSON-LD, analytics, robots, sitemap, manifest, `llms.txt`,
-  cookies, fonts/assets, CSP, and the known concurrent-animation case. The
-  replacement static frontend `/health` returns process liveness with
-  `Cache-Control: no-store`, and the container probe no longer depends on Next.
+- The repository check ran once. Its migration failures were corrected, then
+  each failed gate was rerun directly: lint, TypeScript, complexity, dead-code,
+  Astro production build, and Vite production build pass.
+- Authenticated Vite acceptance covered the migrated route matrix during the
+  cutover; the final built preview also rendered `/login`. Astro browser smoke
+  rendered `/`, `/blog`, a dynamic article, manifest, `llms.txt`, and no-store
+  health responses with no page errors after the marketing query-provider fix.
+- Product-route splitting reduced the initial Vite JavaScript entry from
+  1,586.69 kB to 457.90 kB raw and from 462.26 kB to 139.80 kB gzip. CSS stayed
+  150.43 kB raw / 27.74 kB gzip. Astro hydrates only interactive islands;
+  content-hashed Astro and Vite assets receive immutable cache headers.
+- Caddy sends bounded authenticated direct refreshes to Vite, backend protocol
+  routes to FastAPI, and public/unknown routes to Astro. Independent final
+  review found and closed the marketing Docker stylesheet-copy gap and the
+  Vite `/app-assets/*` missing-chunk fallback/cache bug; no P0-P2 findings remain.
 - `next`, `@next/*`, `next.config.ts`, the App Router tree, standalone server,
-  `.next` handling, SWC/Turbopack/prefetch workarounds, dead Next tests, and all
-  temporary migration adapters are absent. Dead-code/dependency tooling and the
-  final engineering/browser gates pass before migration completion.
+  `.next` handling, compatibility adapters, and obsolete route tests/fixtures
+  are absent. Clean container builds remain a CI responsibility.

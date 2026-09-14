@@ -7,8 +7,8 @@ export default defineConfig({
   // The real-stack integration spec owns its own lifecycle + config; run it
   // explicitly with `--config e2e/content-integration.config.ts`.
   testIgnore: ['**/content-integration.spec.ts'],
-  // One Next dev server compiles routes lazily; serial browser work avoids
-  // navigation aborts and hydration races caused by six concurrent compiles.
+  // One Vite product-app dev server owns the browser suite; serial work keeps
+  // stateful fixture navigation deterministic.
   workers: 1,
   retries: 1,
   reporter: [['html', { outputFolder: 'playwright-report', open: 'never' }]],
@@ -18,7 +18,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: `pnpm exec next dev -p ${e2ePort} -H 127.0.0.1`,
+    command: `pnpm exec vite --config apps/app/vite.config.ts --port ${e2ePort}`,
     url: `http://127.0.0.1:${e2ePort}`,
     reuseExistingServer: !process.env.CI,
   },

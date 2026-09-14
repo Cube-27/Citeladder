@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render as raw, screen, within } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 
 import { PagesTable } from './pages-table';
 import {
@@ -12,25 +14,34 @@ import {
  * the crawl that actually analyzed the page, not the one in view. */
 const SOURCE_CRAWL = '33333333-3333-4333-8333-333333333333';
 
-// Stub next/navigation (unavailable in jsdom). `push` is asserted by the
-// clickable-row test; vi.hoisted so the hoisted mock factory can reference it.
-const { push } = vi.hoisted(() => ({ push: vi.fn() }));
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/projects',
-  useRouter: () => ({ push }),
-}));
+function LocationDisplay() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="location">{pathname + search}</output>;
+}
+
+function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <MemoryRouter initialEntries={['/site']}>
+      {children}
+      <LocationDisplay />
+    </MemoryRouter>
+  );
+}
+
+function renderPages(ui: ReactElement) {
+  return raw(ui, { wrapper: RouterTestWrapper });
+}
 
 describe('PagesTable', () => {
   it('renders scores for a completed page', () => {
-    render(<PagesTable pages={[page()]} crawlId={CRAWL} />);
+    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     expect(screen.getByText('Homepage')).toBeInTheDocument();
     expect(screen.getByText('46')).toBeInTheDocument();
     expect(screen.getByText('64')).toBeInTheDocument();
   });
 
   it('shows a non-null limited-evidence score without an internal confidence subtitle', () => {
-    render(
+    renderPages(
       <PagesTable
         crawlId={CRAWL}
         pages={[
@@ -53,18 +64,18 @@ describe('PagesTable', () => {
   });
 
   it('renders the page-kind badge for a classified page', () => {
-    render(<PagesTable pages={[page()]} crawlId={CRAWL} />);
+    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     expect(screen.getByText('Article')).toBeInTheDocument();
   });
 
   it('renders the not-measured state for an unclassified page (null page_kind)', () => {
-    render(<PagesTable pages={[page({ page_kind: null })]} crawlId={CRAWL} />);
+    renderPages(<PagesTable pages={[page({ page_kind: null })]} crawlId={CRAWL} />);
     expect(screen.queryByText('Article')).not.toBeInTheDocument();
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
   });
 
   it('uses the persisted unresolved-purpose reason for Other pages', () => {
-    render(
+    renderPages(
       <PagesTable
         crawlId={CRAWL}
         pages={[
@@ -86,7 +97,7 @@ describe('PagesTable', () => {
   });
 
   it('renders the not-measured state for a blocked page — never a fabricated zero', () => {
-    render(
+    renderPages(
       <PagesTable
         crawlId={CRAWL}
         pages={[
@@ -117,7 +128,7 @@ describe('PagesTable', () => {
   });
 
   it('links View to the per-URL detail route', () => {
-    render(<PagesTable pages={[page()]} crawlId={CRAWL} />);
+    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     const view = screen.getByText('View');
     const anchor = view.closest('a');
     expect(anchor).not.toBeNull();
@@ -125,14 +136,13 @@ describe('PagesTable', () => {
   });
 
   it('navigates to the per-URL detail when the row is clicked', () => {
-    push.mockClear();
-    render(<PagesTable pages={[page()]} crawlId={CRAWL} />);
+    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     fireEvent.click(screen.getByText('Homepage'));
-    expect(push).toHaveBeenCalledWith(`/site/crawls/${CRAWL}/pages/${UUID}`);
+    expect(screen.getByTestId('location')).toHaveTextContent(`/site/crawls/${CRAWL}/pages/${UUID}`);
   });
 
   it('links an inherited discovered row to the crawl that owns its detail', () => {
-    render(
+    renderPages(
       <PagesTable
         pages={[page({ crawl_id: SOURCE_CRAWL, analysis_status: 'not_selected' })]}
         crawlId={CRAWL}
@@ -145,7 +155,7 @@ describe('PagesTable', () => {
   });
 
   it('renders the final PR2 page metrics', () => {
-    render(<PagesTable pages={[page()]} crawlId={CRAWL} />);
+    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'AEO Coverage' })).toBeInTheDocument();
     expect(
@@ -155,7 +165,7 @@ describe('PagesTable', () => {
   });
 
   it('shows an unmeasured link metric as Not measured, never a zero', () => {
-    render(
+    renderPages(
       <PagesTable
         pages={[page({ inbound_count: null, main_content_indexable: null })]}
         crawlId={CRAWL}
@@ -166,7 +176,7 @@ describe('PagesTable', () => {
 
   it('asks the server to reorder, and marks the active column', async () => {
     const onSortChange = vi.fn();
-    const { rerender } = render(
+    const { rerender } = renderPages(
       <PagesTable pages={[page()]} crawlId={CRAWL} sort="url" onSortChange={onSortChange} />,
     );
     fireEvent.click(screen.getByRole('button', { name: /^Inbound/ }));
@@ -183,7 +193,7 @@ describe('PagesTable', () => {
 
   it('clicking the active sort returns to the default URL order', () => {
     const onSortChange = vi.fn();
-    render(
+    renderPages(
       <PagesTable pages={[page()]} crawlId={CRAWL} sort="inbound" onSortChange={onSortChange} />,
     );
     fireEvent.click(screen.getByRole('button', { name: /^Inbound/ }));
@@ -192,7 +202,7 @@ describe('PagesTable', () => {
 
   it('offers server-backed URL and status sorting', () => {
     const onSortChange = vi.fn();
-    render(
+    renderPages(
       <PagesTable pages={[page()]} crawlId={CRAWL} sort="status" onSortChange={onSortChange} />,
     );
     expect(screen.getByRole('columnheader', { name: /^Status/ })).toHaveAttribute(
@@ -204,7 +214,7 @@ describe('PagesTable', () => {
   });
 
   it('renders plain link headers where the table cannot reorder', () => {
-    render(<PagesTable pages={[page()]} crawlId={CRAWL} />);
+    renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     expect(screen.queryByRole('button', { name: /^Inbound/ })).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Inbound' })).toBeInTheDocument();
   });

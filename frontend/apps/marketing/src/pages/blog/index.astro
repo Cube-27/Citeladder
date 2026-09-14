@@ -1,0 +1,23 @@
+---
+import { BlogIndex } from '@/components/marketing/pages/blog';
+import { POSTS } from '@/lib/marketing-content/blog';
+import { toBlogPostSummary } from '@/lib/marketing-content/blog-index';
+import { blogIndexJsonLd } from '@/lib/seo/json-ld';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
+
+const description =
+  'Practical guides, frameworks, and lessons for finding content gaps, strengthening sources, and measuring AI visibility.';
+const jsonLd = blogIndexJsonLd(POSTS.map(toBlogPostSummary));
+---
+
+<MarketingLayout
+  title="AEO & AI visibility resources · CiteLadder"
+  description={description}
+  canonical="/blog"
+  keywords={['AEO', 'answer-engine optimization', 'AI visibility', 'content evidence']}
+  jsonLd={jsonLd ? [jsonLd] : []}
+>
+  <main id="main">
+    <BlogIndex client:visible />
+  </main>
+</MarketingLayout>

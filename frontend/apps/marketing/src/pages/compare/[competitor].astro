@@ -1,0 +1,34 @@
+---
+import { CompareDetailView } from '@/components/marketing/pages/compare-detail';
+import { COMPETITORS } from '@/lib/marketing-content/compare';
+import { breadcrumbJsonLd } from '@/lib/seo/json-ld';
+import MarketingLayout from '../../layouts/MarketingLayout.astro';
+
+const competitor = COMPETITORS.find((candidate) => candidate.slug === Astro.params.competitor);
+if (!competitor) Astro.response.status = 404;
+const title = competitor ? `CiteLadder vs ${competitor.name}` : 'Comparison not found · CiteLadder';
+const description = competitor?.metaDescription ?? 'The requested CiteLadder comparison does not exist.';
+const breadcrumb = competitor
+  ? breadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Compare', path: '/compare' },
+      { name: `CiteLadder vs ${competitor.name}`, path: `/compare/${competitor.slug}` },
+    ])
+  : null;
+---
+
+<MarketingLayout
+  title={title}
+  description={description}
+  canonical={competitor ? `/compare/${competitor.slug}` : undefined}
+  robots={competitor ? undefined : 'noindex'}
+  jsonLd={breadcrumb ? [breadcrumb] : []}
+>
+  {competitor ? (
+    <main id="main">
+      <CompareDetailView competitor={competitor} />
+    </main>
+  ) : (
+    <main id="main"><h1>Comparison not found</h1></main>
+  )}
+</MarketingLayout>

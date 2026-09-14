@@ -18,12 +18,6 @@ import { renderWithProviders } from '@/test/render';
 
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 
-const routerReplace = vi.fn();
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/projects',
-  useRouter: () => ({ replace: routerReplace, push: vi.fn(), refresh: vi.fn() }),
-}));
 vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: vi.fn() }));
 const navigate = vi.mocked(hardNavigate);
 
@@ -47,7 +41,6 @@ beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
   navigate.mockReset();
-  routerReplace.mockReset();
   window.localStorage.clear();
 });
 afterAll(() => mswServer.close());
@@ -88,7 +81,6 @@ describe('SessionGuard', () => {
     });
     expect(requestCount).toBe(1);
     expect(screen.queryByText(/signed in as/i)).not.toBeInTheDocument();
-    expect(routerReplace).not.toHaveBeenCalled();
   });
 
   it('does not log the user out when /auth/me fails with a non-401 error', async () => {
@@ -201,7 +193,6 @@ describe('SessionGuard', () => {
     expect(window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem('citeladder-theme')).toBe('dark');
     expect(window.localStorage.getItem(ACTIVE_WORKSPACE_STORAGE_KEY)).toBeNull();
-    expect(routerReplace).not.toHaveBeenCalled();
   });
 
   it('acts on a 401 reaching the cache directly, after the deferring microtask', async () => {

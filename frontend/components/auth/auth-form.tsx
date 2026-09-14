@@ -1,7 +1,7 @@
 'use client';
 
 import { Eye, EyeOff } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { type ComponentProps, type ReactNode, useState } from 'react';
 
 import { Alert as MktAlert } from '@/components/ui/alert';
@@ -216,7 +216,7 @@ export function AuthFormShell({
           <p className="flow-help pt-1 text-center">
             {footerPrompt}{' '}
             <Link
-              href={footerHref}
+              to={footerHref}
               className={cn(
                 'flow-exit',
                 footerLinkVariant === 'emphasis' && 'flow-auth-switch-link',

@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
 import { textRole } from '@/components/ui/typography';
@@ -231,7 +231,7 @@ function ScoredInventory({
   crawl: SiteCrawl;
   active: boolean;
 }>) {
-  const requestedSort = useSearchParams().get('sort');
+  const requestedSort = useSearchParams()[0].get('sort');
   return (
     <ScoredInventoryState
       key={requestedSort ?? ''}

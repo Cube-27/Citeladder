@@ -17,17 +17,9 @@ import {
 } from './design-system-source-checks.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-const tokenOwner = join(root, 'app', 'globals.css');
+const tokenOwner = join(root, 'apps', 'app', 'src', 'globals.css');
 const sourceExtensions = new Set(['.css', '.ts', '.tsx', '.js', '.mjs']);
-const ignored = new Set([
-  'node_modules',
-  '.next',
-  '.next-stale-codex',
-  'build',
-  'dist',
-  'coverage',
-  'test-results',
-]);
+const ignored = new Set(['node_modules', 'build', 'dist', 'coverage', 'test-results']);
 const violations = [];
 
 function files(directory) {
@@ -62,10 +54,10 @@ for (const path of files(root)) {
     path !== import.meta.filename &&
     /(?<![\w-])#[0-9a-f]{3,8}(?![\w-])/i.test(source)
   ) {
-    violations.push(`${label}: raw color outside app/globals.css`);
+    violations.push(`${label}: raw color outside apps/app/src/globals.css`);
   }
   if (path !== tokenOwner && path !== import.meta.filename && /@theme\b/.test(source)) {
-    violations.push(`${label}: @theme outside app/globals.css`);
+    violations.push(`${label}: @theme outside apps/app/src/globals.css`);
   }
   violations.push(...directRadixImportViolations(source, label));
   violations.push(...styleAssertionViolations(source, label));
@@ -81,7 +73,7 @@ for (const path of files(root)) {
     !label.startsWith('components/auth/') &&
     !label.startsWith('components/onboarding/') &&
     !label.startsWith('lib/marketing-content/') &&
-    (label.startsWith('app/(authed)/(app)/') ||
+    (label.startsWith('apps/app/src/') ||
       label.startsWith('components/') ||
       label.startsWith('lib/'));
   // Applies to every source file, not just product UI: the ESLint rule this

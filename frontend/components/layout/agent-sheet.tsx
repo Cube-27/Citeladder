@@ -1,7 +1,7 @@
 'use client';
 
 import { Bot } from 'lucide-react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import {
@@ -109,8 +109,8 @@ export function AgentSheetTrigger({
 }
 
 export function AgentSheet() {
-  const pathname = usePathname() ?? '/projects';
-  const searchParams = useSearchParams();
+  const pathname = useLocation().pathname ?? '/projects';
+  const searchParams = useSearchParams()[0];
   const { activeProject } = useProjectContext();
   const { hasCapability, isLoading } = useEntitlement();
   const [open, setOpen] = useState(false);

@@ -10,6 +10,7 @@ export const POST_TRACK: BlogPost = {
   excerpt:
     'Track four distinct evidence streams—referral visits, Google AI impressions, Bing citation activity, and controlled prompt observations.',
   image: '/blog/editorial/article-track.png',
+  cardImage: '/blog/editorial/article-track.svg',
   date: '2026-09-03',
   dateModified: '2026-09-09',
   readTime: '9 min read',

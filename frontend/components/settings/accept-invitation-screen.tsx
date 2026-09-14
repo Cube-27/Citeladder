@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
 import { Alert } from '@/components/ui/alert';
@@ -26,8 +26,8 @@ import { useSelectWorkspace } from '@/lib/navigation/project-destination';
  * about where the reader now is.
  */
 export function AcceptInvitationScreen() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const router = useNavigate();
+  const searchParams = useSearchParams()[0];
   const queryClient = useQueryClient();
   const selectWorkspace = useSelectWorkspace();
   const token = searchParams?.get('token') ?? '';
@@ -77,7 +77,7 @@ export function AcceptInvitationScreen() {
             })}
           />
           <div>
-            <Button type="button" variant="ghost" onClick={() => router.push('/projects')}>
+            <Button type="button" variant="ghost" onClick={() => router('/projects')}>
               Go to your workspace
             </Button>
           </div>

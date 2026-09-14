@@ -1,8 +1,8 @@
 'use client';
 
 import { FolderOpen, Plus } from 'lucide-react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,7 @@ import { DashboardScreen } from './dashboard-screen';
 export function ProjectsScreen() {
   const { projects, projectsSettled, activeWorkspaceId, activeProject, status } =
     useProjectContext();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams()[0];
   const requestedProjectId = searchParams?.get('project') ?? null;
   const [editing, setEditing] = useState<Project | null>(null);
 
@@ -62,7 +62,7 @@ export function ProjectsScreen() {
         description="Add a brand to start tracking how AI answers describe it."
         action={
           <Button asChild>
-            <Link href={newProjectDestination(activeWorkspaceId)}>
+            <Link to={newProjectDestination(activeWorkspaceId)}>
               <Plus className="size-4" aria-hidden />
               Add project
             </Link>

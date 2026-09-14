@@ -19,7 +19,6 @@ artifacts/
 
 # Node / frontend (F1+)
 node_modules/
-.next/
 /.playwright/
 frontend/.playwright-cli/
 /.playwright-cli/
@@ -27,7 +26,7 @@ frontend/.playwright-cli/
 # The root package.json only delegates to frontend/ and backend/; it declares
 # no dependencies. pnpm still materializes an empty project there on any root
 # `pnpm run`, and a second lockfile at the repository root would move the
-# workspace root that Next.js and the tooling infer. frontend/pnpm-lock.yaml
+# workspace root that frontend tooling infers. frontend/pnpm-lock.yaml
 # (not anchored here) stays tracked.
 /pnpm-lock.yaml
 

@@ -2,8 +2,8 @@
 
 import { Menu } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 import { CommandPalette, CommandPaletteTrigger } from '@/components/ui/command-palette';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const pendingDrawerLaunch = useRef<
     { kind: 'palette'; trigger: HTMLElement } | { kind: 'agent' } | null
   >(null);
-  const pathname = usePathname() ?? '/projects';
+  const pathname = useLocation().pathname ?? '/projects';
   const { activeProjectId } = useProjectContext();
   const overviewHref = activeProjectId
     ? projectDestination('/projects', null, activeProjectId)
@@ -98,7 +98,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
 
               <div className="border-border-subtle shrink-0 border-t p-[var(--sidebar-pad-x)]">
                 <Link
-                  href={overviewHref}
+                  to={overviewHref}
                   className="focus-ring flex items-center rounded-xs px-2.5 py-1 transition-opacity hover:opacity-90"
                   aria-label="CiteLadder command center"
                 >
@@ -166,7 +166,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               >
                 <div className="grid gap-4">
                   <Link
-                    href={overviewHref}
+                    to={overviewHref}
                     className="focus-ring flex items-center rounded-[var(--radius-control)] px-2 py-1"
                     onClick={() => setNavigationOpen(false)}
                     aria-label="CiteLadder command center"

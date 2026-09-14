@@ -1,29 +1,7 @@
-// Oxlint replaced ESLint. The rule set was ported with `@oxlint/migrate`, which
-// carried 82 of the 90 rules `eslint-config-next` had resolved; the eight it
-// could not are accounted for as follows.
-//
-//   - `no-restricted-syntax` (the design-token restriction) and
-//     `@next/next/no-location-assign-relative-destination` are not implemented
-//     by oxlint. Both moved into the policy scripts, where they are now
-//     stricter and unit-tested: `textRoleBackgroundViolations` in
-//     scripts/design-system-source-checks.mjs, and the hard-navigation
-//     ownership guard in scripts/check-frontend-architecture.mjs.
-//   - `react-hooks/config` and `react-hooks/gating` need React Compiler options
-//     oxlint does not expose. Inert here: next.config.ts does not enable the
-//     compiler, so there are no options to validate or gate.
-//   - `react/require-render-return` is nursery-only and inert: no class
-//     components exist.
-//   - `react/jsx-uses-react`, `react/jsx-uses-vars` and `react/no-deprecated`
-//     are subsumed by `no-unused-vars` and the modern JSX transform.
-//
-// Correctness is intentionally enabled across Oxlint and every configured
-// plugin. This includes the broader jsx-a11y correctness set that was not part
-// of eslint-config-next; those findings are now part of the required gate.
-// `no-unsafe-optional-chaining` is the one rule adopted from outside the port:
-// it found three real cases where `?.` promised a safety a cast then discarded.
+// Oxlint enforces the common TypeScript and browser correctness baseline.
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["nextjs", "typescript"],
+  "plugins": ["typescript"],
   "categories": {
     "correctness": "error"
   },
@@ -33,13 +11,11 @@
     "node": true
   },
   "ignorePatterns": [
-    ".next/**",
     "out/**",
     "build/**",
     "**/dist/**",
-    "next-env.d.ts",
+    "**/.astro/**",
     "node_modules/**",
-    ".next-stale-codex/**",
     "coverage/**",
     "playwright-report/**",
     "test-results/**"
@@ -66,27 +42,6 @@
     "no-promise-executor-return": "error",
     "no-constant-binary-expression": "error",
     "no-unsafe-optional-chaining": "error",
-    "nextjs/google-font-display": "warn",
-    "nextjs/google-font-preconnect": "warn",
-    "nextjs/next-script-for-ga": "warn",
-    "nextjs/no-async-client-component": "warn",
-    "nextjs/no-before-interactive-script-outside-document": "warn",
-    "nextjs/no-css-tags": "warn",
-    "nextjs/no-head-element": "warn",
-    "nextjs/no-html-link-for-pages": "error",
-    "nextjs/no-img-element": "warn",
-    "nextjs/no-page-custom-font": "warn",
-    "nextjs/no-styled-jsx-in-document": "warn",
-    "nextjs/no-sync-scripts": "error",
-    "nextjs/no-title-in-document-head": "warn",
-    "nextjs/no-typos": "warn",
-    "nextjs/no-unwanted-polyfillio": "warn",
-    "nextjs/inline-script-id": "error",
-    "nextjs/no-assign-module-variable": "error",
-    "nextjs/no-document-import-in-page": "error",
-    "nextjs/no-duplicate-head": "error",
-    "nextjs/no-head-import-in-document": "error",
-    "nextjs/no-script-component-in-head": "error",
     "typescript/ban-ts-comment": "error",
     "typescript/no-duplicate-enum-values": "error",
     "typescript/no-empty-object-type": "error",

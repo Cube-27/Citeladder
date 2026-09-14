@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 
@@ -13,6 +13,7 @@ import { queryKeys } from '@/lib/api/query-keys';
 import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
 import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
 import { WORKSPACE_LOADING_STALL_MS } from '@/lib/config/operational';
+import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { OnboardingScreen } from './onboarding-screen';
@@ -44,13 +45,20 @@ function ProjectSetupGate() {
   };
 
   const remainingProjectSlots = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
+  const projectsHref = activeWorkspaceId
+    ? workspaceDestination('/projects', null, activeWorkspaceId)
+    : '/projects';
 
   // Every settled FAILURE is answered before the loading branch. A failed
   // workspace read leaves `activeWorkspaceId` null forever, so testing for it
   // first hid the retry behind a spinner that never resolved.
   if (status === 'error') {
     return (
-      <ProjectSetupBlocked title="Your workspace could not be loaded" onRetry={retry}>
+      <ProjectSetupBlocked
+        title="Your workspace could not be loaded"
+        onRetry={retry}
+        projectsHref={projectsHref}
+      >
         We could not confirm which workspace to create this project in. Retry to load it again.
       </ProjectSetupBlocked>
     );
@@ -60,24 +68,28 @@ function ProjectSetupGate() {
     // or contradicts the workspace. Creating a project is not the answer to a
     // request that named a different one.
     return (
-      <ProjectSetupBlocked title="That project is unavailable">
+      <ProjectSetupBlocked title="That project is unavailable" projectsHref={projectsHref}>
         The project this link names could not be opened. Go back to your projects to continue.
       </ProjectSetupBlocked>
     );
   }
   if (status === 'resolving' || activeWorkspaceId === null || entitlementLoading) {
-    return <ProjectSetupLoading onRetry={retry} />;
+    return <ProjectSetupLoading onRetry={retry} projectsHref={projectsHref} />;
   }
   if (remainingProjectSlots === undefined) {
     return (
-      <ProjectSetupBlocked title="Project access unavailable" onRetry={retry}>
+      <ProjectSetupBlocked
+        title="Project access unavailable"
+        onRetry={retry}
+        projectsHref={projectsHref}
+      >
         Your project allowance is unresolved. Retry to check for updated access.
       </ProjectSetupBlocked>
     );
   }
   if (remainingProjectSlots === 0) {
     return (
-      <ProjectSetupBlocked title="Project limit reached">
+      <ProjectSetupBlocked title="Project limit reached" projectsHref={projectsHref}>
         Your current access does not include another project.
       </ProjectSetupBlocked>
     );
@@ -85,7 +97,10 @@ function ProjectSetupGate() {
   return <OnboardingScreen />;
 }
 
-function ProjectSetupLoading({ onRetry }: Readonly<{ onRetry: () => void }>) {
+function ProjectSetupLoading({
+  onRetry,
+  projectsHref,
+}: Readonly<{ onRetry: () => void; projectsHref: string }>) {
   const [stalled, setStalled] = useState(false);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -97,6 +112,7 @@ function ProjectSetupLoading({ onRetry }: Readonly<{ onRetry: () => void }>) {
   return (
     <ProjectSetupBlocked
       title="Your workspace is taking longer to load"
+      projectsHref={projectsHref}
       onRetry={() => {
         setStalled(false);
         setAttempt((current) => current + 1);
@@ -112,7 +128,13 @@ function ProjectSetupBlocked({
   title,
   children,
   onRetry,
-}: Readonly<{ title: string; children: ReactNode; onRetry?: () => void }>) {
+  projectsHref,
+}: Readonly<{
+  title: string;
+  children: ReactNode;
+  onRetry?: () => void;
+  projectsHref: string;
+}>) {
   return (
     <main
       id="main"
@@ -128,7 +150,7 @@ function ProjectSetupBlocked({
             </Button>
           )}
           <Button asChild variant="secondary" className="w-fit">
-            <Link href="/projects">Back to projects</Link>
+            <Link to={projectsHref}>Back to projects</Link>
           </Button>
         </div>
       </Alert>

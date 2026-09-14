@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Play } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 import { AuditSchedules } from '@/components/runs/audit-schedules';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
@@ -42,7 +42,7 @@ export function RunsScreen() {
   const project = useActiveProject();
   const scope = resolveActiveProjectRequestScope(project);
   const projectId = scope.projectId;
-  const router = useRouter();
+  const router = useNavigate();
   const projectHref = useProjectHref();
   const [launchOpen, setLaunchOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -158,7 +158,7 @@ export function RunsScreen() {
           open={launchOpen}
           onOpenChange={setLaunchOpen}
           projectId={projectId}
-          onLaunched={(audit) => router.push(projectHref(`/runs/${audit.id}`))}
+          onLaunched={(audit) => router(projectHref(`/runs/${audit.id}`))}
         />
       ) : null}
     </Stack>

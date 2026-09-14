@@ -2,7 +2,6 @@
 
 import { LogoMark } from '@/components/ui/logo-mark';
 import { Menu, X } from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
@@ -306,7 +305,7 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
   const reduceMotion = useReducedMotion();
 
   return (
-    <Link
+    <a
       href="/"
       aria-label="CiteLadder home"
       className="focus-ring inline-flex shrink-0 items-center rounded-xs"
@@ -324,7 +323,7 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
       }}
     >
       <LogoMark priority />
-    </Link>
+    </a>
   );
 }
 
@@ -332,13 +331,12 @@ function HomeLogoLink({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
 function AnonymousActions() {
   return (
     <>
-      <Link
+      <a
         href="/login"
-        prefetch={false}
         className="website-nav text-muted hover:text-accent-text inline-flex px-4 transition-colors"
       >
         Log in
-      </Link>
+      </a>
       <ButtonLink href="/register" className="hidden min-h-10 px-4 sm:inline-flex">
         Sign up
       </ButtonLink>

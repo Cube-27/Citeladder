@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
@@ -22,10 +22,10 @@ const POLL_INTERVAL_MS = RUN_ACTIVE_POLL_MS;
 /** Active-run progress, cancellation, failed-execution reruns, and evidence selection. */
 export function RunDetailScreen() {
   const params = useParams<{ runId: string }>();
-  const router = useRouter();
+  const router = useNavigate();
   const projectHref = useProjectHref();
-  const searchParams = useSearchParams();
-  const runId = params.runId;
+  const searchParams = useSearchParams()[0];
+  const runId = params.runId ?? '';
   const workspaceId = useActiveWorkspaceId();
   const queryClient = useQueryClient();
   const executionParam = searchParams.get('execution');
@@ -66,7 +66,7 @@ export function RunDetailScreen() {
     mutationFn: () => runsApi.rerunFailures(runId, {}, { workspaceId }),
     onSuccess: (repairAudit) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.runs.all });
-      router.push(projectHref(`/runs/${repairAudit.id}`));
+      router(projectHref(`/runs/${repairAudit.id}`));
     },
   });
 
@@ -113,7 +113,8 @@ export function RunDetailScreen() {
         onOpenChange={(open) => {
           if (!open) {
             setSelectedExecutionId(null);
-            if (searchParams.has('execution')) router.replace(projectHref(`/runs/${runId}`));
+            if (searchParams.has('execution'))
+              router(projectHref(`/runs/${runId}`), { replace: true });
           }
         }}
       />

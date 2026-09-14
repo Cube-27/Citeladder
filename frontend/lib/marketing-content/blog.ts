@@ -95,6 +95,7 @@ export type BlogPost = {
   seoDescription: string;
   excerpt: string;
   image: string;
+  cardImage?: string;
   date?: string;
   dateModified?: string;
   readTime?: string;

@@ -21,7 +21,7 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     include: ['**/*.{test,spec}.{ts,tsx}'],
     maxWorkers,
-    exclude: ['node_modules', '.next', 'e2e'],
+    exclude: ['node_modules', 'e2e'],
     css: false,
   },
 });

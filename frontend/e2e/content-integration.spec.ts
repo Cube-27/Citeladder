@@ -15,7 +15,7 @@ import {
  *   pnpm exec playwright test --config e2e/content-integration.config.ts
  *
  * No stubs anywhere in app code: disposable Postgres DB, real FastAPI app,
- * real `content_worker` process, real Next.js proxy, and the real Mistral
+ * real `content_worker` process, real Vite proxy, and the real Mistral
  * connector pointed (via `CONTENT_PROVIDER_ENDPOINT` only) at a local mock
  * server. Requires Postgres reachable via `E2E_ADMIN_DATABASE_URL` (or the
  * backend `.env` `DATABASE_URL` server) and `uv` + node on PATH.
@@ -75,7 +75,7 @@ test('enqueue → worker → sanitised markdown result, persisted across reload'
   await expect(page.getByRole('status', { name: /generating content/i })).toBeVisible();
 
   // The real worker claims the row, calls the mock provider, finalises.
-  // Generous timeout: the first navigation also pays the Next.js dev-server
+  // Generous timeout: the first navigation also pays the Vite dev-server
   // compile of /content, which can dwarf the actual queue round trip.
   const heading = page.getByRole('heading', { name: 'Acme Launch Page' });
   await expect(heading).toBeVisible({ timeout: 120_000 });

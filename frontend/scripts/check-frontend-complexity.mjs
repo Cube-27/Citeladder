@@ -12,7 +12,7 @@ const POLICY_PATH = path.join(FRONTEND, 'scripts', 'frontend_complexity_policy.j
 const POLICY_REPOSITORY_PATH = 'frontend/scripts/frontend_complexity_policy.json';
 const GIT_EXECUTABLE =
   process.platform === 'win32' ? 'C:\\Program Files\\Git\\cmd\\git.exe' : '/usr/bin/git';
-const EXPECTED_ROOTS = ['app', 'components', 'lib'];
+const EXPECTED_ROOTS = ['apps/app', 'components', 'lib'];
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;
 // ESTree names for the kinds the TypeScript walk counted. Accessors and
 // constructors are `MethodDefinition` wrappers around a FunctionExpression
@@ -94,7 +94,7 @@ function filesUnder(root) {
   function visit(directory) {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       if (
-        ['node_modules', '.next', 'out', 'coverage', 'playwright-report', 'test-results'].includes(
+        ['node_modules', '.next', 'dist', 'out', 'coverage', 'playwright-report', 'test-results'].includes(
           entry.name,
         )
       )
@@ -199,7 +199,7 @@ export function validatePolicy(policy) {
   )
     throw new Error('invalid frontend complexity policy shape');
   if (JSON.stringify(policy.roots) !== JSON.stringify(EXPECTED_ROOTS))
-    throw new Error('policy roots must remain app, components, lib');
+    throw new Error('policy roots must remain apps/app, components, lib');
   const defaults = policy.defaults;
   validateDefaults(defaults);
   validateExceptions(policy.exceptions, defaults);

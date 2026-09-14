@@ -7,8 +7,8 @@ import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './s
 
 const EDITORIAL_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']);
 const EDITORIAL_SIZE = /\btext-(?:2xs|xs|sm|base|lg|xl|2xl|3xl|4xl|5xl)\b/;
-const WEBSITE_CSS = 'app/website-type.css';
-const TOKEN_CSS = 'app/globals.css';
+const WEBSITE_CSS = 'apps/app/src/website-type.css';
+const TOKEN_CSS = 'apps/app/src/globals.css';
 const MINIMUM_NORMAL_TEXT_CONTRAST = 4.5;
 const LIGHT_SURFACE_TOKENS = [
   '--color-background',
@@ -614,7 +614,7 @@ function fontSizeRem(rules, selector) {
 /** Shared token completeness and relative scale consistency; appearance belongs to docs/design.md. */
 export function productContractViolations(root) {
   const violations = [];
-  const css = readFileSync(join(root, 'app', 'globals.css'), 'utf8');
+  const css = readFileSync(join(root, ...TOKEN_CSS.split('/')), 'utf8');
   const websiteCss = readFileSync(join(root, ...WEBSITE_CSS.split('/')), 'utf8');
   // Every role the product builds on has to be defined somewhere. The value is
   // the design system's to choose: pinning `--color-action` to a literal hex
@@ -654,7 +654,7 @@ export function productContractViolations(root) {
   ];
   for (const token of requiredTokens) {
     if (!new RegExp(escapeRegExp(token) + String.raw`\s*:\s*[^;]+;`).test(css)) {
-      violations.push(`app/globals.css: ${token} must be defined`);
+      violations.push(`${TOKEN_CSS}: ${token} must be defined`);
     }
   }
   // The type ladder is ordered even though its absolute sizes are free.
@@ -675,17 +675,17 @@ export function productContractViolations(root) {
   for (let index = 1; index < scale.length; index += 1) {
     if (scale[index].size <= scale[index - 1].size) {
       violations.push(
-        `app/globals.css: ${scale[index].token} must be larger than ${scale[index - 1].token}`,
+        `${TOKEN_CSS}: ${scale[index].token} must be larger than ${scale[index - 1].token}`,
       );
     }
   }
   if (/\.website-type\b/.test(css + websiteCss)) {
-    violations.push('app/globals.css: retired .website-type palette boundary must not return');
+    violations.push(`${TOKEN_CSS}: retired .website-type palette boundary must not return`);
   }
   // The class itself is gone from the shell, so guarding only the palette-override
   // shape would be an assertion that can never fire. Keep the namespace retired.
   if (/\.product-app\b/.test(css)) {
-    violations.push('app/globals.css: the retired product-app palette scope must not return');
+    violations.push(`${TOKEN_CSS}: the retired product-app palette scope must not return`);
   }
 
   return violations;

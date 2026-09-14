@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -73,6 +74,8 @@ type ProvidersOptions = Omit<RenderOptions, 'wrapper'> & {
    * what would otherwise hide a consumer that cannot survive without one.
    */
   projectSelection?: Partial<ProjectContextValue> | null;
+  /** Initial in-app location for router-aware component tests. */
+  initialEntries?: string[];
 };
 
 /**
@@ -92,20 +95,28 @@ type ProvidersOptions = Omit<RenderOptions, 'wrapper'> & {
  */
 export function renderWithProviders(ui: ReactElement, options?: ProvidersOptions) {
   const queryClient = createAppQueryClient();
-  const { projectSelection, ...renderOptions } = options ?? {};
+  const { projectSelection, initialEntries, ...renderOptions } = options ?? {};
   const selection = projectSelection === null ? null : testProjectSelection(projectSelection);
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          {selection === null ? (
-            children
-          ) : (
-            <ProjectSelectionProvider value={selection}>{children}</ProjectSelectionProvider>
-          )}
-        </TooltipProvider>
-      </QueryClientProvider>
+      <MemoryRouter
+        initialEntries={
+          initialEntries ?? [
+            window.location.pathname + window.location.search + window.location.hash,
+          ]
+        }
+      >
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            {selection === null ? (
+              children
+            ) : (
+              <ProjectSelectionProvider value={selection}>{children}</ProjectSelectionProvider>
+            )}
+          </TooltipProvider>
+        </QueryClientProvider>
+      </MemoryRouter>
     );
   }
 

@@ -1,0 +1,13 @@
+---
+import { LegalDocumentView } from '@/components/marketing/pages/legal';
+import { AI_POLICY } from '@/lib/marketing-content/legal';
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+---
+
+<MarketingLayout
+  title="AI Policy · CiteLadder"
+  description={AI_POLICY.description}
+  canonical="/ai-policy"
+>
+  <LegalDocumentView document={AI_POLICY} />
+</MarketingLayout>

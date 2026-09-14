@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
 
 import { mswServer } from '@/test/msw-server';
 import { makeProject } from '@/test/fixtures/project';
@@ -17,12 +17,6 @@ import { SiteHealthScreen } from './site-health-screen';
 function setSearch(value: string) {
   window.history.replaceState(null, '', value ? `/site?${value}` : '/site');
 }
-
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  usePathname: () => '/site',
-  useSearchParams: () => new URLSearchParams(window.location.search),
-}));
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';

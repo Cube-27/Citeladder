@@ -1,6 +1,4 @@
 import { ArrowLeft, ArrowRight, PenLine } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
 
 import { BlogIndexExplorer } from '@/components/marketing/blog/blog-index-explorer';
 import { BLOG_EMPTY_STATE, POSTS, type BlogPost } from '@/lib/marketing-content/blog';
@@ -137,14 +135,16 @@ export function BlogIndex() {
               </p>
             </div>
             <div className="relative hidden aspect-[12/7] lg:block">
-              <Image
+              <img
                 src="/blog/editorial/hero-ai-visibility.svg"
                 alt=""
                 aria-hidden="true"
-                fill
-                priority
+                width={384}
+                height={224}
+                loading="eager"
+                fetchPriority="high"
                 sizes="(max-width: 1279px) 288px, 384px"
-                className="object-contain"
+                className="absolute inset-0 size-full object-contain"
               />
             </div>
           </Reveal>
@@ -293,12 +293,12 @@ function ArticleLinks({ post }: Readonly<{ post: BlogPost }>) {
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {related.map((relatedPost) => (
               <li key={relatedPost.slug}>
-                <Link
+                <a
                   href={`/blog/${relatedPost.slug}`}
                   className="border-border-subtle bg-panel hover:border-accent-border text-foreground focus-ring block rounded-[var(--radius-control)] border p-4 text-sm font-medium transition-colors"
                 >
                   {relatedPost.title}
-                </Link>
+                </a>
               </li>
             ))}
           </ul>
@@ -308,7 +308,7 @@ function ArticleLinks({ post }: Readonly<{ post: BlogPost }>) {
       {(previous || next) && (
         <nav aria-label="Previous and next articles" className="mt-10 grid gap-4 sm:grid-cols-2">
           {previous ? (
-            <Link
+            <a
               href={`/blog/${previous.slug}`}
               className="border-border-subtle hover:border-accent-border focus-ring rounded-[var(--radius-control)] border p-4 transition-colors"
             >
@@ -316,18 +316,18 @@ function ArticleLinks({ post }: Readonly<{ post: BlogPost }>) {
               <span className="text-foreground mt-1 block text-sm font-medium">
                 {previous.title}
               </span>
-            </Link>
+            </a>
           ) : (
             <span />
           )}
           {next ? (
-            <Link
+            <a
               href={`/blog/${next.slug}`}
               className="border-border-subtle hover:border-accent-border focus-ring rounded-[var(--radius-control)] border p-4 text-right transition-colors"
             >
               <span className="website-label text-muted">Next</span>
               <span className="text-foreground mt-1 block text-sm font-medium">{next.title}</span>
-            </Link>
+            </a>
           ) : null}
         </nav>
       )}
@@ -348,13 +348,13 @@ export function BlogPostView({ post }: Readonly<{ post: BlogPost }>) {
       <header className="border-border-subtle border-b pt-16 pb-8 md:pb-10">
         <Container>
           <Reveal className="mx-auto w-full max-w-4xl text-center lg:max-w-5xl">
-            <Link
+            <a
               href="/blog"
               className="text-muted hover:text-foreground mx-auto mb-5 flex w-fit items-center gap-2 text-sm font-medium transition-colors"
             >
               <ArrowLeft className="size-4" aria-hidden />
               All guides
-            </Link>
+            </a>
             <TagRow tags={post.tags} className="justify-center" />
             <h1 className="website-page-title origin-centre text-foreground mx-auto mt-4 max-w-4xl text-balance">
               {post.title}

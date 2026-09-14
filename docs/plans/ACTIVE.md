@@ -2,11 +2,6 @@
 
 ## Active
 
-- [Frontend migration — Next.js to Vite and Astro](frontend-migration.md)
-  — active; Phase 0 contract and repository mapping completed on 13 September
-  2026. Phase 1 is the verified-gap-only Next stabilization gate before the
-  Vite application foundation.
-
 - [Runtime correctness and continuity](citeladder-runtime-correctness-and-continuity.md)
   — implementation is delivered through Slice 4. Authenticated local traces
   still gate Slice 5 decisions, and deployed incident/SSE acceptance requires
@@ -25,6 +20,13 @@ for deferred sign-in selection and invitation delivery; it is not an active or
 additional queued assignment. Listed work is not authorization to execute it.
 
 ## Last completed
+
+[Frontend migration — Next.js to Vite and Astro](frontend-migration.md)
+— completed on 14 September 2026. Astro owns public SSR and generated
+endpoints, Vite owns authenticated routes, Caddy preserves same-origin API and
+bounded route ownership, and the Next runtime and migration adapters are gone.
+Focused engineering, browser, performance, and independent architecture gates
+passed; CI retains clean-container validation.
 
 [Design continuity and resource states](citeladder-design-continuity-and-resource-states.md)
 — completed on 13 September 2026. Safe shell/bootstrap recovery, Site Health

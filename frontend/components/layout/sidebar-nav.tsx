@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { Link } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
@@ -35,7 +35,7 @@ function NavLink({
   const Icon = item.icon;
   return (
     <Link
-      href={item.href}
+      to={item.href}
       onMouseEnter={() => {
         if (!active) onIntent(item.href);
       }}
@@ -75,8 +75,8 @@ function StationLinks({
   group,
   onNavigate,
 }: Readonly<{ group: NavGroup; onNavigate?: () => void }>) {
-  const pathname = usePathname() ?? '';
-  const searchParams = useSearchParams();
+  const pathname = useLocation().pathname ?? '';
+  const searchParams = useSearchParams()[0];
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
   const onIntent = useRouteIntent();
   const { hasCapability } = useEntitlement();

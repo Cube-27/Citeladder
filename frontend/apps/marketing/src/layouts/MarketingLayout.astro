@@ -1,0 +1,122 @@
+---
+import { GoogleAnalytics } from '@/components/analytics/google-analytics';
+import { CookieBanner } from '@/components/marketing/chrome/cookie-banner';
+import { MarketingFooter } from '@/components/marketing/chrome/footer';
+import { MarketingNavIsland } from '../components/MarketingNavIsland';
+import { ReturningVisitorHint } from '@/components/marketing/chrome/returning-visitor-hint';
+import { organizationJsonLd, softwareApplicationJsonLd, websiteJsonLd, type JsonLdObject } from '@/lib/seo/json-ld';
+import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
+import '@/apps/app/src/globals.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonical?: string;
+  keywords?: readonly string[];
+  openGraphType?: 'article' | 'website';
+  image?: string;
+  imageAlt?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  author?: string;
+  tags?: readonly string[];
+  twitterCard?: 'summary' | 'summary_large_image';
+  robots?: string;
+  jsonLd?: readonly JsonLdObject[];
+}
+
+const {
+  title = `${SITE_NAME} · ${SITE_TAGLINE}`,
+  description = SITE_DESCRIPTION,
+  canonical,
+  keywords = [],
+  openGraphType = 'website',
+  image,
+  imageAlt = '',
+  publishedTime,
+  modifiedTime,
+  author,
+  tags = [],
+  twitterCard,
+  robots,
+  jsonLd = [],
+} = Astro.props;
+const canonicalUrl = canonical ? (absoluteUrl(canonical) ?? canonical) : undefined;
+const imageUrl = image ? absoluteUrl(image) ?? undefined : undefined;
+const socialTitle = title.endsWith(` · ${SITE_NAME}`)
+  ? title.slice(0, -` · ${SITE_NAME}`.length)
+  : title;
+const resolvedTwitterCard = twitterCard ?? (imageUrl ? 'summary_large_image' : 'summary');
+const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplicationJsonLd()].filter(
+  (data): data is JsonLdObject => data !== null,
+);
+const serializeJsonLd = (data: JsonLdObject) => JSON.stringify(data).replace(/</g, '\u003c');
+---
+
+<!doctype html>
+<html lang="en" data-public-surface>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="color-scheme" content="light" />
+    <meta name="description" content={description} />
+    {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
+    <meta name="application-name" content={SITE_NAME} />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <link rel="icon" href="/citeladder-favicon.ico" sizes="any" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link
+      rel="preload"
+      href="/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <style is:inline>
+      @font-face {
+        font-family: 'Geist';
+        src: url('/fonts/Geist-Variable.woff2') format('woff2');
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --font-geist: 'Geist';
+      }
+    </style>
+    <title>{title}</title>
+    <meta property="og:title" content={socialTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={openGraphType} />
+    <meta property="og:site_name" content={SITE_NAME} />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+    {imageUrl && <meta property="og:image" content={imageUrl} />}
+    {imageUrl && <meta property="og:image:width" content="1080" />}
+    {imageUrl && <meta property="og:image:height" content="630" />}
+    {imageUrl && <meta property="og:image:alt" content={imageAlt} />}
+    {publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+    {author && <meta property="article:author" content={author} />}
+    {tags.map((tag) => <meta property="article:tag" content={tag} />)}
+    <meta name="twitter:card" content={resolvedTwitterCard} />
+    <meta name="twitter:title" content={socialTitle} />
+    <meta name="twitter:description" content={description} />
+    {imageUrl && <meta name="twitter:image" content={imageUrl} />}
+    {robots && <meta name="robots" content={robots} />}
+    {sharedJsonLd.map((data) => (
+      <script type="application/ld+json" set:html={serializeJsonLd(data)} />
+    ))}
+    {jsonLd.map((data) => <script type="application/ld+json" set:html={serializeJsonLd(data)} />)}
+  </head>
+  <body class="bg-background text-foreground relative isolate min-h-dvh">
+    {gaMeasurementId && <GoogleAnalytics measurementId={gaMeasurementId} client:load />}
+    <ReturningVisitorHint />
+    <a href="#main" class="skip-link">Skip to main content</a>
+    <MarketingNavIsland client:load />
+    <div class="relative z-1 pt-[var(--marketing-nav-offset)]"><slot /></div>
+    <div class="relative z-1"><MarketingFooter /></div>
+    <CookieBanner client:load />
+  </body>
+</html>

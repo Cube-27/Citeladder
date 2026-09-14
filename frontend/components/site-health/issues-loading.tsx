@@ -7,7 +7,9 @@ const ISSUE_PLACEHOLDERS = ['issue-a', 'issue-b', 'issue-c', 'issue-d'] as const
 export function IssuesLoading() {
   return (
     <div aria-busy="true" className="grid min-w-0 gap-[var(--page-section-gap)]">
-      <output className="sr-only">Loading issues…</output>
+      <output aria-label="Loading issues…" className="sr-only">
+        Loading issues…
+      </output>
 
       <div className="border-border-subtle flex flex-wrap gap-x-8 gap-y-3 border-b pb-3">
         {SUMMARY_PLACEHOLDERS.map((placeholder) => (

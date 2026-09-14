@@ -152,10 +152,14 @@ jobs:
           retention-days: 7
       - name: Test duplication advisory
         run: pnpm report:duplicates:tests
-      - name: Build
+      - name: Build Astro marketing site
         env:
           BACKEND_ORIGIN: https://backend.ci.invalid
         run: pnpm build
+      - name: Build Vite product app
+        env:
+          BACKEND_ORIGIN: https://backend.ci.invalid
+        run: pnpm build:vite
 
   contract:
     name: API contract (backend to frontend)

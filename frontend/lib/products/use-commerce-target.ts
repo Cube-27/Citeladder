@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { CommerceTarget } from '@/lib/api/schemas/commerce-suite';
 
@@ -32,9 +32,9 @@ export function parseTargetKey(value: string | null | undefined): CommerceTarget
  * runs.
  */
 export function useCommerceTarget() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const pathname = useLocation().pathname;
+  const router = useNavigate();
+  const searchParams = useSearchParams()[0];
   const target = parseTargetKey(searchParams?.get('target'));
   const selectTarget = (next: CommerceTarget | undefined) => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
@@ -44,7 +44,7 @@ export function useCommerceTarget() {
     if (next) params.set('target', targetKey(next));
     else params.delete('target');
     const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    router(query ? `${pathname}?${query}` : pathname, { replace: true, preventScrollReset: true });
   };
   return { target, selectTarget };
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { httpErrorStatus } from '@/lib/api/client';
@@ -39,7 +39,7 @@ const isMissing = (error: unknown) => httpErrorStatus(error) === 404;
 
 /** The scope the URL is asking for, if any. */
 function useRequestedScope() {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams()[0];
   return {
     requestedProjectId: searchParams?.get('project') || null,
     urlWorkspaceId: searchParams?.get('workspace') || null,

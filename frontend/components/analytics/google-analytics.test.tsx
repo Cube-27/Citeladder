@@ -7,12 +7,6 @@ import { COOKIE_CONSENT_STORAGE_KEY, writeConsent } from '@/lib/consent/cookie-c
 import { CookieBanner } from '../marketing/chrome/cookie-banner';
 import { GoogleAnalytics } from './google-analytics';
 
-vi.mock('next/script', () => ({
-  default: ({ id, src }: { id?: string; src?: string }) => (
-    <script data-testid={id ?? 'external-script'} data-src={src} />
-  ),
-}));
-
 describe('GoogleAnalytics', () => {
   beforeEach(() => window.localStorage.clear());
 
@@ -30,7 +24,7 @@ describe('GoogleAnalytics', () => {
     expect(screen.queryByTestId('external-script')).not.toBeInTheDocument();
   });
 
-  it('loads the tag lazily after acceptance in the same tab', async () => {
+  it('loads the tag after acceptance in the same tab', async () => {
     const user = userEvent.setup();
     render(
       <>
@@ -43,7 +37,7 @@ describe('GoogleAnalytics', () => {
 
     expect(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).toBe('accepted');
     expect(screen.getByTestId('external-script')).toHaveAttribute(
-      'data-src',
+      'src',
       'https://www.googletagmanager.com/gtag/js?id=G-TEST',
     );
     expect(screen.getByTestId('google-analytics')).toBeInTheDocument();

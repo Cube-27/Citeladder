@@ -2,7 +2,7 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { CornerDownLeft, Search, type LucideIcon } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { resolveCommandGroups } from '@/components/layout/nav-items';
@@ -105,7 +105,7 @@ function toSections(results: readonly Command[]) {
 }
 
 export function CommandPalette() {
-  const router = useRouter();
+  const router = useNavigate();
   const { projects, activeProjectId, activeWorkspaceId } = useProjectContext();
   const selectProject = useSelectProject();
   const [open, setOpen] = useState(false);
@@ -191,7 +191,7 @@ export function CommandPalette() {
         group: group.title,
         icon: item.icon,
         run: () =>
-          router.push(
+          router(
             scopedNavigationDestination(
               item.href,
               item.scope ?? 'project',

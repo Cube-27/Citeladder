@@ -81,21 +81,15 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        # Server-only Next rewrite destination. Browser requests stay relative
-        # to the frontend origin and are proxied across the Compose network.
-        BACKEND_ORIGIN: http://web:8000
-        # Build-time because `next build` inlines NEXT_PUBLIC_* into the client
-        # bundle. All three are optional; unset means the feature is simply not
-        # configured. Changing one requires a rebuild, not a restart.
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
-        NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE: ${NEXT_PUBLIC_LOGO_DEV_PUBLISHABLE:-}
         NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS: ${NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS:-}
     restart: unless-stopped
     environment:
-      # Read per request on the server: NEXT_PUBLIC_SITE_URL by sitemap/robots/OG
-      # metadata, and the demo pair by the /demo funnel. These are NOT baked into
-      # the image, so they take effect on restart. The frontend deliberately has
-      # no `env_file: .env` — it must not receive backend secrets.
+      # Astro reads the canonical origin on every request so metadata, robots,
+      # and the sitemap remain correct after a restart without an image rebuild.
+      # BACKEND_ORIGIN stays server-only and lets the local marketing server
+      # preserve the same-origin API proxy. No env_file: the service must not
+      # receive backend secrets.
+      BACKEND_ORIGIN: http://web:8000
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
       DEMO_BOOKING_URL: ${DEMO_BOOKING_URL:-}
       PUBLIC_SALES_EMAIL: ${PUBLIC_SALES_EMAIL:-}
@@ -105,8 +99,9 @@ services:
     ports:
       - "3000:3000"
 
-  # Opt-in Vite migration target. The current Next frontend keeps port 3000
-  # and remains authoritative unless this profile is explicitly enabled.
+  # Authenticated Vite application. Production ingress owns the explicit
+  # account/product route table; exposing this port keeps local direct-refresh
+  # smoke checks available beside the Astro marketing server on port 3000.
   vite-app:
     profiles: ["migration"]
     build:

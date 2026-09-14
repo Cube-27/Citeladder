@@ -14,9 +14,9 @@ This document remains the deployment design and security contract.
 Deploy the existing application unchanged on one Compute Engine VM:
 
 ```text
-Cloudflare → Caddy → Next.js → FastAPI
-                            ├─ PostgreSQL 16
-                            └─ Existing workers and schedulers
+Cloudflare → Caddy → Astro marketing SSR container (marketing and public routes)
+                    ├─ Vite/Caddy container (authenticated SPA routes)
+                    └─ FastAPI → PostgreSQL 16, workers, and schedulers
 ```
 
 - Repository: `Cube-27/Citeladder`, temporarily public for code review and made
@@ -48,15 +48,15 @@ Cloudflare → Caddy → Next.js → FastAPI
   - Terraform state in a versioned, uniform-access GCS bucket within the disposable project.
 - Add a production Compose overlay that:
   - runs the existing API, frontend, migration/bootstrap, PostgreSQL, and all ten background processes;
-  - uses host networking but binds PostgreSQL, FastAPI, and Next.js to `127.0.0.1`; only Caddy binds 80/443;
+  - uses host networking but binds PostgreSQL, FastAPI, Astro, and Vite to `127.0.0.1`; only Caddy binds 80/443;
   - enables PostgreSQL TLS and keeps `DB_SSL_MODE=require`;
   - runs `alembic upgrade head && python -m app.demo.bootstrap`;
   - builds the frontend with `BACKEND_ORIGIN=http://127.0.0.1:8000`, `CITELADDER_TASK_LOCAL_BACKEND=true`, and demo mode;
   - throttles demo concurrency to `AUDIT_WORKER_CONCURRENCY=2`, `DB_POOL_SIZE=8`, `DB_MAX_OVERFLOW=0`, and Site Health global/per-host concurrency of 2.
   - enables the read-only MCP server at the public origin and admits only
     `DEV_LOGIN_EMAIL`; Caddy routes `/mcp`, its OAuth endpoints, and both
-    discovery documents directly to FastAPI while all UI/docs traffic remains
-    on Next.js.
+    discovery documents directly to FastAPI; Caddy sends authenticated SPA
+    paths to Vite and all remaining public/UI routes to Astro.
 - Build backend and frontend images in GitHub Actions, push immutable digests to Artifact Registry, deploy those exact digests over IAP, and record the source commit and digests in the GitHub deployment summary.
 - Keep core credentials, database password, demo password, provider keys, and Cloudflare origin private key in Secret Manager. The frontend receives only public/demo configuration.
 - Create a nightly compressed PostgreSQL dump with a ten-day bucket lifecycle. Before each update, take an additional pre-deploy dump. The VM can create, list, and read backup objects for monitoring and restore, but cannot delete or overwrite them; lifecycle policy owns routine deletion.

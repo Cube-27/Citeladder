@@ -1,6 +1,14 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { renderWithProviders } from '@/test/render';
+function renderAgent(ui: ReactElement) {
+  return renderWithProviders(ui, {
+    initialEntries: ['/site?start=2026-08-01&end=2026-08-15&tab=pages'],
+  });
+}
 
 import { AgentLauncher, AgentSheet, AgentSheetTrigger } from './agent-sheet';
 
@@ -20,10 +28,6 @@ let activeProject = {
 let agentEntitled = true;
 let entitlementLoading = false;
 
-vi.mock('next/navigation', () => ({
-  usePathname: () => '/site',
-  useSearchParams: () => new URLSearchParams('start=2026-08-01&end=2026-08-15&tab=pages'),
-}));
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({ activeProject }),
@@ -53,7 +57,7 @@ describe('AgentSheet', () => {
    */
   it('holds the trigger’s slot while entitlement is unresolved, inert', () => {
     entitlementLoading = true;
-    render(<AgentSheetTrigger />);
+    renderAgent(<AgentSheetTrigger />);
     // Present in the layout, absent from the accessibility tree and inert.
     const reserved = document.querySelector('[aria-label="Open Growth Agent"]');
     expect(reserved).toBeDisabled();
@@ -63,7 +67,7 @@ describe('AgentSheet', () => {
 
   it('opens from the top bar with bounded typed route context and returns focus', async () => {
     const user = userEvent.setup();
-    render(<Agent />);
+    renderAgent(<Agent />);
     const trigger = screen.getByRole('button', { name: 'Open Growth Agent' });
     await user.click(trigger);
     expect(screen.getByRole('dialog', { name: 'Growth Agent' })).toBeVisible();
@@ -78,7 +82,7 @@ describe('AgentSheet', () => {
 
   it('opens from a contextual launcher with a typed preset', async () => {
     const user = userEvent.setup();
-    render(
+    renderAgent(
       <>
         <AgentSheet />
         <AgentLauncher taskType="build_roadmap" objective="Prioritize Website evidence">
@@ -93,7 +97,7 @@ describe('AgentSheet', () => {
 
   it('hides contextual launchers when Growth Agent is unavailable', () => {
     agentEntitled = false;
-    render(
+    renderAgent(
       <AgentLauncher taskType="build_roadmap" objective="Prioritize Website evidence">
         Build roadmap
       </AgentLauncher>,
@@ -103,7 +107,7 @@ describe('AgentSheet', () => {
 
   it('reopens the default trigger with the last contextual task and objective', async () => {
     const user = userEvent.setup();
-    render(
+    renderAgent(
       <>
         <Agent />
         <AgentLauncher taskType="build_roadmap" objective="Keep this objective">
@@ -122,7 +126,7 @@ describe('AgentSheet', () => {
 
   it('closes and clears route context when the active project changes', async () => {
     const user = userEvent.setup();
-    const view = render(<Agent />);
+    const view = renderAgent(<Agent />);
     await user.click(screen.getByRole('button', { name: 'Open Growth Agent' }));
     expect(screen.getByRole('dialog', { name: 'Growth Agent' })).toBeVisible();
     activeProject = {

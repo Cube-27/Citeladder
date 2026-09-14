@@ -1,8 +1,12 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
   // Keep caching off initially: `check:dead-code` deliberately omits --cache
-  // while the Next App Router warm-cache behavior remains unreliable.
+  // while the two frontend runtimes are being validated together.
   "entry": [
+    // Astro entrypoints own the public-site runtime graph; Vite discovers its HTML entry.
+    "apps/marketing/astro.config.mjs",
+    "apps/marketing/src/middleware.ts",
+    "apps/marketing/src/pages/**/*.{astro,ts}",
     // Invoked explicitly as the real-stack content-integration Playwright entry point.
     "e2e/content-integration.config.ts",
     // Type declaration for the imported check-frontend-complexity.mjs policy module.
@@ -11,6 +15,16 @@
     "scripts/check-jscpd.d.mts",
     // Type declaration for the imported design-system-source-checks.mjs policy module.
     "scripts/design-system-source-checks.d.mts",
+  ],
+  "project": [
+    "apps/app/**/*.{ts,tsx}",
+    "apps/marketing/**/*.{astro,ts,tsx}",
+    "components/**/*.{ts,tsx}",
+    "lib/**/*.{ts,tsx}",
+    "test/**/*.{ts,tsx}",
+    "e2e/**/*.{ts,tsx}",
+    "scripts/**/*.{js,mjs,ts,mts}",
+    "**/*.css",
   ],
   "ignoreDependencies": [
     // Resolved through a computed path in check-jscpd.mjs, which static analysis cannot follow.

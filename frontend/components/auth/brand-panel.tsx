@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import { LogoMark, type BrandLogoVariant } from '@/components/ui/logo-mark';
 
 /**
@@ -19,12 +17,12 @@ export function AuthWordmark({
   priority?: boolean;
 }>) {
   return (
-    <Link
+    <a
       href="/"
       aria-label="CiteLadder home"
       className="group inline-flex items-center no-underline transition-opacity hover:opacity-90"
     >
       <LogoMark size={size} variant={variant} priority={priority} />
-    </Link>
+    </a>
   );
 }

@@ -1,18 +1,16 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render as raw, screen, waitFor } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // Hoisted so the mock factories below — which vitest lifts above these
 // statements — can reference the state safely rather than relying on the
 // factories happening to run lazily.
-const { push, replace, setActiveProjectId, projectContext } = vi.hoisted(() => {
-  const pushFn = vi.fn();
-  const replaceFn = vi.fn();
-  const setActiveProjectIdFn = vi.fn();
+const { setActiveProjectId, projectContext } = vi.hoisted(() => {
+  const setActiveProjectId = vi.fn();
   return {
-    push: pushFn,
-    replace: replaceFn,
-    setActiveProjectId: setActiveProjectIdFn,
+    setActiveProjectId,
     projectContext: {
       projects: [
         { id: 'p1', brand_name: 'Acme' },
@@ -20,16 +18,10 @@ const { push, replace, setActiveProjectId, projectContext } = vi.hoisted(() => {
       ],
       activeProjectId: 'p1',
       activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-      setActiveProjectId: setActiveProjectIdFn,
+      setActiveProjectId,
     },
   };
 });
-
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/projects',
-  useRouter: () => ({ push, replace }),
-}));
 
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -41,6 +33,24 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
 }));
 
 import { CommandPalette, CommandPaletteTrigger } from './command-palette';
+
+function LocationDisplay() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="location">{pathname + search}</output>;
+}
+
+function RouterTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <MemoryRouter initialEntries={['/projects?project=p1']}>
+      {children}
+      <LocationDisplay />
+    </MemoryRouter>
+  );
+}
+
+function renderPalette(ui: ReactElement) {
+  return raw(ui, { wrapper: RouterTestWrapper });
+}
 
 function Palette() {
   return (
@@ -54,7 +64,7 @@ function Palette() {
 /** Opens via the sidebar trigger and returns the user-event instance. */
 async function open() {
   const user = userEvent.setup();
-  render(<Palette />);
+  renderPalette(<Palette />);
   await user.click(screen.getByRole('button', { name: /search or jump to/i }));
   await screen.findByRole('listbox');
   return user;
@@ -62,13 +72,10 @@ async function open() {
 
 describe('CommandPalette', () => {
   beforeEach(() => {
-    push.mockClear();
-    replace.mockClear();
     setActiveProjectId.mockClear();
   });
-
   it('renders the trigger closed, advertising its shortcut', () => {
-    render(<Palette />);
+    renderPalette(<Palette />);
     const trigger = screen.getByRole('button', { name: /search or jump to/i });
     expect(trigger).toHaveAttribute('aria-keyshortcuts', 'Meta+K Control+K');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
@@ -76,7 +83,7 @@ describe('CommandPalette', () => {
 
   it('opens on Ctrl+K and closes on a second press', async () => {
     const user = userEvent.setup();
-    render(<Palette />);
+    renderPalette(<Palette />);
 
     await user.keyboard('{Control>}k{/Control}');
     expect(await screen.findByRole('listbox')).toBeInTheDocument();
@@ -110,20 +117,22 @@ describe('CommandPalette', () => {
   it('navigates to the highlighted route on Enter', async () => {
     const user = await open();
     await user.keyboard('demand{Enter}');
-    expect(push).toHaveBeenCalledWith('/demand?project=p1');
+    expect(screen.getByTestId('location')).toHaveTextContent('/demand?project=p1');
   });
 
   it('keeps workspace commands out of project scope', async () => {
     const user = await open();
     await user.click(screen.getByRole('option', { name: /^settings$/i }));
-    expect(push).toHaveBeenCalledWith('/settings?workspace=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      '/settings?workspace=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    );
   });
 
   it('switches project through the canonical project destination', async () => {
     const user = await open();
     await user.keyboard('orbit{Enter}');
     expect(setActiveProjectId).toHaveBeenCalledWith('p2');
-    expect(push).toHaveBeenCalledWith('/projects?project=p2');
+    expect(screen.getByTestId('location')).toHaveTextContent('/projects?project=p2');
   });
 
   it('moves the selection with the arrow keys', async () => {
@@ -150,7 +159,7 @@ describe('CommandPalette', () => {
   it('does not fire a command when nothing matches', async () => {
     const user = await open();
     await user.keyboard('zzzzz{Enter}');
-    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByTestId('location')).toHaveTextContent('/projects?project=p1');
     expect(setActiveProjectId).not.toHaveBeenCalled();
   });
 
@@ -159,7 +168,7 @@ describe('CommandPalette', () => {
     // without an explicit hand-back focus falls to <body> and the caller
     // loses their place in the page.
     const user = userEvent.setup();
-    render(
+    renderPalette(
       <>
         <input data-testid="outside" />
         <CommandPalette />

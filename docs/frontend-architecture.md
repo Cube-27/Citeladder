@@ -1,10 +1,13 @@
 # Frontend architecture
 
-The Next.js App Router frontend projects workspace-authorized backend
-contracts. It owns navigation, ephemeral state, accessible interactions and
-presentation; the backend owns authorization, measurement and lifecycle truth.
-[Design](design.md) is the sole visual contract. Feature behavior is routed
-through [the documentation index](README.md).
+The frontend has two runtime owners: Astro SSR serves marketing and public
+routes; the Vite/React Router SPA serves authenticated product routes. The
+two shipped frontend containers are the Astro server on port 3000 and the
+Vite/Caddy SPA server on port 3001. Together they project workspace-authorized
+backend contracts. The frontend owns navigation, ephemeral state, accessible
+interactions and presentation; the backend owns authorization, measurement and
+lifecycle truth. [Design](design.md) is the sole visual contract. Feature
+behavior is routed through [the documentation index](README.md).
 
 ## Routes and shared shell
 
@@ -26,17 +29,20 @@ context and entitlement providers across app and onboarding navigation.
 transitions. Navigation, compact navigation and Command Palette share the
 route/capability owner; UI visibility never replaces backend authorization.
 
-Cache Components and Partial Prefetching preserve the shell while route content
-resolves. The app segment has no separate loading boundary. `shell-fallback`
-is the neutral pre-session structure only; after authentication, PageLoading
-and recoverable gate notices render in the shell's content pane. In-place
-refresh retains data with scoped progress rather than collapsing the surface.
-Intent prefetching reuses the destination's exact query key.
+The Vite SPA preserves the authenticated shell while route content resolves.
+`shell-fallback` is the neutral pre-session structure only; after
+authentication, PageLoading and recoverable gate notices render in the shell's
+content pane. In-place refresh retains data with scoped progress rather than
+collapsing the surface. Intent prefetching reuses the destination's exact query
+key.
 
 ## Server, URL and local state
 
-Browser APIs use relative /api/v1 through server-only BACKEND_ORIGIN rewriting.
-TanStack Query owns server records; shared Zod schemas validate their contract.
+Browser APIs use relative `/api/v1`. Vite's development proxy and production
+Caddy routing send backend-owned paths to the server-only `BACKEND_ORIGIN`.
+Caddy sends explicit authenticated routes and `/app-assets/*` to Vite, then
+falls through to Astro for public routes; no browser CORS configuration is
+required.
 Each domain has one API module and query-key owner. Workspace/project identity
 belongs in both requests and cache keys. Retained placeholder data may survive
 filter/pagination changes only within the same owning project/crawl.

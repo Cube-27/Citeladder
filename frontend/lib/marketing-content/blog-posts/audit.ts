@@ -10,6 +10,7 @@ export const POST_AUDIT: BlogPost = {
   excerpt:
     'Audit whether important pages are crawlable, understandable, well sourced, and aligned with real search demand—without inventing universal AI ranking rules.',
   image: '/blog/editorial/article-audit.png',
+  cardImage: '/blog/editorial/article-audit.svg',
   date: '2026-09-03',
   dateModified: '2026-09-09',
   readTime: '7 min read',

@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+
+import { renderWithProviders as render } from '@/test/render';
 
 import { Insight, type InsightModel } from './insight';
 import { ProvenanceChip } from './provenance-chip';

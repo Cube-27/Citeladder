@@ -1,6 +1,6 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'react-router-dom';
 import { Suspense } from 'react';
 
 import type { SiteHealthReferenceInput } from '@/lib/api/content';
@@ -8,9 +8,7 @@ import { DEMAND_SIGNAL_PARAM } from '@/lib/demand/content-link';
 
 import { ContentScreen } from './content-screen';
 
-function siteHealthReference(
-  searchParams: ReturnType<typeof useSearchParams>,
-): SiteHealthReferenceInput | undefined {
+function siteHealthReference(searchParams: URLSearchParams): SiteHealthReferenceInput | undefined {
   const projectId = searchParams.get('project_id');
   const crawlId = searchParams.get('site_health_crawl_id');
   const siteUrlId = searchParams.get('site_url_id');
@@ -20,7 +18,10 @@ function siteHealthReference(
   // page's current analysis from the crawl and the URL.
   const sourceAnalysisId = searchParams.get('source_analysis_id');
   const dimension = searchParams.get('dimension');
-  const checkpointIds = searchParams.getAll('checkpoint_ids');
+  const checkpointIds = searchParams
+    .getAll('checkpoint_ids')
+    .map((checkpointId) => checkpointId.trim())
+    .filter(Boolean);
   if (!projectId || !crawlId || !siteUrlId || !dimension || checkpointIds.length === 0) {
     return undefined;
   }
@@ -35,7 +36,7 @@ function siteHealthReference(
 }
 
 function ContentRouteSurface() {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams()[0];
   return (
     <ContentScreen
       opportunityId={searchParams.get('opportunity_id')}

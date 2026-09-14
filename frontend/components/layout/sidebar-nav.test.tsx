@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -34,9 +35,11 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
 let pathname = '/site';
 let searchParams = new URLSearchParams();
 
-vi.mock('next/navigation', () => ({
-  usePathname: () => pathname,
-  useSearchParams: () => searchParams,
+vi.mock('react-router-dom', () => ({
+  Link: ({ to, children, ...props }: { to: string; children: ReactNode }) =>
+    createElement('a', { ...props, href: to }, children),
+  useLocation: () => ({ pathname }),
+  useSearchParams: () => [searchParams, vi.fn()],
 }));
 
 import { SidebarNav } from './sidebar-nav';

@@ -1,8 +1,9 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import type { Audit, AuditStatus } from '@/lib/api/types';
+import { renderWithProviders as render } from '@/test/render';
 
 import { RunsTable } from './runs-table';
 

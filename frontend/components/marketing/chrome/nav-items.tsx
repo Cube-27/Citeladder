@@ -1,5 +1,4 @@
 import { ArrowUpRight } from 'lucide-react';
-import Link from 'next/link';
 
 import type { NavDropItem } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
@@ -62,8 +61,8 @@ export function NavItemLink({
   }
 
   return (
-    <Link className={ROW} href={item.href} onClick={onSelect}>
+    <a className={ROW} href={item.href} onClick={onSelect}>
       <RowBody item={item} />
-    </Link>
+    </a>
   );
 }

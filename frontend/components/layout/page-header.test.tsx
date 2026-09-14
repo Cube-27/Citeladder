@@ -1,13 +1,14 @@
-import { render, screen } from '@testing-library/react';
-import { useState, type ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { screen } from '@testing-library/react';
+import { useState, type ReactElement, type ReactNode } from 'react';
+import { describe, expect, it } from 'vitest';
 
-const { pathname } = vi.hoisted(() => ({ pathname: { value: '/visibility' } }));
+import { renderWithProviders } from '@/test/render';
 
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => pathname.value,
-}));
+const { pathname } = { pathname: { value: '/visibility' } };
+
+function renderHeader(ui: ReactElement, route = pathname.value) {
+  return renderWithProviders(ui, { initialEntries: [route] });
+}
 
 import { PageHeader } from './page-header';
 import { CompactPageTitleContext } from './compact-page-title-context';
@@ -24,7 +25,7 @@ function CompactTitleHarness({ children }: Readonly<{ children: ReactNode }>) {
 
 function renderTitle(route: string) {
   pathname.value = route;
-  render(<PageHeader />);
+  renderHeader(<PageHeader />, route);
   return screen.getByRole('heading', { level: 1 }).textContent;
 }
 
@@ -58,12 +59,12 @@ describe('PageHeader', () => {
 
   it('accepts an explicit title override', () => {
     pathname.value = '/visibility';
-    render(<PageHeader title="Custom" />);
+    renderHeader(<PageHeader title="Custom" />);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Custom');
   });
 
   it('supplies an explicit title override to the compact shell', () => {
-    render(
+    renderHeader(
       <CompactTitleHarness>
         <PageHeader title="Custom" />
       </CompactTitleHarness>,
@@ -74,13 +75,13 @@ describe('PageHeader', () => {
 
   it('renders the route title as a level-one heading by default', () => {
     pathname.value = '/site';
-    render(<PageHeader />);
+    renderHeader(<PageHeader />);
     expect(screen.getByRole('heading', { level: 1, name: 'Website' })).toBeInTheDocument();
   });
 
   it('keeps the page-detail route title accessible', () => {
     pathname.value = '/site/crawls/crawl-id/pages/page-id';
-    render(<PageHeader />);
+    renderHeader(<PageHeader />);
     expect(screen.getByRole('heading', { level: 1, name: 'Page detail' })).toBeInTheDocument();
   });
 });
