@@ -65,7 +65,7 @@ test.describe('marketing routes', () => {
     const resources = page
       .getByRole('navigation', { name: 'Main navigation' })
       .getByRole('link', { name: 'Resources', exact: true });
-    await expect(resources).toHaveAttribute('href', '/resources');
+    await expect(resources).toHaveAttribute('href', '/blog');
 
     const footer = page.getByRole('navigation', { name: 'Footer' });
     await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toBeVisible();
