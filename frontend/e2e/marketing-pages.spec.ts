@@ -68,7 +68,7 @@ test.describe('marketing routes', () => {
   });
 
   test('shared navigation and footer work from a subpage', async ({ page }) => {
-    await page.goto('/pricing');
+    await page.goto('/faq');
     const resources = page
       .getByRole('navigation', { name: 'Main navigation' })
       .getByRole('link', { name: 'Resources', exact: true });
