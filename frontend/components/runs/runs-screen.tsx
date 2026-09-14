@@ -5,17 +5,17 @@ import { Play } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { AuditSchedules } from '@/components/runs/audit-schedules';
+import { AuditSchedules, useAuditSchedules } from '@/components/runs/audit-schedules';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { RunsTable } from '@/components/runs/runs-table';
 import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { Stack } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
 import { pageToolbarClasses } from '@/components/ui/workspace';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
@@ -67,6 +67,16 @@ export function RunsScreen() {
     [audits, statusFilter],
   );
   const anyActive = audits.some((audit) => shouldPollAudit(audit.status));
+  const schedulesQuery = useAuditSchedules(projectId);
+
+  if (runsQuery.isLoading || schedulesQuery.isLoading) {
+    return (
+      <Stack gap="section">
+        <PageHeader />
+        <PageLoading label="Loading runs…" />
+      </Stack>
+    );
+  }
 
   return (
     <Stack gap="section">
@@ -97,7 +107,6 @@ export function RunsScreen() {
       <RunsContent
         projectId={projectId}
         isError={runsQuery.isError}
-        isLoading={runsQuery.isLoading}
         audits={audits}
         filteredAudits={filteredAudits}
         statusFilter={statusFilter}
@@ -124,7 +133,6 @@ export function RunsScreen() {
 function RunsContent({
   projectId,
   isError,
-  isLoading,
   audits,
   filteredAudits,
   statusFilter,
@@ -133,7 +141,6 @@ function RunsContent({
 }: Readonly<{
   projectId: string | null;
   isError: boolean;
-  isLoading: boolean;
   audits: Audit[];
   filteredAudits: Audit[];
   statusFilter: StatusFilter;
@@ -143,17 +150,6 @@ function RunsContent({
   if (!projectId) return <Alert tone="info">Select or create a project to launch runs.</Alert>;
   if (isError) {
     return <Alert tone="danger">Could not load runs. Check your connection and try again.</Alert>;
-  }
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="grid gap-3">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-        </CardContent>
-      </Card>
-    );
   }
   if (audits.length === 0) {
     return (

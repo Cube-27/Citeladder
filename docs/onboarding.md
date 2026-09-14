@@ -60,8 +60,10 @@ review surface; a persisted terminal failure remains visible rather than
 spinning. The accepted request, terminal worker attempt, queue-to-terminal
 completion, and route handoff expose separate timing boundaries without
 delaying entry to the committed project.
-Draft URL updates use shallow history replacement so they cannot race completion
-navigation. Leaving onboarding discards retained transaction state; a fresh
+Draft URL updates replace the router history entry while retaining its transaction
+identity, so persisting the discovery ID or step does not remount the flow. These
+updates stop during completion and the committed-project handoff. Leaving
+onboarding discards retained transaction state; a fresh
 Add project URL starts at Basics, while a discovery URL resumes that draft.
 A shell-less terminal failure remains an error, not an endless progress state.
 A project with no topics can later use explicit prompt generation from its

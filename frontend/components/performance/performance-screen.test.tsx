@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, screen, waitFor } from '@testing-library/react';
 
 import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
@@ -18,9 +18,6 @@ vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeProject, isLoading: false }),
 }));
 vi.mock('@/lib/api/integrations', () => ({ integrationsApi: { list: vi.fn(async () => []) } }));
-vi.mock('./readiness-ladder', () => ({
-  ReadinessLadder: () => null,
-}));
 vi.mock('./use-performance-sync', () => ({
   usePerformanceSync: () => ({
     mutation: { mutate: vi.fn(), isPending: false },
@@ -95,12 +92,56 @@ function tablePage(dimension: string) {
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledRequest: 'error' }));
+const readiness = {
+  project_id: PROJECT,
+  stage: 'not_connected',
+  connection_count: 0,
+  providers: [],
+  backfill_state: null,
+  imported_through: null,
+  has_performance_snapshot: false,
+  has_demand_snapshot: false,
+  opportunity_count: 0,
+};
+beforeEach(() =>
+  mswServer.use(
+    http.get(`/api/v1/projects/${PROJECT}/readiness`, () => HttpResponse.json(readiness)),
+  ),
+);
 afterEach(() => {
   mswServer.resetHandlers();
 });
 afterAll(() => mswServer.close());
 
 describe('PerformanceScreen evidence states', () => {
+  it('starts readiness alongside the dashboard and presents one settled first-use state', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let dashboardRead = false;
+    let readinessRead = false;
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, async () => {
+        dashboardRead = true;
+        await pending;
+        return HttpResponse.json(dashboard());
+      }),
+      http.get(`/api/v1/projects/${PROJECT}/readiness`, async () => {
+        readinessRead = true;
+        await pending;
+        return HttpResponse.json(readiness);
+      }),
+    );
+    renderWithProviders(<PerformanceScreen />);
+    await waitFor(() => expect(dashboardRead && readinessRead).toBe(true));
+    expect(screen.getByRole('status', { name: 'Loading performance…' })).toBeInTheDocument();
+    expect(screen.queryByText('No search performance evidence yet')).not.toBeInTheDocument();
+    act(() => release());
+    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(screen.queryAllByRole('alert')).toHaveLength(0);
+  });
+
   it('shows first-use guidance without metric or table scaffolding', async () => {
     let tableReads = 0;
     mswServer.use(

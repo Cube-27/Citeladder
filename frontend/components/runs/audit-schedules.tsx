@@ -28,6 +28,15 @@ const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   weekly: 'Weekly',
 };
 
+export function useAuditSchedules(projectId: string | null) {
+  const workspaceId = useActiveWorkspaceId();
+  return useQuery({
+    queryKey: queryKeys.runs.schedules(workspaceId, projectId ?? ''),
+    queryFn: ({ signal }) => runsApi.listSchedules(projectId!, { signal, workspaceId }),
+    enabled: Boolean(projectId && workspaceId),
+  });
+}
+
 /** Compact schedule ledger: schedules use the same frozen prompt set and engines as a run. */
 export function AuditSchedules({
   projectId,
@@ -60,10 +69,7 @@ function WorkspaceSchedules({
   const [cadence, setCadence] = useState<AuditScheduleCadence>('weekly');
   const [intervalMinutes, setIntervalMinutes] = useState('60');
   const [engines, setEngines] = useState<LogicalEngine[]>(['chatgpt']);
-  const schedulesQuery = useQuery({
-    queryKey: queryKeys.runs.schedules(projectId),
-    queryFn: ({ signal }) => runsApi.listSchedules(projectId, { signal, workspaceId }),
-  });
+  const schedulesQuery = useAuditSchedules(projectId);
   const createMutation = useMutation({
     mutationFn: () => {
       return runsApi.createSchedule(
@@ -80,7 +86,9 @@ function WorkspaceSchedules({
       );
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.runs.schedules(projectId) });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.runs.schedules(workspaceId, projectId),
+      });
     },
   });
   const canCreate = Boolean(promptSetId) && engines.length > 0 && !createMutation.isPending;

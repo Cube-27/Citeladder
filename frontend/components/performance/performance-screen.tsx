@@ -8,7 +8,7 @@ import { GranularitySelect, PerformanceNotices, PerformanceToolbar } from './per
 import { Ga4SummaryRow, MetricCards } from './metric-cards';
 import { PerformanceBreakdowns } from './performance-breakdowns';
 import { PerformanceChart, type ChartSeries } from './performance-chart';
-import { ReadinessLadder } from './readiness-ladder';
+import { ReadinessLadder, useProjectReadiness } from './readiness-ladder';
 import { usePerformanceSelection } from './use-performance-selection';
 import { usePerformanceSync } from './use-performance-sync';
 import { PageLoading } from '@/components/layout/page-loading';
@@ -98,6 +98,17 @@ function evidenceAvailability(data: PerformanceDashboard) {
     snapshotId !== null &&
     (data.dimension_counts.bing_query > 0 || data.dimension_counts.bing_page > 0);
   return { hasSearchConsoleTotals, hasSearchConsoleBreakdowns, hasGa4, hasBing };
+}
+
+function performanceCoverage(data: PerformanceDashboard, hasEvidence: boolean) {
+  const firstUse =
+    !hasEvidence && data.coverage.covered_days === 0 && data.selected.snapshot_id === null;
+  return {
+    firstUse,
+    selectedMissing: !firstUse && data.selected.snapshot_id === null,
+    comparisonMissing:
+      !firstUse && data.comparison !== null && data.comparison.snapshot_id === null,
+  };
 }
 
 function PerformanceEmptyState({
@@ -236,6 +247,7 @@ export function PerformanceScreen() {
     enabled: Boolean(workspaceId),
   });
   const sync = usePerformanceSync(projectId);
+  const readiness = useProjectReadiness(projectId);
   const projection = useRangeProjection(scope, dashboard.data);
 
   // No project yet is either "still resolving which one" or "there is none";
@@ -246,13 +258,14 @@ export function PerformanceScreen() {
     ) : (
       <Alert tone="info">Select or create a project to see its search performance.</Alert>
     );
-  if (dashboard.isLoading) return <PageLoading label="Loading performance…" />;
   if (dashboard.isError)
     return (
       <Alert tone="danger">
         Could not load performance data. Check your connection and try again.
       </Alert>
     );
+  if ([dashboard, connections, readiness].some((query) => query.isLoading))
+    return <PageLoading label="Loading performance…" />;
 
   const data = dashboard.data as PerformanceDashboard;
   // The figures on screen belong to a DIFFERENT selection (retained while the
@@ -271,6 +284,7 @@ export function PerformanceScreen() {
   const series = chartSeries(selectedWindow, comparisonWindow, activeMetrics);
   const evidence = evidenceAvailability(data);
   const hasEvidence = evidence.hasSearchConsoleBreakdowns || evidence.hasGa4 || evidence.hasBing;
+  const coverage = performanceCoverage(data, hasEvidence);
 
   return (
     <div className="grid gap-[var(--workspace-gap)]">
@@ -293,13 +307,13 @@ export function PerformanceScreen() {
         onReset={resetFilters}
       />
 
-      <ReadinessLadder projectId={projectId} />
+      <ReadinessLadder data={readiness.data} hideDisconnected={coverage.firstUse} />
 
       <PerformanceNotices
         sync={sync}
         projecting={projection.projecting}
-        selectedMissing={selectedWindow.snapshot_id === null}
-        comparisonMissing={comparisonWindow !== null && comparisonWindow.snapshot_id === null}
+        selectedMissing={coverage.selectedMissing}
+        comparisonMissing={coverage.comparisonMissing}
       />
 
       {!hasEvidence ? (

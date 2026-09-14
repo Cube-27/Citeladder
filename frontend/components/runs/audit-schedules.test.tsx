@@ -17,13 +17,15 @@ vi.mock('@/lib/api/runs', () => ({
 const createSchedule = vi.mocked(runsApi.createSchedule);
 const listSchedules = vi.mocked(runsApi.listSchedules);
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+let workspaceId = WORKSPACE_ID;
 
 vi.mock('@/lib/project/project-context', () => ({
-  useActiveWorkspaceId: () => WORKSPACE_ID,
+  useActiveWorkspaceId: () => workspaceId,
 }));
 
 describe('AuditSchedules', () => {
   beforeEach(() => {
+    workspaceId = WORKSPACE_ID;
     createSchedule.mockReset();
     listSchedules.mockReset();
     listSchedules.mockResolvedValue([]);
@@ -59,5 +61,36 @@ describe('AuditSchedules', () => {
         { workspaceId: WORKSPACE_ID },
       ),
     );
+    await waitFor(() => expect(listSchedules).toHaveBeenCalledTimes(2));
+  });
+
+  it('does not reuse a fresh schedules cache entry after a workspace transition', async () => {
+    const projectId = '11111111-1111-4111-8111-111111111111';
+    const otherWorkspace = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const view = () => <AuditSchedules projectId={projectId} promptSets={[]} />;
+    const { rerender } = renderWithProviders(view());
+    await screen.findByText('No scheduled audits yet.');
+    let release!: (schedules: Awaited<ReturnType<typeof runsApi.listSchedules>>) => void;
+    listSchedules.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    workspaceId = otherWorkspace;
+    rerender(view());
+    await waitFor(() =>
+      expect(listSchedules).toHaveBeenCalledWith(projectId, {
+        signal: expect.any(AbortSignal),
+        workspaceId: otherWorkspace,
+      }),
+    );
+    expect(screen.queryByText('No scheduled audits yet.')).not.toBeInTheDocument();
+    release([]);
+    await screen.findByText('No scheduled audits yet.');
+    workspaceId = WORKSPACE_ID;
+    rerender(view());
+    expect(screen.getByText('No scheduled audits yet.')).toBeVisible();
+    expect(listSchedules).toHaveBeenCalledTimes(2);
   });
 });

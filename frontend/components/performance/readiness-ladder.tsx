@@ -7,7 +7,11 @@ import { Alert } from '@/components/ui/alert';
 import { panelClasses } from '@/components/ui/panel';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
-import { performanceApi, type ProjectReadinessStage } from '@/lib/api/performance';
+import {
+  performanceApi,
+  type ProjectReadiness,
+  type ProjectReadinessStage,
+} from '@/lib/api/performance';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { queryKeys } from '@/lib/api/query-keys';
 import { formatWindowDate } from '@/lib/format';
@@ -100,7 +104,7 @@ function StepMark({ state }: Readonly<{ state: 'done' | 'active' | 'pending' }>)
  * read the same cache entry, so they can never disagree about which stage a
  * project is on.
  */
-function useProjectReadiness(projectId: string | null) {
+export function useProjectReadiness(projectId: string | null) {
   const workspaceId = useActiveWorkspaceId();
   return useQuery({
     queryKey: queryKeys.performance.readiness(projectId ?? ''),
@@ -116,17 +120,17 @@ function useProjectReadiness(projectId: string | null) {
   });
 }
 
-export function ReadinessLadder({ projectId }: Readonly<{ projectId: string }>) {
-  const readiness = useProjectReadiness(projectId);
-
-  const data = readiness.data;
+export function ReadinessLadder({
+  data,
+  hideDisconnected,
+}: Readonly<{ data: ProjectReadiness | undefined; hideDisconnected: boolean }>) {
   if (!data || data.stage === 'analysis_ready') return null;
 
   if (data.stage === 'import_failed') {
     return <Alert tone="danger">{EXPLANATION.import_failed}</Alert>;
   }
   if (data.stage === 'not_connected') {
-    return <Alert tone="info">{EXPLANATION.not_connected}</Alert>;
+    return hideDisconnected ? null : <Alert tone="info">{EXPLANATION.not_connected}</Alert>;
   }
 
   const reached = stageIndex(data.stage);

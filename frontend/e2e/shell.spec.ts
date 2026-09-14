@@ -2,6 +2,31 @@ import { expect, test } from '@playwright/test';
 
 import { FIXTURE_WORKSPACE_ID, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
+test('the first-load indicator keeps rotating until the workspace answers', async ({ page }) => {
+  await stubAuthedShell(page);
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/auth/me', async (route) => {
+    await pending;
+    await route.fallback();
+  });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(fixtureProjectPath('/projects'));
+  const indicator = page.getByRole('status', { name: 'Loading your workspace…' });
+  try {
+    await expect(indicator).toBeVisible();
+    const initial = await indicator.evaluate((element) => getComputedStyle(element).transform);
+    await expect
+      .poll(() => indicator.evaluate((element) => getComputedStyle(element).transform))
+      .not.toBe(initial);
+  } finally {
+    release();
+  }
+  await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
+});
+
 /** Authenticated shell navigation and persistent launcher workflows. */
 test('authenticated shell exposes authorized navigation and search', async ({ page }) => {
   // stubAuthedShell supplies the canonical user/project AND the 404 catch-all
@@ -35,6 +60,29 @@ test('primary navigation loads the destination route', async ({ page }) => {
     .click();
   await page.waitForURL((url) => url.pathname === '/performance');
   await expect(page.getByRole('heading', { level: 1, name: 'Performance' })).toBeVisible();
+});
+
+test('runs and schedules appear together after their initial reads', async ({ page }) => {
+  await stubAuthedShell(page);
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/audits*', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/v1/projects/*/audit-schedules', async (route) => {
+    await pending;
+    await route.fulfill({ json: [] });
+  });
+  await page.goto(fixtureProjectPath('/runs'));
+  try {
+    await expect(page.getByRole('status', { name: 'Loading runs…' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No runs yet' })).toHaveCount(0);
+    await expect(page.getByText('No scheduled audits yet.')).toHaveCount(0);
+  } finally {
+    release();
+  }
+  await expect(page.getByRole('heading', { name: 'No runs yet' })).toBeVisible();
+  await expect(page.getByText('No scheduled audits yet.')).toBeVisible();
 });
 
 test('compact navigation hands focus to persistent tools and returns it on Escape', async ({

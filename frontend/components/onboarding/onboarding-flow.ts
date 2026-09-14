@@ -93,7 +93,7 @@ function isOrphanedCompletion(
   return discovery?.status === 'completing' || discovery?.status === 'project_created';
 }
 
-export function useOnboardingFlow() {
+export function useOnboardingFlow(transactionKey: string) {
   const router = useNavigate();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams()[0];
@@ -174,22 +174,6 @@ export function useOnboardingFlow() {
     if (workspace) reset.set('workspace', workspace);
     router(`/onboarding?${reset.toString()}`, { replace: true, preventScrollReset: true });
   }, [activeWorkspaceId, form, orphanedCompletion, router, searchParams]);
-
-  useEffect(() => {
-    if (orphanedCompletion || openingProject.current) return;
-    const discoveryId = discoveryState?.id ?? resumeDiscoveryId;
-    if (!discoveryId) return;
-    if (resumeDiscoveryId !== discoveryId) {
-      // oxlint-disable-next-line react-hooks/set-state-in-effect -- mirror the persisted discovery id.
-      setResumeDiscoveryId(discoveryId);
-    }
-    const params = new URLSearchParams(searchParams?.toString() ?? '');
-    params.set('discovery', discoveryId);
-    params.set('step', stepQueryValue(step));
-    const next = params.toString();
-    if (next !== searchParams?.toString())
-      router(`/onboarding?${next}`, { replace: true, preventScrollReset: true });
-  }, [discoveryState?.id, orphanedCompletion, resumeDiscoveryId, router, searchParams, step]);
 
   useEffect(() => {
     if (discoveryState?.status !== 'ready') return;
@@ -292,6 +276,42 @@ export function useOnboardingFlow() {
   const completedProjectId = complete.data?.project_id ?? discoveryState?.project_id ?? null;
   const completionFailed =
     complete.data?.status === 'failed' || discoveryState?.status === 'failed';
+  const isCompleting =
+    !completionFailed &&
+    (complete.isPending ||
+      (complete.isSuccess && !completedProjectId) ||
+      discoveryState?.status === 'completing');
+  useEffect(() => {
+    // Completion owns navigation from acceptance through the project handoff.
+    if (orphanedCompletion || openingProject.current || isCompleting || completedProjectId) return;
+    const discoveryId = discoveryState?.id ?? resumeDiscoveryId;
+    if (!discoveryId) return;
+    if (resumeDiscoveryId !== discoveryId) {
+      // oxlint-disable-next-line react-hooks/set-state-in-effect -- mirror the persisted discovery id.
+      setResumeDiscoveryId(discoveryId);
+    }
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    params.set('discovery', discoveryId);
+    params.set('step', stepQueryValue(step));
+    const next = params.toString();
+    if (next !== searchParams?.toString())
+      router(`/onboarding?${next}`, {
+        replace: true,
+        preventScrollReset: true,
+        state: { onboardingTransactionKey: transactionKey },
+      });
+  }, [
+    isCompleting,
+    completedProjectId,
+    discoveryState?.id,
+    orphanedCompletion,
+    resumeDiscoveryId,
+    router,
+    searchParams,
+    step,
+    transactionKey,
+  ]);
+
   useEffect(() => {
     if (!completedProjectId || completionFailed) return;
     void openProject(completedProjectId);
@@ -333,11 +353,7 @@ export function useOnboardingFlow() {
     // `completing` still protects a resumed legacy/shell-less response from a
     // duplicate click; normal completions redirect as soon as `project_id`
     // arrives and do not wait for prompt generation.
-    isCompleting:
-      !completionFailed &&
-      (complete.isPending ||
-        (complete.isSuccess && discoveryState?.status !== 'failed' && !completedProjectId) ||
-        discoveryState?.status === 'completing'),
+    isCompleting,
     discovery,
     domains,
     form,

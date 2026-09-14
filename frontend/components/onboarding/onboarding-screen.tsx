@@ -1,6 +1,6 @@
 'use client';
 
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { FlowActions, FlowShell, type FlowStep } from '@/components/auth/flow-shell';
 import { Button } from '@/components/ui/button';
@@ -19,16 +19,18 @@ const STEPS: readonly FlowStep[] = [
 
 /** The onboarding transaction coordinator; each visual stage owns its own UI. */
 export function OnboardingScreen() {
-  const pathname = useLocation().pathname;
-  const searchParams = useSearchParams()[0];
+  const location = useLocation();
   // Cached routes may retain component state. A fresh Add project URL must
   // start a fresh transaction, and a hidden route must not keep redirecting.
-  if (stripTrailingSlashes(pathname) !== '/onboarding') return null;
-  return <OnboardingTransaction key={searchParams?.get('discovery') ?? 'new'} />;
+  if (stripTrailingSlashes(location.pathname) !== '/onboarding') return null;
+  // Draft replacements retain this entry's transaction. An explicit navigation
+  // gets a new key, even when it opens another draft without leaving this route.
+  const transactionKey: string = location.state?.onboardingTransactionKey ?? location.key;
+  return <OnboardingTransaction key={transactionKey} transactionKey={transactionKey} />;
 }
 
-function OnboardingTransaction() {
-  const flow = useOnboardingFlow();
+function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: string }>) {
+  const flow = useOnboardingFlow(transactionKey);
   const { activeProjectId } = useProjectContext();
   const projectsHref = activeProjectId
     ? projectDestination('/projects', null, activeProjectId)
