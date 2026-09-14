@@ -33,7 +33,9 @@ export function PageLoading({
 }>) {
   return (
     <div className="grid min-h-[60vh] place-items-center" data-testid="page-loading">
-      <Spinner size="lg" label={label} className="loading-delayed text-muted" />
+      <span className="loading-delayed">
+        <Spinner size="lg" label={label} className="text-muted" />
+      </span>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 import { OnboardingScreen } from './onboarding-screen';
+import { useOnboardingFlow } from './onboarding-flow';
 
 const { setActiveProjectId } = vi.hoisted(() => ({
   setActiveProjectId: vi.fn(),
@@ -22,10 +23,12 @@ const ACTIVE_PROJECT_ID = '55555555-5555-4555-8555-555555555555';
 const CRAWL_ID = '33333333-3333-4333-8333-333333333333';
 
 let discoveryState: BrandDiscovery;
+let useRealDiscovery = false;
 // The URL the screen loads with. A reload mid-generation resumes straight to
 // the review step, which is the only way to reach that screen without a
 // `ready` discovery to click through.
 let searchParams = '';
+const visitedLocations: string[] = [];
 
 const WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
@@ -45,20 +48,25 @@ vi.mock('@/lib/project/project-context', () => ({
   }),
 }));
 
-vi.mock('@/lib/onboarding/use-brand-discovery', () => ({
-  // Mirrors the real hook: a persisted `resumeId` alone is enough to resolve
-  // the discovery. On reload the brand draft is hydrated FROM that row, so
-  // gating on `input` only would leave the screen with no discovery at all.
-  useBrandDiscovery: (input: unknown, resumeId: string | null = null) => {
-    const resolved = input || resumeId ? discoveryState : null;
-    return {
-      discovery: resolved,
-      isRunning: Boolean(resolved) && ['queued', 'running'].includes(discoveryState.status),
-      error: null,
-      retry: vi.fn(),
-    };
-  },
-}));
+vi.mock('@/lib/onboarding/use-brand-discovery', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/onboarding/use-brand-discovery')>();
+  return {
+    // Mirrors the real hook: a persisted `resumeId` alone is enough to resolve
+    // the discovery. On reload the brand draft is hydrated FROM that row, so
+    // gating on `input` only would leave the screen with no discovery at all.
+    useBrandDiscovery: (...args: Parameters<typeof actual.useBrandDiscovery>) => {
+      if (useRealDiscovery) return actual.useBrandDiscovery(...args);
+      const [input, resumeId = null] = args;
+      const resolved = input || resumeId ? discoveryState : null;
+      return {
+        discovery: resolved,
+        isRunning: Boolean(resolved) && ['queued', 'running'].includes(discoveryState.status),
+        error: null,
+        retry: vi.fn(),
+      };
+    },
+  };
+});
 
 function discovery(status: BrandDiscovery['status'], phase: BrandDiscovery['progress']['phase']) {
   return {
@@ -171,6 +179,9 @@ function RouterProbe({ destination }: Readonly<{ destination: string }>) {
   const location = useLocation();
   const lastDestination = useRef<string>(destination);
   useEffect(() => {
+    visitedLocations.push(location.pathname + location.search);
+  }, [location]);
+  useEffect(() => {
     if (lastDestination.current === destination) return;
     lastDestination.current = destination;
     navigate(destination);
@@ -206,10 +217,111 @@ afterEach(() => {
   mswServer.resetHandlers();
   vi.clearAllMocks();
   searchParams = '';
+  useRealDiscovery = false;
+  visitedLocations.length = 0;
 });
 afterAll(() => mswServer.close());
 
 describe('OnboardingScreen', () => {
+  it('keeps draft URL updates paused after a shell-less completion is accepted', async () => {
+    discoveryState = discovery('ready', 'preparing_review');
+    const destination = `/onboarding?discovery=${DISCOVERY_ID}&step=review`;
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mswServer.use(
+      catalogHandler(),
+      http.post(`/api/v1/brand-discoveries/${DISCOVERY_ID}/complete`, async () => {
+        await pending;
+        return HttpResponse.json(
+          {
+            discovery_id: DISCOVERY_ID,
+            status: 'completing',
+            project_id: null,
+            crawl_id: null,
+            activation_state: 'queued',
+            page_limit: null,
+            warnings: [],
+          },
+          { status: 202 },
+        );
+      }),
+    );
+    let flow!: ReturnType<typeof useOnboardingFlow>;
+    function FlowProbe() {
+      const current = useOnboardingFlow('completion-test');
+      useEffect(() => {
+        flow = current;
+      });
+      return null;
+    }
+    renderWithProviders(
+      <>
+        <RouterProbe destination={destination} />
+        <FlowProbe />
+      </>,
+      {
+        initialEntries: [destination],
+      },
+    );
+    await waitFor(() => expect(flow.profile).not.toBeNull());
+    act(() => flow.complete.mutate());
+    await waitFor(() => expect(flow.complete.isPending).toBe(true));
+    act(() => flow.setStep(1));
+    expect(screen.getByTestId('location')).toHaveTextContent(destination);
+    act(() => release());
+    await waitFor(() => expect(flow.complete.isSuccess).toBe(true));
+    expect(flow.isCompleting).toBe(true);
+    // A late draft-state update must not rewrite the accepted transaction URL.
+    act(() => flow.setStep(0));
+    expect(screen.getByTestId('location')).toHaveTextContent(destination);
+  });
+
+  it('keeps the research screen and entered basics when the discovery URL is persisted', async () => {
+    useRealDiscovery = true;
+    discoveryState = discovery('running', 'finding_competitors');
+    let releaseDiscovery!: () => void;
+    const pendingDiscovery = new Promise<void>((resolve) => {
+      releaseDiscovery = resolve;
+    });
+    let creations = 0;
+    mswServer.use(
+      catalogHandler(),
+      http.post('/api/v1/brand-discoveries', async ({ request }) => {
+        creations += 1;
+        discoveryState = {
+          ...discoveryState,
+          input_data: (await request.json()) as Record<string, unknown>,
+        };
+        await pendingDiscovery;
+        return HttpResponse.json(discoveryState);
+      }),
+      http.get(`/api/v1/brand-discoveries/${DISCOVERY_ID}`, () =>
+        HttpResponse.json(discoveryState),
+      ),
+    );
+    renderOnboarding();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/^Brand name/), 'Acme');
+    await user.type(screen.getByLabelText(/^Website/), 'acme.example');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    const research = await screen.findByRole('heading', { name: 'Finding what to track' });
+    act(() => releaseDiscovery());
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(`discovery=${DISCOVERY_ID}`),
+    );
+
+    // Persisting the resumable URL must not replay the progress screen.
+    expect(screen.getByRole('heading', { name: 'Finding what to track' })).toBe(research);
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByLabelText(/^Brand name/)).toHaveValue('Acme');
+    expect(screen.getByLabelText(/^Website/)).toHaveValue('acme.example');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.getByRole('button', { name: 'Searching…' })).toBeDisabled();
+    expect(creations).toBe(1);
+  });
+
   it('treats a trailing slash as the onboarding route', async () => {
     mswServer.use(catalogHandler());
     renderOnboarding('/onboarding/');
@@ -427,7 +539,7 @@ describe('OnboardingScreen', () => {
   });
 
   it('opens a persisted shell after reload while prompts are still generating', async () => {
-    searchParams = `discovery=${DISCOVERY_ID}&step=review`;
+    searchParams = `discovery=${DISCOVERY_ID}`;
     discoveryState = {
       ...discovery('completing', 'preparing_review'),
       project_id: PROJECT_ID,
@@ -448,6 +560,7 @@ describe('OnboardingScreen', () => {
       expect(screen.getByTestId('location')).toHaveTextContent(`/projects?project=${PROJECT_ID}`),
     );
     expect(setActiveProjectId).toHaveBeenCalledWith(PROJECT_ID);
+    expect(visitedLocations).toEqual([onboardingUrl(), `/projects?project=${PROJECT_ID}`]);
   });
 
   it('starts fresh when a persisted completion has lost its deleted project', async () => {

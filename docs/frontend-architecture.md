@@ -104,6 +104,13 @@ exact retry. A transient same-scope refresh failure may retain persisted data
 with an inline notice; an access failure must remove protected evidence and
 mutation controls.
 
+Initial Content catalog/context reads and Runs list/schedule reads settle before
+their working surfaces appear. Later context changes retain the Content editor
+and typed instruction. Performance starts readiness alongside its dashboard,
+then presents one first-use guidance state rather than stacking connection and
+missing-range notices. The page loader's reveal and rotation animate on separate
+elements so its delay cannot replace the spinning animation.
+
 ## Frontend owner boundaries and shared mechanics
 
 A screen entry point coordinates route context, server-state hooks, mutations, and

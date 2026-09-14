@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/page-header';
+import { PageLoading } from '@/components/layout/page-loading';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   type ContentContextPreviewInput,
@@ -135,13 +136,8 @@ function ProjectContentScreen({
   const [instruction, setInstruction] = useState('');
   const instructionRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedInstruction = useRef(false);
+  const [composerReady, setComposerReady] = useState(false);
   const [reasonOpen, setReasonOpen] = useState(false);
-  useEffect(() => {
-    if (!focusedInstruction.current && (opportunityId || demandSignalId || siteHealthReference)) {
-      focusedInstruction.current = true;
-      instructionRef.current?.focus();
-    }
-  }, [demandSignalId, opportunityId, siteHealthReference]);
   const skillCatalog = useSkillCatalog();
   const opportunity = useOpportunityContext(opportunityId);
   const siteHealth = useSiteHealthHandoff(siteHealthReference);
@@ -182,6 +178,34 @@ function ProjectContentScreen({
   const skillId = selectedSkillId(chosenSkillId, skills, catalogDefault);
   const trimmedInstruction = instruction.trim();
   const canGenerate = instructionReady(trimmedInstruction, generating);
+  const initialReadsPending =
+    skillCatalog.isLoading || contextPreview.isLoading || siteHealth.isLoading;
+  const composerVisible = composerReady || !initialReadsPending;
+  useEffect(() => {
+    if (!initialReadsPending) {
+      // oxlint-disable-next-line react-hooks/set-state-in-effect -- latch first-load readiness; later target changes retain the editor.
+      setComposerReady(true);
+    }
+  }, [initialReadsPending]);
+  useEffect(() => {
+    if (
+      composerVisible &&
+      !focusedInstruction.current &&
+      (opportunityId || demandSignalId || siteHealthReference)
+    ) {
+      focusedInstruction.current = true;
+      instructionRef.current?.focus();
+    }
+  }, [composerVisible, demandSignalId, opportunityId, siteHealthReference]);
+
+  if (!composerVisible) {
+    return (
+      <div className="grid gap-[var(--workspace-gap)]">
+        <PageHeader />
+        <PageLoading label="Loading content…" />
+      </div>
+    );
+  }
 
   return (
     <ContentWorkspace

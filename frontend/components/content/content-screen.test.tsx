@@ -1,7 +1,7 @@
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import { ProjectProvider } from '@/lib/project/project-context';
 import { mswServer } from '@/test/msw-server';
@@ -134,6 +134,44 @@ afterEach(() => {
 afterAll(() => mswServer.close());
 
 describe('ContentScreen clean composer', () => {
+  it('opens the composer with its context and retains typing during later context reads', async () => {
+    mockBase();
+    let release!: () => void;
+    let pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let contextReads = 0;
+    mswServer.use(
+      http.get('/api/v1/content/context-preview', async () => {
+        contextReads += 1;
+        await pending;
+        return HttpResponse.json({
+          brand_memory: true,
+          target_page: null,
+          issue_count: 0,
+          related_page_count: 3,
+        });
+      }),
+    );
+    renderScreen();
+    await waitFor(() => expect(contextReads).toBe(1));
+    expect(screen.queryByRole('textbox', { name: 'Your instruction' })).not.toBeInTheDocument();
+    act(() => release());
+    const instruction = await screen.findByRole('textbox', { name: 'Your instruction' });
+    expect(screen.getByText('Context: Brand memory · 3 related pages')).toBeVisible();
+    await userEvent.type(instruction, 'Draft our product page');
+    pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    fireEvent.change(screen.getByLabelText('Enter target URL instead'), {
+      target: { value: 'https://acme.example/product' },
+    });
+    await waitFor(() => expect(contextReads).toBeGreaterThan(1));
+    expect(screen.getByRole('textbox', { name: 'Your instruction' })).toBe(instruction);
+    expect(instruction).toHaveValue('Draft our product page');
+    act(() => release());
+  });
+
   it('defaults to the catalog skill and sends the channel skill the user selects', async () => {
     const sent: Record<string, unknown>[] = [];
     mockBase();

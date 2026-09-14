@@ -7,7 +7,8 @@ export const runKeys = {
   detail: (auditId: string) => ['runs', 'detail', auditId] as const,
   executions: (auditId: string) => ['runs', 'executions', auditId] as const,
   execution: (executionId: string) => ['runs', 'execution', executionId] as const,
-  schedules: (projectId: string) => ['runs', 'schedules', projectId] as const,
+  schedules: (workspaceId: string | null, projectId: string) =>
+    ['runs', 'schedules', workspaceId, projectId] as const,
 };
 
 export const visibilityKeys = {
