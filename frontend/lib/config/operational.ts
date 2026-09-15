@@ -43,6 +43,14 @@ export const API_RETRY_BACKOFF_MS = 150;
 // the API client's request timeout remains the network authority.
 export const WORKSPACE_LOADING_STALL_MS = 8_000;
 
+/**
+ * How long a first-load placeholder hides its spinner so a wait short enough
+ * to go unnoticed passes without one. The visual reveal is the mirrored
+ * `citeladder-loading-appear` animation delay in globals.css; this constant
+ * holds the accessible `status` announcement to the same beat.
+ */
+export const LOADING_INDICATOR_DELAY_MS = 300;
+
 // Evidence request/display bounds.
 export const EVIDENCE_LIMIT = 100;
 export const FANOUT_SEARCH_DEBOUNCE_MS = 300;

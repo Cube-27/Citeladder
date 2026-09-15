@@ -88,14 +88,13 @@ export function MobileNavigation({
             {label}
           </a>
         ))}
-        {!isAuthenticated &&
-          !sessionPending && (
-            // The sign-up CTA leaves the topbar on phones; the sheet is where it
-            // lives, pinned with the account links it accompanies.
-            <ButtonLink href="/register" className="w-full" onClick={closeMenu}>
-              Sign up
-            </ButtonLink>
-          )}
+        {!isAuthenticated && !sessionPending && (
+          // The sign-up CTA leaves the topbar on phones; the sheet is where it
+          // lives, pinned with the account links it accompanies.
+          <ButtonLink href="/register" className="w-full" onClick={closeMenu}>
+            Sign up
+          </ButtonLink>
+        )}
         {sessionPending ? (
           // Same rule as the header actions: a returning visitor waits rather
           // than being offered "Log in" for the moment before `me` resolves.

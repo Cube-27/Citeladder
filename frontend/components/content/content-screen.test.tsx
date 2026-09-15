@@ -155,10 +155,12 @@ describe('ContentScreen clean composer', () => {
     );
     renderScreen();
     await waitFor(() => expect(contextReads).toBe(1));
-    expect(screen.queryByRole('textbox', { name: 'Your instruction' })).not.toBeInTheDocument();
-    act(() => release());
+    // The composer paints immediately; only the context indicator waits for
+    // its own read.
     const instruction = await screen.findByRole('textbox', { name: 'Your instruction' });
-    expect(screen.getByText('Context: Brand memory · 3 related pages')).toBeVisible();
+    expect(screen.queryByText('Context: Brand memory · 3 related pages')).not.toBeInTheDocument();
+    act(() => release());
+    await screen.findByText('Context: Brand memory · 3 related pages');
     await userEvent.type(instruction, 'Draft our product page');
     pending = new Promise<void>((resolve) => {
       release = resolve;
@@ -170,6 +172,33 @@ describe('ContentScreen clean composer', () => {
     expect(screen.getByRole('textbox', { name: 'Your instruction' })).toBe(instruction);
     expect(instruction).toHaveValue('Draft our product page');
     act(() => release());
+  });
+
+  it('paints the composer and accepts input while the skill catalog read is pending', async () => {
+    mockBase();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let skillReads = 0;
+    mswServer.use(
+      http.get('/api/v1/content/skills', async () => {
+        skillReads += 1;
+        await pending;
+        return HttpResponse.json(skillCatalog);
+      }),
+    );
+    renderScreen();
+    await waitFor(() => expect(skillReads).toBe(1));
+
+    // The skill picker owns its own loading state; a slow catalog must not
+    // hold the composer, so the instruction is editable before it answers.
+    const instruction = await screen.findByRole('textbox', { name: 'Your instruction' });
+    await userEvent.type(instruction, 'Draft our product page');
+    expect(instruction).toHaveValue('Draft our product page');
+
+    act(() => release());
+    expect(await screen.findByRole('button', { name: 'Web: Website content page' })).toBeVisible();
   });
 
   it('defaults to the catalog skill and sends the channel skill the user selects', async () => {

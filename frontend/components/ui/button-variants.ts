@@ -6,36 +6,36 @@ import { cva } from 'class-variance-authority';
  * `h-*` utilities defined in globals.css (--control-height*).
  *
  * Buttons use the shared 6px control radius. Primary is solid action;
- * secondary is the white outlined control; quiet variants preserve hierarchy
- * without introducing another component family.
+ * secondary is the white control with the smudged edge (the fused ring +
+ * drop of --shadow-smudge, never a drawn hairline); quiet variants preserve
+ * hierarchy without introducing another component family.
  *
  * Hover moves the fill one step along the action ramp rather than fading
- * opacity, so the label keeps its verified AA contrast in every state.
+ * opacity or changing the edge, so the label keeps its verified AA contrast
+ * in every state and hover never draws a border.
  *
  * Variants only name semantic roles; surfaces never introduce local color or
  * spacing overrides.
  */
 export const buttonVariants = cva(
-  'focus-ring shadow-xs inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] border font-sans font-[550] no-underline transition-[transform,background-color,color,border-color,box-shadow] duration-[120ms] ease-out active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
+  'focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] font-sans font-[550] no-underline transition-[transform,background-color,color,box-shadow] duration-[120ms] ease-out active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-75',
   {
     variants: {
       variant: {
         primary:
-          'border-action bg-action text-action-fg hover:bg-action-hover active:bg-action-active',
+          'bg-action text-action-fg shadow-smudge hover:bg-action-hover active:bg-action-active',
         accent:
-          'border-accent bg-accent-soft text-accent-text shadow-none hover:bg-accent hover:text-accent-fg active:bg-accent-hover',
-        secondary:
-          'border-border bg-panel text-foreground hover:border-border-strong hover:bg-background-alt active:bg-well',
+          'bg-accent-soft text-accent-text shadow-smudge hover:bg-accent hover:text-accent-fg active:bg-accent-hover',
+        secondary: 'bg-panel text-foreground shadow-smudge hover:bg-background-alt active:bg-well',
         tonal:
-          'border-accent-border bg-accent-subtle text-accent-text shadow-none hover:border-accent hover:bg-accent-border active:bg-accent-border',
-        neutral:
-          'border-transparent bg-background-alt text-foreground shadow-none hover:bg-well active:bg-active',
+          'bg-accent-subtle text-accent-text shadow-smudge hover:bg-accent-border active:bg-accent-border',
+        neutral: 'bg-background-alt text-foreground shadow-none hover:bg-well active:bg-active',
         ghost:
-          'border-transparent bg-transparent text-secondary shadow-none hover:bg-background-alt hover:text-foreground active:bg-well',
+          'bg-transparent text-secondary shadow-none hover:bg-background-alt hover:text-foreground active:bg-well',
         destructive:
-          'border-transparent bg-danger-solid text-danger-fg shadow-none hover:bg-danger-solid-hover active:bg-danger-solid-hover',
+          'bg-danger-solid text-danger-fg shadow-none hover:bg-danger-solid-hover active:bg-danger-solid-hover',
         destructiveGhost:
-          'border-transparent bg-transparent text-danger-text shadow-none hover:bg-danger-bg active:bg-danger-bg',
+          'bg-transparent text-danger-text shadow-none hover:bg-danger-bg active:bg-danger-bg',
       },
       size: {
         sm: 'h-[var(--control-height-sm)] px-2.5 text-sm',

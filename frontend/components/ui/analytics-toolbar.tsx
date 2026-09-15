@@ -15,8 +15,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
 import { pageToolbarClasses } from '@/components/ui/workspace';
 
-const ACTIVE_CLASS =
-  'border-accent-border bg-accent-soft text-accent-text hover:border-accent-border hover:bg-accent-soft hover:text-accent-text';
+const ACTIVE_CLASS = 'bg-accent-soft text-accent-text';
 
 export function AnalyticsToolbar<Range extends string, Granularity extends string>({
   range,

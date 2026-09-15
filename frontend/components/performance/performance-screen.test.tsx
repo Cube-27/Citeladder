@@ -143,6 +143,31 @@ describe('PerformanceScreen evidence states', () => {
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
   });
 
+  it('paints the dashboard while a slow readiness read is still pending', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(dashboard())),
+      http.get(`/api/v1/projects/${PROJECT}/readiness`, async () => {
+        await pending;
+        // A settled stage the ladder renders visibly, so the final assertion
+        // can only pass once the released response has updated the screen.
+        return HttpResponse.json({ ...readiness, stage: 'importing' });
+      }),
+    );
+    renderWithProviders(<PerformanceScreen />);
+
+    // The dashboard alone controls first paint: the advisory readiness ladder
+    // must not hold the whole surface on the slowest of two independent reads.
+    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(screen.queryByTestId('readiness-ladder')).not.toBeInTheDocument();
+
+    act(() => release());
+    expect(await screen.findByTestId('readiness-ladder')).toBeVisible();
+  });
+
   it('shows first-use guidance without metric or table scaffolding', async () => {
     let tableReads = 0;
     mswServer.use(
