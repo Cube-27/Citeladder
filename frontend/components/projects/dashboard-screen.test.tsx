@@ -2,7 +2,7 @@ import { render as raw, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 const { project, downloadExecutiveReport, queryResult } = vi.hoisted(() => ({
   project: {
     id: '00000000-0000-4000-8000-000000000001',

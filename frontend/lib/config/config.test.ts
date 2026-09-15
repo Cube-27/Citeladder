@@ -2,7 +2,7 @@
 //
 // Pure logic: no DOM, no window, no React render. The suite-wide jsdom
 // default costs a full environment per file and buys nothing here.
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import {
   PENDING_PRICING_INTENT_MAX_AGE_MS,

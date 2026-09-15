@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import type { DemandSignal } from '@/lib/api/demand';
 import { competingPages, detectorStates, safePageUrl, signalTarget } from './signals';

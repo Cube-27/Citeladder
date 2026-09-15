@@ -2,7 +2,7 @@ import { render as raw, screen, waitFor } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test';
 
 // Hoisted so the mock factories below — which vitest lifts above these
 // statements — can reference the state safely rather than relying on the

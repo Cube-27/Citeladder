@@ -1,6 +1,6 @@
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import { ProjectProvider } from '@/lib/project/project-context';

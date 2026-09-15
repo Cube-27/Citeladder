@@ -2,7 +2,7 @@
   "name": "citeladder",
   "version": "0.1.0",
   "private": true,
-  "description": "Evidence-grounded growth intelligence platform. Root manifest: a single entry point for the install, build, test, and lint commands of the Next.js frontend (frontend/) and the FastAPI backend (backend/). It declares no dependencies of its own and is never installed — pnpm's workspace root is frontend/, and Python dependencies are owned by backend/uv.lock.",
+  "description": "Evidence-grounded growth intelligence platform. Root manifest: a single entry point for the install, build, test, and lint commands of the Astro/Vite frontend (frontend/) and the FastAPI backend (backend/). It declares no dependencies of its own and is never installed — pnpm's workspace root is frontend/, and Python dependencies are owned by backend/uv.lock.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
   },
   "scripts": {
     "setup": "pnpm run setup:frontend && pnpm run setup:backend",
-    "setup:frontend": "pnpm --dir frontend install --frozen-lockfile",
+    "setup:frontend": "pnpm --dir frontend install --frozen-lockfile && node frontend/node_modules/vite-plus/bin/vp config --hooks --no-agent",
     "setup:backend": "uv sync --frozen --extra dev --directory backend",
     "build": "pnpm --dir frontend build",
     "dev": "pnpm --dir frontend dev",

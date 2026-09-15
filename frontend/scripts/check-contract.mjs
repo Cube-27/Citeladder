@@ -15,8 +15,8 @@
 import { spawnSync } from 'node:child_process';
 
 const result = spawnSync(
-  'vitest',
-  ['run', 'lib/api/contract-drift.test.ts', ...process.argv.slice(2)],
+  'vp',
+  ['test', 'run', 'lib/api/contract-drift.test.ts', ...process.argv.slice(2)],
   {
     stdio: 'inherit',
     shell: true,

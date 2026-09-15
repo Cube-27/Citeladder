@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { AI_CRAWLER_BOTS, AI_CRAWLER_ENGINE_LABELS, readSiteFacts } from './site-facts';
 

@@ -14,7 +14,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "types": ["astro/client", "vite/client"],
+    "types": ["astro/client", "vite-plus/client"],
     "paths": {
       "@/*": ["./*"]
     }
@@ -33,7 +33,7 @@
     "test/**/*.tsx",
     "e2e/**/*.ts",
     "e2e/**/*.tsx",
-    "vitest.config.ts"
+    "vite.config.ts"
   ],
   "exclude": ["node_modules"]
 }

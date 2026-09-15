@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { transferableAbortController } from 'node:util';
-import { afterEach } from 'vitest';
+import { afterEach } from 'vite-plus/test';
 
 // The jsdom environment installs jsdom's own AbortController/AbortSignal
 // globals, but `fetch` stays Node's undici implementation, which brand-checks

@@ -10,7 +10,7 @@
  *      logs and skips — run `pnpm check:contract` where a hard failure is
  *      required (CI).
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import {
   acquireOpenApiSpec,

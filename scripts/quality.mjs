@@ -34,7 +34,10 @@ function gitPaths(arguments_) {
   const output = execFileSync('git', ['-C', repositoryRoot, ...arguments_], {
     encoding: 'utf8',
   });
-  return output.split(/\r?\n/u).filter(Boolean).map((path) => path.replaceAll('\\', '/'));
+  return output
+    .split(/\r?\n/u)
+    .filter(Boolean)
+    .map((path) => path.replaceAll('\\', '/'));
 }
 
 function workingDiffPaths() {
@@ -73,7 +76,10 @@ function executable(candidates, missingMessage) {
 
 const backendPython = () =>
   executable(
-    [join(backendRoot, '.venv', 'Scripts', 'python.exe'), join(backendRoot, '.venv', 'bin', 'python')],
+    [
+      join(backendRoot, '.venv', 'Scripts', 'python.exe'),
+      join(backendRoot, '.venv', 'bin', 'python'),
+    ],
     "Backend virtual environment missing. Run 'uv sync --frozen --extra dev' in backend/.",
   );
 
@@ -107,7 +113,12 @@ function step(name, command, commandArgs, cwd, env = process.env) {
 
 function pnpm(name, commandArgs) {
   if (process.platform === 'win32') {
-    step(name, process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', 'pnpm', ...commandArgs], frontendRoot);
+    step(
+      name,
+      process.env.ComSpec ?? 'cmd.exe',
+      ['/d', '/s', '/c', 'pnpm', ...commandArgs],
+      frontendRoot,
+    );
     return;
   }
   step(name, 'pnpm', commandArgs, frontendRoot);
@@ -122,9 +133,19 @@ function backendChecks() {
   const rootScripts = ['--config', 'pyproject.toml', '../reset-db.py'];
   if (mode === 'check') {
     step('Ruff lint', backendTool('ruff'), ['check', '.', ...rootScripts], backendRoot);
-    step('Ruff format', backendTool('ruff'), ['format', '--check', '.', ...rootScripts], backendRoot);
+    step(
+      'Ruff format',
+      backendTool('ruff'),
+      ['format', '--check', '.', ...rootScripts],
+      backendRoot,
+    );
   } else {
-    step('Ruff lint fixes', backendTool('ruff'), ['check', '.', '--fix', ...rootScripts], backendRoot);
+    step(
+      'Ruff lint fixes',
+      backendTool('ruff'),
+      ['check', '.', '--fix', ...rootScripts],
+      backendRoot,
+    );
     step('Ruff format fixes', backendTool('ruff'), ['format', '.', ...rootScripts], backendRoot);
   }
   step('Mypy', backendTool('mypy'), [], backendRoot);
@@ -134,12 +155,7 @@ function backendChecks() {
     ['-m', 'scripts.check_complexity', ...policyDiffArgs().slice(1)],
     backendRoot,
   );
-  step(
-    'Test shape policy',
-    backendPython(),
-    ['-m', 'scripts.check_test_shape'],
-    backendRoot,
-  );
+  step('Test shape policy', backendPython(), ['-m', 'scripts.check_test_shape'], backendRoot);
   step('Architecture policy', backendTool('lint-imports'), [], backendRoot);
   step(
     'Dead-code policy',
@@ -153,10 +169,17 @@ function backendChecks() {
 function frontendChecks() {
   pnpm('Astro marketing build', ['build']);
   pnpm('Vite product-app build', ['build:vite']);
-  pnpm(mode === 'check' ? 'Oxfmt format' : 'Oxfmt format fixes', [
-    mode === 'check' ? 'format:check' : 'format',
+  // Single static-check step: `vp check` (format + lint) reads its strict
+  // policy — denyWarnings, unused-disable-directives-as-errors — from the
+  // `lint.options` block shared by frontend/vite.config.ts and the root
+  // vite.config.ts, so editor, hook, and CI cannot drift apart.
+  pnpm(mode === 'check' ? 'Vite+ static checks' : 'Vite+ static checks with fixes', [
+    mode === 'check' ? 'check' : 'check:fix',
   ]);
-  pnpm('Oxlint', ['lint']);
+  // TypeScript compiler diagnostics stay on tsc: vite-plus 0.3.1 couples
+  // lint.options.typeCheck to typeAware, whose rule surface still reports 47
+  // pre-existing findings here and whose tsgolint rejects the marketing
+  // tsconfig's baseUrl. See the comment in frontend/vp-shared-config.ts.
   pnpm('TypeScript', ['exec', 'tsc', '--noEmit']);
   pnpm('Frontend complexity policy', ['check:complexity', ...policyDiffArgs()]);
   pnpm('Duplication policy', ['check:duplicates', ...policyDiffArgs()]);

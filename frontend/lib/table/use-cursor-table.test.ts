@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';

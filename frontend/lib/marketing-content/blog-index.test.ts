@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import type { BlogPostSummary } from './blog-index';
 import { blogCategories, filterAndSortPosts } from './blog-index';

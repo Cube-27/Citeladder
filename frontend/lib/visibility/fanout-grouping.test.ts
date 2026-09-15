@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { normalizeSearch, SEARCH_MAX_LENGTH } from '@/lib/visibility/fanout-grouping';
 

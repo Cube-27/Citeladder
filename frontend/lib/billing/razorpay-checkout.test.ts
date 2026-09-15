@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { loadRazorpay, openRazorpay } from './razorpay-checkout';
 import { CHECKOUT_SCRIPT_TIMEOUT_MS } from '@/lib/config/billing';
 

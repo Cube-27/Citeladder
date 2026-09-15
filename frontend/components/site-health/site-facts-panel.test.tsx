@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { render, screen, within } from '@testing-library/react';
 
 import { SiteFactsPanel } from './site-facts-panel';
