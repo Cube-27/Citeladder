@@ -19,7 +19,11 @@ export type JscpdReport = {
   statistics: { total: { percentage?: number } };
 };
 
+export const TOOL_VERSION: string;
+export const EXPECTED_SCOPE: string[];
+
 export function cloneFingerprint(clone: Clone): string;
+export function validateHistoricalBaseline(raw: JscpdBaseline): JscpdBaseline;
 export function validateBaseline(raw: JscpdBaseline): JscpdBaseline;
 export function readReport(reportPath: string): JscpdReport;
 export function productionFailures(

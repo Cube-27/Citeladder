@@ -5,11 +5,25 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  EXPECTED_SCOPE,
+  TOOL_VERSION,
   cloneFingerprint,
   productionFailures,
   readReport,
   validateBaseline,
+  validateHistoricalBaseline,
 } from './check-jscpd.mjs';
+
+function baselineFixture(overrides = {}) {
+  return {
+    format_version: 1,
+    tool_version: TOOL_VERSION,
+    scope: EXPECTED_SCOPE,
+    production_percentage: 1,
+    clone_fingerprints: [],
+    ...overrides,
+  };
+}
 
 function cloneFixture() {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'jscpd-clone-test-'));
@@ -62,13 +76,7 @@ describe('jscpd ratchet', () => {
 
   it('rejects a new clone even when aggregate duplication stays below the threshold', () => {
     const { directory, clone } = cloneFixture();
-    const baseline = validateBaseline({
-      format_version: 1,
-      tool_version: '5.0.11',
-      scope: ['backend/app', 'frontend/app', 'frontend/components', 'frontend/lib'],
-      production_percentage: 1,
-      clone_fingerprints: [],
-    });
+    const baseline = validateBaseline(baselineFixture());
     const report = {
       duplicates: [clone],
       statistics: { total: { percentage: 0.1 } },
@@ -86,13 +94,7 @@ describe('jscpd ratchet', () => {
   it('counts repeated identical clone fingerprints instead of collapsing them', () => {
     const { directory, clone } = cloneFixture();
     const fingerprint = cloneFingerprint(clone);
-    const baseline = validateBaseline({
-      format_version: 1,
-      tool_version: '5.0.11',
-      scope: ['backend/app', 'frontend/app', 'frontend/components', 'frontend/lib'],
-      production_percentage: 1,
-      clone_fingerprints: [fingerprint],
-    });
+    const baseline = validateBaseline(baselineFixture({ clone_fingerprints: [fingerprint] }));
     try {
       expect(
         productionFailures(
@@ -106,20 +108,13 @@ describe('jscpd ratchet', () => {
   });
 
   it('rejects relaxing a percentage or accepting a new baseline fingerprint', () => {
-    const base = validateBaseline({
-      format_version: 1,
-      tool_version: '5.0.11',
-      scope: ['backend/app', 'frontend/app', 'frontend/components', 'frontend/lib'],
-      production_percentage: 0.1,
-      clone_fingerprints: [],
-    });
-    const current = validateBaseline({
-      format_version: 1,
-      tool_version: '5.0.11',
-      scope: ['backend/app', 'frontend/app', 'frontend/components', 'frontend/lib'],
-      production_percentage: 0.2,
-      clone_fingerprints: ['typescript|a.ts|b.ts|aaaaaaaaaaaaaaaa|20|200'],
-    });
+    const base = validateBaseline(baselineFixture({ production_percentage: 0.1 }));
+    const current = validateBaseline(
+      baselineFixture({
+        production_percentage: 0.2,
+        clone_fingerprints: ['typescript|a.ts|b.ts|aaaaaaaaaaaaaaaa|20|200'],
+      }),
+    );
 
     expect(
       productionFailures({ duplicates: [], statistics: { total: {} } }, current, base),
@@ -130,6 +125,40 @@ describe('jscpd ratchet', () => {
     ]);
   });
 
+  it('diffs against a base baseline written by a different tool version or scope', () => {
+    // The pre-upgrade baseline on the base revision, as the real one at
+    // 711f6912 looks: old tool pin and pre-Astro scope.
+    const base = validateHistoricalBaseline({
+      format_version: 1,
+      tool_version: '5.0.11',
+      scope: ['backend/app', 'frontend/app', 'frontend/components', 'frontend/lib'],
+      production_percentage: 0.07,
+      clone_fingerprints: [
+        'python|backend/app/models/audit.py|backend/app/models/content.py|1c4bbaf3ede0b965|20|183',
+      ],
+    });
+    const current = validateBaseline(baselineFixture({ production_percentage: 0.008 }));
+
+    expect(
+      productionFailures({ duplicates: [], statistics: { total: {} } }, current, base),
+    ).toEqual([]);
+  });
+
+  it('still rejects a relaxed percentage when the tool version or scope changed', () => {
+    const base = validateHistoricalBaseline(
+      baselineFixture({
+        tool_version: '5.0.11',
+        scope: ['backend/app', 'frontend/app', 'frontend/components', 'frontend/lib'],
+        production_percentage: 0.07,
+      }),
+    );
+    const current = validateBaseline(baselineFixture({ production_percentage: 0.2 }));
+
+    expect(
+      productionFailures({ duplicates: [], statistics: { total: {} } }, current, base),
+    ).toEqual(['jscpd percentage threshold was relaxed']);
+  });
+
   it('allows an accepted clone to move without accepting new clone content', () => {
     const { directory, clone } = cloneFixture();
     const fingerprint = cloneFingerprint(clone);
@@ -137,13 +166,12 @@ describe('jscpd ratchet', () => {
       .split('|')
       .map((part, index) => (index === 1 || index === 2 ? `old/${path.basename(part)}` : part))
       .join('|');
-    const current = validateBaseline({
-      format_version: 1,
-      tool_version: '5.0.11',
-      scope: ['backend/app', 'frontend/app', 'frontend/components', 'frontend/lib'],
-      production_percentage: 0.1,
-      clone_fingerprints: [fingerprint],
-    });
+    const current = validateBaseline(
+      baselineFixture({
+        production_percentage: 0.1,
+        clone_fingerprints: [fingerprint],
+      }),
+    );
     const base = validateBaseline({ ...current, clone_fingerprints: [movedFingerprint] });
 
     try {

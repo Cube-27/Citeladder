@@ -174,6 +174,33 @@ describe('ContentScreen clean composer', () => {
     act(() => release());
   });
 
+  it('paints the composer and accepts input while the skill catalog read is pending', async () => {
+    mockBase();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let skillReads = 0;
+    mswServer.use(
+      http.get('/api/v1/content/skills', async () => {
+        skillReads += 1;
+        await pending;
+        return HttpResponse.json(skillCatalog);
+      }),
+    );
+    renderScreen();
+    await waitFor(() => expect(skillReads).toBe(1));
+
+    // The skill picker owns its own loading state; a slow catalog must not
+    // hold the composer, so the instruction is editable before it answers.
+    const instruction = await screen.findByRole('textbox', { name: 'Your instruction' });
+    await userEvent.type(instruction, 'Draft our product page');
+    expect(instruction).toHaveValue('Draft our product page');
+
+    act(() => release());
+    expect(await screen.findByRole('button', { name: 'Web: Website content page' })).toBeVisible();
+  });
+
   it('defaults to the catalog skill and sends the channel skill the user selects', async () => {
     const sent: Record<string, unknown>[] = [];
     mockBase();
