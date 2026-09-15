@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { queryKeys } from '@/lib/api/query-keys';
 import { invalidateCrawlViews, invalidateMonitoredProjection } from './invalidate';

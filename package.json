@@ -14,7 +14,7 @@
   },
   "scripts": {
     "setup": "pnpm run setup:frontend && pnpm run setup:backend",
-    "setup:frontend": "pnpm --dir frontend install --frozen-lockfile",
+    "setup:frontend": "pnpm --dir frontend install --frozen-lockfile && vp config --hooks --no-agent",
     "setup:backend": "uv sync --frozen --extra dev --directory backend",
     "build": "pnpm --dir frontend build",
     "dev": "pnpm --dir frontend dev",

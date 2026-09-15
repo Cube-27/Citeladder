@@ -97,7 +97,8 @@ Use `-CheckOnly` for non-mutating CI validation. Do not run checks for copy-only
 or documentation-only edits.
 
 For behavior changes, add coverage only for credible regressions and run the
-smallest relevant tests directly with pytest, Vitest, Node, or Playwright.
+smallest relevant tests directly with pytest, Vitest via `vp test` (frontend),
+Node, or Playwright.
 Authorization, persistence, concurrency, and shared runtime changes require
 stronger affected-owner coverage. CI owns full release validation.
 

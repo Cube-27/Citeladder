@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { queryKeys } from '@/lib/api/query-keys';
 import { SITE_HEALTH_STREAM_RECONNECT_BASE_MS } from '@/lib/config/site-health';

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { absoluteUrl, SITE_NAME, SITE_TAGLINE, siteOrigin } from './site';
 

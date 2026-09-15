@@ -1,4 +1,4 @@
-import type { ProxyOptions } from 'vite';
+import type { ProxyOptions } from 'vite-plus';
 import { resolveBackendOrigin } from '../../lib/config/backend-origin.ts';
 
 /**

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import { PENDING_PRICING_INTENT_MAX_AGE_MS } from '@/lib/config/billing';
 

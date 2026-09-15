@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { ACTIVE_RUN_POLL_MS } from '@/lib/config/operational';
 import { catalogPollingInterval } from './catalog-polling';

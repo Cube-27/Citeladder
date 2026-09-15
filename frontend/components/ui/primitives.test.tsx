@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { createRef } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { Alert } from './alert';
 import { Button } from './button';

@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { IcpConfirmation, hasConfirmedIcp } from '@/components/onboarding/icp-confirmation';
 import type { DiscoveryProfile } from '@/lib/api/brand-discoveries';

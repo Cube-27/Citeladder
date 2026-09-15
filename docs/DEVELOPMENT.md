@@ -178,13 +178,14 @@ uv run ruff check .
 
 ```bash
 cd frontend
-pnpm test             # Vitest (network mocked with MSW)
-pnpm lint             # Oxlint (React/Astro/TypeScript/a11y rules)
+pnpm test             # Vitest via Vite+ (`vp test run`; network mocked with MSW)
+pnpm lint             # Oxlint via Vite+ (`vp lint`; React/TypeScript/a11y rules)
+pnpm check            # vp check: format + lint in one pass
 pnpm check:policy     # architecture + design-token guards
 pnpm check:dead-code  # Knip module-graph/dependency gate
 pnpm exec tsc --noEmit # type check
 pnpm build            # Astro marketing SSR build
-pnpm build:vite       # Vite authenticated SPA build
+pnpm build:vite       # Vite+ authenticated SPA build
 pnpm test:e2e         # Playwright (needs a browser + a running stack)
 ```
 
@@ -212,7 +213,7 @@ log sections. The cross-platform `pnpm quality:fix` and `pnpm quality:check`
 commands also default to all owners; CI may pass an explicit `--scope`.
 
 Run focused behavior tests directly with the native runner: pytest from
-`backend/`, `pnpm exec vitest run <test-paths>` from `frontend/`, or
+`backend/`, `pnpm exec vp test run <test-paths>` from `frontend/`, or
 `node --test <test-paths>` from the root. Browser checks use
 `pnpm exec playwright test --config playwright.config.ts <spec-paths>`.
 Redirect output to a log in the worktree Git directory and inspect only failures.

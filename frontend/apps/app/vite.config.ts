@@ -1,14 +1,16 @@
 import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, type ViteUserConfig, loadEnv } from 'vite-plus';
 
 import { createServerProxy } from './server-proxy.ts';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
-export default defineConfig(({ command, isPreview, mode }) => {
+// Explicit return type: without it, tsc compares the inferred literal against
+// every defineConfig overload and dies with TS2321 "Excessive stack depth".
+export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
   const environment = loadEnv(mode, frontendRoot, '');
   const publicValue = (name: string) =>
     JSON.stringify(process.env[name] ?? environment[name] ?? '');

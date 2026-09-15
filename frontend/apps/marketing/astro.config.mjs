@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import node from '@astrojs/node';
 import react from '@astrojs/react';
 import { defineConfig } from 'astro/config';
-import { loadEnv } from 'vite';
+import { loadEnv } from 'vite-plus';
 
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 

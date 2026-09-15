@@ -1,6 +1,8 @@
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vite-plus';
+
+import { fmtConfig, lintConfig } from './vp-shared-config.ts';
 
 // Vitest defaults to one worker per core, so an unqualified `vitest run` opens
 // ~11 processes here and two overlapping runs saturate the machine. Every
@@ -24,4 +26,6 @@ export default defineConfig({
     exclude: ['node_modules', 'e2e'],
     css: false,
   },
+  lint: lintConfig,
+  fmt: fmtConfig,
 });

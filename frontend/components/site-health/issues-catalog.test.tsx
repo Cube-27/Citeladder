@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';

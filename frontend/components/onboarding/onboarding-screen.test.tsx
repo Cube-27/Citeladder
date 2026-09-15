@@ -3,7 +3,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import type { BrandDiscovery } from '@/lib/api/brand-discoveries';
 import { mswServer } from '@/test/msw-server';
