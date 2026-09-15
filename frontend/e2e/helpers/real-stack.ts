@@ -178,12 +178,13 @@ function launch(
   name: string,
   command: string,
   args: string[],
-  options: { cwd: string; env: NodeJS.ProcessEnv },
+  options: { cwd: string; env: NodeJS.ProcessEnv; shell?: boolean },
 ): ManagedProcess {
   const child = spawn(command, args, {
     cwd: options.cwd,
     env: options.env,
     detached: process.platform !== 'win32',
+    shell: options.shell,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const logTail: string[] = [];
@@ -378,17 +379,22 @@ export async function startRealStack(): Promise<RealStack> {
       }),
       launch(
         'frontend',
-        process.execPath,
+        'pnpm',
         [
-          path.join(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js'),
-          '--config',
-          path.join(frontendDir, 'apps', 'app', 'vite.config.ts'),
+          // Shell is required on Windows, where pnpm is pnpm.cmd; the detached
+          // process-group / taskkill teardown in killTree covers the tree.
+          'exec',
+          'vp',
+          'dev',
+          '-c',
+          path.join('apps', 'app', 'vite.config.ts'),
           '--port',
           String(FRONTEND_PORT),
         ],
         {
           cwd: frontendDir,
           env: { ...process.env, BACKEND_ORIGIN: API_ORIGIN },
+          shell: true,
         },
       ),
     );

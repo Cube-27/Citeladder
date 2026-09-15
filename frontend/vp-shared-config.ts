@@ -29,6 +29,21 @@ import type { OxfmtConfig } from 'vite-plus/fmt';
 
 export const lintConfig: OxlintConfig = {
   plugins: ['typescript'],
+  // Central strictness contract (previously CLI flags on the lint script):
+  // warnings fail the gate and unused-disable directives are errors, for every
+  // entry point (`vp check`, `vp lint`, the pre-commit staged command) because
+  // CLI flags would otherwise take precedence and scatter the policy.
+  // `lint.options.typeAware`/`typeCheck` are deliberately NOT enabled: they are
+  // coupled in vite-plus 0.3.1, and verification against this repo surfaced 47
+  // pre-existing type-aware findings (mostly deliberate fire-and-forget
+  // `router()`/`invalidateQueries()` calls and test stubs) plus a hard blocker
+  // -- tsgolint rejects `baseUrl` in apps/marketing/tsconfig.json (removed
+  // upstream, oxc-project/tsgolint#351). TypeScript diagnostics stay on
+  // `tsc --noEmit`; revisit type-aware adoption as a separate change.
+  options: {
+    denyWarnings: true,
+    reportUnusedDisableDirectives: 'error',
+  },
   categories: {
     correctness: 'error',
   },

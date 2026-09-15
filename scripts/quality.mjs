@@ -169,9 +169,17 @@ function backendChecks() {
 function frontendChecks() {
   pnpm('Astro marketing build', ['build']);
   pnpm('Vite product-app build', ['build:vite']);
-  pnpm(mode === 'check' ? 'Vite+ check (format + lint)' : 'Vite+ check --fix (format + lint)', [
+  // Single static-check step: `vp check` (format + lint) reads its strict
+  // policy — denyWarnings, unused-disable-directives-as-errors — from the
+  // `lint.options` block shared by frontend/vite.config.ts and the root
+  // vite.config.ts, so editor, hook, and CI cannot drift apart.
+  pnpm(mode === 'check' ? 'Vite+ static checks' : 'Vite+ static checks with fixes', [
     mode === 'check' ? 'check' : 'check:fix',
   ]);
+  // TypeScript compiler diagnostics stay on tsc: vite-plus 0.3.1 couples
+  // lint.options.typeCheck to typeAware, whose rule surface still reports 47
+  // pre-existing findings here and whose tsgolint rejects the marketing
+  // tsconfig's baseUrl. See the comment in frontend/vp-shared-config.ts.
   pnpm('TypeScript', ['exec', 'tsc', '--noEmit']);
   pnpm('Frontend complexity policy', ['check:complexity', ...policyDiffArgs()]);
   pnpm('Duplication policy', ['check:duplicates', ...policyDiffArgs()]);

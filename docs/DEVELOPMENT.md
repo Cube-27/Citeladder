@@ -180,10 +180,10 @@ uv run ruff check .
 cd frontend
 pnpm test             # Vitest via Vite+ (`vp test run`; network mocked with MSW)
 pnpm lint             # Oxlint via Vite+ (`vp lint`; React/TypeScript/a11y rules)
-pnpm check            # vp check: format + lint in one pass
+pnpm check            # vp check: format + lint; warnings and unused-disable directives fail
 pnpm check:policy     # architecture + design-token guards
 pnpm check:dead-code  # Knip module-graph/dependency gate
-pnpm exec tsc --noEmit # type check
+pnpm exec tsc --noEmit # type check (Vite+ type-aware lint stays off; see vp-shared-config.ts)
 pnpm build            # Astro marketing SSR build
 pnpm build:vite       # Vite+ authenticated SPA build
 pnpm test:e2e         # Playwright (needs a browser + a running stack)

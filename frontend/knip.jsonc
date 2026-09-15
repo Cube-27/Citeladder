@@ -4,10 +4,10 @@
   // while the two frontend runtimes are being validated together.
   "entry": [
     // Astro entrypoints own the public-site runtime graph; the Vite app is
-    // entered explicitly because knip's vite/vitest plugins only auto-activate
-    // on `vite`/`vitest` dependencies, which Vite+ has bundled away. The vite
-    // config covers server-proxy.ts; main.tsx covers the HTML-driven runtime
-    // graph including runtime.css.
+    // entered explicitly because knip's vite plugin does not discover the
+    // nested apps/app/vite.config.ts on its own. The vite config covers
+    // server-proxy.ts; main.tsx covers the HTML-driven runtime graph
+    // including runtime.css.
     "apps/marketing/astro.config.mjs",
     "apps/marketing/src/middleware.ts",
     "apps/marketing/src/pages/**/*.{astro,ts}",
@@ -35,8 +35,6 @@
   "ignoreDependencies": [
     // Resolved through a computed path in check-jscpd.mjs, which static analysis cannot follow.
     "jscpd",
-    // Loaded at runtime by Vite+'s bundled Vitest as the coverage provider; never imported statically.
-    "@vitest/coverage-v8",
   ],
   "ignoreBinaries": [
     // External Python package manager used by the real-stack helper, not an npm dependency.

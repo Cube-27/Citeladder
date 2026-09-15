@@ -33,7 +33,9 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `pnpm exec vite --config apps/app/vite.config.ts --port ${e2ePort}`,
+      // `vp dev` is the Vite+ dev command; the standalone `vite` binary no
+      // longer exists once the toolchain is bundled by vite-plus.
+      command: `pnpm exec vp dev -c apps/app/vite.config.ts --port ${e2ePort}`,
       url: `http://127.0.0.1:${e2ePort}`,
       reuseExistingServer: !process.env.CI,
     },

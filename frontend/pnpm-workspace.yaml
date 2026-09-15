@@ -34,16 +34,37 @@ overrides:
   # (GHSA-f88m-g3jw-g9cj: CVE-2026-33327/33328/35590/35591, fixed in sharp
   # 0.35.0). Remove this override once every owning range requires >=0.35.
   sharp: '^0.35.3'
-  # Per Vite+'s migration guide: alias `vite` to the Vite+ core so every
-  # consumer (including @vitejs/plugin-react's auto-installed peer) shares one
-  # Vite type family — otherwise plugin types from the two copies conflict
-  # (TS2321/TS2322 in vite configs). Pinned to the version vite-plus@0.3.1
-  # bundles; bump together with the vite-plus dependency. Astro's transitive
-  # vite is redirected too — `pnpm build` (marketing) must be re-verified when
-  # bumping this pin.
-  vite: 'npm:@voidzero-dev/vite-plus-core@0.3.1'
-  # Vite+ bundles Vitest 4.1.11, and test files import `vite-plus/test`. Pin
-  # every `vitest` resolution in the tree (notably @testing-library/jest-dom's
-  # peer) to the same version so there is exactly one Vitest copy — two copies
-  # would split `expect`/mock state between the runner and the imports.
-  vitest: '4.1.11'
+  # Vite+ toolchain overrides, keyed with the explicit `@*` ranges that `vp
+  # migrate` uses for managed keys. The catalog below holds the actual pins;
+  # bump them together with the vite-plus dependency.
+  vite@*: 'catalog:'
+  vitest@*: 'catalog:'
+# Single-source pins for the Vite+ toolchain (referenced by package.json
+# through `catalog:` and by the overrides above). `vite` aliases the Vite+
+# core so every consumer — including Astro's transitive vite and
+# @vitejs/plugin-react's peer — shares one Vite type family; `pnpm build`
+# (marketing) must be re-verified when bumping this pin. `vitest` stays at
+# the exact version vite-plus bundles so there is exactly one Vitest copy.
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@0.3.1
+  vitest: 4.1.11
+  vite-plus: 0.3.1
+  '@vitest/coverage-v8': 4.1.11
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest
+  allowedVersions:
+    vite: '*'
+    vitest: '*'
+minimumReleaseAgeExclude:
+  - vite-plus
+  - '@voidzero-dev/*'
+  - oxlint
+  - '@oxlint/*'
+  - oxlint-tsgolint
+  - '@oxlint-tsgolint/*'
+  - oxfmt
+  - '@oxfmt/*'
+  - vitest
+  - '@vitest/*'
