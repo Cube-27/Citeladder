@@ -6,10 +6,9 @@ import { cn } from '@/lib/utils';
  * the base and its own state classes instead of restating the recipe.
  */
 export const chipBaseClasses =
-  'focus-ring inline-flex h-[var(--control-height-sm)] items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-[background-color,color,border-color] duration-[250ms] ease-standard';
+  'focus-ring inline-flex h-[var(--control-height-sm)] items-center gap-1.5 rounded-full border border-transparent px-3 text-xs font-medium transition-[background-color,color,border-color,box-shadow] duration-[250ms] ease-standard';
 
-export const chipRestingClasses =
-  'border-border bg-panel text-secondary hover:border-border-strong hover:text-foreground';
+export const chipRestingClasses = 'bg-panel text-secondary shadow-smudge hover:text-foreground';
 
 const chipSelectedClasses = 'border-accent-border bg-accent-subtle text-accent-text';
 

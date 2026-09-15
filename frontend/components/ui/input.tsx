@@ -12,12 +12,13 @@ import { cn } from '@/lib/utils';
  * the whole field, not a thin band behind the glyphs.
  *
  * The fill is the shared input surface, so the
- * field reads as an inset well on a white card. Hover deepens the
- * hairline to border-strong rather than tinting it accent: accent on hover
- * pre-empts the focus signal, which owns the accent on its own.
+ * field reads as an inset well on a white card. The edge is the shared
+ * smudged shadow, not a drawn hairline; hover deepens the fuse slightly
+ * rather than tinting it accent: accent on hover pre-empts the focus signal,
+ * which owns the accent on its own.
  */
 export const inputClasses =
-  'focus-input h-[var(--field-height)] w-full rounded-[var(--radius-control)] border border-border-strong bg-input px-2.5 text-sm text-foreground leading-[calc(var(--field-height)_-_2px)] transition-[border-color,box-shadow] placeholder:text-muted hover:border-border-bold aria-invalid:border-danger disabled:cursor-not-allowed disabled:opacity-50';
+  'focus-input h-[var(--field-height)] w-full rounded-[var(--radius-control)] shadow-smudge bg-input px-2.5 text-sm text-foreground leading-[calc(var(--field-height)_-_2px)] transition-[box-shadow] placeholder:text-muted hover:shadow-smudge-hover aria-invalid:shadow-smudge-danger disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
  * The roomier field used on the standalone auth and onboarding screens, where a
@@ -57,7 +58,7 @@ export function Input({
   return (
     <div
       className={cn(
-        'focus-frame border-border-strong bg-input has-[[aria-invalid=true]]:border-danger flex h-[var(--field-height)] w-full items-center gap-2 rounded-[var(--radius-control)] border px-2.5 transition-[border-color,box-shadow] hover:border-border-bold',
+        'focus-frame bg-input has-[[aria-invalid=true]]:shadow-smudge-danger flex h-[var(--field-height)] w-full items-center gap-2 rounded-[var(--radius-control)] px-2.5 shadow-smudge transition-[box-shadow] hover:shadow-smudge-hover',
         size === 'lg' && 'h-[var(--field-height-lg)] px-3',
         props.disabled && 'cursor-not-allowed opacity-50',
         containerClassName,

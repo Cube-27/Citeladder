@@ -155,10 +155,12 @@ describe('ContentScreen clean composer', () => {
     );
     renderScreen();
     await waitFor(() => expect(contextReads).toBe(1));
-    expect(screen.queryByRole('textbox', { name: 'Your instruction' })).not.toBeInTheDocument();
-    act(() => release());
+    // The composer paints immediately; only the context indicator waits for
+    // its own read.
     const instruction = await screen.findByRole('textbox', { name: 'Your instruction' });
-    expect(screen.getByText('Context: Brand memory · 3 related pages')).toBeVisible();
+    expect(screen.queryByText('Context: Brand memory · 3 related pages')).not.toBeInTheDocument();
+    act(() => release());
+    await screen.findByText('Context: Brand memory · 3 related pages');
     await userEvent.type(instruction, 'Draft our product page');
     pending = new Promise<void>((resolve) => {
       release = resolve;

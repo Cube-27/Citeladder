@@ -283,6 +283,14 @@
      and overlays retain stronger omnidirectional all-side shadows. */
   --shadow-xs: 0 1px 2px rgb(26 31 54 / 0.06);
   --shadow-sm: 0 1px 2px rgb(26 31 54 / 0.06);
+  /* Smudged control edge — the shared edge treatment for buttons and fields.
+     A faint full-perimeter ring fused with a soft bottom-weighted drop reads
+     as diffused graphite rather than a drawn hairline. Hover deepens the fuse
+     slightly; it never returns to a crisp border. The ring rides the same ink
+     as --shadow-xs, so the dark band rebinds below re-ink it. */
+  --shadow-smudge: 0 0 0 1px rgb(26 31 54 / 0.06), 0 1px 2px rgb(26 31 54 / 0.07);
+  --shadow-smudge-hover: 0 0 0 1px rgb(26 31 54 / 0.1), 0 1px 3px rgb(26 31 54 / 0.11);
+  --shadow-smudge-danger: 0 0 0 1px rgb(180 35 50 / 0.42), 0 1px 2px rgb(180 35 50 / 0.12);
   --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 8px 24px -4px rgb(17 28 69 / 0.06), 0 2px 6px -1px rgb(17 28 69 / 0.03);
   --shadow-card-hover: 0 1px 0 0 rgb(255 255 255 / 0.9) inset, 0 16px 32px -6px rgb(17 28 69 / 0.09), 0 4px 12px -2px rgb(17 28 69 / 0.04);
   --shadow-elevated: 0 12px 32px rgb(26 31 54 / 0.12), 0 2px 6px rgb(26 31 54 / 0.06);
@@ -459,6 +467,8 @@
   --color-action-hover: #d8c9fb;
   --color-action-active: #e4dafc;
   --color-action-fg: #1b1938;
+  --shadow-smudge: 0 0 0 1px rgb(244 243 250 / 0.16), 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-smudge-hover: 0 0 0 1px rgb(244 243 250 / 0.24), 0 1px 3px rgb(0 0 0 / 0.4);
   --skeleton-base: #2b2950;
   --skeleton-highlight: #34325c;
 }
@@ -494,6 +504,8 @@
   --color-action-hover: #eef1ee;
   --color-action-active: #dfe4e0;
   --color-action-fg: #0e3030;
+  --shadow-smudge: 0 0 0 1px rgb(238 244 242 / 0.16), 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-smudge-hover: 0 0 0 1px rgb(238 244 242 / 0.24), 0 1px 3px rgb(0 0 0 / 0.4);
   --skeleton-base: #1a4545;
   --skeleton-highlight: #205050;
 }
@@ -676,7 +688,9 @@ body {
   border-color: var(--color-focus);
   outline: 2px solid var(--color-focus);
   outline-offset: -1px;
-  box-shadow: var(--focus-ring);
+  /* Keep the smudged edge under the focus glow: box-shadow does not compose
+     across rules, so focus restates the edge instead of replacing it. */
+  box-shadow: var(--focus-ring), var(--shadow-smudge);
 }
 
 .focus-frame :focus-visible {

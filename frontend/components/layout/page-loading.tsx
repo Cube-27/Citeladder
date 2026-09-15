@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { Spinner } from '@/components/ui/spinner';
 
 /**
@@ -38,7 +39,7 @@ export function PageLoading({
   // loading state nothing on screen shows yet.
   const [revealed, setRevealed] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setRevealed(true), 300);
+    const timer = setTimeout(() => setRevealed(true), LOADING_INDICATOR_DELAY_MS);
     return () => clearTimeout(timer);
   }, []);
   return (

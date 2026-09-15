@@ -15,7 +15,13 @@ const GIT_EXECUTABLE =
 const BIN = process.execPath;
 const JSCPD_ENTRYPOINT = path.join(FRONTEND, 'node_modules', 'jscpd', 'run-jscpd.js');
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;
-const EXPECTED_SCOPE = ['backend/app', 'frontend/app', 'frontend/components', 'frontend/lib'];
+const EXPECTED_SCOPE = [
+  'backend/app',
+  'frontend/apps/app/src',
+  'frontend/apps/marketing/src',
+  'frontend/components',
+  'frontend/lib',
+];
 
 function normalizeName(value) {
   const reported = String(value);
@@ -126,7 +132,7 @@ function cloneContentSignature(fingerprint) {
 export function validateBaseline(raw) {
   if (
     raw?.format_version !== 1 ||
-    raw.tool_version !== '5.0.11' ||
+    raw.tool_version !== '5.2.1' ||
     JSON.stringify(raw.scope) !== JSON.stringify(EXPECTED_SCOPE) ||
     typeof raw.production_percentage !== 'number' ||
     raw.production_percentage < 0 ||
@@ -244,7 +250,7 @@ function appendBaselineDiffFailures(failures, baseline, baseBaseline) {
 function advisoryTestScan() {
   const backend = runJscpd(['../backend/tests'], ['--format', 'python']);
   const frontend = runJscpd(
-    ['./app', './components', './lib'],
+    ['./apps/app/src', './apps/marketing/src', './components', './lib'],
     ['--format', 'typescript,tsx,javascript,jsx', '--pattern', '**/*.{test,spec}.{ts,tsx,js,jsx}'],
   );
   const backendPercentage = Number(backend.statistics?.total?.percentage ?? 0);
@@ -265,7 +271,7 @@ function main() {
   const revision = diffIndex >= 0 ? process.argv[diffIndex + 1] : undefined;
   if (diffIndex >= 0 && !revision) throw new Error('--check-policy-diff requires a revision');
   const report = runJscpd(
-    ['../backend/app', './app', './components', './lib'],
+    ['../backend/app', './apps/app/src', './apps/marketing/src', './components', './lib'],
     ['--format', 'python,typescript,tsx,javascript,jsx'],
   );
   const failures = productionFailures(

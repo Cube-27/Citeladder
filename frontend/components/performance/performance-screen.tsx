@@ -264,8 +264,12 @@ export function PerformanceScreen() {
         Could not load performance data. Check your connection and try again.
       </Alert>
     );
-  if ([dashboard, connections, readiness].some((query) => query.isLoading))
-    return <PageLoading label="Loading performance…" />;
+  // Only the dashboard controls the screen's first paint. Connections feeds
+  // one toolbar button and readiness one advisory ladder — both render into
+  // an already-drawn page, so a slow secondary read must not hold the whole
+  // surface on the slowest of three independent requests. Retained previous
+  // scope data (a placeholder) counts as paintable.
+  if (!dashboard.data) return <PageLoading label="Loading performance…" />;
 
   const data = dashboard.data as PerformanceDashboard;
   // The figures on screen belong to a DIFFERENT selection (retained while the

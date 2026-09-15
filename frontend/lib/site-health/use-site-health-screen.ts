@@ -149,24 +149,66 @@ export function useSiteHealthScreen(projectId: string | null) {
   // visible window), but the error is exposed so the screen can note it.
   const projectSelectedError = monitoredQuery.isError;
 
+  // "Starting a crawl" spans two distinct phases: the POST that creates the
+  // crawl, and the projection refresh that first shows it. The mutation owns
+  // only the first — it settles at POST success, so a slow or failed
+  // projection refetch can neither extend the mutation lifecycle (and disable
+  // the control indefinitely) nor report a failure for a crawl that already
+  // exists. The `starting` state carries the button guard and strip notice
+  // through the refresh window; the refresh continuation below releases it.
+  // Each attempt carries a token, and every callback applies its state change
+  // only while its token is still the active one — a late callback from an
+  // earlier creation (e.g. the reader switched projects mid-POST) can refresh
+  // that project's projection but can neither overwrite nor clear a newer
+  // attempt's state.
+  const [starting, setStarting] = useState<{
+    projectId: string;
+    crawlId: string | null;
+    token: number;
+  } | null>(null);
+  const createAttemptRef = useRef(0);
+
   const createMutation = useMutation({
     ...siteHealthMutations.createCrawl(requestScope.workspaceId),
-    onSuccess: async (_crawl, variables) => {
-      const targetProjectId = variables.project_id;
+    onMutate: (variables) => {
+      createAttemptRef.current += 1;
+      const token = createAttemptRef.current;
+      setStarting({ projectId: variables.project_id, crawlId: null, token });
+      return { token };
+    },
+    onSuccess: (crawl, variables, context) => {
+      const token = context.token;
+      if (token === createAttemptRef.current) {
+        setStarting({ projectId: variables.project_id, crawlId: crawl.id, token });
+      }
       // The create response is a crawl row, while this screen is driven by the
-      // backend's crawl + phase projection. Keep the mutation pending until
-      // that complete projection refetches; partially replacing only `crawl`
-      // would temporarily combine a new run with the previous run's phase.
-      // Automatic admission also adds the root to the monitored set, so its
-      // project-scoped count must refresh in the same pending window.
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.siteHealth.dashboard(targetProjectId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.siteHealth.monitored(targetProjectId),
-        }),
-      ]);
+      // backend's crawl + phase projection. Refresh the full projection in the
+      // background — the starting state releases when it lands, not when the
+      // POST resolves. Automatic admission also adds the root to the monitored
+      // set, so its project-scoped count must refresh in the same window.
+      void (async () => {
+        // Stop any in-flight dashboard fetch first, so a pre-create answer
+        // cannot commit after creation and read as the acknowledgement.
+        await queryClient.cancelQueries({
+          queryKey: queryKeys.siteHealth.dashboard(variables.project_id),
+        });
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.siteHealth.dashboard(variables.project_id),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.siteHealth.monitored(variables.project_id),
+          }),
+        ]);
+        // The projection has now answered for the created crawl (a refetch
+        // failure also resolves here — bounded by the client's request
+        // timeout), so show the refreshed state instead of a permanent
+        // "Starting…" notice. A stale attempt never clears a newer one.
+        setStarting((current) => (current?.token === token ? null : current));
+      })();
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.token === createAttemptRef.current) setStarting(null);
     },
   });
   const cancelMutation = useMutation({
@@ -185,14 +227,12 @@ export function useSiteHealthScreen(projectId: string | null) {
     requestScope.enabled && createMutation.mutate(input ?? { project_id: requestScope.projectId });
   const cancelCrawl = () => crawl && cancelMutation.mutate(crawl.id);
 
-  // A create is genuinely in flight: the button says "Starting…" and a second
-  // click cannot fire a duplicate. Scoped to the create's own project so a
-  // sticky mutation from another project (after a project switch) can never
-  // disable this screen's control. The mutation stays pending through the
-  // server-projection refetch, so there is no post-success duplicate-click
-  // gap and no separate client-only `crawlStarting` state.
-  const startPending =
-    createMutation.isPending && createMutation.variables?.project_id === projectId;
+  // A create is genuinely in flight, or its projection refresh has not yet
+  // acknowledged it: the button says "Starting…" and a second click cannot
+  // fire a duplicate. Scoped to the create's own project so a sticky state
+  // from another project (after a project switch) can never disable this
+  // screen's control.
+  const startPending = starting?.projectId === projectId;
 
   const runExport = async (format: ExportFormat, view: ExportView) => {
     if (!crawl) return;

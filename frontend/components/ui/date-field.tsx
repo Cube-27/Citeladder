@@ -53,8 +53,8 @@ export function DateField({
   return (
     <div
       className={cn(
-        'focus-frame border-border-strong/80 bg-input flex h-[var(--control-height)] w-full items-center gap-2 rounded-[var(--radius-control)] border px-2.5 transition-[border-color,box-shadow] hover:border-border-bold',
-        isInvalid && 'border-danger',
+        'focus-frame bg-input flex h-[var(--control-height)] w-full items-center gap-2 rounded-[var(--radius-control)] px-2.5 shadow-smudge transition-[box-shadow] hover:shadow-smudge-hover',
+        isInvalid && 'shadow-smudge-danger',
         disabled && 'cursor-not-allowed opacity-50',
         className,
       )}
