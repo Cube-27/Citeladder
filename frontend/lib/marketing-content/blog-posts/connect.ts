@@ -33,10 +33,10 @@ export const POST_CONNECT: BlogPost = {
       url: 'https://support.google.com/webmasters/answer/16984139?hl=en',
     },
     {
-      id: 'openai-publishers',
-      title: 'Publishers and developers FAQ',
-      publisher: 'OpenAI Help Center',
-      url: 'https://help.openai.com/en/articles/12627856-publishers-and-developers-faq',
+      id: 'openai-crawlers',
+      title: 'OpenAI crawlers',
+      publisher: 'OpenAI Platform Docs',
+      url: 'https://developers.openai.com/api/docs/bots',
     },
   ],
   body: [
@@ -101,7 +101,7 @@ export const POST_CONNECT: BlogPost = {
       type: 'richParagraph',
       content: [
         'OpenAI distinguishes OAI-SearchBot, which supports search discovery, from GPTBot, which is used for training controls. A robots rule can allow or disallow access, but it does not prove that a crawler visited a page. CiteLadder evaluates public crawler policy; it does not ingest or monitor server or CDN logs. ',
-        { type: 'citation', sourceId: 'openai-publishers' },
+        { type: 'citation', sourceId: 'openai-crawlers' },
       ],
     },
     { type: 'heading', text: 'Join evidence without flattening it' },
@@ -126,8 +126,12 @@ export const POST_CONNECT: BlogPost = {
           href: '/blog/auditing-content-for-llms-ai-search',
         },
         ' to find page-level gaps, the ',
-        { type: 'link', text: 'tracking guide', href: '/blog/tracking-brand-visibility-ai-search' },
-        ' to keep channel metrics distinct, or explore ',
+        {
+          type: 'link',
+          text: 'four-part measurement taxonomy',
+          href: '/blog/tracking-brand-visibility-ai-search',
+        },
+        ' to keep those evidence streams distinct once they are reported, or explore ',
         { type: 'link', text: 'CiteLadder solutions', href: '/solutions' },
         '.',
       ],

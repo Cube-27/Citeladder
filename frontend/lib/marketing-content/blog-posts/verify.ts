@@ -18,7 +18,11 @@ export const POST_VERIFY: BlogPost = {
   authorRole: PRODUCT_HEAD.role,
   authorUrl: PRODUCT_HEAD.linkedin,
   tags: ['Verification', 'AEO Testing', 'Performance Improvement'],
-  relatedSlugs: ['action-playbook-winning-ai-citations', 'tracking-brand-visibility-ai-search'],
+  relatedSlugs: [
+    'tracking-brand-visibility-ai-search',
+    'track-optimize-ai-citations',
+    'action-playbook-winning-ai-citations',
+  ],
   sources: [
     {
       id: 'google-recrawl',
@@ -33,10 +37,10 @@ export const POST_VERIFY: BlogPost = {
       url: 'https://www.bing.com/webmasters/url-submission-api',
     },
     {
-      id: 'openai-publishers',
-      title: 'Publishers and developers FAQ',
-      publisher: 'OpenAI Help Center',
-      url: 'https://help.openai.com/en/articles/12627856-publishers-and-developers-faq',
+      id: 'openai-crawlers',
+      title: 'OpenAI crawlers',
+      publisher: 'OpenAI Platform Docs',
+      url: 'https://developers.openai.com/api/docs/bots',
     },
   ],
   body: [
@@ -84,7 +88,7 @@ export const POST_VERIFY: BlogPost = {
       type: 'richParagraph',
       content: [
         'For OpenAI, OAI-SearchBot governs search discovery while GPTBot relates to training. Allowing OAI-SearchBot makes a page eligible to appear; it does not create an on-demand recrawl or guarantee a citation. ',
-        { type: 'citation', sourceId: 'openai-publishers' },
+        { type: 'citation', sourceId: 'openai-crawlers' },
       ],
     },
     { type: 'heading', text: 'Interpret movement carefully' },
@@ -119,11 +123,17 @@ export const POST_VERIFY: BlogPost = {
       content: [
         'Choose a bounded change with the ',
         { type: 'link', text: 'AEO playbook', href: '/blog/action-playbook-winning-ai-citations' },
-        ', interpret channels with the ',
+        ', interpret the evidence streams with the ',
         {
           type: 'link',
           text: 'measurement guide',
           href: '/blog/tracking-brand-visibility-ai-search',
+        },
+        ', re-read the sources behind a moved prompt with the ',
+        {
+          type: 'link',
+          text: 'citation-tracking workflow',
+          href: '/blog/track-optimize-ai-citations',
         },
         ', or review ',
         { type: 'link', text: 'CiteLadder solutions', href: '/solutions' },

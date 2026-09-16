@@ -1,4 +1,5 @@
 import { POST_AUDIT } from './blog-posts/audit';
+import { POST_CITATIONS } from './blog-posts/citations';
 import { POST_CONNECT } from './blog-posts/connect';
 import { POST_PLAYBOOK } from './blog-posts/playbook';
 import { POST_TRACK } from './blog-posts/track';
@@ -108,12 +109,22 @@ export type BlogPost = {
   body: readonly BlogBlock[];
 };
 
+/**
+ * Publication order, and the order the previous/next rail walks.
+ *
+ * The cluster is one editorial journey — connect the evidence, measure what is
+ * observed, diagnose which sources win, audit the owned pages, act on the gap,
+ * verify the movement — so each post owns one question and hands the reader to
+ * the next rather than restating the whole thesis. The index sorts by date, so
+ * this array only decides the walk and the tie-break between same-day posts.
+ */
 export const POSTS: readonly BlogPost[] = [
   POST_CONNECT,
+  POST_TRACK,
+  POST_CITATIONS,
   POST_AUDIT,
   POST_PLAYBOOK,
   POST_VERIFY,
-  POST_TRACK,
 ] as const;
 
 export const BLOG_EMPTY_STATE = {
