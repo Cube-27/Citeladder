@@ -1,5 +1,6 @@
 import type { BlogPost } from '../blog';
 import { PRODUCT_HEAD } from '../people';
+import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_TRACK: BlogPost = {
   slug: 'tracking-brand-visibility-ai-search',
@@ -24,30 +25,10 @@ export const POST_TRACK: BlogPost = {
     'verify-improve-ai-search-visibility',
   ],
   sources: [
-    {
-      id: 'ga-ai-assistant',
-      title: 'Default channel group: AI Assistant',
-      publisher: 'Google Analytics Help',
-      url: 'https://support.google.com/analytics/answer/9756891?hl=en',
-    },
-    {
-      id: 'gsc-ai-report',
-      title: 'Generative AI performance report (Search)',
-      publisher: 'Google Search Console Help',
-      url: 'https://support.google.com/webmasters/answer/16984139?hl=en',
-    },
-    {
-      id: 'bing-ai-preview',
-      title: 'Introducing AI Performance in Bing Webmaster Tools',
-      publisher: 'Bing Webmaster Blog',
-      url: 'https://blogs.bing.com/webmaster/February-2026/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview',
-    },
-    {
-      id: 'bing-ai-performance',
-      title: 'AI Performance in Bing Webmaster Tools',
-      publisher: 'Bing Webmaster Tools',
-      url: 'https://www.bing.com/webmasters/help/ai-performance-9f8e7d6c',
-    },
+    BLOG_SOURCES.gaAiAssistant,
+    BLOG_SOURCES.gscAiReport,
+    BLOG_SOURCES.bingAiPreview,
+    BLOG_SOURCES.bingAiPerformance,
   ],
   body: [
     {

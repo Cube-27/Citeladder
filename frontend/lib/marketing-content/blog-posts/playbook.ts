@@ -1,5 +1,6 @@
 import type { BlogPost } from '../blog';
 import { PRODUCT_HEAD } from '../people';
+import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_PLAYBOOK: BlogPost = {
   slug: 'action-playbook-winning-ai-citations',
@@ -23,27 +24,7 @@ export const POST_PLAYBOOK: BlogPost = {
     'auditing-content-for-llms-ai-search',
     'verify-improve-ai-search-visibility',
   ],
-  sources: [
-    {
-      id: 'geo-paper',
-      title: 'GEO: Generative Engine Optimization',
-      publisher: 'arXiv',
-      url: 'https://arxiv.org/abs/2311.09735',
-      publishedDate: '2023-11-16',
-    },
-    {
-      id: 'google-people-first',
-      title: 'Creating helpful, reliable, people-first content',
-      publisher: 'Google Search Central',
-      url: 'https://developers.google.com/search/docs/fundamentals/creating-helpful-content',
-    },
-    {
-      id: 'openai-crawlers',
-      title: 'OpenAI crawlers',
-      publisher: 'OpenAI Platform Docs',
-      url: 'https://developers.openai.com/api/docs/bots',
-    },
-  ],
+  sources: [BLOG_SOURCES.geoPaper, BLOG_SOURCES.googlePeopleFirst, BLOG_SOURCES.openaiCrawlers],
   body: [
     { type: 'heading', text: 'Begin with an evidenced gap' },
     {

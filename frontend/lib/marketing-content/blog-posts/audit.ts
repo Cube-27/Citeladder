@@ -1,5 +1,6 @@
 import type { BlogPost } from '../blog';
 import { PRODUCT_HEAD } from '../people';
+import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_AUDIT: BlogPost = {
   slug: 'auditing-content-for-llms-ai-search',
@@ -25,30 +26,10 @@ export const POST_AUDIT: BlogPost = {
     'verify-improve-ai-search-visibility',
   ],
   sources: [
-    {
-      id: 'gsc-ai-report',
-      title: 'Generative AI in Search Console performance reporting',
-      publisher: 'Google Search Console Help',
-      url: 'https://support.google.com/webmasters/answer/16984139?hl=en',
-    },
-    {
-      id: 'bing-ai-performance',
-      title: 'AI Performance in Bing Webmaster Tools',
-      publisher: 'Bing Webmaster Tools',
-      url: 'https://www.bing.com/webmasters/help/ai-performance-9f8e7d6c',
-    },
-    {
-      id: 'google-structured-data',
-      title: 'Understand how structured data works',
-      publisher: 'Google Search Central',
-      url: 'https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data',
-    },
-    {
-      id: 'openai-crawlers',
-      title: 'OpenAI crawlers',
-      publisher: 'OpenAI Platform Docs',
-      url: 'https://developers.openai.com/api/docs/bots',
-    },
+    BLOG_SOURCES.gscAiReport,
+    BLOG_SOURCES.bingAiPerformance,
+    BLOG_SOURCES.googleStructuredData,
+    BLOG_SOURCES.openaiCrawlers,
   ],
   body: [
     { type: 'heading', text: 'Define the audit question' },

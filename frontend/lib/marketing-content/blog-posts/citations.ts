@@ -1,5 +1,6 @@
 import type { BlogPost } from '../blog';
 import { PRODUCT_HEAD } from '../people';
+import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_CITATIONS: BlogPost = {
   slug: 'track-optimize-ai-citations',
@@ -22,26 +23,7 @@ export const POST_CITATIONS: BlogPost = {
     'auditing-content-for-llms-ai-search',
     'action-playbook-winning-ai-citations',
   ],
-  sources: [
-    {
-      id: 'google-ai-mode-fanout',
-      title: 'Google Search: Introducing AI Mode in India',
-      publisher: 'Google (The Keyword)',
-      url: 'https://blog.google/intl/en-in/products/google-search-introducing-ai-mode-in-india/',
-    },
-    {
-      id: 'bing-ai-preview',
-      title: 'Introducing AI Performance in Bing Webmaster Tools',
-      publisher: 'Bing Webmaster Blog',
-      url: 'https://blogs.bing.com/webmaster/February-2026/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview',
-    },
-    {
-      id: 'gsc-ai-report',
-      title: 'Generative AI performance report (Search)',
-      publisher: 'Google Search Console Help',
-      url: 'https://support.google.com/webmasters/answer/16984139?hl=en',
-    },
-  ],
+  sources: [BLOG_SOURCES.googleAiModeFanout, BLOG_SOURCES.bingAiPreview, BLOG_SOURCES.gscAiReport],
   body: [
     {
       type: 'paragraph',

@@ -1,5 +1,6 @@
 import type { BlogPost } from '../blog';
 import { FOUNDER } from '../people';
+import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_CONNECT: BlogPost = {
   slug: 'connecting-owned-evidence-ai-search',
@@ -19,26 +20,7 @@ export const POST_CONNECT: BlogPost = {
   authorUrl: FOUNDER.linkedin,
   tags: ['AEO Foundations', 'Evidence Systems', 'Data Integration'],
   relatedSlugs: ['auditing-content-for-llms-ai-search', 'tracking-brand-visibility-ai-search'],
-  sources: [
-    {
-      id: 'ga-ai-assistant',
-      title: 'Analytics release notes: AI Assistant channel',
-      publisher: 'Google Analytics Help',
-      url: 'https://support.google.com/analytics/answer/9164320?hl=en',
-    },
-    {
-      id: 'gsc-ai-report',
-      title: 'Generative AI in Search Console performance reporting',
-      publisher: 'Google Search Console Help',
-      url: 'https://support.google.com/webmasters/answer/16984139?hl=en',
-    },
-    {
-      id: 'openai-crawlers',
-      title: 'OpenAI crawlers',
-      publisher: 'OpenAI Platform Docs',
-      url: 'https://developers.openai.com/api/docs/bots',
-    },
-  ],
+  sources: [BLOG_SOURCES.gaAiAssistant, BLOG_SOURCES.gscAiReport, BLOG_SOURCES.openaiCrawlers],
   body: [
     { type: 'heading', text: 'Start with evidence boundaries' },
     {

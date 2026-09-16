@@ -1,5 +1,6 @@
 import type { BlogPost } from '../blog';
 import { PRODUCT_HEAD } from '../people';
+import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_VERIFY: BlogPost = {
   slug: 'verify-improve-ai-search-visibility',
@@ -24,24 +25,9 @@ export const POST_VERIFY: BlogPost = {
     'action-playbook-winning-ai-citations',
   ],
   sources: [
-    {
-      id: 'google-recrawl',
-      title: 'Ask Google to recrawl your URLs',
-      publisher: 'Google Search Central',
-      url: 'https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl',
-    },
-    {
-      id: 'bing-url-submission',
-      title: 'Bing URL Submission API',
-      publisher: 'Bing Webmaster Tools',
-      url: 'https://www.bing.com/webmasters/url-submission-api',
-    },
-    {
-      id: 'openai-crawlers',
-      title: 'OpenAI crawlers',
-      publisher: 'OpenAI Platform Docs',
-      url: 'https://developers.openai.com/api/docs/bots',
-    },
+    BLOG_SOURCES.googleRecrawl,
+    BLOG_SOURCES.bingUrlSubmission,
+    BLOG_SOURCES.openaiCrawlers,
   ],
   body: [
     { type: 'heading', text: 'Define the observation before the change' },
