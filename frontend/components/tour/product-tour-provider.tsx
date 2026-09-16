@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { Suspense, lazy, useEffect, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useRef, type ReactNode } from 'react';
 
 import { workspacesApi } from '@/lib/api/workspaces';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -49,10 +49,19 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
   // Opening the tour is the provider's job, not the runner's: the runner only
   // exists once there is a tour to run, so asking it to start one would mean
   // loading it for every workspace that has already finished.
+  //
+  // Once per workspace, and the ref is what makes that true. A failed start
+  // leaves the tour `not_started`, so the only thing that changed is `starting`
+  // going back to false — which re-runs this effect, which asks again, forever.
+  // Holding the workspace id rather than a flag also handles the switch: a
+  // different workspace has not been attempted, and gets its one turn.
   const { mutate: startTour, isPending: starting } = start;
+  const attemptedWorkspace = useRef<string | null>(null);
   const notStarted = tourQuery.data?.status === 'not_started';
   useEffect(() => {
     if (!workspaceId || !notStarted || starting) return;
+    if (attemptedWorkspace.current === workspaceId) return;
+    attemptedWorkspace.current = workspaceId;
     startTour();
   }, [workspaceId, notStarted, starting, startTour]);
 

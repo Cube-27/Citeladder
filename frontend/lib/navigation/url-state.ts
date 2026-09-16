@@ -23,29 +23,40 @@ function browserLocation(): string {
  * A screen like Site Health's issue catalog holds eleven of them and AI
  * Visibility holds seventeen — so a single filter click woke fifty-one
  * listeners and rebuilt seventeen `URL` objects to read seventeen strings out
- * of the same query. The snapshot below is computed once per change instead.
+ * of the same query. The parse below is computed once per distinct address
+ * instead, and shared.
  *
- * `getSnapshot` returns a string deliberately: React compares snapshots by
- * identity, and a freshly parsed object would loop forever. The parse is cached
- * beside it and invalidated on the same beat.
+ * Nothing here caches "the current address". The browser already holds that,
+ * and a second copy of it is what this module has to keep honest — so both the
+ * snapshot and the parse read through, and the only thing remembered is what
+ * the listeners were last TOLD.
  */
 const listeners = new Set<() => void>();
-let snapshot = browserLocation();
+/**
+ * The address listeners have already been notified about.
+ *
+ * Deliberately not the same value `getSnapshot` returns. When they were one
+ * variable, a render that happened to call `getSnapshot` after the address
+ * changed but before `popstate` arrived advanced it — and `refresh` then found
+ * nothing to report and told nobody. Every component that had not re-rendered
+ * for its own reasons kept the previous query indefinitely.
+ */
+let notified = browserLocation();
 let parsedFor: string | null = null;
 let parsedParams: URLSearchParams = new URLSearchParams();
 
 function refresh(): void {
   const next = browserLocation();
-  if (next === snapshot) return;
-  snapshot = next;
+  if (next === notified) return;
+  notified = next;
   for (const listener of listeners) listener();
 }
 
-/** The current query, parsed once per distinct address rather than per reader. */
-function currentParams(): URLSearchParams {
-  if (parsedFor !== snapshot) {
-    parsedParams = new URL(snapshot, BASE).searchParams;
-    parsedFor = snapshot;
+/** One address's query, parsed once and shared by every reader of it. */
+function paramsFor(href: string): URLSearchParams {
+  if (parsedFor !== href) {
+    parsedParams = new URL(href, BASE).searchParams;
+    parsedFor = href;
   }
   return parsedParams;
 }
@@ -60,7 +71,8 @@ function detach(): void {
   window.removeEventListener('hashchange', refresh);
 }
 
-function subscribe(listener: () => void): () => void {
+/** Watch the address. Returns an unsubscribe, as `useSyncExternalStore` wants. */
+export function subscribeToUrlState(listener: () => void): () => void {
   if (listeners.size === 0) attach();
   listeners.add(listener);
   return () => {
@@ -69,16 +81,15 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-function getSnapshot(): string {
-  // Read through rather than trusting the cached value. The address can also
-  // be changed by something that notifies nobody — a test setting up a deep
-  // link, a `history.replaceState` in code that predates this module — and a
-  // store that only updated on its own events would hand React the previous
-  // page forever. Returning a string keeps this safe: React compares snapshots
-  // with `Object.is`, so an equal string is the same snapshot, and only the
-  // cached PARSE below is worth keying on identity.
-  snapshot = browserLocation();
-  return snapshot;
+/** The address as it is right now. */
+export function readUrlState(): string {
+  // Read through. The address can be changed by something that notifies nobody
+  // — a test setting up a deep link, a `history.replaceState` in code that
+  // predates this module — and a store that only updated on its own events
+  // would hand React the previous page forever. Returning a string keeps this
+  // safe: React compares snapshots with `Object.is`, so an equal string is the
+  // same snapshot.
+  return browserLocation();
 }
 
 function getServerSnapshot(): string {
@@ -150,24 +161,26 @@ export function useUrlState<T>(
   codec: UrlCodec<T>,
   options: Readonly<{ history?: UrlHistory; clearKeys?: readonly string[] }> = {},
 ): readonly [T, (value: T, history?: UrlHistory) => void] {
-  const location = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const value = useMemo(
-    // `location` is not read here, but it is what makes this recompute: the
-    // parse below is the shared cache, keyed on that same string.
-    () => (void location, codec.parse(currentParams().get(key))),
-    [codec, location, key],
-  );
+  const location = useSyncExternalStore(subscribeToUrlState, readUrlState, getServerSnapshot);
+  const value = useMemo(() => codec.parse(paramsFor(location).get(key)), [codec, location, key]);
 
   const { history: historyOption, clearKeys } = options;
   const setValue = useCallback(
     (next: T, history = historyOption ?? 'push') => {
-      const params = new URLSearchParams(currentParams());
+      // Composed from the LIVE address, the same way `setUrlParams` is. A
+      // write is an edit to wherever the reader is now, and "now" can already
+      // be past the render this callback was created in — another setter may
+      // have committed in the same tick, and a router navigation lands a beat
+      // after it is asked for. Building on a remembered address would drop
+      // whatever it did not know about.
+      const current = new URL(window.location.href);
+      const params = current.searchParams;
       const encoded = codec.serialize(next);
       if (encoded === null) params.delete(key);
       else params.set(key, encoded);
       for (const ownedKey of clearKeys ?? []) params.delete(ownedKey);
-      const { pathname, hash } = new URL(snapshot, BASE);
-      const href = `${params.size ? `${pathname}?${params.toString()}` : pathname}${hash}`;
+      const query = params.toString();
+      const href = `${current.pathname}${query ? `?${query}` : ''}${current.hash}`;
       commitUrl(href, history);
     },
     [codec, key, clearKeys, historyOption],

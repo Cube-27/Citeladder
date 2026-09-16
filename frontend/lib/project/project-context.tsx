@@ -271,7 +271,11 @@ function useProjectWarmup(activeProject: Project | null, workspaceId: string | n
         queryClient.prefetchQuery(runsQueries.list(workspaceId, activeProject.id)),
         queryClient.prefetchQuery(siteHealthQueries.dashboard(workspaceId, activeProject.id)),
       ]);
-    })();
+      // A chunk that will not load — a stale index after a deploy, a dropped
+      // connection — must not surface as an unhandled rejection from a warmup
+      // nothing is waiting on. The screens that need these modules import them
+      // again and report the failure where a reader can act on it.
+    })().catch(() => {});
     return () => {
       cancelled = true;
     };

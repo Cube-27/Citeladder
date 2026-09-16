@@ -4,9 +4,11 @@ import { createMemoryRouter, RouterProvider, useSearchParams } from 'react-route
 
 import {
   optionalStringUrlCodec,
+  readUrlState,
   setUrlParams,
   setUrlStateRouter,
   stringUrlCodec,
+  subscribeToUrlState,
 } from './url-state';
 
 beforeEach(() => window.history.replaceState(null, '', '/projects'));
@@ -62,6 +64,31 @@ describe('URL state codecs', () => {
  * canonical-URL rewrite: it rebuilds the address from what it can see, so the
  * next navigation silently dropped the filters the reader had just set.
  */
+describe('address store', () => {
+  /**
+   * `getSnapshot` reads through, so it can observe a change before the event
+   * announcing it arrives. When one variable served as both "current" and
+   * "last notified", that read satisfied the change check and the subsequent
+   * `popstate` told nobody — leaving every component that had not re-rendered
+   * for its own reasons on the previous query.
+   */
+  it('notifies subscribers even when a read has already observed the change', () => {
+    window.history.replaceState(null, '', '/issues?severity=low');
+    const seen: string[] = [];
+    const unsubscribe = subscribeToUrlState(() => seen.push(readUrlState()));
+
+    // A read lands first — a render elsewhere in the tree, say.
+    window.history.replaceState(null, '', '/issues?severity=high');
+    expect(readUrlState()).toContain('severity=high');
+
+    // The event still has to reach the subscribers.
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(seen).toEqual([expect.stringContaining('severity=high')]);
+
+    unsubscribe();
+  });
+});
+
 describe('router registration', () => {
   function Probe() {
     const [params] = useSearchParams();
