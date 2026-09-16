@@ -27,9 +27,11 @@ overrides:
   postcss: '>=8.5.10'
   # Migrated from the `pnpm.overrides` field in package.json, which pnpm 11 no
   # longer reads (it was being silently ignored). Keeps the React type packages
-  # pinned to a single version across the tree.
-  '@types/react': '19.2.18'
-  '@types/react-dom': '19.2.5'
+  # on a single version across the tree. The `$` form resolves to whatever
+  # package.json declares, so the override cannot silently hold the tree behind
+  # the declared version the way the previous hardcoded 19.2.x pins did.
+  '@types/react': '$@types/react'
+  '@types/react-dom': '$@types/react-dom'
   # Force Astro's transitive sharp off the vulnerable libvips line
   # (GHSA-f88m-g3jw-g9cj: CVE-2026-33327/33328/35590/35591, fixed in sharp
   # 0.35.0). Remove this override once every owning range requires >=0.35.

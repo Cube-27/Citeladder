@@ -2,7 +2,6 @@ import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
@@ -16,26 +15,14 @@ function IssuesCatalog(props: Readonly<{ crawlId: string }>) {
   return <ScopedIssuesCatalog workspaceId={WORKSPACE} {...props} />;
 }
 
-function RouterControls() {
-  const navigate = useNavigate();
-  const { pathname, search } = useLocation();
-  return (
-    <>
-      <button
-        aria-label="History back"
-        data-testid="history-back"
-        type="button"
-        onClick={() => navigate(-1)}
-      />
-      <button
-        aria-label="History forward"
-        data-testid="history-forward"
-        type="button"
-        onClick={() => navigate(1)}
-      />
-      <output data-testid="location">{pathname + search}</output>
-    </>
-  );
+/**
+ * The catalog's filters live in the address bar through
+ * `lib/navigation/url-state.ts`, which writes `window.history` directly — so
+ * the URL contract is asserted against `window.location`, and browser history
+ * is driven with the real `history.back()`/`forward()`.
+ */
+function currentUrl(): string {
+  return window.location.pathname + window.location.search;
 }
 
 function renderIssues(
@@ -43,12 +30,7 @@ function renderIssues(
   initialLocation = window.location.pathname + window.location.search,
 ) {
   window.history.replaceState(null, '', initialLocation);
-  return renderWithProviders(
-    <>
-      {ui}
-      <RouterControls />
-    </>,
-  );
+  return renderWithProviders(ui);
 }
 
 const CRAWL = '44444444-4444-4444-8444-444444444444';
@@ -301,22 +283,20 @@ describe('IssuesCatalog', () => {
     await screen.findAllByText('WebSite schema is missing');
 
     await user.click(screen.getByRole('radio', { name: 'Medium (23)' }));
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('severity=medium'),
-    );
-    expect(screen.getByTestId('location')).toHaveTextContent('rule=aeo.website_schema');
-    expect(screen.getByTestId('location')).toHaveTextContent('campaign=overview');
+    await waitFor(() => expect(currentUrl()).toContain('severity=medium'));
+    expect(currentUrl()).toContain('rule=aeo.website_schema');
+    expect(currentUrl()).toContain('campaign=overview');
 
-    await user.click(screen.getByTestId('history-back'));
+    window.history.back();
     await waitFor(() =>
       expect(screen.getByRole('radio', { name: 'All (47)' })).toHaveAttribute(
         'aria-checked',
         'true',
       ),
     );
-    expect(screen.getByTestId('location')).not.toHaveTextContent('severity=medium');
+    expect(currentUrl()).not.toContain('severity=medium');
 
-    await user.click(screen.getByTestId('history-forward'));
+    window.history.forward();
     await waitFor(() =>
       expect(screen.getByRole('radio', { name: 'Medium (23)' })).toHaveAttribute(
         'aria-checked',
@@ -339,11 +319,9 @@ describe('IssuesCatalog', () => {
     await user.click(trigger);
     await user.click(await screen.findByRole('menuitemradio', { name: 'Article' }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('page_kind=article'),
-    );
-    expect(screen.getByTestId('location')).not.toHaveTextContent('cursor=');
-    expect(screen.getByTestId('location')).toHaveTextContent('campaign=overview');
+    await waitFor(() => expect(currentUrl()).toContain('page_kind=article'));
+    expect(currentUrl()).not.toContain('cursor=');
+    expect(currentUrl()).toContain('campaign=overview');
   });
 
   it('renders the API-owned summary and grouped issue rows', async () => {
@@ -492,9 +470,7 @@ describe('IssuesCatalog', () => {
     await screen.findAllByText('WebSite schema is missing');
 
     await user.click(screen.getByRole('button', { name: /WebSite schema is missing/ }));
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent(`issue=${ISSUE_A}`),
-    );
+    await waitFor(() => expect(currentUrl()).toContain(`issue=${ISSUE_A}`));
 
     expect(await screen.findByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
     const link = await screen.findByRole('link', { name: /Homepage/ });
@@ -565,15 +541,13 @@ describe('IssuesCatalog', () => {
     await user.click(screen.getAllByRole('button', { name: 'Next' })[0]!);
     await screen.findByRole('link', { name: /Page Two/ });
     await user.click(screen.getAllByRole('button', { name: 'Next' })[1]!);
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('cursor=catalog-page-2'),
-    );
+    await waitFor(() => expect(currentUrl()).toContain('cursor=catalog-page-2'));
     expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
 
     await user.click(screen.getAllByRole('button', { name: 'Next' })[0]!);
     await screen.findByRole('link', { name: /Page Two/ });
     await user.click(screen.getByRole('button', { name: 'First page' }));
-    await waitFor(() => expect(screen.getByTestId('location')).not.toHaveTextContent('cursor='));
+    await waitFor(() => expect(currentUrl()).not.toContain('cursor='));
     expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
   });
 
