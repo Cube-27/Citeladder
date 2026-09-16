@@ -4,6 +4,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+const { hardNavigateMock } = vi.hoisted(() => ({ hardNavigateMock: vi.fn() }));
+vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: hardNavigateMock }));
+
 import { NAV_DROPS } from '@/lib/marketing-content/nav';
 import { queryKeys } from '@/lib/api/query-keys';
 import { mswServer } from '@/test/msw-server';
@@ -401,6 +404,42 @@ describe('MarketingNav', () => {
     } finally {
       clearSessionHintCookie();
       document.documentElement.removeAttribute(RETURNING_VISITOR_ATTRIBUTE);
+    }
+  });
+
+  /**
+   * The public site is where a signed-in reader most often ends up — every
+   * link out of the product lands here — so it has to be somewhere a session
+   * can be ended, not only somewhere it can be resumed.
+   */
+  it('lets a signed-in visitor sign out from the public nav', async () => {
+    const user = userEvent.setup();
+    let loggedOut = false;
+    stubSignedIn();
+    mswServer.use(
+      http.post('/api/v1/auth/logout', () => {
+        loggedOut = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    document.cookie = `${SESSION_HINT_COOKIE}=1; path=/`;
+    try {
+      renderWithProviders(<MarketingNav />);
+
+      const trigger = await screen.findByRole('button', { name: /account menu/i });
+      await user.click(trigger);
+      await user.click(await screen.findByRole('menuitem', { name: /sign out/i }));
+
+      await waitFor(() => expect(loggedOut).toBe(true));
+      // The hint outlives the cookie it describes, so leaving it would paint
+      // "Dashboard" for a session that is already gone.
+      await waitFor(() => expect(hasSessionHintCookie()).toBe(false));
+      // A full load, not a client transition: every cached answer on this
+      // document was read under the cookie that just stopped existing.
+      expect(hardNavigateMock).toHaveBeenCalledWith('/');
+    } finally {
+      clearSessionHintCookie();
+      hardNavigateMock.mockClear();
     }
   });
 

@@ -9,6 +9,7 @@ import { type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
+import { MarketingAccountMenu } from './marketing-account-menu';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
 import { useMarketingSession } from './use-marketing-session';
@@ -152,7 +153,8 @@ function useDesktopDropdown() {
 /** Fixed marketing chrome with accessible desktop dropdowns and mobile accordions. */
 export function MarketingNav() {
   const reduceMotion = useReducedMotion();
-  const { isAuthenticated, sessionPending, dashboardHref, hasSessionHint } = useMarketingSession();
+  const { isAuthenticated, sessionPending, dashboardHref, email, hasSessionHint } =
+    useMarketingSession();
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<NavDropKey | null>(null);
@@ -263,6 +265,7 @@ export function MarketingNav() {
           isAuthenticated={isAuthenticated}
           sessionPending={sessionPending}
           dashboardHref={dashboardHref}
+          email={email}
           mobileOpen={mobileOpen}
           onToggleMenu={() => setMobileOpen((open) => !open)}
         />
@@ -348,12 +351,14 @@ function NavActions({
   isAuthenticated,
   sessionPending,
   dashboardHref,
+  email,
   mobileOpen,
   onToggleMenu,
 }: Readonly<{
   isAuthenticated: boolean;
   sessionPending: boolean;
   dashboardHref: string;
+  email: string;
   mobileOpen: boolean;
   onToggleMenu: () => void;
 }>) {
@@ -380,17 +385,21 @@ function NavActions({
               <AnonymousActions />
             </span>
             <span data-session-returning>
-              <ButtonLink href="/projects" variant="primary" className="min-h-10 px-4">
+              <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
                 Dashboard
               </ButtonLink>
             </span>
           </>
         ) : isAuthenticated ? (
           // The topbar CTA runs one step smaller than the page CTAs — chrome,
-          // not a section action.
-          <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
-            Dashboard
-          </ButtonLink>
+          // not a section action. The account sits beside it rather than
+          // replacing it: leaving is a menu item, arriving is the button.
+          <>
+            <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
+              Dashboard
+            </ButtonLink>
+            <MarketingAccountMenu email={email} dashboardHref={dashboardHref} />
+          </>
         ) : (
           <AnonymousActions />
         )}

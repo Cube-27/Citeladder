@@ -4,11 +4,33 @@ import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vite-plus/test';
 
+import { UserMenuController } from '@/components/layout/user-menu';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { createAppQueryClient } from '@/lib/api/query-client';
+import { SessionProvider } from '@/lib/auth/session-guard';
 import { ProjectSelectionProvider, type ProjectContextValue } from '@/lib/project/project-scope';
 
 const TEST_WORKSPACE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+/**
+ * The resolved session every authenticated route mounts inside.
+ *
+ * `PrivateRouteLayout` publishes this above every screen, so a screen that
+ * places an account trigger — onboarding does, in its flow bar — works in the
+ * app and would throw under a harness that omitted it. Same reasoning as
+ * `TooltipProvider` and the project selection below.
+ */
+const TEST_SESSION = {
+  user: {
+    id: '00000000-0000-4000-8000-000000000001',
+    email: 'test.user@example.test',
+    role: 'user' as const,
+    is_active: true,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  },
+  clearSession: async () => {},
+};
 
 /**
  * A resolved, empty workspace — the minimum every authed screen mounts inside.
@@ -112,7 +134,11 @@ export function renderWithProviders(ui: ReactElement, options?: ProvidersOptions
             {selection === null ? (
               children
             ) : (
-              <ProjectSelectionProvider value={selection}>{children}</ProjectSelectionProvider>
+              <ProjectSelectionProvider value={selection}>
+                <SessionProvider value={TEST_SESSION}>
+                  <UserMenuController>{children}</UserMenuController>
+                </SessionProvider>
+              </ProjectSelectionProvider>
             )}
           </TooltipProvider>
         </QueryClientProvider>

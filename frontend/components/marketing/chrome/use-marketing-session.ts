@@ -104,6 +104,12 @@ export function useMarketingSession() {
   }, [authenticated, hasSessionHint, me.isPending, me.isSuccess]);
 
   return {
+    /**
+     * Who is signed in, for the account glyph. Empty for an anonymous visitor
+     * and for a session whose `me` has not answered yet — the trigger is not
+     * rendered in either state.
+     */
+    email: me.data?.email ?? '',
     // Only a visitor carrying the backend-issued hint has a session question
     // to settle. Everyone else is anonymous without paying for an auth request.
     //

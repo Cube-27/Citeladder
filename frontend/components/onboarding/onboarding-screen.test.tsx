@@ -335,6 +335,38 @@ describe('OnboardingScreen', () => {
     expect(screen.queryByLabelText(/^Brand name/)).not.toBeInTheDocument();
   });
 
+  it('offers a way out of the account from first-time setup', async () => {
+    // `/onboarding` mounts outside the application chrome, so for a brand new
+    // account this flow bar is the ONLY place a sign-out can be. It used to
+    // offer a link to the marketing site instead, which left the product
+    // without ending the session.
+    const user = userEvent.setup();
+    mswServer.use(catalogHandler());
+    renderOnboarding();
+
+    await screen.findByLabelText(/^Brand name/);
+    expect(screen.queryByRole('link', { name: 'Exit' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /account menu/i }));
+    expect(await screen.findByRole('menuitem', { name: /sign out/i })).toBeVisible();
+  });
+
+  it('keeps a way back to the projects it came from when adding another project', async () => {
+    searchParams = `new=1&workspace=${WORKSPACE_ID}`;
+    const user = userEvent.setup();
+    mswServer.use(catalogHandler());
+    renderOnboarding();
+
+    // An additional project has somewhere to go back TO, so this flow keeps
+    // its exit — and gains the account beside it rather than instead of it.
+    expect(await screen.findByRole('link', { name: 'Exit' })).toHaveAttribute(
+      'href',
+      `/projects?project=${ACTIVE_PROJECT_ID}`,
+    );
+    await user.click(screen.getByRole('button', { name: /account menu/i }));
+    expect(await screen.findByRole('menuitem', { name: /sign out/i })).toBeVisible();
+  });
+
   it('keeps the active project in an additional-project cancellation URL', async () => {
     searchParams = `new=1&workspace=${WORKSPACE_ID}`;
     mswServer.use(catalogHandler());

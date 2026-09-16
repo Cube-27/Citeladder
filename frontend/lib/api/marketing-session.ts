@@ -17,30 +17,74 @@
  * **Why dropping validation is correct HERE and nowhere else.** `strictValidate`
  * exists to fail loud on backend contract drift (drift policy §6), which is the
  * right call when a response drives product behaviour. These two calls drive a
- * navigation variant: one boolean and a link target. The failure mode of drift
+ * navigation variant: an account glyph and a link target. The failure mode of drift
  * is that a visitor sees "Log in" instead of "Dashboard" — self-correcting on
  * the next real page. The failure mode of validating is 449 KB on every
- * marketing visit. Anything that reads a FIELD off these responses belongs in
- * the validated client, not here.
+ * marketing visit.
+ *
+ * **The one field this reads, and why that is still safe.** The signed-in nav
+ * shows an account menu, and that menu is addressed by who it belongs to. The
+ * objection above is to the BARREL, not to validation as such: a hand-written
+ * guard over a single string costs nothing to ship, so `email` is narrowed here
+ * rather than trusted. Its drift mode is blank initials on a marketing page.
+ * Anything that needs a field the guard below does not name belongs in the
+ * validated client, not here.
  */
 import { apiClient, type ApiRequestOptions } from './client';
 import { ApiError } from './errors';
 
+/** The only shape the public chrome may read off `me`. */
+export type MarketingSessionUser = { email: string };
+
 /**
- * True when the caller holds a live session.
+ * Narrow `me` to the one field the marketing chrome renders.
  *
- * Deliberately reduced to a boolean at the transport edge: it means no caller
- * can grow a dependency on an unvalidated user field, which is what would make
- * skipping `strictValidate` unsafe.
+ * Everything the transport cannot vouch for is dropped at this edge, so no
+ * caller downstream can grow a dependency on an unvalidated field by accident.
+ * An absent or non-string email still means "signed in" — the session is what
+ * `/auth/me` answering 200 establishes — it just leaves the initials empty.
  */
-export async function fetchMarketingSession(options?: ApiRequestOptions): Promise<boolean> {
+function readString(source: unknown, key: string): unknown {
+  return typeof source === 'object' && source !== null && key in source
+    ? (source as Record<string, unknown>)[key]
+    : undefined;
+}
+
+function toMarketingSessionUser(value: unknown): MarketingSessionUser {
+  // `/auth/me` answers `{ user: { … } }`, the same envelope `authApi.me` reads
+  // `.user` off. Walking it by hand here rather than importing that schema is
+  // the whole point of this module.
+  const email = readString(readString(value, 'user'), 'email');
+  return { email: typeof email === 'string' ? email : '' };
+}
+
+/**
+ * The signed-in caller, or `null` when there is no live session.
+ *
+ * A 401 is the answer "nobody", not a failure: it is the expected response for
+ * the anonymous majority whose hint cookie has outlived their session.
+ */
+export async function fetchMarketingSession(
+  options?: ApiRequestOptions,
+): Promise<MarketingSessionUser | null> {
   try {
-    await apiClient.get<unknown>('/auth/me', options);
-    return true;
+    return toMarketingSessionUser(await apiClient.get<unknown>('/auth/me', options));
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) return false;
+    if (error instanceof ApiError && error.status === 401) return null;
     throw error;
   }
+}
+
+/**
+ * End the session from the public chrome.
+ *
+ * The same `POST /auth/logout` the app's account menu calls, on the same
+ * transport-only path as the reads above: revoking a cookie has no response
+ * body worth validating. The caller owns what happens next — the hint cookie
+ * and the navigation both belong to the chrome, not to the transport.
+ */
+export async function logoutMarketingSession(options?: ApiRequestOptions): Promise<void> {
+  await apiClient.post<unknown>('/auth/logout', undefined, options);
 }
 
 /**

@@ -58,6 +58,10 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
       assetsDir: 'app-assets',
       outDir: fileURLToPath(new URL('./dist', import.meta.url)),
       emptyOutDir: true,
+      // `scripts/check-bundle-budget.mjs` reads this to compute the EAGER set:
+      // the entry plus its transitive static imports. That is the number a cold
+      // load actually pays, and the one that regresses silently.
+      manifest: true,
     },
   };
 });

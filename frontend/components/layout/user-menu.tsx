@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { ArrowUpRight, LogOut, Map } from 'lucide-react';
+import { ArrowUpRight, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
@@ -66,14 +66,6 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
           <ArrowUpRight className="size-4 shrink-0" aria-hidden />
           <span>MCP</span>
         </a>
-      </DropdownItem>
-      <DropdownItem
-        onSelect={() => {
-          window.dispatchEvent(new Event('citeladder:replay-product-tour'));
-        }}
-      >
-        <Map className="size-4 shrink-0" aria-hidden />
-        <span>Replay product tour</span>
       </DropdownItem>
       <DropdownItem
         onSelect={(event) => {

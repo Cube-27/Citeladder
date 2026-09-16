@@ -23,13 +23,29 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
 
-type SessionContextValue = {
+export type SessionContextValue = {
   user: SessionUser;
   /** Clear all cached session state and send the user back to `/login`. */
   clearSession: () => Promise<void>;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
+
+/**
+ * Publish a resolved session.
+ *
+ * `SessionGuard` decides WHETHER there is one; this only carries the answer.
+ * Separating them lets a harness mount the consumers that every authenticated
+ * route mounts — the account controller, above all — without standing up the
+ * guard's `me` request, while keeping the guard the only thing in the app that
+ * may declare a session resolved.
+ */
+export function SessionProvider({
+  value,
+  children,
+}: Readonly<{ value: SessionContextValue; children: ReactNode }>) {
+  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+}
 type SessionFallback = ReactNode | ((content?: ReactNode) => ReactNode);
 
 function renderSessionFallback(fallback: SessionFallback, content?: ReactNode) {
@@ -164,7 +180,7 @@ export function SessionGuard({
     return <>{renderSessionFallback(fallback)}</>;
   }
 
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return <SessionProvider value={value}>{children}</SessionProvider>;
 }
 
 /** Access the authenticated session user. Throws if used outside the guard. */

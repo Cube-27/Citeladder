@@ -3,6 +3,7 @@
 import { Link, useLocation } from 'react-router-dom';
 
 import { FlowActions, FlowShell, type FlowStep } from '@/components/auth/flow-shell';
+import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { Button } from '@/components/ui/button';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -43,7 +44,13 @@ function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: st
       mainLabel="Project setup"
       steps={STEPS}
       currentStep={flow.step}
-      exitHref={flow.isAdditional ? projectsHref : '/'}
+      // First-time setup has nowhere in the product to exit TO: the workspace
+      // has no projects, so `/projects` would send the reader straight back
+      // here. It used to leave for the marketing site instead, which dropped a
+      // signed-in reader out of the product entirely. The account menu is the
+      // honest way out, and it is now in the bar beside this.
+      exitHref={flow.isAdditional ? projectsHref : undefined}
+      trailing={<UserMenuTrigger presenter="compact" />}
       align={flow.isCompleting ? 'center' : 'start'}
       measure={measure}
       actions={

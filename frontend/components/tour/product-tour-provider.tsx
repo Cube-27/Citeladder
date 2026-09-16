@@ -121,16 +121,6 @@ export function ProductTourProvider({ children }: Readonly<{ children: ReactNode
     [update, workspaceId],
   );
 
-  const replay = useCallback(() => {
-    terminalSkipAttempt.current = null;
-    persist('in_progress', PRODUCT_TOUR_STEPS[0].id);
-  }, [persist]);
-
-  useEffect(() => {
-    window.addEventListener('citeladder:replay-product-tour', replay);
-    return () => window.removeEventListener('citeladder:replay-product-tour', replay);
-  }, [replay]);
-
   useEffect(() => {
     let retryTimeout: number | undefined;
     let instance: ReturnType<typeof driver> | null = null;
