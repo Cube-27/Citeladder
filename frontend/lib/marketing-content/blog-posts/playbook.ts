@@ -1,5 +1,6 @@
 import type { BlogPost } from '../blog';
 import { PRODUCT_HEAD } from '../people';
+import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_PLAYBOOK: BlogPost = {
   slug: 'action-playbook-winning-ai-citations',
@@ -18,33 +19,29 @@ export const POST_PLAYBOOK: BlogPost = {
   authorRole: PRODUCT_HEAD.role,
   authorUrl: PRODUCT_HEAD.linkedin,
   tags: ['AEO Playbook', 'AI Citations', 'Content Strategy'],
-  relatedSlugs: ['auditing-content-for-llms-ai-search', 'verify-improve-ai-search-visibility'],
-  sources: [
-    {
-      id: 'geo-paper',
-      title: 'GEO: Generative Engine Optimization',
-      publisher: 'arXiv',
-      url: 'https://arxiv.org/abs/2311.09735',
-      publishedDate: '2023-11-16',
-    },
-    {
-      id: 'google-people-first',
-      title: 'Creating helpful, reliable, people-first content',
-      publisher: 'Google Search Central',
-      url: 'https://developers.google.com/search/docs/fundamentals/creating-helpful-content',
-    },
-    {
-      id: 'openai-publishers',
-      title: 'Publishers and developers FAQ',
-      publisher: 'OpenAI Help Center',
-      url: 'https://help.openai.com/en/articles/12627856-publishers-and-developers-faq',
-    },
+  relatedSlugs: [
+    'track-optimize-ai-citations',
+    'auditing-content-for-llms-ai-search',
+    'verify-improve-ai-search-visibility',
   ],
+  sources: [BLOG_SOURCES.geoPaper, BLOG_SOURCES.googlePeopleFirst, BLOG_SOURCES.openaiCrawlers],
   body: [
     { type: 'heading', text: 'Begin with an evidenced gap' },
     {
       type: 'paragraph',
       text: 'Getting cited is not a switch you can flip. Start with a query or audience need, inspect the current page and available answer observations, and write down the precise gap: missing evidence, ambiguous scope, weak structure, stale facts, or no suitable page at all.',
+    },
+    {
+      type: 'richParagraph',
+      content: [
+        'This playbook assumes that gap has already been evidenced. If it has not, ',
+        {
+          type: 'link',
+          text: 'reading the sources behind the prompts you are missing',
+          href: '/blog/track-optimize-ai-citations',
+        },
+        ' comes first — it separates an absent topic from a page that is too narrow, and both from an answer being assembled out of third-party sources.',
+      ],
     },
     { type: 'heading', text: 'Make the page easier to use and quote' },
     {
@@ -128,7 +125,7 @@ export const POST_PLAYBOOK: BlogPost = {
       type: 'richParagraph',
       content: [
         'For ChatGPT search eligibility, confirm that OAI-SearchBot is not blocked; GPTBot controls training and is a separate crawler. Eligibility still does not guarantee inclusion or citation. ',
-        { type: 'citation', sourceId: 'openai-publishers' },
+        { type: 'citation', sourceId: 'openai-crawlers' },
       ],
     },
     {

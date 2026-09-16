@@ -238,16 +238,28 @@ describe('blog content', () => {
     }
   });
 
-  it('publishes a named author and review date on every post', () => {
-    expect(POSTS[0]?.author).toBe('Arpan Jain');
-    expect(POSTS[0]?.authorRole).toBe('Founder & CEO');
-    for (const post of POSTS.slice(1)) {
-      expect(post.author, post.slug).toBe('Abhineet Jain');
-      expect(post.authorRole, post.slug).toBe('Product Head');
-    }
+  it('bylines every post with a person from ./people, never a free-typed name', () => {
+    // The byline, the Organization JSON-LD, and llms.txt all read `./people`.
+    // A name typed into a post would drift from the other two silently.
+    const known = new Map([FOUNDER, PRODUCT_HEAD].map((person) => [person.name, person] as const));
     for (const post of POSTS) {
-      expect(post.date, post.slug).toBe('2026-09-03');
-      expect(post.dateModified, post.slug).toBe('2026-09-09');
+      const person = post.author ? known.get(post.author) : undefined;
+      expect(person, `${post.slug} author`).toBeDefined();
+      expect(post.authorRole, post.slug).toBe(person!.role);
+      expect(post.authorUrl, post.slug).toBe(person!.linkedin);
+    }
+  });
+
+  it('dates every post, and never revises one before it was published', () => {
+    // `dateModified` drives the UPDATED row, the sitemap's `lastmod`, and the
+    // index's freshness signal. A revision date behind the publication date
+    // renders "UPDATED" as though the post went backwards in time.
+    for (const post of POSTS) {
+      expect(post.date, post.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(Number.isNaN(Date.parse(post.date!)), post.slug).toBe(false);
+      if (post.dateModified === undefined) continue;
+      expect(post.dateModified, post.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(post.dateModified >= post.date!, `${post.slug} revised before publication`).toBe(true);
     }
   });
 

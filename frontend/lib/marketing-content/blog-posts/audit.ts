@@ -1,5 +1,6 @@
 import type { BlogPost } from '../blog';
 import { PRODUCT_HEAD } from '../people';
+import { BLOG_SOURCES } from '../blog-sources';
 
 export const POST_AUDIT: BlogPost = {
   slug: 'auditing-content-for-llms-ai-search',
@@ -19,35 +20,16 @@ export const POST_AUDIT: BlogPost = {
   authorUrl: PRODUCT_HEAD.linkedin,
   tags: ['Content Audits', 'LLM Retrieval', 'Information Architecture'],
   relatedSlugs: [
+    'track-optimize-ai-citations',
     'connecting-owned-evidence-ai-search',
     'action-playbook-winning-ai-citations',
     'verify-improve-ai-search-visibility',
   ],
   sources: [
-    {
-      id: 'gsc-ai-report',
-      title: 'Generative AI in Search Console performance reporting',
-      publisher: 'Google Search Console Help',
-      url: 'https://support.google.com/webmasters/answer/16984139?hl=en',
-    },
-    {
-      id: 'bing-ai-performance',
-      title: 'AI Performance in Bing Webmaster Tools',
-      publisher: 'Bing Webmaster Tools',
-      url: 'https://www.bing.com/webmasters/help/ai-performance-9f8e7d6c',
-    },
-    {
-      id: 'google-structured-data',
-      title: 'Understand how structured data works',
-      publisher: 'Google Search Central',
-      url: 'https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data',
-    },
-    {
-      id: 'openai-publishers',
-      title: 'Publishers and developers FAQ',
-      publisher: 'OpenAI Help Center',
-      url: 'https://help.openai.com/en/articles/12627856-publishers-and-developers-faq',
-    },
+    BLOG_SOURCES.gscAiReport,
+    BLOG_SOURCES.bingAiPerformance,
+    BLOG_SOURCES.googleStructuredData,
+    BLOG_SOURCES.openaiCrawlers,
   ],
   body: [
     { type: 'heading', text: 'Define the audit question' },
@@ -118,7 +100,25 @@ export const POST_AUDIT: BlogPost = {
       type: 'richParagraph',
       content: [
         'For OpenAI surfaces, review OAI-SearchBot separately from GPTBot because search discovery and model-training controls are distinct. ',
-        { type: 'citation', sourceId: 'openai-publishers' },
+        { type: 'citation', sourceId: 'openai-crawlers' },
+      ],
+    },
+    {
+      type: 'richParagraph',
+      content: [
+        'An audit describes the page. It does not say which pages answer engines are actually attributing, so pair it with the observed evidence: ',
+        {
+          type: 'link',
+          text: 'which sources are winning a prompt',
+          href: '/blog/track-optimize-ai-citations',
+        },
+        ' shows where a competing or third-party page is supplying the answer, and the ',
+        {
+          type: 'link',
+          text: 'measurement guide',
+          href: '/blog/tracking-brand-visibility-ai-search',
+        },
+        ' keeps the reported rates and their denominators honest.',
       ],
     },
     { type: 'heading', text: 'Turn findings into an audit backlog' },
