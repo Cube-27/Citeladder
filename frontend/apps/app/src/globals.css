@@ -1,4 +1,12 @@
-@import 'tailwindcss';
+/*
+ * The design system itself — tokens, base, and every hand-written rule.
+ *
+ * It does NOT import Tailwind. Each app's entry does that, with its own
+ * `@source` list, and then imports this. That indirection is the only way the
+ * two can generate different utility sets: they share this file, and a single
+ * entry point would mean the app shipping the marketing site's utilities and
+ * the marketing site shipping the app's.
+ */
 @import './website-type.css';
 @import './ui-motion.css';
 

@@ -6,8 +6,8 @@
       "comment": "Entry chunk + transitive STATIC imports + entry CSS. Lazy route chunks are excluded: they are paid on navigation, not on boot. Includes the route loader that resolves the shell's opening decision before first paint \u2014 it costs ~4.6 KB gzip and removes three full-viewport paints from a cold load, which is a trade worth making explicitly.",
       "eager_js_raw": 898152,
       "eager_js_gzip": 280136,
-      "eager_css_raw": 148345,
-      "eager_css_gzip": 26776
+      "eager_css_raw": 119768,
+      "eager_css_gzip": 22215
     }
   }
 }
