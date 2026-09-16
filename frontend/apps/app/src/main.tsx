@@ -5,12 +5,16 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 import './app.css';
 import { getAppQueryClient } from '@/lib/api/query-client';
+import { setUrlStateRouter } from '@/lib/navigation/url-state';
 
 import { appRoutes } from './router';
 import './runtime.css';
 
 const queryClient = getAppQueryClient();
 const router = createBrowserRouter(appRoutes);
+// URL-owned filter state writes through the router rather than around it, so
+// `useLocation`/`useSearchParams` cannot go stale behind a filter change.
+setUrlStateRouter(router);
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {

@@ -62,6 +62,28 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
       // the entry plus its transitive static imports. That is the number a cold
       // load actually pays, and the one that regresses silently.
       manifest: true,
+      // The support matrix `package.json` already declares. Without this the
+      // build used Vite's own default and the browserslist was decorative —
+      // the two could disagree and nothing would say so.
+      target: ['chrome111', 'edge111', 'firefox128', 'safari16.4'],
+      rolldownOptions: {
+        output: {
+          // Cache stability, not size. These three change on their own release
+          // schedule and nothing here changes them, but they were sharing a
+          // chunk with application code — so editing anything under `lib/api`
+          // invalidated React Router for every returning reader.
+          //
+          // Deliberately only three. More chunks means more requests on a cold
+          // SPA boot, which is the thing this is trying to protect.
+          advancedChunks: {
+            groups: [
+              { name: 'vendor-react', test: /node_modules[/](react|react-dom|scheduler)[/]/ },
+              { name: 'vendor-router', test: /node_modules[/]react-router/ },
+              { name: 'vendor-zod', test: /node_modules[/]zod[/]/ },
+            ],
+          },
+        },
+      },
     },
   };
 });
