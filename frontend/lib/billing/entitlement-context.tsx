@@ -141,19 +141,8 @@ export function useEntitlement() {
 }
 
 /**
- * How much of one occupancy allowance is left in the active workspace.
- *
- * Reads the MEMBER-SAFE hints on the workspace entitlement rather than the
- * owner-private usage report, so a Member sees the same "no slots left" state
- * an Owner does without being shown the workspace's finances. `undefined`
- * means "not answerable yet", which is not the same as zero — callers must
- * not treat it as a denial.
+ * Re-exported so existing consumers keep one import site. The function itself
+ * lives in `entitlement-capability` because the route loader's bootstrap needs
+ * it without this provider.
  */
-export function capabilityRemaining(
-  entitlement: WorkspaceEntitlement | null,
-  key: string,
-): number | undefined {
-  if (!entitlement || entitlement.status !== 'resolved') return undefined;
-  const hint = entitlement.occupancy.find((candidate) => candidate.key === key);
-  return hint?.remaining;
-}
+export { capabilityRemaining } from '@/lib/billing/entitlement-capability';

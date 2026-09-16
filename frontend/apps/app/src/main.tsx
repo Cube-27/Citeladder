@@ -4,12 +4,12 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 import './globals.css';
-import { createAppQueryClient } from '@/lib/api/query-client';
+import { getAppQueryClient } from '@/lib/api/query-client';
 
 import { appRoutes } from './router';
 import './runtime.css';
 
-const queryClient = createAppQueryClient();
+const queryClient = getAppQueryClient();
 const router = createBrowserRouter(appRoutes);
 const rootElement = document.getElementById('root');
 

@@ -8,74 +8,17 @@ import { PageLoading } from '@/components/layout/page-loading';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
-import type { WorkspaceEntitlement } from '@/lib/api/billing';
 import { queryKeys } from '@/lib/api/query-keys';
-import { capabilityRemaining, useEntitlement } from '@/lib/billing/entitlement-context';
-import { PROJECT_SLOTS_CAPABILITY } from '@/lib/config/billing';
+import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useCanonicalProjectUrl, workspaceDestination } from '@/lib/navigation/project-destination';
+import {
+  isWorkspaceOnlyRoute,
+  resolveAllowance,
+  resolveGate,
+  type NoticeKind,
+} from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
-import type { FailureScope, SelectionStatus } from '@/lib/project/selection';
-
-/**
- * Routes that manage the WORKSPACE rather than work inside a project.
- *
- * A workspace with no projects is a perfectly valid workspace: its owner may
- * still need to reach billing, members and settings, and an invitee arriving
- * at an acceptance link has not joined anything yet. Redirecting these to
- * project creation answered a question nobody asked and made an empty
- * workspace unmanageable.
- */
-const WORKSPACE_ONLY_PREFIXES = ['/onboarding', '/settings', '/invitations'] as const;
-
-function isWorkspaceOnlyRoute(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return WORKSPACE_ONLY_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
-
-/**
- * What the workspace's project allowance currently says.
- *
- * `unknown` covers a FAILED read as well as an unresolved one, even when a
- * stale positive value is still in the cache: sending someone into creation on
- * the strength of a number the server just refused to confirm is how a
- * transient failure turns into a rejected second attempt.
- */
-type Allowance = 'unknown' | 'spent' | 'spare';
-
-function resolveAllowance(entitlement: WorkspaceEntitlement | null): Allowance {
-  const remaining = capabilityRemaining(entitlement, PROJECT_SLOTS_CAPABILITY);
-  if (remaining === undefined) return 'unknown';
-  return remaining > 0 ? 'spare' : 'spent';
-}
-
-/** Which standing notice, if any, this state owes the reader. */
-type NoticeKind = 'failed' | 'missing-project' | 'no-projects';
-type GateState = NoticeKind | 'ready' | 'loading' | 'redirecting';
-
-type GateInputs = {
-  projectRequired: boolean;
-  mayCreate: boolean;
-  allowance: Allowance;
-  entitlementLoading: boolean;
-};
-
-/** Resolve routing, loading and recovery together so their precedence cannot drift. */
-function resolveGate(
-  status: SelectionStatus,
-  { projectRequired, mayCreate, allowance, entitlementLoading }: GateInputs,
-): GateState {
-  if (status === 'error') return 'failed';
-  if (status === 'unavailable') return 'missing-project';
-  if (!projectRequired) return 'ready';
-  if (status === 'resolving') return 'loading';
-  if (status !== 'empty') return 'ready';
-  if (mayCreate && allowance === 'spare') return 'redirecting';
-  if (entitlementLoading) return 'loading';
-  // An unread allowance cannot justify claiming that the workspace is full.
-  return allowance === 'unknown' ? 'failed' : 'no-projects';
-}
+import type { FailureScope } from '@/lib/project/selection';
 
 /**
  * The project-route gate.

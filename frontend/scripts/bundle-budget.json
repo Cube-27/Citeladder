@@ -3,9 +3,9 @@
   "comment": "Byte ceilings for what a COLD load pays before any route code runs. Raise a limit only with a measurement in the PR that explains what the bytes buy.",
   "budgets": {
     "apps/app": {
-      "comment": "Entry chunk + transitive STATIC imports + entry CSS. Lazy route chunks are excluded: they are paid on navigation, not on boot. Ratcheted after the schema de-barrel, the lazy tour runner and the lazy agent workspace.",
-      "eager_js_raw": 892794,
-      "eager_js_gzip": 275545,
+      "comment": "Entry chunk + transitive STATIC imports + entry CSS. Lazy route chunks are excluded: they are paid on navigation, not on boot. Includes the route loader that resolves the shell's opening decision before first paint \u2014 it costs ~4.6 KB gzip and removes three full-viewport paints from a cold load, which is a trade worth making explicitly.",
+      "eager_js_raw": 898152,
+      "eager_js_gzip": 280136,
       "eager_css_raw": 148345,
       "eager_css_gzip": 26776
     }
