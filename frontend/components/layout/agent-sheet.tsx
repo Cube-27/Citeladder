@@ -2,12 +2,9 @@
 
 import { Bot } from 'lucide-react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import {
-  GrowthAgentWorkspace,
-  type AgentRouteContext,
-} from '@/components/agent/growth-agent-workspace';
+import type { AgentRouteContext } from '@/components/agent/growth-agent-workspace';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { Pressable } from '@/components/ui/pressable';
@@ -16,6 +13,21 @@ import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { GROWTH_AGENT_CAPABILITY } from '@/lib/config/billing';
 import { useProjectContext } from '@/lib/project/project-context';
 import { cn } from '@/lib/utils';
+
+/**
+ * The agent's workspace, loaded when the drawer is first opened.
+ *
+ * `AgentSheet` is mounted unconditionally by the shell, so importing the
+ * workspace statically put the agent client and its schemas in the chunk the
+ * browser needs before it can paint — for a panel most sessions never open.
+ * The drawer already portals its body only while open, so nothing here renders
+ * any sooner than it did; only the download moves.
+ */
+const GrowthAgentWorkspace = lazy(() =>
+  import('@/components/agent/growth-agent-workspace').then((module) => ({
+    default: module.GrowthAgentWorkspace,
+  })),
+);
 
 const OPEN_AGENT_EVENT = 'citeladder:open-agent';
 const DATE_KEYS = new Set(['start', 'end', 'start_date', 'end_date', 'date_from', 'date_to']);
@@ -160,12 +172,14 @@ export function AgentSheet() {
          drawer must not add a second scroll container around it. */
       bodyClassName="overflow-hidden p-0"
     >
-      <GrowthAgentWorkspace
-        key={`${activeProject?.id ?? 'none'}:${launch.taskType}:${launch.objective}`}
-        initialTask={launch.taskType}
-        initialObjective={launch.objective}
-        routeContext={routeContext}
-      />
+      <Suspense fallback={null}>
+        <GrowthAgentWorkspace
+          key={`${activeProject?.id ?? 'none'}:${launch.taskType}:${launch.objective}`}
+          initialTask={launch.taskType}
+          initialObjective={launch.objective}
+          routeContext={routeContext}
+        />
+      </Suspense>
     </Drawer>
   );
 }

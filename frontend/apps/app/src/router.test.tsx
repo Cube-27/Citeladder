@@ -4,6 +4,14 @@ import { createMemoryRouter, Outlet, RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const bootstrap = vi.hoisted(() => vi.fn());
+// This file is about chunk download and shell persistence across a navigation.
+// The real bootstrap loader would issue the session and workspace reads, which
+// belong to `bootstrap-loader.test.ts`; here they would only make the route
+// wait on a request nothing answers. The session wait these tests care about is
+// modelled by the `PrivateRouteLayout` stub below.
+vi.mock('@/lib/project/bootstrap-loader', () => ({
+  bootstrapPrivateRoutes: () => null,
+}));
 vi.mock('./auth-routes', () => ({
   LoginRoute: () => <h1>Sign in</h1>,
   RegisterRoute: () => <h1>Register</h1>,

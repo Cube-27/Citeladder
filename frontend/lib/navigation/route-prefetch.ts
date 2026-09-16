@@ -1,29 +1,29 @@
 import type { QueryClient } from '@tanstack/react-query';
 
-import { aiReferralsApi } from '@/lib/api/ai-referrals';
-import { commerceApi } from '@/lib/api/commerce';
-import { demandApi } from '@/lib/api/demand';
-import { opportunitiesQueries } from '@/lib/api/opportunities';
-import { projectsApi } from '@/lib/api/projects';
-import { promptsApi } from '@/lib/api/prompts';
 import { warmQuery } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
-import { runsQueries } from '@/lib/api/runs';
-import { siteHealthQueries } from '@/lib/api/site-health';
-import { performanceQueries } from '@/lib/api/performance';
-import { INITIAL_VISIBILITY_PARAMS, visibilityQueries } from '@/lib/api/visibility';
-import { INITIAL_DASHBOARD_PARAMS } from '@/lib/performance/performance';
 
 type ProjectScope = { projectId: string; workspaceId: string };
-type RoutePrefetcher = (client: QueryClient, scope: ProjectScope) => void;
+type RoutePrefetcher = (client: QueryClient, scope: ProjectScope) => Promise<void>;
 
 /**
  * Primary read intent for data-heavy application destinations. Query keys are
  * identical to each screen's default request, so pointer and keyboard intent
  * warm the existing domain cache rather than creating a navigation cache.
+ *
+ * **Every prefetcher imports its API module dynamically, and that is load-bearing.**
+ * This map reaches ten domains. `sidebar-nav` imports it, `app-shell` imports
+ * that, and the router imports the shell — so a static import here placed every
+ * domain's client, and the Zod schema module behind each one, in the chunk the
+ * browser must download before it can render anything at all. The whole point
+ * of the map is that none of those reads have happened yet.
+ *
+ * The extra microtask before the request is free: nothing awaits a prefetch,
+ * and the chunk is already warm by the second hover.
  */
 const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
-  '/projects': (client, { projectId, workspaceId }) => {
+  '/projects': async (client, { projectId, workspaceId }) => {
+    const { projectsApi } = await import('@/lib/api/projects');
     warmQuery(client, {
       queryKey: queryKeys.projects.commandCenter(projectId),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
@@ -31,50 +31,64 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
     });
   },
   '/site': prefetchSiteHealth,
-  '/issues': prefetchSiteHealth,
-  '/demand': (client, { projectId, workspaceId }) => {
+  '/issues': prefetchIssues,
+  '/demand': async (client, { projectId, workspaceId }) => {
+    const { demandApi } = await import('@/lib/api/demand');
     warmQuery(client, {
       queryKey: queryKeys.demand.latest(projectId),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         demandApi.getLatest(projectId, { signal, workspaceId }),
     });
   },
-  '/performance': (client, { projectId, workspaceId }) => {
+  '/performance': async (client, { projectId, workspaceId }) => {
     // The landing view, built from the screen's own defaults: the latest
     // persisted snapshot, daily buckets, no comparison.
+    const [{ performanceQueries }, { INITIAL_DASHBOARD_PARAMS }] = await Promise.all([
+      import('@/lib/api/performance'),
+      import('@/lib/performance/performance'),
+    ]);
     warmQuery(
       client,
       performanceQueries.dashboard(workspaceId, projectId, INITIAL_DASHBOARD_PARAMS),
     );
   },
-  '/products': (client, { projectId, workspaceId }) => {
+  '/products': async (client, { projectId, workspaceId }) => {
+    const { commerceApi } = await import('@/lib/api/commerce');
     warmQuery(client, {
       queryKey: queryKeys.commerce.catalog(projectId),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         commerceApi.catalog(projectId, { signal, workspaceId }),
     });
   },
-  '/opportunities': (client, { projectId, workspaceId }) => {
+  '/opportunities': async (client, { projectId, workspaceId }) => {
+    const { opportunitiesQueries } = await import('@/lib/api/opportunities');
     warmQuery(client, opportunitiesQueries.summary(workspaceId, projectId));
   },
-  '/prompts': (client, { projectId, workspaceId }) => {
+  '/prompts': async (client, { projectId, workspaceId }) => {
+    const { promptsApi } = await import('@/lib/api/prompts');
     warmQuery(client, {
       queryKey: queryKeys.prompts.sets(projectId),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         promptsApi.listPromptSets(projectId, { signal, workspaceId }),
     });
   },
-  '/visibility': (client, { projectId, workspaceId }) => {
+  '/visibility': async (client, { projectId, workspaceId }) => {
+    const [{ runsQueries }, { INITIAL_VISIBILITY_PARAMS, visibilityQueries }] = await Promise.all([
+      import('@/lib/api/runs'),
+      import('@/lib/api/visibility'),
+    ]);
     warmQuery(client, runsQueries.list(workspaceId, projectId));
     // The landing selection, built from the screen's own defaults. A key
     // spelled out here drifted from the one the screen reads and warmed an
     // entry nothing consumed.
     warmQuery(client, visibilityQueries.project(workspaceId, projectId, INITIAL_VISIBILITY_PARAMS));
   },
-  '/runs': (client, { projectId, workspaceId }) => {
+  '/runs': async (client, { projectId, workspaceId }) => {
+    const { runsQueries } = await import('@/lib/api/runs');
     warmQuery(client, runsQueries.list(workspaceId, projectId));
   },
-  '/ai-referrals': (client, { projectId, workspaceId }) => {
+  '/ai-referrals': async (client, { projectId, workspaceId }) => {
+    const { aiReferralsApi } = await import('@/lib/api/ai-referrals');
     const params = { granularity: 'week' as const };
     warmQuery(client, {
       queryKey: queryKeys.aiReferrals.dashboard(projectId, params),
@@ -84,12 +98,52 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
   },
 };
 
-function prefetchSiteHealth(client: QueryClient, { projectId, workspaceId }: ProjectScope) {
+async function prefetchSiteHealth(client: QueryClient, { projectId, workspaceId }: ProjectScope) {
+  const { siteHealthQueries } = await import('@/lib/api/site-health');
   warmQuery(client, siteHealthQueries.dashboard(workspaceId, projectId));
+}
+
+/**
+ * Warm the issues page itself, not only the dashboard above it.
+ *
+ * `/issues` needs two reads in sequence: the dashboard names the crawl, and
+ * only then can the catalog ask that crawl for its issues. Warming the first
+ * alone left the second — the one the screen actually blocks on — to start
+ * cold on arrival, and the project context has usually warmed the dashboard
+ * already anyway.
+ *
+ * Only the DEFAULT page is warmed. A reader arriving with filters in the
+ * address wants a different key, and warming this one would spend a request on
+ * a page they will not see.
+ */
+async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
+  const [{ siteHealthQueries }, { ISSUE_PAGE_LIMIT }, { emptyIssueFilters, toIssueParams }] =
+    await Promise.all([
+      import('@/lib/api/site-health'),
+      import('@/lib/config/site-health'),
+      import('@/lib/site-health/issue-filters'),
+    ]);
+  const dashboard = siteHealthQueries.dashboard(scope.workspaceId, scope.projectId);
+  warmQuery(client, dashboard);
+
+  const crawlId = (await client.ensureQueryData(dashboard).catch(() => null))?.crawl?.id;
+  if (!crawlId) return;
+  warmQuery(
+    client,
+    siteHealthQueries.issues(
+      scope.workspaceId,
+      crawlId,
+      // The identical params `IssuesCatalog` builds for an unfiltered first
+      // page. Spelling them out differently here would warm a key nothing reads.
+      toIssueParams(emptyIssueFilters, null, ISSUE_PAGE_LIMIT),
+    ),
+  );
 }
 
 export function prefetchRoute(client: QueryClient, href: string, project: ProjectScope | null) {
   if (!project) return;
   const pathname = new URL(href, 'https://citeladder.local').pathname;
-  ROUTE_PREFETCHERS[pathname]?.(client, project);
+  // Intent is best-effort: a chunk that fails to load must not surface here,
+  // and the navigation that follows will report the failure properly.
+  void ROUTE_PREFETCHERS[pathname]?.(client, project).catch(() => {});
 }

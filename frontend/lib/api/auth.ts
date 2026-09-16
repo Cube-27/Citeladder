@@ -7,8 +7,8 @@ import {
   authResponseSchema,
   oauthStartResponseSchema,
   registrationResponseSchema,
-  strictValidate,
-} from './schemas';
+} from './schemas/auth';
+import { strictValidate } from './schemas/validation';
 import type {
   AuthResponse,
   OAuthProvider,

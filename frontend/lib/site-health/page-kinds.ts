@@ -6,7 +6,7 @@
  * dashboard per-type breakdown reads it from here (no duplicated maps).
  * No transport, no React.
  */
-import { pageKindSchema } from '@/lib/api/schemas';
+import { pageKindSchema } from '@/lib/api/schemas/site-health';
 import type { PageKind, PageKindScoreSummary } from '@/lib/api/types';
 import { titleCaseStatus } from '@/lib/utils';
 

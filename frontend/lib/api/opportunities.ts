@@ -18,12 +18,12 @@ import {
   implementationEventsPageSchema,
   opportunitiesPageSchema,
   opportunityDetailSchema,
-  opportunitySummarySchema,
-  opportunitySchema,
   opportunityOrderResponseSchema,
+  opportunitySchema,
+  opportunitySummarySchema,
   recomputeResponseSchema,
-  strictValidate,
-} from './schemas';
+} from './schemas/opportunities';
+import { strictValidate } from './schemas/validation';
 import { definedQuery, withQuery } from './shared';
 import type {
   ImplementationEvent,

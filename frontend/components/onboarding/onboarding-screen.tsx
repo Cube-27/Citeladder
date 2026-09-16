@@ -3,6 +3,7 @@
 import { Link, useLocation } from 'react-router-dom';
 
 import { FlowActions, FlowShell, type FlowStep } from '@/components/auth/flow-shell';
+import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { Button } from '@/components/ui/button';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -32,9 +33,21 @@ export function OnboardingScreen() {
 function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: string }>) {
   const flow = useOnboardingFlow(transactionKey);
   const { activeProjectId } = useProjectContext();
+  /**
+   * Where leaving setup would land — or nothing, when leaving has nowhere to go.
+   *
+   * `?new=1` says the reader ASKED for another project, not that they have one.
+   * "Add project" on the empty state sets it too, so a workspace with no
+   * projects was offered a way out to `/projects`, which is precisely the
+   * address that sends an empty workspace back into setup. The reader saw a
+   * flicker and landed back in the flow they were trying to leave.
+   *
+   * A resolved project is the honest test: it is both the thing to return to
+   * and the proof that returning goes somewhere.
+   */
   const projectsHref = activeProjectId
     ? projectDestination('/projects', null, activeProjectId)
-    : '/projects';
+    : undefined;
   const stage = onboardingStage(flow);
   const measure = !flow.isCompleting && flow.step === 2 ? 'wide' : 'default';
 
@@ -43,7 +56,12 @@ function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: st
       mainLabel="Project setup"
       steps={STEPS}
       currentStep={flow.step}
-      exitHref={flow.isAdditional ? projectsHref : '/'}
+      // No exit unless there is somewhere to exit to. Setup used to leave for
+      // the marketing site instead, which dropped a signed-in reader out of
+      // the product entirely; the account menu beside this is the way out when
+      // there is no project to go back to.
+      exitHref={flow.isAdditional ? projectsHref : undefined}
+      trailing={<UserMenuTrigger presenter="compact" />}
       align={flow.isCompleting ? 'center' : 'start'}
       measure={measure}
       actions={
@@ -87,12 +105,13 @@ function onboardingStage(flow: ReturnType<typeof useOnboardingFlow>) {
 function OnboardingActions({
   flow,
   projectsHref,
-}: Readonly<{ flow: ReturnType<typeof useOnboardingFlow>; projectsHref: string }>) {
+}: Readonly<{ flow: ReturnType<typeof useOnboardingFlow>; projectsHref: string | undefined }>) {
   if (flow.step === 0) {
     return (
       <FlowActions
         secondary={
-          flow.isAdditional ? (
+          // Same rule as the exit above: cancelling has to lead somewhere.
+          flow.isAdditional && projectsHref ? (
             <Button asChild variant="ghost" size="md">
               <Link to={projectsHref}>Cancel</Link>
             </Button>

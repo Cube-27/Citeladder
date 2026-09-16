@@ -13,8 +13,11 @@ import { renderWithProviders } from '@/test/render';
 import { OnboardingScreen } from './onboarding-screen';
 import { useOnboardingFlow } from './onboarding-flow';
 
-const { setActiveProjectId } = vi.hoisted(() => ({
+const { setActiveProjectId, selection } = vi.hoisted(() => ({
   setActiveProjectId: vi.fn(),
+  // Mutable so a test can describe a workspace that has no project yet, which
+  // is the state that decides whether leaving setup leads anywhere.
+  selection: { activeProjectId: '55555555-5555-4555-8555-555555555555' as string | null },
 }));
 
 const DISCOVERY_ID = '11111111-1111-4111-8111-111111111111';
@@ -43,7 +46,7 @@ vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   useProjectContext: () => ({
     activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    activeProjectId: '55555555-5555-4555-8555-555555555555',
+    activeProjectId: selection.activeProjectId,
     setActiveProjectId,
   }),
 }));
@@ -218,6 +221,7 @@ afterEach(() => {
   vi.clearAllMocks();
   searchParams = '';
   useRealDiscovery = false;
+  selection.activeProjectId = ACTIVE_PROJECT_ID;
   visitedLocations.length = 0;
 });
 afterAll(() => mswServer.close());
@@ -333,6 +337,54 @@ describe('OnboardingScreen', () => {
     renderOnboarding('/projects');
 
     expect(screen.queryByLabelText(/^Brand name/)).not.toBeInTheDocument();
+  });
+
+  it('offers a way out of the account from first-time setup', async () => {
+    // `/onboarding` mounts outside the application chrome, so for a brand new
+    // account this flow bar is the ONLY place a sign-out can be. It used to
+    // offer a link to the marketing site instead, which left the product
+    // without ending the session.
+    const user = userEvent.setup();
+    mswServer.use(catalogHandler());
+    renderOnboarding();
+
+    await screen.findByLabelText(/^Brand name/);
+    expect(screen.queryByRole('link', { name: 'Exit' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /account menu/i }));
+    expect(await screen.findByRole('menuitem', { name: /sign out/i })).toBeVisible();
+  });
+
+  it('offers no way out of an additional-project flow that has nowhere to go', async () => {
+    // "Add project" on the empty state also sets `?new=1` — it says the reader
+    // asked for a project, not that they already have one. Offering Exit there
+    // sent them to `/projects`, which is exactly the address that returns an
+    // empty workspace to setup: a flicker, and back in the flow they were
+    // trying to leave.
+    searchParams = `new=1&workspace=${WORKSPACE_ID}`;
+    selection.activeProjectId = null;
+    mswServer.use(catalogHandler());
+    renderOnboarding();
+
+    await screen.findByLabelText(/^Brand name/);
+    expect(screen.queryByRole('link', { name: 'Exit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Cancel' })).not.toBeInTheDocument();
+  });
+
+  it('keeps a way back to the projects it came from when adding another project', async () => {
+    searchParams = `new=1&workspace=${WORKSPACE_ID}`;
+    const user = userEvent.setup();
+    mswServer.use(catalogHandler());
+    renderOnboarding();
+
+    // An additional project has somewhere to go back TO, so this flow keeps
+    // its exit — and gains the account beside it rather than instead of it.
+    expect(await screen.findByRole('link', { name: 'Exit' })).toHaveAttribute(
+      'href',
+      `/projects?project=${ACTIVE_PROJECT_ID}`,
+    );
+    await user.click(screen.getByRole('button', { name: /account menu/i }));
+    expect(await screen.findByRole('menuitem', { name: /sign out/i })).toBeVisible();
   });
 
   it('keeps the active project in an additional-project cancellation URL', async () => {

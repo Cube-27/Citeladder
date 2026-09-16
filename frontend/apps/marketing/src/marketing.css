@@ -1,0 +1,24 @@
+/*
+ * The public site's stylesheet.
+ *
+ * Same reasoning as `apps/app/src/app.css`, pointed the other way: the
+ * marketing pages were shipping the product's utilities — the whole site-health
+ * catalog, the settings screens, the agent — in a stylesheet that blocks the
+ * first paint of the page anonymous visitors actually land on.
+ *
+ * `components/ui` stays in the list because the public chrome uses the shared
+ * primitives (the account menu, the logo, typography roles), and `lib` because
+ * variant helpers live there.
+ */
+/* Both imports come first: CSS drops an `@import` that follows another
+   at-rule, and putting the `@source` list above this one silently shipped a
+   stylesheet with no design system in it at all. */
+@import 'tailwindcss' source(none);
+@import '../../app/src/globals.css';
+
+@source '../../marketing/src';
+@source '../../../components/marketing';
+@source '../../../components/analytics';
+@source '../../../components/billing';
+@source '../../../components/ui';
+@source '../../../lib';

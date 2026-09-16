@@ -6,7 +6,7 @@ import { MarketingNavIsland } from '../components/MarketingNavIsland';
 import { ReturningVisitorHint } from '@/components/marketing/chrome/returning-visitor-hint';
 import { organizationJsonLd, softwareApplicationJsonLd, websiteJsonLd, type JsonLdObject } from '@/lib/seo/json-ld';
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site';
-import '@/apps/app/src/globals.css';
+import '@/apps/marketing/src/marketing.css';
 
 interface Props {
   title?: string;
@@ -79,11 +79,31 @@ const serializeJsonLd = (data: JsonLdObject) => JSON.stringify(data).replace(/</
         src: url('/fonts/Geist-Variable.woff2') format('woff2');
         font-weight: 100 900;
         font-style: normal;
-        font-display: swap;
+        /* `optional`, not `swap`. With `swap` the fallback paints immediately
+           and Geist replaces it whenever it lands — the visible mid-page font
+           change on a cold load. `optional` gives the font a short block
+           period and then commits to one answer for the whole page load: no
+           swap, and no reflow. The file is 29KB, same-origin and preloaded
+           above, so it normally wins that window. */
+        font-display: optional;
+      }
+
+      /* The fallback, matched to Geist's metrics.
+         `optional` can still decide against the webfont on a genuinely cold
+         connection, and an unmatched fallback would reflow the page when it
+         does. These overrides make the substitute occupy the same space, so
+         the difference is a glyph shape rather than a different layout. */
+      @font-face {
+        font-family: 'Geist Fallback';
+        src: local('Segoe UI'), local('Helvetica Neue'), local('Arial');
+        size-adjust: 102%;
+        ascent-override: 93%;
+        descent-override: 24%;
+        line-gap-override: 0%;
       }
 
       :root {
-        --font-geist: 'Geist';
+        --font-geist: 'Geist', 'Geist Fallback';
       }
     </style>
     <title>{title}</title>

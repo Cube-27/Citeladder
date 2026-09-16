@@ -26,6 +26,7 @@
     "report:duplicates:tests": "node scripts/check-jscpd.mjs --tests",
     "check:policy": "node scripts/check-design-system.mjs && node scripts/check-frontend-architecture.mjs",
     "check:contract": "node scripts/check-contract.mjs",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:dead-code": "knip",
     "quality:fix": "node ../scripts/quality.mjs --mode fix",
     "quality:check": "node ../scripts/quality.mjs --mode check"

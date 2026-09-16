@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { CopyButton } from '@/components/ui/copy-button';
 import { panelClasses } from '@/components/ui/panel';
+import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import type { SiteIssue, SiteIssueDetail } from '@/lib/api/types';
@@ -37,6 +38,7 @@ export function IssueDetailRail({
     data: SiteIssueDetail | undefined;
     isError: boolean;
     isFetching: boolean;
+    isPending: boolean;
   };
   canPrevious: boolean;
   onPrevious: () => void;
@@ -103,7 +105,12 @@ export function IssueDetailRail({
               <p className="text-secondary text-sm whitespace-pre-line">{issue.remediation}</p>
             </div>
           ) : null}
-          <OccurrenceList detail={detail} crawlId={crawlId} isError={detailQuery.isError} />
+          <OccurrenceList
+            detail={detail}
+            crawlId={crawlId}
+            isError={detailQuery.isError}
+            isPending={detailQuery.isPending}
+          />
         </div>
         {detail && (canPrevious || detail.next_cursor) ? (
           <footer className="border-border-subtle bg-panel flex shrink-0 items-center justify-end gap-2 border-t p-3">
@@ -169,18 +176,37 @@ function IssueActions({
   );
 }
 
+const OCCURRENCE_PLACEHOLDERS = ['first', 'second', 'third'] as const;
+
 function OccurrenceList({
   detail,
   crawlId,
   isError,
+  isPending,
 }: Readonly<{
   detail: SiteIssueDetail | undefined;
   crawlId: string;
   isError: boolean;
+  isPending: boolean;
 }>) {
-  // `detail` is populated once the screen has painted: no loading state here.
   if (isError) return <Alert tone="danger">Could not load affected URLs.</Alert>;
-  if (!detail || detail.occurrences.length === 0)
+  // The list no longer waits for this read, so "none" and "not yet" are now
+  // genuinely different answers here. Claiming the first while the second is
+  // true told the reader an issue affected nothing, a moment before showing
+  // them the pages it affects.
+  if (isPending || !detail) {
+    return (
+      <ul aria-busy="true" className={ledgerClasses('ruled')}>
+        {OCCURRENCE_PLACEHOLDERS.map((placeholder) => (
+          <li key={placeholder} className="grid gap-2 p-3">
+            <Skeleton className="h-4 w-3/5" />
+            <Skeleton className="h-3 w-4/5" />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  if (detail.occurrences.length === 0)
     return <p className={textRole('body')}>No affected URLs found.</p>;
   return (
     <ul className={ledgerClasses('ruled')}>

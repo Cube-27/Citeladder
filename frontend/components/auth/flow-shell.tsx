@@ -18,6 +18,7 @@ export function FlowShell({
   actions,
   footer,
   exitHref,
+  trailing,
   mainLabel,
   align = 'start',
   measure = 'default',
@@ -28,6 +29,12 @@ export function FlowShell({
   actions?: ReactNode;
   footer?: ReactNode;
   exitHref?: string;
+  /**
+   * The flow bar's right-hand slot, when the caller owns something better than
+   * an exit link — the account menu, say. `FlowShell` never mounts that itself:
+   * `/login` and `/register` use this shell with no session tree above them.
+   */
+  trailing?: ReactNode;
   mainLabel: string;
   align?: 'start' | 'center';
   measure?: 'default' | 'wide' | 'auth';
@@ -37,7 +44,7 @@ export function FlowShell({
       data-flow-surface
       className="bg-shell text-foreground relative grid h-dvh min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden antialiased"
     >
-      <FlowBar steps={steps} currentStep={currentStep} exitHref={exitHref} />
+      <FlowBar steps={steps} currentStep={currentStep} exitHref={exitHref} trailing={trailing} />
       <main
         id="main"
         aria-label={mainLabel}
@@ -54,32 +61,35 @@ export function FlowShell({
   );
 }
 
-function MarketingExitLink() {
-  return (
-    <a href="/" className="flow-exit">
-      Exit
-    </a>
-  );
-}
-
 function FlowBar({
   steps,
   currentStep,
   exitHref,
+  trailing,
 }: Readonly<{
   steps?: readonly FlowStep[];
   currentStep: number;
   exitHref?: string;
+  trailing?: ReactNode;
 }>) {
-  let exit: ReactNode = <span />;
-  if (exitHref === '/') exit = <MarketingExitLink />;
-  else if (exitHref) {
-    exit = (
-      <Link to={exitHref} className="flow-exit">
-        Exit
-      </Link>
+  // The bar is a three-column grid, so this cell is always exactly one child —
+  // an empty span when there is nothing to put in it, and one row when there
+  // is both a way out and an account. `.flow-exit` carries its own
+  // `justify-self`, which the row takes over once it is not the cell itself.
+  const exitLink = exitHref ? (
+    <Link to={exitHref} className="flow-exit">
+      Exit
+    </Link>
+  ) : null;
+  const exit: ReactNode =
+    exitLink || trailing ? (
+      <div className="flex items-center justify-end gap-3 justify-self-end">
+        {exitLink}
+        {trailing}
+      </div>
+    ) : (
+      <span />
     );
-  }
   return (
     <header className="flow-bar">
       <div className="flow-bar-content">

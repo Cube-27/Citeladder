@@ -14,8 +14,8 @@ import {
   opportunitySummarySchema,
   opportunityTypeSchema,
   recomputeResponseSchema,
-  strictValidate,
-} from './schemas';
+} from './schemas/opportunities';
+import { strictValidate } from './schemas/validation';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';

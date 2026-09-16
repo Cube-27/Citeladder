@@ -1,265 +1,88 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { driver } from 'driver.js';
-import 'driver.js/dist/driver.css';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { Suspense, lazy, useEffect, useRef, type ReactNode } from 'react';
 
 import { workspacesApi } from '@/lib/api/workspaces';
-import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { ProductTourStatus } from '@/lib/api/types';
 import { useProjectContext } from '@/lib/project/project-context';
 
-const TOUR_VERSION = 'dashboard-v1';
-
-type TourStep = {
-  id: string;
-  path: string;
-  selector: string;
-  title: string;
-  description: string;
-  /** Which selection owns the destination. Project is the default. */
-  scope?: 'project' | 'workspace';
-  /** Preferred popover placement relative to the highlighted target. */
-  side?: 'top' | 'right' | 'bottom' | 'left';
-  align?: 'start' | 'center' | 'end';
-};
-
-/** Versioned, route-aware catalog. Targets are stable `data-tour` hooks, never CSS layout classes. */
-export const PRODUCT_TOUR_STEPS: readonly TourStep[] = [
-  {
-    id: 'dashboard-overview',
-    path: '/projects',
-    selector: '[data-tour="dashboard-overview"]',
-    title: 'Your Dashboard',
-    description: 'Your active project at a glance — every card links to its evidence.',
-    side: 'bottom',
-    align: 'start',
-  },
-  {
-    id: 'dashboard-report',
-    path: '/projects',
-    selector: '[data-tour="dashboard-report"]',
-    title: 'Share an executive report',
-    description: 'Download a PDF built from persisted results — never a live provider call.',
-    side: 'bottom',
-    align: 'end',
-  },
-  {
-    id: 'provider-settings',
-    path: '/settings?tab=providers',
-    scope: 'workspace',
-    selector: '[data-tour="provider-settings"]',
-    title: 'Connect answer engines',
-    description: 'Add provider keys before launching an audit. Keys are write-only.',
-    side: 'top',
-    align: 'center',
-  },
-] as const;
-
-function stepAt(id: string | null | undefined) {
-  return PRODUCT_TOUR_STEPS.find((step) => step.id === id) ?? PRODUCT_TOUR_STEPS[0];
-}
+import { PRODUCT_TOUR_STEPS, TOUR_VERSION } from './product-tour';
 
 /**
- * Is the reader already where this step lives?
+ * Whether this workspace owes its reader a tour, and nothing else.
  *
- * Only the parameters the STEP names are compared. The shell owns `?project=`
- * and `?workspace=` and writes them into the address itself, so demanding an
- * exact query match meant the tour pushed the bare path, the shell replaced it
- * with the scoped one, and the two navigated against each other forever.
+ * The tour itself — driver.js, its stylesheet, and the effect that drives it —
+ * lives in `product-tour-runner`, loaded only while one is actually in
+ * progress. This provider mounts on every authenticated route, so anything it
+ * imports statically is downloaded before the app can paint; for everyone past
+ * their first session that was a tour library they will never see.
  */
-function isCurrentStepLocation(pathname: string, search: string, stepPath: string) {
-  const expected = new URL(stepPath, 'https://citeladder.local');
-  if (pathname !== expected.pathname) return false;
-  const current = new URLSearchParams(search);
-  return [...expected.searchParams].every(([key, value]) => current.get(key) === value);
-}
+const ProductTourRunner = lazy(() => import('./product-tour-runner'));
 
-/** Persists product-tour progress and resumes it after each App Router transition. */
 export function ProductTourProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const router = useNavigate();
   const pathname = useLocation().pathname ?? '';
-  const searchParams = useSearchParams()[0];
-  const search = searchParams.toString();
+  const search = useSearchParams()[0].toString();
   const queryClient = useQueryClient();
   const { activeProject, activeProjectId, activeWorkspaceId } = useProjectContext();
   const workspaceId = activeProject?.workspace_id ?? null;
-  const renderedStep = useRef<string | null>(null);
-  const transitioning = useRef(false);
-  const terminalSkipAttempt = useRef<string | null>(null);
-  const [targetRetry, setTargetRetry] = useState(0);
 
   const tourQuery = useQuery({
     queryKey: queryKeys.workspaces.productTour(workspaceId ?? ''),
     queryFn: ({ signal }) => workspacesApi.getProductTour(workspaceId!, { signal }),
     enabled: Boolean(workspaceId),
   });
-  const update = useMutation({
-    mutationFn: (payload: { status: ProductTourStatus; step_id?: string | null }) =>
-      workspacesApi.updateProductTour(workspaceId!, { version: TOUR_VERSION, ...payload }),
+
+  const start = useMutation({
+    mutationFn: () =>
+      workspacesApi.updateProductTour(workspaceId!, {
+        version: TOUR_VERSION,
+        status: 'in_progress',
+        step_id: PRODUCT_TOUR_STEPS[0].id,
+      }),
     onSuccess: (tour) => {
       queryClient.setQueryData(queryKeys.workspaces.productTour(workspaceId ?? ''), tour);
-      renderedStep.current = null;
-      transitioning.current = false;
-      terminalSkipAttempt.current = null;
-      setTargetRetry(0);
-    },
-    onError: () => {
-      renderedStep.current = null;
-      transitioning.current = false;
     },
   });
 
-  const persist = useCallback(
-    (status: ProductTourStatus, stepId?: string | null) => {
-      if (!workspaceId || update.isPending) return;
-      update.mutate({ status, step_id: stepId });
-    },
-    [update, workspaceId],
+  // Opening the tour is the provider's job, not the runner's: the runner only
+  // exists once there is a tour to run, so asking it to start one would mean
+  // loading it for every workspace that has already finished.
+  //
+  // Once per workspace, and the ref is what makes that true. A failed start
+  // leaves the tour `not_started`, so the only thing that changed is `starting`
+  // going back to false — which re-runs this effect, which asks again, forever.
+  // Holding the workspace id rather than a flag also handles the switch: a
+  // different workspace has not been attempted, and gets its one turn.
+  const { mutate: startTour, isPending: starting } = start;
+  const attemptedWorkspace = useRef<string | null>(null);
+  const notStarted = tourQuery.data?.status === 'not_started';
+  useEffect(() => {
+    if (!workspaceId || !notStarted || starting) return;
+    if (attemptedWorkspace.current === workspaceId) return;
+    attemptedWorkspace.current = workspaceId;
+    startTour();
+  }, [workspaceId, notStarted, starting, startTour]);
+
+  const tour = tourQuery.data;
+  const running = Boolean(workspaceId) && tour?.status === 'in_progress';
+
+  return (
+    <>
+      {children}
+      {running && workspaceId ? (
+        <Suspense fallback={null}>
+          <ProductTourRunner
+            tour={tour}
+            workspaceId={workspaceId}
+            pathname={pathname}
+            search={search}
+            activeProjectId={activeProjectId}
+            activeWorkspaceId={activeWorkspaceId}
+          />
+        </Suspense>
+      ) : null}
+    </>
   );
-
-  const replay = useCallback(() => {
-    terminalSkipAttempt.current = null;
-    persist('in_progress', PRODUCT_TOUR_STEPS[0].id);
-  }, [persist]);
-
-  useEffect(() => {
-    window.addEventListener('citeladder:replay-product-tour', replay);
-    return () => window.removeEventListener('citeladder:replay-product-tour', replay);
-  }, [replay]);
-
-  useEffect(() => {
-    let retryTimeout: number | undefined;
-    let instance: ReturnType<typeof driver> | null = null;
-    let instanceDestroyed = false;
-    const destroyInstance = () => {
-      if (!instance || instanceDestroyed) return;
-      instanceDestroyed = true;
-      instance.destroy();
-      if (renderedStep.current === stepAt(tourQuery.data?.step_id).id) {
-        renderedStep.current = null;
-      }
-    };
-    const cleanup = () => {
-      if (retryTimeout !== undefined) window.clearTimeout(retryTimeout);
-      destroyInstance();
-    };
-
-    const tour = tourQuery.data;
-    if (!tour || update.isPending) return cleanup;
-    if (tour.status === 'not_started') {
-      persist('in_progress', PRODUCT_TOUR_STEPS[0].id);
-      return cleanup;
-    }
-    if (tour.status !== 'in_progress') return cleanup;
-
-    const step = stepAt(tour.step_id);
-    // Navigate before looking for the hook. The previous ordering searched the
-    // current page first; after step two the provider-settings hook was absent,
-    // so the tour only retried and then silently disappeared.
-    if (!isCurrentStepLocation(pathname, search, step.path)) {
-      // A tour step can target another client-routed screen; no content is shown meanwhile.
-      // Carry the selection so the destination is the one the shell would have
-      // rewritten to anyway, rather than a bare path it immediately replaces.
-      // react-doctor-disable-next-line
-      router(
-        scopedNavigationDestination(
-          step.path,
-          step.scope ?? 'project',
-          activeProjectId,
-          activeWorkspaceId,
-        ),
-      );
-      return cleanup;
-    }
-    const target = document.querySelector<HTMLElement>(step.selector);
-    if (!target) {
-      if (targetRetry < 12) {
-        retryTimeout = window.setTimeout(() => setTargetRetry((value) => value + 1), 100);
-      } else {
-        // Empty/new workspaces may not render a step's target yet (for example,
-        // Command Center has no dashboard cards before the first audit). Do not
-        // leave the tour in_progress: its route-aware effect would otherwise
-        // force every later sidebar navigation back to this unavailable step.
-        const skipAttemptKey = `${workspaceId}:${step.id}`;
-        if (terminalSkipAttempt.current !== skipAttemptKey) {
-          terminalSkipAttempt.current = skipAttemptKey;
-          persist('skipped');
-        }
-      }
-      return cleanup;
-    }
-    if (renderedStep.current === step.id) return cleanup;
-
-    renderedStep.current = step.id;
-    const stepIndex = PRODUCT_TOUR_STEPS.findIndex((candidate) => candidate.id === step.id);
-    instance = driver({
-      animate: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-      allowClose: true,
-      allowKeyboardControl: true,
-      // The scrim token carries its own alpha (light 49% / dark 60%), so the
-      // library's additional opacity multiply stays at 1. Applied as the
-      // overlay SVG's inline fill, the var() resolves per active theme.
-      overlayColor: 'var(--overlay-scrim)',
-      overlayOpacity: 1,
-      // Themed via app/tour.css (.driver-popover.citeladder-tour).
-      popoverClass: 'citeladder-tour',
-      popoverOffset: 12,
-      stagePadding: 6,
-      stageRadius: 12,
-      showProgress: true,
-      progressText: '{{current}} of {{total}}',
-      // We drive step-by-step with highlight() rather than a steps array, so
-      // the library cannot compute {{current}}/{{total}} itself — stamp the
-      // progress readout when the popover renders.
-      onPopoverRender: (popover) => {
-        popover.progress.textContent = `${stepIndex + 1} of ${PRODUCT_TOUR_STEPS.length}`;
-      },
-      onNextClick: () => {
-        transitioning.current = true;
-        destroyInstance();
-        const next = PRODUCT_TOUR_STEPS[stepIndex + 1];
-        persist(next ? 'in_progress' : 'completed', next?.id ?? null);
-      },
-      onPrevClick: () => {
-        const previous = PRODUCT_TOUR_STEPS[Math.max(0, stepIndex - 1)];
-        if (previous.id === step.id) return;
-        transitioning.current = true;
-        destroyInstance();
-        persist('in_progress', previous.id);
-      },
-      onDestroyStarted: () => {
-        if (!transitioning.current) persist('skipped');
-        destroyInstance();
-      },
-    });
-    instance.highlight({
-      element: target,
-      popover: {
-        title: step.title,
-        description: step.description,
-        side: step.side,
-        align: step.align,
-        showButtons: ['previous', 'next', 'close'],
-        nextBtnText: stepIndex === PRODUCT_TOUR_STEPS.length - 1 ? 'Done' : 'Next',
-      },
-    });
-    return cleanup;
-  }, [
-    activeProjectId,
-    activeWorkspaceId,
-    pathname,
-    persist,
-    router,
-    search,
-    targetRetry,
-    tourQuery.data,
-    update.isPending,
-    workspaceId,
-  ]);
-
-  return children;
 }

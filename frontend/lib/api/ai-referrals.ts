@@ -2,12 +2,9 @@
 import type { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
-import {
-  aiReferralsSchema,
-  aiSourceSchema,
-  strictValidate,
-  type snapshotGranularitySchema,
-} from './schemas';
+import { aiReferralsSchema, aiSourceSchema } from './schemas/ai-referrals';
+import { type snapshotGranularitySchema } from './schemas/analytics';
+import { strictValidate } from './schemas/validation';
 import { definedQuery, withQuery } from './shared';
 
 type SnapshotGranularity = z.infer<typeof snapshotGranularitySchema>;

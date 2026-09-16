@@ -8,11 +8,8 @@ import {
   contentApi,
 } from './content';
 import { queryKeys } from './query-keys';
-import {
-  contentGenerationDetailSchema,
-  contentGenerationListItemSchema,
-  strictValidate,
-} from './schemas';
+import { contentGenerationDetailSchema, contentGenerationListItemSchema } from './schemas/content';
+import { strictValidate } from './schemas/validation';
 import { mswServer } from '@/test/msw-server';
 
 const GENERATION_ID = '11111111-1111-4111-8111-111111111111';

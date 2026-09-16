@@ -90,14 +90,12 @@ describe('UserMenu', () => {
 
     const settingsIndex = labels.findIndex((label) => /settings/i.test(label));
     const mcpIndex = labels.findIndex((label) => /^mcp$/i.test(label));
-    const replayIndex = labels.findIndex((label) => /replay product tour/i.test(label));
     const signOutIndex = labels.findIndex((label) => /sign out/i.test(label));
 
-    // Order: Settings → MCP → Replay product tour → Sign out.
+    // Order: Settings → MCP → Sign out.
     expect(settingsIndex).toBeGreaterThanOrEqual(0);
     expect(mcpIndex).toBe(settingsIndex + 1);
-    expect(replayIndex).toBe(mcpIndex + 1);
-    expect(signOutIndex).toBe(replayIndex + 1);
+    expect(signOutIndex).toBe(mcpIndex + 1);
 
     // asChild renders the menuitem as the Link anchor itself.
     expect(items[settingsIndex]).toHaveAttribute('href', `/settings?workspace=${WORKSPACE}`);

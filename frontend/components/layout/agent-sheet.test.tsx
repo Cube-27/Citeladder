@@ -71,7 +71,9 @@ describe('AgentSheet', () => {
     const trigger = screen.getByRole('button', { name: 'Open Growth Agent' });
     await user.click(trigger);
     expect(screen.getByRole('dialog', { name: 'Growth Agent' })).toBeVisible();
-    expect(screen.getByText(/"canonicalRoute":"\/site"/)).toBeVisible();
+    // The workspace is loaded on first open rather than shipped in the boot
+    // chunk, so its content arrives a tick after the drawer does.
+    expect(await screen.findByText(/"canonicalRoute":"\/site"/)).toBeVisible();
     expect(
       screen.getByText(/"dateRange":\{"start":"2026-08-01","end":"2026-08-15"\}/),
     ).toBeVisible();

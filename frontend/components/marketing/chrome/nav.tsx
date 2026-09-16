@@ -9,6 +9,7 @@ import { type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
+import { MarketingAccountMenu } from './marketing-account-menu';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
 import { useMarketingSession } from './use-marketing-session';
@@ -23,14 +24,42 @@ const DROP_LAYOUT: Record<NavDropKey, { width: number; twoColumn: boolean }> = {
   resources: { width: COLUMN, twoColumn: false },
 };
 
+/** How far down the page the bar changes from transparent to a surface. */
+const SCROLLED_THRESHOLD_PX = 10;
+
+/**
+ * Has the reader moved off the top of the page?
+ *
+ * Answered by watching a sentinel rather than by listening to scroll. The
+ * listener ran at input frequency and read `window.scrollY` — a layout
+ * property — on the main thread every time, to answer a question whose answer
+ * changes about twice a visit. An IntersectionObserver reports only the
+ * crossings, and does the watching off the main thread.
+ *
+ * The sentinel is created here rather than rendered because the bar itself is
+ * `position: fixed`: it has no position in the document to observe. Its
+ * position also means the observer reports correctly for a reader who lands
+ * mid-page, which a one-shot `scrollY` read on mount would have to special-case.
+ *
+ * No feature check: `IntersectionObserver` predates every browser in the
+ * support matrix `package.json` declares. The test environment installs a
+ * drivable stub (`test/intersection-observer.ts`).
+ */
 function useScrolled() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const sentinel = document.createElement('div');
+    sentinel.setAttribute('aria-hidden', 'true');
+    sentinel.style.cssText = `position:absolute;top:${SCROLLED_THRESHOLD_PX}px;left:0;width:1px;height:1px;pointer-events:none;`;
+    document.body.prepend(sentinel);
+
+    const observer = new IntersectionObserver(([entry]) => setScrolled(!entry.isIntersecting));
+    observer.observe(sentinel);
+    return () => {
+      observer.disconnect();
+      sentinel.remove();
+    };
   }, []);
 
   return scrolled;
@@ -152,7 +181,8 @@ function useDesktopDropdown() {
 /** Fixed marketing chrome with accessible desktop dropdowns and mobile accordions. */
 export function MarketingNav() {
   const reduceMotion = useReducedMotion();
-  const { isAuthenticated, sessionPending, dashboardHref, hasSessionHint } = useMarketingSession();
+  const { isAuthenticated, sessionPending, dashboardHref, email, hasSessionHint } =
+    useMarketingSession();
   const scrolled = useScrolled();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAcc, setOpenAcc] = useState<NavDropKey | null>(null);
@@ -210,11 +240,15 @@ export function MarketingNav() {
       ref={chromeRef}
       data-marketing-nav
       data-scrolled={scrolled ? 'true' : undefined}
+      // Opaque rather than blurred. A live `backdrop-filter` on a fixed,
+      // full-width strip re-samples and re-blurs whatever is behind it on
+      // every scrolled frame — and this one also TRANSITIONED the filter, so
+      // crossing the threshold animated the blur radius and invalidated every
+      // cached blur for 300ms, at exactly the moment the reader started
+      // moving. At 95% the "content passes underneath" reading survives.
       className={cn(
-        'safe-top fixed inset-x-0 top-0 z-50 w-full max-w-full border-b transition-[background-color,border-color,backdrop-filter] duration-300',
-        surfaceVisible
-          ? 'border-border-subtle bg-panel/80 backdrop-blur-md'
-          : 'border-transparent bg-transparent',
+        'safe-top fixed inset-x-0 top-0 z-50 w-full max-w-full border-b transition-[background-color,border-color] duration-300',
+        surfaceVisible ? 'border-border-subtle bg-panel/95' : 'border-transparent bg-transparent',
       )}
     >
       <nav
@@ -263,6 +297,7 @@ export function MarketingNav() {
           isAuthenticated={isAuthenticated}
           sessionPending={sessionPending}
           dashboardHref={dashboardHref}
+          email={email}
           mobileOpen={mobileOpen}
           onToggleMenu={() => setMobileOpen((open) => !open)}
         />
@@ -348,12 +383,14 @@ function NavActions({
   isAuthenticated,
   sessionPending,
   dashboardHref,
+  email,
   mobileOpen,
   onToggleMenu,
 }: Readonly<{
   isAuthenticated: boolean;
   sessionPending: boolean;
   dashboardHref: string;
+  email: string;
   mobileOpen: boolean;
   onToggleMenu: () => void;
 }>) {
@@ -380,17 +417,21 @@ function NavActions({
               <AnonymousActions />
             </span>
             <span data-session-returning>
-              <ButtonLink href="/projects" variant="primary" className="min-h-10 px-4">
+              <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
                 Dashboard
               </ButtonLink>
             </span>
           </>
         ) : isAuthenticated ? (
           // The topbar CTA runs one step smaller than the page CTAs — chrome,
-          // not a section action.
-          <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
-            Dashboard
-          </ButtonLink>
+          // not a section action. The account sits beside it rather than
+          // replacing it: leaving is a menu item, arriving is the button.
+          <>
+            <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
+              Dashboard
+            </ButtonLink>
+            <MarketingAccountMenu email={email} dashboardHref={dashboardHref} />
+          </>
         ) : (
           <AnonymousActions />
         )}

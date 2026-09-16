@@ -19,15 +19,15 @@ import {
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
+import { competitorSchema } from './schemas/project';
+import { strictValidate } from './schemas/validation';
 import {
-  competitorSchema,
   observedCompetitorSchema,
   promptMetricItemSchema,
-  strictValidate,
-  visibilityEvidenceResponseSchema,
   visibilitySchema,
-  visibilityTrendListSchema,
-} from './schemas';
+} from './schemas/visibility';
+import { visibilityEvidenceResponseSchema } from './schemas/visibility-evidence';
+import { visibilityTrendListSchema } from './schemas/visibility-trends';
 import { definedQuery, withQuery } from './shared';
 import type {
   ObservedCompetitor,

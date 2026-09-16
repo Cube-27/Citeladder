@@ -8,7 +8,7 @@
 import { z } from 'zod';
 
 import type { PromptInput } from '@/lib/api/prompts';
-import { promptCohortSchema, promptIntentSchema } from '@/lib/api/schemas';
+import { promptCohortSchema, promptIntentSchema } from '@/lib/api/schemas/project';
 import type { Prompt, PromptIntent } from '@/lib/api/types';
 
 export const promptFormSchema = z.object({

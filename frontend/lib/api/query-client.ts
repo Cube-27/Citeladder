@@ -68,6 +68,30 @@ export function retainPreviousDataForScope<TData>(
   return previousQuery?.queryKey[2] === scopeId ? previousData : undefined;
 }
 
+/**
+ * The one client this document runs on.
+ *
+ * Route loaders have no React context, so anything they warm has to reach the
+ * tree some other way. Exposing the client as a module singleton is that way:
+ * `PrivateRouteLayout`'s loader resolves the session and workspace bootstrap
+ * into these exact keys, and the providers below it then read them from the
+ * cache synchronously, with no pending render in between — which is the whole
+ * point of deciding before the first paint rather than after it.
+ *
+ * Tests keep calling `createAppQueryClient` directly so each one gets an
+ * isolated cache.
+ */
+let appQueryClient: QueryClient | undefined;
+
+export function getAppQueryClient(): QueryClient {
+  return (appQueryClient ??= createAppQueryClient());
+}
+
+/** Point the singleton at a caller-owned client. Tests only. */
+export function setAppQueryClient(client: QueryClient | undefined) {
+  appQueryClient = client;
+}
+
 export function createAppQueryClient() {
   return new QueryClient({
     defaultOptions: {

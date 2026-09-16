@@ -6,13 +6,15 @@ const PROJECT = '11111111-1111-4111-8111-111111111111';
 const state = vi.hoisted(() => ({
   pathname: '/projects',
   search: '',
+  // Widened to the states the provider actually branches on: `not_started` is
+  // the one it opens a tour from, and its step is null until it does.
   tour: {
     workspace_id: '00000000-0000-4000-8000-000000000002',
     version: 'dashboard-v1',
-    status: 'in_progress' as const,
-    step_id: 'dashboard-overview',
+    status: 'in_progress' as 'in_progress' | 'not_started' | 'completed' | 'skipped',
+    step_id: 'dashboard-overview' as string | null,
     started_at: '2026-07-28T00:00:00Z',
-    completed_at: null,
+    completed_at: null as string | null,
   },
   push: vi.fn(),
   updates: [] as Array<{ status: string; step_id?: string | null }>,
@@ -83,7 +85,8 @@ vi.mock('driver.js', () => ({
   }),
 }));
 
-import { PRODUCT_TOUR_STEPS, ProductTourProvider } from './product-tour-provider';
+import { PRODUCT_TOUR_STEPS, type TourStep } from './product-tour';
+import { ProductTourProvider } from './product-tour-provider';
 
 function renderTour(target = true) {
   return render(
@@ -231,7 +234,7 @@ describe('ProductTourProvider', () => {
     );
 
     expect(state.driverCalls).toHaveLength(0);
-    expect(PRODUCT_TOUR_STEPS.find((step) => step.id === 'provider-settings')?.path).toBe(
+    expect(PRODUCT_TOUR_STEPS.find((step: TourStep) => step.id === 'provider-settings')?.path).toBe(
       '/settings?tab=providers',
     );
     vi.unstubAllGlobals();
@@ -266,6 +269,31 @@ describe('ProductTourProvider', () => {
     });
     expect(state.updates).toContainEqual({ status: 'completed', step_id: null });
     vi.unstubAllGlobals();
+  });
+
+  /**
+   * A start that fails leaves the tour `not_started`, so the only thing that
+   * changes is the mutation settling — which is itself a dependency of the
+   * effect that asked. Without a guard that is a loop: ask, fail, ask again,
+   * for as long as the provider stays mounted.
+   */
+  it('asks a workspace to start its tour once, even when the request fails', async () => {
+    state.tour = { ...state.tour, status: 'not_started', step_id: null };
+    state.failUpdate = true;
+    const view = renderTour(false);
+
+    // The mutation builds its own payload, so the recorded call carries no
+    // argument — the count IS the contract here.
+    await waitFor(() => expect(state.updates).toHaveLength(1));
+
+    // Re-render as the settled mutation would, several times over.
+    for (const _ of [0, 1, 2]) {
+      await act(async () => {
+        view.rerender(<ProductTourProvider>{null}</ProductTourProvider>);
+      });
+    }
+
+    expect(state.updates).toHaveLength(1);
   });
 
   it('clears transition state when persisting a step fails', async () => {

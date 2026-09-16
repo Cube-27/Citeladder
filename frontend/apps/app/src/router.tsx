@@ -3,6 +3,7 @@ import type { RouteObject } from 'react-router-dom';
 
 import { PageLoading } from '@/components/layout/page-loading';
 import { ShellFallback } from '@/components/layout/shell-fallback';
+import { bootstrapPrivateRoutes } from '@/lib/project/bootstrap-loader';
 import { RouteError } from './route-error';
 import { LoginRoute, RegisterRoute } from './auth-routes';
 import {
@@ -43,6 +44,15 @@ export const appRoutes: RouteObject[] = [
   { path: '/register', element: <RegisterRoute />, ErrorBoundary: RouteError },
   {
     element: <PrivateRouteLayout />,
+    // Resolve session, workspace and project BEFORE the shell mounts, so an
+    // account with no projects reaches setup in one paint instead of watching
+    // the application chrome build itself and then be replaced.
+    loader: bootstrapPrivateRoutes,
+    // Once per document. In-app navigation is answered by the providers this
+    // seeded, which stay mounted and keep their own queries fresh; re-running
+    // the whole bootstrap on every route change would put a blocking await in
+    // front of every click.
+    shouldRevalidate: () => false,
     hydrateFallbackElement: <ShellFallback />,
     ErrorBoundary: RouteError,
     children: [
