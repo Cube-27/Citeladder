@@ -44,8 +44,17 @@ export function SeeIt() {
         </Reveal>
       </div>
 
+      {/* The reveal covers the caption, not the canvas below it.
+          It used to wrap both, which meant a scroll-driven animation promoted
+          the entire product illustration — a `shadow-elevated` pane with a
+          32px blur, five tabs, a share bar and a twenty-cell ledger — into one
+          composited layer, and forced that shadow to re-rasterise through the
+          whole of its entry range. The section still announces itself; the
+          heaviest subtree on the page no longer moves to do it. */}
       <Reveal>
         <p className="website-label mb-2">{canvas.contextLabel}</p>
+      </Reveal>
+      <div>
         {/* The ambient ground blooms in the brand's own pastel washes — the
             same atmosphere family as the hero — over a soft→white→soft
             gradient, and the white pane floats on it. Tokens only, never an
@@ -171,7 +180,7 @@ export function SeeIt() {
             />
           </div>
         </div>
-      </Reveal>
+      </div>
     </Section>
   );
 }

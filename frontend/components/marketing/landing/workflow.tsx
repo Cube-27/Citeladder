@@ -28,7 +28,7 @@ const STAGE_ICONS = {
 function StepPreview({ index }: Readonly<{ index: number }>) {
   if (index === 0) {
     return (
-      <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs backdrop-blur-xs">
+      <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs">
         <div aria-hidden className="preview-grid pointer-events-none absolute inset-0" />
         <IllustrativeLabel />
         <div className="border-border-subtle/80 bg-background/90 relative z-1 flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs shadow-2xs">
@@ -50,7 +50,7 @@ function StepPreview({ index }: Readonly<{ index: number }>) {
 
   if (index === 1) {
     return (
-      <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs backdrop-blur-xs">
+      <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs">
         <div aria-hidden className="preview-grid pointer-events-none absolute inset-0" />
         <IllustrativeLabel />
         <div className="relative z-1">
@@ -74,7 +74,7 @@ function StepPreview({ index }: Readonly<{ index: number }>) {
 
   if (index === 2) {
     return (
-      <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs backdrop-blur-xs">
+      <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs">
         <div aria-hidden className="preview-grid pointer-events-none absolute inset-0" />
         <IllustrativeLabel />
         <div className="text-preview-caption relative z-1 flex items-center justify-between">
@@ -94,7 +94,7 @@ function StepPreview({ index }: Readonly<{ index: number }>) {
   }
 
   return (
-    <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs backdrop-blur-xs">
+    <div className="border-border-subtle/70 bg-panel/85 relative my-4 flex min-h-28 flex-col justify-between overflow-hidden rounded-[var(--radius-control)] border p-3.5 shadow-xs">
       <div aria-hidden className="preview-grid pointer-events-none absolute inset-0" />
       <IllustrativeLabel />
       <div className="text-preview-caption relative z-1 flex items-center justify-between">

@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { transferableAbortController } from 'node:util';
 import { afterEach } from 'vite-plus/test';
+import { installIntersectionObserver } from './intersection-observer';
 
 // The jsdom environment installs jsdom's own AbortController/AbortSignal
 // globals, but `fetch` stays Node's undici implementation, which brand-checks
@@ -78,6 +79,11 @@ class ResizeObserverStub {
   }
 }
 globalThis.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObserver;
+
+// Chrome that is off-screen costs nothing to observe and a lot to poll, so
+// components ask IntersectionObserver instead of listening to scroll. Tests
+// drive it through `emitIntersection`.
+installIntersectionObserver();
 
 // Radix Select uses pointer capture and element scrolling in browsers. jsdom
 // does not implement either API, so install inert contract-compatible stubs.

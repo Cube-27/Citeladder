@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { useQuery } from '@tanstack/react-query';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const { hardNavigateMock } = vi.hoisted(() => ({ hardNavigateMock: vi.fn() }));
@@ -9,6 +9,7 @@ vi.mock('@/lib/navigation/hard-navigate', () => ({ hardNavigate: hardNavigateMoc
 
 import { NAV_DROPS } from '@/lib/marketing-content/nav';
 import { queryKeys } from '@/lib/api/query-keys';
+import { emitIntersection } from '@/test/intersection-observer';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -200,36 +201,26 @@ describe('MarketingNav', () => {
     await waitFor(() => expect(solutions).toHaveAttribute('aria-expanded', 'true'));
   });
 
-  it('marks the navigation as scrolled after the page scrolls', async () => {
+  it('marks the navigation as scrolled once the top of the page leaves view', async () => {
     stubAnonymous();
     renderWithProviders(<MarketingNav />);
 
     const chrome = document.querySelector<HTMLElement>('[data-marketing-nav]');
     expect(chrome).not.toBeNull();
+    expect(chrome).not.toHaveAttribute('data-scrolled');
 
-    // `scrollY` is an accessor on the jsdom window, and overriding it with a
-    // data property leaks into every later test in the file unless the
-    // original descriptor goes back — hence the capture/restore pair.
-    const scrollYDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
-    try {
-      Object.defineProperty(window, 'scrollY', {
-        configurable: true,
-        value: 24,
-      });
-      window.dispatchEvent(new Event('scroll'));
+    // The bar watches a sentinel near the top of the document rather than
+    // listening to scroll: the question is "has the top gone", and an observer
+    // answers it without reading layout on every scroll event.
+    act(() => emitIntersection(false));
 
-      // The behaviour is the contract: the bar flags itself as scrolled and the
-      // stylesheet keys off that. Asserting the specific fill/hairline classes
-      // only made restyling the chrome a test edit.
-      await waitFor(() => expect(chrome).toHaveAttribute('data-scrolled', 'true'));
-    } finally {
-      if (scrollYDescriptor) {
-        Object.defineProperty(window, 'scrollY', scrollYDescriptor);
-      } else {
-        Reflect.deleteProperty(window, 'scrollY');
-      }
-      window.dispatchEvent(new Event('scroll'));
-    }
+    // The behaviour is the contract: the bar flags itself as scrolled and the
+    // stylesheet keys off that. Asserting the specific fill/hairline classes
+    // only made restyling the chrome a test edit.
+    await waitFor(() => expect(chrome).toHaveAttribute('data-scrolled', 'true'));
+
+    act(() => emitIntersection(true));
+    await waitFor(() => expect(chrome).not.toHaveAttribute('data-scrolled'));
   });
 
   it('exposes every dropdown as a mobile accordion with truthful aria-expanded', async () => {

@@ -8,7 +8,6 @@ import { getAppQueryClient } from '@/lib/api/query-client';
 import { setUrlStateRouter } from '@/lib/navigation/url-state';
 
 import { appRoutes } from './router';
-import './runtime.css';
 
 const queryClient = getAppQueryClient();
 const router = createBrowserRouter(appRoutes);
