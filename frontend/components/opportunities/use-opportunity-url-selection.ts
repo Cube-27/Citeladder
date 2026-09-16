@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { z } from 'zod';
 
 import {
@@ -16,12 +17,30 @@ const selectedCodec: UrlCodec<string | null> = {
   serialize: (value) => value,
 };
 
+/**
+ * Is the address still the one this hook renders for?
+ *
+ * React Router moves the location before the old route unmounts, so an effect
+ * queued on the way out runs against the destination's address. Every write
+ * below is a normalization of the Opportunities screen's own URL, and none of
+ * them has any business editing another screen's.
+ */
+function ownsAddress(pathname: string): boolean {
+  return typeof window === 'undefined' || window.location.pathname === pathname;
+}
+
 export function clearOpportunitySelection() {
   setUrlParams({ selected: null, opportunity: null, opportunity_id: null }, 'replace');
 }
 
 /** Canonical Opportunity detail URL state, including legacy inbound aliases. */
 export function useOpportunityUrlSelection(scopeKey: string) {
+  // The route this hook speaks for. Its writes normalize THIS screen's address,
+  // and a navigation away can outlive them: the effects below still run while
+  // the address already belongs to the destination, and `opportunity_id` is a
+  // parameter the Content screen reads. Stripping it there deleted the handoff
+  // the reader had just followed.
+  const ownPathname = useLocation().pathname;
   const [selectedId, setSelectedId] = useUrlState('selected', selectedCodec);
   const [legacyOpportunity] = useUrlState('opportunity', optionalStringUrlCodec);
   const [legacyOpportunityId] = useUrlState('opportunity_id', optionalStringUrlCodec);
@@ -38,6 +57,7 @@ export function useOpportunityUrlSelection(scopeKey: string) {
     inboundSelection === selectionScope.selection;
 
   useEffect(() => {
+    if (!ownsAddress(ownPathname)) return;
     if (selectedId && (legacyOpportunity !== null || legacyOpportunityId !== null)) {
       setUrlParams({ opportunity: null, opportunity_id: null }, 'replace');
     } else if (legacySelection) {
@@ -46,15 +66,15 @@ export function useOpportunityUrlSelection(scopeKey: string) {
         'replace',
       );
     }
-  }, [legacyOpportunity, legacyOpportunityId, legacySelection, selectedId]);
+  }, [legacyOpportunity, legacyOpportunityId, legacySelection, ownPathname, selectedId]);
 
   useLayoutEffect(() => {
     if (selectionScope.scopeKey === scopeKey && selectionScope.selection === inboundSelection)
       return;
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- synchronize URL selection ownership before paint.
     setSelectionScope({ scopeKey, selection: inboundSelection });
-    if (selectionCarried) clearOpportunitySelection();
-  }, [inboundSelection, scopeKey, selectionCarried, selectionScope]);
+    if (selectionCarried && ownsAddress(ownPathname)) clearOpportunitySelection();
+  }, [inboundSelection, ownPathname, scopeKey, selectionCarried, selectionScope]);
 
   return {
     selectedId,
