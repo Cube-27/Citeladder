@@ -110,7 +110,15 @@ function main() {
     };
     for (const [key, value] of Object.entries(measured)) {
       const limit = budget[key];
-      if (typeof limit !== 'number') continue;
+      // A ceiling that is absent or misspelled must FAIL, not be skipped. This
+      // check exists so bytes cannot creep back silently, and a budget that
+      // quietly measures nothing is the same outcome it is meant to prevent.
+      if (typeof limit !== 'number') {
+        failures.push(
+          `${target}: no numeric \`${key}\` budget in ${POLICY_REPOSITORY_PATH} (measured ${value} B).`,
+        );
+        continue;
+      }
       lines.push(`  ${report(key, value, limit)}`);
       if (value > limit) {
         failures.push(
