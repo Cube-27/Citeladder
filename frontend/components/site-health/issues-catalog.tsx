@@ -6,55 +6,33 @@ import { useQuery } from '@tanstack/react-query';
 import { IssuesLoading } from '@/components/site-health/issues-loading';
 import { IssueDetailRail } from '@/components/site-health/issue-detail-rail';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
-import {
-  IssueSearch,
-  useIssuesCatalogUrlState,
-} from '@/components/site-health/issues-catalog-url-state';
 import { PageKindSelect } from '@/components/site-health/page-kind-select';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Pressable } from '@/components/ui/pressable';
+import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { siteHealthQueries, type IssuesParams } from '@/lib/api/site-health';
+import { siteHealthQueries } from '@/lib/api/site-health';
 import type { IssuesSummary, SiteIssue } from '@/lib/api/types';
-import { changeIssueFilters, toIssueParams, type IssueFilters } from '@/lib/site-health/filters';
+import {
+  findingClassChange,
+  issueFilterClass,
+  issueFilterClassChange,
+  issueFilterClasses,
+  toIssueParams,
+  useIssueFilters,
+  type FindingClass,
+  type IssueFilterClass,
+  type IssueFilters,
+} from '@/lib/site-health/issue-filters';
 import { issueTitle } from '@/lib/site-health/issues';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
 
 const ISSUE_LIMIT = 25;
 const OCCURRENCE_LIMIT = 25;
-type FilterKey = 'all' | 'high' | 'medium' | 'low' | 'technical' | 'aeo';
-type FindingView = 'defect' | 'advisory';
 
-const FILTERS: ReadonlyArray<{ key: FilterKey; label: string }> = [
-  { key: 'all', label: 'All' },
-  { key: 'high', label: 'High' },
-  { key: 'medium', label: 'Medium' },
-  { key: 'low', label: 'Low' },
-  { key: 'technical', label: 'Web Fundamentals' },
-  { key: 'aeo', label: 'AEO' },
-];
-
-function filterParams(filter: FilterKey): Pick<IssuesParams, 'severity' | 'dimension'> {
-  if (filter === 'high' || filter === 'medium' || filter === 'low') return { severity: filter };
-  if (filter === 'technical' || filter === 'aeo') return { dimension: filter };
-  return {};
-}
-
-function selectedFilter(filters: IssueFilters): FilterKey {
-  if (filters.severity === 'high' || filters.severity === 'medium' || filters.severity === 'low')
-    return filters.severity;
-  if (filters.dimension === 'technical' || filters.dimension === 'aeo') return filters.dimension;
-  return 'all';
-}
-
-function filterChange(filter: FilterKey): Partial<IssueFilters> {
-  const params = filterParams(filter);
-  return { severity: params.severity ?? '', dimension: params.dimension ?? '' };
-}
-
-function filterCount(filter: FilterKey, summary: IssuesSummary, view: FindingView): number {
+function filterCount(filter: IssueFilterClass, summary: IssuesSummary, view: FindingClass): number {
   if (filter === 'high')
     return (summary.severity_counts.high ?? 0) + (summary.severity_counts.critical ?? 0);
   if (filter === 'medium' || filter === 'low') return summary.severity_counts[filter] ?? 0;
@@ -96,27 +74,17 @@ export function IssuesCatalog({
   workspaceId,
   crawlId,
 }: Readonly<{ workspaceId: string; crawlId: string }>) {
-  const { cursor, filters, selectedGroupId, navigate, selectIssue } = useIssuesCatalogUrlState();
-  const [occurrenceCursors, setOccurrenceCursors] = useState<string[]>([]);
-  const findingView: FindingView = filters.finding_class;
+  const catalog = useIssueFilters();
+  const { filters, cursor, selectedGroupId, updateFilters } = catalog;
+  const findingView = filters.finding_class;
   const { issuesQuery, detailQuery, summary, rows, selected, shown } = useIssuesCatalogQueries(
     workspaceId,
     crawlId,
     filters,
     cursor,
     selectedGroupId,
-    occurrenceCursors.at(-1),
+    catalog.occurrenceCursor,
   );
-
-  const updateFilters = (change: Partial<IssueFilters>) => {
-    const changed = changeIssueFilters(filters, change);
-    setOccurrenceCursors([]);
-    navigate(changed.filters, changed.cursor);
-  };
-  const chooseGroup = (groupId: string) => {
-    selectIssue(groupId);
-    setOccurrenceCursors([]);
-  };
 
   // Hold one screen-shaped loading presentation until the finished view can be
   // drawn once. Painting on the list alone shoved everything down when the
@@ -145,20 +113,16 @@ export function IssuesCatalog({
           <FindingClassFilter
             value={findingView}
             summary={summary}
-            onChange={(finding_class) =>
-              updateFilters({ finding_class, severity: '', dimension: '' })
-            }
+            onChange={(value) => updateFilters(findingClassChange(value))}
           />
         </div>
         <div className="max-w-full min-w-0 overflow-x-auto pb-0.5 max-[700px]:w-full">
           <SegmentedControl
             className="w-max"
-            value={selectedFilter(filters)}
-            onChange={(value) => updateFilters(filterChange(value))}
+            value={issueFilterClass(filters)}
+            onChange={(value) => updateFilters(issueFilterClassChange(value))}
             ariaLabel="Issue filters"
-            options={FILTERS.filter(
-              (item) => findingView === 'defect' || !['high', 'medium', 'low'].includes(item.key),
-            ).map((item) => ({
+            options={issueFilterClasses(findingView).map((item) => ({
               value: item.key,
               label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
             }))}
@@ -177,17 +141,21 @@ export function IssuesCatalog({
           className="border-border-subtle grid min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
           aria-busy={issuesQuery.isFetching}
         >
-          <IssueGroupList rows={rows} selectedGroupId={selected?.group_id} onSelect={chooseGroup} />
+          <IssueGroupList
+            rows={rows}
+            selectedGroupId={selected?.group_id}
+            onSelect={catalog.selectIssue}
+          />
           {shown ? (
             <IssueDetailRail
               issue={shown}
               crawlId={crawlId}
               detailQuery={detailQuery}
-              canPrevious={occurrenceCursors.length > 0}
-              onPrevious={() => setOccurrenceCursors((values) => values.slice(0, -1))}
+              canPrevious={catalog.canPageOccurrencesBack}
+              onPrevious={catalog.previousOccurrences}
               onNext={() => {
                 const next = detailQuery.data?.next_cursor;
-                if (next) setOccurrenceCursors((values) => [...values, next]);
+                if (next) catalog.nextOccurrences(next);
               }}
             />
           ) : null}
@@ -195,16 +163,33 @@ export function IssuesCatalog({
       )}
 
       {rows.length > 0 ? (
-        <CatalogPager
-          cursor={cursor}
-          page={issuesQuery.data}
-          onGo={(next) => {
-            setOccurrenceCursors([]);
-            navigate(filters, next);
-          }}
-        />
+        <CatalogPager cursor={cursor} page={issuesQuery.data} onGo={catalog.goToPage} />
       ) : null}
     </div>
+  );
+}
+
+function IssueSearch({
+  query,
+  onApply,
+}: Readonly<{ query: string; onApply: (query: string) => void }>) {
+  const [draft, setDraft] = useState(query);
+  return (
+    <form
+      className="min-w-0 max-[700px]:w-full"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onApply(draft);
+      }}
+    >
+      <SearchField
+        value={draft}
+        onValueChange={setDraft}
+        placeholder="Search issues…"
+        aria-label="Search issues"
+        className="w-full max-w-xs max-[700px]:max-w-none"
+      />
+    </form>
   );
 }
 
@@ -247,7 +232,7 @@ function CatalogPager({
 function IssueSummary({
   summary,
   findingView,
-}: Readonly<{ summary: IssuesSummary; findingView: FindingView }>) {
+}: Readonly<{ summary: IssuesSummary; findingView: FindingClass }>) {
   const typeCount =
     findingView === 'defect' ? summary.defect_issue_type_count : summary.advisory_issue_type_count;
   return (
@@ -273,9 +258,9 @@ function FindingClassFilter({
   summary,
   onChange,
 }: Readonly<{
-  value: FindingView;
+  value: FindingClass;
   summary: IssuesSummary | null;
-  onChange: (value: FindingView) => void;
+  onChange: (value: FindingClass) => void;
 }>) {
   return (
     <SegmentedControl
