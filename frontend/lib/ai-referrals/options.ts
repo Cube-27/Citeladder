@@ -15,7 +15,7 @@
 import type { z } from 'zod';
 
 import type { AiReferralsRangeParams } from '@/lib/api/ai-referrals';
-import type { snapshotGranularitySchema } from '@/lib/api/schemas';
+import type { snapshotGranularitySchema } from '@/lib/api/schemas/analytics';
 /**
  * Date-range presets. `latest` sends no bounds — the backend serves the
  * project's latest persisted snapshot at the requested granularity, so the

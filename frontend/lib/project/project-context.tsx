@@ -7,8 +7,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { httpErrorStatus } from '@/lib/api/client';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
-import { runsQueries } from '@/lib/api/runs';
-import { siteHealthQueries } from '@/lib/api/site-health';
 import type { Project } from '@/lib/api/types';
 import {
   readStoredActiveProjectId,
@@ -256,10 +254,27 @@ function useProjectWarmup(activeProject: Project | null, workspaceId: string | n
   const queryClient = useQueryClient();
   useEffect(() => {
     if (!activeProject || !workspaceId) return;
-    void Promise.all([
-      queryClient.prefetchQuery(runsQueries.list(workspaceId, activeProject.id)),
-      queryClient.prefetchQuery(siteHealthQueries.dashboard(workspaceId, activeProject.id)),
-    ]);
+    let cancelled = false;
+    // Imported here rather than at module scope, and this is the reason:
+    // `runs` and `site-health` each validate through their own schema module,
+    // and this provider mounts on EVERY authenticated route. A static import
+    // put both domains' Zod surface in the boot chunk to serve a prefetch that
+    // is, by definition, optional. The await costs one microtask on a path
+    // that was already speculative.
+    void (async () => {
+      const [{ runsQueries }, { siteHealthQueries }] = await Promise.all([
+        import('@/lib/api/runs'),
+        import('@/lib/api/site-health'),
+      ]);
+      if (cancelled) return;
+      void Promise.all([
+        queryClient.prefetchQuery(runsQueries.list(workspaceId, activeProject.id)),
+        queryClient.prefetchQuery(siteHealthQueries.dashboard(workspaceId, activeProject.id)),
+      ]);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [activeProject, workspaceId, queryClient]);
 }
 

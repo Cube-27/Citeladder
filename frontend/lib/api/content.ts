@@ -18,8 +18,8 @@ import {
   contentSkillCatalogSchema,
   contentSkillViewSchema,
   contentTargetPageSchema,
-  strictValidate,
-} from './schemas';
+} from './schemas/content';
+import { strictValidate } from './schemas/validation';
 import { definedQuery, withQuery } from './shared';
 import type {
   ContentContextPreview,

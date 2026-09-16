@@ -29,15 +29,15 @@ import {
   rerunPageResponseSchema,
   siteCrawlListPageSchema,
   siteCrawlSchema,
-  siteHealthDashboardSchema,
-  siteHealthOverviewSchema,
   siteHealthContentHandoffSchema,
+  siteHealthDashboardSchema,
   siteHealthEntitlementSchema,
+  siteHealthOverviewSchema,
   siteIssueDetailSchema,
   siteIssuesPageSchema,
   urlPreviewResponseSchema,
-  strictValidate,
-} from './schemas';
+} from './schemas/site-health';
+import { strictValidate } from './schemas/validation';
 import { definedQuery, withQuery } from './shared';
 import type {
   AeoReadiness,

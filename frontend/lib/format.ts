@@ -13,7 +13,7 @@
  */
 import type { z } from 'zod';
 
-import type { snapshotGranularitySchema } from '@/lib/api/schemas';
+import type { snapshotGranularitySchema } from '@/lib/api/schemas/analytics';
 
 /** Snapshot bucket granularity — mirrors the backend contract vocabulary. */
 type BucketGranularity = z.infer<typeof snapshotGranularitySchema>;

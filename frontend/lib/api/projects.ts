@@ -5,13 +5,10 @@
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
-import {
-  brandProfileSchema,
-  commandCenterSchema,
-  projectSchema,
-  strictValidate,
-  workspaceSchema,
-} from './schemas';
+import { workspaceSchema } from './schemas/auth';
+import { commandCenterSchema } from './schemas/opportunities';
+import { brandProfileSchema, projectSchema } from './schemas/project';
+import { strictValidate } from './schemas/validation';
 import type { BrandProfile, BrandProfileDraft, CommandCenter, Project, Workspace } from './types';
 
 const workspaceListSchema = z.array(workspaceSchema);

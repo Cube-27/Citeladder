@@ -15,8 +15,8 @@ import {
   auditSchema,
   executionEvidenceSchema,
   executionSchema,
-  strictValidate,
-} from './schemas';
+} from './schemas/audits';
+import { strictValidate } from './schemas/validation';
 import { definedQuery, withQuery } from './shared';
 import type {
   Audit,

@@ -11,9 +11,9 @@ import {
   promptGenerateResponseSchema,
   promptSchema,
   promptSetSchema,
-  strictValidate,
   topicSchema,
-} from './schemas';
+} from './schemas/project';
+import { strictValidate } from './schemas/validation';
 import type { Prompt, PromptGenerateResponse, PromptSet, PromptStatus, Topic } from './types';
 
 const promptSetListSchema = z.array(promptSetSchema);

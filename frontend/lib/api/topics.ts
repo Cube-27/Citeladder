@@ -6,7 +6,8 @@
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
-import { strictValidate, topicSchema } from './schemas';
+import { topicSchema } from './schemas/project';
+import { strictValidate } from './schemas/validation';
 import type { Topic } from './types';
 
 const topicListSchema = z.array(topicSchema);

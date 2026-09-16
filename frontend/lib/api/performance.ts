@@ -16,19 +16,19 @@ import type { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
+import { performanceSyncEnqueueResponseSchema } from './schemas/integrations';
 import {
   performanceDashboardSchema,
   performanceRangeTaskSchema,
   performanceTablePageSchema,
   projectReadinessSchema,
-  strictValidate,
-  performanceSyncEnqueueResponseSchema,
   type performanceCompareSchema,
   type performanceDimensionSchema,
   type performanceGranularitySchema,
   type performanceRangeSchema,
   type projectReadinessStageSchema,
-} from './schemas';
+} from './schemas/performance';
+import { strictValidate } from './schemas/validation';
 import { definedQuery, withQuery } from './shared';
 
 export type PerformanceRange = z.infer<typeof performanceRangeSchema>;

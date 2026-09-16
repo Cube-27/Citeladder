@@ -14,20 +14,20 @@ import type { z } from 'zod';
 
 import { API_BASE_URL, apiClient, type ApiRequestOptions } from './client';
 import {
+  integrationBackfillProgressSchema,
   integrationConnectionListSchema,
   integrationPropertyListSchema,
   integrationPropertyMappingListSchema,
   integrationPropertyMappingSchema,
   integrationSyncEnqueueSchema,
-  integrationBackfillProgressSchema,
   integrationSyncRunListSchema,
   integrationSyncRunSchema,
   integrationTestResultSchema,
-  strictValidate,
   type integrationConnectionSchema,
   type integrationPropertySchema,
   type integrationProviderSchema,
-} from './schemas';
+} from './schemas/integrations';
+import { strictValidate } from './schemas/validation';
 
 export type IntegrationProvider = z.infer<typeof integrationProviderSchema>;
 export type IntegrationConnection = z.infer<typeof integrationConnectionSchema>;

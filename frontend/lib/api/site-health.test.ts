@@ -14,8 +14,8 @@ import {
   siteHealthErrorSchema,
   siteIssueSchema,
   urlPreviewResponseSchema,
-  strictValidate,
-} from './schemas';
+} from './schemas/site-health';
+import { strictValidate } from './schemas/validation';
 import { siteHealthApi } from './site-health';
 import { mswServer } from '@/test/msw-server';
 import {

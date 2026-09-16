@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
@@ -120,17 +120,20 @@ describe('station navigation', () => {
     expect(screen.queryByText('Connect', { selector: 'p' })).not.toBeInTheDocument();
   });
 
-  it('prefetches the destination primary query on pointer and keyboard intent', () => {
+  // Intent warms the key, but no longer in the same tick: each prefetcher
+  // imports its API module on demand, so that the ten domains this map reaches
+  // stay out of the chunk the browser needs before it can paint anything.
+  it('prefetches the destination primary query on pointer and keyboard intent', async () => {
     render(<SidebarNav />);
     const performance = screen.getByRole('link', { name: 'Performance' });
     fireEvent.mouseEnter(performance);
-    expect(mocks.prefetchQuery).toHaveBeenCalled();
+    await waitFor(() => expect(mocks.prefetchQuery).toHaveBeenCalled());
     expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual(PERFORMANCE_LANDING_KEY);
 
     mocks.prefetchQuery.mockClear();
     mocks.find.mockClear();
     fireEvent.focus(performance);
-    expect(mocks.prefetchQuery).toHaveBeenCalledOnce();
+    await waitFor(() => expect(mocks.prefetchQuery).toHaveBeenCalledOnce());
     expect(mocks.prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual(PERFORMANCE_LANDING_KEY);
   });
 
@@ -139,9 +142,10 @@ describe('station navigation', () => {
    * itself reads. A key spelled out in the prefetcher drifted from the
    * selection the dashboard builds and warmed an entry nothing consumed.
    */
-  it('warms the Visibility landing selection the screen actually reads', () => {
+  it('warms the Visibility landing selection the screen actually reads', async () => {
     render(<SidebarNav />);
     fireEvent.mouseEnter(screen.getByRole('link', { name: 'AI Visibility' }));
+    await waitFor(() => expect(mocks.prefetchQuery).toHaveBeenCalled());
     const keys = mocks.prefetchQuery.mock.calls.map((call) => call[0].queryKey);
     expect(keys).toContainEqual([
       'visibility',

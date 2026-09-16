@@ -16,19 +16,19 @@ import type { z } from 'zod';
 import { apiClient, type ApiRequestOptions } from './client';
 import {
   activationSchema,
-  subscriptionCheckoutSchema,
   billingCatalogSchema,
   billingEntitlementSchema,
+  billingInvoiceSchema,
+  billingInvoicesSchema,
   billingUsageSchema,
   noCardClaimSchema,
   noCardOfferSchema,
-  strictValidate,
-  workspaceEntitlementSchema,
-  subscriptionChangeSchema,
   resolvedQuoteSchema,
-  billingInvoiceSchema,
-  billingInvoicesSchema,
-} from './schemas';
+  subscriptionChangeSchema,
+  subscriptionCheckoutSchema,
+  workspaceEntitlementSchema,
+} from './schemas/billing';
+import { strictValidate } from './schemas/validation';
 
 export type BillingCatalog = z.infer<typeof billingCatalogSchema>;
 export type CatalogPlan = BillingCatalog['plans'][number];

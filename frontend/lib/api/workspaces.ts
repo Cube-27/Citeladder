@@ -22,12 +22,12 @@ import { z } from 'zod';
 import { apiClient, type ApiRequestOptions } from './client';
 import {
   productTourSchema,
-  strictValidate,
   workspaceInvitationIssuedSchema,
   workspaceInvitationSchema,
   workspaceMemberSchema,
   workspaceSchema,
-} from './schemas';
+} from './schemas/auth';
+import { strictValidate } from './schemas/validation';
 import type { ProductTour, ProductTourStatus, Workspace } from './types';
 
 export type WorkspaceMember = z.infer<typeof workspaceMemberSchema>;

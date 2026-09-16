@@ -83,7 +83,8 @@ vi.mock('driver.js', () => ({
   }),
 }));
 
-import { PRODUCT_TOUR_STEPS, ProductTourProvider } from './product-tour-provider';
+import { PRODUCT_TOUR_STEPS, type TourStep } from './product-tour';
+import { ProductTourProvider } from './product-tour-provider';
 
 function renderTour(target = true) {
   return render(
@@ -231,7 +232,7 @@ describe('ProductTourProvider', () => {
     );
 
     expect(state.driverCalls).toHaveLength(0);
-    expect(PRODUCT_TOUR_STEPS.find((step) => step.id === 'provider-settings')?.path).toBe(
+    expect(PRODUCT_TOUR_STEPS.find((step: TourStep) => step.id === 'provider-settings')?.path).toBe(
       '/settings?tab=providers',
     );
     vi.unstubAllGlobals();

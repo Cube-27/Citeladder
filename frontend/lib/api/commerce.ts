@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { COMMERCE_BUYER_PROMPT_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
-import { strictValidate } from './schemas';
+import { strictValidate } from './schemas/validation';
 import {
   buyerPromptSchema,
   catalogImportSchema,

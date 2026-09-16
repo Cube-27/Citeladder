@@ -11,7 +11,7 @@
  * quotes (`""`), and embedded newlines — enough for prompt CSVs.
  */
 import type { PromptInput } from '@/lib/api/prompts';
-import { promptIntentSchema } from '@/lib/api/schemas';
+import { promptIntentSchema } from '@/lib/api/schemas/project';
 import type { PromptIntent } from '@/lib/api/types';
 
 const THEME_KEYS = new Set(['theme', 'topic', 'category']);

@@ -7,13 +7,13 @@
 import { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
+import { providerConnectionStatesSchema } from './schemas/billing';
 import {
   connectionTestResultSchema,
   providerCatalogSchema,
   providerConnectionSchema,
-  providerConnectionStatesSchema,
-  strictValidate,
-} from './schemas';
+} from './schemas/providers';
+import { strictValidate } from './schemas/validation';
 import type {
   LogicalEngine,
   ProviderCatalog,
