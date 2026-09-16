@@ -960,10 +960,10 @@ samp {
 
 @keyframes skeleton-shimmer {
   from {
-    background-position: 200% 0;
+    transform: translateX(-100%);
   }
   to {
-    background-position: -200% 0;
+    transform: translateX(266.67%);
   }
 }
 
@@ -1061,16 +1061,37 @@ samp {
   }
 }
 
+/*
+ * The shimmer moves a layer, not a background.
+ *
+ * Animating `background-position` is not compositable: every frame repaints the
+ * element. A loading screen is exactly where that is worst — Site Health's
+ * issues placeholder puts about thirty of these on screen at once, all
+ * repainting at 60fps for as long as the reads take. The highlight is now a
+ * pseudo-element translated across the base, which the compositor owns.
+ */
 .skeleton {
+  position: relative;
+  overflow: hidden;
   border-radius: var(--radius-xs);
   background-color: var(--skeleton-base);
+  /* Confine the repaint to this box: 30 of them are siblings. */
+  contain: paint;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inline-size: 60%;
+  inset-inline-start: 0;
   background-image: linear-gradient(
     90deg,
-    var(--skeleton-base),
+    transparent,
     var(--skeleton-highlight),
-    var(--skeleton-base)
+    transparent
   );
-  background-size: 200% 100%;
+  will-change: transform;
   animation: skeleton-shimmer 1.2s ease-in-out infinite;
 }
 

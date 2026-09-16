@@ -31,7 +31,7 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
     });
   },
   '/site': prefetchSiteHealth,
-  '/issues': prefetchSiteHealth,
+  '/issues': prefetchIssues,
   '/demand': async (client, { projectId, workspaceId }) => {
     const { demandApi } = await import('@/lib/api/demand');
     warmQuery(client, {
@@ -101,6 +101,43 @@ const ROUTE_PREFETCHERS: Readonly<Record<string, RoutePrefetcher>> = {
 async function prefetchSiteHealth(client: QueryClient, { projectId, workspaceId }: ProjectScope) {
   const { siteHealthQueries } = await import('@/lib/api/site-health');
   warmQuery(client, siteHealthQueries.dashboard(workspaceId, projectId));
+}
+
+/**
+ * Warm the issues page itself, not only the dashboard above it.
+ *
+ * `/issues` needs two reads in sequence: the dashboard names the crawl, and
+ * only then can the catalog ask that crawl for its issues. Warming the first
+ * alone left the second — the one the screen actually blocks on — to start
+ * cold on arrival, and the project context has usually warmed the dashboard
+ * already anyway.
+ *
+ * Only the DEFAULT page is warmed. A reader arriving with filters in the
+ * address wants a different key, and warming this one would spend a request on
+ * a page they will not see.
+ */
+async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
+  const [{ siteHealthQueries }, { ISSUE_PAGE_LIMIT }, { emptyIssueFilters, toIssueParams }] =
+    await Promise.all([
+      import('@/lib/api/site-health'),
+      import('@/lib/config/site-health'),
+      import('@/lib/site-health/issue-filters'),
+    ]);
+  const dashboard = siteHealthQueries.dashboard(scope.workspaceId, scope.projectId);
+  warmQuery(client, dashboard);
+
+  const crawlId = (await client.ensureQueryData(dashboard).catch(() => null))?.crawl?.id;
+  if (!crawlId) return;
+  warmQuery(
+    client,
+    siteHealthQueries.issues(
+      scope.workspaceId,
+      crawlId,
+      // The identical params `IssuesCatalog` builds for an unfiltered first
+      // page. Spelling them out differently here would warm a key nothing reads.
+      toIssueParams(emptyIssueFilters, null, ISSUE_PAGE_LIMIT),
+    ),
+  );
 }
 
 export function prefetchRoute(client: QueryClient, href: string, project: ProjectScope | null) {

@@ -17,9 +17,10 @@ function IssuesCatalog(props: Readonly<{ crawlId: string }>) {
 
 /**
  * The catalog's filters live in the address bar through
- * `lib/navigation/url-state.ts`, which writes `window.history` directly — so
- * the URL contract is asserted against `window.location`, and browser history
- * is driven with the real `history.back()`/`forward()`.
+ * `lib/navigation/url-state.ts`. No router is registered in this file, so it
+ * takes its `window.history` fallback — which is why the URL contract is
+ * asserted against `window.location` and browser history is driven with the
+ * real `history.back()`/`forward()`.
  */
 function currentUrl(): string {
   return window.location.pathname + window.location.search;
@@ -136,12 +137,16 @@ afterAll(() => mswServer.close());
 
 describe('IssuesCatalog', () => {
   /**
-   * The list and the auto-selected issue's occurrences are two requests, and
-   * the rail is the second one. Painting after the first left the rail short
-   * and then growing under the reader's first click, so both are held behind
-   * one stable loading presentation and the finished view is drawn once.
+   * The occurrences of the auto-selected issue are a THIRD request, and it
+   * cannot start until the second one names an issue to ask about. Holding the
+   * screen for it meant a reader waited three sequential round trips to see a
+   * list the second had already answered in full.
+   *
+   * So the list opens on its own and the rail carries its own wait. What the
+   * rail must not do is grow under the reader when it lands, which is what the
+   * reserved height and its placeholder rows are for.
    */
-  it('holds one busy, screen-shaped loading presentation until the list and first detail land', async () => {
+  it('opens the list as soon as it lands, with the rail still resolving', async () => {
     let releaseDetail!: () => void;
     const detailSettled = new Promise<void>((resolve) => {
       releaseDetail = resolve;
@@ -158,14 +163,46 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    const loadingStatus = await screen.findByRole('status', { name: 'Loading issues…' });
-    expect(loadingStatus.closest('[aria-busy="true"]')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'WebSite schema is missing' })).toBeNull();
+    // Readable and interactive while the occurrences are still in flight.
+    expect(
+      await screen.findByRole('heading', { name: 'WebSite schema is missing' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading issues…' })).toBeNull();
+    // "none" must not be claimed while the answer is "not yet".
+    expect(screen.queryByText('No affected URLs found.')).toBeNull();
 
     act(() => releaseDetail());
 
     expect(await screen.findByRole('link', { name: /Homepage/ })).toBeInTheDocument();
-    expect(screen.queryByRole('status', { name: 'Loading issues…' })).toBeNull();
+  });
+
+  /** The screen still waits for the list itself — there is nothing to show without it. */
+  it('holds the screen-shaped loading presentation until the list lands', async () => {
+    let releaseIssues!: () => void;
+    const issuesSettled = new Promise<void>((resolve) => {
+      releaseIssues = resolve;
+    });
+    mswServer.use(
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues`, async () => {
+        await issuesSettled;
+        return HttpResponse.json({ items: [issue()], next_cursor: null, summary });
+      }),
+      http.get(`/api/v1/site-crawls/${CRAWL}/issues/${ISSUE_A}`, () =>
+        HttpResponse.json(issueDetail()),
+      ),
+    );
+
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    const loadingStatus = await screen.findByRole('status', { name: 'Loading issues…' });
+    expect(loadingStatus.closest('[aria-busy="true"]')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'WebSite schema is missing' })).toBeNull();
+
+    act(() => releaseIssues());
+
+    expect(
+      await screen.findByRole('heading', { name: 'WebSite schema is missing' }),
+    ).toBeInTheDocument();
   });
 
   /**

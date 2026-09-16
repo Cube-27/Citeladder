@@ -13,6 +13,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { siteHealthQueries } from '@/lib/api/site-health';
+import { ISSUE_OCCURRENCE_LIMIT, ISSUE_PAGE_LIMIT } from '@/lib/config/site-health';
 import type { IssuesSummary, SiteIssue } from '@/lib/api/types';
 import {
   findingClassChange,
@@ -28,9 +29,6 @@ import {
 import { issueTitle } from '@/lib/site-health/issues';
 import { cn } from '@/lib/utils';
 import { textRole } from '@/components/ui/typography';
-
-const ISSUE_LIMIT = 25;
-const OCCURRENCE_LIMIT = 25;
 
 function filterCount(filter: IssueFilterClass, summary: IssuesSummary, view: FindingClass): number {
   if (filter === 'high')
@@ -49,7 +47,7 @@ function useIssuesCatalogQueries(
   selectedGroupId: string | null,
   occurrenceCursor: string | undefined,
 ) {
-  const params = useMemo(() => toIssueParams(filters, cursor, ISSUE_LIMIT), [filters, cursor]);
+  const params = useMemo(() => toIssueParams(filters, cursor, ISSUE_PAGE_LIMIT), [filters, cursor]);
   const issuesQuery = useQuery(siteHealthQueries.issues(workspaceId, crawlId, params));
   const summary = issuesQuery.data?.summary ?? null;
   const rows = issuesQuery.data?.items ?? [];
@@ -57,7 +55,7 @@ function useIssuesCatalogQueries(
   const detailQuery = useQuery({
     ...siteHealthQueries.issue(workspaceId, crawlId, selected?.group_id ?? '', {
       cursor: occurrenceCursor,
-      limit: OCCURRENCE_LIMIT,
+      limit: ISSUE_OCCURRENCE_LIMIT,
     }),
     enabled: selected !== null,
   });
@@ -86,13 +84,18 @@ export function IssuesCatalog({
     catalog.occurrenceCursor,
   );
 
-  // Hold one screen-shaped loading presentation until the finished view can be
-  // drawn once. Painting on the list alone shoved everything down when the
-  // summary band arrived and left the rail short until the occurrences did.
-  // Only this FIRST detail can be empty: later selections keep the previous
-  // crawl-scoped occurrences while the next set loads.
-  if ((issuesQuery.isPending && !issuesQuery.data) || detailQuery.isLoading)
-    return <IssuesLoading />;
+  // Wait for the issues page, and only for that.
+  //
+  // This used to wait for the first issue's OCCURRENCES as well — a third
+  // request that cannot even begin until the second one names an issue. So the
+  // whole screen was withheld for three sequential round trips to show a list
+  // that the second one had already fully answered.
+  //
+  // The reason given for waiting was layout: painting the list alone shoved
+  // everything down when the summary arrived and left the rail short until the
+  // occurrences did. That is an argument for reserving the space, which the
+  // grid below now does, not for showing nothing.
+  if (issuesQuery.isPending && !issuesQuery.data) return <IssuesLoading />;
 
   return (
     <div className="grid min-w-0 gap-[var(--page-section-gap)]">
@@ -138,7 +141,10 @@ export function IssuesCatalog({
         </p>
       ) : (
         <div
-          className="border-border-subtle grid min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
+          // `min-h` matches the loading placeholder's, so the pane keeps its
+          // height while the rail's own read lands rather than growing under
+          // the reader.
+          className="border-border-subtle grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
           aria-busy={issuesQuery.isFetching}
         >
           <IssueGroupList
