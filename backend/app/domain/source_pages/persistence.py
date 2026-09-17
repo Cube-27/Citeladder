@@ -193,5 +193,8 @@ async def record_inspection(
     if fetch.outcome == OUTCOME_INSPECTED:
         page.last_inspected_at = moment
         page.content_hash = extracted.content_hash if extracted else None
-        _apply_page_format(page, assessment)
+    # Every outcome, not just a successful read: a page that is now blocked
+    # would otherwise keep advertising the format an earlier inspection found,
+    # beside a state saying nothing was read.
+    _apply_page_format(page, assessment)
     return snapshot

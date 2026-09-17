@@ -210,6 +210,13 @@ async def _audit_evidence(
         prompt_index = await _check_prompt_index(
             session, audit_id=audit_id, check=check
         )
+        if check.get("target_prompt_id") is not None and prompt_index is None:
+            # The later audit does not carry this prompt. Its absence is not a
+            # decline, and reading the project score instead would let an
+            # unrelated gain verify a specific prompt's action -- the exact
+            # substitution this check exists to stop.
+            result.limitations.append("visibility_metric: target prompt unavailable")
+            continue
         _evaluate_visibility_metric(
             snapshot=snapshot,
             check=check,

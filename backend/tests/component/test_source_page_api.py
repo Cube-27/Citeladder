@@ -14,6 +14,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config.analytics import ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION
 from app.core.config.source_pages import (
     ENTITY_KIND_BRAND,
     ENTITY_KIND_COMPETITOR,
@@ -28,6 +29,7 @@ from app.core.config.source_pages import (
     PRESENCE_PRESENT,
     SOURCE_PAGE_BUDGET_PER_WINDOW,
 )
+from app.models.analytics import AnalyticsTask
 from app.models.source_pages import (
     SourcePage,
     SourcePageEntityPresence,
@@ -251,10 +253,15 @@ async def test_reading_a_page_never_spends_budget(
         assert page.inspection_state == INSPECTION_NOT_INSPECTED
 
 
-async def test_an_explicit_inspection_request_is_admitted_and_paid_for(
+async def test_an_explicit_request_queues_work_rather_than_stranding_a_claim(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
+    """Claiming here would charge for an inspection that never runs.
+
+    The request holds no lease and spends nothing: budget is spent at claim
+    time, by the worker that actually fetches the page.
+    """
     await _login(client)
     async with session_factory() as session:
         scenario = await _seed_scenario(session, email=_EMAIL)
@@ -271,10 +278,24 @@ async def test_an_explicit_inspection_request_is_admitted_and_paid_for(
     assert response.status_code == 200
     body = response.json()
     assert body["accepted"] is True
-    assert body["budget_remaining"] == SOURCE_PAGE_BUDGET_PER_WINDOW - 1
+    assert body["budget_remaining"] == SOURCE_PAGE_BUDGET_PER_WINDOW
     async with session_factory() as session:
         spend = list((await session.scalars(select(SourcePageInspectionSpend))).all())
-        assert len(spend) == 1
+        assert spend == []
+        page = await session.scalar(select(SourcePage))
+        assert page is not None
+        assert page.inspection_state == INSPECTION_NOT_INSPECTED
+        assert page.claim_expires_at is None
+        queued = list(
+            (
+                await session.scalars(
+                    select(AnalyticsTask.task_kind).where(
+                        AnalyticsTask.project_id == scenario.project_id
+                    )
+                )
+            ).all()
+        )
+        assert ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION in queued
 
 
 async def test_an_explicit_request_cannot_bypass_an_exhausted_window(

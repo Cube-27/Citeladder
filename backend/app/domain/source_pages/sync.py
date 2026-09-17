@@ -179,6 +179,7 @@ async def backfill_citation_identity(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
     redirect_url: str,
     resolved_url: str,
     canonical_url: str,
@@ -188,17 +189,26 @@ async def backfill_citation_identity(
 ) -> int:
     """Record where a redirect token pointed, for the citations that used it.
 
-    Scoped to the citations carrying that exact raw URL inside one workspace.
-    This is not a historical migration of anything else: the provider's own
-    ``url`` is left untouched, and a citation written by an older analyzer
-    keeps its null identity rather than acquiring one after the fact.
+    Scoped to the citations carrying that exact raw URL within ONE PROJECT.
+    A workspace-wide update would let one project's resolution rewrite
+    another's evidence, and the two are separately authorized. This is not a
+    historical migration of anything else: the provider's own ``url`` is left
+    untouched, and a citation written by an older analyzer keeps its null
+    identity rather than acquiring one after the fact.
     """
     result = await session.execute(
         update(Citation)
         .where(
             Citation.workspace_id == workspace_id,
             Citation.url == redirect_url,
-            Citation.url_hash.is_(None),
+            # ``url_hash IS NULL`` alone also matches citations written before
+            # identity existed. Those are a different state -- "never
+            # established" -- and writing an identity onto them now would
+            # claim a derivation that never happened.
+            Citation.url_identity_method == URL_IDENTITY_UNRESOLVED,
+            Citation.audit_id.in_(
+                select(Audit.id).where(Audit.project_id == project_id)
+            ),
         )
         .values(
             resolved_url=resolved_url,

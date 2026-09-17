@@ -24,6 +24,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
 from typing import Any, cast
 
 from sqlalchemy import CursorResult, case, func, or_, select
@@ -40,6 +41,7 @@ from app.core.config.source_pages import (
     SOURCE_PAGE_BUDGET_PER_WINDOW,
     SOURCE_PAGE_BUDGET_WINDOW_HOURS,
     SOURCE_PAGE_CLAIM_LEASE_MINUTES,
+    SOURCE_PAGE_REUSE_WITHIN_HOURS,
 )
 from app.domain.prompts.locks import acquire_project_lock
 from app.models.source_pages import SourcePage, SourcePageInspectionSpend
@@ -127,26 +129,38 @@ async def spend_for_redirect(
     exempting them is how an engine that redirects everything quietly doubles
     the bill.
     """
+    await acquire_project_lock(session, project_id)
     budget = await current_budget(session, project_id=project_id, now=now)
     if budget.remaining <= 0:
         return False
+    # Hashed, not truncated: redirect tokens are long and share a prefix, so a
+    # 200-character cut would collide and report a later token as already paid.
+    digest = sha256(redirect_url.encode("utf-8")).hexdigest()
     return await _record_spend(
         session,
         workspace_id=workspace_id,
         project_id=project_id,
         source_page_id=None,
         spend_kind=SPEND_KIND_REDIRECT,
-        idempotency_key=f"{SPEND_KIND_REDIRECT}:{project_id}:{redirect_url}"[:200],
+        idempotency_key=f"{SPEND_KIND_REDIRECT}:{project_id}:{digest}",
     )
 
 
 def _claimable(now: datetime):
+    reuse_after = now - timedelta(hours=SOURCE_PAGE_REUSE_WITHIN_HOURS)
     return (
         SourcePage.inspection_state.not_in(_TERMINAL_STATES),
         or_(
             SourcePage.inspection_state != INSPECTION_QUEUED,
             SourcePage.claim_expires_at.is_(None),
             SourcePage.claim_expires_at < now,
+        ),
+        # A fresh inspection is reused rather than repeated. This is what stops
+        # a page inspected from a redirect body earlier in the same run from
+        # being claimed again and charged twice for one reading.
+        or_(
+            SourcePage.last_inspected_at.is_(None),
+            SourcePage.last_inspected_at < reuse_after,
         ),
     )
 

@@ -291,6 +291,7 @@ async def _resolve_redirects(
             await backfill_citation_identity(
                 session,
                 workspace_id=audit.workspace_id,
+                project_id=audit.project_id,
                 redirect_url=token.url,
                 resolved_url=identity.resolved_url or "",
                 canonical_url=identity.canonical_url or "",

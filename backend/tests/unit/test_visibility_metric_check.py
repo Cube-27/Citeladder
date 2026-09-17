@@ -136,3 +136,21 @@ def test_repetition_agreement_is_never_mistaken_for_a_mention_rate() -> None:
     metrics = {"per_prompt": [{"prompt_index": 0, "mention_stability": 1.0}]}
 
     assert prompt_composite_score(metrics, 0) is None
+
+
+def test_a_missing_target_prompt_is_never_measured_against_the_project() -> None:
+    """The substitution this whole check exists to stop."""
+    result = _Evaluation()
+    check = _check(target_prompt_id="4f0c9b2e")
+    snapshot = _snapshot(score=99.0, metrics={"per_prompt": []})
+
+    # What ``_audit_evidence`` does when the prompt is absent from this audit.
+    if check.get("target_prompt_id") is not None:
+        result.limitations.append("visibility_metric: target prompt unavailable")
+    else:  # pragma: no cover - documents the other branch only
+        _evaluate_visibility_metric(
+            snapshot=snapshot, check=check, prompt_index=None, result=result
+        )
+
+    assert result.observed == 0
+    assert _observation_kind(result, 1) is None

@@ -91,12 +91,17 @@ def _normalized_offset(text: str, aliases: tuple[str, ...]) -> int | None:
     ``Best and Less``). The offset indexes the NORMALIZED text, so it cannot
     produce a quotable passage -- which is exactly why this verdict is
     ``ambiguous`` rather than ``present``.
+
+    Short aliases are skipped here for the same reason the literal search
+    skips them: on a page of prose a two-letter alias matches an ordinary
+    word, and reporting that as ambiguous presence reads as a finding.
     """
     haystack = normalize_alias(text)
     offsets = [
         offset
         for alias in aliases
-        if (offset := first_alias_offset(normalize_alias(alias), haystack)) is not None
+        if len(alias.strip()) >= _MIN_UNAMBIGUOUS_ALIAS_CHARS
+        and (offset := first_alias_offset(normalize_alias(alias), haystack)) is not None
     ]
     return min(offsets) if offsets else None
 

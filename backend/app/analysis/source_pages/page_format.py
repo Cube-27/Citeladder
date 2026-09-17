@@ -34,13 +34,14 @@ from app.core.config.source_pages import (
 
 # schema.org types the publisher declared about its own page. Strongest
 # available evidence: it is the publisher's own statement, not our inference.
+# Page-level types only. Entity types such as ``Organization`` and
+# ``LocalBusiness`` are deliberately absent: a normal article graph nests its
+# publisher as an Organization, and the extractor flattens the whole graph, so
+# treating them as page types would classify most articles as directories.
 _SCHEMA_FORMATS: tuple[tuple[str, str], ...] = (
     ("discussionforumposting", PAGE_FORMAT_DISCUSSION),
     ("qapage", PAGE_FORMAT_DISCUSSION),
     ("videoobject", PAGE_FORMAT_VIDEO),
-    ("review", PAGE_FORMAT_REVIEW),
-    ("localbusiness", PAGE_FORMAT_DIRECTORY),
-    ("organization", PAGE_FORMAT_DIRECTORY),
     ("itemlist", PAGE_FORMAT_LISTICLE),
     ("faqpage", PAGE_FORMAT_REFERENCE),
     ("newsarticle", PAGE_FORMAT_ARTICLE),
@@ -66,8 +67,17 @@ _HEADING_FORMATS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 
+def _schema_token(value: object) -> str:
+    """The bare type name, however the publisher spelled it.
+
+    ``@type`` is frequently a URL (``https://schema.org/Article``), so exact
+    token matching alone would leave those pages unresolved.
+    """
+    return str(value).strip().rstrip("/").rsplit("/", 1)[-1].lower()
+
+
 def _from_schema(page: ExtractedPage) -> str:
-    declared = {str(value).strip().lower() for value in page.structured_types}
+    declared = {_schema_token(value) for value in page.structured_types}
     for token, page_format in _SCHEMA_FORMATS:
         if token in declared:
             return page_format

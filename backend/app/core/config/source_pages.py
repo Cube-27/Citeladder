@@ -142,3 +142,7 @@ SOURCE_PAGE_STALE_AFTER_HOURS: Final = 24 * 14
 # which look distinct until they are resolved.
 SOURCE_PAGE_MAX_REDIRECTS_PER_DOMAIN: Final = 3
 SOURCE_PAGE_CLAIM_LEASE_MINUTES: Final = 30
+# An inspection this recent is reused rather than repeated. Without it a page
+# already read in this run -- from a redirect body, say -- stays claimable and
+# is fetched and charged a second time for the same reading.
+SOURCE_PAGE_REUSE_WITHIN_HOURS: Final = 12

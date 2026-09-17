@@ -154,8 +154,18 @@ async def get_source_page(
     if page is None:
         return None
 
+    # Scoped rather than fetched by id alone: the pointer is not enough on its
+    # own to prove the snapshot belongs to this page and this tenant, and a
+    # mismatched row would surface someone else's evidence under this URL.
     snapshot = (
-        await session.get(SourcePageSnapshot, page.latest_snapshot_id)
+        await session.scalar(
+            select(SourcePageSnapshot).where(
+                SourcePageSnapshot.id == page.latest_snapshot_id,
+                SourcePageSnapshot.source_page_id == page.id,
+                SourcePageSnapshot.project_id == project_id,
+                SourcePageSnapshot.workspace_id == workspace_id,
+            )
+        )
         if page.latest_snapshot_id
         else None
     )
@@ -164,7 +174,11 @@ async def get_source_page(
             (
                 await session.scalars(
                     select(SourcePageEntityPresence)
-                    .where(SourcePageEntityPresence.snapshot_id == snapshot.id)
+                    .where(
+                        SourcePageEntityPresence.snapshot_id == snapshot.id,
+                        SourcePageEntityPresence.source_page_id == page.id,
+                        SourcePageEntityPresence.project_id == project_id,
+                    )
                     .order_by(
                         SourcePageEntityPresence.entity_kind != ENTITY_KIND_BRAND,
                         SourcePageEntityPresence.entity_name,

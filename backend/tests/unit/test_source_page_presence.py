@@ -11,6 +11,7 @@ import pytest
 
 from app.analysis.source_pages import assess_page, extract_source_page
 from app.core.config.source_pages import (
+    PAGE_FORMAT_ARTICLE,
     PAGE_FORMAT_COMPARISON,
     PAGE_FORMAT_DISCUSSION,
     PAGE_FORMAT_LISTICLE,
@@ -151,8 +152,9 @@ def test_outbound_links_distinguish_a_mention_from_a_listing() -> None:
 
     page = extract_source_page(body)
 
-    assert "globex.com" in page.outbound_domains
-    assert "acme.com" not in page.outbound_domains
+    # Exact registrable domains, not substrings: a brand named in prose but
+    # never linked is a different finding from one that is properly listed.
+    assert set(page.outbound_domains) == {"globex.com"}
 
 
 @pytest.mark.parametrize(
@@ -270,3 +272,42 @@ def test_hostile_json_ld_nesting_costs_only_its_own_block() -> None:
     assert page.parsed is True
     assert page.extracted_chars > 0
     assert "ItemList" in page.structured_types
+
+
+def test_a_nested_publisher_does_not_make_an_article_a_directory() -> None:
+    """A normal article graph nests its publisher as an Organization."""
+    body = _page(
+        "<html><head><title>Notes</title>"
+        '<script type="application/ld+json">'
+        '{"@type": "NewsArticle", "publisher": {"@type": "Organization"}}'
+        "</script></head>"
+        f"<body><p>{_FILLER}</p></body></html>"
+    )
+
+    result = _assess(body, brand_name="Acme Corp")
+
+    assert result.page_format == PAGE_FORMAT_ARTICLE
+    assert result.page_format_method == PAGE_FORMAT_METHOD_STRUCTURED_DATA
+
+
+def test_a_url_shaped_schema_type_is_still_recognised() -> None:
+    """``@type`` is frequently written as a schema.org URL."""
+    body = _page(
+        "<html><head><title>Notes</title>"
+        '<script type="application/ld+json">'
+        '{"@type": "https://schema.org/ItemList"}</script></head>'
+        f"<body><p>{_FILLER}</p></body></html>"
+    )
+
+    assert _assess(body, brand_name="Acme Corp").page_format == PAGE_FORMAT_LISTICLE
+
+
+def test_a_two_letter_alias_never_produces_ambiguous_presence() -> None:
+    """On a page of prose a short alias matches an ordinary word."""
+    result = _assess(
+        _listicle(names="Teams use AI tools to evaluate vendors."),
+        brand_name="Acme Corp",
+        competitors=(("AI", ("AI",)),),
+    )
+
+    assert result.presences[1].presence == PRESENCE_NOT_DETECTED

@@ -15,17 +15,20 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_db, require_active_workspace
 from app.core.http_errors import raise_not_found
+from app.domain.analytics.enqueue import enqueue_source_page_inspection
 from app.domain.projects.service import ProjectNotFoundError, get_project
-from app.domain.source_pages.admission import claim_pages, current_budget
+from app.domain.source_pages.admission import current_budget
 from app.domain.source_pages.projection import SourcePageView, get_source_page
 from app.domain.source_pages.schemas import (
     SourcePageDetail,
     SourcePageInspectionRequested,
 )
+from app.models.audit import Audit
 
 router = APIRouter(prefix="/projects", tags=["source-pages"])
 
@@ -81,22 +84,49 @@ async def inspect_source_page_endpoint(
 ) -> SourcePageInspectionRequested:
     """Ask for one page to be inspected ahead of the automatic selection.
 
-    An explicit request is still an admission: same lock, same budget, same
-    spend accounting. Saying so is what keeps the remaining allowance
-    meaningful.
+    Queues the work rather than claiming the page here. Claiming in the request
+    would spend a budget unit and leave the page leased with nothing running,
+    so the user would be charged for an inspection that never happens and the
+    page would sit untouched until the lease expired.
+
+    A never-inspected page sorts first in admission, so the queued run picks it
+    up; if it loses to a full batch of other new pages it is taken by the next
+    one. The budget is reported as it stands now and is spent, as always, at
+    claim time.
     """
-    view = await _resolve(session, ctx=ctx, project_id=project_id, url_hash=url_hash)
-    claims = await claim_pages(
+    await _resolve(session, ctx=ctx, project_id=project_id, url_hash=url_hash)
+    budget = await current_budget(session, project_id=project_id)
+    if budget.remaining <= 0:
+        return SourcePageInspectionRequested(
+            accepted=False,
+            reason="budget_exhausted",
+            budget_remaining=0,
+        )
+    audit_id = await session.scalar(
+        select(Audit.id)
+        .where(
+            Audit.workspace_id == ctx.workspace_id,
+            Audit.project_id == project_id,
+            Audit.completed_at.is_not(None),
+        )
+        .order_by(Audit.completed_at.desc())
+        .limit(1)
+    )
+    if audit_id is None:
+        # Inspection is scoped to an audit's cited evidence, so with no
+        # completed audit there is nothing to inspect this page as part of.
+        return SourcePageInspectionRequested(
+            accepted=False,
+            reason="no_completed_audit",
+            budget_remaining=budget.remaining,
+        )
+    await enqueue_source_page_inspection(
         session,
         workspace_id=ctx.workspace_id,
         project_id=project_id,
-        limit=1,
-        page_ids=[view.id],
+        audit_id=audit_id,
     )
     await session.commit()
-    budget = await current_budget(session, project_id=project_id)
     return SourcePageInspectionRequested(
-        accepted=bool(claims),
-        reason=None if claims else "budget_exhausted_or_not_claimable",
-        budget_remaining=budget.remaining,
+        accepted=True, reason=None, budget_remaining=budget.remaining
     )
