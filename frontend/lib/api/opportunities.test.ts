@@ -150,6 +150,7 @@ const implementationEvent = {
   opportunity_id: OPP,
   opportunity_snapshot_id: AUDIT,
   target_site_url_ids: [CRAWL],
+  target_external_url: null,
   generation_id: null,
   declared_implemented_at: '2026-07-24T00:00:00Z',
   expected_checks: [

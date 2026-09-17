@@ -586,6 +586,7 @@ describe('OpportunitiesScreen', () => {
               opportunity_id: OPP_A,
               opportunity_snapshot_id: RUN,
               target_site_url_ids: [],
+              target_external_url: null,
               generation_id: GENERATION,
               declared_implemented_at: '2026-07-24T00:00:00Z',
               expected_checks: [

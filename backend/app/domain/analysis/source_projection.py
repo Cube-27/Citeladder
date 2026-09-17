@@ -15,6 +15,7 @@ from app.domain.analysis.evidence import (
     _validated_evidence_request,
 )
 from app.domain.analysis.schemas import SourceRow, SourcesResponse
+from app.domain.analysis.source_page_links import attach_page_links
 from app.models.analysis import Citation, ResponseAnalysis
 from app.models.audit import AuditPromptSnapshot
 
@@ -139,6 +140,12 @@ async def get_visibility_sources(
         next_offset=offset + limit if offset + limit < (total or 0) else None,
         category_totals=category_totals,
         items=[_source_row(row, denominator, prompts) for row in rows],
+    )
+    await attach_page_links(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        items=response.items,
     )
     if baseline_audit_ids:
         from app.domain.analysis.source_comparison import apply_source_comparison

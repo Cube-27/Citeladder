@@ -105,6 +105,11 @@ export const visibilitySourcesSchema = responseObject({
       taxonomy_versions: z.array(z.string()),
       category_unavailable: z.boolean(),
       response_delta: z.number().nullable(),
+      // Page rows only. `url_hash` is set when this project has a record for
+      // the page; `opportunity_id` when that page produced a live action to
+      // route to. A domain row is a group and carries neither.
+      url_hash: z.string().nullable(),
+      opportunity_id: uuid().nullable(),
     }),
   ),
 });

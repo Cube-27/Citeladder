@@ -68,6 +68,12 @@ class SourceRow(BaseModel):
     taxonomy_versions: list[str] = Field(default_factory=list)
     category_unavailable: bool = False
     response_delta: float | None = None
+    # Page rows only (a domain is selected). The identity this project has a
+    # page record for, and the live action on it -- so a suspicious cited page
+    # routes to its Opportunity instead of having to be searched for by name.
+    # Null means no page record, or none that produced an action.
+    url_hash: str | None = None
+    opportunity_id: uuid.UUID | None = None
 
 
 class CitationTotals(BaseModel):
