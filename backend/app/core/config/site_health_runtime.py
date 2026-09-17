@@ -166,6 +166,16 @@ class SiteHealthSettings(BaseSettings):
     # Hard ceiling on cached authorities. Expired entries are dropped first;
     # beyond the cap, the oldest go. 0 disables the cap.
     robots_cache_max_authorities: int = 2048
+    # Curl sessions are pooled per pinned address so a crawl of one host reuses
+    # its connection and TLS session instead of handshaking per page. An idle
+    # session holds an open socket against someone else's server, so it is
+    # dropped once it has gone unused this long. Entries in flight are never
+    # evicted -- a fetch holds a streaming response well past the request call.
+    curl_session_pool_idle_seconds: float = 90.0
+    # Hard ceiling on pooled sessions, so a crawl spanning many hosts (or a
+    # rotating-DNS host) cannot accumulate sockets without bound. Idle entries
+    # go oldest-first. 0 disables the cap.
+    curl_session_pool_max_entries: int = 64
 
     # --- Parser bounds (bounded, deterministic extraction) ---
     max_links_per_page: int = 2000

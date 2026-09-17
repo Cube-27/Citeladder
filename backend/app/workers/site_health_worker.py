@@ -34,6 +34,7 @@ from app.connectors.web_evidence.contracts import (
     DnsResolver,
     FetchResult,
 )
+from app.connectors.web_evidence.curl_transport import CurlCffiTransport
 from app.connectors.web_evidence.fetcher import SecureFetcher
 from app.connectors.web_evidence.resolver import SystemDnsResolver
 from app.connectors.web_evidence.url_policy import (
@@ -159,8 +160,14 @@ class SiteHealthWorker(DrainableWorkerMixin):
         self.owner = owner or f"site-worker-{uuid.uuid4().hex[:12]}"
         self._resolver = resolver or SystemDnsResolver()
         # Tests inject the same bounded transport contract used by curl-cffi.
-        # Production leaves this empty so ``SecureFetcher`` constructs curl.
-        self._transport = transport
+        # Production builds one curl transport for the whole worker rather than
+        # leaving ``SecureFetcher`` to build a fresh one per task: the transport
+        # owns the pooled curl sessions, so a per-task transport threw away the
+        # connection and TLS session after every page.
+        self._owns_transport = transport is None
+        self._transport: AcquisitionTransport = transport or CurlCffiTransport(
+            impersonation_profile=site_health_settings.curl_cffi_impersonation_profile
+        )
         # Per-host politeness (concurrency cap + start pacing + eviction). The
         # robots-declared crawl-delay is injected as a lookup so the gate never
         # fetches anything itself.
@@ -192,7 +199,15 @@ class SiteHealthWorker(DrainableWorkerMixin):
         )
 
     async def aclose(self) -> None:
-        """The production curl transport owns no long-lived worker resource."""
+        """Release the worker-lived curl transport and its pooled sessions.
+
+        An injected transport belongs to whoever injected it, so only a
+        transport this worker built is closed here -- the same ownership rule
+        ``SecureFetcher`` applies, which is what keeps a per-task fetcher from
+        tearing down the worker's pool.
+        """
+        if self._owns_transport:
+            await self._transport.aclose()
 
     async def run_once(self) -> int:
         """Sweep leases, fill the capacity-sharing lanes once, and execute."""

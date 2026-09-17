@@ -19,6 +19,10 @@ from app.connectors.web_evidence.contracts import (
     FetchResult,
     ResolvedTarget,
 )
+from app.connectors.web_evidence.curl_session_pool import (
+    CurlSessionPool,
+    SessionKey,
+)
 from app.connectors.web_evidence.targets import (
     validate_resolved_target as _validate_resolved_target,
 )
@@ -33,6 +37,7 @@ from app.core.config.site_health_acquisition import (
 from app.core.config.site_health_rules import (
     PERSISTED_RESPONSE_HEADERS,
 )
+from app.core.config.site_health_runtime import site_health_settings
 
 
 def _header_values(headers: object, name: str) -> list[str]:
@@ -158,13 +163,25 @@ def _connection_error_code(transport_error_code: int | None) -> str:
 
 
 class CurlCffiTransport:
-    """One-hop curl request pinned to a previously validated address."""
+    """One-hop curl request pinned to a previously validated address.
+
+    Sessions are pooled per pinned address for the transport's lifetime, so a
+    crawl of one host reuses its connection and TLS session instead of
+    handshaking per page. See ``curl_session_pool`` for why the resolved
+    address has to be part of the key.
+    """
 
     def __init__(self, *, impersonation_profile: str) -> None:
         self._impersonation_profile = impersonation_profile
+        # Built through the module-level name so the test seam still replaces
+        # every session this transport creates.
+        self._pool = CurlSessionPool(
+            session_factory=lambda **kwargs: AsyncSession(**kwargs)
+        )
 
     async def aclose(self) -> None:
-        """No-op: this transport holds only per-request state."""
+        """Close the pooled sessions this transport has kept alive."""
+        await self._pool.aclose()
 
     async def fetch(
         self,
@@ -184,15 +201,23 @@ class CurlCffiTransport:
             CurlOpt.RESOLVE: [_curl_resolve_entry(target)],
             CurlOpt.MAXFILESIZE_LARGE: max_wire_bytes,
         }
+        key = SessionKey(
+            host=target.host,
+            port=target.port,
+            connect_ip=target.connect_ip,
+            max_wire_bytes=max_wire_bytes,
+            impersonation_profile=self._impersonation_profile,
+        )
         try:
-            async with AsyncSession(
+            async with self._pool.lease(
+                key,
                 trust_env=False,
                 verify=True,
                 allow_redirects=False,
                 timeout=timeout_seconds,
                 impersonate=self._impersonation_profile,
-                headers=headers,
                 curl_options=options,
+                max_clients=max(int(site_health_settings.per_host_concurrency), 1),
             ) as session:
                 response = await session.request(
                     request.method,
@@ -200,6 +225,13 @@ class CurlCffiTransport:
                     stream=True,
                     allow_redirects=False,
                     timeout=timeout_seconds,
+                    headers=headers,
+                    # A pooled session would otherwise accumulate a cookie jar
+                    # shared across hops, tasks, crawls and workspaces. Sessions
+                    # were per hop before, so discarding keeps today's semantics
+                    # and leaves "should we keep a jar like a real browser" a
+                    # separate question.
+                    discard_cookies=True,
                 )
                 ttfb_ms = int((time.monotonic() - started) * 1000)
                 body = await self._bounded_body(response, max_decoded_bytes)
