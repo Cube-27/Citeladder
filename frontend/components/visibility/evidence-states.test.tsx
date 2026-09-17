@@ -74,7 +74,7 @@ describe('evidence empty states', () => {
   it('sends a user with no executions to Runs', () => {
     render(
       <EvidenceEmpty
-        title="Mentions & Citations"
+        title="Tracked answers"
         heading="No evidence yet"
         body="Run a visibility audit to collect evidence."
       />,

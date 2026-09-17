@@ -56,6 +56,18 @@ class MeasurementCounts(BaseModel):
         return self.expected is not None and self.responses == self.expected
 
 
+class SourceRowBrand(BaseModel):
+    """A brand named in an answer that cited this source.
+
+    Co-occurrence within one response, NOT presence on the page: the schema
+    links a mention to its answer and never to the citation beside it.
+    """
+
+    kind: Literal["brand", "competitor"]
+    name: str
+    responses: int = 0
+
+
 class SourceRow(BaseModel):
     key: str
     responses: int
@@ -101,6 +113,11 @@ class SourceRow(BaseModel):
     page_format: str | None = None
     page_format_method: str | None = None
     last_cited_at: datetime | None = None
+    # Distinct brands named in the answers that cited this page, and the
+    # leading few of them. Zero is a real count; a domain row leaves both at
+    # their defaults because the question is asked of a page.
+    mentions: int = 0
+    brands: list[SourceRowBrand] = Field(default_factory=list)
 
 
 class CitationTotals(BaseModel):

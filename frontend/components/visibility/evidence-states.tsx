@@ -13,7 +13,7 @@ import { ICONS } from '@/lib/icons';
 /**
  * Shared data-state presentations for the two evidence tabs (design.md states
  * gallery): loading skeleton, retryable error, empty (no executions yet),
- * filtered-empty, and the truncation notice. Both `mentions-citations.tsx` and
+ * filtered-empty, and the truncation notice. Both `answer-evidence.tsx` and
  * `fanout-evidence.tsx` reuse these so their states stay consistent.
  */
 
@@ -24,7 +24,7 @@ import type { VisibilityExecutionEvidence, VisibilityEvidenceResponse } from '@/
 import { engineLabel } from '@/lib/providers/catalog';
 import { formatExecutionDate } from '@/lib/visibility/evidence';
 
-/** Props shared by both evidence tabs (Query Fanout, Mentions & Citations). */
+/** Props shared by the surfaces that render execution evidence. */
 export type EvidenceTabProps = Readonly<{
   query: UseQueryResult<VisibilityEvidenceResponse, unknown>;
   isFiltered: boolean;

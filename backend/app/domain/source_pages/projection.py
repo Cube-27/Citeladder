@@ -56,27 +56,6 @@ class EntityView:
     limitations: tuple[str, ...]
 
 
-@dataclass(frozen=True, slots=True)
-class SourcePageView:
-    """Everything a reader may be told about one cited page."""
-
-    id: uuid.UUID
-    canonical_url: str
-    registrable_domain: str
-    source_class: str | None
-    page_format: str
-    page_format_method: str | None
-    inspection_state: str
-    inspection_reason: str | None
-    last_inspected_at: datetime | None
-    last_cited_at: datetime | None
-    recurrence_count: int
-    title: str
-    extracted_chars: int
-    entities: tuple[EntityView, ...]
-    limitations: tuple[str, ...]
-
-
 def page_limitations(page: SourcePage, snapshot: SourcePageSnapshot | None) -> tuple:
     """Why this page's findings should be read with caution, if they should.
 
@@ -227,79 +206,6 @@ def entity_state(page: SourcePage, row: SourcePageEntityPresence | None) -> str:
     if row is None or page.inspection_state != INSPECTION_INSPECTED:
         return STATE_NOT_INSPECTED
     return row.presence
-
-
-async def get_source_page(
-    session: AsyncSession,
-    *,
-    workspace_id: uuid.UUID,
-    project_id: uuid.UUID,
-    url_hash: str,
-) -> SourcePageView | None:
-    """Project one cited page, or ``None`` when this project has no record."""
-    page = await session.scalar(
-        select(SourcePage).where(
-            SourcePage.workspace_id == workspace_id,
-            SourcePage.project_id == project_id,
-            SourcePage.url_hash == url_hash,
-        )
-    )
-    if page is None:
-        return None
-
-    # Scoped rather than fetched by id alone: the pointer is not enough on its
-    # own to prove the snapshot belongs to this page and this tenant, and a
-    # mismatched row would surface someone else's evidence under this URL.
-    snapshot = (
-        await session.scalar(
-            select(SourcePageSnapshot).where(
-                SourcePageSnapshot.id == page.latest_snapshot_id,
-                SourcePageSnapshot.source_page_id == page.id,
-                SourcePageSnapshot.project_id == project_id,
-                SourcePageSnapshot.workspace_id == workspace_id,
-            )
-        )
-        if page.latest_snapshot_id
-        else None
-    )
-    rows = (
-        list(
-            (
-                await session.scalars(
-                    select(SourcePageEntityPresence)
-                    .where(
-                        SourcePageEntityPresence.snapshot_id == snapshot.id,
-                        SourcePageEntityPresence.source_page_id == page.id,
-                        SourcePageEntityPresence.project_id == project_id,
-                    )
-                    .order_by(
-                        SourcePageEntityPresence.entity_kind != ENTITY_KIND_BRAND,
-                        SourcePageEntityPresence.entity_name,
-                    )
-                )
-            ).all()
-        )
-        if snapshot is not None
-        else []
-    )
-    entities = tuple(entity_view(page, snapshot, row) for row in rows)
-    return SourcePageView(
-        id=page.id,
-        canonical_url=page.canonical_url,
-        registrable_domain=page.registrable_domain,
-        source_class=page.source_class,
-        page_format=page.page_format,
-        page_format_method=page.page_format_method,
-        inspection_state=page.inspection_state,
-        inspection_reason=page.inspection_reason,
-        last_inspected_at=page.last_inspected_at,
-        last_cited_at=page.last_cited_at,
-        recurrence_count=page.recurrence_count,
-        title=page_title(snapshot),
-        extracted_chars=snapshot.extracted_chars if snapshot else 0,
-        entities=entities,
-        limitations=page_limitations(page, snapshot),
-    )
 
 
 @dataclass(frozen=True)

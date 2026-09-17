@@ -1,5 +1,5 @@
 /**
- * Execution-evidence display helpers (Mentions & Citations + Query Fanout tabs).
+ * Execution-evidence display helpers (Query fanouts + the Sources drill-downs).
  *
  * Pure, framework-free projections over the loaded
  * `VisibilityExecutionEvidence[]` window. The endpoint is the single source of
@@ -85,14 +85,4 @@ export function formatExecutionDate(timestamp: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-/** All classified citations across the window, de-duplicated by execution+ordinal. */
-export function totalCitationCount(items: readonly VisibilityExecutionEvidence[]): number {
-  return items.reduce((sum, item) => sum + item.citations.length, 0);
-}
-
-/** All persisted mentions across the window. */
-export function totalMentionCount(items: readonly VisibilityExecutionEvidence[]): number {
-  return items.reduce((sum, item) => sum + item.mentions.length, 0);
 }

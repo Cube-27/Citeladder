@@ -18,8 +18,6 @@
  *     shared availability vocabulary. Never a placeholder sentence per cell.
  */
 
-import { sourceClassLabel, type SourceClass } from '@/lib/opportunities/source-pattern';
-
 /**
  * A change in percentage points, or `null` when there is none to show.
  *
@@ -47,22 +45,82 @@ export function observationLabel(state: string | null | undefined): string | nul
 }
 
 /**
- * The kind of site, reusing the labels the opportunities surface already
- * publishes. An unrecognised class is dropped rather than shown raw — which is
- * how `editorial_third_party` and `source-taxonomy-2` reached the screen.
+ * Domain types, in the order a reader should reason about a source mix.
+ *
+ * These ARE the backend's nine source classes — this file only gives them the
+ * short chip copy the Sources tables need, where `sourceClassLabel` gives the
+ * sentence-shaped copy the Opportunities drawer needs. Deliberately not a
+ * second taxonomy: one token per type means one filter value per type, and a
+ * display grouping that folded three classes into one chip could not be sent
+ * back to the endpoint as a filter at all.
+ *
+ * `brand_owned` reads as "You" rather than "Corporate". Whether a cited page is
+ * the reader's own is the single most useful distinction on the screen, and
+ * folding it into a generic class is the one edit that would cost the table
+ * its point.
  */
-export function sourceCategoryLabels(values: readonly string[]): string[] {
-  return [
-    ...new Set(
-      values
-        .map((value) => {
-          try {
-            return sourceClassLabel(value as SourceClass);
-          } catch {
-            return undefined;
-          }
-        })
-        .filter((label): label is string => Boolean(label)),
-    ),
-  ];
+export const DOMAIN_TYPES: readonly { token: string; label: string }[] = [
+  { token: 'brand_owned', label: 'You' },
+  { token: 'competitor_owned', label: 'Competitor' },
+  { token: 'review_marketplace', label: 'Corporate' },
+  { token: 'editorial_third_party', label: 'Editorial' },
+  { token: 'institutional', label: 'Institutional' },
+  { token: 'community', label: 'UGC' },
+  { token: 'social', label: 'Social' },
+  { token: 'video', label: 'Video' },
+  { token: 'other_third_party', label: 'Other' },
+] as const;
+
+const DOMAIN_TYPE_LABELS = new Map(DOMAIN_TYPES.map((type) => [type.token, type.label]));
+
+/** The chip copy for one domain type; an unknown token renders as nothing. */
+export function domainTypeLabel(token: string | null | undefined): string | null {
+  return (token && DOMAIN_TYPE_LABELS.get(token)) || null;
+}
+
+/**
+ * URL types — what KIND of page this one is, as distinct from who publishes it.
+ *
+ * Ordered by how a reader scans a mix: the shapes that earn a placement first,
+ * then the ones that merely carry a brand. `unresolved` is last and reads as
+ * "Other", because it is a real outcome — the page's kind is not evident — and
+ * never a claim that the page is uninteresting.
+ */
+export const URL_TYPES: readonly { token: string; label: string }[] = [
+  { token: 'comparison', label: 'Comparison' },
+  { token: 'alternative', label: 'Alternative' },
+  { token: 'listicle', label: 'Listicle' },
+  { token: 'review', label: 'Review' },
+  { token: 'how_to', label: 'How-To Guide' },
+  { token: 'article', label: 'Article' },
+  { token: 'discussion', label: 'Discussion' },
+  { token: 'profile', label: 'Profile' },
+  { token: 'directory', label: 'Directory' },
+  { token: 'product', label: 'Product Page' },
+  { token: 'category', label: 'Category Page' },
+  { token: 'homepage', label: 'Homepage' },
+  { token: 'reference', label: 'Reference' },
+  { token: 'video', label: 'Video' },
+  { token: 'unresolved', label: 'Other' },
+] as const;
+
+const URL_TYPE_LABELS = new Map(URL_TYPES.map((type) => [type.token, type.label]));
+
+/** The chip copy for one URL type; an unknown token renders as nothing. */
+export function urlTypeLabel(token: string | null | undefined): string | null {
+  return (token && URL_TYPE_LABELS.get(token)) || null;
+}
+
+/**
+ * How a page's kind was established, for the reader who asks.
+ *
+ * A format derived from the address alone is a weaker claim than one read off
+ * the page, and the two must not look identical in a table. Returns null for a
+ * method that carries no useful qualification.
+ */
+export function pageFormatBasis(method: string | null | undefined): string | null {
+  if (method === 'structured_data') return 'From the page’s own structured data';
+  if (method === 'heading_evidence') return 'From the page’s headings';
+  if (method === 'url_pattern') return 'From the address; the page has not been read';
+  return null;
 }

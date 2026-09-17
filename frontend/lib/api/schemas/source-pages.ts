@@ -1,15 +1,14 @@
 import { z } from 'zod';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
-const uuid = () => z.uuid();
 
 // ---------------------------------------------------------------------------
-// Externally cited pages (`/projects/{id}/source-pages/...`).
+// The entity-presence shape an inspected page carries.
 //
-// Every field here is a persisted projection. The backend never fetches on a
-// read, so a page nobody has inspected arrives with `inspection_state:
-// 'not_inspected'`, no entities and its own limitation sentence — it is NOT an
-// absence, and no surface may render it as one.
+// Read today through the Opportunities verification payload rather than a page
+// endpoint of its own. Every field is a persisted projection: the backend never
+// fetches on a read, so a page nobody has inspected carries no entities at all
+// — which is NOT an absence, and no surface may render it as one.
 // ---------------------------------------------------------------------------
 
 /**
@@ -40,31 +39,4 @@ export const sourcePageEntitySchema = responseObject({
   // carries the raw verdict, not the resolved one.
   state: z.string(),
   limitations: z.array(z.string()),
-});
-
-/** Full projection of one cited page (`GET .../source-pages/{url_hash}`). */
-export const sourcePageDetailSchema = responseObject({
-  id: uuid(),
-  canonical_url: z.string(),
-  registrable_domain: z.string(),
-  source_class: z.string().nullable(),
-  page_format: z.string(),
-  page_format_method: z.string().nullable(),
-  inspection_state: z.string(),
-  inspection_reason: z.string().nullable(),
-  last_inspected_at: z.string().nullable(),
-  last_cited_at: z.string().nullable(),
-  // A scheduling value for inspection admission, never a citation count.
-  recurrence_count: z.number().int(),
-  title: z.string(),
-  extracted_chars: z.number().int(),
-  entities: z.array(sourcePageEntitySchema),
-  limitations: z.array(z.string()),
-});
-
-/** The answer to an explicit inspect command — including a refusal. */
-export const sourcePageInspectionSchema = responseObject({
-  accepted: z.boolean(),
-  reason: z.string().nullable(),
-  budget_remaining: z.number().int(),
 });

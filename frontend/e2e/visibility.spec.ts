@@ -6,7 +6,7 @@ import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/
  *
  * All backend calls are stubbed at the network layer so the spec runs without a
  * live backend (mirrors `runs.spec.ts`). It asserts the tab IA — Trends,
- * Mentions & Citations, Competitor analysis, Query fanouts (no Overview /
+ * Sources, Query fanouts (no Overview /
  * Sources / Topics / Sentiment) — the WAI-ARIA tablist (pointer + keyboard navigation, one panel at
  * a time, `?tab=` URL sync), shared-filter persistence across tabs, the evidence
  * populated / empty / error states, the three query-fanout states, and a
@@ -373,14 +373,11 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   await expect(page.getByText('Over time', { exact: true })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
-  // Mentions & Citations.
-  await page.getByRole('tab', { name: 'Mentions & Citations' }).click();
-  await expect(page).toHaveURL(/[?&]tab=mentions-citations/);
-  // The answers ARE the default now; no mode switch is needed to reach them.
-  // One row per execution, each captioned with the frozen prompt it answered —
-  // the fixture holds three answers to the same prompt.
-  await expect(page.getByText('Best affordable clothing stores in Australia?')).toHaveCount(3);
-  await expect(page.getByText('Acme Blog').first()).toBeVisible();
+  // Sources — the cited domains, with the URLs half one switch away.
+  await page.getByRole('tab', { name: 'Sources', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]tab=sources/);
+  await expect(page.getByRole('radio', { name: 'Domains' })).toBeVisible();
+  await expect(page.getByRole('radio', { name: 'URLs' })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
   // Query fanouts — reuses the shared evidence cache.

@@ -14,6 +14,8 @@ import { queryOptions } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
   visibilityFanoutSummarySchema,
+  visibilitySourceSeriesSchema,
+  visibilitySourceUrlSchema,
   visibilitySourcesSchema,
 } from './schemas/visibility-evidence';
 
@@ -133,6 +135,7 @@ export const visibilityApi = {
       cohort?: string;
       domain?: string;
       source_type?: string;
+      dimension?: 'domain' | 'url';
       offset?: number;
       as_of?: string;
       limit?: number;
@@ -144,6 +147,44 @@ export const visibilityApi = {
       options,
     );
     return strictValidate(visibilitySourcesSchema, result, 'visibility.getSources');
+  },
+  getSourceSeries: async (
+    projectId: string,
+    params: {
+      dimension?: 'domain' | 'url';
+      granularity?: string;
+      audit_id?: string;
+      audit_ids?: string[];
+      engine?: string;
+      cohort?: string;
+      domain?: string;
+      source_type?: string;
+      limit?: number;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/sources/series`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(visibilitySourceSeriesSchema, result, 'visibility.getSourceSeries');
+  },
+  getSourceUrl: async (
+    projectId: string,
+    params: {
+      url: string;
+      audit_id?: string;
+      audit_ids?: string[];
+      engine?: string;
+      cohort?: string;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/sources/url`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(visibilitySourceUrlSchema, result, 'visibility.getSourceUrl');
   },
   getProjectVisibility: async (
     projectId: string,
@@ -174,8 +215,8 @@ export const visibilityApi = {
   },
 
   /**
-   * Shared persisted execution-evidence dataset for the Mentions & Citations
-   * and Query Fanout tabs (`/projects/{id}/visibility/evidence`). Returns a
+   * Shared persisted execution-evidence dataset for Query fanouts and the
+   * Sources drill-downs (`/projects/{id}/visibility/evidence`). Returns a
    * bounded newest-first window of `VisibilityExecutionEvidence` plus a
    * `truncated` flag — no provider is called and no evidence is inferred at read
    * time. Same-origin relative path only; response is strictly validated.

@@ -15,6 +15,13 @@ export const visibilityKeys = {
   all: ['visibility'] as const,
   sources: (projectId: string, filters: ListFilters = {}) =>
     ['visibility', 'sources', projectId, filters] as const,
+  // The usage charts and one URL's detail. Separate namespaces from `sources`
+  // because they are not the same read narrowed — paging the table must not
+  // refetch a chart that does not page.
+  sourceSeries: (projectId: string, filters: ListFilters = {}) =>
+    ['visibility', 'source-series', projectId, filters] as const,
+  sourceUrl: (projectId: string, filters: ListFilters = {}) =>
+    ['visibility', 'source-url', projectId, filters] as const,
   fanout: (projectId: string, filters: ListFilters = {}) =>
     ['visibility', 'fanout', projectId, filters] as const,
   project: (projectId: string, auditId?: string, filters: ListFilters = {}) =>
@@ -29,15 +36,4 @@ export const visibilityKeys = {
     ['visibility', 'prompts', projectId, auditId ?? 'latest'] as const,
   competitorSuggestions: (projectId: string) =>
     ['visibility', 'competitor-suggestions', projectId] as const,
-};
-
-/**
- * Externally cited pages. Project-scoped and NOT run-scoped: inspection is a
- * property of the page, not of the audit that happened to cite it, so a page
- * read must not be re-fetched because a reader picked another run.
- */
-export const sourcePageKeys = {
-  all: ['source-pages'] as const,
-  page: (projectId: string, urlHash: string) =>
-    ['source-pages', 'page', projectId, urlHash] as const,
 };

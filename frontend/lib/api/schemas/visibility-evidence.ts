@@ -5,7 +5,7 @@ const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(s
 const uuid = () => z.uuid();
 
 // ---------------------------------------------------------------------------
-// Execution-evidence projection (Mentions & Citations + Query Fanout tabs)
+// Execution-evidence projection (Query fanouts, and the Sources drill-downs)
 // `GET /projects/{id}/visibility/evidence`. A pure read projection over already
 // persisted mention/citation/task/artifact rows — nothing is inferred or
 // backfilled at read time (invariant 7).
@@ -85,8 +85,11 @@ export const visibilitySourcesSchema = responseObject({
   total: z.number().int(),
   responses: z.number().int(),
   prompts: z.number().int(),
-  // Distinct cited domains per source class across the WHOLE selection, so the
-  // breakdown is not a picture of whichever page happens to be loaded.
+  // Every citation in the filtered selection: the denominator behind
+  // `citation_share` and the number the source-type ring reports in its centre.
+  total_citations: z.number().int(),
+  // Citations per source class across the WHOLE selection, so the breakdown is
+  // not a picture of whichever page happens to be loaded.
   category_totals: z.record(z.string(), z.number().int()).optional(),
   next_offset: z.number().int().nullable(),
   as_of: z.string(),
@@ -100,6 +103,12 @@ export const visibilitySourcesSchema = responseObject({
       urls: z.number().int(),
       response_rate: z.number().nullable(),
       prompt_coverage: z.number().nullable(),
+      // Unique URLs from this source per response, this row's share of the
+      // filtered view's citations, and citations per response the source was
+      // RETRIEVED in — never per response in the selection.
+      retrieval_rate: z.number().nullable(),
+      citation_share: z.number().nullable(),
+      citation_rate: z.number().nullable(),
       ownership: z.array(z.string()),
       categories: z.array(z.string()),
       taxonomy_versions: z.array(z.string()),
@@ -112,6 +121,92 @@ export const visibilitySourcesSchema = responseObject({
       url_hash: z.string().nullable(),
       inspection_state: z.string().nullable(),
       opportunity_id: uuid().nullable(),
+      // Page facts, for the URL table. `page_format_method` says how the kind
+      // was established, so a format read off the address alone is never
+      // presented as one read off the page.
+      title: z.string().nullable(),
+      page_format: z.string().nullable(),
+      page_format_method: z.string().nullable(),
+      last_cited_at: z.string().nullable(),
+      // Brands named in the ANSWERS that cited this page, never found on it.
+      // `mentions` is the distinct count; `brands` is the leading few.
+      mentions: z.number().int(),
+      brands: z.array(
+        responseObject({
+          kind: z.enum(['brand', 'competitor']),
+          name: z.string(),
+          responses: z.number().int(),
+        }),
+      ),
+    }),
+  ),
+});
+
+/**
+ * The leading sources' use over the selected period, one dense line each.
+ *
+ * Every series carries a point for every bucket, including the buckets where
+ * it was cited nothing at all: a sparse series would let a line skip a gap and
+ * read as continuous use.
+ */
+export const visibilitySourceSeriesSchema = responseObject({
+  dimension: z.enum(['domain', 'url']),
+  granularity: z.string(),
+  buckets: z.array(z.string()),
+  series: z.array(
+    responseObject({
+      key: z.string(),
+      citations: z.number().int(),
+      points: z.array(
+        responseObject({
+          at: z.string(),
+          responses: z.number().int(),
+          // Null only when the bucket held no responses at all, which is not
+          // the same fact as a source going uncited in a bucket that did.
+          share: z.number().nullable(),
+        }),
+      ),
+    }),
+  ),
+});
+
+/** One cited URL's own page: overview, engines, prompts and co-named brands. */
+export const visibilitySourceUrlSchema = responseObject({
+  url: z.string(),
+  title: z.string(),
+  retrievals: z.number().int(),
+  citations: z.number().int(),
+  responses: z.number().int(),
+  citation_rate: z.number().nullable(),
+  prompts: z.number().int(),
+  // Within the SELECTION, so narrowing the period moves them. Never a claim
+  // about when the page itself was published.
+  first_seen: z.string().nullable(),
+  last_seen: z.string().nullable(),
+  engines: z.array(
+    responseObject({
+      logical_engine: z.string(),
+      transport_model: z.string().nullable(),
+      retrievals: z.number().int(),
+    }),
+  ),
+  prompt_rows: z.array(
+    responseObject({
+      prompt_text: z.string(),
+      topic: z.string().nullable(),
+      responses: z.number().int(),
+      last_seen: z.string().nullable(),
+      engines: z.array(z.string()),
+    }),
+  ),
+  // Named in the ANSWERS that cited this URL, never found on the page: a
+  // mention is recorded against the response and nothing links it to the
+  // citation beside it.
+  brands: z.array(
+    responseObject({
+      kind: z.enum(['brand', 'competitor']),
+      name: z.string(),
+      responses: z.number().int(),
     }),
   ),
 });

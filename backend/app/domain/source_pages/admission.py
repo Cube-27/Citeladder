@@ -38,7 +38,7 @@ from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from typing import Any, cast
 
-from sqlalchemy import CursorResult, case, func, or_, select, update
+from sqlalchemy import CursorResult, case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -173,26 +173,6 @@ async def spend_for_redirect(
         source_page_id=None,
         spend_kind=SPEND_KIND_REDIRECT,
         idempotency_key=f"{SPEND_KIND_REDIRECT}:{project_id}:{digest}",
-    )
-
-
-async def mark_inspection_requested(
-    session: AsyncSession,
-    *,
-    project_id: uuid.UUID,
-    url_hash: str,
-    now: datetime | None = None,
-) -> None:
-    """Record that a person asked for this page by name.
-
-    Separate from the claim because asking is not spending: the request is
-    remembered whether or not the budget admits it today, and a page somebody
-    went looking for stays worth resolving after a fetch that told us nothing.
-    """
-    await session.execute(
-        update(SourcePage)
-        .where(SourcePage.project_id == project_id, SourcePage.url_hash == url_hash)
-        .values(inspection_requested_at=now or datetime.now(UTC))
     )
 
 
