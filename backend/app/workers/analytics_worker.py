@@ -43,6 +43,7 @@ from app.core.config.analytics import (
     ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
     ANALYTICS_TASK_KIND_PERFORMANCE_RANGE_PROJECTION,
     ANALYTICS_TASK_KIND_REFERRAL_RETENTION_SWEEP,
+    ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION,
     ANALYTICS_TASK_KIND_TRAFFIC_SNAPSHOT_REFRESH,
     ERROR_EXECUTOR_NOT_WIRED,
     analytics_settings,
@@ -75,6 +76,7 @@ from app.models.analytics import AnalyticsTask
 from app.orchestration.executor_errors import TerminalExecutorError
 from app.orchestration.postgres_task_queue import PostgresTaskQueue
 from app.workers.drain import DrainableWorkerMixin
+from app.workers.source_pages.inspector import inspect_source_pages
 
 logger = logging.getLogger("app.workers.analytics_worker")
 
@@ -122,6 +124,7 @@ EXECUTORS: dict[str, AnalyticsExecutor] = {
     ANALYTICS_TASK_KIND_COMMERCE_COMPETITOR_DISCOVERY: run_competitor_discovery,
     ANALYTICS_TASK_KIND_OPPORTUNITY_REFRESH: _refresh_opportunities,
     ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION: verify_implementation_events,
+    ANALYTICS_TASK_KIND_SOURCE_PAGE_INSPECTION: inspect_source_pages,
     ANALYTICS_TASK_KIND_DEMAND_SNAPSHOT_REFRESH: recompute_demand,
 }
 

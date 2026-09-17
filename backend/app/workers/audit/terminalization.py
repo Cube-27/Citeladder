@@ -36,10 +36,10 @@ from app.core.config.task_queue import (
     TASK_STATUS_SUCCEEDED,
     TASK_TERMINAL_STATUSES,
 )
+from app.domain.analytics.enqueue import enqueue_source_page_inspection
 from app.domain.audits.state_events import apply_transition, record_event
 from app.domain.commerce.shelf import analyze_commerce_task
 from app.domain.commerce.shelf_metrics import finalize_commerce_shelf
-from app.domain.opportunities.verification import enqueue_audit_opportunity_tasks
 from app.domain.providers.credentials import pause_connection_after_key_failure
 from app.models.audit import (
     Audit,
@@ -478,9 +478,15 @@ class AuditTerminalizationMixin:
         only (invariant 7 — no provider call) and drives ANALYZING -> REPORTING
         -> COMPLETED / PARTIALLY_COMPLETED. Guarded with ``FOR UPDATE`` so
         concurrent workers don't double-finalize. After the terminal commit it
-        best-effort queues the project's Opportunities refresh — this is the
-        ONLY audit-side hook: ``_finalize_audit`` never fires it (execution
-        boundary, no snapshots yet) and failed audits never reach ANALYZING.
+        best-effort queues source-page inspection — this is the ONLY audit-side
+        hook: ``_finalize_audit`` never fires it (execution boundary, no
+        snapshots yet) and failed audits never reach ANALYZING.
+
+        Inspection, not the Opportunities refresh, because the refresh has to
+        see this audit's page evidence and the inspection is what produces it.
+        The inspection enqueues the refresh itself when its batch finishes; if
+        both were queued here the refresh would win the race every time and the
+        page-aware detectors would read an empty inventory.
         """
         async with self._session_factory() as session:
             audit = await session.get(Audit, audit_id, with_for_update=True)
@@ -501,13 +507,13 @@ class AuditTerminalizationMixin:
             project_id = audit.project_id
             await session.commit()
 
-        await self._enqueue_opportunity_refresh(
+        await self._enqueue_source_page_inspection(
             audit_id=audit_id,
             workspace_id=workspace_id,
             project_id=project_id,
         )
 
-    async def _enqueue_opportunity_refresh(
+    async def _enqueue_source_page_inspection(
         self,
         *,
         audit_id: uuid.UUID,
@@ -517,10 +523,12 @@ class AuditTerminalizationMixin:
         """Queue downstream work without reopening the terminal audit write."""
 
         # Queue work only after the source audit is durably terminal. A queue
-        # outage must never roll back the evidence and snapshot above.
+        # outage must never roll back the evidence and snapshot above, and an
+        # unreachable publisher must never turn a measured audit into a failed
+        # one.
         try:
             async with self._session_factory() as session:
-                await enqueue_audit_opportunity_tasks(
+                await enqueue_source_page_inspection(
                     session,
                     workspace_id=workspace_id,
                     project_id=project_id,
@@ -529,6 +537,6 @@ class AuditTerminalizationMixin:
                 await session.commit()
         except Exception:
             logger.exception(
-                "opportunity refresh enqueue failed",
+                "source page inspection enqueue failed",
                 extra={"audit_id": str(audit_id)},
             )

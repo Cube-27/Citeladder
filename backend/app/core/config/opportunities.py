@@ -127,9 +127,16 @@ IMPLEMENTATION_EVENT_MAX_LIMIT: Final = 200
 IMPLEMENTATION_IDEMPOTENCY_KEY_MAX_LEN: Final = 160
 IMPLEMENTATION_EXPECTED_CHECKS_MAX: Final = 32
 IMPLEMENTATION_TARGETS_MAX: Final = 64
-IMPLEMENTATION_VERIFIER_VERSION: Final = "implementation-verifier-1"
+IMPLEMENTATION_VERIFIER_VERSION: Final = "implementation-verifier-2"
 IMPLEMENTATION_VERIFICATION_BATCH_MAX: Final = 100
 IMPLEMENTATION_VERIFICATION_HISTORY_MAX: Final = 50
+# Visibility expectations are movements against a baseline frozen at
+# declaration time, never absolute floors. Scope is carried by the check's
+# ``target_prompt_id``: a prompt-keyed Opportunity is measured on that prompt's
+# composite score, and ``visibility_score`` is the mean of exactly those, so
+# one delta serves either scope without rescaling anything.
+VISIBILITY_METRIC_PROJECT_SCORE: Final = "visibility_score"
+VISIBILITY_CHECK_MIN_DELTA: Final = 1.0
 SOURCE_ROLLUP_MAX_DOMAINS: Final = 100
 ACTION_PATH_OWNED: Final = "owned"
 ACTION_PATH_EARNED: Final = "earned"

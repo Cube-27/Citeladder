@@ -127,6 +127,7 @@ def test_analytics_task_kinds_include_commerce_replacement_tasks() -> None:
             "commerce_competitor_discovery",
             "opportunity_refresh",
             "opportunity_verification",
+            "source_page_inspection",
             "demand_snapshot_refresh",
         }
     )

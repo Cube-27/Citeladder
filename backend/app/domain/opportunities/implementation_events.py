@@ -20,6 +20,7 @@ from app.core.config.opportunities import (
 )
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.demand.page_equivalence import resolve_owned_page
+from app.domain.opportunities.visibility_checks import build_visibility_check
 from app.models.content import ContentGeneration
 from app.models.opportunity import (
     Opportunity,
@@ -52,8 +53,19 @@ class ImplementationDeclaration:
     expected_checks: list[dict]
 
 
-def _project_expected_checks(opportunity: Opportunity) -> list[dict]:
-    """Server-owned verification intent for the rule/pathway."""
+async def _project_expected_checks(
+    session: AsyncSession,
+    *,
+    opportunity: Opportunity,
+    snapshot: OpportunitySnapshot,
+) -> list[dict]:
+    """Server-owned verification intent for the rule/pathway.
+
+    The caller never supplies this. What a declaration will be measured
+    against is decided here, from the opportunity and its frozen snapshot, so
+    a client cannot declare itself verified against an expectation of its own
+    choosing.
+    """
     evidence = opportunity.evidence or {}
     if opportunity.opportunity_type == OPPORTUNITY_TYPE_SITE:
         check: dict = {
@@ -75,13 +87,9 @@ def _project_expected_checks(opportunity: Opportunity) -> list[dict]:
             }
         ]
     return [
-        {
-            "kind": "visibility_metric",
-            "metric": "visibility_score",
-            "direction": "increase",
-            "expected_value": 1,
-            "tolerance": 0,
-        }
+        await build_visibility_check(
+            session, opportunity=opportunity, snapshot=snapshot
+        )
     ]
 
 
@@ -258,6 +266,12 @@ async def create_implementation_event(
         "declared_implemented_at": declaration.declared_implemented_at,
         "expected_checks": declaration.expected_checks,
     }
+    if declaration.expected_checks:
+        # Verification intent is server-owned. Accepting a caller's checks
+        # would let a declaration choose the expectation that confirms it.
+        raise ImplementationConflictError(
+            "Expected checks are server-owned and cannot be supplied"
+        )
     fingerprint = _fingerprint(request_payload)
     existing = await _idempotent_replay(
         session,
@@ -297,8 +311,9 @@ async def create_implementation_event(
         target_site_url_ids=[str(item) for item in targets],
         generation_id=declaration.generation_id,
         declared_implemented_at=declaration.declared_implemented_at,
-        expected_checks=declaration.expected_checks
-        or _project_expected_checks(opportunity),
+        expected_checks=await _project_expected_checks(
+            session, opportunity=opportunity, snapshot=snapshot
+        ),
         actor_user_id=actor_user_id,
         idempotency_key=idempotency_key,
         request_fingerprint=fingerprint,

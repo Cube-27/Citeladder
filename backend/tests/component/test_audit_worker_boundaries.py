@@ -312,7 +312,7 @@ async def test_worker_discards_success_when_lease_lost_mid_call(
 # C4(a): the audit-finalize Opportunities refresh task
 # =========================================================================
 @pytest.mark.asyncio
-async def test_completed_audit_enqueues_opportunities_refresh(
+async def test_completed_audit_enqueues_source_page_inspection(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,
     monkeypatch: pytest.MonkeyPatch,
@@ -330,7 +330,7 @@ async def test_completed_audit_enqueues_opportunities_refresh(
         )
 
     monkeypatch.setattr(
-        audit_terminalization, "enqueue_audit_opportunity_tasks", _record
+        audit_terminalization, "enqueue_source_page_inspection", _record
     )
     worker = AuditWorker(session_factory=session_factory, owner="w-hook")
     await worker.run_until_idle()
@@ -349,7 +349,7 @@ async def test_completed_audit_enqueues_opportunities_refresh(
 
 
 @pytest.mark.asyncio
-async def test_failed_audit_never_enqueues_opportunities_refresh(
+async def test_failed_audit_never_enqueues_source_page_inspection(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,
     monkeypatch: pytest.MonkeyPatch,
@@ -378,7 +378,7 @@ async def test_failed_audit_never_enqueues_opportunities_refresh(
         calls.append({"audit_id": audit_id})
 
     monkeypatch.setattr(
-        audit_terminalization, "enqueue_audit_opportunity_tasks", _record
+        audit_terminalization, "enqueue_source_page_inspection", _record
     )
     worker = AuditWorker(session_factory=session_factory, owner="w-hook-fail")
     await worker.run_until_idle()
@@ -391,7 +391,7 @@ async def test_failed_audit_never_enqueues_opportunities_refresh(
 
 
 @pytest.mark.asyncio
-async def test_opportunities_enqueue_failure_never_blocks_terminalization(
+async def test_inspection_enqueue_failure_never_blocks_terminalization(
     session_factory: async_sessionmaker[AsyncSession],
     _stub_adapter,
     monkeypatch: pytest.MonkeyPatch,
@@ -401,7 +401,7 @@ async def test_opportunities_enqueue_failure_never_blocks_terminalization(
     async def _boom(session, *, workspace_id, project_id, audit_id):
         raise RuntimeError("enqueue exploded")
 
-    monkeypatch.setattr(audit_terminalization, "enqueue_audit_opportunity_tasks", _boom)
+    monkeypatch.setattr(audit_terminalization, "enqueue_source_page_inspection", _boom)
     worker = AuditWorker(session_factory=session_factory, owner="w-hook-boom")
     # Best-effort: the raise is logged + swallowed; the audit still
     # terminalizes.
