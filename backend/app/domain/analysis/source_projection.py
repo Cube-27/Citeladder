@@ -148,7 +148,11 @@ async def get_visibility_sources(
     )
     if pages:
         await attach_row_mentions(
-            session, workspace_id=workspace_id, scope=scope, items=response.items
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            scope=scope,
+            items=response.items,
         )
     if baseline_audit_ids:
         from app.domain.analysis.source_comparison import apply_source_comparison
@@ -289,7 +293,11 @@ def _source_row(row, denominator, prompts, total_citations, *, pages: bool = Fal
         urls=row["urls"],
         response_rate=_ratio(responses, denominator),
         prompt_coverage=_ratio(row["prompts"], prompts),
-        retrieval_rate=_ratio(row["urls"], denominator),
+        # Unique URLs per response, which is a question about a PUBLISHER: how
+        # much of its site the engines reached. A page row is one URL by
+        # construction, so the same arithmetic there is just `1 / responses`
+        # wearing a metric's name. Left unset rather than computed.
+        retrieval_rate=None if pages else _ratio(row["urls"], denominator),
         citation_share=_ratio(annotations, total_citations),
         # Per response the source was RETRIEVED in, never per response in the
         # selection: the question is how heavily a source is quoted when it is

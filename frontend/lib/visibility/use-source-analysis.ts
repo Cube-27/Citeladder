@@ -15,6 +15,14 @@ function set<T>(value: T | null | undefined): T | undefined {
   return value ?? undefined;
 }
 
+/**
+ * How many publishers the domain filter lists.
+ *
+ * A select is not a browsing surface: past a few dozen entries a reader is
+ * faster typing into the search box beside it, which searches the same rows.
+ */
+const SOURCE_DOMAIN_OPTIONS = 50;
+
 export type SourceScope = {
   dimension: 'domain' | 'url';
   /** Set when drilling into one domain; the table then lists its pages. */
@@ -124,4 +132,31 @@ export function useSourceUrl(filters: SourceFilters, queries: SourceQueries, url
       }),
     enabled: Boolean(queries.projectId && queries.activeRunId && url),
   });
+}
+
+/**
+ * The publishers in this selection, for the "filter by domain" control.
+ *
+ * Its own small read of the domain dimension rather than a list folded out of
+ * whatever rows the URL table happens to hold: a filter offering only the
+ * domains on page one would hide the publisher a reader is looking for, which
+ * is the exact moment they reach for it.
+ */
+export function useSourceDomains(filters: SourceFilters, queries: SourceQueries) {
+  const params = {
+    ...selectionParams(filters, queries),
+    dimension: 'domain' as const,
+    offset: 0,
+    limit: SOURCE_DOMAIN_OPTIONS,
+  };
+  const query = useQuery({
+    queryKey: queryKeys.visibility.sources(queries.projectId ?? '', params),
+    queryFn: ({ signal }) =>
+      visibilityApi.getSources(queries.projectId!, params, {
+        signal,
+        workspaceId: queries.workspaceId,
+      }),
+    enabled: Boolean(queries.projectId && queries.activeRunId),
+  });
+  return (query.data?.items ?? []).map((item) => item.key).filter(Boolean);
 }

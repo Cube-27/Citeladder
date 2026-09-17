@@ -247,7 +247,12 @@ function MentionedChips({
           content={`${brand.name} — named in ${brand.responses} of the answers citing this URL`}
         >
           <span className="inline-flex">
-            <BrandLogo name={brand.name} size="xs" />
+            <BrandLogo
+              name={brand.name}
+              logoUrl={brand.logo_url}
+              websiteUrl={brand.website}
+              size="xs"
+            />
           </span>
         </Tooltip>
       ))}

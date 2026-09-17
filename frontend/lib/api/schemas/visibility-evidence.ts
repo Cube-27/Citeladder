@@ -136,6 +136,9 @@ export const visibilitySourcesSchema = responseObject({
           kind: z.enum(['brand', 'competitor']),
           name: z.string(),
           responses: z.number().int(),
+          // The cached mark this project holds, or a site to derive one from.
+          logo_url: z.string().nullable(),
+          website: z.string().nullable(),
         }),
       ),
     }),
@@ -207,6 +210,8 @@ export const visibilitySourceUrlSchema = responseObject({
       kind: z.enum(['brand', 'competitor']),
       name: z.string(),
       responses: z.number().int(),
+      logo_url: z.string().nullable(),
+      website: z.string().nullable(),
     }),
   ),
 });

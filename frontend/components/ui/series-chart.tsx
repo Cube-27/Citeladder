@@ -46,7 +46,7 @@ function segmentsOf(
   points: readonly SeriesPoint[],
   positions: readonly number[],
   project: (value: number) => number,
-): string[] {
+): { paths: string[]; dots: { x: number; y: number }[] } {
   const runs: { x: number; y: number }[][] = [];
   let current: { x: number; y: number }[] = [];
   points.forEach((point, index) => {
@@ -58,13 +58,20 @@ function segmentsOf(
     current.push({ x: positions[index], y: project(point.value) });
   });
   if (current.length) runs.push(current);
-  return runs
-    .filter((run) => run.length > 1)
-    .map((run) =>
-      run
-        .map((at, index) => `${index === 0 ? 'M' : 'L'}${at.x.toFixed(1)},${at.y.toFixed(1)}`)
-        .join(' '),
-    );
+  // A run of one point has no line to draw, so it is drawn as a mark instead.
+  // Dropping it made a single-bucket period, and any value sitting alone
+  // between two gaps, render as nothing at all — which reads as "not cited"
+  // rather than "cited once".
+  return {
+    paths: runs
+      .filter((run) => run.length > 1)
+      .map((run) =>
+        run
+          .map((at, index) => `${index === 0 ? 'M' : 'L'}${at.x.toFixed(1)},${at.y.toFixed(1)}`)
+          .join(' '),
+      ),
+    dots: runs.filter((run) => run.length === 1).map((run) => run[0]),
+  };
 }
 
 /** First, middle and last, pulled inward at the ends so they stay in the plot. */
@@ -187,24 +194,36 @@ export function SeriesChart({
           yAxisLabel={yAxisLabel}
           height={height}
         />
-        {series.map((one) =>
-          segmentsOf(one.points, positions, project).map((path, index) => (
-            <path
-              key={`${one.key}-${index}`}
-              d={path}
-              fill="none"
-              strokeWidth={1.75}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-              className={cn(
-                one.strokeClass,
-                'transition-opacity',
-                active && active !== one.key ? 'opacity-25' : 'opacity-100',
-              )}
-            />
-          )),
-        )}
+        {series.map((one) => {
+          const { paths, dots } = segmentsOf(one.points, positions, project);
+          const dim = active && active !== one.key ? 'opacity-25' : 'opacity-100';
+          return (
+            <g key={one.key}>
+              {paths.map((path, index) => (
+                <path
+                  key={`${one.key}-path-${index}`}
+                  d={path}
+                  fill="none"
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                  className={cn(one.strokeClass, 'transition-opacity', dim)}
+                />
+              ))}
+              {dots.map((dot) => (
+                <circle
+                  key={`${one.key}-dot-${dot.x}-${dot.y}`}
+                  cx={dot.x}
+                  cy={dot.y}
+                  r={2.25}
+                  vectorEffect="non-scaling-stroke"
+                  className={cn(one.strokeClass, 'fill-current transition-opacity', dim)}
+                />
+              ))}
+            </g>
+          );
+        })}
       </svg>
     </div>
   );

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Final
 
+from app.core.config.site_health_answer_shapes import EDITORIAL_PAGE_KINDS
 from app.core.config.site_health_architecture_rules import ARCHITECTURE_RULE_SPECS
 from app.core.config.site_health_contracts import (
     APPLICABILITY_CRAWL_FINALIZE,
@@ -34,12 +35,9 @@ from app.core.config.site_health_rule_types import (
 )
 from app.core.config.site_health_search_rules import SEARCH_ACCESS_RULES
 from app.core.config.site_health_taxonomy import (
-    PAGE_KIND_ARTICLE,
     PAGE_KIND_CASE_STUDY_REVIEW,
-    PAGE_KIND_COMPARISON,
     PAGE_KIND_DOCS,
     PAGE_KIND_FAQ,
-    PAGE_KIND_GUIDE,
     PAGE_KIND_SCHEMA_ANALYSIS_KINDS,
     _page_kinds,
 )
@@ -309,9 +307,7 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         severity=SEVERITY_MEDIUM,
         weight=1.5,
         applicability_key=_page_kinds(
-            PAGE_KIND_ARTICLE,
-            PAGE_KIND_GUIDE,
-            PAGE_KIND_COMPARISON,
+            *sorted(EDITORIAL_PAGE_KINDS),
             PAGE_KIND_CASE_STUDY_REVIEW,
             reads_content=True,
         ),
@@ -332,10 +328,8 @@ SITE_HEALTH_RULES: Final[tuple[SiteHealthRule, ...]] = (
         severity=SEVERITY_LOW,
         weight=1.0,
         applicability_key=_page_kinds(
-            PAGE_KIND_ARTICLE,
-            PAGE_KIND_GUIDE,
+            *sorted(EDITORIAL_PAGE_KINDS),
             PAGE_KIND_CASE_STUDY_REVIEW,
-            PAGE_KIND_COMPARISON,
             PAGE_KIND_DOCS,
             reads_content=True,
         ),

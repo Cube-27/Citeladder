@@ -35,12 +35,16 @@ export function SourceUrlDetail({
   filters,
   queries,
   onBack,
+  onOpenInventory,
 }: Readonly<{
   url: string;
   domain: string | null;
   filters: SourceFilters;
   queries: SourceQueries;
+  /** Up one level: the domain's page when opened from it, else the inventory. */
   onBack: () => void;
+  /** All the way out to the Domains / URLs inventory. */
+  onOpenInventory: () => void;
 }>) {
   const query = useSourceUrl(filters, queries, url);
   const data = query.data;
@@ -49,8 +53,10 @@ export function SourceUrlDetail({
   return (
     <div className="grid gap-[var(--workspace-gap)]">
       <SourceBreadcrumb
+        // Two crumbs, two destinations. Both calling `onBack` meant clicking
+        // "Sources" from a URL opened inside a domain landed on that domain.
         trail={[
-          { label: 'Sources', onClick: onBack },
+          { label: 'Sources', onClick: onOpenInventory },
           ...(domain ? [{ label: domain, onClick: onBack }] : []),
         ]}
         current={title}
@@ -67,11 +73,11 @@ export function SourceUrlDetail({
       </Card>
 
       <div className="grid gap-[var(--workspace-gap)] xl:grid-cols-2">
-        <EnginesCard engines={data?.engines} loading={query.isLoading} />
-        <BrandsCard brands={data?.brands} loading={query.isLoading} />
+        <EnginesCard engines={data?.engines} loading={query.isLoading} errored={query.isError} />
+        <BrandsCard brands={data?.brands} loading={query.isLoading} errored={query.isError} />
       </div>
 
-      <PromptsCard rows={data?.prompt_rows} loading={query.isLoading} />
+      <PromptsCard rows={data?.prompt_rows} loading={query.isLoading} errored={query.isError} />
 
       <SourcePrompts filters={filters} queries={queries} url={url} />
     </div>

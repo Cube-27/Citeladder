@@ -35,12 +35,15 @@ function SectionCard({
   title,
   caption,
   loading,
+  errored,
   empty,
   children,
 }: Readonly<{
   title: string;
   caption?: string;
   loading: boolean;
+  /** A read that FAILED has no data, so its empty sentence would be a lie. */
+  errored?: boolean;
   empty: string;
   children: React.ReactNode | null;
 }>) {
@@ -51,27 +54,53 @@ function SectionCard({
         {caption ? <p className={textRole('meta', 'text-secondary')}>{caption}</p> : null}
       </CardHeader>
       <CardContent className="p-0">
-        {loading ? (
-          <Skeleton className="m-[var(--card-padding)] h-24" />
-        ) : children ? (
-          children
-        ) : (
-          <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>{empty}</p>
-        )}
+        <SectionBody loading={loading} errored={errored} empty={empty}>
+          {children}
+        </SectionBody>
       </CardContent>
     </Card>
   );
 }
 
+/**
+ * The card's body, once its states are separated from its frame.
+ *
+ * The error branch comes first and renders NOTHING: "no engine used this page"
+ * and "we could not find out" are different answers, and a failed request can
+ * only honestly give the second. The page's own alert already reports it.
+ */
+function SectionBody({
+  loading,
+  errored,
+  empty,
+  children,
+}: Readonly<{
+  loading: boolean;
+  errored?: boolean;
+  empty: string;
+  children: React.ReactNode | null;
+}>) {
+  if (errored) return null;
+  if (loading) return <Skeleton className="m-[var(--card-padding)] h-24" />;
+  if (children) return <>{children}</>;
+  return <p className={textRole('body', 'text-secondary p-[var(--card-padding)]')}>{empty}</p>;
+}
+
 export function EnginesCard({
   engines,
   loading,
-}: Readonly<{ engines: UrlDetail['engines'] | undefined; loading: boolean }>) {
+  errored,
+}: Readonly<{
+  engines: UrlDetail['engines'] | undefined;
+  loading: boolean;
+  errored?: boolean;
+}>) {
   return (
     <SectionCard
       title="Retrievals by AI model"
       caption="Which engines used this page as a source."
       loading={loading}
+      errored={errored}
       empty="No engine used this page in this selection."
     >
       {engines?.length ? (
@@ -117,19 +146,30 @@ export function EnginesCard({
 export function BrandsCard({
   brands,
   loading,
-}: Readonly<{ brands: UrlDetail['brands'] | undefined; loading: boolean }>) {
+  errored,
+}: Readonly<{
+  brands: UrlDetail['brands'] | undefined;
+  loading: boolean;
+  errored?: boolean;
+}>) {
   return (
     <SectionCard
       title="Brands mentioned"
       caption="Named in the answers that cited this URL — not necessarily present on the page itself."
       loading={loading}
+      errored={errored}
       empty="No tracked brand was named in the answers citing this URL."
     >
       {brands?.length ? (
         <ul className="grid gap-2 p-[var(--card-padding)]">
           {brands.map((brand) => (
             <li key={`${brand.kind}:${brand.name}`} className="flex items-center gap-2">
-              <BrandLogo name={brand.name} size="sm" />
+              <BrandLogo
+                name={brand.name}
+                logoUrl={brand.logo_url}
+                websiteUrl={brand.website}
+                size="sm"
+              />
               <span className="min-w-0 truncate">{brand.name}</span>
               <Badge
                 className="ml-auto shrink-0"
@@ -149,11 +189,17 @@ export function BrandsCard({
 export function PromptsCard({
   rows,
   loading,
-}: Readonly<{ rows: UrlDetail['prompt_rows'] | undefined; loading: boolean }>) {
+  errored,
+}: Readonly<{
+  rows: UrlDetail['prompt_rows'] | undefined;
+  loading: boolean;
+  errored?: boolean;
+}>) {
   return (
     <SectionCard
       title="Prompts using this URL"
       loading={loading}
+      errored={errored}
       empty="No prompt in this selection reached this URL."
     >
       {rows?.length ? (

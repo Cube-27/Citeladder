@@ -23,6 +23,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.analysis.brand_identity import brand_identities
 from app.domain.analysis.schemas import SourceRow, SourceRowBrand
 from app.models.analysis import BrandMention, Citation, CompetitorMention
 
@@ -37,6 +38,7 @@ async def attach_row_mentions(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
     scope,
     items: list[SourceRow],
 ) -> None:
@@ -69,6 +71,7 @@ async def attach_row_mentions(
         for url, name, responses in rows:
             if name:
                 found.setdefault(str(url), {})[(kind, str(name))] = int(responses)
+    identities = await brand_identities(session, project_id=project_id)
     for row in items:
         named = found.get(row.key)
         if not named:
@@ -76,6 +79,18 @@ async def attach_row_mentions(
         ordered = sorted(named.items(), key=lambda item: (-item[1], item[0][1]))
         row.mentions = len(ordered)
         row.brands = [
-            SourceRowBrand(kind=kind, name=name, responses=responses)
+            _row_brand(kind, name, responses, identities)
             for (kind, name), responses in ordered[:SOURCE_ROW_MAX_BRANDS]
         ]
+
+
+def _row_brand(kind, name, responses, identities) -> SourceRowBrand:
+    """One chip, carrying this project's mark for the brand when it has one."""
+    identity = identities.get(" ".join(name.split()).casefold())
+    return SourceRowBrand(
+        kind=kind,
+        name=name,
+        responses=responses,
+        logo_url=identity.logo_url if identity else None,
+        website=identity.website if identity else None,
+    )

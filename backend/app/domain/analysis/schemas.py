@@ -66,6 +66,11 @@ class SourceRowBrand(BaseModel):
     kind: Literal["brand", "competitor"]
     name: str
     responses: int = 0
+    # What a logo chip needs: the cached mark this project already holds, or a
+    # website to derive one from. Both null means the chip shows initials,
+    # which is the honest answer for a brand with no mark on file.
+    logo_url: str | None = None
+    website: str | None = None
 
 
 class SourceRow(BaseModel):
@@ -201,6 +206,8 @@ class SourceUrlBrand(BaseModel):
     kind: Literal["brand", "competitor"]
     name: str
     responses: int = 0
+    logo_url: str | None = None
+    website: str | None = None
 
 
 class SourceUrlDetail(BaseModel):

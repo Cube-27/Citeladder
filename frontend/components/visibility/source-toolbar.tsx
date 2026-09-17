@@ -46,6 +46,7 @@ export function SourceTableToolbar({
   rows,
   domain,
   typeControl,
+  domainControl,
 }: Readonly<{
   dimension: 'domain' | 'url';
   search: string;
@@ -53,6 +54,8 @@ export function SourceTableToolbar({
   rows: readonly SourceItem[];
   domain: string | null;
   typeControl: ReactNode;
+  /** Narrows the URL table to one publisher, above the URL column. */
+  domainControl?: ReactNode;
 }>) {
   const onExport = () => {
     const stamp = new Date().toISOString().slice(0, 10);
@@ -92,6 +95,7 @@ export function SourceTableToolbar({
 
   return (
     <CardHeader className="flex-row flex-wrap items-center gap-2">
+      {domainControl}
       {typeControl}
       <div className="ml-auto flex items-center gap-2">
         <SearchField

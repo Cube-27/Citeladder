@@ -30,6 +30,7 @@ from datetime import datetime
 from sqlalchemy import String, cast, func, select
 
 from app.core.config.analysis import VISIBILITY_EVIDENCE_DEFAULT_LIMIT
+from app.domain.analysis.brand_identity import brand_identities
 from app.domain.analysis.evidence import (
     _assert_selected_audit,
     _evidence_statement,
@@ -104,7 +105,13 @@ async def get_visibility_source_url(
             func.coalesce(Audit.completed_at, Audit.created_at).label("observed_at"),
             AuditPromptSnapshot.text.label("prompt_text"),
             AuditPromptSnapshot.theme.label("theme"),
-            cast(AuditPromptSnapshot.prompt_id, String).label("prompt_key"),
+            # Coalesced to the frozen text, exactly as the source projection
+            # does. A snapshot whose prompt was deleted carries a NULL id, and
+            # `count(distinct)` skips nulls -- so counting the id alone reports
+            # fewer prompts than the table below it lists.
+            func.coalesce(
+                cast(AuditPromptSnapshot.prompt_id, String), AuditPromptSnapshot.text
+            ).label("prompt_key"),
         )
         .order_by(None)
         .subquery()
@@ -154,7 +161,9 @@ async def get_visibility_source_url(
         last_seen=overview.last_seen,
         engines=await _engines(session, cited=cited),
         prompt_rows=await _prompts(session, cited=cited),
-        brands=await _brands(session, workspace_id=workspace_id, cited=cited),
+        brands=await _brands(
+            session, workspace_id=workspace_id, project_id=project_id, cited=cited
+        ),
     )
 
 
@@ -224,7 +233,7 @@ async def _prompts(session, *, cited) -> list[SourceUrlPromptRow]:
     ]
 
 
-async def _brands(session, *, workspace_id, cited) -> list[SourceUrlBrand]:
+async def _brands(session, *, workspace_id, project_id, cited) -> list[SourceUrlBrand]:
     """Brands and competitors named in the answers that cited this URL.
 
     Co-occurrence within one answer, which is the strongest link the persisted
@@ -249,7 +258,15 @@ async def _brands(session, *, workspace_id, cited) -> list[SourceUrlBrand]:
             if name:
                 found[(kind, str(name))] = int(responses)
     ordered = sorted(found.items(), key=lambda item: (-item[1], item[0][1]))
+    identities = await brand_identities(session, project_id=project_id)
     return [
-        SourceUrlBrand(kind=kind, name=name, responses=responses)
+        SourceUrlBrand(
+            kind=kind,
+            name=name,
+            responses=responses,
+            logo_url=(identity := identities.get(" ".join(name.split()).casefold()))
+            and identity.logo_url,
+            website=identity.website if identity else None,
+        )
         for (kind, name), responses in ordered[:SOURCE_URL_MAX_BRANDS]
     ]

@@ -64,8 +64,14 @@ export function DonutChart({
   const [active, setActive] = useState<string | null>(null);
   const drawn = slices.filter((slice) => slice.value > 0);
   const sum = drawn.reduce((carry, slice) => carry + slice.value, 0);
+  // The denominator is the DECLARED total, never the slices' own sum. The
+  // slices can be a bounded or classified subset — citations whose page was
+  // never identified are counted in the centre and belong to no type — and
+  // scaling them to fill the ring would report 100% beside a larger number.
+  const whole = Math.max(total, sum);
+  const unaccounted = Math.max(whole - sum, 0);
 
-  if (!drawn.length || sum <= 0) {
+  if (!drawn.length || whole <= 0) {
     return <p className={textRole('meta', cn('text-secondary', className))}>{emptyLabel}</p>;
   }
 
@@ -73,7 +79,7 @@ export function DonutChart({
   // running total. Accumulated up front rather than inside the map: mutating a
   // local while rendering is the pattern that breaks when React replays a
   // render, and the scan says what it means anyway.
-  const lengths = drawn.map((slice) => (slice.value / sum) * CIRCUMFERENCE);
+  const lengths = drawn.map((slice) => (slice.value / whole) * CIRCUMFERENCE);
   const starts = lengths.reduce<number[]>(
     (carry, length, index) => [...carry, (carry[index] ?? 0) + length],
     [0],
@@ -84,6 +90,10 @@ export function DonutChart({
     dash: Math.max(lengths[index] - (lengths[index] > GAP * 2 ? GAP : 0), 0.5),
     offset: -starts[index],
   }));
+  // The remainder is drawn as a quiet arc rather than left as a gap: an
+  // unclosed ring reads as a rendering fault, and a closed one that silently
+  // rescaled its parts is worse.
+  const remainderLength = (unaccounted / whole) * CIRCUMFERENCE;
   const highlighted = active ? drawn.find((slice) => slice.key === active) : undefined;
 
   return (
@@ -93,10 +103,11 @@ export function DonutChart({
           same composition twice, so the drawing is hidden and the list is the
           accessible copy. */}
       <p id={titleId} className="sr-only">
-        {`${total} ${totalLabel}. ` +
+        {`${whole} ${totalLabel}. ` +
           drawn
-            .map((slice) => `${slice.label}: ${slice.value} (${shareText(slice.value, sum)})`)
-            .join(', ')}
+            .map((slice) => `${slice.label}: ${slice.value} (${shareText(slice.value, whole)})`)
+            .join(', ') +
+          (unaccounted > 0 ? `. Unclassified: ${unaccounted}` : '')}
       </p>
       <div className="relative">
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden className="size-[168px]">
@@ -122,6 +133,18 @@ export function DonutChart({
                 )}
               />
             ))}
+            {remainderLength > 0 ? (
+              <circle
+                cx={SIZE / 2}
+                cy={SIZE / 2}
+                r={RADIUS}
+                fill="none"
+                strokeWidth={STROKE}
+                strokeDasharray={`${remainderLength} ${CIRCUMFERENCE - remainderLength}`}
+                strokeDashoffset={-(CIRCUMFERENCE - remainderLength)}
+                className="stroke-border-subtle"
+              />
+            ) : null}
           </g>
         </svg>
         {/* Centre copy sits over the ring rather than inside the svg so it
@@ -134,7 +157,7 @@ export function DonutChart({
             <div className="grid gap-0.5">
               <span className={textRole('metric', 'tabular-nums')}>{highlighted.value}</span>
               <span className={textRole('meta', 'text-secondary')}>
-                {shareText(highlighted.value, sum)}
+                {shareText(highlighted.value, whole)}
               </span>
             </div>
           ) : (
@@ -162,7 +185,7 @@ export function DonutChart({
               <span className={cn('size-2 shrink-0 rounded-full', slice.swatchClass)} aria-hidden />
               <span className={textRole('meta', 'truncate')}>{slice.label}</span>
               <span className={textRole('meta', 'text-secondary ml-auto shrink-0 tabular-nums')}>
-                {shareText(slice.value, sum)}
+                {shareText(slice.value, whole)}
               </span>
             </button>
           </li>

@@ -29,6 +29,7 @@ import {
 } from '@/lib/visibility/sources';
 import {
   useSourceAnalysis,
+  useSourceDomains,
   useSourceSeries,
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
@@ -54,8 +55,11 @@ export function VisibilitySources({
   queries,
 }: Readonly<{ filters: SourceFilters; queries: SourceQueries }>) {
   const [openUrl, setOpenUrl] = useUrlState('source_url', optionalStringUrlCodec);
+  // `source_view` goes with the domain: opening a second domain while its
+  // Prompts tab was selected would otherwise land on that domain's Prompts,
+  // which is not where a reader who clicked a row expects to be.
   const [domain, setDomain] = useUrlState('source_domain', optionalStringUrlCodec, {
-    clearKeys: ['source_offset', 'source_as_of', 'source_url'],
+    clearKeys: ['source_offset', 'source_as_of', 'source_url', 'source_view'],
   });
 
   if (openUrl) {
@@ -66,6 +70,10 @@ export function VisibilitySources({
         filters={filters}
         queries={queries}
         onBack={() => setOpenUrl(null)}
+        onOpenInventory={() => {
+          setOpenUrl(null);
+          setDomain(null);
+        }}
       />
     );
   }
@@ -150,9 +158,21 @@ export function SourcesPanel({
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortState>(null);
 
-  const scope = { dimension, domain, offset, asOf, sourceType, pageSize };
+  // On a domain's own page the publisher is fixed by the route above, so the
+  // control is not offered there — it would let a reader contradict the
+  // breadcrumb they arrived through.
+  const [pickedDomain, setPickedDomain] = useUrlState('source_pick', optionalStringUrlCodec, {
+    clearKeys: ['source_offset', 'source_as_of'],
+  });
+  const domainOptions = useSourceDomains(filters, queries);
+  const activeDomain = domain ?? pickedDomain;
+  const scope = { dimension, domain: activeDomain, offset, asOf, sourceType, pageSize };
   const { sourceQuery } = useSourceAnalysis(filters, queries, scope);
-  const seriesQuery = useSourceSeries(filters, queries, { dimension, domain, sourceType });
+  const seriesQuery = useSourceSeries(filters, queries, {
+    dimension,
+    domain: activeDomain,
+    sourceType,
+  });
 
   const data = sourceQuery.data;
   const types = availableTypes(data?.category_totals, dimension);
@@ -198,22 +218,23 @@ export function SourcesPanel({
           search={search}
           onSearch={setSearch}
           rows={rows}
-          domain={domain}
-          typeControl={
-            types.length > 1 ? (
-              <AnalysisChoice
-                label={dimension === 'url' ? 'Filter by URL type' : 'Filter by domain type'}
-                value={sourceType ?? 'all'}
-                options={[
-                  {
-                    value: 'all',
-                    label: dimension === 'url' ? 'All URL types' : 'All domain types',
-                  },
-                  ...types.map((type) => ({ value: type.token, label: type.label })),
-                ]}
-                onChange={(value) => setSourceType(value === 'all' ? null : value)}
+          domain={activeDomain}
+          domainControl={
+            domain ? null : (
+              <DomainFilter
+                value={pickedDomain}
+                options={domainOptions}
+                onChange={setPickedDomain}
               />
-            ) : null
+            )
+          }
+          typeControl={
+            <TypeFilter
+              dimension={dimension}
+              value={sourceType}
+              options={types}
+              onChange={setSourceType}
+            />
           }
         />
         <CardContent className="p-0">
@@ -230,7 +251,7 @@ export function SourcesPanel({
           />
           <SourcePaging
             data={data}
-            domain={domain}
+            domain={activeDomain}
             dimension={dimension}
             offset={Math.max(0, Number.parseInt(offset ?? '0', 10) || 0)}
             pageSize={pageSize}
@@ -243,6 +264,57 @@ export function SourcesPanel({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** Narrows every table on the tab to one publisher. */
+function DomainFilter({
+  value,
+  options,
+  onChange,
+}: Readonly<{
+  value: string | null;
+  options: readonly string[];
+  onChange: (value: string | null) => void;
+}>) {
+  if (options.length < 2) return null;
+  return (
+    <AnalysisChoice
+      label="Filter by domain"
+      value={value ?? 'all'}
+      options={[
+        { value: 'all', label: 'All domains' },
+        ...options.map((entry) => ({ value: entry, label: entry })),
+      ]}
+      onChange={(next) => onChange(next === 'all' ? null : next)}
+    />
+  );
+}
+
+/** Narrows the table to one domain type, or one URL type. */
+function TypeFilter({
+  dimension,
+  value,
+  options,
+  onChange,
+}: Readonly<{
+  dimension: 'domain' | 'url';
+  value: string | null;
+  options: readonly { token: string; label: string }[];
+  onChange: (value: string | null) => void;
+}>) {
+  if (options.length < 2) return null;
+  const urls = dimension === 'url';
+  return (
+    <AnalysisChoice
+      label={urls ? 'Filter by URL type' : 'Filter by domain type'}
+      value={value ?? 'all'}
+      options={[
+        { value: 'all', label: urls ? 'All URL types' : 'All domain types' },
+        ...options.map((type) => ({ value: type.token, label: type.label })),
+      ]}
+      onChange={(next) => onChange(next === 'all' ? null : next)}
+    />
   );
 }
 

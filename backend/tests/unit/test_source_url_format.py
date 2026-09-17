@@ -39,6 +39,11 @@ from app.models.source_pages import SourcePage
         ("https://wise.com/", PAGE_FORMAT_HOMEPAGE),
         ("https://wise.com", PAGE_FORMAT_HOMEPAGE),
         ("https://wise.com/us/blog/revolut-vs-wise", PAGE_FORMAT_COMPARISON),
+        # The marker at the START of the path: `/vs/wise` normalizes to
+        # `vs-wise`, which has no leading hyphen for a `-vs-` pattern to find.
+        ("https://site.com/vs/wise", PAGE_FORMAT_COMPARISON),
+        ("https://site.com/wise/vs", PAGE_FORMAT_COMPARISON),
+        ("https://site.com/compare", PAGE_FORMAT_COMPARISON),
         ("https://site.com/alternatives/revolut", PAGE_FORMAT_ALTERNATIVE),
         ("https://site.com/how-to-send-money", PAGE_FORMAT_HOW_TO),
         ("https://nerdwallet.com/best-credit-cards", PAGE_FORMAT_LISTICLE),
@@ -52,6 +57,13 @@ from app.models.source_pages import SourcePage
 def test_a_url_shape_establishes_the_kind_a_reader_would_agree_with(url, expected):
     page_format, _method = derive_url_format(url)
     assert page_format == expected
+
+
+def test_a_comparison_marker_is_a_whole_segment_and_not_a_substring():
+    """`vs` is a segment. `versatile` and `advsomething` are not."""
+    assert derive_url_format("https://site.com/versatile-tools")[0] != (
+        PAGE_FORMAT_COMPARISON
+    )
 
 
 def test_a_slug_word_does_not_match_inside_a_longer_headline():

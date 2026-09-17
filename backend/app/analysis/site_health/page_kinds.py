@@ -34,6 +34,8 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from app.analysis.site_health.content_heuristics import content_heuristic
+from app.analysis.site_health.page_routes import signal as _signal
+from app.analysis.site_health.page_routes import slug_signals
 from app.core.config import site_health_acquisition as _acquisition
 from app.core.config import site_health_contracts as _contracts
 from app.core.config import site_health_taxonomy as _config
@@ -170,21 +172,6 @@ def _is_absolute_http_url(final_url: str) -> bool:
     return parts.scheme.lower() in {"http", "https"} and bool(parts.hostname)
 
 
-def _signal(signal: str, page_kind: str, detail: str) -> dict[str, Any]:
-    """One bounded matched-signal record, tagged with its evidence tier."""
-    return {
-        "signal": signal,
-        "page_kind": page_kind,
-        # ``.get`` with the weakest tier as default: a signal constant added
-        # without a tier should contribute the least, not raise KeyError and
-        # fail the whole classification of an otherwise analyzable page.
-        "tier": _config.PAGE_KIND_SIGNAL_TIERS.get(
-            signal, _config.PAGE_KIND_TIER_SEMANTIC
-        ),
-        "detail": detail[:_MAX_SIGNAL_DETAIL_CHARS],
-    }
-
-
 def _mapping(value: Any) -> dict[str, Any]:
     """A nested fact as a mapping, or ``{}`` when it is the wrong shape.
 
@@ -232,6 +219,30 @@ def classify(final_url: str, facts: dict) -> PageKindAssessment:
     matched, schema_page_kind = _classification_signals(final_url, mapped)
     winner = _winning_signal(matched)
     return _assessment(matched, winner, schema_page_kind)
+
+
+def route_page_kind(final_url: str) -> str | None:
+    """The page kind this URL's PATH alone establishes, or ``None``.
+
+    The URL-only slice of ``classify``, published because a caller outside
+    Site Health needs it. Cited third-party pages are mostly never fetched --
+    the inspection budget is small and the publishers are not ours -- so the
+    only evidence available for most of them is the address. Re-deriving these
+    route rules in a second module would be a second place they drift from the
+    catalog in config.
+
+    Returns ``None`` rather than ``other`` when the path settles nothing:
+    "this URL says nothing about its kind" and "this page is of kind other"
+    are different answers, and only the caller knows which one its surface
+    should show.
+    """
+    if not _is_absolute_http_url(final_url):
+        return None
+    path = _normalized_path(final_url)
+    if path in _config.HOMEPAGE_PATH_EQUIVALENTS:
+        return _config.PAGE_KIND_HOMEPAGE
+    signals = _route_signals(path)
+    return str(signals[0]["page_kind"]) if signals else None
 
 
 def _assessment(
@@ -557,7 +568,12 @@ def _route_signals(path: str) -> list[dict[str, Any]]:
     Config order is the deterministic tie-breaker when two patterns identify
     the same segment. This preserves ``/blog/products/...`` as article while
     still finding nested route patterns such as ``/resources/guides/...``.
+
+    A shape named inside the slug wins first: see ``slug_signals``.
     """
+    slug_matched = slug_signals(path)
+    if slug_matched:
+        return slug_matched
     path_matches: list[tuple[int, int, str, re.Pattern[str]]] = []
     for priority, (page_kind, pattern) in enumerate(_PATH_PATTERNS):
         match = pattern.match(path)

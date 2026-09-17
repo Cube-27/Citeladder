@@ -54,15 +54,18 @@ export function observationLabel(state: string | null | undefined): string | nul
  * display grouping that folded three classes into one chip could not be sent
  * back to the endpoint as a filter at all.
  *
- * `brand_owned` reads as "You" rather than "Corporate". Whether a cited page is
- * the reader's own is the single most useful distinction on the screen, and
- * folding it into a generic class is the one edit that would cost the table
- * its point.
+ * `brand_owned` reads as "You". Whether a cited page is the reader's own is the
+ * single most useful distinction on the screen, and folding it into a generic
+ * class is the one edit that would cost the table its point.
+ *
+ * `review_marketplace` reads as "Reviews", not "Corporate". The class holds G2,
+ * Trustpilot and Yelp — sites whose content is other people's verdicts — and
+ * calling that corporate describes the wrong half of what it is.
  */
 export const DOMAIN_TYPES: readonly { token: string; label: string }[] = [
   { token: 'brand_owned', label: 'You' },
   { token: 'competitor_owned', label: 'Competitor' },
-  { token: 'review_marketplace', label: 'Corporate' },
+  { token: 'review_marketplace', label: 'Reviews' },
   { token: 'editorial_third_party', label: 'Editorial' },
   { token: 'institutional', label: 'Institutional' },
   { token: 'community', label: 'UGC' },

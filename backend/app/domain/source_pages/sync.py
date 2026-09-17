@@ -58,6 +58,17 @@ def _stale_before(now: datetime) -> datetime:
     return now - timedelta(hours=SOURCE_PAGE_STALE_AFTER_HOURS)
 
 
+# Which existing page-format evidence a URL-derived verdict is allowed to
+# replace. NULL is included explicitly: rows written before the format column
+# carried a method have no method at all, and `IN (...)` is never true for
+# NULL, so without this they would be the only pages that never got a format.
+_weak_format = SourcePage.page_format_method.is_(None) | (
+    SourcePage.page_format_method.in_(
+        (PAGE_FORMAT_METHOD_URL_PATTERN, PAGE_FORMAT_METHOD_NONE)
+    )
+)
+
+
 async def _resolved_rows(
     session: AsyncSession, *, audit: Audit
 ) -> list[tuple[str, str, str, str | None, str | None, int]]:
@@ -166,32 +177,24 @@ async def sync_cited_pages(
                     "source_class": source_class,
                     "source_taxonomy_version": taxonomy_version,
                     # The URL shape is the WEAKEST evidence for a page kind,
-                    # so it only fills a gap. Once an inspection has read the
-                    # page, re-syncing the inventory must not replace what the
-                    # page said about itself with a guess from its address.
+                    # so it only fills a gap. Once a page has been read, a
+                    # re-sync must not replace what the page said about itself
+                    # with a guess from its address.
+                    #
+                    # All three columns move together. Leaving the version
+                    # behind would stamp a URL-derived format with the version
+                    # of the reading it just replaced.
                     "page_format": case(
-                        (
-                            SourcePage.page_format_method.in_(
-                                (
-                                    PAGE_FORMAT_METHOD_URL_PATTERN,
-                                    PAGE_FORMAT_METHOD_NONE,
-                                )
-                            ),
-                            url_format,
-                        ),
+                        (_weak_format, url_format),
                         else_=SourcePage.page_format,
                     ),
                     "page_format_method": case(
-                        (
-                            SourcePage.page_format_method.in_(
-                                (
-                                    PAGE_FORMAT_METHOD_URL_PATTERN,
-                                    PAGE_FORMAT_METHOD_NONE,
-                                )
-                            ),
-                            url_format_method,
-                        ),
+                        (_weak_format, url_format_method),
                         else_=SourcePage.page_format_method,
+                    ),
+                    "page_format_version": case(
+                        (_weak_format, SOURCE_PAGE_FORMAT_VERSION),
+                        else_=SourcePage.page_format_version,
                     ),
                     "updated_at": moment,
                 },
