@@ -22,7 +22,6 @@ NOTHING`` and reconcile short-circuits on terminal crawls).
 from __future__ import annotations
 
 import logging
-import time
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -99,6 +98,7 @@ from app.models.site_health.urls import SiteUrlObservation
 from app.workers.site_health.lifecycle_finalize import (
     CrawlFinalizeMixin,
 )
+from app.workers.site_health.score_refresh import ScoreRefreshCadence
 
 logger = logging.getLogger("app.workers.site_health.lifecycle")
 
@@ -267,7 +267,7 @@ class CrawlLifecycle(CrawlFinalizeMixin):
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
-        self._score_refresh_marks: dict[uuid.UUID, tuple[float, int]] = {}
+        self._score_refresh = ScoreRefreshCadence()
 
     async def reconcile_after_task(
         self,
@@ -292,7 +292,7 @@ class CrawlLifecycle(CrawlFinalizeMixin):
         if outcome is _FinalizeAction.NONE:
             return
         if outcome is _FinalizeAction.REFRESH_SCORES:
-            if self._admit_score_refresh(task.crawl_id):
+            if self._score_refresh.admits(task.crawl_id):
                 await refresh_live_score_summary_for_crawl(
                     self._session_factory,
                     crawl_id=task.crawl_id,
@@ -300,56 +300,6 @@ class CrawlLifecycle(CrawlFinalizeMixin):
                 )
             return
         await self.reconcile(task.crawl_id)
-
-    def _admit_score_refresh(self, crawl_id: uuid.UUID) -> bool:
-        """Debounce the live summary rebuild to a cadence, not a page count.
-
-        The rebuild reloads the crawl's whole measurement projection under the
-        crawl and profile row locks, so running it once per analyzed page costs
-        O(pages^2) and holds exactly the locks cancellation competes for. The
-        check lives here rather than inside the refresh because the refresh
-        takes its lock before it can read anything -- a check in there would
-        already have paid the contention it exists to avoid. This one costs a
-        dict lookup: no query, no lock.
-
-        Deliberately kept in process. The mark is a display cadence, not a
-        fact: terminalization rebuilds the summary from persisted evidence
-        regardless, so the worst a lost or duplicated mark can do is refresh
-        more often than configured.
-        """
-        page_interval = site_health_settings.live_score_refresh_page_interval
-        min_interval = site_health_settings.live_score_refresh_min_interval_seconds
-        if page_interval <= 0 and min_interval <= 0:
-            return True
-        now = time.monotonic()
-        # An unseen crawl has ``last_at`` 0.0, so its first analysis always
-        # refreshes and the first score card appears as promptly as ever.
-        last_at, pending = self._score_refresh_marks.get(crawl_id, (0.0, 0))
-        pending += 1
-        due = (page_interval > 0 and pending >= page_interval) or (
-            min_interval > 0 and now - last_at >= min_interval
-        )
-        self._score_refresh_marks[crawl_id] = (now, 0) if due else (last_at, pending)
-        # Prune on both paths. With the elapsed trigger disabled a crawl's
-        # first analysis is not due, so an unseen crawl can enter the table
-        # here without ever passing through the admitted branch.
-        self._prune_score_refresh_marks()
-        return due
-
-    def _prune_score_refresh_marks(self) -> None:
-        """Bound the mark table so a long-lived worker cannot accumulate rows.
-
-        Evicting the least recently refreshed crawl is safe on its own terms:
-        a forgotten crawl simply refreshes once more than it strictly owed.
-        """
-        cap = site_health_settings.live_score_refresh_max_tracked_crawls
-        if cap <= 0 or len(self._score_refresh_marks) <= cap:
-            return
-        stale = sorted(self._score_refresh_marks.items(), key=lambda item: item[1][0])[
-            : len(self._score_refresh_marks) - cap
-        ]
-        for crawl_id, _mark in stale:
-            self._score_refresh_marks.pop(crawl_id, None)
 
     async def _finalize_reconcile_outcome(
         self,

@@ -159,11 +159,9 @@ class SiteHealthWorker(DrainableWorkerMixin):
         )
         self.owner = owner or f"site-worker-{uuid.uuid4().hex[:12]}"
         self._resolver = resolver or SystemDnsResolver()
-        # Tests inject the same bounded transport contract used by curl-cffi.
-        # Production builds one curl transport for the whole worker rather than
-        # leaving ``SecureFetcher`` to build a fresh one per task: the transport
-        # owns the pooled curl sessions, so a per-task transport threw away the
-        # connection and TLS session after every page.
+        # One curl transport for the whole worker: it owns the pooled curl
+        # sessions, so a per-task transport threw away the connection and TLS
+        # session after every page. Tests inject the same bounded contract.
         self._owns_transport = transport is None
         self._transport: AcquisitionTransport = transport or CurlCffiTransport(
             impersonation_profile=site_health_settings.curl_cffi_impersonation_profile
@@ -199,13 +197,7 @@ class SiteHealthWorker(DrainableWorkerMixin):
         )
 
     async def aclose(self) -> None:
-        """Release the worker-lived curl transport and its pooled sessions.
-
-        An injected transport belongs to whoever injected it, so only a
-        transport this worker built is closed here -- the same ownership rule
-        ``SecureFetcher`` applies, which is what keeps a per-task fetcher from
-        tearing down the worker's pool.
-        """
+        """Close pooled curl sessions; an injected transport is not ours."""
         if self._owns_transport:
             await self._transport.aclose()
 
