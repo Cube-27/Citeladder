@@ -326,7 +326,7 @@ def _evaluate_visibility_metric(
             f"visibility_metric: {metric_name} has no frozen baseline"
         )
         return
-    value = metric_value(snapshot, metric=metric_name, prompt_index=prompt_index)
+    value = metric_value(snapshot, prompt_index=prompt_index)
     if value is None:
         result.limitations.append(f"visibility_metric: {metric_name} unavailable")
         return

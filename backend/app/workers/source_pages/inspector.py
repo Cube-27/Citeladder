@@ -39,10 +39,7 @@ from app.analysis.source_pages import assess_page, extract_source_page
 from app.connectors.web_evidence.contracts import FetchError, FetchResult
 from app.connectors.web_evidence.fetcher import SecureFetcher
 from app.connectors.web_evidence.resolver import SystemDnsResolver
-from app.connectors.web_evidence.source_page_fetch import (
-    redirect_resolution_request,
-    source_page_request,
-)
+from app.connectors.web_evidence.source_page_fetch import source_page_request
 from app.core.config.source_pages import (
     INSPECTION_REASON_NON_HTML,
     INSPECTION_REASON_ROBOTS,
@@ -85,7 +82,7 @@ class _Scope:
 
     workspace_id: uuid.UUID
     project_id: uuid.UUID
-    audit_id: uuid.UUID | None
+    audit_id: uuid.UUID
     config: ScoringConfig
     roster_version: str
 
@@ -139,13 +136,11 @@ class _Inspector:
             reason=INSPECTION_REASON_ROBOTS,
         )
 
-    async def fetch(self, url: str, *, redirect: bool) -> FetchResult | FetchOutcome:
+    async def fetch(self, url: str) -> FetchResult | FetchOutcome:
         """Fetch one external URL, or describe why it could not be read."""
         if not await self.allowed(url):
             return self._blocked(url)
-        request = (
-            redirect_resolution_request(url) if redirect else source_page_request(url)
-        )
+        request = source_page_request(url)
         try:
             async with self.pacer.slot(authority_key(url)):
                 async with asyncio.timeout(SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS * 2):
@@ -247,7 +242,7 @@ async def _inspect_one(
     page: SourcePage,
     scope: _Scope,
 ) -> None:
-    result = await inspector.fetch(page.canonical_url, redirect=False)
+    result = await inspector.fetch(page.canonical_url)
     if isinstance(result, FetchOutcome):
         await record_inspection(
             session, page=page, fetch=result, audit_id=scope.audit_id
@@ -282,11 +277,11 @@ async def _resolve_redirects(
         if not paid:
             logger.info("source-page redirect budget exhausted")
             return resolved
-        result = await inspector.fetch(token.url, redirect=True)
+        result = await inspector.fetch(token.url)
         if isinstance(result, FetchOutcome):
             continue
         identity = identify_unwrapped_redirect(result.final_url)
-        if not identity.is_resolved or not identity.url_hash:
+        if not identity.url_hash:
             logger.debug(
                 "redirect did not resolve to a publisher",
                 extra={"reason": INSPECTION_REASON_UNRESOLVED_REDIRECT},
@@ -358,13 +353,13 @@ async def _inspect_claims(
     inspector: _Inspector,
     *,
     scope: _Scope,
-    claims: list,
+    claims: list[uuid.UUID],
 ) -> None:
     semaphore = asyncio.Semaphore(SOURCE_PAGE_FETCH_CONCURRENCY)
 
-    async def run(claim) -> None:
+    async def run(page_id: uuid.UUID) -> None:
         async with semaphore, session_factory() as session:
-            page = await session.get(SourcePage, claim.source_page_id)
+            page = await session.get(SourcePage, page_id)
             if page is None:
                 return
             try:
@@ -375,52 +370,44 @@ async def _inspect_claims(
                 # were read successfully alongside it.
                 logger.exception(
                     "source-page inspection failed",
-                    extra={"source_page_id": str(claim.source_page_id)},
+                    extra={"source_page_id": str(page_id)},
                 )
                 await session.rollback()
 
-    await asyncio.gather(*(run(claim) for claim in claims))
+    await asyncio.gather(*(run(page_id) for page_id in claims))
 
 
 async def _hand_off(
-    session_factory: async_sessionmaker[AsyncSession], *, scope: _Scope
+    session_factory: async_sessionmaker[AsyncSession],
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    audit_id: uuid.UUID,
 ) -> None:
     """Queue the Opportunity refresh this audit is waiting on.
 
     Batch completion, not per page: the recompute is project-wide, so running
     it once per inspected page would be the same work repeated.
     """
-    if scope.audit_id is None:
-        return
     async with session_factory() as session:
         await enqueue_audit_opportunity_tasks(
             session,
-            workspace_id=scope.workspace_id,
-            project_id=scope.project_id,
-            audit_id=scope.audit_id,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            audit_id=audit_id,
         )
         await session.commit()
 
 
 def _is_final_attempt(task: AnalyticsTask) -> bool:
-    return int(task.attempt_count or 0) >= int(task.max_attempts or 1)
+    """Whether the attempt now running is the last one this task will get.
 
-
-def _fallback_scope(task: AnalyticsTask) -> _Scope:
-    """Enough identity to hand off after a failure that produced no scope."""
-    if task.project_id is None:
-        raise ValueError("Source page inspection requires project_id")
-    try:
-        audit_id: uuid.UUID | None = _audit_id(task)
-    except ValueError:
-        audit_id = None
-    return _Scope(
-        workspace_id=task.workspace_id,
-        project_id=task.project_id,
-        audit_id=audit_id,
-        config=ScoringConfig.from_project({}),
-        roster_version="",
-    )
+    ``attempt_count`` on a claimed row is the number of attempts that already
+    FINISHED -- the worker bumps it in ``_finalize``, after the executor
+    returns. The attempt in progress is therefore ``attempt_count + 1``, and
+    comparing the stored value directly would mean this never fires.
+    """
+    return int(task.attempt_count or 0) + 1 >= int(task.max_attempts or 1)
 
 
 async def _run_inspection(
@@ -430,7 +417,7 @@ async def _run_inspection(
         audit = await _load_audit(session, task)
         if audit is None:
             raise ValueError("Source page inspection audit is unavailable")
-        sync = await sync_cited_pages(session, audit=audit)
+        tokens = await sync_cited_pages(session, audit=audit)
         await session.commit()
         scope = _Scope(
             workspace_id=audit.workspace_id,
@@ -447,7 +434,7 @@ async def _run_inspection(
             pacer=HostPacer(),
         )
         prefetched = await _resolve_redirects(
-            session_factory, inspector, audit=audit, tokens=sync.unresolved
+            session_factory, inspector, audit=audit, tokens=tokens
         )
         # Resolving tokens creates identities the first sync could not see.
         async with session_factory() as session:
@@ -482,6 +469,17 @@ async def inspect_source_pages(
         scope = await _run_inspection(session_factory, task)
     except Exception:
         if _is_final_attempt(task):
-            await _hand_off(session_factory, scope=_fallback_scope(task))
+            with contextlib.suppress(ValueError):
+                await _hand_off(
+                    session_factory,
+                    workspace_id=task.workspace_id,
+                    project_id=task.project_id,
+                    audit_id=_audit_id(task),
+                )
         raise
-    await _hand_off(session_factory, scope=scope)
+    await _hand_off(
+        session_factory,
+        workspace_id=scope.workspace_id,
+        project_id=scope.project_id,
+        audit_id=scope.audit_id,
+    )

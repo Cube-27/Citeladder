@@ -46,7 +46,7 @@ from app.core.config.source_pages import (
 _MIN_UNAMBIGUOUS_ALIAS_CHARS = 3
 
 
-def _windows(text: str, alias: str) -> tuple[int, list[tuple[int, int]]]:
+def _windows(text: str, alias: str) -> list[tuple[int, int]]:
     """Every whole-token occurrence of ``alias`` in the ORIGINAL text.
 
     Searched case-insensitively against the original rather than against a
@@ -55,8 +55,7 @@ def _windows(text: str, alias: str) -> tuple[int, list[tuple[int, int]]]:
     wrong characters in the original.
     """
     pattern = re.compile(r"(?<!\w)" + re.escape(alias) + r"(?!\w)", re.IGNORECASE)
-    spans = [(match.start(), match.end()) for match in pattern.finditer(text)]
-    return len(spans), spans
+    return [(match.start(), match.end()) for match in pattern.finditer(text)]
 
 
 def _passage(text: str, start: int, end: int, entity_ref: str) -> EvidencePassage:
@@ -79,8 +78,8 @@ def _resolve_alias(
         candidate = alias.strip()
         if len(candidate) < _MIN_UNAMBIGUOUS_ALIAS_CHARS:
             continue
-        count, spans = _windows(text, candidate)
-        if count:
+        spans = _windows(text, candidate)
+        if spans:
             return candidate, spans
     return "", []
 
@@ -120,7 +119,7 @@ def assess_entity(
     alias, spans = _resolve_alias(haystack, candidates)
     if spans:
         refs: list[int] = []
-        for start, end in spans[:SOURCE_PAGE_MAX_PASSAGES]:
+        for start, end in spans:
             if len(passages) >= SOURCE_PAGE_MAX_PASSAGES:
                 break
             refs.append(len(passages))

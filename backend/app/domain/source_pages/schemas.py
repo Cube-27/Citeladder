@@ -19,7 +19,10 @@ from pydantic import BaseModel, ConfigDict
 
 
 class _Model(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # ``from_attributes`` so the wire model reads the domain view directly.
+    # The two declare the same fields; a hand-written mapper between them buys
+    # no isolation, because a rename on either side is a runtime error anyway.
+    model_config = ConfigDict(extra="forbid", from_attributes=True)
 
 
 class SourcePageEntityView(_Model):

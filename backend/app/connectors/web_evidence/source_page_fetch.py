@@ -23,7 +23,12 @@ from app.core.config.source_pages import (
 
 
 def source_page_request(url: str) -> FetchRequest:
-    """One bounded GET for an external page whose content we want to read."""
+    """One bounded GET for an external page whose content we want to read.
+
+    Resolving a redirect token uses this too. The publisher is unknown until
+    the hops are followed, so the request cannot be cheaper, and the body it
+    returns IS the page inspection rather than something to throw away.
+    """
     return FetchRequest(
         url=url,
         purpose=FETCH_PURPOSE_ANALYZE,
@@ -33,13 +38,3 @@ def source_page_request(url: str) -> FetchRequest:
         max_redirects=SOURCE_PAGE_MAX_REDIRECTS,
         allowed_content_types=frozenset(SOURCE_PAGE_ALLOWED_CONTENT_TYPES),
     )
-
-
-def redirect_resolution_request(url: str) -> FetchRequest:
-    """One fetch whose only purpose is learning where a token points.
-
-    Identical bounds. The publisher is unknown until the hops are followed, so
-    the request cannot be cheaper than a page fetch -- but the result is reused
-    as the page inspection rather than being thrown away and refetched.
-    """
-    return source_page_request(url)

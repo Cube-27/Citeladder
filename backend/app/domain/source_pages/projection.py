@@ -25,6 +25,7 @@ from app.core.config.source_pages import (
     INSPECTION_BLOCKED,
     INSPECTION_FAILED,
     INSPECTION_INSPECTED,
+    INSPECTION_NOT_INSPECTED,
     INSPECTION_STALE,
     PRESENCE_PARTIAL,
     SOURCE_PAGE_MIN_COVERAGE_CHARS,
@@ -35,11 +36,12 @@ from app.models.source_pages import (
     SourcePageSnapshot,
 )
 
-# The vocabulary a reader sees. The first four come from a presence row and
-# require a snapshot; the last three are properties of the page itself.
-STATE_NOT_INSPECTED = "not_inspected"
-STATE_BLOCKED = "blocked"
-STATE_STALE = "stale"
+# The vocabulary a reader sees. Four values come from a presence row and
+# require a snapshot; these three are properties of the page itself. Aliased
+# rather than re-spelled, so the two vocabularies cannot silently diverge.
+STATE_NOT_INSPECTED = INSPECTION_NOT_INSPECTED
+STATE_BLOCKED = INSPECTION_BLOCKED
+STATE_STALE = INSPECTION_STALE
 
 
 @dataclass(frozen=True, slots=True)

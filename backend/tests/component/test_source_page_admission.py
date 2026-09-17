@@ -74,7 +74,7 @@ async def test_a_claim_is_paid_for_before_anything_is_fetched(
         )
         await session.commit()
 
-        assert [claim.source_page_id for claim in claims] == [page.id]
+        assert claims == [page.id]
         await session.refresh(page)
         assert page.inspection_state == INSPECTION_QUEUED
         assert page.claim_expires_at is not None
@@ -203,7 +203,7 @@ async def test_never_inspected_pages_are_admitted_before_stale_ones(
             limit=2,
         )
 
-        assert [claim.source_page_id for claim in claims] == [fresh_gap.id, stale.id]
+        assert claims == [fresh_gap.id, stale.id]
 
 
 async def test_an_already_inspected_page_is_reused_before_a_new_one(
@@ -229,7 +229,7 @@ async def test_an_already_inspected_page_is_reused_before_a_new_one(
             limit=1,
         )
 
-        assert [claim.source_page_id for claim in claims] == [pending.id]
+        assert claims == [pending.id]
 
 
 async def test_a_robots_blocked_page_is_never_reclaimed(
@@ -267,7 +267,7 @@ async def test_an_abandoned_claim_becomes_available_again(
         )
         await session.commit()
 
-        assert [claim.source_page_id for claim in claims] == [page.id]
+        assert claims == [page.id]
         budget = await current_budget(session, project_id=scenario.project_id)
         assert budget.spent == 1
 
@@ -289,7 +289,7 @@ async def test_a_manually_requested_page_still_pays_the_same_budget(
         )
         await session.commit()
 
-        assert [claim.source_page_id for claim in claims] == [wanted.id]
+        assert claims == [wanted.id]
         budget = await current_budget(session, project_id=scenario.project_id)
         assert budget.spent == 1
 

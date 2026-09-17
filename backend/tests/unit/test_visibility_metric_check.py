@@ -10,14 +10,15 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
-
 from app.domain.opportunities.verification import (
     _evaluate_visibility_metric,
     _Evaluation,
     _observation_kind,
 )
-from app.domain.opportunities.visibility_checks import metric_value, prompt_mention_rate
+from app.domain.opportunities.visibility_checks import (
+    metric_value,
+    prompt_composite_score,
+)
 from app.models.analysis import MetricSnapshot
 
 
@@ -79,27 +80,23 @@ def test_a_decline_is_contradicted_rather_than_ignored() -> None:
     assert result.contradicted is True
 
 
-@pytest.mark.parametrize(
-    ("check", "expected_limitation"),
-    [
-        (
-            _check(baseline_value=None),
-            "visibility_metric: visibility_score has no frozen baseline",
-        ),
-        (
-            _check(metric="prompt_mention_rate"),
-            "visibility_metric: prompt_mention_rate unavailable",
-        ),
-    ],
-)
-def test_an_unobservable_expectation_verifies_nothing(
-    check: dict, expected_limitation: str
-) -> None:
-    """No baseline, or no value, must not degrade into a free pass."""
-    result = _evaluate(_snapshot(score=90.0), check)
+def test_an_expectation_with_no_frozen_baseline_verifies_nothing() -> None:
+    """A missing baseline must not degrade into a free pass."""
+    result = _evaluate(_snapshot(score=90.0), _check(baseline_value=None))
 
     assert (result.observed, result.matched, result.contradicted) == (0, 0, False)
-    assert result.limitations == [expected_limitation]
+    assert result.limitations == [
+        "visibility_metric: visibility_score has no frozen baseline"
+    ]
+    assert _observation_kind(result, 1) is None
+
+
+def test_a_prompt_missing_from_the_later_audit_verifies_nothing() -> None:
+    """Its absence is not a decline; the portfolio simply changed."""
+    result = _evaluate(_snapshot(metrics={"per_prompt": []}), _check(), prompt_index=4)
+
+    assert (result.observed, result.matched, result.contradicted) == (0, 0, False)
+    assert result.limitations == ["visibility_metric: visibility_score unavailable"]
     assert _observation_kind(result, 1) is None
 
 
@@ -107,11 +104,11 @@ def test_a_prompt_keyed_expectation_reads_only_its_own_prompt() -> None:
     """A gain on another prompt must not verify this one."""
     metrics = {
         "per_prompt": [
-            {"prompt_index": 0, "mention_stability": 0.10},
-            {"prompt_index": 1, "mention_stability": 0.90},
+            {"prompt_index": 0, "composite_score": 10.0},
+            {"prompt_index": 1, "composite_score": 90.0},
         ]
     }
-    check = _check(metric="prompt_mention_rate", baseline_value=10.0)
+    check = _check(baseline_value=10.0)
 
     flat = _evaluate(_snapshot(metrics=metrics), check, prompt_index=0)
     moved = _evaluate(_snapshot(metrics=metrics), check, prompt_index=1)
@@ -120,14 +117,22 @@ def test_a_prompt_keyed_expectation_reads_only_its_own_prompt() -> None:
     assert moved.matched == 1
 
 
-def test_prompt_rate_is_scaled_onto_the_project_score_scale() -> None:
-    """One delta serves both scopes only if both are 0-100."""
-    metrics = {"per_prompt": [{"prompt_index": 3, "mention_stability": 0.25}]}
+def test_both_scopes_read_the_same_quantity_at_two_levels() -> None:
+    """``visibility_score`` is the mean of these, so no rescaling is needed."""
+    metrics = {"per_prompt": [{"prompt_index": 3, "composite_score": 62.5}]}
 
-    assert prompt_mention_rate(metrics, 3) == 25.0
-    assert prompt_mention_rate(metrics, 4) is None
-    assert prompt_mention_rate(metrics, None) is None
-    assert (
-        metric_value(_snapshot(score=7.5), metric="visibility_score", prompt_index=None)
-        == 7.5
-    )
+    assert prompt_composite_score(metrics, 3) == 62.5
+    assert prompt_composite_score(metrics, 4) is None
+    assert metric_value(_snapshot(metrics=metrics), prompt_index=3) == 62.5
+    assert metric_value(_snapshot(score=7.5), prompt_index=None) == 7.5
+
+
+def test_repetition_agreement_is_never_mistaken_for_a_mention_rate() -> None:
+    """``mention_stability`` reads 1.0 for "always" AND "never".
+
+    Measuring a movement against it would score a genuine win as a
+    contradiction, so the check must not read that field.
+    """
+    metrics = {"per_prompt": [{"prompt_index": 0, "mention_stability": 1.0}]}
+
+    assert prompt_composite_score(metrics, 0) is None

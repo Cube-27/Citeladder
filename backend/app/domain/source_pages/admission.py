@@ -32,7 +32,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.source_pages import (
     INSPECTION_BLOCKED,
-    INSPECTION_EXCLUDED,
     INSPECTION_INSPECTED,
     INSPECTION_NOT_INSPECTED,
     INSPECTION_QUEUED,
@@ -56,18 +55,10 @@ _STATE_RANK = case(
     (SourcePage.inspection_state == INSPECTION_STALE, 1),
     else_=2,
 )
-# States a page cannot be claimed from. ``queued`` is excluded by lease check
-# rather than by state, so an abandoned claim is recoverable.
-_TERMINAL_STATES = (INSPECTION_BLOCKED, INSPECTION_EXCLUDED)
-
-
-@dataclass(frozen=True, slots=True)
-class Claim:
-    """One admitted page, already paid for."""
-
-    source_page_id: uuid.UUID
-    canonical_url: str
-    registrable_domain: str
+# The one state a page cannot be claimed from: retrying a wall spends budget
+# to be told the same thing. ``queued`` is excluded by lease check rather than
+# by state, so an abandoned claim stays recoverable.
+_TERMINAL_STATES = (INSPECTION_BLOCKED,)
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,7 +159,7 @@ async def claim_pages(
     limit: int = SOURCE_PAGE_BATCH_MAX,
     page_ids: list[uuid.UUID] | None = None,
     now: datetime | None = None,
-) -> list[Claim]:
+) -> list[uuid.UUID]:
     """Admit up to ``limit`` pages for inspection, paying for each as it is taken.
 
     Runs inside ONE transaction under the project lock, so two workers cannot
@@ -206,7 +197,7 @@ async def claim_pages(
             return []
         statement = statement.where(SourcePage.id.in_(page_ids))
 
-    claims: list[Claim] = []
+    claims: list[uuid.UUID] = []
     lease_until = moment + timedelta(minutes=SOURCE_PAGE_CLAIM_LEASE_MINUTES)
     for page in (await session.scalars(statement)).all():
         kind = (
@@ -229,11 +220,5 @@ async def claim_pages(
         page.inspection_state = INSPECTION_QUEUED
         page.claim_expires_at = lease_until
         page.updated_at = moment
-        claims.append(
-            Claim(
-                source_page_id=page.id,
-                canonical_url=page.canonical_url,
-                registrable_domain=page.registrable_domain,
-            )
-        )
+        claims.append(page.id)
     return claims

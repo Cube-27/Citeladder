@@ -24,7 +24,6 @@ from app.domain.source_pages.admission import claim_pages, current_budget
 from app.domain.source_pages.projection import SourcePageView, get_source_page
 from app.domain.source_pages.schemas import (
     SourcePageDetail,
-    SourcePageEntityView,
     SourcePageInspectionRequested,
 )
 
@@ -33,37 +32,6 @@ router = APIRouter(prefix="/projects", tags=["source-pages"])
 _SessionDep = Annotated[AsyncSession, Depends(get_db)]
 _WorkspaceDep = Annotated[WorkspaceContext, Depends(require_active_workspace)]
 _UrlHash = Annotated[str, Path(min_length=64, max_length=64)]
-
-
-def _detail(view: SourcePageView) -> SourcePageDetail:
-    return SourcePageDetail(
-        id=view.id,
-        canonical_url=view.canonical_url,
-        registrable_domain=view.registrable_domain,
-        source_class=view.source_class,
-        page_format=view.page_format,
-        page_format_method=view.page_format_method,
-        inspection_state=view.inspection_state,
-        inspection_reason=view.inspection_reason,
-        last_inspected_at=view.last_inspected_at,
-        last_cited_at=view.last_cited_at,
-        recurrence_count=view.recurrence_count,
-        title=view.title,
-        extracted_chars=view.extracted_chars,
-        entities=[
-            SourcePageEntityView(
-                entity_kind=entity.entity_kind,
-                entity_name=entity.entity_name,
-                state=entity.state,
-                match_method=entity.match_method,
-                match_count=entity.match_count,
-                passages=list(entity.passages),
-                limitations=list(entity.limitations),
-            )
-            for entity in view.entities
-        ],
-        limitations=list(view.limitations),
-    )
 
 
 async def _resolve(
@@ -96,7 +64,7 @@ async def get_source_page_endpoint(
     session: _SessionDep,
 ) -> SourcePageDetail:
     """What is known about one cited page. Never triggers an inspection."""
-    return _detail(
+    return SourcePageDetail.model_validate(
         await _resolve(session, ctx=ctx, project_id=project_id, url_hash=url_hash)
     )
 

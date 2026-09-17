@@ -41,13 +41,6 @@ SOURCE_PAGE_FORMAT_VERSION: Final = "source-page-format-1"
 URL_IDENTITY_VERBATIM: Final = "verbatim"
 URL_IDENTITY_UNWRAPPED_REDIRECT: Final = "unwrapped_redirect"
 URL_IDENTITY_UNRESOLVED: Final = "unresolved"
-URL_IDENTITY_METHODS: Final[frozenset[str]] = frozenset(
-    {
-        URL_IDENTITY_VERBATIM,
-        URL_IDENTITY_UNWRAPPED_REDIRECT,
-        URL_IDENTITY_UNRESOLVED,
-    }
-)
 
 # =========================================================================
 # Page lifecycle
@@ -58,30 +51,14 @@ INSPECTION_INSPECTED: Final = "inspected"
 INSPECTION_BLOCKED: Final = "blocked"
 INSPECTION_FAILED: Final = "failed"
 INSPECTION_STALE: Final = "stale"
-INSPECTION_EXCLUDED: Final = "excluded"
-INSPECTION_STATES: Final[frozenset[str]] = frozenset(
-    {
-        INSPECTION_NOT_INSPECTED,
-        INSPECTION_QUEUED,
-        INSPECTION_INSPECTED,
-        INSPECTION_BLOCKED,
-        INSPECTION_FAILED,
-        INSPECTION_STALE,
-        INSPECTION_EXCLUDED,
-    }
-)
 
 # Why a page is in a non-``inspected`` state. Kept separate from the state so
 # "blocked by robots" and "blocked by a bot wall" stay distinguishable.
 INSPECTION_REASON_ROBOTS: Final = "robots_disallowed"
-INSPECTION_REASON_ADMISSION: Final = "url_not_admissible"
 INSPECTION_REASON_NON_HTML: Final = "non_html"
-INSPECTION_REASON_OVERSIZE: Final = "oversize"
-INSPECTION_REASON_TIMEOUT: Final = "timeout"
 INSPECTION_REASON_STATUS: Final = "status_rejected"
 INSPECTION_REASON_TRANSPORT: Final = "transport_error"
 INSPECTION_REASON_UNRESOLVED_REDIRECT: Final = "unresolved_redirect"
-INSPECTION_REASON_BUDGET: Final = "budget_exhausted"
 
 # =========================================================================
 # Page format (derived from ONE page, never from its domain)
@@ -95,30 +72,6 @@ PAGE_FORMAT_REFERENCE: Final = "reference"
 PAGE_FORMAT_ARTICLE: Final = "article"
 PAGE_FORMAT_VIDEO: Final = "video"
 PAGE_FORMAT_UNRESOLVED: Final = "unresolved"
-PAGE_FORMATS: Final[frozenset[str]] = frozenset(
-    {
-        PAGE_FORMAT_COMPARISON,
-        PAGE_FORMAT_LISTICLE,
-        PAGE_FORMAT_REVIEW,
-        PAGE_FORMAT_DIRECTORY,
-        PAGE_FORMAT_DISCUSSION,
-        PAGE_FORMAT_REFERENCE,
-        PAGE_FORMAT_ARTICLE,
-        PAGE_FORMAT_VIDEO,
-        PAGE_FORMAT_UNRESOLVED,
-    }
-)
-# Formats where an inclusion gap is an actionable request rather than a
-# category error. Pitching inclusion into a reference entry or a video page is
-# not the same kind of ask.
-PAGE_FORMATS_ADMITTING_INCLUSION: Final[frozenset[str]] = frozenset(
-    {
-        PAGE_FORMAT_COMPARISON,
-        PAGE_FORMAT_LISTICLE,
-        PAGE_FORMAT_REVIEW,
-        PAGE_FORMAT_DIRECTORY,
-    }
-)
 
 PAGE_FORMAT_METHOD_STRUCTURED_DATA: Final = "structured_data"
 PAGE_FORMAT_METHOD_HEADING_EVIDENCE: Final = "heading_evidence"
@@ -133,13 +86,9 @@ PRESENCE_PRESENT: Final = "present"
 PRESENCE_NOT_DETECTED: Final = "not_detected"
 PRESENCE_AMBIGUOUS: Final = "ambiguous"
 PRESENCE_PARTIAL: Final = "partial"
-PRESENCE_STATES: Final[frozenset[str]] = frozenset(
-    {PRESENCE_PRESENT, PRESENCE_NOT_DETECTED, PRESENCE_AMBIGUOUS, PRESENCE_PARTIAL}
-)
 
 PRESENCE_MATCH_EXACT_ALIAS: Final = "exact_alias"
 PRESENCE_MATCH_NORMALIZED_ALIAS: Final = "normalized_alias"
-PRESENCE_MATCH_DOMAIN_LINK: Final = "domain_link"
 PRESENCE_MATCH_NONE: Final = "none"
 
 ENTITY_KIND_BRAND: Final = "brand"
@@ -170,9 +119,7 @@ SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS: Final = 15
 SOURCE_PAGE_MAX_REDIRECTS: Final = 5
 SOURCE_PAGE_MAX_WIRE_BYTES: Final = 3_000_000
 SOURCE_PAGE_MAX_DECODED_BYTES: Final = 10_000_000
-SOURCE_PAGE_PER_HOST_CONCURRENCY: Final = 1
 SOURCE_PAGE_PER_HOST_DELAY_SECONDS: Final = 1.0
-SOURCE_PAGE_MAX_CRAWL_DELAY_SECONDS: Final = 30
 SOURCE_PAGE_FETCH_CONCURRENCY: Final = 4
 SOURCE_PAGE_ALLOWED_CONTENT_TYPES: Final[tuple[str, ...]] = (
     "text/html",

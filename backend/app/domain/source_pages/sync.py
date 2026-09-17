@@ -50,12 +50,6 @@ class UnresolvedCitation:
     implied_domain: str
 
 
-@dataclass(frozen=True, slots=True)
-class SyncResult:
-    resolved_pages: int
-    unresolved: tuple[UnresolvedCitation, ...]
-
-
 def _stale_before(now: datetime) -> datetime:
     return now - timedelta(hours=SOURCE_PAGE_STALE_AFTER_HOURS)
 
@@ -113,7 +107,7 @@ async def _unresolved_rows(
 
 async def sync_cited_pages(
     session: AsyncSession, *, audit: Audit, now: datetime | None = None
-) -> SyncResult:
+) -> tuple[UnresolvedCitation, ...]:
     """Record every page this audit cited, and report tokens needing a hop."""
     moment = now or datetime.now(UTC)
     rows = await _resolved_rows(session, audit=audit)
@@ -178,10 +172,7 @@ async def sync_cited_pages(
         )
         .values(inspection_state=INSPECTION_STALE, updated_at=moment)
     )
-    return SyncResult(
-        resolved_pages=len(rows),
-        unresolved=await _unresolved_rows(session, audit=audit),
-    )
+    return await _unresolved_rows(session, audit=audit)
 
 
 async def backfill_citation_identity(
