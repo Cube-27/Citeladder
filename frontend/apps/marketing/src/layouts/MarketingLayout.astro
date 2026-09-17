@@ -79,30 +79,44 @@ const serializeJsonLd = (data: JsonLdObject) => JSON.stringify(data).replace(/</
         src: url('/fonts/Geist-Variable.woff2') format('woff2');
         font-weight: 100 900;
         font-style: normal;
-        /* `swap`, not `optional`. `optional` gives the font a ~100ms block
-           period and then commits to ONE answer for the whole page load — and
-           crucially it does not swap afterwards even when the font arrives a
-           moment later. That is fine from the HTTP cache, but a hard reload
-           (Ctrl+Shift+R) bypasses the cache by definition, so the 29KB file
-           has to come off the network inside that window and usually loses.
-           The result was the reported bug: on a hard reload Geist did not
-           render at all, and no amount of waiting brought it in.
+        /* `fallback`: a ~100ms block period, then a ~3s window in which the
+           font may still swap in, then a permanent commit to the fallback.
 
-           `swap` is safe here specifically BECAUSE of the metric-matched
-           fallback below. The original objection to `swap` was the visible
-           reflow when the real font lands, and the `size-adjust` /
-           `*-override` pair removes exactly that: the substitute occupies the
-           same space, so the swap changes glyph shapes without moving a single
-           line of text. A brief change of letterforms beats a page that never
-           gets the typeface at all. */
-        font-display: swap;
+           Not `optional`, which was the bug. `optional` commits after the
+           block period alone and will NOT swap afterwards even when the font
+           arrives moments later. That is fine from the HTTP cache, but a hard
+           reload (Ctrl+Shift+R) bypasses the cache by definition, so the 29KB
+           file has to come off the network inside ~100ms and usually loses —
+           Geist then did not render at all, however long you waited.
+
+           Not `swap` either, whose swap period is unbounded: on a bad
+           connection it will re-lay out the page whenever the font finally
+           lands, which may be ten seconds in, long after the reader started
+           reading. `fallback` bounds that to ~3s — comfortably enough for a
+           preloaded, same-origin 29KB file on any connection that was going
+           to succeed at all, while capping how late a shift can arrive.
+
+           A shift IS possible, and the fallback below only narrows it rather
+           than eliminating it — see the note there. That trade is deliberate:
+           a bounded, small reflow beats a page that never gets the typeface. */
+        font-display: fallback;
       }
 
-      /* The fallback, matched to Geist's metrics.
-         `optional` can still decide against the webfont on a genuinely cold
-         connection, and an unmatched fallback would reflow the page when it
-         does. These overrides make the substitute occupy the same space, so
-         the difference is a glyph shape rather than a different layout. */
+      /* The fallback, approximately matched to Geist's metrics.
+         The vertical overrides are exact: `ascent`/`descent`/`line-gap` are
+         fractions of the em, so they hold for whichever face resolves and
+         line boxes keep their height either way.
+
+         `size-adjust` is the approximate one, and deliberately so. It is a
+         SINGLE scale factor, but `src` resolves to a different face per
+         platform — Segoe UI on Windows, Helvetica Neue on macOS, Arial
+         otherwise — and those do not share advance widths, so one number
+         cannot be exact for all three. On a platform with none of them the
+         `@font-face` does not resolve at all and the chain falls through to
+         the unadjusted `sans-serif` at the end of `--font-sans`.
+         So: this narrows the reflow when the real font swaps in, it does not
+         remove it. `font-display: fallback` above is what bounds how late
+         that reflow can happen. */
       @font-face {
         font-family: 'Geist Fallback';
         src: local('Segoe UI'), local('Helvetica Neue'), local('Arial');
