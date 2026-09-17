@@ -32,6 +32,19 @@ updates:
       patch-and-minor:
         update-types: [patch, minor]
 
+  # The app image pins the SAME node digest as /frontend, but nothing watched
+  # this directory, so it silently drifted a release behind every time the
+  # /frontend bump landed alone. Its own entry is what keeps the pair in step.
+  - package-ecosystem: docker
+    directory: /frontend/apps/app
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      patch-and-minor:
+        update-types: [patch, minor]
+
   - package-ecosystem: docker
     directory: /
     schedule:

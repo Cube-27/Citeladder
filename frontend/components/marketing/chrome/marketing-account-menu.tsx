@@ -32,6 +32,52 @@ import { clearSessionHintCookie } from './returning-visitor-hint';
  * reader most often ends up — every link out of the product lands on it — and
  * until now the only way back out of a session was to find the app again.
  */
+/**
+ * The circle itself, shared by the live trigger and the placeholder that holds
+ * its place while `me` is still in flight.
+ *
+ * One component rather than two matching class strings because the ONLY thing
+ * that must stay true is that both render the identical box: the moment they
+ * disagree on size, shape or spacing, the glyph resolving turns back into the
+ * layout shift this exists to remove.
+ */
+function AccountGlyph({ children }: Readonly<{ children?: React.ReactNode }>) {
+  return (
+    <span
+      aria-hidden
+      className={textRole(
+        'label',
+        'bg-accent text-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full text-xs uppercase',
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+/**
+ * The account circle for a returning visitor whose `me` has not answered yet.
+ *
+ * The nav knows from the hint cookie that a session exists, but not whose — the
+ * cookie deliberately carries no identity — so the initials cannot be known
+ * before the round trip. Rendering nothing until they are is what produced the
+ * reported flicker: the circle appeared late and shoved "Dashboard" sideways as
+ * it arrived. Painting the empty circle at its final size turns that into the
+ * two letters fading up inside a box that never moves.
+ *
+ * Inert on purpose: it has no trigger and no menu, because there is nothing yet
+ * to put in one. It is a reserved seat, not a disabled control, so it is hidden
+ * from assistive tech rather than announced as an account button that does
+ * nothing.
+ */
+export function MarketingAccountGlyphPlaceholder() {
+  return (
+    <span className="flex items-center p-1">
+      <AccountGlyph />
+    </span>
+  );
+}
+
 export function MarketingAccountMenu({
   email,
   dashboardHref,
@@ -68,15 +114,7 @@ export function MarketingAccountMenu({
         aria-label={`Account menu for ${email}`}
         className="focus-ring hover:bg-accent-soft flex items-center rounded-[var(--radius-control)] p-1 transition-colors"
       >
-        <span
-          aria-hidden
-          className={textRole(
-            'label',
-            'bg-accent text-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full text-xs uppercase',
-          )}
-        >
-          {emailInitials(email)}
-        </span>
+        <AccountGlyph>{emailInitials(email)}</AccountGlyph>
       </DropdownTrigger>
       {open ? (
         <DropdownContent align="end" side="bottom" className="w-56">

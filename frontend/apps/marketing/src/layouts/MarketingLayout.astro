@@ -79,13 +79,23 @@ const serializeJsonLd = (data: JsonLdObject) => JSON.stringify(data).replace(/</
         src: url('/fonts/Geist-Variable.woff2') format('woff2');
         font-weight: 100 900;
         font-style: normal;
-        /* `optional`, not `swap`. With `swap` the fallback paints immediately
-           and Geist replaces it whenever it lands — the visible mid-page font
-           change on a cold load. `optional` gives the font a short block
-           period and then commits to one answer for the whole page load: no
-           swap, and no reflow. The file is 29KB, same-origin and preloaded
-           above, so it normally wins that window. */
-        font-display: optional;
+        /* `swap`, not `optional`. `optional` gives the font a ~100ms block
+           period and then commits to ONE answer for the whole page load — and
+           crucially it does not swap afterwards even when the font arrives a
+           moment later. That is fine from the HTTP cache, but a hard reload
+           (Ctrl+Shift+R) bypasses the cache by definition, so the 29KB file
+           has to come off the network inside that window and usually loses.
+           The result was the reported bug: on a hard reload Geist did not
+           render at all, and no amount of waiting brought it in.
+
+           `swap` is safe here specifically BECAUSE of the metric-matched
+           fallback below. The original objection to `swap` was the visible
+           reflow when the real font lands, and the `size-adjust` /
+           `*-override` pair removes exactly that: the substitute occupies the
+           same space, so the swap changes glyph shapes without moving a single
+           line of text. A brief change of letterforms beats a page that never
+           gets the typeface at all. */
+        font-display: swap;
       }
 
       /* The fallback, matched to Geist's metrics.
