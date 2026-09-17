@@ -54,6 +54,7 @@ from app.core.config.source_patterns import SOURCE_TAXONOMY_VERSION
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.audits.state_events import apply_transition, record_event
 from app.domain.prompts.normalization import prompt_text_hash
+from app.domain.source_pages.identity import identify_citation_url
 from app.models.analysis import (
     BrandMention,
     Citation,
@@ -158,6 +159,12 @@ def _persist_analysis_rows(
         )
     for ordinal, citation in enumerate(citations):
         classified = classify_citation(citation, config)
+        # Offline only. Analysis runs inside audit scoring, so a citation write
+        # must not depend on a third party being reachable; a redirect token is
+        # recorded as unresolved and the inspector follows it later.
+        identity = identify_citation_url(
+            citation.get("resolved_url") or citation.get("url")
+        )
         session.add(
             Citation(
                 workspace_id=task.workspace_id,
@@ -179,6 +186,11 @@ def _persist_analysis_rows(
                 is_owned=bool(classified.get("is_owned")),
                 is_unintended=bool(classified.get("is_unintended")),
                 matched_competitor=classified.get("matched_competitor"),
+                resolved_url=identity.resolved_url,
+                canonical_url=identity.canonical_url,
+                url_hash=identity.url_hash,
+                url_identity_method=identity.method,
+                url_identity_version=identity.version,
             )
         )
 
