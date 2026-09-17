@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 
 import { Alert } from '@/components/ui/alert';
 import { BrandLogo } from '@/components/ui/brand-logo';
+import { Button } from '@/components/ui/button';
+import { ProjectLink } from '@/components/layout/scoped-link';
 import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +20,7 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { TruncationNotice } from '@/components/visibility/evidence-states';
 import { queryKeys } from '@/lib/api/query-keys';
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { visibilityApi } from '@/lib/api/visibility';
@@ -25,6 +28,7 @@ import { engineLabel } from '@/lib/providers/catalog';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import { count, hostOf, sinceLabel } from '@/lib/visibility/sources';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
+import { EVIDENCE_LIMIT } from '@/lib/visibility/use-visibility-dashboard';
 
 /** Chips a cell carries before it stops being a cell; the rest become "+N". */
 const MAX_CHIPS = 3;
@@ -83,6 +87,10 @@ export function SourcePrompts({
           loading={query.isLoading}
           errored={query.isError}
         />
+        {/* The endpoint returns a bounded newest-first window. Without this a
+            source cited by more answers than fit simply looked like it had
+            fewer. */}
+        {query.data?.truncated ? <TruncationNotice limit={EVIDENCE_LIMIT} /> : null}
       </CardContent>
     </Card>
   );
@@ -116,6 +124,9 @@ function PromptsBody({
           <TableHead className="hidden lg:table-cell">Sources</TableHead>
           <TableHead numeric className="hidden sm:table-cell">
             Created
+          </TableHead>
+          <TableHead>
+            <span className="sr-only">Open</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -162,6 +173,16 @@ function PromptRow({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
       </TableCell>
       <TableCell numeric className="hidden sm:table-cell">
         {sinceLabel(item.completed_at) ?? <UnavailableValue state="not_measured" />}
+      </TableCell>
+      <TableCell>
+        {/* The row summarises the answer; this reaches the answer itself. It
+            is the one thing the old evidence feed carried that a compact row
+            cannot replace with a number. */}
+        <Button asChild variant="ghost" size="sm">
+          <ProjectLink href={`/runs/${item.audit_id}?execution=${item.task_id}`}>
+            Open answer
+          </ProjectLink>
+        </Button>
       </TableCell>
     </TableRow>
   );

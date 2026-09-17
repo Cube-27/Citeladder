@@ -288,7 +288,7 @@ PAGE_KIND_SCHEMA_TYPE_MAP: Final[dict[str, str]] = {
     "ContactPage": PAGE_KIND_ABOUT_CONTACT,
     "LocalBusiness": PAGE_KIND_LOCAL,
     "Service": PAGE_KIND_SERVICE,
-    "HowTo": PAGE_KIND_GUIDE,
+    "HowTo": PAGE_KIND_HOW_TO,
     "Review": PAGE_KIND_CASE_STUDY_REVIEW,
     "TechArticle": PAGE_KIND_DOCS,
     "NewsArticle": PAGE_KIND_ARTICLE,

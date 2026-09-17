@@ -150,6 +150,15 @@ def _apply_page_format(page: SourcePage, assessment: PageAssessment | None) -> N
         if assessment is not None
         else (PAGE_FORMAT_UNRESOLVED, PAGE_FORMAT_METHOD_NONE)
     )
+    # A verdict of "no idea" never replaces a verdict. Rows written before the
+    # method column existed carry a real format and a NULL method, which ranks
+    # weakest -- so without this a blocked retry would reset exactly the pages
+    # that already had a usable answer.
+    if incoming[0] == PAGE_FORMAT_UNRESOLVED and page.page_format not in (
+        None,
+        PAGE_FORMAT_UNRESOLVED,
+    ):
+        return
     if not _is_stronger(incoming[1], page.page_format_method):
         return
     page.page_format, page.page_format_method = incoming

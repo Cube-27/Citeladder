@@ -73,16 +73,3 @@ export function queryTexts(item: VisibilityExecutionEvidence): string[] {
   }
   return queries;
 }
-
-/** Format an execution completion timestamp, or a "date unavailable" note. */
-export function formatExecutionDate(timestamp: string | null): string {
-  if (!timestamp) return 'Date unavailable';
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return 'Date unavailable';
-  return date.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}

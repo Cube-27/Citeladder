@@ -2,7 +2,6 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { renderWithProviders as render } from '@/test/render';
 
 import {
@@ -10,7 +9,6 @@ import {
   EvidenceError,
   EvidenceFilteredEmpty,
   EvidenceSkeleton,
-  ExecutionHeader,
   TruncationNotice,
 } from './evidence-states';
 
@@ -24,31 +22,6 @@ import {
  * ("your filters excluded everything") are different facts, and collapsing them
  * tells a user their data does not exist when it does.
  */
-const ITEM: VisibilityExecutionEvidence = {
-  audit_id: '11111111-1111-4111-8111-111111111111',
-  task_id: 'aaaaaaaa-1111-4111-8111-111111111111',
-  analysis_id: 'bbbbbbbb-2222-4222-8222-222222222222',
-  artifact_id: 'cccccccc-3333-4333-8333-333333333333',
-  prompt_snapshot_id: 'dddddddd-4444-4444-8444-444444444444',
-  prompt_id: 'eeeeeeee-5555-4555-8555-555555555555',
-  prompt_index: 0,
-  prompt_text: 'Best trail running shoes',
-  repetition: 0,
-  completed_at: '2026-08-01T10:30:00Z',
-  logical_engine: 'gemini',
-  transport_provider: 'google',
-  transport_model: 'gemini-2.5-pro',
-  retrieval_enabled: true,
-  search_used: true,
-  search_query_count: 2,
-  query_text_available: true,
-  state: 'queries_available',
-  search_events: [],
-  event_source: 'raw_artifact',
-  mentions: [],
-  citations: [],
-};
-
 describe('evidence loading and error states', () => {
   it('hides the skeleton from assistive technology', () => {
     const { container } = render(<EvidenceSkeleton title="Query Fanout" />);
@@ -120,38 +93,5 @@ describe('TruncationNotice', () => {
     // The endpoint returns a newest-first window with no total, so the notice
     // must not suggest one.
     expect(screen.getByText(/Showing newest 100 executions/)).toBeVisible();
-  });
-});
-
-describe('ExecutionHeader', () => {
-  it('labels the engine and names the exact transport model', () => {
-    render(<ExecutionHeader item={ITEM} />);
-
-    // Provenance: the answer came from one specific model, not just "Gemini".
-    expect(screen.getByText('gemini-2.5-pro')).toBeVisible();
-  });
-
-  it('hides the repeat marker for the first execution', () => {
-    render(<ExecutionHeader item={{ ...ITEM, repetition: 0 }} />);
-
-    expect(screen.queryByText(/repeat/)).not.toBeInTheDocument();
-  });
-
-  it('numbers a repeated execution from one, not zero', () => {
-    render(<ExecutionHeader item={{ ...ITEM, repetition: 2 }} />);
-
-    expect(screen.getByText(/repeat 3/)).toBeVisible();
-  });
-
-  it('says the date is unavailable rather than rendering an invalid one', () => {
-    render(<ExecutionHeader item={{ ...ITEM, completed_at: null }} />);
-
-    expect(screen.getByText(/Date unavailable/)).toBeVisible();
-  });
-
-  it('renders caller-supplied trailing content', () => {
-    render(<ExecutionHeader item={ITEM} trailing={<span>2 searches</span>} />);
-
-    expect(screen.getByText('2 searches')).toBeVisible();
   });
 });

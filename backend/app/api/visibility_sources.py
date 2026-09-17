@@ -100,7 +100,10 @@ async def get_visibility_source_url_endpoint(
     project_id: uuid.UUID,
     ctx: _WorkspaceDep,
     session: _SessionDep,
-    url: Annotated[str, Query(min_length=1, max_length=2048)],
+    # `citations.url` is unbounded text, so a cap here is a cap on which
+    # pages have a detail view at all. 8192 is the practical ceiling a query
+    # string survives, not a claim about what a publisher may serve.
+    url: Annotated[str, Query(min_length=1, max_length=8192)],
     audit_id: Annotated[uuid.UUID | None, Query()] = None,
     audit_ids: Annotated[list[uuid.UUID] | None, Query()] = None,
     engine: Annotated[str | None, Query()] = None,

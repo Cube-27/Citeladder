@@ -17,12 +17,9 @@ import { ICONS } from '@/lib/icons';
  * `fanout-evidence.tsx` reuse these so their states stay consistent.
  */
 
-import type { ReactNode } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import type { VisibilityExecutionEvidence, VisibilityEvidenceResponse } from '@/lib/api/types';
-import { engineLabel } from '@/lib/providers/catalog';
-import { formatExecutionDate } from '@/lib/visibility/evidence';
+import type { VisibilityEvidenceResponse } from '@/lib/api/types';
 
 /** Props shared by the surfaces that render execution evidence. */
 export type EvidenceTabProps = Readonly<{
@@ -132,42 +129,6 @@ export function TruncationNotice({ limit }: Readonly<{ limit: number }>) {
     <div className="border-border-subtle text-muted flex items-center gap-2 border-t px-4 py-2 text-xs">
       <Info className="size-4 shrink-0" aria-hidden />
       <span>Showing newest {limit} executions; refine filters to narrow results.</span>
-    </div>
-  );
-}
-
-/**
- * Shared per-execution header for both evidence tabs.
- *
- * Executions used to render as filled, bordered boxes nested inside the tab's
- * own card, each with a third layer of boxes around its citations/queries and a
- * line of raw truncated UUIDs across the top. That is three nested surfaces to
- * show one answer. An execution is now a ruled row, and its ids live behind one
- * "Provenance" disclosure instead of on the primary surface — they are audit
- * trail, not the evidence a reader came for.
- */
-export function ExecutionHeader({
-  item,
-  trailing,
-}: Readonly<{ item: VisibilityExecutionEvidence; trailing?: ReactNode }>) {
-  return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-      <p className="text-muted text-xs">
-        {formatExecutionDate(item.completed_at)}
-        {item.repetition > 0 ? ` · repeat ${item.repetition + 1}` : ''}
-      </p>
-      <span className="text-muted flex items-center gap-2 text-xs">
-        <span className={textRole('emphasis', 'text-secondary')}>
-          {engineLabel(item.logical_engine)}
-        </span>
-        <span>{item.transport_model}</span>
-        {trailing}
-        <Button asChild variant="ghost" size="sm">
-          <ProjectLink href={`/runs/${item.audit_id}?execution=${item.task_id}`}>
-            Open answer
-          </ProjectLink>
-        </Button>
-      </span>
     </div>
   );
 }

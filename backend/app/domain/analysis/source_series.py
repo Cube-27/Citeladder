@@ -35,6 +35,7 @@ from app.domain.analysis.schemas import (
 )
 from app.models.analysis import Citation, ResponseAnalysis
 from app.models.audit import Audit
+from app.models.source_pages import SourcePage
 
 # Lines a reader can actually tell apart, and the number of categorical chart
 # tokens the design system defines.
@@ -123,6 +124,11 @@ async def get_visibility_source_series(
         return SourceSeriesResponse(
             dimension=dimension, granularity=granularity, buckets=[], series=[]
         )
+    # A URL series is keyed by page, and a page is filtered by its own format
+    # exactly as the URL table is. Applying the table's filter value as a
+    # publisher class would match nothing and draw an empty chart under a full
+    # table.
+    pages = dimension == "url" or bool(domain)
     key = Citation.url if dimension == "url" else Citation.domain
     counted = (
         select(
@@ -137,7 +143,15 @@ async def get_visibility_source_series(
     if domain:
         counted = counted.where(Citation.domain == domain)
     if source_class:
-        counted = counted.where(Citation.source_class == source_class)
+        counted = (
+            counted.join(
+                SourcePage,
+                (SourcePage.url_hash == Citation.url_hash)
+                & (SourcePage.project_id == project_id),
+            ).where(SourcePage.page_format == source_class)
+            if pages
+            else counted.where(Citation.source_class == source_class)
+        )
     rows = (await session.execute(counted.group_by(key, scope.c.bucket))).all()
     return _assemble(
         rows,

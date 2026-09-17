@@ -104,6 +104,7 @@ async def get_visibility_sources(
         project_id=project_id,
         scope=scope,
         domain=domain,
+        source_class=source_class,
         pages=pages,
     )
     rows = (
@@ -318,7 +319,7 @@ def _source_boundary(as_of):
 
 
 async def _category_totals(
-    session, *, workspace_id, project_id, scope, domain, pages
+    session, *, workspace_id, project_id, scope, domain, source_class, pages
 ) -> dict[str, int]:
     """Citations per type, across the whole selection.
 
@@ -334,6 +335,11 @@ async def _category_totals(
     page format, which lives on the page record, so those have to be counted
     through the identity join -- and a citation whose identity was never
     resolved is absent rather than counted as an unknown kind.
+
+    The type filter applies here too. The ring prints the same
+    ``total_citations`` the rows are shares of, and that total follows the
+    filter -- so a ring that ignored it would disagree with the number in its
+    own centre.
     """
     if pages:
         return await _format_totals(
@@ -342,6 +348,7 @@ async def _category_totals(
             project_id=project_id,
             scope=scope,
             domain=domain,
+            source_class=source_class,
         )
     statement = (
         select(
@@ -356,6 +363,8 @@ async def _category_totals(
     )
     if domain:
         statement = statement.where(Citation.domain == domain)
+    if source_class:
+        statement = statement.where(Citation.source_class == source_class)
     rows = (await session.execute(statement.group_by(Citation.source_class))).all()
     return {
         str(source_class): int(count) for source_class, count in rows if source_class
@@ -363,7 +372,7 @@ async def _category_totals(
 
 
 async def _format_totals(
-    session, *, workspace_id, project_id, scope, domain
+    session, *, workspace_id, project_id, scope, domain, source_class
 ) -> dict[str, int]:
     """Citations per page format, joined through page identity."""
     statement = (
@@ -381,5 +390,7 @@ async def _format_totals(
     )
     if domain:
         statement = statement.where(Citation.domain == domain)
+    if source_class:
+        statement = statement.where(SourcePage.page_format == source_class)
     rows = (await session.execute(statement.group_by(SourcePage.page_format))).all()
     return {str(page_format): int(count) for page_format, count in rows if page_format}

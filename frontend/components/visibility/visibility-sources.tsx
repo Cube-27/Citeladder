@@ -386,7 +386,12 @@ function TypesCard({
         <CardTitle>Source types</CardTitle>
       </CardHeader>
       <CardContent>
-        {query.isLoading ? (
+        {/* A failed read is not an empty mix. Drawing the empty ring here
+            reported "no citations in this selection" for a request that never
+            answered. */}
+        {query.isError ? (
+          <Alert tone="danger">Could not load source types.</Alert>
+        ) : query.isLoading ? (
           <Skeleton className="h-[240px] w-full" />
         ) : (
           <DonutChart

@@ -406,7 +406,7 @@ test('mobile viewport keeps the visibility tabs and one active panel usable', as
   await expect(selectedTab).toBeVisible();
 
   // Every retained tab is still present in the one row.
-  await expect(tablist.getByRole('tab')).toHaveCount(4);
+  await expect(tablist.getByRole('tab')).toHaveCount(3);
 
   // Inactive panels are NOT stacked — still exactly one panel in the DOM.
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
@@ -446,14 +446,15 @@ for (const width of [1280, 375]) {
       content: 'nextjs-portal { display: none !important; }',
     });
     await page.getByRole('button', { name: 'Gemini', exact: true }).click();
-    await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toBeVisible();
+    // The drill-down lands on Query fanouts, which is where execution evidence
+    // is rendered now that the Mentions tab is gone. What this test is for is
+    // unchanged: the selected run and engine must be the run and engine the
+    // evidence request asks for.
+    await expect(page).toHaveURL(/[?&]tab=query-fanout/);
+    await expect(page.getByRole('tabpanel')).toHaveCount(1);
+    await expect.poll(() => evidenceUrls.at(-1)?.searchParams.get('audit_id')).toBe(AUDIT_EARLIER);
     const evidenceUrl = evidenceUrls.at(-1)!;
-    expect(evidenceUrl.searchParams.get('audit_id')).toBe(AUDIT_EARLIER);
     expect(evidenceUrl.searchParams.get('engine')).toBe('gemini');
-    await expect(page.getByRole('link', { name: 'Open answer', exact: true })).toHaveAttribute(
-      'href',
-      fixtureProjectPath(`/runs/${AUDIT_EARLIER}?execution=${TASK_A}`),
-    );
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`run=${AUDIT_EARLIER}.*engine=gemini`));
     await page.screenshot({
