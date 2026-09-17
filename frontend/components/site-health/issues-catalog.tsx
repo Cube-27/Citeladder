@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
+import { PageShell } from '@/components/layout/page-shell';
+import { Stack } from '@/components/ui/layout';
 import { IssuesLoading } from '@/components/site-health/issues-loading';
 import { IssueDetailRail } from '@/components/site-health/issue-detail-rail';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
@@ -71,7 +73,13 @@ function useIssuesCatalogQueries(
 export function IssuesCatalog({
   workspaceId,
   crawlId,
-}: Readonly<{ workspaceId: string; crawlId: string }>) {
+  notice,
+}: Readonly<{
+  workspaceId: string;
+  crawlId: string;
+  /** A refresh failure to report above the catalog it could not refresh. */
+  notice?: ReactNode;
+}>) {
   const catalog = useIssueFilters();
   const { filters, cursor, selectedGroupId, updateFilters } = catalog;
   const findingView = filters.finding_class;
@@ -95,83 +103,97 @@ export function IssuesCatalog({
   // everything down when the summary arrived and left the rail short until the
   // occurrences did. That is an argument for reserving the space, which the
   // grid below now does, not for showing nothing.
-  if (issuesQuery.isPending && !issuesQuery.data) return <IssuesLoading />;
+  if (issuesQuery.isPending && !issuesQuery.data)
+    return (
+      <PageShell>
+        <Stack gap="section" className="min-w-0">
+          {notice}
+          <IssuesLoading />
+        </Stack>
+      </PageShell>
+    );
 
   return (
-    <div className="grid min-w-0 gap-[var(--page-section-gap)]">
-      {summary ? <IssueSummary summary={summary} findingView={findingView} /> : null}
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <IssueSearch
-          key={filters.query}
-          query={filters.query}
-          onApply={(query) => updateFilters({ query })}
-        />
-        <div className="min-w-0 max-[700px]:w-full [&>button]:max-[700px]:w-full">
-          <PageKindSelect
-            value={filters.page_kind}
-            onChange={(page_kind) => updateFilters({ page_kind })}
+    <PageShell
+      controls={
+        <>
+          <IssueSearch
+            key={filters.query}
+            query={filters.query}
+            onApply={(query) => updateFilters({ query })}
           />
-        </div>
-        <div className="max-w-full min-w-0 overflow-x-auto pb-0.5 max-[700px]:w-full">
-          <FindingClassFilter
-            value={findingView}
-            summary={summary}
-            onChange={(value) => updateFilters(findingClassChange(value))}
-          />
-        </div>
-        <div className="max-w-full min-w-0 overflow-x-auto pb-0.5 max-[700px]:w-full">
-          <SegmentedControl
-            className="w-max"
-            value={issueFilterClass(filters)}
-            onChange={(value) => updateFilters(issueFilterClassChange(value))}
-            ariaLabel="Issue filters"
-            options={issueFilterClasses(findingView).map((item) => ({
-              value: item.key,
-              label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
-            }))}
-          />
-        </div>
-      </div>
-
-      {issuesQuery.isError ? (
-        <Alert tone="danger">Could not load issues for this crawl. Please refresh.</Alert>
-      ) : rows.length === 0 ? (
-        <p className="text-secondary py-[var(--empty-state-padding)] text-sm">
-          No issues match this view.
-        </p>
-      ) : (
-        <div
-          // `min-h` matches the loading placeholder's, so the pane keeps its
-          // height while the rail's own read lands rather than growing under
-          // the reader.
-          className="border-border-subtle grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
-          aria-busy={issuesQuery.isFetching}
-        >
-          <IssueGroupList
-            rows={rows}
-            selectedGroupId={selected?.group_id}
-            onSelect={catalog.selectIssue}
-          />
-          {shown ? (
-            <IssueDetailRail
-              issue={shown}
-              crawlId={crawlId}
-              detailQuery={detailQuery}
-              canPrevious={catalog.canPageOccurrencesBack}
-              onPrevious={catalog.previousOccurrences}
-              onNext={() => {
-                const next = detailQuery.data?.next_cursor;
-                if (next) catalog.nextOccurrences(next);
-              }}
+          <div className="min-w-0 max-[700px]:w-full [&>button]:max-[700px]:w-full">
+            <PageKindSelect
+              value={filters.page_kind}
+              onChange={(page_kind) => updateFilters({ page_kind })}
             />
-          ) : null}
-        </div>
-      )}
+          </div>
+          <div className="max-w-full min-w-0 overflow-x-auto max-[700px]:w-full">
+            <FindingClassFilter
+              value={findingView}
+              summary={summary}
+              onChange={(value) => updateFilters(findingClassChange(value))}
+            />
+          </div>
+          <div className="max-w-full min-w-0 overflow-x-auto max-[700px]:w-full">
+            <SegmentedControl
+              className="w-max"
+              value={issueFilterClass(filters)}
+              onChange={(value) => updateFilters(issueFilterClassChange(value))}
+              ariaLabel="Issue filters"
+              options={issueFilterClasses(findingView).map((item) => ({
+                value: item.key,
+                label: `${item.label}${summary ? ` (${filterCount(item.key, summary, findingView)})` : ''}`,
+              }))}
+            />
+          </div>
+        </>
+      }
+    >
+      <Stack gap="section" className="min-w-0">
+        {notice}
+        {summary ? <IssueSummary summary={summary} findingView={findingView} /> : null}
 
-      {rows.length > 0 ? (
-        <CatalogPager cursor={cursor} page={issuesQuery.data} onGo={catalog.goToPage} />
-      ) : null}
-    </div>
+        {issuesQuery.isError ? (
+          <Alert tone="danger">Could not load issues for this crawl. Please refresh.</Alert>
+        ) : rows.length === 0 ? (
+          <p className="text-secondary py-[var(--empty-state-padding)] text-sm">
+            No issues match this view.
+          </p>
+        ) : (
+          <div
+            // `min-h` matches the loading placeholder's, so the pane keeps its
+            // height while the rail's own read lands rather than growing under
+            // the reader.
+            className="border-border-subtle grid min-h-[32rem] min-w-0 items-start overflow-hidden rounded-[var(--radius-card)] border min-[701px]:grid-cols-[var(--pane-list-detail)]"
+            aria-busy={issuesQuery.isFetching}
+          >
+            <IssueGroupList
+              rows={rows}
+              selectedGroupId={selected?.group_id}
+              onSelect={catalog.selectIssue}
+            />
+            {shown ? (
+              <IssueDetailRail
+                issue={shown}
+                crawlId={crawlId}
+                detailQuery={detailQuery}
+                canPrevious={catalog.canPageOccurrencesBack}
+                onPrevious={catalog.previousOccurrences}
+                onNext={() => {
+                  const next = detailQuery.data?.next_cursor;
+                  if (next) catalog.nextOccurrences(next);
+                }}
+              />
+            ) : null}
+          </div>
+        )}
+
+        {rows.length > 0 ? (
+          <CatalogPager cursor={cursor} page={issuesQuery.data} onGo={catalog.goToPage} />
+        ) : null}
+      </Stack>
+    </PageShell>
   );
 }
 

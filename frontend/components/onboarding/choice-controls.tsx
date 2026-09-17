@@ -12,102 +12,86 @@
  * the answer rows and selection controls.
  */
 
-import { Check, Pencil, Plus } from 'lucide-react';
+import { Check, Pencil } from 'lucide-react';
+import { useId, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { FilterChip } from '@/components/ui/filter-chip';
-import { cn } from '@/lib/utils';
-
-/** The row a set of chips lives in, so every group wraps identically. */
-export function ChipRow({
-  children,
-  className,
-}: Readonly<{ children: React.ReactNode; className?: string }>) {
-  return (
-    <div className={cn('items-center gap-1.5', className ?? 'flex flex-wrap')}>{children}</div>
-  );
-}
+import { Pressable } from '@/components/ui/pressable';
 
 /**
- * Shared chip geometry.
+ * A discovered entity as a ruled row: identity, what it is, and whether we are
+ * tracking it.
  *
- * The icon slot is ALWAYS rendered, empty when unselected. Showing the check
- * only once selected changed the chip's width on click, so picking an option
- * reflowed the whole row and the neighbour you were about to compare against
- * moved out from under the cursor.
+ * This was a chip, and a wall of chips is what the review step had become —
+ * every competitor logo sitting inside its own outlined rectangle, so the page
+ * read as two dozen small boxes rather than as a list of companies. The logo is
+ * already the design; the row only has to say yes or no about it.
+ *
+ * The whole row is the toggle, with `aria-pressed` carrying the state, and the
+ * visible name is the accessible name. Edit stays a separate explicit control
+ * beside it, never a second meaning for clicking the row.
  */
-function ChipMark({ selected, idle }: Readonly<{ selected: boolean; idle?: React.ReactNode }>) {
-  return (
-    <span aria-hidden className="flex size-3.5 shrink-0 items-center justify-center">
-      {selected ? <Check className="text-accent-text size-3.5" /> : idle}
-    </span>
-  );
-}
-
-/**
- * An include/exclude chip for a discovered suggestion.
- *
- * An excluded chip is rendered MUTED rather than dropped. Hiding it made every
- * exclusion permanent — and discovery legitimately returns more suggestions
- * than the cap pre-selects, so the extras were unreachable before the user ever
- * touched anything. A review step whose choices cannot be undone is not one.
- *
- * `onEdit` is an explicit pencil, not a click on the label. The label used to
- * open an inline domain field with a `title` tooltip as its only hint, while
- * looking exactly like a hyperlink — two undiscoverable affordances wearing one
- * borrowed appearance.
- */
-export function ToggleChip({
-  label,
+export function EntityRow({
+  name,
+  meta,
   selected,
   onToggle,
   disabled = false,
   leading,
   onEdit,
   editLabel,
+  trailing,
 }: Readonly<{
-  label: string;
+  name: string;
+  /** The domain, or whatever else identifies this beyond its name. */
+  meta?: string;
   selected: boolean;
   onToggle: () => void;
   /** True when selecting this would exceed the cap. Excluding stays available. */
   disabled?: boolean;
-  /** Optional decorative identity, such as a discovered competitor logo. */
-  leading?: React.ReactNode;
+  leading?: ReactNode;
   onEdit?: () => void;
   editLabel?: string;
+  trailing?: ReactNode;
 }>) {
+  // The NAME names the row, not the name plus the domain under it. Letting the
+  // row's whole text content become its accessible name meant a voice-control
+  // user had to say "Jira atlassian.com" to click Jira, and `aria-pressed`
+  // already carries the selected state.
+  const nameId = useId();
   return (
-    <span className="inline-flex max-w-full items-center gap-1">
-      <FilterChip
-        active={selected}
-        onClick={onToggle}
+    <li className="flow-entity">
+      <Pressable
+        aria-pressed={selected}
+        aria-labelledby={nameId}
         disabled={disabled && !selected}
-        className="flow-choice-chip group min-w-0"
+        onClick={onToggle}
+        className="flow-entity-row"
       >
-        <ChipMark
-          selected={selected}
-          idle={<Plus className="size-3.5 opacity-40 group-hover:opacity-90" />}
-        />
         {leading}
-        {/* The visible label IS the accessible name, and `aria-pressed` carries
-            the state. An `aria-label` of "Include Peer 6" moved the state into
-            the name, so the same control announced a different name depending
-            on whether it was on — and a voice-control user could not say the
-            word they could see. */}
-        <span className="truncate">{label}</span>
-      </FilterChip>
+        <span className="flow-entity-identity">
+          <span id={nameId} className="flow-entity-name">
+            {name}
+          </span>
+          {meta ? <span className="flow-entity-meta">{meta}</span> : null}
+        </span>
+        <span className="flow-entity-mark" aria-hidden>
+          {selected ? <Check className="size-3.5" /> : null}
+        </span>
+      </Pressable>
       {onEdit ? (
         <Button
           type="button"
           variant="ghost"
           size="icon"
           onClick={onEdit}
-          aria-label={editLabel ?? `Edit ${label}`}
-          className="size-6 shrink-0"
+          aria-label={editLabel ?? `Edit ${name}`}
+          className="size-8 shrink-0"
         >
-          <Pencil className="size-3" aria-hidden />
+          <Pencil className="size-3.5" aria-hidden />
         </Button>
       ) : null}
-    </span>
+      {trailing}
+    </li>
   );
 }

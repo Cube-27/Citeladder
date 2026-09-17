@@ -6,7 +6,7 @@ import { useState } from 'react';
 
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
 import { RunDetailView } from '@/components/runs/run-detail-view';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { queryKeys } from '@/lib/api/query-keys';
 import { runsApi } from '@/lib/api/runs';
@@ -57,7 +57,9 @@ export function RunDetailScreen() {
     mutationFn: () => runsApi.cancelAudit(runId, { workspaceId }),
     onSuccess: (audit) => {
       queryClient.setQueryData(queryKeys.runs.detail(runId), audit);
-      queryClient.invalidateQueries({ queryKey: queryKeys.runs.executions(runId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.runs.executions(runId),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.runs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.visibility.all });
     },
@@ -80,8 +82,7 @@ export function RunDetailScreen() {
     executions.find((execution) => execution.id === activeExecutionId) ?? null;
 
   return (
-    <>
-      <PageHeader title="Run details" />
+    <PageShell>
       <RunDetailView
         audit={auditQuery.data}
         auditLoading={auditQuery.isLoading}
@@ -92,7 +93,9 @@ export function RunDetailScreen() {
         cancelPending={cancelMutation.isPending}
         cancelNotice={
           cancelMutation.isError
-            ? mutationNoticeForError(cancelMutation.error, { action: 'cancel the run' })
+            ? mutationNoticeForError(cancelMutation.error, {
+                action: 'cancel the run',
+              })
             : null
         }
         rerunPending={rerunFailuresMutation.isPending}
@@ -118,6 +121,6 @@ export function RunDetailScreen() {
           }
         }}
       />
-    </>
+    </PageShell>
   );
 }

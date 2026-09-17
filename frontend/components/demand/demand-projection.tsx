@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { Calendar, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -11,6 +11,8 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageShell } from '@/components/layout/page-shell';
+import { ReadError } from '@/components/ui/read-error';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { DemandDetectorBar } from '@/components/demand/demand-detector-bar';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
@@ -136,7 +138,17 @@ function DemandLoading() {
   );
 }
 
-function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) {
+function SearchDemandView({
+  snapshot,
+  refreshError,
+  onRetry,
+  retrying,
+}: Readonly<{
+  snapshot: DemandSnapshot;
+  refreshError?: Error | null;
+  onRetry?: () => void;
+  retrying?: boolean;
+}>) {
   const { activeProject } = useProjectContext();
   const queryClient = useQueryClient();
 
@@ -208,72 +220,21 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
   }, [snapshot.signals, activeTab, searchQuery]);
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      <EditorialSectionHeader
-        title={
-          <span className="flex flex-wrap items-center gap-2">
-            <span>
-              {snapshot.signals.length === 1
-                ? '1 demand signal observed'
-                : `${snapshot.signals.length} demand signals observed`}
-            </span>
-            <span className="text-muted inline-flex items-center gap-1 text-xs">
-              <Calendar className="size-3.5" aria-hidden="true" />
-              {windowLabel}
-            </span>
-          </span>
-        }
-        actions={
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => recomputeMutation.mutate()}
-            pending={recomputeMutation.isPending}
-            pendingLabel="Queueing…"
-            className="shrink-0 text-xs"
-          >
-            <RefreshCw className="mr-1.5 size-3.5" />
-            Recompute Signals
-          </Button>
-        }
-      />
-
-      {recomputeMutation.isError ? (
-        <MutationNotice
-          notice={mutationNoticeForError(recomputeMutation.error, {
-            action: 'queue the search demand recompute',
-          })}
-          onRetry={() => recomputeMutation.mutate()}
-        />
-      ) : null}
-
-      {recomputeMutation.isSuccess ? (
-        <Alert tone="info">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span>
-              {recomputeMutation.data.status === 'already_queued'
-                ? 'A recompute for this window is already queued.'
-                : 'Recompute queued. Signals refresh once the job finishes.'}
-            </span>
-            <Button type="button" variant="ghost" size="sm" onClick={() => refreshSnapshot()}>
-              Check for the new snapshot
-            </Button>
-          </div>
-        </Alert>
-      ) : null}
-
-      <Card>
-        <CardContent>
-          <Stack gap="workspace">
-            <DemandSummaryCards snapshot={snapshot} />
-            <DemandDetectorBar snapshot={snapshot} />
-          </Stack>
-        </CardContent>
-      </Card>
-
-      {/* Interactive Filter & Search Controls */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-1.5">
+    <PageShell
+      actions={
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => recomputeMutation.mutate()}
+          pending={recomputeMutation.isPending}
+          pendingLabel="Queueing…"
+        >
+          <RefreshCw className="size-3.5" />
+          Recompute signals
+        </Button>
+      }
+      controls={
+        <>
           {FILTER_TABS.map(({ tab, label }) => {
             const count = tabCounts.get(tab) ?? 0;
             // The optional cohorts stay hidden while empty, but a tab the user
@@ -291,66 +252,123 @@ function SearchDemandView({ snapshot }: Readonly<{ snapshot: DemandSnapshot }>) 
               </FilterChip>
             );
           })}
-        </div>
-
-        {/* Search Input */}
-        <div className="w-full sm:w-64">
-          <SearchField
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-            placeholder="Filter queries or URLs..."
-            aria-label="Filter queries or URLs"
-          />
-        </div>
-      </div>
-
-      {/* Signals List Feed */}
-      {filteredSignals.length > 0 ? (
-        <div className="grid gap-3">
-          {filteredSignals.map(({ signal, rank }) => (
-            <DemandSignalCard
-              key={signal.id}
-              signal={signal}
-              rank={rank}
-              onInspect={handleInspect}
+          <div className="ms-auto w-full sm:w-64">
+            <SearchField
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              placeholder="Filter queries or URLs..."
+              aria-label="Filter queries or URLs"
             />
-          ))}
-        </div>
-      ) : snapshot.signals.length === 0 ? (
-        <EmptyState
-          icon={Sparkles}
-          heading="No qualifying search gaps observed"
-          description="Search Console data was observed, but no configured detector emitted a signal in this window."
-        />
-      ) : (
-        <EmptyState
-          icon={Search}
-          heading="No signals match your filter"
-          description="Try choosing a different filter tab or clearing your search term."
-          action={
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setActiveTab('all');
-                setSearchQuery('');
-              }}
-            >
-              Clear Filters
-            </Button>
+          </div>
+        </>
+      }
+    >
+      <Stack gap="workspace">
+        {refreshError ? (
+          <ReadError
+            error={refreshError}
+            fallback="Search demand could not be refreshed."
+            onRetry={onRetry ?? (() => undefined)}
+            pending={Boolean(retrying)}
+          />
+        ) : null}
+        <EditorialSectionHeader
+          title={
+            <span className="flex flex-wrap items-center gap-2">
+              <span>
+                {snapshot.signals.length === 1
+                  ? '1 demand signal observed'
+                  : `${snapshot.signals.length} demand signals observed`}
+              </span>
+              <span className="text-muted inline-flex items-center gap-1 text-xs">
+                <Calendar className="size-3.5" aria-hidden="true" />
+                {windowLabel}
+              </span>
+            </span>
           }
         />
-      )}
 
-      {/* Evidence Inspection Drawer */}
-      <DemandEvidenceDrawer
-        signal={selectedSignal}
-        open={selectedSignal !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelectedSignalId(null);
-        }}
-      />
-    </div>
+        {recomputeMutation.isError ? (
+          <MutationNotice
+            notice={mutationNoticeForError(recomputeMutation.error, {
+              action: 'queue the search demand recompute',
+            })}
+            onRetry={() => recomputeMutation.mutate()}
+          />
+        ) : null}
+
+        {recomputeMutation.isSuccess ? (
+          <Alert tone="info">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>
+                {recomputeMutation.data.status === 'already_queued'
+                  ? 'A recompute for this window is already queued.'
+                  : 'Recompute queued. Signals refresh once the job finishes.'}
+              </span>
+              <Button type="button" variant="ghost" size="sm" onClick={() => refreshSnapshot()}>
+                Check for the new snapshot
+              </Button>
+            </div>
+          </Alert>
+        ) : null}
+
+        <Card>
+          <CardContent>
+            <Stack gap="workspace">
+              <DemandSummaryCards snapshot={snapshot} />
+              <DemandDetectorBar snapshot={snapshot} />
+            </Stack>
+          </CardContent>
+        </Card>
+
+        {/* Signals List Feed */}
+        {filteredSignals.length > 0 ? (
+          <div className="grid gap-3">
+            {filteredSignals.map(({ signal, rank }) => (
+              <DemandSignalCard
+                key={signal.id}
+                signal={signal}
+                rank={rank}
+                onInspect={handleInspect}
+              />
+            ))}
+          </div>
+        ) : snapshot.signals.length === 0 ? (
+          <EmptyState
+            icon={Sparkles}
+            heading="No qualifying search gaps observed"
+            description="Search Console data was observed, but no configured detector emitted a signal in this window."
+          />
+        ) : (
+          <EmptyState
+            icon={Search}
+            heading="No signals match your filter"
+            description="Try choosing a different filter tab or clearing your search term."
+            action={
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setActiveTab('all');
+                  setSearchQuery('');
+                }}
+              >
+                Clear Filters
+              </Button>
+            }
+          />
+        )}
+
+        {/* Evidence Inspection Drawer */}
+        <DemandEvidenceDrawer
+          signal={selectedSignal}
+          open={selectedSignal !== null}
+          onOpenChange={(open) => {
+            if (!open) setSelectedSignalId(null);
+          }}
+        />
+      </Stack>
+    </PageShell>
   );
 }
 
@@ -370,12 +388,48 @@ export function DemandProjection() {
     // `SearchDemandView` recomputes against the CURRENT project id.
   });
 
-  if (projectLoading || latest.isLoading) {
-    return <DemandLoading />;
+  // The loaded view owns its own bands. Every other state is the same page
+  // with an empty content region, so it keeps its identity band rather than
+  // losing the heading and the rule above the work.
+  const snapshot = latest.data;
+  if (activeProject && snapshot && snapshot.coverage.search === 'observed') {
+    // The route already wraps this subtree in a TooltipProvider.
+    //
+    // A refresh that fails over evidence we already hold keeps the evidence and
+    // says so. Returning the error instead would blank a working screen; saying
+    // nothing would present a stale snapshot as current.
+    return (
+      <SearchDemandView
+        snapshot={snapshot}
+        refreshError={latest.isError ? latest.error : null}
+        onRetry={() => void latest.refetch()}
+        retrying={latest.isFetching}
+      />
+    );
   }
-  if (!activeProject) {
-    return <Alert tone="info">Select a project to inspect search demand.</Alert>;
-  }
+  return (
+    <PageShell>
+      {demandFallback({
+        projectLoading,
+        hasProject: Boolean(activeProject),
+        latest,
+      })}
+    </PageShell>
+  );
+}
+
+/** Every non-loaded state of `/demand`, in the order it is decided. */
+function demandFallback({
+  projectLoading,
+  hasProject,
+  latest,
+}: Readonly<{
+  projectLoading: boolean;
+  hasProject: boolean;
+  latest: UseQueryResult<DemandSnapshot, Error>;
+}>) {
+  if (projectLoading || latest.isLoading) return <DemandLoading />;
+  if (!hasProject) return <Alert tone="info">Select a project to inspect search demand.</Alert>;
   if (latest.isError && httpErrorStatus(latest.error) === 404) {
     return (
       <EmptyState
@@ -390,20 +444,12 @@ export function DemandProjection() {
       />
     );
   }
-  if (latest.isError) {
-    return <Alert tone="danger">Search demand could not be loaded.</Alert>;
-  }
+  if (latest.isError) return <Alert tone="danger">Search demand could not be loaded.</Alert>;
   if (!latest.data) return null;
-
-  if (latest.data.coverage.search !== 'observed') {
-    return (
-      <Alert tone="info">
-        Search Console evidence is unavailable for this snapshot. Sync Search Console to measure
-        search demand.
-      </Alert>
-    );
-  }
-
-  // The route already wraps this subtree in a TooltipProvider.
-  return <SearchDemandView snapshot={latest.data} />;
+  return (
+    <Alert tone="info">
+      Search Console evidence is unavailable for this snapshot. Sync Search Console to measure
+      search demand.
+    </Alert>
+  );
 }

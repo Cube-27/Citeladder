@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { IssuesLoading } from '@/components/site-health/issues-loading';
+import { PageShell } from '@/components/layout/page-shell';
 import { ReadError } from '@/components/ui/read-error';
 import { IssuesCatalog } from '@/components/site-health/issues-catalog';
 import { AccentEyebrow } from '@/components/ui/eyebrow';
@@ -36,14 +37,12 @@ export function IssuesScreen() {
   });
 
   return (
-    <div className="grid min-w-0 gap-4">
-      <IssuesDataRegion
-        projectId={projectId}
-        workspaceId={activeWorkspaceId}
-        projectLoading={projectLoading}
-        dashboard={dashboardQuery}
-      />
-    </div>
+    <IssuesDataRegion
+      projectId={projectId}
+      workspaceId={activeWorkspaceId}
+      projectLoading={projectLoading}
+      dashboard={dashboardQuery}
+    />
   );
 }
 
@@ -59,23 +58,34 @@ function IssuesDataRegion({
   dashboard: UseQueryResult<SiteHealthDashboard, Error>;
 }>) {
   if (!projectId && !projectLoading)
-    return <Alert tone="info">Select or create a project to view its Site Health issues.</Alert>;
-  if (projectLoading || dashboard.isLoading) return <IssuesLoading />;
+    return (
+      <PageShell>
+        <Alert tone="info">Select or create a project to view its Site Health issues.</Alert>
+      </PageShell>
+    );
+  if (projectLoading || dashboard.isLoading)
+    return (
+      <PageShell>
+        <IssuesLoading />
+      </PageShell>
+    );
 
   const status = httpErrorStatus(dashboard.error);
   const accessDenied = status === 401 || status === 403;
   if (dashboard.isError && (accessDenied || !dashboard.data)) {
     return (
-      <ReadError
-        error={dashboard.error}
-        fallback={
-          accessDenied
-            ? 'Site Health is unavailable for this project.'
-            : 'Could not load Site Health.'
-        }
-        onRetry={() => void dashboard.refetch()}
-        pending={dashboard.isFetching}
-      />
+      <PageShell>
+        <ReadError
+          error={dashboard.error}
+          fallback={
+            accessDenied
+              ? 'Site Health is unavailable for this project.'
+              : 'Could not load Site Health.'
+          }
+          onRetry={() => void dashboard.refetch()}
+          pending={dashboard.isFetching}
+        />
+      </PageShell>
     );
   }
 
@@ -91,35 +101,47 @@ function IssuesLoadedRegion({
 }>) {
   const crawl = dashboard.data?.crawl ?? null;
   if (dashboard.isError) {
-    return (
-      <>
+    return crawl && workspaceId ? (
+      <IssuesCatalog
+        workspaceId={workspaceId}
+        crawlId={crawl.id}
+        notice={
+          <ReadError
+            error={dashboard.error}
+            fallback="Could not refresh Site Health."
+            onRetry={() => void dashboard.refetch()}
+            pending={dashboard.isFetching}
+          />
+        }
+      />
+    ) : (
+      <PageShell>
         <ReadError
           error={dashboard.error}
           fallback="Could not refresh Site Health."
           onRetry={() => void dashboard.refetch()}
           pending={dashboard.isFetching}
         />
-        {crawl && workspaceId ? (
-          <IssuesCatalog workspaceId={workspaceId} crawlId={crawl.id} />
-        ) : null}
-      </>
+      </PageShell>
     );
   }
   if (!crawl) {
     return (
-      <Card>
-        <CardContent className="grid gap-3 py-[var(--empty-state-padding)]">
-          <AccentEyebrow>Issues</AccentEyebrow>
-          <h2 className={textRole('sectionTitle')}>No Site Health crawl yet</h2>
-          <p className="text-secondary max-w-md text-sm">
-            Run Site Health to discover and analyze this project&apos;s pages — grouped issues will
-            appear here once a crawl finishes.
-          </p>
-          <Button variant="secondary" asChild>
-            <ProjectLink href="/site">Go to Website</ProjectLink>
-          </Button>
-        </CardContent>
-      </Card>
+      <PageShell>
+        <Card>
+          <CardContent className="grid gap-3 py-[var(--empty-state-padding)]">
+            <AccentEyebrow>Issues</AccentEyebrow>
+            <h2 className={textRole('sectionTitle')}>No Site Health crawl yet</h2>
+            <p className="text-secondary max-w-md text-sm">
+              Run Site Health to discover and analyze this project&apos;s pages — grouped issues
+              will appear here once a crawl finishes.
+            </p>
+            <Button variant="secondary" asChild>
+              <ProjectLink href="/site">Go to Website</ProjectLink>
+            </Button>
+          </CardContent>
+        </Card>
+      </PageShell>
     );
   }
   return workspaceId ? <IssuesCatalog workspaceId={workspaceId} crawlId={crawl.id} /> : null;

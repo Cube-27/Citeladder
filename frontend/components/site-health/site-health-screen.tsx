@@ -6,8 +6,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { Tabs } from '@/components/ui/tabs';
-import { PageHeader } from '@/components/layout/page-header';
+import { TabsBar, TabsRoot } from '@/components/ui/tabs';
+import { PageShell } from '@/components/layout/page-shell';
+import { Stack } from '@/components/ui/layout';
 import { SiteHealthDashboardLayout } from '@/components/site-health/dashboard-layout';
 import { AeoReadinessPanel } from '@/components/site-health/aeo-readiness-panel';
 import { ArchitecturePanel } from '@/components/site-health/architecture-panel';
@@ -69,7 +70,9 @@ function SiteHealthContent({
       ),
     [defaultTab],
   );
-  const [tab, selectTab] = useUrlState('tab', tabCodec, { clearKeys: ['cursor', 'sort'] });
+  const [tab, selectTab] = useUrlState('tab', tabCodec, {
+    clearKeys: ['cursor', 'sort'],
+  });
   const blockingState = projectBlockingState(projectId, projectLoading, screen);
   const mutationsAllowed = !entitlementQuery.isError;
   const refreshFailures = !blockingState ? <SiteHealthRefreshFailures screen={screen} /> : null;
@@ -86,26 +89,44 @@ function SiteHealthContent({
       />
     ) : undefined;
   const prefetchTab = useSiteHealthTabPrefetch(workspaceId, projectId, crawl?.id, !active);
+  if (blockingState) {
+    return (
+      <PageShell>
+        <Stack gap="workspace" className="min-w-0">
+          {refreshFailures}
+          {blockingState}
+        </Stack>
+      </PageShell>
+    );
+  }
   return (
-    <div className="grid min-w-0 gap-[var(--workspace-gap)]">
-      <PageHeader actions={blockingState ? undefined : headerActions} />
-      {!blockingState ? (
-        <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
-      ) : null}
-      {refreshFailures}
-      {!blockingState ? <AnalysisTabs tab={tab} setTab={selectTab} onIntent={prefetchTab} /> : null}
-      {blockingState ?? (
-        <AnalysisPanel
-          tab={tab}
-          crawlId={crawl?.id}
-          projectId={projectId!}
-          workspaceId={workspaceId!}
-          screen={screen}
-          entitlement={entitlementQuery.data!}
-          mutationsAllowed={mutationsAllowed}
-        />
-      )}
-    </div>
+    <TabsRoot value={tab as AnalysisTab} onValueChange={selectTab}>
+      <PageShell
+        actions={headerActions}
+        tabs={
+          <TabsBar
+            variant="band"
+            items={ANALYSIS_TABS}
+            ariaLabel="Website analysis"
+            onIntent={prefetchTab}
+          />
+        }
+      >
+        <Stack gap="workspace" className="min-w-0">
+          <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
+          {refreshFailures}
+          <AnalysisPanel
+            tab={tab}
+            crawlId={crawl?.id}
+            projectId={projectId!}
+            workspaceId={workspaceId!}
+            screen={screen}
+            entitlement={entitlementQuery.data!}
+            mutationsAllowed={mutationsAllowed}
+          />
+        </Stack>
+      </PageShell>
+    </TabsRoot>
   );
 }
 
@@ -199,13 +220,17 @@ function SiteHealthNotices({
       {screen.exportError ? <Alert tone="danger">{screen.exportError}</Alert> : null}
       {mutationsAllowed && screen.createMutation.isError ? (
         <MutationNotice
-          notice={mutationNoticeForError(screen.createMutation.error, { action: 'start a crawl' })}
+          notice={mutationNoticeForError(screen.createMutation.error, {
+            action: 'start a crawl',
+          })}
           onRetry={screen.startCrawl}
         />
       ) : null}
       {mutationsAllowed && screen.cancelMutation.isError ? (
         <MutationNotice
-          notice={mutationNoticeForError(screen.cancelMutation.error, { action: 'stop the crawl' })}
+          notice={mutationNoticeForError(screen.cancelMutation.error, {
+            action: 'stop the crawl',
+          })}
           onRetry={screen.cancelCrawl}
         />
       ) : null}
@@ -228,33 +253,6 @@ const ANALYSIS_TABS: ReadonlyArray<{ value: AnalysisTab; label: string }> = [
   { value: 'aeo-readiness', label: 'AEO Readiness' },
   { value: 'changes', label: 'Changes' },
 ];
-
-function AnalysisTabs({
-  tab,
-  setTab,
-  onIntent,
-}: Readonly<{
-  tab: string;
-  setTab: (tab: AnalysisTab) => void;
-  onIntent: (tab: AnalysisTab) => void;
-}>) {
-  // Page actions share the tablist row: the tablist's own block-end rule is
-  // suppressed so the row wrapper can carry it across the full width, keeping
-  // the selected tab's underline flush with the rule under the buttons.
-  return (
-    <div className="border-border relative z-10 min-h-10 min-w-0 border-b">
-      <Tabs
-        value={tab as AnalysisTab}
-        onValueChange={setTab}
-        items={ANALYSIS_TABS}
-        ariaLabel="Website analysis"
-        rootClassName="min-w-0 flex-1"
-        className="border-b-0"
-        onIntent={onIntent}
-      />
-    </div>
-  );
-}
 
 function AnalysisPanel({
   tab,

@@ -289,7 +289,11 @@ function RunDetailHeader({
   run,
   cancelling,
   onCancel,
-}: Readonly<{ run: AgentTaskRun; cancelling: boolean; onCancel: (run: AgentTaskRun) => void }>) {
+}: Readonly<{
+  run: AgentTaskRun;
+  cancelling: boolean;
+  onCancel: (run: AgentTaskRun) => void;
+}>) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
       <Stack gap="tight">
@@ -399,6 +403,7 @@ export function TaskForm({
         {(props) => (
           <Textarea
             {...props}
+            raised
             value={objective}
             onChange={(event) => onObjectiveChange(event.target.value)}
             maxLength={2000}
@@ -417,7 +422,10 @@ export function TaskForm({
               value={taskType}
               onValueChange={(value) => onTaskTypeChange(requestedTask(value))}
               disabled={submitting}
-              options={TASKS.map((task) => ({ value: task.value, label: task.label }))}
+              options={TASKS.map((task) => ({
+                value: task.value,
+                label: task.label,
+              }))}
             />
           )}
         </Field>

@@ -45,7 +45,10 @@
 [data-flow-surface] {
   --flow-bar-height: 4rem;
   --flow-measure: 45rem;
-  --flow-measure-wide: 45rem;
+  /* Review is the one step with more to confirm than to read. It was capped at
+     the same 45rem as every other step, which is why it scrolled for a page and
+     a half with both margins empty. */
+  --flow-measure-wide: 64rem;
   --flow-auth-measure: 27.5rem;
   --flow-gutter: 1.5rem;
   --flow-header-gap: 2.5rem;
@@ -502,16 +505,125 @@
   margin-top: var(--flow-answer);
 }
 
-.flow-pair {
-  display: grid;
-  gap: var(--flow-block);
-}
-
+/* Choices on a flow surface are squared off and set at reading size. They also
+   drop the control smudge: an unselected option is a word you have not picked
+   yet, not a button, and twelve outlined rectangles read as a form to fill in
+   rather than a list to check. Selection alone carries a fill. */
 [data-flow-surface] .flow-choice-chip,
 [data-flow-surface] [data-radio-variant='chip'] button {
   border-radius: var(--radius-control);
   font-size: 0.875rem;
   line-height: 1.25rem;
+  box-shadow: none;
+}
+
+/* The review step is the only wide one, and the only one with more to confirm
+   than to read. It runs a tighter rhythm and a smaller title than the steps
+   that ask a single question, so the confirmation fits a laptop viewport
+   instead of scrolling past its own actions. */
+.flow-content[data-flow-measure='wide'] {
+  --flow-header-gap: 1.5rem;
+  --flow-block: 1.25rem;
+  --flow-answer: 0.5rem;
+}
+
+.flow-content[data-flow-measure='wide'] .flow-title {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+/* The review step's two columns: what we found on the left, what you tell us on
+   the right. One column below the breakpoint, exactly as before. */
+.flow-review {
+  display: grid;
+  align-items: start;
+  gap: var(--flow-block);
+}
+
+@media (min-width: 64rem) {
+  .flow-review {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    column-gap: calc(var(--flow-block) * 1.5);
+  }
+}
+
+/* A found entity as a ruled row rather than a boxed chip.
+
+   Competitors arrive with a logo each, and a logo is already a piece of design;
+   putting twelve of them in twelve outlined rectangles made the rectangles the
+   thing you saw. The rows hang between hairlines instead, and the only mark is
+   the one that says whether we are tracking it. */
+.flow-entity-list {
+  display: grid;
+  border-block: 1px solid var(--color-border-subtle);
+}
+
+.flow-entity-list > li + li {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.flow-entity {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.flow-entity-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.5rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--radius-control);
+}
+
+.flow-entity-row:hover {
+  background: var(--color-background-alt);
+}
+
+.flow-entity-row[aria-pressed='false'] .flow-entity-identity {
+  opacity: 0.55;
+}
+
+.flow-entity-identity {
+  display: grid;
+  min-width: 0;
+  gap: 0.125rem;
+}
+
+.flow-entity-name {
+  color: var(--color-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-entity-meta {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-entity-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-accent-fg);
+}
+
+.flow-entity-row[aria-pressed='true'] .flow-entity-mark {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .flow-activity {
@@ -613,10 +725,6 @@
   .flow-title {
     font-size: 1.875rem;
     line-height: 2.25rem;
-  }
-
-  .flow-pair {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
@@ -22,35 +22,36 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { PageShell } from '@/components/layout/page-shell';
+import { Stack } from '@/components/ui/layout';
+
 import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
-import { OPPORTUNITY_STATUS_META } from '@/components/opportunities/opportunity-status-meta';
 import { OpportunityStatusBadge } from '@/components/opportunities/opportunity-status-badge';
 import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge';
 import { useUpdateOpportunityStatus } from '@/components/opportunities/use-opportunity-status';
-import { OpportunityFilterMenu } from '@/components/opportunities/opportunity-filter-menu';
+import {
+  RecommendationFilters,
+  STATUS_CHOICES,
+  pathCodec,
+  severityCodec,
+  statusCodec,
+  typeCodec,
+  type PathFilter,
+  type SeverityFilter,
+  type StatusFilter,
+  type TypeFilter,
+} from '@/components/opportunities/recommendation-filters';
 import {
   clearOpportunitySelection,
   useOpportunityUrlSelection,
 } from '@/components/opportunities/use-opportunity-url-selection';
 import { opportunitiesQueries, type OpportunitiesParams } from '@/lib/api/opportunities';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
-import type {
-  Opportunity,
-  OpportunitiesPage,
-  OpportunityDetail,
-  OpportunitySeverity,
-  OpportunityStatus,
-  OpportunityType,
-} from '@/lib/api/types';
+import type { Opportunity, OpportunitiesPage, OpportunityDetail } from '@/lib/api/types';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 import { formatAudited } from '@/lib/site-health/status';
 import { pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
-import {
-  setUrlParams,
-  stringUrlCodec,
-  useUrlState,
-  type UrlCodec,
-} from '@/lib/navigation/url-state';
+import { setUrlParams, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
 
 /**
@@ -62,61 +63,6 @@ import { textRole } from '@/components/ui/typography';
  * status dropdown, and drill-down into the evidence drawer.
  */
 
-type TypeFilter = 'all' | OpportunityType;
-type SeverityFilter = 'all' | OpportunitySeverity;
-type StatusFilter = 'active' | OpportunityStatus;
-type PathFilter = 'all' | 'owned' | 'earned';
-
-const TYPE_FILTERS: ReadonlyArray<{ key: TypeFilter; label: string }> = [
-  { key: 'all', label: 'All types' },
-  { key: 'visibility', label: 'Visibility' },
-  { key: 'site', label: 'Site' },
-  { key: 'traffic', label: 'Traffic' },
-  { key: 'topic', label: 'Topic' },
-];
-
-const SEVERITY_FILTERS: ReadonlyArray<{ key: SeverityFilter; label: string }> = [
-  { key: 'all', label: 'All impact levels' },
-  { key: 'critical', label: 'Critical' },
-  { key: 'high', label: 'High' },
-  { key: 'medium', label: 'Medium' },
-  { key: 'low', label: 'Low' },
-  { key: 'info', label: 'Informational' },
-];
-
-// Status labels come from the single source (evidence-drawer's meta record,
-// in display order) so chips, the row dropdown, and the drawer never drift.
-const STATUS_CHOICES: ReadonlyArray<{ value: OpportunityStatus; label: string }> = (
-  Object.keys(OPPORTUNITY_STATUS_META) as OpportunityStatus[]
-).map((value) => ({ value, label: OPPORTUNITY_STATUS_META[value].label }));
-
-// The server's no-status-param default IS the active triage queue
-// (open + in_progress), so the honest chip label is "Active".
-const STATUS_FILTERS: ReadonlyArray<{ key: StatusFilter; label: string }> = [
-  { key: 'active', label: 'Active' },
-  ...STATUS_CHOICES.map(({ value, label }) => ({ key: value, label })),
-];
-const PATH_FILTERS: ReadonlyArray<{ key: PathFilter; label: string }> = [
-  { key: 'all', label: 'All paths' },
-  { key: 'owned', label: 'Owned' },
-  { key: 'earned', label: 'Earned' },
-];
-const typeCodec = stringUrlCodec(
-  TYPE_FILTERS.map(({ key }) => key),
-  'all',
-);
-const severityCodec = stringUrlCodec(
-  SEVERITY_FILTERS.map(({ key }) => key),
-  'all',
-);
-const statusCodec = stringUrlCodec(
-  STATUS_FILTERS.map(({ key }) => key),
-  'active',
-);
-const pathCodec = stringUrlCodec(
-  PATH_FILTERS.map(({ key }) => key),
-  'all',
-);
 function FeaturedRecommendation({
   detail,
   onOpen,
@@ -181,7 +127,12 @@ function StatusControl({ row, projectId }: Readonly<{ row: Opportunity; projectI
           <DropdownItem
             key={choice.value}
             disabled={choice.value === row.status || updateStatus.isPending}
-            onSelect={() => updateStatus.mutate({ opportunityId: row.id, status: choice.value })}
+            onSelect={() =>
+              updateStatus.mutate({
+                opportunityId: row.id,
+                status: choice.value,
+              })
+            }
           >
             {choice.label}
           </DropdownItem>
@@ -191,7 +142,17 @@ function StatusControl({ row, projectId }: Readonly<{ row: Opportunity; projectI
   );
 }
 
-export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string }>) {
+export function OpportunitiesCatalog({
+  projectId,
+  actions,
+  summary,
+}: Readonly<{
+  projectId: string;
+  /** Route actions for the identity band, owned by the screen above. */
+  actions?: ReactNode;
+  /** The queue's measured state, at the top of the content region. */
+  summary?: ReactNode;
+}>) {
   const workspaceId = useActiveWorkspaceId() ?? '';
   const scopeKey = `${workspaceId}:${projectId}`;
   const filters = useCatalogFilters(workspaceId, projectId);
@@ -205,27 +166,44 @@ export function OpportunitiesCatalog({ projectId }: Readonly<{ projectId: string
   );
   const { selectedId, visibleSelectedId, setSelectedId } = useOpportunityUrlSelection(scopeKey);
   return (
-    <div className="grid gap-[var(--page-section-gap)]">
-      <FeaturedSection
-        featured={featured}
-        onOpen={(id) => setSelectedId(id, selectedId ? 'replace' : 'push')}
-      />
-      <RecommendationsSection
-        projectId={projectId}
-        filters={filters}
-        listQuery={listQuery}
-        rows={rows}
-        onOpen={(id) => setSelectedId(id, selectedId ? 'replace' : 'push')}
-      />
-      <EvidenceDrawer
-        opportunityId={visibleSelectedId}
-        projectId={projectId}
-        open={visibleSelectedId !== null}
-        onOpenChange={(open) => {
-          if (!open) clearOpportunitySelection();
-        }}
-      />
-    </div>
+    <PageShell
+      actions={actions}
+      controls={
+        <RecommendationFilters
+          pathFilter={filters.pathFilter}
+          onPathChange={filters.setPathFilter}
+          typeFilter={filters.typeFilter}
+          onTypeChange={filters.setTypeFilter}
+          severityFilter={filters.severityFilter}
+          onSeverityChange={filters.setSeverityFilter}
+          statusFilter={filters.statusFilter}
+          onStatusChange={filters.setStatusFilter}
+        />
+      }
+    >
+      <Stack gap="section">
+        {summary}
+        <FeaturedSection
+          featured={featured}
+          onOpen={(id) => setSelectedId(id, selectedId ? 'replace' : 'push')}
+        />
+        <RecommendationsSection
+          projectId={projectId}
+          filters={filters}
+          listQuery={listQuery}
+          rows={rows}
+          onOpen={(id) => setSelectedId(id, selectedId ? 'replace' : 'push')}
+        />
+        <EvidenceDrawer
+          opportunityId={visibleSelectedId}
+          projectId={projectId}
+          open={visibleSelectedId !== null}
+          onOpenChange={(open) => {
+            if (!open) clearOpportunitySelection();
+          }}
+        />
+      </Stack>
+    </PageShell>
   );
 }
 
@@ -335,7 +313,7 @@ function RecommendationsSection({
 }>) {
   return (
     <section className="grid gap-3" aria-labelledby="recommendations-heading">
-      <RecommendationsHeader filters={filters} />
+      <RecommendationsHeader />
       <RecommendationsBody projectId={projectId} query={listQuery} rows={rows} onOpen={onOpen} />
       {rows.length ? (
         <CursorTableFooter
@@ -358,43 +336,13 @@ function RecommendationsSection({
   );
 }
 
-function RecommendationsHeader({
-  filters,
-}: Readonly<{ filters: ReturnType<typeof useCatalogFilters> }>) {
+function RecommendationsHeader() {
   return (
     <EditorialSectionHeader
       ruled
       headingId="recommendations-heading"
       title="Prioritized recommendations"
       description="Ordered by expected impact using your latest visibility and site evidence."
-      actions={
-        <fieldset className="flex flex-wrap items-center gap-2" aria-label="Recommendation filters">
-          <OpportunityFilterMenu
-            label="Path"
-            value={filters.pathFilter}
-            options={PATH_FILTERS}
-            onChange={filters.setPathFilter}
-          />
-          <OpportunityFilterMenu
-            label="Area"
-            value={filters.typeFilter}
-            options={TYPE_FILTERS}
-            onChange={filters.setTypeFilter}
-          />
-          <OpportunityFilterMenu
-            label="Impact"
-            value={filters.severityFilter}
-            options={SEVERITY_FILTERS}
-            onChange={filters.setSeverityFilter}
-          />
-          <OpportunityFilterMenu
-            label="Status"
-            value={filters.statusFilter}
-            options={STATUS_FILTERS}
-            onChange={filters.setStatusFilter}
-          />
-        </fieldset>
-      }
     />
   );
 }
@@ -432,7 +380,11 @@ function RecommendationsTable({
   projectId,
   rows,
   onOpen,
-}: Readonly<{ projectId: string; rows: Opportunity[]; onOpen: (id: string) => void }>) {
+}: Readonly<{
+  projectId: string;
+  rows: Opportunity[];
+  onOpen: (id: string) => void;
+}>) {
   return (
     <Table className="min-w-[48rem] table-fixed">
       <TableHeader>

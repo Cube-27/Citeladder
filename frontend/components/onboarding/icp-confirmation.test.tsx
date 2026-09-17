@@ -2,7 +2,25 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-import { IcpConfirmation, hasConfirmedIcp } from '@/components/onboarding/icp-confirmation';
+import {
+  IcpAudience,
+  IcpCategory,
+  hasConfirmedIcp,
+} from '@/components/onboarding/icp-confirmation';
+
+/**
+ * The step renders the two halves in different places now — what you sell leads
+ * at full width, the audience questions sit beside the found competitors — so
+ * the test mounts both together, which is what the reader still sees.
+ */
+function IcpConfirmation(props: Parameters<typeof IcpCategory>[0]) {
+  return (
+    <>
+      <IcpCategory {...props} />
+      <IcpAudience {...props} />
+    </>
+  );
+}
 import type { DiscoveryProfile } from '@/lib/api/brand-discoveries';
 
 function profile(overrides: Partial<DiscoveryProfile> = {}): DiscoveryProfile {

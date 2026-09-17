@@ -9,6 +9,7 @@ import type { AiReferrals } from '@/lib/api/ai-referrals';
 
 import { AiReferralsDashboard } from './ai-referrals-dashboard';
 import { PageLoading } from '@/components/layout/page-loading';
+import { PageShell } from '@/components/layout/page-shell';
 
 export function AiReferralsContent({
   projectId,
@@ -23,16 +24,17 @@ export function AiReferralsContent({
   query: UseQueryResult<AiReferrals, Error>;
   toolbar: React.ReactNode;
 }>) {
+  // The control band stays drawn while the project resolves. Hiding it left the
+  // work jumping a row's height the moment data arrived.
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      {projectLoading || !projectId ? null : toolbar}
+    <PageShell controls={toolbar}>
       <AiReferralsDataRegion
         projectId={projectId}
         projectLoading={projectLoading}
         range={range}
         query={query}
       />
-    </div>
+    </PageShell>
   );
 }
 

@@ -10,7 +10,9 @@ import { FanoutEvidence } from '@/components/visibility/fanout-evidence';
 import { VisibilitySources } from '@/components/visibility/visibility-sources';
 import { VisibilityActions, VisibilityToolbar } from '@/components/visibility/visibility-toolbar';
 import { VisibilityTrends } from '@/components/visibility/visibility-trends';
-import { TabPanel, Tabs } from '@/components/ui/tabs';
+import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
+import { PageShell } from '@/components/layout/page-shell';
+import { Stack } from '@/components/ui/layout';
 import { useProjectContext } from '@/lib/project/project-context';
 import { VISIBILITY_TABS, type VisibilityTab } from '@/lib/visibility/dashboard';
 import {
@@ -76,28 +78,32 @@ function VisibilityWorkspace({
 }>) {
   if (state === 'empty') {
     return (
-      <div className="grid gap-[var(--workspace-gap)]">
-        {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
-        <VisibilityEmptyState hasActiveRun={Boolean(queries.activeRun)} />
-      </div>
+      <PageShell actions={<VisibilityActions />}>
+        <Stack gap="workspace">
+          {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
+          <VisibilityEmptyState hasActiveRun={Boolean(queries.activeRun)} />
+        </Stack>
+      </PageShell>
     );
   }
+  // The root spans the whole page: the strip is the navigation band and its
+  // panels are two bands below, in the content region.
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
-      <Tabs
-        value={filters.activeTab}
-        onValueChange={filters.selectTab}
-        items={VISIBILITY_TABS.map((tab) => ({
-          value: tab.id,
-          label: tab.label,
-        }))}
-        ariaLabel="Visibility views"
-        rootClassName="grid gap-[var(--workspace-gap)]"
-        onIntent={queries.prefetchTab}
+    <TabsRoot value={filters.activeTab} onValueChange={filters.selectTab}>
+      <PageShell
         actions={<VisibilityActions />}
-      >
-        <div className="flex flex-wrap items-center gap-2">
+        tabs={
+          <TabsBar
+            variant="band"
+            items={VISIBILITY_TABS.map((tab) => ({
+              value: tab.id,
+              label: tab.label,
+            }))}
+            ariaLabel="Visibility views"
+            onIntent={queries.prefetchTab}
+          />
+        }
+        controls={
           <VisibilityToolbar
             activeTab={filters.activeTab}
             runs={queries.runOptions}
@@ -119,16 +125,20 @@ function VisibilityWorkspace({
             outcome={filters.outcome}
             onChangeOutcome={filters.setOutcome}
           />
-        </div>
-        <TabPanel value={filters.activeTab} className="focus-ring">
-          {state ? (
-            <DashboardState state={state} />
-          ) : (
-            <DashboardPanel filters={filters} queries={queries} />
-          )}
-        </TabPanel>
-      </Tabs>
-    </div>
+        }
+      >
+        <Stack gap="workspace">
+          {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
+          <TabPanel value={filters.activeTab} className="focus-ring">
+            {state ? (
+              <DashboardState state={state} />
+            ) : (
+              <DashboardPanel filters={filters} queries={queries} />
+            )}
+          </TabPanel>
+        </Stack>
+      </PageShell>
+    </TabsRoot>
   );
 }
 

@@ -1,33 +1,34 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { DateRangeDialog } from './date-range-dialog';
-import { GranularitySelect, PerformanceNotices, PerformanceToolbar } from './performance-chrome';
+import {
+  GranularitySelect,
+  PerformanceActions,
+  PerformanceNotices,
+  PerformanceToolbar,
+} from './performance-chrome';
 import { Ga4SummaryRow, MetricCards } from './metric-cards';
 import { PerformanceBreakdowns } from './performance-breakdowns';
 import { PerformanceChart, type ChartSeries } from './performance-chart';
 import { ReadinessLadder, useProjectReadiness } from './readiness-ladder';
 import { usePerformanceSelection } from './use-performance-selection';
 import { usePerformanceSync } from './use-performance-sync';
+import { useRangeProjection } from './use-range-projection';
 import { PageLoading } from '@/components/layout/page-loading';
+import { PageShell } from '@/components/layout/page-shell';
+import { Stack } from '@/components/ui/layout';
 import { Alert } from '@/components/ui/alert';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ChartNoAxesColumn } from 'lucide-react';
 import { integrationsApi } from '@/lib/api/integrations';
-import {
-  performanceApi,
-  performanceQueries,
-  type PerformanceDashboard,
-} from '@/lib/api/performance';
+import { performanceQueries, type PerformanceDashboard } from '@/lib/api/performance';
 import { queryKeys } from '@/lib/api/query-keys';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { useProjectContext } from '@/lib/project/project-context';
-import {
-  resolveActiveProjectRequestScope,
-  type ProjectRequestScope,
-} from '@/lib/project/request-scope';
+import { resolveActiveProjectRequestScope } from '@/lib/project/request-scope';
 import {
   COMPARE_OPTIONS,
   METRIC_CARDS,
@@ -97,7 +98,12 @@ function evidenceAvailability(data: PerformanceDashboard) {
   const hasBing =
     snapshotId !== null &&
     (data.dimension_counts.bing_query > 0 || data.dimension_counts.bing_page > 0);
-  return { hasSearchConsoleTotals, hasSearchConsoleBreakdowns, hasGa4, hasBing };
+  return {
+    hasSearchConsoleTotals,
+    hasSearchConsoleBreakdowns,
+    hasGa4,
+    hasBing,
+  };
 }
 
 function performanceCoverage(data: PerformanceDashboard, hasEvidence: boolean) {
@@ -165,7 +171,7 @@ function SearchConsoleWorkspace({
 }>) {
   if (!available) return null;
   return (
-    <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-panel)] border">
+    <div className="border-border-subtle bg-panel overflow-hidden rounded-[var(--radius-card)] border">
       <div className="border-border-subtle flex flex-col border-b lg:flex-row lg:items-stretch lg:justify-between">
         <MetricCards
           selected={selected}
@@ -252,24 +258,38 @@ export function PerformanceScreen() {
 
   // No project yet is either "still resolving which one" or "there is none";
   // only the second is something to tell the reader about.
+  // Every state keeps its identity band: a page that loses its heading and its
+  // rule while loading is a different-looking page, and the work below it moves
+  // when the real one arrives.
   if (!projectId)
-    return isLoading ? (
-      <PageLoading label="Loading performance…" />
-    ) : (
-      <Alert tone="info">Select or create a project to see its search performance.</Alert>
+    return (
+      <PageShell>
+        {isLoading ? (
+          <PageLoading label="Loading performance…" />
+        ) : (
+          <Alert tone="info">Select or create a project to see its search performance.</Alert>
+        )}
+      </PageShell>
     );
   if (dashboard.isError)
     return (
-      <Alert tone="danger">
-        Could not load performance data. Check your connection and try again.
-      </Alert>
+      <PageShell>
+        <Alert tone="danger">
+          Could not load performance data. Check your connection and try again.
+        </Alert>
+      </PageShell>
     );
   // Only the dashboard controls the screen's first paint. Connections feeds
   // one toolbar button and readiness one advisory ladder — both render into
   // an already-drawn page, so a slow secondary read must not hold the whole
   // surface on the slowest of three independent requests. Retained previous
   // scope data (a placeholder) counts as paintable.
-  if (!dashboard.data) return <PageLoading label="Loading performance…" />;
+  if (!dashboard.data)
+    return (
+      <PageShell>
+        <PageLoading label="Loading performance…" />
+      </PageShell>
+    );
 
   const data = dashboard.data as PerformanceDashboard;
   // The figures on screen belong to a DIFFERENT selection (retained while the
@@ -291,173 +311,110 @@ export function PerformanceScreen() {
   const coverage = performanceCoverage(data, hasEvidence);
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      <PerformanceToolbar
-        selection={selection}
-        selectedLabel={selectedLabel}
-        latestDate={data.coverage.latest_date}
-        hasConnections={Boolean(connections.data?.length)}
-        sync={sync}
-        onOpenRange={() => {
-          setDialogTab('filter');
-          setDialogOpen(true);
-        }}
-        onOpenCompare={() => {
-          setDialogTab('compare');
-          setDialogOpen(true);
-        }}
-        onSelectRange={setSelection}
-        comparing={selection.compare !== 'none'}
-        onReset={resetFilters}
-      />
+    <PageShell
+      actions={
+        <PerformanceActions
+          latestDate={data.coverage.latest_date}
+          hasConnections={Boolean(connections.data?.length)}
+          sync={sync}
+        />
+      }
+      controls={
+        <PerformanceToolbar
+          selection={selection}
+          selectedLabel={selectedLabel}
+          onOpenRange={() => {
+            setDialogTab('filter');
+            setDialogOpen(true);
+          }}
+          onOpenCompare={() => {
+            setDialogTab('compare');
+            setDialogOpen(true);
+          }}
+          onSelectRange={setSelection}
+          comparing={selection.compare !== 'none'}
+          onReset={resetFilters}
+        />
+      }
+    >
+      <Stack gap="workspace">
+        {readiness.isError ? (
+          <Alert tone="warning">
+            Could not load data readiness. Check your connection and try again.
+          </Alert>
+        ) : (
+          <ReadinessLadder data={readiness.data} hideDisconnected={coverage.firstUse} />
+        )}
 
-      {readiness.isError ? (
-        <Alert tone="warning">
-          Could not load data readiness. Check your connection and try again.
-        </Alert>
-      ) : (
-        <ReadinessLadder data={readiness.data} hideDisconnected={coverage.firstUse} />
-      )}
+        <PerformanceNotices
+          sync={sync}
+          projecting={projection.projecting}
+          selectedMissing={coverage.selectedMissing}
+          comparisonMissing={coverage.comparisonMissing}
+        />
 
-      <PerformanceNotices
-        sync={sync}
-        projecting={projection.projecting}
-        selectedMissing={coverage.selectedMissing}
-        comparisonMissing={coverage.comparisonMissing}
-      />
-
-      {!hasEvidence ? (
-        <PerformanceEmptyState data={data} projecting={projection.projecting} />
-      ) : (
-        <>
-          {/* One card holds the strip and the plot it drives: selecting a card
+        {!hasEvidence ? (
+          <PerformanceEmptyState data={data} projecting={projection.projecting} />
+        ) : (
+          <>
+            {/* One card holds the strip and the plot it drives: selecting a card
           changes the lines directly beneath it, so a gap between them would
           split a control from its own result. The strip sits flush with the
           granularity control aligned on the right of the header row. */}
-          <SearchConsoleWorkspace
-            available={evidence.hasSearchConsoleTotals}
-            selected={selectedWindow}
-            comparison={comparisonWindow}
-            selectedLabel={selectedLabel}
-            compareLabel={comparisonLabel}
-            activeMetrics={activeMetrics}
-            onToggleMetric={toggleMetric}
-            series={series}
-            granularity={granularity}
-            onGranularityChange={setGranularity}
-            refreshing={refreshing}
-          />
-          <Ga4Workspace
-            available={evidence.hasGa4}
-            selected={selectedWindow}
-            comparison={comparisonWindow}
-            compareLabel={comparisonLabel}
-            refreshing={refreshing}
-          />
+            <SearchConsoleWorkspace
+              available={evidence.hasSearchConsoleTotals}
+              selected={selectedWindow}
+              comparison={comparisonWindow}
+              selectedLabel={selectedLabel}
+              compareLabel={comparisonLabel}
+              activeMetrics={activeMetrics}
+              onToggleMetric={toggleMetric}
+              series={series}
+              granularity={granularity}
+              onGranularityChange={setGranularity}
+              refreshing={refreshing}
+            />
+            <Ga4Workspace
+              available={evidence.hasGa4}
+              selected={selectedWindow}
+              comparison={comparisonWindow}
+              compareLabel={comparisonLabel}
+              refreshing={refreshing}
+            />
 
-          <PerformanceBreakdowns
-            projectId={projectId}
-            dimension={dimension}
-            onDimensionChange={setDimension}
-            snapshotId={selectedWindow.snapshot_id}
-            compareSnapshotId={comparisonWindow?.snapshot_id ?? null}
-            unavailableDimensions={data.unavailable_dimensions}
-            activeMetrics={activeMetrics}
-            selectedLabel={selectedLabel}
-            compareLabel={comparisonLabel}
-            hasSearchConsole={evidence.hasSearchConsoleBreakdowns}
-            // Only when a Bing connection exists: Bing's panel states "measured
-            // nothing", which is not what an absent connection means.
-            hasBing={evidence.hasBing}
-          />
-        </>
-      )}
-      <DateRangeDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        initialTab={dialogTab}
-        selection={selection}
-        onApply={setSelection}
-        coverage={{
-          earliest: data.coverage.earliest_date,
-          latest: data.coverage.latest_date,
-        }}
-        yearOverYearAvailable={canCompareYearOverYear(
-          data.coverage.covered_days,
-          windowLength(selectedWindow) || 1,
+            <PerformanceBreakdowns
+              projectId={projectId}
+              dimension={dimension}
+              onDimensionChange={setDimension}
+              snapshotId={selectedWindow.snapshot_id}
+              compareSnapshotId={comparisonWindow?.snapshot_id ?? null}
+              unavailableDimensions={data.unavailable_dimensions}
+              activeMetrics={activeMetrics}
+              selectedLabel={selectedLabel}
+              compareLabel={comparisonLabel}
+              hasSearchConsole={evidence.hasSearchConsoleBreakdowns}
+              // Only when a Bing connection exists: Bing's panel states "measured
+              // nothing", which is not what an absent connection means.
+              hasBing={evidence.hasBing}
+            />
+          </>
         )}
-      />
-    </div>
+        <DateRangeDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          initialTab={dialogTab}
+          selection={selection}
+          onApply={setSelection}
+          coverage={{
+            earliest: data.coverage.earliest_date,
+            latest: data.coverage.latest_date,
+          }}
+          yearOverYearAvailable={canCompareYearOverYear(
+            data.coverage.covered_days,
+            windowLength(selectedWindow) || 1,
+          )}
+        />
+      </Stack>
+    </PageShell>
   );
-}
-
-/**
- * Materialize any window the dashboard reported as unprojected.
- *
- * A read never builds a projection, so when the selected or comparison window
- * has no snapshot the screen queues the display-only range task and refetches
- * once it completes. The task is idempotent on the window, so a re-render or
- * a second viewer joins the same work rather than duplicating it.
- */
-function useRangeProjection(scope: ProjectRequestScope, data: PerformanceDashboard | undefined) {
-  const { workspaceId, projectId } = scope;
-  const queryClient = useQueryClient();
-  const scopeKey = `${workspaceId}:${projectId}`;
-  const [queued, setQueued] = useState<{ scopeKey: string; taskId: string } | null>(null);
-  const pending = queued?.scopeKey === scopeKey ? queued.taskId : null;
-  const mutation = useMutation({
-    mutationFn: async (window: { from: string; to: string }) => {
-      if (!scope.enabled) throw new Error('Project is not available.');
-      const task = await performanceApi.enqueueRange(projectId, window, { workspaceId });
-      return { scopeKey, taskId: task.task_id };
-    },
-    onSuccess: setQueued,
-  });
-
-  const missing = missingWindow(data);
-  useEffect(() => {
-    if (!scope.enabled || !missing) return;
-    mutation.mutate(missing);
-    // `missing` is a stable string pair derived from the response; re-running
-    // on the mutation object itself would loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope.enabled, workspaceId, projectId, missing?.from, missing?.to]);
-
-  const task = useQuery({
-    queryKey: queryKeys.performance.rangeTask(projectId, pending ?? ''),
-    queryFn: ({ signal }) =>
-      performanceApi.getRangeTask(projectId, pending ?? '', { signal, workspaceId }),
-    enabled: scope.enabled && Boolean(pending),
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      return status === 'succeeded' || status === 'failed' || status === 'cancelled' ? false : 1500;
-    },
-  });
-
-  const status = task.data?.status;
-  const terminal = status === 'succeeded' || status === 'failed' || status === 'cancelled';
-  useEffect(() => {
-    // EVERY terminal status releases the poll — a failed or cancelled task
-    // that stayed pending would leave the surface reporting work that has
-    // already stopped. Only a success changed a projection, so only a
-    // success invalidates.
-    if (!terminal) return;
-    setQueued(null);
-    if (status === 'succeeded') {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.performance.all });
-    }
-  }, [terminal, status, queryClient]);
-
-  return { projecting: Boolean(pending) && !terminal };
-}
-
-/** The first window the response reported as unprojected, if any. */
-function missingWindow(data: PerformanceDashboard | undefined) {
-  if (!data) return null;
-  for (const window of [data.selected, data.comparison]) {
-    if (window && window.snapshot_id === null && window.window_start && window.window_end) {
-      return { from: window.window_start, to: window.window_end };
-    }
-  }
-  return null;
 }

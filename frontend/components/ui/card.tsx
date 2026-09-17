@@ -1,6 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 import { cardClasses, type CardTone } from './card-variants';
 
@@ -75,7 +76,10 @@ export function CardTitle({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'h3'>>) {
   return (
-    <h3 {...props} className={cn('font-display text-foreground text-lg font-medium', className)}>
+    // The object rung, the same one the route H1 and a section H2 sit at. It
+    // used to be 18/500 — larger and lighter than both, so a card's title
+    // outranked the page's and weight said nothing.
+    <h3 {...props} className={textRole('objectTitle', className)}>
       {children}
     </h3>
   );

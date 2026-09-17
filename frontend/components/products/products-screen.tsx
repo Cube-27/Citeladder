@@ -1,6 +1,7 @@
 'use client';
 
 import { PageLoading } from '@/components/layout/page-loading';
+import { PageShell } from '@/components/layout/page-shell';
 import { Alert } from '@/components/ui/alert';
 import { useProjectContext } from '@/lib/project/project-context';
 
@@ -19,7 +20,17 @@ import { CommerceWorkspace } from './commerce-workspace';
 export function ProductsScreen() {
   const { activeProject, isLoading } = useProjectContext();
   const projectId = activeProject?.id ?? '';
-  if (isLoading) return <PageLoading label="Loading Commerce…" />;
-  if (!projectId) return <Alert tone="info">Select or create a project to use Commerce.</Alert>;
+  if (isLoading)
+    return (
+      <PageShell>
+        <PageLoading label="Loading Commerce…" />
+      </PageShell>
+    );
+  if (!projectId)
+    return (
+      <PageShell>
+        <Alert tone="info">Select or create a project to use Commerce.</Alert>
+      </PageShell>
+    );
   return <CommerceWorkspace projectId={projectId} />;
 }

@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 
 import { AcceptInvitationScreen } from './accept-invitation-screen';
 import { SettingsScreen } from './settings-screen';
@@ -11,10 +11,7 @@ import { SettingsScreen } from './settings-screen';
 export function SettingsRouteContent() {
   return (
     <Suspense>
-      <div className="grid gap-[var(--workspace-gap)]">
-        <PageHeader />
-        <SettingsScreen />
-      </div>
+      <SettingsScreen />
     </Suspense>
   );
 }
@@ -23,8 +20,9 @@ export function SettingsRouteContent() {
 export function AcceptInvitationRouteContent() {
   return (
     <Suspense>
-      <PageHeader />
-      <AcceptInvitationScreen />
+      <PageShell>
+        <AcceptInvitationScreen />
+      </PageShell>
     </Suspense>
   );
 }

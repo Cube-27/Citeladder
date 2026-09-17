@@ -10,7 +10,7 @@ import { MarketSelect } from '@/components/ui/market-select';
 import { COUNTRY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/setup/markets';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
 import { onboardingErrorMessage, type BrandStepValues } from '@/lib/onboarding/forms';
-import { hasConfirmedIcp, IcpConfirmation } from './icp-confirmation';
+import { hasConfirmedIcp, IcpAudience, IcpCategory } from './icp-confirmation';
 import { ReviewStep } from './review-step';
 
 const MARKET_OPTIONS = [{ value: 'GLOBAL', label: 'Global' }, ...COUNTRY_OPTIONS];
@@ -215,7 +215,9 @@ export function CreationStage({
 
 export function ReviewStage({
   flow,
-}: Readonly<{ flow: ReturnType<typeof import('./onboarding-flow').useOnboardingFlow> }>) {
+}: Readonly<{
+  flow: ReturnType<typeof import('./onboarding-flow').useOnboardingFlow>;
+}>) {
   const {
     catalog,
     competitors,
@@ -234,21 +236,32 @@ export function ReviewStage({
       <StageHeader title="Does this look right?">
         Everything below was found automatically. Deselect anything you don&apos;t want to track.
       </StageHeader>
-      <div className="flow-groups">
-        <ReviewStep
-          domains={domains}
-          competitors={competitors}
-          onToggleDomain={toggle(flow.setDomains)}
-          onToggleCompetitor={(index) =>
-            toggleCompetitor(index, setCompetitors, maximumCompetitors)
-          }
-          onEditCompetitorDomain={(index, domain) =>
-            editCompetitorDomain(index, domain, setCompetitors)
-          }
-          onAddCompetitor={() => addCompetitor(setCompetitors, maximumCompetitors)}
-          maximumCompetitors={maximumCompetitors}
-        />
-        {profile ? <IcpConfirmation profile={profile} onChange={setProfile} /> : null}
+      {/* Two columns: what we found on the left, what only you can tell us on
+          the right. One `.flow-groups` per column — this used to nest three of
+          them, so the page carried three stacked 2rem rhythms and ran on well
+          past the fold with both margins empty. */}
+      <div className="flow-review">
+        <div className="flow-groups">
+          <ReviewStep
+            domains={domains}
+            competitors={competitors}
+            onToggleDomain={toggle(flow.setDomains)}
+            onToggleCompetitor={(index) =>
+              toggleCompetitor(index, setCompetitors, maximumCompetitors)
+            }
+            onEditCompetitorDomain={(index, domain) =>
+              editCompetitorDomain(index, domain, setCompetitors)
+            }
+            onAddCompetitor={() => addCompetitor(setCompetitors, maximumCompetitors)}
+            maximumCompetitors={maximumCompetitors}
+          />
+        </div>
+        {profile ? (
+          <div className="flow-groups">
+            <IcpCategory profile={profile} onChange={setProfile} />
+            <IcpAudience profile={profile} onChange={setProfile} />
+          </div>
+        ) : null}
       </div>
       <div className="mt-[var(--flow-block)] grid gap-[var(--flow-answer)]">
         {catalog.isError ? (
@@ -367,7 +380,13 @@ function addCompetitor(
     const id = globalThis.crypto.randomUUID();
     return [
       ...items,
-      { id: `competitor:manual:${id}`, name: '', aliases: [], domains: [], selected: true },
+      {
+        id: `competitor:manual:${id}`,
+        name: '',
+        aliases: [],
+        domains: [],
+        selected: true,
+      },
     ];
   });
 }

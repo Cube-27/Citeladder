@@ -14,7 +14,8 @@ import { IntegrationSettings } from '@/components/settings/integration-settings'
 import { BillingSettings } from '@/components/settings/billing-settings';
 import { MemberSettings } from '@/components/settings/member-settings';
 import { ProviderSettings } from '@/components/settings/provider-settings';
-import { TabPanel, Tabs } from '@/components/ui/tabs';
+import { TabPanel, TabsBar, TabsRoot } from '@/components/ui/tabs';
+import { PageShell } from '@/components/layout/page-shell';
 import { projectsApi } from '@/lib/api/projects';
 import { queryKeys } from '@/lib/api/query-keys';
 import { useSessionUser } from '@/lib/auth/session-guard';
@@ -239,13 +240,15 @@ export function SettingsScreen() {
   const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'account';
 
   return (
-    <div className="grid gap-[var(--workspace-gap)]">
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
-        ariaLabel="Settings sections"
-        rootClassName="grid gap-[var(--page-section-gap)]"
+    <TabsRoot value={activeTab} onValueChange={setActiveTab}>
+      <PageShell
+        tabs={
+          <TabsBar
+            variant="band"
+            items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
+            ariaLabel="Settings sections"
+          />
+        }
       >
         <TabPanel value="billing" forceMount className="focus-ring data-[state=inactive]:hidden">
           <BillingSettings enabled={activeTab === 'billing'} />
@@ -326,7 +329,7 @@ export function SettingsScreen() {
         <TabPanel value="integrations" className="focus-ring">
           <IntegrationSettings />
         </TabPanel>
-      </Tabs>
-    </div>
+      </PageShell>
+    </TabsRoot>
   );
 }

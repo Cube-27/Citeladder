@@ -1,4 +1,5 @@
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
+import { Stack } from '@/components/ui/layout';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
@@ -37,27 +38,28 @@ export function UrlDetailView({
   onRerun: () => void;
 }>) {
   return (
-    <>
-      <PageHeader
-        title={pageDisplayTitle(detail.title, detail.display_url)}
-        actions={
-          <Button size="sm" onClick={onRerun} disabled={rerunPending}>
-            {rerunPending ? 'Re-auditing…' : rerunQueued ? 'Re-audit queued' : 'Re-audit this page'}
-          </Button>
-        }
-      />
-      <PageMetadata detail={detail} />
-      <UrlScoreSummary detail={detail} />
-      <DeliveryMetrics delivery={detail.delivery} />
-      <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
-      <IssuesList issues={detail.issues} />
-    </>
+    <PageShell
+      title={pageDisplayTitle(detail.title, detail.display_url)}
+      actions={
+        <Button size="sm" onClick={onRerun} disabled={rerunPending}>
+          {rerunPending ? 'Re-auditing…' : rerunQueued ? 'Re-audit queued' : 'Re-audit this page'}
+        </Button>
+      }
+    >
+      <Stack gap="workspace">
+        <PageMetadata detail={detail} />
+        <UrlScoreSummary detail={detail} />
+        <DeliveryMetrics delivery={detail.delivery} />
+        <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
+        <IssuesList issues={detail.issues} />
+      </Stack>
+    </PageShell>
   );
 }
 
 function PageMetadata({ detail }: Readonly<{ detail: PageDetail }>) {
   return (
-    <section className="border-border-subtle min-w-0 border-y py-4">
+    <section className="border-border-subtle min-w-0 border-b pb-4">
       <dl className="grid min-w-0 gap-x-6 gap-y-4 min-[701px]:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
         <DetailFact label="URL" className="min-[701px]:col-span-2 xl:col-span-1">
           <a
@@ -104,7 +106,10 @@ function DetailFact({
 function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {
   const items = [
     { label: 'TTFB', value: formatMeasuredMs(delivery.ttfb_ms) },
-    { label: 'Response Size', value: formatBytes(delivery.decoded_bytes ?? delivery.html_bytes) },
+    {
+      label: 'Response Size',
+      value: formatBytes(delivery.decoded_bytes ?? delivery.html_bytes),
+    },
     {
       label: 'HTTP Status',
       value: delivery.status_code === null ? PLACEHOLDER : `${delivery.status_code}`,

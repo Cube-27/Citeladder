@@ -10,6 +10,12 @@ describe('BrandLogo', () => {
     expect(brandInitials('Acme')).toBe('AC');
     expect(brandInitials('Acme Corporation')).toBe('AC');
     expect(brandInitials('')).toBe('?');
+    // Discovery hands back the long form in tow, and it is not part of the name.
+    expect(brandInitials('EY (Ernst & Young)')).toBe('EY');
+    expect(brandInitials('PwC (PricewaterhouseCoopers)')).toBe('PW');
+    expect(brandInitials('(((')).toBe('?');
+    // One code point, not half a surrogate pair.
+    expect(brandInitials('\u{1D54F} Corp')).toBe('\u{1D54F}C');
   });
 
   it('renders the cached logo URL and falls back after an image error', () => {

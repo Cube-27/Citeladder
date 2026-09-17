@@ -61,7 +61,9 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
       return;
     }
     window.dispatchEvent(
-      new CustomEvent('citeladder:open-command-palette', { detail: { trigger: launch.trigger } }),
+      new CustomEvent('citeladder:open-command-palette', {
+        detail: { trigger: launch.trigger },
+      }),
     );
   }
 
@@ -81,12 +83,13 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               <ProjectSwitcher />
             </div>
 
-            {/* The first row below the switcher is offset by the same
-                  workspace gap the content pane puts between its header and
-                  its first section, so both second rows start at one line. */}
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-[var(--sidebar-pad-x)] pt-[var(--workspace-gap)] pb-[var(--sidebar-pad-y)]">
-              {/* Tab-height rows, so the sidebar's second row and the
-                    content's second row are the same band at the same offset. */}
+            {/* No offset below the switcher. The pane's second row is the band
+                  that closes the identity band, which starts the moment the
+                  56px switcher row ends — so anything added here would push the
+                  search below the row it is meant to line up with. */}
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-[var(--sidebar-pad-x)] pb-[var(--sidebar-pad-y)]">
+              {/* Band-height rows, so the sidebar's second row and the pane's
+                    second row are the same band at the same offset. */}
               <CommandPaletteTrigger className="h-[var(--tab-height)] w-full" />
               <AgentSheetTrigger className="h-[var(--tab-height)] w-full justify-start" />
               <div className="min-h-0 flex-1 overflow-y-auto">
@@ -131,22 +134,26 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             <main id="main" className="app-pane app-pane-workspace relative flex-1">
               {/* The account rides the route's own first row rather than a
                     bar of its own, so the shell adds no second row above the
-                    work. It is positioned rather than placed in PageHeader
+                    work. It is positioned rather than placed in PageShell
                     because the account belongs to the shell: routes render
-                    their header on its own in tests and previews, and coupling
+                    their bands on their own in tests and previews, and coupling
                     every one of them to the account controller would make the
-                    header unmountable outside this provider.
+                    page shell unmountable outside this provider.
 
                     Desktop only — the compact topbar already carries it. The
                     inline-size padding matches the pane's gutter so the glyph
                     lines up with the actions beneath it. */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-[var(--compact-topbar-height)] items-center justify-end px-[var(--content-gutter)] min-[981px]:flex">
-                <div className="pointer-events-auto">
-                  <UserMenuTrigger presenter="header" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-[var(--page-band-identity)] min-[981px]:block">
+                <div className="mx-auto flex h-full w-full max-w-[var(--content-max-width)] items-center justify-end px-[var(--content-gutter)]">
+                  <div className="pointer-events-auto">
+                    <UserMenuTrigger presenter="header" />
+                  </div>
                 </div>
               </div>
-              <div className="mx-auto grid w-full max-w-[var(--content-max-width)] grid-cols-[minmax(0,1fr)] gap-0 px-[var(--content-gutter)] pb-[var(--content-gutter)]">
-                <div>{children}</div>
+              {/* No gutter here. The route's own bands carry it, so their rules
+                  reach the paper's edges instead of stopping at the margin. */}
+              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-0 pb-[var(--content-gutter)]">
+                <div className="min-w-0">{children}</div>
               </div>
             </main>
 
