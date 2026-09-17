@@ -6,13 +6,25 @@
 # legacy domain-keyed thresholds and the page-keyed rule catalog entries --
 # lives here, so the general catalog stays about rules in general.
 #
-# The ACTION PATH vocabulary here says who owns the page an action touches --
-# us, or a publisher. A publisher's ``source_class`` is a different thing: it
-# describes the domain, and never establishes the action path on its own.
+# Two vocabularies here are easy to collapse and must not be. The ACTION PATH
+# says who owns the page an action touches -- us, or a publisher. The PAGE
+# FORMAT says what kind of page it is, derived per page from its own content.
+# A publisher's ``source_class`` is neither; it describes a domain, and one
+# inspected page never promotes it.
 from __future__ import annotations
 
 from typing import Final
 
+from app.core.config.source_pages import (
+    PAGE_FORMAT_ARTICLE,
+    PAGE_FORMAT_COMPARISON,
+    PAGE_FORMAT_DIRECTORY,
+    PAGE_FORMAT_DISCUSSION,
+    PAGE_FORMAT_LISTICLE,
+    PAGE_FORMAT_REFERENCE,
+    PAGE_FORMAT_REVIEW,
+    PAGE_FORMAT_VIDEO,
+)
 from app.core.config.source_patterns import (
     SOURCE_CLASS_COMMUNITY,
     SOURCE_CLASS_EDITORIAL_THIRD_PARTY,
@@ -62,3 +74,110 @@ EARNED_SUGGESTED_ROLE_BY_CLASS: Final[dict[str, str]] = {
     SOURCE_CLASS_INSTITUTIONAL: "PR",
     SOURCE_CLASS_VIDEO: "Marketing",
 }
+
+# =========================================================================
+# Page-keyed earned actions
+# =========================================================================
+# Four rule ids rather than one rule carrying an action field. ``_score_hits``
+# consolidates on ``(rule_id, target_key)`` and the partial unique index is
+# keyed identically, so a single rule would collapse two different actions on
+# one page into one row with one status -- and acquiring a listing and
+# correcting a listing have different done-states.
+#
+# The target key is ``earned-page:{url_hash}``. Source class and page format
+# are EVIDENCE, never key fields: keying on a classification is what made a
+# reclassification supersede a row with no successor and silently discard a
+# human decision.
+RULE_EARNED_PAGE_ACQUIRE: Final = "earned_page_acquire_listing"
+RULE_EARNED_PAGE_CORRECT: Final = "earned_page_correct_listing"
+RULE_EARNED_PAGE_DEFEND: Final = "earned_page_defend_listing"
+RULE_EARNED_PAGE_RESEARCH: Final = "earned_page_research_source"
+EARNED_PAGE_RULE_IDS: Final[frozenset[str]] = frozenset(
+    {
+        RULE_EARNED_PAGE_ACQUIRE,
+        RULE_EARNED_PAGE_CORRECT,
+        RULE_EARNED_PAGE_DEFEND,
+        RULE_EARNED_PAGE_RESEARCH,
+    }
+)
+# Every rule id whose action is performed on somebody else's page. The list
+# filter reads this rather than naming one id, so retiring the domain-keyed
+# rule does not silently empty the earned view.
+EARNED_RULE_IDS: Final[frozenset[str]] = EARNED_PAGE_RULE_IDS | {
+    RULE_EARNED_SOURCE_RECURS
+}
+
+EARNED_PAGE_TARGET_PREFIX: Final = "earned-page:"
+
+# =========================================================================
+# Qualification gate
+# =========================================================================
+# Hard, and ahead of ranking. An unqualified candidate stays a source state or
+# a research candidate; it never becomes a fabricated action.
+#
+# ``earned_page_research_source`` is the deliberate exception -- it exists for
+# precisely what this gate rejects, and applying the gate to it would put every
+# unresolved source back in the silent-drop path.
+#
+# Page formats whose shape admits a new entrant. An article ABOUT a company is
+# not a place a second company can be added, so it is absent: correcting or
+# defending an existing mention there is still available, acquiring one is not.
+EARNED_PAGE_INCLUDABLE_FORMATS: Final[frozenset[str]] = frozenset(
+    {
+        PAGE_FORMAT_COMPARISON,
+        PAGE_FORMAT_LISTICLE,
+        PAGE_FORMAT_DIRECTORY,
+        PAGE_FORMAT_REVIEW,
+    }
+)
+# How often a page must recur before it is worth a human's attention at all.
+# Below it a cited page is inventory, visible in Sources, and not a task.
+EARNED_PAGE_MIN_RECURRENCE: Final = 2
+# Research fires on relevance and recurrence alone, so its bar is the one that
+# keeps a single incidental citation from becoming a queue item.
+EARNED_PAGE_RESEARCH_MIN_RECURRENCE: Final = 3
+
+# =========================================================================
+# Priority inputs
+# =========================================================================
+# Bounded, and computed from VERIFIED ON-PAGE presence only. Answer-level
+# co-occurrence survives as descriptive evidence and is labelled as such; it
+# never boosts a page score, because a competitor merely named in prose says
+# nothing about the page that answer happened to cite.
+EARNED_PAGE_USAGE_FACTOR_MAX: Final = 2.0
+EARNED_PAGE_COMPETITOR_FACTOR_MAX: Final = 1.6
+EARNED_PAGE_COMPETITOR_FACTOR_STEP: Final = 0.2
+EARNED_PAGE_COMPETITOR_FACTOR_CAP: Final = 3
+
+# =========================================================================
+# Handoff shape
+# =========================================================================
+# The output type follows the PAGE, not the publisher. A comparison page needs
+# comparison copy whoever runs it, and a generic article brief is what made
+# every earned handoff interchangeable.
+EARNED_PAGE_SKILL_BY_FORMAT: Final[dict[str, str]] = {
+    PAGE_FORMAT_COMPARISON: "comparison",
+    PAGE_FORMAT_LISTICLE: "listicle",
+    PAGE_FORMAT_DIRECTORY: "about_us",
+    PAGE_FORMAT_REVIEW: "case_study",
+    PAGE_FORMAT_DISCUSSION: "reddit",
+    PAGE_FORMAT_REFERENCE: "faq",
+    PAGE_FORMAT_ARTICLE: "article",
+    PAGE_FORMAT_VIDEO: "youtube",
+}
+EARNED_PAGE_ROLE_BY_FORMAT: Final[dict[str, str]] = {
+    PAGE_FORMAT_COMPARISON: "Marketing",
+    PAGE_FORMAT_LISTICLE: "PR",
+    PAGE_FORMAT_DIRECTORY: "Marketing",
+    PAGE_FORMAT_REVIEW: "PR",
+    PAGE_FORMAT_DISCUSSION: "Founder",
+    PAGE_FORMAT_REFERENCE: "Marketing",
+    PAGE_FORMAT_ARTICLE: "PR",
+    PAGE_FORMAT_VIDEO: "Marketing",
+}
+EARNED_PAGE_DEFAULT_SKILL: Final = "article"
+EARNED_PAGE_DEFAULT_ROLE: Final = "PR"
+# Bounds on what one page hit carries into its brief.
+EARNED_PAGE_MAX_PASSAGES: Final = 4
+EARNED_PAGE_MAX_COMPETITORS: Final = 12
+EARNED_PAGE_MAX_PROMPTS: Final = 12
