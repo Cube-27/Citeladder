@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select, update
+from sqlalchemy import Boolean, func, literal_column, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -154,7 +154,20 @@ async def _enqueue_task(
     parent_site_url_id: uuid.UUID | None = None,
     priority: int = 0,
 ) -> uuid.UUID | None:
-    """Enqueue one active-crawl task conflict-safely."""
+    """Enqueue one active-crawl task conflict-safely, raising priority on conflict.
+
+    A recrawl pre-seeds an analyze task per monitored URL at priority 0 before
+    discovery has fetched anything. When discovery later reaches that URL it
+    enqueues the same ``(crawl, kind, url_hash, generation)`` row carrying
+    ``ANALYZE_PRIORITY_BOOST`` -- and under ``ON CONFLICT DO NOTHING`` the boost
+    was silently dropped, so the boost never reached the seeded tasks it exists
+    to reorder. Those are exactly the monitored URLs the user is waiting on, and
+    they churned through claim/defer cycles against the crawl row instead.
+
+    The upsert therefore raises priority, and only ever raises it: the ``where``
+    keeps a lower-priority re-enqueue from demoting a queued task, and a task
+    already claimed is left alone because its ordering has been decided.
+    """
     still_active = await session.scalar(
         select(SiteCrawl.id).where(
             SiteCrawl.id == crawl.id,
@@ -164,7 +177,8 @@ async def _enqueue_task(
     if still_active is None:
         return None
 
-    stmt = (
+    excluded = pg_insert(SiteCrawlTask).excluded
+    result = await session.execute(
         pg_insert(SiteCrawlTask)
         .values(
             crawl_id=crawl.id,
@@ -184,12 +198,23 @@ async def _enqueue_task(
             parent_site_url_id=parent_site_url_id,
             max_attempts=site_health_settings.max_attempts,
         )
-        .on_conflict_do_nothing(
-            index_elements=["crawl_id", "task_kind", "url_hash", "generation"]
+        .on_conflict_do_update(
+            index_elements=["crawl_id", "task_kind", "url_hash", "generation"],
+            set_={"priority": excluded.priority},
+            where=(SiteCrawlTask.status == TASK_STATUS_QUEUED)
+            & (SiteCrawlTask.priority < excluded.priority),
         )
-        .returning(SiteCrawlTask.id)
+        # ``xmax = 0`` is true only on a freshly inserted row, so callers keep
+        # counting admissions and a priority bump is not mistaken for one.
+        .returning(
+            SiteCrawlTask.id,
+            literal_column("xmax = 0", type_=Boolean).label("inserted"),
+        )
     )
-    return await session.scalar(stmt)
+    row = result.first()
+    if row is None or not row.inserted:
+        return None
+    return uuid.UUID(str(row.id))
 
 
 async def _upsert_system_membership(

@@ -25,7 +25,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -280,8 +280,17 @@ def enqueue_analyze_task(
     site_url: SiteUrl,
     generation: int,
     position: int,
+    available_in_seconds: float = 0.0,
 ) -> SiteCrawlTask:
-    """Create one queued ``analyze`` task for a newly monitored URL."""
+    """Create one queued ``analyze`` task for a newly monitored URL.
+
+    ``available_in_seconds`` staggers a bulk seed so the whole set is not
+    claimable at once; a single task leaves it at the default and is claimable
+    immediately.
+    """
+    available_at = utcnow()
+    if available_in_seconds > 0:
+        available_at += timedelta(seconds=available_in_seconds)
     task = SiteCrawlTask(
         crawl_id=crawl.id,
         workspace_id=crawl.workspace_id,
@@ -297,7 +306,7 @@ def enqueue_analyze_task(
             generation=generation,
         ),
         status=TASK_STATUS_QUEUED,
-        available_at=utcnow(),
+        available_at=available_at,
     )
     session.add(task)
     return task

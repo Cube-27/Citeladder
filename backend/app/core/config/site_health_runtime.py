@@ -208,6 +208,15 @@ class SiteHealthSettings(BaseSettings):
     # reuse of a sibling's discover artifact is an optimization, never a
     # correctness requirement.
     analysis_dependency_max_wait_seconds: float = 180.0
+    # Spread applied to a recrawl's pre-seeded analyze tasks. Seeding creates
+    # one per monitored URL, all immediately claimable, before discovery has
+    # fetched anything -- so at t0 every processing slot claims a task whose
+    # prerequisite cannot exist yet and immediately defers it. Staggering
+    # ``available_at`` by rank lets discovery get ahead of the seeded set
+    # instead of racing it for slots. Capped so a large monitored set cannot
+    # push its own tail minutes into the future. 0 disables the stagger.
+    monitored_seed_stagger_seconds: float = 0.25
+    monitored_seed_stagger_max_seconds: float = 30.0
     # Deterministic bound on how many expired leases the sweeper reclaims in
     # ONE transaction. A mass expiry across a large frontier (e.g. 50,000
     # URLs) would otherwise lock and update every expired row in a single
@@ -295,6 +304,18 @@ class SiteHealthSettings(BaseSettings):
             raise ValueError(
                 "max_advanced_requested_page_limit must not exceed max_discovery_urls"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_monitored_seed_stagger(self) -> SiteHealthSettings:
+        """Keep the recrawl seeding stagger non-negative (0 disables it)."""
+        _require_non_negative(
+            self,
+            (
+                "monitored_seed_stagger_seconds",
+                "monitored_seed_stagger_max_seconds",
+            ),
+        )
         return self
 
     @model_validator(mode="after")

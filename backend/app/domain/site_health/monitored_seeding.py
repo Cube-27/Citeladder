@@ -18,6 +18,7 @@ from app.core.config.site_health_contracts import (
     OBSERVATION_SOURCE_LINK,
     TASK_KIND_ANALYZE,
 )
+from app.core.config.site_health_runtime import site_health_settings
 from app.domain.site_health.selection import enqueue_analyze_task
 from app.models.site_health.crawl import SiteCrawl
 from app.models.site_health.queue import SiteCrawlTask
@@ -70,6 +71,7 @@ async def seed_monitored_targets(
             site_url=site_url,
             generation=INITIAL_TASK_GENERATION,
             position=position,
+            available_in_seconds=_seed_stagger_seconds(position),
         )
         position += 1
         already_seeded.add(site_url.url_hash)
@@ -155,3 +157,17 @@ async def _write_seed_observation(
         )
         .on_conflict_do_nothing(index_elements=["crawl_id", "site_url_id"])
     )
+
+
+def _seed_stagger_seconds(position: int) -> float:
+    """Spread a seeded task's wake-up by its rank, within the configured cap.
+
+    Without it every seeded analyze task is claimable at once, so at crawl
+    start the processing slots fill with tasks whose discover artifact cannot
+    exist yet and each one burns a claim to defer. The spread lets discovery
+    run ahead of the seeded set rather than competing with it.
+    """
+    step = site_health_settings.monitored_seed_stagger_seconds
+    if step <= 0:
+        return 0.0
+    return min(position * step, site_health_settings.monitored_seed_stagger_max_seconds)
