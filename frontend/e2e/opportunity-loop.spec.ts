@@ -224,6 +224,7 @@ test('earned opportunity handoff links generation and comparable verification', 
           opportunity_id: OPPORTUNITY,
           opportunity_snapshot_id: SNAPSHOT,
           target_site_url_ids: [],
+          target_external_url: null,
           generation_id: GENERATION,
           declared_implemented_at: '2026-08-28T00:03:00Z',
           expected_checks: [
