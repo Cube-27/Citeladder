@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.core.config.content import CONTENT_DEFAULT_SKILL, CONTENT_SKILLS
-from app.core.config.opportunities import ACTION_PATH_OWNED
+from app.core.config.earned_actions import ACTION_PATH_OWNED
 from app.core.config.source_patterns import CONTENT_HANDOFF_TEMPLATE_VERSION
 from app.models.opportunity import Opportunity
 

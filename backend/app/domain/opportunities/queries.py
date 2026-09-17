@@ -7,15 +7,17 @@ import uuid
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.opportunities import (
+from app.core.config.earned_actions import (
     ACTION_PATH_EARNED,
     ACTION_PATH_OWNED,
     ACTION_PATHS,
+    RULE_EARNED_SOURCE_RECURS,
+)
+from app.core.config.opportunities import (
     OPPORTUNITY_ACTIVE_STATUSES,
     OPPORTUNITY_SEVERITIES,
     OPPORTUNITY_STATUSES,
     OPPORTUNITY_TYPES,
-    RULE_EARNED_SOURCE_RECURS,
     validate_rule_id,
 )
 from app.domain.opportunities.common import (

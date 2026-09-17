@@ -27,14 +27,6 @@ from app.core.config.projects import (
     PROMPT_INTENT_PURCHASE,
     PROMPT_INTENT_SERVICE,
 )
-from app.core.config.source_patterns import (
-    SOURCE_CLASS_COMMUNITY,
-    SOURCE_CLASS_EDITORIAL_THIRD_PARTY,
-    SOURCE_CLASS_INSTITUTIONAL,
-    SOURCE_CLASS_REVIEW_MARKETPLACE,
-    SOURCE_CLASS_SOCIAL,
-    SOURCE_CLASS_VIDEO,
-)
 
 # =========================================================================
 # Provenance versions (invariant 4)
@@ -49,7 +41,6 @@ RULE_VERSION: Final = "opp-rules-1"
 RULE_PRODUCT_NOT_MENTIONED: Final = "product_not_mentioned"
 RULE_CITED_ALTERNATIVES: Final = "cited_alternatives_without_uploaded_presence"
 RULE_CATALOG_FIELDS_MISSING: Final = "catalog_fields_missing"
-RULE_EARNED_SOURCE_RECURS: Final = "earned_source_recurs_beside_gap"
 FORMULA_VERSION: Final = "opp-formula-1"
 CONFIRMED_DECLINE_MIN_FACTOR: Final = 0.1
 CONFIRMED_DECLINE_GAP_NORMALIZER: Final = 10.0
@@ -137,32 +128,6 @@ IMPLEMENTATION_VERIFICATION_HISTORY_MAX: Final = 50
 # one delta serves either scope without rescaling anything.
 VISIBILITY_METRIC_PROJECT_SCORE: Final = "visibility_score"
 VISIBILITY_CHECK_MIN_DELTA: Final = 1.0
-SOURCE_ROLLUP_MAX_DOMAINS: Final = 100
-ACTION_PATH_OWNED: Final = "owned"
-ACTION_PATH_EARNED: Final = "earned"
-ACTION_PATHS: Final[frozenset[str]] = frozenset({ACTION_PATH_OWNED, ACTION_PATH_EARNED})
-SOURCE_ROLLUP_MAX_URLS: Final = 6
-SOURCE_ROLLUP_MAX_PROMPTS: Final = 12
-EARNED_SOURCE_MIN_ANSWERS: Final = 2
-EARNED_SOURCE_MIN_USAGE_RATE: Final = 0.1
-EARNED_USAGE_FACTOR_MAX: Final = 2.0
-EARNED_COMPETITOR_FACTOR_MAX: Final = 1.5
-EARNED_SUGGESTED_SKILL_BY_CLASS: Final[dict[str, str]] = {
-    SOURCE_CLASS_REVIEW_MARKETPLACE: "comparison",
-    SOURCE_CLASS_EDITORIAL_THIRD_PARTY: "article",
-    SOURCE_CLASS_COMMUNITY: "reddit",
-    SOURCE_CLASS_SOCIAL: "linkedin",
-    SOURCE_CLASS_INSTITUTIONAL: "article",
-    SOURCE_CLASS_VIDEO: "youtube",
-}
-EARNED_SUGGESTED_ROLE_BY_CLASS: Final[dict[str, str]] = {
-    SOURCE_CLASS_REVIEW_MARKETPLACE: "Marketing",
-    SOURCE_CLASS_EDITORIAL_THIRD_PARTY: "PR",
-    SOURCE_CLASS_COMMUNITY: "Founder",
-    SOURCE_CLASS_SOCIAL: "Marketing",
-    SOURCE_CLASS_INSTITUTIONAL: "PR",
-    SOURCE_CLASS_VIDEO: "Marketing",
-}
 
 # =========================================================================
 # Rule catalog

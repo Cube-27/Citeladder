@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from app.analysis.opportunities.detectors import DetectorHit
-from app.core.config.opportunities import (
+from app.core.config.earned_actions import (
     ACTION_PATH_EARNED,
-    OPPORTUNITY_RULES_BY_ID,
     RULE_EARNED_SOURCE_RECURS,
 )
+from app.core.config.opportunities import OPPORTUNITY_RULES_BY_ID
 from app.core.config.source_patterns import (
     CONTENT_HANDOFF_TEMPLATE_VERSION,
     SOURCE_MIX_PROJECTION_VERSION,
