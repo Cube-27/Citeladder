@@ -170,7 +170,19 @@ async def _fetch_well_known(
         return None
 
 
-async def collect_site_setup(
+def sitemap_ingest_pending(site_facts: dict | None) -> bool:
+    """True while site facts are published but the sitemap walk has not run.
+
+    ``collect_site_evidence`` publishes robots and llms.txt evidence as soon as
+    it has them, so the root page stops waiting on a walk that tells it
+    nothing. That leaves a durable in-between state, and this flag is what
+    names it: a setup task that crashes after the first commit must resume the
+    walk rather than treat the crawl as fully set up.
+    """
+    return bool(((site_facts or {}).get("sitemap") or {}).get("pending"))
+
+
+async def collect_site_evidence(
     ctx: PhaseContext,
     *,
     requested_url: str,
@@ -178,12 +190,15 @@ async def collect_site_setup(
     robots_policy: RobotsPolicy | None,
     robots_body: str | None,
     robots_status: int | None,
-    root_registrable_domain: str,
-    include_globs: list[str] | None,
-    exclude_globs: list[str] | None,
     sample_mode: bool,
-) -> tuple[dict, tuple[str, ...]]:
-    """Build bounded site facts and ingest the optional sitemap tree."""
+) -> dict:
+    """Build the site facts the root-page gate actually protects.
+
+    Robots stance and llms.txt presence are the whole of what the root
+    analysis reads out of ``site_facts``; the sitemap section is evidence for
+    the dashboard, not an input to any rule. Returning before the walk is what
+    lets the first score appear without waiting on it.
+    """
     stance = _crawler_stance(requested_url, robots_body)
     declared_sitemaps: list[str] = []
     if robots_policy is not None:
@@ -197,24 +212,13 @@ async def collect_site_setup(
     llms_fetched = False
     llms_status: int | None = None
     llms_present = False
-    sitemap_urls: tuple[str, ...] = ()
-    sitemap_files: tuple[str, ...] = ()
-    if not sample_mode and authority:
+    walks_sitemap = sitemap_walk_applies(authority=authority, sample_mode=sample_mode)
+    if walks_sitemap:
         llms_url, llms_fetched, llms_status, llms_present = await _llms_facts(
             ctx, authority, robots_policy
         )
-        seeds = declared_sitemaps or [
-            f"{authority}{path}" for path in SITEMAP_DEFAULT_PATHS
-        ]
-        sitemap_urls, sitemap_files = await _ingest_sitemaps(
-            ctx,
-            seeds,
-            root_registrable_domain=root_registrable_domain,
-            include_globs=include_globs,
-            exclude_globs=exclude_globs,
-        )
 
-    site_facts = {
+    return {
         "robots": {
             "fetched": robots_body is not None,
             "status": _classify_robots_fetch(robots_body, robots_status),
@@ -234,12 +238,42 @@ async def collect_site_setup(
             "status_code": llms_status,
             "present": llms_present,
         },
-        "sitemap": {
-            "fetched": bool(sitemap_files),
-            "files": list(sitemap_files)[: site_health_settings.max_sitemap_documents],
-        },
+        "sitemap": {"fetched": False, "files": [], "pending": walks_sitemap},
     }
-    return site_facts, sitemap_urls
+
+
+def sitemap_walk_applies(*, authority: str, sample_mode: bool) -> bool:
+    """Whether this crawl shape ingests the sitemap tree at all."""
+    return bool(authority) and not sample_mode
+
+
+async def ingest_sitemap_tree(
+    ctx: PhaseContext,
+    *,
+    site_facts: dict,
+    authority: str,
+    root_registrable_domain: str,
+    include_globs: list[str] | None,
+    exclude_globs: list[str] | None,
+) -> tuple[dict, tuple[str, ...]]:
+    """Walk the bounded sitemap tree and fold the result into site facts."""
+    declared_sitemaps = list((site_facts.get("robots") or {}).get("sitemaps") or ())
+    seeds = declared_sitemaps or [
+        f"{authority}{path}" for path in SITEMAP_DEFAULT_PATHS
+    ]
+    sitemap_urls, sitemap_files = await _ingest_sitemaps(
+        ctx,
+        seeds,
+        root_registrable_domain=root_registrable_domain,
+        include_globs=include_globs,
+        exclude_globs=exclude_globs,
+    )
+    resolved = dict(site_facts)
+    resolved["sitemap"] = {
+        "fetched": bool(sitemap_files),
+        "files": list(sitemap_files)[: site_health_settings.max_sitemap_documents],
+    }
+    return resolved, sitemap_urls
 
 
 async def _llms_facts(

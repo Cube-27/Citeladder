@@ -906,12 +906,14 @@ async def test_root_and_site_setup_branches_converge_durably(
     async def blocked_site_setup(*_args, **_kwargs):
         setup_started.set()
         await release_setup.wait()
-        return site_facts, ()
+        return site_facts
 
     monkeypatch.setattr(site_health_settings, "worker_concurrency", 2)
     monkeypatch.setattr(site_health_settings, "global_concurrency", 2)
     monkeypatch.setattr(site_health_settings, "acquisition_lane_reserve", 1)
-    monkeypatch.setattr(site_setup_phase, "collect_site_setup", blocked_site_setup)
+    monkeypatch.setattr(
+        site_setup_phase, "collect_site_evidence", blocked_site_setup
+    )
     worker = _worker(
         session_factory,
         {"/": _html([])},
