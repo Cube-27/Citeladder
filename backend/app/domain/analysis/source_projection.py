@@ -90,6 +90,12 @@ async def get_visibility_sources(
     grouped = (
         select(
             key.label("key"),
+            # Page identity, grouped alongside everything else rather than
+            # re-scanned: ``citations`` has no index on ``url``, so a second
+            # lookup by URL would sweep the workspace's whole history.
+            # Meaningless for a domain row, which is why it is only read
+            # through when a domain is selected.
+            func.min(Citation.url_hash).label("url_hash"),
             func.count(func.distinct(Citation.analysis_id)).label("responses"),
             func.count(func.distinct(scope.c.prompt_key)).label("prompts"),
             func.count(Citation.id).label("annotations"),
@@ -139,7 +145,9 @@ async def get_visibility_sources(
         as_of=as_of,
         next_offset=offset + limit if offset + limit < (total or 0) else None,
         category_totals=category_totals,
-        items=[_source_row(row, denominator, prompts) for row in rows],
+        items=[
+            _source_row(row, denominator, prompts, pages=bool(domain)) for row in rows
+        ],
     )
     await attach_page_links(
         session,
@@ -165,9 +173,10 @@ async def get_visibility_sources(
     return response
 
 
-def _source_row(row, denominator, prompts):
+def _source_row(row, denominator, prompts, *, pages: bool = False):
     return SourceRow(
         key=row["key"],
+        url_hash=row["url_hash"] if pages else None,
         responses=row["responses"],
         prompts=row["prompts"],
         annotations=row["annotations"],

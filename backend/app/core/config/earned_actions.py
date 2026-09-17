@@ -100,14 +100,24 @@ EARNED_PAGE_RULE_IDS: Final[frozenset[str]] = frozenset(
         RULE_EARNED_PAGE_RESEARCH,
     }
 )
-# Every rule id whose action is performed on somebody else's page. The list
-# filter reads this rather than naming one id, so retiring the domain-keyed
-# rule does not silently empty the earned view.
-EARNED_RULE_IDS: Final[frozenset[str]] = EARNED_PAGE_RULE_IDS | {
-    RULE_EARNED_SOURCE_RECURS
-}
 
+# The persisted anchor for a page-keyed row, matched by a partial unique
+# index. Built and parsed here rather than at each call site, because a
+# positional slice of the prefix yields a wrong-but-plausible hash if the
+# prefix ever changes, instead of an error.
 EARNED_PAGE_TARGET_PREFIX: Final = "earned-page:"
+
+
+def earned_page_target_key(url_hash: str) -> str:
+    return f"{EARNED_PAGE_TARGET_PREFIX}{url_hash}"
+
+
+def url_hash_from_target_key(target_key: str) -> str:
+    """The identity inside a page target key, or ``""`` for any other key."""
+    if not target_key.startswith(EARNED_PAGE_TARGET_PREFIX):
+        return ""
+    return target_key[len(EARNED_PAGE_TARGET_PREFIX) :]
+
 
 # =========================================================================
 # Qualification gate
@@ -147,7 +157,6 @@ EARNED_PAGE_RESEARCH_MIN_RECURRENCE: Final = 3
 EARNED_PAGE_USAGE_FACTOR_MAX: Final = 2.0
 EARNED_PAGE_COMPETITOR_FACTOR_MAX: Final = 1.6
 EARNED_PAGE_COMPETITOR_FACTOR_STEP: Final = 0.2
-EARNED_PAGE_COMPETITOR_FACTOR_CAP: Final = 3
 
 # =========================================================================
 # Handoff shape

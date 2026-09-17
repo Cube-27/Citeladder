@@ -98,16 +98,27 @@ async def inspect_source_page_endpoint(
     # Record the ask before anything can decline it. Asking is not spending:
     # the request is remembered whether or not today's budget admits it, and
     # a source somebody went looking for stays worth resolving either way.
-    # Marking it only on the accepted path would drop exactly the requests
-    # made while the window was full.
     await mark_inspection_requested(session, project_id=project_id, url_hash=url_hash)
+    outcome = await _admit(session, ctx=ctx, project_id=project_id, url_hash=url_hash)
+    # One commit, after the decision. A per-branch commit would mean the next
+    # decline reason someone adds silently discards the recorded request --
+    # the exact failure marking it up front was introduced to prevent.
+    await session.commit()
+    return outcome
+
+
+async def _admit(
+    session: AsyncSession,
+    *,
+    ctx: WorkspaceContext,
+    project_id: uuid.UUID,
+    url_hash: str,
+) -> SourcePageInspectionRequested:
+    """Queue the inspection, or say why it was declined. Never commits."""
     budget = await current_budget(session, project_id=project_id)
     if budget.remaining <= 0:
-        await session.commit()
         return SourcePageInspectionRequested(
-            accepted=False,
-            reason="budget_exhausted",
-            budget_remaining=0,
+            accepted=False, reason="budget_exhausted", budget_remaining=0
         )
     audit_id = await session.scalar(
         select(Audit.id)
@@ -122,7 +133,6 @@ async def inspect_source_page_endpoint(
     if audit_id is None:
         # Inspection is scoped to an audit's cited evidence, so with no
         # completed audit there is nothing to inspect this page as part of.
-        await session.commit()
         return SourcePageInspectionRequested(
             accepted=False,
             reason="no_completed_audit",
@@ -134,7 +144,6 @@ async def inspect_source_page_endpoint(
         project_id=project_id,
         audit_id=audit_id,
     )
-    await session.commit()
     return SourcePageInspectionRequested(
         accepted=True, reason=None, budget_remaining=budget.remaining
     )

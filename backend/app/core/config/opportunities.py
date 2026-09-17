@@ -21,6 +21,8 @@ from app.core.config.demand import (
     DEMAND_SIGNAL_STRIKING_DISTANCE,
 )
 from app.core.config.earned_actions import (
+    ACTION_PATH_EARNED,
+    ACTION_PATH_OWNED,
     RULE_EARNED_PAGE_ACQUIRE,
     RULE_EARNED_PAGE_CORRECT,
     RULE_EARNED_PAGE_DEFEND,
@@ -151,9 +153,17 @@ class OpportunityRule:
     snapshot semantics — a catalog relabel never rewrites history). A
     disabled rule (``enabled=False``) ships config-only: its shape is stable
     but no detector emits it.
+
+    ``action_path`` declares WHOSE page the action happens on. It is a
+    property of the rule rather than a hand-kept list of ids elsewhere,
+    because the two consumers -- the earned list filter and the external
+    implementation target -- both fail confusingly when a new rule is missing
+    from such a list: the action vanishes from the earned view AND its
+    declaration is routed through the owned-page resolver, which raises.
     """
 
     __slots__ = (
+        "action_path",
         "enabled",
         "opportunity_type",
         "remediation",
@@ -171,6 +181,7 @@ class OpportunityRule:
         title: str,
         remediation: str,
         enabled: bool = True,
+        action_path: str = ACTION_PATH_OWNED,
     ) -> None:
         self.rule_id = rule_id
         self.opportunity_type = opportunity_type
@@ -178,6 +189,7 @@ class OpportunityRule:
         self.title = title
         self.remediation = remediation
         self.enabled = enabled
+        self.action_path = action_path
 
 
 # The v2 catalog. The two visibility rules + the three site-sourced rules +
@@ -221,6 +233,7 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
             "request. This observation does not establish domain-wide absence or "
             "guarantee a later citation."
         ),
+        action_path=ACTION_PATH_EARNED,
         # RETIRED. Keys on a registrable domain, leaves ``target_url``
         # null, and scores on answer-level co-occurrence, so any
         # reclassification superseded its row with no successor and
@@ -492,6 +505,7 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
             " carries and ask to be included, then declare the placement so"
             " it can be checked."
         ),
+        action_path=ACTION_PATH_EARNED,
     ),
     OpportunityRule(
         rule_id=RULE_EARNED_PAGE_CORRECT,
@@ -504,6 +518,7 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
             " correction and the evidence for it, then declare the change so"
             " the specific claim can be re-checked."
         ),
+        action_path=ACTION_PATH_EARNED,
     ),
     OpportunityRule(
         rule_id=RULE_EARNED_PAGE_DEFEND,
@@ -515,6 +530,7 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
             " position it no longer holds. Compare the two snapshots in the"
             " brief, then ask the publisher to restore or update the entry."
         ),
+        action_path=ACTION_PATH_EARNED,
     ),
     OpportunityRule(
         rule_id=RULE_EARNED_PAGE_RESEARCH,
@@ -527,6 +543,7 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
             " on it. Open it and decide; an unresolved source is the one kind"
             " that never resolves itself."
         ),
+        action_path=ACTION_PATH_EARNED,
         # Deliberately ``low`` and not ``info``. With SEVERITY_WEIGHTS[info]
         # at 0.5, a PRIORITY_SCALE of 10 and a MIN_PRIORITY_TO_SURFACE floor
         # of 10.0, an info hit at base factors scores 5.0 and is dropped at
@@ -540,6 +557,13 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
 OPPORTUNITY_RULES_BY_ID: Final[dict[str, OpportunityRule]] = {
     rule.rule_id: rule for rule in OPPORTUNITY_RULES
 }
+
+# Every rule whose action happens on somebody else's page, derived from the
+# catalog rather than hand-listed beside it. Includes the retired domain-keyed
+# rule, so its historical rows stay in the earned view.
+EARNED_RULE_IDS: Final[frozenset[str]] = frozenset(
+    rule.rule_id for rule in OPPORTUNITY_RULES if rule.action_path == ACTION_PATH_EARNED
+)
 
 DEMAND_SIGNAL_RULE_IDS: Final[dict[str, str]] = {
     DEMAND_SIGNAL_HIGH_IMPRESSION_LOW_CTR: "search_demand_content_gap",

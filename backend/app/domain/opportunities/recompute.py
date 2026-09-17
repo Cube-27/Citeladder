@@ -15,9 +15,6 @@ from app.analysis.opportunities.detectors import (
     detect_owned_page_not_cited,
     detect_site_issue_opportunities,
 )
-from app.analysis.opportunities.earned_detector import (
-    detect_earned_source_opportunities,
-)
 from app.analysis.opportunities.scoring import priority_score
 from app.analysis.opportunities.source_mix import (
     build_source_projection,
@@ -339,7 +336,6 @@ async def _audit_hits(
         gap_indices=gap_indices,
         projections=projections[:2],
     )
-    visibility_hits.extend(detect_earned_source_opportunities(projections[2]))
     # Page-keyed, and over the FULL eligible answer set rather than the
     # gap-prompt subset ``build_source_projection`` filters to. That filter is
     # what makes a page where the brand is present but wrongly described, or

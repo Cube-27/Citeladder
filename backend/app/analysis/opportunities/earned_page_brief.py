@@ -107,6 +107,9 @@ def earned_page_brief(
     extra: dict,
 ) -> dict:
     """The bounded Content handoff for one earned-page task."""
+    on_page = [entity.entity_name for entity in page.present_competitors][
+        :EARNED_PAGE_MAX_COMPETITORS
+    ]
     return {
         "pathway": ACTION_PATH_EARNED,
         "rule_id": rule_id,
@@ -133,17 +136,12 @@ def earned_page_brief(
         "extracted_chars": page.extracted_chars,
         "sufficient_coverage": page.sufficient_coverage,
         "page_entities": _entity_rows(page),
-        # ``observed_competitors`` is the shared handoff field every reader
-        # already renders, so it carries the competitors found ON THE PAGE --
-        # the ones the action is actually about. ``answer_competitors`` is
-        # the looser answer-level set, kept separate and labelled, and never
-        # scored. Collapsing the two is the defect this detector replaces.
-        "observed_competitors": [
-            entity.entity_name for entity in page.present_competitors
-        ][:EARNED_PAGE_MAX_COMPETITORS],
-        "page_competitors": [entity.entity_name for entity in page.present_competitors][
-            :EARNED_PAGE_MAX_COMPETITORS
-        ],
+        # The shared handoff field every reader already renders, carrying
+        # the competitors found ON THE PAGE -- the ones the action is about.
+        # ``answer_competitors`` is the looser answer-level set, kept
+        # separate and labelled, and never scored. Collapsing the two is the
+        # defect this detector replaces.
+        "observed_competitors": on_page,
         "answer_competitors": list(page.answer_competitors)[
             :EARNED_PAGE_MAX_COMPETITORS
         ],

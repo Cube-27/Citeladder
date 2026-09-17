@@ -17,8 +17,8 @@ import { setUrlParams } from '@/lib/navigation/url-state';
 import { formatRate } from '@/lib/visibility/dashboard';
 import type { useVisibilityFilters } from '@/lib/visibility/use-visibility-dashboard';
 
-type SourceRow = z.infer<typeof visibilitySourcesSchema>['items'][number];
-type SourceFilters = ReturnType<typeof useVisibilityFilters>;
+export type SourceRow = z.infer<typeof visibilitySourcesSchema>['items'][number];
+export type SourceFilters = ReturnType<typeof useVisibilityFilters>;
 
 /**
  * A cited page's route to the action it produced.

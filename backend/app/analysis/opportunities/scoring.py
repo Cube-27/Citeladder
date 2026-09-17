@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 from app.core.config.earned_actions import (
-    EARNED_PAGE_COMPETITOR_FACTOR_CAP,
     EARNED_PAGE_COMPETITOR_FACTOR_MAX,
     EARNED_PAGE_COMPETITOR_FACTOR_STEP,
     EARNED_PAGE_USAGE_FACTOR_MAX,
@@ -109,7 +108,7 @@ def page_competitor_presence_factor(present_competitors: int) -> float:
     Counts only verdicts that required a snapshot and produced a quotable
     passage; ``ambiguous`` and ``partial`` are not presence for this purpose.
     """
-    counted = min(max(int(present_competitors), 0), EARNED_PAGE_COMPETITOR_FACTOR_CAP)
+    counted = max(int(present_competitors), 0)
     return min(
         EARNED_PAGE_COMPETITOR_FACTOR_MAX,
         1.0 + counted * EARNED_PAGE_COMPETITOR_FACTOR_STEP,
@@ -126,7 +125,7 @@ def page_recurrence_factor(*, answer_count: int, eligible_answers: int) -> float
     """
     if eligible_answers <= 0:
         return 1.0
-    rate = min(max(answer_count, 0) / eligible_answers, 1.0)
+    rate = max(answer_count, 0) / eligible_answers
     return min(EARNED_PAGE_USAGE_FACTOR_MAX, 1.0 + rate)
 
 

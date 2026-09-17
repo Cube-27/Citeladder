@@ -12,8 +12,8 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.earned_actions import EARNED_RULE_IDS
 from app.core.config.opportunities import (
+    EARNED_RULE_IDS,
     IMPLEMENTATION_TARGETS_MAX,
     IMPLEMENTATION_VERIFICATION_HISTORY_MAX,
     OPPORTUNITY_TYPE_SITE,

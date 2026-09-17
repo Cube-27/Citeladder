@@ -109,7 +109,14 @@ def _entity_limitations(row: SourcePageEntityPresence) -> tuple[str, ...]:
     return ()
 
 
-def _passages(snapshot: SourcePageSnapshot | None, refs: list | None) -> tuple:
+def passage_texts(snapshot: SourcePageSnapshot | None, refs: list | None) -> tuple:
+    """The quoted windows behind one verdict, resolved from its snapshot.
+
+    Shared with the Opportunity brief rather than reimplemented there: the
+    shape of ``evidence_passages`` (which index is valid, which key holds the
+    text, what an empty one means) has one owner, so a reader and an action
+    cannot end up quoting the same page differently.
+    """
     rows = (snapshot.evidence_passages or []) if snapshot else []
     out: list[str] = []
     for index in refs or []:
@@ -196,7 +203,7 @@ async def get_source_page(
             state=_state(page, row),
             match_method=row.match_method,
             match_count=row.match_count,
-            passages=_passages(snapshot, row.passage_refs),
+            passages=passage_texts(snapshot, row.passage_refs),
             limitations=_entity_limitations(row),
         )
         for row in rows

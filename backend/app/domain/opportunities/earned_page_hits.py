@@ -24,7 +24,11 @@ from dataclasses import dataclass
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analysis.opportunities.detectors import DetectorHit, VisibilityEvidence
+from app.analysis.opportunities.detectors import (
+    AnalysisEvidence,
+    DetectorHit,
+    VisibilityEvidence,
+)
 from app.analysis.opportunities.earned_page_evidence import (
     EarnedPageEvidence,
     PageEntityEvidence,
@@ -39,10 +43,10 @@ from app.core.config.source_pages import (
     SOURCE_PAGE_MIN_COVERAGE_CHARS,
 )
 from app.domain.source_pages.persistence import OUTCOME_INSPECTED
+from app.domain.source_pages.projection import passage_texts
 from app.domain.source_pages.roster import project_roster
 from app.models.analysis import Citation
 from app.models.audit import Audit
-from app.models.brand import OwnedDomain
 from app.models.source_pages import (
     SourcePage,
     SourcePageEntityPresence,
@@ -183,18 +187,6 @@ async def _presences(
     return grouped
 
 
-def _passages(snapshot: SourcePageSnapshot, refs: list | None) -> tuple[str, ...]:
-    """The quoted windows behind one verdict, resolved from the snapshot."""
-    rows = snapshot.evidence_passages or []
-    out: list[str] = []
-    for index in refs or []:
-        if isinstance(index, int) and 0 <= index < len(rows):
-            text = str((rows[index] or {}).get("text") or "").strip()
-            if text:
-                out.append(text)
-    return tuple(out)
-
-
 def _entities(
     snapshot: SourcePageSnapshot, rows: list[SourcePageEntityPresence]
 ) -> tuple[PageEntityEvidence, ...]:
@@ -205,7 +197,7 @@ def _entities(
             presence=row.presence,
             match_method=row.match_method,
             match_count=row.match_count,
-            passages=_passages(snapshot, row.passage_refs),
+            passages=passage_texts(snapshot, row.passage_refs),
         )
         for row in rows
     )
@@ -233,27 +225,46 @@ def _prior(
     )
 
 
-def _answer_context(
-    visibility: VisibilityEvidence, analysis_ids: set[uuid.UUID]
-) -> tuple[tuple[int, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
-    """Prompts, themes, analysis ids and answer-level competitor names.
+@dataclass(frozen=True, slots=True)
+class _AnswerIndex:
+    """The audit's answers, indexed once for every page that cites them.
 
-    The competitor names are carried for DISPLAY. They attach every name in an
-    answer to every page that answer cited, which is why they are excluded
-    from the priority and labelled in the brief.
+    Built before the per-page loop: each page cites a handful of answers, and
+    rescanning all of them per page is quadratic in a recompute that is
+    already bounded at 5,000 analyses and 500 pages.
     """
-    themes = {row.prompt_index: row.theme for row in visibility.prompt_snapshots}
-    selected = [row for row in visibility.analyses if row.analysis_id in analysis_ids]
-    return (
-        tuple(sorted({row.prompt_index for row in selected})),
-        tuple(
-            sorted(
-                {theme for row in selected if (theme := themes.get(row.prompt_index))}
-            )
-        ),
-        tuple(sorted(str(row.analysis_id) for row in selected)),
-        tuple(sorted({name for row in selected for name in row.competitor_names})),
-    )
+
+    by_id: dict[uuid.UUID, AnalysisEvidence]
+    themes: dict[int, str]
+
+    @classmethod
+    def of(cls, visibility: VisibilityEvidence) -> _AnswerIndex:
+        return cls(
+            by_id={row.analysis_id: row for row in visibility.analyses},
+            themes={
+                row.prompt_index: row.theme
+                for row in visibility.prompt_snapshots
+                if row.theme
+            },
+        )
+
+    def context(
+        self, analysis_ids: set[uuid.UUID]
+    ) -> tuple[tuple[int, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+        """Prompts, themes, analysis ids and answer-level competitor names.
+
+        The competitor names are carried for DISPLAY. They attach every name
+        in an answer to every page that answer cited, which is why they are
+        excluded from the priority and labelled in the brief.
+        """
+        selected = [row for aid in analysis_ids if (row := self.by_id.get(aid))]
+        indices = {row.prompt_index for row in selected}
+        return (
+            tuple(sorted(indices)),
+            tuple(sorted({theme for i in indices if (theme := self.themes.get(i))})),
+            tuple(sorted(str(row.analysis_id) for row in selected)),
+            tuple(sorted({name for row in selected for name in row.competitor_names})),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -289,14 +300,13 @@ def _page_evidence(
     *,
     snapshots: list[SourcePageSnapshot],
     presences: dict[uuid.UUID, list[SourcePageEntityPresence]],
-    visibility: VisibilityEvidence,
+    answers: _AnswerIndex,
     analysis_ids: set[uuid.UUID],
     roster_version: str,
 ) -> SourcePageEvidence:
     read = _reading(snapshots, presences)
-    prompt_indices, themes, ids, answer_competitors = _answer_context(
-        visibility, analysis_ids
-    )
+    prior_snapshot = snapshots[1] if len(snapshots) > 1 else None
+    prompt_indices, themes, ids, answer_competitors = answers.context(analysis_ids)
     return SourcePageEvidence(
         url_hash=page.url_hash,
         canonical_url=page.canonical_url,
@@ -317,8 +327,8 @@ def _page_evidence(
         content_hash=read.snapshot.content_hash if read.snapshot else None,
         entities=_entities(read.snapshot, read.rows) if read.snapshot else (),
         prior=_prior(
-            snapshots[1] if len(snapshots) > 1 else None,
-            presences.get(snapshots[1].id, []) if len(snapshots) > 1 else [],
+            prior_snapshot,
+            presences.get(prior_snapshot.id, []) if prior_snapshot else [],
         ),
         # Every verdict on this snapshot was frozen against one roster, so
         # comparing the first is comparing all of them.
@@ -338,15 +348,16 @@ def _page_evidence(
 
 async def _coverage(session: AsyncSession, *, project_id: uuid.UUID) -> tuple[int, int]:
     """How much of this project's cited inventory has actually been read."""
-    total = await session.scalar(
-        select(func.count(SourcePage.id)).where(SourcePage.project_id == project_id)
-    )
-    inspected = await session.scalar(
-        select(func.count(SourcePage.id)).where(
-            SourcePage.project_id == project_id,
-            SourcePage.inspection_state == INSPECTION_INSPECTED,
+    inspected, total = (
+        await session.execute(
+            select(
+                func.count(SourcePage.id).filter(
+                    SourcePage.inspection_state == INSPECTION_INSPECTED
+                ),
+                func.count(SourcePage.id),
+            ).where(SourcePage.project_id == project_id)
         )
-    )
+    ).one()
     return int(inspected or 0), int(total or 0)
 
 
@@ -371,31 +382,25 @@ async def load_earned_page_hits(
         project_id=project_id,
         snapshot_ids=[row.id for rows in snapshots.values() for row in rows],
     )
-    owned_domains = list(
-        (
-            await session.scalars(
-                select(OwnedDomain.domain)
-                .where(OwnedDomain.project_id == project_id)
-                .order_by(OwnedDomain.domain.asc())
-            )
-        ).all()
-    )
     inspected_pages, total_pages = await _coverage(session, project_id=project_id)
     roster_version = project_roster(audit.configuration or {})
+    answers = _AnswerIndex.of(visibility)
     evidence = EarnedPageEvidence(
         pages=tuple(
             _page_evidence(
                 page,
                 snapshots=snapshots.get(page.id, []),
                 presences=presences,
-                visibility=visibility,
+                answers=answers,
                 analysis_ids=cited.get(page.url_hash, set()),
                 roster_version=roster_version,
             )
             for page in pages
         ),
-        owned_domains=tuple(owned_domains),
-        brand_name=str((audit.configuration or {}).get("brand_name") or ""),
+        # Already loaded with the rest of this audit's visibility evidence;
+        # re-querying would be a second copy of the same fact with its own
+        # ordering.
+        owned_domains=visibility.owned_domains,
         # Every analyzed answer in the audit, not only the ones already
         # classified as brand-absence gaps. That filter is what made
         # correction and defence structurally unreachable.

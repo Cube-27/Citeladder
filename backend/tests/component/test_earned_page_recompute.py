@@ -260,7 +260,7 @@ async def test_recompute_turns_page_evidence_into_a_ranked_row(
     assert row.target_key == f"earned-page:{_URL_HASH}"
     assert row.target_url == _URL
     handoff = row.evidence["content_handoff"]
-    assert handoff["page_competitors"] == ["Globex"]
+    assert handoff["observed_competitors"] == ["Globex"]
     assert handoff["suggested_skill_id"] == "listicle"
     assert handoff["snapshot_id"]
     assert row.evidence["priority_factors"]["page_competitor_presence_factor"] > 1.0
@@ -300,7 +300,7 @@ async def test_a_deteriorating_placement_is_reachable_without_a_gap_prompt(
     rows = await _earned_rows(session_factory, scenario)
 
     assert [row.rule_id for row in rows] == [RULE_EARNED_PAGE_DEFEND]
-    assert "brand_removed" in rows[0].evidence["deterioration"]
+    assert "brand_removed" in rows[0].evidence["content_handoff"]["deterioration"]
 
 
 async def test_a_page_nobody_read_is_never_reported_as_an_absence(
@@ -336,8 +336,9 @@ async def test_a_page_nobody_read_is_never_reported_as_an_absence(
     rows = await _earned_rows(session_factory, scenario)
 
     assert [row.rule_id for row in rows] == [RULE_EARNED_PAGE_RESEARCH]
-    assert "not_inspected" in rows[0].evidence["unresolved"]
-    assert rows[0].evidence["requested"] is True
+    handoff = rows[0].evidence["content_handoff"]
+    assert "not_inspected" in handoff["unresolved"]
+    assert handoff["requested"] is True
 
 
 async def test_a_human_status_survives_recomputing_the_same_evidence(

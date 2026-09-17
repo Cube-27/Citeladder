@@ -128,7 +128,6 @@ def _evidence(*pages: SourcePageEvidence, **overrides) -> EarnedPageEvidence:
     base = {
         "pages": pages,
         "owned_domains": ("acme.example",),
-        "brand_name": _BRAND,
         "eligible_answers": 6,
         "inspected_pages": len(pages),
         "total_pages": len(pages),
@@ -180,8 +179,9 @@ def test_a_placement_that_disappeared_defends_rather_than_acquires():
     )
 
     assert _rules(hits) == [RULE_EARNED_PAGE_DEFEND]
-    assert "brand_removed" in hits[0].evidence["deterioration"]
-    assert hits[0].evidence["prior_snapshot_id"] == "snap-0"
+    handoff = hits[0].evidence["content_handoff"]
+    assert "brand_removed" in handoff["deterioration"]
+    assert handoff["prior_snapshot_id"] == "snap-0"
 
 
 def test_defence_needs_a_prior_snapshot_to_deteriorate_from():
@@ -210,7 +210,7 @@ def test_a_new_competitor_beside_a_kept_placement_still_defends():
     )
 
     assert _rules(hits) == [RULE_EARNED_PAGE_DEFEND]
-    assert hits[0].evidence["deterioration"] == ["competitor_added"]
+    assert hits[0].evidence["content_handoff"]["deterioration"] == ["competitor_added"]
 
 
 def test_brand_present_but_not_an_entry_is_a_correction():
@@ -225,7 +225,8 @@ def test_brand_present_but_not_an_entry_is_a_correction():
     )
 
     assert _rules(hits) == [RULE_EARNED_PAGE_CORRECT]
-    assert hits[0].evidence["discrepancies"] == [DISCREPANCY_NOT_LISTED_AS_ENTRY]
+    handoff = hits[0].evidence["content_handoff"]
+    assert handoff["discrepancies"] == [DISCREPANCY_NOT_LISTED_AS_ENTRY]
 
 
 def test_a_listing_that_links_every_rival_but_not_us_is_a_correction():
@@ -239,7 +240,8 @@ def test_a_listing_that_links_every_rival_but_not_us_is_a_correction():
         )
     )
 
-    assert hits[0].evidence["discrepancies"] == [DISCREPANCY_OWNED_DOMAIN_MISSING]
+    handoff = hits[0].evidence["content_handoff"]
+    assert handoff["discrepancies"] == [DISCREPANCY_OWNED_DOMAIN_MISSING]
 
 
 def test_brand_presence_alone_never_produces_a_correction():
@@ -282,7 +284,7 @@ def test_an_unqualified_recurring_source_becomes_research_not_an_action(
     hits = detect_earned_page_opportunities(_evidence(_page(**overrides)))
 
     assert _rules(hits) == [RULE_EARNED_PAGE_RESEARCH]
-    assert unresolved in hits[0].evidence["unresolved"]
+    assert unresolved in hits[0].evidence["content_handoff"]["unresolved"]
 
 
 def test_research_scores_above_the_surfacing_floor():
@@ -413,12 +415,12 @@ def test_a_partial_read_never_reports_an_absence_as_an_action():
     assert _rules(hits) == [RULE_EARNED_PAGE_RESEARCH]
 
 
-def test_the_brief_separates_page_competitors_from_answer_competitors():
+def test_the_brief_separates_on_page_competitors_from_answer_competitors():
     handoff = detect_earned_page_opportunities(_evidence(_page()))[0].evidence[
         "content_handoff"
     ]
 
-    assert handoff["page_competitors"] == [_RIVAL]
+    assert handoff["observed_competitors"] == [_RIVAL]
     assert handoff["answer_competitors"] == ["Unrelated Co"]
     assert handoff["suggested_skill_id"] == "comparison"
     assert handoff["snapshot_id"] == "snap-1"

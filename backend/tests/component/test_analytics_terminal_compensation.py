@@ -24,6 +24,7 @@ from app.core.config.task_queue import (
 )
 from app.models.analytics import AnalyticsTask
 from app.workers.analytics_worker import AnalyticsWorker
+from app.workers.terminal_compensation import compensate_analytics_tasks
 from tests.component.opportunity_helpers import _seed_scenario
 
 pytestmark = pytest.mark.asyncio
@@ -188,7 +189,49 @@ async def test_a_kind_with_no_compensator_is_left_alone(
 
 async def test_the_default_table_compensates_source_page_inspection() -> None:
     """The production wiring, not just the test seam."""
-    from app.workers.analytics_worker import TERMINAL_COMPENSATORS
     from app.workers.source_pages.inspector import compensate_inspection_handoff
+    from app.workers.terminal_compensation import analytics_compensators
 
-    assert TERMINAL_COMPENSATORS[_KIND] is compensate_inspection_handoff
+    assert analytics_compensators()[_KIND] is compensate_inspection_handoff
+
+
+async def test_the_standalone_sweeper_runs_the_same_compensation(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """The process most likely to terminalize a task this way must fire it.
+
+    ``QueueSweeper`` sweeps every queue from outside the workers precisely so
+    a queue whose worker died still gets reclaimed -- which is the scenario
+    compensation exists for. A hook registered only on the worker would rarely
+    run when it mattered.
+    """
+    from app.core.config.analytics import ANALYTICS_QUEUE_SPEC
+    from app.workers.queue_sweeper import TERMINAL_TASK_HOOKS, QueueSweeper
+
+    task_id = await _enqueue(
+        session_factory,
+        max_attempts=1,
+        leased_until=datetime.now(UTC) - timedelta(hours=1),
+    )
+    fired: list[uuid.UUID] = []
+
+    async def compensator(_factory, task: AnalyticsTask) -> None:
+        fired.append(task.id)
+
+    async def hook(factory, task_ids: list[uuid.UUID]) -> None:
+        await compensate_analytics_tasks(
+            factory, task_ids, compensators={_KIND: compensator}
+        )
+
+    sweeper = QueueSweeper(
+        session_factory=session_factory, specs=(ANALYTICS_QUEUE_SPEC,)
+    )
+    original = TERMINAL_TASK_HOOKS[ANALYTICS_QUEUE_SPEC.model.__tablename__]
+    TERMINAL_TASK_HOOKS[ANALYTICS_QUEUE_SPEC.model.__tablename__] = hook
+    try:
+        await sweeper.run_once()
+    finally:
+        TERMINAL_TASK_HOOKS[ANALYTICS_QUEUE_SPEC.model.__tablename__] = original
+
+    assert await _status(session_factory, task_id) == TASK_STATUS_FAILED
+    assert fired == [task_id]

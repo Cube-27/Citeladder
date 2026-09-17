@@ -31,6 +31,7 @@ Only on-page presence scores.
 
 from __future__ import annotations
 
+from app.analysis.normalization import alias_present, domain_matches, normalize_alias
 from app.analysis.opportunities.detectors import DetectorHit
 from app.analysis.opportunities.earned_page_brief import earned_page_brief
 from app.analysis.opportunities.earned_page_evidence import (
@@ -45,11 +46,11 @@ from app.core.config.earned_actions import (
     EARNED_PAGE_INCLUDABLE_FORMATS,
     EARNED_PAGE_MIN_RECURRENCE,
     EARNED_PAGE_RESEARCH_MIN_RECURRENCE,
-    EARNED_PAGE_TARGET_PREFIX,
     RULE_EARNED_PAGE_ACQUIRE,
     RULE_EARNED_PAGE_CORRECT,
     RULE_EARNED_PAGE_DEFEND,
     RULE_EARNED_PAGE_RESEARCH,
+    earned_page_target_key,
 )
 from app.core.config.opportunities import OPPORTUNITY_RULES_BY_ID
 from app.core.config.source_pages import (
@@ -113,6 +114,18 @@ def qualification(page: SourcePageEvidence) -> tuple[bool, tuple[str, ...]]:
     return not missing, tuple(missing)
 
 
+def _in_headings(name: str, headings: str) -> bool:
+    """Whether a tracked name appears as an entry heading on this page.
+
+    Matched with the same alias rules the page's presence verdicts were
+    produced under. Plain substring containment would match inside a longer
+    word and would miss ``Best & Less`` against ``Best and Less``, so the
+    heading check and the presence check could disagree about the same brand
+    on the same page.
+    """
+    return bool(name) and alias_present(normalize_alias(name), headings)
+
+
 def _not_listed_as_entry(page: SourcePageEvidence, brand_name: str) -> bool:
     """Named in prose while every rival has its own entry.
 
@@ -122,11 +135,11 @@ def _not_listed_as_entry(page: SourcePageEvidence, brand_name: str) -> bool:
     """
     if page.page_format not in EARNED_PAGE_INCLUDABLE_FORMATS:
         return False
-    headings = " | ".join(page.headings).casefold()
-    if not headings or brand_name.casefold() in headings:
+    headings = normalize_alias(" | ".join(page.headings))
+    if not headings or _in_headings(brand_name, headings):
         return False
     return any(
-        entity.entity_name and entity.entity_name.casefold() in headings
+        _in_headings(entity.entity_name, headings)
         for entity in page.present_competitors
     )
 
@@ -138,10 +151,18 @@ def _owned_domain_missing(
 
     Guarded on the page having outbound links at all: "we extracted no links"
     is a limitation of the reading, not a fact about the entry.
+
+    Compared with the same rule that classifies a citation as owned, so this
+    cannot disagree with ``Citation.is_owned`` about the same pair -- a link
+    to ``docs.brand.com`` is a link to us, and ``www.`` is not a distinction.
     """
-    owned = {domain.casefold() for domain in owned_domains if domain}
-    linked = {domain.casefold() for domain in page.outbound_domains if domain}
-    return bool(owned and linked and not (owned & linked))
+    if not owned_domains or not page.outbound_domains:
+        return False
+    return not any(
+        domain_matches(linked, owned)
+        for linked in page.outbound_domains
+        for owned in owned_domains
+    )
 
 
 def _discrepancies(
@@ -207,6 +228,8 @@ def _hit(
     rule_id: str,
     page: SourcePageEvidence,
     evidence: EarnedPageEvidence,
+    qualified: bool,
+    missing: tuple[str, ...],
     value_factor: float,
     gap_factor: float,
     extra: dict,
@@ -214,7 +237,6 @@ def _hit(
     rule = OPPORTUNITY_RULES_BY_ID[rule_id]
     if not rule.enabled:
         return None
-    qualified, missing = qualification(page)
     brief = earned_page_brief(
         rule_id=rule_id,
         page=page,
@@ -225,20 +247,22 @@ def _hit(
     )
     return DetectorHit(
         rule_id=rule_id,
-        target_key=f"{EARNED_PAGE_TARGET_PREFIX}{page.url_hash}",
+        target_key=earned_page_target_key(page.url_hash),
         target_prompt_id=None,
         # The canonical page URL, where the domain-keyed rule left null. This
         # is what makes the declaration path reachable, and it is why external
         # implementation targets had to land before this detector was wired in.
         target_url=page.canonical_url,
         target_theme=next(iter(page.themes), None),
+        # The brief is where the page evidence lives, ``extra`` included.
+        # Spreading it at this level too would persist two copies of one
+        # payload and give a reader two places to look for the same fact.
         evidence={
             "content_handoff": brief,
             "priority_factors": {
                 "page_recurrence_factor": value_factor,
                 "page_competitor_presence_factor": gap_factor,
             },
-            **extra,
         },
         source_analysis_ids=tuple(page.analysis_ids),
         source_issue_ids=(),
@@ -318,6 +342,8 @@ def _page_hit(
         rule_id=rule_id,
         page=page,
         evidence=evidence,
+        qualified=qualified,
+        missing=missing,
         value_factor=page_recurrence_factor(
             answer_count=page.answer_count,
             eligible_answers=evidence.eligible_answers,
@@ -331,9 +357,8 @@ def detect_earned_page_opportunities(
     evidence: EarnedPageEvidence,
 ) -> list[DetectorHit]:
     """One hit per page that earns one. Deterministic in ``url_hash`` order."""
-    hits = [
+    return [
         hit
         for page in sorted(evidence.pages, key=lambda row: row.url_hash)
         if (hit := _page_hit(page, evidence)) is not None
     ]
-    return hits

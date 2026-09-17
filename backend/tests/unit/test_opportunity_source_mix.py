@@ -6,9 +6,6 @@ from app.analysis.opportunities.detectors import (
     AnalysisEvidence,
     PromptSnapshotEvidence,
 )
-from app.analysis.opportunities.earned_detector import (
-    detect_earned_source_opportunities,
-)
 from app.analysis.opportunities.source_mix import build_source_projection
 from app.analysis.opportunities.source_patterns import CitationEvidence
 
@@ -60,11 +57,10 @@ def test_source_mix_deduplicates_within_answer_and_counts_across_answers() -> No
     forbes = next(row for row in rollups if row["canonical_domain"] == "forbes.com")
     assert forbes["answer_count"] == 2
     assert forbes["usage_denominator"] == 2
+    # The mix survives for the Sources display. Its ``actionable`` flag no
+    # longer produces anything: the domain-keyed detector it fed is retired,
+    # and a task now needs a page somebody read.
     assert forbes["actionable"] is True
-    # The mix survives for the Sources display; the domain-keyed detector it
-    # used to feed is retired, and an actionable rollup no longer becomes a
-    # task. Page-keyed tasks come from inspected pages instead.
-    assert detect_earned_source_opportunities(rollups) == []
 
 
 def test_source_mix_preserves_not_applicable_and_unavailable() -> None:
@@ -80,7 +76,7 @@ def test_source_mix_preserves_not_applicable_and_unavailable() -> None:
     assert unavailable["state"] == "unavailable"
 
 
-def test_competitor_owned_never_becomes_an_earned_task() -> None:
+def test_a_competitor_owned_domain_is_never_on_the_earned_path() -> None:
     analyses = (
         _analysis(0, _citation("rival.test", competitor="Rival")),
         _analysis(0, _citation("rival.test", competitor="Rival")),
@@ -91,4 +87,4 @@ def test_competitor_owned_never_becomes_an_earned_task() -> None:
         gap_prompt_indices={0},
     )
     assert action_mix["counts"] == {"owned": 2}
-    assert detect_earned_source_opportunities(rollups) == []
+    assert all(row["pathway"] != "earned" for row in rollups)

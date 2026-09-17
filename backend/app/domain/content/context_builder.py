@@ -17,6 +17,7 @@ from app.core.config.content import (
     CONTENT_CONTEXT_STATUS_UNAVAILABLE,
     CONTENT_CONTEXT_VERSION,
 )
+from app.core.config.earned_actions import ACTION_PATH_EARNED
 from app.domain.content.website_context import (
     CrawlFragmentSelection,
     normalized_target_url,
@@ -463,8 +464,12 @@ def _page_evidence_lines(handoff: dict) -> list[tuple[str, object]]:
     Only populated for an earned page action. Every positive claim here
     resolves to a snapshot and a quoted passage; an absence carries the
     extraction coverage instead, because no passage can demonstrate one.
+
+    Gated on the declared pathway rather than on a field being present: an
+    owned handoff that ever gained a ``url_hash`` would otherwise start
+    rendering earned-only labels with nothing behind them.
     """
-    if not handoff.get("url_hash"):
+    if handoff.get("pathway") != ACTION_PATH_EARNED:
         return []
     quoted = [
         f"{row.get('entity_name')}: {passage}"
@@ -477,7 +482,6 @@ def _page_evidence_lines(handoff: dict) -> list[tuple[str, object]]:
         ("Page title", handoff.get("page_title")),
         ("Inspection state", handoff.get("inspection_state")),
         ("Readable characters", handoff.get("extracted_chars")),
-        ("Competitors found on the page", handoff.get("page_competitors")),
         ("Competitors named only in answers", handoff.get("answer_competitors")),
         ("Quoted from the page", quoted),
         ("Identified discrepancies", handoff.get("discrepancies")),

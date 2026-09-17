@@ -132,9 +132,11 @@ class EarnedPageEvidence:
     """The page slice one audit offers the earned-page detector."""
 
     pages: tuple[SourcePageEvidence, ...]
-    # Reviewed, human-authoritative brand facts a correction can cite.
+    # Reviewed, human-authoritative brand facts a correction can cite. The
+    # brand's own NAME is deliberately absent: the authoritative one for a
+    # page is the one on that page's presence verdict, which was frozen
+    # against the roster the verdict was judged under.
     owned_domains: tuple[str, ...]
-    brand_name: str
     # Analyzed answers this audit could have cited a page from. The denominator
     # of the recurrence factor, and the reason it is a rate rather than a count.
     eligible_answers: int

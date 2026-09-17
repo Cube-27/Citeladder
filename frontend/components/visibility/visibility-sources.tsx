@@ -11,7 +11,7 @@ import { InfoHint } from '@/components/ui/info-hint';
 import { Stack } from '@/components/ui/layout';
 import { MetricGroup, MetricItem } from '@/components/ui/workspace';
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
-import { SourceTable } from '@/components/visibility/source-rows';
+import { SourceTable, type SourceFilters } from '@/components/visibility/source-rows';
 import { SOURCE_MODES } from '@/lib/config/visibility';
 import { CursorTableFooter } from '@/components/ui/cursor-table-footer';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
@@ -27,10 +27,7 @@ import {
 import { formatRate } from '@/lib/visibility/dashboard';
 import { textRole } from '@/components/ui/typography';
 import { sourceCategoryLabels } from '@/lib/visibility/vocabulary';
-import type {
-  useVisibilityFilters,
-  useVisibilityQueries,
-} from '@/lib/visibility/use-visibility-dashboard';
+import type { useVisibilityQueries } from '@/lib/visibility/use-visibility-dashboard';
 
 const modeCodec = stringUrlCodec(
   SOURCE_MODES.map((item) => item.value),
@@ -43,7 +40,6 @@ function set<T>(value: T | null | undefined): T | undefined {
 }
 
 type SourceData = z.infer<typeof visibilitySourcesSchema>;
-type SourceFilters = ReturnType<typeof useVisibilityFilters>;
 type SourceQueries = ReturnType<typeof useVisibilityQueries>;
 
 export function VisibilitySources({
