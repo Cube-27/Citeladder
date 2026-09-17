@@ -46,23 +46,56 @@ A successful Content generation may link back without declaring implementation.
 
 [Implementation events](../backend/app/domain/opportunities/implementation_events.py)
 authorize the project, Opportunity, target pages and optional successful
-generation. The server supplies applicable expected checks. An idempotent
-declaration freezes the targets, expected checks and baseline evidence.
-Same-key conflicting input is rejected. Merely marking an Opportunity resolved
-does not create this declaration.
+generation. The server supplies applicable expected checks; a caller-supplied
+set is rejected outright, because a declaration that chose its own expectation
+could declare itself verified. An idempotent declaration freezes the targets,
+expected checks and baseline evidence. Same-key conflicting input is rejected.
+Merely marking an Opportunity resolved does not create this declaration.
 
-Later crawl, audit or traffic completion can enqueue bounded
-[verification](../backend/app/domain/opportunities/verification.py) over
-persisted evidence. Verification appends observations against eligible
+An earned declaration receives a PLACEMENT check, not the baseline-anchored
+visibility one. Its expected change is read from the rule — a listing acquired,
+a named discrepancy resolved, a placement restored, a source resolved — and a
+[placement check](../backend/app/domain/opportunities/placement_checks.py) row
+anchored on that implementation event freezes the source identity, the expected
+change, the baseline snapshot and the roster it was judged against. The
+opportunity's stable key travels alongside for navigation across recompute and
+is never the anchor: the same page and action can be attempted more than once,
+and a check has to know which attempt it verifies.
+
+Later crawl, audit, traffic or source-page-inspection completion can enqueue
+bounded [verification](../backend/app/domain/opportunities/verification.py)
+over persisted evidence. Verification appends observations against eligible
 declarations; it does not perform an external change or infer one from metrics.
 Repeated processing is idempotent. New evidence can change the observed
 verification result without rewriting the original declaration.
+
+## Placement observation
+
+An inspection batch compares every pending check against the reading it just
+committed, through the pure comparator in
+[placement_outcome.py](../backend/app/analysis/opportunities/placement_outcome.py).
+The comparison is for the SPECIFIC declared change: a correction that named a
+missing outbound link is satisfied by the page linking to us, not by the brand
+appearing somewhere in the prose. A reading judged against a different entity
+roster is not comparable and is not compared — the same rule the deterioration
+detector applies. `unavailable` never decays into `unmet`: a page we could not
+read says nothing about whether the placement went live.
+
+An empty first reading is an observation, not a contradiction. The check is
+re-armed a bounded number of times before it stops asking, and a due check
+makes its page claimable through the same atomic admission and the same
+inspection budget unit as any other reading — never a path around the
+accounting.
 
 ## Comparability and presentation
 
 The [verification result](../backend/app/domain/opportunities/verification_result.py)
 projects separate visibility, AI-referral and branded-demand legs, baseline and
 post-action source IDs, version identity, gap changes and overlapping actions.
+A placement observation travels in its own top-level section, never folded into
+those legs. "The listing is live" and "visibility moved" are two observations
+about two different things; they are free to disagree, and reporting them as
+one is the defect.
 Visibility comparison checks frozen audit context, prompt/cohort identity,
 engines, repetitions, locale and retrieval policy. Missing or incompatible
 evidence remains not-run, unavailable or non-comparable.
@@ -86,9 +119,13 @@ survive source retention through SET NULL. Content history actions retain
 attempt provenance and the declaration's nullable generation relationship.
 
 [Configuration](../backend/app/core/config/opportunities.py) owns tunable
-ranking and verification policy. [Content](content-generation.md),
+ranking and verification policy;
+[placement configuration](../backend/app/core/config/placement.py) owns the
+expected-change vocabulary, the check states and the recheck schedule. [Content](content-generation.md),
 [Site Health](site-health.md), [Demand](integrations-traffic-analytics.md) and
 [Visibility](visibility-prompt.md) remain the source authorities.
 [Verification-result tests](../backend/tests/unit/test_opportunity_verification_result.py)
-exercise comparison and unavailable-state behavior. The pending integrations
+exercise comparison and unavailable-state behavior;
+[placement tests](../backend/tests/component/test_placement_checks.py) exercise
+the declaration-to-observation path and the recheck admission ordering. The pending integrations
 follow-up may improve these read surfaces; it is not a second action store.

@@ -44,6 +44,8 @@ from app.analysis.opportunities.scoring import (
     page_recurrence_factor,
 )
 from app.core.config.earned_actions import (
+    DISCREPANCY_NOT_LISTED_AS_ENTRY,
+    DISCREPANCY_OWNED_DOMAIN_MISSING,
     EARNED_PAGE_INCLUDABLE_FORMATS,
     EARNED_PAGE_MIN_RECURRENCE,
     EARNED_PAGE_RESEARCH_MIN_RECURRENCE,
@@ -63,11 +65,6 @@ from app.core.config.source_pages import (
 )
 
 __all__ = ["detect_earned_page_opportunities", "qualification"]
-
-# A discrepancy a correction task can name and a passage can support. Both
-# kinds are checkable from the page itself; neither infers intent from prose.
-DISCREPANCY_NOT_LISTED_AS_ENTRY = "not_listed_as_entry"
-DISCREPANCY_OWNED_DOMAIN_MISSING = "owned_domain_missing"
 
 # Page states that the next inspection run resolves by itself. A page in one
 # of them is inventory, visible in Sources, and not somebody's task. Notably

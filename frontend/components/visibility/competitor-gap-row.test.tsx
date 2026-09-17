@@ -63,7 +63,7 @@ describe('a page where a rival appears and the brand does not', () => {
 
     // No passage can prove an absence, so the coverage and the matching method
     // are what stands in for one.
-    expect(screen.getByText(/4,200 characters read/)).toBeTruthy();
+    expect(screen.getByText(/Searched 4,200 characters of readable text/)).toBeTruthy();
   });
 
   it('says there is no action rather than inventing one', () => {

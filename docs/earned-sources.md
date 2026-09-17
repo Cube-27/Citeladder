@@ -24,7 +24,9 @@ audit terminalizes
   -> per-project brand and competitor verdicts, roster frozen per verdict
   -> batch completion enqueues the Opportunity refresh
   -> page-keyed earned rules over the full eligible answer set
-  -> brief, declaration against the publisher page, placement observation
+  -> brief, declaration against the publisher page
+  -> pending placement checks compared against that batch's readings
+  -> placement reported beside, never inside, comparable visibility movement
 ```
 
 Reads render persisted projections. Neither the Sources inventory nor a page
@@ -59,10 +61,15 @@ fetches and then crashes has spent its unit. Following a redirect token is
 fetching its publisher, so the page it lands on is read from the body already
 in hand rather than claimed and fetched again.
 
-Selection is never-inspected first, then stale, then due rechecks, with
-recurrence ranking within each set. A recent enough inspection is reused. A
-changed content hash is only knowable after retrieval, so it decides whether
-analysis reruns, never whether retrieval happens.
+Selection is never-inspected first, then stale, then pages that owe a placement
+recheck, then the rest, with recurrence ranking within each set. A due recheck
+is an inspection like any other: it is claimed under the same project lock and
+pays the same budget unit, which is why it changes a page's PRIORITY rather
+than getting its own path around the accounting. A recent enough inspection is
+reused, so a page read inside the reuse window is not re-read for a due check
+either — the reading that check needs already exists. A changed content hash is
+only knowable after retrieval, so it decides whether analysis reruns, never
+whether retrieval happens.
 
 `recurrence_count` on `source_pages` is a project-wide scheduling value. It is
 never rendered as the citation count for a selected engine, cohort or period;
@@ -119,6 +126,46 @@ against this project's crawled inventory and raise, and it rejects owned page
 targets outright: verifying an owned-page change against an external placement
 would report two things as one.
 
+## Confirming the placement
+
+A declaration opens a `placement_checks` row anchored on the IMPLEMENTATION
+EVENT rather than on the opportunity. The same page and the same action can be
+attempted more than once, and a check has to know which attempt it verifies;
+the opportunity's stable key travels alongside for navigation across recompute
+and is never the anchor. The row never references an owned `SiteUrl`.
+
+It freezes the project-scoped source identity, the expected change, the
+baseline snapshot and the roster that snapshot's verdicts were judged against.
+The expected change comes from the rule, so each done-state is verified on its
+own terms:
+
+| Rule | Expected change | Satisfied when |
+|---|---|---|
+| `earned_page_acquire_listing` | `brand_listed` | The brand is present on a later reading. |
+| `earned_page_correct_listing` | `discrepancy_resolved` | Every discrepancy the task NAMED is gone — an entry heading of our own, or an outbound link to a reviewed owned domain. Brand presence alone never satisfies it. |
+| `earned_page_defend_listing` | `placement_restored` | The brand is present again and mentioned no less than at the deteriorated baseline. |
+| `earned_page_research_source` | `source_resolved` | The page was read with sufficient coverage and yielded a verdict against the current roster. |
+
+The comparison itself is pure
+(`analysis/opportunities/placement_outcome.py`) and runs when an inspection
+batch commits, against the reading that batch just took. A reading judged
+against a different roster is not comparable and is not compared, which is the
+rule `earned_page_hits._prior` already applies to deterioration. Insufficient
+coverage, a missing baseline, a missing brand verdict and an uncheckable
+discrepancy code are all `unavailable`, and `unavailable` never decays into
+`unmet`: a page we could not read says nothing about whether the placement went
+live.
+
+An empty first reading is an OBSERVATION, not a contradiction — a publisher
+does not act the day somebody emails them. The check re-arms a bounded number
+of times and only then reports a contradiction, at which point it stops asking
+and stops competing for the budget.
+
+Placement live and visibility moved are reported as two observations, in two
+places in the verification result. Folding placement into the comparable
+visibility, AI-referral and branded-demand legs is exactly the defect: they
+describe different things and are free to disagree.
+
 The domain-keyed `earned_source_recurs_beside_gap` is retired in one cutover
 and ships config-only, so its rows and their history stay readable. A human
 status carries forward only to an unambiguous successor — the same registrable
@@ -136,7 +183,23 @@ data and never an instruction to an enrichment step. Third-party hosts get a
 stricter per-host delay than owned-site crawling, and a robots-disallowed page
 produces a visible blocked state rather than a silent skip.
 
+## Reading it
+
+The [Competitor analysis tab](../frontend/components/visibility/competitor-analysis.tsx)
+answers "where are competitors cited and I am not, by kind of source" with no
+drill-down: source classes are the axis, and each carries the pages where a
+rival is on the page and the brand is not, with the names, the quoted line
+proving each, the page format, the answers that cited it, and the action. It is
+project-scoped, not run-scoped, so the run controls are hidden for it.
+
+A page nobody inspected is COUNTED and never listed as a gap, and every group
+states its own coverage. `GET /projects/{id}/source-pages/{url_hash}` backs a
+page detail, and the manual inspect command is an explicit button in it that
+reports whether it was admitted and what the budget has left.
+
 [Configuration](../backend/app/core/config/source_pages.py) owns the
 inspection limits, vocabularies and budget window;
 [earned actions](../backend/app/core/config/earned_actions.py) owns the rule
-ids, the qualification thresholds and the format-to-output-type mapping.
+ids, the qualification thresholds and the format-to-output-type mapping;
+[placement](../backend/app/core/config/placement.py) owns the expected-change
+vocabulary, the check states and the recheck schedule.

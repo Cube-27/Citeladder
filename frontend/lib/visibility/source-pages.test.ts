@@ -21,7 +21,13 @@ describe('cited-page vocabulary', () => {
 
   it('qualifies an absence with the method and the coverage behind it', () => {
     expect(absenceBasis('not_detected', 'exact_alias', 4200)).toBe(
-      'Searched by exact name match, 4,200 characters read.',
+      'Searched 4,200 characters of readable text for the exact name.',
+    );
+  });
+
+  it('says outright that nothing matched, rather than naming a null method', () => {
+    expect(absenceBasis('not_detected', 'none', 4200)).toBe(
+      'Searched 4,200 characters of readable text; no form of the name matched.',
     );
   });
 

@@ -93,7 +93,9 @@ describe('the grounded brief behind an earned action', () => {
     );
 
     expect(screen.getByText(/Acme Corp — not found on the page/)).toBeVisible();
-    expect(screen.getByText(/Searched by exact name match, 4,200 characters read\./)).toBeVisible();
+    expect(
+      screen.getByText(/Searched 4,200 characters of readable text for the exact name\./),
+    ).toBeVisible();
   });
 
   it('keeps names found on the page apart from names merely in an answer', () => {

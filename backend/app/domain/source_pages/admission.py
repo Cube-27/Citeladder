@@ -12,11 +12,17 @@ before any request leaves the process. A worker that dies mid-fetch has spent
 its unit; that is the honest outcome, and the claim's lease expiry is what lets
 the page be tried again later rather than stranding it.
 
-Selection order is new pages, then stale ones, then the rest, with recurrence
-ranking within each group. Fresh pages are reused rather than refetched, and
-nothing is refetched because its content changed -- a changed hash is only
-knowable after fetching, so it decides whether ANALYSIS reruns, never whether
-retrieval happens.
+Selection order is new pages, then stale ones, then pages that owe a placement
+recheck, then the rest, with recurrence ranking within each group. A recheck is
+an inspection like any other: it is claimed through this same lock and pays the
+same unit, which is why a due check changes a page's PRIORITY here rather than
+getting its own path.
+
+Fresh pages are reused rather than refetched, and nothing is refetched because
+its content changed -- a changed hash is only knowable after fetching, so it
+decides whether ANALYSIS reruns, never whether retrieval happens. A page read
+within the reuse window is therefore not re-read for a due check either: the
+reading that check needs already exists.
 """
 
 from __future__ import annotations
@@ -43,6 +49,7 @@ from app.core.config.source_pages import (
     SOURCE_PAGE_CLAIM_LEASE_MINUTES,
     SOURCE_PAGE_REUSE_WITHIN_HOURS,
 )
+from app.domain.opportunities.placement_checks import due_placement_page_ids
 from app.domain.prompts.locks import acquire_project_lock
 from app.models.source_pages import SourcePage, SourcePageInspectionSpend
 
@@ -51,12 +58,31 @@ SPEND_KIND_REDIRECT = "redirect"
 SPEND_KIND_RECHECK = "recheck"
 
 # Ranked worst-known-first. A page never looked at tells us the most; a stale
-# one tells us whether a placement survived; an inspected one is reused.
-_STATE_RANK = case(
-    (SourcePage.inspection_state == INSPECTION_NOT_INSPECTED, 0),
-    (SourcePage.inspection_state == INSPECTION_STALE, 1),
-    else_=2,
-)
+# one tells us whether a placement survived; a page somebody has declared work
+# on is owed a reading; an inspected one with nothing pending is reused.
+_RANK_NEW = 0
+_RANK_STALE = 1
+_RANK_DUE_RECHECK = 2
+_RANK_REST = 3
+
+
+def _rank(due_page_ids: set[uuid.UUID]):
+    """The selection order, with due placement rechecks ahead of the rest.
+
+    A due check is not a page STATE -- the page is perfectly well inspected --
+    so it cannot live alongside the states. It is a separate fact about the
+    page, and it only ever promotes one that would otherwise sort last. An
+    empty set renders as an always-false branch, which is the same ordering
+    the states alone produce.
+    """
+    return case(
+        (SourcePage.inspection_state == INSPECTION_NOT_INSPECTED, _RANK_NEW),
+        (SourcePage.inspection_state == INSPECTION_STALE, _RANK_STALE),
+        (SourcePage.id.in_(due_page_ids), _RANK_DUE_RECHECK),
+        else_=_RANK_REST,
+    )
+
+
 # The one state a page cannot be claimed from: retrying a wall spends budget
 # to be told the same thing. ``queued`` is excluded by lease check rather than
 # by state, so an abandoned claim stays recoverable.
@@ -211,6 +237,7 @@ async def claim_pages(
     if allowed <= 0:
         return []
 
+    due = await due_placement_page_ids(session, project_id=project_id, now=moment)
     statement = (
         select(SourcePage)
         .where(
@@ -219,7 +246,7 @@ async def claim_pages(
             *_claimable(moment),
         )
         .order_by(
-            _STATE_RANK,
+            _rank(due),
             SourcePage.recurrence_count.desc(),
             SourcePage.last_cited_at.desc().nulls_last(),
             SourcePage.id,

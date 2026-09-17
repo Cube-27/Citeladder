@@ -322,10 +322,35 @@ const metricExpectedCheckSchema = responseObject({
   expected_value: z.number(),
   tolerance: z.number(),
 });
+/**
+ * What a declaration against somebody else's page will be measured by.
+ *
+ * Deliberately NOT a metric check. A listing going live and the project's
+ * visibility score moving are two observations about two different things;
+ * measuring an external placement by the score is what let any healthy project
+ * verify an earned action it had not taken.
+ */
+const placementExpectedCheckSchema = responseObject({
+  kind: z.literal('placement'),
+  rule_id: z.string(),
+  expected_change: z.enum([
+    'brand_listed',
+    'discrepancy_resolved',
+    'placement_restored',
+    'source_resolved',
+  ]),
+  url_hash: z.string(),
+  target_url: z.string().nullable(),
+  brand_name: z.string(),
+  discrepancies: z.array(z.string()),
+  deterioration: z.array(z.string()),
+  baseline_snapshot_id: z.string().nullable(),
+});
 const expectedCheckSchema = z.discriminatedUnion('kind', [
   siteRuleExpectedCheckSchema,
   pageFactExpectedCheckSchema,
   metricExpectedCheckSchema,
+  placementExpectedCheckSchema,
 ]);
 
 export const implementationEventSchema = responseObject({

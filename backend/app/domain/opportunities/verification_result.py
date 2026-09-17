@@ -1,4 +1,14 @@
-"""Comparable three-signal result for one implementation declaration."""
+"""Comparable three-signal result for one implementation declaration.
+
+The three legs are COMPARABLE MOVEMENT: visibility, AI referral traffic and
+branded search demand, each a before/after over the same measurement.
+
+A placement observation is not one of them and is never folded into them.
+"The listing is live" and "the score moved" are two observations about two
+different things, they are free to disagree, and reporting them as one leg is
+how a verification result comes to claim more than it knows. It travels in its
+own top-level ``placement`` section.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.comparison import frozen_comparison_key
 from app.core.config.demand import DEMAND_SIGNAL_BRANDED_QUERY
+from app.domain.opportunities.placement_checks import placement_section
 from app.models.analysis import MetricSnapshot
 from app.models.analytics import AiReferralsSnapshot
 from app.models.audit import Audit, AuditEngineSnapshot, AuditPromptSnapshot
@@ -379,6 +390,9 @@ async def build_verification_result(
     return {
         "state": "available",
         "legs": legs,
+        # Beside the legs, never inside them. A reader is shown two
+        # observations and told they may disagree.
+        "placement": await placement_section(session, declaration=declaration),
         "gap_changes": _gap_changes(before_keys, after_keys, latest),
         "overlapping_action_ids": [str(item) for item in overlaps],
         "causality_notice": (

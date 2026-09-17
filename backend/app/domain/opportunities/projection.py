@@ -25,7 +25,13 @@ def _target_label(row: Opportunity) -> str | None:
     return row.target_url or prompt_text or theme_label or product_name or None
 
 
-def _stable_key(row: Opportunity) -> str:
+def stable_key(row: Opportunity) -> str:
+    """The one encoding of an opportunity's identity across recomputes.
+
+    Public because a placement check carries it for navigation: recompute
+    replaces opportunity ROWS, so an id does not survive one and this does.
+    There is exactly one encoding, and a second would drift from it.
+    """
     return json.dumps(
         [row.rule_id, row.target_key], ensure_ascii=False, separators=(",", ":")
     )
@@ -92,7 +98,7 @@ def ordered_items(
     ordered = sorted(
         rows,
         key=lambda row: (
-            manual_rank.get(_stable_key(row), len(manual_rank) + system_rank[row.id]),
+            manual_rank.get(stable_key(row), len(manual_rank) + system_rank[row.id]),
             system_rank[row.id],
         ),
     )
@@ -101,7 +107,7 @@ def ordered_items(
             row,
             system_rank=system_rank[row.id],
             display_rank=index,
-            order_source="manual" if _stable_key(row) in manual_rank else "system",
+            order_source="manual" if stable_key(row) in manual_rank else "system",
         )
         for index, row in enumerate(ordered, start=1)
     ]

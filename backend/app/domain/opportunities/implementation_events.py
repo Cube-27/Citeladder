@@ -21,6 +21,10 @@ from app.core.config.opportunities import (
 )
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.demand.page_equivalence import resolve_owned_page
+from app.domain.opportunities.placement_checks import (
+    open_placement_check,
+    placement_expected_check,
+)
 from app.domain.opportunities.visibility_checks import build_visibility_check
 from app.models.content import ContentGeneration
 from app.models.opportunity import (
@@ -80,6 +84,7 @@ def is_external_target(opportunity: Opportunity) -> bool:
 async def _project_expected_checks(
     session: AsyncSession,
     *,
+    project: Project,
     opportunity: Opportunity,
     snapshot: OpportunitySnapshot,
 ) -> list[dict]:
@@ -89,8 +94,18 @@ async def _project_expected_checks(
     against is decided here, from the opportunity and its frozen snapshot, so
     a client cannot declare itself verified against an expectation of its own
     choosing.
+
+    An earned action gets a PLACEMENT check and not the baseline-anchored
+    visibility one. Every non-site, non-traffic opportunity used to fall
+    through to "did the project score move", which is not what a declaration
+    against a publisher's page claims: a listing can go live while the score
+    sits still, and the score can move for reasons nothing to do with it.
     """
     evidence = opportunity.evidence or {}
+    if is_external_target(opportunity):
+        return [
+            placement_expected_check(opportunity, brand_name=project.brand_name or "")
+        ]
     if opportunity.opportunity_type == OPPORTUNITY_TYPE_SITE:
         check: dict = {
             "kind": "site_rule",
@@ -346,6 +361,9 @@ async def create_implementation_event(
         opportunity_id=opportunity.id,
         generation_id=declaration.generation_id,
     )
+    checks = await _project_expected_checks(
+        session, project=project, opportunity=opportunity, snapshot=snapshot
+    )
     row = OpportunityImplementationEvent(
         workspace_id=workspace_id,
         project_id=project_id,
@@ -355,14 +373,22 @@ async def create_implementation_event(
         target_external_url=targets.external_url,
         generation_id=declaration.generation_id,
         declared_implemented_at=declaration.declared_implemented_at,
-        expected_checks=await _project_expected_checks(
-            session, opportunity=opportunity, snapshot=snapshot
-        ),
+        expected_checks=checks,
         actor_user_id=actor_user_id,
         idempotency_key=idempotency_key,
         request_fingerprint=fingerprint,
     )
-    return await _flush_declaration(session, row=row, fingerprint=fingerprint)
+    stored, created = await _flush_declaration(
+        session, row=row, fingerprint=fingerprint
+    )
+    # Only for a declaration that is actually new. A replay returns the row
+    # that already exists, and opening a second check for it would leave two
+    # rows racing to describe one attempt.
+    if created and is_external_target(opportunity):
+        await open_placement_check(
+            session, declaration=stored, opportunity=opportunity, check=checks[0]
+        )
+    return stored, created
 
 
 async def list_implementation_events(

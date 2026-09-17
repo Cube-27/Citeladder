@@ -45,10 +45,14 @@ const PRESENCE_LABELS: Record<string, string> = {
   stale: 'From an earlier inspection',
 };
 
+/**
+ * How a name was looked for. `none` is deliberately absent: it means nothing
+ * matched, which the sentence below says outright rather than printing
+ * "searched by no name match".
+ */
 const MATCH_METHOD_LABELS: Record<string, string> = {
-  exact_alias: 'exact name match',
-  normalized_alias: 'normalized name match',
-  none: 'no name match',
+  exact_alias: 'the exact name',
+  normalized_alias: 'a normalized form of the name',
 };
 
 const PAGE_FORMAT_LABELS: Record<string, string> = {
@@ -87,10 +91,12 @@ export function absenceBasis(
   extractedChars: number,
 ): string | null {
   if (state !== 'not_detected' && state !== 'ambiguous' && state !== 'partial') return null;
-  const method = matchMethod ? (MATCH_METHOD_LABELS[matchMethod] ?? null) : null;
-  const read = extractedChars > 0 ? `${extractedChars.toLocaleString()} characters read` : null;
-  const parts = [method, read].filter((part): part is string => Boolean(part));
-  return parts.length ? `Searched by ${parts.join(', ')}.` : null;
+  if (extractedChars <= 0) return null;
+  const read = `${extractedChars.toLocaleString()} characters of readable text`;
+  const method = matchMethod ? MATCH_METHOD_LABELS[matchMethod] : undefined;
+  return method
+    ? `Searched ${read} for ${method}.`
+    : `Searched ${read}; no form of the name matched.`;
 }
 
 /**

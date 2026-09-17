@@ -17,16 +17,14 @@ from app.analysis.opportunities.earned_page_evidence import (
     PriorPageEvidence,
     SourcePageEvidence,
 )
-from app.analysis.opportunities.earned_pages import (
-    DISCREPANCY_NOT_LISTED_AS_ENTRY,
-    DISCREPANCY_OWNED_DOMAIN_MISSING,
-    detect_earned_page_opportunities,
-)
+from app.analysis.opportunities.earned_pages import detect_earned_page_opportunities
 from app.analysis.opportunities.scoring import (
     page_competitor_presence_factor,
     priority_score,
 )
 from app.core.config.earned_actions import (
+    DISCREPANCY_NOT_LISTED_AS_ENTRY,
+    DISCREPANCY_OWNED_DOMAIN_MISSING,
     RULE_EARNED_PAGE_ACQUIRE,
     RULE_EARNED_PAGE_CORRECT,
     RULE_EARNED_PAGE_DEFEND,
