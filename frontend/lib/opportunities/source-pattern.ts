@@ -17,6 +17,8 @@ export type SourceClass =
   | 'review_marketplace'
   | 'editorial_third_party'
   | 'community'
+  | 'social'
+  | 'institutional'
   | 'video'
   | 'other_third_party';
 
@@ -46,16 +48,26 @@ const SOURCE_CLASSES: readonly SourceClass[] = [
   'review_marketplace',
   'editorial_third_party',
   'community',
+  'social',
+  'institutional',
   'video',
   'other_third_party',
 ];
 
+/**
+ * Every class in the backend taxonomy needs a line here. An unmapped one is
+ * DROPPED by `sourceCategoryLabels`, so `social` and `institutional` pages were
+ * simply missing from every source breakdown that consumed it — not shown raw,
+ * not shown as "other", just absent.
+ */
 const CLASS_LABELS: Record<SourceClass, string> = {
   brand_owned: 'Your own pages',
   competitor_owned: 'Competitor-owned',
   review_marketplace: 'Review / marketplace',
   editorial_third_party: 'Editorial',
   community: 'Community',
+  social: 'Social',
+  institutional: 'Institutional',
   video: 'Video',
   other_third_party: 'Other third-party',
 };
@@ -71,6 +83,8 @@ const CLASS_BADGE: Record<SourceClass, ClassificationValue> = {
   review_marketplace: 'third-party',
   editorial_third_party: 'third-party',
   community: 'third-party',
+  social: 'third-party',
+  institutional: 'third-party',
   video: 'third-party',
   other_third_party: 'third-party',
 };

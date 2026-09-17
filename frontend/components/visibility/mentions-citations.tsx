@@ -19,6 +19,7 @@ import { ExternalLink } from 'lucide-react';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 import type { VisibilityExecutionEvidence } from '@/lib/api/types';
 import { totalCitationCount, totalMentionCount } from '@/lib/visibility/evidence';
+import { safeExternalUrl } from '@/lib/visibility/urls';
 import { TablePagination, useTablePage } from '@/components/ui/table-pagination';
 import { textRole } from '@/components/ui/typography';
 import { panelClasses } from '@/components/ui/panel';
@@ -28,16 +29,6 @@ const TITLE = 'Mentions & Citations';
 
 /** Executions per page, matching the shared table footer used across the app. */
 const PAGE_SIZE = 10;
-
-function safeUrl(value?: string): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Mentions & Citations tab — persisted brand/competitor mention rows and
@@ -194,7 +185,7 @@ function ExecutionEvidenceRow({ item }: Readonly<{ item: VisibilityExecutionEvid
           <p className={eyebrowClasses}>Citations</p>
           <ul className={ledgerClasses('boxed')}>
             {item.citations.map((citation) => {
-              const href = safeUrl(citation.url);
+              const href = safeExternalUrl(citation.url);
               return (
                 <li
                   key={`${item.analysis_id}-${citation.ordinal}-${citation.url}`}

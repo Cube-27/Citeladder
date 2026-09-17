@@ -7,13 +7,14 @@ import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { PageLoading } from '@/components/layout/page-loading';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
 import { FanoutEvidence } from '@/components/visibility/fanout-evidence';
+import { CompetitorAnalysis } from '@/components/visibility/competitor-analysis';
 import { MentionsCitations } from '@/components/visibility/mentions-citations';
 import { VisibilitySources } from '@/components/visibility/visibility-sources';
 import { VisibilityActions, VisibilityToolbar } from '@/components/visibility/visibility-toolbar';
 import { VisibilityTrends } from '@/components/visibility/visibility-trends';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { useProjectContext } from '@/lib/project/project-context';
-import { VISIBILITY_TABS, type VisibilityTab } from '@/lib/visibility/dashboard';
+import { isRunScopedTab, VISIBILITY_TABS, type VisibilityTab } from '@/lib/visibility/dashboard';
 import {
   EVIDENCE_LIMIT,
   useVisibilityFilters,
@@ -98,30 +99,36 @@ function VisibilityWorkspace({
         onIntent={queries.prefetchTab}
         actions={<VisibilityActions />}
       >
+        {/* The run, engine, prompt and period controls narrow a MEASUREMENT.
+            Competitor analysis reads the project's page inventory, which no
+            run selection changes, so offering them there would imply a
+            narrowing that does not happen. */}
         <div className="flex flex-wrap items-center gap-2">
-          <VisibilityToolbar
-            activeTab={filters.activeTab}
-            runs={queries.runOptions}
-            selectedRunId={filters.selectedRunId}
-            onSelectMeasurement={filters.selectMeasurement}
-            engine={filters.engine}
-            onChangeEngine={filters.setEngine}
-            promptOptions={queries.promptOptions}
-            promptId={filters.promptId}
-            onChangePrompt={filters.setPromptId}
-            range={filters.range}
-            onChangeRange={filters.setRange}
-            granularity={filters.granularity}
-            onChangeGranularity={filters.setGranularity}
-            cohort={filters.cohort}
-            onChangeCohort={filters.setCohort}
-            selectionMode={filters.selectionMode}
-            onChangeSelectionMode={filters.setSelectionMode}
-            sourceMode={filters.sourceMode}
-            onChangeSourceMode={filters.setSourceMode}
-            outcome={filters.outcome}
-            onChangeOutcome={filters.setOutcome}
-          />
+          {isRunScopedTab(filters.activeTab) ? (
+            <VisibilityToolbar
+              activeTab={filters.activeTab}
+              runs={queries.runOptions}
+              selectedRunId={filters.selectedRunId}
+              onSelectMeasurement={filters.selectMeasurement}
+              engine={filters.engine}
+              onChangeEngine={filters.setEngine}
+              promptOptions={queries.promptOptions}
+              promptId={filters.promptId}
+              onChangePrompt={filters.setPromptId}
+              range={filters.range}
+              onChangeRange={filters.setRange}
+              granularity={filters.granularity}
+              onChangeGranularity={filters.setGranularity}
+              cohort={filters.cohort}
+              onChangeCohort={filters.setCohort}
+              selectionMode={filters.selectionMode}
+              onChangeSelectionMode={filters.setSelectionMode}
+              sourceMode={filters.sourceMode}
+              onChangeSourceMode={filters.setSourceMode}
+              outcome={filters.outcome}
+              onChangeOutcome={filters.setOutcome}
+            />
+          ) : null}
         </div>
         <TabPanel value={filters.activeTab} className="focus-ring">
           {state ? (
@@ -162,6 +169,9 @@ function DashboardPanel({
           limit={EVIDENCE_LIMIT}
         />
       </VisibilitySources>
+    ),
+    'competitor-analysis': (
+      <CompetitorAnalysis projectId={queries.projectId} workspaceId={queries.workspaceId} />
     ),
     'query-fanout': (
       <FanoutEvidence
