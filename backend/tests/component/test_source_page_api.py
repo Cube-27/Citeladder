@@ -7,7 +7,6 @@ every page view into third-party traffic the budget never approved.
 
 from __future__ import annotations
 
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -31,7 +30,6 @@ from app.core.config.source_pages import (
     SOURCE_PAGE_BUDGET_PER_WINDOW,
 )
 from app.models.analytics import AnalyticsTask
-from app.models.project import Project
 from app.models.source_pages import (
     SourcePage,
     SourcePageEntityPresence,
@@ -350,116 +348,3 @@ async def test_a_page_from_another_project_is_not_found(
     )
 
     assert response.status_code == 404
-
-
-async def _analysis(client: httpx.AsyncClient, scenario: Scenario) -> dict:
-    response = await client.get(
-        f"/api/v1/projects/{scenario.project_id}/source-pages/competitor-analysis",
-        headers={"X-Workspace-Id": str(scenario.workspace_id)},
-    )
-    assert response.status_code == 200
-    return response.json()
-
-
-async def test_competitor_analysis_groups_a_gap_page_under_its_source_class(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    await _login(client)
-    async with session_factory() as session:
-        scenario = await _seed_scenario(session, email=_EMAIL)
-        await _seed_page(session, scenario)
-        await session.commit()
-
-    body = await _analysis(client, scenario)
-
-    assert body["gap_pages"] == 1
-    groups = {group["source_class"]: group for group in body["groups"]}
-    editorial = groups["editorial_third_party"]
-    assert editorial["gap_pages"] == 1
-    page = editorial["pages"][0]
-    assert page["brand_state"] == PRESENCE_NOT_DETECTED
-    # The rival, and the line that proves it is there. A name without its
-    # passage is the claim this feature exists to stop making.
-    assert [item["entity_name"] for item in page["competitors"]] == ["Globex"]
-    assert page["competitors"][0]["passages"] == ["Globex leads the field."]
-    assert page["page_format"] == "listicle"
-
-
-async def test_competitor_analysis_counts_an_unread_page_rather_than_calling_it_a_gap(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    await _login(client)
-    async with session_factory() as session:
-        scenario = await _seed_scenario(session, email=_EMAIL)
-        await _seed_page(
-            session, scenario, state=INSPECTION_NOT_INSPECTED, inspected=False
-        )
-        await session.commit()
-
-    body = await _analysis(client, scenario)
-
-    assert body["gap_pages"] == 0
-    assert body["pages_not_inspected"] == 1
-    group = body["groups"][0]
-    assert group["pages_total"] == 1
-    assert group["pages_inspected"] == 0
-    assert group["pages_not_inspected"] == 1
-    assert group["pages"] == []
-    assert any("have been inspected" in note for note in body["limitations"])
-
-
-async def test_competitor_analysis_reports_nothing_for_an_empty_project(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    await _login(client)
-    async with session_factory() as session:
-        scenario = await _seed_scenario(session, email=_EMAIL)
-        await session.commit()
-
-    body = await _analysis(client, scenario)
-
-    assert body == {
-        "pages_total": 0,
-        "pages_inspected": 0,
-        "pages_not_inspected": 0,
-        "gap_pages": 0,
-        "groups": [],
-        "limitations": [],
-        "truncated": False,
-    }
-
-
-async def test_competitor_analysis_does_not_see_another_project_in_the_workspace(
-    client: httpx.AsyncClient,
-    session_factory: async_sessionmaker[AsyncSession],
-) -> None:
-    """A page inspected for one project is invisible to its neighbour.
-
-    Presence is project-relative -- two projects in one workspace track
-    different brands and different rivals -- so a sibling's verdicts must not
-    appear here even though the workspace owns both.
-    """
-    await _login(client)
-    async with session_factory() as session:
-        scenario = await _seed_scenario(session, email=_EMAIL)
-        sibling = Project(
-            workspace_id=scenario.workspace_id,
-            name="Sibling",
-            brand_name="Other Brand",
-            country_code="AU",
-            language_code="en-AU",
-            benchmark_mode="consumer_like",
-            default_repetitions=1,
-            website_url="https://other.example",
-        )
-        session.add(sibling)
-        await session.flush()
-        await _seed_page(session, replace(scenario, project_id=sibling.id))
-        await session.commit()
-
-    body = await _analysis(client, scenario)
-
-    assert body["pages_total"] == 0

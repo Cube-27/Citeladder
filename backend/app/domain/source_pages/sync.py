@@ -29,9 +29,13 @@ from sqlalchemy import CursorResult, case, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.source_pages.url_format import derive_url_format
 from app.core.config.source_pages import (
     INSPECTION_INSPECTED,
     INSPECTION_STALE,
+    PAGE_FORMAT_METHOD_NONE,
+    PAGE_FORMAT_METHOD_URL_PATTERN,
+    SOURCE_PAGE_FORMAT_VERSION,
     SOURCE_PAGE_INSPECTOR_VERSION,
     SOURCE_PAGE_MAX_REDIRECTS_PER_DOMAIN,
     SOURCE_PAGE_STALE_AFTER_HOURS,
@@ -119,6 +123,7 @@ async def sync_cited_pages(
         taxonomy_version,
         answers,
     ) in rows:
+        url_format, url_format_method = derive_url_format(canonical_url or "")
         statement = (
             pg_insert(SourcePage)
             .values(
@@ -130,6 +135,9 @@ async def sync_cited_pages(
                 source_class=source_class,
                 source_taxonomy_version=taxonomy_version,
                 recurrence_count=answers,
+                page_format=url_format,
+                page_format_method=url_format_method,
+                page_format_version=SOURCE_PAGE_FORMAT_VERSION,
                 last_cited_at=moment,
                 first_seen_audit_id=audit.id,
                 last_seen_audit_id=audit.id,
@@ -157,6 +165,34 @@ async def sync_cited_pages(
                     "last_seen_audit_id": audit.id,
                     "source_class": source_class,
                     "source_taxonomy_version": taxonomy_version,
+                    # The URL shape is the WEAKEST evidence for a page kind,
+                    # so it only fills a gap. Once an inspection has read the
+                    # page, re-syncing the inventory must not replace what the
+                    # page said about itself with a guess from its address.
+                    "page_format": case(
+                        (
+                            SourcePage.page_format_method.in_(
+                                (
+                                    PAGE_FORMAT_METHOD_URL_PATTERN,
+                                    PAGE_FORMAT_METHOD_NONE,
+                                )
+                            ),
+                            url_format,
+                        ),
+                        else_=SourcePage.page_format,
+                    ),
+                    "page_format_method": case(
+                        (
+                            SourcePage.page_format_method.in_(
+                                (
+                                    PAGE_FORMAT_METHOD_URL_PATTERN,
+                                    PAGE_FORMAT_METHOD_NONE,
+                                )
+                            ),
+                            url_format_method,
+                        ),
+                        else_=SourcePage.page_format_method,
+                    ),
                     "updated_at": moment,
                 },
             )

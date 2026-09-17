@@ -8,9 +8,10 @@ name.
 
 Strictly a read over persisted rows. It never inspects, never enqueues and
 never creates a page record -- a cited URL nobody has inspected simply carries
-no page identity and no action, which is the honest answer. What "live action
-for this page" means is the Opportunity owner's question, so this asks it
-rather than reconstructing the target key here.
+no page identity, no page facts and no action, which is the honest answer.
+What "live action for this page" means is the Opportunity owner's question and
+what a page IS is the page owner's, so this asks each of them rather than
+reconstructing either answer here.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.analysis.schemas import SourceRow
 from app.domain.opportunities.page_links import live_page_opportunities
+from app.domain.source_pages.projection import page_facts_for
 
 __all__ = ["attach_page_links"]
 
@@ -49,18 +51,30 @@ async def attach_page_links(
             identities.setdefault(row.url_hash, []).append(row)
     if not identities:
         return
+    hashes = sorted(identities)
     actions = await live_page_opportunities(
         session,
         workspace_id=workspace_id,
         project_id=project_id,
-        url_hashes=sorted(identities),
+        url_hashes=hashes,
+    )
+    facts = await page_facts_for(
+        session,
+        workspace_id=workspace_id,
+        project_id=project_id,
+        url_hashes=hashes,
     )
     for url_hash, rows in identities.items():
-        # A hash this project has no page record for stays unset on both
-        # fields: the reader is told nobody looked, not that nothing is wrong.
+        # A hash this project has no page record for stays unset on every
+        # field: the reader is told nobody looked, not that nothing is wrong.
         action = actions.get(url_hash)
-        if action is None:
-            continue
+        fact = facts.get(url_hash)
         for row in rows:
-            row.inspection_state = action.inspection_state
-            row.opportunity_id = action.opportunity_id
+            if action is not None:
+                row.inspection_state = action.inspection_state
+                row.opportunity_id = action.opportunity_id
+            if fact is not None:
+                row.title = fact.title or None
+                row.page_format = fact.page_format
+                row.page_format_method = fact.page_format_method
+                row.last_cited_at = fact.last_cited_at

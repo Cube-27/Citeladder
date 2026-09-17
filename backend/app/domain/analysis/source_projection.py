@@ -120,6 +120,17 @@ async def get_visibility_sources(
         grouped = grouped.where(Citation.source_class == source_class)
     source_groups = grouped.group_by(key).subquery()
     total = await session.scalar(select(func.count()).select_from(source_groups))
+    # The share denominator follows the SAME filters as the rows, so the
+    # shares of a filtered table add to 100% within that filter rather than
+    # to whatever fraction of the project it happens to be.
+    total_citations = int(
+        await session.scalar(
+            select(func.coalesce(func.sum(source_groups.c.annotations), 0)).select_from(
+                source_groups
+            )
+        )
+        or 0
+    )
     category_totals = await _category_totals(
         session, workspace_id=workspace_id, scope=scope, domain=domain
     )
@@ -142,11 +153,19 @@ async def get_visibility_sources(
         total=total or 0,
         responses=denominator,
         prompts=prompts,
+        total_citations=total_citations,
         as_of=as_of,
         next_offset=offset + limit if offset + limit < (total or 0) else None,
         category_totals=category_totals,
         items=[
-            _source_row(row, denominator, prompts, pages=bool(domain)) for row in rows
+            _source_row(
+                row,
+                denominator,
+                prompts,
+                total_citations,
+                pages=bool(domain),
+            )
+            for row in rows
         ],
     )
     await attach_page_links(
@@ -173,16 +192,24 @@ async def get_visibility_sources(
     return response
 
 
-def _source_row(row, denominator, prompts, *, pages: bool = False):
+def _source_row(row, denominator, prompts, total_citations, *, pages: bool = False):
+    responses = row["responses"]
+    annotations = row["annotations"]
     return SourceRow(
         key=row["key"],
         url_hash=row["url_hash"] if pages else None,
-        responses=row["responses"],
+        responses=responses,
         prompts=row["prompts"],
-        annotations=row["annotations"],
+        annotations=annotations,
         urls=row["urls"],
-        response_rate=row["responses"] / denominator if denominator else None,
+        response_rate=responses / denominator if denominator else None,
         prompt_coverage=row["prompts"] / prompts if prompts else None,
+        retrieval_rate=row["urls"] / denominator if denominator else None,
+        citation_share=annotations / total_citations if total_citations else None,
+        # Per response the source was RETRIEVED in, never per response in the
+        # selection: the question is how heavily a source is quoted when it is
+        # used, which a project-wide denominator would flatten.
+        citation_rate=annotations / responses if responses else None,
         ownership=sorted(value for value in row["ownership"] if value),
         categories=sorted(value for value in row["categories"] if value),
         taxonomy_versions=sorted(value for value in row["versions"] if value),
@@ -198,17 +225,19 @@ def _source_boundary(as_of):
 
 
 async def _category_totals(session, *, workspace_id, scope, domain) -> dict[str, int]:
-    """Distinct cited domains per source class, across the whole selection.
+    """Citations per source class, across the whole selection.
 
     Counted server-side because the rows are paginated: a client folding the
-    page it happens to hold would present page one as the mix. Distinct DOMAINS
-    rather than citations, so one heavily cited site cannot look like a whole
-    category.
+    page it happens to hold would present page one as the mix.
+
+    CITATIONS rather than distinct domains: the source-type ring reports a
+    citation total and each segment's share of it, so a mix counted in domains
+    would not add up to the number printed in its centre.
     """
     statement = (
         select(
             Citation.source_class,
-            func.count(func.distinct(Citation.domain)).label("domains"),
+            func.count(Citation.id).label("citations"),
         )
         .join(scope, scope.c.analysis_id == Citation.analysis_id)
         .where(

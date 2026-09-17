@@ -33,13 +33,11 @@ export const visibilityKeys = {
 
 /**
  * Externally cited pages. Project-scoped and NOT run-scoped: inspection is a
- * property of the page, not of the audit that happened to cite it, so the
- * grouped read must not be re-fetched because a reader picked another run.
+ * property of the page, not of the audit that happened to cite it, so a page
+ * read must not be re-fetched because a reader picked another run.
  */
 export const sourcePageKeys = {
   all: ['source-pages'] as const,
-  competitorAnalysis: (projectId: string) =>
-    ['source-pages', 'competitor-analysis', projectId] as const,
   page: (projectId: string, urlHash: string) =>
     ['source-pages', 'page', projectId, urlHash] as const,
 };

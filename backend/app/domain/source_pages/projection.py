@@ -14,6 +14,7 @@ callers.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -299,3 +300,65 @@ async def get_source_page(
         entities=entities,
         limitations=page_limitations(page, snapshot),
     )
+
+
+@dataclass(frozen=True)
+class SourcePageFacts:
+    """What the Sources table shows about one cited page.
+
+    A read over persisted rows for the URL table, kept beside the page
+    projection rather than in the analysis owner: ``page_format`` and the
+    page's own title belong to the page, and a second module reaching into
+    ``page_facts`` by hand is a second place a key rename has to be found.
+    """
+
+    title: str
+    page_format: str
+    page_format_method: str | None
+    last_cited_at: datetime | None
+
+
+async def page_facts_for(
+    session: AsyncSession,
+    *,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    url_hashes: Sequence[str],
+) -> dict[str, SourcePageFacts]:
+    """Page facts for the given identities, keyed by ``url_hash``.
+
+    An identity with no page record is simply absent from the result. That is
+    the honest answer for a URL nobody has a record of, and it is NOT the same
+    as a page whose format is ``unresolved`` because nobody has read it yet.
+    """
+    if not url_hashes:
+        return {}
+    rows = (
+        await session.execute(
+            select(
+                SourcePage.url_hash,
+                SourcePage.page_format,
+                SourcePage.page_format_method,
+                SourcePage.last_cited_at,
+                SourcePageSnapshot.page_facts,
+            )
+            .outerjoin(
+                SourcePageSnapshot,
+                SourcePageSnapshot.id == SourcePage.latest_snapshot_id,
+            )
+            .where(
+                SourcePage.workspace_id == workspace_id,
+                SourcePage.project_id == project_id,
+                SourcePage.url_hash.in_(list(url_hashes)),
+            )
+        )
+    ).all()
+    return {
+        str(url_hash): SourcePageFacts(
+            title=str((facts or {}).get("title") or ""),
+            page_format=page_format,
+            page_format_method=page_format_method,
+            last_cited_at=last_cited_at,
+        )
+        for url_hash, page_format, page_format_method, last_cited_at, facts in rows
+    }

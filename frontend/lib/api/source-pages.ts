@@ -1,8 +1,7 @@
 /**
- * Externally cited pages: the grouped competitor read, one page's detail, and
- * the explicit inspect command.
+ * Externally cited pages: one page's detail and the explicit inspect command.
  *
- * Both reads render persisted projections. Neither triggers a fetch of the
+ * The read renders a persisted projection. It never triggers a fetch of the
  * publisher's page — that only ever happens through the inspect mutation
  * below, which is an authorized command that spends the project's inspection
  * budget exactly as automatic selection does. Opening a page detail is not a
@@ -14,21 +13,10 @@ import { mutationOptions, queryOptions } from '@tanstack/react-query';
 
 import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
-import {
-  competitorAnalysisSchema,
-  sourcePageDetailSchema,
-  sourcePageInspectionSchema,
-} from './schemas/source-pages';
+import { sourcePageDetailSchema, sourcePageInspectionSchema } from './schemas/source-pages';
 import { strictValidate } from './schemas/validation';
 
 const sourcePagesApi = {
-  getCompetitorAnalysis: async (projectId: string, options?: ApiRequestOptions) => {
-    const result = await apiClient.get(
-      `/projects/${projectId}/source-pages/competitor-analysis`,
-      options,
-    );
-    return strictValidate(competitorAnalysisSchema, result, 'sourcePages.getCompetitorAnalysis');
-  },
   getPage: async (projectId: string, urlHash: string, options?: ApiRequestOptions) => {
     const result = await apiClient.get(`/projects/${projectId}/source-pages/${urlHash}`, options);
     return strictValidate(sourcePageDetailSchema, result, 'sourcePages.getPage');
@@ -44,12 +32,6 @@ const sourcePagesApi = {
 };
 
 export const sourcePagesQueries = {
-  competitorAnalysis: (workspaceId: string, projectId: string) =>
-    queryOptions({
-      queryKey: queryKeys.sourcePages.competitorAnalysis(projectId),
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        sourcePagesApi.getCompetitorAnalysis(projectId, { signal, workspaceId }),
-    }),
   page: (workspaceId: string, projectId: string, urlHash: string) =>
     queryOptions({
       queryKey: queryKeys.sourcePages.page(projectId, urlHash),

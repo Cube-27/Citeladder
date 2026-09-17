@@ -87,7 +87,6 @@ export const CONTRACT_SCHEMA_MAP = {
   // Externally cited pages
   sourcePageDetailSchema: 'SourcePageDetail',
   sourcePageInspectionSchema: 'SourcePageInspectionRequested',
-  competitorAnalysisSchema: 'CompetitorAnalysis',
   // Content
   contentGenerationListItemSchema: 'ContentGenerationListItem',
   contentGenerationDetailSchema: 'ContentGenerationDetail',
