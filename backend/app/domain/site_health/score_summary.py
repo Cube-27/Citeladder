@@ -108,7 +108,7 @@ class _ClassifiedEvidence:
 
 
 def _classified_evidence(
-    rows: Sequence[Row], expected_tasks: dict[uuid.UUID, SiteCrawlTask]
+    rows: Sequence[Row], expected_tasks: dict[uuid.UUID, Row]
 ) -> _ClassifiedEvidence:
     evidence = _ClassifiedEvidence(Counter(), Counter(), [], set(), set())
     for row in rows:
@@ -131,7 +131,7 @@ def _classified_evidence(
 
 
 def _classification_errors(
-    expected_tasks: dict[uuid.UUID, SiteCrawlTask],
+    expected_tasks: dict[uuid.UUID, Row],
     completed_ids: set[uuid.UUID],
 ) -> tuple[int, Counter[str], set[uuid.UUID]]:
     error_ids = {
@@ -164,26 +164,42 @@ async def load_classification_projection(
     selected_ids: list[uuid.UUID],
     rows: Sequence[Row],
 ) -> ClassificationProjection:
-    tasks = (
-        await session.scalars(
-            select(SiteCrawlTask)
+    # The projection reads six fields off the newest analyze task per URL.
+    # Loading whole ORM entities for every selected URL to get them made this
+    # the widest query on a path that runs while the crawl is still moving, so
+    # the ranking is done in SQL and only those fields come back. ``DISTINCT
+    # ON`` with the generation ordering reversed picks the same row
+    # ``latest_task_by_url`` did, and ``classification_expected`` is still
+    # filtered after the ranking -- a URL whose newest task stopped expecting
+    # classification is out, not silently replaced by an older one.
+    task_rows = (
+        await session.execute(
+            select(
+                SiteCrawlTask.id,
+                SiteCrawlTask.site_url_id,
+                SiteCrawlTask.status,
+                SiteCrawlTask.error_code,
+                SiteCrawlTask.result_artifact_id,
+                SiteCrawlTask.classification_expected,
+            )
             .where(
                 SiteCrawlTask.crawl_id == crawl.id,
                 SiteCrawlTask.workspace_id == crawl.workspace_id,
                 SiteCrawlTask.task_kind == TASK_KIND_ANALYZE,
                 SiteCrawlTask.site_url_id.in_(selected_ids),
             )
+            .distinct(SiteCrawlTask.site_url_id)
             .order_by(
                 SiteCrawlTask.site_url_id,
-                SiteCrawlTask.generation,
-                SiteCrawlTask.id,
+                SiteCrawlTask.generation.desc(),
+                SiteCrawlTask.id.desc(),
             )
         )
     ).all()
     expected_tasks = {
-        site_url_id: task
-        for site_url_id, task in latest_task_by_url(tasks).items()
-        if task.classification_expected
+        row.site_url_id: row
+        for row in task_rows
+        if row.site_url_id is not None and row.classification_expected
     }
     evidence = _classified_evidence(rows, expected_tasks)
     error_count, error_reasons, error_artifacts = _classification_errors(

@@ -245,6 +245,26 @@ class SiteHealthSettings(BaseSettings):
     # disables it.
     overdue_crawl_seconds: float = 3_600.0
 
+    # --- Live score projection ---
+    # A successful analyze rewrites the crawl's WHOLE score summary: it locks
+    # the crawl row and the profile row, reloads every analysis, every rule
+    # evaluation the analyses cite, and the classification cohort. Doing that
+    # once per page made the cost of displaying a running mean grow with the
+    # square of the crawl, and those two row locks are the same ones the user's
+    # Stop button needs -- the contention documented on
+    # ``_finalize_reconcile_outcome``. A refresh is admitted at most once per
+    # this many analyses, or once per the interval below, whichever comes
+    # first. The number is a live convenience, never the record:
+    # terminalization always rebuilds the summary from persisted evidence, so
+    # a debounced crawl cannot settle on a partial one. The mark is per worker
+    # process, so N workers refresh up to N times as often -- fresher than
+    # configured, never staler. 0 on either knob disables that trigger.
+    live_score_refresh_page_interval: int = 10
+    live_score_refresh_min_interval_seconds: float = 5.0
+    # Ceiling on how many crawls carry a live-refresh mark in one worker, so a
+    # long-lived process cannot accumulate one entry per crawl it ever saw.
+    live_score_refresh_max_tracked_crawls: int = 256
+
     # --- Export ---
     # Bounds how many rows ``_export_items`` materializes into memory for a
     # single CSV/Markdown export before it truncates, so a very large Starter
@@ -304,6 +324,19 @@ class SiteHealthSettings(BaseSettings):
             raise ValueError(
                 "max_advanced_requested_page_limit must not exceed max_discovery_urls"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_live_score_refresh(self) -> SiteHealthSettings:
+        """Keep the live-summary debounce non-negative (0 disables a trigger)."""
+        _require_non_negative(
+            self,
+            (
+                "live_score_refresh_page_interval",
+                "live_score_refresh_min_interval_seconds",
+                "live_score_refresh_max_tracked_crawls",
+            ),
+        )
         return self
 
     @model_validator(mode="after")
