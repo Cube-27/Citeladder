@@ -109,23 +109,29 @@ def bridge_legacy_earned(
     domain is absent, and is superseded with no successor exactly as any
     retired row is -- readable in history, generating nothing.
     """
-    legacy = {
-        _legacy_domain(row.target_key): row
-        for row in live_rows
-        if row.rule_id == RULE_EARNED_SOURCE_RECURS
-    }
+    legacy: dict[str, list[Opportunity]] = {}
+    for row in live_rows:
+        if row.rule_id == RULE_EARNED_SOURCE_RECURS:
+            legacy.setdefault(_legacy_domain(row.target_key), []).append(row)
     if not legacy:
         return {}
     by_domain = _qualified_by_domain(scored)
     bridges: dict[str, LegacyBridge] = {}
-    for domain, row in legacy.items():
+    for domain, decisions in legacy.items():
+        # A publisher can carry more than one legacy row -- the old key
+        # included the source class, so a reclassification left two. Which of
+        # their decisions to move is then a question the data does not
+        # answer, and picking by row order would answer it arbitrarily.
+        row = min(decisions, key=lambda item: str(item.id))
         qualified = by_domain.get(domain, [])
         inheriting = [hit for hit in qualified if hit.rule_id == _INHERITING_RULE]
-        # One qualified page on the domain, and it is the one with a matching
-        # intent: the decision is unambiguous and moves. Anything else and it
-        # would distribute a single domain-level judgement across pages that
-        # judgement was never about.
-        carried = len(qualified) == 1 and row.status != STATUS_OPEN
+        # One legacy decision, one qualified page, and that page is the one
+        # with a matching intent: unambiguous, so it moves. Anything else and
+        # it would distribute a single domain-level judgement across pages
+        # that judgement was never about.
+        carried = (
+            len(decisions) == 1 and len(qualified) == 1 and row.status != STATUS_OPEN
+        )
         for hit in inheriting:
             bridges[hit.target_key] = LegacyBridge(
                 legacy_opportunity_id=str(row.id),

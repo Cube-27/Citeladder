@@ -204,9 +204,21 @@ def _entities(
 
 
 def _prior(
-    snapshot: SourcePageSnapshot | None, rows: list[SourcePageEntityPresence]
+    snapshot: SourcePageSnapshot | None,
+    rows: list[SourcePageEntityPresence],
+    *,
+    roster_version: str,
 ) -> PriorPageEvidence | None:
-    if snapshot is None:
+    """The last usable reading, or ``None`` when it is not comparable.
+
+    A verdict is only meaningful against the roster it was judged under, so a
+    prior snapshot assessed against a different one is dropped rather than
+    compared. Comparing across rosters reports an alias somebody removed as a
+    placement the publisher took down.
+    """
+    if snapshot is None or not rows:
+        return None
+    if any(row.roster_version != roster_version for row in rows):
         return None
     entities = _entities(snapshot, rows)
     brand = next(
@@ -329,12 +341,13 @@ def _page_evidence(
         prior=_prior(
             prior_snapshot,
             presences.get(prior_snapshot.id, []) if prior_snapshot else [],
+            roster_version=roster_version,
         ),
-        # Every verdict on this snapshot was frozen against one roster, so
-        # comparing the first is comparing all of them.
-        roster_current=bool(
-            read.rows and read.rows[0].roster_version == roster_version
-        ),
+        # Written together against one roster, but checked per row rather
+        # than on the first: the assumption costs nothing to drop, and a
+        # verdict judged under a roster nobody is using is not current.
+        roster_current=bool(read.rows)
+        and all(row.roster_version == roster_version for row in read.rows),
         source_class=page.source_class,
         recurrence_count=page.recurrence_count,
         answer_count=len(analysis_ids),

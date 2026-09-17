@@ -467,6 +467,42 @@ async def test_an_external_placement_declares_against_the_publisher_page(
     assert [check["kind"] for check in body["expected_checks"]] == ["visibility_metric"]
 
 
+async def test_the_database_refuses_a_row_claiming_both_target_kinds(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """An owned change and an external placement verify against different
+    evidence, so a row claiming both would report two outcomes as one."""
+    from sqlalchemy.exc import IntegrityError
+
+    scenario, opportunity, site_url = await _seed_and_recompute(client, session_factory)
+    async with session_factory() as session:
+        snapshot = await session.scalar(
+            select(OpportunitySnapshot)
+            .where(OpportunitySnapshot.project_id == scenario.project_id)
+            .order_by(OpportunitySnapshot.created_at.desc())
+            .limit(1)
+        )
+        assert snapshot is not None
+        session.add(
+            OpportunityImplementationEvent(
+                workspace_id=scenario.workspace_id,
+                project_id=scenario.project_id,
+                opportunity_id=opportunity.id,
+                opportunity_snapshot_id=snapshot.id,
+                target_site_url_ids=[str(site_url.id)],
+                target_external_url=_PUBLISHER_URL,
+                declared_implemented_at=datetime.now(UTC),
+                expected_checks=[],
+                actor_user_id=scenario.user_id,
+                idempotency_key="both-targets",
+                request_fingerprint="f" * 64,
+            )
+        )
+        with pytest.raises(IntegrityError):
+            await session.commit()
+
+
 async def test_an_external_placement_refuses_owned_page_targets(
     client: httpx.AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],

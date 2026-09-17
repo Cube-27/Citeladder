@@ -36,9 +36,13 @@ function PageAction({ row }: Readonly<{ row: SourceRow }>) {
       </ProjectLink>
     );
   }
+  // Read from the page record, not from the identity: a citation resolves to
+  // an identity whether or not this project has ever looked at that page, so
+  // keying the label on `url_hash` reported an unread page as one with
+  // nothing to do.
   return (
     <span className={textRole('meta', 'text-secondary')}>
-      {row.url_hash ? 'No action yet' : 'Not inspected'}
+      {row.inspection_state ? 'No action yet' : 'Not inspected'}
     </span>
   );
 }

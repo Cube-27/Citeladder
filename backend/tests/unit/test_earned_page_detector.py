@@ -191,7 +191,12 @@ def test_defence_needs_a_prior_snapshot_to_deteriorate_from():
     assert _rules(hits) == [RULE_EARNED_PAGE_ACQUIRE]
 
 
-def test_a_new_competitor_beside_a_kept_placement_still_defends():
+def test_a_new_competitor_beside_a_kept_placement_is_not_deterioration():
+    """Both present stays the healthy watch state, rival or no rival.
+
+    Otherwise every page a competitor ever joins becomes a task, and the
+    thing that supposedly deteriorated is a placement we still hold.
+    """
     hits = detect_earned_page_opportunities(
         _evidence(
             _page(
@@ -209,8 +214,54 @@ def test_a_new_competitor_beside_a_kept_placement_still_defends():
         )
     )
 
+    assert hits == []
+
+
+def test_a_new_competitor_qualifies_a_placement_that_did_deteriorate():
+    hits = detect_earned_page_opportunities(
+        _evidence(
+            _page(
+                entities=(
+                    _brand(PRESENCE_NOT_DETECTED),
+                    _competitor(),
+                    _competitor("Initech"),
+                ),
+                prior=PriorPageEvidence(
+                    snapshot_id="snap-0",
+                    brand_present=True,
+                    brand_match_count=2,
+                    present_competitors=(_RIVAL,),
+                    content_hash="hash-0",
+                ),
+            )
+        )
+    )
+
     assert _rules(hits) == [RULE_EARNED_PAGE_DEFEND]
-    assert hits[0].evidence["content_handoff"]["deterioration"] == ["competitor_added"]
+    assert hits[0].evidence["content_handoff"]["deterioration"] == [
+        "brand_removed",
+        "competitor_added",
+    ]
+
+
+def test_an_unsettled_brand_verdict_is_not_a_removed_placement():
+    """A reading that could not settle it is not the publisher taking us down."""
+    hits = detect_earned_page_opportunities(
+        _evidence(
+            _page(
+                entities=(_brand(PRESENCE_AMBIGUOUS), _competitor()),
+                prior=PriorPageEvidence(
+                    snapshot_id="snap-0",
+                    brand_present=True,
+                    brand_match_count=2,
+                    present_competitors=(_RIVAL,),
+                    content_hash="hash-0",
+                ),
+            )
+        )
+    )
+
+    assert hits == []
 
 
 def test_brand_present_but_not_an_entry_is_a_correction():
@@ -284,7 +335,7 @@ def test_an_unqualified_recurring_source_becomes_research_not_an_action(
     hits = detect_earned_page_opportunities(_evidence(_page(**overrides)))
 
     assert _rules(hits) == [RULE_EARNED_PAGE_RESEARCH]
-    assert unresolved in hits[0].evidence["content_handoff"]["unresolved"]
+    assert unresolved in hits[0].evidence["content_handoff"]["unmet_qualification"]
 
 
 def test_research_scores_above_the_surfacing_floor():

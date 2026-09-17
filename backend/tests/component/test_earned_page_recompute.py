@@ -138,6 +138,7 @@ async def _add_snapshot(
     outbound: list[str],
     content_hash: str,
     fetched_at: datetime,
+    roster: str | None = None,
 ) -> SourcePageSnapshot:
     snapshot = SourcePageSnapshot(
         workspace_id=scenario.workspace_id,
@@ -169,7 +170,7 @@ async def _add_snapshot(
     )
     session.add(snapshot)
     await session.flush()
-    roster = project_roster(_ROSTER)
+    roster = roster or project_roster(_ROSTER)
     session.add(
         SourcePageEntityPresence(
             workspace_id=scenario.workspace_id,
@@ -303,6 +304,43 @@ async def test_a_deteriorating_placement_is_reachable_without_a_gap_prompt(
     assert "brand_removed" in rows[0].evidence["content_handoff"]["deterioration"]
 
 
+async def test_a_prior_snapshot_judged_on_another_roster_is_not_compared(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """An alias somebody removed is not a placement the publisher took down.
+
+    Same evidence as the defence case above, except the earlier snapshot was
+    judged against a different roster. It is dropped rather than compared, so
+    this falls back to the ordinary acquisition.
+    """
+    async with session_factory() as session:
+        scenario = await _seed_scenario(session)
+        page = await _seed_cited_page(
+            session,
+            scenario,
+            brand_present=False,
+            headings=["Globex", "Initech"],
+            outbound=["globex.test"],
+        )
+        await _add_snapshot(
+            session,
+            scenario,
+            page,
+            brand_present=True,
+            headings=["Acme Corp", "Globex"],
+            outbound=["acme.com", "globex.test"],
+            content_hash="hash-before",
+            fetched_at=datetime.now(UTC) - timedelta(days=30),
+            roster="roster-from-an-older-alias-set",
+        )
+        await session.commit()
+
+    await _recompute(session_factory, scenario)
+    rows = await _earned_rows(session_factory, scenario)
+
+    assert [row.rule_id for row in rows] == [RULE_EARNED_PAGE_ACQUIRE]
+
+
 async def test_a_page_nobody_read_is_never_reported_as_an_absence(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -337,7 +375,7 @@ async def test_a_page_nobody_read_is_never_reported_as_an_absence(
 
     assert [row.rule_id for row in rows] == [RULE_EARNED_PAGE_RESEARCH]
     handoff = rows[0].evidence["content_handoff"]
-    assert "not_inspected" in handoff["unresolved"]
+    assert "not_inspected" in handoff["unmet_qualification"]
     assert handoff["requested"] is True
 
 

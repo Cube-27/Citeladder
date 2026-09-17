@@ -9,6 +9,7 @@ reconstructing either would have to be found and changed when either moves.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 
 from sqlalchemy import literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +18,21 @@ from app.core.config.earned_actions import EARNED_PAGE_TARGET_PREFIX
 from app.models.opportunity import Opportunity
 from app.models.source_pages import SourcePage
 
-__all__ = ["live_page_opportunities"]
+__all__ = ["PageAction", "live_page_opportunities"]
+
+
+@dataclass(frozen=True, slots=True)
+class PageAction:
+    """What this project knows about one cited page, for a linking reader.
+
+    Absence from the result and a ``None`` ``opportunity_id`` are different
+    answers: the first means no record of the page exists here, the second
+    that one does and no rule has acted on it. A reader that cannot tell them
+    apart reports an uninspected page as one with nothing wrong.
+    """
+
+    inspection_state: str
+    opportunity_id: uuid.UUID | None
 
 
 async def live_page_opportunities(
@@ -26,7 +41,7 @@ async def live_page_opportunities(
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
     url_hashes: list[str],
-) -> dict[str, uuid.UUID | None]:
+) -> dict[str, PageAction]:
     """Page identities this project knows, mapped to their live action.
 
     A hash absent from the result is a page this project has no record for;
@@ -45,7 +60,7 @@ async def live_page_opportunities(
     # of keys assembled in Python and kept in step by hand.
     page_key = literal(EARNED_PAGE_TARGET_PREFIX).concat(SourcePage.url_hash)
     rows = await session.execute(
-        select(SourcePage.url_hash, Opportunity.id)
+        select(SourcePage.url_hash, SourcePage.inspection_state, Opportunity.id)
         .outerjoin(
             Opportunity,
             (Opportunity.target_key == page_key)
@@ -62,10 +77,16 @@ async def live_page_opportunities(
             Opportunity.priority_score.desc().nullslast(),
         )
     )
-    found: dict[str, uuid.UUID | None] = {}
-    for url_hash, opportunity_id in rows.all():
+    found: dict[str, PageAction] = {}
+    for url_hash, inspection_state, opportunity_id in rows.all():
         # Ordered by descending priority, so the first row per page is the
         # one a reader should act on first if a future rule set ever emits
         # two for one page.
-        found.setdefault(str(url_hash), opportunity_id)
+        found.setdefault(
+            str(url_hash),
+            PageAction(
+                inspection_state=str(inspection_state),
+                opportunity_id=opportunity_id,
+            ),
+        )
     return found

@@ -32,13 +32,21 @@ async def attach_page_links(
     project_id: uuid.UUID,
     items: list[SourceRow],
 ) -> None:
-    """Fill ``opportunity_id`` on page rows that have an action, in place.
+    """Fill the page state and action on page rows, in place.
 
     Only meaningful when Sources is showing PAGES (a domain is selected); a
     domain row's key is a hostname and has no page identity, so its
     ``url_hash`` was never set by the projection and it is skipped here.
+
+    Grouped by identity rather than keyed by it: two rows are two cited URLs,
+    and two URLs can canonicalize to one page -- a tracking parameter, or a
+    redirect token resolved to the publisher it pointed at. Keeping one row
+    per hash would leave the others silently unlinked.
     """
-    identities = {row.url_hash: row for row in items if row.url_hash}
+    identities: dict[str, list[SourceRow]] = {}
+    for row in items:
+        if row.url_hash:
+            identities.setdefault(row.url_hash, []).append(row)
     if not identities:
         return
     actions = await live_page_opportunities(
@@ -47,7 +55,12 @@ async def attach_page_links(
         project_id=project_id,
         url_hashes=sorted(identities),
     )
-    for url_hash, row in identities.items():
-        # A hash this project has no page record for addresses somebody
-        # else's evidence; the row keeps its identity but offers no action.
-        row.opportunity_id = actions.get(url_hash)
+    for url_hash, rows in identities.items():
+        # A hash this project has no page record for stays unset on both
+        # fields: the reader is told nobody looked, not that nothing is wrong.
+        action = actions.get(url_hash)
+        if action is None:
+            continue
+        for row in rows:
+            row.inspection_state = action.inspection_state
+            row.opportunity_id = action.opportunity_id

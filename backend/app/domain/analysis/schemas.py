@@ -68,11 +68,16 @@ class SourceRow(BaseModel):
     taxonomy_versions: list[str] = Field(default_factory=list)
     category_unavailable: bool = False
     response_delta: float | None = None
-    # Page rows only (a domain is selected). The identity this project has a
-    # page record for, and the live action on it -- so a suspicious cited page
-    # routes to its Opportunity instead of having to be searched for by name.
-    # Null means no page record, or none that produced an action.
+    # Page rows only (a domain is selected). The page identity this citation
+    # resolved to, what this project knows about that page, and the live
+    # action on it -- so a suspicious cited page routes to its Opportunity
+    # instead of having to be searched for by name.
+    #
+    # The three are distinct answers. A null ``inspection_state`` means this
+    # project has no record of the page at all; a state with no
+    # ``opportunity_id`` means it has one and no rule has acted on it.
     url_hash: str | None = None
+    inspection_state: str | None = None
     opportunity_id: uuid.UUID | None = None
 
 

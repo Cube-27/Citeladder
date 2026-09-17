@@ -2459,6 +2459,11 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
+        sa.CheckConstraint(
+            "jsonb_array_length(target_site_url_ids) = 0"
+            " OR target_external_url IS NULL",
+            name="ck_opportunity_implementation_single_target",
+        ),
         sa.UniqueConstraint(
             "workspace_id",
             "idempotency_key",

@@ -126,6 +126,11 @@ class SourcePageEvidence:
             if e.entity_kind == ENTITY_KIND_COMPETITOR and e.is_present
         )
 
+    @property
+    def present_competitors_named(self) -> tuple[str, ...]:
+        """Just the names, for comparison against a prior snapshot's."""
+        return tuple(entity.entity_name for entity in self.present_competitors)
+
 
 @dataclass(frozen=True, slots=True)
 class EarnedPageEvidence:

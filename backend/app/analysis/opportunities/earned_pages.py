@@ -36,6 +36,7 @@ from app.analysis.opportunities.detectors import DetectorHit
 from app.analysis.opportunities.earned_page_brief import earned_page_brief
 from app.analysis.opportunities.earned_page_evidence import (
     EarnedPageEvidence,
+    PriorPageEvidence,
     SourcePageEvidence,
 )
 from app.analysis.opportunities.scoring import (
@@ -190,6 +191,22 @@ def _discrepancies(
     return tuple(kind for kind, failed in checks if failed)
 
 
+def _placement_reduced(page: SourcePageEvidence, prior: PriorPageEvidence) -> bool:
+    """The prose changed AND the brand is mentioned less than it was.
+
+    Either signal alone is noise: a publisher rewrites a page without
+    touching our entry, and a match count moves on extraction differences.
+    """
+    brand = page.brand
+    return bool(
+        brand
+        and prior.content_hash
+        and page.content_hash
+        and prior.content_hash != page.content_hash
+        and brand.match_count < prior.brand_match_count
+    )
+
+
 def _deterioration(page: SourcePageEvidence) -> tuple[str, ...]:
     """How this placement got worse since the last usable snapshot.
 
@@ -201,24 +218,22 @@ def _deterioration(page: SourcePageEvidence) -> tuple[str, ...]:
     brand = page.brand
     if prior is None or brand is None or not prior.brand_present:
         return ()
+    if not (brand.is_present or brand.is_absent):
+        # Ambiguous or partial: this reading could not settle where the brand
+        # stands, so there is nothing to compare the prior one against.
+        # Reporting an unsettled verdict as a lost placement is the same
+        # mistake as reporting an unread page as an absence.
+        return ()
     reasons: list[str] = []
-    if not brand.is_present:
+    if brand.is_absent:
         reasons.append("brand_removed")
-    elif (
-        prior.content_hash
-        and page.content_hash
-        and prior.content_hash != page.content_hash
-        and brand.match_count < prior.brand_match_count
-    ):
-        # The prose changed AND the brand is mentioned less often than it was.
-        # Either alone is noise: a page rewrites without touching our entry,
-        # and a match count moves on extraction differences.
+    elif _placement_reduced(page, prior):
         reasons.append("placement_reduced")
-    new_competitors = sorted(
-        {entity.entity_name for entity in page.present_competitors}
-        - set(prior.present_competitors)
-    )
-    if new_competitors:
+    # A rival arriving beside a placement we still hold is not deterioration
+    # -- both present is the healthy watch state, and firing on it would put
+    # a task on every page a competitor ever joins. It qualifies what
+    # DISPLACED us only once something else shows we lost ground.
+    if reasons and set(page.present_competitors_named) - set(prior.present_competitors):
         reasons.append("competitor_added")
     return tuple(reasons)
 
@@ -322,7 +337,9 @@ def _research_extra(page: SourcePageEvidence, missing: tuple[str, ...]) -> dict 
         return None
     if not (page.requested or _recurrent(page, EARNED_PAGE_RESEARCH_MIN_RECURRENCE)):
         return None
-    return {"unresolved": list(missing), "requested": page.requested}
+    # What is unresolved is already on the brief as ``unmet_qualification``;
+    # repeating it under a second name would be one fact with two owners.
+    return {"requested": page.requested}
 
 
 def _page_hit(

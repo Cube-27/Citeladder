@@ -107,9 +107,20 @@ def earned_page_brief(
     extra: dict,
 ) -> dict:
     """The bounded Content handoff for one earned-page task."""
-    on_page = [entity.entity_name for entity in page.present_competitors][
-        :EARNED_PAGE_MAX_COMPETITORS
-    ]
+    on_page = [entity.entity_name for entity in page.present_competitors]
+    entity_rows = _entity_rows(page)
+    # Every bound this brief applies, not just the first two. A reader who
+    # acts on a truncated list without being told it was truncated is acting
+    # on a partial picture, and which field ran short does not change that.
+    truncated = (
+        len(page.prompt_indices) > EARNED_PAGE_MAX_PROMPTS
+        or len(page.themes) > EARNED_PAGE_MAX_PROMPTS
+        or len(page.answer_competitors) > EARNED_PAGE_MAX_COMPETITORS
+        or len(on_page) > EARNED_PAGE_MAX_COMPETITORS
+        or any(
+            len(entity.passages) > EARNED_PAGE_MAX_PASSAGES for entity in page.entities
+        )
+    )
     return {
         "pathway": ACTION_PATH_EARNED,
         "rule_id": rule_id,
@@ -135,13 +146,13 @@ def earned_page_brief(
         "inspection_reason": page.inspection_reason,
         "extracted_chars": page.extracted_chars,
         "sufficient_coverage": page.sufficient_coverage,
-        "page_entities": _entity_rows(page),
+        "page_entities": entity_rows,
         # The shared handoff field every reader already renders, carrying
         # the competitors found ON THE PAGE -- the ones the action is about.
         # ``answer_competitors`` is the looser answer-level set, kept
         # separate and labelled, and never scored. Collapsing the two is the
         # defect this detector replaces.
-        "observed_competitors": on_page,
+        "observed_competitors": on_page[:EARNED_PAGE_MAX_COMPETITORS],
         "answer_competitors": list(page.answer_competitors)[
             :EARNED_PAGE_MAX_COMPETITORS
         ],
@@ -159,8 +170,7 @@ def earned_page_brief(
         # The shared handoff shape. One page is one cited source, so the
         # representative list has exactly one entry: this page.
         "representative_citations": [{"url": page.canonical_url, "title": page.title}],
-        "truncated": len(page.prompt_indices) > EARNED_PAGE_MAX_PROMPTS
-        or len(page.answer_competitors) > EARNED_PAGE_MAX_COMPETITORS,
+        "truncated": truncated,
         "qualified": qualified,
         "unmet_qualification": list(unmet),
         "source_analysis_ids": list(page.analysis_ids),
