@@ -132,6 +132,13 @@ class SourcePage(Base):
     last_cited_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # When a person last asked for this page specifically. It is what makes
+    # the research rule's explicit-request exception real: a source somebody
+    # went looking for is worth resolving even when nothing about it has
+    # qualified yet. Never cleared, so the ask survives a failed inspection.
+    inspection_requested_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # Project-wide SCHEDULING value used to rank inspection candidates. It is
     # never the citation count for a selected engine, cohort or period; that
     # comes from the full captured evidence through the source projection.

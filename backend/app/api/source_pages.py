@@ -22,7 +22,7 @@ from app.api.deps import WorkspaceContext, get_db, require_active_workspace
 from app.core.http_errors import raise_not_found
 from app.domain.analytics.enqueue import enqueue_source_page_inspection
 from app.domain.projects.service import ProjectNotFoundError, get_project
-from app.domain.source_pages.admission import current_budget
+from app.domain.source_pages.admission import current_budget, mark_inspection_requested
 from app.domain.source_pages.projection import SourcePageView, get_source_page
 from app.domain.source_pages.schemas import (
     SourcePageDetail,
@@ -95,8 +95,15 @@ async def inspect_source_page_endpoint(
     claim time.
     """
     await _resolve(session, ctx=ctx, project_id=project_id, url_hash=url_hash)
+    # Record the ask before anything can decline it. Asking is not spending:
+    # the request is remembered whether or not today's budget admits it, and
+    # a source somebody went looking for stays worth resolving either way.
+    # Marking it only on the accepted path would drop exactly the requests
+    # made while the window was full.
+    await mark_inspection_requested(session, project_id=project_id, url_hash=url_hash)
     budget = await current_budget(session, project_id=project_id)
     if budget.remaining <= 0:
+        await session.commit()
         return SourcePageInspectionRequested(
             accepted=False,
             reason="budget_exhausted",
@@ -115,6 +122,7 @@ async def inspect_source_page_endpoint(
     if audit_id is None:
         # Inspection is scoped to an audit's cited evidence, so with no
         # completed audit there is nothing to inspect this page as part of.
+        await session.commit()
         return SourcePageInspectionRequested(
             accepted=False,
             reason="no_completed_audit",

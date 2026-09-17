@@ -54,9 +54,11 @@ from app.domain.opportunities.common import (
     _utcnow,
 )
 from app.domain.opportunities.demand_hits import load_demand_hits
+from app.domain.opportunities.earned_page_hits import load_earned_page_hits
 from app.domain.opportunities.errors import (
     OpportunityNotFoundError,
 )
+from app.domain.opportunities.legacy_earned import LegacyBridge, bridge_legacy_earned
 from app.domain.opportunities.site_coverage import site_coverage
 from app.domain.opportunities.snapshot_build import build_snapshot
 from app.domain.opportunities.snapshot_projection import project_snapshot
@@ -338,6 +340,19 @@ async def _audit_hits(
         projections=projections[:2],
     )
     visibility_hits.extend(detect_earned_source_opportunities(projections[2]))
+    # Page-keyed, and over the FULL eligible answer set rather than the
+    # gap-prompt subset ``build_source_projection`` filters to. That filter is
+    # what makes a page where the brand is present but wrongly described, or
+    # present and losing ground, structurally invisible.
+    visibility_hits.extend(
+        await load_earned_page_hits(
+            session,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            audit=audit,
+            visibility=visibility,
+        )
+    )
     if metric_snapshot is not None:
         metric_ids = (str(metric_snapshot.id),)
         visibility_hits = [
@@ -478,41 +493,28 @@ async def _write_recompute(
         ).all()
     )
     live_by_target = {(row.rule_id, row.target_key): row for row in live_rows}
+    live_ids = {row.id for row in live_rows}
+    # The domain-keyed earned rule is retired, so its key space no longer
+    # meets the page keys that replaced it. Without this the cutover would
+    # discard every human decision on a publisher in silence.
+    bridges = bridge_legacy_earned(live_rows=live_rows, scored=scored)
     successor_ids: dict[uuid.UUID, uuid.UUID] = {}
     new_rows: list[Opportunity] = []
     for hit, score in scored:
-        rule = OPPORTUNITY_RULES_BY_ID[hit.rule_id]
-        title, remediation = _opportunity_copy(hit, rule)
         live = live_by_target.get((hit.rule_id, hit.target_key))
-        new_id = uuid.uuid4()
-        new_rows.append(
-            Opportunity(
-                id=new_id,
-                workspace_id=workspace_id,
-                project_id=project_id,
-                rule_id=rule.rule_id,
-                opportunity_type=rule.opportunity_type,
-                severity=rule.severity,
-                priority_score=score,
-                title=title,
-                remediation=remediation,
-                target_key=hit.target_key,
-                target_prompt_id=hit.target_prompt_id,
-                target_url=hit.target_url,
-                target_theme=hit.target_theme,
-                evidence=hit.evidence,
-                source_analysis_ids=list(hit.source_analysis_ids),
-                source_issue_ids=list(hit.source_issue_ids),
-                source_metric_ids=list(hit.source_metric_ids),
-                source_traffic_ids=None,
-                analyzer_version=ANALYZER_VERSION,
-                rule_version=RULE_VERSION,
-                formula_version=FORMULA_VERSION,
-                status=live.status if live is not None else STATUS_OPEN,
-            )
+        bridge = bridges.get(hit.target_key) if live is None else None
+        row = _new_opportunity(
+            hit,
+            score=score,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            live=live,
+            bridge=bridge,
         )
-        if live is not None:
-            successor_ids[live.id] = new_id
+        new_rows.append(row)
+        predecessor = _predecessor_id(live, bridge, live_ids)
+        if predecessor is not None:
+            successor_ids[predecessor] = row.id
     now = _utcnow()
     for live in live_rows:
         live.superseded_at = now
@@ -538,6 +540,81 @@ async def _write_recompute(
     session.add(snapshot)
     await session.commit()
     return project_snapshot(snapshot)
+
+
+def _predecessor_id(
+    live: Opportunity | None,
+    bridge: LegacyBridge | None,
+    live_ids: set[uuid.UUID],
+) -> uuid.UUID | None:
+    """Which live row this one supersedes, if it supersedes a specific one.
+
+    A legacy row whose decision did NOT move keeps no successor pointer: it
+    is retired and readable, not rewritten into a page task.
+    """
+    if live is not None:
+        return live.id
+    if bridge is None or not bridge.carried:
+        return None
+    legacy_id = uuid.UUID(bridge.legacy_opportunity_id)
+    return legacy_id if legacy_id in live_ids else None
+
+
+def _new_opportunity(
+    hit: DetectorHit,
+    *,
+    score: float,
+    workspace_id: uuid.UUID,
+    project_id: uuid.UUID,
+    live: Opportunity | None,
+    bridge: LegacyBridge | None,
+) -> Opportunity:
+    rule = OPPORTUNITY_RULES_BY_ID[hit.rule_id]
+    title, remediation = _opportunity_copy(hit, rule)
+    return Opportunity(
+        id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        project_id=project_id,
+        rule_id=rule.rule_id,
+        opportunity_type=rule.opportunity_type,
+        severity=rule.severity,
+        priority_score=score,
+        title=title,
+        remediation=remediation,
+        target_key=hit.target_key,
+        target_prompt_id=hit.target_prompt_id,
+        target_url=hit.target_url,
+        target_theme=hit.target_theme,
+        evidence=_evidence_with_legacy(hit, bridge),
+        source_analysis_ids=list(hit.source_analysis_ids),
+        source_issue_ids=list(hit.source_issue_ids),
+        source_metric_ids=list(hit.source_metric_ids),
+        source_traffic_ids=None,
+        analyzer_version=ANALYZER_VERSION,
+        rule_version=RULE_VERSION,
+        formula_version=FORMULA_VERSION,
+        status=_carried_status(live, bridge),
+    )
+
+
+def _carried_status(live: Opportunity | None, bridge: LegacyBridge | None) -> str:
+    """The human decision this row inherits, if it inherits one at all."""
+    if live is not None:
+        return live.status
+    if bridge is not None and bridge.carried:
+        return bridge.legacy_status
+    return STATUS_OPEN
+
+
+def _evidence_with_legacy(hit: DetectorHit, bridge: LegacyBridge | None) -> dict:
+    """Attach the retired domain decision as context, carried or not.
+
+    Present even when the status did NOT move, so a reader who dismissed a
+    publisher and now sees three page tasks can tell where they came from.
+    """
+    if bridge is None:
+        return hit.evidence
+    return {**hit.evidence, "legacy_source_decision": bridge.as_evidence()}
 
 
 def _opportunity_copy(hit: DetectorHit, rule: OpportunityRule) -> tuple[str, str]:

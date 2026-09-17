@@ -181,3 +181,5 @@ EARNED_PAGE_DEFAULT_ROLE: Final = "PR"
 EARNED_PAGE_MAX_PASSAGES: Final = 4
 EARNED_PAGE_MAX_COMPETITORS: Final = 12
 EARNED_PAGE_MAX_PROMPTS: Final = 12
+# Bounded recompute read: the most-recurrent cited pages of one audit.
+EARNED_PAGE_DETECTOR_MAX_PAGES: Final = 500

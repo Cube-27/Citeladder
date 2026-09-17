@@ -61,7 +61,10 @@ def test_source_mix_deduplicates_within_answer_and_counts_across_answers() -> No
     assert forbes["answer_count"] == 2
     assert forbes["usage_denominator"] == 2
     assert forbes["actionable"] is True
-    assert len(detect_earned_source_opportunities(rollups)) == 1
+    # The mix survives for the Sources display; the domain-keyed detector it
+    # used to feed is retired, and an actionable rollup no longer becomes a
+    # task. Page-keyed tasks come from inspected pages instead.
+    assert detect_earned_source_opportunities(rollups) == []
 
 
 def test_source_mix_preserves_not_applicable_and_unavailable() -> None:

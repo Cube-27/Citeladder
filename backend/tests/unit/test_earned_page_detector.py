@@ -41,6 +41,7 @@ from app.core.config.source_pages import (
     ENTITY_KIND_BRAND,
     ENTITY_KIND_COMPETITOR,
     INSPECTION_BLOCKED,
+    INSPECTION_FAILED,
     INSPECTION_INSPECTED,
     INSPECTION_NOT_INSPECTED,
     PAGE_FORMAT_ARTICLE,
@@ -303,21 +304,19 @@ def test_research_scores_above_the_surfacing_floor():
 
 
 def test_a_routine_fetch_failure_is_a_source_state_not_an_opportunity():
+    """It will be retried; a state the next run clears is not a human's task."""
     hits = detect_earned_page_opportunities(
         _evidence(
             _page(
-                inspection_state=INSPECTION_NOT_INSPECTED,
+                inspection_state=INSPECTION_FAILED,
+                inspection_reason="transport_error",
                 snapshot_id=None,
-                sufficient_coverage=True,
-                page_format=PAGE_FORMAT_COMPARISON,
                 entities=(),
-                roster_current=True,
             )
         )
     )
 
-    assert _rules(hits) == [RULE_EARNED_PAGE_RESEARCH]
-    assert "entity_matching_unresolved" in hits[0].evidence["unresolved"]
+    assert hits == []
 
 
 def test_an_uninspected_page_alone_earns_nothing_unless_asked_for():
@@ -350,7 +349,8 @@ def test_an_incidental_single_citation_is_inventory_not_a_task():
     assert hits == []
 
 
-def test_a_blocked_publisher_page_reports_a_state_and_no_action():
+def test_a_blocked_publisher_page_is_research_because_it_never_self_resolves():
+    """Unlike a retryable failure, a refusal stands until a person acts."""
     hits = detect_earned_page_opportunities(
         _evidence(
             _page(

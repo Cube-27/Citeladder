@@ -221,6 +221,13 @@ OPPORTUNITY_RULES: Final[tuple[OpportunityRule, ...]] = (
             "request. This observation does not establish domain-wide absence or "
             "guarantee a later citation."
         ),
+        # RETIRED. Keys on a registrable domain, leaves ``target_url``
+        # null, and scores on answer-level co-occurrence, so any
+        # reclassification superseded its row with no successor and
+        # discarded the human decision on it. Replaced by the four
+        # ``earned_page_*`` rules. Config-only so existing rows and
+        # their history stay readable and validate; nothing emits it.
+        enabled=False,
     ),
     OpportunityRule(
         rule_id="confirmed_prompt_decline",

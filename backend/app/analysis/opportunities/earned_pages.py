@@ -53,7 +53,10 @@ from app.core.config.earned_actions import (
 )
 from app.core.config.opportunities import OPPORTUNITY_RULES_BY_ID
 from app.core.config.source_pages import (
+    INSPECTION_FAILED,
     INSPECTION_INSPECTED,
+    INSPECTION_NOT_INSPECTED,
+    INSPECTION_QUEUED,
     PAGE_FORMAT_UNRESOLVED,
 )
 
@@ -63,6 +66,14 @@ __all__ = ["detect_earned_page_opportunities", "qualification"]
 # kinds are checkable from the page itself; neither infers intent from prose.
 DISCREPANCY_NOT_LISTED_AS_ENTRY = "not_listed_as_entry"
 DISCREPANCY_OWNED_DOMAIN_MISSING = "owned_domain_missing"
+
+# Page states that the next inspection run resolves by itself. A page in one
+# of them is inventory, visible in Sources, and not somebody's task. Notably
+# absent: ``blocked``. A publisher that refuses automated access will refuse
+# it again forever, so that one needs a person.
+_SELF_RESOLVING_STATES = frozenset(
+    {INSPECTION_NOT_INSPECTED, INSPECTION_QUEUED, INSPECTION_FAILED}
+)
 
 
 def _relevant(page: SourcePageEvidence) -> bool:
@@ -272,12 +283,18 @@ def _research_extra(page: SourcePageEvidence, missing: tuple[str, ...]) -> dict 
 
     The explicit exception to the qualification gate. Its own bar is relevance
     and recurrence, or an explicit request; it asserts only that the source is
-    worth a look. A routine fetch failure is a visible source state and does
-    not by itself earn a task.
+    worth a look.
+
+    Read from the page STATE rather than from the set of unmet reasons, which
+    reads the same for two different situations. A page still waiting in the
+    queue, and a page whose fetch failed and will be retried, are visible
+    source states that resolve themselves. A page a publisher refuses is not:
+    it will never resolve on its own, and deciding what to do about it is
+    exactly the human judgement this rule exists to ask for.
     """
     if not _relevant(page):
         return None
-    if missing == ("not_inspected",) and not page.requested:
+    if page.inspection_state in _SELF_RESOLVING_STATES and not page.requested:
         return None
     if not (page.requested or _recurrent(page, EARNED_PAGE_RESEARCH_MIN_RECURRENCE)):
         return None

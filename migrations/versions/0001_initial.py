@@ -6226,6 +6226,9 @@ def upgrade() -> None:
         sa.Column("content_hash", sa.String(length=64), nullable=True),
         sa.Column("last_inspected_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_cited_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "inspection_requested_at", sa.DateTime(timezone=True), nullable=True
+        ),
         sa.Column("recurrence_count", sa.Integer(), nullable=False),
         sa.Column("first_seen_audit_id", sa.UUID(), nullable=True),
         sa.Column("last_seen_audit_id", sa.UUID(), nullable=True),

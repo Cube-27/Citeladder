@@ -11,7 +11,7 @@ from app.core.config.earned_actions import (
     ACTION_PATH_EARNED,
     ACTION_PATH_OWNED,
     ACTION_PATHS,
-    RULE_EARNED_SOURCE_RECURS,
+    EARNED_RULE_IDS,
 )
 from app.core.config.opportunities import (
     OPPORTUNITY_ACTIVE_STATUSES,
@@ -97,10 +97,14 @@ def _filter_clauses(
         clauses.append(Opportunity.rule_id == rule_id)
     if min_priority is not None:
         clauses.append(Opportunity.priority_score >= min_priority)
+    # Every rule whose action happens on somebody else's page, not one id.
+    # Naming only the retiring rule here would have emptied the earned view
+    # the moment it stopped generating.
+    earned = sorted(EARNED_RULE_IDS)
     if action_path == ACTION_PATH_EARNED:
-        clauses.append(Opportunity.rule_id == RULE_EARNED_SOURCE_RECURS)
+        clauses.append(Opportunity.rule_id.in_(earned))
     elif action_path == ACTION_PATH_OWNED:
-        clauses.append(Opportunity.rule_id != RULE_EARNED_SOURCE_RECURS)
+        clauses.append(Opportunity.rule_id.not_in(earned))
     return clauses
 
 

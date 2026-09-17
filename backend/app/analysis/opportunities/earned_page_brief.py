@@ -133,11 +133,17 @@ def earned_page_brief(
         "extracted_chars": page.extracted_chars,
         "sufficient_coverage": page.sufficient_coverage,
         "page_entities": _entity_rows(page),
+        # ``observed_competitors`` is the shared handoff field every reader
+        # already renders, so it carries the competitors found ON THE PAGE --
+        # the ones the action is actually about. ``answer_competitors`` is
+        # the looser answer-level set, kept separate and labelled, and never
+        # scored. Collapsing the two is the defect this detector replaces.
+        "observed_competitors": [
+            entity.entity_name for entity in page.present_competitors
+        ][:EARNED_PAGE_MAX_COMPETITORS],
         "page_competitors": [entity.entity_name for entity in page.present_competitors][
             :EARNED_PAGE_MAX_COMPETITORS
         ],
-        # Kept deliberately distinct from ``page_competitors`` and never
-        # scored. Collapsing the two is the defect this detector replaces.
         "answer_competitors": list(page.answer_competitors)[
             :EARNED_PAGE_MAX_COMPETITORS
         ],
@@ -152,6 +158,11 @@ def earned_page_brief(
             "inspected_pages": evidence.inspected_pages,
             "total_pages": evidence.total_pages,
         },
+        # The shared handoff shape. One page is one cited source, so the
+        # representative list has exactly one entry: this page.
+        "representative_citations": [{"url": page.canonical_url, "title": page.title}],
+        "truncated": len(page.prompt_indices) > EARNED_PAGE_MAX_PROMPTS
+        or len(page.answer_competitors) > EARNED_PAGE_MAX_COMPETITORS,
         "qualified": qualified,
         "unmet_qualification": list(unmet),
         "source_analysis_ids": list(page.analysis_ids),
