@@ -2,6 +2,28 @@ from __future__ import annotations
 
 from typing import Final
 
+from app.core.config.site_health_answer_shapes import (
+    PAGE_KIND_ALTERNATIVE,
+    PAGE_KIND_HOW_TO,
+    PAGE_KIND_LISTICLE,
+)
+from app.core.config.site_health_page_kinds import (
+    PAGE_KIND_ABOUT_CONTACT,
+    PAGE_KIND_ARTICLE,
+    PAGE_KIND_CASE_STUDY_REVIEW,
+    PAGE_KIND_CATEGORY,
+    PAGE_KIND_COMPARISON,
+    PAGE_KIND_DOCS,
+    PAGE_KIND_FAQ,
+    PAGE_KIND_GUIDE,
+    PAGE_KIND_HOMEPAGE,
+    PAGE_KIND_LOCAL,
+    PAGE_KIND_OTHER,
+    PAGE_KIND_PRICING,
+    PAGE_KIND_PRODUCT,
+    PAGE_KIND_SERVICE,
+    PAGE_KIND_TRUST_POLICY,
+)
 from app.core.config.site_health_traits import (
     PAGE_TRAIT_ABOUT_INTENT,
     PAGE_TRAIT_CONTACT_INTENT,
@@ -9,36 +31,6 @@ from app.core.config.site_health_traits import (
     PAGE_TRAIT_LISTING,
     PAGE_TRAIT_LOCAL_INTENT,
 )
-
-PAGE_KIND_HOMEPAGE: Final = "homepage"
-
-PAGE_KIND_ARTICLE: Final = "article"
-
-PAGE_KIND_PRODUCT: Final = "product"
-
-PAGE_KIND_CATEGORY: Final = "category"
-
-PAGE_KIND_PRICING: Final = "pricing"
-
-PAGE_KIND_DOCS: Final = "docs"
-
-PAGE_KIND_FAQ: Final = "faq"
-
-PAGE_KIND_ABOUT_CONTACT: Final = "about_contact"
-
-PAGE_KIND_OTHER: Final = "other"
-
-PAGE_KIND_SERVICE: Final = "service"
-
-PAGE_KIND_LOCAL: Final = "local"
-
-PAGE_KIND_GUIDE: Final = "guide"
-
-PAGE_KIND_COMPARISON: Final = "comparison"
-
-PAGE_KIND_CASE_STUDY_REVIEW: Final = "case_study_review"
-
-PAGE_KIND_TRUST_POLICY: Final = "trust_policy"
 
 PAGE_KINDS: Final[tuple[str, ...]] = (
     PAGE_KIND_HOMEPAGE,
@@ -52,7 +44,10 @@ PAGE_KINDS: Final[tuple[str, ...]] = (
     PAGE_KIND_SERVICE,
     PAGE_KIND_LOCAL,
     PAGE_KIND_GUIDE,
+    PAGE_KIND_HOW_TO,
+    PAGE_KIND_LISTICLE,
     PAGE_KIND_COMPARISON,
+    PAGE_KIND_ALTERNATIVE,
     PAGE_KIND_CASE_STUDY_REVIEW,
     PAGE_KIND_TRUST_POLICY,
     PAGE_KIND_OTHER,
@@ -293,7 +288,7 @@ PAGE_KIND_SCHEMA_TYPE_MAP: Final[dict[str, str]] = {
     "ContactPage": PAGE_KIND_ABOUT_CONTACT,
     "LocalBusiness": PAGE_KIND_LOCAL,
     "Service": PAGE_KIND_SERVICE,
-    "HowTo": PAGE_KIND_GUIDE,
+    "HowTo": PAGE_KIND_HOW_TO,
     "Review": PAGE_KIND_CASE_STUDY_REVIEW,
     "TechArticle": PAGE_KIND_DOCS,
     "NewsArticle": PAGE_KIND_ARTICLE,
@@ -560,6 +555,9 @@ PAGE_KIND_PROFILES: Final[dict[str, PageKindProfile]] = {
     PAGE_KIND_GUIDE: PageKindProfile(
         page_kind=PAGE_KIND_GUIDE,
     ),
+    PAGE_KIND_HOW_TO: PageKindProfile(page_kind=PAGE_KIND_HOW_TO),
+    PAGE_KIND_LISTICLE: PageKindProfile(page_kind=PAGE_KIND_LISTICLE),
+    PAGE_KIND_ALTERNATIVE: PageKindProfile(page_kind=PAGE_KIND_ALTERNATIVE),
     PAGE_KIND_COMPARISON: PageKindProfile(
         page_kind=PAGE_KIND_COMPARISON,
     ),
@@ -736,6 +734,26 @@ PAGE_KIND_EXPECTED_SCHEMA: Final[dict[str, PageKindSchemaExpectation]] = {
         expected_types=("HowTo",),
         required_properties=("name", "step"),
         recommended_properties=("image",),
+    ),
+    # A how-to declares what a guide declares; a ranking and an alternatives
+    # page are both an ordered list, which is what `ItemList` describes.
+    PAGE_KIND_HOW_TO: PageKindSchemaExpectation(
+        page_kind=PAGE_KIND_HOW_TO,
+        expected_types=("HowTo",),
+        required_properties=("name", "step"),
+        recommended_properties=("image",),
+    ),
+    PAGE_KIND_LISTICLE: PageKindSchemaExpectation(
+        page_kind=PAGE_KIND_LISTICLE,
+        expected_types=("ItemList",),
+        required_properties=("itemListElement",),
+        recommended_properties=(),
+    ),
+    PAGE_KIND_ALTERNATIVE: PageKindSchemaExpectation(
+        page_kind=PAGE_KIND_ALTERNATIVE,
+        expected_types=("ItemList",),
+        required_properties=("itemListElement",),
+        recommended_properties=(),
     ),
     PAGE_KIND_COMPARISON: PageKindSchemaExpectation(
         page_kind=PAGE_KIND_COMPARISON,

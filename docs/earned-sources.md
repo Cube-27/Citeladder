@@ -37,9 +37,19 @@ or an explicit authorized command, never a side effect of looking.
 
 **Publisher class is not page format.** `source_class` describes a domain and
 comes from the taxonomy in `core/config/source_patterns.py`. `page_format`
-describes one page and is derived from that page's own content. A single
-inspected comparison page is actionable on its own terms; it never promotes
-its publisher to a known category.
+describes ONE page. Sync derives a first verdict from the citation URL's own
+shape and stamps it `url_pattern`; a successful inspection may replace that
+with what the page says about itself, and an inspection that learns nothing
+leaves the URL-derived value standing. A single comparison page is actionable
+on its own terms either way; it never promotes its publisher to a known
+category.
+
+The page-kind catalog is SHARED with Site Health
+(`core/config/site_health_answer_shapes.py` and `site_health_page_kinds.py`).
+`listicle`, `how_to`, `comparison` and `alternative` are ordinary page kinds
+there, classified by the same slug and route catalogs whether the page is one
+we own or one an engine cited. A second classifier for the same four shapes is
+a second place they drift.
 
 **Page state is not an entity verdict.** `not_inspected`, `blocked` and
 `stale` are properties of the page and are never written as a presence row.
@@ -185,17 +195,20 @@ produces a visible blocked state rather than a silent skip.
 
 ## Reading it
 
-The [Competitor analysis tab](../frontend/components/visibility/competitor-analysis.tsx)
-answers "where are competitors cited and I am not, by kind of source" with no
-drill-down: source classes are the axis, and each carries the pages where a
-rival is on the page and the brand is not, with the names, the quoted line
-proving each, the page format, the answers that cited it, and the action. It is
-project-scoped, not run-scoped, so the run controls are hidden for it.
+Inspection has no surface of its own. What it establishes reaches a reader
+through two places that already exist: the page format it derives is the URL
+type in [Sources](../frontend/components/visibility/visibility-sources.tsx),
+and the entity-presence verdicts back the Opportunities verification payload.
 
-A page nobody inspected is COUNTED and never listed as a gap, and every group
-states its own coverage. `GET /projects/{id}/source-pages/{url_hash}` backs a
-page detail, and the manual inspect command is an explicit button in it that
-reports whether it was admitted and what the budget has left.
+Page format is deliberately not hostage to the inspection budget. Every cited
+page gets a format from its URL at sync time, stamped `url_pattern`; an
+inspection that reads the page REPLACES that with what the page says about
+itself, and never the other way round. An inspection that read nothing — a
+blocked page, or one whose kind is not evident — leaves the address verdict
+alone, because it has learned nothing that contradicts it.
+
+What was never read stays distinguishable from what was read and found absent.
+A page carries presence verdicts only once a snapshot exists.
 
 [Configuration](../backend/app/core/config/source_pages.py) owns the
 inspection limits, vocabularies and budget window;

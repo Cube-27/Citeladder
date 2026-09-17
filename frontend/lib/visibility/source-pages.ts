@@ -12,11 +12,7 @@
  * "not present" is the defect the whole inspection feature was built to
  * remove, and it would re-enter here if one label covered both.
  */
-import type { z } from 'zod';
-import type { sourcePageEntitySchema } from '@/lib/api/schemas/source-pages';
 import { formatCount } from '@/lib/format';
-
-export type SourcePageEntity = z.infer<typeof sourcePageEntitySchema>;
 
 /**
  * The one sentence for "we could not read enough of this page to judge it".
@@ -129,9 +125,4 @@ export function absenceBasis(
 export function citedByLabel(answers: number): string {
   if (answers <= 0) return 'Not cited in analyzed answers';
   return `Cited by ${answers} ${answers === 1 ? 'answer' : 'answers'}`;
-}
-
-/** "4 of 12 inspected" — coverage stated wherever a finding is stated. */
-export function coverageLabel(inspected: number, total: number): string {
-  return `${inspected} of ${total} inspected`;
 }

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Final
 
+from app.core.config.site_health_answer_shapes import EDITORIAL_PAGE_KINDS
 from app.core.config.site_health_contracts import (
     APPLICABILITY_SITE_ROOT,
     CATEGORY_CITABILITY,
@@ -28,12 +29,9 @@ from app.core.config.site_health_rule_types import (
 )
 from app.core.config.site_health_taxonomy import (
     PAGE_KIND_ABOUT_CONTACT,
-    PAGE_KIND_ARTICLE,
     PAGE_KIND_CASE_STUDY_REVIEW,
     PAGE_KIND_CATEGORY,
-    PAGE_KIND_COMPARISON,
     PAGE_KIND_DOCS,
-    PAGE_KIND_GUIDE,
     PAGE_KIND_HOMEPAGE,
     PAGE_KIND_LOCAL,
     PAGE_KIND_OTHER,
@@ -44,11 +42,12 @@ from app.core.config.site_health_taxonomy import (
     _page_kinds,
 )
 
+# Every prose kind, plus docs and case studies. Built from the shared set so a
+# kind added to the taxonomy is covered here without a second edit -- splitting
+# `listicle` out of `article` must not drop it from the rules that covered it.
 _EDITORIAL_KINDS: Final = (
-    PAGE_KIND_ARTICLE,
-    PAGE_KIND_GUIDE,
+    *sorted(EDITORIAL_PAGE_KINDS),
     PAGE_KIND_DOCS,
-    PAGE_KIND_COMPARISON,
     PAGE_KIND_CASE_STUDY_REVIEW,
 )
 _ENTITY_KINDS: Final = (

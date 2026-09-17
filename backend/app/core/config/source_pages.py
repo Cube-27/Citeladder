@@ -71,11 +71,34 @@ PAGE_FORMAT_DISCUSSION: Final = "discussion"
 PAGE_FORMAT_REFERENCE: Final = "reference"
 PAGE_FORMAT_ARTICLE: Final = "article"
 PAGE_FORMAT_VIDEO: Final = "video"
+# Shapes a URL alone can establish. They are page kinds like the rest -- what
+# distinguishes them is that the evidence for them is the address, so they are
+# available for every cited page rather than only for the inspected ones.
+PAGE_FORMAT_HOMEPAGE: Final = "homepage"
+PAGE_FORMAT_CATEGORY: Final = "category"
+PAGE_FORMAT_PRODUCT: Final = "product"
+PAGE_FORMAT_PROFILE: Final = "profile"
+PAGE_FORMAT_ALTERNATIVE: Final = "alternative"
+PAGE_FORMAT_HOW_TO: Final = "how_to"
 PAGE_FORMAT_UNRESOLVED: Final = "unresolved"
 
 PAGE_FORMAT_METHOD_STRUCTURED_DATA: Final = "structured_data"
 PAGE_FORMAT_METHOD_HEADING_EVIDENCE: Final = "heading_evidence"
+# Derived from the address, with no page read. Ranked BELOW the two above and
+# recorded distinctly, so a format read off a URL is never presented to a
+# reader as one read off the page.
+PAGE_FORMAT_METHOD_URL_PATTERN: Final = "url_pattern"
 PAGE_FORMAT_METHOD_NONE: Final = "none"
+
+# Methods in strength order, strongest first. An inspection may only REPLACE a
+# format established by a method at or below its own strength, which is what
+# stops a URL-shape guess from overwriting the publisher's own declaration.
+PAGE_FORMAT_METHOD_STRENGTH: Final[tuple[str, ...]] = (
+    PAGE_FORMAT_METHOD_STRUCTURED_DATA,
+    PAGE_FORMAT_METHOD_HEADING_EVIDENCE,
+    PAGE_FORMAT_METHOD_URL_PATTERN,
+    PAGE_FORMAT_METHOD_NONE,
+)
 
 # =========================================================================
 # Entity presence on an inspected page
@@ -146,19 +169,3 @@ SOURCE_PAGE_CLAIM_LEASE_MINUTES: Final = 30
 # already read in this run -- from a redirect body, say -- stays claimable and
 # is fetched and charged a second time for the same reading.
 SOURCE_PAGE_REUSE_WITHIN_HOURS: Final = 12
-
-# =========================================================================
-# Grouped competitor-presence read
-# =========================================================================
-# Bounds for the project-wide "where are competitors cited and we are not"
-# projection. It reads the whole project's inventory rather than one run's,
-# so every bound here is what keeps an unbounded read off a read path.
-#
-# The per-class page bound is deliberately small. The surface answers a
-# question, not a paging request: a reader needs the worst pages of each kind
-# of source on one screen, and the Sources inventory is where the full list
-# lives.
-SOURCE_PAGE_ANALYSIS_MAX_PAGES: Final = 500
-SOURCE_PAGE_ANALYSIS_MAX_PER_CLASS: Final = 10
-SOURCE_PAGE_ANALYSIS_MAX_COMPETITORS: Final = 8
-SOURCE_PAGE_ANALYSIS_MAX_PASSAGES: Final = 2

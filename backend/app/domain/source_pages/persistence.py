@@ -24,6 +24,8 @@ from app.core.config.source_pages import (
     INSPECTION_BLOCKED,
     INSPECTION_FAILED,
     INSPECTION_INSPECTED,
+    PAGE_FORMAT_METHOD_NONE,
+    PAGE_FORMAT_METHOD_STRENGTH,
     PAGE_FORMAT_UNRESOLVED,
     SOURCE_PAGE_EXTRACTOR_VERSION,
     SOURCE_PAGE_FORMAT_VERSION,
@@ -136,19 +138,43 @@ def _presence_rows(
 def _apply_page_format(page: SourcePage, assessment: PageAssessment | None) -> None:
     """Only ever the format of THIS page; the publisher's class is untouched.
 
-    An inspection that produced no assessment clears the derivation method and
-    version alongside the format. Leaving them behind would advertise stale
-    provenance next to ``unresolved`` -- a reader would be told how we decided
-    something we did not decide.
+    An inspection only ever REPLACES a weaker verdict. The page may already
+    carry a format derived from its URL alone, and an inspection that read the
+    page without recognising its kind -- or that never got to read it at all --
+    has learned nothing that contradicts the address. Overwriting on the way
+    past would turn a usable answer into ``unresolved`` every time a blocked
+    or unrecognisable page was retried.
     """
-    if assessment is None:
-        page.page_format = PAGE_FORMAT_UNRESOLVED
-        page.page_format_method = None
-        page.page_format_version = None
+    incoming = (
+        (assessment.page_format, assessment.page_format_method)
+        if assessment is not None
+        else (PAGE_FORMAT_UNRESOLVED, PAGE_FORMAT_METHOD_NONE)
+    )
+    # A verdict of "no idea" never replaces a verdict. Rows written before the
+    # method column existed carry a real format and a NULL method, which ranks
+    # weakest -- so without this a blocked retry would reset exactly the pages
+    # that already had a usable answer.
+    if incoming[0] == PAGE_FORMAT_UNRESOLVED and page.page_format not in (
+        None,
+        PAGE_FORMAT_UNRESOLVED,
+    ):
         return
-    page.page_format = assessment.page_format
-    page.page_format_method = assessment.page_format_method
+    if not _is_stronger(incoming[1], page.page_format_method):
+        return
+    page.page_format, page.page_format_method = incoming
     page.page_format_version = SOURCE_PAGE_FORMAT_VERSION
+
+
+def _is_stronger(incoming: str | None, existing: str | None) -> bool:
+    """Whether ``incoming`` evidence outranks what the page already carries.
+
+    Equal strength counts as stronger: re-reading a page with the same method
+    is a refresh, and its newer answer is the one to keep.
+    """
+    order = PAGE_FORMAT_METHOD_STRENGTH
+    rank = {method: index for index, method in enumerate(order)}
+    floor = len(order)
+    return rank.get(incoming or "", floor) <= rank.get(existing or "", floor)
 
 
 async def record_inspection(

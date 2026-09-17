@@ -11,6 +11,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -55,6 +56,23 @@ class MeasurementCounts(BaseModel):
         return self.expected is not None and self.responses == self.expected
 
 
+class SourceRowBrand(BaseModel):
+    """A brand named in an answer that cited this source.
+
+    Co-occurrence within one response, NOT presence on the page: the schema
+    links a mention to its answer and never to the citation beside it.
+    """
+
+    kind: Literal["brand", "competitor"]
+    name: str
+    responses: int = 0
+    # What a logo chip needs: the cached mark this project already holds, or a
+    # website to derive one from. Both null means the chip shows initials,
+    # which is the honest answer for a brand with no mark on file.
+    logo_url: str | None = None
+    website: str | None = None
+
+
 class SourceRow(BaseModel):
     key: str
     responses: int
@@ -63,6 +81,20 @@ class SourceRow(BaseModel):
     urls: int
     response_rate: float | None = None
     prompt_coverage: float | None = None
+    # Unique URLs from this source per response in the selection. Distinct
+    # from ``response_rate``, which asks whether the source appeared at all:
+    # one answer citing four pages of a domain is one response and four
+    # retrievals, and a domain that is quoted deeply reads differently from
+    # one that is quoted once.
+    retrieval_rate: float | None = None
+    # This row's share of the citations in the CURRENT filtered view, not of
+    # the project. Filtering to one domain type makes the shares add to 100%
+    # within that type, which is the question the filtered table is asking.
+    citation_share: float | None = None
+    # Citations per response that retrieved this source. Deliberately NOT
+    # derived from any stored retrieval counter: the denominator is the
+    # distinct responses this source was actually retrieved in.
+    citation_rate: float | None = None
     ownership: list[str] = Field(default_factory=list)
     categories: list[str] = Field(default_factory=list)
     taxonomy_versions: list[str] = Field(default_factory=list)
@@ -79,6 +111,18 @@ class SourceRow(BaseModel):
     url_hash: str | None = None
     inspection_state: str | None = None
     opportunity_id: uuid.UUID | None = None
+    # Page facts, for the URL table. ``page_format`` is what THIS page is;
+    # ``page_format_method`` says how that was established, so a format read
+    # off the URL alone is never presented as one read off the page.
+    title: str | None = None
+    page_format: str | None = None
+    page_format_method: str | None = None
+    last_cited_at: datetime | None = None
+    # Distinct brands named in the answers that cited this page, and the
+    # leading few of them. Zero is a real count; a domain row leaves both at
+    # their defaults because the question is asked of a page.
+    mentions: int = 0
+    brands: list[SourceRowBrand] = Field(default_factory=list)
 
 
 class CitationTotals(BaseModel):
@@ -94,12 +138,95 @@ class SourcesResponse(BaseModel):
     total: int = 0
     responses: int = 0
     prompts: int = 0
-    # Domains per source class across the WHOLE filtered selection, not the
+    # Every citation in the filtered selection. The denominator behind
+    # ``citation_share`` and the number the source-type ring reports in its
+    # centre, computed server-side because the rows are paginated.
+    total_citations: int = 0
+    # Citations per source class across the WHOLE filtered selection, not the
     # page. A client folding only the rows it loaded would chart page one.
     category_totals: dict[str, int] = Field(default_factory=dict)
     next_offset: int | None = None
     as_of: datetime
     comparison_status: str = "no_baseline"
+
+
+class SourceSeriesPoint(BaseModel):
+    """One source's use in one time bucket.
+
+    ``share`` is null only when the bucket held no responses at all, which is
+    a different fact from a source going uncited in a bucket that did.
+    """
+
+    at: datetime
+    responses: int = 0
+    share: float | None = None
+
+
+class SourceSeries(BaseModel):
+    key: str
+    citations: int = 0
+    points: list[SourceSeriesPoint] = Field(default_factory=list)
+
+
+class SourceSeriesResponse(BaseModel):
+    """Leading sources over the selected period, one dense line each."""
+
+    dimension: Literal["domain", "url"]
+    granularity: str
+    # Shared x positions. Every series carries a point for every bucket, so a
+    # reader comparing two lines is comparing them at the same moments.
+    buckets: list[datetime] = Field(default_factory=list)
+    series: list[SourceSeries] = Field(default_factory=list)
+
+
+class SourceUrlEngineRow(BaseModel):
+    logical_engine: str
+    transport_model: str | None = None
+    retrievals: int = 0
+
+
+class SourceUrlPromptRow(BaseModel):
+    prompt_text: str
+    # The prompt's frozen theme from its audit snapshot, which is what was
+    # true when the answer was observed. Null is "no theme", never "unknown".
+    topic: str | None = None
+    responses: int = 0
+    last_seen: datetime | None = None
+    engines: list[str] = Field(default_factory=list)
+
+
+class SourceUrlBrand(BaseModel):
+    """A brand named in an answer that cited this URL.
+
+    Co-occurrence in one response, NOT presence on the page: mentions are
+    recorded against the response, and nothing links one to the citation
+    beside it. Named for what it is so no surface can promote it.
+    """
+
+    kind: Literal["brand", "competitor"]
+    name: str
+    responses: int = 0
+    logo_url: str | None = None
+    website: str | None = None
+
+
+class SourceUrlDetail(BaseModel):
+    url: str
+    title: str = ""
+    retrievals: int = 0
+    citations: int = 0
+    # Every response in the selection, so a reader can place the retrievals
+    # against what was asked rather than only against each other.
+    responses: int = 0
+    citation_rate: float | None = None
+    prompts: int = 0
+    # First and last sighting WITHIN the selection; narrowing the period moves
+    # them. Never a claim about when the page itself was published.
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
+    engines: list[SourceUrlEngineRow] = Field(default_factory=list)
+    prompt_rows: list[SourceUrlPromptRow] = Field(default_factory=list)
+    brands: list[SourceUrlBrand] = Field(default_factory=list)
 
 
 class FanoutQueryRow(BaseModel):

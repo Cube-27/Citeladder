@@ -34,7 +34,7 @@ from app.api.provider_connections import (
 )
 from app.api.provider_connections import router as provider_connections_router
 from app.api.site_health import router as site_health_router
-from app.api.source_pages import router as source_pages_router
+from app.api.visibility_sources import router as visibility_sources_router
 from app.api.workspaces import router as workspaces_router
 from app.connectors.answer_engines.http_client import aclose_shared_clients
 from app.connectors.billing.http_client import aclose_shared_billing_clients
@@ -84,6 +84,7 @@ _ROUTERS = (
     oauth_router,
     workspaces_router,
     projects_router,
+    visibility_sources_router,
     brand_discoveries_router,
     prompts_router,
     provider_connections_router,
@@ -94,7 +95,6 @@ _ROUTERS = (
     site_health_router,
     content_router,
     demand_router,
-    source_pages_router,
     integrations_router,
     ai_referrals_router,
     performance_router,

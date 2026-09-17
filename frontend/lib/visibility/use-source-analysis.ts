@@ -1,20 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { z } from 'zod';
 
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { queryKeys } from '@/lib/api/query-keys';
-import type { visibilitySourcesSchema } from '@/lib/api/schemas/visibility-evidence';
 import { visibilityApi } from '@/lib/api/visibility';
-import { sourceCategoryLabels } from '@/lib/visibility/vocabulary';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import type { useVisibilityQueries } from '@/lib/visibility/use-visibility-dashboard';
 
-export type SourceData = z.infer<typeof visibilitySourcesSchema>;
 export type SourceQueries = ReturnType<typeof useVisibilityQueries>;
-export type SourceType = { token: string; label: string; domains: number; share: number };
 
 /** A query parameter is either a value or absent; null is neither. */
 function set<T>(value: T | null | undefined): T | undefined {
@@ -22,16 +16,16 @@ function set<T>(value: T | null | undefined): T | undefined {
 }
 
 /**
- * How many domains the compact strip above the answers shows.
+ * How many publishers the domain filter lists.
  *
- * The strip exists so a reader landing on the evidence still sees WHICH sites
- * the models drew on. It is an orientation band, not a table — the full list
- * is one deliberate switch away.
+ * A select is not a browsing surface: past a few dozen entries a reader is
+ * faster typing into the search box beside it, which searches the same rows.
  */
-const SOURCE_STRIP_LIMIT = 8;
+const SOURCE_DOMAIN_OPTIONS = 50;
 
 export type SourceScope = {
-  mode: string;
+  dimension: 'domain' | 'url';
+  /** Set when drilling into one domain; the table then lists its pages. */
   domain: string | null;
   offset: string | null;
   asOf: string | null;
@@ -40,13 +34,29 @@ export type SourceScope = {
 };
 
 /**
- * The cited-sources read, scoped to whichever half of the tab is showing.
+ * The run/engine/period selection every Sources read shares.
  *
- * Both halves ask the same endpoint. The answers half wants a short, unpaged,
- * unfiltered list of the top domains to orient the reader; the sources half
- * wants the paged, filterable table. They are the same question at two
- * resolutions, so they share one hook and one cache namespace rather than
- * growing a second client.
+ * Built once so the table, the usage chart and a URL's detail are all reading
+ * the same measurement. Three call sites assembling their own would be three
+ * chances for a chart to describe a different selection from the table under
+ * it — and nothing on the screen would say so.
+ */
+function selectionParams(filters: SourceFilters, queries: SourceQueries) {
+  return {
+    audit_id: queries.selectedRunIds ? undefined : set(queries.activeRunId),
+    audit_ids: queries.selectedRunIds,
+    engine: set(filters.engine === 'all' ? null : filters.engine),
+    cohort: filters.cohort,
+  };
+}
+
+/**
+ * The paged, filterable source table.
+ *
+ * `dimension` decides what a row IS. A domain row groups a publisher; a URL row
+ * is one page. The endpoint expresses the second as "a domain is selected", so
+ * the URL table asks for every page across every domain by leaving `domain`
+ * unset and reading the page-keyed rows the projection returns for it.
  */
 export function useSourceAnalysis(
   filters: SourceFilters,
@@ -55,13 +65,15 @@ export function useSourceAnalysis(
 ) {
   const comparison = queries.visibilityQuery.data?.comparison;
   const params = {
-    audit_id: queries.selectedRunIds ? undefined : set(queries.activeRunId),
-    audit_ids: queries.selectedRunIds,
+    ...selectionParams(filters, queries),
     baseline_audit_ids:
       comparison?.status === 'comparable' ? comparison.baseline_audit_ids : undefined,
-    engine: set(filters.engine === 'all' ? null : filters.engine),
-    cohort: filters.cohort,
-    ...tableParams(scope),
+    domain: set(scope.domain),
+    source_type: set(scope.sourceType),
+    dimension: scope.dimension,
+    offset: Math.max(0, Number.parseInt(scope.offset ?? '0', 10) || 0),
+    as_of: set(scope.asOf),
+    limit: scope.pageSize,
   };
   const sourceQuery = useQuery({
     queryKey: queryKeys.visibility.sources(queries.projectId ?? '', params),
@@ -79,53 +91,72 @@ export function useSourceAnalysis(
 }
 
 /**
- * The narrowing only the domain TABLE applies.
+ * The usage-over-time chart above the table.
  *
- * The strip above the answers is an orientation band: it shows the top
- * domains of the whole selection, so paging, the domain drill-down and the
- * source-type filter are all deliberately absent from it. Folding these into
- * the caller inline put every one of them behind its own conditional.
+ * A separate read, and a separate cache namespace, because it does not page.
+ * Folding it into the table query would refetch the whole chart every time a
+ * reader stepped to the next page of rows.
  */
-function tableParams(scope: SourceScope) {
-  if (scope.mode !== 'sources') {
-    return {
-      domain: undefined,
-      source_type: undefined,
-      offset: 0,
-      as_of: undefined,
-      limit: SOURCE_STRIP_LIMIT,
-    };
-  }
-  return {
+export function useSourceSeries(
+  filters: SourceFilters,
+  queries: SourceQueries,
+  scope: Pick<SourceScope, 'dimension' | 'domain' | 'sourceType'>,
+) {
+  const params = {
+    ...selectionParams(filters, queries),
+    dimension: scope.dimension,
+    granularity: filters.granularity === 'run' ? 'day' : filters.granularity,
     domain: set(scope.domain),
     source_type: set(scope.sourceType),
-    offset: Math.max(0, Number.parseInt(scope.offset ?? '0', 10) || 0),
-    as_of: set(scope.asOf),
-    limit: scope.pageSize,
   };
+  return useQuery({
+    queryKey: queryKeys.visibility.sourceSeries(queries.projectId ?? '', params),
+    queryFn: ({ signal }) =>
+      visibilityApi.getSourceSeries(queries.projectId!, params, {
+        signal,
+        workspaceId: queries.workspaceId,
+      }),
+    enabled: Boolean(queries.projectId && queries.activeRunId),
+  });
+}
+
+/** One cited URL's detail page: overview, engines, prompts, co-named brands. */
+export function useSourceUrl(filters: SourceFilters, queries: SourceQueries, url: string | null) {
+  const params = { ...selectionParams(filters, queries), url: url ?? '' };
+  return useQuery({
+    queryKey: queryKeys.visibility.sourceUrl(queries.projectId ?? '', params),
+    queryFn: ({ signal }) =>
+      visibilityApi.getSourceUrl(queries.projectId!, params, {
+        signal,
+        workspaceId: queries.workspaceId,
+      }),
+    enabled: Boolean(queries.projectId && queries.activeRunId && url),
+  });
 }
 
 /**
- * The mix of sites the models drew on.
+ * The publishers in this selection, for the "filter by domain" control.
  *
- * Counted server-side over the whole selection. This folded the loaded rows
- * until the backend published a rollup, which meant page one could pass for the
- * whole picture on any project with more domains than fit a page.
+ * Its own small read of the domain dimension rather than a list folded out of
+ * whatever rows the URL table happens to hold: a filter offering only the
+ * domains on page one would hide the publisher a reader is looking for, which
+ * is the exact moment they reach for it.
  */
-export function useSourceTypes(data?: SourceData): SourceType[] {
-  return useMemo(() => {
-    const totals = data?.category_totals ?? {};
-    const total = Object.values(totals).reduce((sum, count) => sum + count, 0);
-    return Object.entries(totals)
-      .map(([token, domains]) => ({
-        token,
-        // An unmapped class is dropped rather than shown raw; that is how
-        // `editorial_third_party` reached the screen in the first place.
-        label: sourceCategoryLabels([token])[0],
-        domains,
-        share: total ? domains / total : 0,
-      }))
-      .filter((type): type is SourceType => Boolean(type.label))
-      .sort((a, b) => b.domains - a.domains || a.label.localeCompare(b.label));
-  }, [data]);
+export function useSourceDomains(filters: SourceFilters, queries: SourceQueries) {
+  const params = {
+    ...selectionParams(filters, queries),
+    dimension: 'domain' as const,
+    offset: 0,
+    limit: SOURCE_DOMAIN_OPTIONS,
+  };
+  const query = useQuery({
+    queryKey: queryKeys.visibility.sources(queries.projectId ?? '', params),
+    queryFn: ({ signal }) =>
+      visibilityApi.getSources(queries.projectId!, params, {
+        signal,
+        workspaceId: queries.workspaceId,
+      }),
+    enabled: Boolean(queries.projectId && queries.activeRunId),
+  });
+  return (query.data?.items ?? []).map((item) => item.key).filter(Boolean);
 }

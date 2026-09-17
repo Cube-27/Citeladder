@@ -24,7 +24,7 @@ import {
   type RunOption,
   type VisibilityTab,
 } from '@/lib/visibility/dashboard';
-import { ANSWER_OUTCOMES, SOURCE_MODES } from '@/lib/config/visibility';
+import { ANSWER_OUTCOMES } from '@/lib/config/visibility';
 import { AnalysisChoice } from '@/components/visibility/analysis-choice';
 import {
   GRANULARITY_OPTIONS,
@@ -71,8 +71,6 @@ type ToolbarProps = Readonly<{
   onChangeGranularity: (granularity: TrendGranularity) => void;
   cohort: 'core' | 'comparison';
   onChangeCohort: (cohort: 'core' | 'comparison') => void;
-  sourceMode?: 'sources' | 'answers';
-  onChangeSourceMode?: (mode: 'sources' | 'answers') => void;
   outcome?: string | null;
   onChangeOutcome?: (outcome: string | null) => void;
 }>;
@@ -90,10 +88,6 @@ type ToolbarProps = Readonly<{
  */
 export function VisibilityToolbar(props: ToolbarProps) {
   const evidence = isEvidenceTab(props.activeTab);
-  // Normalized once. Reading the default in the selector and the raw prop in
-  // the outcome filter meant an omitted `sourceMode` showed "Answers" while
-  // hiding the control that only applies to answers.
-  const sourceMode = props.sourceMode ?? 'answers';
   return (
     <div className="contents" data-testid="visibility-toolbar">
       <MeasurementFilter {...props} />
@@ -103,19 +97,10 @@ export function VisibilityToolbar(props: ToolbarProps) {
       <CohortFilter {...props} />
       <EngineFilterControl {...props} />
       {evidence ? <PromptFilter {...props} /> : null}
-      {/* Mentions & Citations used to stack its own filter row under this one.
-          Two rows of filters is one row too many; these belong with the rest. */}
-      {props.activeTab === 'mentions-citations' && props.onChangeSourceMode ? (
-        <AnalysisChoice
-          label="Show"
-          value={sourceMode}
-          options={SOURCE_MODES}
-          onChange={props.onChangeSourceMode}
-        />
-      ) : null}
-      {props.activeTab === 'mentions-citations' &&
-      sourceMode === 'answers' &&
-      props.onChangeOutcome ? (
+      {/* The answer-outcome narrowing belongs with the rest of the filters
+          rather than in a second row under them. It applies wherever answers
+          are rendered, which is Query fanouts. */}
+      {evidence && props.onChangeOutcome ? (
         <AnalysisChoice
           label="Answer outcome"
           value={props.outcome ?? 'all'}

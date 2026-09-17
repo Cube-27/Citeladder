@@ -14,6 +14,7 @@ callers.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -52,27 +53,6 @@ class EntityView:
     match_method: str
     match_count: int
     passages: tuple[str, ...]
-    limitations: tuple[str, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class SourcePageView:
-    """Everything a reader may be told about one cited page."""
-
-    id: uuid.UUID
-    canonical_url: str
-    registrable_domain: str
-    source_class: str | None
-    page_format: str
-    page_format_method: str | None
-    inspection_state: str
-    inspection_reason: str | None
-    last_inspected_at: datetime | None
-    last_cited_at: datetime | None
-    recurrence_count: int
-    title: str
-    extracted_chars: int
-    entities: tuple[EntityView, ...]
     limitations: tuple[str, ...]
 
 
@@ -228,74 +208,63 @@ def entity_state(page: SourcePage, row: SourcePageEntityPresence | None) -> str:
     return row.presence
 
 
-async def get_source_page(
+@dataclass(frozen=True)
+class SourcePageFacts:
+    """What the Sources table shows about one cited page.
+
+    A read over persisted rows for the URL table, kept beside the page
+    projection rather than in the analysis owner: ``page_format`` and the
+    page's own title belong to the page, and a second module reaching into
+    ``page_facts`` by hand is a second place a key rename has to be found.
+    """
+
+    title: str
+    page_format: str
+    page_format_method: str | None
+    last_cited_at: datetime | None
+
+
+async def page_facts_for(
     session: AsyncSession,
     *,
     workspace_id: uuid.UUID,
     project_id: uuid.UUID,
-    url_hash: str,
-) -> SourcePageView | None:
-    """Project one cited page, or ``None`` when this project has no record."""
-    page = await session.scalar(
-        select(SourcePage).where(
-            SourcePage.workspace_id == workspace_id,
-            SourcePage.project_id == project_id,
-            SourcePage.url_hash == url_hash,
-        )
-    )
-    if page is None:
-        return None
+    url_hashes: Sequence[str],
+) -> dict[str, SourcePageFacts]:
+    """Page facts for the given identities, keyed by ``url_hash``.
 
-    # Scoped rather than fetched by id alone: the pointer is not enough on its
-    # own to prove the snapshot belongs to this page and this tenant, and a
-    # mismatched row would surface someone else's evidence under this URL.
-    snapshot = (
-        await session.scalar(
-            select(SourcePageSnapshot).where(
-                SourcePageSnapshot.id == page.latest_snapshot_id,
-                SourcePageSnapshot.source_page_id == page.id,
-                SourcePageSnapshot.project_id == project_id,
-                SourcePageSnapshot.workspace_id == workspace_id,
+    An identity with no page record is simply absent from the result. That is
+    the honest answer for a URL nobody has a record of, and it is NOT the same
+    as a page whose format is ``unresolved`` because nobody has read it yet.
+    """
+    if not url_hashes:
+        return {}
+    rows = (
+        await session.execute(
+            select(
+                SourcePage.url_hash,
+                SourcePage.page_format,
+                SourcePage.page_format_method,
+                SourcePage.last_cited_at,
+                SourcePageSnapshot.page_facts,
+            )
+            .outerjoin(
+                SourcePageSnapshot,
+                SourcePageSnapshot.id == SourcePage.latest_snapshot_id,
+            )
+            .where(
+                SourcePage.workspace_id == workspace_id,
+                SourcePage.project_id == project_id,
+                SourcePage.url_hash.in_(list(url_hashes)),
             )
         )
-        if page.latest_snapshot_id
-        else None
-    )
-    rows = (
-        list(
-            (
-                await session.scalars(
-                    select(SourcePageEntityPresence)
-                    .where(
-                        SourcePageEntityPresence.snapshot_id == snapshot.id,
-                        SourcePageEntityPresence.source_page_id == page.id,
-                        SourcePageEntityPresence.project_id == project_id,
-                    )
-                    .order_by(
-                        SourcePageEntityPresence.entity_kind != ENTITY_KIND_BRAND,
-                        SourcePageEntityPresence.entity_name,
-                    )
-                )
-            ).all()
+    ).all()
+    return {
+        str(url_hash): SourcePageFacts(
+            title=str((facts or {}).get("title") or ""),
+            page_format=page_format,
+            page_format_method=page_format_method,
+            last_cited_at=last_cited_at,
         )
-        if snapshot is not None
-        else []
-    )
-    entities = tuple(entity_view(page, snapshot, row) for row in rows)
-    return SourcePageView(
-        id=page.id,
-        canonical_url=page.canonical_url,
-        registrable_domain=page.registrable_domain,
-        source_class=page.source_class,
-        page_format=page.page_format,
-        page_format_method=page.page_format_method,
-        inspection_state=page.inspection_state,
-        inspection_reason=page.inspection_reason,
-        last_inspected_at=page.last_inspected_at,
-        last_cited_at=page.last_cited_at,
-        recurrence_count=page.recurrence_count,
-        title=page_title(snapshot),
-        extracted_chars=snapshot.extracted_chars if snapshot else 0,
-        entities=entities,
-        limitations=page_limitations(page, snapshot),
-    )
+        for url_hash, page_format, page_format_method, last_cited_at, facts in rows
+    }

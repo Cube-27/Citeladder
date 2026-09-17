@@ -241,9 +241,16 @@ def test_homepage_outranks_conflicting_schema_and_records_suggestion() -> None:
         # Both spellings reach PAGE_KIND_GUIDE. Listing "guides" under the
         # earlier article pattern made the plural an article and left the guide
         # entry unreachable for it, so /guide and /guides classified differently.
-        ("https://example.com/guide/how-to", "guide"),
-        ("https://example.com/guides/how-to", "guide"),
+        ("https://example.com/guide/seasoning", "guide"),
+        ("https://example.com/guides/seasoning", "guide"),
         ("https://example.com/pages/care-guide", "guide"),
+        # A shape NAMED IN THE SLUG outranks the route holding it: these three
+        # are what an answer engine actually quotes, and where a publisher
+        # files them says nothing about what they are.
+        ("https://example.com/guides/how-to-season-a-pan", "how_to"),
+        ("https://example.com/blog/best-cast-iron-pans", "listicle"),
+        ("https://example.com/blog/lodge-vs-smithey", "comparison"),
+        ("https://example.com/blog/lodge-alternatives", "alternative"),
         ("https://example.com/product/123", "product"),
         ("https://example.com/products/123", "product"),
         ("https://example.com/p/abc", "product"),

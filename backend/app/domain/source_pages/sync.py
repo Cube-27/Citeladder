@@ -29,9 +29,13 @@ from sqlalchemy import CursorResult, case, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analysis.source_pages.url_format import derive_url_format
 from app.core.config.source_pages import (
     INSPECTION_INSPECTED,
     INSPECTION_STALE,
+    PAGE_FORMAT_METHOD_NONE,
+    PAGE_FORMAT_METHOD_URL_PATTERN,
+    SOURCE_PAGE_FORMAT_VERSION,
     SOURCE_PAGE_INSPECTOR_VERSION,
     SOURCE_PAGE_MAX_REDIRECTS_PER_DOMAIN,
     SOURCE_PAGE_STALE_AFTER_HOURS,
@@ -52,6 +56,17 @@ class UnresolvedCitation:
 
 def _stale_before(now: datetime) -> datetime:
     return now - timedelta(hours=SOURCE_PAGE_STALE_AFTER_HOURS)
+
+
+# Which existing page-format evidence a URL-derived verdict is allowed to
+# replace. NULL is included explicitly: rows written before the format column
+# carried a method have no method at all, and `IN (...)` is never true for
+# NULL, so without this they would be the only pages that never got a format.
+_weak_format = SourcePage.page_format_method.is_(None) | (
+    SourcePage.page_format_method.in_(
+        (PAGE_FORMAT_METHOD_URL_PATTERN, PAGE_FORMAT_METHOD_NONE)
+    )
+)
 
 
 async def _resolved_rows(
@@ -119,6 +134,7 @@ async def sync_cited_pages(
         taxonomy_version,
         answers,
     ) in rows:
+        url_format, url_format_method = derive_url_format(canonical_url or "")
         statement = (
             pg_insert(SourcePage)
             .values(
@@ -130,6 +146,9 @@ async def sync_cited_pages(
                 source_class=source_class,
                 source_taxonomy_version=taxonomy_version,
                 recurrence_count=answers,
+                page_format=url_format,
+                page_format_method=url_format_method,
+                page_format_version=SOURCE_PAGE_FORMAT_VERSION,
                 last_cited_at=moment,
                 first_seen_audit_id=audit.id,
                 last_seen_audit_id=audit.id,
@@ -157,6 +176,26 @@ async def sync_cited_pages(
                     "last_seen_audit_id": audit.id,
                     "source_class": source_class,
                     "source_taxonomy_version": taxonomy_version,
+                    # The URL shape is the WEAKEST evidence for a page kind,
+                    # so it only fills a gap. Once a page has been read, a
+                    # re-sync must not replace what the page said about itself
+                    # with a guess from its address.
+                    #
+                    # All three columns move together. Leaving the version
+                    # behind would stamp a URL-derived format with the version
+                    # of the reading it just replaced.
+                    "page_format": case(
+                        (_weak_format, url_format),
+                        else_=SourcePage.page_format,
+                    ),
+                    "page_format_method": case(
+                        (_weak_format, url_format_method),
+                        else_=SourcePage.page_format_method,
+                    ),
+                    "page_format_version": case(
+                        (_weak_format, SOURCE_PAGE_FORMAT_VERSION),
+                        else_=SourcePage.page_format_version,
+                    ),
                     "updated_at": moment,
                 },
             )

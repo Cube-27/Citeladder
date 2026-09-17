@@ -97,18 +97,6 @@ export function useVisibilityFilters() {
   const [outcome, setOutcome] = useUrlState('outcome', optionalStringUrlCodec, {
     clearKeys: pageKeys,
   });
-  // Which half of Mentions & Citations is showing. It lives here rather than in
-  // the panel so the page keeps ONE filter row instead of stacking a second.
-  //
-  // Defaults to the ANSWERS, which are the evidence. The domain table defaulted
-  // here and made a quoted line cost four interactions to reach; it is still
-  // one switch away, and the cited-source rollup rides above the answers so
-  // nothing about the sites is hidden by the change.
-  const [sourceMode, setSourceMode] = useUrlState(
-    'mode',
-    stringUrlCodec(['sources', 'answers'] as const, 'answers'),
-    { clearKeys: [...pageKeys, 'outcome'] },
-  );
   const [competitor] = useUrlState('competitor', optionalStringUrlCodec);
   const [domain] = useUrlState('domain', optionalStringUrlCodec);
   const [url] = useUrlState('url', optionalStringUrlCodec);
@@ -139,8 +127,6 @@ export function useVisibilityFilters() {
     setBaselineId,
     outcome,
     setOutcome,
-    sourceMode,
-    setSourceMode,
     competitor,
     domain,
     url,
@@ -172,10 +158,12 @@ export function useVisibilityFilters() {
         cursor: null,
         as_of: null,
       }),
+    // The answers themselves live on Query fanouts now: it is the tab that
+    // renders execution evidence, and sending a reader to Sources would hand
+    // them an inventory when they asked to see what was said.
     openEvidence: (slice: Record<string, string | null>) =>
       setUrlParams({
-        tab: 'mentions-citations',
-        mode: 'answers',
+        tab: 'query-fanout',
         cursor: null,
         as_of: null,
         outcome: null,

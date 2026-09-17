@@ -6,14 +6,13 @@ from dataclasses import dataclass
 from typing import Final
 
 from app.core.config.brand_discovery import SERVICE_BUSINESS_MODELS
+from app.core.config.site_health_answer_shapes import EDITORIAL_PAGE_KINDS
 from app.core.config.site_health_taxonomy import (
     PAGE_KIND_ABOUT_CONTACT,
-    PAGE_KIND_ARTICLE,
     PAGE_KIND_CATEGORY,
     PAGE_KIND_COMPARISON,
     PAGE_KIND_DOCS,
     PAGE_KIND_FAQ,
-    PAGE_KIND_GUIDE,
     PAGE_KIND_HOMEPAGE,
     PAGE_KIND_LOCAL,
     PAGE_KIND_PRICING,
@@ -76,10 +75,9 @@ ARCHITECTURE_HUB_PAGE_KINDS: Final[frozenset[str]] = frozenset(
 ARCHITECTURE_DETAIL_PAGE_KINDS: Final[frozenset[str]] = frozenset(
     {
         PAGE_KIND_PRODUCT,
-        PAGE_KIND_ARTICLE,
-        PAGE_KIND_GUIDE,
         PAGE_KIND_LOCAL,
         PAGE_KIND_SERVICE,
+        *EDITORIAL_PAGE_KINDS,
     }
 )
 
@@ -130,7 +128,7 @@ COMMON_STRUCTURES: Final[dict[str, tuple[CommonStructure, ...]]] = {
         CommonStructure(
             "editorial",
             "Editorial content",
-            frozenset({PAGE_KIND_ARTICLE, PAGE_KIND_GUIDE}),
+            EDITORIAL_PAGE_KINDS,
         ),
     ),
     ARCHETYPE_SOFTWARE: (
@@ -148,7 +146,7 @@ COMMON_STRUCTURES: Final[dict[str, tuple[CommonStructure, ...]]] = {
         CommonStructure(
             "editorial",
             "Editorial content",
-            frozenset({PAGE_KIND_ARTICLE, PAGE_KIND_GUIDE}),
+            EDITORIAL_PAGE_KINDS,
         ),
     ),
     ARCHETYPE_SERVICES: (
@@ -165,9 +163,7 @@ COMMON_STRUCTURES: Final[dict[str, tuple[CommonStructure, ...]]] = {
             frozenset({PAGE_KIND_LOCAL}),
             local_market_only=True,
         ),
-        CommonStructure(
-            "guides", "Guides", frozenset({PAGE_KIND_GUIDE, PAGE_KIND_ARTICLE})
-        ),
+        CommonStructure("guides", "Guides", EDITORIAL_PAGE_KINDS),
     ),
     ARCHETYPE_OTHER: (),
 }
