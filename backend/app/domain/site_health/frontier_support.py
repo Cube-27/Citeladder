@@ -200,7 +200,16 @@ async def _enqueue_task(
         )
         .on_conflict_do_update(
             index_elements=["crawl_id", "task_kind", "url_hash", "generation"],
-            set_={"priority": excluded.priority},
+            set_={
+                "priority": excluded.priority,
+                # Pulling the wake-up forward is part of the same decision. A
+                # seeded task carries a stagger delay whose only job is to stop
+                # the whole seed set being claimable at once, and once
+                # discovery has produced this URL's artifact that delay is
+                # holding back work that is ready -- it would otherwise
+                # neutralize the boost for up to the configured stagger.
+                "available_at": func.least(SiteCrawlTask.available_at, func.now()),
+            },
             where=(SiteCrawlTask.status == TASK_STATUS_QUEUED)
             & (SiteCrawlTask.priority < excluded.priority),
         )

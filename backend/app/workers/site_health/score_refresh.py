@@ -38,9 +38,17 @@ class ScoreRefreshCadence:
         if page_interval <= 0 and min_interval <= 0:
             return True
         now = time.monotonic()
-        # An unseen crawl has ``last_at`` 0.0, so its first analysis refreshes
-        # and the first score card appears as promptly as it ever did.
-        last_at, pending = self._marks.get(crawl_id, (0.0, 0))
+        mark = self._marks.get(crawl_id)
+        if mark is None:
+            # A crawl's first analysis always refreshes, so the first score
+            # card appears as promptly as it ever did. Stated as its own case
+            # rather than leaning on a zero timestamp, which only read as due
+            # while the elapsed trigger was enabled -- with it off, the first
+            # card waited for a whole page interval.
+            self._marks[crawl_id] = (now, 0)
+            self._prune()
+            return True
+        last_at, pending = mark
         pending += 1
         due = (page_interval > 0 and pending >= page_interval) or (
             min_interval > 0 and now - last_at >= min_interval
