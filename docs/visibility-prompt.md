@@ -97,15 +97,22 @@ Unknown, not-run, failed, partial and observed-zero states remain distinct.
 
 ## Read and UI surface
 
-Visibility has Trends, Mentions & Citations and Query Fanout; Trends is default.
+Visibility has Trends, Sources and Query Fanout; Trends is default.
 Typed URL state retains run/period, engine, cohort, baseline, history, metric and
 evidence filters. The server resolves Latest to a concrete run or compatible
 run set, reused by dependent requests. An invalid explicit run never falls back
 to Latest; historical windows remain separate from selected measurement.
 
-Mentions & Citations has Sources and Answers modes. Source/fanout totals are
+Sources has Domains and URLs, each with a usage series, a citation-type ring
+and a searchable, sortable, exportable table; a domain opens its URLs and the
+prompts that reached it, and a URL opens its own page. Source/fanout totals are
 server aggregates over the full selection; answer cursors bind filters and the
 snapshot boundary. Original answers use /runs/{runId}?execution={taskId}.
+
+Citation rate is citations over the responses a source was RETRIEVED in, never
+over the responses in the selection, and never over a stored retrieval counter.
+A URL's brand list is co-occurrence in the answers that cited it: mentions are
+persisted against the response, so nothing links one to a citation.
 Browser history restores the analytical context. Competitor suggestions remain
 in Overview Facts rather than becoming measurement evidence automatically.
 

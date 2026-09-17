@@ -185,17 +185,20 @@ produces a visible blocked state rather than a silent skip.
 
 ## Reading it
 
-The [Competitor analysis tab](../frontend/components/visibility/competitor-analysis.tsx)
-answers "where are competitors cited and I am not, by kind of source" with no
-drill-down: source classes are the axis, and each carries the pages where a
-rival is on the page and the brand is not, with the names, the quoted line
-proving each, the page format, the answers that cited it, and the action. It is
-project-scoped, not run-scoped, so the run controls are hidden for it.
+Inspection has no surface of its own. What it establishes reaches a reader
+through two places that already exist: the page format it derives is the URL
+type in [Sources](../frontend/components/visibility/visibility-sources.tsx),
+and the entity-presence verdicts back the Opportunities verification payload.
 
-A page nobody inspected is COUNTED and never listed as a gap, and every group
-states its own coverage. `GET /projects/{id}/source-pages/{url_hash}` backs a
-page detail, and the manual inspect command is an explicit button in it that
-reports whether it was admitted and what the budget has left.
+Page format is deliberately not hostage to the inspection budget. Every cited
+page gets a format from its URL at sync time, stamped `url_pattern`; an
+inspection that reads the page REPLACES that with what the page says about
+itself, and never the other way round. An inspection that read nothing — a
+blocked page, or one whose kind is not evident — leaves the address verdict
+alone, because it has learned nothing that contradicts it.
+
+What was never read stays distinguishable from what was read and found absent.
+A page carries presence verdicts only once a snapshot exists.
 
 [Configuration](../backend/app/core/config/source_pages.py) owns the
 inspection limits, vocabularies and budget window;
