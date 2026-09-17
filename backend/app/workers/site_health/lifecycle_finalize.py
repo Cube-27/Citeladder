@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import Any
 from urllib.parse import urljoin, urlsplit
 
@@ -31,6 +31,7 @@ from app.core.config.site_health_contracts import (
     OBSERVATION_SOURCE_SITEMAP,
     PAGE_ANALYSIS_STATUS_COMPLETED,
 )
+from app.core.config.site_health_runtime import site_health_settings
 from app.domain.site_health.coverage import crawl_coverage
 from app.domain.site_health.normalization import canonical_identity, canonical_or_empty
 from app.domain.site_health.snapshot import persist_crawl_snapshot
@@ -187,31 +188,13 @@ def _evaluate_hreflang_for_page(
     )
 
 
-async def _crawl_hreflang_indexes(
-    session: AsyncSession,
-    *,
-    crawl: SiteCrawl,
-    artifact_by_analysis: dict[uuid.UUID, uuid.UUID],
+def _hreflang_indexes(
+    artifacts: Sequence[Any],
 ) -> tuple[
     list[tuple[uuid.UUID, str, list[dict]]],
     dict[str, list[dict]],
     dict[uuid.UUID, str],
 ]:
-    artifacts = (
-        await session.execute(
-            select(
-                SiteFetchArtifact.id,
-                SiteFetchArtifact.final_url,
-                SiteFetchArtifact.normalized_facts,
-            )
-            .where(
-                SiteFetchArtifact.id.in_(artifact_by_analysis.values()),
-                SiteFetchArtifact.crawl_id == crawl.id,
-                SiteFetchArtifact.workspace_id == crawl.workspace_id,
-            )
-            .order_by(SiteFetchArtifact.id)
-        )
-    ).all()
     alternates_by_page: dict[str, list[dict]] = {}
     canonical_by_artifact: dict[uuid.UUID, str] = {}
     per_artifact: list[tuple[uuid.UUID, str, list[dict]]] = []
@@ -236,6 +219,93 @@ async def _site_url_hashes(
         )
     )
     return {row[0]: row[1] for row in rows}
+
+
+@dataclass(frozen=True, slots=True)
+class _FinalizeContext:
+    """Everything the cross-page evaluators read, loaded exactly once.
+
+    The three evaluators used to load the same things independently: the
+    artifact rows (carrying the wide ``normalized_facts`` JSONB) three times,
+    the crawl's sitemap observations twice, and the site-URL hashes twice --
+    all inside the single transaction that holds the crawl row ``FOR UPDATE``,
+    so every duplicate lengthened the lock hold.
+    """
+
+    rows: list[Any]
+    artifact_by_analysis: dict[uuid.UUID, uuid.UUID]
+    site_url_by_analysis: dict[uuid.UUID, uuid.UUID]
+    # ``(id, final_url, normalized_facts)`` per analyzed artifact.
+    artifacts: list[Any]
+    # ``(site_url_id, observed_url)`` per sitemap-sourced observation.
+    sitemap_rows: list[Any]
+    resolutions: dict[str, Resolution]
+    root_canonical: str
+    root_analysis_id: uuid.UUID | None
+
+    def link_sources(self) -> list[tuple[str, Any]]:
+        """Artifact rows shaped for ``_internal_link_targets``."""
+        return [
+            (str(final_url or ""), facts) for _id, final_url, facts in self.artifacts
+        ]
+
+
+async def _load_finalize_context(
+    session: AsyncSession, *, crawl: SiteCrawl, rows: list[Any]
+) -> _FinalizeContext:
+    """Load the shared evidence for one crawl's finalize pass."""
+    artifact_by_analysis = {row.id: row.artifact_id for row in rows}
+    site_url_by_analysis = {row.id: row.site_url_id for row in rows}
+    artifacts = (
+        await session.execute(
+            select(
+                SiteFetchArtifact.id,
+                SiteFetchArtifact.final_url,
+                SiteFetchArtifact.normalized_facts,
+            )
+            .where(
+                SiteFetchArtifact.id.in_(artifact_by_analysis.values()),
+                SiteFetchArtifact.crawl_id == crawl.id,
+                SiteFetchArtifact.workspace_id == crawl.workspace_id,
+            )
+            .order_by(SiteFetchArtifact.id)
+        )
+    ).all()
+    sitemap_rows = (
+        await session.execute(
+            select(
+                SiteUrlObservation.site_url_id,
+                SiteUrlObservation.observed_url,
+            ).where(
+                SiteUrlObservation.workspace_id == crawl.workspace_id,
+                SiteUrlObservation.project_id == crawl.project_id,
+                SiteUrlObservation.crawl_id == crawl.id,
+                SiteUrlObservation.source_kind == OBSERVATION_SOURCE_SITEMAP,
+            )
+        )
+    ).all()
+    root_canonical, root_hash = crawl_root_identity(crawl)
+    root_analysis_id = None
+    if root_hash:
+        # Tenancy-scoped, which the orphan evaluator's own copy of this lookup
+        # was not. Every id here already belongs to this crawl's analyses, so
+        # the scoping narrows nothing it should have matched.
+        hash_by_site_url = await _site_url_hashes(
+            session, crawl=crawl, site_url_ids=tuple(site_url_by_analysis.values())
+        )
+        root_analysis_id = _root_analysis_id(
+            rows, hash_by_site_url=hash_by_site_url, root_hash=root_hash
+        )
+    return _FinalizeContext(
+        rows=rows,
+        artifact_by_analysis=artifact_by_analysis,
+        site_url_by_analysis=site_url_by_analysis,
+        artifacts=list(artifacts),
+        sitemap_rows=list(sitemap_rows),
+        resolutions=await fetch_resolutions(session, crawl=crawl),
+        root_canonical=root_canonical,
+        root_analysis_id=root_analysis_id,
+    )
 
 
 def _source_link_evaluation(evaluation: RuleEvaluation) -> RuleEvaluation:
@@ -266,41 +336,12 @@ class CrawlFinalizeMixin:
         rows = await self._load_latest_analyses(session, crawl=crawl)
         if not rows:
             return
-        artifact_by_analysis = {row.id: row.artifact_id for row in rows}
-        site_url_by_analysis = {row.id: row.site_url_id for row in rows}
-        resolutions = await fetch_resolutions(session, crawl=crawl)
-        evaluations = await self._evaluate_hreflang_conflicts(
-            session,
-            crawl=crawl,
-            rows=rows,
-            artifact_by_analysis=artifact_by_analysis,
-            resolutions=resolutions,
-        )
-        evaluations.extend(
-            await self._evaluate_resolution_rules(
-                session,
-                crawl=crawl,
-                rows=rows,
-                artifact_by_analysis=artifact_by_analysis,
-                site_url_by_analysis=site_url_by_analysis,
-                resolutions=resolutions,
-            )
-        )
-        evaluations.extend(
-            await self._evaluate_sitemap_orphans(
-                session,
-                crawl=crawl,
-                rows=rows,
-                artifact_by_analysis=artifact_by_analysis,
-                site_url_by_analysis=site_url_by_analysis,
-            )
-        )
+        ctx = await _load_finalize_context(session, crawl=crawl, rows=rows)
+        evaluations = self._evaluate_hreflang_conflicts(ctx)
+        evaluations.extend(self._evaluate_resolution_rules(crawl, ctx))
+        evaluations.extend(await self._evaluate_sitemap_orphans(session, crawl, ctx))
         await self._persist_evaluations(
-            session,
-            crawl=crawl,
-            evaluations=evaluations,
-            artifact_by_analysis=artifact_by_analysis,
-            site_url_by_analysis=site_url_by_analysis,
+            session, crawl=crawl, ctx=ctx, evaluations=evaluations
         )
         await publish_final_page_analyses(session, crawl=crawl)
 
@@ -341,24 +382,16 @@ class CrawlFinalizeMixin:
             ).all()
         )
 
-    async def _evaluate_hreflang_conflicts(
-        self,
-        session: AsyncSession,
-        *,
-        crawl: SiteCrawl,
-        rows: list[Any],
-        artifact_by_analysis: dict[uuid.UUID, uuid.UUID],
-        resolutions: dict[str, Resolution],
+    def _evaluate_hreflang_conflicts(
+        self, ctx: _FinalizeContext
     ) -> list[tuple[uuid.UUID, RuleEvaluation]]:
         (
             per_artifact,
             alternates_by_page,
             canonical_by_artifact,
-        ) = await _crawl_hreflang_indexes(
-            session, crawl=crawl, artifact_by_analysis=artifact_by_analysis
-        )
-        analysis_by_artifact = {row.artifact_id: row.id for row in rows}
-        rate_limited = rate_limited_targets(resolutions)
+        ) = _hreflang_indexes(ctx.artifacts)
+        analysis_by_artifact = {row.artifact_id: row.id for row in ctx.rows}
+        rate_limited = rate_limited_targets(ctx.resolutions)
         return [
             (
                 analysis_by_artifact[artifact_id],
@@ -373,119 +406,48 @@ class CrawlFinalizeMixin:
         ]
 
     async def _evaluate_sitemap_orphans(
-        self,
-        session: AsyncSession,
-        *,
-        crawl: SiteCrawl,
-        rows: list[Any],
-        artifact_by_analysis: dict[uuid.UUID, uuid.UUID],
-        site_url_by_analysis: dict[uuid.UUID, uuid.UUID],
+        self, session: AsyncSession, crawl: SiteCrawl, ctx: _FinalizeContext
     ) -> list[tuple[uuid.UUID, RuleEvaluation]]:
-        root_canonical, root_hash = crawl_root_identity(crawl)
-        if not root_hash:
+        if ctx.root_analysis_id is None:
             return []
-        site_url_rows = (
-            await session.execute(
-                select(SiteUrl.id, SiteUrl.url_hash).where(
-                    SiteUrl.id.in_(site_url_by_analysis.values())
-                )
-            )
-        ).all()
-        hash_by_site_url = {row[0]: row[1] for row in site_url_rows}
-        root_analysis_id = _root_analysis_id(
-            rows, hash_by_site_url=hash_by_site_url, root_hash=root_hash
-        )
-        if root_analysis_id is None:
-            return []
-        sitemap_rows = (
-            await session.execute(
-                select(
-                    SiteUrlObservation.site_url_id,
-                    SiteUrlObservation.observed_url,
-                ).where(
-                    SiteUrlObservation.workspace_id == crawl.workspace_id,
-                    SiteUrlObservation.project_id == crawl.project_id,
-                    SiteUrlObservation.crawl_id == crawl.id,
-                    SiteUrlObservation.source_kind == OBSERVATION_SOURCE_SITEMAP,
-                )
-            )
-        ).all()
-        artifacts = (
-            await session.execute(
-                select(SiteFetchArtifact.final_url, SiteFetchArtifact.normalized_facts)
-                .join(
-                    SitePageAnalysis,
-                    SitePageAnalysis.artifact_id == SiteFetchArtifact.id,
-                )
-                .where(
-                    SiteFetchArtifact.id.in_(artifact_by_analysis.values()),
-                    SiteFetchArtifact.crawl_id == crawl.id,
-                    SiteFetchArtifact.workspace_id == crawl.workspace_id,
-                    SitePageAnalysis.workspace_id == crawl.workspace_id,
-                    SitePageAnalysis.project_id == crawl.project_id,
-                    SitePageAnalysis.crawl_id == crawl.id,
-                )
-            )
-        ).all()
-        linked_targets = _internal_link_targets(artifacts)
         orphans = _sitemap_orphan_urls(
-            sitemap_rows,
-            root_canonical=root_canonical,
-            linked_targets=set(linked_targets),
+            ctx.sitemap_rows,
+            root_canonical=ctx.root_canonical,
+            linked_targets=set(_internal_link_targets(ctx.link_sources())),
         )
         coverage = await crawl_coverage(session, crawl=crawl)
         return [
             (
-                root_analysis_id,
+                ctx.root_analysis_id,
                 evaluate_sitemap_orphan(
-                    sitemap_url_count=len(sitemap_rows),
+                    sitemap_url_count=len(ctx.sitemap_rows),
                     orphan_urls=orphans,
                     coverage_state=coverage.state,
                 ),
             )
         ]
 
-    async def _evaluate_resolution_rules(
-        self,
-        session: AsyncSession,
-        *,
-        crawl: SiteCrawl,
-        rows: list[Any],
-        artifact_by_analysis: dict[uuid.UUID, uuid.UUID],
-        site_url_by_analysis: dict[uuid.UUID, uuid.UUID],
-        resolutions: dict[str, Resolution],
+    def _evaluate_resolution_rules(
+        self, crawl: SiteCrawl, ctx: _FinalizeContext
     ) -> list[tuple[uuid.UUID, RuleEvaluation]]:
         """Build canonical, internal-link, and sitemap resolution results."""
-        artifacts = (
-            await session.execute(
-                select(
-                    SiteFetchArtifact.id,
-                    SiteFetchArtifact.final_url,
-                    SiteFetchArtifact.normalized_facts,
-                ).where(
-                    SiteFetchArtifact.id.in_(artifact_by_analysis.values()),
-                    SiteFetchArtifact.crawl_id == crawl.id,
-                    SiteFetchArtifact.workspace_id == crawl.workspace_id,
-                )
-            )
-        ).all()
         analysis_ids_by_artifact: dict[uuid.UUID, list[uuid.UUID]] = {}
-        for row in rows:
+        for row in ctx.rows:
             analysis_ids_by_artifact.setdefault(row.artifact_id, []).append(row.id)
         evaluations = canonical_resolution_evaluations(
-            artifacts,
+            ctx.artifacts,
             analysis_ids_by_artifact=analysis_ids_by_artifact,
-            resolutions=resolutions,
+            resolutions=ctx.resolutions,
         )
 
-        for artifact_id, final_url, normalized_facts in artifacts:
+        for artifact_id, final_url, normalized_facts in ctx.artifacts:
             page_targets = _internal_link_targets(
                 [(str(final_url or ""), normalized_facts)]
             )
             page_evaluation = _source_link_evaluation(
                 resolution_set_evaluation(
                     page_targets,
-                    resolutions=resolutions,
+                    resolutions=ctx.resolutions,
                     evaluator=evaluate_broken_internal_links,
                     failure_key="broken_urls",
                 )
@@ -495,44 +457,22 @@ class CrawlFinalizeMixin:
                 for analysis_id in analysis_ids_by_artifact[artifact_id]
             )
 
-        _root_canonical, root_hash = crawl_root_identity(crawl)
-        root_analysis_id = _root_analysis_id(
-            rows,
-            hash_by_site_url=await _site_url_hashes(
-                session,
-                crawl=crawl,
-                site_url_ids=tuple(site_url_by_analysis.values()),
-            ),
-            root_hash=root_hash,
-        )
-        if root_analysis_id is None:
+        if ctx.root_analysis_id is None:
             return evaluations
-
-        sitemap_rows = (
-            await session.scalars(
-                select(SiteUrlObservation.observed_url).where(
-                    SiteUrlObservation.workspace_id == crawl.workspace_id,
-                    SiteUrlObservation.project_id == crawl.project_id,
-                    SiteUrlObservation.crawl_id == crawl.id,
-                    SiteUrlObservation.source_kind == OBSERVATION_SOURCE_SITEMAP,
-                )
-            )
-        ).all()
         sitemap_targets = {
             canonical
-            for url in sitemap_rows
+            for _site_url_id, url in ctx.sitemap_rows
             if (canonical := canonical_or_empty(str(url or "")))
         }
-        sitemap_evaluation = resolution_set_evaluation(
-            sorted(sitemap_targets),
-            resolutions=resolutions,
-            evaluator=evaluate_sitemap_url_unreachable,
-            failure_key="unreachable_urls",
-        )
         evaluations.append(
             (
-                root_analysis_id,
-                sitemap_evaluation,
+                ctx.root_analysis_id,
+                resolution_set_evaluation(
+                    sorted(sitemap_targets),
+                    resolutions=ctx.resolutions,
+                    evaluator=evaluate_sitemap_url_unreachable,
+                    failure_key="unreachable_urls",
+                ),
             )
         )
         return evaluations
@@ -542,72 +482,126 @@ class CrawlFinalizeMixin:
         session: AsyncSession,
         *,
         crawl: SiteCrawl,
+        ctx: _FinalizeContext,
         evaluations: list[tuple[uuid.UUID, RuleEvaluation]],
-        artifact_by_analysis: dict[uuid.UUID, uuid.UUID],
-        site_url_by_analysis: dict[uuid.UUID, uuid.UUID],
     ) -> None:
+        """Insert the finalize evaluations and their issues in bulk.
+
+        This used to await one ``INSERT ... RETURNING`` per evaluation -- about
+        three per analyzed page, so roughly two thousand sequential round trips
+        on a large crawl, every one of them inside the transaction holding the
+        crawl row ``FOR UPDATE``. The rows are identical in content and
+        provenance; only the number of statements changes.
+        """
+        # ``(analysis_id, rule_id)`` is unique under a NULL architecture id
+        # (the constraint is NULLS NOT DISTINCT), so the old loop already
+        # dropped a repeat and skipped its issue. Deduping first-wins here
+        # keeps that exact behaviour and makes RETURNING map 1:1 to the batch.
+        deduped: dict[tuple[uuid.UUID, str], RuleEvaluation] = {}
         for analysis_id, ev in evaluations:
-            artifact_id = artifact_by_analysis[analysis_id]
-            inserted_id = await session.scalar(
-                pg_insert(SiteRuleEvaluation)
-                .values(
-                    workspace_id=crawl.workspace_id,
-                    analysis_id=analysis_id,
-                    source_artifact_id=artifact_id,
-                    rule_id=ev.rule_id,
-                    dimension=ev.dimension,
-                    category=ev.category,
-                    severity=ev.severity,
-                    finding_class=ev.finding_class,
-                    scope=ev.scope,
-                    weight=ev.weight,
-                    outcome=ev.outcome,
-                    display_applicability=ev.display_applicability,
-                    score_applicability=ev.score_applicability,
-                    reason_code=ev.reason_code,
-                    score_roles=list(ev.score_roles),
-                    readiness_dimension=ev.readiness_dimension,
-                    readiness_weight=ev.readiness_weight,
-                    evidence=ev.evidence,
-                    supporting_artifact_ids=[artifact_id],
-                    extractor_version=crawl.extractor_version or EXTRACTOR_VERSION,
-                    analyzer_version=crawl.analyzer_version or ANALYZER_VERSION,
-                    rule_version=ev.rule_version,
-                )
-                .on_conflict_do_nothing(
-                    index_elements=[
-                        "analysis_id",
-                        "rule_id",
-                        "source_architecture_id",
-                    ]
-                )
-                .returning(SiteRuleEvaluation.id)
-            )
-            if inserted_id is None:
-                continue
-            if creates_issue(ev):
-                session.add(
-                    SiteIssue(
-                        workspace_id=crawl.workspace_id,
-                        project_id=crawl.project_id,
-                        crawl_id=crawl.id,
-                        site_url_id=site_url_by_analysis[analysis_id],
-                        analysis_id=analysis_id,
-                        evaluation_id=inserted_id,
-                        source_artifact_id=artifact_id,
-                        rule_id=ev.rule_id,
-                        dimension=ev.dimension,
-                        category=ev.category,
-                        severity=ev.severity,
-                        finding_class=ev.finding_class,
-                        evidence=ev.evidence,
-                        description=ev.description,
-                        remediation=ev.remediation,
-                        analyzer_version=crawl.analyzer_version or ANALYZER_VERSION,
-                        rule_version=ev.rule_version,
+            deduped.setdefault((analysis_id, ev.rule_id), ev)
+        if not deduped:
+            return
+        pending = [
+            (key, ev, self._evaluation_values(crawl, ctx, key[0], ev))
+            for key, ev in deduped.items()
+        ]
+        batch_size = max(int(site_health_settings.finalize_insert_batch_size), 1)
+        inserted: dict[tuple[uuid.UUID, str], uuid.UUID] = {}
+        for offset in range(0, len(pending), batch_size):
+            chunk = pending[offset : offset + batch_size]
+            returned = (
+                await session.execute(
+                    pg_insert(SiteRuleEvaluation)
+                    .values([values for _key, _ev, values in chunk])
+                    .on_conflict_do_nothing(
+                        index_elements=[
+                            "analysis_id",
+                            "rule_id",
+                            "source_architecture_id",
+                        ]
+                    )
+                    .returning(
+                        SiteRuleEvaluation.id,
+                        SiteRuleEvaluation.analysis_id,
+                        SiteRuleEvaluation.rule_id,
                     )
                 )
+            ).all()
+            # A row that conflicts with one a replay already wrote is not
+            # returned, so it gets no issue -- as before.
+            inserted.update(
+                {(row.analysis_id, row.rule_id): row.id for row in returned}
+            )
+        for key, ev, values in pending:
+            evaluation_id = inserted.get(key)
+            if evaluation_id is not None and creates_issue(ev):
+                session.add(
+                    self._issue_row(crawl, ctx, key[0], ev, evaluation_id, values)
+                )
         await session.flush()
+
+    @staticmethod
+    def _evaluation_values(
+        crawl: SiteCrawl,
+        ctx: _FinalizeContext,
+        analysis_id: uuid.UUID,
+        ev: RuleEvaluation,
+    ) -> dict[str, Any]:
+        artifact_id = ctx.artifact_by_analysis[analysis_id]
+        return {
+            "workspace_id": crawl.workspace_id,
+            "analysis_id": analysis_id,
+            "source_artifact_id": artifact_id,
+            "rule_id": ev.rule_id,
+            "dimension": ev.dimension,
+            "category": ev.category,
+            "severity": ev.severity,
+            "finding_class": ev.finding_class,
+            "scope": ev.scope,
+            "weight": ev.weight,
+            "outcome": ev.outcome,
+            "display_applicability": ev.display_applicability,
+            "score_applicability": ev.score_applicability,
+            "reason_code": ev.reason_code,
+            "score_roles": list(ev.score_roles),
+            "readiness_dimension": ev.readiness_dimension,
+            "readiness_weight": ev.readiness_weight,
+            "evidence": ev.evidence,
+            "supporting_artifact_ids": [artifact_id],
+            "extractor_version": crawl.extractor_version or EXTRACTOR_VERSION,
+            "analyzer_version": crawl.analyzer_version or ANALYZER_VERSION,
+            "rule_version": ev.rule_version,
+        }
+
+    @staticmethod
+    def _issue_row(
+        crawl: SiteCrawl,
+        ctx: _FinalizeContext,
+        analysis_id: uuid.UUID,
+        ev: RuleEvaluation,
+        evaluation_id: uuid.UUID,
+        values: dict[str, Any],
+    ) -> SiteIssue:
+        return SiteIssue(
+            workspace_id=crawl.workspace_id,
+            project_id=crawl.project_id,
+            crawl_id=crawl.id,
+            site_url_id=ctx.site_url_by_analysis[analysis_id],
+            analysis_id=analysis_id,
+            evaluation_id=evaluation_id,
+            source_artifact_id=values["source_artifact_id"],
+            rule_id=ev.rule_id,
+            dimension=ev.dimension,
+            category=ev.category,
+            severity=ev.severity,
+            finding_class=ev.finding_class,
+            evidence=ev.evidence,
+            description=ev.description,
+            remediation=ev.remediation,
+            analyzer_version=crawl.analyzer_version or ANALYZER_VERSION,
+            rule_version=ev.rule_version,
+        )
 
     async def _persist_snapshot(
         self, session: AsyncSession, *, crawl: SiteCrawl

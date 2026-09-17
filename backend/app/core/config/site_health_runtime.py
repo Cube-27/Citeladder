@@ -233,6 +233,11 @@ class SiteHealthSettings(BaseSettings):
     # long-running transaction and stall live claims; the sweeper instead
     # drains the remainder across subsequent polls.
     lease_reclaim_batch_size: int = 500
+    # Rows per multi-row INSERT in the crawl-finalize pass. Bounded because
+    # PostgreSQL caps a statement at 65,535 bind parameters and an evaluation
+    # row carries 22 columns -- a large crawl's ~3 evaluations per page would
+    # otherwise build one statement past that ceiling and fail outright.
+    finalize_insert_batch_size: int = 500
     # Backstop for crawl terminalization. A crawl normally goes terminal from a
     # task's finalize; any path that drains the last non-terminal task without
     # running one (a sweeper reclaim at max attempts, a killed process between
