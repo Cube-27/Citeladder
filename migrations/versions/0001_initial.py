@@ -2430,6 +2430,7 @@ def upgrade() -> None:
             postgresql.JSONB(astext_type=Text()),
             nullable=False,
         ),
+        sa.Column("target_external_url", sa.Text(), nullable=True),
         sa.Column("generation_id", sa.UUID(), nullable=True),
         sa.Column(
             "declared_implemented_at", sa.DateTime(timezone=True), nullable=False

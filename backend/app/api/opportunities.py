@@ -141,6 +141,7 @@ def _implementation_view(
         opportunity_id=row.opportunity_id,
         opportunity_snapshot_id=row.opportunity_snapshot_id,
         target_site_url_ids=list(row.target_site_url_ids or []),
+        target_external_url=row.target_external_url,
         generation_id=row.generation_id,
         declared_implemented_at=row.declared_implemented_at,
         expected_checks=list(row.expected_checks or []),

@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.earned_actions import EARNED_RULE_IDS
 from app.core.config.opportunities import (
     IMPLEMENTATION_TARGETS_MAX,
     IMPLEMENTATION_VERIFICATION_HISTORY_MAX,
@@ -51,6 +52,29 @@ class ImplementationDeclaration:
     generation_id: uuid.UUID | None
     declared_implemented_at: datetime
     expected_checks: list[dict]
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedTargets:
+    """What one declaration says it changed: our pages, or somebody else's.
+
+    Exactly one side is populated. An action performed on a publisher's page
+    has no owned page to name, and naming one anyway would make an unrelated
+    owned URL look like the thing that was edited.
+    """
+
+    site_url_ids: list[uuid.UUID]
+    external_url: str | None = None
+
+
+def is_external_target(opportunity: Opportunity) -> bool:
+    """Whether this rule's action happens on a page somebody else owns.
+
+    Read from the rule id rather than sniffing the URL: whether a URL is ours
+    is a question with an answer (``resolve_owned_page``), but asking it about
+    a publisher's page is the failure being prevented, not the test.
+    """
+    return opportunity.rule_id in EARNED_RULE_IDS
 
 
 async def _project_expected_checks(
@@ -130,9 +154,28 @@ async def _resolve_targets(
     project: Project,
     opportunity: Opportunity,
     requested_ids: list[uuid.UUID],
-) -> list[uuid.UUID]:
+) -> ResolvedTargets:
+    """Resolve what this declaration acted on, without crossing the boundary.
+
+    An earned rule targets a third-party page. Routing its ``target_url``
+    through ``resolve_owned_page`` would try to match a publisher's URL
+    against this project's crawled inventory and raise a target conflict --
+    so the action would surface to the user as broken rather than as
+    unsupported. It short-circuits here instead.
+    """
     if len(requested_ids) > IMPLEMENTATION_TARGETS_MAX:
         raise ImplementationConflictError("Too many implementation targets")
+    if is_external_target(opportunity):
+        if requested_ids:
+            # Owned pages are not where this action happened. Accepting them
+            # would later verify an owned-page change against an external
+            # placement and report the two as one outcome.
+            raise ImplementationConflictError(
+                "An external placement cannot declare owned page targets"
+            )
+        if not opportunity.target_url:
+            raise ImplementationConflictError("Implementation target is unresolved")
+        return ResolvedTargets(site_url_ids=[], external_url=opportunity.target_url)
     if requested_ids:
         rows = list(
             (
@@ -147,9 +190,9 @@ async def _resolve_targets(
         )
         if {row.id for row in rows} != set(requested_ids):
             raise ImplementationConflictError("Implementation target is unresolved")
-        return list(dict.fromkeys(requested_ids))
+        return ResolvedTargets(site_url_ids=list(dict.fromkeys(requested_ids)))
     if not opportunity.target_url:
-        return []
+        return ResolvedTargets(site_url_ids=[])
     resolution = await resolve_owned_page(
         session,
         workspace_id=project.workspace_id,
@@ -164,7 +207,7 @@ async def _resolve_targets(
         raise ImplementationConflictError(
             "Implementation target is ambiguous or unresolved"
         )
-    return [resolution.site_url_id]
+    return ResolvedTargets(site_url_ids=[resolution.site_url_id])
 
 
 async def _current_snapshot(
@@ -308,7 +351,8 @@ async def create_implementation_event(
         project_id=project_id,
         opportunity_id=declaration.opportunity_id,
         opportunity_snapshot_id=snapshot.id,
-        target_site_url_ids=[str(item) for item in targets],
+        target_site_url_ids=[str(item) for item in targets.site_url_ids],
+        target_external_url=targets.external_url,
         generation_id=declaration.generation_id,
         declared_implemented_at=declaration.declared_implemented_at,
         expected_checks=await _project_expected_checks(
