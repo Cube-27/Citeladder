@@ -24,13 +24,21 @@ const uuid = () => z.uuid();
  * for anything else, because no passage can demonstrate an absence — that is
  * what `match_method` and the page's `extracted_chars` are for.
  */
-export const sourcePageEntitySchema = responseObject({
-  entity_kind: z.enum(['brand', 'competitor']),
+export const pageEntityFields = {
+  entity_kind: z.string(),
   entity_name: z.string(),
-  state: z.string(),
   match_method: z.string(),
   match_count: z.number().int(),
   passages: z.array(z.string()),
+} as const;
+
+export const sourcePageEntitySchema = responseObject({
+  ...pageEntityFields,
+  entity_kind: z.enum(['brand', 'competitor']),
+  // The resolver's vocabulary: a presence verdict OR the page-level state
+  // that overrides it. The brief calls the same thing `presence` because it
+  // carries the raw verdict, not the resolved one.
+  state: z.string(),
   limitations: z.array(z.string()),
 });
 
@@ -61,18 +69,19 @@ export const sourcePageInspectionSchema = responseObject({
   budget_remaining: z.number().int(),
 });
 
-/** One page where rivals appear and the brand does not. */
+/**
+ * One page where rivals appear and the brand does not.
+ *
+ * Every page here was READ — a gap needs a brand verdict, which only an
+ * inspected page has — so this shape carries no inspection state. What was NOT
+ * read is counted on the group beside it.
+ */
 export const competitorPageSchema = responseObject({
   url_hash: z.string(),
   canonical_url: z.string(),
   registrable_domain: z.string(),
-  source_class: z.string(),
   page_format: z.string(),
-  page_format_method: z.string().nullable(),
   title: z.string(),
-  inspection_state: z.string(),
-  inspection_reason: z.string().nullable(),
-  last_inspected_at: z.string().nullable(),
   extracted_chars: z.number().int(),
   // Distinct analyzed answers in this project that cited the page.
   answers_citing: z.number().int(),
@@ -82,8 +91,6 @@ export const competitorPageSchema = responseObject({
   // competitors merely named in an answer that cited this page.
   competitors: z.array(sourcePageEntitySchema),
   opportunity_id: uuid().nullable(),
-  opportunity_rule_id: z.string().nullable(),
-  opportunity_status: z.string().nullable(),
   opportunity_title: z.string().nullable(),
   limitations: z.array(z.string()),
 });

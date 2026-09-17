@@ -20,6 +20,7 @@ import { opportunitiesQueries } from '@/lib/api/opportunities';
 import type { OpportunityDetail } from '@/lib/api/types';
 import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
 import { panelClasses } from '@/components/ui/panel';
+import { Limitations } from '@/components/ui/passage';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 /** Recommendation detail drawer backed by the persisted detail projection. */
@@ -118,11 +119,7 @@ function ActionHandoff({ detail }: Readonly<{ detail: OpportunityDetail }>) {
       <Label>Action handoff</Label>
       <div className={panelClasses({ pad: 'compact' }, 'grid gap-2')}>
         <p className={textRole('body')}>Create or improve content the brand controls.</p>
-        {detail.content_handoff.limitations.map((limitation) => (
-          <p key={limitation} className="text-muted text-xs">
-            {limitation}
-          </p>
-        ))}
+        <Limitations items={detail.content_handoff.limitations} />
         <Button asChild size="sm" className="justify-self-start">
           <ProjectLink href={`/content?opportunity_id=${detail.id}`}>
             Create owned content

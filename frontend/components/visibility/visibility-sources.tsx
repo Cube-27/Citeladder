@@ -10,29 +10,14 @@ import { CitedSourcesStrip } from '@/components/visibility/cited-sources-strip';
 import { SourcePaging, SourceTotals, SourceTypes } from '@/components/visibility/source-panels';
 import { SourcePageDrawer } from '@/components/visibility/source-page-drawer';
 import { SourceTable, type SourceFilters } from '@/components/visibility/source-rows';
-import { SOURCE_MODES } from '@/lib/config/visibility';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
-import {
-  optionalStringUrlCodec,
-  setUrlParams,
-  stringUrlCodec,
-  useUrlState,
-} from '@/lib/navigation/url-state';
+import { optionalStringUrlCodec, setUrlParams, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
 import {
   useSourceAnalysis,
   useSourceTypes,
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
-
-const modeCodec = stringUrlCodec(
-  SOURCE_MODES.map((item) => item.value),
-  // ANSWERS, not sources. Reaching one quoted line used to cost four
-  // interactions — pick the tab, switch the mode, click a domain, click a page
-  // — and the thing a reader came for was the evidence at the end of them. The
-  // domain table is refinement and stays one deliberate switch away.
-  'answers',
-);
 
 /**
  * Mentions & Citations: the persisted answer evidence, with the cited-source
@@ -47,7 +32,6 @@ export function VisibilitySources({
   queries: SourceQueries;
   children: ReactNode;
 }>) {
-  const [mode] = useUrlState('mode', modeCodec);
   const [domain] = useUrlState('source_domain', optionalStringUrlCodec);
   const [offset] = useUrlState('source_offset', optionalStringUrlCodec);
   const [asOf] = useUrlState('source_as_of', optionalStringUrlCodec);
@@ -57,8 +41,10 @@ export function VisibilitySources({
   const [sourceType, setSourceType] = useUrlState('source_type', optionalStringUrlCodec, {
     clearKeys: ['source_offset', 'source_as_of'],
   });
+  // `filters.sourceMode` is the one reader of `?mode=`; declaring a second
+  // codec here meant the default lived in three files that had to agree.
   const { params, sourceQuery } = useSourceAnalysis(filters, queries, {
-    mode,
+    mode: filters.sourceMode,
     domain,
     offset,
     asOf,
@@ -66,7 +52,7 @@ export function VisibilitySources({
     pageSize,
   });
 
-  if (mode === 'answers') {
+  if (filters.sourceMode === 'answers') {
     return (
       <Stack gap="workspace">
         {filters.competitor ? (

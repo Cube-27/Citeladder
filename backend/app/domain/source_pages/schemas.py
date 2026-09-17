@@ -65,18 +65,18 @@ class SourcePageInspectionRequested(_Model):
 
 
 class SourcePageCompetitorPage(_Model):
-    """One page where rivals appear and the brand does not."""
+    """One page where rivals appear and the brand does not.
+
+    Every page here was READ -- a gap needs a brand verdict, which only an
+    inspected page has -- so this shape carries no inspection state. What was
+    NOT read is counted on the group beside it.
+    """
 
     url_hash: str
     canonical_url: str
     registrable_domain: str
-    source_class: str
     page_format: str
-    page_format_method: str | None
     title: str
-    inspection_state: str
-    inspection_reason: str | None
-    last_inspected_at: datetime | None
     extracted_chars: int
     # Distinct analyzed answers in this project that cited this page. Never
     # ``recurrence_count``, which schedules inspections and measures nothing.
@@ -87,8 +87,6 @@ class SourcePageCompetitorPage(_Model):
     # that only appeared in an answer is a different fact and is not here.
     competitors: list[SourcePageEntityView]
     opportunity_id: uuid.UUID | None
-    opportunity_rule_id: str | None
-    opportunity_status: str | None
     opportunity_title: str | None
     limitations: list[str]
 

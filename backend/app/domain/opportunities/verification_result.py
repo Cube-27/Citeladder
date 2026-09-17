@@ -343,9 +343,19 @@ async def build_verification_result(
         OpportunitySnapshot, declaration.opportunity_snapshot_id
     )
     if baseline is None:
+        # The same keys as the available shape. A second payload shape means
+        # every reader has to handle both an absent key and a null one, and
+        # the next section added here would face that choice again.
+        #
+        # The placement section is still built. It does not depend on the
+        # frozen Opportunity snapshot at all -- it is a reading of somebody
+        # else's page against its own frozen baseline -- so discarding real
+        # placement evidence because the COMPARABLE legs lost their footing
+        # would throw away the one observation that survived.
         return {
             "state": "unavailable",
             "legs": {},
+            "placement": await placement_section(session, declaration=declaration),
             "limitations": ["Frozen Opportunity snapshot is unavailable."],
         }
     latest = await session.scalar(

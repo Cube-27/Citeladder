@@ -14,8 +14,18 @@
  */
 import type { z } from 'zod';
 import type { sourcePageEntitySchema } from '@/lib/api/schemas/source-pages';
+import { formatCount } from '@/lib/format';
 
 export type SourcePageEntity = z.infer<typeof sourcePageEntitySchema>;
+
+/**
+ * The one sentence for "we could not read enough of this page to judge it".
+ *
+ * Shared because three surfaces state the same fact — a presence verdict, an
+ * unmet qualification and a placement that could not be compared — and three
+ * copies drift into three slightly different claims about one thing.
+ */
+export const COVERAGE_TOO_THIN = 'Too little of the page was readable to judge it.';
 
 /** Page-level states: properties of the PAGE, never of an entity on it. */
 const PAGE_STATE_LABELS: Record<string, string> = {
@@ -39,7 +49,7 @@ const PRESENCE_LABELS: Record<string, string> = {
   present: 'On the page',
   not_detected: 'Not found on the page',
   ambiguous: 'Match could not be confirmed',
-  partial: 'Too little of the page was readable',
+  partial: COVERAGE_TOO_THIN,
   not_inspected: 'Not inspected',
   blocked: 'Publisher blocks automated access',
   stale: 'From an earlier inspection',
@@ -80,23 +90,34 @@ export function pageFormatLabel(format: string): string | null {
 }
 
 /**
- * How an absence was established, for a claim no passage can support.
+ * Why a verdict could not be shown with a passage, and on what basis.
  *
  * Returns `null` when the page was not read at all: there is no method to
  * report, and printing one would imply a search that never happened.
+ *
+ * The fallback, when the matching method is unknown, is NOT shared across the
+ * three states. "No form of the name matched" is true of a non-detection and
+ * false of the other two: `ambiguous` means a match WAS found and could not be
+ * quoted, and `partial` means too little of the page was read to judge. One
+ * fallback sentence for all three told two of them a flat untruth.
  */
+const UNKNOWN_METHOD_BASIS: Record<string, string> = {
+  not_detected: 'no form of the name matched',
+  ambiguous: 'a match was found that could not be quoted',
+  partial: 'not enough of it to settle this',
+};
+
 export function absenceBasis(
   state: string,
   matchMethod: string | null,
   extractedChars: number,
 ): string | null {
-  if (state !== 'not_detected' && state !== 'ambiguous' && state !== 'partial') return null;
+  const fallback = UNKNOWN_METHOD_BASIS[state];
+  if (!fallback) return null;
   if (extractedChars <= 0) return null;
-  const read = `${extractedChars.toLocaleString()} characters of readable text`;
+  const read = `${formatCount(extractedChars)} characters of readable text`;
   const method = matchMethod ? MATCH_METHOD_LABELS[matchMethod] : undefined;
-  return method
-    ? `Searched ${read} for ${method}.`
-    : `Searched ${read}; no form of the name matched.`;
+  return method ? `Searched ${read} for ${method}.` : `Searched ${read}; ${fallback}.`;
 }
 
 /**

@@ -53,7 +53,10 @@ from app.core.config.source_pages import (
     SOURCE_PAGE_PER_HOST_DELAY_SECONDS,
     SOURCE_PAGE_REQUEST_TIMEOUT_SECONDS,
 )
-from app.domain.opportunities.placement_checks import evaluate_placement_checks
+from app.domain.opportunities.placement_checks import (
+    due_placement_page_ids,
+    evaluate_placement_checks,
+)
 from app.domain.opportunities.verification import (
     TRIGGER_SOURCE_PAGE,
     enqueue_audit_opportunity_tasks,
@@ -408,7 +411,10 @@ async def _hand_off(
 
 
 async def _settle_placements(
-    session_factory: async_sessionmaker[AsyncSession], *, scope: _Scope
+    session_factory: async_sessionmaker[AsyncSession],
+    task: AnalyticsTask,
+    *,
+    scope: _Scope,
 ) -> None:
     """Compare every pending placement check against what this batch just read.
 
@@ -417,11 +423,12 @@ async def _settle_placements(
     and only then is a verification observation asked for -- so the event
     records a comparison that already exists rather than triggering one.
 
-    The trigger revision is this batch's moment, so a recheck weeks from now
-    enqueues its own task instead of colliding with this one's idempotency
-    key. The observation event's own key is derived from the observation time,
-    which is stable, so a retried batch still cannot write the same
-    observation twice.
+    The trigger revision is this inspection TASK's id, matching the one other
+    caller that supplies one. A later recheck arrives on its own task and so
+    enqueues its own verification, while a retry of this task reuses the same
+    key and is deduplicated -- which is the whole reason the enqueue takes a
+    revision. A wall-clock revision would switch that dedup off for exactly
+    this trigger kind.
     """
     moment = datetime.now(UTC)
     async with session_factory() as session:
@@ -438,7 +445,12 @@ async def _settle_placements(
                 project_id=scope.project_id,
                 trigger_kind=TRIGGER_SOURCE_PAGE,
                 trigger_id=scope.audit_id,
-                trigger_revision=str(int(moment.timestamp() * 1_000_000)),
+                trigger_revision=str(task.id),
+                # The moment this batch settled its checks. Every check it
+                # touched carries the same value in ``updated_at``, so the
+                # verification it queues is dated by ITS OWN readings rather
+                # than by whatever another batch happened to settle later.
+                payload_extra={"settled_since": moment.isoformat()},
             )
         await session.commit()
 
@@ -505,6 +517,12 @@ async def _run_inspection(
                 session,
                 workspace_id=scope.workspace_id,
                 project_id=scope.project_id,
+                # Admission ranks; the verification domain decides what is
+                # owed. Asking here keeps the dependency pointing the way
+                # every other one between these two packages already does.
+                due_page_ids=await due_placement_page_ids(
+                    session, project_id=scope.project_id
+                ),
             )
             await session.commit()
         await _inspect_claims(session_factory, inspector, scope=scope, claims=claims)
@@ -532,4 +550,4 @@ async def inspect_source_pages(
         project_id=scope.project_id,
         audit_id=scope.audit_id,
     )
-    await _settle_placements(session_factory, scope=scope)
+    await _settle_placements(session_factory, task, scope=scope)

@@ -20,7 +20,6 @@ comparison said.
 from __future__ import annotations
 
 import uuid
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -49,15 +48,17 @@ from app.core.config.placement import (
     PLACEMENT_RECHECK_AFTER_HOURS,
     PLACEMENT_RECHECK_INTERVAL_HOURS,
     PLACEMENT_RECHECK_MAX_ATTEMPTS,
+    PLACEMENT_RETRYABLE_REASONS,
     PLACEMENT_STATE_PENDING,
-    PLACEMENT_STATE_SATISFIED,
     PLACEMENT_STATE_UNAVAILABLE,
     PLACEMENT_STATE_UNMET,
 )
 from app.core.config.source_pages import ENTITY_KIND_BRAND, PRESENCE_PRESENT
+from app.domain.opportunities.content_handoff import persisted_handoff
 from app.domain.opportunities.projection import stable_key
+from app.domain.opportunities.visibility_evidence import owned_domain_list
 from app.domain.source_pages.persistence import OUTCOME_INSPECTED
-from app.models.brand import OwnedDomain
+from app.domain.source_pages.projection import page_fact_strings
 from app.models.opportunity import Opportunity, OpportunityImplementationEvent
 from app.models.source_pages import (
     PlacementCheck,
@@ -86,10 +87,6 @@ _CHANGE_BY_RULE = {
 }
 
 
-def _handoff(opportunity: Opportunity) -> dict:
-    return dict((opportunity.evidence or {}).get("content_handoff") or {})
-
-
 def _brand_name(handoff: dict, fallback: str) -> str:
     """The name the page was searched for, as the verdict recorded it.
 
@@ -111,7 +108,7 @@ def placement_expected_check(opportunity: Opportunity, *, brand_name: str) -> di
     is in neither -- so a verification triggered by one records it as
     unobservable instead of quietly passing it.
     """
-    handoff = _handoff(opportunity)
+    handoff = persisted_handoff(opportunity)
     return {
         "kind": PLACEMENT_CHECK_KIND,
         "rule_id": opportunity.rule_id,
@@ -125,18 +122,6 @@ def placement_expected_check(opportunity: Opportunity, *, brand_name: str) -> di
         "deterioration": list(handoff.get("deterioration") or []),
         "baseline_snapshot_id": handoff.get("snapshot_id"),
     }
-
-
-async def _owned_domains(session: AsyncSession, project_id: uuid.UUID) -> list[str]:
-    return list(
-        (
-            await session.scalars(
-                select(OwnedDomain.domain)
-                .where(OwnedDomain.project_id == project_id)
-                .order_by(OwnedDomain.domain.asc())
-            )
-        ).all()
-    )
 
 
 async def open_placement_check(
@@ -178,7 +163,9 @@ async def open_placement_check(
         expected_change=str(check.get("expected_change") or ""),
         expected_detail={
             "brand_name": check.get("brand_name") or "",
-            "owned_domains": await _owned_domains(session, declaration.project_id),
+            "owned_domains": await owned_domain_list(
+                session, project_id=declaration.project_id
+            ),
             "discrepancies": list(check.get("discrepancies") or []),
             "deterioration": list(check.get("deterioration") or []),
         },
@@ -241,7 +228,7 @@ async def due_placement_page_ids(
             PlacementCheck.project_id == project_id,
             PlacementCheck.due_at.is_not(None),
             PlacementCheck.due_at <= moment,
-            PlacementCheck.state.in_((PLACEMENT_STATE_PENDING, PLACEMENT_STATE_UNMET)),
+            PlacementCheck.state.in_(_OPEN_STATES),
         )
         .order_by(PlacementCheck.due_at.asc())
         .limit(PLACEMENT_DUE_PAGES_MAX)
@@ -249,9 +236,41 @@ async def due_placement_page_ids(
     return set(rows.all())
 
 
+def _retryable(check: PlacementCheck) -> bool:
+    """Whether a later reading could still settle this check.
+
+    ``unmet`` always could: the publisher may simply not have acted yet. Some
+    ``unavailable`` answers could too -- a reading that was too thin, or that
+    produced no brand verdict, is a property of THAT reading and not of the
+    check. The rest are properties of the check itself, and re-reading the
+    page forever would not change them.
+    """
+    if check.state == PLACEMENT_STATE_UNMET:
+        return True
+    return (
+        check.state == PLACEMENT_STATE_UNAVAILABLE
+        and (check.state_reason or "") in PLACEMENT_RETRYABLE_REASONS
+    )
+
+
+_OPEN_STATES = (
+    PLACEMENT_STATE_PENDING,
+    PLACEMENT_STATE_UNMET,
+    PLACEMENT_STATE_UNAVAILABLE,
+)
+
+
 def _reading(
-    snapshot: SourcePageSnapshot, rows: list[SourcePageEntityPresence]
+    snapshot: SourcePageSnapshot,
+    rows: list[SourcePageEntityPresence],
+    *,
+    roster_version: str | None = None,
 ) -> PlacementReading:
+    """One reading, reduced to what a placement comparison needs.
+
+    ``roster_version`` is overridable because the BASELINE's roster is the one
+    frozen on the check, not the one its presence rows happen to carry now.
+    """
     brand = next(
         (row for row in rows if row.entity_kind == ENTITY_KIND_BRAND),
         None,
@@ -259,15 +278,17 @@ def _reading(
     facts = snapshot.page_facts or {}
     return PlacementReading(
         snapshot_id=str(snapshot.id),
-        roster_version=(rows[0].roster_version if rows else ""),
+        roster_version=(
+            roster_version
+            if roster_version is not None
+            else (rows[0].roster_version if rows else "")
+        ),
         extracted_chars=snapshot.extracted_chars,
         brand_presence=brand.presence if brand else None,
         brand_present=bool(brand and brand.presence == PRESENCE_PRESENT),
         brand_match_count=brand.match_count if brand else 0,
-        outbound_domains=tuple(
-            str(item) for item in (facts.get("outbound_domains") or [])
-        ),
-        headings=tuple(str(item) for item in (facts.get("headings") or [])),
+        outbound_domains=page_fact_strings(facts, "outbound_domains"),
+        headings=page_fact_strings(facts, "headings"),
     )
 
 
@@ -295,15 +316,13 @@ async def _baseline_reading(
             )
         ).all()
     )
-    return replace(
-        _reading(snapshot, rows), roster_version=check.baseline_roster_version
-    )
+    return _reading(snapshot, rows, roster_version=check.baseline_roster_version)
 
 
 async def _observation(
     session: AsyncSession, check: PlacementCheck
 ) -> SourcePageSnapshot | None:
-    """The first successful reading taken AFTER the declaration.
+    """The latest successful reading taken AFTER the declaration.
 
     Successful only: a blocked or failed attempt is a fact about the fetch,
     not a reading of the page, and comparing a placement against one would
@@ -338,9 +357,10 @@ def _reschedule(check: PlacementCheck, *, moment: datetime) -> None:
 
     An open-ended recheck is an open-ended charge against the project's
     inspection budget for an outcome nobody is still waiting on, so the check
-    stops asking after a bounded number of readings.
+    stops asking after a bounded number of readings -- and stops immediately
+    for an answer no later reading can change.
     """
-    if check.state != PLACEMENT_STATE_UNMET:
+    if not _retryable(check):
         check.due_at = None
         return
     if check.attempts >= PLACEMENT_RECHECK_MAX_ATTEMPTS:
@@ -366,13 +386,22 @@ async def evaluate_placement_checks(
     checks = list(
         (
             await session.scalars(
-                select(PlacementCheck).where(
+                select(PlacementCheck)
+                .where(
                     PlacementCheck.workspace_id == workspace_id,
                     PlacementCheck.project_id == project_id,
-                    PlacementCheck.state.in_(
-                        (PLACEMENT_STATE_PENDING, PLACEMENT_STATE_UNMET)
-                    ),
+                    PlacementCheck.state.in_(_OPEN_STATES),
+                    # Only what is DUE. A check waiting out its window is not
+                    # judged early -- reading the page the hour after somebody
+                    # declared the work and recording "not there" reports a
+                    # slow editor as a false declaration. A check that has
+                    # stopped asking has ``due_at`` cleared and leaves the
+                    # scan for good rather than being re-queried forever.
+                    PlacementCheck.due_at.is_not(None),
+                    PlacementCheck.due_at <= moment,
                 )
+                .order_by(PlacementCheck.due_at.asc())
+                .limit(PLACEMENT_DUE_PAGES_MAX)
             )
         ).all()
     )
@@ -409,17 +438,6 @@ async def evaluate_placement_checks(
     return observed
 
 
-# The state a check reports before anything has read the page since the
-# declaration. Kept out of the verdict vocabulary so a reader is never told a
-# placement failed when nobody has looked at it yet.
-_SECTION_STATES = {
-    PLACEMENT_STATE_SATISFIED: "live",
-    PLACEMENT_STATE_UNMET: "not_observed",
-    PLACEMENT_STATE_UNAVAILABLE: "unavailable",
-    PLACEMENT_STATE_PENDING: "not_run",
-}
-
-
 async def placement_section(
     session: AsyncSession, *, declaration: OpportunityImplementationEvent
 ) -> dict | None:
@@ -438,7 +456,12 @@ async def placement_section(
     if check is None:
         return None
     return {
-        "state": _SECTION_STATES.get(check.state, "unavailable"),
+        # The persisted state verbatim. Renaming it into a second four-value
+        # vocabulary here added no information and gave the fallback a chance
+        # to report an unrecognised state as "we could not compare" -- the one
+        # answer this module must never infer. The words a reader sees are the
+        # frontend's label table, which already owns that job.
+        "state": check.state,
         "expected_change": check.expected_change,
         "rule_id": check.rule_id,
         "url_hash": check.url_hash,
@@ -455,18 +478,4 @@ async def placement_section(
         "max_attempts": PLACEMENT_RECHECK_MAX_ATTEMPTS,
         "due_at": check.due_at.isoformat() if check.due_at else None,
         "checker_version": check.checker_version,
-        "limitations": _section_limitations(check),
     }
-
-
-def _section_limitations(check: PlacementCheck) -> list[str]:
-    if check.state == PLACEMENT_STATE_PENDING:
-        return ["The page has not been read since this was declared."]
-    if check.state == PLACEMENT_STATE_UNAVAILABLE:
-        return ["The page could not be compared against its frozen baseline."]
-    if check.state == PLACEMENT_STATE_UNMET and check.due_at is not None:
-        return ["The change is not on the page yet. It will be read again."]
-    return [
-        "A placement going live and visibility moving are separate observations"
-        " and may disagree."
-    ]

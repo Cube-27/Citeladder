@@ -3,32 +3,46 @@
  *
  * The backend reports a placement observation in its own `placement` section,
  * beside — never inside — the comparable movement legs. This module turns that
- * section into sentences and keeps the four outcomes apart:
+ * section into sentences and keeps the four persisted states apart:
  *
- *   live          the declared change is on the page
- *   not_observed  the page was read and the change is not there
- *   not_run       nobody has read the page since the declaration
- *   unavailable   the page could not be compared against its frozen baseline
+ *   satisfied    the declared change is on the page
+ *   unmet        the page was read and the change is not there
+ *   pending      nobody has read the page since the declaration
+ *   unavailable  the page could not be compared against its frozen baseline
  *
  * The last two are the ones a careless reading collapses into the second. "We
  * could not look" is not "it did not happen", and reporting it as such is the
  * same error as calling an unread page a confirmed absence.
+ *
+ * `result` is a persisted blob the API declares as an open record, so the
+ * section is PARSED rather than cast. An unrecognised shape yields no claim at
+ * all, which is the honest outcome — a cast would keep printing confident copy
+ * over a payload whose fields had been renamed.
  */
+import { z } from 'zod';
+
+import { COVERAGE_TOO_THIN } from '@/lib/visibility/source-pages';
 
 /** The persisted result payload, as loosely as the API declares it. */
 export type VerificationResult = Record<string, unknown>;
 
-type PlacementSection = {
-  state: string;
-  expected_change?: string;
-  reason?: string | null;
-  attempts?: number;
-  max_attempts?: number;
-  due_at?: string | null;
-  limitations?: string[];
-};
+const placementSectionSchema = z.object({
+  state: z.string(),
+  expected_change: z.string().optional(),
+  reason: z.string().nullish(),
+  attempts: z.number().optional(),
+  max_attempts: z.number().optional(),
+  due_at: z.string().nullish(),
+});
+
+type PlacementSection = z.infer<typeof placementSectionSchema>;
 
 export type PlacementReport = { headline: string; detail: string | null };
+
+/** The persisted check states, in the words a reader gets. */
+const STATE_SATISFIED = 'satisfied';
+const STATE_UNMET = 'unmet';
+const STATE_PENDING = 'pending';
 
 const CHANGE_HEADLINES: Record<string, string> = {
   brand_listed: 'You are listed on the page.',
@@ -41,15 +55,14 @@ const UNAVAILABLE_REASONS: Record<string, string> = {
   no_frozen_baseline: 'Nothing had been read from this page when the work was declared.',
   roster_changed:
     'The brand or competitor roster changed since the baseline, so the two readings do not answer the same question.',
-  insufficient_coverage: 'Too little of the page was readable to judge it.',
+  insufficient_coverage: COVERAGE_TOO_THIN,
   no_brand_verdict: 'The reading produced no verdict for your brand.',
   unknown_expected_change: 'What was declared cannot be checked from the page itself.',
 };
 
 function section(result: VerificationResult | undefined): PlacementSection | null {
-  const value = result?.placement;
-  if (!value || typeof value !== 'object' || !('state' in value)) return null;
-  return value as PlacementSection;
+  const parsed = placementSectionSchema.safeParse(result?.placement);
+  return parsed.success ? parsed.data : null;
 }
 
 function notObserved(placement: PlacementSection): PlacementReport {
@@ -73,15 +86,15 @@ function notObserved(placement: PlacementSection): PlacementReport {
 export function placementReport(result: VerificationResult | undefined): PlacementReport | null {
   const placement = section(result);
   if (!placement) return null;
-  if (placement.state === 'live') {
+  if (placement.state === STATE_SATISFIED) {
     return {
       headline:
         CHANGE_HEADLINES[placement.expected_change ?? ''] ?? 'The declared change is on the page.',
       detail: 'A placement going live and visibility moving are separate observations.',
     };
   }
-  if (placement.state === 'not_observed') return notObserved(placement);
-  if (placement.state === 'not_run') {
+  if (placement.state === STATE_UNMET) return notObserved(placement);
+  if (placement.state === STATE_PENDING) {
     return {
       headline: 'The page has not been read since this was declared.',
       detail: null,

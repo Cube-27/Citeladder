@@ -4104,6 +4104,12 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
+        "ix_citations_workspace_url_hash",
+        "citations",
+        ["workspace_id", "url_hash"],
+        unique=False,
+    )
+    op.create_index(
         op.f("ix_citations_analysis_id"), "citations", ["analysis_id"], unique=False
     )
     op.create_index(

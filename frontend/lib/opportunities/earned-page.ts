@@ -8,6 +8,8 @@
  * the copy states what was observed rather than how it was derived.
  */
 import type { OpportunityDetail } from '@/lib/api/types';
+import { formatCount } from '@/lib/format';
+import { COVERAGE_TOO_THIN } from '@/lib/visibility/source-pages';
 
 type ContentHandoff = OpportunityDetail['content_handoff'];
 export type HandoffPageEntity = NonNullable<ContentHandoff['page_entities']>[number];
@@ -40,7 +42,7 @@ const DETERIORATION_LABELS: Record<string, string> = {
 /** Why an action could not be qualified — what the research task asks about. */
 const UNMET_LABELS: Record<string, string> = {
   not_inspected: 'Nobody has read this page yet.',
-  insufficient_coverage: 'Too little of the page was readable to judge it.',
+  insufficient_coverage: COVERAGE_TOO_THIN,
   no_tracked_prompt: 'No prompt you track led to this page.',
   not_recurrent: 'This page has not come up often enough to act on.',
   entity_matching_unresolved: 'The brand and competitor roster changed since this page was read.',
@@ -101,7 +103,7 @@ export function coverageSentence(
   sufficient: boolean | undefined,
 ): string | null {
   if (!extractedChars) return null;
-  const read = `${extractedChars.toLocaleString()} characters of this page were readable`;
+  const read = `${formatCount(extractedChars)} characters of this page were readable`;
   return sufficient === false
     ? `${read} — not enough to treat an absence as evidence.`
     : `${read}.`;

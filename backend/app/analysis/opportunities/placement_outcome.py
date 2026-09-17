@@ -28,7 +28,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.analysis.normalization import alias_present, domain_matches, normalize_alias
+from app.analysis.opportunities.page_predicates import (
+    links_to_owned,
+    listed_in_headings,
+)
 from app.core.config.earned_actions import (
     DISCREPANCY_NOT_LISTED_AS_ENTRY,
     DISCREPANCY_OWNED_DOMAIN_MISSING,
@@ -107,25 +110,31 @@ def _comparable(
     return None
 
 
-def _listed_as_entry(expectation: PlacementExpectation, obs: PlacementReading) -> bool:
-    """The brand now has an entry heading of its own on the page.
+def _entry_added(
+    expectation: PlacementExpectation, obs: PlacementReading
+) -> bool | None:
+    """The brand now has an entry heading of its own. ``None``: unreadable.
 
-    Matched with the same alias rules the presence verdicts were produced
-    under, so the check and the detector that raised it cannot disagree about
-    the same name on the same page.
+    A reading that produced no headings cannot show an entry either way, so it
+    is unverifiable rather than a correction nobody made.
     """
-    headings = normalize_alias(" | ".join(obs.headings))
-    name = normalize_alias(expectation.brand_name)
-    return bool(headings and name and alias_present(name, headings))
+    if not obs.headings:
+        return None
+    return listed_in_headings(expectation.brand_name, obs.headings)
 
 
-def _links_to_us(expectation: PlacementExpectation, obs: PlacementReading) -> bool:
-    """The page now links to one of the brand's reviewed domains."""
-    return any(
-        domain_matches(linked, owned)
-        for linked in obs.outbound_domains
-        for owned in expectation.owned_domains
-    )
+def _link_added(
+    expectation: PlacementExpectation, obs: PlacementReading
+) -> bool | None:
+    """The page now links to one of the brand's domains. ``None``: unreadable.
+
+    Guarded on the page having extracted links at all, the same way the
+    detector guards before asserting the omission. Without that, a reading
+    that extracted no links reports a link somebody added as still missing.
+    """
+    if not obs.outbound_domains or not expectation.owned_domains:
+        return None
+    return links_to_owned(obs.outbound_domains, expectation.owned_domains)
 
 
 def _discrepancy_resolved(
@@ -133,13 +142,15 @@ def _discrepancy_resolved(
 ) -> bool | None:
     """Whether one named discrepancy is fixed. ``None`` means unverifiable.
 
-    The codes come from the config the detector raises them with, so a rename
-    cannot leave the detector naming one thing and this checking another.
+    The codes come from the config the detector raises them with, and the
+    matching goes through the predicates the detector used, so a rename or a
+    normalisation change cannot leave the two asking different questions about
+    the same page.
     """
     if code == DISCREPANCY_NOT_LISTED_AS_ENTRY:
-        return _listed_as_entry(expectation, obs)
+        return _entry_added(expectation, obs)
     if code == DISCREPANCY_OWNED_DOMAIN_MISSING:
-        return _links_to_us(expectation, obs)
+        return _link_added(expectation, obs)
     return None
 
 

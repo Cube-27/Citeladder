@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,7 +39,7 @@ from app.core.config.source_pages import (
     ENTITY_KIND_COMPETITOR,
     INSPECTION_BLOCKED,
     INSPECTION_INSPECTED,
-    INSPECTION_NOT_INSPECTED,
+    PRESENCE_NOT_DETECTED,
     PRESENCE_PRESENT,
     SOURCE_PAGE_ANALYSIS_MAX_COMPETITORS,
     SOURCE_PAGE_ANALYSIS_MAX_PAGES,
@@ -54,10 +53,11 @@ from app.core.config.source_patterns import (
 from app.domain.opportunities.page_links import PageAction, live_page_opportunities
 from app.domain.source_pages.projection import (
     EntityView,
-    entity_limitations,
     entity_state,
+    entity_view,
     page_limitations,
-    passage_texts,
+    page_title,
+    presence_rows,
 )
 from app.models.analysis import Citation
 from app.models.audit import Audit
@@ -72,18 +72,19 @@ __all__ = ["CompetitorAnalysisView", "SourceClassGroup", "get_competitor_analysi
 
 @dataclass(frozen=True, slots=True)
 class CompetitorPageView:
-    """One cited page a reader should look at, and the proof that they should."""
+    """One cited page a reader should look at, and the proof that they should.
+
+    Every page here was READ: a gap needs a brand verdict, which only an
+    inspected page has. So the page's own inspection state is a constant on
+    this shape and is deliberately absent -- the counts beside the group are
+    where a reader learns what was not read.
+    """
 
     url_hash: str
     canonical_url: str
     registrable_domain: str
-    source_class: str
     page_format: str
-    page_format_method: str | None
     title: str
-    inspection_state: str
-    inspection_reason: str | None
-    last_inspected_at: datetime | None
     extracted_chars: int
     # Distinct analyzed answers in this project that cited this page. NOT
     # ``recurrence_count``, which is a scheduling value for admission and is
@@ -94,8 +95,6 @@ class CompetitorPageView:
     brand_match_method: str | None
     competitors: tuple[EntityView, ...]
     opportunity_id: uuid.UUID | None
-    opportunity_rule_id: str | None
-    opportunity_status: str | None
     opportunity_title: str | None
     limitations: tuple[str, ...]
 
@@ -180,33 +179,6 @@ async def _snapshots(
     return {row.source_page_id: row for row in rows}
 
 
-async def _presences(
-    session: AsyncSession,
-    *,
-    project_id: uuid.UUID,
-    snapshot_ids: list[uuid.UUID],
-) -> dict[uuid.UUID, list[SourcePageEntityPresence]]:
-    if not snapshot_ids:
-        return {}
-    rows = (
-        await session.scalars(
-            select(SourcePageEntityPresence)
-            .where(
-                SourcePageEntityPresence.project_id == project_id,
-                SourcePageEntityPresence.snapshot_id.in_(snapshot_ids),
-            )
-            .order_by(
-                SourcePageEntityPresence.entity_kind != ENTITY_KIND_BRAND,
-                SourcePageEntityPresence.entity_name.asc(),
-            )
-        )
-    ).all()
-    grouped: dict[uuid.UUID, list[SourcePageEntityPresence]] = {}
-    for row in rows:
-        grouped.setdefault(row.snapshot_id, []).append(row)
-    return grouped
-
-
 async def _answers_citing(
     session: AsyncSession,
     *,
@@ -239,24 +211,6 @@ async def _answers_citing(
     return {str(url_hash): int(count or 0) for url_hash, count in rows.all()}
 
 
-def _entity_view(
-    page: SourcePage,
-    snapshot: SourcePageSnapshot | None,
-    row: SourcePageEntityPresence,
-) -> EntityView:
-    return EntityView(
-        entity_kind=row.entity_kind,
-        entity_name=row.entity_name,
-        state=entity_state(page, row),
-        match_method=row.match_method,
-        match_count=row.match_count,
-        passages=passage_texts(snapshot, row.passage_refs)[
-            :SOURCE_PAGE_ANALYSIS_MAX_PASSAGES
-        ],
-        limitations=entity_limitations(row),
-    )
-
-
 @dataclass(frozen=True, slots=True)
 class _Reading:
     """One page's verdicts, already resolved through the shared vocabulary."""
@@ -266,17 +220,32 @@ class _Reading:
 
     @property
     def present_competitors(self) -> tuple[EntityView, ...]:
-        return tuple(row for row in self.competitors if row.state == PRESENCE_PRESENT)
+        """Present AND quotable. A name without its line is not a finding.
+
+        ``entity_view`` has already resolved each verdict's passage refs
+        against the snapshot, so a verdict whose refs pointed at nothing has
+        an empty ``passages`` here. Reporting it anyway would put a rival's
+        name on screen under a heading promising the line that proves it,
+        with no line -- which is the claim this whole surface exists to stop
+        making.
+        """
+        return tuple(
+            row
+            for row in self.competitors
+            if row.state == PRESENCE_PRESENT and row.passages
+        )
 
     @property
     def brand_missing(self) -> bool:
         """The brand was looked for on a page that was read, and not found.
 
-        Deliberately not "the brand is not present": ``ambiguous`` and
-        ``partial`` mean the reading could not settle it, and a page nobody
-        read has no verdict at all. Neither is a gap a person should act on.
+        Deliberately NOT "the brand is not present". ``ambiguous`` and
+        ``partial`` mean the reading could not settle where the brand stands,
+        and a page nobody read has no verdict at all. Listing either as a gap
+        would print "you are not on this page" over a reading that never said
+        so -- the same overclaim as reporting an unread page as an absence.
         """
-        return self.brand is not None and self.brand.state != PRESENCE_PRESENT
+        return self.brand is not None and self.brand.state == PRESENCE_NOT_DETECTED
 
 
 def _reading(
@@ -284,7 +253,10 @@ def _reading(
     snapshot: SourcePageSnapshot | None,
     rows: list[SourcePageEntityPresence],
 ) -> _Reading:
-    views = [_entity_view(page, snapshot, row) for row in rows]
+    views = [
+        entity_view(page, snapshot, row, max_passages=SOURCE_PAGE_ANALYSIS_MAX_PASSAGES)
+        for row in rows
+    ]
     return _Reading(
         brand=next((v for v in views if v.entity_kind == ENTITY_KIND_BRAND), None),
         competitors=tuple(v for v in views if v.entity_kind == ENTITY_KIND_COMPETITOR),
@@ -303,21 +275,14 @@ def _page_view(
         url_hash=page.url_hash,
         canonical_url=page.canonical_url,
         registrable_domain=page.registrable_domain,
-        source_class=_class_of(page),
         page_format=page.page_format,
-        page_format_method=page.page_format_method,
-        title=str(((snapshot.page_facts or {}) if snapshot else {}).get("title") or ""),
-        inspection_state=page.inspection_state,
-        inspection_reason=page.inspection_reason,
-        last_inspected_at=page.last_inspected_at,
+        title=page_title(snapshot),
         extracted_chars=snapshot.extracted_chars if snapshot else 0,
         answers_citing=answers,
         brand_state=reading.brand.state if reading.brand else entity_state(page, None),
         brand_match_method=reading.brand.match_method if reading.brand else None,
         competitors=reading.present_competitors[:SOURCE_PAGE_ANALYSIS_MAX_COMPETITORS],
         opportunity_id=action.opportunity_id if action else None,
-        opportunity_rule_id=action.rule_id if action else None,
-        opportunity_status=action.status if action else None,
         opportunity_title=action.title if action else None,
         limitations=page_limitations(page, snapshot),
     )
@@ -333,53 +298,53 @@ def _rank(view: CompetitorPageView) -> tuple:
     )
 
 
-@dataclass(slots=True)
-class _Bucket:
-    """One source class while it is being filled."""
+def _group(
+    source_class: str,
+    pages: list[SourcePage],
+    gaps: list[CompetitorPageView],
+) -> SourceClassGroup:
+    """One class's counts, derived from its pages rather than accumulated.
 
-    pages_total: int = 0
-    pages_inspected: int = 0
-    pages_not_inspected: int = 0
-    pages_blocked: int = 0
-    gaps: list[CompetitorPageView] | None = None
-
-    def count(self, page: SourcePage) -> None:
-        self.pages_total += 1
-        if page.inspection_state == INSPECTION_INSPECTED:
-            self.pages_inspected += 1
-        elif page.inspection_state == INSPECTION_BLOCKED:
-            self.pages_blocked += 1
-        elif page.inspection_state == INSPECTION_NOT_INSPECTED:
-            self.pages_not_inspected += 1
-
-    def add_gap(self, view: CompetitorPageView) -> None:
-        if self.gaps is None:
-            self.gaps = []
-        self.gaps.append(view)
-
-    def freeze(self, source_class: str) -> SourceClassGroup:
-        ranked = sorted(self.gaps or [], key=_rank)
-        return SourceClassGroup(
-            source_class=source_class,
-            pages_total=self.pages_total,
-            pages_inspected=self.pages_inspected,
-            pages_not_inspected=self.pages_not_inspected,
-            pages_blocked=self.pages_blocked,
-            gap_pages=len(ranked),
-            pages=tuple(ranked[:SOURCE_PAGE_ANALYSIS_MAX_PER_CLASS]),
-            truncated=len(ranked) > SOURCE_PAGE_ANALYSIS_MAX_PER_CLASS,
-        )
+    Counting alongside the loop meant a second, mutable picture of the same
+    list that had to be kept in step by hand: a new inspection state needed a
+    counter, a branch, a field and a line in the freeze, and forgetting one
+    produced numbers that quietly disagreed with the rows beneath them.
+    """
+    ranked = sorted(gaps, key=_rank)
+    states = [page.inspection_state for page in pages]
+    inspected = states.count(INSPECTION_INSPECTED)
+    blocked = states.count(INSPECTION_BLOCKED)
+    return SourceClassGroup(
+        source_class=source_class,
+        pages_total=len(pages),
+        pages_inspected=inspected,
+        # Everything without a current reading, DERIVED rather than counted
+        # per state. Counting only ``not_inspected`` left queued, failed and
+        # stale pages in the total and in none of the three buckets, so the
+        # numbers under a group did not add up to it -- and a new state would
+        # silently vanish the same way.
+        pages_not_inspected=len(pages) - inspected - blocked,
+        pages_blocked=blocked,
+        gap_pages=len(ranked),
+        pages=tuple(ranked[:SOURCE_PAGE_ANALYSIS_MAX_PER_CLASS]),
+        truncated=len(ranked) > SOURCE_PAGE_ANALYSIS_MAX_PER_CLASS,
+    )
 
 
-def _ordered(buckets: dict[str, _Bucket]) -> tuple[SourceClassGroup, ...]:
+def _ordered(
+    by_class: dict[str, list[SourcePage]],
+    gaps: dict[str, list[CompetitorPageView]],
+) -> tuple[SourceClassGroup, ...]:
     """Classes in the taxonomy's own order, with unknown ones after it.
 
     Ordering by gap count instead would reshuffle the axis every time a page
     was inspected, so a reader could not learn where to look.
     """
-    known = [name for name in SOURCE_CLASS_ORDER if name in buckets]
-    rest = sorted(name for name in buckets if name not in SOURCE_CLASS_ORDER)
-    return tuple(buckets[name].freeze(name) for name in [*known, *rest])
+    known = [name for name in SOURCE_CLASS_ORDER if name in by_class]
+    rest = sorted(name for name in by_class if name not in SOURCE_CLASS_ORDER)
+    return tuple(
+        _group(name, by_class[name], gaps.get(name, [])) for name in [*known, *rest]
+    )
 
 
 def _limitations(*, inspected: int, total: int, truncated: bool) -> tuple[str, ...]:
@@ -417,7 +382,7 @@ async def get_competitor_analysis(
     truncated = len(rows) > SOURCE_PAGE_ANALYSIS_MAX_PAGES
     pages = rows[:SOURCE_PAGE_ANALYSIS_MAX_PAGES]
     snapshots = await _snapshots(session, project_id=project_id, pages=pages)
-    presences = await _presences(
+    presences = await presence_rows(
         session,
         project_id=project_id,
         snapshot_ids=[row.id for row in snapshots.values()],
@@ -436,11 +401,11 @@ async def get_competitor_analysis(
         url_hashes=url_hashes,
     )
 
-    buckets: dict[str, _Bucket] = {}
-    gap_pages = 0
+    by_class: dict[str, list[SourcePage]] = {}
+    gaps: dict[str, list[CompetitorPageView]] = {}
     for page in pages:
-        bucket = buckets.setdefault(_class_of(page), _Bucket())
-        bucket.count(page)
+        source_class = _class_of(page)
+        by_class.setdefault(source_class, []).append(page)
         snapshot = snapshots.get(page.id)
         reading = _reading(
             page, snapshot, presences.get(snapshot.id, []) if snapshot else []
@@ -449,8 +414,7 @@ async def get_competitor_analysis(
         # looked for and not found. Either half alone is inventory.
         if not (reading.present_competitors and reading.brand_missing):
             continue
-        gap_pages += 1
-        bucket.add_gap(
+        gaps.setdefault(source_class, []).append(
             _page_view(
                 page,
                 snapshot=snapshot,
@@ -459,13 +423,13 @@ async def get_competitor_analysis(
                 action=actions.get(page.url_hash),
             )
         )
-    groups = _ordered(buckets)
+    groups = _ordered(by_class, gaps)
     inspected = sum(group.pages_inspected for group in groups)
     return CompetitorAnalysisView(
         pages_total=len(pages),
         pages_inspected=inspected,
         pages_not_inspected=sum(group.pages_not_inspected for group in groups),
-        gap_pages=gap_pages,
+        gap_pages=sum(group.gap_pages for group in groups),
         groups=groups,
         limitations=_limitations(
             inspected=inspected, total=len(pages), truncated=truncated

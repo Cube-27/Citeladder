@@ -31,13 +31,16 @@ Only on-page presence scores.
 
 from __future__ import annotations
 
-from app.analysis.normalization import alias_present, domain_matches, normalize_alias
 from app.analysis.opportunities.detectors import DetectorHit
 from app.analysis.opportunities.earned_page_brief import earned_page_brief
 from app.analysis.opportunities.earned_page_evidence import (
     EarnedPageEvidence,
     PriorPageEvidence,
     SourcePageEvidence,
+)
+from app.analysis.opportunities.page_predicates import (
+    links_to_owned,
+    listed_in_headings,
 )
 from app.analysis.opportunities.scoring import (
     page_competitor_presence_factor,
@@ -112,18 +115,6 @@ def qualification(page: SourcePageEvidence) -> tuple[bool, tuple[str, ...]]:
     return not missing, tuple(missing)
 
 
-def _in_headings(name: str, headings: str) -> bool:
-    """Whether a tracked name appears as an entry heading on this page.
-
-    Matched with the same alias rules the page's presence verdicts were
-    produced under. Plain substring containment would match inside a longer
-    word and would miss ``Best & Less`` against ``Best and Less``, so the
-    heading check and the presence check could disagree about the same brand
-    on the same page.
-    """
-    return bool(name) and alias_present(normalize_alias(name), headings)
-
-
 def _not_listed_as_entry(page: SourcePageEvidence, brand_name: str) -> bool:
     """Named in prose while every rival has its own entry.
 
@@ -133,11 +124,10 @@ def _not_listed_as_entry(page: SourcePageEvidence, brand_name: str) -> bool:
     """
     if page.page_format not in EARNED_PAGE_INCLUDABLE_FORMATS:
         return False
-    headings = normalize_alias(" | ".join(page.headings))
-    if not headings or _in_headings(brand_name, headings):
+    if not page.headings or listed_in_headings(brand_name, page.headings):
         return False
     return any(
-        _in_headings(entity.entity_name, headings)
+        listed_in_headings(entity.entity_name, page.headings)
         for entity in page.present_competitors
     )
 
@@ -148,19 +138,12 @@ def _owned_domain_missing(
     """The page links out, and to none of the brand's reviewed domains.
 
     Guarded on the page having outbound links at all: "we extracted no links"
-    is a limitation of the reading, not a fact about the entry.
-
-    Compared with the same rule that classifies a citation as owned, so this
-    cannot disagree with ``Citation.is_owned`` about the same pair -- a link
-    to ``docs.brand.com`` is a link to us, and ``www.`` is not a distinction.
+    is a limitation of the reading, not a fact about the entry, so it asserts
+    nothing rather than asserting an omission.
     """
     if not owned_domains or not page.outbound_domains:
         return False
-    return not any(
-        domain_matches(linked, owned)
-        for linked in page.outbound_domains
-        for owned in owned_domains
-    )
+    return not links_to_owned(page.outbound_domains, owned_domains)
 
 
 def _discrepancies(

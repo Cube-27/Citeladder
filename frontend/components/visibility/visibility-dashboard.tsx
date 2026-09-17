@@ -103,8 +103,8 @@ function VisibilityWorkspace({
             Competitor analysis reads the project's page inventory, which no
             run selection changes, so offering them there would imply a
             narrowing that does not happen. */}
-        <div className="flex flex-wrap items-center gap-2">
-          {isRunScopedTab(filters.activeTab) ? (
+        {isRunScopedTab(filters.activeTab) ? (
+          <div className="flex flex-wrap items-center gap-2">
             <VisibilityToolbar
               activeTab={filters.activeTab}
               runs={queries.runOptions}
@@ -128,8 +128,8 @@ function VisibilityWorkspace({
               outcome={filters.outcome}
               onChangeOutcome={filters.setOutcome}
             />
-          ) : null}
-        </div>
+          </div>
+        ) : null}
         <TabPanel value={filters.activeTab} className="focus-ring">
           {state ? (
             <DashboardState state={state} />

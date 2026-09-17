@@ -10,6 +10,7 @@ import { BusyBar } from '@/components/ui/busy-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Stack } from '@/components/ui/layout';
+import { Limitations } from '@/components/ui/passage';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -131,11 +132,7 @@ function Summary({ data, busy }: Readonly<{ data: Analysis; busy: boolean }>) {
         />
         <MetricItem label="Not inspected" value={String(data.pages_not_inspected)} />
       </MetricGroup>
-      {data.limitations.map((limitation) => (
-        <p key={limitation} className="text-muted text-xs lg:col-span-2">
-          {limitation}
-        </p>
-      ))}
+      <Limitations items={data.limitations} className="lg:col-span-2" />
     </div>
   );
 }

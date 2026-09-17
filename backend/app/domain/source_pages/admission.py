@@ -18,6 +18,11 @@ an inspection like any other: it is claimed through this same lock and pays the
 same unit, which is why a due check changes a page's PRIORITY here rather than
 getting its own path.
 
+Which pages owe one is ASKED OF THE CALLER rather than looked up here.
+Retrieval and budget are this module's concern; what a declaration promised is
+the verification domain's, and every other dependency between the two already
+points that way. The worker orchestrates both and knows the answer.
+
 Fresh pages are reused rather than refetched, and nothing is refetched because
 its content changed -- a changed hash is only knowable after fetching, so it
 decides whether ANALYSIS reruns, never whether retrieval happens. A page read
@@ -49,7 +54,6 @@ from app.core.config.source_pages import (
     SOURCE_PAGE_CLAIM_LEASE_MINUTES,
     SOURCE_PAGE_REUSE_WITHIN_HOURS,
 )
-from app.domain.opportunities.placement_checks import due_placement_page_ids
 from app.domain.prompts.locks import acquire_project_lock
 from app.models.source_pages import SourcePage, SourcePageInspectionSpend
 
@@ -218,6 +222,7 @@ async def claim_pages(
     project_id: uuid.UUID,
     limit: int = SOURCE_PAGE_BATCH_MAX,
     page_ids: list[uuid.UUID] | None = None,
+    due_page_ids: set[uuid.UUID] | None = None,
     now: datetime | None = None,
 ) -> list[uuid.UUID]:
     """Admit up to ``limit`` pages for inspection, paying for each as it is taken.
@@ -228,6 +233,11 @@ async def claim_pages(
     ``page_ids`` narrows this to an explicitly requested page, which a manual
     inspection uses. It goes through the same lock, the same budget and the same
     spend accounting; a page someone asked for is not free.
+
+    ``due_page_ids`` are the pages that owe a placement reading. They only
+    change the ORDER, never eligibility -- a due page is claimable on exactly
+    the same terms as any other, including the reuse window, because a page
+    read an hour ago already holds the reading that check needs.
     """
     moment = now or datetime.now(UTC)
     await acquire_project_lock(session, project_id)
@@ -237,7 +247,6 @@ async def claim_pages(
     if allowed <= 0:
         return []
 
-    due = await due_placement_page_ids(session, project_id=project_id, now=moment)
     statement = (
         select(SourcePage)
         .where(
@@ -246,7 +255,7 @@ async def claim_pages(
             *_claimable(moment),
         )
         .order_by(
-            _rank(due),
+            _rank(due_page_ids or set()),
             SourcePage.recurrence_count.desc(),
             SourcePage.last_cited_at.desc().nulls_last(),
             SourcePage.id,

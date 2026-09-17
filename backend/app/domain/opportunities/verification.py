@@ -381,19 +381,24 @@ async def _placement_evidence(
     editor as a false declaration.
     """
     result = _Evaluation()
-    check = await session.scalar(
-        select(PlacementCheck).where(
-            PlacementCheck.workspace_id == declaration.workspace_id,
-            PlacementCheck.implementation_event_id == declaration.id,
-        )
-    )
-    for expectation in declaration.expected_checks or []:
-        if expectation.get("kind") != PLACEMENT_CHECK_KIND:
-            result.limitations.append(
-                f"{expectation.get('kind')}: unavailable from a page inspection"
+    kinds = [check.get("kind") for check in declaration.expected_checks or []]
+    for kind in kinds:
+        if kind != PLACEMENT_CHECK_KIND:
+            result.limitations.append(f"{kind}: unavailable from a page inspection")
+    if PLACEMENT_CHECK_KIND not in kinds:
+        return result
+    # Once, not once per expectation. The evidence is one row per DECLARATION,
+    # so looping would count the same verdict twice the day a declaration
+    # carries two placement expectations.
+    _evaluate_placement_check(
+        await session.scalar(
+            select(PlacementCheck).where(
+                PlacementCheck.workspace_id == declaration.workspace_id,
+                PlacementCheck.implementation_event_id == declaration.id,
             )
-            continue
-        _evaluate_placement_check(check, result=result)
+        ),
+        result=result,
+    )
     return result
 
 
@@ -436,6 +441,7 @@ async def enqueue_implementation_verification(
     trigger_kind: str,
     trigger_id: uuid.UUID,
     trigger_revision: str | None = None,
+    payload_extra: dict[str, Any] | None = None,
 ) -> None:
     idempotency_key = (
         f"implementation-verification:{trigger_kind}:{trigger_id}:"
@@ -447,7 +453,11 @@ async def enqueue_implementation_verification(
             workspace_id=workspace_id,
             project_id=project_id,
             task_kind=ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATION,
-            payload={"trigger_kind": trigger_kind, "trigger_id": str(trigger_id)},
+            payload={
+                "trigger_kind": trigger_kind,
+                "trigger_id": str(trigger_id),
+                **(payload_extra or {}),
+            },
             idempotency_key=idempotency_key,
             status=TASK_STATUS_QUEUED,
             max_attempts=analytics_settings.task_max_attempts,
@@ -519,21 +529,44 @@ async def _verification_source(
         )
         observed_at = snapshot.created_at if snapshot is not None else None
     elif trigger_kind == TRIGGER_SOURCE_PAGE:
-        # The batch's own newest placement observation, not the audit's
-        # completion time. A recheck weeks later has to produce a distinct
-        # event revision, or it collides with the first reading's idempotency
-        # key and the observation is silently discarded.
-        observed_at = await session.scalar(
-            select(func.max(PlacementCheck.observed_at)).where(
-                PlacementCheck.workspace_id == task.workspace_id,
-                PlacementCheck.project_id == task.project_id,
-            )
-        )
+        observed_at = await _batch_observed_at(session, task=task, payload=payload)
     else:
         raise ValueError("Implementation verification trigger kind is invalid")
     if observed_at is None:
         raise ValueError("Implementation verification source is not terminal")
     return _Source(trigger_kind, trigger_id, observed_at)
+
+
+async def _batch_observed_at(
+    session: AsyncSession, *, task: AnalyticsTask, payload: dict[str, Any]
+) -> datetime | None:
+    """When THIS inspection batch's placement readings were settled.
+
+    A placement observation has no terminal row of its own to read a time
+    from, so the batch stamps the moment it settled its checks into the task
+    payload and the checks it touched carry that same moment in ``updated_at``.
+    Taking the project-wide maximum instead would let a task queued by one
+    batch be dated by a reading another batch took, which is how "which
+    reading produced this observation" stops being answerable.
+
+    Falls back to the project-wide maximum for a task queued before the batch
+    marker existed; an absent marker is the only case that can reach it.
+    """
+    settled_since = _parsed_datetime(payload.get("settled_since"))
+    statement = select(func.max(PlacementCheck.observed_at)).where(
+        PlacementCheck.workspace_id == task.workspace_id,
+        PlacementCheck.project_id == task.project_id,
+    )
+    if settled_since is not None:
+        statement = statement.where(PlacementCheck.updated_at >= settled_since)
+    return await session.scalar(statement)
+
+
+def _parsed_datetime(value: object) -> datetime | None:
+    try:
+        return datetime.fromisoformat(str(value)) if value else None
+    except ValueError:
+        return None
 
 
 async def _eligible_declarations(

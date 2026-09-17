@@ -37,7 +37,6 @@ class PageAction:
     # drawer to find out. Null exactly when ``opportunity_id`` is null.
     rule_id: str | None = None
     status: str | None = None
-    severity: str | None = None
     title: str | None = None
 
 
@@ -72,7 +71,6 @@ async def live_page_opportunities(
             Opportunity.id,
             Opportunity.rule_id,
             Opportunity.status,
-            Opportunity.severity,
             Opportunity.title,
         )
         .outerjoin(
@@ -92,7 +90,7 @@ async def live_page_opportunities(
         )
     )
     found: dict[str, PageAction] = {}
-    for url_hash, state, opportunity_id, rule_id, status, severity, title in rows.all():
+    for url_hash, state, opportunity_id, rule_id, status, title in rows.all():
         # Ordered by descending priority, so the first row per page is the
         # one a reader should act on first if a future rule set ever emits
         # two for one page.
@@ -101,12 +99,12 @@ async def live_page_opportunities(
             PageAction(
                 inspection_state=str(state),
                 opportunity_id=opportunity_id,
-                # Read off the same row as the id, so a page can never be
-                # shown an action's name beside another action's identity.
-                rule_id=rule_id if opportunity_id else None,
-                status=status if opportunity_id else None,
-                severity=severity if opportunity_id else None,
-                title=title if opportunity_id else None,
+                # Off the same row as the id. The outer join makes these NULL
+                # together, so a page can never be shown an action's name
+                # beside another action's identity.
+                rule_id=rule_id,
+                status=status,
+                title=title,
             ),
         )
     return found

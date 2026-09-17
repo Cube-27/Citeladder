@@ -31,6 +31,14 @@ describe('cited-page vocabulary', () => {
     );
   });
 
+  it('never tells an ambiguous or partial verdict that nothing matched', () => {
+    // `ambiguous` means a match WAS found and could not be quoted; `partial`
+    // means too little was read. One shared fallback lied to both.
+    expect(absenceBasis('ambiguous', null, 4200)).toContain('could not be quoted');
+    expect(absenceBasis('partial', null, 4200)).toContain('not enough of it');
+    expect(absenceBasis('not_detected', null, 4200)).toContain('no form of the name matched');
+  });
+
   it('offers no basis for a positive finding, which has its own passage', () => {
     expect(absenceBasis('present', 'exact_alias', 4200)).toBeNull();
   });

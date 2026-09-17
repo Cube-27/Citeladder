@@ -18,13 +18,8 @@ const PAGE: CompetitorGapPage = {
   url_hash: 'a'.repeat(64),
   canonical_url: 'https://publisher.example/best-crm',
   registrable_domain: 'publisher.example',
-  source_class: 'editorial_third_party',
   page_format: 'listicle',
-  page_format_method: 'heading_evidence',
   title: 'Best CRM tools',
-  inspection_state: 'inspected',
-  inspection_reason: null,
-  last_inspected_at: '2026-09-01T10:00:00Z',
   extracted_chars: 4200,
   answers_citing: 3,
   brand_state: 'not_detected',
@@ -41,8 +36,6 @@ const PAGE: CompetitorGapPage = {
     },
   ],
   opportunity_id: null,
-  opportunity_rule_id: null,
-  opportunity_status: null,
   opportunity_title: null,
   limitations: [],
 };
@@ -78,8 +71,6 @@ describe('a page where a rival appears and the brand does not', () => {
         page={{
           ...PAGE,
           opportunity_id: '11111111-1111-4111-8111-111111111111',
-          opportunity_rule_id: 'earned_page_acquire_listing',
-          opportunity_status: 'open',
           opportunity_title: 'Get listed on publisher.example',
         }}
         onOpenPage={vi.fn()}

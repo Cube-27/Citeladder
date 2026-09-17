@@ -4,7 +4,9 @@ import { ProjectLink } from '@/components/layout/scoped-link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { eyebrowClasses } from '@/components/ui/eyebrow';
+import { OnPageEntities } from '@/components/ui/on-page-entities';
 import { panelClasses } from '@/components/ui/panel';
+import { Limitations, Passage } from '@/components/ui/passage';
 import { Label, textRole } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@/lib/api/types';
 import {
@@ -58,15 +60,14 @@ export function EarnedPageHandoff({ detail }: Readonly<{ detail: OpportunityDeta
         />
         <FindingList heading="What changed" items={deteriorationLabels(handoff.deterioration)} />
         <FindingList heading="Still unresolved" items={unmetLabels(handoff.unmet_qualification)} />
-        <OnPage handoff={handoff} />
+        <OnPageEntities
+          heading="Found on this page"
+          entities={onPageCompetitors(handoff.page_entities)}
+        />
         <Brand handoff={handoff} />
         <NamedInAnswers names={handoff.answer_competitors} />
         <Coverage handoff={handoff} />
-        {handoff.limitations.map((limitation) => (
-          <p key={limitation} className="text-muted text-xs">
-            {limitation}
-          </p>
-        ))}
+        <Limitations items={handoff.limitations} />
         <Button asChild size="sm" className="justify-self-start">
           <ProjectLink href={`/content?opportunity_id=${detail.id}`}>
             Prepare earned content
@@ -88,34 +89,6 @@ function FindingList({ heading, items }: Readonly<{ heading: string; items: stri
           {item}
         </p>
       ))}
-    </div>
-  );
-}
-
-/** The rivals on the publisher's page, each with the line that proves it. */
-function OnPage({ handoff }: Readonly<{ handoff: OpportunityDetail['content_handoff'] }>) {
-  const competitors = onPageCompetitors(handoff.page_entities);
-  if (!competitors.length) return null;
-  return (
-    <div className="grid gap-1.5">
-      <p className={eyebrowClasses}>Found on this page</p>
-      <div className="flex flex-wrap gap-1.5">
-        {competitors.map((entity) => (
-          <Badge key={entity.entity_name} variant="classification" value="competitor">
-            {entity.entity_name}
-          </Badge>
-        ))}
-      </div>
-      {competitors.map((entity) =>
-        entity.passages.map((passage) => (
-          <blockquote
-            key={`${entity.entity_name}:${passage}`}
-            className={panelClasses({ tone: 'well', pad: 'compact' })}
-          >
-            <p className={textRole('body', 'leading-relaxed')}>“{passage}”</p>
-          </blockquote>
-        )),
-      )}
     </div>
   );
 }
@@ -152,9 +125,7 @@ function BrandLine({
         {verdict ? ` — ${verdict.toLowerCase()}` : ''}
       </p>
       {brand.passages.map((passage) => (
-        <blockquote key={passage} className={panelClasses({ tone: 'well', pad: 'compact' })}>
-          <p className={textRole('body', 'leading-relaxed')}>“{passage}”</p>
-        </blockquote>
+        <Passage key={passage}>{passage}</Passage>
       ))}
       {basis ? <p className="text-muted text-xs">{basis}</p> : null}
     </>

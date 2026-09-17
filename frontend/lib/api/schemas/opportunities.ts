@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { cursorPageSchema } from './site-health';
+import { pageEntityFields } from './source-pages';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -45,12 +46,11 @@ const domainRollupSchema = z.record(z.string(), z.unknown());
  * non-detection is reported with, because no passage can demonstrate one.
  */
 const handoffPageEntitySchema = responseObject({
-  entity_kind: z.string(),
-  entity_name: z.string(),
+  ...pageEntityFields,
+  // The raw verdict, where the page projection publishes the RESOLVED
+  // `state`. Same vocabulary, different question, so the field names differ
+  // and the shared fields are declared once.
   presence: z.string(),
-  match_method: z.string(),
-  match_count: z.number().int(),
-  passages: z.array(z.string()),
 });
 
 /**

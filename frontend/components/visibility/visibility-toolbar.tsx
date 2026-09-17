@@ -90,6 +90,10 @@ type ToolbarProps = Readonly<{
  */
 export function VisibilityToolbar(props: ToolbarProps) {
   const evidence = isEvidenceTab(props.activeTab);
+  // Normalized once. Reading the default in the selector and the raw prop in
+  // the outcome filter meant an omitted `sourceMode` showed "Answers" while
+  // hiding the control that only applies to answers.
+  const sourceMode = props.sourceMode ?? 'answers';
   return (
     <div className="contents" data-testid="visibility-toolbar">
       <MeasurementFilter {...props} />
@@ -104,13 +108,13 @@ export function VisibilityToolbar(props: ToolbarProps) {
       {props.activeTab === 'mentions-citations' && props.onChangeSourceMode ? (
         <AnalysisChoice
           label="Show"
-          value={props.sourceMode ?? 'answers'}
+          value={sourceMode}
           options={SOURCE_MODES}
           onChange={props.onChangeSourceMode}
         />
       ) : null}
       {props.activeTab === 'mentions-citations' &&
-      props.sourceMode === 'answers' &&
+      sourceMode === 'answers' &&
       props.onChangeOutcome ? (
         <AnalysisChoice
           label="Answer outcome"

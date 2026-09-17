@@ -50,6 +50,16 @@ PLACEMENT_REASON_NO_VERDICT: Final = "no_brand_verdict"
 PLACEMENT_REASON_UNKNOWN_CHANGE: Final = "unknown_expected_change"
 PLACEMENT_REASON_EXHAUSTED: Final = "recheck_attempts_exhausted"
 
+# Which unavailable answers a LATER reading could turn into a real verdict.
+# Too little text and no brand verdict are properties of one reading: read the
+# page again and it may settle. A missing baseline, a changed roster and an
+# expectation nothing can check are properties of the CHECK, and no amount of
+# re-reading changes them -- retrying those would spend the inspection budget
+# forever on a question that has no answer.
+PLACEMENT_RETRYABLE_REASONS: Final[frozenset[str]] = frozenset(
+    {PLACEMENT_REASON_COVERAGE, PLACEMENT_REASON_NO_VERDICT}
+)
+
 # =========================================================================
 # Recheck scheduling
 # =========================================================================

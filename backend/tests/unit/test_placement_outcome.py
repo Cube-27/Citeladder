@@ -200,3 +200,39 @@ def test_a_declaration_with_no_frozen_baseline_never_passes_for_free() -> None:
 
     assert verdict.state == PLACEMENT_STATE_UNAVAILABLE
     assert verdict.reason == PLACEMENT_REASON_NO_BASELINE
+
+
+def test_a_page_whose_links_were_not_extracted_cannot_settle_a_link_fix() -> None:
+    """The detector guards on this and so must the verifier.
+
+    "We extracted no links" is a limitation of the reading, not a fact about
+    the entry. Reporting it as unmet would tell somebody who added the link
+    that they did not.
+    """
+    verdict = evaluate_placement(
+        expectation=PlacementExpectation(
+            expected_change=PLACEMENT_CHANGE_DISCREPANCY_RESOLVED,
+            brand_name="Acme Corp",
+            owned_domains=("acme.com",),
+            discrepancies=("owned_domain_missing",),
+        ),
+        baseline=_reading(),
+        observation=_reading(presence="present", present=True, matches=2),
+    )
+
+    assert verdict.state == PLACEMENT_STATE_UNAVAILABLE
+    assert verdict.reason == PLACEMENT_REASON_UNKNOWN_CHANGE
+
+
+def test_a_page_whose_headings_were_not_extracted_cannot_settle_an_entry_fix() -> None:
+    verdict = evaluate_placement(
+        expectation=PlacementExpectation(
+            expected_change=PLACEMENT_CHANGE_DISCREPANCY_RESOLVED,
+            brand_name="Acme Corp",
+            discrepancies=("not_listed_as_entry",),
+        ),
+        baseline=_reading(),
+        observation=_reading(presence="present", present=True, matches=2),
+    )
+
+    assert verdict.state == PLACEMENT_STATE_UNAVAILABLE

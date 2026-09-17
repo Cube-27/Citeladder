@@ -28,8 +28,12 @@ from app.core.config.analytics import ANALYTICS_TASK_KIND_OPPORTUNITY_VERIFICATI
 from app.core.config.earned_actions import RULE_EARNED_PAGE_ACQUIRE
 from app.core.config.placement import (
     PLACEMENT_CHANGE_BRAND_LISTED,
+    PLACEMENT_REASON_COVERAGE,
+    PLACEMENT_REASON_ROSTER_CHANGED,
+    PLACEMENT_RECHECK_AFTER_HOURS,
     PLACEMENT_STATE_PENDING,
     PLACEMENT_STATE_SATISFIED,
+    PLACEMENT_STATE_UNAVAILABLE,
     PLACEMENT_STATE_UNMET,
 )
 from app.core.config.source_pages import (
@@ -72,6 +76,8 @@ _EMAIL = "placement-checks@example.com"
 _PAGE_URL = "https://review.example/best-crm-tools"
 _HASH = "b" * 64
 _ROSTER = "roster-fixed"
+# Past the configured recheck delay, so a freshly declared check is due.
+_DUE = datetime.now(UTC) + timedelta(hours=PLACEMENT_RECHECK_AFTER_HOURS + 1)
 
 
 async def _snapshot(
@@ -237,6 +243,26 @@ async def _declare(
     return response.json()
 
 
+async def _settle(
+    session_factory: async_sessionmaker[AsyncSession], scenario: Scenario
+) -> int:
+    """Evaluate once the check is DUE.
+
+    A check is not judged inside its waiting window: reading the page the hour
+    after somebody declared the work and recording "not there" reports a slow
+    editor as a false declaration.
+    """
+    async with session_factory() as session:
+        observed = await evaluate_placement_checks(
+            session,
+            workspace_id=scenario.workspace_id,
+            project_id=scenario.project_id,
+            now=_DUE,
+        )
+        await session.commit()
+    return observed
+
+
 async def _check(
     session_factory: async_sessionmaker[AsyncSession], scenario: Scenario
 ) -> PlacementCheck:
@@ -279,13 +305,7 @@ async def test_a_page_nobody_reread_is_not_a_failed_placement(
     scenario, opportunity, _page, _baseline = await _seed(client, session_factory)
     await _declare(client, scenario, opportunity, key="declare-unread")
 
-    async with session_factory() as session:
-        observed = await evaluate_placement_checks(
-            session,
-            workspace_id=scenario.workspace_id,
-            project_id=scenario.project_id,
-        )
-        await session.commit()
+    observed = await _settle(session_factory, scenario)
 
     check = await _check(session_factory, scenario)
     assert observed == 0
@@ -312,13 +332,7 @@ async def test_a_listing_that_went_live_settles_the_check(
             brand_matches=3,
         )
         await session.commit()
-    async with session_factory() as session:
-        observed = await evaluate_placement_checks(
-            session,
-            workspace_id=scenario.workspace_id,
-            project_id=scenario.project_id,
-        )
-        await session.commit()
+    observed = await _settle(session_factory, scenario)
 
     check = await _check(session_factory, scenario)
     assert observed == 1
@@ -352,13 +366,7 @@ async def test_placement_and_visibility_are_reported_as_two_observations(
             brand_matches=3,
         )
         await session.commit()
-    async with session_factory() as session:
-        await evaluate_placement_checks(
-            session,
-            workspace_id=scenario.workspace_id,
-            project_id=scenario.project_id,
-        )
-        await session.commit()
+    await _settle(session_factory, scenario)
 
     async with session_factory() as session:
         declaration = await session.scalar(
@@ -371,7 +379,7 @@ async def test_placement_and_visibility_are_reported_as_two_observations(
             session, declaration=declaration, post_audit_id=None
         )
 
-    assert result["placement"]["state"] == "live"
+    assert result["placement"]["state"] == PLACEMENT_STATE_SATISFIED
     # Beside the legs, not inside them.
     assert "placement" not in result["legs"]
     assert set(result["legs"]) == {
@@ -429,13 +437,7 @@ async def test_a_reading_that_found_nothing_keeps_asking_until_it_stops(
             brand_present=False,
         )
         await session.commit()
-    async with session_factory() as session:
-        await evaluate_placement_checks(
-            session,
-            workspace_id=scenario.workspace_id,
-            project_id=scenario.project_id,
-        )
-        await session.commit()
+    await _settle(session_factory, scenario)
 
     check = await _check(session_factory, scenario)
     assert check.state == PLACEMENT_STATE_UNMET
@@ -469,13 +471,7 @@ async def test_a_settled_check_becomes_a_verification_observation(
             brand_matches=3,
         )
         await session.commit()
-    async with session_factory() as session:
-        await evaluate_placement_checks(
-            session,
-            workspace_id=scenario.workspace_id,
-            project_id=scenario.project_id,
-        )
-        await session.commit()
+    await _settle(session_factory, scenario)
 
     task = AnalyticsTask(
         workspace_id=scenario.workspace_id,
@@ -502,7 +498,7 @@ async def test_a_settled_check_becomes_a_verification_observation(
         )
         assert event is not None
         assert event.observation_kind == "verified"
-        assert event.result["placement"]["state"] == "live"
+        assert event.result["placement"]["state"] == PLACEMENT_STATE_SATISFIED
 
 
 async def test_an_audit_cannot_observe_a_publishers_page(
@@ -545,3 +541,85 @@ async def test_an_audit_cannot_observe_a_publishers_page(
         )
 
     assert events == []
+
+
+async def _thin_snapshot(
+    session_factory: async_sessionmaker[AsyncSession], scenario: Scenario, page_id
+) -> None:
+    """A reading that saw the page but barely any of its text."""
+    async with session_factory() as session:
+        fresh = await session.get(SourcePage, page_id)
+        assert fresh is not None
+        snapshot = await _snapshot(
+            session,
+            scenario,
+            fresh,
+            fetched_at=datetime.now(UTC) + timedelta(minutes=5),
+            brand_present=False,
+        )
+        snapshot.extracted_chars = 40
+        await session.commit()
+
+
+async def test_a_reading_too_thin_to_judge_is_asked_again(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Some unavailable answers are properties of the READING, not the check.
+
+    A page whose text barely extracted says nothing about whether the
+    placement went live, and the next reading may say plenty. Clearing the
+    schedule on it abandoned the declaration's verification for good on the
+    strength of one bad fetch.
+    """
+    scenario, opportunity, page, _baseline = await _seed(client, session_factory)
+    await _declare(client, scenario, opportunity, key="declare-thin")
+    await _thin_snapshot(session_factory, scenario, page.id)
+
+    await _settle(session_factory, scenario)
+
+    check = await _check(session_factory, scenario)
+    assert check.state == PLACEMENT_STATE_UNAVAILABLE
+    assert check.state_reason == PLACEMENT_REASON_COVERAGE
+    # Still scheduled, and still claimable, so a later reading can settle it.
+    assert check.due_at is not None
+    async with session_factory() as session:
+        due = await due_placement_page_ids(
+            session, project_id=scenario.project_id, now=_DUE + timedelta(days=30)
+        )
+    assert due == {page.id}
+
+
+async def test_an_answer_no_rereading_can_change_stops_asking(
+    client: httpx.AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """A roster change is a property of the CHECK. Re-reading cannot fix it."""
+    scenario, opportunity, page, _baseline = await _seed(client, session_factory)
+    await _declare(client, scenario, opportunity, key="declare-roster")
+    async with session_factory() as session:
+        row = await session.scalar(
+            select(PlacementCheck).where(
+                PlacementCheck.project_id == scenario.project_id
+            )
+        )
+        assert row is not None
+        row.baseline_roster_version = "roster-from-another-era"
+        fresh = await session.get(SourcePage, page.id)
+        assert fresh is not None
+        await _snapshot(
+            session,
+            scenario,
+            fresh,
+            fetched_at=datetime.now(UTC) + timedelta(minutes=5),
+            brand_present=True,
+            brand_matches=3,
+        )
+        await session.commit()
+
+    await _settle(session_factory, scenario)
+
+    check = await _check(session_factory, scenario)
+    assert check.state == PLACEMENT_STATE_UNAVAILABLE
+    assert check.state_reason == PLACEMENT_REASON_ROSTER_CHANGED
+    assert check.due_at is None

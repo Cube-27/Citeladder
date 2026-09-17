@@ -12,13 +12,18 @@ import { placementReport } from './verification';
  */
 describe('reporting a placement observation', () => {
   it('has nothing to say about an owned-page action', () => {
-    expect(placementReport({ legs: {} })).toBeNull();
+    expect(placementReport({ legs: {}, placement: null })).toBeNull();
     expect(placementReport(undefined)).toBeNull();
+  });
+
+  it('makes no claim at all when the section is not the shape it expects', () => {
+    // A cast would keep printing confident copy over a renamed payload.
+    expect(placementReport({ placement: { staet: 'satisfied' } })).toBeNull();
   });
 
   it('names the change that went live, and keeps it apart from the score', () => {
     const report = placementReport({
-      placement: { state: 'live', expected_change: 'discrepancy_resolved' },
+      placement: { state: 'satisfied', expected_change: 'discrepancy_resolved' },
     });
 
     expect(report?.headline).toBe('The page no longer says what was wrong.');
@@ -26,17 +31,17 @@ describe('reporting a placement observation', () => {
   });
 
   it('says a page has not been read rather than that the work failed', () => {
-    const report = placementReport({ placement: { state: 'not_run' } });
+    const report = placementReport({ placement: { state: 'pending' } });
 
     expect(report?.headline).toBe('The page has not been read since this was declared.');
   });
 
   it('distinguishes a reading still to come from the last one', () => {
     const pending = placementReport({
-      placement: { state: 'not_observed', attempts: 1, max_attempts: 4, due_at: '2026-10-01' },
+      placement: { state: 'unmet', attempts: 1, max_attempts: 4, due_at: '2026-10-01' },
     });
     const finished = placementReport({
-      placement: { state: 'not_observed', attempts: 4, max_attempts: 4, due_at: null },
+      placement: { state: 'unmet', attempts: 4, max_attempts: 4, due_at: null },
     });
 
     expect(pending?.detail).toContain('will be read again');

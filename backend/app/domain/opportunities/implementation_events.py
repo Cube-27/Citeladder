@@ -19,6 +19,7 @@ from app.core.config.opportunities import (
     OPPORTUNITY_TYPE_SITE,
     OPPORTUNITY_TYPE_TRAFFIC,
 )
+from app.core.config.placement import PLACEMENT_CHECK_KIND
 from app.core.config.task_queue import TASK_STATUS_SUCCEEDED
 from app.domain.demand.page_equivalence import resolve_owned_page
 from app.domain.opportunities.placement_checks import (
@@ -381,12 +382,20 @@ async def create_implementation_event(
     stored, created = await _flush_declaration(
         session, row=row, fingerprint=fingerprint
     )
+    # Driven by the check that was projected, not by re-deciding the pathway
+    # and then trusting a list position. A declaration that grows a second
+    # expectation alongside the placement one must not silently open a
+    # placement check against the wrong expectation.
+    placement = next(
+        (check for check in checks if check.get("kind") == PLACEMENT_CHECK_KIND),
+        None,
+    )
     # Only for a declaration that is actually new. A replay returns the row
     # that already exists, and opening a second check for it would leave two
     # rows racing to describe one attempt.
-    if created and is_external_target(opportunity):
+    if created and placement is not None:
         await open_placement_check(
-            session, declaration=stored, opportunity=opportunity, check=checks[0]
+            session, declaration=stored, opportunity=opportunity, check=placement
         )
     return stored, created
 

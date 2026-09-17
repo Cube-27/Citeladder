@@ -29,8 +29,12 @@ export function VerificationObservations({
   if (!implementation) return null;
   const result = implementation.verification_events?.at(-1)?.result;
   return (
-    <div className={`${stateTone(implementation.state)} grid gap-1.5 text-xs`}>
-      <p>
+    // The container stays neutral. The aggregate state colours the SUMMARY
+    // line only: painting the whole block red because the roll-up says
+    // "contradicted" would tint a placement that is live, which is the one
+    // thing these separate observations exist to be able to say.
+    <div className="text-muted grid gap-1.5 text-xs">
+      <p className={stateTone(implementation.state)}>
         {implementation.state === 'declared'
           ? 'Declared for verification.'
           : `Verification: ${implementation.state}.`}

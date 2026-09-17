@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { panelClasses } from '@/components/ui/panel';
+import { Limitations, Passage } from '@/components/ui/passage';
 import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label, textRole } from '@/components/ui/typography';
@@ -176,16 +176,10 @@ function EntityRow({
         {verdict ? <span className={textRole('meta')}>{verdict}</span> : null}
       </div>
       {entity.passages.map((passage) => (
-        <blockquote key={passage} className={panelClasses({ tone: 'well', pad: 'compact' })}>
-          <p className={textRole('body', 'leading-relaxed')}>“{passage}”</p>
-        </blockquote>
+        <Passage key={passage}>{passage}</Passage>
       ))}
       {basis ? <p className="text-muted text-xs">{basis}</p> : null}
-      {entity.limitations.map((limitation) => (
-        <p key={limitation} className="text-muted text-xs">
-          {limitation}
-        </p>
-      ))}
+      <Limitations items={entity.limitations} />
     </li>
   );
 }
@@ -205,7 +199,13 @@ function InspectCommand({
   const queryClient = useQueryClient();
   const inspect = useMutation({
     ...sourcePagesMutations.inspect(workspaceId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.sourcePages.all }),
+    // This page's own record, not the namespace. Queuing an inspection has
+    // read nothing yet, so refetching the project-wide analysis would redo its
+    // whole query to receive a byte-identical answer.
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.sourcePages.page(projectId, urlHash),
+      }),
   });
   const result = inspect.data;
   return (

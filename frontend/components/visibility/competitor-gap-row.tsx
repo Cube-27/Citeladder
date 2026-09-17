@@ -6,8 +6,8 @@ import type { z } from 'zod';
 import { ProjectLink } from '@/components/layout/scoped-link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { eyebrowClasses } from '@/components/ui/eyebrow';
-import { panelClasses } from '@/components/ui/panel';
+import { OnPageEntities } from '@/components/ui/on-page-entities';
+import { Limitations } from '@/components/ui/passage';
 import { textRole } from '@/components/ui/typography';
 import type { competitorPageSchema } from '@/lib/api/schemas/source-pages';
 import { absenceBasis, citedByLabel, pageFormatLabel } from '@/lib/visibility/source-pages';
@@ -47,14 +47,10 @@ export function CompetitorGapRow({
         {format ? <Badge variant="neutral">{format}</Badge> : null}
         <PageSourceLink url={page.canonical_url} />
       </div>
-      <OnPageCompetitors page={page} />
+      <OnPageEntities heading="On this page" entities={page.competitors} />
       <BrandVerdict page={page} />
       <PageAction page={page} />
-      {page.limitations.map((limitation) => (
-        <p key={limitation} className="text-muted text-xs">
-          {limitation}
-        </p>
-      ))}
+      <Limitations items={page.limitations} />
     </li>
   );
 }
@@ -75,39 +71,6 @@ function PageSourceLink({ url }: Readonly<{ url: string }>) {
       Open page
       <ExternalLink className="size-3 shrink-0" aria-hidden />
     </a>
-  );
-}
-
-/**
- * The rivals found ON this page, each with the line that proves it.
- *
- * A name without its passage is exactly the claim the page-keyed detector
- * replaced, so the quote travels with the name rather than a click away.
- * Competitors merely named in an answer that cited this page are a different
- * fact and never appear here.
- */
-function OnPageCompetitors({ page }: Readonly<{ page: CompetitorGapPage }>) {
-  return (
-    <div className="grid gap-1.5">
-      <p className={eyebrowClasses}>On this page</p>
-      <div className="flex flex-wrap gap-1.5">
-        {page.competitors.map((entity) => (
-          <Badge key={entity.entity_name} variant="classification" value="competitor">
-            {entity.entity_name}
-          </Badge>
-        ))}
-      </div>
-      {page.competitors.map((entity) =>
-        entity.passages.map((passage) => (
-          <blockquote
-            key={`${entity.entity_name}:${passage}`}
-            className={panelClasses({ tone: 'well', pad: 'compact' })}
-          >
-            <p className={textRole('body', 'leading-relaxed')}>“{passage}”</p>
-          </blockquote>
-        )),
-      )}
-    </div>
   );
 }
 
