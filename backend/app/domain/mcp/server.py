@@ -105,6 +105,17 @@ mcp_server = MCPServer(
     auth=AuthSettings(
         issuer_url=AnyHttpUrl(_STARTUP_ORIGIN),
         resource_server_url=AnyHttpUrl(f"{_STARTUP_ORIGIN}/mcp"),
+        # Refuse a bearer token issued for some other resource. Set explicitly
+        # because leaving it unset means False today and True in mcp 3.0 — a
+        # security default that would otherwise change under us on a routine
+        # dependency bump, in whichever direction the library chose.
+        #
+        # True is the safe answer here rather than a guess: `authorize` already
+        # rejects a mismatched `resource` parameter and records the canonical
+        # `resource_url()` on every authorization request whether or not the
+        # client sent one, so every token this provider issues carries the
+        # resource this check compares against.
+        validate_token_resource=True,
         service_documentation_url=AnyHttpUrl(f"{_STARTUP_ORIGIN}/docs/mcp"),
         required_scopes=[MCP_READ_SCOPE],
         client_registration_options=ClientRegistrationOptions(

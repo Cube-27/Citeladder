@@ -9,7 +9,7 @@ import { type NavDropKey } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
 import { ButtonLink } from '../primitives/button';
-import { MarketingAccountMenu } from './marketing-account-menu';
+import { MarketingAccountGlyphPlaceholder, MarketingAccountMenu } from './marketing-account-menu';
 import { DesktopNavigation } from './nav-desktop';
 import { MobileNavigation } from './nav-mobile';
 import { useMarketingSession } from './use-marketing-session';
@@ -420,6 +420,14 @@ function NavActions({
               <ButtonLink href={dashboardHref} variant="primary" className="min-h-10 px-4">
                 Dashboard
               </ButtonLink>
+              {/* The account circle is reserved here, not deferred until `me`
+                  answers. Its initials need the round trip, but its BOX does
+                  not — and rendering only "Dashboard" first meant the circle
+                  appeared a beat later and pushed the button sideways on every
+                  refresh and every page change. Holding the space makes the
+                  arrival a fade of two letters into a circle that was already
+                  there. */}
+              <MarketingAccountGlyphPlaceholder />
             </span>
           </>
         ) : isAuthenticated ? (

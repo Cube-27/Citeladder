@@ -21,14 +21,28 @@ updates:
       patch-and-minor:
         update-types: [patch, minor]
 
-  # Dockerfiles are in separate directories, so each needs an explicit entry.
+  # Both frontend Dockerfiles pin the SAME node digest, so they are ONE entry
+  # spanning two directories rather than two entries. Two entries would open
+  # two pull requests that merge independently, and between those merges the
+  # marketing and app images run different node builds — the drift that left
+  # apps/app a release behind in the first place.
+  #
+  # The `node` group omits `update-types` on purpose. A digest bump is neither
+  # patch nor minor, so `patch-and-minor` does not catch it — which is exactly
+  # why the /frontend digest arrived as its own ungrouped PR. Omitting the key
+  # takes every update type, so both directories' node bumps land together.
+  # `patch-and-minor` still covers the caddy image in apps/app.
   - package-ecosystem: docker
-    directory: /frontend
+    directories:
+      - /frontend
+      - /frontend/apps/app
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
     groups:
+      node:
+        patterns: ['node']
       patch-and-minor:
         update-types: [patch, minor]
 
